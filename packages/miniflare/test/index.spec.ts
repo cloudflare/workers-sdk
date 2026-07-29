@@ -2071,7 +2071,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						timestamp: string;
 						messageId: string;
 				  }
-				| { type: "reject"; timestamp: string }
+				| { type: "received" | "reject" | "unhandled"; timestamp: string }
 			)[];
 		};
 	}
@@ -2095,6 +2095,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		],
 	});
 	expect(okResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{
 			type: "forward",
 			timestamp: expect.any(String),
@@ -2115,6 +2116,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		replies: [],
 	});
 	expect(rejectedResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{ type: "reject", timestamp: expect.any(String) },
 	]);
 
@@ -2137,6 +2139,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		],
 	});
 	expect(exceptionResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{
 			type: "forward",
 			timestamp: expect.any(String),

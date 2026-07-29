@@ -706,6 +706,17 @@ const config = {
 														type: "object",
 														properties: {
 															id: { type: "string" },
+															outcome: {
+																type: "string",
+																enum: ["ok", "exception"],
+																description:
+																	"Whether the handler ran to completion or threw.",
+															},
+															rejectReason: {
+																type: "string",
+																description:
+																	"Reason passed to setReject(), if the handler rejected the message.",
+															},
 														},
 													},
 												},
@@ -2127,25 +2138,63 @@ const config = {
 				required: ["columns", "rows"],
 			},
 
-			"email_routing-action": {
+			"email_handler-event": {
 				type: "object",
+				description:
+					"One entry in the ordered lifecycle of what the handler did to the message. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.",
 				properties: {
-					action: {
+					type: {
 						type: "string",
-						enum: ["received", "unhandled", "rejected", "forwarded", "replied"],
-						description: "The action the handler took on the message.",
+						enum: ["received", "forward", "reply", "reject", "unhandled"],
+						description: "The kind of event.",
 					},
 					timestamp: {
 						type: "string",
-						description: "ISO 8601 timestamp of when the action occurred.",
+						description: "ISO 8601 timestamp of when the event occurred.",
 					},
-					details: {
-						type: "object",
-						additionalProperties: true,
-						description: "Action-specific details (e.g. forward recipient).",
+					messageId: {
+						type: "string",
+						description:
+							"Present on `forward`/`reply` events; correlates with the matching `forwards`/`replies` entry.",
 					},
 				},
-				required: ["action", "timestamp"],
+				required: ["type", "timestamp"],
+			},
+			"email_handler-forward": {
+				type: "object",
+				properties: {
+					messageId: { type: "string" },
+					recipient: {
+						type: "string",
+						description: "Envelope recipient the message was forwarded to.",
+					},
+					headers: {
+						type: "array",
+						description:
+							"Headers added to the forwarded message, as [key, value] pairs.",
+						items: {
+							type: "array",
+							items: { type: "string" },
+						},
+					},
+				},
+				required: ["messageId", "recipient", "headers"],
+			},
+			"email_handler-reply": {
+				type: "object",
+				properties: {
+					messageId: { type: "string" },
+					sender: {
+						type: "string",
+						description: "Address the reply was sent from.",
+					},
+					raw: {
+						type: "string",
+						description:
+							"Raw MIME content of the reply. Omitted from the routing list; present on the detail response.",
+					},
+				},
+				required: ["messageId", "sender"],
 			},
 			"email_routing-item": {
 				type: "object",
@@ -2162,11 +2211,27 @@ const config = {
 					messageId: { type: "string" },
 					receivedAt: { type: "string" },
 					rawSize: { type: "number" },
-					handlingPath: {
+					outcome: {
+						type: "string",
+						enum: ["ok", "exception"],
+						description: "Whether the handler ran to completion or threw.",
+					},
+					rejectReason: {
+						type: "string",
+						description:
+							"Reason passed to setReject(), if the handler rejected the message.",
+					},
+					forwards: {
 						type: "array",
-						items: {
-							$ref: "#/components/schemas/email_routing-action",
-						},
+						items: { $ref: "#/components/schemas/email_handler-forward" },
+					},
+					replies: {
+						type: "array",
+						items: { $ref: "#/components/schemas/email_handler-reply" },
+					},
+					events: {
+						type: "array",
+						items: { $ref: "#/components/schemas/email_handler-event" },
 					},
 				},
 				required: [
@@ -2176,7 +2241,10 @@ const config = {
 					"subject",
 					"receivedAt",
 					"rawSize",
-					"handlingPath",
+					"outcome",
+					"forwards",
+					"replies",
+					"events",
 				],
 			},
 			"email_routing-detail": {
@@ -2202,11 +2270,27 @@ const config = {
 						description:
 							"Metadata for attachments parsed out of the received message. The content itself is only available in `raw`.",
 					},
-					handlingPath: {
+					outcome: {
+						type: "string",
+						enum: ["ok", "exception"],
+						description: "Whether the handler ran to completion or threw.",
+					},
+					rejectReason: {
+						type: "string",
+						description:
+							"Reason passed to setReject(), if the handler rejected the message.",
+					},
+					forwards: {
 						type: "array",
-						items: {
-							$ref: "#/components/schemas/email_routing-action",
-						},
+						items: { $ref: "#/components/schemas/email_handler-forward" },
+					},
+					replies: {
+						type: "array",
+						items: { $ref: "#/components/schemas/email_handler-reply" },
+					},
+					events: {
+						type: "array",
+						items: { $ref: "#/components/schemas/email_handler-event" },
 					},
 				},
 				required: [
@@ -2218,7 +2302,10 @@ const config = {
 					"rawSize",
 					"raw",
 					"attachments",
-					"handlingPath",
+					"outcome",
+					"forwards",
+					"replies",
+					"events",
 				],
 			},
 			"email_send-request": {

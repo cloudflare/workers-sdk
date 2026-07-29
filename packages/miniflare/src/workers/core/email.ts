@@ -1,15 +1,16 @@
 import assert from "node:assert";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
-import PostalMime, { decodeWords } from "postal-mime";
+import PostalMime from "postal-mime";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
 import type {
-	EmailRoutingAction,
-	EmailStoreService,
-	StoredRoutingEmail,
-} from "../email/storage";
+	EmailHandlerEvent,
+	EmailHandlerForward,
+	EmailHandlerReply,
+} from "../email/result";
+import type { EmailStoreService, StoredRoutingEmail } from "../email/storage";
 import type { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
 import type { Email } from "postal-mime";
 
@@ -42,27 +43,9 @@ export async function handleEmail(
 	env: Env,
 	ctx: ExecutionContext
 ): Promise<Response> {
-	const events: Array<
-		| {
-				type: "forward" | "reply";
-				timestamp: string;
-				messageId: string;
-		  }
-		| {
-				type: "reject";
-				timestamp: string;
-		  }
-	> = [];
-	const forwards: Array<{
-		messageId: string;
-		recipient: string;
-		headers: [string, string][];
-	}> = [];
-	const replies: Array<{
-		messageId: string;
-		sender: string;
-		raw: string;
-	}> = [];
+	const events: EmailHandlerEvent[] = [];
+	const forwards: EmailHandlerForward[] = [];
+	const replies: EmailHandlerReply[] = [];
 
 	// Turn an HTTP request into an EmailMessage, using:
 	//  - `from` and `to` from the URL
@@ -154,12 +137,17 @@ export async function handleEmail(
 		parsedIncomingEmail.headers.map((header) => [header.key, header.value])
 	);
 
+	// The result of dispatching this message, shared between the JSON response
+	// and the local explorer store. `events` is seeded with `received` and grows
+	// as the handler forwards/replies/rejects; `outcome` is finalised below.
+	let outcome: "ok" | "exception" = "ok";
+	// Propogate `.setReject()` reasons to the caller
+	let rejectReason: string | undefined = undefined;
+	events.push({ type: "received", timestamp: new Date().toISOString() });
+
 	// Capture this email for the local explorer "Routing" interface. Store
 	// the email ID to match the stored email with any files written to disk.
 	const emailId = params.get("id") ?? crypto.randomUUID();
-	const handlingPath: EmailRoutingAction[] = [
-		{ action: "received", timestamp: new Date().toISOString() },
-	];
 	const storedEmail: StoredRoutingEmail = {
 		id: emailId,
 		worker: params.get("worker") ?? undefined,
@@ -180,18 +168,28 @@ export async function handleEmail(
 					? attachment.content.length
 					: attachment.content.byteLength,
 		})),
-		handlingPath,
+		outcome,
+		forwards,
+		replies,
+		events,
 	};
+	// Store exactly once per request, no matter which exit path runs. The result
+	// fields are refreshed from the (possibly mutated) locals on each attempt.
+	let stored = false;
 	async function storeReceivedEmail(): Promise<void> {
+		if (stored) {
+			return;
+		}
+		stored = true;
+		storedEmail.outcome = outcome;
+		storedEmail.rejectReason = rejectReason;
 		try {
 			await env[CoreBindings.SERVICE_EMAIL_STORE]?.storeReceived(storedEmail);
 		} catch {
 			// Ignore storage failures - they must not affect email handling.
+			stored = false;
 		}
 	}
-
-	// Propogate `.setReject()` reasons to the caller
-	let rejectReason: string | undefined = undefined;
 
 	try {
 		// @ts-expect-error .email is not in the `Fetcher` but it's a valid RPC call.
@@ -207,11 +205,6 @@ export async function handleEmail(
 				rawSize: incomingEmailRaw.byteLength,
 				headers: incomingEmailHeaders,
 				setReject: (reason: string): void => {
-					handlingPath.push({
-						action: "rejected",
-						timestamp: new Date().toISOString(),
-						details: { reason },
-					});
 					ctx.waitUntil(
 						env[CoreBindings.SERVICE_LOOPBACK].fetch(
 							"http://localhost/core/log",
@@ -235,16 +228,6 @@ export async function handleEmail(
 					rcptTo: string,
 					headers?: Headers
 				): Promise<EmailSendResult> => {
-					handlingPath.push({
-						action: "forwarded",
-						timestamp: new Date().toISOString(),
-						details: {
-							rcptTo,
-							headers: headers
-								? Object.fromEntries(headers.entries())
-								: undefined,
-						},
-					});
 					await env[CoreBindings.SERVICE_LOOPBACK].fetch(
 						"http://localhost/core/log",
 						{
@@ -278,11 +261,6 @@ export async function handleEmail(
 					return result;
 				},
 				reply: async (replyMessage): Promise<EmailSendResult> => {
-					const repliedAction: EmailRoutingAction = {
-						action: "replied",
-						timestamp: new Date().toISOString(),
-					};
-					handlingPath.push(repliedAction);
 					assert(
 						"from" in replyMessage && "to" in replyMessage,
 						"EmailReplyMessageBuilder is not currently supported"
@@ -311,28 +289,6 @@ export async function handleEmail(
 						parsedIncomingEmail,
 						replyMessage as MiniflareEmailMessage
 					);
-
-					let replySubject: string | undefined;
-					let replyMessageId: string | undefined;
-					try {
-						const parsedReply = await PostalMime.parse(finalReply);
-						replySubject = parsedReply.subject;
-						replyMessageId = parsedReply.messageId;
-					} catch {
-						// Ignore parse failures; fall back to no decoded subject/message-id.
-					}
-
-					// Attach the reply data to the handling-path entry so the local
-					// explorer can display the reply.
-					repliedAction.details = {
-						raw: decodeWords(new TextDecoder().decode(finalReply)),
-						...(replySubject !== undefined ? { subject: replySubject } : {}),
-						...(replyMessageId !== undefined
-							? { messageId: replyMessageId }
-							: {}),
-						from: replyMessage.from,
-						to: replyMessage.to,
-					};
 
 					// Store the reply under `email/<session-id>/reply/<emailId>.eml` -
 					// grouped under `reply/` (keeping it separate from sent emails)
@@ -378,6 +334,8 @@ export async function handleEmail(
 
 		if (params.get("format") !== "json") {
 			await emailEvent;
+			// Record the message now the handler has finished, so `events` is
+			// complete. Every exit from here on must store exactly once.
 			await storeReceivedEmail();
 
 			if (rejectReason !== undefined) {
@@ -392,13 +350,20 @@ export async function handleEmail(
 			});
 		}
 
-		let outcome: "ok" | "exception";
-
 		try {
 			await emailEvent;
 			outcome = "ok";
-		} catch {
+		} catch (e) {
 			outcome = "exception";
+			if (isMissingEmailHandlerError(e)) {
+				// The Worker has no `email()` handler, so the message could not be
+				// delivered. Record it as `unhandled` (replacing the `received` seed)
+				// so the local explorer can mark it accordingly.
+				events.splice(0, events.length, {
+					type: "unhandled",
+					timestamp: new Date().toISOString(),
+				});
+			}
 		}
 
 		// Give an un-awaited `setReject()` call time to cross JSRPC.
@@ -416,12 +381,13 @@ export async function handleEmail(
 			{ status: outcome === "ok" ? 200 : 500 }
 		);
 	} catch (e) {
+		outcome = "exception";
 		if (isMissingEmailHandlerError(e)) {
 			// The Worker has no `email()` handler, so the message could not be
-			// delivered. It shoudl be recorded and marked as 'Unhandled' in the local
-			// explorer.
-			handlingPath.splice(0, handlingPath.length, {
-				action: "unhandled",
+			// delivered. It should be recorded and marked as `unhandled` in the
+			// local explorer.
+			events.splice(0, events.length, {
+				type: "unhandled",
 				timestamp: new Date().toISOString(),
 			});
 			await storeReceivedEmail();

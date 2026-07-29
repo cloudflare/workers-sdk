@@ -5,20 +5,9 @@
 // loopback service, and the local explorer reads them back. Emails do not
 // persist across dev-server restarts.
 
-export type EmailRoutingActionType =
-	| "received"
-	| "unhandled"
-	| "rejected"
-	| "forwarded"
-	| "replied";
+import type { EmailHandlerResult } from "./result";
 
-export interface EmailRoutingAction {
-	action: EmailRoutingActionType;
-	timestamp: string;
-	details?: Record<string, unknown>;
-}
-
-export interface StoredRoutingEmail {
+export interface StoredRoutingEmail extends EmailHandlerResult {
 	id: string;
 	/** Worker whose `email()` handler processed the message, if known. */
 	worker?: string;
@@ -34,8 +23,6 @@ export interface StoredRoutingEmail {
 	raw: string;
 	/** Attachments parsed out of `raw`. Metadata only.*/
 	attachments: StoredEmailAttachment[];
-	/** Ordered list of actions the handler took on the message. */
-	handlingPath: EmailRoutingAction[];
 }
 
 export interface StoredEmailAttachment {

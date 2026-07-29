@@ -1,6 +1,8 @@
 import { getPublicUrl } from "miniflare:shared";
+import { decodeWords } from "postal-mime";
 import { CoreBindings, CorePaths } from "../../core";
 import { errorResponse, wrapResponse } from "../common";
+import type { EmailHandlerResult } from "../../email/result";
 import type { EmailStoreService } from "../../email/storage";
 import type { AppContext } from "../common";
 import type {
@@ -119,16 +121,12 @@ export async function listReceivedEmails(c: AppContext): Promise<Response> {
 			"Email store is not available for this dev session."
 		);
 	}
+	// The list omits the (potentially large) raw MIME of both the received
+	// message and each reply; the detail endpoint exposes them.
 	const emails = (await store.listReceived()).map(
-		({ raw: _raw, handlingPath, ...rest }) => ({
+		({ raw: _raw, replies, ...rest }) => ({
 			...rest,
-			handlingPath: handlingPath.map((action) => {
-				if (action.details && "raw" in action.details) {
-					const { raw: _actionRaw, ...details } = action.details;
-					return { ...action, details };
-				}
-				return action;
-			}),
+			replies: replies.map(({ raw: _replyRaw, ...reply }) => reply),
 		})
 	);
 	return c.json(wrapResponse(emails as EmailRoutingItem[]));
@@ -154,7 +152,17 @@ export async function getReceivedEmail(
 			`Email '${emailId}' not found.`
 		);
 	}
-	return c.json(wrapResponse(email as EmailRoutingDetail));
+	// Decode MIME "encoded-word" headers (e.g. `=?utf-8?B?...?=`) in each reply's
+	// raw MIME so the explorer displays readable subjects. The stored raw is kept
+	// byte-identical to the handler response; decoding happens only on read.
+	const decoded = {
+		...email,
+		replies: email.replies.map((reply) => ({
+			...reply,
+			raw: decodeWords(reply.raw),
+		})),
+	};
+	return c.json(wrapResponse(decoded as EmailRoutingDetail));
 }
 
 /**
@@ -183,20 +191,34 @@ export async function sendTestEmail(
 	const deliverUrl = new URL(CorePaths.EMAIL, entryUrl);
 	deliverUrl.searchParams.set("from", from);
 	deliverUrl.searchParams.set("to", to);
-
 	deliverUrl.searchParams.set("id", id);
+	// Request the JSON result so we can surface the handler outcome (including a
+	// `setReject()` reason) instead of just a text status.
+	deliverUrl.searchParams.set("format", "json");
 	const response = await fetch(deliverUrl, { method: "POST", body: mime });
 
-	if (!response.ok) {
+	// A 4xx means the message itself was invalid (bad envelope, unparseable, or
+	// too large) and never reached the handler — that's a send failure. Anything
+	// else (including a handler that rejected or threw) counts as delivered.
+	if (response.status >= 400 && response.status < 500) {
 		const message = await response.text();
 		return errorResponse(
-			response.status === 400 ? 400 : 500,
+			400,
 			EMAIL_ERROR_SEND_FAILED,
 			message || "Failed to deliver test email."
 		);
 	}
 
-	return c.json(wrapResponse({ id }));
+	const result = (await response.json()) as EmailHandlerResult;
+	return c.json(
+		wrapResponse({
+			id,
+			outcome: result.outcome,
+			...(result.rejectReason !== undefined
+				? { rejectReason: result.rejectReason }
+				: {}),
+		})
+	);
 }
 
 export async function listSentEmails(c: AppContext): Promise<Response> {

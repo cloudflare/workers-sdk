@@ -23,31 +23,33 @@ export default class EmailStoreHost extends WorkerEntrypoint<Env> {
 		);
 	}
 
-	storeReceived(email: StoredRoutingEmail): Promise<void> {
-		return this.#store().storeReceived(email);
+	async storeReceived(email: StoredRoutingEmail): Promise<void> {
+		await this.#store().storeReceived(email);
 	}
 
-	findReceived(id: string): Promise<StoredRoutingEmail | undefined> {
-		return this.#store().findReceived(id);
+	async findReceived(id: string): Promise<StoredRoutingEmail | undefined> {
+		return (await this.#store().findReceived(id)) as unknown as
+			| StoredRoutingEmail
+			| undefined;
 	}
 
-	listReceived(): Promise<StoredRoutingEmail[]> {
-		return this.#store().listReceived();
+	async listReceived(): Promise<StoredRoutingEmail[]> {
+		return (await this.#store().listReceived()) as unknown as StoredRoutingEmail[];
 	}
 
-	storeSent(email: StoredSendingEmail): Promise<void> {
-		return this.#store().storeSent(email);
+	async storeSent(email: StoredSendingEmail): Promise<void> {
+		await this.#store().storeSent(email);
 	}
 
-	findSent(id: string): Promise<StoredSendingEmail | undefined> {
-		return this.#store().findSent(id);
+	async findSent(id: string): Promise<StoredSendingEmail | undefined> {
+		return await this.#store().findSent(id);
 	}
 
-	listSent(): Promise<StoredSendingEmail[]> {
-		return this.#store().listSent();
+	async listSent(): Promise<StoredSendingEmail[]> {
+		return await this.#store().listSent();
 	}
 
-	clear(): Promise<void> {
-		return this.#store().clear();
+	async clear(): Promise<void> {
+		await this.#store().clear();
 	}
 }

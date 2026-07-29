@@ -529,12 +529,25 @@ export const zObservabilityQueryResult = z.object({
 	rows: z.array(z.array(z.unknown())),
 });
 
-export const zR2ResultInfoWritable = z.record(z.string(), z.unknown());
-
-export const zEmailRoutingAction = z.object({
-	action: z.enum(["received", "unhandled", "rejected", "forwarded", "replied"]),
+/**
+ * One entry in the ordered lifecycle of what the handler did to the message. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
+ */
+export const zEmailHandlerEvent = z.object({
+	type: z.enum(["received", "forward", "reply", "reject", "unhandled"]),
 	timestamp: z.string(),
-	details: z.record(z.unknown()).optional(),
+	messageId: z.string().optional(),
+});
+
+export const zEmailHandlerForward = z.object({
+	messageId: z.string(),
+	recipient: z.string(),
+	headers: z.array(z.array(z.string())),
+});
+
+export const zEmailHandlerReply = z.object({
+	messageId: z.string(),
+	sender: z.string(),
+	raw: z.string().optional(),
 });
 
 export const zEmailRoutingItem = z.object({
@@ -546,7 +559,11 @@ export const zEmailRoutingItem = z.object({
 	messageId: z.string().optional(),
 	receivedAt: z.string(),
 	rawSize: z.number(),
-	handlingPath: z.array(zEmailRoutingAction),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply),
+	events: z.array(zEmailHandlerEvent),
 });
 
 /**
@@ -561,7 +578,7 @@ export const zEmailSendRequest = z.object({
 	subject: z.string(),
 	text: z.string().optional(),
 	html: z.string().optional(),
-	headers: z.record(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
 	attachments: z
 		.array(
 			z.object({
@@ -595,7 +612,11 @@ export const zEmailRoutingDetail = z.object({
 	rawSize: z.number(),
 	raw: z.string(),
 	attachments: z.array(zEmailAttachment),
-	handlingPath: z.array(zEmailRoutingAction),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply),
+	events: z.array(zEmailHandlerEvent),
 });
 
 export const zEmailSendingItem = z.object({
@@ -623,10 +644,12 @@ export const zEmailSendingDetail = z.object({
 	sentAt: z.string(),
 	text: z.string().optional(),
 	html: z.string().optional(),
-	headers: z.record(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
 	attachments: z.array(zEmailAttachment),
 	raw: z.string().optional(),
 });
+
+export const zR2ResultInfoWritable = z.record(z.string(), z.unknown());
 
 export const zWorkersNamespaceWritable = z.object({
 	class: z.string().optional(),
@@ -1055,6 +1078,8 @@ export const zEmailSendRoutingResponse = zWorkersApiResponseCommon.and(
 		result: z
 			.object({
 				id: z.string().optional(),
+				outcome: z.enum(["ok", "exception"]).optional(),
+				rejectReason: z.string().optional(),
 			})
 			.optional(),
 	})

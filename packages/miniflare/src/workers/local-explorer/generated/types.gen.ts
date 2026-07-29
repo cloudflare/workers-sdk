@@ -782,21 +782,46 @@ export type ObservabilityQueryResult = {
 	rows: Array<Array<unknown>>;
 };
 
-export type EmailRoutingAction = {
+/**
+ * One entry in the ordered lifecycle of what the handler did to the message. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
+ */
+export type EmailHandlerEvent = {
 	/**
-	 * The action the handler took on the message.
+	 * The kind of event.
 	 */
-	action: "received" | "unhandled" | "rejected" | "forwarded" | "replied";
+	type: "received" | "forward" | "reply" | "reject" | "unhandled";
 	/**
-	 * ISO 8601 timestamp of when the action occurred.
+	 * ISO 8601 timestamp of when the event occurred.
 	 */
 	timestamp: string;
 	/**
-	 * Action-specific details (e.g. forward recipient).
+	 * Present on `forward`/`reply` events; correlates with the matching `forwards`/`replies` entry.
 	 */
-	details?: {
-		[key: string]: unknown;
-	};
+	messageId?: string;
+};
+
+export type EmailHandlerForward = {
+	messageId: string;
+	/**
+	 * Envelope recipient the message was forwarded to.
+	 */
+	recipient: string;
+	/**
+	 * Headers added to the forwarded message, as [key, value] pairs.
+	 */
+	headers: Array<Array<string>>;
+};
+
+export type EmailHandlerReply = {
+	messageId: string;
+	/**
+	 * Address the reply was sent from.
+	 */
+	sender: string;
+	/**
+	 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
+	 */
+	raw?: string;
 };
 
 export type EmailRoutingItem = {
@@ -817,7 +842,17 @@ export type EmailRoutingItem = {
 	messageId?: string;
 	receivedAt: string;
 	rawSize: number;
-	handlingPath: Array<EmailRoutingAction>;
+	/**
+	 * Whether the handler ran to completion or threw.
+	 */
+	outcome: "ok" | "exception";
+	/**
+	 * Reason passed to setReject(), if the handler rejected the message.
+	 */
+	rejectReason?: string;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
 };
 
 export type EmailRoutingDetail = {
@@ -837,7 +872,17 @@ export type EmailRoutingDetail = {
 	 * Metadata for attachments parsed out of the received message. The content itself is only available in `raw`.
 	 */
 	attachments: Array<EmailAttachment>;
-	handlingPath: Array<EmailRoutingAction>;
+	/**
+	 * Whether the handler ran to completion or threw.
+	 */
+	outcome: "ok" | "exception";
+	/**
+	 * Reason passed to setReject(), if the handler rejected the message.
+	 */
+	rejectReason?: string;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
 };
 
 /**
@@ -1679,6 +1724,14 @@ export type EmailSendRoutingResponses = {
 	200: WorkersApiResponseCommon & {
 		result?: {
 			id?: string;
+			/**
+			 * Whether the handler ran to completion or threw.
+			 */
+			outcome?: "ok" | "exception";
+			/**
+			 * Reason passed to setReject(), if the handler rejected the message.
+			 */
+			rejectReason?: string;
 		};
 	};
 };

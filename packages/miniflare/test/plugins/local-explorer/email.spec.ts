@@ -17,13 +17,18 @@ import { expectValidResponse } from "./helpers";
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 // Worker with an email() handler. Forwards any message addressed to a
-// "forward@" recipient so we can exercise the handling-path capture.
+// "forward@" recipient and rejects any addressed to a "reject@" recipient so
+// we can exercise the event capture.
 const EMAIL_HANDLER_WORKER = dedent /* javascript */ `
 	export default {
 		fetch() {
 			return new Response("user worker");
 		},
 		async email(message) {
+			if (message.to.includes("reject@")) {
+				message.setReject("blocked sender");
+				return;
+			}
 			if (message.to.includes("forward@")) {
 				await message.forward("forwarded@example.com");
 			}
@@ -124,10 +129,10 @@ describe("Email API - Routing", () => {
 		);
 		expect(detail.result?.id).toBe(sentId);
 		expect(detail.result?.raw).toContain("Subject: Hello from the explorer");
-		expect(detail.result?.handlingPath[0]?.action).toBe("received");
+		expect(detail.result?.events[0]?.type).toBe("received");
 	});
 
-	test("records a forwarded handling path", async ({ expect }) => {
+	test("records a forwarded event", async ({ expect }) => {
 		const sendResponse = await mf.dispatchFetch(
 			`${BASE_URL}/email/routing/send`,
 			{
@@ -151,9 +156,55 @@ describe("Email API - Routing", () => {
 		);
 		const forwarded = list.result?.find((e) => e.to === "forward@example.com");
 		expect(forwarded).toBeDefined();
-		expect(forwarded?.handlingPath.map((action) => action.action)).toContain(
-			"forwarded"
+		expect(forwarded?.events.map((event) => event.type)).toContain("forward");
+		// The forward's full payload is available on the message, correlated by id.
+		expect(forwarded?.forwards).toEqual([
+			{
+				recipient: "forwarded@example.com",
+				headers: [],
+				messageId: expect.any(String),
+			},
+		]);
+	});
+
+	test("a rejected test email still succeeds and reports the reason", async ({
+		expect,
+	}) => {
+		const sendResponse = await mf.dispatchFetch(
+			`${BASE_URL}/email/routing/send`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["reject@example.com"],
+					subject: "Please reject me",
+					text: "body",
+				}),
+			}
 		);
+		// A handler that rejects the message is not a send failure: the message was
+		// delivered to the handler, which chose to reject it.
+		const sendData = await expectValidResponse(
+			sendResponse,
+			zEmailSendRoutingResponse,
+			expect
+		);
+		expect(sendData.result?.outcome).toBe("ok");
+		expect(sendData.result?.rejectReason).toBe("blocked sender");
+
+		const listResponse = await mf.dispatchFetch(`${BASE_URL}/email/routing`);
+		const list = await expectValidResponse(
+			listResponse,
+			zEmailListRoutingResponse,
+			expect
+		);
+		const rejected = list.result?.find((e) => e.to === "reject@example.com");
+		expect(rejected?.rejectReason).toBe("blocked sender");
+		expect(rejected?.events.map((event) => event.type)).toEqual([
+			"received",
+			"reject",
+		]);
 	});
 
 	test("returns 404 for an unknown email", async ({ expect }) => {
@@ -487,9 +538,8 @@ describe("Email API - Routing without an email() handler", () => {
 			zEmailGetRoutingResponse,
 			expect
 		);
-		expect(detailData.result?.handlingPath.map((a) => a.action)).toEqual([
-			"unhandled",
-		]);
+		expect(detailData.result?.events.map((e) => e.type)).toEqual(["unhandled"]);
+		expect(detailData.result?.outcome).toBe("exception");
 	});
 });
 
@@ -600,15 +650,16 @@ describe("Email API - Routing reply file correlation", () => {
 		expect(routed).toBeDefined();
 		expect(routed?.id).toBe(fileId);
 
-		// The inbox list omits the (potentially large) reply raw...
-		const listedReply = routed?.handlingPath.find(
-			(a) => a.action === "replied"
-		);
+		// The reply event is recorded, but the inbox list omits the (potentially
+		// large) reply raw...
+		expect(routed?.events.map((e) => e.type)).toContain("reply");
+		const listedReply = routed?.replies[0];
 		expect(listedReply).toBeDefined();
-		expect(listedReply?.details?.raw).toBeUndefined();
+		expect(listedReply?.sender).toBe("someone-else@example.com");
+		expect(listedReply?.raw).toBeUndefined();
 
 		// ...but the detail view exposes it, so the reply can be shown when the
-		// "Replied" handling-path step is clicked/expanded in the explorer.
+		// "Reply" event is clicked/expanded in the explorer.
 		const detailResponse = await mf.dispatchFetch(
 			`${BASE_URL}/email/routing/${routed?.id}`
 		);
@@ -617,17 +668,15 @@ describe("Email API - Routing reply file correlation", () => {
 			zEmailGetRoutingResponse,
 			expect
 		);
-		const detailReply = detail.result?.handlingPath.find(
-			(a) => a.action === "replied"
-		);
-		expect(detailReply?.details?.raw).toContain("This is a reply.");
+		const detailReply = detail.result?.replies[0];
+		expect(detailReply?.raw).toContain("This is a reply.");
 		// The reply's MIME encoded-word subject must be surfaced decoded, not raw.
-		expect(detailReply?.details?.raw).toContain(
+		expect(detailReply?.raw).toContain(
 			"Subject: An email generated in a Worker"
 		);
-		expect(detailReply?.details?.raw).not.toContain("=?utf-8?B?");
+		expect(detailReply?.raw).not.toContain("=?utf-8?B?");
 		// The reply's Message-ID is preserved from the worker's raw email.
-		expect(detailReply?.details?.raw).toContain(
+		expect(detailReply?.raw).toContain(
 			"Message-ID: <im-a-random-reply-message-id@example.com>"
 		);
 	});
