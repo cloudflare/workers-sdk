@@ -4,7 +4,7 @@
 
 Add support for dispatching email handlers with `createTestHarness`
 
-You can now call `server.getWorker().email({ from, to, raw })` to dispatch directly to a Worker's `email()` handler and inspect its outcome, rejection reason, forwarded messages, and replies.
+You can now call `server.getWorker().email({ from, to, raw })` to dispatch directly to a Worker's `email()` handler and inspect its outcome, rejection reason, forwarded messages, replies, and an ordered `events` lifecycle of everything the handler did to the message.
 
 ```ts
 const result = await server.getWorker().email({
@@ -29,5 +29,6 @@ expect(result).toMatchObject({
 			raw: expect.stringContaining("Thanks for your email"),
 		},
 	],
+	events: [{ type: "received" }, { type: "forward" }, { type: "reply" }],
 });
 ```
