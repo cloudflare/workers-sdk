@@ -233,7 +233,7 @@ function applyKeymap(
 		commands[key] = {
 			args,
 			confirm: false,
-			label: action,
+			label: `configured ${key} action`,
 			toggle: false,
 		};
 	}

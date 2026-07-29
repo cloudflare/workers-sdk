@@ -2,11 +2,14 @@ import { ChildProcess } from "node:child_process";
 import process from "node:process";
 import { describe, it, vi } from "vitest";
 import { CodexMicroCommandRunner } from "../../codex-micro/command-runner";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import type { CodexMicroCommandRunnerOptions } from "../../codex-micro/command-runner";
 
 type SpawnProcess = NonNullable<CodexMicroCommandRunnerOptions["spawnProcess"]>;
 
 describe("CodexMicroCommandRunner", () => {
+	const std = mockConsoleMethods();
+
 	it("starts the mapped Wrangler command without a shell", ({ expect }) => {
 		const child = createChild(41);
 		const spawnProcess = vi.fn<SpawnProcess>(() => child);
@@ -75,6 +78,8 @@ describe("CodexMicroCommandRunner", () => {
 			"--env",
 			"staging",
 		]);
+		expect(std.out).not.toContain("status = 500");
+		expect(std.out).not.toContain("--env staging");
 	});
 
 	it("runs configured rotary dial actions", ({ expect }) => {

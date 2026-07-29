@@ -185,7 +185,7 @@ export function createSystemdUnit(options: {
 		"--cwd",
 		options.projectPath,
 	]
-		.map(quoteSystemdValue)
+		.map(quoteSystemdExecArgument)
 		.join(" ");
 
 	return `[Unit]
@@ -429,6 +429,10 @@ function quoteSystemdValue(value: string): string {
 		.replaceAll("\\", "\\\\")
 		.replaceAll('"', '\\"')
 		.replaceAll("%", "%%")}"`;
+}
+
+function quoteSystemdExecArgument(value: string): string {
+	return quoteSystemdValue(value.replaceAll("$", () => "$$"));
 }
 
 function ignoreMissingFile(error: unknown): void {

@@ -103,12 +103,16 @@ function parseKeyNotification(line: string): CodexMicroKeyEvent | undefined {
 		return undefined;
 	}
 
-	let notification: JsonRpcNotification;
+	let parsed: unknown;
 	try {
-		notification = JSON.parse(trimmed) as JsonRpcNotification;
+		parsed = JSON.parse(trimmed);
 	} catch {
 		return undefined;
 	}
+	if (!isRecord(parsed)) {
+		return undefined;
+	}
+	const notification: JsonRpcNotification = parsed;
 
 	if ((notification.method ?? notification.m) !== "v.oai.hid") {
 		return undefined;
@@ -132,7 +136,7 @@ function parseKeyNotification(line: string): CodexMicroKeyEvent | undefined {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null;
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isCodexMicroKey(value: unknown): value is CodexMicroKey {

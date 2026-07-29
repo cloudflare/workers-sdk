@@ -137,13 +137,14 @@ describe("Codex Micro daemon installation", () => {
 				stdoutPath: "/tmp/output.log",
 			})
 		).toContain("/tmp/project&lt;one&gt;");
-		expect(
-			createSystemdUnit({
-				cliPath: '/tmp/wrangler"cli.js',
-				nodePath: "/tmp/node",
-				pathEnvironment: "/tmp/100%",
-				projectPath: "/tmp/project",
-			})
-		).toContain('/tmp/wrangler\\"cli.js');
+		const systemdUnit = createSystemdUnit({
+			cliPath: '/tmp/$WRANGLER/wrangler"cli.js',
+			nodePath: "/tmp/node",
+			pathEnvironment: "/tmp/$PATH/100%",
+			projectPath: "/tmp/$PROJECT",
+		});
+		expect(systemdUnit).toContain('/tmp/$$WRANGLER/wrangler\\"cli.js');
+		expect(systemdUnit).toContain('WorkingDirectory="/tmp/$PROJECT"');
+		expect(systemdUnit).toContain('Environment="PATH=/tmp/$PATH/100%%"');
 	});
 });

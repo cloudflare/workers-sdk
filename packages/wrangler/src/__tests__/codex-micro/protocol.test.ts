@@ -55,10 +55,12 @@ describe("CodexMicroProtocol", () => {
 		const unknownKeyReport = createReport(
 			Buffer.from('{"m":"v.oai.hid","p":{"k":"AG06"}}\n')
 		);
+		const primitiveReport = createReport(Buffer.from("null\n"));
 
 		expect(protocol.pushReport(debugReport)).toEqual([]);
 		expect(protocol.pushReport(Buffer.from([6, 2, 62]))).toEqual([]);
 		expect(protocol.pushReport(unknownKeyReport)).toEqual([]);
+		expect(protocol.pushReport(primitiveReport)).toEqual([]);
 	});
 });
 
