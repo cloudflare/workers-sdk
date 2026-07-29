@@ -81,6 +81,8 @@ Wrangler also honors [`DO_NOT_TRACK`](https://donottrack.sh/), a shared opt-out 
 export DO_NOT_TRACK=1
 ```
 
+Setting `WRANGLER_SEND_METRICS` takes precedence, so `WRANGLER_SEND_METRICS=true` re-enables Wrangler telemetry even when `DO_NOT_TRACK` is set.
+
 If you would like to re-enable telemetry globally, you can run:
 
 ```sh

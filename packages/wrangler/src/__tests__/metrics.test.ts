@@ -679,6 +679,34 @@ describe("metrics", () => {
 				});
 			});
 
+			it("should return enabled false if the DO_NOT_TRACK environment variable is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "1");
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
+					enabled: false,
+				});
+			});
+
+			it("should let the WRANGLER_SEND_METRICS environment variable override DO_NOT_TRACK", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "1");
+				vi.stubEnv("WRANGLER_SEND_METRICS", "true");
+				expect(await getMetricsConfig({})).toMatchObject({
+					enabled: true,
+				});
+			});
+
+			it("should ignore DO_NOT_TRACK if it is not set to an opt-out value", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "0");
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
+					enabled: true,
+				});
+			});
+
 			it("should return the sendMetrics argument for enabled if it is defined", async ({
 				expect,
 			}) => {

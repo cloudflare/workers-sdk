@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { setTimeout } from "node:timers/promises";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { CancelError } from "@cloudflare/cli-shared-helpers/error";
+import { isDoNotTrackEnabled } from "@cloudflare/workers-utils";
 import {
 	getDeviceId,
 	readMetricsConfig,
@@ -110,7 +111,10 @@ export function createReporter() {
 	}
 
 	function isTelemetryEnabled() {
-		if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DISABLED === "1" || process.env.DO_NOT_TRACK === "1") {
+		if (
+			process.env.CREATE_CLOUDFLARE_TELEMETRY_DISABLED === "1" ||
+			isDoNotTrackEnabled()
+		) {
 			return false;
 		}
 
