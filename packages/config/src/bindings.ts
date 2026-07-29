@@ -226,7 +226,7 @@ interface HyperdriveBindingOptions {
 	/** The ID of the Hyperdrive configuration. */
 	id: string;
 	/** Options that only apply during local development. */
-	dev?: {
+	dev?: BindingDevOptions & {
 		/** The database connection string used during local development. */
 		connectionString?: string;
 	};
