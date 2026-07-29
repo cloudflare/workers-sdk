@@ -222,8 +222,8 @@ interface HyperdriveBindingOptions {
 	/** The local database connection string used during local development. */
 	localConnectionString?: string;
 	/**
-	 * Whether local development connects to the deployed Hyperdrive
-	 * configuration instead of `localConnectionString`.
+	 * Connect to the deployed Hyperdrive configuration at the edge during local
+	 * development (via the remote-bindings proxy) instead of a local database.
 	 */
 	remote?: boolean;
 }

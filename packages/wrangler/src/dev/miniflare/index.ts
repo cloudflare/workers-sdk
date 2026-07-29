@@ -343,7 +343,54 @@ function pipelineEntry(
 		throw new Error("Pipeline must have either a stream");
 	}
 }
-function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
+function hyperdriveEntry(
+	hyperdrive: CfHyperdrive,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+):
+	| [string, string]
+	| [
+			string,
+			{
+				localConnectionString?: string;
+				remoteProxyConnectionString: RemoteProxyConnectionString;
+			},
+	  ] {
+	// Remote binding: tunnel the connection through the remote-bindings proxy to
+	// the edge Hyperdrive configuration. `localConnectionString` is still passed
+	// (seeded with the edge session's credentials, see
+	// `seedRemoteHyperdriveBindings`) so workerd can synthesise the binding's
+	// `connectionString`; miniflare uses `remoteProxyConnectionString` to stand
+	// up the local TCP bridge.
+	if (hyperdrive.remote && remoteProxyConnectionString) {
+		return [
+			hyperdrive.binding,
+			{
+				localConnectionString: hyperdrive.localConnectionString,
+				remoteProxyConnectionString,
+			},
+		];
+	}
+
+	// Opted into a remote binding, but no remote proxy session is available
+	// (not logged in, offline, or remote bindings turned off). There is nothing
+	// to tunnel to, so fall back to the local database if one was configured and
+	// otherwise explain how to get either half working — without this the empty
+	// connection string below fails miniflare's URL validation with an opaque
+	// error.
+	if (hyperdrive.remote) {
+		if (hyperdrive.localConnectionString === undefined) {
+			throw new UserError(
+				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no remote connection could be established, and it has no local database to fall back to. Please make sure you are authenticated (run \`wrangler login\`) and connected to the internet so that Wrangler can reach your Hyperdrive configuration, or set the value of the 'CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to a local Postgres connection string.`,
+				{
+					telemetryMessage: "no remote hyperdrive session or connection string",
+				}
+			);
+		}
+		logger.once.warn(
+			`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no remote connection could be established. Falling back to its "localConnectionString".`
+		);
+	}
+
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
 function workflowEntry({
@@ -866,7 +913,11 @@ export function buildMiniflareBindingOptions(
 				pipelineEntry(pipeline, remoteProxyConnectionString)
 			)
 		),
-		hyperdrives: Object.fromEntries(hyperdrives.map(hyperdriveEntry)),
+		hyperdrives: Object.fromEntries(
+			hyperdrives.map((hyperdrive) =>
+				hyperdriveEntry(hyperdrive, remoteProxyConnectionString)
+			)
+		),
 		analyticsEngineDatasets: Object.fromEntries(
 			analyticsEngineDatasets.map((binding) => [
 				binding.binding,

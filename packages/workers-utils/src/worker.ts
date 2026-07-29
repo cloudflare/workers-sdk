@@ -305,6 +305,12 @@ export interface CfHyperdrive {
 	binding: string;
 	id: string;
 	localConnectionString?: string;
+	/**
+	 * Opt the binding into remote mode: instead of connecting to a local
+	 * database, `wrangler dev` tunnels the binding's connection through the
+	 * remote-bindings proxy to the deployed Hyperdrive configuration at the edge.
+	 */
+	remote?: boolean;
 }
 
 export interface CfDevPluginCfg {
