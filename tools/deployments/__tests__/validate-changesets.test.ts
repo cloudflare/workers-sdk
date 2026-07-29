@@ -202,7 +202,7 @@ describe("validateChangesets()", () => {
 					"miniflare",
 					{
 						name: "miniflare",
-						"workers-sdk": { npmPrereleaseVersion: "5.0.0-alpha" },
+						"workers-sdk": { npmPrereleaseIdentifier: "alpha" },
 					},
 				],
 				["package-b", { name: "package-b" }],

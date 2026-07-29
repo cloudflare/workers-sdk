@@ -22,20 +22,39 @@ function parseVersion(version) {
 	return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
 }
 
-function getNextPrereleaseVersion(
-	currentVersion,
-	changesetsVersion,
-	prereleaseVersion
+function getNextMiniflarePrereleaseVersion(
+	workerdVersion,
+	previousVersion,
+	version,
+	prereleaseIdentifier
 ) {
-	if (currentVersion === changesetsVersion) return changesetsVersion;
-	const prefix = `${prereleaseVersion}.`;
-	if (!currentVersion.startsWith(prefix)) return `${prefix}0`;
+	let nextVersion = getNextMiniflareVersion(
+		workerdVersion,
+		previousVersion,
+		version
+	);
+	const [previousMajor, previousMinor, previousPatch] =
+		parseVersion(previousVersion);
+	if (!previousVersion.includes("-")) {
+		if (previousVersion === version) return nextVersion;
+		const [major] = parseVersion(version);
+		assert(
+			major > previousMajor,
+			"Starting a prerelease requires a major bump"
+		);
+	} else if (previousVersion !== version) {
+		// All changeset types advance an active prerelease by one patch.
+		nextVersion = getNextMiniflareVersion(
+			workerdVersion,
+			previousVersion,
+			`${previousMajor}.${previousMinor}.${previousPatch + 1}`
+		);
+	}
 
-	const number = currentVersion.slice(prefix.length);
-	assert(/^\d+$/.test(number));
-	return `${prefix}${Number(number) + 1}`;
+	const [major, minor, patch] = parseVersion(nextVersion);
+	return `${major}.${minor}.${patch}-${prereleaseIdentifier}`;
 }
-exports.getNextPrereleaseVersion = getNextPrereleaseVersion;
+exports.getNextMiniflarePrereleaseVersion = getNextMiniflarePrereleaseVersion;
 
 const rootPath = path.resolve(__dirname, "..");
 const miniflarePath = path.join(rootPath, "packages/miniflare");
@@ -84,12 +103,12 @@ function main() {
 	//    minor version was bumped
 	const previousMiniflarePkg = getPkg(miniflarePkgPath);
 	const previousMiniflareVersion = previousMiniflarePkg.version;
-	const prereleaseVersion =
-		previousMiniflarePkg["workers-sdk"]?.npmPrereleaseVersion;
-	if (prereleaseVersion !== undefined) {
+	const prereleaseIdentifier =
+		previousMiniflarePkg["workers-sdk"]?.npmPrereleaseIdentifier;
+	if (prereleaseIdentifier !== undefined) {
 		assert(
-			/^\d+\.\d+\.\d+-[0-9A-Za-z-]+$/.test(prereleaseVersion),
-			"Invalid Miniflare npmPrereleaseVersion"
+			/^[A-Za-z][0-9A-Za-z-]*$/.test(prereleaseIdentifier),
+			"Invalid Miniflare npmPrereleaseIdentifier"
 		);
 	}
 
@@ -103,18 +122,19 @@ function main() {
 	const miniflarePkg = getPkg(miniflarePkgPath);
 	const miniflareVersion = miniflarePkg.version;
 	const workerdVersion = getWorkerdVersion();
-	let nextMiniflareVersion = getNextMiniflareVersion(
-		workerdVersion,
-		previousMiniflareVersion,
-		miniflareVersion
-	);
-	if (prereleaseVersion !== undefined) {
-		nextMiniflareVersion = getNextPrereleaseVersion(
-			previousMiniflareVersion,
-			miniflareVersion,
-			prereleaseVersion
-		);
-	}
+	const nextMiniflareVersion =
+		prereleaseIdentifier === undefined
+			? getNextMiniflareVersion(
+					workerdVersion,
+					previousMiniflareVersion,
+					miniflareVersion
+				)
+			: getNextMiniflarePrereleaseVersion(
+					workerdVersion,
+					previousMiniflareVersion,
+					miniflareVersion,
+					prereleaseIdentifier
+				);
 
 	if (nextMiniflareVersion !== miniflareVersion) {
 		// If `changeset version` didn't produce the correct version on its own...
