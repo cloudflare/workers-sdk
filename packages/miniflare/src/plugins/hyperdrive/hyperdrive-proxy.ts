@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import net from "node:net";
 import tls from "node:tls";
+import WebSocket from "ws";
 import type { Log } from "../../shared";
 
 export interface HyperdriveProxyConfig {
@@ -223,6 +224,125 @@ export class HyperdriveProxyController {
 		// Pipe plain tcp sockets
 		clientSocket.pipe(dbSocket);
 		dbSocket.pipe(clientSocket);
+	}
+
+	/**
+	 * Creates a local TCP bridge for a *remote* Hyperdrive binding.
+	 *
+	 * The bridge is a plain `net.Server` on `127.0.0.1:<port>`; the binding's
+	 * `external.tcp` designator points at it, so workerd stays unmodified —
+	 * pointing a Hyperdrive designator at a Worker service crashes workerd
+	 * (SIGSEGV). Each inbound TCP connection is relayed, byte-for-byte, over a
+	 * WebSocket to the remote proxy's `connect` handler (which calls
+	 * `env[binding].connect()` at the edge and pipes the Hyperdrive proxy socket
+	 * back). Mirrors the raw-TCP relay in ProxyServerWorker's `handleConnect`,
+	 * but runs in the Miniflare Node process instead of inside workerd.
+	 *
+	 * @returns the local bridge port the designator should target.
+	 */
+	async createRemoteTcpBridge(config: {
+		// Hyperdrive binding name (used for the server key and the `MF-Binding`
+		// header the edge relay dispatches on).
+		name: string;
+		// The remote proxy connection string (a local URL that upgrades to a
+		// WebSocket relaying to the edge Hyperdrive binding).
+		remoteProxyConnectionString: URL;
+	}): Promise<number> {
+		const { name, remoteProxyConnectionString } = config;
+		const wsUrl = new URL(remoteProxyConnectionString.href);
+		wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+		const wsHref = wsUrl.href;
+
+		const server = net.createServer((clientSocket) => {
+			this.#handleRemoteBridgeConnection(clientSocket, wsHref, name);
+		});
+		server.on("error", (err) => {
+			this.log?.error(
+				new Error(
+					`Hyperdrive remote bridge error for binding "${name}": ${err.message}`
+				)
+			);
+		});
+		const port = await new Promise<number>((resolve, reject) => {
+			server.once("error", reject);
+			server.listen(0, "127.0.0.1", () => {
+				server.off("error", reject);
+				const address = server.address() as net.AddressInfo;
+				if (address && typeof address !== "string") {
+					resolve(address.port);
+				} else {
+					reject(new Error("Invalid port"));
+				}
+			});
+		});
+		this.#servers.set(`remote:${name}`, server);
+		return port;
+	}
+
+	/**
+	 * Relays one bridged TCP connection to the edge over a WebSocket. The socket
+	 * is paused until the WebSocket opens so no client bytes (the MySQL/Postgres
+	 * handshake) are dropped; both directions are torn down together on any
+	 * close/error.
+	 */
+	#handleRemoteBridgeConnection(
+		clientSocket: net.Socket,
+		wsHref: string,
+		bindingName: string
+	): void {
+		clientSocket.pause();
+		const ws = new WebSocket(wsHref, {
+			headers: {
+				"MF-Binding": bindingName,
+				// Hyperdrive's edge `connect()` ignores the address, but the raw-TCP
+				// relay path requires the header to be present.
+				"MF-Connect-Address": "hyperdrive.local:0",
+				...(process.env.CF_TRACE_ID
+					? { "cf-trace-id": process.env.CF_TRACE_ID }
+					: {}),
+			},
+		});
+
+		let closed = false;
+		const teardown = () => {
+			if (closed) {
+				return;
+			}
+			closed = true;
+			try {
+				clientSocket.destroy();
+			} catch {
+				// ignore
+			}
+			try {
+				ws.close();
+			} catch {
+				// ignore
+			}
+		};
+
+		ws.on("open", () => {
+			clientSocket.on("data", (chunk: Buffer) => {
+				try {
+					ws.send(chunk);
+				} catch {
+					teardown();
+				}
+			});
+			clientSocket.resume();
+		});
+		ws.on("message", (data: WebSocket.RawData) => {
+			const buf = Array.isArray(data)
+				? Buffer.concat(data)
+				: Buffer.isBuffer(data)
+					? data
+					: Buffer.from(data as ArrayBuffer);
+			clientSocket.write(buf);
+		});
+		ws.on("close", teardown);
+		ws.on("error", teardown);
+		clientSocket.on("close", teardown);
+		clientSocket.on("error", teardown);
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
