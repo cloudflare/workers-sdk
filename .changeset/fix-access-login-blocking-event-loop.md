@@ -1,5 +1,6 @@
 ---
 "@cloudflare/workers-auth": patch
+"wrangler": patch
 ---
 
 Fix ctrl+c not being able to interrupt wrangler while waiting for Cloudflare Access authorization
