@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { z } from "zod";
 import { ProxyNodeBinding } from "../shared";
 import type { Worker_Binding } from "../../runtime";
-import type { Plugin } from "../shared";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
@@ -71,8 +71,50 @@ export const HyperdriveSchema = z
 		return url;
 	});
 
+// A Hyperdrive entry is either the legacy plain connection string (local dev),
+// or an object that additionally carries a `remoteProxyConnectionString`, opting
+// the binding into remote-bindings mode: `connect()` traffic is tunnelled through
+// the shared remote-proxy-client service to the edge Hyperdrive binding.
+const HyperdriveEntrySchema = z.union([
+	HyperdriveSchema,
+	z.object({
+		localConnectionString: HyperdriveSchema.optional(),
+		remoteProxyConnectionString: z
+			.custom<RemoteProxyConnectionString>()
+			.optional(),
+	}),
+]);
+
+// Placeholder connection string used to synthesise the local Hyperdrive binding
+// when a remote binding has no local connection string. workerd still needs a
+// scheme/database/user/password to build the magic `connectionString` it exposes
+// to the Worker; the real origin lives at the edge. In normal `wrangler dev`
+// usage the caller seeds `localConnectionString` with the edge session's
+// credentials before this runs (so a database client authenticates through the
+// proxy), and this placeholder is only reached when no seeding has occurred.
+const REMOTE_PLACEHOLDER_URL = new URL(
+	"mysql://user:password@hyperdrive.local:3306/database"
+);
+
+type NormalizedHyperdrive = {
+	url: URL;
+	remoteProxyConnectionString?: RemoteProxyConnectionString;
+};
+
+function normalizeHyperdriveEntry(
+	value: z.infer<typeof HyperdriveEntrySchema>
+): NormalizedHyperdrive {
+	if (value instanceof URL) {
+		return { url: value };
+	}
+	return {
+		url: value.localConnectionString ?? REMOTE_PLACEHOLDER_URL,
+		remoteProxyConnectionString: value.remoteProxyConnectionString,
+	};
+}
+
 export const HyperdriveInputOptionsSchema = z.object({
-	hyperdrives: z.record(z.string(), HyperdriveSchema).optional(),
+	hyperdrives: z.record(z.string(), HyperdriveEntrySchema).optional(),
 });
 
 export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
@@ -80,15 +122,20 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	bindingTypeDescription: "Hyperdrive",
 	getBindings(options) {
 		return Object.entries(options.hyperdrives ?? {}).map<Worker_Binding>(
-			([name, url]) => {
+			([name, entry]) => {
+				const { url } = normalizeHyperdriveEntry(entry);
 				const database = url.pathname.replace("/", "");
 				const scheme = url.protocol.replace(":", "");
+				// Both local and remote bindings use the per-binding
+				// `hyperdrive:<name>` external.tcp designator. For remote bindings
+				// that service points at the local TCP bridge (see `getServices`),
+				// which relays to the edge. workerd is unmodified either way —
+				// pointing a Hyperdrive designator at a Worker service SIGSEGVs.
+				const designator = { name: `${HYPERDRIVE_PLUGIN_NAME}:${name}` };
 				return {
 					name,
 					hyperdrive: {
-						designator: {
-							name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
-						},
+						designator,
 						database: decodeURIComponent(database),
 						user: decodeURIComponent(url.username),
 						password: decodeURIComponent(url.password),
@@ -100,7 +147,8 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.entries(options.hyperdrives ?? {}).map(([name, url]) => {
+			Object.entries(options.hyperdrives ?? {}).map(([name, entry]) => {
+				const { url } = normalizeHyperdriveEntry(entry);
 				const connectionOverrides: Record<string | symbol, string | number> = {
 					connectionString: `${url}`,
 					port: Number.parseInt(url.port),
@@ -119,7 +167,30 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	},
 	async getServices({ options, hyperdriveProxyController }) {
 		const services = [];
-		for (const [name, url] of Object.entries(options.hyperdrives ?? {})) {
+		for (const [name, entry] of Object.entries(options.hyperdrives ?? {})) {
+			const { url, remoteProxyConnectionString } =
+				normalizeHyperdriveEntry(entry);
+
+			// Remote bindings: stand up a local TCP bridge that relays `connect()`
+			// bytes to the edge Hyperdrive binding over a WebSocket, and point the
+			// `hyperdrive:<name>` external.tcp designator at it. This keeps workerd
+			// unmodified (the Worker-service designator path SIGSEGVs).
+			if (remoteProxyConnectionString) {
+				const bridgePort =
+					await hyperdriveProxyController.createRemoteTcpBridge({
+						name,
+						remoteProxyConnectionString,
+					});
+				services.push({
+					name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
+					external: {
+						address: `127.0.0.1:${bridgePort}`,
+						tcp: {},
+					},
+				});
+				continue;
+			}
+
 			const scheme = url.protocol.replace(":", "");
 			const sslmode = parseSslMode(url, scheme);
 			const targetPort = getPort(url);
