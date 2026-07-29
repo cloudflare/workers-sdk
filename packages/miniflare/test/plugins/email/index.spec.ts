@@ -10,6 +10,7 @@ import {
 } from "miniflare";
 import dedent from "ts-dedent";
 import { describe, type ExpectStatic, test, vi } from "vitest";
+import { CorePaths } from "../../../src/workers/core/constants";
 import { TestLog, useDispose, useTmp } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent /* javascript */ `
@@ -1321,7 +1322,7 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 				.replace(/\x1b\[[0-9;]*m/g, "")
 				// Replace dynamic file paths with placeholders (Unix and Windows)
 				.replace(
-					/(?:[A-Z]:\\|\/)[^\s]*[/\\](email-text|email-html|email-attachment)[/\\][a-f0-9-]+\.(txt|html|png|pdf)/g,
+					/(?:[A-Z]:\\|\/)[^\s]*[/\\](email-text|email-html|email-attachment)[/\\]\S+?\.(txt|html|png|pdf)/g,
 					"/$1/[FILE].$2"
 				);
 
@@ -1344,6 +1345,157 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 		},
 		{ timeout: 5_000, interval: 100 }
 	);
+});
+
+/**
+ * Reads the file paths out of the `send_email` binding's MessageBuilder log,
+ * keyed by the label the binding logs them under.
+ */
+async function readLoggedFilePaths(
+	log: TestLog,
+	expect: ExpectStatic
+): Promise<{ text?: string; html?: string; attachments: string[] }> {
+	let message = "";
+	await vi.waitFor(
+		() => {
+			const entry = log.logs.find(
+				([type, logMessage]) =>
+					type === LogLevel.INFO &&
+					logMessage.includes("send_email binding called with MessageBuilder:")
+			);
+			if (!entry) {
+				throw new Error("send_email binding log not found");
+			}
+			message = entry[1];
+			// The paths are logged in a deferred task, so wait until they appear.
+			expect(message).toContain("Text: ");
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
+
+	return {
+		text: message.match(/^Text: (.+)$/m)?.[1],
+		html: message.match(/^HTML: (.+)$/m)?.[1],
+		attachments: Array.from(
+			message.matchAll(/^Attachment \([^)]+\): \S+ -> (.+)$/gm),
+			(match) => match[1]
+		),
+	};
+}
+
+// Regression test: the local explorer keys a sent email by its Message-ID, and
+// the files written to disk must be named after that same id so a message
+// listed in the explorer can be found on disk.
+test("MessageBuilder file names match the id the local explorer lists", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		modules: true,
+		script: MESSAGE_BUILDER_WORKER,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		unsafeLocalExplorer: true,
+		inspectorPort: 0,
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: "recipient@example.com",
+			subject: "Correlated files",
+			text: "text body",
+			html: "<p>html body</p>",
+			attachments: [
+				{
+					disposition: "attachment",
+					filename: "report.pdf",
+					type: "application/pdf",
+					content: "JVBERi0xLjc=",
+				},
+				{
+					disposition: "inline",
+					filename: "logo.png",
+					type: "image/png",
+					content: "iVBORw0KGgo=",
+				},
+			],
+		}),
+	});
+	expect(await res.text()).toBe("ok");
+
+	const listResponse = await mf.dispatchFetch(
+		`http://localhost${CorePaths.EXPLORER}/api/email/sending`
+	);
+	const { result } = (await listResponse.json()) as {
+		result: { id: string }[];
+	};
+	const id = result[0]?.id;
+	expect(id).toBeDefined();
+
+	const files = await readLoggedFilePaths(log, expect);
+	expect(path.basename(String(files.text))).toBe(`${id}.txt`);
+	expect(path.basename(String(files.html))).toBe(`${id}.html`);
+	// Several attachments would collide on a single id, so each is suffixed with
+	// its position in the message.
+	expect(files.attachments.map((file) => path.basename(file))).toEqual([
+		`${id}-1.pdf`,
+		`${id}-2.png`,
+	]);
+});
+
+// The id is derived from a Message-ID header that Worker code controls, so it
+// must not be able to escape the temp directory it names a file in.
+test("MessageBuilder file names sanitise a path-traversing Message-ID", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		modules: true,
+		script: MESSAGE_BUILDER_WORKER,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		defaultProjectTmpPath: projectTmpPath,
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: "recipient@example.com",
+			subject: "Traversal",
+			text: "text body",
+			headers: { "Message-ID": "<../../../../escaped@example.com>" },
+		}),
+	});
+	expect(await res.text()).toBe("ok");
+
+	const files = await readLoggedFilePaths(log, expect);
+	const textPath = String(files.text);
+	// Each `.` and `/` of the traversal is replaced, so the id stays a single
+	// path segment inside the directory it names a file in.
+	expect(path.basename(textPath)).toBe("____________escaped@example.com.txt");
+	expect(path.basename(path.dirname(textPath))).toBe("email-text");
+	expect(textPath.startsWith(projectTmpPath)).toBe(true);
+	expect(await readFile(textPath, "utf-8")).toBe("text body");
 });
 
 test("MessageBuilder with inline attachment", async ({ expect }) => {

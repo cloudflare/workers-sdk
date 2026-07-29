@@ -113,6 +113,7 @@ import {
 	decodeErrorPayload,
 	LogLevel,
 	Mutex,
+	sanitisePath,
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
@@ -1290,7 +1291,10 @@ export class Miniflare {
 		const prefix = url.searchParams.get("prefix");
 
 		if (url.searchParams.get("email") === "true") {
-			const id = url.searchParams.get("id") ?? crypto.randomUUID();
+			// `id` is derived from a Message-ID, which Worker code controls, so it
+			// must be sanitised before being used as a path segment.
+			const rawId = url.searchParams.get("id");
+			const id = rawId === null ? crypto.randomUUID() : sanitisePath(rawId);
 			const filePath = await writeEmailTempFile({
 				defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
 				tmpPath: this.#tmpPath,

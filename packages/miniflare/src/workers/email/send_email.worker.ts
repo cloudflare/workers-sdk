@@ -31,12 +31,8 @@ function synthesizeMessageId(senderEmail: string): string {
 
 /**
  * Strips the enclosing angle brackets from a Message-ID (`<id@domain>` becomes
- * `id@domain`).
- *
- * TODO(someday): once Miniflare v5 generates message ids via mimetext, unify
- * the local explorer id and the on-disk storage filename on that single
- * mimetext-generated Message-ID (they currently diverge: the explorer keys off
- * the Message-ID while system storage uses a random UUID).
+ * `id@domain`), giving the id used for the local explorer record and the
+ * on-disk filenames.
  */
 function stripAngleBrackets(messageId: string): string {
 	return messageId.replace(/^<|>$/g, "");
@@ -159,12 +155,16 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	 *
 	 * Always requests the endpoint's email mode so the file lands in the email
 	 * directories and is mirrored into the project directory.
+	 *
+	 * `id` names the file, and is always derived from the message's id so every
+	 * file belonging to a message can be found from the id the local explorer
+	 * shows.
 	 */
 	private async storeTempFile(
 		content: string | ArrayBuffer | ArrayBufferView,
 		extension: string,
 		prefix: string,
-		id?: string
+		id: string
 	): Promise<string> {
 		let body: string | Uint8Array;
 		if (typeof content === "string") {
@@ -180,10 +180,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			);
 		}
 
-		const params = new URLSearchParams({ prefix, extension, email: "true" });
-		if (id !== undefined) {
-			params.set("id", id);
-		}
+		const params = new URLSearchParams({
+			prefix,
+			extension,
+			email: "true",
+			id,
+		});
 
 		const resp = await this.env.MINIFLARE_LOOPBACK.fetch(
 			`http://localhost/core/store-temp-file?${params.toString()}`,
@@ -330,7 +332,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					const filePath = await this.storeTempFile(
 						rawEmailBuffer,
 						"eml",
-						"email"
+						"email",
+						id
 					);
 					await this.log(
 						`${blue("send_email binding called with the following message:")}\nEmail: ${filePath}`
@@ -348,8 +351,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.validateMessageBuilder(builder);
 
 			// Use the Message-ID the caller supplied (mimetext sets one) if present,
-			// otherwise synthesize one as production would. This keys the local
-			// explorer record; on-disk files use random UUIDs (see `storeTempFile`).
+			// otherwise synthesize one as production would. This keys both the local
+			// explorer record and the on-disk filenames.
 			const messageId =
 				getHeader(builder.headers, "Message-ID") ??
 				synthesizeMessageId(extractEmailAddress(builder.from));
@@ -395,7 +398,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						const textPath = await this.storeTempFile(
 							builder.text,
 							"txt",
-							"email-text"
+							"email-text",
+							id
 						);
 						files.push(`Text: ${textPath}`);
 					}
@@ -404,23 +408,26 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						const htmlPath = await this.storeTempFile(
 							builder.html,
 							"html",
-							"email-html"
+							"email-html",
+							id
 						);
 						files.push(`HTML: ${htmlPath}`);
 					}
 
 					if (builder.attachments) {
-						for (const attachment of builder.attachments) {
+						for (const [index, attachment] of builder.attachments.entries()) {
 							// Extract file extension from filename or use generic extension
 							const extMatch = attachment.filename.match(/\.([^.]+)$/);
 							const extension = extMatch ? extMatch[1] : "bin";
-							const attachmentUUID = crypto.randomUUID();
 
 							const attachmentPath = await this.storeTempFile(
 								attachment.content,
 								extension,
 								"email-attachment",
-								attachmentUUID
+								// A message can carry several attachments, so suffix the
+								// message id with the attachment's position to keep the
+								// filenames unique while still grouping them by message.
+								`${id}-${index + 1}`
 							);
 							files.push(
 								`Attachment (${attachment.disposition}): ${attachment.filename} -> ${attachmentPath}`
