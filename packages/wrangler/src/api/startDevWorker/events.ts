@@ -34,10 +34,34 @@ export function castErrorCause(cause: unknown) {
 		return cause;
 	}
 
+	// Errors that cross a JSON channel (e.g. the ProxyWorker's error reports)
+	// arrive as SerializedError plain objects — rehydrate them so their
+	// message/name/stack are surfaced instead of an empty `new Error()`.
+	if (isSerializedError(cause)) {
+		const error = new Error(cause.message);
+		if (cause.name !== undefined) {
+			error.name = cause.name;
+		}
+		if (cause.stack !== undefined) {
+			error.stack = cause.stack;
+		}
+		error.cause = cause.cause;
+		return error;
+	}
+
 	const error = new Error();
 	error.cause = cause;
 
 	return error;
+}
+
+function isSerializedError(value: unknown): value is SerializedError {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"message" in value &&
+		typeof value.message === "string"
+	);
 }
 
 // ConfigController
