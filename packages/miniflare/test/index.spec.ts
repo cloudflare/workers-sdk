@@ -271,11 +271,14 @@ test("Miniflare: loopback server keeps idle keep-alive connections open", async 
 	const mf = new Miniflare({
 		port: 0,
 		liveReload: true,
-		script: `addEventListener("fetch", (event) => {
-			event.respondWith(new Response("<p>👋</p>", {
-				headers: { "Content-Type": "text/html;charset=utf-8" }
-			}));
-		})`,
+		modules: true,
+		script: `export default {
+			fetch() {
+				return new Response("<p>👋</p>", {
+					headers: { "Content-Type": "text/html;charset=utf-8" }
+				});
+			}
+		}`,
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
