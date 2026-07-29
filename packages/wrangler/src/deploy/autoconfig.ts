@@ -193,12 +193,20 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 
 	// Prompt for name when missing from both CLI args and config
 	if (!args.name && !config.name) {
-		const projectName = getWorkerNameFromProject(process.cwd());
-		args.name = options.useProjectName
-			? projectName
-			: await prompt("What do you want to name your project?", {
-					defaultValue: projectName,
-				});
+		if (options.useProjectName) {
+			args.name = getWorkerNameFromProject(process.cwd());
+		} else {
+			const defaultName = process
+				.cwd()
+				.split(path.sep)
+				.pop()
+				?.replaceAll("_", "-")
+				.trim();
+			const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
+			args.name = await prompt("What do you want to name your project?", {
+				defaultValue: isValidName ? defaultName : "my-project",
+			});
+		}
 		logger.log("");
 		promptedForMissing = true;
 	}
