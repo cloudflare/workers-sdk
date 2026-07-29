@@ -16,6 +16,17 @@ type GetWorkersDevSubdomainOptions = {
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
 };
 
+function toValidSubdomain(input: string): string {
+	const subdomain = input
+		.toLowerCase()
+		.replace(/[^a-z0-9-]+/g, "-")
+		.replace(/^-+/, "")
+		.slice(0, 63)
+		.replace(/-+$/, "");
+
+	return subdomain || "my-worker";
+}
+
 /**
  * Gets the <user-subdomain>.(fed.)workers.dev URL for the given account.
  */
@@ -131,7 +142,9 @@ async function registerSubdomain(
 	automaticSubdomain?: string
 ): Promise<string> {
 	let subdomain: string | undefined;
-	let suggestedSubdomain = automaticSubdomain;
+	let suggestedSubdomain = automaticSubdomain
+		? toValidSubdomain(automaticSubdomain)
+		: undefined;
 
 	while (subdomain === undefined) {
 		const potentialName =
@@ -142,14 +155,6 @@ async function registerSubdomain(
 		suggestedSubdomain = undefined;
 
 		if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(potentialName)) {
-			if (automaticSubdomain) {
-				throw new UserError(
-					`Wrangler could not automatically register "${potentialName}" as your \`workers.dev\` subdomain because the name is invalid. Register a different subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
-					{
-						telemetryMessage: "workers dev automatic registration invalid name",
-					}
-				);
-			}
 			logger.warn(
 				`${potentialName} is invalid, please choose another subdomain.`
 			);

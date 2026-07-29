@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Avoid Worker and workers.dev naming prompts in agent-driven deploys
