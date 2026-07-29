@@ -305,8 +305,11 @@ export class LocalRuntimeController extends RuntimeController {
 			if (data.config.dev?.remote !== false) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
-				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
-					await import("../remoteBindings");
+				const {
+					maybeStartOrUpdateRemoteProxySession,
+					pickRemoteBindings,
+					seedRemoteHyperdriveBindings,
+				} = await import("../remoteBindings");
 
 				const remoteBindings = pickRemoteBindings(configBundle.bindings ?? {});
 
@@ -323,6 +326,15 @@ export class LocalRuntimeController extends RuntimeController {
 								undefined
 							: data.config.dev.auth
 					);
+
+				// Remote Hyperdrive bindings need the edge session's connection
+				// string seeded into their local config before miniflare options are
+				// built (that step is synchronous). No-op unless a remote proxy
+				// session is running and there are remote Hyperdrive bindings.
+				await seedRemoteHyperdriveBindings(
+					configBundle.bindings ?? undefined,
+					this.#remoteProxySessionData?.session?.remoteProxyConnectionString
+				);
 			}
 
 			// Bail out if a newer bundle arrived while we were setting up
