@@ -259,6 +259,33 @@ describe("createReporter", () => {
 		expect(sendEvent).toHaveBeenCalledTimes(0);
 	});
 
+	test("sends no event if the DO_NOT_TRACK env is set to '1'", async ({
+		expect,
+	}) => {
+		vi.stubEnv("DO_NOT_TRACK", "1");
+
+		const deferred = promiseWithResolvers<string>();
+		const reporter = createReporter();
+		const operation = reporter.collectAsyncMetrics({
+			eventPrefix: "c3 session",
+			props: {
+				args: {
+					projectName: "app",
+				},
+			},
+			promise: () => deferred.promise,
+		});
+
+		expect(reporter.isEnabled).toBe(false);
+
+		expect(sendEvent).toHaveBeenCalledTimes(0);
+
+		deferred.resolve("test result");
+
+		await expect(operation).resolves.toBe("test result");
+		expect(sendEvent).toHaveBeenCalledTimes(0);
+	});
+
 	test("sends started and cancelled event to sparrow if the promise reject with a CancelError", async ({
 		expect,
 	}) => {

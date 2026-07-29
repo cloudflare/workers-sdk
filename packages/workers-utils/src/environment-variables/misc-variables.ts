@@ -37,16 +37,34 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => "create cloudflare",
 });
 
+const getDoNotTrackFromEnv = getEnvironmentVariableFactory({
+	variableName: "DO_NOT_TRACK",
+});
+
 /**
- * `WRANGLER_SEND_METRICS` and `DO_NOT_TRACK` can override whether we attempt to send
- * metrics information to Sparrow.
+ * `DO_NOT_TRACK` is a shared telemetry opt-out convention: https://donottrack.sh/
  */
-export const getWranglerSendMetricsFromEnv =
+export function isDoNotTrackEnabled(): boolean {
+	const value = getDoNotTrackFromEnv()?.toLowerCase();
+	return value === "1" || value === "true";
+}
+
+const getWranglerSendMetricsVariableFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "WRANGLER_SEND_METRICS",
-	}) || getBooleanEnvironmentVariableFactory({
-		variableName: "DO_NOT_TRACK",
 	});
+
+/**
+ * `WRANGLER_SEND_METRICS` can override whether we attempt to send metrics information to Sparrow.
+ *
+ * When it is unset, `DO_NOT_TRACK` opts out of sending metrics.
+ */
+export function getWranglerSendMetricsFromEnv(): boolean | undefined {
+	return (
+		getWranglerSendMetricsVariableFromEnv() ??
+		(isDoNotTrackEnabled() ? false : undefined)
+	);
+}
 
 /**
  * `WRANGLER_SEND_ERROR_REPORTS` controls whether we attempt to send error reports to Sentry.
