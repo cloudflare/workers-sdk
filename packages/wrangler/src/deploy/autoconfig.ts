@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
+	getWorkerNameFromProject,
 	getTodaysCompatDate,
 	UserError,
 	type Config,
@@ -180,9 +181,11 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
  */
 export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 	args: Args,
-	config: { configPath?: string; compatibility_date?: string; name?: string }
+	config: { configPath?: string; compatibility_date?: string; name?: string },
+	options: { useProjectName?: boolean } = {}
 ): Promise<Args> {
-	if (isNonInteractiveOrCI()) {
+	const nonInteractiveOrCI = isNonInteractiveOrCI();
+	if (nonInteractiveOrCI && !options.useProjectName) {
 		return args;
 	}
 
@@ -190,19 +193,18 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 
 	// Prompt for name when missing from both CLI args and config
 	if (!args.name && !config.name) {
-		const defaultName = process
-			.cwd()
-			.split(path.sep)
-			.pop()
-			?.replaceAll("_", "-")
-			.trim();
-		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
-		const projectName = await prompt("What do you want to name your project?", {
-			defaultValue: isValidName ? defaultName : "my-project",
-		});
-		args.name = projectName;
+		const projectName = getWorkerNameFromProject(process.cwd());
+		args.name = options.useProjectName
+			? projectName
+			: await prompt("What do you want to name your project?", {
+					defaultValue: projectName,
+				});
 		logger.log("");
 		promptedForMissing = true;
+	}
+
+	if (nonInteractiveOrCI) {
+		return args;
 	}
 
 	// Prompt for compatibility date when missing

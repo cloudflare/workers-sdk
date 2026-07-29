@@ -330,6 +330,7 @@ export async function preUploadApiChecks(
 	//     such deploys still get a correctly-worded prompt in the triggers phase).
 	if (!workerExists && wantsWorkersDev) {
 		await getWorkersDevSubdomain(config, accountId, {
+			autoRegisterSubdomain: props.autoRegisterWorkersDevSubdomain,
 			configPath: config.configPath,
 		});
 	}
