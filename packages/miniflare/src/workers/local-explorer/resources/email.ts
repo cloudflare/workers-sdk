@@ -1,6 +1,11 @@
 import { getPublicUrl } from "miniflare:shared";
 import { decodeWords } from "postal-mime";
 import { CoreBindings, CorePaths } from "../../core";
+import {
+	getHeader,
+	messageIdToStorageId,
+	synthesizeMessageId,
+} from "../../email/message-id";
 import { errorResponse, wrapResponse } from "../common";
 import type { EmailHandlerResult } from "../../email/result";
 import type { EmailStoreService } from "../../email/storage";
@@ -44,8 +49,13 @@ function buildMimeMessage(body: EmailSendRequest, messageId: string): string {
 	headers.push(`Date: ${new Date().toUTCString()}`);
 	headers.push("MIME-Version: 1.0");
 
-	// Custom headers last so they can override defaults if intentionally set.
+	// Custom headers last so they can override defaults if intentionally set. A
+	// caller-supplied Message-ID is skipped because it is already emitted above,
+	// as `messageId`.
 	for (const [key, value] of Object.entries(body.headers ?? {})) {
+		if (key.toLowerCase() === "message-id") {
+			continue;
+		}
 		headers.push(`${key}: ${value}`);
 	}
 
@@ -179,13 +189,13 @@ export async function sendTestEmail(
 		return errorResponse(400, 10000, "At least one recipient is required.");
 	}
 
-	// Message-ID header keeps the full domain.
-	const domain = from.split("@")[1] ?? "example.com";
-	const localPart = Math.random().toString(36).slice(2);
-	const lastDot = domain.lastIndexOf(".");
-	const domainWithoutExt = lastDot === -1 ? domain : domain.slice(0, lastDot);
-	const id = `${localPart}@${domainWithoutExt}`;
-	const mime = buildMimeMessage(body, `<${localPart}@${domain}>`);
+	// Derive the id exactly as the `send_email` binding does, so a received and a
+	// sent email are both stored under their own Message-ID. Honour one the
+	// caller set explicitly, since the send dialog allows custom headers.
+	const messageId =
+		getHeader(body.headers, "Message-ID") ?? synthesizeMessageId(from);
+	const id = messageIdToStorageId(messageId);
+	const mime = buildMimeMessage(body, messageId);
 
 	const entryUrl = await getPublicUrl(c.env.MINIFLARE_LOOPBACK);
 	const deliverUrl = new URL(CorePaths.EMAIL, entryUrl);

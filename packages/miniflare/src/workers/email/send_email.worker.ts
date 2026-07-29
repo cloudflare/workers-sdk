@@ -5,6 +5,11 @@ import PostalMime from "postal-mime";
 import { CoreBindings } from "../core/constants";
 import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
+import {
+	getHeader,
+	messageIdToStorageId,
+	synthesizeMessageId,
+} from "./message-id";
 import type {
 	EmailStoreService,
 	StoredEmailAttachment,
@@ -17,28 +22,6 @@ import type { Email } from "postal-mime";
 $.enabled = true;
 
 /**
- * Build a Message-ID in the shape the production `send_email` binding returns:
- * `<{36 alphanumeric chars}@{sender domain}>`.
- */
-function synthesizeMessageId(senderEmail: string): string {
-	const alphabet =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	const bytes = crypto.getRandomValues(new Uint8Array(36));
-	const id = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
-	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
-	return `<${id}@${domain}>`;
-}
-
-/**
- * Strips the enclosing angle brackets from a Message-ID (`<id@domain>` becomes
- * `id@domain`), giving the id used for the local explorer record and the
- * on-disk filenames.
- */
-function stripAngleBrackets(messageId: string): string {
-	return messageId.replace(/^<|>$/g, "");
-}
-
-/**
  * Byte length of email content, so attachment sizes are accurate for
  * multi-byte payloads (string `.length` counts UTF-16 code units, not bytes).
  */
@@ -49,25 +32,6 @@ function contentByteLength(
 		return new TextEncoder().encode(content).byteLength;
 	}
 	return content.byteLength;
-}
-
-/**
- * Case-insensitive lookup of a header value in a MessageBuilder's `headers`.
- */
-function getHeader(
-	headers: Record<string, string> | undefined,
-	name: string
-): string | undefined {
-	if (headers === undefined) {
-		return undefined;
-	}
-	const target = name.toLowerCase();
-	for (const [key, value] of Object.entries(headers)) {
-		if (key.toLowerCase() === target) {
-			return value;
-		}
-	}
-	return undefined;
 }
 
 /**
@@ -306,7 +270,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 			const messageId =
 				parsedEmail.messageId ?? synthesizeMessageId(emailMessage.from);
-			const id = stripAngleBrackets(messageId);
+			const id = messageIdToStorageId(messageId);
 
 			await this.reportSentEmail({
 				id,
@@ -356,7 +320,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const messageId =
 				getHeader(builder.headers, "Message-ID") ??
 				synthesizeMessageId(extractEmailAddress(builder.from));
-			const id = stripAngleBrackets(messageId);
+			const id = messageIdToStorageId(messageId);
 
 			const toDisplay = (
 				addr: string | EmailAddress | (string | EmailAddress)[]

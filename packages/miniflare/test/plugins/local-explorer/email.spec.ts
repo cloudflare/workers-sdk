@@ -130,6 +130,48 @@ describe("Email API - Routing", () => {
 		expect(detail.result?.id).toBe(sentId);
 		expect(detail.result?.raw).toContain("Subject: Hello from the explorer");
 		expect(detail.result?.events[0]?.type).toBe("received");
+
+		// The id is the message's own Message-ID minus the angle brackets - the
+		// same derivation the `send_email` binding uses - so the id, the header in
+		// the raw MIME, and the record all agree.
+		expect(detail.result?.messageId).toBe(`<${sentId}>`);
+		expect(detail.result?.raw).toContain(`Message-ID: <${sentId}>`);
+		expect(sentId).toMatch(/^[A-Za-z0-9]{36}@example\.com$/);
+	});
+
+	test("uses a caller-supplied Message-ID as the id", async ({ expect }) => {
+		const messageId = "<explicit-id@sender.example.com>";
+		const sendResponse = await mf.dispatchFetch(
+			`${BASE_URL}/email/routing/send`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Explicit id",
+					text: "body",
+					headers: { "message-id": messageId },
+				}),
+			}
+		);
+		const sendData = await expectValidResponse(
+			sendResponse,
+			zEmailSendRoutingResponse,
+			expect
+		);
+		expect(sendData.result?.id).toBe("explicit-id@sender.example.com");
+
+		const detail = await expectValidResponse(
+			await mf.dispatchFetch(
+				`${BASE_URL}/email/routing/${sendData.result?.id}`
+			),
+			zEmailGetRoutingResponse,
+			expect
+		);
+		expect(detail.result?.messageId).toBe(messageId);
+		// The supplied header must not be emitted twice alongside a synthesized one.
+		expect(detail.result?.raw?.match(/^Message-ID:/gim)).toHaveLength(1);
 	});
 
 	test("records a forwarded event", async ({ expect }) => {
@@ -162,7 +204,9 @@ describe("Email API - Routing", () => {
 			{
 				recipient: "forwarded@example.com",
 				headers: [],
-				messageId: expect.any(String),
+				// Synthesized in the shape production returns, using the recipient's
+				// domain: `<{36 alphanumeric chars}@{domain}>`.
+				messageId: expect.stringMatching(/^<[A-Za-z0-9]{36}@example\.com>$/),
 			},
 		]);
 	});

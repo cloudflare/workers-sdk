@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
+import { synthesizeMessageId } from "../email/message-id";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
@@ -236,16 +237,10 @@ export async function handleEmail(
 							body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`)}`,
 						}
 					);
-					/**
-					 * The message ID in production uses the sender domain rather than
-					 * example.com. Locally, we have access to none of that information
-					 * so instead we make a dummy message ID that matches the production
-					 * format (random alphanumeric chars followed by a domain).
-					 */
-					const forwardDomain = rcptTo.slice(rcptTo.lastIndexOf("@") + 1);
-					const result = {
-						messageId: `<${Math.random().toString(36).slice(2)}@${forwardDomain}>`,
-					};
+					// Production returns a message id identifying the forwarded message.
+					// Locally we have no such id, so synthesize one in the production
+					// shape, using the recipient's domain.
+					const result = { messageId: synthesizeMessageId(rcptTo) };
 
 					events.push({
 						type: "forward",
@@ -310,13 +305,10 @@ export async function handleEmail(
 						}
 					);
 
-					/**
-					 * The message ID in production is a 36 character random string that identifies the message for e.g. linking up threads.
-					 * In production it uses the sender domain rather than example.com. Locally, we have access to none of that information
-					 * so instead we make a dummy message ID that matches the production format (36 characters followed by a domain)
-					 */
-					const uuid = crypto.randomUUID().replaceAll("-", "");
-					const result = { messageId: `${uuid}@example.com` };
+					// Production returns a message id identifying the reply, used for
+					// e.g. linking up threads. Locally we have no such id, so synthesize
+					// one in the production shape, using the reply sender's domain.
+					const result = { messageId: synthesizeMessageId(replyMessage.from) };
 					events.push({
 						type: "reply",
 						timestamp: new Date().toISOString(),
