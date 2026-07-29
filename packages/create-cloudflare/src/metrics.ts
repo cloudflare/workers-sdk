@@ -110,7 +110,7 @@ export function createReporter() {
 	}
 
 	function isTelemetryEnabled() {
-		if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DISABLED === "1") {
+		if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DISABLED === "1" || process.env.DO_NOT_TRACK === "1") {
 			return false;
 		}
 
