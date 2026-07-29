@@ -522,4 +522,171 @@ export type Event =
 				 */
 				durationMs?: number;
 			};
+	  }
+	| {
+			name: "c3 autoconfig started";
+			properties: {
+				/**
+				 * The OS platform the CLI is running on
+				 * This could be "Mac OS", "Windows", "Linux", etc.
+				 */
+				platform?: string;
+
+				/**
+				 * The version of the create-cloudflare CLI used
+				 */
+				c3Version?: string;
+
+				/**
+				 * The name of the package manager used to run the CLI
+				 */
+				packageManager?: string;
+
+				/**
+				 * The CLI arguments set at the time the event is sent
+				 */
+				args?: Partial<C3Args>;
+
+				/**
+				 * Whether this is the first time the user is using the CLI
+				 * Determined by checking if the user has a permission set in the metrics config
+				 */
+				isFirstUsage?: boolean;
+			};
+	  }
+	| {
+			name: "c3 autoconfig cancelled";
+			properties: {
+				/**
+				 * The OS platform the CLI is running on
+				 * This could be "Mac OS", "Windows", "Linux", etc.
+				 */
+				platform?: string;
+
+				/**
+				 * The version of the create-cloudflare CLI used
+				 */
+				c3Version?: string;
+
+				/**
+				 * The name of the package manager used to run the CLI
+				 */
+				packageManager?: string;
+
+				/**
+				 * The CLI arguments set at the time the event is sent
+				 */
+				args?: Partial<C3Args>;
+
+				/**
+				 * Whether this is the first time the user is using the CLI
+				 * Determined by checking if the user has a permission set in the metrics config
+				 */
+				isFirstUsage?: boolean;
+
+				/**
+				 * The id of the framework detected by autoconfig (if any)
+				 */
+				framework?: string;
+
+				/**
+				 * The duration of the autoconfig process since it started in milliseconds (ms)
+				 */
+				durationMs?: number;
+			};
+	  }
+	| {
+			name: "c3 autoconfig errored";
+			properties: {
+				/**
+				 * The OS platform the CLI is running on
+				 * This could be "Mac OS", "Windows", "Linux", etc.
+				 */
+				platform?: string;
+
+				/**
+				 * The version of the create-cloudflare CLI used
+				 */
+				c3Version?: string;
+
+				/**
+				 * The name of the package manager used to run the CLI
+				 */
+				packageManager?: string;
+
+				/**
+				 * The CLI arguments set at the time the event is sent
+				 */
+				args?: Partial<C3Args>;
+
+				/**
+				 * Whether this is the first time the user is using the CLI
+				 * Determined by checking if the user has a permission set in the metrics config
+				 */
+				isFirstUsage?: boolean;
+
+				/**
+				 * The id of the framework detected by autoconfig (if any)
+				 */
+				framework?: string;
+
+				/**
+				 * The error that caused the autoconfig process to fail
+				 */
+				error?: {
+					message: string | undefined;
+					stack: string | undefined;
+				};
+
+				/**
+				 * The duration of the autoconfig process since it started in milliseconds (ms)
+				 */
+				durationMs?: number;
+			};
+	  }
+	| {
+			name: "c3 autoconfig completed";
+			properties: {
+				/**
+				 * The OS platform the CLI is running on
+				 * This could be "Mac OS", "Windows", "Linux", etc.
+				 */
+				platform?: string;
+
+				/**
+				 * The version of the create-cloudflare CLI used
+				 */
+				c3Version?: string;
+
+				/**
+				 * The name of the package manager used to run the CLI
+				 */
+				packageManager?: string;
+
+				/**
+				 * The CLI arguments set at the time the event is sent
+				 */
+				args?: Partial<C3Args>;
+
+				/**
+				 * Whether this is the first time the user is using the CLI
+				 * Determined by checking if the user has a permission set in the metrics config
+				 */
+				isFirstUsage?: boolean;
+
+				/**
+				 * The id of the framework detected by autoconfig (if any)
+				 */
+				framework?: string;
+
+				/**
+				 * Whether the project was already configured for Cloudflare before autoconfig ran
+				 */
+				configured?: boolean;
+
+				/**
+				 * The duration of the autoconfig process since it started in milliseconds (ms)
+				 */
+				durationMs?: number;
+			};
 	  };

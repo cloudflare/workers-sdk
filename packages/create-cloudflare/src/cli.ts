@@ -2,6 +2,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { chdir } from "node:process";
+import * as autoConfig from "@cloudflare/autoconfig";
 import {
 	cancel,
 	checkMacOSVersion,
@@ -15,11 +16,7 @@ import { maybeAppendWranglerToGitIgnore } from "@cloudflare/cli-shared-helpers/g
 import { isInteractive } from "@cloudflare/cli-shared-helpers/interactive";
 import { cliDefinition, parseArgs, processArgument } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable, runLatest } from "helpers/cli";
-import { runWranglerCommand } from "helpers/command";
-import {
-	detectPackageManager,
-	rectifyPmMismatch,
-} from "helpers/packageManagers";
+import { rectifyPmMismatch } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
 import {
 	getPnpmIgnoredBuildsGuidance,
@@ -27,6 +24,7 @@ import {
 	writePnpmBuildApprovals,
 } from "helpers/pnpmBuildApprovals";
 import { version } from "../package.json";
+import { createC3AutoConfigContext } from "./autoconfig-context";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
 import { gitCommit, offerGit } from "./git";
@@ -42,7 +40,10 @@ import {
 } from "./templates";
 import { validateProjectDirectory } from "./validators";
 import { addTypes } from "./workers";
-import { updateWranglerConfig } from "./wrangler/config";
+import {
+	loadProjectWranglerConfig,
+	updateWranglerConfig,
+} from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
 export const main = async (argv: string[]) => {
@@ -164,27 +165,16 @@ const create = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	startSection(
 		`Configuring your application for Cloudflare${
-			ctx.args.experimental ? ` via \`wrangler setup\`` : ""
+			ctx.args.experimental ? ` via autoconfig` : ""
 		}`,
 		"Step 2 of 3"
 	);
 
-	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
-	// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
-	await installWrangler();
-
 	if (ctx.args.experimental) {
-		const { npx } = detectPackageManager();
-
-		await runWranglerCommand([
-			npx,
-			"wrangler",
-			"setup",
-			"--yes",
-			"--no-completion-message",
-			"--no-install-wrangler",
-		]);
+		await runAutoConfig(ctx);
 	} else {
+		await installWrangler();
+
 		// Note: This _must_ be called before the configure phase since
 		//       pre-existing workers assume its presence in their configure phase
 		await updateWranglerConfig(ctx);
@@ -206,6 +196,40 @@ const configure = async (ctx: C3Context) => {
 	await gitCommit(ctx);
 
 	endSection(`Application configured`);
+};
+
+/**
+ * Configures a C3 project for Cloudflare by running the `@cloudflare/autoconfig` flow in-process.
+ *
+ * @param ctx - The C3 context for the project being created.
+ */
+const runAutoConfig = async (ctx: C3Context) => {
+	await reporter.collectAsyncMetrics({
+		eventPrefix: "c3 autoconfig",
+		props: { args: ctx.args },
+		async promise() {
+			const context = createC3AutoConfigContext();
+
+			const details = await autoConfig.getDetailsForAutoConfig({
+				projectPath: ctx.project.path,
+				// Note: the started application might already include a wrangler config file
+				wranglerConfig: loadProjectWranglerConfig(ctx.project.path),
+				context,
+			});
+
+			reporter.setEventProperty("framework", details.framework?.id);
+			reporter.setEventProperty("configured", details.configured);
+
+			if (!details.configured) {
+				await autoConfig.runAutoConfig(details, {
+					context,
+					skipConfirmations: true,
+					runBuild: false,
+					enableWranglerInstallation: true,
+				});
+			}
+		},
+	});
 };
 
 const deploy = async (ctx: C3Context) => {

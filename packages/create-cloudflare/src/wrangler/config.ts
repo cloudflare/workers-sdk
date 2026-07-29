@@ -1,6 +1,11 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { isCompatDate } from "@cloudflare/workers-utils";
+import {
+	experimental_readRawConfig,
+	findWranglerConfig,
+	isCompatDate,
+	normalizeAndValidateConfig,
+} from "@cloudflare/workers-utils";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -11,6 +16,7 @@ import {
 	writeJSONWithComments,
 } from "helpers/json";
 import TOML from "smol-toml";
+import type { Config } from "@cloudflare/workers-utils";
 import type { CommentObject, Reviver } from "comment-json";
 import type { TomlTable } from "smol-toml";
 import type { C3Context } from "types";
@@ -384,4 +390,26 @@ function addNodejsCompatFlagToToml(wranglerConfig: TomlTable): void {
 	}
 
 	wranglerConfig.compatibility_flags = ["nodejs_compat", ...existingFlags];
+}
+
+/**
+ * Loads the project's existing Wrangler configuration, if any.
+ *
+ * @param projectPath - The path to the project being created.
+ * @returns The normalized Wrangler configuration, or `undefined` if none exists.
+ */
+export function loadProjectWranglerConfig(
+	projectPath: string
+): Config | undefined {
+	const { userConfigPath } = findWranglerConfig(projectPath);
+	if (!userConfigPath) {
+		return undefined;
+	}
+
+	const { rawConfig, configPath } = experimental_readRawConfig({
+		config: userConfigPath,
+	});
+
+	return normalizeAndValidateConfig(rawConfig, configPath, userConfigPath, {})
+		.config;
 }
