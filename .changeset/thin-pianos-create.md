@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-shared": minor
+"@cloudflare/workers-shared": patch
 ---
 
 Track alternate URL paths in Workers Assets
