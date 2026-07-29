@@ -472,7 +472,7 @@ test("operations are no-ops when caching disabled", async ({ expect }) => {
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
-				dev: { disableCache: true },
+				dev: { cacheAPI: false },
 			},
 		],
 	});

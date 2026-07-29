@@ -102,7 +102,6 @@ export {
 	compileModuleRules,
 	getGlobalServices,
 	ModuleRuleTypeSchema,
-	ModuleRuleSchema,
 	ModuleDefinitionSchema,
 	ProxyClient,
 	getFreshSourceMapSupport,
@@ -112,7 +111,6 @@ export {
 	INTROSPECT_SQLITE_METHOD,
 } from "./core";
 export type {
-	CompiledModuleRule,
 	ModuleRuleType,
 	ModuleRule,
 	ModuleDefinition,

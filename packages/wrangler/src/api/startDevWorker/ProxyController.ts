@@ -134,7 +134,7 @@ export class ProxyController extends Controller {
 						// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
 						stripCfConnectingIp: false,
 						// no need to use file-system, so don't
-						disableCache: true,
+						cacheAPI: false,
 						unsafeEphemeralDurableObjects: true,
 					},
 				},
@@ -211,7 +211,7 @@ export class ProxyController extends Controller {
 						},
 					],
 					// no need to use file-system, so don't
-					disableCache: true,
+					cacheAPI: false,
 					unsafeEphemeralDurableObjects: true,
 				},
 			});

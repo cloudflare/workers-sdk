@@ -12,8 +12,14 @@ import {
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	KVBindingSchema,
+	D1BindingSchema,
+	R2BindingSchema,
+	QueueBindingSchema,
+	FlagshipBindingSchema,
 } from "@cloudflare/config";
 import { z } from "zod";
+import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
 	HttpOptions_Style,
 	TlsOptions_Version,
@@ -24,7 +30,6 @@ import type {
 	RemoteProxyConnectionString,
 	WorkerdStructuredLog,
 } from "../index";
-import type { kCurrentWorker } from "../plugins/core/services";
 import type { DOContainerOptions } from "../plugins/do";
 import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
@@ -48,6 +53,11 @@ export const MiniflareManifestSchema = z.strictObject({
 // ---------------------------------------------------------------------------
 // Miniflare-only binding extensions
 // ---------------------------------------------------------------------------
+
+// Service binding designator that always points to the worker with the binding.
+// Using `Symbol.for()` instead of `Symbol()` in case multiple copies of
+// `miniflare` are loaded (e.g. when configuring Vitest and when running pool)
+export const kCurrentWorker = Symbol.for("miniflare.kCurrentWorker");
 
 /**
  * A function-backed "service binding".
@@ -82,13 +92,18 @@ const HttpOptionsHeaderSchema = z.object({
 	value: z.string().optional(),
 });
 
-const HttpOptionsSchema = z.object({
-	style: z.nativeEnum(HttpOptions_Style).optional(),
-	forwardedProtoHeader: z.string().optional(),
-	cfBlobHeader: z.string().optional(),
-	injectRequestHeaders: HttpOptionsHeaderSchema.array().optional(),
-	injectResponseHeaders: HttpOptionsHeaderSchema.array().optional(),
-});
+const HttpOptionsSchema = z
+	.object({
+		style: z.enum(HttpOptions_Style).optional(),
+		forwardedProtoHeader: z.string().optional(),
+		cfBlobHeader: z.string().optional(),
+		injectRequestHeaders: HttpOptionsHeaderSchema.array().optional(),
+		injectResponseHeaders: HttpOptionsHeaderSchema.array().optional(),
+	})
+	.transform((options) => ({
+		...options,
+		capnpConnectHost: HOST_CAPNP_CONNECT,
+	}));
 
 const TlsOptionsKeypairSchema = z.object({
 	privateKey: z.string().optional(),
@@ -119,18 +134,22 @@ const NetworkServiceBindingSchema = z.strictObject({
  * Binds directly to workerd's `external` service, forwarding subrequests to a
  * server reachable at `address`.
  */
-const ExternalServiceBindingSchema = z.strictObject({
-	type: z.literal("external"),
-	address: z.string(),
-	http: HttpOptionsSchema.optional(),
-	https: z
-		.object({
-			options: HttpOptionsSchema.optional(),
-			tlsOptions: TlsOptionsSchema.optional(),
-			certificateHost: z.string().optional(),
-		})
-		.optional(),
-});
+const ExternalServiceBindingSchema = z
+	.strictObject({
+		type: z.literal("external"),
+		address: z.string(),
+		http: HttpOptionsSchema.optional(),
+		https: z
+			.object({
+				options: HttpOptionsSchema.optional(),
+				tlsOptions: TlsOptionsSchema.optional(),
+				certificateHost: z.string().optional(),
+			})
+			.optional(),
+	})
+	.refine((data) => !(data.http !== undefined && data.https !== undefined), {
+		message: "Cannot specify both 'http' and 'https'",
+	});
 
 /**
  * Binds directly to workerd's `disk` service, serving files from `path`.
@@ -149,15 +168,58 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 });
 
 /**
+ * Force id to be required
+ */
+const MiniflareKVBindingSchema = KVBindingSchema.omit({
+	id: true,
+}).extend({
+	id: z.string(),
+});
+
+/**
+ * Force id to be required
+ */
+const MiniflareD1BindingSchema = D1BindingSchema.omit({
+	id: true,
+}).extend({
+	id: z.string(),
+});
+
+/**
+ * Force id to be required
+ */
+const MiniflareFlagshipBindingSchema = FlagshipBindingSchema.omit({
+	id: true,
+}).extend({
+	id: z.string(),
+});
+
+/**
+ * Force name to be required
+ */
+const MiniflareR2BindingSchema = R2BindingSchema.omit({
+	name: true,
+}).extend({
+	name: z.string(),
+});
+
+/**
+ * Force name to be required
+ */
+const MiniflareQueueBindingSchema = QueueBindingSchema.omit({
+	name: true,
+}).extend({
+	name: z.string(),
+});
+
+/**
  * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
  * (the SELF marker) in addition to a plain worker name.
  */
 const MiniflareWorkerBindingSchema = WorkerBindingSchema.extend({
 	workerName: z.union([
 		z.string(),
-		z.custom<typeof kCurrentWorker>(
-			(v) => v === Symbol.for("miniflare.kCurrentWorker")
-		),
+		z.custom<typeof kCurrentWorker>((v) => v === kCurrentWorker),
 	]),
 });
 
@@ -172,16 +234,27 @@ const HelloWorldBindingSchema = z.strictObject({
 
 const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareBrowserBindingSchema,
+	MiniflareQueueBindingSchema,
+	MiniflareR2BindingSchema,
+	MiniflareD1BindingSchema,
+	MiniflareKVBindingSchema,
+	MiniflareFlagshipBindingSchema,
 	MiniflareWorkerBindingSchema,
 	FetcherBindingSchema,
 	NodeHandlerBindingSchema,
-	NetworkServiceBindingSchema,
 	ExternalServiceBindingSchema,
+	NetworkServiceBindingSchema,
 	DiskServiceBindingSchema,
 	HelloWorldBindingSchema,
 	...KnownBindingSchema.options.filter(
 		(option) =>
-			option !== BrowserBindingSchema && option !== WorkerBindingSchema
+			option !== BrowserBindingSchema &&
+			option !== WorkerBindingSchema &&
+			option !== QueueBindingSchema &&
+			option !== R2BindingSchema &&
+			option !== D1BindingSchema &&
+			option !== KVBindingSchema &&
+			option !== FlagshipBindingSchema
 	),
 ]);
 
@@ -375,7 +448,9 @@ const OutboundServiceSchema = z.discriminatedUnion("type", [
 ]);
 
 export const DevConfigSchema = z.strictObject({
-	disableCache: z.boolean().optional(),
+	// Enables the Cache API (NOT Workers cache).
+	// not user-configurable (only Wrangler's internal ProxyWorker disables it).
+	cacheAPI: z.boolean().default(true),
 	outboundService: OutboundServiceSchema.optional(),
 	remoteProxyConnectionString: z
 		.custom<RemoteProxyConnectionString>()

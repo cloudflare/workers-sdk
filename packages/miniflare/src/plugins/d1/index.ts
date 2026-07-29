@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { SharedBindings } from "../../workers";
@@ -37,15 +36,10 @@ export const D1_PLUGIN: Plugin = {
 	getBindings(options) {
 		return getEnvBindingsOfType(options.config, "d1").map<Worker_Binding>(
 			([name, binding]) => {
-				const id = binding.id ?? name;
+				const id = binding.id;
 				const remoteProxyConnectionString = getRemoteProxyConnectionString(
 					binding,
 					options.dev
-				);
-
-				assert(
-					!(name.startsWith("__D1_BETA__") && remoteProxyConnectionString),
-					"Alpha D1 Databases cannot run remotely"
 				);
 
 				// Remote databases share one proxy service (config via props);
@@ -59,25 +53,18 @@ export const D1_PLUGIN: Plugin = {
 							name: getUserBindingServiceName(D1_DATABASE_SERVICE_PREFIX, id),
 						};
 
-				const bindingConfig = name.startsWith("__D1_BETA__")
-					? // Used before Wrangler 3.3
-						{
-							service: serviceDesignator,
-						}
-					: // Used after Wrangler 3.3
-						{
-							wrapped: {
-								moduleName: "cloudflare-internal:d1-api",
-								innerBindings: [
-									{
-										name: "fetcher",
-										service: serviceDesignator,
-									},
-								],
+				return {
+					name,
+					wrapped: {
+						moduleName: "cloudflare-internal:d1-api",
+						innerBindings: [
+							{
+								name: "fetcher",
+								service: serviceDesignator,
 							},
-						};
-
-				return { name, ...bindingConfig };
+						],
+					},
+				};
 			}
 		);
 	},
@@ -89,13 +76,13 @@ export const D1_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({ options, tmpPath, sharedOptions }) {
 		const databases = getEnvBindingsOfType(options.config, "d1");
 
 		const services: Service[] = [];
 		let hasRemote = false;
-		for (const [name, binding] of databases) {
-			const id = binding.id ?? name;
+		for (const [, binding] of databases) {
+			const id = binding.id;
 			const remoteProxyConnectionString = getRemoteProxyConnectionString(
 				binding,
 				options.dev
@@ -122,7 +109,7 @@ export const D1_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				D1_PLUGIN_NAME,
 				tmpPath,
-				resourcePersistencePath
+				sharedOptions.resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 

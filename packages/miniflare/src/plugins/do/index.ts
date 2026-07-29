@@ -57,7 +57,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin = {
 	},
 	async getServices({
 		tmpPath,
-		resourcePersistencePath,
+		sharedOptions,
 		durableObjectClassNames,
 		unsafeEphemeralDurableObjects,
 	}) {
@@ -80,7 +80,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin = {
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
-			resourcePersistencePath
+			sharedOptions.resourcePersistencePath
 		);
 		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`
 		// is like `mkdir -p`: it won't fail if the directory already exists, and it

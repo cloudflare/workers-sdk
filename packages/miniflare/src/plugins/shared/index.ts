@@ -61,12 +61,9 @@ export interface PluginServicesOptions {
 	workerIndex: number;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
-	resourcePersistencePath: string | undefined;
-	resourceTmpPath: string | undefined;
 	workerNames: string[];
 	loopbackHost: string;
 	loopbackPort: number;
-	publicUrl: string | undefined;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	durableObjectClassNames: DurableObjectClassNames;

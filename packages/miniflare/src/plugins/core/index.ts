@@ -18,6 +18,7 @@ import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
+import { kCurrentWorker } from "../../config/schema";
 import { kVoid } from "../../runtime";
 import { MiniflareCoreError, type Log } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
@@ -33,7 +34,6 @@ import { getR2PublicService, R2_PUBLIC_SERVICE_NAME } from "../r2";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
-	HOST_CAPNP_CONNECT,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -68,11 +68,8 @@ import {
 	withSourceURL,
 } from "./modules";
 import { PROXY_SECRET } from "./proxy";
-import { kCurrentWorker } from "./services";
 import type {
 	Extension,
-	ExternalServer,
-	HttpOptions,
 	Service,
 	ServiceDesignator,
 	Worker_Binding,
@@ -247,30 +244,16 @@ function maybeGetCustomServiceService(
 				],
 			},
 		};
-	} else if (service.type === "network") {
-		// Builtin workerd `network` service
-		const { type: _type, ...network } = service;
-		return { name: getBuiltinServiceName(workerIndex, kind, name), network };
-	} else if (service.type === "external") {
-		// Builtin workerd `external` service. Set `capnpConnectHost` so JS RPC
-		// works over `external` services (e.g. RPC across Miniflare instances).
-		const { type: _type, http, https, ...rest } = service;
-		const external: ExternalServer = {
-			...rest,
-			...(https !== undefined
-				? {
-						https: {
-							...https,
-							options: withCapnpConnectHost(https.options),
-						},
-					}
-				: { http: withCapnpConnectHost(http) ?? {} }),
+	} else if (
+		service.type === "network" ||
+		service.type === "external" ||
+		service.type === "disk"
+	) {
+		const { type, ...rest } = service;
+		return {
+			name: getBuiltinServiceName(workerIndex, kind, name),
+			[type]: rest,
 		};
-		return { name: getBuiltinServiceName(workerIndex, kind, name), external };
-	} else if (service.type === "disk") {
-		// Builtin workerd `disk` service
-		const { type: _type, ...disk } = service;
-		return { name: getBuiltinServiceName(workerIndex, kind, name), disk };
 	} else if (getRemoteProxyConnectionString(service, dev) !== undefined) {
 		// Remote `worker` service binding
 		return {
@@ -278,15 +261,6 @@ function maybeGetCustomServiceService(
 			worker: remoteProxyClientWorker(),
 		};
 	}
-}
-
-function withCapnpConnectHost(
-	options: Omit<HttpOptions, "capnpConnectHost"> | undefined
-): HttpOptions | undefined {
-	if (options === undefined) {
-		return undefined;
-	}
-	return { ...options, capnpConnectHost: HOST_CAPNP_CONNECT };
 }
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
@@ -1092,5 +1066,5 @@ export * from "./errors";
 export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
-export * from "./services";
+export { kCurrentWorker } from "../../config/schema";
 export * from "./node-compat";

@@ -38,11 +38,11 @@ export function getR2PublicService(
 ): Service | undefined {
 	const publicBucketIds = new Set<string>();
 	for (const worker of allWorkerOpts) {
-		for (const [name, bucket] of getEnvBindingsOfType(worker.config, "r2")) {
+		for (const [, bucket] of getEnvBindingsOfType(worker.config, "r2")) {
 			if (getRemoteProxyConnectionString(bucket, worker.dev) !== undefined) {
 				continue;
 			}
-			publicBucketIds.add(bucket.name ?? name);
+			publicBucketIds.add(bucket.name);
 		}
 	}
 	if (publicBucketIds.size === 0) {
@@ -69,7 +69,7 @@ export const R2_PLUGIN: Plugin = {
 	getBindings(options) {
 		return getEnvBindingsOfType(options.config, "r2").map<Worker_Binding>(
 			([name, bucket]) => {
-				const id = bucket.name ?? name;
+				const id = bucket.name;
 				const remoteProxyConnectionString = getRemoteProxyConnectionString(
 					bucket,
 					options.dev
@@ -96,13 +96,13 @@ export const R2_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({ options, tmpPath, sharedOptions }) {
 		const buckets = getEnvBindingsOfType(options.config, "r2");
 
 		const services: Service[] = [];
 		let hasRemote = false;
-		for (const [name, bucket] of buckets) {
-			const id = bucket.name ?? name;
+		for (const [, bucket] of buckets) {
+			const id = bucket.name;
 			const remoteProxyConnectionString = getRemoteProxyConnectionString(
 				bucket,
 				options.dev
@@ -129,7 +129,7 @@ export const R2_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				R2_PLUGIN_NAME,
 				tmpPath,
-				resourcePersistencePath
+				sharedOptions.resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {

@@ -45,11 +45,9 @@ beforeEach(async () => {
 	const tablePalettes = `palettes_${ns}`;
 
 	const db = await getDatabase(ctx.mf);
-	const bindings = await ctx.mf.getBindings();
 
 	await db.exec(SCHEMA(tableColours, tableKitchenSink, tablePalettes));
 
-	ctx.bindings = bindings;
 	ctx.db = db;
 	ctx.tableColours = tableColours;
 	ctx.tableKitchenSink = tableKitchenSink;
@@ -484,23 +482,20 @@ test("D1PreparedStatement: raw", async ({ expect }) => {
 	expect(id).toBe(4);
 
 	// Check whether workerd raw test case passes here too
-	// Note that this test did not pass with the old binding
-	if (!ctx.bindings["__D1_BETA__DB"]) {
-		await db.prepare(`CREATE TABLE abc (a INT, b INT, c INT);`).run();
-		await db.prepare(`CREATE TABLE cde (c INT, d INT, e INT);`).run();
-		await db.prepare(`INSERT INTO abc VALUES (1,2,3),(4,5,6);`).run();
-		await db.prepare(`INSERT INTO cde VALUES (7,8,9),(1,2,3);`).run();
-		const rawPromise = await db
-			.prepare(`SELECT * FROM abc, cde;`)
-			.raw({ columnNames: true });
-		expect(rawPromise).toEqual([
-			["a", "b", "c", "c", "d", "e"],
-			[1, 2, 3, 7, 8, 9],
-			[1, 2, 3, 1, 2, 3],
-			[4, 5, 6, 7, 8, 9],
-			[4, 5, 6, 1, 2, 3],
-		]);
-	}
+	await db.prepare(`CREATE TABLE abc (a INT, b INT, c INT);`).run();
+	await db.prepare(`CREATE TABLE cde (c INT, d INT, e INT);`).run();
+	await db.prepare(`INSERT INTO abc VALUES (1,2,3),(4,5,6);`).run();
+	await db.prepare(`INSERT INTO cde VALUES (7,8,9),(1,2,3);`).run();
+	const rawPromise = await db
+		.prepare(`SELECT * FROM abc, cde;`)
+		.raw({ columnNames: true });
+	expect(rawPromise).toEqual([
+		["a", "b", "c", "c", "d", "e"],
+		[1, 2, 3, 7, 8, 9],
+		[1, 2, 3, 1, 2, 3],
+		[4, 5, 6, 7, 8, 9],
+		[4, 5, 6, 1, 2, 3],
+	]);
 });
 
 test("operations persist D1 data", async ({ expect }) => {
@@ -584,14 +579,7 @@ test("it properly handles ROWS_AND_COLUMNS results format", async ({
 		)
 		.raw();
 
-	let expectedResults;
-	// Note that this test did not pass with the old binding
-	if (!ctx.bindings["__D1_BETA__DB"]) {
-		expectedResults = [["blue", "Night"]];
-	} else {
-		expectedResults = [["Night"]];
-	}
-	expect(results).toEqual(expectedResults);
+	expect(results).toEqual([["blue", "Night"]]);
 });
 
 /**

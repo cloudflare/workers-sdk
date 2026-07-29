@@ -135,9 +135,9 @@ export const EMAIL_PLUGIN: Plugin = {
 			},
 		];
 
-		if (args.resourceTmpPath) {
+		if (args.sharedOptions.resourceTmpPath) {
 			const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
-				args.resourceTmpPath,
+				args.sharedOptions.resourceTmpPath,
 				args.tmpPath
 			);
 			if (emailProjectSessionDirectory !== undefined) {
@@ -167,18 +167,17 @@ export const EMAIL_PLUGIN: Plugin = {
 			}
 
 			// The local send-email worker reads these config values from env
-			// under their original snake_case names, so map the renamed config
-			// fields back and only include the ones that are present.
+			// directly, so pass through only the ones that are present.
 			const config: Record<string, unknown> = {};
 			if (binding.destinationAddress !== undefined) {
-				config.destination_address = binding.destinationAddress;
+				config.destinationAddress = binding.destinationAddress;
 			}
 			if (binding.allowedDestinationAddresses !== undefined) {
-				config.allowed_destination_addresses =
+				config.allowedDestinationAddresses =
 					binding.allowedDestinationAddresses;
 			}
 			if (binding.allowedSenderAddresses !== undefined) {
-				config.allowed_sender_addresses = binding.allowedSenderAddresses;
+				config.allowedSenderAddresses = binding.allowedSenderAddresses;
 			}
 
 			services.push({

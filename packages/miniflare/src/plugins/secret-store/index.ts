@@ -43,7 +43,7 @@ export const SECRET_STORE_PLUGIN: Plugin = {
 			)
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({ options, tmpPath, sharedOptions }) {
 		const configs = getEnvBindingsOfType(
 			options.config,
 			"secrets-store-secret"
@@ -56,7 +56,7 @@ export const SECRET_STORE_PLUGIN: Plugin = {
 		const persistPath = getPersistPath(
 			SECRET_STORE_PLUGIN_NAME,
 			tmpPath,
-			resourcePersistencePath
+			sharedOptions.resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });

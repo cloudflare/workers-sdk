@@ -39,6 +39,7 @@ function getPort(url: URL) {
 	assert.fail(`Expected known protocol, got ${url.protocol}`);
 }
 
+// TODO: upstream this to cloudflare/config
 export const HyperdriveSchema = z
 	.union([z.url(), z.instanceof(URL)])
 	.transform((url, ctx) => {

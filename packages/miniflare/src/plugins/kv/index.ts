@@ -50,7 +50,7 @@ export const KV_PLUGIN: Plugin = {
 	async getBindings(options) {
 		const namespaces = getEnvBindingsOfType(options.config, "kv");
 		const bindings = namespaces.map<Worker_Binding>(([name, binding]) => {
-			const id = binding.id ?? name;
+			const id = binding.id;
 			const remoteProxyConnectionString = getRemoteProxyConnectionString(
 				binding,
 				options.dev
@@ -101,7 +101,7 @@ export const KV_PLUGIN: Plugin = {
 		return bindings;
 	},
 
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({ options, tmpPath, sharedOptions }) {
 		const namespaces = getEnvBindingsOfType(options.config, "kv");
 
 		const services: Service[] = [];
@@ -133,7 +133,7 @@ export const KV_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				KV_PLUGIN_NAME,
 				tmpPath,
-				resourcePersistencePath
+				sharedOptions.resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {

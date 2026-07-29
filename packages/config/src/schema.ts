@@ -29,6 +29,41 @@ export const WorkerBindingSchema = z.strictObject({
 	remote: z.boolean().optional(),
 });
 
+export const D1BindingSchema = z.strictObject({
+	type: z.literal("d1"),
+	name: z.string().optional(),
+	id: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const KVBindingSchema = z.strictObject({
+	type: z.literal("kv"),
+	id: z.string().optional(),
+	// TODO: name support not yet implemented
+	// name: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const QueueBindingSchema = z.strictObject({
+	type: z.literal("queue"),
+	name: z.string().optional(),
+	deliveryDelay: z.number().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const R2BindingSchema = z.strictObject({
+	type: z.literal("r2"),
+	name: z.string().optional(),
+	jurisdiction: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const FlagshipBindingSchema = z.strictObject({
+	type: z.literal("flagship"),
+	id: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
 export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("agent-memory"),
@@ -57,12 +92,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({ type: z.literal("assets") }),
 	BrowserBindingSchema,
-	z.strictObject({
-		type: z.literal("d1"),
-		name: z.string().optional(),
-		id: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	D1BindingSchema,
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
 		namespace: z.string().optional(),
@@ -79,11 +109,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		workerName: z.string(),
 		exportName: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("flagship"),
-		id: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	FlagshipBindingSchema,
 	z.strictObject({
 		type: z.literal("hyperdrive"),
 		id: z.string(),
@@ -94,13 +120,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("json"), value: z.json() }),
-	z.strictObject({
-		type: z.literal("kv"),
-		id: z.string().optional(),
-		// TODO: name support not yet implemented
-		// name: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	KVBindingSchema,
 	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
 	z.strictObject({
 		type: z.literal("media"),
@@ -116,12 +136,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		name: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("queue"),
-		name: z.string().optional(),
-		deliveryDelay: z.number().optional(),
-		remote: z.boolean().optional(),
-	}),
+	QueueBindingSchema,
 	z.strictObject({
 		type: z.literal("rate-limit"),
 		namespace: z.string(),
@@ -130,12 +145,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 			period: z.union([z.literal(10), z.literal(60)]),
 		}),
 	}),
-	z.strictObject({
-		type: z.literal("r2"),
-		name: z.string().optional(),
-		jurisdiction: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	R2BindingSchema,
 	z.strictObject({ type: z.literal("secret") }),
 	z.strictObject({
 		type: z.literal("secrets-store-secret"),

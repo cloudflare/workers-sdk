@@ -1,4 +1,4 @@
-import { WorkerOptionsSchemaV5 as WorkerOptionsSchema } from "miniflare";
+import { WorkerOptionsSchema } from "miniflare";
 import { test } from "vitest";
 
 function workerConfigBase(

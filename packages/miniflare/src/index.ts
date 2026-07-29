@@ -125,6 +125,7 @@ import type {
 import type { DispatchFetch, RequestInit } from "./http";
 import type {
 	DurableObjectClassNames,
+	MiniflareFetcherBinding,
 	Plugin,
 	PluginServicesOptions,
 	QueueConsumers,
@@ -314,12 +315,11 @@ function validateOptions(
 	return [sharedOpts, workers];
 }
 
-// When creating user worker services, we need to know which Durable Objects
-// they export. Rather than parsing JavaScript to search for class exports
-// (which would have to be recursive because of `export * from ...`), we collect
-// all Durable Object bindings, noting that bindings may be defined for objects
-// in other services.
-// Note that while the new config format restricts
+// When creating user worker services, we need to know which Durable Object
+// classes each worker defines. In the new config format, `config.exports` is a
+// reliable map of every Durable Object class a worker hosts, so we collect them
+// from there — we don't need to inspect `config.env`
+// `env` is handled by `getBindings` in the Durable Objects plugin).
 function getDurableObjectClassNames(
 	allWorkerOpts: ParsedWorkerOptions[]
 ): DurableObjectClassNames {
@@ -1010,17 +1010,13 @@ export class Miniflare {
 		request: Request,
 		customService: string
 	): Promise<Response> {
-		let handler:
-			| ((request: Request, miniflare: Miniflare) => Awaitable<Response>)
-			| undefined;
+		let handler: MiniflareFetcherBinding["handler"] | undefined;
 		// IMAGES_BINDING_SERVICE backs the Images binding (`env.IMAGES`).
 		// IMAGES_FETCH_SERVICE backs `fetch(url, { cf: { image } })` transforms.
-		// The image fetchers are typed against undici's `Request`; the loopback
-		// always invokes them with a Miniflare `Request`, so the cast is safe.
 		if (customService === CoreBindings.IMAGES_BINDING_SERVICE) {
-			handler = imagesLocalFetcher as unknown as typeof handler;
+			handler = imagesLocalFetcher;
 		} else if (customService === CoreBindings.IMAGES_FETCH_SERVICE) {
-			handler = cfImageLocalFetcher as unknown as typeof handler;
+			handler = cfImageLocalFetcher;
 		} else {
 			const { workerIndex, serviceKind, serviceName } =
 				extractCustomService(customService);
@@ -1895,12 +1891,9 @@ export class Miniflare {
 				workerIndex: i,
 				additionalModules,
 				tmpPath: this.#tmpPath,
-				resourcePersistencePath: sharedOpts.resourcePersistencePath,
-				resourceTmpPath: sharedOpts.resourceTmpPath,
 				workerNames,
 				loopbackHost,
 				loopbackPort,
-				publicUrl: sharedOpts.publicUrl,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
 				queueProducers,
@@ -3149,13 +3142,13 @@ export type {
 	ParsedModuleFallbackRequest,
 } from "./plugins/core/module-fallback";
 export {
-	DevConfigSchema as DevConfigSchemaV5,
-	InstanceOptionsSchema as InstanceOptionsSchemaV5,
-	LegacyConfigSchema as LegacyConfigSchemaV5,
-	MiniflareDurableObjectExportSchema as MiniflareDurableObjectExportSchemaV5,
-	MiniflareOptionsSchema as MiniflareOptionsSchemaV5,
-	MiniflareWorkerConfigSchema as MiniflareWorkerConfigSchemaV5,
-	WorkerOptionsSchema as WorkerOptionsSchemaV5,
+	DevConfigSchema,
+	InstanceOptionsSchema,
+	LegacyConfigSchema,
+	MiniflareDurableObjectExportSchema,
+	MiniflareOptionsSchema,
+	MiniflareWorkerConfigSchema,
+	WorkerOptionsSchema,
 } from "./config/schema";
 export type {
 	MiniflareOptions,
