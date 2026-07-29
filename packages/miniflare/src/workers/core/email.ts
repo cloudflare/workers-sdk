@@ -378,6 +378,7 @@ export async function handleEmail(
 
 		if (params.get("format") !== "json") {
 			await emailEvent;
+			await storeReceivedEmail();
 
 			if (rejectReason !== undefined) {
 				return new Response(
@@ -402,6 +403,7 @@ export async function handleEmail(
 
 		// Give an un-awaited `setReject()` call time to cross JSRPC.
 		await scheduler.wait(0);
+		await storeReceivedEmail();
 
 		return Response.json(
 			{
