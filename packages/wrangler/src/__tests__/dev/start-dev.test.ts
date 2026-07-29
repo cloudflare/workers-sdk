@@ -104,13 +104,13 @@ describe("startDev", () => {
 			"Wrangler detected this dev session is running in an AI agent."
 		);
 		expect(std.out).toContain(
-			"The Local Explorer API is available at http://127.0.0.1:8787/cdn-cgi/explorer/api"
+			"The Local Explorer API is available at http://127.0.0.1:8787/cdn-cgi/local/explorer/api"
 		);
 		expect(std.out).toContain(
-			"GET http://127.0.0.1:8787/cdn-cgi/explorer/api/local/workers - local Workers and bindings"
+			"GET http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings"
 		);
 		expect(std.out).toContain(
-			"POST http://127.0.0.1:8787/cdn-cgi/explorer/api/local/observability/query - query request traces and console logs"
+			"POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query - query request traces and console logs"
 		);
 	});
 
