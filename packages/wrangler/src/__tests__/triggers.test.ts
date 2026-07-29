@@ -1,11 +1,11 @@
 import {
 	runInTempDir,
+	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeRedirectedWranglerConfig } from "./helpers/write-wrangler-config";
 
 describe("triggers deploy", () => {
 	runInTempDir();
