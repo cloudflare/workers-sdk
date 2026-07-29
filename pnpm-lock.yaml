@@ -2743,6 +2743,9 @@ importers:
       '@types/ws':
         specifier: ^8.5.13
         version: 8.5.13
+      am-i-vibing:
+        specifier: ^0.5.0
+        version: 0.5.0
       defu:
         specifier: ^6.1.4
         version: 6.1.4
