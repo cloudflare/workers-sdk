@@ -375,14 +375,16 @@ function printLocalExplorerAgentHint(url: URL): void {
 		Wrangler detected this dev session is running in an AI agent.
 		The Local Explorer API is available at ${explorerApiUrl}
 		Useful routes:
-		  GET ${explorerApiUrl} - OpenAPI schema
-		  GET ${explorerApiUrl}/d1/database - D1 databases
 		  GET ${explorerApiUrl}/local/workers - local Workers and bindings
-		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
 		  GET ${explorerApiUrl}/storage/kv/namespaces - KV namespaces
+		  GET ${explorerApiUrl}/d1/database - D1 databases
+		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
 		  GET ${explorerApiUrl}/workers/durable_objects/namespaces - Durable Object namespaces
 		  GET ${explorerApiUrl}/workflows - Workflows
-		  POST ${explorerApiUrl}/local/observability/query - query request traces and console logs`);
+		  POST ${explorerApiUrl}/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
+		    curl -X POST ${explorerApiUrl}/local/observability/query -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+		If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
+		  GET ${explorerApiUrl} - OpenAPI schema`);
 }
 
 export function formatHostname(hostname: string): string {
