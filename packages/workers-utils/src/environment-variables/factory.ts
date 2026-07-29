@@ -142,6 +142,9 @@ type VariableNames =
 	/** Disable config watching in ConfigController. */
 	| "WRANGLER_CI_DISABLE_CONFIG_WATCHING"
 
+	/** https://donottrack.sh/ */
+	| "DOT_NOT_TRACK"
+
 	// ## Docker Configuration
 
 	/** Path to docker binary (default: "docker"). */

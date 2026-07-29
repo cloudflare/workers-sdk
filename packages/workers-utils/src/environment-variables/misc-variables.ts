@@ -38,11 +38,14 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_SEND_METRICS` can override whether we attempt to send metrics information to Sparrow.
+ * `WRANGLER_SEND_METRICS` and `DO_NOT_TRACK` can override whether we attempt to send
+ * metrics information to Sparrow.
  */
 export const getWranglerSendMetricsFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "WRANGLER_SEND_METRICS",
+	}) || getBooleanEnvironmentVariableFactory({
+		variableName: "DO_NOT_TRACK",
 	});
 
 /**
