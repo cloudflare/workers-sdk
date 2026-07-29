@@ -55,6 +55,73 @@ test(
 );
 
 test(
+	"normalizes the deprecated cache option",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					cache: false,
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.test.ts": dedent /* javascript */ `
+				import { it } from "vitest";
+
+				it("disables the cache", async ({ expect }) => {
+					const key = "https://example.com/cache";
+					await caches.default.put(
+						key,
+						new Response("cached", {
+							headers: { "Cache-Control": "max-age=3600" },
+						})
+					);
+					expect(await caches.default.match(key)).toBeUndefined();
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
+	}
+);
+
+test(
+	"gives cacheAPI precedence over the deprecated cache option",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					cache: true,
+					cacheAPI: false,
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.test.ts": dedent /* javascript */ `
+				import { it } from "vitest";
+
+				it("disables the cache", async ({ expect }) => {
+					const key = "https://example.com/cache";
+					await caches.default.put(
+						key,
+						new Response("cached", {
+							headers: { "Cache-Control": "max-age=3600" },
+						})
+					);
+					expect(await caches.default.match(key)).toBeUndefined();
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
+	}
+);
+
+test(
 	"requires modules entrypoint to use SELF",
 	{ timeout: 45_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
