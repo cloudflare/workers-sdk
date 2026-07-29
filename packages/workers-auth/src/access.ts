@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { isNonInteractiveOrCI, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import {
@@ -90,6 +90,8 @@ export async function getAccessHeaders(
 	options: {
 		logger: OAuthFlowLogger;
 		isNonInteractiveOrCI?: () => boolean;
+		/** Aborts a pending `cloudflared` authorization and kills its process. */
+		signal?: AbortSignal;
 	}
 ): Promise<Record<string, string>> {
 	const logger = options.logger;
@@ -153,14 +155,14 @@ export async function getAccessHeaders(
 
 	// 3. Interactive: fall back to cloudflared
 	logger.debug("Spawning cloudflared to get Access token for domain:");
-	const output = spawnSync("cloudflared", ["access", "login", domain]);
+	const output = await spawnCloudflaredAccessLogin(domain, options.signal);
 	if (output.error) {
 		throw new UserError(
 			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
 			{ telemetryMessage: "user access missing cloudflared" }
 		);
 	}
-	const stringOutput = output.stdout.toString();
+	const stringOutput = output.stdout;
 	logger.debug("cloudflared output:", stringOutput);
 	const matches = stringOutput.match(/fetched your token:\n\n(.*)/m);
 	if (matches && matches.length >= 2) {
@@ -170,6 +172,53 @@ export async function getAccessHeaders(
 		return headers;
 	}
 	throw new Error("Failed to authenticate with Cloudflare Access");
+}
+
+/**
+ * Run `cloudflared access login <domain>` without blocking the event loop.
+ *
+ * `cloudflared` only exits once the user completes the authorization flow in
+ * the browser, which can take arbitrarily long (or never happen). Waiting for
+ * it synchronously would prevent any SIGINT or keypress handler from running,
+ * making it impossible to interrupt wrangler with ctrl+c. The `exit` hook
+ * makes sure a still-waiting `cloudflared` does not outlive the process.
+ *
+ * A spawn failure (e.g. `cloudflared` is not installed) is reported via the
+ * `error` property, mirroring the `spawnSync` API, so that the caller can
+ * surface an installation hint.
+ */
+function spawnCloudflaredAccessLogin(
+	domain: string,
+	signal?: AbortSignal
+): Promise<{ error?: Error; stdout: string }> {
+	return new Promise((resolve, reject) => {
+		const child = spawn("cloudflared", ["access", "login", domain], { signal });
+		const stdoutChunks: Buffer[] = [];
+		child.stdout.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
+		child.stderr.resume();
+		const killChild = () => child.kill();
+		process.once("exit", killChild);
+		child.on("error", (error) => {
+			process.removeListener("exit", killChild);
+			if (signal?.aborted) {
+				// The runtime aborted the authorization; the signal has already
+				// killed the child, so propagate the AbortError to the caller.
+				reject(error);
+				return;
+			}
+			resolve({ error, stdout: "" });
+		});
+		child.on("close", () => {
+			process.removeListener("exit", killChild);
+			if (signal?.aborted) {
+				// The abort kill also fires `close`; whichever of `close` and
+				// `error` arrives first must settle the promise as aborted.
+				reject(signal.reason ?? new Error("The operation was aborted"));
+				return;
+			}
+			resolve({ stdout: Buffer.concat(stdoutChunks).toString() });
+		});
+	});
 }
 
 /**
@@ -183,6 +232,7 @@ export async function getAccessHeaders(
 export async function getCloudflareAccessHeaders(options: {
 	logger: OAuthFlowLogger;
 	isNonInteractiveOrCI: () => boolean;
+	signal?: AbortSignal;
 }): Promise<Record<string, string>> {
 	const cfAuthToken = getCfAuthorizationTokenFromEnv();
 
