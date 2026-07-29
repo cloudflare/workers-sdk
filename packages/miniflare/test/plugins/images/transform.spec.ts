@@ -63,7 +63,6 @@ describe("Images binding local transforms", () => {
 			modules: true,
 			script: WORKER_SCRIPT,
 			images: { binding: "IMAGES" },
-			imagesPersist: false,
 		} satisfies MiniflareOptions);
 	});
 

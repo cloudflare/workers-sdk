@@ -849,18 +849,16 @@ export const CORE_PLUGIN: Plugin<
 						options.hasAssetsAndIsVitest
 					);
 				}),
-				streamingTails: streamingTails?.map<ServiceDesignator>(
-					(service) => {
-						return getCustomServiceDesignator(
-							/* referrer */ options.name,
-							workerIndex,
-							CustomServiceKind.UNKNOWN,
-							name,
-							service,
-							options.hasAssetsAndIsVitest
-						);
-					}
-				),
+				streamingTails: streamingTails?.map<ServiceDesignator>((service) => {
+					return getCustomServiceDesignator(
+						/* referrer */ options.name,
+						workerIndex,
+						CustomServiceKind.UNKNOWN,
+						name,
+						service,
+						options.hasAssetsAndIsVitest
+					);
+				}),
 				containerEngine: getContainerEngine(sharedOptions.containerEngine),
 			},
 		});
@@ -1179,7 +1177,10 @@ export function getGlobalServices({
 	// tail above.
 	if (sharedOptions.unsafeObservability) {
 		services.push(
-			...getObservabilityServices(tmpPath, sharedOptions.defaultPersistRoot)
+			...getObservabilityServices(
+				tmpPath,
+				sharedOptions.resourcePersistencePath
+			)
 		);
 	}
 

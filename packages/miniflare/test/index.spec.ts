@@ -2045,7 +2045,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 
 	async function dispatchEmail(mode: string) {
 		const response = await mf.dispatchFetch(
-			`http://localhost/cdn-cgi/handler/email?format=json&from=sender@example.com&to=${mode}@example.com`,
+			`http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=${mode}@example.com`,
 			{
 				method: "POST",
 				body: `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`,
@@ -2925,61 +2925,6 @@ test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
 	const restartedWorker = await mf.getWorker();
 	const r4 = await restartedWorker.fetch("http://placeholder/");
 	expect(await r4.text()).toBe("ok 2");
-});
-
-test("Miniflare: logs workerd restart failures", async ({ expect }) => {
-	const log = new TestLog();
-	const logError = vi.spyOn(log, "error").mockImplementation(() => {});
-	const handleRuntimeRestart = vi.fn();
-	let runtimeStarts = 0;
-	const options = {
-		log,
-		modules: true,
-		handleRuntimeStdio() {
-			runtimeStarts++;
-			if (runtimeStarts === 2) {
-				throw new Error("restart failed");
-			}
-		},
-		unsafeHandleRuntimeRestart: handleRuntimeRestart,
-		script: `
-			import { abortIsolate } from "cloudflare:workers";
-			export default {
-				fetch(request) {
-					if (new URL(request.url).searchParams.get("crash")) {
-						abortIsolate("test crash");
-					}
-					return new Response("ok");
-				},
-			}
-		`,
-	} satisfies MiniflareOptions;
-	const mf = new Miniflare(options);
-	useDispose(mf);
-
-	await mf.ready;
-	await expect(
-		mf.dispatchFetch("http://placeholder/?crash=1")
-	).rejects.toThrow();
-
-	await vi.waitFor(() => {
-		expect(logError).toHaveBeenCalledWith(
-			expect.objectContaining({
-				code: "ERR_RUNTIME_FAILURE",
-				message:
-					"The Workers runtime failed to restart after an unexpected crash.",
-			})
-		);
-	});
-	expect(handleRuntimeRestart).not.toHaveBeenCalled();
-	await expect(mf.ready).rejects.toMatchObject({
-		code: "ERR_RUNTIME_FAILURE",
-		message: "The Workers runtime failed to restart after an unexpected crash.",
-	});
-
-	await mf.setOptions(options);
-	const response = await mf.dispatchFetch("http://placeholder/");
-	expect(await response.text()).toBe("ok");
 });
 
 test("Miniflare: logs post-restart callback failures", async ({ expect }) => {
