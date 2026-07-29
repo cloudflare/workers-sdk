@@ -1,0 +1,65 @@
+{
+	"name": "@cloudflare/pages-functions",
+	"version": "0.0.1",
+	"description": "Compile a Pages Functions directory into a Cloudflare Worker bundle",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-functions#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/pages-functions"
+	},
+	"bin": {
+		"pages-functions": "./bin/pages-functions"
+	},
+	"files": [
+		"bin",
+		"dist",
+		"src/templates"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc",
+		"dev": "tsdown --watch",
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"esbuild": "catalog:default",
+		"path-to-regexp": "6.3.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"@types/node": "catalog:default",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}
