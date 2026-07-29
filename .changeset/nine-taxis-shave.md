@@ -1,7 +1,7 @@
 ---
-"create-cloudflare": patch
-"@cloudflare/workers-utils": patch
-"wrangler": patch
+"create-cloudflare": minor
+"@cloudflare/workers-utils": minor
+"wrangler": minor
 ---
 
 Support the `DO_NOT_TRACK` environment variable as a telemetry opt-out
