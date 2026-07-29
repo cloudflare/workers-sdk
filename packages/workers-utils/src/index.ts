@@ -90,10 +90,13 @@ export * from "./errors";
 export { assertNever } from "./assert-never";
 
 export {
+	createLockfileCache,
 	getPackagePath,
 	isPackageInstalled,
 	getInstalledPackageVersion,
 } from "./package-resolution";
+
+export type { LockfileCache } from "./package-resolution";
 
 export * from "./constants";
 

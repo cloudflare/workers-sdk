@@ -58,7 +58,9 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/node": "catalog:default",
+		"@types/yarnpkg__lockfile": "^1.1.9",
 		"@vitest/ui": "catalog:default",
+		"@yarnpkg/lockfile": "^1.1.0",
 		"ci-info": "catalog:default",
 		"cloudflare": "^5.2.0",
 		"command-exists": "catalog:default",
@@ -74,7 +76,8 @@
 		"typescript": "catalog:default",
 		"update-check": "^1.5.4",
 		"vitest": "catalog:default",
-		"xdg-app-paths": "^8.3.0"
+		"xdg-app-paths": "^8.3.0",
+		"yaml": "^2.8.1"
 	},
 	"peerDependencies": {
 		"vitest": "^4.1.0"
