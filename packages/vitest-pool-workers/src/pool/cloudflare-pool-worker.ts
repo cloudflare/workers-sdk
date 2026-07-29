@@ -18,9 +18,9 @@ import {
 	structuredSerializableStringify,
 } from ".";
 import type {
+	ParsedWorkerPoolOptions,
 	WorkersConfigPluginAPI,
 	WorkersPoolOptions,
-	WorkersPoolOptionsWithDefines,
 } from "./config";
 import type {
 	Miniflare,
@@ -39,7 +39,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 	private readonly debug = util.debuglog("vitest-pool-workers");
 	private mf: Miniflare | undefined;
 	private socket: WebSocket | undefined;
-	private parsedPoolOptions: WorkersPoolOptionsWithDefines | undefined;
+	private parsedPoolOptions: ParsedWorkerPoolOptions | undefined;
 	private main: string | undefined;
 	// Store wrapped listeners so off() can remove them correctly.
 	// Vitest registers at most one listener per event type.
