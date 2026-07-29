@@ -370,7 +370,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
-			// Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			// yarn: nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18.
+			// npm: nuxt project creation fails on npm with "Cannot read properties of null (reading 'edgesOut')".
 			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
 			// The Nuxt `ui` template pins `packageManager: pnpm@11.9.0`, so run
