@@ -20,7 +20,7 @@ import {
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { writeOutput } from "../output";
+import { formatBundleSizeOutput, writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
@@ -195,14 +195,20 @@ export async function runDeployCommandHandler(
 
 		const buildResult = await buildWorker(buildProps, config);
 
-		const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
-			await deploy(props, config, buildResult, {
-				syncWorkersSite,
-				getNormalizedContainerOptions,
-				buildContainer,
-				deployContainers,
-				analyseBundle,
-			});
+		const {
+			sourceMapSize,
+			versionId,
+			workerTag,
+			assetUploadStats,
+			targets,
+			bundleSize,
+		} = await deploy(props, config, buildResult, {
+			syncWorkersSite,
+			getNormalizedContainerOptions,
+			buildContainer,
+			deployContainers,
+			analyseBundle,
+		});
 
 		writeOutput({
 			type: "deploy",
@@ -213,6 +219,7 @@ export async function runDeployCommandHandler(
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
+			bundle_size: formatBundleSizeOutput(bundleSize),
 		});
 
 		metrics.sendMetricsEvent(

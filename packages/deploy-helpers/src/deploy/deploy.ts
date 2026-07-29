@@ -22,7 +22,7 @@ import {
 	syncAssets,
 } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
+import { printBundleSize, type BundleSize } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
@@ -144,6 +144,7 @@ export default async function deploy(
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
+	bundleSize?: BundleSize;
 }> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
@@ -340,7 +341,7 @@ export default async function deploy(
 		0
 	);
 
-	await printBundleSize(
+	const bundleSize = await printBundleSize(
 		{ name: path.basename(resolvedEntryPointPath), content: content },
 		modules
 	);
@@ -719,7 +720,7 @@ export default async function deploy(
 
 	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, bundleSize };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -742,7 +743,7 @@ export default async function deploy(
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats };
+		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
 	// deploy triggers
@@ -765,5 +766,6 @@ export default async function deploy(
 		workerTag,
 		assetUploadStats,
 		targets: targets ?? [],
+		bundleSize,
 	};
 }

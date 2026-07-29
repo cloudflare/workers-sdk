@@ -9,7 +9,14 @@ const ONE_KIB_BYTES = 1024;
 // See https://developers.cloudflare.com/workers/platform/limits/#worker-size
 const MAX_GZIP_SIZE_BYTES = 3 * ONE_KIB_BYTES * ONE_KIB_BYTES;
 
-async function getSize(modules: Pick<CfModule, "content">[]) {
+export interface BundleSize {
+	size: number;
+	gzipSize: number;
+}
+
+async function getSize(
+	modules: Pick<CfModule, "content">[]
+): Promise<BundleSize> {
 	const gzipSize = gzipSync(
 		await new Blob(modules.map((file) => file.content)).arrayBuffer()
 	).byteLength;
@@ -24,7 +31,7 @@ export async function printBundleSize(
 		content: string;
 	},
 	modules: CfModule[]
-) {
+): Promise<BundleSize> {
 	const { size, gzipSize } = await getSize([...modules, main]);
 
 	const bundleReport = `${(size / ONE_KIB_BYTES).toFixed(2)} KiB / gzip: ${(
@@ -41,4 +48,6 @@ export async function printBundleSize(
 				: chalk.green(bundleReport);
 
 	logger.log(`Total Upload: ${colorizedReport}`);
+
+	return { size, gzipSize };
 }

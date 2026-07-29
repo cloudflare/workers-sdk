@@ -1120,14 +1120,17 @@ export default { fetch() { return new Response(foo); } }`
 			test("should print the bundle size", async ({ expect }) => {
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
-				await printBundleSize({ name: "index.js", content: "" }, [
-					{
-						name: "index.js",
-						filePath: undefined,
-						content: bigModule,
-						type: "buffer",
-					},
-				]);
+				const bundleSize = await printBundleSize(
+					{ name: "index.js", content: "" },
+					[
+						{
+							name: "index.js",
+							filePath: undefined,
+							content: bigModule,
+							type: "buffer",
+						},
+					]
+				);
 
 				expect(std).toMatchInlineSnapshot(`
 					{
@@ -1138,6 +1141,10 @@ export default { fetch() { return new Response(foo); } }`
 					  "warn": "",
 					}
 				`);
+				expect(bundleSize).toEqual({
+					size: 10_000_000,
+					gzipSize: expect.any(Number),
+				});
 			});
 
 			test("should print the top biggest dependencies in the bundle when upload fails", ({

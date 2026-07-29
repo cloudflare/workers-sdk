@@ -15,7 +15,7 @@ import {
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
-import { writeOutput } from "../output";
+import { formatBundleSizeOutput, writeOutput } from "../output";
 import { getScriptName } from "../utils/getScriptName";
 
 export const versionsUploadCommand = createCommand({
@@ -70,6 +70,7 @@ export const versionsUploadCommand = createCommand({
 				assetUploadStats: uploadStats,
 				versionPreviewUrl,
 				versionPreviewAliasUrl,
+				bundleSize,
 			} = await versionsUpload(props, config, buildResult, {
 				analyseBundle: analyseBundle,
 			});
@@ -85,6 +86,7 @@ export const versionsUploadCommand = createCommand({
 				preview_alias_url: versionPreviewAliasUrl,
 				wrangler_environment: args.env,
 				worker_name_overridden: workerNameOverridden,
+				bundle_size: formatBundleSizeOutput(bundleSize),
 			});
 		} finally {
 			metrics.sendMetricsEvent(
