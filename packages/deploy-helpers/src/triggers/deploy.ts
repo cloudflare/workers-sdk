@@ -358,7 +358,7 @@ export async function triggersDeploy(
 	const failedWorkflowNames = completedWorkflowDeployments
 		.filter(({ deployment }) => deployment.error !== undefined)
 		.map(({ name }) => name);
-	const eventTriggers = config.triggers.events;
+	const eventTriggers = config.triggers?.events;
 
 	if (eventTriggers !== undefined && failedWorkflowNames.length === 0) {
 		deployments.push(
@@ -750,7 +750,7 @@ export function validateEventTriggerTargets(
 	config: Config,
 	scriptName: string
 ): void {
-	for (const event of config.triggers.events ?? []) {
+	for (const event of config.triggers?.events ?? []) {
 		for (const target of event.targets) {
 			const isDefinedByThisWorker = config.workflows.some(
 				(workflow) =>
