@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type -- Type augmentation interfaces intentionally left empty */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import { APIError, FatalError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 /* eslint-disable-next-line no-restricted-imports --
  * Uses expect in MSW handlers outside test callbacks
@@ -13,9 +13,13 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
 
+const { mockWhoami } = vi.hoisted(() => ({ mockWhoami: vi.fn() }));
+vi.mock("../user/whoami", () => ({ whoami: mockWhoami }));
+
 describe("writeOutput()", () => {
 	runInTempDir({ homedir: "home" });
 	afterEach(clearOutputFilePath);
+	afterEach(() => mockWhoami.mockReset());
 	mockConsoleMethods();
 
 	it("should do nothing with no env vars set", () => {
@@ -283,15 +287,11 @@ describe("writeOutput()", () => {
 	});
 
 	it("should write an error log when a handler throws an error", async () => {
-		vi.mock("../user/whoami", () => {
-			return {
-				whoami: vi.fn().mockImplementation(() => {
-					throw new FatalError("A request to the Cloudflare API failed.", {
-						code: 10211,
-						telemetryMessage: false,
-					});
-				}),
-			};
+		mockWhoami.mockImplementation(() => {
+			throw new FatalError("A request to the Cloudflare API failed.", {
+				code: 10211,
+				telemetryMessage: false,
+			});
 		});
 
 		const WRANGLER_OUTPUT_FILE_PATH = "output.json";
@@ -313,6 +313,37 @@ describe("writeOutput()", () => {
 			// excluding timestamp
 			message: "A request to the Cloudflare API failed.",
 			code: 10211,
+		});
+		expect(entries[1].retry_after_ms).toBeUndefined();
+	});
+
+	it("should include retry_after_ms in the error log when the failure carries a Retry-After duration", async () => {
+		mockWhoami.mockImplementation(() => {
+			const error = new APIError({
+				text: "A request to the Cloudflare API failed.",
+				status: 429,
+				telemetryMessage: false,
+			});
+			error.retryAfterMs = 12_345;
+			throw error;
+		});
+
+		const WRANGLER_OUTPUT_FILE_PATH = "output.json";
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", WRANGLER_OUTPUT_FILE_PATH);
+
+		await expect(runWrangler("whoami")).rejects.toThrow();
+
+		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
+		const entries = outputFile
+			.split("\n")
+			.filter(Boolean)
+			.map((e) => JSON.parse(e));
+		expect(entries).toHaveLength(2);
+		expect(entries[1]).toMatchObject({
+			version: 1,
+			type: "command-failed",
+			retry_after_ms: 12_345,
 		});
 	});
 });

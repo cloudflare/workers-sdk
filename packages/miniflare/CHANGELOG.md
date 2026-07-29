@@ -1,5 +1,33 @@
 # miniflare
 
+## 4.20260722.1
+
+### Minor Changes
+
+- [#14702](https://github.com/cloudflare/workers-sdk/pull/14702) [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a) Thanks [@Sipixer](https://github.com/Sipixer)! - Support passing V8 flags to `workerd` via the `MINIFLARE_WORKERD_V8_FLAGS` environment variable
+
+  The generated `workerd` config already supports `v8Flags`, but Miniflare never populated it, so the runtime always ran with V8's default heap limit (~1.4 GB). Large dev applications (e.g. big SSR module graphs under `@cloudflare/vite-plugin`, where each server-file edit grows the runner isolate's heap) can reach that limit, at which point `workerd` aborts with `V8 fatal error; location = Reached heap limit` and every subsequent `dispatchFetch()` fails with `fetch failed` until the dev server is manually restarted.
+
+  Setting e.g. `MINIFLARE_WORKERD_V8_FLAGS="--max-old-space-size=4096"` raises the limit and keeps long dev sessions alive. The variable follows the same space-separated format as `MINIFLARE_WORKERD_AUTOGATES`.
+
+- [#14280](https://github.com/cloudflare/workers-sdk/pull/14280) [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Add a local S3-compatible API for R2 buckets at `/cdn-cgi/local/r2/s3/<bucket-id>`, where `<bucket-id>` is the ID the bucket is configured with in the `r2Buckets` option
+
+  Buckets configured with `s3Credentials: { accessKeyId, secretAccessKey }` in `r2Buckets` are served over an S3-compatible HTTP API, authenticated with AWS Signature Version 4 (both `Authorization` header and presigned URL query authentication). Supported operations: GetObject, HeadObject, PutObject, CopyObject, DeleteObject, DeleteObjects, ListObjects, ListObjectsV2, HeadBucket, ListBuckets, CreateMultipartUpload, UploadPart, UploadPartCopy, CompleteMultipartUpload, and AbortMultipartUpload. Status codes, error responses, and unsupported-header screening mirror R2's S3 endpoint, including its static responses for bucket-configuration reads and its named errors for unimplemented operations.
+
+- [#14712](https://github.com/cloudflare/workers-sdk/pull/14712) [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1) Thanks [@mack-erel](https://github.com/mack-erel)! - Support `connect()` on remote VPC Network and VPC Service bindings in local development
+
+  Remote VPC Network and VPC Service bindings previously only supported HTTP and JSRPC, so calling `binding.connect(address)` against a private TCP service (for example a database) failed in local dev with `Incoming CONNECT on a worker not supported`. Raw TCP connections through remote VPC Network and VPC Service bindings now work in local development.
+
+  This feature is experimental. Existing HTTP and JSRPC usage of remote VPC Network and VPC Service bindings is unaffected, and no new configuration is required.
+
+### Patch Changes
+
+- [#14784](https://github.com/cloudflare/workers-sdk/pull/14784) [`1035f74`](https://github.com/cloudflare/workers-sdk/commit/1035f7450006c5c8b8b003135d2b530193c913a1) Thanks [@ATKasem](https://github.com/ATKasem)! - Fix `getWithMetadata` dropping metadata for falsy KV values
+
+  `KVNamespace.getWithMetadata` returned `null` metadata whenever the stored value was falsy — an empty string or `"0"` — because the metadata branch was guarded by a truthiness check on the value. The guard now checks for `null` explicitly, so metadata is preserved for empty-string and `"0"` values while genuinely missing keys still return `null`.
+
+- [#14864](https://github.com/cloudflare/workers-sdk/pull/14864) [`3a22ae5`](https://github.com/cloudflare/workers-sdk/commit/3a22ae532c5c75c716d4c219e116eb3e0c5b236e) Thanks [@Hashim1999164](https://github.com/Hashim1999164)! - Hide the workerd console window on Windows when the parent process has no console. Spawning workerd without `windowsHide: true` caused Windows Terminal to open a visible, focus-stealing window for background or detached parents (for example Astro's `astro dev --background`).
+
 ## 4.20260722.0
 
 ### Minor Changes
