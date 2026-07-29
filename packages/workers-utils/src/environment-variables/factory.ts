@@ -143,7 +143,7 @@ type VariableNames =
 	| "WRANGLER_CI_DISABLE_CONFIG_WATCHING"
 
 	/** https://donottrack.sh/ */
-	| "DOT_NOT_TRACK"
+	| "DO_NOT_TRACK"
 
 	// ## Docker Configuration
 
