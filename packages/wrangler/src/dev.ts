@@ -483,9 +483,12 @@ function applyHyperdriveEnvVars(config: Config, local: boolean): void {
 			connectionStringFromEnv = process.env[varName];
 		}
 
-		// only require a local connection string in the wrangler file or the env if not using dev --remote
+		// only require a local connection string in the wrangler file or the env
+		// if not using dev --remote, and not opted into a remote Hyperdrive
+		// binding (which tunnels to the edge instead of a local database)
 		if (
 			local &&
+			!hyperdrive.remote &&
 			connectionStringFromEnv === undefined &&
 			hyperdrive.localConnectionString === undefined
 		) {
