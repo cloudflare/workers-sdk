@@ -1888,6 +1888,9 @@ importers:
       '@clack/prompts':
         specifier: ^1.2.0
         version: 1.2.0
+      '@cloudflare/autoconfig':
+        specifier: workspace:*
+        version: link:../autoconfig
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
