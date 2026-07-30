@@ -14,23 +14,37 @@ import type {
 	ParsedSettingsConfig,
 } from "@cloudflare/config";
 
+interface BuildOutputWorkerBase {
+	/** Absolute path to the Worker's `config.json`. */
+	configPath: string;
+	/** The parsed, schema-validated Worker config, including its `manifest`. */
+	config: ParsedOutputWorkerConfig;
+}
+
 /**
  * The Worker found in the Build Output Specification tree.
  *
  * `bundleDir` / `assetsDir` are resolved to `undefined` when the corresponding
  * directory is absent on disk, so consumers don't need their own existence
- * checks.
+ * checks. A Worker always has at least one of them: the type is a union so
+ * that a Worker with neither a `bundle/` nor an `assets/` directory is
+ * unrepresentable.
  */
-export interface BuildOutputWorker {
-	/** Absolute path to the Worker's `config.json`. */
-	configPath: string;
-	/** The parsed, schema-validated Worker config, including its `manifest`. */
-	config: ParsedOutputWorkerConfig;
-	/** Absolute path to the Worker's `bundle/` directory, if present. */
-	bundleDir: string | undefined;
-	/** Absolute path to the Worker's `assets/` directory, if present. */
-	assetsDir: string | undefined;
-}
+export type BuildOutputWorker = BuildOutputWorkerBase &
+	(
+		| {
+				/** Absolute path to the Worker's `bundle/` directory. */
+				bundleDir: string;
+				/** Absolute path to the Worker's `assets/` directory, if present. */
+				assetsDir: string | undefined;
+		  }
+		| {
+				/** Absolute path to the Worker's `bundle/` directory, if present. */
+				bundleDir: string | undefined;
+				/** Absolute path to the Worker's `assets/` directory. */
+				assetsDir: string;
+		  }
+	);
 
 /**
  * The result of reading a Build Output Specification tree.
@@ -94,13 +108,36 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 
 	const bundleDir = getWorkerBundleDir(root);
 	const assetsDir = getWorkerAssetsDir(root);
+	const hasBundleDir = fs.existsSync(bundleDir);
+	const hasAssetsDir = fs.existsSync(assetsDir);
 
-	return {
-		configPath,
-		config: result.data,
-		bundleDir: fs.existsSync(bundleDir) ? bundleDir : undefined,
-		assetsDir: fs.existsSync(assetsDir) ? assetsDir : undefined,
-	};
+	if (result.data.manifest && !hasBundleDir) {
+		throw new BuildOutputError(
+			`Build Output Specification: Worker config at ${configPath} contains a manifest, but no bundle directory exists at ${bundleDir}.`
+		);
+	}
+
+	if (hasBundleDir) {
+		return {
+			configPath,
+			config: result.data,
+			bundleDir,
+			assetsDir: hasAssetsDir ? assetsDir : undefined,
+		};
+	}
+
+	if (hasAssetsDir) {
+		return {
+			configPath,
+			config: result.data,
+			bundleDir: undefined,
+			assetsDir,
+		};
+	}
+
+	throw new BuildOutputError(
+		`Build Output Specification: Worker config at ${configPath} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
+	);
 }
 
 /**

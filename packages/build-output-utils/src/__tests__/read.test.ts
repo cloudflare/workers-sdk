@@ -37,21 +37,32 @@ function inputWorkerConfig(name: string) {
 /**
  * Seed the single `default` Worker into the Build Output Specification tree,
  * optionally creating the `bundle/` and `assets/` directories on disk.
+ *
+ * `hasBundle` controls whether the config is written with a manifest and
+ * whether the `bundle/` directory is created. `bundleDir` can override just the
+ * directory creation (defaulting to `hasBundle`), which is useful for
+ * exercising the "manifest present but bundle directory missing" validation.
  */
 async function seedWorker(
 	root: string,
 	{
 		name = "my-worker",
-		bundle = true,
+		hasBundle = true,
+		bundleDir = hasBundle,
 		assets = false,
-	}: { name?: string; bundle?: boolean; assets?: boolean } = {}
+	}: {
+		name?: string;
+		hasBundle?: boolean;
+		bundleDir?: boolean;
+		assets?: boolean;
+	} = {}
 ) {
 	await writeWorkerConfig(
 		root,
 		inputWorkerConfig(name),
-		bundle ? manifest : undefined
+		hasBundle ? manifest : undefined
 	);
-	if (bundle) {
+	if (bundleDir) {
 		await fsp.mkdir(getWorkerBundleDir(root), { recursive: true });
 	}
 	if (assets) {
@@ -85,7 +96,7 @@ describe("readBuildOutput", () => {
 		expect,
 	}) => {
 		const root = process.cwd();
-		await seedWorker(root, { bundle: false, assets: true });
+		await seedWorker(root, { hasBundle: false, assets: true });
 
 		const {
 			workers: [worker],
@@ -93,6 +104,30 @@ describe("readBuildOutput", () => {
 
 		expect(worker.bundleDir).toBeUndefined();
 		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
+	});
+
+	it("throws when the config has a manifest but no bundle directory", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root, { hasBundle: true, bundleDir: false });
+
+		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/contains a manifest, but no bundle directory exists/
+		);
+	});
+
+	it("throws when the Worker has neither a bundle nor an assets directory", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root, { hasBundle: false, assets: false });
+
+		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/has neither a bundle directory .* nor an assets directory/
+		);
 	});
 
 	it("throws when the Worker config is missing", async ({ expect }) => {
