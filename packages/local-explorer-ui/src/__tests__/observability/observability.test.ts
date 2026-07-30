@@ -563,6 +563,11 @@ describe("formatLogMessage", () => {
 	test("stringifies non-string JSON", ({ expect }) => {
 		expect(formatLogMessage(JSON.stringify({ a: 1 }))).toBe(`{"a":1}`);
 	});
+	test("joins a console arg array the way the console would", ({ expect }) => {
+		expect(
+			formatLogMessage(JSON.stringify(["request failed:", { a: 1 }]))
+		).toBe(`request failed: {"a":1}`);
+	});
 	test("falls back to the raw value on invalid JSON", ({ expect }) => {
 		expect(formatLogMessage("raw")).toBe("raw");
 	});

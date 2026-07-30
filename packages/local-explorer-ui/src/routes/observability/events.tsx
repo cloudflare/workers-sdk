@@ -10,9 +10,10 @@ import {
 	CopyIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
+	TreeStructureIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClearButton } from "../../components/observability/ClearButton";
 import { FilterBuilder } from "../../components/observability/FilterBuilder";
@@ -23,6 +24,7 @@ import { ResourceError } from "../../components/ResourceError";
 import { copyTextToClipboard } from "../../utils/agent-prompt";
 import {
 	clearTraces,
+	formatLogMessage,
 	isObservabilityDisabledError,
 	listEvents,
 } from "../../utils/observability";
@@ -64,17 +66,6 @@ function parseMessage(message: string | null): unknown {
 	} catch {
 		return message;
 	}
-}
-
-function previewMessage(message: string | null): string {
-	const parsed = parseMessage(message);
-	if (parsed == null) {
-		return "";
-	}
-	if (typeof parsed === "string") {
-		return parsed;
-	}
-	return JSON.stringify(parsed);
 }
 
 function levelClass(level: string | null): string {
@@ -128,6 +119,8 @@ function EventsView(): JSX.Element {
 					search: parsed.text,
 					level: parsed.level ?? level,
 					operation: parsed.operation,
+					traceId: parsed.traceId,
+					spanId: parsed.spanId,
 					clauses: filterClauses,
 				})
 			);
@@ -294,6 +287,7 @@ function EventsView(): JSX.Element {
 									<th className="w-20 py-2 pr-3 font-medium">Level</th>
 									<th className="py-2 pr-3 font-medium">Message</th>
 									<th className="w-48 py-2 pr-3 font-medium">Service</th>
+									<th className="w-10 py-2 pr-3" />
 								</tr>
 							</thead>
 							<tbody>
@@ -328,6 +322,14 @@ function EventRow({
 	onToggle: () => void;
 }): JSX.Element {
 	const toast = useKumoToastManager();
+	const router = useRouter();
+	// Jump to the Traces view and open the trace this event was emitted from.
+	const goToTrace = useCallback(() => {
+		void router.navigate({
+			to: "/observability",
+			search: (prev) => ({ ...prev, trace: event.trace_id }),
+		});
+	}, [router, event.trace_id]);
 	const blob = useMemo(() => {
 		const obj = {
 			timestamp: event.created_at,
@@ -379,15 +381,31 @@ function EventRow({
 					</span>
 				</td>
 				<td className="truncate py-2 pr-3 font-mono text-xs text-kumo-default">
-					{previewMessage(event.message)}
+					{formatLogMessage(event.message ?? undefined)}
 				</td>
 				<td className="py-2 pr-3 font-mono text-xs text-kumo-subtle">
 					{event.service ?? "-"}
 				</td>
+				<td className="py-2 pr-3">
+					{event.span_id ? (
+						<Button
+							size="sm"
+							shape="square"
+							variant="ghost"
+							icon={TreeStructureIcon}
+							aria-label="View trace"
+							title="View this event's trace"
+							onClick={(e) => {
+								e.stopPropagation();
+								goToTrace();
+							}}
+						/>
+					) : null}
+				</td>
 			</tr>
 			{isOpen ? (
 				<tr className="bg-kumo-base">
-					<td colSpan={4} className="px-4 py-3">
+					<td colSpan={5} className="px-4 py-3">
 						<div className="relative rounded-lg border border-kumo-fill bg-kumo-elevated p-3">
 							<Button
 								size="sm"

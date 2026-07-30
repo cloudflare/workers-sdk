@@ -1,23 +1,8 @@
 import { cn } from "@cloudflare/kumo";
 import { useEffect, useState } from "react";
-import { fetchTraceLogs } from "../../utils/observability";
+import { fetchTraceLogs, formatLogMessage } from "../../utils/observability";
 import type { Log } from "../../utils/observability";
 import type { JSX } from "react";
-
-function previewMessage(message?: string | null): string {
-	if (!message) {
-		return "";
-	}
-	try {
-		const parsed: unknown = JSON.parse(message);
-		if (typeof parsed === "string") {
-			return parsed;
-		}
-		return JSON.stringify(parsed);
-	} catch {
-		return message;
-	}
-}
 
 function levelClass(level?: string | null): string {
 	switch (level) {
@@ -93,7 +78,7 @@ export function InvocationLogs({ traceId }: { traceId: string }): JSX.Element {
 								{log.level ?? "log"}
 							</span>
 							<span className="font-mono text-xs break-all text-kumo-default">
-								{previewMessage(log.message)}
+								{formatLogMessage(log.message ?? undefined)}
 							</span>
 						</li>
 					))}

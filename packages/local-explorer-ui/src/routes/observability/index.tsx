@@ -14,7 +14,7 @@ import {
 	PulseIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import {
 	Fragment,
 	useCallback,
@@ -128,6 +128,12 @@ function ObservabilityView(): JSX.Element {
 	// render) so the effect can consult the latest cache on the list cadence.
 	const spansByTraceRef = useRef(spansByTrace);
 	spansByTraceRef.current = spansByTrace;
+	// Deep link from an event's "View trace" button (?trace=<id>): open that
+	// trace's waterfall and scroll to it once its row is in the list.
+	const deepLinkTrace = useRouterState({
+		select: (s) => (s.location.search as { trace?: string }).trace,
+	});
+	const deepLinkAppliedRef = useRef<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Capture is off (no collector bound). We show an "off" panel instead of the
@@ -330,6 +336,34 @@ function ObservabilityView(): JSX.Element {
 			void loadSpans(trace);
 		}
 	}, [traces, expanded, loadSpans]);
+
+	useEffect(() => {
+		if (!deepLinkTrace || deepLinkAppliedRef.current === deepLinkTrace) {
+			return;
+		}
+		const match = traces.find((t) => t.trace_id === deepLinkTrace);
+		if (!match) {
+			return;
+		}
+		deepLinkAppliedRef.current = deepLinkTrace;
+		const key = traceKey(match);
+		setExpanded((prev) => {
+			if (prev.has(key)) {
+				return prev;
+			}
+			const next = new Set(prev);
+			next.add(key);
+			return next;
+		});
+		if (!spansByTraceRef.current[key]) {
+			void loadSpans(match);
+		}
+		requestAnimationFrame(() => {
+			document
+				.getElementById(`trace-row-${deepLinkTrace}`)
+				?.scrollIntoView({ block: "center" });
+		});
+	}, [deepLinkTrace, traces, loadSpans]);
 
 	const maxDuration = useMemo(
 		() => Math.max(1, ...traces.map((t) => t.duration_ms ?? 0)),
@@ -562,6 +596,7 @@ function ObservabilityView(): JSX.Element {
 									return (
 										<Fragment key={key}>
 											<tr
+												id={`trace-row-${t.trace_id}`}
 												onClick={() => void toggleTrace(t)}
 												className={cn(
 													"cursor-pointer border-b border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5",

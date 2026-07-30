@@ -68,6 +68,15 @@ describe("parseTraceQuery clauses", () => {
 			{ field: "duration", op: ">=", value: "100" },
 		]);
 	});
+
+	test("trace: and span: are parsed as id lookups, not clauses", ({
+		expect,
+	}) => {
+		const parsed = parseTraceQuery("trace:abc123 span:def456");
+		expect(parsed.traceId).toBe("abc123");
+		expect(parsed.spanId).toBe("def456");
+		expect(parsed.clauses).toEqual([]);
+	});
 });
 
 describe("durationClauseSql", () => {
