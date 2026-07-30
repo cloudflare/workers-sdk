@@ -52,6 +52,34 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 	);
 });
 
+test("accepts a workflow with cron schedules configured", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		name: "workflow-schedules-worker",
+		compatibilityDate: "2024-11-20",
+		modules: true,
+		script: WORKFLOW_SCRIPT(),
+		workflows: {
+			MY_WORKFLOW: {
+				className: "MyWorkflow",
+				name: "MY_WORKFLOW",
+				schedules: ["0 * * * *", "*/15 * * * *"],
+			},
+		},
+		workflowsPersist: tmp,
+	});
+	useDispose(mf);
+
+	// `schedules` is plumbed through (not auto-fired), so the workflow still runs
+	// normally only when explicitly created.
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe(
+		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
+	);
+});
+
 test("persists Workflow data on file-system between runs", async ({
 	expect,
 }) => {

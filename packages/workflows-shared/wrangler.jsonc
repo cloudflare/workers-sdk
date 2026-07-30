@@ -13,5 +13,10 @@
 			"service": "workflows-shared-test",
 			"entrypoint": "TestWorkflow",
 		},
+		{
+			"binding": "SAFFRON",
+			"service": "workflows-shared-test",
+			"entrypoint": "CronFetcher",
+		},
 	],
 }

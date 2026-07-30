@@ -14,6 +14,8 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 export * from "../src/index";
 
+export { CronFetcher } from "../src/saffron-worker";
+
 type WorkflowCallback = (
 	event: unknown,
 	step: WorkflowStep

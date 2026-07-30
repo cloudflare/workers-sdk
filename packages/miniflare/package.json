@@ -26,6 +26,7 @@
 	"files": [
 		"dist/src",
 		"dist/local-explorer-ui",
+		"dist/saffron",
 		"bootstrap.js"
 	],
 	"main": "./dist/src/index.js",

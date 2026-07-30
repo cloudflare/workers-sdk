@@ -61,5 +61,7 @@
 		"packages/**/worker-configuration.d.ts",
 		"packages/local-explorer-ui/src/routeTree.gen.ts",
 		"packages/local-explorer-ui/src/api/generated",
+		// Vendored (generated) saffron wasm-bindgen glue
+		"packages/workflows-shared/src/vendor/saffron/saffron.js",
 	],
 }

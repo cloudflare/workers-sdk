@@ -355,6 +355,7 @@ function workflowEntry(
 		script_name: scriptName,
 		remote,
 		limits,
+		schedules,
 	}: CfWorkflow,
 	remoteProxyConnectionString?: RemoteProxyConnectionString,
 	compatibilityFlags?: string[]
@@ -367,9 +368,17 @@ function workflowEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		stepLimit?: number;
 		compatibilityFlags?: string[];
+		schedules?: string[];
 	},
 ] {
 	const stepLimit = limits?.steps;
+
+	const normalizedSchedules =
+		schedules === undefined
+			? undefined
+			: Array.isArray(schedules)
+				? schedules
+				: [schedules];
 
 	if (!remoteProxyConnectionString || !remote) {
 		return [
@@ -380,6 +389,9 @@ function workflowEntry(
 				scriptName,
 				...(stepLimit !== undefined && { stepLimit }),
 				compatibilityFlags,
+				...(normalizedSchedules !== undefined && {
+					schedules: normalizedSchedules,
+				}),
 			},
 		];
 	}
@@ -393,6 +405,9 @@ function workflowEntry(
 			remoteProxyConnectionString,
 			...(stepLimit !== undefined && { stepLimit }),
 			compatibilityFlags,
+			...(normalizedSchedules !== undefined && {
+				schedules: normalizedSchedules,
+			}),
 		},
 	];
 }
