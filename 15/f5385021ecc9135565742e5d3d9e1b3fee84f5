@@ -1,0 +1,20 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "15f5385021ecc9135565742e5d3d9e1b3fee84f5",
+  "prompts": {
+    "22baa37600d6ebd1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c49c2946ffez7W6VFJaYSJQFu",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "Gabriel Massadas",
+      "total_additions": 17,
+      "total_deletions": 22,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}
