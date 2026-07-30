@@ -355,12 +355,20 @@ export async function triggersDeploy(
 		)
 	);
 
-	const failedWorkflowNames = completedWorkflowDeployments
-		.filter(({ deployment }) => deployment.error !== undefined)
-		.map(({ name }) => name);
 	const eventTriggers = config.triggers?.events;
+	const targetedWorkflowNames = new Set(
+		eventTriggers?.flatMap((event) =>
+			event.targets.map((target) => target.workflow_name)
+		) ?? []
+	);
+	const failedTargetedWorkflowNames = completedWorkflowDeployments
+		.filter(
+			({ name, deployment }) =>
+				deployment.error !== undefined && targetedWorkflowNames.has(name)
+		)
+		.map(({ name }) => name);
 
-	if (eventTriggers !== undefined && failedWorkflowNames.length === 0) {
+	if (eventTriggers !== undefined && failedTargetedWorkflowNames.length === 0) {
 		deployments.push(
 			fetchResult(
 				config,
@@ -394,8 +402,8 @@ export async function triggersDeploy(
 		);
 	} else if (eventTriggers !== undefined) {
 		const workflowLabel =
-			failedWorkflowNames.length === 1 ? "Workflow" : "Workflows";
-		const failedWorkflows = failedWorkflowNames
+			failedTargetedWorkflowNames.length === 1 ? "Workflow" : "Workflows";
+		const failedWorkflows = failedTargetedWorkflowNames
 			.map((name) => `"${name}"`)
 			.join(", ");
 
@@ -447,6 +455,10 @@ export async function triggersDeploy(
 			workerTag: props.workerTag,
 		});
 	} catch (error) {
+		if (failedDeployments.length === 0) {
+			throw error;
+		}
+
 		failedDeployments.push({
 			category: "Email routing",
 			targets: [],

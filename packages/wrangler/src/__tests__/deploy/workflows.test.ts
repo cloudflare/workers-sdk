@@ -565,6 +565,98 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should update event triggers when an unrelated Workflow fails", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "TARGET_WORKFLOW",
+						name: "target-workflow",
+						class_name: "TargetWorkflow",
+					},
+					{
+						binding: "UNRELATED_WORKFLOW",
+						name: "unrelated-workflow",
+						class_name: "UnrelatedWorkflow",
+					},
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "target-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class TargetWorkflow extends WorkflowEntrypoint {};
+                export class UnrelatedWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			let eventTriggersUpdated = false;
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					({ params }) => {
+						if (params.workflowName === "unrelated-workflow") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10000,
+										message: "Unrelated Workflow failed",
+									},
+								]),
+								{ status: 500 }
+							);
+						}
+
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-workflow-id" })
+						);
+					}
+				),
+				http.put("*/accounts/:accountId/triggers/:scriptName", () => {
+					eventTriggersUpdated = true;
+					return HttpResponse.json(createFetchResult({}));
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "TARGET_WORKFLOW",
+						workflow_name: "target-workflow",
+						class_name: "TargetWorkflow",
+					},
+					{
+						type: "workflow",
+						name: "UNRELATED_WORKFLOW",
+						workflow_name: "unrelated-workflow",
+						class_name: "UnrelatedWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Trigger configuration for "test-name" was only partially updated'
+			);
+			expect(eventTriggersUpdated).toBe(true);
+		});
+
 		it("should deploy a workflow with schedules as an array of cron expressions", async ({
 			expect,
 		}) => {
