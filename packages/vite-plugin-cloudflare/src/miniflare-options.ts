@@ -673,7 +673,7 @@ function getPreviewModules(
 }
 
 /**
- * Translate a Build Output API module type to a Miniflare module type.
+ * Translate a Build Output Specification module type to a Miniflare module type.
  */
 function toMiniflareModuleType(type: ModuleType): ModuleRuleType | null {
 	switch (type) {
@@ -710,7 +710,7 @@ export function getModulesFromManifest(bundle: Bundle) {
 	const mainEntry = bundle.modules[mainModule];
 	assert(
 		mainEntry !== undefined,
-		`Build Output API: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
+		`Build Output Specification: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
 	);
 
 	const ordered: Array<[string, { type: ModuleType }]> = [
@@ -825,7 +825,7 @@ export async function getPreviewMiniflareOptions(
 				const { modulesRules, ...workerOptions } =
 					miniflareWorkerOptions.workerOptions;
 
-				// Build Output API workers carry an explicit modules manifest
+				// Build Output Specification workers carry an explicit modules manifest
 				// that drives Miniflare's module loader directly, bypassing the
 				// extension-glob-based discovery in `getPreviewModules`. This
 				// preserves the exact module list (with its declared types)

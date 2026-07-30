@@ -61,6 +61,7 @@
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/build-output-utils": "workspace:*",
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
