@@ -35,6 +35,8 @@ export function getBuildOutputDir(root: string): string {
 
 /**
  * Absolute path to the top-level `config.json` for the current project.
+ *
+ * This corresponds with the `settings` export in the input `cloudflare.config.ts`.
  */
 export function getRootConfigPath(root: string): string {
 	return path.join(
