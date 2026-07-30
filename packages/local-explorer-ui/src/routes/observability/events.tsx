@@ -287,7 +287,7 @@ function EventsView(): JSX.Element {
 									<th className="w-20 py-2 pr-3 font-medium">Level</th>
 									<th className="py-2 pr-3 font-medium">Message</th>
 									<th className="w-48 py-2 pr-3 font-medium">Service</th>
-									<th className="w-10 py-2 pr-3" />
+									<th className="w-28 py-2 pr-3 font-medium">Trace</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -390,16 +390,16 @@ function EventRow({
 					{event.span_id ? (
 						<Button
 							size="sm"
-							shape="square"
-							variant="ghost"
+							variant="secondary"
 							icon={TreeStructureIcon}
-							aria-label="View trace"
-							title="View this event's trace"
+							title="Open this event's trace in the Traces view"
 							onClick={(e) => {
 								e.stopPropagation();
 								goToTrace();
 							}}
-						/>
+						>
+							View trace
+						</Button>
 					) : null}
 				</td>
 			</tr>

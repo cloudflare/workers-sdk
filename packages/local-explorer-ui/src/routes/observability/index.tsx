@@ -224,6 +224,8 @@ function ObservabilityView(): JSX.Element {
 					search: parsed.text,
 					status: parsed.status ?? status,
 					kind: parsed.kind ?? kind,
+					traceId: parsed.traceId,
+					spanId: parsed.spanId,
 					clauses: [...parsed.clauses, ...filterClauses],
 				})
 			);
