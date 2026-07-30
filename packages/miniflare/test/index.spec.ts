@@ -3418,6 +3418,41 @@ test("Miniflare: supports unsafe eval bindings", async ({ expect }) => {
 	expect(await response.text()).toBe("the computed value is 3");
 });
 
+test("Miniflare: supports memory cache bindings", async ({ expect }) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			async fetch(req, env) {
+				const first = await env.CACHE.read("key", async () => ({
+					value: "first",
+					expiration: Date.now() + 60_000,
+				}));
+				const second = await env.CACHE.read("key", async () => ({
+					value: "second",
+					expiration: Date.now() + 60_000,
+				}));
+				return Response.json({ first, second });
+			}
+		}`,
+		unsafeMemoryCaches: {
+			CACHE: {
+				id: "test-cache",
+				maxKeys: 10,
+				maxValueSize: 1024,
+				maxTotalValueSize: 1024,
+			},
+		},
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost");
+	expect(response.ok).toBe(true);
+	expect(await response.json()).toEqual({
+		first: "first",
+		second: "first",
+	});
+});
+
 test("Miniflare: supports wrapped bindings", async ({ expect }) => {
 	const store = new Map<string, string>();
 	const mf = new Miniflare({

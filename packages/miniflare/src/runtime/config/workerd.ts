@@ -116,6 +116,7 @@ export type Worker_Binding = {
 	| { analyticsEngine?: ServiceDesignator }
 	| { hyperdrive?: Worker_Binding_Hyperdrive }
 	| { unsafeEval?: Void }
+	| { memoryCache?: Worker_Binding_MemoryCache }
 	| { workerLoader?: Worker_Binding_WorkerLoader }
 	| { workerdDebugPort?: Void }
 );
@@ -188,7 +189,7 @@ export interface Worker_Binding_MemoryCache {
 export interface Worker_Binding_MemoryCacheLimits {
 	maxKeys?: number;
 	maxValueSize?: number;
-	maxTotalValueSize?: number;
+	maxTotalValueSize?: bigint;
 }
 
 export type Worker_DurableObjectNamespace = {

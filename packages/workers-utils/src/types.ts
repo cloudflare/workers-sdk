@@ -484,6 +484,13 @@ export type Binding =
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| ({ type: "vpc_network" } & BindingOmit<CfVpcNetwork>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
+	| {
+			type: "unsafe_volatile_cache";
+			cache_id: string;
+			max_keys: number;
+			max_value_size: number;
+			max_total_value_size: number;
+	  }
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }
 	| { type: "inherit" };

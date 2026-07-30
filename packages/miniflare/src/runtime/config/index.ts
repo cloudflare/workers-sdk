@@ -52,7 +52,14 @@ function encodeCapnpStruct(obj: any, struct: Struct) {
 export function serializeConfig(config: Config): Buffer {
 	const debugPath = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 	if (debugPath) {
-		writeFileSync(debugPath, JSON.stringify(config, null, 2));
+		writeFileSync(
+			debugPath,
+			JSON.stringify(
+				config,
+				(_key, value) => (typeof value === "bigint" ? value.toString() : value),
+				2
+			)
+		);
 	}
 	const message = new Message();
 	const struct = message.initRoot(CapnpConfig);
