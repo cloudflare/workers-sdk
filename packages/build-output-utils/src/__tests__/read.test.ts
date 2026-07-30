@@ -72,13 +72,13 @@ describe("readBuildOutput", () => {
 
 		expect(output.version).toBe("v0");
 		expect(output.root).toBe(root);
-		expect(output.worker.configPath).toBe(getWorkerConfigPath(root));
-		expect(output.worker.bundleDir).toBe(getWorkerBundleDir(root));
-		expect(output.worker.assetsDir).toBeUndefined();
+		expect(output.workers[0].configPath).toBe(getWorkerConfigPath(root));
+		expect(output.workers[0].bundleDir).toBe(getWorkerBundleDir(root));
+		expect(output.workers[0].assetsDir).toBeUndefined();
 
-		expect(output.worker.config.name).toBe("my-worker");
-		expect(output.worker.config.manifest).toEqual(manifest);
-		expect(output.worker.config).not.toHaveProperty("entrypoint");
+		expect(output.workers[0].config.name).toBe("my-worker");
+		expect(output.workers[0].config.manifest).toEqual(manifest);
+		expect(output.workers[0].config).not.toHaveProperty("entrypoint");
 	});
 
 	it("resolves the assets directory when present and leaves bundle undefined for assets-only Workers", async ({
@@ -87,7 +87,9 @@ describe("readBuildOutput", () => {
 		const root = process.cwd();
 		await seedWorker(root, { bundle: false, assets: true });
 
-		const { worker } = await readBuildOutput(root);
+		const {
+			workers: [worker],
+		} = await readBuildOutput(root);
 
 		expect(worker.bundleDir).toBeUndefined();
 		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));

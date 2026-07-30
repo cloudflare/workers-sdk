@@ -30,7 +30,8 @@ export async function readBuildOutputWorkers(
 	// `settings` comes from the optional top-level `config.json` holding
 	// project-level settings (`account_id`, `compliance_region`) shared by
 	// every Worker.
-	const { worker, settings } = await readBuildOutput(root);
+	const { workers, settings } = await readBuildOutput(root);
+	const [worker] = workers;
 
 	const { manifest, ...inputShape } = worker.config;
 	const rawConfig = convertToWranglerConfig(inputShape, settings);

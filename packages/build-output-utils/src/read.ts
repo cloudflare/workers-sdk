@@ -45,8 +45,11 @@ export interface BuildOutput {
 	 * (shared by every Worker), or `undefined` when the file is absent.
 	 */
 	settings: ParsedSettingsConfig | undefined;
-	/** The Worker at `<root>/.cloudflare/output/v0/workers/default/`. */
-	worker: BuildOutputWorker;
+	/**
+	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`.
+	 * Guaranteed to contain at least one Worker; currently always exactly one.
+	 */
+	workers: [BuildOutputWorker, ...BuildOutputWorker[]];
 }
 
 /**
@@ -64,7 +67,7 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
 	const settings = await readSettings(root);
 	const worker = await readWorker(root);
 
-	return { root, version: BUILD_OUTPUT_VERSION, settings, worker };
+	return { root, version: BUILD_OUTPUT_VERSION, settings, workers: [worker] };
 }
 
 /**
