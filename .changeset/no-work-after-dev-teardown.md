@@ -2,12 +2,8 @@
 "wrangler": patch
 ---
 
-Stop `wrangler dev` doing watcher-triggered work after it has shut down or reloaded its config
+Stop `wrangler dev` starting new work after you stop it or it reloads
 
-File watchers can deliver events while they are closing, and `wrangler dev` tears its controllers down concurrently, so work could still be started after dev had already moved on:
+Stopping `wrangler dev`, or having it reload after a configuration change, could still leave it starting work for the state it had just left behind: your custom build command could run once more after dev had stopped, a change to a file in your assets directory could be reported against configuration that had already been replaced, and in some cases the process could stay alive instead of exiting.
 
-- a custom build could spawn the user's build command against a torn-down environment
-- an assets change could report a bundle against a configuration that a config reload had just replaced
-- a config update arriving after teardown created file watchers, an esbuild watch build and a temp directory that nothing was left to clean up, any of which could keep the process alive after dev had stopped
-
-These paths now discard pending work, and no longer leave timers or watchers behind that can delay the process exiting.
+That work is now discarded, so stopping or reloading `wrangler dev` leaves nothing running behind it.
