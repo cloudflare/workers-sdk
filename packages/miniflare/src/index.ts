@@ -2282,15 +2282,23 @@ export class Miniflare {
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
 							};
 
+				const protocol =
+					directSocket.protocol === "tcp"
+						? { tcp: {} }
+						: {
+								http: {
+									style: directSocket.proxy
+										? HttpOptions_Style.PROXY
+										: undefined,
+									cfBlobHeader: CoreHeaders.CF_BLOB,
+									capnpConnectHost: HOST_CAPNP_CONNECT,
+								},
+							};
 				sockets.push({
 					name,
 					address,
 					service,
-					http: {
-						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
-						cfBlobHeader: CoreHeaders.CF_BLOB,
-						capnpConnectHost: HOST_CAPNP_CONNECT,
-					},
+					...protocol,
 				});
 			}
 		}

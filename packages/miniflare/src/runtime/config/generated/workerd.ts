@@ -292,6 +292,34 @@ export class Socket_Https extends $.Struct {
 		return "Socket_Https_" + super.toString();
 	}
 }
+export class Socket_Tcp extends $.Struct {
+	static readonly _capnp = {
+		displayName: "tcp",
+		id: "b59d8ecf6886b64c",
+		size: new $.ObjectSize(8, 5),
+	};
+	_adoptTlsOptions(value: $.Orphan<TlsOptions>): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownTlsOptions(): $.Orphan<TlsOptions> {
+		return $.utils.disown(this.tlsOptions);
+	}
+	get tlsOptions(): TlsOptions {
+		return $.utils.getStruct(2, TlsOptions, this);
+	}
+	_hasTlsOptions(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initTlsOptions(): TlsOptions {
+		return $.utils.initStructAt(2, TlsOptions, this);
+	}
+	set tlsOptions(value: TlsOptions) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
+	toString(): string {
+		return "Socket_Tcp_" + super.toString();
+	}
+}
 export const Socket_Which = {
 	/**
 	 * Each socket has a unique name which can be used on the command line to override the socket's
@@ -319,11 +347,13 @@ export const Socket_Which = {
 	 *
 	 */
 	HTTPS: 1,
+	TCP: 2,
 } as const;
 export type Socket_Which = (typeof Socket_Which)[keyof typeof Socket_Which];
 export class Socket extends $.Struct {
 	static readonly HTTP = Socket_Which.HTTP;
 	static readonly HTTPS = Socket_Which.HTTPS;
+	static readonly TCP = Socket_Which.TCP;
 	static readonly _capnp = {
 		displayName: "Socket",
 		id: "9a0eba45530ee79f",
@@ -403,6 +433,20 @@ export class Socket extends $.Struct {
 	}
 	set https(_: true) {
 		$.utils.setUint16(0, 1, this);
+	}
+	get tcp(): Socket_Tcp {
+		$.utils.testWhich("tcp", $.utils.getUint16(0, this), 2, this);
+		return $.utils.getAs(Socket_Tcp, this);
+	}
+	_initTcp(): Socket_Tcp {
+		$.utils.setUint16(0, 2, this);
+		return $.utils.getAs(Socket_Tcp, this);
+	}
+	get _isTcp(): boolean {
+		return $.utils.getUint16(0, this) === 2;
+	}
+	set tcp(_: true) {
+		$.utils.setUint16(0, 2, this);
 	}
 	_adoptService(value: $.Orphan<ServiceDesignator>): void {
 		$.utils.adopt(value, $.utils.getPointer(4, this));

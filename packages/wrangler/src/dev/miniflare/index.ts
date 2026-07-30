@@ -1154,6 +1154,19 @@ export async function buildMiniflareOptions(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
 	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
 ): Promise<Options> {
+	const unsafeTcpPortValue = process.env.WRANGLER_UNSAFE_TCP_PORT;
+	const unsafeTcpPort =
+		unsafeTcpPortValue === undefined ? undefined : Number(unsafeTcpPortValue);
+	if (
+		unsafeTcpPort !== undefined &&
+		(!Number.isInteger(unsafeTcpPort) ||
+			unsafeTcpPort < 0 ||
+			unsafeTcpPort > 65535)
+	) {
+		throw new UserError(
+			"WRANGLER_UNSAFE_TCP_PORT must be an integer between 0 and 65535."
+		);
+	}
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
@@ -1216,6 +1229,16 @@ export async function buildMiniflareOptions(
 				outboundService: config.outboundService,
 				containerEngine: config.containerEngine,
 				zone: config.zone,
+				unsafeDirectSockets:
+					unsafeTcpPort === undefined
+						? undefined
+						: [
+								{
+									host: config.initialIp,
+									port: unsafeTcpPort,
+									protocol: "tcp",
+								},
+							],
 			},
 			...externalWorkers,
 		],

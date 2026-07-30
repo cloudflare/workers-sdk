@@ -3042,6 +3042,33 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 		new TypeError('Direct access disabled in "d" worker for "three" entrypoint')
 	);
 });
+test("Miniflare: allows direct TCP access to workers", async ({ expect }) => {
+	const mf = new Miniflare({
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async connect(socket) {
+					const reader = socket.readable.getReader();
+					const writer = socket.writable.getWriter();
+					const { value } = await reader.read();
+					await writer.write(value);
+				}
+			};
+		`,
+		unsafeDirectSockets: [{ host: "127.0.0.1", port: 0, protocol: "tcp" }],
+	});
+	useDispose(mf);
+
+	const directUrl = await mf.unsafeGetDirectURL();
+	const socket = net.connect(Number(directUrl.port), directUrl.hostname);
+	await once(socket, "connect");
+	socket.write("hello");
+	const [data] = await once(socket, "data");
+	socket.destroy();
+
+	expect(data.toString()).toBe("hello");
+});
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 	const mf1 = new Miniflare({
 		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],

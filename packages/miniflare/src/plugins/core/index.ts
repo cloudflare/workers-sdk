@@ -150,6 +150,7 @@ export const UnsafeDirectSocketSchema = z.object({
 	serviceName: z.ostring(),
 	entrypoint: z.ostring(),
 	proxy: z.oboolean(),
+	protocol: z.enum(["http", "tcp"]).optional(),
 });
 
 export const ExternalPluginSpecifier = z.object({
