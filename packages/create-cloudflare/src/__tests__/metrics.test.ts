@@ -286,6 +286,15 @@ describe("createReporter", () => {
 		expect(sendEvent).toHaveBeenCalledTimes(0);
 	});
 
+	test("DO_NOT_TRACK='1' takes precedence over CREATE_CLOUDFLARE_TELEMETRY_DISABLED='0'", ({
+		expect,
+	}) => {
+		vi.stubEnv("DO_NOT_TRACK", "1");
+		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DISABLED", "0");
+
+		expect(createReporter().isEnabled).toBe(false);
+	});
+
 	test("sends started and cancelled event to sparrow if the promise reject with a CancelError", async ({
 		expect,
 	}) => {

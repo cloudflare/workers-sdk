@@ -41,9 +41,7 @@ const getDoNotTrackFromEnv = getEnvironmentVariableFactory({
 	variableName: "DO_NOT_TRACK",
 });
 
-/**
- * `DO_NOT_TRACK` is a shared telemetry opt-out convention: https://donottrack.sh/
- */
+/** Whether `DO_NOT_TRACK` is set to a supported telemetry opt-out value. */
 export function isDoNotTrackEnabled(): boolean {
 	const value = getDoNotTrackFromEnv()?.toLowerCase();
 	return value === "1" || value === "true";
@@ -55,15 +53,15 @@ const getWranglerSendMetricsVariableFromEnv =
 	});
 
 /**
- * `WRANGLER_SEND_METRICS` can override whether we attempt to send metrics information to Sparrow.
- *
- * When it is unset, `DO_NOT_TRACK` opts out of sending metrics.
+ * `WRANGLER_SEND_METRICS` controls whether we attempt to send metrics information to Sparrow.
+ * `DO_NOT_TRACK` takes precedence when it is set to an opt-out value.
  */
 export function getWranglerSendMetricsFromEnv(): boolean | undefined {
-	return (
-		getWranglerSendMetricsVariableFromEnv() ??
-		(isDoNotTrackEnabled() ? false : undefined)
-	);
+	if (isDoNotTrackEnabled()) {
+		return false;
+	}
+
+	return getWranglerSendMetricsVariableFromEnv();
 }
 
 /**
