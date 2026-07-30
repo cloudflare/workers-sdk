@@ -107,9 +107,11 @@ describe("createRequestHandler", () => {
 	let httpServer: http.Server;
 	let port: number;
 	let capturedUrls: string[];
+	let capturedForwardedHosts: (string | null)[];
 
 	beforeEach(async () => {
 		capturedUrls = [];
+		capturedForwardedHosts = [];
 	});
 
 	afterEach(async () => {
@@ -118,13 +120,15 @@ describe("createRequestHandler", () => {
 		);
 	});
 
-	function startServer() {
+	function startServer(mutateReq?: (req: http.IncomingMessage) => void) {
 		const handler = createRequestHandler(async (request) => {
 			capturedUrls.push(request.url);
+			capturedForwardedHosts.push(request.headers.get("X-Forwarded-Host"));
 			return new MiniflareResponse("OK");
 		});
 
 		httpServer = http.createServer((req, res) => {
+			mutateReq?.(req);
 			void handler(
 				req as unknown as Parameters<typeof handler>[0],
 				res,
@@ -366,5 +370,33 @@ describe("createRequestHandler", () => {
 		} finally {
 			socket.destroy();
 		}
+	});
+
+	test("preserves non-default port from `:authority` when `Host` is missing", async ({
+		expect,
+	}) => {
+		// Simulate HTTP/2: mutateReq removes `host` and injects `:authority` so the
+		// plugin falls back to the pseudo-header for the origin.
+		await startServer((req) => {
+			delete req.headers.host;
+			req.headers[":authority"] = "localhost:5173";
+		});
+		await fetch(`http://127.0.0.1:${port}/path`);
+		expect(capturedUrls[0]).toBe("http://localhost:5173/path");
+		expect(capturedForwardedHosts[0]).toBe("localhost:5173");
+	});
+
+	test("preserves non-default port from the `Host` header", async ({
+		expect,
+	}) => {
+		// The Host header is the normal HTTP/1.1 mechanism; override it in mutateReq
+		// so the plugin uses the value the client would have sent in a real Vite HTTPS
+		// setup (e.g. localhost:5173 instead of 127.0.0.1:<ephemeral>).
+		await startServer((req) => {
+			req.headers.host = "localhost:5173";
+		});
+		await fetch(`http://127.0.0.1:${port}/path`);
+		expect(capturedUrls[0]).toBe("http://localhost:5173/path");
+		expect(capturedForwardedHosts[0]).toBe("localhost:5173");
 	});
 });
