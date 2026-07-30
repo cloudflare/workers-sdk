@@ -214,7 +214,9 @@ async function updateVitePluginAndWranglerVersion(
 		// WASI binding requires @emnapi 1, causing npm's strict resolver to fail.
 		pkg.overrides = {
 			...pkg.overrides,
-			"@napi-rs/wasm-runtime": "1.1.6",
+			"@rolldown/binding-wasm32-wasi@1.1.5": {
+				"@napi-rs/wasm-runtime": "1.1.6",
+			},
 		};
 	}
 	await fs.writeFile(
