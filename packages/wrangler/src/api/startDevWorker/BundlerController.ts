@@ -497,6 +497,17 @@ export class BundlerController extends Controller {
 	#tmpDir?: EphemeralDirectory;
 
 	onConfigUpdate(event: ConfigUpdateEvent) {
+		// A config update can arrive after teardown has finished: `DevEnv` tears its
+		// controllers down concurrently, and `ConfigController` can dispatch a
+		// config-file change delivered while its own watcher was closing. Acting on
+		// it would create file watchers, an esbuild watch build and a temp directory
+		// that nothing will ever clean up, all of which can keep the process alive
+		// after dev has shut down.
+		if (this.tearingDown) {
+			logger.debug("Ignoring config update during teardown");
+			return;
+		}
+
 		this.#tmpDir?.remove();
 		try {
 			this.#tmpDir = getWranglerTmpDir(event.config.projectRoot, "dev");

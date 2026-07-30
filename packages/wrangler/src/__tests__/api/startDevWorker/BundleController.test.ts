@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import {
@@ -19,6 +19,15 @@ function findSourceFile(source: string, name: string): string {
 	const startIndex = source.indexOf(`// ${name}`);
 	const endIndex = source.indexOf("\n//", startIndex);
 	return source.slice(startIndex, endIndex);
+}
+
+/**
+ * The temporary build directories created under the project root, each of which
+ * also registers a process exit listener to clean itself up.
+ */
+function wranglerTmpDirs(): string[] {
+	const tmpRoot = path.resolve(".wrangler/tmp");
+	return existsSync(tmpRoot) ? readdirSync(tmpRoot) : [];
 }
 
 function configDefaults(
@@ -494,48 +503,72 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			).toBe(false);
 		});
 
-		test("a custom build scheduled after teardown never runs", async ({
-			expect,
-		}) => {
-			await seed({
-				"build.js": dedent /* javascript */ `
-					const fs = require("node:fs");
-					fs.writeFileSync("built.txt", "yes");
-					fs.cpSync("custom_build_dir/index.ts", "out.ts");
-				`,
-				"custom_build_dir/index.ts": dedent /* javascript */ `
-					export default {
-						fetch() {
-							return new Response("initial")
-						}
-					}
-				`,
-			});
-			const config = configDefaults({
-				entrypoint: path.resolve("out.ts"),
-				projectRoot: path.resolve("."),
+		// `DevEnv` tears its controllers down concurrently, and `ConfigController` can
+		// dispatch a config-file change that was delivered while its own watcher was
+		// closing, so a config update can reach the bundler after it has torn down.
+		// Acting on one leaks watchers, an esbuild watch build and a temp directory
+		// that nothing will ever clean up, and can keep the process alive.
+		const postTeardownCases = [
+			{
+				name: "watched custom build",
+				build: {
+					custom: { command: "node build.js", watch: "custom_build_dir" },
+				},
+			},
+			{
+				name: "unwatched custom build",
 				dev: { watch: false },
 				build: {
-					custom: {
-						command: "node build.js",
-						watch: "custom_build_dir",
-					},
-					moduleRoot: path.resolve("."),
+					custom: { command: "node build.js", watch: "custom_build_dir" },
 				},
+			},
+			{
+				name: "esbuild bundler",
+				entrypoint: path.resolve("custom_build_dir/index.ts"),
+			},
+		];
+
+		for (const testCase of postTeardownCases) {
+			test(`a config update after teardown is ignored (${testCase.name})`, async ({
+				expect,
+			}) => {
+				await seed({
+					"build.js": dedent /* javascript */ `
+						const fs = require("node:fs");
+						fs.writeFileSync("built.txt", "yes");
+						fs.cpSync("custom_build_dir/index.ts", "out.ts");
+					`,
+					"custom_build_dir/index.ts": dedent /* javascript */ `
+						export default {
+							fetch() {
+								return new Response("initial")
+							}
+						}
+					`,
+				});
+				const config = configDefaults({
+					entrypoint: path.resolve("out.ts"),
+					projectRoot: path.resolve("."),
+					...testCase,
+					build: { moduleRoot: path.resolve("."), ...testCase.build },
+				});
+
+				await controller.teardown();
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				await setTimeout(500);
+
+				// Nothing may run the user's build command or report to the torn-down bus
+				expect(existsSync("built.txt")).toBe(false);
+				expect(
+					bus.events.filter(
+						(event) =>
+							event.type === "bundleStart" || event.type === "bundleComplete"
+					)
+				).toEqual([]);
+				// ...nor create resources that nothing is left to clean up
+				expect(wranglerTmpDirs()).toEqual([]);
 			});
-
-			await controller.teardown();
-			// Watcher events can be delivered while the watcher is closing, so a build
-			// can be scheduled after dev has stopped. It must not spawn the user's
-			// build command or dispatch bundle events into a torn-down environment.
-			controller.onConfigUpdate({ type: "configUpdate", config });
-			await setTimeout(500);
-
-			expect(existsSync("built.txt")).toBe(false);
-			expect(
-				bus.events.filter((event) => event.type === "bundleStart")
-			).toEqual([]);
-		});
+		}
 	});
 
 	test("module aliasing", async ({ expect }) => {
