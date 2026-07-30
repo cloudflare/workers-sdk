@@ -21,6 +21,39 @@ export async function settlePendingWorkflows(): Promise<void> {
 	pendingInits.length = 0;
 }
 
+export function encodeUtf8(str: string): Uint8Array {
+	return new TextEncoder().encode(str);
+}
+
+export function decodeUtf8(bytes: Uint8Array): string {
+	return new TextDecoder().decode(bytes);
+}
+
+export async function readStreamBytes(
+	stream: ReadableStream<Uint8Array>
+): Promise<Uint8Array> {
+	const chunks: Uint8Array[] = [];
+	const reader = stream.getReader();
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) {
+			break;
+		}
+		chunks.push(value);
+	}
+	let totalLength = 0;
+	for (const chunk of chunks) {
+		totalLength += chunk.byteLength;
+	}
+	const result = new Uint8Array(totalLength);
+	let offset = 0;
+	for (const chunk of chunks) {
+		result.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return result;
+}
+
 export async function runWorkflow(
 	instanceId: string,
 	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>

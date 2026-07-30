@@ -24,6 +24,7 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 		/^\/workflows\/[^/]+\/instances\/[^/]+\/status$/,
 		"workflows.instance.status",
 	],
+	[/^\/workflows\/[^/]+\/instances\/[^/]+\/step$/, "workflows.instance.step"],
 	[/^\/workflows\/[^/]+\/instances\/[^/]+$/, "workflows.instance"],
 	[/^\/workflows\/[^/]+\/instances$/, "workflows.instances"],
 	[/^\/workflows\/[^/]+$/, "workflows.details"],
