@@ -54,7 +54,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/unenv-preset": "workspace:*",
-		"miniflare": "workspace:*",
+		"miniflare": "npm:miniflare@4.20260722.1",
 		"unenv": "2.0.0-rc.24",
 		"workerd": "catalog:default",
 		"wrangler": "workspace:*",

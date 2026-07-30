@@ -39,6 +39,10 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
+  # TEMPORARY: vite-plugin-cloudflare + vitest-pool-workers are pinned to the
+  # published miniflare while the workspace miniflare is mid-migration. Revert
+  # with the repoint.
+  - "miniflare"
   - "workerd"
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"

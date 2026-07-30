@@ -99,10 +99,7 @@ export {
 	CORE_PLUGIN,
 	CORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
-	compileModuleRules,
 	getGlobalServices,
-	ModuleRuleTypeSchema,
-	ModuleDefinitionSchema,
 	ProxyClient,
 	getFreshSourceMapSupport,
 	kCurrentWorker,
@@ -110,13 +107,7 @@ export {
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
 	INTROSPECT_SQLITE_METHOD,
 } from "./core";
-export type {
-	ModuleRuleType,
-	ModuleRule,
-	ModuleDefinition,
-	GlobalServicesOptions,
-	NodeJSCompatMode,
-} from "./core";
+export type { GlobalServicesOptions, NodeJSCompatMode } from "./core";
 export type * from "./core/proxy/types";
 export * from "./d1";
 export * from "./do";

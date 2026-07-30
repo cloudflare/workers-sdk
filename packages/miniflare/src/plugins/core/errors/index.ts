@@ -9,38 +9,19 @@ import { contentsToString, maybeGetStringScriptPathIndex } from "../modules";
 import { getSourceMapper } from "./sourcemap";
 import type { Request } from "../../../http";
 import type { Log } from "../../../shared";
-import type { SourceOptions } from "../modules";
+import type { ParsedWorkerOptions } from "../../shared";
 import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
 
-// Subset of core worker options that define Worker source code.
-// These are the possible cases, and corresponding reported source files in
-// workerd stack traces.
+// Worker source is provided inline in the config, so stack frames are resolved
+// directly against it. There are two forms, with corresponding file specifiers
+// reported in workerd stack traces:
 //
-// Single Worker:
-// (a) { script: "<contents>" }                                          -> "<script:0>"
-// (b) { script: "<contents>", modules: true }                           -> "<script:0>"
-// (c) { script: "<contents>", scriptPath: "<path>" }                    -> "file://<path>"
-// (d) { script: "<contents>", scriptPath: "<path>", modules: true }     -> "file://<path>"
-// (e) { scriptPath: "<path>" }                                          -> "file://<path>"
-// (f) { scriptPath: "<path>", modules: true }                           -> "file://<path>"
-// (g) { modules: [
-//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "file://<path:0>"
-//  [ii]  { ..., path: "<path:1>" },                                     -> "file://<path:1>"
-//     ] }
-// (h) { modulesRoot: "<root>", modules: [
-//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "file://<path:0>"
-//  [ii]  { ..., path: "<path:1>" },                                     -> "file://<path:1>"
-//     ] }
-//
-// Multiple Workers (array of `SourceOptions`):
-// (i) [
-//   [i]  { script: "<contents:0>" },                                    -> "<script:0>"
-//  [ii]  { name: "a", script: "<contents:1>" },                         -> "<script:1>"
-// [iii]  { name: "b", script: "<contents:2>", scriptPath: "<path:2>" }, -> "file://<path:2>"
-//  [iv]  { name: "c", scriptPath: "<path:3>" },                         -> "file://<path:3>"
-//   [v]  { script: "<contents:4>", modules: true },                     -> "<script:4>"
-//     ]
-//
+// - Module workers: `config.manifest.modules` is a record keyed by module path,
+//   each with inline `contents`. These are reported as "file://<path>", where
+//   `<path>` is the (already-resolved) module path.
+// - Service workers: `legacy.serviceWorkerScript` holds the script. It has no
+//   module path, so it is reported as "<script:n>" for the nth worker (see
+//   `buildStringScriptPath`).
 
 interface SourceFile {
 	path?: string; // Path may be undefined if file is in-memory
@@ -58,12 +39,10 @@ function maybeGetDiskFile(filePath: string): Required<SourceFile> | undefined {
 	}
 }
 
-export type NameSourceOptions = SourceOptions & { name?: string };
-
 // Try to extract the path and contents of a `file` reported in a JavaScript
-// stack-trace. See the big comment above for examples of what these look like.
+// stack-trace. See the big comment above for the forms these take.
 function maybeGetFile(
-	workerSrcOpts: NameSourceOptions[],
+	allWorkerOpts: ParsedWorkerOptions[],
 	fileSpecifier: string
 ): SourceFile | undefined {
 	// If `file` looks like a `file://` URL, use that
@@ -71,48 +50,32 @@ function maybeGetFile(
 	if (maybeUrl !== undefined && maybeUrl.protocol === "file:") {
 		const filePath = fileURLToPath(maybeUrl);
 
-		// Check if this `filePath` matches any scripts with custom contents...
-		for (const srcOpts of workerSrcOpts) {
-			if (Array.isArray(srcOpts.modules)) {
-				const modulesRoot = srcOpts.modulesRoot ?? "";
-				for (const module of srcOpts.modules) {
-					if (
-						module.contents !== undefined &&
-						path.resolve(modulesRoot, module.path) === filePath
-					) {
-						// Cases: (g)[i], (h)[i]
-						const contents = contentsToString(module.contents);
-						return { path: filePath, contents };
-					}
-				}
-			} else if (
-				"script" in srcOpts &&
-				"scriptPath" in srcOpts &&
-				srcOpts.script !== undefined &&
-				srcOpts.scriptPath !== undefined
-			) {
-				// Use `modulesRoot` if it and `modules` are truthy, otherwise ""
-				const modulesRoot = (srcOpts.modules && srcOpts.modulesRoot) || "";
-				if (path.resolve(modulesRoot, srcOpts.scriptPath) === filePath) {
-					// Cases: (c), (d), (i)[iii]
-					return { path: filePath, contents: srcOpts.script };
+		// Check if this `filePath` matches an inline manifest module...
+		for (const { config } of allWorkerOpts) {
+			const modules = config.manifest?.modules;
+			if (modules === undefined) continue;
+			for (const [modulePath, module] of Object.entries(modules)) {
+				if (path.resolve(modulePath) === filePath) {
+					return {
+						path: filePath,
+						contents: contentsToString(module.contents),
+					};
 				}
 			}
 		}
 
 		// ...otherwise, read contents from disk
-		// Cases: (e), (f), (g)[ii], (h)[ii], (i)[iv]
 		return maybeGetDiskFile(filePath);
 	}
 
-	// Cases: (a), (b), (i)[i], (i)[ii], (i)[v]
-	// If `file` looks like "<script:n>", and the `n`th worker has a custom
-	// `script`, use that.
+	// If `file` looks like "<script:n>", and the `n`th worker is a service
+	// worker, use its inline script.
 	const workerIndex = maybeGetStringScriptPathIndex(fileSpecifier);
 	if (workerIndex !== undefined) {
-		const srcOpts = workerSrcOpts[workerIndex];
-		if ("script" in srcOpts && srcOpts.script !== undefined) {
-			return { contents: srcOpts.script };
+		const serviceWorkerScript =
+			allWorkerOpts[workerIndex]?.legacy?.serviceWorkerScript;
+		if (serviceWorkerScript !== undefined) {
+			return { contents: serviceWorkerScript };
 		}
 	}
 
@@ -137,7 +100,7 @@ function getHeaders(request: Request) {
 }
 
 function getSourceMappedStack(
-	workerSrcOpts: NameSourceOptions[],
+	workerSrcOpts: ParsedWorkerOptions[],
 	error: Error,
 	onSourceMap?: (
 		sourcemap: RawSourceMap,
@@ -232,7 +195,7 @@ const ALLOWED_ERROR_SUBCLASS_CONSTRUCTORS: StandardErrorConstructor[] = [
 	URIError,
 ];
 export function reviveError(
-	workerSrcOpts: NameSourceOptions[],
+	workerSrcOpts: ParsedWorkerOptions[],
 	jsonError: JsonError,
 	onSourceMap?: (
 		sourcemap: RawSourceMap,
@@ -285,7 +248,7 @@ export function reviveError(
 
 export async function handlePrettyErrorRequest(
 	log: Log,
-	workerSrcOpts: NameSourceOptions[],
+	workerSrcOpts: ParsedWorkerOptions[],
 	request: Request,
 	handleUncaughtError?: (error: Error) => void
 ): Promise<Response> {
@@ -379,9 +342,10 @@ export async function handlePrettyErrorRequest(
 		// Check if it is an inline script, which are reported as "script-<workerIndex>"
 		const workerIndex = maybeGetStringScriptPathIndex(stackFrame.fileName);
 		if (workerIndex !== undefined) {
-			const srcOpts = workerSrcOpts[workerIndex];
-			if ("script" in srcOpts && srcOpts.script !== undefined) {
-				return { contents: srcOpts.script };
+			const serviceWorkerScript =
+				workerSrcOpts[workerIndex]?.legacy?.serviceWorkerScript;
+			if (serviceWorkerScript !== undefined) {
+				return { contents: serviceWorkerScript };
 			}
 		}
 

@@ -263,8 +263,11 @@ export {
 } from "../../config/schema";
 export type {
 	MiniflareBinding,
+	MiniflareDiskServiceBinding,
 	MiniflareExport,
+	MiniflareExternalServiceBinding,
 	MiniflareFetcherBinding,
+	MiniflareNetworkServiceBinding,
 	MiniflareNodeHandlerBinding,
 	MiniflareServiceBinding,
 	MiniflareTrigger,

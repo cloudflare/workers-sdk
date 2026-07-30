@@ -232,6 +232,32 @@ const HelloWorldBindingSchema = z.strictObject({
 	enable_timer: z.boolean().optional(),
 });
 
+// The miniflare-extended schemas below replace these base `@cloudflare/config`
+// binding schemas (which have optional `id`/`name`) with variants that require
+// those fields.
+const OVERRIDDEN_BASE_BINDING_SCHEMAS = [
+	BrowserBindingSchema,
+	WorkerBindingSchema,
+	QueueBindingSchema,
+	R2BindingSchema,
+	D1BindingSchema,
+	KVBindingSchema,
+	FlagshipBindingSchema,
+] as const;
+
+// `Array.prototype.filter` removes the overridden base schemas at runtime, but
+// does not narrow the tuple element type. Cast to also drop them at the type
+// level — otherwise the base variants (with optional `id`/`name`) would linger
+// in the union alongside the overrides, widening `id`/`name` back to
+// `string | undefined`.
+const PassthroughBindingSchemas = KnownBindingSchema.options.filter(
+	(option) =>
+		!(OVERRIDDEN_BASE_BINDING_SCHEMAS as readonly unknown[]).includes(option)
+) as Exclude<
+	(typeof KnownBindingSchema.options)[number],
+	(typeof OVERRIDDEN_BASE_BINDING_SCHEMAS)[number]
+>[];
+
 const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareBrowserBindingSchema,
 	MiniflareQueueBindingSchema,
@@ -246,16 +272,7 @@ const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	NetworkServiceBindingSchema,
 	DiskServiceBindingSchema,
 	HelloWorldBindingSchema,
-	...KnownBindingSchema.options.filter(
-		(option) =>
-			option !== BrowserBindingSchema &&
-			option !== WorkerBindingSchema &&
-			option !== QueueBindingSchema &&
-			option !== R2BindingSchema &&
-			option !== D1BindingSchema &&
-			option !== KVBindingSchema &&
-			option !== FlagshipBindingSchema
-	),
+	...PassthroughBindingSchemas,
 ]);
 
 /**

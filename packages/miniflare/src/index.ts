@@ -76,7 +76,6 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
-	manifestModuleTypeToRuleType,
 	reviveError,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
@@ -132,7 +131,6 @@ import type {
 	QueueProducers,
 	ReplaceWorkersTypes,
 } from "./plugins";
-import type { NameSourceOptions } from "./plugins/core";
 import type {
 	Config,
 	Extension,
@@ -1290,29 +1288,6 @@ export class Miniflare {
 		return new Response("OK", { status: 200 });
 	}
 
-	get #workerSrcOpts(): NameSourceOptions[] {
-		// Source is provided inline (manifest module `contents` or a service-worker
-		// script). Expose it as `SourceOptions` so stack traces can be source-mapped
-		// against it — including any `sourcemap`-type manifest modules, which carry
-		// the source maps referenced by `//# sourceMappingURL=` comments.
-		return this.#workerOpts.map<NameSourceOptions>(({ config, legacy }) => {
-			if (legacy?.serviceWorkerScript !== undefined) {
-				// Service-worker scripts have no module path, so their `//#
-				// sourceMappingURL=` comments can't be resolved to an inline map.
-				return { name: config.name, script: legacy.serviceWorkerScript };
-			}
-			const manifest = config.manifest;
-			const modules = Object.entries(manifest?.modules ?? {}).map(
-				([modulePath, module]) => ({
-					type: manifestModuleTypeToRuleType(module.type),
-					path: modulePath,
-					contents: module.contents,
-				})
-			);
-			return { name: config.name, modules };
-		});
-	}
-
 	#handleLoopback = async (
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
@@ -1373,7 +1348,7 @@ export class Miniflare {
 			} else if (url.pathname === "/core/error") {
 				response = await handlePrettyErrorRequest(
 					this.#log,
-					this.#workerSrcOpts,
+					this.#workerOpts,
 					request,
 					this.#sharedOpts.handleUncaughtError
 				);
@@ -2600,7 +2575,7 @@ export class Miniflare {
 				throw new Error("Worker threw an uncaught exception");
 			}
 			const caught = JsonErrorSchema.parse(JSON.parse(serialised));
-			throw reviveError(this.#workerSrcOpts, caught);
+			throw reviveError(this.#workerOpts, caught);
 		}
 
 		// At this point, undici.fetch (used inside fetch, above)
