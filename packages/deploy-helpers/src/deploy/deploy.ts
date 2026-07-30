@@ -22,7 +22,11 @@ import {
 	syncAssets,
 } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize, type BundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
@@ -341,10 +345,8 @@ export default async function deploy(
 		0
 	);
 
-	const bundleSize = await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	// We can use the new versions/deployments APIs if we:
 	// * are uploading a worker that already exists

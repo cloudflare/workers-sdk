@@ -15,7 +15,11 @@ import { getWorkersDevSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize, type BundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
 	applyServiceAndEnvironmentTags,
@@ -200,10 +204,8 @@ export default async function versionsUpload(
 				: undefined,
 	};
 
-	const bundleSize = await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	let workerBundle: FormData;
 

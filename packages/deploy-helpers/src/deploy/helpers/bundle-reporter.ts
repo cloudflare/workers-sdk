@@ -14,7 +14,7 @@ export interface BundleSize {
 	gzipSize: number;
 }
 
-async function getSize(
+export async function getSize(
 	modules: Pick<CfModule, "content">[]
 ): Promise<BundleSize> {
 	const gzipSize = gzipSync(
@@ -25,15 +25,7 @@ async function getSize(
 	return { size: aggregateSize, gzipSize };
 }
 
-export async function printBundleSize(
-	main: {
-		name: string;
-		content: string;
-	},
-	modules: CfModule[]
-): Promise<BundleSize> {
-	const { size, gzipSize } = await getSize([...modules, main]);
-
+export function printBundleSize({ size, gzipSize }: BundleSize) {
 	const bundleReport = `${(size / ONE_KIB_BYTES).toFixed(2)} KiB / gzip: ${(
 		gzipSize / ONE_KIB_BYTES
 	).toFixed(2)} KiB`;
@@ -48,6 +40,4 @@ export async function printBundleSize(
 				: chalk.green(bundleReport);
 
 	logger.log(`Total Upload: ${colorizedReport}`);
-
-	return { size, gzipSize };
 }
