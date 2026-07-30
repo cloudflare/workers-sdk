@@ -834,7 +834,7 @@ export interface Bindings {
 	//  * `workerName` must match a known config's name (or any `string` for untyped bindings).
 	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
 	//  */
-	// workflow(options: WorkflowBindingOptions): WorkflowBinding;
+	workflow(options: WorkflowBindingOptions): WorkflowBinding;
 }
 
 export const bindings = {
@@ -886,5 +886,5 @@ export const bindings = {
 	worker: (options) => ({ type: "worker", ...options }),
 	workerLoader: () => ({ type: "worker-loader" }),
 	// TODO: re-enable when workflow bindings return.
-	// workflow: (options) => ({ type: "workflow", ...options }),
+	workflow: (options) => ({ type: "workflow", ...options }),
 } as Bindings;
