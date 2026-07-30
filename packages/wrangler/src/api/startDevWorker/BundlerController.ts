@@ -436,15 +436,27 @@ export class BundlerController extends Controller {
 	}
 
 	#assetsWatcher?: ReturnType<typeof watch>;
+	#debouncedRefreshBundle?: ReturnType<typeof debounce>;
+
 	async #ensureWatchingAssets(config: StartDevWorkerOptions) {
 		await this.#assetsWatcher?.close();
 		this.#assetsWatcher = undefined;
+		// The watcher has closed, so no further events can arm the previous refresh.
+		// Discard any that is still pending: it captured the config it was created
+		// with, which has now been replaced.
+		this.#debouncedRefreshBundle?.cancel();
 
 		const debouncedRefreshBundle = debounce(() => {
+			// The watcher can deliver events while it is closing, so a refresh can be
+			// armed after dev has stopped.
+			if (this.tearingDown) {
+				return;
+			}
 			if (this.#currentBundle) {
 				this.emitBundleCompleteEvent(config, this.#currentBundle);
 			}
 		});
+		this.#debouncedRefreshBundle = debouncedRefreshBundle;
 
 		if (config.dev.watch !== false && config.assets?.directory) {
 			const assetsDir = config.assets.directory;
@@ -547,10 +559,11 @@ export class BundlerController extends Controller {
 			this.#customBuildDrain?.catch(() => {}),
 			this.#assetsWatcher?.close(),
 		]);
-		// Discard any debounced build armed by an event that arrived while the
-		// watcher was closing, so its timer doesn't keep the process alive. Must run
-		// after the watcher has closed, otherwise a later event could re-arm it.
+		// Discard any debounced work armed by an event that arrived while the
+		// watchers were closing, so its timer doesn't keep the process alive. Must
+		// run after the watchers have closed, otherwise a later event could re-arm it.
 		this.#debouncedCustomBuild?.cancel();
+		this.#debouncedRefreshBundle?.cancel();
 		// Defence-in-depth: `bundle.ts`'s `stop()` normally removes the tmp
 		// dir on our behalf, but it may have never been assigned (e.g. when
 		// running a custom build, or when the initial build threw). Remove
