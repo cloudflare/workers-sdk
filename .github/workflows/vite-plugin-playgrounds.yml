@@ -58,6 +58,8 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: |
           pnpm dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
       - name: Downgrade to Vite 6
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
         run: |
