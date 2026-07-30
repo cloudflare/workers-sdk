@@ -27,6 +27,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { formatDistanceToNowStrict } from "date-fns";
 import { dedent } from "ts-dedent";
+import { validateAccountId } from "../account-id";
 import { createCredentialStorageContext } from "../credential-store";
 import { getAuthFromEnv } from "../credentials";
 import { getCloudflareAccountIdFromEnv as getAccountIdFromEnv } from "../env-vars";
@@ -479,7 +480,10 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 		}
 
 		if (config.account_id) {
-			return config.account_id;
+			return validateAccountId(
+				config.account_id,
+				`set as \`account_id\` in your ${descriptor.getConfigFileLabel()} file`
+			);
 		}
 		const envAccountId = getAccountIdFromEnv();
 		if (envAccountId) {
