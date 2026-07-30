@@ -48,8 +48,12 @@ export const WorkflowsSharedOptionsSchema = z.object({
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
 
-export const WORKFLOWS_PLUGIN: Plugin<typeof WorkflowsOptionsSchema> = {
+export const WORKFLOWS_PLUGIN: Plugin<
+	typeof WorkflowsOptionsSchema,
+	typeof WorkflowsSharedOptionsSchema
+> = {
 	options: WorkflowsOptionsSchema,
+	sharedOptions: WorkflowsSharedOptionsSchema,
 	bindingTypeDescription: "Workflow",
 	async getBindings(options: z.infer<typeof WorkflowsOptionsSchema>) {
 		return Object.entries(options.workflows ?? {}).map(
@@ -98,7 +102,12 @@ export const WORKFLOWS_PLUGIN: Plugin<typeof WorkflowsOptionsSchema> = {
 		];
 	},
 
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({
+		options,
+		tmpPath,
+		resourcePersistencePath,
+		sharedOptions,
+	}) {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,

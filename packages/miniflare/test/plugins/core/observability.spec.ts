@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { Miniflare, type WorkerOptions } from "miniflare";
 import { describe, test } from "vitest";
 import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "../../../src/plugins/core/constants";
-import { useDispose, useTmp } from "../../test-shared";
+import { useDispose } from "../../test-shared";
 
 // Local observability wiring.
 //
@@ -590,7 +590,6 @@ describe("unsafeObservability (workflows)", () => {
 	test("captures the Workflows engine invocation, attributed to the workflow", async ({
 		expect,
 	}) => {
-		const tmp = await useTmp();
 		const mf = new Miniflare({
 			unsafeObservability: true,
 			name: "wf-user",
@@ -603,7 +602,6 @@ describe("unsafeObservability (workflows)", () => {
 					name: "capture-workflow",
 				},
 			},
-			workflowsPersist: tmp,
 			serviceBindings: { WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME } },
 		});
 		useDispose(mf);

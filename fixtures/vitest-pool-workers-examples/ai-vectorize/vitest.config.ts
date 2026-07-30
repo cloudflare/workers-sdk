@@ -9,9 +9,6 @@ export default mergeConfig(
 			cloudflareTest({
 				remoteBindings: false,
 				wrangler: { configPath: "./wrangler.jsonc" },
-				miniflare: {
-					fet,
-				},
 			}),
 		],
 		test: {

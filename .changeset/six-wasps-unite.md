@@ -2,7 +2,7 @@
 "@cloudflare/vitest-pool-workers": minor
 ---
 
-Breaking change: rRemove several options from the `miniflare` override options
+Breaking change: Remove several options from the `miniflare` override options
 
 The following options have been removed from the `miniflare` override options, as they were not intended to be exposed, were not functional, or have been superseded by other options:
 
