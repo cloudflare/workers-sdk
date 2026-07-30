@@ -1,9 +1,11 @@
+import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { readConfig } from "../../config";
 import { runDeployCommandHandler, type DeployArgs } from "../../deploy";
 import { run } from "../../experimental-flags";
+import { detectAgent } from "../../utils/detect-agent";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -12,12 +14,10 @@ import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 
-// The Pages-to-Workers delegation deploys non-interactively on behalf of an
-// agent. When the target Worker name was not proven to belong to this project
-// (no config file naming it), an existing Worker of the same name is a probable
-// collision, and there is no prompt to resolve it. These tests exercise that
-// guard directly through `runDeployCommandHandler` with
-// `pagesToWorkersDelegation: true`.
+// When an agent or the Pages-to-Workers delegation chooses a Worker name without
+// a config file proving ownership, an existing Worker of the same name is a
+// probable collision. These tests exercise that guard directly through
+// `runDeployCommandHandler`.
 describe("deploy name-collision guard (non-interactive)", () => {
 	mockAccountId();
 	mockApiToken();
@@ -72,8 +72,30 @@ describe("deploy name-collision guard (non-interactive)", () => {
 
 	beforeEach(() => {
 		// The delegation always runs non-interactively.
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 		setIsTTY(false);
 		writeWorkerSource();
+	});
+
+	it("aborts when an agent-generated name matches an existing Worker", async ({
+		expect,
+	}) => {
+		writeFileSync("package.json", JSON.stringify({ name: "existing-worker" }));
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		const args = delegatedDeployArgs({});
+		const config = readConfig(args, { useRedirectIfAvailable: true });
+		config.main = "index.js";
+		config.compatibility_date = "2024-01-01";
+		mockExistingWorker();
+
+		await expect(
+			run(experimentalFlags, () => runDeployCommandHandler(args, { config }))
+		).rejects.toThrow(
+			'A Worker named "existing-worker" already exists in your account.'
+		);
 	});
 
 	it("aborts when the delegated name was auto-generated (no --name)", async ({
@@ -131,8 +153,8 @@ describe("deploy name-collision guard (non-interactive)", () => {
 		// Regression test for #14312: a plain `wrangler deploy` in CI with no
 		// config file and no --name (e.g. an autoconfigured project whose
 		// generated config PR has not been merged) is routinely re-run against
-		// the same, already-deployed Worker. Only the Pages-to-Workers delegation
-		// guards name ownership, so this must deploy normally instead of aborting.
+		// the same, already-deployed Worker. A plain non-agent deploy does not guard
+		// name ownership, so this must deploy normally instead of aborting.
 		const args = delegatedDeployArgs({});
 		const config = readConfig(args, { useRedirectIfAvailable: true });
 		config.name = "existing-worker";
