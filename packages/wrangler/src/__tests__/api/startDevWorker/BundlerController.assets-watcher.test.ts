@@ -1,9 +1,17 @@
+import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { watch } from "chokidar";
-import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	type ExpectStatic,
+	test,
+	vi,
+} from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
@@ -52,14 +60,49 @@ function assetsConfig() {
 	});
 }
 
-/** Make `watch()` hand the controller a watcher whose events we drive ourselves. */
-function mockAssetsWatcher() {
-	const fakeWatcher = new EventEmitter() as EventEmitter & {
-		close: ReturnType<typeof vi.fn>;
+/**
+ * A config that makes the controller create two watchers: one for the custom
+ * build's watched paths and one for the assets directory.
+ */
+function customBuildAndAssetsConfig(): StartDevWorkerOptions {
+	const config = assetsConfig();
+	return {
+		...config,
+		build: {
+			...config.build,
+			// The command only runs in response to watcher events, which this suite
+			// drives itself, so it is never actually executed.
+			custom: { command: "echo 'never runs'", watch: path.resolve("src") },
+		},
 	};
-	fakeWatcher.close = vi.fn().mockResolvedValue(undefined);
-	vi.mocked(watch).mockReturnValue(fakeWatcher as unknown as FSWatcher);
-	return fakeWatcher;
+}
+
+type FakeWatcher = EventEmitter & { close: ReturnType<typeof vi.fn> };
+
+/**
+ * Make `watch()` hand the controller watchers whose events we drive ourselves,
+ * recording every one so that tests can assert they all get closed.
+ */
+function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
+	const created: FakeWatcher[] = [];
+	vi.mocked(watch).mockImplementation(() => {
+		const fakeWatcher = new EventEmitter() as FakeWatcher;
+		let closing: Promise<void> | undefined;
+		// Repeated `close()` calls return the same promise, as chokidar's do.
+		fakeWatcher.close = vi.fn(() => (closing ??= setTimeout(closeDelayMs)));
+		created.push(fakeWatcher);
+		return fakeWatcher as unknown as FSWatcher;
+	});
+	return {
+		created,
+		/** Wait for the watcher at `index` to be created, then return it. */
+		async at(index: number) {
+			await vi.waitFor(() => expect(created.length).toBeGreaterThan(index));
+			const watcher = created[index];
+			assert(watcher);
+			return watcher;
+		},
+	};
 }
 
 describe("BundlerController — assets watcher", () => {
@@ -85,7 +128,7 @@ describe("BundlerController — assets watcher", () => {
 	test("a pending assets refresh is discarded on teardown", async ({
 		expect,
 	}) => {
-		const fakeWatcher = mockAssetsWatcher();
+		const watchers = mockWatchers(expect);
 
 		const firstBundle = bus.waitFor("bundleComplete");
 		controller.onConfigUpdate({
@@ -93,6 +136,7 @@ describe("BundlerController — assets watcher", () => {
 			config: assetsConfig(),
 		});
 		await firstBundle;
+		const fakeWatcher = await watchers.at(0);
 
 		// An asset change arms the debounced bundle refresh...
 		fakeWatcher.emit("all", "change", path.resolve("assets/placeholder.txt"));
@@ -109,12 +153,13 @@ describe("BundlerController — assets watcher", () => {
 	test("a pending assets refresh is discarded when the config is replaced", async ({
 		expect,
 	}) => {
-		const fakeWatcher = mockAssetsWatcher();
+		const watchers = mockWatchers(expect);
 
 		const config = assetsConfig();
 		const firstBundle = bus.waitFor("bundleComplete");
 		controller.onConfigUpdate({ type: "configUpdate", config });
 		await firstBundle;
+		const fakeWatcher = await watchers.at(0);
 
 		// An asset change arms the debounced bundle refresh...
 		fakeWatcher.emit("all", "change", path.resolve("assets/placeholder.txt"));
@@ -149,15 +194,14 @@ describe("BundlerController — assets watcher", () => {
 		"logs a warning and disables the watcher when chokidar emits EMFILE",
 		{ timeout: 5_000 },
 		async ({ expect }) => {
-			const fakeWatcher = mockAssetsWatcher();
+			const watchers = mockWatchers(expect);
 
 			controller.onConfigUpdate({
 				type: "configUpdate",
 				config: assetsConfig(),
 			});
 
-			// Let the async watch setup complete.
-			await setTimeout(50);
+			const fakeWatcher = await watchers.at(0);
 
 			const emfileError = Object.assign(
 				new Error("EMFILE: too many open files, watch"),
@@ -178,13 +222,13 @@ describe("BundlerController — assets watcher", () => {
 		"logs a warning and closes the watcher for non-EMFILE watcher errors",
 		{ timeout: 5_000 },
 		async ({ expect }) => {
-			const fakeWatcher = mockAssetsWatcher();
+			const watchers = mockWatchers(expect);
 
 			controller.onConfigUpdate({
 				type: "configUpdate",
 				config: assetsConfig(),
 			});
-			await setTimeout(50);
+			const fakeWatcher = await watchers.at(0);
 
 			const genericError = new Error("EACCES: permission denied");
 			fakeWatcher.emit("error", genericError);
@@ -196,4 +240,33 @@ describe("BundlerController — assets watcher", () => {
 			expect(fakeWatcher.close).toHaveBeenCalled();
 		}
 	);
+
+	test("no watchers are created by a config reload that outlives teardown", async ({
+		expect,
+	}) => {
+		// Closing a watcher takes long enough that the reload waiting on it is still
+		// suspended when teardown runs to completion.
+		const watchers = mockWatchers(expect, { closeDelayMs: 200 });
+
+		const config = customBuildAndAssetsConfig();
+		controller.onConfigUpdate({ type: "configUpdate", config });
+		// The custom build watcher and the assets watcher.
+		await watchers.at(1);
+
+		// A reload closes both watchers before setting up their replacements...
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: { ...config, name: "replacement-worker" },
+		});
+		// ...and dev shuts down while those closes are in flight. Teardown only sees
+		// the watchers that exist when it starts, so the reload must not go on to
+		// create replacements: they would never be closed, and a `persistent: true`
+		// chokidar watcher keeps the process alive.
+		await controller.teardown();
+
+		expect(watchers.created).toHaveLength(2);
+		for (const watcher of watchers.created) {
+			expect(watcher.close).toHaveBeenCalled();
+		}
+	});
 });

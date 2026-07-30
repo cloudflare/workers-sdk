@@ -283,7 +283,11 @@ export class BundlerController extends Controller {
 		this.#pendingCustomBuild = undefined;
 		this.#customBuildAborter?.abort();
 
-		if (!config.build?.custom?.command) {
+		// Closing the previous watcher suspends this method, so `teardown()` may
+		// have run to completion in the meantime. It reads `#customBuildWatcher`
+		// once, so a watcher created below would never be closed and would keep
+		// the process alive.
+		if (this.tearingDown || !config.build?.custom?.command) {
 			return;
 		}
 
@@ -327,6 +331,14 @@ export class BundlerController extends Controller {
 
 	async #startBundle(config: StartDevWorkerOptions) {
 		await this.#bundlerCleanup?.();
+		// Cleaning up the previous build suspends this method, so `teardown()` may
+		// have run to completion in the meantime. It reads `#bundlerCleanup` once,
+		// so an esbuild watch build started below would never be disposed of. Bail
+		// out before replacing the aborter, which `teardown()` has already aborted
+		// to suppress events from in-flight builds.
+		if (this.tearingDown) {
+			return;
+		}
 		// If a new bundle build comes in, we need to cancel in-flight builds
 		this.#bundleBuildAborter.abort();
 		this.#bundleBuildAborter = new AbortController();
@@ -445,6 +457,15 @@ export class BundlerController extends Controller {
 		// Discard any that is still pending: it captured the config it was created
 		// with, which has now been replaced.
 		this.#debouncedRefreshBundle?.cancel();
+		this.#debouncedRefreshBundle = undefined;
+
+		// Closing the previous watcher suspends this method, so `teardown()` may
+		// have run to completion in the meantime. It reads `#assetsWatcher` once,
+		// so a watcher created below would never be closed and would keep the
+		// process alive.
+		if (this.tearingDown) {
+			return;
+		}
 
 		const debouncedRefreshBundle = debounce(() => {
 			// The watcher can deliver events while it is closing, so a refresh can be
