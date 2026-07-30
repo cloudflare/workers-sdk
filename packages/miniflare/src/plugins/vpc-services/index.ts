@@ -14,7 +14,7 @@ const VpcServicesSchema = z.object({
 });
 
 export const VpcServicesOptionsSchema = z.object({
-	vpcServices: z.record(VpcServicesSchema).optional(),
+	vpcServices: z.record(z.string(), VpcServicesSchema).optional(),
 });
 
 export const VPC_SERVICES_PLUGIN_NAME = "vpc-services";

@@ -152,7 +152,8 @@ async function exportLocal(
 	// TODO: should we allow customising persistence path?
 	// Should it be --persist-to for consistency (even though this isn't persisting anything)?
 	const persistencePath = getLocalPersistencePath(undefined, config);
-	const d1Persist = path.join(persistencePath, "v3", "d1");
+	const resourcePersistencePath = path.join(persistencePath, "v3");
+	const d1Persist = path.join(resourcePersistencePath, "d1");
 
 	logger.log(
 		`🌀 Exporting local database ${name} (${id}) from ${readableRelative(
@@ -166,7 +167,7 @@ async function exportLocal(
 	const mf = new Miniflare({
 		modules: true,
 		script: "export default {}",
-		d1Persist,
+		resourcePersistencePath,
 		d1Databases: { DATABASE: id },
 	});
 	const db = await mf.getD1Database("DATABASE");

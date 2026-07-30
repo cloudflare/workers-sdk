@@ -57,7 +57,7 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"wrangler": "workspace:*",
-		"zod": "3.25.76"
+		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/mock-npm-registry": "workspace:*",

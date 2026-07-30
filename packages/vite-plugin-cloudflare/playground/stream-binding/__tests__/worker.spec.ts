@@ -8,7 +8,7 @@ test("stream upload returns a valid preview URL", async ({ expect }) => {
 		id: string;
 	};
 	expect(result.id).toBeTruthy();
-	expect(result.preview).toContain("/cdn-cgi/mf/stream/");
+	expect(result.preview).toContain("/__cf_local/stream/");
 	expect(result.preview).toContain("/watch");
 });
 

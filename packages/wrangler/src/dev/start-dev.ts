@@ -362,7 +362,7 @@ function maybePrintScheduledWorkerWarning(
 	logger.once.warn(
 		`Scheduled Workers are not automatically triggered during local development.\n` +
 			`To manually trigger a scheduled event, run:\n` +
-			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
+			`  curl "http://${host}:${port}/cdn-cgi/local/scheduled"\n` +
 			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
 }

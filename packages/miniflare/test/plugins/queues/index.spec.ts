@@ -64,7 +64,7 @@ test("maxBatchTimeout validation", async ({ expect }) => {
 		error = e as MiniflareCoreError;
 	}
 	expect(error?.code).toEqual("ERR_VALIDATION");
-	expect(error?.message).toMatch(/Number must be less than or equal to 60/);
+	expect(error?.message).toMatch(/Too big: expected number to be <=60/);
 });
 
 test("flushes partial and full batches", async ({ expect }) => {

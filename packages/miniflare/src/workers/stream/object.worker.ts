@@ -21,7 +21,6 @@ const BLOB_NAMESPACE = "stream-data";
 
 interface Env {
 	MINIFLARE_BLOBS?: Fetcher;
-	MINIFLARE_STICKY_BLOBS?: boolean;
 	[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS]?: boolean;
 }
 
@@ -42,12 +41,7 @@ export class StreamObject extends DurableObject<Env> {
 		db.exec(SQL_SCHEMA);
 		this.#db = db;
 		this.#stmts = sqlStmts(db, () => this.#now());
-		const stickyBlobs = !!env.MINIFLARE_STICKY_BLOBS;
-		this.#blob = new BlobStore(
-			env.MINIFLARE_BLOBS as Fetcher,
-			BLOB_NAMESPACE,
-			stickyBlobs
-		);
+		this.#blob = new BlobStore(env.MINIFLARE_BLOBS as Fetcher, BLOB_NAMESPACE);
 	}
 
 	async createVideo(

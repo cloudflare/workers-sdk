@@ -1795,8 +1795,8 @@ describe("createTestHarness", () => {
 			<timestamp> [server] startup - completed
 			<timestamp> [server] fetch - GET / - started
 			<timestamp> [server] fetch - GET / - 200
-			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/handler/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - started
-			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/handler/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - 200
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/local/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - started
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/local/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - 200
 			<timestamp> [server] fetch - GET / - started
 			<timestamp> [server] fetch - GET / - 200"
 		`);

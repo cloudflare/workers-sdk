@@ -8,11 +8,9 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
-	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
@@ -28,6 +26,7 @@ export const D1OptionsSchema = z.object({
 	d1Databases: z
 		.union([
 			z.record(
+				z.string(),
 				z.union([
 					z.string(),
 					z.object({
@@ -42,10 +41,6 @@ export const D1OptionsSchema = z.object({
 		])
 		.optional(),
 });
-export const D1SharedOptionsSchema = z.object({
-	d1Persist: PersistenceSchema,
-});
-
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
@@ -57,12 +52,8 @@ const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	className: D1_DATABASE_OBJECT_CLASS_NAME,
 };
 
-export const D1_PLUGIN: Plugin<
-	typeof D1OptionsSchema,
-	typeof D1SharedOptionsSchema
-> = {
+export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
 	options: D1OptionsSchema,
-	sharedOptions: D1SharedOptionsSchema,
 	bindingTypeDescription: "D1 database",
 	getBindings(options) {
 		const databases = namespaceEntries(options.d1Databases);
@@ -112,15 +103,7 @@ export const D1_PLUGIN: Plugin<
 			databases.map((name) => [name, new ProxyNodeBinding()])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		log,
-		unsafeStickyBlobs,
-	}) {
-		const persist = sharedOptions.d1Persist;
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		const databases = namespaceEntries(options.d1Databases);
 
 		const services: Service[] = [];
@@ -148,8 +131,7 @@ export const D1_PLUGIN: Plugin<
 			const persistPath = getPersistPath(
 				D1_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
-				persist
+				resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 
@@ -186,23 +168,13 @@ export const D1_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};
 			services.push(storageService, objectService);
-
-			for (const [, database] of databases) {
-				if (database.remoteProxyConnectionString) {
-					continue;
-				}
-				await migrateDatabase(log, uniqueKey, persistPath, database.id);
-			}
 		}
 
 		return services;
-	},
-	getPersistPath({ d1Persist }, tmpPath) {
-		return getPersistPath(D1_PLUGIN_NAME, tmpPath, undefined, d1Persist);
 	},
 };

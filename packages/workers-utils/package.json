@@ -65,6 +65,7 @@
 		"concurrently": "^8.2.2",
 		"empathic": "^2.0.0",
 		"jsonc-parser": "catalog:default",
+		"kleur": "^4.1.5",
 		"open": "catalog:default",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
@@ -74,7 +75,8 @@
 		"typescript": "catalog:default",
 		"update-check": "^1.5.4",
 		"vitest": "catalog:default",
-		"xdg-app-paths": "^8.3.0"
+		"xdg-app-paths": "^8.3.0",
+		"zod": "catalog:default"
 	},
 	"peerDependencies": {
 		"vitest": "^4.1.0"

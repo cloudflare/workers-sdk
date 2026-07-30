@@ -626,7 +626,6 @@ async function buildProjectWorkerOptions(
 const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
 	handleStructuredLogs,
-	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
 
 const DEFAULT_INSPECTOR_PORT = 9229;

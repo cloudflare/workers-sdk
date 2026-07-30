@@ -12,7 +12,7 @@ import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
-import { Headers, Request } from "miniflare";
+import { CorePaths, Headers, Request } from "miniflare";
 import {
 	buildMigrationQuery,
 	getCreateMigrationsTableQuery,
@@ -1033,7 +1033,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					const response = await dispatchFetch(
 						miniflare,
-						`/cdn-cgi/handler/email?${searchParams.toString()}`,
+						`${CorePaths.EMAIL}?${searchParams.toString()}`,
 						requestInit,
 						workerName,
 						"email"
@@ -1070,7 +1070,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					const response = await dispatchFetch(
 						miniflare,
-						`/cdn-cgi/handler/scheduled?${searchParams.toString()}`,
+						`/cdn-cgi/local/scheduled?${searchParams.toString()}`,
 						undefined,
 						workerName,
 						"scheduled"

@@ -57,27 +57,27 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 }
 
 function getEmailProjectParentDirectory(
-	defaultProjectTmpPath: string | undefined
+	resourceTmpPath: string | undefined
 ): string | undefined {
-	if (defaultProjectTmpPath === undefined) {
+	if (resourceTmpPath === undefined) {
 		return undefined;
 	}
-	return path.join(defaultProjectTmpPath, EMAIL_PLUGIN_NAME);
+	return path.join(resourceTmpPath, EMAIL_PLUGIN_NAME);
 }
 
 /**
  * Returns the session directory for email files.
- * Path: `<defaultProjectTmpPath>/email/<session-id>`
+ * Path: `<resourceTmpPath>/email/<session-id>`
  * Example: `/path/to/project/.wrangler/tmp/email/dev-abc123`
  * When an email is logged, it is stored under this directory using a type indicator
  * and a unique ID.
  * Path: `<session-dir>/<email-type>/<message-id>.<ext>`
  */
 function getEmailProjectSessionDirectory(
-	defaultProjectTmpPath: string | undefined,
+	resourceTmpPath: string | undefined,
 	tmpPath: string
 ): string | undefined {
-	const parentDir = getEmailProjectParentDirectory(defaultProjectTmpPath);
+	const parentDir = getEmailProjectParentDirectory(resourceTmpPath);
 	if (parentDir === undefined) {
 		return undefined;
 	}
@@ -85,17 +85,14 @@ function getEmailProjectSessionDirectory(
 }
 
 export function getEmailPathsToClean(
-	defaultProjectTmpPath: string | undefined,
+	resourceTmpPath: string | undefined,
 	tmpPath: string
 ): { sessionDir: string; parentDir: string } | undefined {
-	if (defaultProjectTmpPath === undefined) {
+	if (resourceTmpPath === undefined) {
 		return undefined;
 	}
-	const sessionDir = getEmailProjectSessionDirectory(
-		defaultProjectTmpPath,
-		tmpPath
-	);
-	const parentDir = getEmailProjectParentDirectory(defaultProjectTmpPath);
+	const sessionDir = getEmailProjectSessionDirectory(resourceTmpPath, tmpPath);
+	const parentDir = getEmailProjectParentDirectory(resourceTmpPath);
 	if (sessionDir === undefined || parentDir === undefined) {
 		return undefined;
 	}
@@ -148,7 +145,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		await mkdir(emailSystemDirectory, { recursive: true });
 
 		// Map binding disk services to names and paths, for concise access when storing emails as files.
-		// When defaultProjectTmpPath is unset, only create system service to avoid duplicates
+		// When resourceTmpPath is unset, only create system service to avoid duplicates
 		const diskServices: Array<{
 			location: "system" | "project";
 			bindingName: string;
@@ -163,9 +160,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			},
 		];
 
-		if (args.defaultProjectTmpPath) {
+		if (args.resourceTmpPath) {
 			const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
-				args.defaultProjectTmpPath,
+				args.resourceTmpPath,
 				args.tmpPath
 			);
 			if (emailProjectSessionDirectory !== undefined) {

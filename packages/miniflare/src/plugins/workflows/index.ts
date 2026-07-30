@@ -10,7 +10,6 @@ import {
 import {
 	getPersistPath,
 	getUserBindingServiceName,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
@@ -20,6 +19,7 @@ import type { Plugin, RemoteProxyConnectionString } from "../shared";
 export const WorkflowsOptionsSchema = z.object({
 	workflows: z
 		.record(
+			z.string(),
 			z.object({
 				name: z.string(),
 				className: z.string(),
@@ -41,7 +41,6 @@ export const WorkflowsOptionsSchema = z.object({
 		.optional(),
 });
 export const WorkflowsSharedOptionsSchema = z.object({
-	workflowsPersist: PersistenceSchema,
 	// Shared with the core plugin; lets us tail the engine service (see below).
 	unsafeObservability: z.boolean().optional(),
 });
@@ -103,12 +102,16 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		];
 	},
 
-	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
+	async getServices({
+		options,
+		tmpPath,
+		resourcePersistencePath,
+		sharedOptions,
+	}) {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.workflowsPersist
+			resourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 		// each workflow should get its own storage service
@@ -235,14 +238,5 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		}
 
 		return [...storageServices, ...services];
-	},
-
-	getPersistPath({ workflowsPersist }, tmpPath) {
-		return getPersistPath(
-			WORKFLOWS_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			workflowsPersist
-		);
 	},
 };

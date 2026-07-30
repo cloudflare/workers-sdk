@@ -5,6 +5,7 @@ import { setTimeout } from "node:timers/promises";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
 	DeferredPromise,
+	DURABLE_OBJECTS_PLUGIN_NAME,
 	kUnsafeEphemeralUniqueKey,
 	Miniflare,
 } from "miniflare";
@@ -71,20 +72,17 @@ test("persists Durable Object data in-memory between options reloads", async ({
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #2: 2");
 
-	opts.durableObjectsPersist = false;
 	opts.script = COUNTER_SCRIPT("Options #3: ");
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #3: 3");
 
-	opts.durableObjectsPersist = "memory:";
 	opts.script = COUNTER_SCRIPT("Options #4: ");
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #4: 4");
 
 	// Check a `new Miniflare()` instance has its own in-memory storage
-	delete opts.durableObjectsPersist;
 	opts.script = COUNTER_SCRIPT("Options #5: ");
 	await mf.dispose();
 	const mf2 = new Miniflare(opts);
@@ -112,7 +110,7 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 		modules: true,
 		script: COUNTER_SCRIPT(),
 		durableObjects: { COUNTER: "Counter" },
-		durableObjectsPersist: tmp,
+		resourcePersistencePath: tmp,
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -120,8 +118,9 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("1");
 
-	// Check directory created for "worker"'s Durable Object
-	const names = await fs.readdir(tmp);
+	// Check directory created for "worker"'s Durable Object under the plugin subdirectory
+	const doTmp = path.join(tmp, DURABLE_OBJECTS_PLUGIN_NAME);
+	const names = await fs.readdir(doTmp);
 	expect(names).toEqual(["worker-Counter"]);
 
 	// Check reloading keeps persisted data
@@ -133,7 +132,7 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	// reload here as `workerd` keeps a copy of the SQLite database in-memory,
 	// we also need to `dispose()` to avoid `EBUSY` error on Windows)
 	await mf.dispose();
-	await removeDir(path.join(tmp, names[0]));
+	await removeDir(path.join(doTmp, names[0]));
 
 	const mf2 = new Miniflare(opts);
 	useDispose(mf2);
@@ -152,7 +151,7 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 	const tmp = await useTmp();
 	const mf = new Miniflare({
-		defaultPersistRoot: tmp,
+		resourcePersistencePath: tmp,
 		name: "worker",
 		modules: true,
 		script: COUNTER_SCRIPT(),
@@ -182,7 +181,7 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 test("multiple Workers access same Durable Object data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const mf = new Miniflare({
-		durableObjectsPersist: tmp,
+		resourcePersistencePath: tmp,
 		workers: [
 			{
 				name: "entry",
@@ -234,8 +233,8 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 	});
 	expect(await res.text()).toBe("via A: b: 1");
 
-	// Check directory created for Durable Objects
-	const names = await fs.readdir(tmp);
+	// Check directory created for Durable Objects under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, DURABLE_OBJECTS_PLUGIN_NAME));
 	expect(names.sort()).toEqual(["a-Counter", "b-Counter"]);
 
 	// Check accessing via a different service accesses same persisted data
