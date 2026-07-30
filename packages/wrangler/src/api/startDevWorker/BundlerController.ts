@@ -70,6 +70,14 @@ export class BundlerController extends Controller {
 		config: StartDevWorkerOptions,
 		filePath: string
 	): Promise<void> {
+		// Watcher events can still be delivered between `teardown()` aborting the
+		// in-flight build and the watcher finishing closing, and a build must never
+		// outlive dev: it would spawn a process and dispatch bundle events into a
+		// torn-down environment.
+		if (this.tearingDown) {
+			return Promise.resolve();
+		}
+
 		// If a new custom build comes in, we need to cancel in-flight builds
 		this.#customBuildAborter.abort();
 		this.#customBuildAborter = new AbortController();
@@ -522,7 +530,6 @@ export class BundlerController extends Controller {
 	override async teardown() {
 		logger.debug("BundlerController teardown beginning...");
 		await super.teardown();
-		this.#debouncedCustomBuild?.cancel();
 		this.#pendingCustomBuild = undefined;
 		this.#customBuildAborter?.abort();
 		// Abort any in-flight esbuild build so that a finishing build doesn't
@@ -540,6 +547,10 @@ export class BundlerController extends Controller {
 			this.#customBuildDrain?.catch(() => {}),
 			this.#assetsWatcher?.close(),
 		]);
+		// Discard any debounced build armed by an event that arrived while the
+		// watcher was closing, so its timer doesn't keep the process alive. Must run
+		// after the watcher has closed, otherwise a later event could re-arm it.
+		this.#debouncedCustomBuild?.cancel();
 		// Defence-in-depth: `bundle.ts`'s `stop()` normally removes the tmp
 		// dir on our behalf, but it may have never been assigned (e.g. when
 		// running a custom build, or when the initial build threw). Remove

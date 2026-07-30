@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import {
 	normalizeString,
 	runInTempDir,
@@ -22,8 +23,9 @@ function findSourceFile(source: string, name: string): string {
 
 function configDefaults(
 	config: Partial<
-		Omit<StartDevWorkerOptions, "build"> & {
+		Omit<StartDevWorkerOptions, "build" | "dev"> & {
 			build: Partial<StartDevWorkerOptions["build"]>;
+			dev: Partial<StartDevWorkerOptions["dev"]>;
 		}
 	>
 ): StartDevWorkerOptions {
@@ -34,8 +36,11 @@ function configDefaults(
 		entrypoint: path.resolve("src/index.ts"),
 		projectRoot: path.resolve("src"),
 		legacy: {},
-		dev: { persist },
 		...config,
+		dev: {
+			persist,
+			...config.dev,
+		},
 		build: {
 			additionalModules: [],
 			processEntrypoint: false,
@@ -487,6 +492,49 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 						event.type === "error" && event.source === "BundlerController"
 				)
 			).toBe(false);
+		});
+
+		test("a custom build scheduled after teardown never runs", async ({
+			expect,
+		}) => {
+			await seed({
+				"build.js": dedent /* javascript */ `
+					const fs = require("node:fs");
+					fs.writeFileSync("built.txt", "yes");
+					fs.cpSync("custom_build_dir/index.ts", "out.ts");
+				`,
+				"custom_build_dir/index.ts": dedent /* javascript */ `
+					export default {
+						fetch() {
+							return new Response("initial")
+						}
+					}
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				dev: { watch: false },
+				build: {
+					custom: {
+						command: "node build.js",
+						watch: "custom_build_dir",
+					},
+					moduleRoot: path.resolve("."),
+				},
+			});
+
+			await controller.teardown();
+			// Watcher events can be delivered while the watcher is closing, so a build
+			// can be scheduled after dev has stopped. It must not spawn the user's
+			// build command or dispatch bundle events into a torn-down environment.
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			await setTimeout(500);
+
+			expect(existsSync("built.txt")).toBe(false);
+			expect(
+				bus.events.filter((event) => event.type === "bundleStart")
+			).toEqual([]);
 		});
 	});
 
