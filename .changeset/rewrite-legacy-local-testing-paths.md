@@ -15,4 +15,3 @@ These are the new paths:
 - `/cdn-cgi/mf/scheduled` → `/cdn-cgi/local/scheduled` (Note `/cdn-cgi/mf/scheduled` is already deprecated)
 - `/cdn-cgi/mf/stream/*` → `/__cf_local/stream/*`
 - `/cdn-cgi/mf/imagedelivery/*` → `/__cf_local/imagedelivery/*`
-- `/cdn-cgi/platform-proxy` → `/cdn-cgi/local/platform-proxy`
