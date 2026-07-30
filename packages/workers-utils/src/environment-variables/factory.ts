@@ -142,7 +142,7 @@ type VariableNames =
 	/** Disable config watching in ConfigController. */
 	| "WRANGLER_CI_DISABLE_CONFIG_WATCHING"
 
-	/** https://donottrack.sh/ */
+	/** Disable telemetry when set to an opt-out value. */
 	| "DO_NOT_TRACK"
 
 	// ## Docker Configuration

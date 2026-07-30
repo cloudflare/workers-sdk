@@ -688,13 +688,13 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should let the WRANGLER_SEND_METRICS environment variable override DO_NOT_TRACK", async ({
+			it("should let DO_NOT_TRACK override the WRANGLER_SEND_METRICS environment variable", async ({
 				expect,
 			}) => {
 				vi.stubEnv("DO_NOT_TRACK", "1");
 				vi.stubEnv("WRANGLER_SEND_METRICS", "true");
 				expect(await getMetricsConfig({})).toMatchObject({
-					enabled: true,
+					enabled: false,
 				});
 			});
 
