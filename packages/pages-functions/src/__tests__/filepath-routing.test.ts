@@ -1,13 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { toUrlPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, test } from "vitest";
-import {
-	compareRoutes,
-	generateConfigFromFileTree,
-} from "../../pages/functions/filepath-routing";
-import { toUrlPath } from "../../paths";
-import type { HTTPMethod, RouteConfig } from "../../pages/functions/routes";
-import type { UrlPath } from "../../paths";
+import { compareRoutes, generateConfigFromFileTree } from "../index";
+import type { HTTPMethod, RouteConfig } from "../index";
+import type { UrlPath } from "@cloudflare/workers-utils";
 
 describe("filepath-routing", () => {
 	describe("compareRoutes()", () => {
@@ -257,7 +254,7 @@ describe("filepath-routing", () => {
 					baseURL: "/base" as UrlPath,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Invalid Pages function route parameter - "[hyphen-not-allowed]". Parameter names must only contain alphanumeric and underscore characters.]`
+				`[PagesFunctionsError: Invalid Pages function route parameter - "[hyphen-not-allowed]". Parameter names must only contain alphanumeric and underscore characters.]`
 			);
 		});
 
@@ -275,16 +272,23 @@ describe("filepath-routing", () => {
 					baseURL: "/base" as UrlPath,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Invalid Pages function route parameter - "[[hyphen-not-allowed]]". Parameters names must only contain alphanumeric and underscore characters.]`
+				`[PagesFunctionsError: Invalid Pages function route parameter - "[[hyphen-not-allowed]]". Parameters names must only contain alphanumeric and underscore characters.]`
 			);
 		});
 	});
 });
 
-function routeConfig(routePath: string, method?: string): RouteConfig {
+/**
+ * Create a minimal route config for route ordering tests.
+ *
+ * @param routePath - URL path represented by the route.
+ * @param method - Optional HTTP method handled by the route.
+ * @returns A route config suitable for `compareRoutes`.
+ */
+function routeConfig(routePath: string, method?: HTTPMethod): RouteConfig {
 	return {
 		routePath: toUrlPath(routePath),
 		mountPath: toUrlPath("/"),
-		method: method as HTTPMethod,
+		method,
 	};
 }

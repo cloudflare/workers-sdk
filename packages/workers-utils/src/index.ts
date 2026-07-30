@@ -173,3 +173,6 @@ export {
 } from "./worker-name";
 
 export { _forceColour, formatZodError } from "./zod-format";
+
+export { toUrlPath } from "./url-path";
+export type { UrlPath } from "./url-path";
