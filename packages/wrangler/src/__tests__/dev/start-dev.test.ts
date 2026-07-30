@@ -114,7 +114,7 @@ describe("startDev", () => {
 		);
 		// The query route ships a copy-pasteable example that also documents the request body shape.
 		expect(std.out).toContain(
-			`curl -X POST http://127.0.0.1:8787/cdn-cgi/explorer/api/local/observability/query -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'`
+			`curl -X POST http://127.0.0.1:8787/cdn-cgi/explorer/api/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'`
 		);
 		// The OpenAPI schema is demoted to a last-resort footer after the functional routes.
 		expect(std.out).toContain(
