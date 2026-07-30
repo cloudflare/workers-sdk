@@ -319,6 +319,112 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			);
 		});
 
+		test("a burst of watched file changes does not run custom builds concurrently", async ({
+			expect,
+		}) => {
+			await seed({
+				// Records an overlap in `overlap.txt` if another custom build process is
+				// still running when this one starts.
+				//
+				// A build that is superseded part way through is killed, leaving
+				// `build.lock` behind, so the recorded pid is checked for liveness
+				// rather than treating the presence of the lock as an overlap.
+				"build.js": dedent /* javascript */ `
+					const fs = require("node:fs");
+
+					if (fs.existsSync("build.lock")) {
+						const pid = Number(fs.readFileSync("build.lock", "utf8"));
+						let running = true;
+						try {
+							process.kill(pid, 0);
+						} catch {
+							running = false;
+						}
+						if (running) {
+							fs.writeFileSync("overlap.txt", String(pid));
+							process.exit(1);
+						}
+					}
+
+					fs.writeFileSync("build.lock", String(process.pid));
+					setTimeout(() => {
+						fs.cpSync("custom_build_dir/index.ts", "out.ts");
+						fs.rmSync("build.lock");
+					}, 300);
+				`,
+				"custom_build_dir/index.ts": dedent /* javascript */ `
+					export default {
+						fetch() {
+							return new Response("hello custom build")
+						}
+					} satisfies ExportedHandler
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				build: {
+					custom: {
+						command: "node build.js",
+						watch: "custom_build_dir",
+					},
+					moduleRoot: path.resolve("."),
+				},
+			});
+
+			const firstBuild = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			await firstBuild;
+
+			const bundleStartCount = () =>
+				bus.events.filter((event) => event.type === "bundleStart").length;
+			const buildsBeforeChanges = bundleStartCount();
+
+			// Simulate the burst of watcher events produced by something like a
+			// `git pull` touching several files at once.
+			await seed(
+				Object.fromEntries(
+					Array.from({ length: 5 }, (_, i) => [
+						`custom_build_dir/change-${i}.txt`,
+						String(i),
+					])
+				)
+			);
+
+			// Wait for the builds triggered by the burst to settle, which we treat as
+			// two consecutive polls seeing the same number of builds. We deliberately
+			// don't wait for `bundleComplete`: overlapping builds make the last build
+			// fail, and the assertions below report that far more usefully than the
+			// test timing out.
+			let previousCount = -1;
+			await vi.waitFor(
+				() => {
+					const count = bundleStartCount();
+					const settled =
+						count > buildsBeforeChanges && count === previousCount;
+					previousCount = count;
+					if (!settled) {
+						throw new Error(
+							`Custom builds have not settled yet (${count - buildsBeforeChanges} started since the file changes)`
+						);
+					}
+				},
+				{ timeout: 8_000, interval: 500 }
+			);
+
+			expect(existsSync("overlap.txt")).toBe(false);
+			expect(
+				bus.events.filter(
+					(event) =>
+						event.type === "error" &&
+						event.source === "BundlerController" &&
+						event.reason === "Custom build failed"
+				)
+			).toEqual([]);
+			// The burst is debounced, so it must not produce a build per changed file
+			expect(bundleStartCount() - buildsBeforeChanges).toBeLessThan(5);
+		});
+
 		test("teardown aborts an in-flight watched custom build", async ({
 			expect,
 		}) => {
