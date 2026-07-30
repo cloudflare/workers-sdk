@@ -2,6 +2,7 @@ packages/wrangler/src/triggers/index.ts
   s_dbbc503753dcd7::t_3d3b54464c8bb0 1-4,70
 .changeset/workflows-hotfix.md
   s_6839e8c88e235c::t_dba03cf065c867 1-29
+  s_6839e8c88e235c::t_6e7de7d0da1b8d 1-29
 packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
   s_6839e8c88e235c::t_fa5a67f905e78d 11-14,103
 packages/deploy-helpers/src/shared/types.ts
