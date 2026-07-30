@@ -102,7 +102,7 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 	const result = OutputWorkerSchema.safeParse(parseJson(contents, configPath));
 	if (!result.success) {
 		throw new BuildOutputError(
-			`Build Output Specification: invalid Worker config at ${configPath}.\n${result.error.message}`
+			`invalid Worker config at ${configPath}.\n${result.error.message}`
 		);
 	}
 
@@ -113,7 +113,7 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 
 	if (result.data.manifest && !hasBundleDir) {
 		throw new BuildOutputError(
-			`Build Output Specification: Worker config at ${configPath} contains a manifest, but no bundle directory exists at ${bundleDir}.`
+			`Worker config at ${configPath} contains a manifest, but no bundle directory exists at ${bundleDir}.`
 		);
 	}
 
@@ -136,7 +136,7 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 	}
 
 	throw new BuildOutputError(
-		`Build Output Specification: Worker config at ${configPath} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
+		`Worker config at ${configPath} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
 	);
 }
 
@@ -161,7 +161,7 @@ async function readSettings(
 	const result = SettingsSchema.safeParse(parseJson(contents, configPath));
 	if (!result.success) {
 		throw new BuildOutputError(
-			`Build Output Specification: invalid root config at ${configPath}.\n${result.error.message}`
+			`invalid root config at ${configPath}.\n${result.error.message}`
 		);
 	}
 
@@ -174,7 +174,7 @@ function parseJson(contents: string, configPath: string): unknown {
 	} catch (e) {
 		const reason = e instanceof Error ? e.message : String(e);
 		throw new BuildOutputError(
-			`Build Output Specification: could not parse JSON at ${configPath}.\n${reason}`
+			`could not parse JSON at ${configPath}.\n${reason}`
 		);
 	}
 }
