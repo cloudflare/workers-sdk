@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.31.0
+
+### Minor Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Move `formatZodError` from `miniflare` to `@cloudflare/workers-utils`
+
+  The `formatZodError` and `_forceColour` helpers are no longer exported from `miniflare`; they are now exported from `@cloudflare/workers-utils`.
+
 ## 0.30.0
 
 ### Minor Changes
