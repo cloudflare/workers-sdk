@@ -49,7 +49,7 @@ export abstract class Framework {
 		_options: FrameworkVersionUpgradeOptions
 	): Promise<void> {
 		throw new AutoConfigFrameworkConfigurationError(
-			`${this.name} requires an upgrade before it can be automatically configured, but autoconfig cannot upgrade it automatically.`,
+			`${this.name} requires an upgrade before your project can be automatically configured.`,
 			{ telemetryMessage: "autoconfig framework version upgrade unavailable" }
 		);
 	}
