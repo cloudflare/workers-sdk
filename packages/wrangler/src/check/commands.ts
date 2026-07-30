@@ -38,7 +38,7 @@ export const checkNamespace = createNamespace({
 	metadata: {
 		description: "☑︎ Run checks on your Worker",
 		owner: "Workers: Authoring and Testing",
-		status: "alpha",
+		status: "stable",
 		hidden: true,
 	},
 });
@@ -211,7 +211,7 @@ export const checkStartupCommand = createCommand({
 	metadata: {
 		description: "⌛ Profile your Worker's startup performance",
 		owner: "Workers: Authoring and Testing",
-		status: "alpha",
+		status: "stable",
 	},
 	behaviour: {
 		suggestSkillsAfterHandler: true,
