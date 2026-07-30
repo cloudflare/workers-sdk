@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getSubdomainValues } from "@cloudflare/deploy-helpers";
 import {
@@ -11,6 +12,7 @@ import { http, HttpResponse } from "msw";
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearOutputFilePath } from "../../output";
+import { detectAgent } from "../../utils/detect-agent";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -96,6 +98,7 @@ describe("deploy", () => {
 	});
 
 	afterEach(() => {
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 		vi.unstubAllGlobals();
 		clearDialogs();
 		clearOutputFilePath();
@@ -1012,6 +1015,64 @@ describe("deploy", () => {
 
 					"
 				`);
+			});
+
+			it("uses the project name without prompting when run by an agent", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"package.json",
+					JSON.stringify({ name: "agent-project-name" })
+				);
+				writeWranglerConfig({ name: undefined as unknown as string });
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockSubDomainRequest("agent-project-name", true, false);
+				mockSubDomainRequest("agent-project-name", false, true);
+				mockUploadWorkerRequest({
+					expectedScriptName: "agent-project-name",
+					useOldUploadApi: true,
+				});
+				vi.mocked(detectAgent).mockReturnValue({
+					isAgent: true,
+					id: "test-agent",
+				});
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/workers/subdomains/:subdomain",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{ code: 10032, message: "subdomain_unavailable" },
+								])
+							),
+						{ once: true }
+					),
+					http.put(
+						"*/accounts/:accountId/workers/subdomain",
+						async ({ request }) => {
+							expect(await request.json()).toEqual({
+								subdomain: "agent-project-name",
+							});
+							return HttpResponse.json(
+								createFetchResult({ subdomain: "agent-project-name" })
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler("deploy ./index");
+
+				expect(std.out).toContain(
+					'Using the project name "agent-project-name" as the Worker name.'
+				);
+				expect(std.out).toContain(
+					"Visit https://dash.cloudflare.com/some-account-id/workers/subdomain to edit your workers.dev subdomain"
+				);
+				expect(std.out).toContain(
+					"https://agent-project-name.agent-project-name.workers.dev"
+				);
 			});
 
 			it("fails before uploading when the user declines to register a subdomain", async ({
