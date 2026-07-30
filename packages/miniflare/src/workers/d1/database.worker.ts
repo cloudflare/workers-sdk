@@ -222,11 +222,26 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			searchParams.get("resultsFormat")
 		);
 
-		return Response.json(this.#txn(queries, resultsFormat), {
-			headers: {
-				[D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]:
-					await this.state.storage.getCurrentBookmark(),
-			},
+		const results = this.#txn(queries, resultsFormat);
+
+		// `getCurrentBookmark()` can fail with a recoverable SQLite error (e.g.
+		// `SQLITE_BUSY` when another process is writing to the same persisted
+		// database), which workerd surfaces as an opaque internal error. Wrap the
+		// failure in a `D1Error` so it reaches the Worker as a normal, catchable
+		// query error instead of escaping the handler and crashing the whole
+		// `wrangler dev` process.
+		let commitToken: string;
+		try {
+			commitToken = await this.state.storage.getCurrentBookmark();
+		} catch (e) {
+			const message = e instanceof Error ? e.message : String(e);
+			throw new D1Error(
+				new Error(`Failed to get session commit token: ${message}`)
+			);
+		}
+
+		return Response.json(results, {
+			headers: { [D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]: commitToken },
 		});
 	};
 
