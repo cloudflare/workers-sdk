@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.30.0
+
+### Minor Changes
+
+- [#14785](https://github.com/cloudflare/workers-sdk/pull/14785) [`5e6556a`](https://github.com/cloudflare/workers-sdk/commit/5e6556a0c788679b6ac149ba3018a2cfd7cc73e9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `toUrlPath` and `UrlPath` exports
+
+  `toUrlPath(filePath)` converts a file-system path into a URL-safe path by replacing backslashes with forward slashes and rejecting Windows drive-letter prefixes (e.g. `C:`). `UrlPath` is the branded string type it returns, letting callers prove at the type level that a string has been normalized for use in URLs.
+
 ## 0.29.0
 
 ### Minor Changes
