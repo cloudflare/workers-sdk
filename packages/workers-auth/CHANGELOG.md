@@ -1,5 +1,16 @@
 # @cloudflare/workers-auth
 
+## 0.5.4
+
+### Patch Changes
+
+- [#14838](https://github.com/cloudflare/workers-sdk/pull/14838) [`8049ca4`](https://github.com/cloudflare/workers-sdk/commit/8049ca451c9561e8b72f3eeeb7916a8712f06133) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Fix ctrl+c not being able to interrupt wrangler while waiting for Cloudflare Access authorization
+
+  When a domain is behind Cloudflare Access (for example during remote bindings startup), wrangler runs `cloudflared access login`, which only returns once the user completes the authorization flow in the browser. This was invoked synchronously, blocking Node's event loop, so wrangler could not react to ctrl+c (or anything else) until the authorization completed — abandoning the browser flow left a hung wrangler process that had to be killed externally. `cloudflared` is now spawned asynchronously, keeping wrangler responsive while it waits. The remote runtime passes its abort signal through to the spawn, so tearing down the session kills a still-pending `cloudflared` immediately, with process exit as a last-resort cleanup.
+
+- Updated dependencies [[`5e6556a`](https://github.com/cloudflare/workers-sdk/commit/5e6556a0c788679b6ac149ba3018a2cfd7cc73e9)]:
+  - @cloudflare/workers-utils@0.30.0
+
 ## 0.5.3
 
 ### Patch Changes

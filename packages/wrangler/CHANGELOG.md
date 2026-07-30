@@ -1,5 +1,79 @@
 # wrangler
 
+## 4.116.0
+
+### Minor Changes
+
+- [#14907](https://github.com/cloudflare/workers-sdk/pull/14907) [`beec0fb`](https://github.com/cloudflare/workers-sdk/commit/beec0fbc9d3adec24bc42e31a21fe7f82badb543) Thanks [@NuroDev](https://github.com/NuroDev)! - Avoid Worker and workers.dev naming prompts in agent-driven deploys
+
+  Wrangler now derives the Worker name from the project and automatically registers the same project-derived workers.dev account subdomain on a first deploy when running in a detected agent environment. The deploy output explains how to change both names.
+
+- [#14905](https://github.com/cloudflare/workers-sdk/pull/14905) [`b21eac2`](https://github.com/cloudflare/workers-sdk/commit/b21eac24878f060296915f198fae910268c465ef) Thanks [@jamesopstad](https://github.com/jamesopstad)! - The experimental build output directory now includes the Worker's configuration at `.cloudflare/output/v0/workers/default/config.json` instead of `.cloudflare/output/v0/workers/<worker-name>/worker.config.json`
+
+- [#14893](https://github.com/cloudflare/workers-sdk/pull/14893) [`bb09f1b`](https://github.com/cloudflare/workers-sdk/commit/bb09f1bd77a194520db3e61d733996f4bbe4bad8) Thanks [@apeacock1991](https://github.com/apeacock1991)! - Graduate `wrangler check startup` from alpha and show bundle size and a local timing summary
+
+  The command no longer prints an alpha warning. It now reports its local profile window, sampled active, garbage collection, and idle time alongside the raw and compressed bundle sizes. The existing measurement warning continues to distinguish these local measurements from startup time measured on Cloudflare.
+
+- [#14685](https://github.com/cloudflare/workers-sdk/pull/14685) [`01d7020`](https://github.com/cloudflare/workers-sdk/commit/01d7020806dd523158cf9f26a4575365117f5381) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for dispatching email handlers with `createTestHarness`
+
+  You can now call `server.getWorker().email({ from, to, raw })` to dispatch directly to a Worker's `email()` handler and inspect its outcome, rejection reason, forwarded messages, and replies.
+
+  ```ts
+  const result = await server.getWorker().email({
+    from: "sender@example.com",
+    to: "inbox@example.com",
+    raw: [
+      "From: Sender <sender@example.com>",
+      "To: Inbox <inbox@example.com>",
+      "Message-ID: <test@example.com>",
+      "Subject: Test email",
+      "",
+      "Hello from the test harness",
+    ].join("\r\n"),
+  });
+
+  expect(result).toMatchObject({
+    outcome: "ok",
+    forwards: [{ recipient: "archive@example.com" }],
+    replies: [
+      {
+        sender: "inbox@example.com",
+        raw: expect.stringContaining("Thanks for your email"),
+      },
+    ],
+  });
+  ```
+
+### Patch Changes
+
+- [#14929](https://github.com/cloudflare/workers-sdk/pull/14929) [`48f0c6c`](https://github.com/cloudflare/workers-sdk/commit/48f0c6cbbc50dfac02e2d76554c181ced233a792) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260722.1 | ^5.20260730.1 |
+  | workerd                   | 1.20260722.1  | 1.20260730.1  |
+
+- [#14838](https://github.com/cloudflare/workers-sdk/pull/14838) [`8049ca4`](https://github.com/cloudflare/workers-sdk/commit/8049ca451c9561e8b72f3eeeb7916a8712f06133) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Fix ctrl+c not being able to interrupt wrangler while waiting for Cloudflare Access authorization
+
+  When a domain is behind Cloudflare Access (for example during remote bindings startup), wrangler runs `cloudflared access login`, which only returns once the user completes the authorization flow in the browser. This was invoked synchronously, blocking Node's event loop, so wrangler could not react to ctrl+c (or anything else) until the authorization completed — abandoning the browser flow left a hung wrangler process that had to be killed externally. `cloudflared` is now spawned asynchronously, keeping wrangler responsive while it waits. The remote runtime passes its abort signal through to the spawn, so tearing down the session kills a still-pending `cloudflared` immediately, with process exit as a last-resort cleanup.
+
+- [#14871](https://github.com/cloudflare/workers-sdk/pull/14871) [`1394867`](https://github.com/cloudflare/workers-sdk/commit/1394867d1dc357d9bddabf8c16aede47d052fb18) Thanks [@nickpatt](https://github.com/nickpatt)! - Include the local observability query endpoint in the agent-facing Local Explorer hint
+
+  The hint `wrangler dev` prints for AI-agent sessions now lists `POST /cdn-cgi/explorer/api/local/observability/query`, so agents can discover the read-only SQL endpoint for captured request traces and console logs (the `spans` and `logs` tables) alongside the existing binding and storage routes.
+
+- [#14918](https://github.com/cloudflare/workers-sdk/pull/14918) [`cc54478`](https://github.com/cloudflare/workers-sdk/commit/cc5447865022ebc602258cfbeb79953181a62ae0) Thanks [@nickpatt](https://github.com/nickpatt)! - Improve the agent-facing Local Explorer hint for the observability query endpoint
+
+  When a `wrangler dev` session is detected as running inside an AI agent, the hint for `POST /local/observability/query` now explains that the endpoint takes a read-only SQL query (SELECT/WITH only) over the captured `spans` and `logs` tables, notes that `attributes` is JSON (read via `json(attributes)`), and includes a copy-pasteable `curl` example. The full OpenAPI schema is demoted to a last-resort footer so agents reach for the small, actionable example first instead of fetching the large schema.
+
+- [#14897](https://github.com/cloudflare/workers-sdk/pull/14897) [`e31ab0f`](https://github.com/cloudflare/workers-sdk/commit/e31ab0f40c5310babd8b493490c0e1ca677e9a8c) Thanks [@ericclemmons](https://github.com/ericclemmons)! - Fix `wrangler triggers deploy` to use Vite-generated redirected configuration
+
+  The command now reads `.wrangler/deploy/config.json`, matching `wrangler deploy` and `wrangler versions upload`, so generated Worker names and trigger settings are applied.
+
+- Updated dependencies [[`01d7020`](https://github.com/cloudflare/workers-sdk/commit/01d7020806dd523158cf9f26a4575365117f5381), [`48f0c6c`](https://github.com/cloudflare/workers-sdk/commit/48f0c6cbbc50dfac02e2d76554c181ced233a792), [`d7f38c3`](https://github.com/cloudflare/workers-sdk/commit/d7f38c311e8cd0f29f56a25250da45f62b20f8ca), [`5c25cfe`](https://github.com/cloudflare/workers-sdk/commit/5c25cfe4e03e0d3d42ddab57adc3274d6f6a1a30), [`1f61001`](https://github.com/cloudflare/workers-sdk/commit/1f61001e5f7a807db7856f5d89e0b26e12a0d0a0)]:
+  - miniflare@4.20260730.0
+
 ## 4.115.0
 
 ### Minor Changes
