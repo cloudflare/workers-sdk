@@ -34,6 +34,7 @@ import { ResourceError } from "../../components/ResourceError";
 import {
 	clearTraces,
 	fetchTraceSpans,
+	findInvocationRoot,
 	formatDuration,
 	getInvocationRootIds,
 	getTagKeys,
@@ -128,10 +129,13 @@ function ObservabilityView(): JSX.Element {
 	// render) so the effect can consult the latest cache on the list cadence.
 	const spansByTraceRef = useRef(spansByTrace);
 	spansByTraceRef.current = spansByTrace;
-	// Deep link from an event's "View trace" button (?trace=<id>): open that
-	// trace's waterfall and scroll to it once its row is in the list.
+	// Deep link from an event's "View trace" button (?trace=&span=): open that
+	// trace's waterfall once its row lands. span picks the right invocation row.
 	const deepLinkTrace = useRouterState({
 		select: (s) => (s.location.search as { trace?: string }).trace,
+	});
+	const deepLinkSpan = useRouterState({
+		select: (s) => (s.location.search as { span?: string }).span,
 	});
 	const deepLinkAppliedRef = useRef<string | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -343,29 +347,50 @@ function ObservabilityView(): JSX.Element {
 		if (!deepLinkTrace || deepLinkAppliedRef.current === deepLinkTrace) {
 			return;
 		}
-		const match = traces.find((t) => t.trace_id === deepLinkTrace);
-		if (!match) {
+		const matches = traces.filter((t) => t.trace_id === deepLinkTrace);
+		const first = matches[0];
+		if (!first) {
+			// Row not in the list yet — a refresh will bring it in.
 			return;
 		}
 		deepLinkAppliedRef.current = deepLinkTrace;
-		const key = traceKey(match);
-		setExpanded((prev) => {
-			if (prev.has(key)) {
-				return prev;
+
+		// Expand a row's waterfall (loading spans if needed) and scroll to it.
+		const reveal = (row: TraceRow): void => {
+			const key = traceKey(row);
+			setExpanded((prev) => {
+				if (prev.has(key)) {
+					return prev;
+				}
+				const next = new Set(prev);
+				next.add(key);
+				return next;
+			});
+			if (!spansByTraceRef.current[key]) {
+				void loadSpans(row);
 			}
-			const next = new Set(prev);
-			next.add(key);
-			return next;
-		});
-		if (!spansByTraceRef.current[key]) {
-			void loadSpans(match);
+			requestAnimationFrame(() => {
+				document
+					.getElementById(`trace-row-${key}`)
+					?.scrollIntoView({ block: "center" });
+			});
+		};
+
+		// One invocation, or no span to disambiguate.
+		if (matches.length === 1 || !deepLinkSpan) {
+			reveal(first);
+			return;
 		}
-		requestAnimationFrame(() => {
-			document
-				.getElementById(`trace-row-${deepLinkTrace}`)
-				?.scrollIntoView({ block: "center" });
-		});
-	}, [deepLinkTrace, traces, loadSpans]);
+
+		// Several invocations share this trace_id — reveal the one whose spans
+		// contain the linked span, falling back to the first row.
+		void fetchTraceSpans(deepLinkTrace)
+			.then((spans) => {
+				const root = findInvocationRoot(spans, deepLinkSpan);
+				reveal(matches.find((m) => m.root_span_id === root) ?? first);
+			})
+			.catch(() => reveal(first));
+	}, [deepLinkTrace, deepLinkSpan, traces, loadSpans]);
 
 	const maxDuration = useMemo(
 		() => Math.max(1, ...traces.map((t) => t.duration_ms ?? 0)),
@@ -598,7 +623,7 @@ function ObservabilityView(): JSX.Element {
 									return (
 										<Fragment key={key}>
 											<tr
-												id={`trace-row-${t.trace_id}`}
+												id={`trace-row-${key}`}
 												onClick={() => void toggleTrace(t)}
 												className={cn(
 													"cursor-pointer border-b border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5",

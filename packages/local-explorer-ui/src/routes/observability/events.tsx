@@ -323,13 +323,18 @@ function EventRow({
 }): JSX.Element {
 	const toast = useKumoToastManager();
 	const router = useRouter();
-	// Jump to the Traces view and open the trace this event was emitted from.
+	// Open this event's trace, carrying span_id to pick the right invocation
+	// row when a trace_id spans several.
 	const goToTrace = useCallback(() => {
 		void router.navigate({
 			to: "/observability",
-			search: (prev) => ({ ...prev, trace: event.trace_id }),
+			search: (prev) => ({
+				...prev,
+				trace: event.trace_id,
+				span: event.span_id ?? undefined,
+			}),
 		});
-	}, [router, event.trace_id]);
+	}, [router, event.trace_id, event.span_id]);
 	const blob = useMemo(() => {
 		const obj = {
 			timestamp: event.created_at,

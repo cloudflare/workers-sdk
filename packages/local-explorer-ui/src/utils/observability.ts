@@ -600,6 +600,32 @@ export async function getInvocationRootIds(traceId: string): Promise<string[]> {
 	return rows.map((r) => String(r.span_id)).filter(Boolean);
 }
 
+/**
+ * Walks up `parent_id` to the parent-less root `spanId` descends from. A
+ * trace_id with multiple invocations (e.g. a self fetch) has several such
+ * roots — one per Traces-view row — so this maps an event's span to its row.
+ */
+export function findInvocationRoot(
+	spans: Span[],
+	spanId: string
+): string | undefined {
+	const byId = new Map(spans.map((s) => [s.span_id, s]));
+	let current = byId.get(spanId);
+	if (!current) {
+		return undefined;
+	}
+	const seen = new Set<string>();
+	while (current.parent_id && !seen.has(current.span_id)) {
+		seen.add(current.span_id);
+		const parent = byId.get(current.parent_id);
+		if (!parent) {
+			break;
+		}
+		current = parent;
+	}
+	return current.span_id;
+}
+
 /** A persisted console.log event (the "Logs" view). */
 export interface LogEvent {
 	trace_id: string;
