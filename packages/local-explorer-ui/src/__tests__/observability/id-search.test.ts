@@ -34,6 +34,18 @@ describe("listTraces id search", () => {
 		expect(sql).toContain("SELECT trace_id FROM spans WHERE span_id LIKE ?");
 		expect(params).toContain("def456%");
 	});
+
+	test("free-text matches ids by prefix, names/attrs by substring", async ({
+		expect,
+	}) => {
+		await listTraces({ search: "de" });
+		const { params } = lastQuery();
+		// ids: prefix only (no leading %), so a short hex term doesn't match all.
+		expect(params).toContain("de%");
+		expect(params).not.toContain("%de%de%");
+		// names/attributes: substring.
+		expect(params).toContain("%de%");
+	});
 });
 
 describe("listEvents id search", () => {
@@ -49,5 +61,16 @@ describe("listEvents id search", () => {
 		const { sql, params } = lastQuery();
 		expect(sql).toContain("l.span_id LIKE ?");
 		expect(params).toContain("def456%");
+	});
+
+	test("free-text matches ids by prefix, message/service by substring", async ({
+		expect,
+	}) => {
+		await listEvents({ search: "de" });
+		const { params } = lastQuery();
+		// ids: prefix only.
+		expect(params).toContain("de%");
+		// message/operation/service: substring.
+		expect(params).toContain("%de%");
 	});
 });

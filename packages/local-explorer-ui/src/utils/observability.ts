@@ -559,10 +559,13 @@ export function listTraces(filters: TraceFilters = {}): Promise<TraceRow[]> {
 	const q = filters.search?.trim();
 	if (q) {
 		const like = `%${q}%`;
+		// ids match as a prefix (like the trace:/span: filters) — a substring
+		// match on hex ids means any short term matches almost everything.
+		const idPrefix = `${q}%`;
 		where.push(
 			"(s.name LIKE ? OR s.trace_id LIKE ? OR s.trace_id IN (SELECT trace_id FROM spans WHERE name LIKE ? OR span_id LIKE ? OR json(attributes) LIKE ?))"
 		);
-		params.push(like, like, like, like, like);
+		params.push(like, idPrefix, like, idPrefix, like);
 	}
 
 	params.push(limit);
@@ -682,10 +685,13 @@ export function listEvents(filters: EventFilters = {}): Promise<LogEvent[]> {
 	const q = filters.search?.trim();
 	if (q) {
 		const like = `%${q}%`;
+		// ids match as a prefix (like the trace:/span: filters) — a substring
+		// match on hex ids means any short term matches almost everything.
+		const idPrefix = `${q}%`;
 		where.push(
 			"(l.message LIKE ? OR l.operation LIKE ? OR sp.service LIKE ? OR l.trace_id LIKE ? OR l.span_id LIKE ?)"
 		);
-		params.push(like, like, like, like, like);
+		params.push(like, like, like, idPrefix, idPrefix);
 	}
 
 	// Structured clauses from the filter modal. Fields map to a concrete log
