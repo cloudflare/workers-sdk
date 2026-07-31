@@ -86,14 +86,18 @@ export function getPackageManagerName(packageManager: PackageManager): string {
 
 async function supports(name: string): Promise<boolean> {
 	try {
-		await x(name, ["--version"], {
+		const { exitCode } = await x(name, ["--version"], {
 			nodeOptions: { stdio: "ignore" },
-			throwOnError: true,
-			// Disable tinyexec's default PATH (includes node_modules/.bin)
+			// Disable tinyexec's default PATH manipulation, which prepends every
+			// ancestor `node_modules/.bin` and the directory holding the running Node
+			// binary, so that we only detect package managers that are actually
+			// available on the user's own PATH.
 			nodePath: false,
 		});
-		return true;
+		// `exitCode` is `undefined` when the process was terminated by a signal.
+		return exitCode === 0;
 	} catch {
+		// The command could not be spawned at all (e.g. it is not installed).
 		return false;
 	}
 }
