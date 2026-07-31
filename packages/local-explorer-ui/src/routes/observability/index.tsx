@@ -14,7 +14,7 @@ import {
 	PulseIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, useRouterState } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
 	Fragment,
 	useCallback,
@@ -72,6 +72,13 @@ const KIND_LABELS: Record<string, string> = {
 export const Route = createFileRoute("/observability/")({
 	component: ObservabilityView,
 	errorComponent: ResourceError,
+	validateSearch: (
+		search: Record<string, unknown>
+	): { worker?: string; trace?: string; span?: string } => ({
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+		trace: typeof search.trace === "string" ? search.trace : undefined,
+		span: typeof search.span === "string" ? search.span : undefined,
+	}),
 });
 
 function isError(t: TraceRow): boolean {
@@ -131,12 +138,7 @@ function ObservabilityView(): JSX.Element {
 	spansByTraceRef.current = spansByTrace;
 	// Deep link from an event's "View trace" button (?trace=&span=): open that
 	// trace's waterfall once its row lands. span picks the right invocation row.
-	const deepLinkTrace = useRouterState({
-		select: (s) => (s.location.search as { trace?: string }).trace,
-	});
-	const deepLinkSpan = useRouterState({
-		select: (s) => (s.location.search as { span?: string }).span,
-	});
+	const { trace: deepLinkTrace, span: deepLinkSpan } = Route.useSearch();
 	const deepLinkAppliedRef = useRef<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);

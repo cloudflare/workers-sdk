@@ -2,6 +2,7 @@ import {
 	Button,
 	cn,
 	InputGroup,
+	LinkButton,
 	RefreshButton,
 	Select,
 	useKumoToastManager,
@@ -13,7 +14,7 @@ import {
 	TreeStructureIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, createLink, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClearButton } from "../../components/observability/ClearButton";
 import { FilterBuilder } from "../../components/observability/FilterBuilder";
@@ -56,6 +57,10 @@ export const Route = createFileRoute("/observability/events")({
 	component: EventsView,
 	errorComponent: ResourceError,
 });
+
+// A real anchor (new-tab / copy-link) that navigates via the router, so we keep
+// typed search params instead of building an href by hand.
+const TraceLinkButton = createLink(LinkButton);
 
 function parseMessage(message: string | null): unknown {
 	if (!message) {
@@ -322,19 +327,12 @@ function EventRow({
 	onToggle: () => void;
 }): JSX.Element {
 	const toast = useKumoToastManager();
-	const router = useRouter();
-	// Open this event's trace, carrying span_id to pick the right invocation
-	// row when a trace_id spans several.
-	const goToTrace = useCallback(() => {
-		void router.navigate({
-			to: "/observability",
-			search: (prev) => ({
-				...prev,
-				trace: event.trace_id,
-				span: event.span_id ?? undefined,
-			}),
-		});
-	}, [router, event.trace_id, event.span_id]);
+	// Keep the selected worker when jumping to the Traces view, but don't carry
+	// over the rest of the Events view's search state.
+	const worker = useSearch({
+		strict: false,
+		select: (s) => (s as { worker?: string }).worker,
+	});
 	const blob = useMemo(() => {
 		const obj = {
 			timestamp: event.created_at,
@@ -395,18 +393,22 @@ function EventRow({
 				</td>
 				<td className="py-2 pr-3">
 					{event.span_id ? (
-						<Button
+						<TraceLinkButton
+							to="/observability"
+							search={{
+								worker,
+								trace: event.trace_id,
+								span: event.span_id,
+							}}
 							size="sm"
 							variant="secondary"
 							icon={TreeStructureIcon}
 							title="Open this event's trace in the Traces view"
-							onClick={(e) => {
-								e.stopPropagation();
-								goToTrace();
-							}}
+							// Stop the row's toggle handler; the link handles navigation.
+							onClick={(e) => e.stopPropagation()}
 						>
 							View trace
-						</Button>
+						</TraceLinkButton>
 					) : null}
 				</td>
 			</tr>
