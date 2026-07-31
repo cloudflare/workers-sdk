@@ -66,7 +66,7 @@ export type FrameworkInfo = {
 	| {
 			supported: true;
 			class: typeof Framework;
-			frameworkPackageInfo: AutoConfigFrameworkPackageInfo;
+			frameworkPackageInfo?: AutoConfigFrameworkPackageInfo;
 	  }
 );
 

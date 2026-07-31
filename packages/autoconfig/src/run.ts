@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, unlink, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -11,6 +11,7 @@ import {
 	FatalError,
 	getTodaysCompatDate,
 	parseJSONC,
+	parseTOML,
 } from "@cloudflare/workers-utils";
 import {
 	assertNonConfigured,
@@ -55,8 +56,8 @@ export async function runAutoConfig(
 		dryRun || autoConfigOptions.skipConfirmations === true;
 	const enableWranglerInstallation =
 		autoConfigOptions.enableWranglerInstallation ?? true;
-
 	assertNonConfigured(autoConfigDetails);
+	assertExistingConfigIsInProject(autoConfigDetails);
 
 	displayAutoConfigDetails(autoConfigDetails, context);
 
@@ -72,6 +73,11 @@ export async function runAutoConfig(
 
 	autoConfigDetails = updatedAutoConfigDetails;
 	assertNonConfigured(autoConfigDetails);
+	assertExistingConfigIsInProject(autoConfigDetails);
+
+	const packageJsonWillBeCreated =
+		autoConfigDetails.framework.requiresPackageJson &&
+		autoConfigDetails.packageJson === undefined;
 
 	if (isKnownFramework(autoConfigDetails.framework.id)) {
 		const frameworkIsSupported = isFrameworkSupported(
@@ -79,9 +85,7 @@ export async function runAutoConfig(
 		);
 		if (!frameworkIsSupported) {
 			throw new FatalError(
-				autoConfigDetails.framework.id === "cloudflare-pages"
-					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
-					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`,
+				`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`,
 				{ telemetryMessage: "autoconfig run framework unsupported" }
 			);
 		}
@@ -94,13 +98,21 @@ export async function runAutoConfig(
 
 	const compatibilityDate = getTodaysCompatDate();
 
+	const {
+		pages_build_output_dir: _pagesBuildOutputDir,
+		...existingPagesConfig
+	} =
+		autoConfigDetails.framework.id === "cloudflare-pages"
+			? (autoConfigDetails.existingWranglerConfig ?? {})
+			: {};
+
 	const wranglerConfig: RawConfig = {
+		...existingPagesConfig,
 		$schema: "node_modules/wrangler/config-schema.json",
 		name: autoConfigDetails.workerName,
-		compatibility_date: compatibilityDate,
-		observability: {
-			enabled: true,
-		},
+		compatibility_date:
+			existingPagesConfig.compatibility_date ?? compatibilityDate,
+		observability: existingPagesConfig.observability ?? { enabled: true },
 	} satisfies RawConfig;
 
 	const { packageManager } = autoConfigDetails;
@@ -126,6 +138,7 @@ export async function runAutoConfig(
 			isWorkspaceRoot,
 			dryRun: true,
 			packageManager,
+			existingWranglerConfig: autoConfigDetails.existingWranglerConfig,
 			context,
 		});
 
@@ -174,9 +187,28 @@ export async function runAutoConfig(
 		return autoConfigSummary;
 	}
 
+	const {
+		existingWranglerConfig: _existingWranglerConfig,
+		...autoConfigDetailsForLogging
+	} = autoConfigDetails;
 	logger.debug(
-		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
+		`Running autoconfig with:\n${JSON.stringify(autoConfigDetailsForLogging, null, 2)}...`
 	);
+
+	if (packageJsonWillBeCreated) {
+		await writeFile(
+			resolve(autoConfigDetails.projectPath, "package.json"),
+			JSON.stringify(
+				{
+					name: autoConfigDetails.workerName,
+					private: true,
+					type: "module",
+				} satisfies PackageJSON & { type: "module" },
+				null,
+				2
+			) + "\n"
+		);
+	}
 
 	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
 		await installWrangler(packageManager.type, isWorkspaceRoot);
@@ -189,10 +221,11 @@ export async function runAutoConfig(
 		isWorkspaceRoot,
 		dryRun: false,
 		packageManager,
+		existingWranglerConfig: autoConfigDetails.existingWranglerConfig,
 		context,
 	});
 
-	if (autoConfigDetails.packageJson) {
+	if (autoConfigDetails.packageJson || packageJsonWillBeCreated) {
 		const packageJsonPath = resolve(
 			autoConfigDetails.projectPath,
 			"package.json"
@@ -201,15 +234,20 @@ export async function runAutoConfig(
 			await readFile(packageJsonPath, "utf8")
 		) as PackageJSON;
 
+		const mergedScripts = {
+			...existingPackageJson.scripts,
+			...autoConfigSummary.scripts,
+		};
+
 		await writeFile(
 			packageJsonPath,
 			JSON.stringify(
 				{
 					...existingPackageJson,
-					scripts: {
-						...existingPackageJson.scripts,
-						...autoConfigSummary.scripts,
-					},
+					scripts:
+						autoConfigDetails.framework.id === "cloudflare-pages"
+							? replacePagesCommandsInScripts(mergedScripts)
+							: mergedScripts,
 				} satisfies PackageJSON,
 				null,
 				2
@@ -220,6 +258,7 @@ export async function runAutoConfig(
 	if (configurationResults.wranglerConfig !== null) {
 		await saveWranglerJsonc(
 			autoConfigDetails.projectPath,
+			autoConfigDetails.existingWranglerConfigPath,
 			ensureNodejsCompatIsInConfig({
 				...wranglerConfig,
 				...configurationResults.wranglerConfig,
@@ -251,6 +290,27 @@ export async function runAutoConfig(
 }
 
 /**
+ * Prevents a Pages migration from replacing or deleting a Wrangler config
+ * discovered outside the selected project root.
+ *
+ * @param autoConfigDetails The detected project and existing config details.
+ */
+function assertExistingConfigIsInProject(
+	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject
+): void {
+	const configPath = autoConfigDetails.existingWranglerConfigPath;
+	if (
+		configPath &&
+		dirname(resolve(configPath)) !== resolve(autoConfigDetails.projectPath)
+	) {
+		throw new FatalError(
+			"Cannot automatically migrate this Pages project because its Wrangler configuration is outside the project directory. Run the command from the directory containing the Wrangler configuration or migrate the project manually.",
+			{ telemetryMessage: "autoconfig pages config outside project" }
+		);
+	}
+}
+
+/**
  * Given a wrangler config object this function makes sure that the `nodejs_compat` flag is present
  * in its `compatibility_flags` setting.
  *
@@ -276,38 +336,44 @@ function ensureNodejsCompatIsInConfig(wranglerConfig: RawConfig): RawConfig {
 }
 
 /**
- * Saves the a wrangler.jsonc file for the current project potentially combining new values to the potential
- * pre-existing wrangler config file generated by the framework's CLI
+ * Saves a wrangler.jsonc file for the current project, potentially combining new values with the
+ * pre-existing wrangler config file (either generated by the framework's CLI or being migrated from
+ * a Pages project). When the existing config file is in a different format or location (e.g. a
+ * `wrangler.toml` being migrated) it is removed after the new `wrangler.jsonc` has been written.
  *
  * @param projectPath The project's path
- * @param baseWranglerConfig The wrangler config to use
+ * @param existingWranglerConfigPath The path to the existing wrangler config file to merge and
+ *   replace, if any (falls back to a config file discovered in `projectPath`)
+ * @param wranglerConfig The wrangler config to use
  */
 async function saveWranglerJsonc(
 	projectPath: string,
+	existingWranglerConfigPath: string | undefined,
 	wranglerConfig: RawConfig
 ): Promise<void> {
 	let existingWranglerConfig: RawConfig = {};
 
-	const wranglerConfigPath = getDirWranglerJsonConfigPath(projectPath);
+	const wranglerConfigPath =
+		existingWranglerConfigPath ?? getDirWranglerConfigPath(projectPath);
 	if (wranglerConfigPath) {
 		const existingContent = await readFile(wranglerConfigPath, "utf8");
-		existingWranglerConfig = parseJSONC(
-			existingContent,
-			wranglerConfigPath
+		existingWranglerConfig = (
+			wranglerConfigPath.endsWith(".toml")
+				? parseTOML(existingContent, wranglerConfigPath)
+				: parseJSONC(existingContent, wranglerConfigPath)
 		) as RawConfig;
 	}
+	const { pages_build_output_dir: _pagesBuildOutputDir, ...migratedConfig } = {
+		...existingWranglerConfig,
+		...wranglerConfig,
+	};
 
-	await writeFile(
-		resolve(projectPath, "wrangler.jsonc"),
-		JSON.stringify(
-			{
-				...existingWranglerConfig,
-				...wranglerConfig,
-			},
-			null,
-			2
-		) + "\n"
-	);
+	const outputPath = resolve(projectPath, "wrangler.jsonc");
+	await writeFile(outputPath, JSON.stringify(migratedConfig, null, 2) + "\n");
+
+	if (wranglerConfigPath && resolve(wranglerConfigPath) !== outputPath) {
+		await unlink(wranglerConfigPath);
+	}
 }
 
 /**
@@ -351,9 +417,16 @@ export async function buildOperationsSummary(
 		buildCommand: projectCommands.build,
 		deployCommand: projectCommands.deploy,
 		versionCommand: projectCommands.version,
+		...(autoConfigDetails.framework.requiresPackageJson &&
+		autoConfigDetails.packageJson === undefined
+			? { packageJsonCreated: true }
+			: {}),
 	};
 
-	if (autoConfigDetails.packageJson) {
+	if (
+		autoConfigDetails.packageJson ||
+		autoConfigDetails.framework.requiresPackageJson
+	) {
 		// If there is a package.json file we will want to install wrangler
 		summary.wranglerInstall = true;
 
@@ -382,7 +455,7 @@ export async function buildOperationsSummary(
 			// If there is no server side code, then there is no need to add the cf-typegen script
 			containsServerSideCode &&
 			usesTypescript(autoConfigDetails.projectPath) &&
-			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
+			!("cf-typegen" in (autoConfigDetails.packageJson?.scripts ?? {}))
 		) {
 			summary.scripts["cf-typegen"] =
 				packageJsonScriptsOverrides?.typegen ?? "wrangler types";
@@ -428,12 +501,36 @@ export async function buildOperationsSummary(
 }
 
 /**
+ * Replaces legacy `wrangler pages dev` and `wrangler pages deploy` commands
+ * with their Workers equivalents (`wrangler dev` and `wrangler deploy`) in
+ * every string-valued script entry.
+ *
+ * @param scripts The package.json `scripts` object to process.
+ * @returns A copy of the scripts with pages commands replaced.
+ */
+export function replacePagesCommandsInScripts(
+	scripts: Record<string, unknown>
+): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(scripts)) {
+		if (typeof value === "string") {
+			result[key] = value
+				.replace(/\bwrangler pages dev\b/g, "wrangler dev")
+				.replace(/\bwrangler pages deploy\b/g, "wrangler deploy");
+		} else {
+			result[key] = value;
+		}
+	}
+	return result;
+}
+
+/**
  * Gets the path to the wrangler config file, in jsonc or json format, if present in a target directory.
  *
  * @param dir The target directory
  * @returns The path to the wrangler config file if present, `undefined` otherwise
  */
-function getDirWranglerJsonConfigPath(dir: string): string | undefined {
+function getDirWranglerConfigPath(dir: string): string | undefined {
 	const filePathJsonC = resolve(dir, "wrangler.jsonc");
 	if (existsSync(filePathJsonC)) {
 		return filePathJsonC;
@@ -442,6 +539,11 @@ function getDirWranglerJsonConfigPath(dir: string): string | undefined {
 	const filePathJson = resolve(dir, "wrangler.json");
 	if (existsSync(filePathJson)) {
 		return filePathJson;
+	}
+
+	const filePathToml = resolve(dir, "wrangler.toml");
+	if (existsSync(filePathToml)) {
+		return filePathToml;
 	}
 
 	return undefined;

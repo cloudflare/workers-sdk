@@ -1647,6 +1647,9 @@ importers:
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
+      '@cloudflare/pages-functions':
+        specifier: workspace:*
+        version: link:../pages-functions
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils

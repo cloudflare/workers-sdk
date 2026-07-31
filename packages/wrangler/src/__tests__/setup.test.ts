@@ -1,7 +1,10 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import * as run from "@cloudflare/autoconfig";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
+import dedent from "ts-dedent";
 import { afterEach, assert, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -97,6 +100,132 @@ describe("wrangler setup", () => {
 		expect(std.out).toContain(
 			"🎉 Your project is now setup to deploy to Cloudflare"
 		);
+	});
+
+	test("should migrate a Pages Functions project to an editable Worker", async ({
+		expect,
+	}) => {
+		await seed({
+			"functions/hello.js":
+				'export function onRequest() { return new Response("hello"); }',
+			"public/index.html": "<h1>Hello</h1>",
+			"package.json": JSON.stringify({ name: "different-package-name" }),
+			"wrangler.toml": dedent`
+				name = "pages-app"
+				pages_build_output_dir = "public"
+				compatibility_date = "2025-01-15"
+				compatibility_flags = ["global_fetch_strictly_public"]
+
+				[vars]
+				EXISTING_VALUE = "preserved"
+			`,
+		});
+
+		const installWranglerSpy = vi
+			.spyOn(cliPackages, "installWrangler")
+			.mockImplementation(async () => {});
+		const installPackagesSpy = vi
+			.spyOn(cliPackages, "installPackages")
+			.mockImplementation(async () => {});
+
+		await runWrangler("setup --yes");
+
+		expect(installWranglerSpy).toHaveBeenCalled();
+		expect(installPackagesSpy).toHaveBeenCalledWith(
+			"npm",
+			["@cloudflare/pages-functions"],
+			expect.objectContaining({ dev: true })
+		);
+		expect(existsSync("wrangler.toml")).toBe(false);
+
+		const config = JSON.parse(await readFile("wrangler.jsonc", "utf8"));
+		expect(config).toMatchObject({
+			name: "pages-app",
+			main: "./worker/index.js",
+			compatibility_date: "2025-01-15",
+			compatibility_flags: ["global_fetch_strictly_public", "nodejs_compat"],
+			vars: { EXISTING_VALUE: "preserved" },
+			assets: {
+				directory: "public",
+				binding: "ASSETS",
+				run_worker_first: true,
+			},
+			build: {
+				command: "node ./scripts/build-pages-functions.mjs",
+				watch_dir: ["./functions", "./worker"],
+			},
+		});
+		expect(config).not.toHaveProperty("pages_build_output_dir");
+		expect(await readFile("worker/index.js", "utf8")).toContain(
+			"pagesFunctions.fetch(request, env, ctx)"
+		);
+		expect(
+			await readFile("scripts/build-pages-functions.mjs", "utf8")
+		).toContain("buildPagesFunctions");
+
+		const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+		expect(packageJson.scripts).toMatchObject({
+			deploy: "wrangler deploy",
+			preview: "wrangler dev",
+		});
+	});
+
+	test("should not migrate a Pages config outside the project directory", async ({
+		expect,
+	}) => {
+		const projectRoot = process.cwd();
+		await seed({
+			"wrangler.toml": dedent`
+				name = "pages-app"
+				pages_build_output_dir = "child/public"
+			`,
+			"child/functions/hello.js":
+				'export function onRequest() { return new Response("hello"); }',
+			"child/public/index.html": "<h1>Hello</h1>",
+			"child/package.json": JSON.stringify({ name: "pages-app" }),
+		});
+
+		await expect(runWrangler("setup --cwd child --yes")).rejects.toThrow(
+			"Wrangler configuration is outside the project directory"
+		);
+		expect(existsSync(resolve(projectRoot, "wrangler.toml"))).toBe(true);
+		expect(existsSync(resolve(projectRoot, "child/wrangler.jsonc"))).toBe(
+			false
+		);
+		expect(existsSync(resolve(projectRoot, "child/worker/index.js"))).toBe(
+			false
+		);
+	});
+
+	test("should create package.json when migrating a package-less Pages project", async ({
+		expect,
+	}) => {
+		await seed({
+			"functions/hello.js":
+				'export function onRequest() { return new Response("hello"); }',
+			"public/index.html": "<h1>Hello</h1>",
+			"wrangler.jsonc": JSON.stringify({
+				name: "pages-app",
+				pages_build_output_dir: "public",
+				compatibility_date: "2025-01-15",
+			}),
+		});
+		vi.spyOn(cliPackages, "installWrangler").mockImplementation(async () => {});
+		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
+
+		await runWrangler("setup --yes");
+
+		const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+		expect(packageJson).toEqual({
+			name: "pages-app",
+			private: true,
+			type: "module",
+			scripts: {
+				deploy: "wrangler deploy",
+				preview: "wrangler dev",
+			},
+		});
+		expect(std.out).toContain("You can now deploy with npm run deploy");
 	});
 
 	test("should not display completion message when disabled", async ({

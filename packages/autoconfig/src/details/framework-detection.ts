@@ -1,11 +1,13 @@
 import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { generateConfigFromFileTree } from "@cloudflare/pages-functions";
 import {
 	BunPackageManager,
 	FatalError,
 	NpmPackageManager,
 	NubPackageManager,
 	PnpmPackageManager,
+	toUrlPath,
 	UserError,
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
@@ -97,23 +99,20 @@ export async function detectFramework(
 		context
 	);
 
-	if (
-		await isPagesProject(
-			projectPath,
-			context,
-			wranglerConfig,
-			maybeDetectedFramework
-		)
-	) {
+	if (await isPagesProject(projectPath, context, wranglerConfig)) {
 		return {
 			detectedFramework: {
 				framework: {
 					name: "Cloudflare Pages",
 					id: "cloudflare-pages",
 				},
-				dist: wranglerConfig?.pages_build_output_dir,
+				buildCommand: maybeDetectedFramework?.buildCommand,
+				dist:
+					wranglerConfig?.pages_build_output_dir ??
+					maybeDetectedFramework?.dist,
 			},
 			packageManager,
+			isWorkspaceRoot,
 		};
 	}
 
@@ -227,8 +226,7 @@ type DetectedFramework = {
 async function isPagesProject(
 	projectPath: string,
 	context: AutoConfigContext,
-	wranglerConfig: Config | undefined,
-	detectedFramework?: DetectedFramework | undefined
+	wranglerConfig: Config | undefined
 ): Promise<boolean> {
 	if (wranglerConfig?.pages_build_output_dir) {
 		// The `pages_build_output_dir` is set only for Pages projects
@@ -245,25 +243,50 @@ async function isPagesProject(
 		}
 	}
 
-	if (detectedFramework === undefined) {
-		const functionsPath = join(projectPath, "functions");
-		if (existsSync(functionsPath)) {
-			const functionsStat = statSync(functionsPath);
-			if (functionsStat.isDirectory()) {
-				const pagesConfirmed = await context.dialogs.confirm(
-					"We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
-					{
-						defaultValue: true,
-						// In CI we do want to fallback to `false` so that we can proceed with the autoconfig flow
-						fallbackValue: false,
-					}
-				);
-				return pagesConfirmed;
-			}
+	const functionsPath = join(projectPath, "functions");
+	if (existsSync(functionsPath)) {
+		const functionsStat = statSync(functionsPath);
+		if (
+			functionsStat.isDirectory() &&
+			(await hasPagesFunctions(functionsPath))
+		) {
+			const pagesConfirmed = await context.dialogs.confirm(
+				"We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
+				{
+					defaultValue: true,
+					// In CI we do want to fallback to `false` so that we can proceed with the autoconfig flow
+					fallbackValue: false,
+				}
+			);
+			return pagesConfirmed;
 		}
 	}
 
 	return false;
+}
+
+/**
+ * Determines whether a `functions` directory contains genuine Pages Functions.
+ *
+ * The presence of a `functions` directory alone is not sufficient to conclude
+ * a project is a Pages application, since the name could be used for unrelated
+ * purposes. This scans the directory's file tree for `onRequest*` handlers,
+ * which are what actually define Pages Functions routes.
+ *
+ * @param functionsPath Absolute path to the project's `functions` directory
+ * @returns `true` when at least one Pages Functions route is discovered,
+ *   `false` when none are found or the directory cannot be analyzed
+ */
+async function hasPagesFunctions(functionsPath: string): Promise<boolean> {
+	try {
+		const { routes } = await generateConfigFromFileTree({
+			baseDir: functionsPath,
+			baseURL: toUrlPath("/"),
+		});
+		return routes.length > 0;
+	} catch {
+		return false;
+	}
 }
 
 /**

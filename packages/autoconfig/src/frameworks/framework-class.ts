@@ -11,6 +11,10 @@ export abstract class Framework {
 	readonly id: FrameworkInfo["id"];
 	readonly name: FrameworkInfo["name"];
 
+	get requiresPackageJson(): boolean {
+		return false;
+	}
+
 	#frameworkVersion: string | undefined;
 	get frameworkVersion(): string {
 		assert(
@@ -96,6 +100,7 @@ export type ConfigurationOptions = {
 	dryRun: boolean;
 	packageManager: PackageManager;
 	isWorkspaceRoot: boolean;
+	existingWranglerConfig?: RawConfig;
 	context: AutoConfigContext;
 };
 

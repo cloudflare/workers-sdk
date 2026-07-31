@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { CloudflarePages } from "./cloudflare-pages";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
@@ -210,8 +211,8 @@ export const allKnownFrameworks = [
 	{
 		id: "cloudflare-pages",
 		name: "Cloudflare Pages",
-		// Autoconfiguring a Pages project into a Workers one is not yet supported
-		supported: false,
+		class: CloudflarePages,
+		supported: true,
 	},
 	{
 		id: "hydrogen",
@@ -272,5 +273,7 @@ export function getFrameworkPackageInfo(
 		targetedFramework.supported,
 		`Framework unexpectedly not supported ${JSON.stringify(frameworkId)}`
 	);
-	return targetedFramework.frameworkPackageInfo;
+	return "frameworkPackageInfo" in targetedFramework
+		? targetedFramework.frameworkPackageInfo
+		: undefined;
 }

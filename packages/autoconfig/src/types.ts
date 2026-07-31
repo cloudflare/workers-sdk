@@ -25,6 +25,10 @@ type AutoConfigDetailsBase = {
 	packageManager: PackageManager;
 	/** Whether the current path is at the root of a workspace */
 	isWorkspaceRoot?: boolean;
+	/** Raw configuration for an existing Pages project that is being migrated. */
+	existingWranglerConfig?: RawConfig;
+	/** Path to the existing Pages configuration file. */
+	existingWranglerConfigPath?: string;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<
@@ -70,6 +74,7 @@ export type AutoConfigOptions = {
 export type AutoConfigSummary = {
 	scripts: Record<string, string>;
 	wranglerInstall: boolean;
+	packageJsonCreated?: boolean;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
 	outputDir: string;
