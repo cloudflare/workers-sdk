@@ -76,4 +76,18 @@ export interface WranglerConfig {
 		containerEngine?: string;
 	};
 	sendMetrics?: boolean;
+	/**
+	 * Whether to suppress the prompt that offers to update Cloudflare agent
+	 * skills when they are out of date.
+	 *
+	 * When `true`, Wrangler will not prompt the user to update skills even if
+	 * newer versions are available upstream. The `--install-skills` flag still
+	 * works regardless of this setting.
+	 *
+	 * Can also be controlled via the `WRANGLER_NO_SKILLS_UPDATE_PROMPTS`
+	 * environment variable.
+	 *
+	 * @default false
+	 */
+	noSkillsUpdatePrompts?: boolean;
 }

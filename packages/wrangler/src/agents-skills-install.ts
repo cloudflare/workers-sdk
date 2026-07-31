@@ -912,9 +912,20 @@ async function getDetectedAgents(): Promise<AgentInfo[]> {
 		}));
 }
 
-/** Actionable hint shown after declining a skills update. */
-const SKILLS_UPDATE_OPT_OUT_HINT =
-	'If you don\'t want to be prompted again, set "no_skills_update_prompts": true in your wrangler.jsonc or set the WRANGLER_NO_SKILLS_UPDATE_PROMPTS=true environment variable.';
+/**
+ * Returns an actionable hint shown after declining a skills update,
+ * tailored to the config format the project is using.
+ *
+ * @param experimentalNewConfig - Whether the project uses the new `wrangler.config.ts` format or the classic `wrangler.jsonc` format
+ * @returns The opt-out hint string
+ */
+function skillsUpdateOptOutHint(experimentalNewConfig: boolean): string {
+	return `If you don't want to be prompted again, set ${
+		experimentalNewConfig
+			? '"noSkillsUpdatePrompts": true in your wrangler.config.ts'
+			: '"no_skills_update_prompts": true in your wrangler.jsonc'
+	} or set the WRANGLER_NO_SKILLS_UPDATE_PROMPTS=true environment variable.`;
+}
 
 /**
  * Options for {@link runSkillsUpdateFlow}.
@@ -924,6 +935,11 @@ type SkillsUpdateFlowOptions = {
 	 * The wrangler command that triggered the update flow, for telemetry.
 	 */
 	command?: string;
+	/**
+	 * Whether the project uses the new `wrangler.config.ts` format. Controls
+	 * which config-file syntax the opt-out hint displays to the user.
+	 */
+	experimentalNewConfig?: boolean;
 };
 
 /**
@@ -1072,7 +1088,7 @@ export async function runSkillsUpdateFlow(
 
 	if (!accepted) {
 		logger.log("\nUnderstood, skills will not be updated at this time.");
-		logger.log(SKILLS_UPDATE_OPT_OUT_HINT);
+		logger.log(skillsUpdateOptOutHint(options.experimentalNewConfig ?? false));
 
 		writeSkillsInstallMetadataFile({
 			...metadata,
