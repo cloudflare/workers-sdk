@@ -273,7 +273,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			await helper.bestEffortRun(`wrangler delete`);
 		});
 
-		it("deploys a Workers + Assets project with assets only", async ({
+		it("deploys a Workers + Assets project with assets only, logging each uploaded asset", async ({
 			expect,
 		}) => {
 			await helper.seed({
@@ -286,13 +286,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				...generateInitialAssets(workerName),
 			});
 
-			// deploy user Worker && verify output
-			const output = await helper.run(`wrangler deploy`);
-			validateAssetUploadLogs(expect, output, [
-				"/404.html",
-				"/index.html",
-				"/[boop].html",
-			]);
+			// Deploy the user Worker && verify output.
+			// `debug: true` is load-bearing: the per-file `✨ <path>` upload logs
+			// asserted by `includeDebug` are only emitted at `WRANGLER_LOG=debug`.
+			const output = await helper.run(`wrangler deploy`, { debug: true });
+			validateAssetUploadLogs(
+				expect,
+				output,
+				["/404.html", "/index.html", "/[boop].html"],
+				{ includeDebug: true }
+			);
 
 			const deployedUrl = getDeployedUrl(output);
 
@@ -403,66 +406,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				}
 			);
 			expect(text).toContain("<h1>404.html</h1>");
-		});
-
-		it("deploys a Workers + Assets project with helpful debug logs", async ({
-			expect,
-		}) => {
-			await helper.seed({
-				"wrangler.toml": dedent`
-					name = "${workerName}"
-					compatibility_date = "2023-01-01"
-					[assets]
-					directory = "public"
-				`,
-				...generateInitialAssets(workerName),
-			});
-
-			// deploy user Worker && verify output
-			const output = await helper.run(`wrangler deploy`, {
-				debug: true,
-			});
-
-			validateAssetUploadLogs(
-				expect,
-				output,
-				["/404.html", "/index.html", "/[boop].html"],
-				{ includeDebug: true }
-			);
-
-			const deployedUrl = getDeployedUrl(output);
-
-			const testCases: AssetTestCase[] = [
-				// Tests html_handling = "auto_trailing_slash" (default):
-				{
-					path: "/",
-					content: "<h1>index.html</h1>",
-				},
-				{
-					path: "/index.html",
-					content: "<h1>index.html</h1>",
-					redirect: "/",
-				},
-				{
-					path: "/[boop]",
-					content: "<h1>[boop].html</h1>",
-					redirect: "/%5Bboop%5D",
-				},
-			];
-			await checkAssets(expect, testCases, deployedUrl);
-
-			// Test 404 handling:
-			// even though 404.html has been uploaded, because not_found_handling is set to "none"
-			// we expect to get an empty response
-			const { text } = await retry(
-				(s) => s.status !== 404,
-				async () => {
-					const r = await fetch(new URL("/try-404", deployedUrl));
-					const temp = { text: await r.text(), status: r.status };
-					return temp;
-				}
-			);
-			expect(text).toBeFalsy();
 		});
 
 		it("runs the user Worker ahead of matching assets when run_worker_first = true", async ({
