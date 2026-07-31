@@ -379,6 +379,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							) {
 								await runSkillsUpdateFlow({
 									command: sanitizedCommand,
+									experimentalNewConfig: newConfigEnabled,
 								});
 							}
 						} catch (skillsErr) {

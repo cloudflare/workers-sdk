@@ -70,6 +70,7 @@ export const WranglerConfigSchema = z.strictObject({
 	assetsDirectory: z.string().optional(),
 	dev: DevSchema.optional(),
 	sendMetrics: z.boolean().optional(),
+	noSkillsUpdatePrompts: z.boolean().optional(),
 });
 
 export type ParsedWranglerConfig = z.output<typeof WranglerConfigSchema>;
