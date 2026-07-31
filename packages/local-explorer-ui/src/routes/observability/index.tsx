@@ -343,6 +343,8 @@ function ObservabilityView(): JSX.Element {
 		}
 	}, [traces, expanded, loadSpans]);
 
+	// Apply the ?trace=&span= deep link once: expand and scroll to the right
+	// invocation row when it lands in the list.
 	useEffect(() => {
 		if (!deepLinkTrace || deepLinkAppliedRef.current === deepLinkTrace) {
 			return;

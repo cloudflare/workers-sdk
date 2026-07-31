@@ -77,6 +77,31 @@ describe("parseTraceQuery clauses", () => {
 		expect(parsed.spanId).toBe("def456");
 		expect(parsed.clauses).toEqual([]);
 	});
+
+	test("valueless trace:/span: fall back to free text", ({ expect }) => {
+		const parsed = parseTraceQuery("trace: span:");
+		expect(parsed.traceId).toBeUndefined();
+		expect(parsed.spanId).toBeUndefined();
+		expect(parsed.text).toBe("trace: span:");
+		expect(parsed.clauses).toEqual([]);
+	});
+
+	test("traceid/trace_id/spanid/span_id aliases map to the id fields", ({
+		expect,
+	}) => {
+		expect(parseTraceQuery("traceid:abc").traceId).toBe("abc");
+		expect(parseTraceQuery("trace_id:abc").traceId).toBe("abc");
+		expect(parseTraceQuery("spanid:def").spanId).toBe("def");
+		expect(parseTraceQuery("span_id:def").spanId).toBe("def");
+	});
+
+	test("an id lookup alongside a real clause keeps both", ({ expect }) => {
+		const parsed = parseTraceQuery("trace:abc123 db.query.text:orders");
+		expect(parsed.traceId).toBe("abc123");
+		expect(parsed.clauses).toEqual([
+			{ field: "db.query.text", op: "~", value: "orders" },
+		]);
+	});
 });
 
 describe("durationClauseSql", () => {

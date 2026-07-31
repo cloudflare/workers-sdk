@@ -78,7 +78,9 @@ export function InvocationLogs({ traceId }: { traceId: string }): JSX.Element {
 								{log.level ?? "log"}
 							</span>
 							<span className="font-mono text-xs break-all text-kumo-default">
-								{formatLogMessage(log.message ?? undefined)}
+								{formatLogMessage(log.message ?? undefined) || (
+									<span className="text-kumo-subtle italic">(no message)</span>
+								)}
 							</span>
 						</li>
 					))}

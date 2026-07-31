@@ -386,7 +386,9 @@ function EventRow({
 					</span>
 				</td>
 				<td className="truncate py-2 pr-3 font-mono text-xs text-kumo-default">
-					{formatLogMessage(event.message ?? undefined)}
+					{formatLogMessage(event.message ?? undefined) || (
+						<span className="text-kumo-subtle italic">(no message)</span>
+					)}
 				</td>
 				<td className="py-2 pr-3 font-mono text-xs text-kumo-subtle">
 					{event.service ?? "-"}
