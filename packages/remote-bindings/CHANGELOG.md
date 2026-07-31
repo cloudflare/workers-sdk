@@ -1,5 +1,12 @@
 # @cloudflare/remote-bindings
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`cec9d88`](https://github.com/cloudflare/workers-sdk/commit/cec9d8875d3f103acc813724ded980867bd25ed7)]:
+  - @cloudflare/workers-auth@0.5.6
+
 ## 0.0.5
 
 ### Patch Changes
