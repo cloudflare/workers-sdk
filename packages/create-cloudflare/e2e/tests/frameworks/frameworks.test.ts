@@ -55,7 +55,13 @@ describe
 			// is a variant label that disambiguates tests sharing the same
 			// framework id + platform. getFrameworkConfig ignores it.
 			const variantLabel = testConfig.name.split(":")[2];
-			test.runIf(shouldRunTest(testConfig))(
+			const frameworkTest = test.runIf(shouldRunTest(testConfig));
+			// Check whether concurrent pnpm version provisioning causes the Nuxt failures.
+			const testToRun =
+				frameworkConfig.id === "nuxt"
+					? frameworkTest.sequential
+					: frameworkTest;
+			testToRun(
 				`${frameworkConfig.id} (${frameworkConfig.platform ?? "pages"})${
 					variantLabel ? ` [${variantLabel}]` : ""
 				}`,
