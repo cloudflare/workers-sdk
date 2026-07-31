@@ -372,15 +372,13 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							// Only check for updates when the install flow did not
 							// just perform a fresh install — a brand-new install
 							// already has the latest content — and the user has
-							// not opted out via config or environment variable.
+							// not opted out via environment variable.
 							if (
 								!justInstalled &&
-								config.no_skills_update_prompts !== true &&
 								getNoSkillsUpdatePromptsFromEnv() !== true
 							) {
 								await runSkillsUpdateFlow({
 									command: sanitizedCommand,
-									experimentalNewConfig: newConfigEnabled,
 								});
 							}
 						} catch (skillsErr) {

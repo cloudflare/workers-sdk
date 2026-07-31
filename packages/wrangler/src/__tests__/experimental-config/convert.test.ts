@@ -133,14 +133,6 @@ describe("convertToolingConfig", () => {
 				send_metrics: false,
 			});
 		});
-
-		it("maps noSkillsUpdatePrompts to no_skills_update_prompts", ({
-			expect,
-		}) => {
-			expect(convertToolingConfig({ noSkillsUpdatePrompts: true })).toEqual({
-				no_skills_update_prompts: true,
-			});
-		});
 	});
 
 	describe("pythonModules", () => {
@@ -311,7 +303,6 @@ describe("convertToolingConfig", () => {
 				assetsDirectory: "./public",
 				dev: { port: 8787 },
 				sendMetrics: true,
-				noSkillsUpdatePrompts: true,
 			});
 
 			expect(new Set(Object.keys(result))).toEqual(
@@ -337,7 +328,6 @@ describe("convertToolingConfig", () => {
 					"assets",
 					"dev",
 					"send_metrics",
-					"no_skills_update_prompts",
 				])
 			);
 
