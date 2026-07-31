@@ -1908,7 +1908,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
@@ -1972,7 +1972,7 @@ describe("runSkillsUpdateFlow", () => {
 		});
 
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
@@ -2044,7 +2044,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm(
 			{
-				text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+				text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 				result: false,
 			},
 			{
@@ -2098,7 +2098,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm(
 			{
-				text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+				text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 				result: false,
 			},
 			{
@@ -2168,7 +2168,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "even-newer-sha");
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "even-newer-sha");
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
@@ -2198,7 +2198,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		mockRosieInstall.mockRejectedValue(new Error("Network failure"));
@@ -2251,7 +2251,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
@@ -2354,7 +2354,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
@@ -2440,7 +2440,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubTreesApi("old-sha", installedEntries, "new-sha", remoteEntries);
 
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
@@ -2486,7 +2486,7 @@ describe("runSkillsUpdateFlow", () => {
 		mockGitHubTreesApi("old-sha", installedEntries, "new-sha", remoteEntries);
 
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
@@ -2553,7 +2553,7 @@ describe("runSkillsUpdateFlow", () => {
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
 		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();

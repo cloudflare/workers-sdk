@@ -1070,7 +1070,7 @@ export async function runSkillsUpdateFlow(
 
 	logger.log();
 	const accepted = await confirm(
-		"It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+		"It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 		{
 			defaultValue: true,
 			fallbackValue: false,
