@@ -10,7 +10,7 @@ catalogs:
       specifier: 0.13.3
       version: 0.13.3
     '@cloudflare/workers-types':
-      specifier: ^5.20260730.1
+      specifier: ^5.20260728.1
       version: 5.20260730.1
     '@hey-api/openapi-ts':
       specifier: 0.94.0
