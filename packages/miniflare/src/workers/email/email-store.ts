@@ -15,6 +15,7 @@
  * instance temp directory).
  */
 import { DurableObject } from "cloudflare:workers";
+import { messageIdToStorageId } from "./message-id";
 import type { StoredRoutingEmail, StoredSendingEmail } from "./storage";
 
 export type { StoredRoutingEmail, StoredSendingEmail };
@@ -85,7 +86,9 @@ export class EmailStore extends DurableObject {
 			.map((row) => JSON.parse(row.data) as T);
 	}
 
-	/** Most recently stored record with the given id, or undefined. */
+	/**
+	 * Most recently stored record with the given message ID
+	 */
 	#find<T>(table: EmailTable, id: string): T | undefined {
 		const row = this.sql
 			.exec<{ data: string }>(STATEMENTS[table].find, id)
@@ -94,7 +97,7 @@ export class EmailStore extends DurableObject {
 	}
 
 	storeReceived(email: StoredRoutingEmail): void {
-		this.#insert("received", email.id, email);
+		this.#insert("received", messageIdToStorageId(email.messageId), email);
 	}
 
 	findReceived(id: string): StoredRoutingEmail | undefined {
@@ -106,7 +109,7 @@ export class EmailStore extends DurableObject {
 	}
 
 	storeSent(email: StoredSendingEmail): void {
-		this.#insert("sent", email.id, email);
+		this.#insert("sent", messageIdToStorageId(email.messageId), email);
 	}
 
 	findSent(id: string): StoredSendingEmail | undefined {

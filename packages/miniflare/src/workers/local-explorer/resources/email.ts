@@ -189,11 +189,13 @@ export async function sendTestEmail(
 		return errorResponse(400, 10000, "At least one recipient is required.");
 	}
 
-	// Derive the id exactly as the `send_email` binding does, so a received and a
-	// sent email are both stored under their own Message-ID. Honour one the
-	// caller set explicitly, since the send dialog allows custom headers.
+	// Derive the Message-ID exactly as the `send_email` binding does, so a
+	// received and a sent email agree on it. Honour one the caller set
+	// explicitly, since the send dialog allows custom headers.
 	const messageId =
 		getHeader(body.headers, "Message-ID") ?? synthesizeMessageId(from);
+	// TODO(miniflare v5): switch on-disk file naming to a mimetext-style id
+	// to unify the file name with the Message-ID seen in local explorer.
 	const id = messageIdToStorageId(messageId);
 	const mime = buildMimeMessage(body, messageId);
 
@@ -222,7 +224,7 @@ export async function sendTestEmail(
 	const result = (await response.json()) as EmailHandlerResult;
 	return c.json(
 		wrapResponse({
-			id,
+			messageId,
 			outcome: result.outcome,
 			...(result.rejectReason !== undefined
 				? { rejectReason: result.rejectReason }

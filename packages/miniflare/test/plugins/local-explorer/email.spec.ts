@@ -97,8 +97,10 @@ describe("Email API - Routing", () => {
 			zEmailSendRoutingResponse,
 			expect
 		);
-		const sentId = sendData.result?.id;
-		expect(sentId).toBeDefined();
+		const sentMessageId = sendData.result?.messageId;
+		expect(sentMessageId).toBeDefined();
+		// The store is keyed by the Message-ID with its angle brackets stripped.
+		const sentId = sentMessageId?.replace(/^<|>$/g, "");
 
 		const listResponse = await mf.dispatchFetch(`${BASE_URL}/email/routing`);
 		const data = await expectValidResponse(
@@ -106,9 +108,9 @@ describe("Email API - Routing", () => {
 			zEmailListRoutingResponse,
 			expect
 		);
-		// The id returned by the send must be the id the email is stored under, so
+		// The Message-ID returned by the send must identify the stored email, so
 		// the caller can reference the delivered message directly.
-		const stored = data.result?.find((e) => e.id === sentId);
+		const stored = data.result?.find((e) => e.messageId === sentMessageId);
 		expect(stored).toEqual(
 			expect.objectContaining({
 				from: "sender@example.com",
@@ -117,8 +119,8 @@ describe("Email API - Routing", () => {
 			})
 		);
 
-		// And the detail endpoint must resolve that same id, exposing the raw MIME
-		// and the handling path the list view omits.
+		// And the detail endpoint must resolve that same email, exposing the raw
+		// MIME and the handling path the list view omits.
 		const detailResponse = await mf.dispatchFetch(
 			`${BASE_URL}/email/routing/${sentId}`
 		);
@@ -127,16 +129,14 @@ describe("Email API - Routing", () => {
 			zEmailGetRoutingResponse,
 			expect
 		);
-		expect(detail.result?.id).toBe(sentId);
+		expect(detail.result?.messageId).toBe(sentMessageId);
 		expect(detail.result?.raw).toContain("Subject: Hello from the explorer");
 		expect(detail.result?.events[0]?.type).toBe("received");
 
-		// The id is the message's own Message-ID minus the angle brackets - the
-		// same derivation the `send_email` binding uses - so the id, the header in
-		// the raw MIME, and the record all agree.
-		expect(detail.result?.messageId).toBe(`<${sentId}>`);
-		expect(detail.result?.raw).toContain(`Message-ID: <${sentId}>`);
-		expect(sentId).toMatch(/^[A-Za-z0-9]{36}@example\.com$/);
+		// The synthesized Message-ID follows mimetext's shape: a base36 random id
+		// plus the sender's domain, wrapped in angle brackets.
+		expect(detail.result?.raw).toContain(`Message-ID: ${sentMessageId}`);
+		expect(sentMessageId).toMatch(/^<[a-z0-9]+@example\.com>$/);
 	});
 
 	test("uses a caller-supplied Message-ID as the id", async ({ expect }) => {
@@ -160,11 +160,11 @@ describe("Email API - Routing", () => {
 			zEmailSendRoutingResponse,
 			expect
 		);
-		expect(sendData.result?.id).toBe("explicit-id@sender.example.com");
+		expect(sendData.result?.messageId).toBe(messageId);
 
 		const detail = await expectValidResponse(
 			await mf.dispatchFetch(
-				`${BASE_URL}/email/routing/${sendData.result?.id}`
+				`${BASE_URL}/email/routing/${sendData.result?.messageId?.replace(/^<|>$/g, "")}`
 			),
 			zEmailGetRoutingResponse,
 			expect
@@ -204,9 +204,9 @@ describe("Email API - Routing", () => {
 			{
 				recipient: "forwarded@example.com",
 				headers: [],
-				// Synthesized in the shape production returns, using the recipient's
-				// domain: `<{36 alphanumeric chars}@{domain}>`.
-				messageId: expect.stringMatching(/^<[A-Za-z0-9]{36}@example\.com>$/),
+				// Synthesized in mimetext's shape, using the recipient's domain:
+				// `<{base36 random}@{domain}>`.
+				messageId: expect.stringMatching(/^<[a-z0-9]+@example\.com>$/),
 			},
 		]);
 	});
@@ -301,7 +301,7 @@ describe("Email API - Routing attachments", () => {
 		);
 		const detail = await expectValidResponse(
 			await mf.dispatchFetch(
-				`${BASE_URL}/email/routing/${sendData.result?.id}`
+				`${BASE_URL}/email/routing/${sendData.result?.messageId?.replace(/^<|>$/g, "")}`
 			),
 			zEmailGetRoutingResponse,
 			expect
@@ -575,7 +575,7 @@ describe("Email API - Routing without an email() handler", () => {
 		expect(email?.subject).toBe("Undeliverable");
 
 		const detail = await mf.dispatchFetch(
-			`${BASE_URL}/email/routing/${email?.id}`
+			`${BASE_URL}/email/routing/${email?.messageId?.replace(/^<|>$/g, "")}`
 		);
 		const detailData = await expectValidResponse(
 			detail,
@@ -692,7 +692,9 @@ describe("Email API - Routing reply file correlation", () => {
 			(e) => e.messageId === "<im-a-random-parent-message-id@example.com>"
 		);
 		expect(routed).toBeDefined();
-		expect(routed?.id).toBe(fileId);
+		// The reply file on disk is named after the received email's Message-ID
+		// (angle brackets stripped) - the same value the record is indexed by.
+		expect(routed?.messageId?.replace(/^<|>$/g, "")).toBe(fileId);
 
 		// The reply event is recorded, but the inbox list omits the (potentially
 		// large) reply raw...
@@ -705,7 +707,7 @@ describe("Email API - Routing reply file correlation", () => {
 		// ...but the detail view exposes it, so the reply can be shown when the
 		// "Reply" event is clicked/expanded in the explorer.
 		const detailResponse = await mf.dispatchFetch(
-			`${BASE_URL}/email/routing/${routed?.id}`
+			`${BASE_URL}/email/routing/${routed?.messageId?.replace(/^<|>$/g, "")}`
 		);
 		const detail = await expectValidResponse(
 			detailResponse,
@@ -789,7 +791,7 @@ describe("Email API - Sending", () => {
 
 		// The list view omits the body, so the detail endpoint must expose it.
 		const detailResponse = await mf.dispatchFetch(
-			`${BASE_URL}/email/sending/${listed?.id}`
+			`${BASE_URL}/email/sending/${listed?.messageId?.replace(/^<|>$/g, "")}`
 		);
 		const detail = await expectValidResponse(
 			detailResponse,

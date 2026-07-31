@@ -2077,12 +2077,12 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 	}
 
 	const okResult = await dispatchEmail("ok");
-	// Forwards and replies both report a message id synthesized in the shape
-	// production returns - `<{36 alphanumeric chars}@{domain}>` - taken from the
-	// forward recipient and the reply sender respectively.
+	// Forwards and replies both report a message id synthesized in mimetext's
+	// shape - `<{base36 random}@{domain}>` - taken from the forward recipient and
+	// the reply sender respectively.
 	const syntheticMessageId = (domain: string) =>
 		expect.stringMatching(
-			new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
+			new RegExp(`^<[a-z0-9]+@${domain.replace(/\./g, "\\.")}>$`)
 		);
 	expect(okResult).toMatchObject({
 		outcome: "ok",

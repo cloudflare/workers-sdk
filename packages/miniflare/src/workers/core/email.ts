@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
-import { synthesizeMessageId } from "../email/message-id";
+import { messageIdToStorageId, synthesizeMessageId } from "../email/message-id";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
@@ -146,11 +146,14 @@ export async function handleEmail(
 	let rejectReason: string | undefined = undefined;
 	events.push({ type: "received", timestamp: new Date().toISOString() });
 
-	// Capture this email for the local explorer "Routing" interface. Store
-	// the email ID to match the stored email with any files written to disk.
-	const emailId = params.get("id") ?? crypto.randomUUID();
+	// Capture this email for the local explorer "Routing" interface. The store
+	// indexes records by their Message-ID; `emailId` is used only to name any
+	// files written to disk so they can be matched to this message.
+	// TODO(miniflare v5): switch on-disk file naming to a mimetext-style id (or a
+	// `crypto.randomUUID()`), decoupling the file name from the Message-ID.
+	const emailId =
+		params.get("id") ?? messageIdToStorageId(parsedIncomingEmail.messageId);
 	const storedEmail: StoredRoutingEmail = {
-		id: emailId,
 		worker: params.get("worker") ?? undefined,
 		from,
 		to,

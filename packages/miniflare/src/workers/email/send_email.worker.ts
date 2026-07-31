@@ -268,12 +268,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				throw new Error("invalid headers set");
 			}
 
-			const messageId =
-				parsedEmail.messageId ?? synthesizeMessageId(emailMessage.from);
+			const messageId = parsedEmail.messageId;
 			const id = messageIdToStorageId(messageId);
 
 			await this.reportSentEmail({
-				id,
 				from: emailMessage.from,
 				to: [emailMessage.to],
 				subject: parsedEmail.subject ?? "(no subject)",
@@ -315,12 +313,14 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.validateMessageBuilder(builder);
 
 			// Use the Message-ID the caller supplied (mimetext sets one) if present,
-			// otherwise synthesize one as production would. This keys both the local
-			// explorer record and the on-disk filenames.
+			// otherwise synthesize one in the same mimetext shape. This keys the
+			// local explorer record (via the Message-ID) and names the on-disk
+			// files.
 			const messageId =
 				getHeader(builder.headers, "Message-ID") ??
 				synthesizeMessageId(extractEmailAddress(builder.from));
 			const id = messageIdToStorageId(messageId);
+			const systemId = id.split("@")[0];
 
 			const toDisplay = (
 				addr: string | EmailAddress | (string | EmailAddress)[]
@@ -337,7 +337,6 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			}));
 
 			await this.reportSentEmail({
-				id,
 				from: formatEmailAddress(builder.from),
 				to: toDisplay(builder.to),
 				cc: builder.cc ? toDisplay(builder.cc) : undefined,

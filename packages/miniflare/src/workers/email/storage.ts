@@ -8,7 +8,6 @@
 import type { EmailHandlerResult } from "./result";
 
 export interface StoredRoutingEmail extends EmailHandlerResult {
-	id: string;
 	/** Worker whose `email()` handler processed the message, if known. */
 	worker?: string;
 	/** Envelope MAIL FROM address. */
@@ -16,7 +15,11 @@ export interface StoredRoutingEmail extends EmailHandlerResult {
 	/** Envelope RCPT TO address. */
 	to: string;
 	subject: string;
-	messageId?: string;
+	/**
+	 * RFC `Message-ID` header value (`<id@domain>`). Indexes the record in the
+	 * store; a message listed in the explorer is looked up by it.
+	 */
+	messageId: string;
 	receivedAt: string;
 	rawSize: number;
 	/** Raw MIME content (capped at 1MiB by the email handler). */
@@ -33,7 +36,6 @@ export interface StoredEmailAttachment {
 }
 
 export interface StoredSendingEmail {
-	id: string;
 	from: string;
 	to: string[];
 	cc?: string[];
@@ -41,7 +43,11 @@ export interface StoredSendingEmail {
 	replyTo?: string;
 	subject: string;
 	sentAt: string;
-	messageId?: string;
+	/**
+	 * RFC `Message-ID` header value (`<id@domain>`). Indexes the record in the
+	 * store; a message listed in the explorer is looked up by it.
+	 */
+	messageId: string;
 	text?: string;
 	html?: string;
 	headers?: Record<string, string>;
@@ -58,9 +64,11 @@ export interface StoredSendingEmail {
  */
 export interface EmailStoreService {
 	storeReceived(email: StoredRoutingEmail): Promise<void>;
+	/** Looks up a received email by its bracket-stripped Message-ID. */
 	findReceived(id: string): Promise<StoredRoutingEmail | undefined>;
 	listReceived(): Promise<StoredRoutingEmail[]>;
 	storeSent(email: StoredSendingEmail): Promise<void>;
+	/** Looks up a sent email by its bracket-stripped Message-ID. */
 	findSent(id: string): Promise<StoredSendingEmail | undefined>;
 	listSent(): Promise<StoredSendingEmail[]>;
 	clear(): Promise<void>;

@@ -1437,10 +1437,13 @@ test("MessageBuilder file names match the id the local explorer lists", async ({
 		`http://localhost${CorePaths.EXPLORER}/api/email/sending`
 	);
 	const { result } = (await listResponse.json()) as {
-		result: { id: string }[];
+		result: { messageId: string }[];
 	};
-	const id = result[0]?.id;
-	expect(id).toBeDefined();
+	const messageId = result[0]?.messageId;
+	expect(messageId).toBeDefined();
+	// Files on disk are named after the Message-ID with its angle brackets
+	// stripped - the same value the local explorer indexes the record by.
+	const id = messageId?.replace(/^<|>$/g, "");
 
 	const files = await readLoggedFilePaths(log, expect);
 	expect(path.basename(String(files.text))).toBe(`${id}.txt`);
@@ -2114,11 +2117,11 @@ const SEND_EMAIL_RETURNS_RESULT_WORKER = dedent /* javascript */ `
 	};
 `;
 
-// MessageBuilder emails get a synthesized id in the shape:
-// `<{36 alphanumeric chars}@{sender domain}>`, angle brackets included.
+// MessageBuilder emails get a synthesized id in mimetext's shape:
+// `<{base36 random}@{sender domain}>`, angle brackets included.
 function synthesizedMessageId(expect: ExpectStatic, domain: string) {
 	return expect.stringMatching(
-		new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
+		new RegExp(`^<[a-z0-9]+@${domain.replace(/\./g, "\\.")}>$`)
 	);
 }
 

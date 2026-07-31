@@ -1356,8 +1356,9 @@
 												"result": {
 													"type": "object",
 													"properties": {
-														"id": {
-															"type": "string"
+														"messageId": {
+															"type": "string",
+															"description": "RFC Message-ID header value of the delivered test email."
 														},
 														"outcome": {
 															"type": "string",
@@ -3733,9 +3734,6 @@
 			"email_routing-item": {
 				"type": "object",
 				"properties": {
-					"id": {
-						"type": "string"
-					},
 					"worker": {
 						"type": "string",
 						"description": "Worker whose email() handler processed the message, if known."
@@ -3752,7 +3750,8 @@
 						"type": "string"
 					},
 					"messageId": {
-						"type": "string"
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
 					},
 					"receivedAt": {
 						"type": "string"
@@ -3789,7 +3788,7 @@
 					}
 				},
 				"required": [
-					"id",
+					"messageId",
 					"from",
 					"to",
 					"subject",
@@ -3804,9 +3803,6 @@
 			"email_routing-detail": {
 				"type": "object",
 				"properties": {
-					"id": {
-						"type": "string"
-					},
 					"worker": {
 						"type": "string"
 					},
@@ -3820,7 +3816,8 @@
 						"type": "string"
 					},
 					"messageId": {
-						"type": "string"
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
 					},
 					"receivedAt": {
 						"type": "string"
@@ -3868,7 +3865,7 @@
 					}
 				},
 				"required": [
-					"id",
+					"messageId",
 					"from",
 					"to",
 					"subject",
@@ -3983,9 +3980,6 @@
 			"email_sending-item": {
 				"type": "object",
 				"properties": {
-					"id": {
-						"type": "string"
-					},
 					"from": {
 						"type": "string"
 					},
@@ -4014,7 +4008,8 @@
 						"type": "string"
 					},
 					"messageId": {
-						"type": "string"
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
 					},
 					"sentAt": {
 						"type": "string"
@@ -4026,14 +4021,18 @@
 						}
 					}
 				},
-				"required": ["id", "from", "to", "subject", "sentAt", "attachments"]
+				"required": [
+					"messageId",
+					"from",
+					"to",
+					"subject",
+					"sentAt",
+					"attachments"
+				]
 			},
 			"email_sending-detail": {
 				"type": "object",
 				"properties": {
-					"id": {
-						"type": "string"
-					},
 					"from": {
 						"type": "string"
 					},
@@ -4062,7 +4061,8 @@
 						"type": "string"
 					},
 					"messageId": {
-						"type": "string"
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
 					},
 					"sentAt": {
 						"type": "string"
@@ -4090,7 +4090,14 @@
 						"description": "Raw MIME content, present when sent via the EmailMessage API."
 					}
 				},
-				"required": ["id", "from", "to", "subject", "sentAt", "attachments"]
+				"required": [
+					"messageId",
+					"from",
+					"to",
+					"subject",
+					"sentAt",
+					"attachments"
+				]
 			}
 		}
 	}

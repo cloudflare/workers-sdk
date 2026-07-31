@@ -705,7 +705,11 @@ const config = {
 													result: {
 														type: "object",
 														properties: {
-															id: { type: "string" },
+															messageId: {
+																type: "string",
+																description:
+																	"RFC Message-ID header value of the delivered test email.",
+															},
 															outcome: {
 																type: "string",
 																enum: ["ok", "exception"],
@@ -2199,7 +2203,6 @@ const config = {
 			"email_routing-item": {
 				type: "object",
 				properties: {
-					id: { type: "string" },
 					worker: {
 						type: "string",
 						description:
@@ -2208,7 +2211,11 @@ const config = {
 					from: { type: "string", description: "Envelope MAIL FROM address." },
 					to: { type: "string", description: "Envelope RCPT TO address." },
 					subject: { type: "string" },
-					messageId: { type: "string" },
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
 					receivedAt: { type: "string" },
 					rawSize: { type: "number" },
 					outcome: {
@@ -2235,7 +2242,7 @@ const config = {
 					},
 				},
 				required: [
-					"id",
+					"messageId",
 					"from",
 					"to",
 					"subject",
@@ -2250,12 +2257,15 @@ const config = {
 			"email_routing-detail": {
 				type: "object",
 				properties: {
-					id: { type: "string" },
 					worker: { type: "string" },
 					from: { type: "string" },
 					to: { type: "string" },
 					subject: { type: "string" },
-					messageId: { type: "string" },
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
 					receivedAt: { type: "string" },
 					rawSize: { type: "number" },
 					raw: {
@@ -2294,7 +2304,7 @@ const config = {
 					},
 				},
 				required: [
-					"id",
+					"messageId",
 					"from",
 					"to",
 					"subject",
@@ -2382,14 +2392,17 @@ const config = {
 			"email_sending-item": {
 				type: "object",
 				properties: {
-					id: { type: "string" },
 					from: { type: "string" },
 					to: { type: "array", items: { type: "string" } },
 					cc: { type: "array", items: { type: "string" } },
 					bcc: { type: "array", items: { type: "string" } },
 					replyTo: { type: "string" },
 					subject: { type: "string" },
-					messageId: { type: "string" },
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
 					sentAt: { type: "string" },
 					attachments: {
 						type: "array",
@@ -2398,19 +2411,29 @@ const config = {
 						},
 					},
 				},
-				required: ["id", "from", "to", "subject", "sentAt", "attachments"],
+				required: [
+					"messageId",
+					"from",
+					"to",
+					"subject",
+					"sentAt",
+					"attachments",
+				],
 			},
 			"email_sending-detail": {
 				type: "object",
 				properties: {
-					id: { type: "string" },
 					from: { type: "string" },
 					to: { type: "array", items: { type: "string" } },
 					cc: { type: "array", items: { type: "string" } },
 					bcc: { type: "array", items: { type: "string" } },
 					replyTo: { type: "string" },
 					subject: { type: "string" },
-					messageId: { type: "string" },
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
 					sentAt: { type: "string" },
 					text: { type: "string" },
 					html: { type: "string" },
@@ -2430,7 +2453,14 @@ const config = {
 							"Raw MIME content, present when sent via the EmailMessage API.",
 					},
 				},
-				required: ["id", "from", "to", "subject", "sentAt", "attachments"],
+				required: [
+					"messageId",
+					"from",
+					"to",
+					"subject",
+					"sentAt",
+					"attachments",
+				],
 			},
 		},
 	},

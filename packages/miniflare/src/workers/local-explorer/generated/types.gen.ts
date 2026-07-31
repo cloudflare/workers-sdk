@@ -825,7 +825,6 @@ export type EmailHandlerReply = {
 };
 
 export type EmailRoutingItem = {
-	id: string;
 	/**
 	 * Worker whose email() handler processed the message, if known.
 	 */
@@ -839,7 +838,10 @@ export type EmailRoutingItem = {
 	 */
 	to: string;
 	subject: string;
-	messageId?: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
 	receivedAt: string;
 	rawSize: number;
 	/**
@@ -856,12 +858,14 @@ export type EmailRoutingItem = {
 };
 
 export type EmailRoutingDetail = {
-	id: string;
 	worker?: string;
 	from: string;
 	to: string;
 	subject: string;
-	messageId?: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
 	receivedAt: string;
 	rawSize: number;
 	/**
@@ -949,27 +953,31 @@ export type EmailAttachment = {
 };
 
 export type EmailSendingItem = {
-	id: string;
 	from: string;
 	to: Array<string>;
 	cc?: Array<string>;
 	bcc?: Array<string>;
 	replyTo?: string;
 	subject: string;
-	messageId?: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
 	sentAt: string;
 	attachments: Array<EmailAttachment>;
 };
 
 export type EmailSendingDetail = {
-	id: string;
 	from: string;
 	to: Array<string>;
 	cc?: Array<string>;
 	bcc?: Array<string>;
 	replyTo?: string;
 	subject: string;
-	messageId?: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
 	sentAt: string;
 	text?: string;
 	html?: string;
@@ -1723,7 +1731,10 @@ export type EmailSendRoutingResponses = {
 	 */
 	200: WorkersApiResponseCommon & {
 		result?: {
-			id?: string;
+			/**
+			 * RFC Message-ID header value of the delivered test email.
+			 */
+			messageId?: string;
 			/**
 			 * Whether the handler ran to completion or threw.
 			 */

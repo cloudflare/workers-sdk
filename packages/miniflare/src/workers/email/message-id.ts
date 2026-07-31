@@ -1,31 +1,26 @@
 // Message-ID handling shared by the paths that capture emails: the `send_email`
 // binding and the local explorer's "send test email" endpoint. Both must agree
 // on the format, because the id derived from a Message-ID keys the explorer's
-// record and names the files written to disk.
-
-const ID_ALPHABET =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+// record.
 
 /**
- * Builds a Message-ID in the shape the production `send_email` binding returns:
- * `<{36 alphanumeric chars}@{sender domain}>`.
+ * Builds a Message-ID in the shape the `mimetext` library generates for emails
+ * created via `createMimeMessage()`: `<{base36 random}@{sender domain}>`. Used
+ * as a fallback when no Message-ID is otherwise available, so a synthesized id
+ * matches the format callers see everywhere else.
  */
 export function synthesizeMessageId(senderEmail: string): string {
-	const bytes = crypto.getRandomValues(new Uint8Array(36));
-	const id = Array.from(
-		bytes,
-		(byte) => ID_ALPHABET[byte % ID_ALPHABET.length]
-	).join("");
+	const id = Math.random().toString(36).slice(2);
 	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
 	return `<${id}@${domain}>`;
 }
 
 /**
- * Derives the id an email is stored under from its Message-ID, by stripping the
+ * Derives the id an email is indexed under from its Message-ID, by stripping the
  * enclosing angle brackets (`<id@domain>` becomes `id@domain`).
  *
- * This id keys the local explorer record and names the files written to disk, so
- * a message listed in the explorer can be found on disk by its id.
+ * This id keys the local explorer record, so a message listed in the explorer
+ * can be looked up by it.
  */
 export function messageIdToStorageId(messageId: string): string {
 	return messageId.replace(/^<|>$/g, "");

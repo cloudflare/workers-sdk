@@ -551,12 +551,11 @@ export const zEmailHandlerReply = z.object({
 });
 
 export const zEmailRoutingItem = z.object({
-	id: z.string(),
 	worker: z.string().optional(),
 	from: z.string(),
 	to: z.string(),
 	subject: z.string(),
-	messageId: z.string().optional(),
+	messageId: z.string(),
 	receivedAt: z.string(),
 	rawSize: z.number(),
 	outcome: z.enum(["ok", "exception"]),
@@ -602,12 +601,11 @@ export const zEmailAttachment = z.object({
 });
 
 export const zEmailRoutingDetail = z.object({
-	id: z.string(),
 	worker: z.string().optional(),
 	from: z.string(),
 	to: z.string(),
 	subject: z.string(),
-	messageId: z.string().optional(),
+	messageId: z.string(),
 	receivedAt: z.string(),
 	rawSize: z.number(),
 	raw: z.string(),
@@ -620,27 +618,25 @@ export const zEmailRoutingDetail = z.object({
 });
 
 export const zEmailSendingItem = z.object({
-	id: z.string(),
 	from: z.string(),
 	to: z.array(z.string()),
 	cc: z.array(z.string()).optional(),
 	bcc: z.array(z.string()).optional(),
 	replyTo: z.string().optional(),
 	subject: z.string(),
-	messageId: z.string().optional(),
+	messageId: z.string(),
 	sentAt: z.string(),
 	attachments: z.array(zEmailAttachment),
 });
 
 export const zEmailSendingDetail = z.object({
-	id: z.string(),
 	from: z.string(),
 	to: z.array(z.string()),
 	cc: z.array(z.string()).optional(),
 	bcc: z.array(z.string()).optional(),
 	replyTo: z.string().optional(),
 	subject: z.string(),
-	messageId: z.string().optional(),
+	messageId: z.string(),
 	sentAt: z.string(),
 	text: z.string().optional(),
 	html: z.string().optional(),
@@ -1077,7 +1073,7 @@ export const zEmailSendRoutingResponse = zWorkersApiResponseCommon.and(
 	z.object({
 		result: z
 			.object({
-				id: z.string().optional(),
+				messageId: z.string().optional(),
 				outcome: z.enum(["ok", "exception"]).optional(),
 				rejectReason: z.string().optional(),
 			})
