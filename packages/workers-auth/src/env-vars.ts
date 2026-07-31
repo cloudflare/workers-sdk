@@ -3,6 +3,7 @@ import {
 	getCloudflareApiEnvironmentFromEnv,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
+import { validateAccountId } from "./account-id";
 
 /**
  * `WRANGLER_AUTH_DOMAIN` is the URL base domain that is used
@@ -59,17 +60,34 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
+const readCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCOUNT_ID",
+	deprecatedName: "CF_ACCOUNT_ID",
+});
+
 /**
  * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
  *
  * This is a Cloudflare-wide variable (not wrangler-specific), so it lives in the
  * shared core rather than a consumer layer. `CF_ACCOUNT_ID` is the deprecated
  * spelling.
+ *
+ * Every caller feeds the result into a Cloudflare API URL path, so the value is
+ * validated here rather than at each call site. An empty string is treated as
+ * unset so callers keep falling back to the cached / interactively selected
+ * account.
  */
-export const getCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
-	variableName: "CLOUDFLARE_ACCOUNT_ID",
-	deprecatedName: "CF_ACCOUNT_ID",
-});
+export function getCloudflareAccountIdFromEnv(): string | undefined {
+	const accountId = readCloudflareAccountIdFromEnv();
+	if (!accountId) {
+		return undefined;
+	}
+
+	return validateAccountId(
+		accountId,
+		"set in the `CLOUDFLARE_ACCOUNT_ID` environment variable"
+	);
+}
 
 /**
  * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
