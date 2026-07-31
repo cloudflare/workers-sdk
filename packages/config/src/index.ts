@@ -1,10 +1,28 @@
 export * from "./public";
 export {
+	AssetsSchema,
+	BindingSchema,
+	BrowserBindingSchema,
 	ConfigExportsSchema,
+	D1BindingSchema,
+	DurableObjectCreatedExportSchema,
+	DurableObjectDeletedExportSchema,
+	DurableObjectExpectingTransferExportSchema,
+	DurableObjectRenamedExportSchema,
+	DurableObjectTransferredExportSchema,
+	ExportSchema,
 	InputWorkerSchema,
+	KnownBindingSchema,
+	KVBindingSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
+	QueueBindingSchema,
+	R2BindingSchema,
+	FlagshipBindingSchema,
 	SettingsSchema,
+	UnsafeBindingSchema,
+	WorkerBindingSchema,
+	WorkerEntrypointExportSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
