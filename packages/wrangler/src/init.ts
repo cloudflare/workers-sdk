@@ -6,7 +6,7 @@ import {
 	getC3CommandFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { x } from "tinyexec";
+import { NonZeroExitError, x } from "tinyexec";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
@@ -21,7 +21,6 @@ import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type { PackageManager } from "./package-manager";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
 import type { ReadableStream } from "node:stream/web";
-import type { NonZeroExitError } from "tinyexec";
 
 export const init = createCommand({
 	metadata: {
@@ -140,8 +139,8 @@ export const init = createCommand({
 				const childProcess = x(packageManager.type, c3Arguments, {
 					nodeOptions: {
 						// Note: we need to pipe stdout and stderr otherwise tinyexec won't
-						//       include those in the command's error, but we want it to so
-						//       that we can include those in the error Sentry receives
+						//       capture those on the command's error, but we want it to so
+						//       that they are attached to the error Sentry receives
 						stdio: ["inherit", "pipe", "pipe"],
 						...(metricsConfig.permission?.enabled === false && {
 							env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
@@ -152,21 +151,27 @@ export const init = createCommand({
 				});
 				childProcess.process?.stdout?.pipe(process.stdout);
 				childProcess.process?.stderr?.pipe(process.stderr);
-				await childProcess;
+				const { exitCode } = await childProcess;
+				// `throwOnError` only covers non-zero exit codes, so a process that
+				// was terminated by a signal would otherwise look like a success.
+				if (exitCode === undefined) {
+					throw new Error(
+						`${replacementC3Command} was terminated by ${childProcess.process?.signalCode ?? "a signal"}`
+					);
+				}
 			} catch (e: unknown) {
-				const procError = e as NonZeroExitError;
-				const output = [procError.output?.stdout, procError.output?.stderr]
-					.filter(Boolean)
-					.join("\n");
-				throw new Error(
-					output ? `${procError.message}\n\n${output}` : procError.message,
-					{
-						// We include the process error as the cause, in this way this
-						// will be reflected in Sentry allowing us to better monitor
-						// C3 errors
-						cause: procError,
-					}
-				);
+				if (e instanceof NonZeroExitError) {
+					// C3 has already streamed its output to the terminal, so keep it out
+					// of the message: a stable message is what lets Sentry group these
+					// failures together. The captured output rides along on the cause,
+					// which is what Sentry reports, allowing us to better monitor C3
+					// errors.
+					throw new Error(
+						`${replacementC3Command} failed with exit code ${e.exitCode ?? "unknown"}`,
+						{ cause: e }
+					);
+				}
+				throw e;
 			}
 		}
 	},
