@@ -138,7 +138,14 @@ function ObservabilityView(): JSX.Element {
 	spansByTraceRef.current = spansByTrace;
 	// Deep link from an event's "View trace" button (?trace=&span=): open that
 	// trace's waterfall once its row lands. span picks the right invocation row.
-	const { trace: deepLinkTrace, span: deepLinkSpan } = Route.useSearch();
+	// Capture it at mount and strip it from the URL below, so returning to this
+	// view later (the switcher preserves search params) doesn't re-apply it.
+	const routeSearch = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const deepLinkRef = useRef<{ trace?: string; span?: string } | null>(null);
+	deepLinkRef.current ??= { trace: routeSearch.trace, span: routeSearch.span };
+	const deepLinkTrace = deepLinkRef.current.trace;
+	const deepLinkSpan = deepLinkRef.current.span;
 	const deepLinkAppliedRef = useRef<string | null>(null);
 	const deepLinkSeededRef = useRef<string | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -345,6 +352,18 @@ function ObservabilityView(): JSX.Element {
 			void loadSpans(trace);
 		}
 	}, [traces, expanded, loadSpans]);
+
+	// Strip the deep-link params from the URL once we've captured them, so they
+	// don't linger and re-seed the query on every later return to this view.
+	useEffect(() => {
+		if (routeSearch.trace === undefined && routeSearch.span === undefined) {
+			return;
+		}
+		void navigate({
+			search: (prev) => ({ ...prev, trace: undefined, span: undefined }),
+			replace: true,
+		});
+	}, [navigate, routeSearch.trace, routeSearch.span]);
 
 	// A deep-linked trace can be older than the default trace-list window, so
 	// seed the search with `trace:<id>` to fetch that specific row. If it still
