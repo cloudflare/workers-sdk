@@ -56,5 +56,5 @@ export function isCompressedByCloudflareFL(
 
 	const [contentType] = contentTypeHeader.split(";");
 
-	return compressedByCloudflareFL.has(contentType);
+	return compressedByCloudflareFL.has(contentType.trim().toLowerCase());
 }
