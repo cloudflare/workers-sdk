@@ -567,6 +567,8 @@ describe("runTelemetryCommand", () => {
 
 	afterEach(() => {
 		vi.useRealTimers();
+		vi.clearAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	test("run telemetry status when c3permission is disabled", async ({
@@ -602,6 +604,36 @@ describe("runTelemetryCommand", () => {
 
 		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Status: Enabled
+
+			"
+		`);
+	});
+
+	test("run telemetry status when DO_NOT_TRACK is enabled", ({ expect }) => {
+		vi.stubEnv("DO_NOT_TRACK", "1");
+
+		runTelemetryCommand("status");
+
+		expect(readMetricsConfig).not.toHaveBeenCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"Status: Disabled (set by DO_NOT_TRACK)
+
+			"
+		`);
+	});
+
+	test("run telemetry status when CREATE_CLOUDFLARE_TELEMETRY_DISABLED is enabled", ({
+		expect,
+	}) => {
+		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DISABLED", "1");
+
+		runTelemetryCommand("status");
+
+		expect(readMetricsConfig).not.toHaveBeenCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"Status: Disabled (set by CREATE_CLOUDFLARE_TELEMETRY_DISABLED)
 
 			"
 		`);
