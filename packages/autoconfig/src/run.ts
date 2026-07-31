@@ -574,12 +574,23 @@ function rewritePagesCommand(subcommand: string, argsString: string): string {
 	for (let i = 0; i < tokens.length; i++) {
 		const token = tokens[i];
 
-		if (PAGES_ONLY_VALUE_FLAGS.has(token)) {
-			i++;
+		// A bare `--` marks the end of flags; keep it and everything after it
+		// verbatim (used in the `wrangler pages dev -- <cmd>` proxy pattern).
+		if (token === "--") {
+			kept.push(...tokens.slice(i));
+			break;
+		}
+
+		const flagName = token.startsWith("-") ? token.split("=")[0] : token;
+
+		if (PAGES_ONLY_VALUE_FLAGS.has(flagName)) {
+			if (!token.includes("=")) {
+				i++;
+			}
 			continue;
 		}
 
-		if (PAGES_ONLY_BOOLEAN_FLAGS.has(token)) {
+		if (PAGES_ONLY_BOOLEAN_FLAGS.has(flagName)) {
 			continue;
 		}
 

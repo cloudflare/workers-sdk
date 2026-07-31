@@ -378,4 +378,27 @@ describe("replacePagesCommandsInScripts()", () => {
 		});
 		expect(result).toEqual({ dev: "wrangler dev --port 3000" });
 	});
+
+	test("strips Pages-only flags written in --flag=value form", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			publish: "wrangler pages deploy dist --project-name=my-app --branch=main",
+		});
+		expect(result).toEqual({ publish: "wrangler deploy" });
+	});
+
+	test("keeps everything after a bare -- separator verbatim", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			dev: "wrangler pages dev -- npm run dev",
+		});
+		expect(result).toEqual({ dev: "wrangler dev -- npm run dev" });
+	});
+
+	test("strips positional and Pages flags before -- while keeping the rest", ({
+		expect,
+	}) => {
+		const result = replacePagesCommandsInScripts({
+			dev: "wrangler pages dev public --project-name my-app -- npm run start",
+		});
+		expect(result).toEqual({ dev: "wrangler dev -- npm run start" });
+	});
 });

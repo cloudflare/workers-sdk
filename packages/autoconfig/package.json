@@ -31,8 +31,7 @@
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/pages-functions": "workspace:*",
-		"@cloudflare/workers-utils": "workspace:*",
-		"shell-quote": "^1.8.1"
+		"@cloudflare/workers-utils": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/codemod": "workspace:*",
@@ -46,6 +45,7 @@
 		"esprima": "4.0.1",
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",
+		"shell-quote": "^1.8.1",
 		"ts-dedent": "^2.2.0",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
