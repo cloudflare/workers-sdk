@@ -2,7 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 // Minimal worker script. When assets are configured, all incoming `dispatchFetch`
 // requests are automatically routed through the assets router service, which
@@ -14,12 +15,19 @@ const WORKER_SCRIPT = `export default {
 	}
 }`;
 
-function makeOptions(directory: string) {
+function makeOptions(directory: string): MiniflareOptions {
 	return {
-		modules: true,
-		script: WORKER_SCRIPT,
-		compatibilityDate: "2026-04-29",
-		assets: { directory },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-04-29",
+					manifest: singleModuleManifest(WORKER_SCRIPT),
+					assets: { directory },
+				},
+			},
+		],
 	};
 }
 
