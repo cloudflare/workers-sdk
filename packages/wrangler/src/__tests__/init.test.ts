@@ -3,7 +3,7 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
-import { x } from "tinyexec";
+import { NonZeroExitError, x } from "tinyexec";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
@@ -114,7 +114,7 @@ describe("init", () => {
 				// Update the mock to handle "yarn" for these tests
 				(x as Mock).mockImplementation((command: string) => {
 					if (command === "yarn" || command === "mockpm") {
-						return Promise.resolve();
+						return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
 					}
 					return Promise.reject(new Error(`Unexpected command: ${command}`));
 				});
@@ -231,6 +231,40 @@ describe("init", () => {
 				},
 				throwOnError: true,
 				nodePath: false,
+			});
+		});
+
+		describe("when C3 fails", () => {
+			it("reports a stable message that names the command and carries the output on the cause", async ({
+				expect,
+			}) => {
+				const output = { stdout: "some stdout", stderr: "some stderr" };
+				const cause = new NonZeroExitError(
+					{ pid: 1234, killed: false, exitCode: 2 },
+					{ ...output, exitCode: 2 }
+				);
+				(x as Mock).mockRejectedValueOnce(cause);
+
+				await expect(runWrangler("init")).rejects.toThrow(
+					expect.objectContaining({
+						// The message must not embed the command output, otherwise every
+						// C3 failure becomes a distinct Sentry issue.
+						message: "`mockpm create cloudflare` failed with exit code 2",
+						cause,
+					})
+				);
+			});
+
+			it("reports a process terminated by a signal as a failure", async ({
+				expect,
+			}) => {
+				// `throwOnError` does not fire for signal termination: tinyexec resolves
+				// with no exit code at all.
+				(x as Mock).mockResolvedValueOnce({ stdout: "", stderr: "" });
+
+				await expect(runWrangler("init")).rejects.toThrow(
+					"`mockpm create cloudflare` was terminated by a signal"
+				);
 			});
 		});
 	});

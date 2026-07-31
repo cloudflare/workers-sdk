@@ -28,17 +28,23 @@ export async function runCommand(
 	logger.log(chalk.blue(prefix), "Running:", command);
 	let abortHandler: ReturnType<typeof terminateProcessOnAbort> | undefined;
 	try {
-		const res = x(command, [], {
+		// `command` is handed to the shell verbatim, so trim it: on Windows the
+		// shell is `cmd.exe /d /s /c "<command>"`, where surrounding whitespace
+		// from a multi-line config value is not harmless.
+		const res = x(command.trim(), [], {
 			nodeOptions: {
 				shell: true,
 				cwd,
-				env: {
-					...(runOptions?.wranglerCommand
-						? { WRANGLER_COMMAND: runOptions.wranglerCommand }
-						: {}),
-				},
+				// tinyexec always merges this over `process.env`, so the rest of the
+				// environment is still inherited.
+				env: runOptions?.wranglerCommand
+					? { WRANGLER_COMMAND: runOptions.wranglerCommand }
+					: undefined,
 			},
 			throwOnError: true,
+			// Disable tinyexec's default PATH manipulation, which prepends every
+			// ancestor `node_modules/.bin` and the directory holding the running
+			// Node binary. Custom builds should see the user's own PATH.
 			nodePath: false,
 		});
 		abortHandler = terminateProcessOnAbort(runOptions?.signal, res);
