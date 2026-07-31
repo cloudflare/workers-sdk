@@ -28,7 +28,7 @@ describe("autoconfig run - saveWranglerJsonc()", () => {
 			}),
 		});
 
-		await saveWranglerJsonc(process.cwd(), {
+		await saveWranglerJsonc(process.cwd(), undefined, {
 			name: "worker-name",
 			compatibility_date: NODEJS_COMPAT_DEFAULT_ON_DATE,
 		});
@@ -52,7 +52,7 @@ describe("autoconfig run - saveWranglerJsonc()", () => {
 			}),
 		});
 
-		await saveWranglerJsonc(process.cwd(), {
+		await saveWranglerJsonc(process.cwd(), undefined, {
 			compatibility_date: NODEJS_COMPAT_DEFAULT_ON_DATE,
 		});
 
@@ -70,7 +70,7 @@ describe("autoconfig run - saveWranglerJsonc()", () => {
 			}),
 		});
 
-		await saveWranglerJsonc(process.cwd(), {
+		await saveWranglerJsonc(process.cwd(), undefined, {
 			compatibility_date: DATE_BEFORE_DEFAULT_ON,
 		});
 
@@ -82,7 +82,7 @@ describe("autoconfig run - saveWranglerJsonc()", () => {
 	test("writes the config when the project has none yet", async ({
 		expect,
 	}) => {
-		await saveWranglerJsonc(process.cwd(), {
+		await saveWranglerJsonc(process.cwd(), undefined, {
 			name: "worker-name",
 			compatibility_date: NODEJS_COMPAT_DEFAULT_ON_DATE,
 		});

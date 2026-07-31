@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import { getFrameworkClassInstance } from "../../src/frameworks";
+import { CloudflarePages } from "../../src/frameworks/cloudflare-pages";
 import { NextJs } from "../../src/frameworks/next";
 import { NoOpFramework } from "../../src/frameworks/no-op";
 import { Static } from "../../src/frameworks/static";
@@ -23,6 +24,13 @@ describe("getFrameworkClassInstance()", () => {
 		expect(framework).toBeInstanceOf(NextJs);
 		expect(framework.id).toBe("next");
 		expect(framework.name).toBe("Next.js");
+	});
+
+	it("should return the Cloudflare Pages migration framework", ({ expect }) => {
+		const framework = getFrameworkClassInstance("cloudflare-pages");
+
+		expect(framework).toBeInstanceOf(CloudflarePages);
+		expect(framework.id).toBe("cloudflare-pages");
 	});
 
 	it("should return a NoOpFramework for an unsupported framework (hono)", ({

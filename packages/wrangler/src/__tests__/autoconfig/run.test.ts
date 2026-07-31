@@ -203,7 +203,7 @@ describe("autoconfig (deploy)", () => {
 		expect(runSpy).not.toHaveBeenCalled();
 	});
 
-	it("should warn and prompt when Pages project is detected", async ({
+	it("should run autoconfig when a Pages project is detected", async ({
 		expect,
 	}) => {
 		vi.spyOn(autoconfig, "getDetailsForAutoConfig").mockImplementationOnce(() =>
@@ -223,22 +223,18 @@ describe("autoconfig (deploy)", () => {
 		);
 		const runSpy = vi.spyOn(autoconfig, "runAutoConfig");
 
-		// User declines to proceed
 		mockConfirm({
-			text: "Are you sure that you want to proceed?",
+			text: "Do you want to modify these settings?",
 			result: false,
 		});
+		mockConfirm({ text: "Proceed with setup?", result: true });
 
-		// Should not throw - just return early
-		await runWrangler("deploy --autoconfig");
+		await runDeploy(expect, "--autoconfig");
 
-		// Should show warning about Pages project
-		expect(std.warn).toContain(
+		expect(runSpy).toHaveBeenCalled();
+		expect(std.warn).not.toContain(
 			"It seems that you have run `wrangler deploy` on a Pages project"
 		);
-
-		// Should NOT run autoconfig since it's a Pages project
-		expect(runSpy).not.toHaveBeenCalled();
 	});
 
 	describe("runAutoConfig()", () => {
@@ -645,36 +641,6 @@ describe("autoconfig (deploy)", () => {
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[AssertionError: The Output Directory is unexpectedly missing]`
-			);
-		});
-
-		it("errors with Pages-specific message when framework is cf-pages", async ({
-			expect,
-		}) => {
-			mockConfirm({
-				text: "Do you want to modify these settings?",
-				result: false,
-			});
-
-			await expect(
-				autoconfig.runAutoConfig(
-					{
-						projectPath: process.cwd(),
-						configured: false,
-						framework: {
-							id: "cloudflare-pages",
-							name: "Cloudflare Pages",
-							configure: async () => ({ wranglerConfig: {} }),
-							isConfigured: () => false,
-						} as unknown as Framework,
-						workerName: "my-worker",
-						outputDir: "dist",
-						packageManager: NpmPackageManager,
-					},
-					{ context }
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.]`
 			);
 		});
 

@@ -4,7 +4,10 @@ import { dedent } from "ts-dedent";
 import { describe, test } from "vitest";
 import { Astro } from "../src/frameworks/astro";
 import { Static } from "../src/frameworks/static";
-import { buildOperationsSummary } from "../src/run";
+import {
+	buildOperationsSummary,
+	replacePagesCommandsInScripts,
+} from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -246,5 +249,133 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(std.out).not.toContain("🛠️  Configuring project for");
 			expect(summary.frameworkConfiguration).toBeUndefined();
 		});
+	});
+});
+
+describe("replacePagesCommandsInScripts()", () => {
+	test("replaces 'wrangler pages dev' with 'wrangler dev'", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			dev: "wrangler pages dev",
+		});
+		expect(result).toEqual({ dev: "wrangler dev" });
+	});
+
+	test("replaces 'wrangler pages deploy' with 'wrangler deploy'", ({
+		expect,
+	}) => {
+		const result = replacePagesCommandsInScripts({
+			deploy: "wrangler pages deploy",
+		});
+		expect(result).toEqual({ deploy: "wrangler deploy" });
+	});
+
+	test("strips the directory positional from pages commands", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			publish: "wrangler pages deploy public",
+			dev: "wrangler pages dev dist",
+		});
+		expect(result).toEqual({
+			publish: "wrangler deploy",
+			dev: "wrangler dev",
+		});
+	});
+
+	test("strips the directory positional but preserves shared flags", ({
+		expect,
+	}) => {
+		const result = replacePagesCommandsInScripts({
+			dev: "wrangler pages dev public --port 8789",
+			publish: "wrangler pages deploy dist --compatibility-date 2024-01-01",
+		});
+		expect(result).toEqual({
+			dev: "wrangler dev --port 8789",
+			publish: "wrangler deploy --compatibility-date 2024-01-01",
+		});
+	});
+
+	test("strips Pages-only flags and their values", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			publish: "wrangler pages deploy dist --project-name my-app --branch main",
+		});
+		expect(result).toEqual({ publish: "wrangler deploy" });
+	});
+
+	test("strips the --commit-dirty boolean flag", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			publish: "wrangler pages deploy dist --commit-dirty",
+		});
+		expect(result).toEqual({ publish: "wrangler deploy" });
+	});
+
+	test("replaces deprecated 'wrangler pages publish' with 'wrangler deploy'", ({
+		expect,
+	}) => {
+		const result = replacePagesCommandsInScripts({
+			publish: "wrangler pages publish dist",
+		});
+		expect(result).toEqual({ publish: "wrangler deploy" });
+	});
+
+	test("handles commands chained with '&&'", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			dev: "npm run build && wrangler pages dev --port 3000",
+			publish: "npm run build && wrangler pages deploy dist",
+		});
+		expect(result).toEqual({
+			dev: "npm run build && wrangler dev --port 3000",
+			publish: "npm run build && wrangler deploy",
+		});
+	});
+
+	test("replaces multiple occurrences in a single script", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			all: "wrangler pages dev & wrangler pages deploy dist",
+		});
+		expect(result).toEqual({
+			all: "wrangler dev & wrangler deploy",
+		});
+	});
+
+	test("does not modify scripts without pages commands", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({
+			build: "vite build",
+			test: "vitest run",
+			dev: "wrangler dev",
+			deploy: "wrangler deploy",
+		});
+		expect(result).toEqual({
+			build: "vite build",
+			test: "vitest run",
+			dev: "wrangler dev",
+			deploy: "wrangler deploy",
+		});
+	});
+
+	test("leaves non-string values untouched", ({ expect }) => {
+		const scripts: Record<string, unknown> = {
+			dev: "wrangler pages dev",
+			config: { nested: true },
+			count: 42,
+		};
+		const result = replacePagesCommandsInScripts(scripts);
+		expect(result).toEqual({
+			dev: "wrangler dev",
+			config: { nested: true },
+			count: 42,
+		});
+	});
+
+	test("handles an empty scripts object", ({ expect }) => {
+		const result = replacePagesCommandsInScripts({});
+		expect(result).toEqual({});
+	});
+
+	test("preserves flags that appear before the directory positional", ({
+		expect,
+	}) => {
+		const result = replacePagesCommandsInScripts({
+			dev: "wrangler pages dev --port 3000 public",
+		});
+		expect(result).toEqual({ dev: "wrangler dev --port 3000" });
 	});
 });

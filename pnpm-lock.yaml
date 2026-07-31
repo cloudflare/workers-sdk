@@ -1692,9 +1692,15 @@ importers:
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
+      '@cloudflare/pages-functions':
+        specifier: workspace:*
+        version: link:../pages-functions
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
+      shell-quote:
+        specifier: ^1.8.1
+        version: 1.8.3
     devDependencies:
       '@cloudflare/codemod':
         specifier: workspace:*
@@ -1711,6 +1717,9 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      '@types/shell-quote':
+        specifier: ^1.7.2
+        version: 1.7.2
       chalk:
         specifier: catalog:default
         version: 5.3.0

@@ -9,4 +9,5 @@ export const EXTERNAL_DEPENDENCIES = [
 	// They are kept external to share a single copy with wrangler and other SDK tools.
 	"@cloudflare/cli-shared-helpers",
 	"@cloudflare/workers-utils",
+	"@cloudflare/pages-functions",
 ];
