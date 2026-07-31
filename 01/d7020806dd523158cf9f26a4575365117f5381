@@ -1,0 +1,25 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "01d7020806dd523158cf9f26a4575365117f5381",
+  "prompts": {},
+  "sessions": {
+    "s_6839e8c88e235c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019fae0f-212d-7ffd-93e0-046ef22fa694",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "avenceslau <avenceslau@cloudflare.com>"
+    },
+    "s_dbbc503753dcd7": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019faea6-ae1d-7768-952d-5a3188583cce",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "avenceslau <avenceslau@cloudflare.com>"
+    }
+  }
+}
