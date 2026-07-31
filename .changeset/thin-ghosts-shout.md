@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Migrate to `tinyexec` for process execution.
+Replace `execa` with `tinyexec` for running subprocesses, shrinking the bundled Wrangler output.
