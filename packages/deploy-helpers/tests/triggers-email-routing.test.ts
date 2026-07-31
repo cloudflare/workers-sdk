@@ -15,10 +15,12 @@ const WORKER_TAG = "a7e6fb77503c41d8a7f3113c6918f10c";
 describe("triggersDeploy Email Routing integration", () => {
 	let metadataRequests: number;
 	let planRequests: number;
+	let planError: Error | undefined;
 
 	beforeEach(() => {
 		metadataRequests = 0;
 		planRequests = 0;
+		planError = undefined;
 
 		initDeployHelpersContext({
 			logger: {
@@ -48,6 +50,9 @@ describe("triggersDeploy Email Routing integration", () => {
 					path.endsWith("/email/routing/rules/plan")
 				) {
 					planRequests++;
+					if (planError !== undefined) {
+						throw planError;
+					}
 					return { zones: [] };
 				}
 				throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${path}`);
@@ -104,6 +109,25 @@ describe("triggersDeploy Email Routing integration", () => {
 
 		expect(planRequests).toBe(1);
 		expect(metadataRequests).toBe(1);
+	});
+
+	it("rethrows an email routing failure when no other trigger failed", async ({
+		expect,
+	}) => {
+		planError = new Error("email routing failed");
+
+		await expect(
+			triggersDeploy({
+				config: config(),
+				accountId: ACCOUNT_ID,
+				scriptName: WORKER_NAME,
+				workerTag: WORKER_TAG,
+				env: undefined,
+				crons: undefined,
+				routes: [],
+				firstDeploy: false,
+			})
+		).rejects.toBe(planError);
 	});
 
 	it("reconciles when another trigger deployment fails", async ({ expect }) => {

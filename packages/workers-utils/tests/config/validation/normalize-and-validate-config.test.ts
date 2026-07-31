@@ -835,6 +835,116 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 		});
 
+		it("should accept Artifacts event triggers", ({ expect }) => {
+			const expectedConfig: RawConfig = {
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							filter: {
+								namespace: "my-namespace",
+								repo_name: "my-repo",
+							},
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "my-workflow",
+								},
+							],
+						},
+					],
+				},
+			};
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				expectedConfig,
+				"wrangler.json",
+				"wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(config.triggers.events).toEqual(expectedConfig.triggers?.events);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+		});
+
+		it.for([
+			{ type: "cf.artifacts.repo.created" },
+			{ type: "cf.artifacts.repo.deleted" },
+			{ type: "cf.artifacts.repo.forked" },
+			{ type: "cf.artifacts.repo.imported" },
+			{ type: "cf.artifacts.repo.pushed" },
+			{ type: "cf.artifacts.repo.cloned" },
+			{ type: "cf.artifacts.repo.fetched" },
+			{ type: "cf.artifacts.repo.token.created" },
+			{ type: "cf.artifacts.repo.token.revoked" },
+		] as const)(
+			"should accept the documented Artifacts event $type",
+			({ type }, { expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						triggers: {
+							events: [
+								{
+									type,
+									targets: [
+										{
+											type: "workflow",
+											workflow_name: "my-workflow",
+										},
+									],
+								},
+							],
+						},
+					},
+					"wrangler.json",
+					"wrangler.json",
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			}
+		);
+
+		it.for([
+			{
+				name: "an unsupported event type",
+				event: {
+					type: "cf.r2.bucket.created",
+					targets: [{ type: "workflow", workflow_name: "my-workflow" }],
+				},
+			},
+			{
+				name: "an unsupported filter",
+				event: {
+					type: "cf.artifacts.repo.pushed",
+					filter: { repoName: "my-repo" },
+					targets: [{ type: "workflow", workflow_name: "my-workflow" }],
+				},
+			},
+			{
+				name: "an empty target list",
+				event: {
+					type: "cf.artifacts.repo.pushed",
+					targets: [],
+				},
+			},
+		])("should reject $name in event triggers", ({ event }, { expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					triggers: {
+						// @ts-expect-error The invalid shapes exercise runtime validation.
+						events: [event],
+					},
+				},
+				"wrangler.json",
+				"wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
+		});
+
 		it("should error on invalid `wasm_modules` paths", ({ expect }) => {
 			const expectedConfig = {
 				wasm_modules: {
