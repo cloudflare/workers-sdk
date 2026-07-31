@@ -27,7 +27,6 @@ import { ClearButton } from "../../components/observability/ClearButton";
 import { FilterBuilder } from "../../components/observability/FilterBuilder";
 import { InvocationLogs } from "../../components/observability/InvocationLogs";
 import { ObservabilityDisabled } from "../../components/observability/ObservabilityDisabled";
-import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
 import { QuerySyntaxHint } from "../../components/observability/QuerySyntaxHint";
 import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
 import { ResourceError } from "../../components/ResourceError";
@@ -453,7 +452,9 @@ function ObservabilityView(): JSX.Element {
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-6">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<ObservabilityViewSwitcher current="traces" />
+					<span className="pl-1 text-sm leading-tight font-semibold text-kumo-default">
+						Traces
+					</span>
 					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
