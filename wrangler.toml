@@ -1,0 +1,33 @@
+name = "teammarysy-bot"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+
+# ---------------------------------------------------------------------------
+# Workers KV
+# Create with: wrangler kv namespace create "TEAMMARYSY_KV"
+# Then paste the returned id/preview_id below.
+# ---------------------------------------------------------------------------
+[[kv_namespaces]]
+binding = "TEAMMARYSY_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
+
+# ---------------------------------------------------------------------------
+# Cron Triggers (Scheduled Tasks)
+#   */30 * * * *  -> every 30 minutes: reminders / nudges
+#   0 */4 * * *   -> every 4 hours: refresh external data
+#   0 3 * * *     -> daily at 03:00: cleanup temp/session data
+#   0 9 * * 1     -> weekly, Monday 09:00: maintenance summary to Owner
+# ---------------------------------------------------------------------------
+[triggers]
+crons = ["*/30 * * * *", "0 */4 * * *", "0 3 * * *", "0 9 * * 1"]
+
+# ---------------------------------------------------------------------------
+# Secrets (do NOT put real values here — set via CLI):
+#   wrangler secret put TELEGRAM_BOT_TOKEN
+#   wrangler secret put WEBHOOK_SECRET
+#   wrangler secret put OWNER_TELEGRAM_ID
+# ---------------------------------------------------------------------------
+
+[vars]
+ENVIRONMENT = "production"
