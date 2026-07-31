@@ -318,6 +318,13 @@ interface SkillsInstallMetadata {
 	 * changes to a different value.
 	 */
 	declinedTreeSha?: string;
+	/**
+	 * When `true`, the user has opted out of future skills-update prompts
+	 * entirely. Set via the follow-up confirmation shown after declining an
+	 * update. The `WRANGLER_NO_SKILLS_UPDATE_PROMPTS` environment variable
+	 * and the `--install-skills` flag still work regardless.
+	 */
+	skipUpdatePrompts?: boolean;
 }
 
 /** Jsonc metadata file created when Cloudflare agent skills are installed */
@@ -913,21 +920,6 @@ async function getDetectedAgents(): Promise<AgentInfo[]> {
 }
 
 /**
- * Returns an actionable hint shown after declining a skills update,
- * tailored to the config format the project is using.
- *
- * @param experimentalNewConfig - Whether the project uses the new `wrangler.config.ts` format or the classic `wrangler.jsonc` format
- * @returns The opt-out hint string
- */
-function skillsUpdateOptOutHint(experimentalNewConfig: boolean): string {
-	return `If you don't want to be prompted again, set ${
-		experimentalNewConfig
-			? '"noSkillsUpdatePrompts": true in your wrangler.config.ts'
-			: '"no_skills_update_prompts": true in your wrangler.jsonc'
-	} or set the WRANGLER_NO_SKILLS_UPDATE_PROMPTS=true environment variable.`;
-}
-
-/**
  * Options for {@link runSkillsUpdateFlow}.
  */
 type SkillsUpdateFlowOptions = {
@@ -935,11 +927,6 @@ type SkillsUpdateFlowOptions = {
 	 * The wrangler command that triggered the update flow, for telemetry.
 	 */
 	command?: string;
-	/**
-	 * Whether the project uses the new `wrangler.config.ts` format. Controls
-	 * which config-file syntax the opt-out hint displays to the user.
-	 */
-	experimentalNewConfig?: boolean;
 };
 
 /**
@@ -982,6 +969,10 @@ export async function runSkillsUpdateFlow(
 		return;
 	}
 	if (metadata.installFailed === true) {
+		return;
+	}
+	if (metadata.skipUpdatePrompts === true) {
+		logger.debug("Skills update prompts are disabled; skipping update check.");
 		return;
 	}
 
@@ -1088,18 +1079,32 @@ export async function runSkillsUpdateFlow(
 
 	if (!accepted) {
 		logger.log("\nUnderstood, skills will not be updated at this time.");
-		logger.log(skillsUpdateOptOutHint(options.experimentalNewConfig ?? false));
+
+		const stopAsking = await confirm(
+			"Would you like Wrangler to stop asking about skills updates?",
+			{
+				defaultValue: false,
+				fallbackValue: false,
+			}
+		);
 
 		writeSkillsInstallMetadataFile({
 			...metadata,
 			date: new Date().toISOString(),
 			declinedTreeSha: remoteTreeSha,
+			...(stopAsking ? { skipUpdatePrompts: true } : {}),
 		});
+
+		if (stopAsking) {
+			logger.log(
+				"\nSkills update prompts have been disabled. You can re-enable them by running `wrangler --install-skills`."
+			);
+		}
 
 		sendMetricsEvent(
 			"skills_update_skipped",
 			{
-				reason: "User declined",
+				reason: stopAsking ? "User opted out permanently" : "User declined",
 				...(command ? { command } : {}),
 			},
 			{}

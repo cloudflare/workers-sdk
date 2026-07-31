@@ -158,24 +158,6 @@ describe("register-yargs-command skills integration", () => {
 		);
 	});
 
-	test("does not call runSkillsUpdateFlow when no_skills_update_prompts is set in config", async ({
-		expect,
-	}) => {
-		vi.mocked(runSkillsInstallFlow).mockResolvedValueOnce(false);
-
-		await seed({
-			"wrangler.jsonc": JSON.stringify({
-				name: "test-worker",
-				no_skills_update_prompts: true,
-			}),
-		});
-
-		await runWrangler("setup");
-
-		expect(runSkillsInstallFlow).toHaveBeenCalled();
-		expect(runSkillsUpdateFlow).not.toHaveBeenCalled();
-	});
-
 	test("does not call runSkillsUpdateFlow when WRANGLER_NO_SKILLS_UPDATE_PROMPTS env var is set", async ({
 		expect,
 	}) => {

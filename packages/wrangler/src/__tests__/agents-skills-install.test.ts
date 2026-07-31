@@ -2022,7 +2022,7 @@ describe("runSkillsUpdateFlow", () => {
 		expect(finalMetadata.declinedTreeSha).toBeUndefined();
 	});
 
-	test("records declinedTreeSha and shows opt-out hint when user declines", async ({
+	test("records declinedTreeSha when user declines and does not opt out of future prompts", async ({
 		expect,
 	}) => {
 		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
@@ -2042,10 +2042,16 @@ describe("runSkillsUpdateFlow", () => {
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
-		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
-			result: false,
-		});
+		mockConfirm(
+			{
+				text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+				result: false,
+			},
+			{
+				text: "Would you like Wrangler to stop asking about skills updates?",
+				result: false,
+			}
+		);
 		const runSkillsUpdateFlow = await freshUpdateImport();
 
 		await runSkillsUpdateFlow({ command: "deploy" });
@@ -2054,13 +2060,11 @@ describe("runSkillsUpdateFlow", () => {
 		expect(std.out).toContain(
 			"Understood, skills will not be updated at this time."
 		);
-		expect(std.out).toContain("no_skills_update_prompts");
-		expect(std.out).toContain("wrangler.jsonc");
-		expect(std.out).not.toContain("wrangler.config.ts");
 
 		const metadata = readMetadataFile();
 		expect(metadata.declinedTreeSha).toBe("new-sha");
 		expect(metadata.date).not.toBe("2025-01-01T00:00:00Z");
+		expect(metadata.skipUpdatePrompts).toBeUndefined();
 
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"skills_update_skipped",
@@ -2072,7 +2076,7 @@ describe("runSkillsUpdateFlow", () => {
 		);
 	});
 
-	test("shows new-config opt-out hint when experimentalNewConfig is true and user declines", async ({
+	test("persists skipUpdatePrompts when user declines and opts out of future prompts", async ({
 		expect,
 	}) => {
 		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
@@ -2092,21 +2096,53 @@ describe("runSkillsUpdateFlow", () => {
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
 		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
-		mockConfirm({
-			text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
-			result: false,
+		mockConfirm(
+			{
+				text: "It looks like your Cloudflare skills are out of date. Would you like Wrangler to update them for you?",
+				result: false,
+			},
+			{
+				text: "Would you like Wrangler to stop asking about skills updates?",
+				result: true,
+			}
+		);
+		const runSkillsUpdateFlow = await freshUpdateImport();
+
+		await runSkillsUpdateFlow({ command: "deploy" });
+
+		expect(mockRosieInstall).not.toHaveBeenCalled();
+		expect(std.out).toContain(
+			"Skills update prompts have been disabled. You can re-enable them by running `wrangler --install-skills`."
+		);
+
+		const metadata = readMetadataFile();
+		expect(metadata.declinedTreeSha).toBe("new-sha");
+		expect(metadata.skipUpdatePrompts).toBe(true);
+
+		expect(sendMetricsEvent).toHaveBeenCalledWith(
+			"skills_update_skipped",
+			expect.objectContaining({
+				reason: "User opted out permanently",
+				command: "deploy",
+			}),
+			{}
+		);
+	});
+
+	test("skips update check when skipUpdatePrompts is set in metadata", async ({
+		expect,
+	}) => {
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			skipUpdatePrompts: true,
 		});
 		const runSkillsUpdateFlow = await freshUpdateImport();
 
-		await runSkillsUpdateFlow({
-			command: "deploy",
-			experimentalNewConfig: true,
-		});
+		await runSkillsUpdateFlow({});
 
 		expect(mockRosieInstall).not.toHaveBeenCalled();
-		expect(std.out).toContain("noSkillsUpdatePrompts");
-		expect(std.out).toContain("wrangler.config.ts");
-		expect(std.out).not.toContain("wrangler.jsonc");
 	});
 
 	test("prompts again after upstream changes past a previously declined SHA", async ({

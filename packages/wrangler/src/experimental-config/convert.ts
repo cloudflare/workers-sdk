@@ -98,9 +98,6 @@ export function convertToolingConfig(
 	if (parsed.sendMetrics !== undefined) {
 		result.send_metrics = parsed.sendMetrics;
 	}
-	if (parsed.noSkillsUpdatePrompts !== undefined) {
-		result.no_skills_update_prompts = parsed.noSkillsUpdatePrompts;
-	}
 	if (parsed.assetsDirectory !== undefined) {
 		result.assets = { directory: parsed.assetsDirectory };
 	}

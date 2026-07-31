@@ -318,14 +318,6 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
-	validateOptionalProperty(
-		diagnostics,
-		"",
-		"no_skills_update_prompts",
-		rawConfig.no_skills_update_prompts,
-		"boolean"
-	);
-
 	if (
 		validateOptionalProperty(
 			diagnostics,
@@ -534,7 +526,6 @@ export function normalizeAndValidateConfig(
 			rawConfig.pages_build_output_dir
 		),
 		send_metrics: rawConfig.send_metrics,
-		no_skills_update_prompts: rawConfig.no_skills_update_prompts,
 		dependencies_instrumentation: rawConfig.dependencies_instrumentation,
 		keep_vars: rawConfig.keep_vars,
 		addresses: rawConfig.addresses,
