@@ -140,6 +140,7 @@ function ObservabilityView(): JSX.Element {
 	// trace's waterfall once its row lands. span picks the right invocation row.
 	const { trace: deepLinkTrace, span: deepLinkSpan } = Route.useSearch();
 	const deepLinkAppliedRef = useRef<string | null>(null);
+	const deepLinkSeededRef = useRef<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Capture is off (no collector bound). We show an "off" panel instead of the
@@ -345,8 +346,21 @@ function ObservabilityView(): JSX.Element {
 		}
 	}, [traces, expanded, loadSpans]);
 
+	// A deep-linked trace can be older than the default trace-list window, so
+	// seed the search with `trace:<id>` to fetch that specific row. If it still
+	// doesn't come back, the trace is gone and the empty state explains that.
+	useEffect(() => {
+		if (!deepLinkTrace || deepLinkSeededRef.current === deepLinkTrace) {
+			return;
+		}
+		deepLinkSeededRef.current = deepLinkTrace;
+		const query = `trace:${deepLinkTrace}`;
+		setSearch(query);
+		setAppliedSearch(query);
+	}, [deepLinkTrace]);
+
 	// Apply the ?trace=&span= deep link once: expand and scroll to the right
-	// invocation row when it lands in the list.
+	// invocation row when the seeded query above brings it into the list.
 	useEffect(() => {
 		if (!deepLinkTrace || deepLinkAppliedRef.current === deepLinkTrace) {
 			return;
@@ -354,7 +368,7 @@ function ObservabilityView(): JSX.Element {
 		const matches = traces.filter((t) => t.trace_id === deepLinkTrace);
 		const first = matches[0];
 		if (!first) {
-			// Row not in the list yet — a refresh will bring it in.
+			// Seeded query hasn't returned the row yet (or the trace is gone).
 			return;
 		}
 		deepLinkAppliedRef.current = deepLinkTrace;
