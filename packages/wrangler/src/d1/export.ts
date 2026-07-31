@@ -165,10 +165,23 @@ async function exportLocal(
 	);
 
 	const mf = new Miniflare({
-		modules: true,
-		script: "export default {}",
 		resourcePersistencePath,
-		d1Databases: { DATABASE: id },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "wrangler-d1",
+					compatibilityDate: "2024-01-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modules: {
+							"index.mjs": { type: "esm", contents: "export default {}" },
+						},
+					},
+					env: { DATABASE: { type: "d1", id } },
+				},
+			},
+		],
 	});
 	const db = await mf.getD1Database("DATABASE");
 	logger.log(`🌀 Exporting SQL to ${output}...`);
