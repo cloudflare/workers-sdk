@@ -6,7 +6,6 @@ import {
 	afterAll,
 	assert,
 	beforeAll,
-	beforeEach,
 	describe,
 	expect,
 	test,
@@ -30,8 +29,6 @@ const execOptions = {
 const remoteWorkerName = `preserve-e2e-get-platform-proxy-remote`;
 const remoteStagingWorkerName = `preserve-e2e-get-platform-proxy-remote-staging`;
 const remoteKvName = `tmp-e2e-kv${Date.now()}-test-remote-bindings-${randomUUID().split("-")[0]}`;
-
-const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 if (auth) {
 	describe("getPlatformProxy - remote bindings", { timeout: 50_000 }, () => {
@@ -109,10 +106,6 @@ if (auth) {
 				});
 			} catch {}
 		}, 35_000);
-
-		beforeEach(() => {
-			errorSpy.mockReset();
-		});
 
 		describe("normal usage", () => {
 			beforeAll(async () => {
