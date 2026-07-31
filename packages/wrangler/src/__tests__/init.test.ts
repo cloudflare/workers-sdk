@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
+import { x } from "tinyexec";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
@@ -76,19 +76,27 @@ describe("init", () => {
 				}
 			`);
 
-			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
-				stdio: ["inherit", "pipe", "pipe"],
+			expect(x).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				nodeOptions: {
+					stdio: ["inherit", "pipe", "pipe"],
+				},
+				throwOnError: true,
+				nodePath: false,
 			});
 		});
 
 		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
 			await runWrangler("init -y");
 
-			expect(execa).toHaveBeenCalledWith(
+			expect(x).toHaveBeenCalledWith(
 				"mockpm",
 				["create", "cloudflare", "--wrangler-defaults"],
 				{
-					stdio: ["inherit", "pipe", "pipe"],
+					nodeOptions: {
+						stdio: ["inherit", "pipe", "pipe"],
+					},
+					throwOnError: true,
+					nodePath: false,
 				}
 			);
 		});
@@ -104,7 +112,7 @@ describe("init", () => {
 				(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 
 				// Update the mock to handle "yarn" for these tests
-				(execa as Mock).mockImplementation((command: string) => {
+				(x as Mock).mockImplementation((command: string) => {
 					if (command === "yarn" || command === "mockpm") {
 						return Promise.resolve();
 					}
@@ -116,15 +124,19 @@ describe("init", () => {
 				await runWrangler("init");
 
 				// No version specifier needed since C3 has auto-update behavior
-				expect(execa).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
-					stdio: ["inherit", "pipe", "pipe"],
+				expect(x).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
+					nodeOptions: {
+						stdio: ["inherit", "pipe", "pipe"],
+					},
+					throwOnError: true,
+					nodePath: false,
 				});
 			});
 
 			test("uses C3 command without version specifier when using --from-dash with yarn", async () => {
 				await runWrangler("init --from-dash my-worker");
 
-				expect(execa).toHaveBeenCalledWith(
+				expect(x).toHaveBeenCalledWith(
 					"yarn",
 					[
 						"create",
@@ -134,7 +146,11 @@ describe("init", () => {
 						"my-worker",
 					],
 					{
-						stdio: ["inherit", "pipe", "pipe"],
+						nodeOptions: {
+							stdio: ["inherit", "pipe", "pipe"],
+						},
+						throwOnError: true,
+						nodePath: false,
 					}
 				);
 			});
@@ -171,23 +187,27 @@ describe("init", () => {
 					}
 				`);
 
-				expect(execa).toHaveBeenCalledWith(
-					"mockpm",
-					["run", "create-cloudflare"],
-					{
+				expect(x).toHaveBeenCalledWith("mockpm", ["run", "create-cloudflare"], {
+					nodeOptions: {
 						stdio: ["inherit", "pipe", "pipe"],
-					}
-				);
+					},
+					throwOnError: true,
+					nodePath: false,
+				});
 			});
 
 			it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
 				await runWrangler("init -y");
 
-				expect(execa).toHaveBeenCalledWith(
+				expect(x).toHaveBeenCalledWith(
 					"mockpm",
 					["run", "create-cloudflare", "--wrangler-defaults"],
 					{
-						stdio: ["inherit", "pipe", "pipe"],
+						nodeOptions: {
+							stdio: ["inherit", "pipe", "pipe"],
+						},
+						throwOnError: true,
+						nodePath: false,
 					}
 				);
 			});
@@ -202,11 +222,15 @@ describe("init", () => {
 			});
 			await runWrangler("init");
 
-			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
-				env: {
-					CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
+			expect(x).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				nodeOptions: {
+					env: {
+						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
+					},
+					stdio: ["inherit", "pipe", "pipe"],
 				},
-				stdio: ["inherit", "pipe", "pipe"],
+				throwOnError: true,
+				nodePath: false,
 			});
 		});
 	});
@@ -848,8 +872,8 @@ describe("init", () => {
 				}
 			`);
 
-			expect(execa).toHaveBeenCalledTimes(1);
-			expect(execa).toHaveBeenCalledWith(
+			expect(x).toHaveBeenCalledTimes(1);
+			expect(x).toHaveBeenCalledWith(
 				"mockpm",
 				[
 					"create",
@@ -859,7 +883,11 @@ describe("init", () => {
 					"existing-memory-crystal",
 				],
 				{
-					stdio: ["inherit", "pipe", "pipe"],
+					nodeOptions: {
+						stdio: ["inherit", "pipe", "pipe"],
+					},
+					throwOnError: true,
+					nodePath: false,
 				}
 			);
 		});
