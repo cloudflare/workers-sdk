@@ -1,6 +1,6 @@
 import { env } from "node:process";
 import { UserError } from "@cloudflare/workers-utils";
-import { execaCommandSync } from "execa";
+import { x } from "tinyexec";
 import { logger } from "./logger";
 
 export type { PackageManager } from "@cloudflare/workers-utils";
@@ -86,7 +86,12 @@ export function getPackageManagerName(packageManager: PackageManager): string {
 
 async function supports(name: string): Promise<boolean> {
 	try {
-		execaCommandSync(`${name} --version`, { stdio: "ignore" });
+		await x(name, ["--version"], {
+			nodeOptions: { stdio: "ignore" },
+			throwOnError: true,
+			// Disable tinyexec's default PATH (includes node_modules/.bin)
+			nodePath: false,
+		});
 		return true;
 	} catch {
 		return false;
