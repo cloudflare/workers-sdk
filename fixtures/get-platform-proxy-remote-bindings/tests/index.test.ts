@@ -247,22 +247,8 @@ if (auth) {
 						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
 					})
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. Error reloading remote server: A request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.]`
+					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
 				);
-
-				expect(errorSpy).toHaveBeenCalledOnce();
-				expect(
-					`${errorSpy.mock.calls?.[0]?.[0]}`
-						// Windows gets a different marker for ✘, so let's normalize it here
-						// so that this test can be platform independent
-						.replaceAll("✘", "X")
-				).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.[0m
-
-					  Could not route to /client/v4/accounts/NOT%20a%20valid%20account%20id/workers/subdomain/edge-preview, perhaps your object identifier is invalid? [code: 7003]
-
-					"
-				`);
 			});
 
 			test("usage with a wrangler config file with a valid account id", async () => {
