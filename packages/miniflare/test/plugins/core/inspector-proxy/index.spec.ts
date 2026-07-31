@@ -38,7 +38,9 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 
 	const versionDetails = (await res.json()) as Record<string, string>;
 
-	expect(versionDetails["Browser"]).toMatch(/^miniflare\/v\d\.\d{8}\.\d+$/);
+	expect(versionDetails["Browser"]).toMatch(
+		/^miniflare\/v\d\.\d{8}\.\d+(-\w+)?$/
+	);
 	expect(versionDetails["Protocol-Version"]).toMatch(/^\d+\.\d+$/);
 });
 
