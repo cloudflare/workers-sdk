@@ -71,13 +71,16 @@ export type {
 } from "./exports";
 export { exports } from "./exports";
 export type {
+	InferAggregatedEnv,
 	InferEnv,
+	InferEnvForMode,
+	InferModeNames,
 	InferDurableNamespaces,
 	InferMainModule,
 	UnwrapConfig,
 } from "./inference";
 export type { ConfigContext } from "./definition";
-export type { SettingsConfig, WorkerConfig } from "./types";
+export type { SettingsConfig, WorkerConfig, WorkerModeConfig } from "./types";
 export type {
 	TypedWorkerDefinition,
 	WorkerConfigExport,

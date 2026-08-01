@@ -282,6 +282,148 @@ export type InferEnv<TUnwrappedConfig> = TUnwrappedConfig extends {
 	: never;
 
 /**
+ * Flatten an intersection into a single object literal so editor hovers and
+ * error messages show the resolved shape rather than `A & B & C`.
+ *
+ * The mapped type is homomorphic, so optional modifiers survive.
+ */
+type Simplify<T> = { [K in keyof T]: T[K] };
+
+/**
+ * Distribute a union into an intersection. Used below to recover the full set
+ * of binding names across every mode, since `keyof (A | B)` yields only the
+ * keys `A` and `B` share.
+ */
+type UnionToIntersection<TUnion> = (
+	TUnion extends unknown ? (arg: TUnion) => void : never
+) extends (arg: infer TIntersection) => void
+	? TIntersection
+	: never;
+
+/**
+ * The names of the modes a Worker config declares, as a string union. Resolves
+ * to `never` for a config without `modes`.
+ *
+ * @example
+ * ```typescript
+ * const config = defineWorker({
+ *   name: "my-worker",
+ *   modes: { staging: {}, production: {} },
+ * });
+ *
+ * type WorkerConfig = UnwrapConfig<typeof config>;
+ * // Inferred as: "staging" | "production"
+ * type Modes = InferModeNames<WorkerConfig>;
+ * ```
+ */
+export type InferModeNames<TUnwrappedConfig> = TUnwrappedConfig extends {
+	modes: infer TModes;
+}
+	? keyof TModes & string
+	: never;
+
+/** A bindings map with no entries, used when a config or mode declares no `env`. */
+type NoBindings = Record<never, never>;
+
+/** The raw `env` bindings map declared at the top level of a config. */
+type BaseEnvSource<TUnwrappedConfig> = TUnwrappedConfig extends {
+	env: infer TEnv extends Record<string, any>;
+}
+	? TEnv
+	: NoBindings;
+
+/** The raw `env` bindings map declared by a single mode. */
+type ModeEnvSource<
+	TUnwrappedConfig,
+	TMode extends string,
+> = TUnwrappedConfig extends { modes: infer TModes }
+	? TMode extends keyof TModes
+		? TModes[TMode] extends { env: infer TEnv extends Record<string, any> }
+			? TEnv
+			: NoBindings
+		: NoBindings
+	: NoBindings;
+
+/**
+ * Infer the `Env` interface for one specific mode.
+ *
+ * Mirrors what `applyMode` does at runtime: the mode's bindings are layered
+ * over the base config's, and a name declared in both resolves to the mode's.
+ *
+ * @example
+ * ```typescript
+ * const config = defineWorker({
+ *   name: "my-worker",
+ *   env: { SHARED_KV: bindings.kv() },
+ *   modes: { production: { env: { API_KEY: bindings.secret() } } },
+ * });
+ *
+ * type WorkerConfig = UnwrapConfig<typeof config>;
+ * // Inferred as: { SHARED_KV: KVNamespace; API_KEY: string }
+ * type ProdEnv = InferEnvForMode<WorkerConfig, "production">;
+ * ```
+ */
+export type InferEnvForMode<TUnwrappedConfig, TMode extends string> = Simplify<
+	InferEnv<{
+		env: Omit<
+			BaseEnvSource<TUnwrappedConfig>,
+			keyof ModeEnvSource<TUnwrappedConfig, TMode>
+		> &
+			ModeEnvSource<TUnwrappedConfig, TMode>;
+	}>
+>;
+
+/** Every mode's resolved `Env`, keyed by mode name. */
+type ModeEnvMap<TUnwrappedConfig> = {
+	[TMode in InferModeNames<TUnwrappedConfig>]: InferEnvForMode<
+		TUnwrappedConfig,
+		TMode
+	>;
+};
+
+/** Binding names shared by every mode. */
+type CommonKeys<TEnvMap> = keyof TEnvMap[keyof TEnvMap];
+
+/** Binding names present in at least one mode. */
+type AllKeys<TEnvMap> = keyof UnionToIntersection<TEnvMap[keyof TEnvMap]>;
+
+/** The union of a binding's types across the modes that declare it. */
+type ValueAcrossModes<TEnvMap, TKey> = {
+	[TMode in keyof TEnvMap]: TKey extends keyof TEnvMap[TMode]
+		? TEnvMap[TMode][TKey]
+		: never;
+}[keyof TEnvMap];
+
+/**
+ * Infer a single `Env` covering every mode a config declares.
+ *
+ * A binding is required when every mode has it and optional when only some do,
+ * and its type is the union of the types the declaring modes give it. This
+ * matches how `wrangler types` aggregates `env.*` for the Wrangler JSON config,
+ * so code written against `Env` type checks regardless of which mode it is
+ * deployed with.
+ *
+ * Falls back to {@link InferEnv} when the config declares no modes.
+ */
+export type InferAggregatedEnv<TUnwrappedConfig> = [
+	InferModeNames<TUnwrappedConfig>,
+] extends [never]
+	? InferEnv<TUnwrappedConfig>
+	: Simplify<
+			{
+				[TKey in CommonKeys<ModeEnvMap<TUnwrappedConfig>>]: ValueAcrossModes<
+					ModeEnvMap<TUnwrappedConfig>,
+					TKey
+				>;
+			} & {
+				[TKey in Exclude<
+					AllKeys<ModeEnvMap<TUnwrappedConfig>>,
+					CommonKeys<ModeEnvMap<TUnwrappedConfig>>
+				>]?: ValueAcrossModes<ModeEnvMap<TUnwrappedConfig>, TKey>;
+			}
+		>;
+
+/**
  * Infer the Durable Object namespace names from a Worker config's exports.
  * Returns a union of export names that declare a *live* Durable Object —
  * `type: "durable-object"` with `state` either omitted, `"created"`, or

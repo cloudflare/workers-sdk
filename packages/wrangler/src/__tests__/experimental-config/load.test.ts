@@ -168,6 +168,108 @@ describe("loadNewConfig", () => {
 		});
 	});
 
+	describe("modes", () => {
+		const configWithModes = `
+			export default {
+				type: "worker",
+				name: "my-worker",
+				compatibilityDate: "2026-05-18",
+				compatibilityFlags: ["nodejs_compat"],
+				env: { SHARED_KV: { type: "kv", id: "shared" } },
+				modes: {
+					staging: {
+						env: { API_KEY: { type: "secret" } },
+					},
+					production: {
+						name: "my-worker-prod",
+						compatibilityFlags: [],
+						env: { API_KEY: { type: "secret" } },
+					},
+				},
+			};
+		`;
+
+		it("uses the base config when no mode is selected", async ({ expect }) => {
+			await seed({ "cloudflare.config.ts": configWithModes });
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(result.rawConfig.name).toBe("my-worker");
+			expect(result.rawConfig.compatibility_flags).toEqual(["nodejs_compat"]);
+			expect(result.rawConfig.kv_namespaces).toEqual([
+				{ binding: "SHARED_KV", id: "shared" },
+			]);
+		});
+
+		it("layers a mode's bindings over the base config", async ({ expect }) => {
+			await seed({ "cloudflare.config.ts": configWithModes });
+
+			const result = await loadNewConfig({
+				cwd: process.cwd(),
+				args: { env: "staging" },
+			});
+
+			expect(result.rawConfig.name).toBe("my-worker");
+			expect(result.rawConfig.kv_namespaces).toEqual([
+				{ binding: "SHARED_KV", id: "shared" },
+			]);
+			expect(result.parsedWorkerConfig.env).toMatchObject({
+				SHARED_KV: { type: "kv", id: "shared" },
+				API_KEY: { type: "secret" },
+			});
+		});
+
+		it("lets a mode override non-binding fields", async ({ expect }) => {
+			await seed({ "cloudflare.config.ts": configWithModes });
+
+			const result = await loadNewConfig({
+				cwd: process.cwd(),
+				args: { env: "production" },
+			});
+
+			expect(result.rawConfig.name).toBe("my-worker-prod");
+			expect(result.rawConfig.compatibility_flags).toEqual([]);
+		});
+
+		it("selects a mode from CLOUDFLARE_ENV", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ENV", "production");
+			await seed({ "cloudflare.config.ts": configWithModes });
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(result.rawConfig.name).toBe("my-worker-prod");
+		});
+
+		it("never leaks `modes` into the converted Wrangler config", async ({
+			expect,
+		}) => {
+			await seed({ "cloudflare.config.ts": configWithModes });
+
+			const result = await loadNewConfig({
+				cwd: process.cwd(),
+				args: { env: "staging" },
+			});
+
+			expect(result.rawConfig).not.toHaveProperty("modes");
+			expect(result.parsedWorkerConfig).not.toHaveProperty("modes");
+		});
+
+		it("throws a UserError for a mode the config does not declare", async ({
+			expect,
+		}) => {
+			await seed({ "cloudflare.config.ts": configWithModes });
+
+			await expect(
+				loadNewConfig({ cwd: process.cwd(), args: { env: "prod" } })
+			).rejects.toMatchObject({
+				message: expect.stringContaining(
+					`No mode named "prod" is defined in your config. Available modes: "staging", "production".`
+				),
+				telemetryMessage: "new-config unknown mode",
+			});
+		});
+	});
+
 	describe("settings export", () => {
 		it("threads accountId and complianceRegion from the settings export", async ({
 			expect,

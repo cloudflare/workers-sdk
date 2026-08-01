@@ -9,6 +9,7 @@ export {
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
+export { applyMode, UnknownModeError } from "./modes";
 export { loadAndValidateConfig } from "./config-loader";
 export { resolveExportDefinition } from "./definition";
 export type { LoadConfigResult } from "./load";

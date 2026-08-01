@@ -404,7 +404,43 @@ export interface WorkerConfig {
 	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
 	 */
 	exports?: Record<string, Export>;
+
+	/**
+	 * Per-mode overrides, keyed by mode name.
+	 *
+	 * A mode is selected with `--env <name>` or the `CLOUDFLARE_ENV` environment
+	 * variable, and its overrides are layered over the fields above. `env` and
+	 * `exports` merge per key so a mode only states what differs; every other
+	 * field replaces the base value outright.
+	 *
+	 * Because modes are declared statically, `wrangler types` can generate an
+	 * `Env` for each one. Branching on `ctx.mode` inside a config function
+	 * cannot be analysed this way, so prefer `modes` when the shape of your
+	 * bindings changes between environments.
+	 *
+	 * @example
+	 * ```ts
+	 * export default defineWorker({
+	 *   name: "my-worker",
+	 *   env: { SHARED_KV: bindings.kv() },
+	 *   modes: {
+	 *     staging: { env: { API: bindings.secret() } },
+	 *     production: { name: "my-worker-prod", env: { API: bindings.secret() } },
+	 *   },
+	 * });
+	 * ```
+	 */
+	modes?: Record<string, WorkerModeConfig>;
 }
+
+/**
+ * A single entry under {@link WorkerConfig.modes}.
+ *
+ * Every Worker field is available and optional. `type` is excluded because the
+ * parent config already fixes it, and `modes` is excluded because modes do not
+ * nest.
+ */
+export type WorkerModeConfig = Partial<Omit<WorkerConfig, "type" | "modes">>;
 
 /**
  * Settings shared by the other exports.

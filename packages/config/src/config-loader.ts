@@ -1,5 +1,6 @@
 import { resolveExportDefinition } from "./definition";
 import { loadConfig } from "./load";
+import { applyMode } from "./modes";
 import { ConfigExportsSchema } from "./schema";
 import type { ConfigContext } from "./definition";
 import type { ParsedConfigExports } from "./schema";
@@ -17,6 +18,10 @@ export interface LoadAndValidateConfigResult {
 
 /**
  * Load a `cloudflare.config.ts`, resolve all exports, and validate against {@link ConfigExportsSchema}.
+ *
+ * Worker exports have their `modes` collapsed against `ctx.mode` after
+ * validation, so every caller downstream sees a single flat config and never
+ * has to reason about mode selection itself.
  */
 export async function loadAndValidateConfig(
 	configPath: string,
@@ -32,5 +37,18 @@ export async function loadAndValidateConfig(
 
 	const result = ConfigExportsSchema.safeParse(resolved);
 
-	return { result, dependencies };
+	if (!result.success) {
+		return { result, dependencies };
+	}
+
+	// Validation runs against the authored config so that a bad binding inside a
+	// mode reports against `modes.<name>.env.<binding>` rather than a merged path
+	// the user never wrote.
+	const withModesApplied: ParsedConfigExports = {};
+	for (const [name, value] of Object.entries(result.data)) {
+		withModesApplied[name] =
+			value.type === "worker" ? applyMode(value, ctx.mode) : value;
+	}
+
+	return { result: { ...result, data: withModesApplied }, dependencies };
 }

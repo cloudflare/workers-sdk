@@ -452,16 +452,32 @@ const BaseWorkerSchema = z.strictObject({
 	exports: z.record(z.string(), ExportSchema).optional(),
 });
 
+const EntrypointSchema = z
+	.union([z.string(), z.strictObject({ default: z.string() })])
+	.transform((value) => (typeof value === "string" ? value : value.default));
+
+/**
+ * A single entry under `modes`, a partial Worker config layered over the base
+ * config when that mode is selected.
+ *
+ * Every field is optional, and `type` is omitted because the discriminant is
+ * fixed by the parent config. `modes` itself is absent too: modes do not nest.
+ */
+const WorkerModeSchema = BaseWorkerSchema.omit({ type: true })
+	.extend({ entrypoint: EntrypointSchema.optional() })
+	.partial();
+
 /**
  * Input Worker schema — the shape that user-authored `cloudflare.config.ts`
- * files are validated against. Adds an optional `entrypoint` field to the
- * base schema.
+ * files are validated against. Adds optional `entrypoint` and `modes` fields to
+ * the base schema.
+ *
+ * `modes` is resolved away by `applyMode` during config loading, so it never
+ * reaches the Build Output Specification in {@link OutputWorkerSchema}.
  */
 export const InputWorkerSchema = BaseWorkerSchema.extend({
-	entrypoint: z
-		.union([z.string(), z.strictObject({ default: z.string() })])
-		.transform((value) => (typeof value === "string" ? value : value.default))
-		.optional(),
+	entrypoint: EntrypointSchema.optional(),
+	modes: z.record(z.string(), WorkerModeSchema).optional(),
 });
 
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
@@ -561,12 +577,18 @@ export type ParsedOutputWorkerConfig = z.output<typeof OutputWorkerSchema>;
  *   only accepts the post-`load.ts` shape (`string` or `{ default: string }`).
  *
  * - `env`: see the separate unidirectional drift check below.
+ *
+ * - `modes`: each entry is a partial Worker config, so it inherits both of the
+ *   exclusions above. It gets its own unidirectional check below.
  */
 type _ComparableInput = Omit<
 	z.input<typeof InputWorkerSchema>,
-	"entrypoint" | "env"
+	"entrypoint" | "env" | "modes"
 >;
-type _ComparableWorkerConfig = Omit<WorkerConfig, "entrypoint" | "env">;
+type _ComparableWorkerConfig = Omit<
+	WorkerConfig,
+	"entrypoint" | "env" | "modes"
+>;
 type _AssertSchemaMatchesWorkerConfig = [
 	_ComparableInput extends _ComparableWorkerConfig ? true : false,
 	_ComparableWorkerConfig extends _ComparableInput ? true : false,
@@ -597,6 +619,25 @@ type _AssertWorkerConfigEnvExtendsSchema = WorkerConfig["env"] extends z.input<
 	: false;
 const _assertWorkerConfigEnvExtendsSchema: _AssertWorkerConfigEnvExtendsSchema = true;
 void _assertWorkerConfigEnvExtendsSchema;
+
+/**
+ * Unidirectional drift check for `modes`, for the same reason as `env` above:
+ * a mode override is a partial Worker config, so it carries the same phantom
+ * binding fields the schema cannot validate at runtime. `entrypoint` is
+ * excluded for the same reason it is excluded from the top-level check.
+ */
+type _ComparableModeInput = Omit<
+	NonNullable<z.input<typeof InputWorkerSchema>["modes"]>[string],
+	"entrypoint"
+>;
+type _ComparableModeConfig = Omit<
+	NonNullable<WorkerConfig["modes"]>[string],
+	"entrypoint"
+>;
+type _AssertWorkerConfigModesExtendsSchema =
+	_ComparableModeConfig extends _ComparableModeInput ? true : false;
+const _assertWorkerConfigModesExtendsSchema: _AssertWorkerConfigModesExtendsSchema = true;
+void _assertWorkerConfigModesExtendsSchema;
 
 /**
  * Bidirectional drift check between {@link SettingsSchema} and the public

@@ -33,9 +33,19 @@ describe("generateTypes", () => {
 	}) => {
 		const out = generateTypes({ configPath: "./cloudflare.config.ts" });
 		expect(out).toContain(
-			`type __Env = import("@cloudflare/config").InferEnv<__WorkerConfig>;`
+			`type __Env = import("@cloudflare/config").InferAggregatedEnv<__WorkerConfig>;`
 		);
 		expect(out).toContain(`interface Env extends __Env {}`);
+	});
+
+	it("exposes the declared modes and their per-mode envs", ({ expect }) => {
+		const out = generateTypes({ configPath: "./cloudflare.config.ts" });
+		expect(out).toContain(
+			`type Mode = import("@cloudflare/config").InferModeNames<__WorkerConfig>;`
+		);
+		expect(out).toContain(
+			`type EnvFor<TMode extends Mode> = import("@cloudflare/config").InferEnvForMode<__WorkerConfig, TMode>;`
+		);
 	});
 
 	it("emits a global script (no top-level import/export, no declare global)", ({

@@ -38,16 +38,36 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 		};
 	}
 
-	async function loadAndValidateConfig(configPath: string, ctx: unknown) {
+	// Mirrors the real `loadAndValidateConfig`, including collapsing `modes`
+	// against the selected mode. Only the loading step is faked.
+	async function loadAndValidateConfig(
+		configPath: string,
+		ctx: { mode?: string }
+	) {
 		const { exports } = await loadConfig(configPath);
 		const resolved: Record<string, unknown> = {};
 		for (const [name, value] of Object.entries(exports)) {
 			resolved[name] = await actual.resolveExportDefinition(value, ctx);
 		}
-		return {
-			result: actual.ConfigExportsSchema.safeParse(resolved),
-			dependencies: new Set<string>([path.resolve(configPath)]),
-		};
+
+		const dependencies = new Set<string>([path.resolve(configPath)]);
+		const result = actual.ConfigExportsSchema.safeParse(resolved);
+
+		if (!result.success) {
+			return { result, dependencies };
+		}
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock plumbing
+		const withModesApplied: Record<string, any> = {};
+		for (const [name, value] of Object.entries(
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock plumbing
+			result.data as Record<string, any>
+		)) {
+			withModesApplied[name] =
+				value.type === "worker" ? actual.applyMode(value, ctx.mode) : value;
+		}
+
+		return { result: { ...result, data: withModesApplied }, dependencies };
 	}
 
 	return {

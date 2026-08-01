@@ -4,6 +4,7 @@ import {
 	convertToWranglerConfig,
 	loadAndValidateConfig,
 	loadConfig,
+	UnknownModeError,
 } from "@cloudflare/config";
 import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
@@ -75,9 +76,19 @@ export async function loadNewConfig(options: {
 	const mode = options.args.env ?? getCloudflareEnv();
 
 	// ── Worker + settings config ────────────────────────────────────────
-	const workerConfigResult = await loadAndValidateConfig(cloudflareConfigPath, {
-		mode,
-	});
+	let workerConfigResult;
+	try {
+		workerConfigResult = await loadAndValidateConfig(cloudflareConfigPath, {
+			mode,
+		});
+	} catch (e) {
+		if (e instanceof UnknownModeError) {
+			throw new UserError(e.message, {
+				telemetryMessage: "new-config unknown mode",
+			});
+		}
+		throw e;
+	}
 
 	if (!workerConfigResult.result.success) {
 		throw new UserError(
