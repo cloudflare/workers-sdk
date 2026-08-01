@@ -4,8 +4,7 @@
 
 fix: normalize Content-Type case and whitespace when determining compression eligibility
 
-`isCompressedByCloudflareFL()` compared the Content-Type header against a lowercase
-set without trimming whitespace or lowercasing the input first. Headers like
-`Text/HTML` or `text/html ; charset=utf-8` (extra space before the `;`) were
-treated as non-compressible even though Cloudflare's real edge compresses them,
-causing local dev responses to diverge from production behavior.
+Responses with a `Content-Type` such as `Text/HTML` or `text/html ; charset=utf-8` are now
+compressed in local development, matching how Cloudflare's network handles them. Previously
+differences in letter casing or extra spacing meant these responses were left uncompressed
+locally, so local behaviour diverged from production.
