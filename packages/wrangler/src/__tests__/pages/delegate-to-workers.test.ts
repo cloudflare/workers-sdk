@@ -182,7 +182,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
-			unsupportedArgs: ["--branch"],
+			unsupportedArgs: ["--commit-hash"],
 		});
 
 		expect(result).toEqual({ delegate: false });
