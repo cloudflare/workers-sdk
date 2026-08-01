@@ -40,26 +40,26 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 }
 
 function clearPreviewMetadataEnvs() {
-	vi.stubEnv("GITHUB_REPOSITORY", undefined);
-	vi.stubEnv("GITHUB_SERVER_URL", undefined);
-	vi.stubEnv("GITHUB_EVENT_PATH", undefined);
-	vi.stubEnv("GITHUB_REF", undefined);
-	vi.stubEnv("CI_PROJECT_URL", undefined);
-	vi.stubEnv("CI_REPOSITORY_URL", undefined);
-	vi.stubEnv("CI_MERGE_REQUEST_IID", undefined);
-	vi.stubEnv("CI_MERGE_REQUEST_PROJECT_URL", undefined);
-	vi.stubEnv("CIRCLE_REPOSITORY_URL", undefined);
-	vi.stubEnv("CIRCLE_PULL_REQUEST", undefined);
-	vi.stubEnv("BUILDKITE_REPO", undefined);
-	vi.stubEnv("BITBUCKET_GIT_HTTP_ORIGIN", undefined);
-	vi.stubEnv("BITBUCKET_GIT_SSH_ORIGIN", undefined);
-	vi.stubEnv("REPOSITORY_URL", undefined);
-	vi.stubEnv("PULL_REQUEST_URL", undefined);
-	vi.stubEnv("PULL_REQUEST_NUMBER", undefined);
-	vi.stubEnv("PR_URL", undefined);
-	vi.stubEnv("PR_NUMBER", undefined);
-	vi.stubEnv("CHANGE_URL", undefined);
-	vi.stubEnv("CHANGE_ID", undefined);
+	vi.stubEnv("GITHUB_REPOSITORY", "");
+	vi.stubEnv("GITHUB_SERVER_URL", "");
+	vi.stubEnv("GITHUB_EVENT_PATH", "");
+	vi.stubEnv("GITHUB_REF", "");
+	vi.stubEnv("CI_PROJECT_URL", "");
+	vi.stubEnv("CI_REPOSITORY_URL", "");
+	vi.stubEnv("CI_MERGE_REQUEST_IID", "");
+	vi.stubEnv("CI_MERGE_REQUEST_PROJECT_URL", "");
+	vi.stubEnv("CIRCLE_REPOSITORY_URL", "");
+	vi.stubEnv("CIRCLE_PULL_REQUEST", "");
+	vi.stubEnv("BUILDKITE_REPO", "");
+	vi.stubEnv("BITBUCKET_GIT_HTTP_ORIGIN", "");
+	vi.stubEnv("BITBUCKET_GIT_SSH_ORIGIN", "");
+	vi.stubEnv("REPOSITORY_URL", "");
+	vi.stubEnv("PULL_REQUEST_URL", "");
+	vi.stubEnv("PULL_REQUEST_NUMBER", "");
+	vi.stubEnv("PR_URL", "");
+	vi.stubEnv("PR_NUMBER", "");
+	vi.stubEnv("CHANGE_URL", "");
+	vi.stubEnv("CHANGE_ID", "");
 }
 
 describe("wrangler preview", () => {
