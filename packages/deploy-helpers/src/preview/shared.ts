@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import {
 	configFileName,
 	getWorkersCIBranchName,
@@ -53,6 +54,165 @@ export function getHeadCommitMessage(): string | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+function normalizeRepositoryUrl(repositoryUrl: string): string | undefined {
+	const trimmed = repositoryUrl.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+
+	const scpLikeSshMatch = trimmed.match(/^git@([^:]+):(.+)$/);
+	if (scpLikeSshMatch) {
+		const [, host, pathname] = scpLikeSshMatch;
+		return `https://${host}/${pathname.replace(/\.git$/, "")}`;
+	}
+
+	try {
+		const url = new URL(trimmed);
+		if (url.protocol === "ssh:" && url.username === "git") {
+			return `https://${url.host}${url.pathname.replace(/\.git$/, "")}`;
+		}
+
+		if (url.protocol !== "https:" && url.protocol !== "http:") {
+			return undefined;
+		}
+
+		url.username = "";
+		url.password = "";
+		url.search = "";
+		url.hash = "";
+		url.pathname = url.pathname.replace(/\.git$/, "");
+		return url.toString().replace(/\/$/, "");
+	} catch {
+		return undefined;
+	}
+}
+
+export function getRepositoryUrl(): string | undefined {
+	const repositoryUrl =
+		process.env.CI_PROJECT_URL ??
+		process.env.CI_REPOSITORY_URL ??
+		process.env.CIRCLE_REPOSITORY_URL ??
+		process.env.BUILDKITE_REPO ??
+		process.env.BITBUCKET_GIT_HTTP_ORIGIN ??
+		process.env.BITBUCKET_GIT_SSH_ORIGIN ??
+		process.env.REPOSITORY_URL;
+	if (repositoryUrl) {
+		return normalizeRepositoryUrl(repositoryUrl);
+	}
+
+	if (process.env.GITHUB_REPOSITORY) {
+		const githubServerUrl = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+		return normalizeRepositoryUrl(
+			`${githubServerUrl.replace(/\/$/, "")}/${process.env.GITHUB_REPOSITORY}`
+		);
+	}
+
+	try {
+		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
+		return normalizeRepositoryUrl(
+			execSync(`git config --get remote.origin.url`).toString()
+		);
+	} catch {
+		return undefined;
+	}
+}
+
+export type PullRequestMetadata = {
+	number?: string;
+	url?: string;
+};
+
+function normalizePullRequestNumber(number: string | number | undefined) {
+	if (number === undefined) {
+		return undefined;
+	}
+
+	const normalizedNumber = String(number).trim();
+	return normalizedNumber ? normalizedNumber : undefined;
+}
+
+function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
+	if (process.env.GITHUB_EVENT_PATH) {
+		try {
+			const event = JSON.parse(
+				readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
+			) as {
+				pull_request?: { html_url?: string; number?: number };
+			};
+			const number = normalizePullRequestNumber(event.pull_request?.number);
+			const url = event.pull_request?.html_url
+				? normalizeRepositoryUrl(event.pull_request.html_url)
+				: undefined;
+			if (number || url) {
+				return { number, url };
+			}
+		} catch {
+			// Fall back to environment-derived metadata below.
+		}
+	}
+
+	const refPullRequestNumber = process.env.GITHUB_REF?.match(
+		/^refs\/pull\/(\d+)\//
+	)?.[1];
+	const number = normalizePullRequestNumber(refPullRequestNumber);
+	if (!number || !process.env.GITHUB_REPOSITORY) {
+		return undefined;
+	}
+
+	const githubServerUrl = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+	return {
+		number,
+		url: normalizeRepositoryUrl(
+			`${githubServerUrl.replace(/\/$/, "")}/${process.env.GITHUB_REPOSITORY}/pull/${number}`
+		),
+	};
+}
+
+function getGitLabPullRequestMetadata(): PullRequestMetadata | undefined {
+	const number = normalizePullRequestNumber(process.env.CI_MERGE_REQUEST_IID);
+	const projectUrl =
+		process.env.CI_MERGE_REQUEST_PROJECT_URL ?? process.env.CI_PROJECT_URL;
+	if (!number || !projectUrl) {
+		return undefined;
+	}
+
+	const normalizedProjectUrl = projectUrl.replace(/\.git$/, "").replace(/\/$/, "");
+	return {
+		number,
+		url: normalizeRepositoryUrl(
+			`${normalizedProjectUrl}/-/merge_requests/${number}`
+		),
+	};
+}
+
+function getDirectPullRequestMetadata(): PullRequestMetadata | undefined {
+	const directUrl =
+		process.env.PULL_REQUEST_URL ??
+		process.env.PR_URL ??
+		process.env.CHANGE_URL ??
+		process.env.CIRCLE_PULL_REQUEST;
+	const number = normalizePullRequestNumber(
+		process.env.PULL_REQUEST_NUMBER ??
+			process.env.PR_NUMBER ??
+			process.env.CHANGE_ID
+	);
+	const url = directUrl ? normalizeRepositoryUrl(directUrl) : undefined;
+
+	if (number || url) {
+		return { number, url };
+	}
+
+	return undefined;
+}
+
+export function getPullRequestMetadata(): PullRequestMetadata | undefined {
+	return (
+		getDirectPullRequestMetadata() ??
+		getGitHubPullRequestMetadata() ??
+		getGitLabPullRequestMetadata()
+	);
 }
 
 export function resolveWorkerName(

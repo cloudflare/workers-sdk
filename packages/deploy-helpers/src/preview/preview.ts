@@ -27,9 +27,12 @@ import {
 	getBranchName,
 	getHeadCommitMessage,
 	getHeadCommitRef,
+	getPullRequestMetadata,
+	getRepositoryUrl,
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
+import type { PullRequestMetadata } from "./shared";
 import type { WorkerBuildResult } from "../shared/types";
 import type {
 	Binding,
@@ -80,6 +83,10 @@ type MergedVersionLevel = {
 	cache?: {
 		value: Config["cache"];
 		fromConfig: boolean;
+	};
+	pull_request?: {
+		value: string;
+		fromConfig: false;
 	};
 	assets?: {
 		value: {
@@ -240,6 +247,8 @@ async function assemblePreviewDeploymentSettings(
 	options: {
 		message?: string;
 		tag?: string;
+		repositoryUrl?: string;
+		pullRequest?: PullRequestMetadata;
 		assetsOptions?: PreviewAssetsOptions;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
@@ -276,9 +285,16 @@ async function assemblePreviewDeploymentSettings(
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
 	}
-	if (options.message || options.tag) {
+	const repositoryUrl = options.repositoryUrl;
+	const pullRequest = options.pullRequest;
+	if (options.message || options.tag || repositoryUrl || pullRequest) {
 		request.annotations = {
 			...(options.message && { "workers/message": options.message }),
+			...(pullRequest?.number && {
+				"workers/pull_request_number": pullRequest.number,
+			}),
+			...(pullRequest?.url && { "workers/pull_request_url": pullRequest.url }),
+			...(repositoryUrl && { "workers/repository_url": repositoryUrl }),
 			...(options.tag && { "workers/tag": options.tag }),
 		};
 	}
@@ -374,7 +390,9 @@ function buildMergedScriptLevel(
 
 function buildMergedVersionLevel(
 	config: Config,
-	deployment: DeploymentResource
+	deployment: DeploymentResource,
+	repositoryUrl?: string,
+	pullRequest?: PullRequestMetadata
 ): MergedVersionLevel {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const configBindingNames = new Set(
@@ -429,6 +447,17 @@ function buildMergedVersionLevel(
 			fromConfig: previews?.cache !== undefined || config.cache !== undefined,
 		};
 	}
+	const deploymentPullRequestUrl =
+		deployment.annotations?.["workers/pull_request_url"] ?? pullRequest?.url;
+	const deploymentPullRequestNumber =
+		deployment.annotations?.["workers/pull_request_number"] ??
+		pullRequest?.number;
+	if (deploymentPullRequestUrl || deploymentPullRequestNumber) {
+		result.pull_request = {
+			value: deploymentPullRequestUrl ?? `#${deploymentPullRequestNumber}`,
+			fromConfig: false,
+		};
+	}
 	if (config.assets) {
 		result.assets = {
 			value: {
@@ -446,6 +475,49 @@ function buildMergedVersionLevel(
 	}
 
 	return result;
+}
+
+function hasPreviewMetadataAnnotations(
+	request: CreatePreviewDeploymentRequestParams
+): boolean {
+	return !!(
+		request.annotations?.["workers/pull_request_number"] ||
+		request.annotations?.["workers/pull_request_url"] ||
+		request.annotations?.["workers/repository_url"]
+	);
+}
+
+function omitPreviewMetadataAnnotations(
+	request: CreatePreviewDeploymentRequestParams
+): CreatePreviewDeploymentRequestParams {
+	const annotations = {
+		...(request.annotations?.["workers/message"] && {
+			"workers/message": request.annotations["workers/message"],
+		}),
+		...(request.annotations?.["workers/tag"] && {
+			"workers/tag": request.annotations["workers/tag"],
+		}),
+	};
+
+	return {
+		...request,
+		annotations:
+			Object.keys(annotations).length > 0 ? annotations : undefined,
+	};
+}
+
+function isPreviewMetadataAnnotationsUnsupportedError(error: unknown): boolean {
+	if (typeof error !== "object" || error === null) {
+		return false;
+	}
+
+	const message = error instanceof Error ? error.message : String(error);
+
+	return (
+		message.includes("annotations not allowed") &&
+		(message.includes("workers/pull_request") ||
+			message.includes("workers/repository_url"))
+	);
 }
 
 function formatPreviewResource(
@@ -565,6 +637,13 @@ function formatDeploymentResource(
 			versionLevel.cache.fromConfig,
 		]);
 	}
+	if (versionLevel.pull_request !== undefined) {
+		settingsRows.push([
+			"pull_request",
+			versionLevel.pull_request.value,
+			versionLevel.pull_request.fromConfig,
+		]);
+	}
 	if (settingsRows.length > 0) {
 		lines.push("");
 		lines.push(...formatAlignedRows(settingsRows));
@@ -682,6 +761,8 @@ export async function preview(
 		!args.message && shouldUseCIMetadataFallback()
 			? getHeadCommitMessage()
 			: undefined;
+	const repositoryUrl = getRepositoryUrl();
+	const pullRequest = getPullRequestMetadata();
 
 	let existingPreview: PreviewResource | null = null;
 	try {
@@ -732,17 +813,38 @@ export async function preview(
 		{
 			message: args.message ?? fallbackMessage,
 			tag: args.tag ?? fallbackTag,
+			repositoryUrl,
+			pullRequest,
 			assetsOptions,
 		}
 	);
-	const deployment = await createPreviewDeployment(
-		config,
-		accountId,
-		workerName,
-		previewResource.id,
-		deploymentRequest,
-		{ ignoreDefaults }
-	);
+	let deployment: DeploymentResource;
+	try {
+		deployment = await createPreviewDeployment(
+			config,
+			accountId,
+			workerName,
+			previewResource.id,
+			deploymentRequest,
+			{ ignoreDefaults }
+		);
+	} catch (error) {
+		if (
+			hasPreviewMetadataAnnotations(deploymentRequest) &&
+			isPreviewMetadataAnnotationsUnsupportedError(error)
+		) {
+			deployment = await createPreviewDeployment(
+				config,
+				accountId,
+				workerName,
+				previewResource.id,
+				omitPreviewMetadataAnnotations(deploymentRequest),
+				{ ignoreDefaults }
+			);
+		} else {
+			throw error;
+		}
+	}
 
 	if (args.json) {
 		logger.log(
@@ -750,7 +852,12 @@ export async function preview(
 		);
 	} else {
 		const scriptLevel = buildMergedScriptLevel(config, previewResource);
-		const versionLevel = buildMergedVersionLevel(config, deployment);
+		const versionLevel = buildMergedVersionLevel(
+			config,
+			deployment,
+			repositoryUrl,
+			pullRequest
+		);
 		const configName = configFileName(config.configPath);
 		logger.log(
 			formatPreviewResource(
