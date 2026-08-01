@@ -1,9 +1,9 @@
 import { test } from "vitest";
-import { fetchJson, viteTestUrl } from "../../__test-utils__";
+import { getJsonResponse, viteTestUrl } from "../../__test-utils__";
 import { CONFIGURED_PORT } from "./serve";
 
 test("stream upload returns a valid preview URL", async ({ expect }) => {
-	const result = (await fetchJson("/upload")) as {
+	const result = (await getJsonResponse("/upload")) as {
 		preview: string;
 		id: string;
 	};
@@ -19,7 +19,7 @@ test("stream preview URL port matches actual server port after port bump", async
 	const serverUrl = new URL(viteTestUrl);
 	expect(Number(serverUrl.port)).not.toBe(CONFIGURED_PORT);
 
-	const result = (await fetchJson("/upload")) as {
+	const result = (await getJsonResponse("/upload")) as {
 		preview: string;
 		id: string;
 	};

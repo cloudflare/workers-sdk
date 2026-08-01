@@ -85,3 +85,18 @@ contract so the parent can drive either impl interchangeably.
 - Unit tests: `.spec.ts` in `__tests__/`
 - E2E tests: `.test.ts` in `e2e/`, own vitest config
 - Playground tests: Playwright-based, tested across Vite 6/7/8 in CI
+- Playground request helpers (`playground/__test-utils__/responses.ts`):
+  - `getTextResponse()` / `getJsonResponse()` use plain `fetch()` with
+    browser navigation headers (`Sec-Fetch-Mode: navigate` et al), which the
+    asset and router workers branch on. Default to these.
+  - `getResponse()` drives a real `page.goto()` and returns a Playwright
+    `Response`. Only use it when the assertion needs the browser. Anything
+    routed through Playwright can outlive a timed-out test and surface as an
+    unhandled rejection, which fails the whole run rather than one test.
+  - `WAIT_FOR_OPTIONS` (`playground/__test-utils__/index.ts`) must stay
+    comfortably below the test timeout, otherwise `vi.waitFor()` never gets to
+    report the assertion that was actually failing.
+- `playground/vitest.config.e2e.ts` inherits the repo-wide timeouts and
+  `retry: 1` from the root `vitest.shared.ts`. It spreads `configShared.test`
+  rather than using `mergeConfig()`, which concatenates arrays and would
+  silently enable the shared `default` reporter alongside `dot`.
