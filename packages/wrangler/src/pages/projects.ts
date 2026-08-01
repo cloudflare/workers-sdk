@@ -163,7 +163,10 @@ export const pagesProjectCreateCommand = createCommand({
 			projectName,
 			compatibilityDate,
 			compatibilityFlags,
-			unsupportedArgs: productionBranch ? ["--production-branch"] : [],
+			// `--production-branch` is not treated as unsupported: it names the
+			// project's production branch, which is exactly what a Workers deploy
+			// targets. `pages project create` always creates a new project, so there
+			// is never an existing production branch to preview against.
 		});
 		if (delegation.delegate) {
 			await runPagesToWorkersDeploy(delegation);
