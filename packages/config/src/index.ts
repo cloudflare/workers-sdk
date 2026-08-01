@@ -23,6 +23,7 @@ export {
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowExportSchema,
 } from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";

@@ -44,6 +44,7 @@ import {
 	getExportsOfType,
 	getGlobalServices,
 	getPersistPath,
+	getRemoteProxyConnectionString,
 	getTriggersOfType,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
@@ -473,6 +474,21 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 					exportName: getOutboundDoProxyClassName(workerName, exportName),
 				};
 				getEntrypoints(workerName).classNames.add(exportName);
+			}
+		}
+
+		// Cross-worker workflow bindings: when `workerName` refers to a worker
+		// outside this Miniflare instance (registered in the dev registry), record
+		// its entrypoint so the dev-registry proxy exposes it. The workflows plugin
+		// reroutes the engine's USER_WORKFLOW binding through the proxy itself; here
+		// we only register the external entrypoint. Mirrors the DO block above.
+		for (const [, binding] of getEnvBindingsOfType(config, "workflow")) {
+			const { workerName, exportName } = binding;
+			if (
+				getRemoteProxyConnectionString(binding, dev) === undefined &&
+				!allWorkerNames.includes(workerName)
+			) {
+				getEntrypoints(workerName).entrypoints.add(exportName);
 			}
 		}
 	}

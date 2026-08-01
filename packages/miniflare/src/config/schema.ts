@@ -12,6 +12,7 @@ import {
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowExportSchema,
 	KVBindingSchema,
 	D1BindingSchema,
 	R2BindingSchema,
@@ -344,6 +345,7 @@ const MiniflareExportSchema = z.union([
 	DurableObjectTransferredExportSchema,
 	DurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowExportSchema,
 ]);
 
 // ---------------------------------------------------------------------------

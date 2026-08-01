@@ -201,12 +201,14 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
 	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	workerName: z.string(),
-	// 	exportName: z.string(),
-	// 	remote: z.boolean().optional(),
-	// }),
+	// (MAY HAVE TO REVERT PARTIALLY OR PRETEND IT IS A MINIFLARE ONLY BINDING)
+	z.strictObject({
+		type: z.literal("workflow"),
+		name: z.string(),
+		workerName: z.string(),
+		exportName: z.string(),
+		remote: z.boolean().optional(),
+	}),
 ]);
 
 export const UnsafeBindingSchema = z.looseObject({
@@ -340,6 +342,14 @@ export const WorkerEntrypointExportSchema = z.strictObject({
 	cache: z.strictObject({ enabled: z.boolean() }).optional(),
 });
 
+// Exported for Miniflare's `MiniflareExportSchema`. Not yet added to the shared
+// `ExportSchema` union / public `Export` type — see "TODO: support Workflows".
+export const WorkflowExportSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	limits: z.strictObject({ steps: z.number().optional() }).optional(),
+});
+
 export const ExportSchema = z.union([
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
@@ -348,11 +358,6 @@ export const ExportSchema = z.union([
 	DurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
 	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	name: z.string(),
-	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	// }),
 ]);
 
 const LimitsSchema = z.strictObject({
