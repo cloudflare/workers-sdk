@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from "node:timers/promises";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -46,6 +47,20 @@ function configDefaults(
 		dev: { persist: "./persist", remote: false },
 		...config,
 	};
+}
+
+/**
+ * Miniflare's rate limiter buckets requests into fixed windows aligned to the
+ * wall clock and clears every counter on rollover, so a burst that straddles a
+ * boundary has its count reset part way through. Wait out the tail of the
+ * current window so the burst below is guaranteed to run inside a single one.
+ */
+async function waitForFreshRateLimitWindow(periodSeconds: number) {
+	const periodMs = periodSeconds * 1000;
+	const remainingMs = periodMs - (Date.now() % periodMs);
+	if (remainingMs < 10_000) {
+		await sleep(remainingMs + 50);
+	}
 }
 
 describe("MultiworkerRuntimeController", () => {
@@ -186,6 +201,8 @@ describe("MultiworkerRuntimeController", () => {
 
 			const event = await bus.waitFor("reloadComplete");
 			const url = urlFromParts(event.proxyData.userWorkerUrl);
+
+			await waitForFreshRateLimitWindow(60);
 
 			// limit is 2, so the first two requests succeed and the third is
 			// rate limited — proving the secondary's binding survived the merge.

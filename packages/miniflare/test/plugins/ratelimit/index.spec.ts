@@ -1,6 +1,28 @@
+import { setTimeout as sleep } from "node:timers/promises";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
 import { useDispose } from "../../test-shared";
+
+/**
+ * The emulated rate limiter buckets requests into fixed windows aligned to the
+ * wall clock (`Math.floor(Date.now() / (period * 1000))`, see
+ * `src/workers/ratelimit/ratelimit-object.worker.ts`) and clears every counter
+ * when the window rolls over.
+ *
+ * A burst that straddles a boundary therefore has its count reset part way
+ * through, so a test sending `limit + 1` requests and expecting the last to be
+ * rejected fails whenever the boundary lands mid-burst. Await this first: it
+ * returns immediately unless the current window is nearly over, in which case
+ * it waits for the next one so the burst runs inside a single window.
+ */
+async function waitForFreshRateLimitWindow(periodSeconds: number) {
+	const periodMs = periodSeconds * 1000;
+	const remainingMs = periodMs - (Date.now() % periodMs);
+	if (remainingMs < 10_000) {
+		// Overshoot slightly so the next request is unambiguously in the new window.
+		await sleep(remainingMs + 50);
+	}
+}
 
 test("ratelimit", async ({ expect }) => {
 	const mf = new Miniflare({
@@ -30,6 +52,8 @@ test("ratelimit", async ({ expect }) => {
 		`,
 	});
 	useDispose(mf);
+
+	await waitForFreshRateLimitWindow(60);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(res.status).toBe(200);
@@ -147,6 +171,8 @@ test("ratelimit counters are keyed by namespace_id", async ({ expect }) => {
 		await res.text();
 		return res.status;
 	};
+
+	await waitForFreshRateLimitWindow(60);
 
 	// RATE_A and RATE_B share the "shared" namespace, so they increment the same
 	// counter: two successes across the pair, then the third call is limited.
