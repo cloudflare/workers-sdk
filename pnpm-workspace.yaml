@@ -40,9 +40,10 @@ minimumReleaseAge: 1440
 # adopted same-day.
 minimumReleaseAgeExclude:
   # TEMPORARY: vite-plugin-cloudflare + vitest-pool-workers are pinned to the
-  # published miniflare while the workspace miniflare is mid-migration. Revert
-  # with the repoint.
+  #   published miniflare while the workspace miniflare is mid-migration. Revert
+  #   with the repoint.
   - "miniflare"
+  - "wrangler"
   - "workerd"
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"
