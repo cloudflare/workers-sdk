@@ -283,6 +283,64 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(worker?.config.name).toBe("worker-development");
 	});
 
+	test("applies a mode whose name matches the Vite mode", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'base-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"  modes: { development: { name: 'dev-worker' } },",
+				"});",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		const names = [...result.environmentNameToWorkerMap.values()].map(
+			(worker) => worker.config.name
+		);
+		expect(names).toContain("dev-worker");
+	});
+
+	test("falls back to the base config when the Vite mode is not a declared mode", async ({
+		expect,
+	}) => {
+		// Vite always supplies a mode, so a config that only declares deploy-time
+		// modes must still resolve rather than refusing to start the dev server.
+		seedWorkerSource();
+		writeWorkerConfig(
+			[
+				"import { defineWorker } from '@cloudflare/config';",
+				"export default defineWorker({",
+				"  name: 'base-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"  modes: { staging: { name: 'staging-worker' } },",
+				"});",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		const names = [...result.environmentNameToWorkerMap.values()].map(
+			(worker) => worker.config.name
+		);
+		expect(names).toContain("base-worker");
+	});
+
 	test("adds cloudflare.config.ts to configPaths for watching", async ({
 		expect,
 	}) => {

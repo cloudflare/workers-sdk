@@ -144,27 +144,51 @@ describe("applyMode", () => {
 		expect(result.logpush).toBe(true);
 	});
 
-	it("throws for a mode the config does not declare", ({ expect }) => {
+	it("throws under `strict` for a mode the config does not declare", ({
+		expect,
+	}) => {
 		expect(() =>
 			applyMode(
 				{ ...baseConfig, modes: { staging: {}, production: {} } },
-				"prod"
+				"prod",
+				{ strict: true }
 			)
 		).toThrow(UnknownModeError);
 
 		expect(() =>
 			applyMode(
 				{ ...baseConfig, modes: { staging: {}, production: {} } },
-				"prod"
+				"prod",
+				{ strict: true }
 			)
 		).toThrow(`No mode named "prod" is defined in your config.`);
+	});
+
+	it("falls back to the base config for an undeclared mode when not strict", ({
+		expect,
+	}) => {
+		// Vite always supplies a mode ("development" for `vite dev`), and a config
+		// is not obliged to declare one for it. Erroring here would refuse to start
+		// the dev server for any config that uses modes at all.
+		const result = applyMode(
+			{
+				...baseConfig,
+				env: { SHARED: { type: "kv" } },
+				modes: { staging: {}, production: {} },
+			},
+			"development"
+		);
+
+		expect(result.env).toEqual({ SHARED: { type: "kv" } });
+		expect(result).not.toHaveProperty("modes");
 	});
 
 	it("lists the available modes on the thrown error", ({ expect }) => {
 		try {
 			applyMode(
 				{ ...baseConfig, modes: { staging: {}, production: {} } },
-				"prod"
+				"prod",
+				{ strict: true }
 			);
 			expect.unreachable("applyMode should have thrown");
 		} catch (e) {
@@ -177,6 +201,30 @@ describe("applyMode", () => {
 			);
 		}
 	});
+
+	// `modes` is an ordinary object, so a bare `modes[mode]` lookup would find
+	// these on Object.prototype and mistake them for a declared mode.
+	for (const inherited of ["toString", "constructor", "valueOf", "__proto__"]) {
+		it(`does not treat the inherited property ${inherited} as a declared mode`, ({
+			expect,
+		}) => {
+			expect(() =>
+				applyMode({ ...baseConfig, modes: { staging: {} } }, inherited, {
+					strict: true,
+				})
+			).toThrow(UnknownModeError);
+
+			const result = applyMode(
+				{
+					...baseConfig,
+					env: { SHARED: { type: "kv" } },
+					modes: { staging: {} },
+				},
+				inherited
+			);
+			expect(result.env).toEqual({ SHARED: { type: "kv" } });
+		});
+	}
 
 	it("passes a config without modes through untouched, whatever the mode", ({
 		expect,

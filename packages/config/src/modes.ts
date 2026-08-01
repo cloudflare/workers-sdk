@@ -56,11 +56,23 @@ const MERGED_RECORD_FIELDS = ["env", "exports"] as const;
  * The function form of a config receives `ctx.mode` and may branch on it
  * directly, so a mode with nothing to select here is not an error.
  *
- * @throws {UnknownModeError} If the config declares `modes` but not this one.
+ * `strict` controls what happens when the config declares `modes` but not the
+ * selected one. Callers where the mode is an explicit user choice should set it
+ * so a typo is caught: `wrangler deploy --env prodction` is a mistake worth
+ * reporting. Callers where the mode is ambient should leave it off, because
+ * they always supply a value and a config is not obliged to name it. Vite is
+ * the motivating case: `ConfigEnv.mode` defaults to `"development"` for `vite
+ * dev` and `"production"` for `vite build`, so erroring on an unlisted mode
+ * would refuse to start the dev server for any config that declares modes at
+ * all.
+ *
+ * @throws {UnknownModeError} If `strict` and the config declares `modes` but
+ *   not this one.
  */
 export function applyMode(
 	config: ParsedInputWorkerConfig,
-	mode: string | undefined
+	mode: string | undefined,
+	options: { strict?: boolean } = {}
 ): ParsedInputWorkerConfig {
 	const { modes, ...base } = config;
 
@@ -68,9 +80,18 @@ export function applyMode(
 		return base;
 	}
 
-	const override = modes[mode];
+	// `modes` comes from `z.record`, which returns an ordinary object, so a mode
+	// named after something on `Object.prototype` ("toString", "constructor")
+	// would otherwise resolve to an inherited value and pass for a declared mode.
+	const override = Object.prototype.hasOwnProperty.call(modes, mode)
+		? modes[mode]
+		: undefined;
+
 	if (override === undefined) {
-		throw new UnknownModeError(mode, Object.keys(modes));
+		if (options.strict) {
+			throw new UnknownModeError(mode, Object.keys(modes));
+		}
+		return base;
 	}
 
 	const merged: Record<string, unknown> = { ...base };

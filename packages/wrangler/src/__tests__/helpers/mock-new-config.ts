@@ -42,7 +42,8 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 	// against the selected mode. Only the loading step is faked.
 	async function loadAndValidateConfig(
 		configPath: string,
-		ctx: { mode?: string }
+		ctx: { mode?: string },
+		options?: { strictModes?: boolean }
 	) {
 		const { exports } = await loadConfig(configPath);
 		const resolved: Record<string, unknown> = {};
@@ -64,7 +65,11 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 			result.data as Record<string, any>
 		)) {
 			withModesApplied[name] =
-				value.type === "worker" ? actual.applyMode(value, ctx.mode) : value;
+				value.type === "worker"
+					? actual.applyMode(value, ctx.mode, {
+							strict: options?.strictModes,
+						})
+					: value;
 		}
 
 		return { result: { ...result, data: withModesApplied }, dependencies };

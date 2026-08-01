@@ -78,9 +78,13 @@ export async function loadNewConfig(options: {
 	// ── Worker + settings config ────────────────────────────────────────
 	let workerConfigResult;
 	try {
-		workerConfigResult = await loadAndValidateConfig(cloudflareConfigPath, {
-			mode,
-		});
+		workerConfigResult = await loadAndValidateConfig(
+			cloudflareConfigPath,
+			{ mode },
+			// `--env`/`CLOUDFLARE_ENV` is an explicit selection here, so naming a
+			// mode the config does not declare is a mistake worth reporting.
+			{ strictModes: true }
+		);
 	} catch (e) {
 		if (e instanceof UnknownModeError) {
 			throw new UserError(e.message, {
