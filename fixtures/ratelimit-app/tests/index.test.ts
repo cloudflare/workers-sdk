@@ -1,5 +1,5 @@
-import { resolve } from "path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { resolve } from "path";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { createTestHarness } from "wrangler";
 
