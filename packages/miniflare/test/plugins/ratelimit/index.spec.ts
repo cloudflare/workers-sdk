@@ -2,12 +2,13 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
 import { useDispose } from "../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 /**
  * The emulated rate limiter buckets requests into fixed windows aligned to the
  * wall clock (`Math.floor(Date.now() / (period * 1000))`, see
- * `src/workers/ratelimit/ratelimit-object.worker.ts`) and clears every counter
- * when the window rolls over.
+ * `src/workers/ratelimit/ratelimit-object.worker.ts`) and resets a counter when
+ * its window rolls over.
  *
  * A burst that straddles a boundary therefore has its count reset part way
  * through, so a test sending `limit + 1` requests and expecting the last to be
@@ -185,4 +186,47 @@ test("ratelimit counters are keyed by namespace_id", async ({ expect }) => {
 	expect(await call("RATE_C")).toBe(200);
 	expect(await call("RATE_C")).toBe(200);
 	expect(await call("RATE_C")).toBe(429);
+});
+
+test("ratelimit counters survive a workerd restart", async ({ expect }) => {
+	const options = {
+		ratelimits: {
+			TESTRATE: {
+				namespace_id: "restart",
+				simple: { limit: 1, period: 60 },
+			},
+		},
+
+		modules: true,
+		script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const { success } = await env.TESTRATE.limit({ key: "k" });
+				return new Response(success ? "ok" : "limited", {
+					status: success ? 200 : 429,
+				});
+			},
+		}
+		`,
+	} satisfies MiniflareOptions;
+
+	const mf = new Miniflare(options);
+	useDispose(mf);
+
+	const call = async () => {
+		const res = await mf.dispatchFetch("http://localhost");
+		await res.text();
+		return res.status;
+	};
+
+	await waitForFreshRateLimitWindow(60);
+
+	expect(await call()).toBe(200);
+
+	// `setOptions()` restarts `workerd`, tearing down every Durable Object. This
+	// is a strictly stronger teardown than the ~10s idle eviction that used to
+	// silently reset the counters, so it proves the state is durable.
+	await mf.setOptions(options);
+
+	expect(await call()).toBe(429);
 });

@@ -1,10 +1,11 @@
+import fs from "node:fs/promises";
 import SCRIPT_RATELIMIT_CLIENT from "worker:ratelimit/ratelimit";
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit-object";
 import { z } from "zod";
-import { kVoid } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
+	getPersistPath,
 	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
@@ -43,6 +44,7 @@ export const RATELIMIT_PLUGIN_NAME = "ratelimit";
 const SERVICE_RATELIMIT_PREFIX = `${RATELIMIT_PLUGIN_NAME}`;
 const SERVICE_RATELIMIT_MODULE = `cloudflare-internal:${SERVICE_RATELIMIT_PREFIX}:module`;
 const RATELIMIT_ENTRY_SERVICE_PREFIX = `${RATELIMIT_PLUGIN_NAME}:ns`;
+const RATELIMIT_STORAGE_SERVICE_NAME = `${RATELIMIT_PLUGIN_NAME}:storage`;
 const RATELIMIT_OBJECT_CLASS_NAME = "RateLimiterObject";
 const RATELIMIT_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: RATELIMIT_ENTRY_SERVICE_PREFIX,
@@ -99,7 +101,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 			])
 		);
 	},
-	async getServices({ options }) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		if (!options.ratelimits) {
 			return [];
 		}
@@ -121,6 +123,17 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 			});
 		}
 
+		const persistPath = getPersistPath(
+			RATELIMIT_PLUGIN_NAME,
+			tmpPath,
+			resourcePersistencePath
+		);
+		await fs.mkdir(persistPath, { recursive: true });
+		services.push({
+			name: RATELIMIT_STORAGE_SERVICE_NAME,
+			disk: { path: persistPath, writable: true },
+		});
+
 		const uniqueKey = `miniflare-${RATELIMIT_OBJECT_CLASS_NAME}`;
 		services.push({
 			name: RATELIMIT_ENTRY_SERVICE_PREFIX,
@@ -134,12 +147,22 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 					},
 				],
 				durableObjectNamespaces: [
-					{ className: RATELIMIT_OBJECT_CLASS_NAME, uniqueKey },
+					{
+						className: RATELIMIT_OBJECT_CLASS_NAME,
+						uniqueKey,
+						enableSql: true,
+					},
 				],
-				// Counters are only ever needed for the lifetime of the Miniflare
-				// process, never persisted across restarts (matching the previous
-				// purely in-memory implementation).
-				durableObjectStorage: { inMemory: kVoid },
+				// Counters must outlive the Durable Object itself. `workerd` evicts
+				// idle objects after ~10s, which would silently reset every counter
+				// mid-window if the state lived on the heap (or in `inMemory` storage,
+				// which is backed by a per-actor `ActorCache` and is just as lossy).
+				//
+				// The namespace deliberately stays evictable: `deleteAllDurableObjects()`
+				// (what vitest-pool-workers' `reset()` calls) skips namespaces with
+				// `preventEviction` set, and it is what resets these counters between
+				// tests, via `ActorNamespace::deleteAll()` -> `SqliteDatabase::reset()`.
+				durableObjectStorage: { localDisk: RATELIMIT_STORAGE_SERVICE_NAME },
 				bindings: [
 					{
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
