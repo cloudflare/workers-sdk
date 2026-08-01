@@ -1,5 +1,6 @@
 import path from "node:path";
 import {
+	APIError,
 	configFileName,
 	getBindingTypeFriendlyName,
 	UserError,
@@ -511,13 +512,45 @@ function isPreviewMetadataAnnotationsUnsupportedError(error: unknown): boolean {
 		return false;
 	}
 
-	const message = error instanceof Error ? error.message : String(error);
+	const code = "code" in error ? error.code : undefined;
+	if (code !== undefined && code !== 10021) {
+		return false;
+	}
+
+	const messages = [
+		error instanceof Error ? error.message : undefined,
+		error instanceof APIError ? error.text : undefined,
+		...getErrorNoteTexts(error),
+	]
+		.filter(Boolean)
+		.join("\n");
 
 	return (
-		message.includes("annotations not allowed") &&
-		(message.includes("workers/pull_request") ||
-			message.includes("workers/repository_url"))
+		messages.includes("annotations not allowed") &&
+		(messages.includes("workers/pull_request") ||
+			messages.includes("workers/repository_url"))
 	);
+}
+
+function getErrorNoteTexts(error: unknown): string[] {
+	if (typeof error !== "object" || error === null || !("notes" in error)) {
+		return [];
+	}
+
+	const notes = error.notes;
+	if (!Array.isArray(notes)) {
+		return [];
+	}
+
+	return notes.flatMap((note) => [
+		typeof note === "object" &&
+		note !== null &&
+		"text" in note &&
+		typeof note.text === "string"
+			? note.text
+			: undefined,
+		...getErrorNoteTexts(note),
+	]).filter((text): text is string => text !== undefined);
 }
 
 function formatPreviewResource(
