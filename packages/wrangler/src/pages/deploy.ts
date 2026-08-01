@@ -646,11 +646,25 @@ export const pagesDeployCommand = createCommand({
 	},
 });
 
-function getUnsupportedDeployDelegateArgs(
+/**
+ * The Pages-only `pages deploy` flags that cannot be represented by a Workers
+ * static-assets deploy, so their presence disqualifies the command from
+ * delegation: git-integration metadata (`--commit-*`) and a Pages build option
+ * (`--skip-caching`), none of which have a Workers equivalent.
+ *
+ * `--branch` is deliberately absent. It exists to target a Pages preview
+ * deployment, which only has meaning relative to an existing project's
+ * production. Delegation only ever fires when the account has no existing Pages
+ * projects (the `accountHasPagesProjects` gate in `maybeDelegatePagesToWorkers`),
+ * so the targeted project is necessarily brand-new, and on a new project
+ * `--branch` merely names the production branch — exactly what a Workers deploy
+ * targets — so there are no preview semantics to preserve. If delegation is ever
+ * widened to existing projects, re-examine this omission.
+ */
+export function getUnsupportedDeployDelegateArgs(
 	args: (typeof pagesDeployCommand)["args"]
 ): string[] {
 	return [
-		["--branch", args.branch],
 		["--commit-hash", args.commitHash],
 		["--commit-message", args.commitMessage],
 		["--commit-dirty", args.commitDirty],

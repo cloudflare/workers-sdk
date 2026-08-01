@@ -22,6 +22,7 @@ import {
 	PAGES_CONFIG_CACHE_FILENAME,
 	ROUTES_SPEC_VERSION,
 } from "../../pages/constants";
+import { getUnsupportedDeployDelegateArgs } from "../../pages/deploy";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
@@ -6650,3 +6651,47 @@ function mockGetProjectHandler(
 		{ once: true }
 	);
 }
+
+describe("getUnsupportedDeployDelegateArgs", () => {
+	type DeployArgs = Parameters<typeof getUnsupportedDeployDelegateArgs>[0];
+
+	it("does not treat --branch as unsupported, so a branch deploy stays eligible for delegation", ({
+		expect,
+	}) => {
+		const args = { branch: "main" } as DeployArgs;
+
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([]);
+	});
+
+	it("still reports git-integration metadata and --skip-caching as unsupported", ({
+		expect,
+	}) => {
+		const args = {
+			commitHash: "abc123",
+			commitMessage: "a message",
+			commitDirty: true,
+			skipCaching: true,
+		} as DeployArgs;
+
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([
+			"--commit-hash",
+			"--commit-message",
+			"--commit-dirty",
+			"--skip-caching",
+		]);
+	});
+
+	it("ignores boolean flags left at false", ({ expect }) => {
+		const args = { commitDirty: false, skipCaching: false } as DeployArgs;
+
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([]);
+	});
+
+	it("reports only the genuinely unsupported flags when a branch is combined with commit metadata", ({
+		expect,
+	}) => {
+		const args = { branch: "main", commitHash: "abc123" } as DeployArgs;
+
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual(["--commit-hash"]);
+	});
+});
