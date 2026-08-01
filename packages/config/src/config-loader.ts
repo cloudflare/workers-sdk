@@ -46,10 +46,10 @@ export async function loadAndValidateConfig(
 		return { result, dependencies };
 	}
 
-	// Validation runs against the authored config so that a bad binding inside a
+	// The pass above validates the config as authored, so a bad binding inside a
 	// mode reports against `modes.<name>.env.<binding>` rather than a merged path
 	// the user never wrote.
-	const withModesApplied: ParsedConfigExports = {};
+	const withModesApplied: Record<string, unknown> = {};
 	for (const [name, value] of Object.entries(result.data)) {
 		withModesApplied[name] =
 			value.type === "worker"
@@ -57,5 +57,13 @@ export async function loadAndValidateConfig(
 				: value;
 	}
 
-	return { result: { ...result, data: withModesApplied }, dependencies };
+	// Merging can produce a config that neither the base nor the mode violated on
+	// its own. Singleton bindings are the motivating case: one `ai` binding in the
+	// base and another under a different name in a mode are individually fine but
+	// invalid together, and that is only visible once they share an `env`. Errors
+	// here are inherently about the merged result, so merged paths are the right
+	// thing to report.
+	const mergedResult = ConfigExportsSchema.safeParse(withModesApplied);
+
+	return { result: mergedResult, dependencies };
 }

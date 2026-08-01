@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import { bindings } from "../bindings";
 import { applyMode, UnknownModeError } from "../modes";
+import { ConfigExportsSchema } from "../schema";
 import { defineWorker } from "../worker-definition";
 import type {
 	InferAggregatedEnv,
@@ -234,6 +235,64 @@ describe("applyMode", () => {
 		const result = applyMode({ ...baseConfig }, "production");
 
 		expect(result).toEqual(baseConfig);
+	});
+});
+
+// `loadAndValidateConfig` re-validates after applying a mode. These cover the
+// conflicts that only exist once base and mode bindings share one `env`.
+describe("validation of the merged config", () => {
+	it("rejects two singleton bindings that only collide after merging", ({
+		expect,
+	}) => {
+		const merged = applyMode(
+			{
+				...baseConfig,
+				env: { SMART: { type: "ai" } },
+				modes: { production: { env: { CLEVER: { type: "ai" } } } },
+			},
+			"production"
+		);
+
+		const result = ConfigExportsSchema.safeParse({ default: merged });
+
+		expect(result.success).toBe(false);
+		expect(JSON.stringify(result.error?.issues)).toContain(
+			"can only be defined once"
+		);
+	});
+
+	it("accepts the same config when the offending mode is not selected", ({
+		expect,
+	}) => {
+		const base = applyMode(
+			{
+				...baseConfig,
+				env: { SMART: { type: "ai" } },
+				modes: { production: { env: { CLEVER: { type: "ai" } } } },
+			},
+			undefined
+		);
+
+		expect(ConfigExportsSchema.safeParse({ default: base }).success).toBe(true);
+	});
+
+	it("survives a second parse after `entrypoint` has been transformed", ({
+		expect,
+	}) => {
+		// The first parse rewrites `{ default: "..." }` to a plain string. Parsing
+		// the output again must not reject that already-transformed shape.
+		const once = ConfigExportsSchema.safeParse({
+			default: { ...baseConfig, entrypoint: { default: "./src/index.ts" } },
+		});
+		expect(once.success).toBe(true);
+
+		const twice = ConfigExportsSchema.safeParse(once.data);
+		expect(twice.success).toBe(true);
+		expect(
+			twice.data?.default && "entrypoint" in twice.data.default
+				? twice.data.default.entrypoint
+				: undefined
+		).toBe("./src/index.ts");
 	});
 });
 
