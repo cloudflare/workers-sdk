@@ -1,5 +1,5 @@
-import { isCompressedByCloudflareFL } from "miniflare";
 import { test } from "vitest";
+import { isCompressedByCloudflareFL } from "../../src/shared/mime-types";
 
 test("isCompressedByCloudflareFL: matches known compressible types", ({
 	expect,
