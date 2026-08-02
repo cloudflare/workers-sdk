@@ -1,7 +1,8 @@
+import fs from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
-import { Miniflare } from "miniflare";
+import { Miniflare, RATELIMIT_PLUGIN_NAME } from "miniflare";
 import { test } from "vitest";
-import { useDispose } from "../../test-shared";
+import { useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 /**
@@ -298,4 +299,74 @@ test("ratelimit counters survive a workerd restart", async ({ expect }) => {
 	await mf.setOptions(options);
 
 	expect(await call()).toBe(429);
+});
+
+test("ratelimit persists on file-system", async ({ expect }) => {
+	const tmp = await useTmp();
+	const options = {
+		ratelimits: {
+			TESTRATE: {
+				namespace_id: "persist",
+				simple: { limit: 1, period: 60 },
+			},
+		},
+		resourcePersistencePath: tmp,
+
+		modules: true,
+		script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const { success } = await env.TESTRATE.limit({ key: "k" });
+				return new Response(success ? "ok" : "limited", {
+					status: success ? 200 : 429,
+				});
+			},
+		}
+		`,
+	} satisfies MiniflareOptions;
+
+	const call = async (mf: Miniflare) => {
+		const res = await mf.dispatchFetch("http://localhost");
+		await res.text();
+		return res.status;
+	};
+
+	await waitForFreshRateLimitWindow([60]);
+
+	let mf = new Miniflare(options);
+	useDispose(mf);
+	expect(await call(mf)).toBe(200);
+
+	const names = await fs.readdir(tmp);
+	expect(names.includes(RATELIMIT_PLUGIN_NAME)).toBe(true);
+
+	// A whole new Miniflare instance, as after restarting `wrangler dev`: the
+	// window hasn't rolled over, so the limit must still be exhausted.
+	await mf.dispose();
+	mf = new Miniflare(options);
+	useDispose(mf);
+	expect(await call(mf)).toBe(429);
+});
+
+test("ratelimit creates no storage directory when unconfigured", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	// Wrangler passes an empty object rather than omitting `ratelimits` when a
+	// Worker declares no rate limit bindings, so this must not leave a stray
+	// directory behind in the user's persistence directory.
+	const mf = new Miniflare({
+		ratelimits: {},
+		resourcePersistencePath: tmp,
+
+		modules: true,
+		script: `export default { fetch: () => new Response("ok") }`,
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("ok");
+
+	const names = await fs.readdir(tmp);
+	expect(names.includes(RATELIMIT_PLUGIN_NAME)).toBe(false);
 });

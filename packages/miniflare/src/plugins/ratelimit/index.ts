@@ -102,26 +102,26 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 		);
 	},
 	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		if (!options.ratelimits) {
-			return [];
-		}
 		// One entry service + Durable Object instance per unique namespace_id.
 		// Multiple bindings sharing a namespace collapse to a single counter.
-		const services: Service[] = [];
-		const seenNamespaces = new Set<string>();
-		for (const { namespace_id } of Object.values(options.ratelimits)) {
-			if (seenNamespaces.has(namespace_id)) {
-				continue;
-			}
-			seenNamespaces.add(namespace_id);
-			services.push({
-				name: getUserBindingServiceName(
-					RATELIMIT_ENTRY_SERVICE_PREFIX,
-					namespace_id
-				),
-				worker: objectEntryWorker(RATELIMIT_OBJECT, namespace_id),
-			});
+		const namespaceIds = new Set(
+			Object.values(options.ratelimits ?? {}).map((c) => c.namespace_id)
+		);
+		// Wrangler passes `ratelimits: {}` rather than omitting it when a Worker
+		// has no rate limit bindings, so bail on emptiness rather than presence.
+		// Otherwise every `wrangler dev` session would create an unused storage
+		// directory in the user's persistence directory.
+		if (namespaceIds.size === 0) {
+			return [];
 		}
+
+		const services: Service[] = [...namespaceIds].map((namespace_id) => ({
+			name: getUserBindingServiceName(
+				RATELIMIT_ENTRY_SERVICE_PREFIX,
+				namespace_id
+			),
+			worker: objectEntryWorker(RATELIMIT_OBJECT, namespace_id),
+		}));
 
 		const persistPath = getPersistPath(
 			RATELIMIT_PLUGIN_NAME,
