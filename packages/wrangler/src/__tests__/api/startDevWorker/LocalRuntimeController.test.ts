@@ -271,10 +271,10 @@ describe("LocalRuntimeController", () => {
 				modules: [
 					{
 						type: "commonjs",
-						name: "add.cjs",
+						name: "cjs/add.cjs",
 						filePath: "/virtual/cjs/add.cjs",
 						content: `
-					const addModule = require("./add.wasm");
+					const addModule = require("../add.wasm");
 					const addInstance = new WebAssembly.Instance(addModule);
 					module.exports = {
 						add: addInstance.exports.add,
@@ -286,7 +286,7 @@ describe("LocalRuntimeController", () => {
 					},
 					{
 						type: "commonjs",
-						name: "base64.cjs",
+						name: "node/base64.cjs",
 						filePath: "/virtual/node/base64.cjs",
 						content: `module.exports = {
 						encode(value) {
@@ -322,10 +322,10 @@ describe("LocalRuntimeController", () => {
 				id: 0,
 				path: "/virtual/esm/index.mjs",
 				entrypointSource: dedent /*javascript*/ `
-				import add from "./add.cjs";
-				import base64 from "./base64.cjs";
-				import wave1 from "./data/wave.txt";
-				import wave2 from "./data/wave.bin";
+				import add from "../cjs/add.cjs";
+				import base64 from "../node/base64.cjs";
+				import wave1 from "../data/wave.txt";
+				import wave2 from "../data/wave.bin";
 				export default {
 					fetch(request, env, ctx) {
 						const { pathname } = new URL(request.url);

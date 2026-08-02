@@ -50,6 +50,12 @@ export const MiniflareModuleSchema = z.strictObject({
 export const MiniflareManifestSchema = z.strictObject({
 	mainModule: z.string(),
 	modules: z.record(z.string(), MiniflareModuleSchema),
+	// Absolute directory the module names are relative to. Module `name`s are
+	// kept relative (workerd rejects absolute module specifiers), but stack
+	// traces and the inspector need the real on-disk location. When set,
+	// Miniflare resolves each module's `//# sourceURL` against this root
+	// (`resolve(rootPath, name)`); otherwise it falls back to the bare name.
+	rootPath: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------

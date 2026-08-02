@@ -100,13 +100,26 @@ async function generate({
 		await fsp.readFile(require.resolve("workerd/worker.mjs"))
 	).toString();
 	const mf = new Miniflare({
-		// Must stay before the 2024-09-23 nodejs_compat v1->v2 switchover: the
-		// workerd RTTI worker only runs under nodejs_compat v1. This date is
-		// internal to type generation and never appears in the output/header.
-		compatibilityDate: "2024-01-01",
-		compatibilityFlags: ["nodejs_compat", "rtti_api"],
-		modules: true,
-		script: worker,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "runtime-types",
+					// Must stay before the 2024-09-23 nodejs_compat v1->v2 switchover:
+					// the workerd RTTI worker only runs under nodejs_compat v1. This
+					// date is internal to type generation and never appears in the
+					// output/header.
+					compatibilityDate: "2024-01-01",
+					compatibilityFlags: ["nodejs_compat", "rtti_api"],
+					manifest: {
+						mainModule: "worker.mjs",
+						modules: {
+							"worker.mjs": { type: "esm", contents: worker },
+						},
+					},
+				},
+			},
+		],
 	});
 
 	const flagsString = compatibilityFlags.length

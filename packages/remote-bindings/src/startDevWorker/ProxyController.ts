@@ -49,42 +49,58 @@ export class ProxyController {
 			unsafeLocalExplorer: false,
 			workers: [
 				{
-					name: "ProxyWorker",
-					compatibilityDate: "2023-12-18",
-					compatibilityFlags: ["nodejs_compat"],
-					modules: [
-						{
-							type: "ESModule",
-							path: "dev-proxy-worker.mjs",
-							contents: proxyWorkerSource,
+					config: {
+						type: "worker",
+						name: "ProxyWorker",
+						compatibilityDate: "2023-12-18",
+						compatibilityFlags: ["nodejs_compat"],
+						manifest: {
+							mainModule: "dev-proxy-worker.mjs",
+							modules: {
+								"dev-proxy-worker.mjs": {
+									type: "esm",
+									contents: proxyWorkerSource,
+								},
+							},
 						},
-					],
-					durableObjects: {
-						DURABLE_OBJECT: {
-							className: "ProxyWorker",
-							unsafePreventEviction: true,
+						exports: {
+							ProxyWorker: {
+								type: "durable-object",
+								storage: "legacy-kv",
+								unsafePreventEviction: true,
+							},
+						},
+						env: {
+							DURABLE_OBJECT: {
+								type: "durable-object",
+								workerName: "ProxyWorker",
+								exportName: "ProxyWorker",
+							},
+							PROXY_CONTROLLER: {
+								type: "fetcher",
+								handler: async (req): Promise<Response> => {
+									const message =
+										(await req.json()) as ProxyWorkerOutgoingRequestBody;
+
+									this.onProxyWorkerMessage(message);
+
+									return new Response(null, { status: 204 });
+								},
+							},
+							PROXY_CONTROLLER_AUTH_SECRET: {
+								type: "text",
+								value: this.secret,
+							},
 						},
 					},
-					// Miniflare will strip CF-Connecting-IP from outgoing fetches from a Worker (to fix https://github.com/cloudflare/workers-sdk/issues/7924)
-					// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
-					stripCfConnectingIp: false,
-					serviceBindings: {
-						PROXY_CONTROLLER: async (req): Promise<Response> => {
-							const message =
-								(await req.json()) as ProxyWorkerOutgoingRequestBody;
-
-							this.onProxyWorkerMessage(message);
-
-							return new Response(null, { status: 204 });
-						},
+					dev: {
+						// Miniflare will strip CF-Connecting-IP from outgoing fetches from a Worker (to fix https://github.com/cloudflare/workers-sdk/issues/7924)
+						// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
+						stripCfConnectingIp: false,
+						// no need to use file-system, so don't
+						cacheAPI: false,
+						unsafeEphemeralDurableObjects: true,
 					},
-					bindings: {
-						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					},
-
-					// no need to use file-system, so don't
-					cacheAPI: false,
-					unsafeEphemeralDurableObjects: true,
 				},
 			],
 

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { TextDecoder, TextEncoder } from "node:util";
 import { type ModuleType } from "@cloudflare/config";
@@ -59,27 +60,33 @@ function contentsToArray(contents: string | Uint8Array): Uint8Array {
 }
 /**
  * Converts a single manifest module (config `ModuleType` + inline contents)
- * into a workerd `Worker_Module`. The module `name` is used as-is (manifest
- * names are already relative module identifiers).
+ * into a workerd `Worker_Module`. The module `name` is used as-is for the
+ * workerd module specifier (manifest names are already relative module
+ * identifiers). The `//# sourceURL` — used by stack traces and the inspector to
+ * point at the real on-disk file — is resolved against `rootPath` when given,
+ * otherwise it falls back to the bare `name`.
  */
 export function convertManifestModule(
 	name: string,
 	type: ModuleType,
-	contents: string | Uint8Array
+	contents: string | Uint8Array,
+	rootPath?: string
 ): Worker_Module {
+	const modulePath =
+		rootPath !== undefined ? path.resolve(rootPath, name) : name;
 	switch (type) {
 		case "esm":
 			return createJavaScriptModule(
 				contentsToString(contents),
 				name,
-				name,
+				modulePath,
 				"ESModule"
 			);
 		case "cjs":
 			return createJavaScriptModule(
 				contentsToString(contents),
 				name,
-				name,
+				modulePath,
 				"CommonJS"
 			);
 		case "wasm":

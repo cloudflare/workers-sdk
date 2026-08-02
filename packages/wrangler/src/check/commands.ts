@@ -5,21 +5,24 @@ import path from "node:path";
 import { gzipSync } from "node:zlib";
 import { log } from "@cloudflare/cli-shared-helpers";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
-import { getWranglerTmpDir, UserError } from "@cloudflare/workers-utils";
+import {
+	getTodaysCompatDate,
+	getWranglerTmpDir,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { createCLIParser } from "..";
 import { createCommand, createNamespace } from "../core/create-command";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
-import {
-	flipObject,
-	ModuleTypeToRuleType,
-} from "../deployment-bundle/module-collection";
+import { flipObject } from "../deployment-bundle/module-collection";
+import { toManifestModuleType } from "../dev/miniflare";
 import { logger } from "../logger";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ManifestModuleType } from "../dev/miniflare";
+import type { CfModuleType, Config } from "@cloudflare/workers-utils";
 import type Protocol from "devtools-protocol";
-import type { ModuleDefinition } from "miniflare";
+import type { WorkerOptions } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
 
 const mimeTypeModuleType = flipObject(moduleTypeMimeType);
@@ -221,17 +224,19 @@ export const checkStartupCommand = createCommand({
 
 async function getEntryValue(
 	entry: FormDataEntryValue
-): Promise<Uint8Array | string> {
+): Promise<Uint8Array<ArrayBuffer> | string> {
 	if (entry instanceof Blob) {
-		return new Uint8Array((await entry.arrayBuffer()) as ArrayBuffer);
+		return new Uint8Array<ArrayBuffer>(
+			(await entry.arrayBuffer()) as ArrayBuffer
+		);
 	} else {
 		return entry as string;
 	}
 }
 
-function getModuleType(entry: FormDataEntryValue) {
+function getModuleType(entry: FormDataEntryValue): CfModuleType {
 	if (entry instanceof Blob) {
-		const type = ModuleTypeToRuleType[mimeTypeModuleType[entry.type]];
+		const type = mimeTypeModuleType[entry.type];
 
 		if (!type) {
 			throw new Error(
@@ -241,28 +246,32 @@ function getModuleType(entry: FormDataEntryValue) {
 
 		return type;
 	} else {
-		return "Text";
+		return "text";
 	}
 }
 
+type ManifestModules = NonNullable<
+	WorkerOptions["config"]["manifest"]
+>["modules"];
+
 async function convertWorkerBundleToModules(
 	workerBundle: FormData
-): Promise<ModuleDefinition[]> {
-	return await Promise.all(
+): Promise<ManifestModules> {
+	const entries = await Promise.all(
 		[...workerBundle.entries()]
 			// Sourcemaps aren't "real" modules in the application and won't be imported by user code, so lets not load them when analyzing the bundle
 			.filter(
 				(m) => m[1] instanceof Blob && m[1].type !== "application/source-map"
 			)
-			.map(
-				async (m) =>
-					({
-						type: getModuleType(m[1]),
-						path: m[0],
-						contents: await getEntryValue(m[1]),
-					}) as ModuleDefinition
-			)
+			.map(async (m): Promise<[string, ManifestModules[string]]> => [
+				m[0],
+				{
+					type: toManifestModuleType(getModuleType(m[1])),
+					contents: await getEntryValue(m[1]),
+				},
+			])
 	);
+	return Object.fromEntries(entries);
 }
 
 async function parseFormDataFromFile(file: string): Promise<FormData> {
@@ -301,17 +310,14 @@ async function analyseBundleProfile(
 			{ telemetryMessage: "check startup service worker format unsupported" }
 		);
 	}
-	const mf = new Miniflare({
-		name: "profiler",
-		compatibilityDate: metadata.compatibility_date,
-		compatibilityFlags: metadata.compatibility_flags,
-		modulesRoot: "/",
-		modules: [
-			{
-				type: "ESModule",
-				// Make sure the entrypoint path doesn't conflict with a user worker module
-				path: randomUUID(),
-				contents: /* javascript */ `
+	// Make sure the entrypoint path doesn't conflict with a user worker module
+	const entrypointPath = randomUUID();
+	const entrypointModule: {
+		type: ManifestModuleType;
+		contents: string;
+	} = {
+		type: "esm",
+		contents: /* javascript */ `
 					async function startup() {
 						await import("${metadata.main_module}");
 					}
@@ -322,10 +328,26 @@ async function analyseBundleProfile(
 						}
 					}
 					`,
-			},
-			...(await convertWorkerBundleToModules(workerBundle)),
-		],
+	};
+	const mf = new Miniflare({
 		inspectorPort: 0,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "profiler",
+					compatibilityDate: metadata.compatibility_date ?? getTodaysCompatDate(),
+					compatibilityFlags: metadata.compatibility_flags,
+					manifest: {
+						mainModule: entrypointPath,
+						modules: {
+							[entrypointPath]: entrypointModule,
+							...(await convertWorkerBundleToModules(workerBundle)),
+						},
+					},
+				},
+			},
+		],
 	});
 	await mf.ready;
 	const inspectorUrl = await mf.getInspectorURL();

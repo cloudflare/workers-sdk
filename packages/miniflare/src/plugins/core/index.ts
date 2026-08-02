@@ -1055,7 +1055,12 @@ function getWorkerScript(
 
 	const modules: Worker_Module[] = [
 		// workerd uses the first module as the entrypoint, so it must come first.
-		convertManifestModule(manifest.mainModule, entry.type, entry.contents),
+		convertManifestModule(
+			manifest.mainModule,
+			entry.type,
+			entry.contents,
+			manifest.rootPath
+		),
 	];
 	for (const [name, module] of Object.entries(manifest.modules)) {
 		if (name === manifest.mainModule) {
@@ -1066,7 +1071,9 @@ function getWorkerScript(
 		if (module.type === "sourcemap") {
 			continue;
 		}
-		modules.push(convertManifestModule(name, module.type, module.contents));
+		modules.push(
+			convertManifestModule(name, module.type, module.contents, manifest.rootPath)
+		);
 	}
 	return { modules };
 }

@@ -21,7 +21,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBe("example.com");
+			expect(workerOptions.dev?.zone).toBe("example.com");
 		});
 
 		it("uses the first entry in `routes`, preferring its `zone_name`", ({
@@ -44,7 +44,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			// Per https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-worker
 			// the `CF-Worker` header is the zone name that owns the Worker, not
 			// the route pattern's hostname.
-			expect(workerOptions.zone).toBe("example.com");
+			expect(workerOptions.dev?.zone).toBe("example.com");
 		});
 
 		it("falls back to the pattern hostname when `zone_name` is absent", ({
@@ -64,7 +64,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			// Without `zone_name` or an account-scoped API lookup we can't
 			// determine the parent zone locally, so the pattern hostname is
 			// the closest approximation.
-			expect(workerOptions.zone).toBe("foo.example.com");
+			expect(workerOptions.dev?.zone).toBe("foo.example.com");
 		});
 
 		it("uses `zone_name` for unparseable patterns like `*/*`", ({ expect }) => {
@@ -79,7 +79,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBe("example.com");
+			expect(workerOptions.dev?.zone).toBe("example.com");
 		});
 
 		it("ignores `dev.host` (the `dev` config block is `wrangler dev`-only)", ({
@@ -98,7 +98,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBeUndefined();
+			expect(workerOptions.dev?.zone).toBeUndefined();
 		});
 
 		it("derives the zone from `routes` even when `dev.host` is also set", ({
@@ -118,7 +118,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBe("example.com");
+			expect(workerOptions.dev?.zone).toBe("example.com");
 		});
 
 		it("returns undefined when no routes are configured", ({ expect }) => {
@@ -132,7 +132,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.zone).toBeUndefined();
+			expect(workerOptions.dev?.zone).toBeUndefined();
 		});
 	});
 
@@ -176,12 +176,10 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
 
-			expect(workerOptions.serviceBindings?.ENTITLEMENTS).toBeUndefined();
-			expect(workerOptions.unsafeBindings).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						name: "ENTITLEMENTS",
-						type: "service",
+			expect(workerOptions.config.env?.ENTITLEMENTS).toEqual(
+				expect.objectContaining({
+					type: "unsafe:service",
+					dev: {
 						plugin: {
 							package: "@cloudflare/workers-toolbox-plugins",
 							name: "entitlements",
@@ -199,8 +197,8 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 							],
 							mapping: { "*": { "containers.enabled": true } },
 						}),
-					}),
-				])
+					},
+				})
 			);
 		});
 
@@ -223,12 +221,12 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.serviceBindings?.MY_SERVICE).toBeDefined();
-			expect(
-				(workerOptions.unsafeBindings ?? []).find(
-					(b) => "name" in b && b.name === "MY_SERVICE"
-				)
-			).toBeUndefined();
+			expect(workerOptions.config.env?.MY_SERVICE).toEqual(
+				expect.objectContaining({
+					type: "worker",
+					workerName: "real-service",
+				})
+			);
 		});
 	});
 });

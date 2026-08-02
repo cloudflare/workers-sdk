@@ -8,13 +8,13 @@ import { Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
-import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
+	buildTriggersAndTailConsumers,
 	getDefaultProjectTmpPath,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
@@ -36,7 +36,6 @@ import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,
-	ModuleRule,
 	RemoteProxyConnectionString,
 	WorkerOptions,
 } from "miniflare";
@@ -281,16 +280,15 @@ async function getMiniflareOptionsFromConfig(args: {
 		}
 	}
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
+	const {
+		bindingOptions: { env, exports, legacyBindings },
+		externalWorkers,
+	} = buildMiniflareBindingOptions(
 		{
 			name: config.name,
-			complianceRegion: config.compliance_region,
 			bindings,
-			queueConsumers: undefined,
 			migrations: config.migrations,
 			exports: config.exports,
-			tails: [],
-			streamingTails: [],
 			containerDOClassNames: new Set(
 				config.containers?.map((c) => c.class_name)
 			),
@@ -315,9 +313,12 @@ async function getMiniflareOptionsFromConfig(args: {
 		});
 	}
 
-	const assetOptions = processedAssetOptions
+	const { assets, assetsBinding } = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
+	if (assetsBinding) {
+		env[assetsBinding[0]] = assetsBinding[1];
+	}
 
 	const resourcePersistencePath = getMiniflarePersistRoot(options.persist);
 	const projectRoot = config.userConfigPath
@@ -328,26 +329,38 @@ async function getMiniflareOptionsFromConfig(args: {
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
 			{
-				script: "",
-				modules: true,
-				name: config.name,
-				zone: getZoneFromConfig(config),
-				...bindingOptions,
-				...assetOptions,
+				config: {
+					type: "worker",
+					name: config.name ?? "",
+					compatibilityDate:
+						config.compatibility_date ?? getTodaysCompatDate(),
+					compatibilityFlags: config.compatibility_flags,
+					// getPlatformProxy exposes bindings to a Node.js process; there is
+					// no user worker script, so use an empty placeholder module.
+					manifest: { mainModule: "index.mjs", modules: PLACEHOLDER_MODULES },
+					env,
+					exports,
+					assets,
+				},
+				legacy: legacyBindings,
+				dev: {
+					remoteProxyConnectionString,
+					zone: getZoneFromConfig(config),
+				},
 			},
 			...externalWorkers,
 		],
 		resourcePersistencePath,
 		resourceTmpPath,
-	};
-
-	return {
-		script: "",
-		modules: true,
-		...miniflareOptions,
 		unsafeDevRegistryPath: getRegistryPath(),
 	};
+
+	return miniflareOptions;
 }
+
+const PLACEHOLDER_MODULES = {
+	"index.mjs": { type: "esm", contents: "export default {}" },
+} as const;
 
 /**
  * Get the persist option properties to pass to miniflare
@@ -381,10 +394,13 @@ function deepFreeze<T extends Record<string | number | symbol, unknown>>(
 	});
 }
 
-export type SourcelessWorkerOptions = Omit<
-	WorkerOptions,
-	"script" | "scriptPath" | "modules" | "modulesRoot"
-> & { modulesRules?: ModuleRule[] };
+/**
+ * A Miniflare per-worker options object without the worker's source. Callers
+ * supply their own `config.manifest` (or `legacy.serviceWorkerScript`).
+ */
+export type SourcelessWorkerOptions = Omit<WorkerOptions, "config"> & {
+	config: Omit<WorkerOptions["config"], "manifest">;
+};
 
 export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
@@ -435,14 +451,6 @@ export function unstable_getMiniflareWorkerOptions(
 			? readConfig({ config: configOrConfigPath, env })
 			: configOrConfigPath;
 
-	const modulesRules: ModuleRule[] = config.rules
-		.concat(DEFAULT_MODULE_RULES)
-		.map((rule) => ({
-			type: rule.type,
-			include: rule.globs,
-			fallthrough: rule.fallthrough,
-		}));
-
 	const containerDOClassNames = new Set(
 		config.containers?.map((c) => c.class_name)
 	);
@@ -460,16 +468,15 @@ export function unstable_getMiniflareWorkerOptions(
 			? options?.overrides?.enableContainers
 			: config.dev.enable_containers;
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
+	const {
+		bindingOptions: { env: envBindings, exports, legacyBindings },
+		externalWorkers,
+	} = buildMiniflareBindingOptions(
 		{
 			name: config.name,
-			complianceRegion: config.compliance_region,
 			bindings,
-			queueConsumers: config.queues.consumers,
 			migrations: config.migrations,
 			exports: config.exports,
-			tails: config.tail_consumers,
-			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
@@ -496,19 +503,37 @@ export function unstable_getMiniflareWorkerOptions(
 				overrides: options?.overrides?.assets,
 			})
 		: undefined;
-	const assetOptions = processedAssetOptions
+	const { assets, assetsBinding } = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
+	if (assetsBinding) {
+		envBindings[assetsBinding[0]] = assetsBinding[1];
+	}
+
+	const { triggers, tailConsumers } = buildTriggersAndTailConsumers({
+		crons: config.triggers?.crons,
+		queueConsumers: config.queues.consumers,
+		tails: config.tail_consumers,
+		streamingTails: config.streaming_tail_consumers,
+	});
 
 	const workerOptions: SourcelessWorkerOptions = {
-		compatibilityDate: config.compatibility_date,
-		compatibilityFlags: config.compatibility_flags,
-		modulesRules,
-		zone: getZoneFromConfig(config),
-
-		...bindingOptions,
-		...sitesOptions,
-		...assetOptions,
+		config: {
+			type: "worker",
+			name: config.name ?? "",
+			compatibilityDate: config.compatibility_date ?? getTodaysCompatDate(),
+			compatibilityFlags: config.compatibility_flags,
+			env: envBindings,
+			exports,
+			assets,
+			triggers: triggers.length > 0 ? triggers : undefined,
+			tailConsumers: tailConsumers.length > 0 ? tailConsumers : undefined,
+		},
+		legacy: { ...legacyBindings, ...sitesOptions },
+		dev: {
+			remoteProxyConnectionString: options?.remoteProxyConnectionString,
+			zone: getZoneFromConfig(config),
+		},
 	};
 
 	return {

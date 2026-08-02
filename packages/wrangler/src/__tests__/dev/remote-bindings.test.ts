@@ -79,7 +79,9 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 
 // Mock the buildMiniflareOptions function to capture the WorkerOptions that would be passed to Miniflare
 // The `workerOptions` variable will be assigned in the mock implementation.
-let workerOptions: Omit<WorkerOptions, "modules">[] = [];
+// Assertions only inspect `config.env` (via `objectContaining`), so we keep the
+// full worker options — including the source manifest — without stripping.
+let workerOptions: WorkerOptions[] = [];
 vi.mock("../../dev/miniflare/index.ts", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../dev/miniflare/index.ts")
@@ -90,9 +92,7 @@ vi.mock("../../dev/miniflare/index.ts", async () => {
 			.fn<typeof actual.buildMiniflareOptions>()
 			.mockImplementation(async (...args) => {
 				const options = await actual.buildMiniflareOptions(...args);
-				workerOptions = options.workers.map(
-					({ modules: _, modulesRoot: __, ...other }) => other
-				);
+				workerOptions = options.workers;
 				return options;
 			}),
 	};
@@ -130,7 +130,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		name: string;
 		config: RawConfig;
 		expectedProxyWorkerBindings: Record<string, Binding>;
-		expectedWorkerOptions: Omit<WorkerOptions, "modules">[];
+		expectedWorkerOptions: WorkerOptions[];
 	}[] = [
 		{
 			name: "service",
@@ -164,20 +164,24 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					serviceBindings: {
-						SERVICE: {
-							entrypoint: undefined,
-							name: "remote-service-binding-worker",
-							props: undefined,
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							SERVICE: {
+								type: "worker",
+								workerName: "remote-service-binding-worker",
+								exportName: undefined,
+								props: undefined,
+								remote: true,
+							},
+							SERVICE_WITH_ENTRYPOINT: {
+								type: "worker",
+								workerName: "remote-service-binding-worker",
+								exportName: "CustomEntrypoint",
+								props: undefined,
+								remote: true,
+							},
 						},
-						SERVICE_WITH_ENTRYPOINT: {
-							entrypoint: "CustomEntrypoint",
-							name: "remote-service-binding-worker",
-							props: undefined,
-							remoteProxyConnectionString,
-						},
-					},
+					}),
 				}),
 			],
 		},
@@ -197,10 +201,9 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					ai: {
-						binding: "AI",
-						remoteProxyConnectionString,
-					},
+					config: expect.objectContaining({
+						env: { AI: { type: "ai", remote: true } },
+					}),
 				}),
 			],
 		},
@@ -220,10 +223,9 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					browserRendering: {
-						binding: "BROWSER",
-						remoteProxyConnectionString,
-					},
+					config: expect.objectContaining({
+						env: { BROWSER: { type: "browser", remote: true } },
+					}),
 				}),
 			],
 		},
@@ -243,10 +245,9 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					images: {
-						binding: "IMAGES",
-						remoteProxyConnectionString,
-					},
+					config: expect.objectContaining({
+						env: { IMAGES: { type: "images", remote: true } },
+					}),
 				}),
 			],
 		},
@@ -270,12 +271,15 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					vectorize: {
-						VECTORIZE_BINDING: {
-							index_name: "mock-vectorize-index",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							VECTORIZE_BINDING: {
+								type: "vectorize",
+								name: "mock-vectorize-index",
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -299,12 +303,15 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					dispatchNamespaces: {
-						DISPATCH: {
-							namespace: "mock-dispatch-namespace",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							DISPATCH: {
+								type: "dispatch-namespace",
+								namespace: "mock-dispatch-namespace",
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -328,12 +335,15 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					kvNamespaces: {
-						KV_BINDING: {
-							id: "mock-kv-namespace",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							KV_BINDING: {
+								type: "kv",
+								id: "mock-kv-namespace",
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -358,12 +368,16 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					r2Buckets: {
-						R2_BINDING: {
-							id: "mock-r2-bucket",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							R2_BINDING: {
+								type: "r2",
+								name: "mock-r2-bucket",
+								s3Credentials: undefined,
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -389,12 +403,15 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					d1Databases: {
-						DB: {
-							id: "mock-d1-database-id",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							DB: {
+								type: "d1",
+								id: "mock-d1-database-id",
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -418,12 +435,15 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					mtlsCertificates: {
-						MTLS: {
-							certificate_id: "mock-mtls-certificate-id",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							MTLS: {
+								type: "mtls-certificate",
+								id: "mock-mtls-certificate-id",
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -447,12 +467,15 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					pipelines: {
-						PIPELINE: {
-							pipeline: "preserve-e2e-pipelines",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							PIPELINE: {
+								type: "pipeline",
+								name: "preserve-e2e-pipelines",
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -474,12 +497,15 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					artifacts: {
-						MY_ARTIFACTS: {
-							namespace: "default",
-							remoteProxyConnectionString,
+					config: expect.objectContaining({
+						env: {
+							MY_ARTIFACTS: {
+								type: "artifacts",
+								namespace: "default",
+								remote: true,
+							},
 						},
-					},
+					}),
 				}),
 			],
 		},
@@ -501,15 +527,17 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			},
 			expectedWorkerOptions: [
 				expect.objectContaining({
-					email: {
-						send_email: [
-							{
-								name: "EMAIL",
+					config: expect.objectContaining({
+						env: {
+							EMAIL: {
+								type: "send-email",
+								destinationAddress: undefined,
+								allowedDestinationAddresses: undefined,
+								allowedSenderAddresses: undefined,
 								remote: true,
-								remoteProxyConnectionString,
 							},
-						],
-					},
+						},
+					}),
 				}),
 			],
 		},
@@ -686,15 +714,20 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		});
 		expect(workerOptions).toEqual([
 			expect.objectContaining({
-				kvNamespaces: {
-					KV_LOCAL_BINDING: {
-						id: "mock-kv-namespace",
+				config: expect.objectContaining({
+					env: {
+						KV_LOCAL_BINDING: {
+							type: "kv",
+							id: "mock-kv-namespace",
+							remote: false,
+						},
+						KV_REMOTE_BINDING: {
+							type: "kv",
+							id: "mock-kv-namespace",
+							remote: true,
+						},
 					},
-					KV_REMOTE_BINDING: {
-						id: "mock-kv-namespace",
-						remoteProxyConnectionString,
-					},
-				},
+				}),
 			}),
 		]);
 		await stopWrangler();
@@ -744,14 +777,20 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		expect(proxyWorkerBindings).toEqual(undefined);
 		expect(workerOptions).toEqual([
 			expect.objectContaining({
-				kvNamespaces: {
-					KV_LOCAL_BINDING: {
-						id: "mock-kv-namespace",
+				config: expect.objectContaining({
+					env: {
+						KV_LOCAL_BINDING: {
+							type: "kv",
+							id: "mock-kv-namespace",
+							remote: false,
+						},
+						KV_REMOTE_BINDING: {
+							type: "kv",
+							id: "mock-kv-namespace",
+							remote: false,
+						},
 					},
-					KV_REMOTE_BINDING: {
-						id: "mock-kv-namespace",
-					},
-				},
+				}),
 			}),
 		]);
 		await stopWrangler();
