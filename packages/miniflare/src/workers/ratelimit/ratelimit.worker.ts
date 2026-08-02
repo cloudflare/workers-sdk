@@ -12,12 +12,12 @@ interface RatelimitConfig {
 }
 
 // options for Ratelimit
-//   (should be kept in sync with https://bitbucket.cfdata.org/projects/EW/repos/edgeworker/browse/src/edgeworker/internal-api/ratelimit.capnp)
+//   (should be kept in sync with `RatelimitOptions` in https://gitlab.cfdata.org/cloudflare/ew/edgeworker/-/blob/master/src/edgeworker/internal-api/ratelimit.h)
 const RatelimitOptionKeys = ["key", "limit", "period"];
 const RatelimitPeriodValues = [10, 60];
 
 // result from Ratelimit call
-//   (should be kept in sync with https://bitbucket.cfdata.org/projects/EW/repos/edgeworker/browse/src/edgeworker/internal-api/ratelimit.capnp)
+//   (should be kept in sync with `RatelimitResult` in https://gitlab.cfdata.org/cloudflare/ew/edgeworker/-/blob/master/src/edgeworker/internal-api/ratelimit.h)
 interface RatelimitResult {
 	success: boolean;
 }

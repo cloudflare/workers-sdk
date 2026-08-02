@@ -21,38 +21,55 @@ interface LimitResult {
 	success: boolean;
 }
 
-// One counter per key, shared by every binding pointing at this namespace.
-// `period` is a property of the namespace rather than of an individual call, so
-// it deliberately isn't part of the key: bindings that share a `namespace_id`
-// are documented to share counters for a given key.
+// Counters are scoped to `(key, period)`, mirroring production: there, an entry
+// is identified by `(account_id, namespace, hash(key), bucket, bucket_start_ts)`
+// and both `bucket` and `bucket_start_ts` are derived from the period, so
+// differing periods never share a counter. See
+// https://gitlab.cfdata.org/cloudflare/egs/doppler/-/blob/main/doppler-lib/src/counts.rs
+//
+// Bindings that share a `namespace_id` still share a counter for a given key,
+// because in the normal case they also share a period. Were `period` left out of
+// the key, two such bindings configured with different periods would instead
+// overwrite each other's row on every call — each seeing a foreign epoch, so
+// each resetting the count to zero — and neither would ever limit anything.
+//
+// Note the limit itself is deliberately *not* part of the key, again matching
+// production, where it is a threshold applied to a shared count rather than part
+// of the counter's identity.
 type BucketRow = {
 	key: string;
+	period: number;
 	epoch: number;
 	count: number;
 };
 
 const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS _mf_ratelimit_buckets (
-  key TEXT PRIMARY KEY,
+  key TEXT NOT NULL,
+  period INTEGER NOT NULL,
   epoch INTEGER NOT NULL,
-  count INTEGER NOT NULL
+  count INTEGER NOT NULL,
+  PRIMARY KEY (key, period)
 );
 `;
 
 function sqlStmts(db: TypedSql) {
 	return {
-		getBucket: db.stmt<Pick<BucketRow, "key">, BucketRow>(
-			"SELECT key, epoch, count FROM _mf_ratelimit_buckets WHERE key = :key"
+		getBucket: db.stmt<Pick<BucketRow, "key" | "period">, BucketRow>(
+			`SELECT key, period, epoch, count FROM _mf_ratelimit_buckets
+        WHERE key = :key AND period = :period`
 		),
 		putBucket: db.stmt<BucketRow>(
-			`INSERT OR REPLACE INTO _mf_ratelimit_buckets (key, epoch, count)
-        VALUES (:key, :epoch, :count)`
+			`INSERT OR REPLACE INTO _mf_ratelimit_buckets (key, period, epoch, count)
+        VALUES (:key, :period, :epoch, :count)`
 		),
-		// Windows are aligned to the wall clock, so every key in the namespace
+		// Windows are aligned to the wall clock, so every key sharing a period
 		// rolls over at the same instant. Clearing them all together matches the
 		// previous `#buckets.clear()` and stops the table growing without bound.
-		deleteExpired: db.stmt<Pick<BucketRow, "epoch">>(
-			"DELETE FROM _mf_ratelimit_buckets WHERE epoch != :epoch"
+		// It has to stay scoped to the period, or rolling one period's window over
+		// would discard the counters belonging to the other.
+		deleteExpired: db.stmt<Pick<BucketRow, "period" | "epoch">>(
+			"DELETE FROM _mf_ratelimit_buckets WHERE period = :period AND epoch != :epoch"
 		),
 	};
 }
@@ -72,19 +89,19 @@ export class RateLimiterObject extends MiniflareDurableObject {
 		const { key, limit, period } = await req.json<LimitRequestBody>();
 
 		const epoch = Math.floor(Date.now() / (period * 1000));
-		const bucket = get(this.stmts.getBucket({ key }));
+		const bucket = get(this.stmts.getBucket({ key, period }));
 
 		let count = 0;
 		if (bucket !== undefined && bucket.epoch === epoch) {
 			count = bucket.count;
 		} else {
-			drain(this.stmts.deleteExpired({ epoch }));
+			drain(this.stmts.deleteExpired({ period, epoch }));
 		}
 
 		if (count >= limit) {
 			return Response.json({ success: false } satisfies LimitResult);
 		}
-		this.stmts.putBucket({ key, epoch, count: count + 1 });
+		this.stmts.putBucket({ key, period, epoch, count: count + 1 });
 		return Response.json({ success: true } satisfies LimitResult);
 	};
 }

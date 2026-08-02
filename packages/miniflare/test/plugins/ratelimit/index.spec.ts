@@ -13,15 +13,34 @@ import type { MiniflareOptions } from "miniflare";
  * A burst that straddles a boundary therefore has its count reset part way
  * through, so a test sending `limit + 1` requests and expecting the last to be
  * rejected fails whenever the boundary lands mid-burst. Await this first: it
- * returns immediately unless the current window is nearly over, in which case
- * it waits for the next one so the burst runs inside a single window.
+ * returns immediately unless one of the current windows is nearly over, in
+ * which case it waits for the next one so the burst runs inside a single window
+ * of every period it was given.
  */
-async function waitForFreshRateLimitWindow(periodSeconds: number) {
-	const periodMs = periodSeconds * 1000;
-	const remainingMs = periodMs - (Date.now() % periodMs);
-	if (remainingMs < 10_000) {
+async function waitForFreshRateLimitWindow(
+	periodsSeconds: number[],
+	minRemainingMs = 10_000
+) {
+	const remaining = () =>
+		Math.min(
+			...periodsSeconds.map((periodSeconds) => {
+				const periodMs = periodSeconds * 1000;
+				return periodMs - (Date.now() % periodMs);
+			})
+		);
+	// A window can never offer more headroom than its own length, so asking for
+	// more than the shortest period would never be satisfied.
+	const targetMs = Math.min(
+		minRemainingMs,
+		(Math.min(...periodsSeconds) * 1000) / 2
+	);
+	// Periods divide one another, so skipping past the closest boundary realigns
+	// all of them at once and this loop runs at most twice.
+	let remainingMs = remaining();
+	while (remainingMs < targetMs) {
 		// Overshoot slightly so the next request is unambiguously in the new window.
 		await sleep(remainingMs + 50);
+		remainingMs = remaining();
 	}
 }
 
@@ -54,7 +73,7 @@ test("ratelimit", async ({ expect }) => {
 	});
 	useDispose(mf);
 
-	await waitForFreshRateLimitWindow(60);
+	await waitForFreshRateLimitWindow([60]);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(res.status).toBe(200);
@@ -173,7 +192,7 @@ test("ratelimit counters are keyed by namespace_id", async ({ expect }) => {
 		return res.status;
 	};
 
-	await waitForFreshRateLimitWindow(60);
+	await waitForFreshRateLimitWindow([60]);
 
 	// RATE_A and RATE_B share the "shared" namespace, so they increment the same
 	// counter: two successes across the pair, then the third call is limited.
@@ -186,6 +205,56 @@ test("ratelimit counters are keyed by namespace_id", async ({ expect }) => {
 	expect(await call("RATE_C")).toBe(200);
 	expect(await call("RATE_C")).toBe(200);
 	expect(await call("RATE_C")).toBe(429);
+});
+
+test("ratelimit counters are scoped per period", async ({ expect }) => {
+	const mf = new Miniflare({
+		ratelimits: {
+			// Same namespace, different windows. Production identifies a counter by
+			// bucket index and bucket start timestamp, both derived from the period,
+			// so these two must not share (nor clobber) a counter.
+			RATE_SLOW: {
+				namespace_id: "shared",
+				simple: { limit: 1, period: 60 },
+			},
+			RATE_FAST: {
+				namespace_id: "shared",
+				simple: { limit: 1, period: 10 },
+			},
+		},
+
+		modules: true,
+		script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const binding = new URL(request.url).searchParams.get("b");
+				const { success } = await env[binding].limit({ key: "k" });
+				return new Response(success ? "ok" : "limited", {
+					status: success ? 200 : 429,
+				});
+			},
+		}
+		`,
+	});
+	useDispose(mf);
+
+	const call = async (b: string) => {
+		const res = await mf.dispatchFetch(`http://localhost?b=${b}`);
+		await res.text();
+		return res.status;
+	};
+
+	await waitForFreshRateLimitWindow([10, 60], 3_000);
+
+	expect(await call("RATE_SLOW")).toBe(200);
+	expect(await call("RATE_FAST")).toBe(200);
+
+	// The discriminating assertion: if the period weren't part of the counter's
+	// identity, RATE_FAST's call would have replaced RATE_SLOW's row with an
+	// epoch RATE_SLOW can never match, so RATE_SLOW would start from zero again
+	// here — and by symmetry neither binding would ever limit anything.
+	expect(await call("RATE_SLOW")).toBe(429);
+	expect(await call("RATE_FAST")).toBe(429);
 });
 
 test("ratelimit counters survive a workerd restart", async ({ expect }) => {
@@ -219,7 +288,7 @@ test("ratelimit counters survive a workerd restart", async ({ expect }) => {
 		return res.status;
 	};
 
-	await waitForFreshRateLimitWindow(60);
+	await waitForFreshRateLimitWindow([60]);
 
 	expect(await call()).toBe(200);
 
