@@ -89,14 +89,20 @@ contract so the parent can drive either impl interchangeably.
   - `getTextResponse()` / `getJsonResponse()` issue a request with browser
     navigation headers (`Sec-Fetch-Mode: navigate` et al), which the asset and
     router workers branch on. Default to these.
-  - They use `node:http` rather than `fetch()` **deliberately**. `Sec-Fetch-Mode`
-    is a forbidden header name, and Node's `fetch()` (undici) rewrites it to
-    `cors` on the way out — every other `Sec-Fetch-*` header survives, but that
-    one does not, and it is the one that decides whether the asset worker
-    applies `not_found_handling`. Do not "simplify" these back to `fetch()`;
-    `spa-with-api`'s "via `getTextResponse()`" test exists to catch exactly that
-    regression. Passing `mode: "navigate"` to `fetch()` is not an option either
-    (the `Request` constructor rejects it).
+  - They use undici's low-level `request()` rather than `fetch()`
+    **deliberately**. The Fetch spec requires implementations to set
+    `Sec-Fetch-Mode` from the request's `mode` ("append the Fetch metadata
+    headers"), so `fetch()` overwrites whatever the caller passed with `cors`
+    before the request leaves the process (`appendFetchMetadata` in undici).
+    `Sec-Fetch-Dest`/`-Site`/`-User` are unimplemented there, so they survive —
+    which is why only `Sec-Fetch-Mode` breaks and it is easy to miss. That one
+    decides whether the asset worker applies `not_found_handling`.
+  - This is permanent, not a bug to wait out: no Fetch-based API can send
+    `Sec-Fetch-Mode: navigate`, and `fetch(url, { mode: "navigate" })` is
+    rejected by the `Request` constructor. Do not "simplify" these back to
+    `fetch()`; `spa-with-api`'s "via `getTextResponse()`" test exists to catch
+    exactly that regression (it is the only playground whose compat date enables
+    `SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING`).
   - `getResponse()` drives a real `page.goto()` and returns a Playwright
     `Response`. Only use it when the assertion needs the browser. Anything
     routed through Playwright can outlive a timed-out test and surface as an
