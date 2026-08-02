@@ -1,7 +1,7 @@
 import * as z from "zod";
 import type { SettingsConfig, WorkerConfig } from "./types";
 
-const AssetsSchema = z.strictObject({
+export const AssetsSchema = z.strictObject({
 	htmlHandling: z
 		.enum([
 			"auto-trailing-slash",
@@ -16,7 +16,55 @@ const AssetsSchema = z.strictObject({
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
-const KnownBindingSchema = z.discriminatedUnion("type", [
+export const BrowserBindingSchema = z.strictObject({
+	type: z.literal("browser"),
+	remote: z.boolean().optional(),
+});
+
+export const WorkerBindingSchema = z.strictObject({
+	type: z.literal("worker"),
+	workerName: z.string(),
+	exportName: z.string().optional(),
+	props: z.record(z.string(), z.unknown()).optional(),
+	remote: z.boolean().optional(),
+});
+
+export const D1BindingSchema = z.strictObject({
+	type: z.literal("d1"),
+	name: z.string().optional(),
+	id: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const KVBindingSchema = z.strictObject({
+	type: z.literal("kv"),
+	id: z.string().optional(),
+	// TODO: name support not yet implemented
+	// name: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const QueueBindingSchema = z.strictObject({
+	type: z.literal("queue"),
+	name: z.string().optional(),
+	deliveryDelay: z.number().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const R2BindingSchema = z.strictObject({
+	type: z.literal("r2"),
+	name: z.string().optional(),
+	jurisdiction: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const FlagshipBindingSchema = z.strictObject({
+	type: z.literal("flagship"),
+	id: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),
@@ -43,16 +91,8 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("assets") }),
-	z.strictObject({
-		type: z.literal("browser"),
-		remote: z.boolean().optional(),
-	}),
-	z.strictObject({
-		type: z.literal("d1"),
-		name: z.string().optional(),
-		id: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	BrowserBindingSchema,
+	D1BindingSchema,
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
 		namespace: z.string().optional(),
@@ -69,11 +109,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		workerName: z.string(),
 		exportName: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("flagship"),
-		id: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	FlagshipBindingSchema,
 	z.strictObject({
 		type: z.literal("hyperdrive"),
 		id: z.string(),
@@ -84,13 +120,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("json"), value: z.json() }),
-	z.strictObject({
-		type: z.literal("kv"),
-		id: z.string().optional(),
-		// TODO: name support not yet implemented
-		// name: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	KVBindingSchema,
 	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
 	z.strictObject({
 		type: z.literal("media"),
@@ -106,12 +136,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		name: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("queue"),
-		name: z.string().optional(),
-		deliveryDelay: z.number().optional(),
-		remote: z.boolean().optional(),
-	}),
+	QueueBindingSchema,
 	z.strictObject({
 		type: z.literal("rate-limit"),
 		namespace: z.string(),
@@ -120,12 +145,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 			period: z.union([z.literal(10), z.literal(60)]),
 		}),
 	}),
-	z.strictObject({
-		type: z.literal("r2"),
-		name: z.string().optional(),
-		jurisdiction: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	R2BindingSchema,
 	z.strictObject({ type: z.literal("secret") }),
 	z.strictObject({
 		type: z.literal("secrets-store-secret"),
@@ -178,24 +198,20 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		type: z.literal("web-search"),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("worker"),
-		workerName: z.string(),
-		exportName: z.string().optional(),
-		props: z.record(z.string(), z.unknown()).optional(),
-		remote: z.boolean().optional(),
-	}),
+	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
 	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	workerName: z.string(),
-	// 	exportName: z.string(),
-	// 	remote: z.boolean().optional(),
-	// }),
+	// (MAY HAVE TO REVERT PARTIALLY OR PRETEND IT IS A MINIFLARE ONLY BINDING)
+	z.strictObject({
+		type: z.literal("workflow"),
+		name: z.string(),
+		workerName: z.string(),
+		exportName: z.string(),
+		remote: z.boolean().optional(),
+	}),
 ]);
 
-const UnsafeBindingSchema = z.looseObject({
+export const UnsafeBindingSchema = z.looseObject({
 	type: z.templateLiteral(["unsafe:", z.string().min(1)]),
 	dev: z
 		.strictObject({
@@ -215,7 +231,7 @@ type BindingOutput =
 	| z.output<typeof KnownBindingSchema>
 	| z.output<typeof UnsafeBindingSchema>;
 
-const BindingSchema = z.unknown().transform((value, ctx) => {
+export const BindingSchema = z.unknown().transform((value, ctx) => {
 	const isUnsafe =
 		typeof value === "object" &&
 		value !== null &&
@@ -291,42 +307,57 @@ const EnvSchema = z
 // `state` defaults to `"created"` (live) when omitted. Tombstones use one of
 // `"deleted"`, `"renamed"`, `"transferred"`; `"expecting-transfer"` is a live
 // entry awaiting incoming data via the two-phase cross-script transfer flow.
-const ExportSchema = z.union([
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("created").optional(),
-		storage: z.enum(["sqlite", "legacy-kv"]),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("deleted"),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("renamed"),
-		renamedTo: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("transferred"),
-		transferredTo: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("expecting-transfer"),
-		storage: z.enum(["sqlite", "legacy-kv"]),
-		transferFrom: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("worker"),
-		cache: z.strictObject({ enabled: z.boolean() }).optional(),
-	}),
+export const DurableObjectCreatedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("created").optional(),
+	storage: z.enum(["sqlite", "legacy-kv"]),
+});
+
+export const DurableObjectDeletedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("deleted"),
+});
+
+export const DurableObjectRenamedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("renamed"),
+	renamedTo: z.string(),
+});
+
+export const DurableObjectTransferredExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("transferred"),
+	transferredTo: z.string(),
+});
+
+export const DurableObjectExpectingTransferExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("expecting-transfer"),
+	storage: z.enum(["sqlite", "legacy-kv"]),
+	transferFrom: z.string(),
+});
+
+export const WorkerEntrypointExportSchema = z.strictObject({
+	type: z.literal("worker"),
+	cache: z.strictObject({ enabled: z.boolean() }).optional(),
+});
+
+// Exported for Miniflare's `MiniflareExportSchema`. Not yet added to the shared
+// `ExportSchema` union / public `Export` type — see "TODO: support Workflows".
+export const WorkflowExportSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	limits: z.strictObject({ steps: z.number().optional() }).optional(),
+});
+
+export const ExportSchema = z.union([
+	DurableObjectCreatedExportSchema,
+	DurableObjectDeletedExportSchema,
+	DurableObjectRenamedExportSchema,
+	DurableObjectTransferredExportSchema,
+	DurableObjectExpectingTransferExportSchema,
+	WorkerEntrypointExportSchema,
 	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	name: z.string(),
-	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	// }),
 ]);
 
 const LimitsSchema = z.strictObject({

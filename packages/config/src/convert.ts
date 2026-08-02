@@ -561,17 +561,18 @@ function convertBindingsAndAssets(
 				break;
 			}
 			// TODO: re-enable when workflow bindings return.
-			// case "workflow": {
-			// 	workflows.push(
-			// 		omitUndefined({
-			// 			binding: name,
-			// 			class_name: binding.exportName,
-			// 			script_name: binding.workerName,
-			// 			remote: binding.remote,
-			// 		})
-			// 	);
-			// 	break;
-			// }
+			case "workflow": {
+				workflows.push(
+					omitUndefined({
+						binding: name,
+						name: binding.name,
+						class_name: binding.exportName,
+						script_name: binding.workerName,
+						remote: binding.remote,
+					})
+				);
+				break;
+			}
 		}
 	}
 

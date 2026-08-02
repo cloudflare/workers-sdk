@@ -55,8 +55,8 @@
 	"dependencies": {
 		"cjs-module-lexer": "1.2.3",
 		"esbuild": "catalog:default",
-		"miniflare": "workspace:*",
-		"wrangler": "workspace:*",
+		"miniflare": "npm:miniflare@4.20260722.1",
+		"wrangler": "npm:wrangler@4.118.0",
 		"zod": "catalog:default"
 	},
 	"devDependencies": {

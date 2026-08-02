@@ -6,7 +6,11 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
-import { disposeWithRetry, waitForWorkersInRegistry } from "../../test-shared";
+import {
+	disposeWithRetry,
+	singleModuleManifest,
+	waitForWorkersInRegistry,
+} from "../../test-shared";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
@@ -16,13 +20,22 @@ describe("Local Explorer API validation", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			kvNamespaces: {
-				TEST_KV: "test-kv-id",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_KV: { type: "kv", id: "test-kv-id" },
+						},
+					},
+				},
+			],
 		});
 	});
 
@@ -318,15 +331,24 @@ describe("Local Explorer works with custom routes", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			kvNamespaces: {
-				TEST_KV: "test-kv-id",
-			},
-			// Configure a custom route that would trigger header rewriting
-			routes: ["my-custom-site.com/*"],
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_KV: { type: "kv", id: "test-kv-id" },
+						},
+						// Configure a custom route that would trigger header rewriting
+						triggers: [{ type: "fetch", pattern: "my-custom-site.com/*" }],
+					},
+				},
+			],
 		});
 	});
 
@@ -455,14 +477,23 @@ describe("Local Explorer works with wildcard routes", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			kvNamespaces: {
-				TEST_KV: "test-kv-id",
-			},
-			routes: ["*.example.com/*"],
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_KV: { type: "kv", id: "test-kv-id" },
+						},
+						triggers: [{ type: "fetch", pattern: "*.example.com/*" }],
+					},
+				},
+			],
 		});
 	});
 
@@ -518,14 +549,23 @@ describe("Local Explorer works with upstream", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			kvNamespaces: {
-				TEST_KV: "test-kv-id",
-			},
 			upstream: "https://upstream-host.example/",
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_KV: { type: "kv", id: "test-kv-id" },
+						},
+					},
+				},
+			],
 		});
 	});
 
@@ -599,39 +639,47 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 		// Instance A has two workers
 		instanceA = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
-					name: "worker-a1",
-					modules: true,
-					script: `
+					config: {
+						type: "worker",
+						name: "worker-a1",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(`
 						export class TestDO {
 							constructor(state) { this.state = state; }
 							async fetch() { return new Response("DO"); }
 						}
 						export default { fetch() { return new Response("Worker A1"); } }
-					`,
-					kvNamespaces: {
-						MY_KV: "kv-namespace-id",
-					},
-					d1Databases: {
-						MY_DB: "d1-database-id",
-					},
-					r2Buckets: {
-						MY_BUCKET: "r2-bucket-name",
-					},
-					durableObjects: {
-						MY_DO: "TestDO",
+					`),
+						env: {
+							MY_KV: { type: "kv", id: "kv-namespace-id" },
+							MY_DB: { type: "d1", id: "d1-database-id" },
+							MY_BUCKET: { type: "r2", name: "r2-bucket-name" },
+							MY_DO: {
+								type: "durable-object",
+								workerName: "worker-a1",
+								exportName: "TestDO",
+							},
+						},
+						exports: {
+							TestDO: { type: "durable-object", storage: "legacy-kv" },
+						},
 					},
 				},
 				{
-					name: "worker-a2",
-					modules: true,
-					script: `export default { fetch() { return new Response("Worker A2"); } }`,
-					kvNamespaces: {
-						KV_A2: "kv-a2",
+					config: {
+						type: "worker",
+						name: "worker-a2",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker A2"); } }`
+						),
+						env: {
+							KV_A2: { type: "kv", id: "kv-a2" },
+						},
 					},
 				},
 			],
@@ -639,16 +687,24 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 
 		// Instance B has one worker
 		instanceB = new Miniflare({
-			name: "worker-b",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("Worker B"); } }`,
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
-			d1Databases: {
-				DB_B: "db-b",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "worker-b",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker B"); } }`
+						),
+						env: {
+							DB_B: { type: "d1", id: "db-b" },
+						},
+					},
+				},
+			],
 		});
 
 		await instanceA.ready;
@@ -668,6 +724,12 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 		removeDirSync(registryPath);
 	});
 
+	// NOTE(miniflare v5): the per-worker `bindings` snapshot below omits the
+	// `workflows` key while the Workflows plugin is disabled during the config
+	// migration (`constructExplorerWorkerOpts` does not aggregate workflows yet).
+	// When workflows are re-enabled the key returns and this snapshot needs
+	// updating. The rest of the assertion still covers cross-instance kv/d1/r2/do
+	// aggregation.
 	test("returns all workers from multiple instances with bindings", async ({
 		expect,
 	}) => {
@@ -709,7 +771,6 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			            "id": "r2-bucket-name",
 			          },
 			        ],
-			        "workflows": [],
 			      },
 			      "isSelf": true,
 			      "name": "worker-a1",
@@ -725,7 +786,6 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			          },
 			        ],
 			        "r2": [],
-			        "workflows": [],
 			      },
 			      "isSelf": true,
 			      "name": "worker-a2",
@@ -741,7 +801,6 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			        "do": [],
 			        "kv": [],
 			        "r2": [],
-			        "workflows": [],
 			      },
 			      "isSelf": false,
 			      "name": "worker-b",

@@ -158,10 +158,8 @@ export async function usingLocalBucket<T>(
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
 	const resourcePersistencePath = getDefaultPersistRoot(persist);
-	const mf = new Miniflare({
-		modules: true,
-		// TODO(soon): import `reduceError()` from `miniflare:shared`
-		script: `
+	// TODO(soon): import `reduceError()` from `miniflare:shared`
+	const r2PutScript = `
     function reduceError(e) {
       return {
         name: e?.name,
@@ -188,9 +186,23 @@ export async function usingLocalBucket<T>(
           });
         }
       }
-    }`,
+    }`;
+	const mf = new Miniflare({
 		resourcePersistencePath,
-		r2Buckets: { BUCKET: bucketName },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "wrangler-r2",
+					compatibilityDate: "2024-01-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modules: { "index.mjs": { type: "esm", contents: r2PutScript } },
+					},
+					env: { BUCKET: { type: "r2", name: bucketName } },
+				},
+			},
+		],
 	});
 	const bucket = await mf.getR2Bucket("BUCKET");
 	try {

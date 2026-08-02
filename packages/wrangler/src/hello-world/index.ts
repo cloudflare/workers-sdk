@@ -25,14 +25,21 @@ export async function usingLocalHelloWorldBinding<T>(
 	const persist = getLocalPersistencePath(persistTo, config);
 	const resourcePersistencePath = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
-		script:
-			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
 		resourcePersistencePath,
-		helloWorld: {
-			BINDING: {
-				enable_timer: false,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "wrangler-hello-world",
+					compatibilityDate: "2024-01-01",
+					env: { BINDING: { type: "hello-world", enable_timer: false } },
+				},
+				legacy: {
+					serviceWorkerScript:
+						'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+				},
 			},
-		},
+		],
 	});
 	const binding = await mf.getHelloWorldBinding("BINDING");
 	try {
