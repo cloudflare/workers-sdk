@@ -115,7 +115,12 @@ export async function runDeployCommandHandler(
 	{
 		config,
 		pagesToWorkersDelegation = false,
-	}: { config: Config; pagesToWorkersDelegation?: boolean }
+		autoConfigOutputDir,
+	}: {
+		config: Config;
+		pagesToWorkersDelegation?: boolean;
+		autoConfigOutputDir?: string;
+	}
 ): Promise<void> {
 	// Capture whether this project can prove it owns the target Worker name,
 	// BEFORE autoconfig generates or rewrites the config. Ownership is proven by
@@ -139,6 +144,7 @@ export async function runDeployCommandHandler(
 	// --- Step 0. Auto-config --- //
 	const autoConfigResult = await maybeRunAutoConfig(args, config, {
 		skipConfirmations: pagesToWorkersDelegation,
+		outputDir: autoConfigOutputDir,
 	});
 	if (autoConfigResult.aborted) {
 		return;

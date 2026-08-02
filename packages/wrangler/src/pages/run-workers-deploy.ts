@@ -109,6 +109,7 @@ export async function runPagesToWorkersDeploy(
 			await runDeployCommandHandler(deployArgs, {
 				config,
 				pagesToWorkersDelegation: true,
+				autoConfigOutputDir: delegation.assetsDirectory,
 			});
 		});
 	} catch (error) {

@@ -57,6 +57,7 @@ describe("runPagesToWorkersDeploy", () => {
 			deployArgs: {
 				name: "test-project",
 			},
+			assetsDirectory: "/tmp/my-site/dist",
 		};
 
 		await runPagesToWorkersDeploy(delegation);
@@ -92,6 +93,10 @@ describe("runPagesToWorkersDeploy", () => {
 			expect.objectContaining({
 				config: {},
 				pagesToWorkersDelegation: true,
+				// The named assets directory is forwarded as the autoconfig
+				// output-directory hint so the delegated deploy configures exactly
+				// the directory the agent asked to deploy.
+				autoConfigOutputDir: "/tmp/my-site/dist",
 			})
 		);
 		expect(run).toHaveBeenCalledWith(

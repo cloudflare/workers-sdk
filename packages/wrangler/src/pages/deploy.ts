@@ -35,7 +35,7 @@ import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 import { runPagesToWorkersDeploy } from "./run-workers-deploy";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
-import type { PagesConfigCache } from "./types";
+import type { PagesConfigCache, Project as PagesProject } from "./types";
 import type {
 	Deployment,
 	DeploymentStage,
@@ -47,6 +47,13 @@ import type { Config } from "@cloudflare/workers-utils";
 export const pagesDeploymentCreateCommand = createAlias({
 	aliasOf: "wrangler pages deploy",
 });
+
+/**
+ * A Pages project created within this window that still has no deployment is
+ * treated as a fresh artefact of the current agent run (see the deploy handler),
+ * so delegation to Cloudflare Workers still applies to it.
+ */
+const FRESH_EMPTY_PROJECT_WINDOW_MS = 60 * 60 * 1000;
 
 export const pagesPublishCommand = createAlias({
 	aliasOf: "wrangler pages deploy",
@@ -203,10 +210,11 @@ export const pagesDeployCommand = createCommand({
 		let projectName =
 			args.projectName ?? config?.name ?? configCache.project_name;
 		let isExistingProject = true;
+		let project: PagesProject | undefined;
 
 		if (projectName) {
 			try {
-				await fetchResult<Project>(
+				project = await fetchResult<PagesProject>(
 					COMPLIANCE_REGION_CONFIG_PUBLIC,
 					`/accounts/${accountId}/pages/projects/${projectName}`
 				);
@@ -221,6 +229,27 @@ export const pagesDeployCommand = createCommand({
 			}
 		}
 
+		// A Pages project that exists but has no deployment and was created within
+		// the last hour is almost certainly an artefact of this same agent run
+		// (e.g. a forced `pages project create`), so we treat it as new and let
+		// delegation apply. Established projects (>=1 deployment) and older empty
+		// projects keep deploying to Pages. A missing or unparseable creation date
+		// safely yields `false`, defaulting to Pages.
+		const createdOnMs = project?.created_on
+			? new Date(project.created_on).getTime()
+			: Number.NaN;
+		const isFreshEmptyArtefact =
+			isExistingProject &&
+			project !== undefined &&
+			project.latest_deployment === undefined &&
+			!Number.isNaN(createdOnMs) &&
+			Date.now() - createdOnMs < FRESH_EMPTY_PROJECT_WINDOW_MS;
+		if (isFreshEmptyArtefact) {
+			logger.debug(
+				"pages deploy: target project exists but is a freshly-created empty project; treating it as new so Workers delegation applies"
+			);
+		}
+
 		// When run by an AI agent, delegate brand-new static Pages deploys to a
 		// Workers static-assets deploy. Deploys to an existing project, projects
 		// using unsupported Pages features, and explicit opt-outs are never
@@ -230,7 +259,8 @@ export const pagesDeployCommand = createCommand({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
-			projectExists: Boolean(projectName) && isExistingProject,
+			projectExists:
+				Boolean(projectName) && isExistingProject && !isFreshEmptyArtefact,
 			force: args.iReallyWantToDeployToPagesBecauseIHaveARationale,
 			rationale: args.agentRationaleContext,
 			projectName,
@@ -254,7 +284,7 @@ export const pagesDeployCommand = createCommand({
 				// get projects that are not connected to an SCM source (GitHub/GitLab)
 				// aka direct-upload projects
 				const duProjects = (await listProjects({ accountId })).filter(
-					(project) => !project.source
+					(duProject) => !duProject.source
 				);
 
 				if (duProjects.length > 0) {

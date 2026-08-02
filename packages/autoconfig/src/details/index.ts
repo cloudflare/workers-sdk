@@ -90,6 +90,7 @@ export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
 	context,
+	outputDir: outputDirHint,
 }: {
 	/** The path to the project, defaults to cwd. */
 	projectPath?: string;
@@ -97,10 +98,38 @@ export async function getDetailsForAutoConfig({
 	wranglerConfig?: Config;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
+	/**
+	 * An explicit static-assets directory the caller already knows (relative to
+	 * `projectPath`, or absolute). When provided we skip framework detection and
+	 * the `findAssetsDir` heuristic and configure a plain static-assets deploy of
+	 * exactly that directory.
+	 */
+	outputDir?: string;
 }): Promise<AutoConfigDetails> {
 	const { logger } = context;
 
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
+
+	// A caller that already knows the assets directory (e.g. the Pages-to-Workers
+	// delegation, which was handed one by the agent) skips detection entirely: no
+	// framework guessing, no `findAssetsDir` heuristic, no package.json mutation.
+	// We configure a plain static-assets deploy of exactly that directory.
+	if (outputDirHint !== undefined) {
+		const resolvedOutputDir =
+			relative(projectPath, resolve(projectPath, outputDirHint)) || ".";
+		logger.debug(
+			`Using explicit static-assets output directory for autoconfig: ${resolvedOutputDir}`
+		);
+		return {
+			configured: false,
+			projectPath,
+			framework: getFrameworkClassInstance(staticFramework.id),
+			packageManager: NpmPackageManager,
+			workerName: getWorkerName(undefined, projectPath),
+			outputDir: resolvedOutputDir,
+			isWorkspaceRoot: false,
+		};
+	}
 
 	if (
 		// If a real Wrangler config has been found the project is already configured for Workers

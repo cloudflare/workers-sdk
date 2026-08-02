@@ -38,10 +38,12 @@ export async function runAutoConfigDetection({
 	command,
 	wranglerConfig,
 	context,
+	outputDir,
 }: {
 	command: NonNullable<AutoConfigWranglerTriggerCommand>;
 	wranglerConfig: Config;
 	context: AutoConfigContext;
+	outputDir?: string;
 }): Promise<AutoConfigDetails> {
 	sendMetricsEvent(
 		"autoconfig_detection_started",
@@ -53,6 +55,7 @@ export async function runAutoConfigDetection({
 		const details = await getDetailsForAutoConfig({
 			wranglerConfig,
 			context,
+			outputDir,
 		});
 
 		sendMetricsEvent(

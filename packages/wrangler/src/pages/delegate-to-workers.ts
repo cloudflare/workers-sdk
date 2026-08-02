@@ -20,6 +20,7 @@
  */
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { detectAgent } from "../utils/detect-agent";
@@ -47,9 +48,9 @@ export interface MaybeDelegatePagesToWorkersOptions {
 	force?: boolean;
 	/**
 	 * The agent-supplied rationale (`--agent-rationale-context`) for an opt-out.
-	 * Only ever used to derive a categorical bucket for telemetry (see
-	 * `categoriseForceRationale`); the raw string is never transmitted, so it
-	 * cannot leak secrets or PII.
+	 * Validated against a closed set of categories (see
+	 * `assertRecognisedForceRationale`); only a known category is ever recorded,
+	 * so the raw string is never transmitted and cannot leak secrets or PII.
 	 */
 	rationale?: string;
 	/** Project/worker name to carry across to the Workers deploy. */
@@ -83,6 +84,14 @@ export type PagesToWorkersDelegateResult =
 			command: PagesDelegateCommand;
 			agentId: string | null;
 			deployArgs: PagesToWorkersDeployArgs;
+			/**
+			 * The static-assets directory the agent named, carried across so the
+			 * delegated Workers deploy can hand it to autoconfig as an explicit
+			 * output-directory hint. It rides on the result rather than in
+			 * `deployArgs` because putting it in `deployArgs` (as `--assets`/`--path`)
+			 * would disable autoconfig (see `buildWorkersDeployArgs`).
+			 */
+			assetsDirectory?: string;
 	  };
 
 /** The outcome recorded against the `delegate pages to workers` metrics event. */
@@ -114,8 +123,9 @@ export const AGENT_RATIONALE_CONTEXT_FLAG = "agent-rationale-context";
  * when it opts out of delegation. This is the single source of truth: the values
  * are both the menu we present to agents (in the guidance and failure messages
  * that are the only place an agent discovers the opt-out flag) and the only
- * values we ever record. Anything an agent passes that is not in this set is
- * bucketed as `"other"`, and an absent rationale is recorded as `"unspecified"`.
+ * values we ever record. A rationale that is absent or not a member of this set
+ * is rejected with an error (see `assertRecognisedForceRationale`) rather than
+ * bucketed, so the agent must pick a known category.
  *
  * Because we only ever transmit one of these constants (never the raw input),
  * the field cannot carry secrets, API keys, file paths, or user details.
@@ -130,29 +140,36 @@ const FORCE_RATIONALE_CATEGORIES = [
 	"other",
 ] as const;
 
-/** Recorded when the opt-out flag is used without a rationale. */
-const FORCE_RATIONALE_UNSPECIFIED = "unspecified";
-
 /** Comma-separated menu of categories, embedded verbatim in agent messages. */
 const FORCE_RATIONALE_MENU = FORCE_RATIONALE_CATEGORIES.join(", ");
 
 /**
- * Maps an agent-supplied `--agent-rationale-context` to a telemetry bucket.
+ * Validates an agent-supplied `--agent-rationale-context` against the closed set
+ * of categories and returns the normalised value, throwing when it is missing or
+ * unrecognised.
  *
- * The mapping is a deterministic membership check, not interpretation: a value
- * is kept only if it exactly matches a known category (after trimming and
- * lower-casing), otherwise it collapses to `"other"`. An absent rationale is
- * `"unspecified"`. The raw input is never returned or transmitted, so freeform
- * text (which could contain secrets or PII) can never escape.
+ * The opt-out flag is only useful to an agent we previously delegated, and that
+ * agent has already been handed the category menu, so an absent or unknown
+ * rationale is a mistake we surface rather than silently absorb. The check is a
+ * deterministic membership test (after trimming and lower-casing), never
+ * interpretation. The raw input is never echoed back or transmitted — only a
+ * known constant is ever returned — so freeform text (which could contain
+ * secrets or PII) can never escape via the error message or telemetry.
  */
-export function categoriseForceRationale(input: string | undefined): string {
-	if (input === undefined) {
-		return FORCE_RATIONALE_UNSPECIFIED;
+export function assertRecognisedForceRationale(
+	input: string | undefined
+): string {
+	const normalised = input?.trim().toLowerCase() ?? "";
+	if (!(FORCE_RATIONALE_CATEGORIES as readonly string[]).includes(normalised)) {
+		throw new UserError(
+			`--${FORCE_PAGES_FLAG} requires --${AGENT_RATIONALE_CONTEXT_FLAG} to be set to one of the following categories: ${FORCE_RATIONALE_MENU}.`,
+			{
+				telemetryMessage:
+					"pages delegation opt-out missing or unrecognised rationale",
+			}
+		);
 	}
-	const normalised = input.trim().toLowerCase();
-	return (FORCE_RATIONALE_CATEGORIES as readonly string[]).includes(normalised)
-		? normalised
-		: "other";
+	return normalised;
 }
 
 /**
@@ -200,18 +217,28 @@ function buildWorkersDeployFailedMessage(
 /**
  * Agent-facing notice emitted at the end of a successful opt-out command.
  *
- * The opt-out flag takes this one command out of delegation and runs it directly
- * against Cloudflare Pages. Once it succeeds the project exists on the account,
- * so every subsequent Pages command is no longer eligible for delegation and
- * runs directly without the flag. We say this explicitly so the agent stops
- * appending the flag to future commands.
+ * The two commands leave the account in different states, so the guidance
+ * differs. A forced `pages deploy` leaves the project with a deployment, so it
+ * is established and no future command needs the flag. A forced `pages project
+ * create` leaves the project existing but empty; because a very recently created
+ * empty project is treated as a fresh artefact (see `deploy.ts`), a follow-up
+ * `pages deploy` without the flag would be delegated to Workers — so the agent
+ * that wanted this directory on Pages must re-run the deploy WITH the flag, and
+ * only after that first deployment lands does the project become established.
  */
 function buildForceOptOutNoticeMessage(command: PagesDelegateCommand): string {
-	const action = command === "deploy" ? "deployed" : "created";
+	if (command === "deploy") {
+		return (
+			`Notice to agents: this project was deployed directly on Cloudflare Pages because --${FORCE_PAGES_FLAG} was set, bypassing delegation to Cloudflare Workers. ` +
+			`This is the only time you need --${FORCE_PAGES_FLAG}: this project now exists, so subsequent commands will run directly against Cloudflare Pages and will not be delegated to Cloudflare Workers. ` +
+			`Do not pass --${FORCE_PAGES_FLAG} on future commands.`
+		);
+	}
 	return (
-		`Notice to agents: this project was ${action} directly on Cloudflare Pages because --${FORCE_PAGES_FLAG} was set, bypassing delegation to Cloudflare Workers. ` +
-		`This is the only time you need --${FORCE_PAGES_FLAG}: this project now exists, so subsequent commands will run directly against Cloudflare Pages and will not be delegated to Cloudflare Workers. ` +
-		`Do not pass --${FORCE_PAGES_FLAG} on future commands.`
+		`Notice to agents: this Pages project was created directly on Cloudflare Pages because --${FORCE_PAGES_FLAG} was set, bypassing delegation to Cloudflare Workers. ` +
+		`The project now exists but has no deployment yet, so a follow-up \`wrangler pages deploy\` WITHOUT --${FORCE_PAGES_FLAG} will be delegated to Cloudflare Workers. ` +
+		`To deploy your directory to the Pages project you just created, re-run \`wrangler pages deploy\` WITH --${FORCE_PAGES_FLAG} and an --${AGENT_RATIONALE_CONTEXT_FLAG} (one of: ${FORCE_RATIONALE_MENU}). ` +
+		`Once that first deployment lands the project is established, and later \`wrangler pages deploy\` commands run directly against Cloudflare Pages without the flag.`
 	);
 }
 
@@ -258,9 +285,11 @@ export async function maybeDelegatePagesToWorkers(
 	// `forcedOptOut` so the caller emits the one-time opt-out notice once the
 	// direct Pages command succeeds (see `logPagesToWorkersForceOptOutNotice`).
 	if (options.force) {
-		recordDelegate("forced", options, agent.id, {
-			rationale: categoriseForceRationale(options.rationale),
-		});
+		// Validate the rationale before recording anything: an invalid or missing
+		// category throws here so the opt-out cannot proceed without a recognised
+		// reason, and only a known constant is ever recorded.
+		const rationale = assertRecognisedForceRationale(options.rationale);
+		recordDelegate("forced", options, agent.id, { rationale });
 		logger.debug("Pages-to-Workers delegation skipped: opt-out flag");
 		return { delegate: false, forcedOptOut: true };
 	}
@@ -300,6 +329,7 @@ export async function maybeDelegatePagesToWorkers(
 		command: options.command,
 		agentId: agent.id,
 		deployArgs: buildWorkersDeployArgs(options),
+		assetsDirectory: options.assetsDirectory,
 	};
 }
 

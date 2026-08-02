@@ -559,4 +559,38 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.framework?.id).toBe("static");
 		});
 	});
+
+	describe("explicit outputDir hint", () => {
+		it("configures a plain static deploy of exactly the named directory, skipping detection", async ({
+			expect,
+		}) => {
+			// Deliberately seed no index.html anywhere: the hint bypasses framework
+			// detection and the findAssetsDir heuristic, so the presence of static
+			// files is never required for the hint path to succeed.
+			const result = await details.getDetailsForAutoConfig({
+				context,
+				outputDir: "site",
+			});
+
+			expect(result.configured).toBe(false);
+			expect(result.framework?.id).toBe("static");
+			expect(result.outputDir).toBe("site");
+			// No package.json is read on the hint path, so runAutoConfig performs no
+			// install/build and no package.json mutation.
+			expect(result.packageJson).toBeUndefined();
+		});
+
+		it("normalises a hint that points at the project root to '.'", async ({
+			expect,
+		}) => {
+			const result = await details.getDetailsForAutoConfig({
+				context,
+				outputDir: ".",
+			});
+
+			expect(result.configured).toBe(false);
+			expect(result.framework?.id).toBe("static");
+			expect(result.outputDir).toBe(".");
+		});
+	});
 });

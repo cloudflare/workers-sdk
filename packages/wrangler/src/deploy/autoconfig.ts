@@ -75,7 +75,7 @@ type AutoConfigArgs = ReadConfigCommandArgs &
 export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	args: Args,
 	config: Config,
-	options: { skipConfirmations?: boolean } = {}
+	options: { skipConfirmations?: boolean; outputDir?: string } = {}
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
 		args.autoconfig &&
@@ -110,6 +110,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 				command: "wrangler deploy",
 				wranglerConfig: config,
 				context: autoConfigContext,
+				outputDir: options.outputDir,
 			});
 
 			if (details.framework?.id === "cloudflare-pages") {

@@ -5,7 +5,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { sendMetricsEvent } from "../../metrics";
 import {
 	AGENT_RATIONALE_CONTEXT_FLAG,
-	categoriseForceRationale,
+	assertRecognisedForceRationale,
 	FORCE_PAGES_FLAG,
 	logPagesToWorkersForceOptOutNotice,
 	maybeDelegatePagesToWorkers,
@@ -172,6 +172,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 				command: "deploy",
 				agentId: "test-agent",
 				deployArgs: {},
+				assetsDirectory,
 			});
 		});
 	}
@@ -246,10 +247,14 @@ describe("maybeDelegatePagesToWorkers", () => {
 			command: "deploy",
 			agentId: "test-agent",
 			deployArgs: { name: "my-app" },
+			assetsDirectory,
 		});
 		if (!result.delegate) {
 			throw new Error("Expected delegation to be actioned");
 		}
+		// The named directory rides on the result (not in `deployArgs`) so the
+		// delegated deploy can hand it to autoconfig as an explicit hint.
+		expect(result.assetsDirectory).toBe(assetsDirectory);
 		// Regression guard: forwarding `--assets` would disable autoconfig, and a
 		// non-interactive agent deploy would then have no compatibility date and
 		// fail validation. autoconfig must run to detect the directory and write a
@@ -281,26 +286,21 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 	});
 
-	it("does not delegate when the opt-out flag is set, records the opt-out (with an unspecified rationale), and flags forcedOptOut", async ({
+	it("throws (and emits no telemetry) when the opt-out flag is set with no rationale", async ({
 		expect,
 	}) => {
-		const result = await maybeDelegatePagesToWorkers({
-			command: "deploy",
-			projectPath: process.cwd(),
-			force: true,
-		});
-
-		expect(result).toEqual({ delegate: false, forcedOptOut: true });
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"delegate pages to workers",
-			expect.objectContaining({
+		await expect(
+			maybeDelegatePagesToWorkers({
 				command: "deploy",
-				result: "forced",
-				// No rationale was passed, so it is recorded as "unspecified".
-				rationale: "unspecified",
-			}),
-			expect.anything()
+				projectPath: process.cwd(),
+				force: true,
+			})
+		).rejects.toThrow(
+			`--${FORCE_PAGES_FLAG} requires --${AGENT_RATIONALE_CONTEXT_FLAG} to be set to one of the following categories`
 		);
+		// The rationale is validated before anything is recorded, so an opt-out
+		// without a recognised category produces no metrics event.
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
 	it("records a recognised rationale category on the forced event", async ({
@@ -324,24 +324,42 @@ describe("maybeDelegatePagesToWorkers", () => {
 		);
 	});
 
-	it("buckets an unrecognised rationale as 'other' rather than transmitting the raw text", async ({
+	it("throws without transmitting the raw text when the rationale is unrecognised", async ({
 		expect,
 	}) => {
-		await maybeDelegatePagesToWorkers({
-			command: "deploy",
-			projectPath: process.cwd(),
-			force: true,
-			// A value that could contain sensitive text must never be sent verbatim.
-			rationale: "token=sk-secret-value",
-		});
-
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"delegate pages to workers",
-			expect.objectContaining({ result: "forced", rationale: "other" }),
-			expect.anything()
+		await expect(
+			maybeDelegatePagesToWorkers({
+				command: "deploy",
+				projectPath: process.cwd(),
+				force: true,
+				// A value that could contain sensitive text must never be sent verbatim
+				// or echoed back in the error.
+				rationale: "token=sk-secret-value",
+			})
+		).rejects.toThrow(
+			`--${FORCE_PAGES_FLAG} requires --${AGENT_RATIONALE_CONTEXT_FLAG} to be set to one of the following categories`
 		);
-		const [, properties] = vi.mocked(sendMetricsEvent).mock.calls[0];
-		expect(JSON.stringify(properties)).not.toContain("sk-secret-value");
+
+		// The raw value never reaches telemetry: nothing is recorded at all.
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
+
+		// The error surfaces the menu but never echoes the raw (secret-bearing) input.
+		await expect(
+			maybeDelegatePagesToWorkers({
+				command: "deploy",
+				projectPath: process.cwd(),
+				force: true,
+				rationale: "token=sk-secret-value",
+			})
+		).rejects.toThrow(/user-requested-pages/);
+		await expect(
+			maybeDelegatePagesToWorkers({
+				command: "deploy",
+				projectPath: process.cwd(),
+				force: true,
+				rationale: "token=sk-secret-value",
+			})
+		).rejects.not.toThrow(/sk-secret-value/);
 	});
 
 	it("emits a one-time, deploy-specific opt-out notice to stdout", ({
@@ -359,14 +377,22 @@ describe("maybeDelegatePagesToWorkers", () => {
 		);
 	});
 
-	it("emits a one-time, create-specific opt-out notice to stdout", ({
+	it("emits a create-specific opt-out notice explaining the follow-up deploy", ({
 		expect,
 	}) => {
 		logPagesToWorkersForceOptOutNotice("create");
 
 		expect(std.out).toContain("created directly on Cloudflare Pages");
+		// The create path leaves the project empty, so it warns that a follow-up
+		// deploy WITHOUT the flag would be delegated to Workers.
+		expect(std.out).toContain("has no deployment yet");
 		expect(std.out).toContain(
-			`This is the only time you need --${FORCE_PAGES_FLAG}`
+			`a follow-up \`wrangler pages deploy\` WITHOUT --${FORCE_PAGES_FLAG} will be delegated to Cloudflare Workers`
+		);
+		// To land the directory on the Pages project just created, the agent must
+		// re-run the deploy WITH the flag and a rationale.
+		expect(std.out).toContain(
+			`re-run \`wrangler pages deploy\` WITH --${FORCE_PAGES_FLAG} and an --${AGENT_RATIONALE_CONTEXT_FLAG}`
 		);
 	});
 
@@ -411,13 +437,9 @@ describe("maybeDelegatePagesToWorkers", () => {
 	});
 });
 
-describe("categoriseForceRationale", () => {
-	it("returns 'unspecified' when no rationale is given", ({ expect }) => {
-		expect(categoriseForceRationale(undefined)).toBe("unspecified");
-	});
-
-	it("keeps a recognised category", ({ expect }) => {
-		expect(categoriseForceRationale("existing-pages-workflow")).toBe(
+describe("assertRecognisedForceRationale", () => {
+	it("returns a recognised category unchanged", ({ expect }) => {
+		expect(assertRecognisedForceRationale("existing-pages-workflow")).toBe(
 			"existing-pages-workflow"
 		);
 	});
@@ -425,13 +447,31 @@ describe("categoriseForceRationale", () => {
 	it("normalises case and surrounding whitespace before matching", ({
 		expect,
 	}) => {
-		expect(categoriseForceRationale("  User-Requested-Pages  ")).toBe(
+		expect(assertRecognisedForceRationale("  User-Requested-Pages  ")).toBe(
 			"user-requested-pages"
 		);
 	});
 
-	it("collapses anything off-menu to 'other'", ({ expect }) => {
-		expect(categoriseForceRationale("because the user said so")).toBe("other");
-		expect(categoriseForceRationale("")).toBe("other");
+	it("throws when no rationale is given", ({ expect }) => {
+		expect(() => assertRecognisedForceRationale(undefined)).toThrow(
+			`--${FORCE_PAGES_FLAG} requires --${AGENT_RATIONALE_CONTEXT_FLAG} to be set to one of the following categories`
+		);
+	});
+
+	it("throws for an empty rationale", ({ expect }) => {
+		expect(() => assertRecognisedForceRationale("")).toThrow(
+			/one of the following categories/
+		);
+	});
+
+	it("throws for an off-menu rationale and lists the menu without echoing the input", ({
+		expect,
+	}) => {
+		expect(() =>
+			assertRecognisedForceRationale("because the user said so")
+		).toThrow(/user-requested-pages/);
+		expect(() =>
+			assertRecognisedForceRationale("because the user said so")
+		).not.toThrow(/because the user said so/);
 	});
 });

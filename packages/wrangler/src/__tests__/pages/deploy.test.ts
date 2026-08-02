@@ -25,6 +25,8 @@ import {
 import { getUnsupportedDeployDelegateArgs } from "../../pages/deploy";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
+import { runPagesToWorkersDeploy } from "../../pages/run-workers-deploy";
+import { detectAgent } from "../../utils/detect-agent";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -46,6 +48,16 @@ import type {
 } from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
+import type { ExpectStatic } from "vitest";
+
+// Agent detection gates Pages-to-Workers delegation; mock it so tests can opt in
+// or out. The default (set in the top-level beforeEach) is a non-agent so the
+// bulk of the suite deploys to Pages exactly as before.
+vi.mock("../../utils/detect-agent");
+// When a deploy is delegated, the handler hands off to `runPagesToWorkersDeploy`;
+// stub it so delegated tests can assert the hand-off without running a real
+// Workers deploy. Non-delegating tests never call it.
+vi.mock("../../pages/run-workers-deploy");
 
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();
@@ -63,6 +75,8 @@ describe("pages deploy", () => {
 	beforeEach(() => {
 		vi.mocked(ci).isCI = true;
 		setIsTTY(false);
+		// Default to a non-agent so delegation stays off for the bulk of the suite.
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 	});
 
 	afterEach(async () => {
@@ -6623,6 +6637,163 @@ and that at least one include rule is provided.
 			await expect(
 				runWrangler("pages deploy . --project-name=foo")
 			).rejects.toThrow();
+		});
+	});
+
+	describe("delegation for freshly-created empty projects (agent)", () => {
+		// A minute and two hours, expressed relative to the current clock so the
+		// created_on timestamps sit deterministically inside/outside the one-hour
+		// freshness window regardless of when the suite runs.
+		const ONE_MINUTE_MS = 60 * 1000;
+		const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+		beforeEach(() => {
+			// These cases only apply when Wrangler is driven by an agent.
+			vi.mocked(detectAgent).mockReturnValue({
+				isAgent: true,
+				id: "test-agent",
+			});
+		});
+
+		function mockProjectGet(result: Record<string, unknown>) {
+			msw.use(
+				http.get("*/accounts/:accountId/pages/projects/foo", async () =>
+					HttpResponse.json(
+						{ success: true, errors: [], messages: [], result },
+						{ status: 200 }
+					)
+				)
+			);
+		}
+
+		/** MSW handlers for a complete, successful direct Pages deploy of `foo`. */
+		function mockDirectPagesDeploy(expect: ExpectStatic) {
+			mockGetUploadTokenRequest(
+				expect,
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+			msw.use(
+				http.post("*/pages/assets/check-missing", async () =>
+					HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: [] },
+						{ status: 200 }
+					)
+				),
+				http.post("*/pages/assets/upload", async () =>
+					HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: null },
+						{ status: 200 }
+					)
+				),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async () =>
+						HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						),
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () =>
+						HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: { name: "deploy", status: "success" },
+								},
+							},
+							{ status: 200 }
+						)
+				)
+			);
+		}
+
+		it("delegates to Workers when the target project exists, has no deployment, and was created within the last hour", async ({
+			expect,
+		}) => {
+			mkdirSync("public");
+			writeFileSync("public/index.html", "<h1>Test</h1>");
+
+			// Exists, but empty and just created: a fresh artefact of this same run.
+			mockProjectGet({
+				name: "foo",
+				created_on: new Date(Date.now() - ONE_MINUTE_MS).toISOString(),
+				deployment_configs: { production: {}, preview: {} },
+			});
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			// The empty just-created project is treated as new, so the deploy is
+			// delegated to Workers rather than landing on Pages. The named directory
+			// rides across as the autoconfig output-directory hint.
+			expect(runPagesToWorkersDeploy).toHaveBeenCalledTimes(1);
+			expect(runPagesToWorkersDeploy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					delegate: true,
+					command: "deploy",
+					assetsDirectory: "public",
+				})
+			);
+			expect(std.out).toContain(
+				"Delegating to the latest version of Cloudflare Pages, now part of Cloudflare Workers"
+			);
+		});
+
+		it("does not delegate when the target project is empty but was created over an hour ago", async ({
+			expect,
+		}) => {
+			mkdirSync("public");
+			writeFileSync("public/index.html", "<h1>Test</h1>");
+
+			// Empty, but old enough that it is no longer a fresh artefact of this run.
+			mockProjectGet({
+				name: "foo",
+				created_on: new Date(Date.now() - TWO_HOURS_MS).toISOString(),
+				deployment_configs: { production: {}, preview: {} },
+			});
+			mockDirectPagesDeploy(expect);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			// Older empty projects keep today's behaviour: deploy directly to Pages.
+			expect(runPagesToWorkersDeploy).not.toHaveBeenCalled();
+			expect(std.out).toContain("Deployment complete!");
+		});
+
+		it("does not delegate when the target project already has a deployment", async ({
+			expect,
+		}) => {
+			mkdirSync("public");
+			writeFileSync("public/index.html", "<h1>Test</h1>");
+
+			// Established (>=1 deployment), even though it was created recently.
+			mockProjectGet({
+				name: "foo",
+				created_on: new Date(Date.now() - ONE_MINUTE_MS).toISOString(),
+				latest_deployment: { modified_on: new Date().toISOString() },
+				deployment_configs: { production: {}, preview: {} },
+			});
+			mockDirectPagesDeploy(expect);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			expect(runPagesToWorkersDeploy).not.toHaveBeenCalled();
+			expect(std.out).toContain("Deployment complete!");
 		});
 	});
 });
