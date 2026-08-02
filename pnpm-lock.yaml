@@ -4342,6 +4342,12 @@ importers:
 
   packages/workers-utils:
     dependencies:
+      acorn:
+        specifier: 8.16.0
+        version: 8.16.0
+      cjs-module-lexer:
+        specifier: 1.2.3
+        version: 1.2.3
       undici:
         specifier: catalog:default
         version: 7.28.0
