@@ -161,6 +161,23 @@ describe("experimental CommonJS module graph", () => {
 		expect(graph.root.transformedSource).toBe(source);
 	});
 
+	it("supports optional catch bindings", async ({ expect }) => {
+		writePackage("node_modules/pkg", "pkg");
+		const root = write(
+			"node_modules/pkg/index.cjs",
+			`try { require("./child.cjs"); } catch {}`
+		);
+		const child = write(
+			"node_modules/pkg/child.cjs",
+			`module.exports = "child";`
+		);
+		const graph = await experimental_createCommonJsGraph({
+			resolve: async () => child,
+		}).discover(root);
+
+		expect(graph.modules).toHaveLength(2);
+	});
+
 	it("preserves cycles while rewriting both edges", async ({ expect }) => {
 		writePackage("node_modules/pkg", "pkg");
 		const a = write(
@@ -181,6 +198,49 @@ describe("experimental CommonJS module graph", () => {
 		expect(graph.modules).toHaveLength(2);
 		expect(aModule?.transformedSource).toContain('require("./b.cjs")');
 		expect(bModule?.transformedSource).toContain('require("./a.cjs")');
+	});
+
+	it("serializes concurrent discovery of cyclic roots", async ({ expect }) => {
+		writePackage("node_modules/pkg", "pkg");
+		const a = write(
+			"node_modules/pkg/a.cjs",
+			`exports.a = require("./b.cjs");`
+		);
+		const b = write(
+			"node_modules/pkg/b.cjs",
+			`exports.b = require("./a.cjs");`
+		);
+		const builder = experimental_createCommonJsGraph({
+			resolve: async (specifier, importer) =>
+				path.resolve(path.dirname(importer), specifier),
+		});
+
+		const graphs = await Promise.all([
+			builder.discover(a),
+			builder.discover(b),
+		]);
+
+		expect(graphs.map((graph) => graph.modules.length)).toEqual([2, 2]);
+	});
+
+	it("rejects CommonJS requires that resolve to an ES module", async ({
+		expect,
+	}) => {
+		writePackage("node_modules/pkg", "pkg");
+		const root = write(
+			"node_modules/pkg/index.cjs",
+			`module.exports = require("./dependency.mjs");`
+		);
+		const dependency = write(
+			"node_modules/pkg/dependency.mjs",
+			`export default 42;`
+		);
+
+		await expect(
+			experimental_createCommonJsGraph({
+				resolve: async () => dependency,
+			}).discover(root)
+		).rejects.toThrow(/resolves to ES module/);
 	});
 
 	it("returns only safe lexer-derived named exports, including reexports", async ({

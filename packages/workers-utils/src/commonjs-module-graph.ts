@@ -162,8 +162,11 @@ function forEachChild(node: AstNode, callback: (child: AstNode) => void): void {
 	}
 }
 
-function addPatternBindings(pattern: AstNode | undefined, scope: Scope): void {
-	if (pattern === undefined) {
+function addPatternBindings(
+	pattern: AstNode | null | undefined,
+	scope: Scope
+): void {
+	if (pattern == null) {
 		return;
 	}
 	if (pattern.type === "Identifier") {
@@ -246,9 +249,9 @@ function buildScopeMap(root: AstNode): Map<AstNode, Scope> {
 				bindings: new Set(),
 			};
 			scopes.set(node, catchScope);
-			const parameter = node.param as AstNode | undefined;
+			const parameter = node.param as AstNode | null;
 			addPatternBindings(parameter, catchScope);
-			if (parameter !== undefined) {
+			if (parameter !== null) {
 				visit(parameter, catchScope);
 			}
 			visit(node.body as AstNode, catchScope);
@@ -456,12 +459,22 @@ function rewriteRequires(
 export class ExperimentalCommonJsGraphBuilder {
 	readonly #resolve: ExperimentalCommonJsResolver;
 	readonly #records = new Map<string, ModuleRecord>();
+	#discoveryQueue = Promise.resolve();
 
 	constructor(options: ExperimentalCommonJsGraphOptions) {
 		this.#resolve = options.resolve;
 	}
 
-	async discover(rootPath: string): Promise<ExperimentalCommonJsGraph> {
+	discover(rootPath: string): Promise<ExperimentalCommonJsGraph> {
+		const discovery = this.#discoveryQueue.then(() => this.#discover(rootPath));
+		this.#discoveryQueue = discovery.then(
+			() => undefined,
+			() => undefined
+		);
+		return discovery;
+	}
+
+	async #discover(rootPath: string): Promise<ExperimentalCommonJsGraph> {
 		rootPath = path.resolve(rootPath);
 		const root = await this.#visit(rootPath, new Set());
 		if (root.sourceType !== "commonjs") {
@@ -588,6 +601,11 @@ export class ExperimentalCommonJsGraphBuilder {
 			}
 			const dependencyPath = path.resolve(resolved);
 			const dependency = await this.#visit(dependencyPath, nextAncestors);
+			if (dependency.sourceType === "esmodule") {
+				throw new Error(
+					`Experimental CommonJS graph cannot preserve require(${JSON.stringify(call.specifier)}) in ${JSON.stringify(sourcePath)} because it resolves to ES module ${JSON.stringify(dependencyPath)}.`
+				);
+			}
 			record.dependencies.push(dependencyPath);
 			record.dependenciesBySpecifier.set(call.specifier, dependencyPath);
 			const relativeName = path.posix.relative(

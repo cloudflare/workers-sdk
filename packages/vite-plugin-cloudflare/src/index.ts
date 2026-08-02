@@ -5,6 +5,7 @@ import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
 import { buildOutputPlugin } from "./plugins/build-output";
+import { commonJsModuleRegistryPlugin } from "./plugins/commonjs-module-registry";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
 import { devPlugin } from "./plugins/dev";
@@ -115,6 +116,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
+		commonJsModuleRegistryPlugin(ctx),
 		outputPlugin,
 		wasmHelperPlugin(ctx),
 		additionalModulesPlugin(ctx),

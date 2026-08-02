@@ -6,7 +6,9 @@ import {
 } from "@cloudflare/build-output-utils";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
+import { getExperimentalCommonJsModuleTypes } from "./commonjs-module-registry";
 import type { ModuleType } from "@cloudflare/config";
+import type { ExperimentalJavaScriptSourceType } from "@cloudflare/workers-utils";
 
 /**
  * Build Output Specification plugin. Replaces `outputConfigPlugin` when
@@ -69,6 +71,10 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			}
 
 			const modules: Record<string, { type: ModuleType }> = {};
+			const commonJsModuleTypes = getExperimentalCommonJsModuleTypes(
+				ctx,
+				this.environment.name
+			);
 			for (const fileName of Object.keys(bundle)) {
 				// Skip Vite's own manifest emitted via `build.manifest: true`.
 				if (fileName === ".vite/manifest.json") {
@@ -80,7 +86,9 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				if (importedAssetPaths.has(fileName)) {
 					continue;
 				}
-				modules[fileName] = { type: detectModuleType(fileName) };
+				modules[fileName] = {
+					type: detectModuleType(fileName, commonJsModuleTypes.get(fileName)),
+				};
 			}
 
 			await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig, {
@@ -108,7 +116,13 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 /**
  * Map a bundle filename to its declared module type.
  */
-export function detectModuleType(filename: string): ModuleType {
+export function detectModuleType(
+	filename: string,
+	explicitType?: ExperimentalJavaScriptSourceType
+): ModuleType {
+	if (explicitType !== undefined) {
+		return explicitType === "commonjs" ? "cjs" : "esm";
+	}
 	const ext = path.extname(filename).toLowerCase();
 
 	switch (ext) {

@@ -1,5 +1,12 @@
-import { describe, test } from "vitest";
-import { getModulesFromManifest } from "../miniflare-options";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
+import { describe, onTestFinished, test } from "vitest";
+import {
+	getModulesFromManifest,
+	getPreviewModules,
+} from "../miniflare-options";
 
 describe("getModulesFromManifest", () => {
 	test("hoists `mainModule` to index 0 even when it is not first in the manifest", ({
@@ -98,5 +105,30 @@ describe("getModulesFromManifest", () => {
 				modules: { "index.js": { type: "esm" } },
 			})
 		).toThrow(/`mainModule` "missing\.js" is missing from `modules`/);
+	});
+});
+
+describe("getPreviewModules", () => {
+	test("uses the first matching rule when globs overlap", ({ expect }) => {
+		const root = fs.mkdtempSync(
+			path.join(os.tmpdir(), "vite-preview-modules-")
+		);
+		onTestFinished(() => removeDirSync(root));
+		fs.mkdirSync(path.join(root, "preserved"));
+		fs.writeFileSync(path.join(root, "index.js"), "export default {};");
+		fs.writeFileSync(
+			path.join(root, "preserved", "module.js"),
+			"module.exports = {};"
+		);
+
+		const result = getPreviewModules(path.join(root, "index.js"), [
+			{ type: "CommonJS", include: ["preserved/module.js"] },
+			{ type: "ESModule", include: ["**/*.js"] },
+		]);
+
+		expect(result.modules).toEqual([
+			{ type: "ESModule", path: "index.js" },
+			{ type: "CommonJS", path: "preserved/module.js" },
+		]);
 	});
 });
