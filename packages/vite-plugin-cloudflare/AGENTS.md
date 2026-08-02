@@ -86,9 +86,17 @@ contract so the parent can drive either impl interchangeably.
 - E2E tests: `.test.ts` in `e2e/`, own vitest config
 - Playground tests: Playwright-based, tested across Vite 6/7/8 in CI
 - Playground request helpers (`playground/__test-utils__/responses.ts`):
-  - `getTextResponse()` / `getJsonResponse()` use plain `fetch()` with
-    browser navigation headers (`Sec-Fetch-Mode: navigate` et al), which the
-    asset and router workers branch on. Default to these.
+  - `getTextResponse()` / `getJsonResponse()` issue a request with browser
+    navigation headers (`Sec-Fetch-Mode: navigate` et al), which the asset and
+    router workers branch on. Default to these.
+  - They use `node:http` rather than `fetch()` **deliberately**. `Sec-Fetch-Mode`
+    is a forbidden header name, and Node's `fetch()` (undici) rewrites it to
+    `cors` on the way out — every other `Sec-Fetch-*` header survives, but that
+    one does not, and it is the one that decides whether the asset worker
+    applies `not_found_handling`. Do not "simplify" these back to `fetch()`;
+    `spa-with-api`'s "via `getTextResponse()`" test exists to catch exactly that
+    regression. Passing `mode: "navigate"` to `fetch()` is not an option either
+    (the `Request` constructor rejects it).
   - `getResponse()` drives a real `page.goto()` and returns a Playwright
     `Response`. Only use it when the assertion needs the browser. Anything
     routed through Playwright can outlive a timed-out test and surface as an

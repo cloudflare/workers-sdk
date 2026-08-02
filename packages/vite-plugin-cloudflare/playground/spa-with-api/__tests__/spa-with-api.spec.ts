@@ -29,6 +29,22 @@ test("returns the home page for not found route on navigation request ('sec-fetc
 	expect(content).toBe("Vite + React");
 });
 
+// Regression test for the `getTextResponse()` transport. The previous test
+// covers a real browser navigation; this one asserts that the helper the rest
+// of the playgrounds use is *also* seen as a navigation by the Worker.
+//
+// It is easy to break: `Sec-Fetch-Mode` is a forbidden header name, and Node's
+// `fetch()` rewrites it to `cors` on the way out, so a `fetch()`-based helper
+// silently stops exercising `not_found_handling` while still passing every
+// other assertion in this file.
+test("returns the home page for not found route via `getTextResponse()`", async ({
+	expect,
+}) => {
+	const text = await getTextResponse("/api/");
+	expect(text).toContain("<title>Vite + React + TS</title>");
+	expect(text).not.toContain("Cloudflare");
+});
+
 test("returns the Worker API response for API route on non-navigation request ('sec-fetch-mode: navigate' header not included)", async ({
 	expect,
 }) => {
