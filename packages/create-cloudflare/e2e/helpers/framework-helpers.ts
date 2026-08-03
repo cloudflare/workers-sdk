@@ -36,6 +36,7 @@ import type { ExpectStatic } from "vitest";
 export type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
 	nodeCompat: boolean;
+	typesPath?: string;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
 	/**
@@ -326,10 +327,14 @@ export async function verifyPreviewScript(
 
 export async function verifyTypes(
 	expect: ExpectStatic,
-	{ nodeCompat, verifyTypes: verify }: FrameworkTestConfig,
+	{
+		nodeCompat,
+		typesPath: configuredTypesPath,
+		verifyTypes: verify,
+	}: FrameworkTestConfig,
 	{
 		workersTypes,
-		typesPath = "./worker-configuration.d.ts",
+		typesPath: templateTypesPath = "./worker-configuration.d.ts",
 		envInterfaceName = "Env",
 	}: TemplateConfig,
 	projectPath: string
@@ -338,6 +343,7 @@ export async function verifyTypes(
 		return;
 	}
 
+	const typesPath = configuredTypesPath ?? templateTypesPath;
 	const outputFileContent = readFile(join(projectPath, typesPath)).split("\n");
 
 	const hasEnvInterface = outputFileContent.some(

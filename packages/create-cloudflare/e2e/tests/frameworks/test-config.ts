@@ -368,6 +368,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--variant", "opennext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
+			typesPath: "./cloudflare-env.d.ts",
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
 				route: "/",

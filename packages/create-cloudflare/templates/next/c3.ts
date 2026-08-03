@@ -3,16 +3,16 @@ import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
-import {
-	downloadRemoteTemplate,
-	updatePackageName,
-} from "../../src/templates";
+import { downloadRemoteTemplate, updatePackageName } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
 type NextVariantValue = "vinext" | "opennext";
+
+const VINEXT_TYPES_PATH = "./worker-configuration.d.ts";
+const OPENNEXT_TYPES_PATH = "./cloudflare-env.d.ts";
 
 type NextVariant = {
 	value: NextVariantValue;
@@ -107,6 +107,8 @@ const generate = async (ctx: C3Context) => {
 	const variant = await getNextVariant(ctx);
 	// Stash on args so transformPackageJson can branch without re-prompting.
 	ctx.args.variant = variant.value;
+	ctx.template.typesPath =
+		variant.value === "opennext" ? OPENNEXT_TYPES_PATH : VINEXT_TYPES_PATH;
 
 	if (variant.value === "opennext") {
 		await generateOpenNext(ctx);
@@ -117,9 +119,6 @@ const generate = async (ctx: C3Context) => {
 };
 
 const envInterfaceName = "CloudflareEnv";
-// vinext generates wrangler types into worker-configuration.d.ts; OpenNext's
-// remote template ships cloudflare-env.d.ts and its own cf-typegen script.
-const typesPath = "./worker-configuration.d.ts";
 
 export default {
 	configVersion: 1,
@@ -141,13 +140,13 @@ export default {
 				// Align with OpenNext so the shared previewScript: "preview" works
 				// for both variants (vinext only ships dev/build/start/deploy).
 				preview: `${npm} run build && ${npm} run start`,
-				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${typesPath}`,
+				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
 			},
 		};
 	},
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
-	typesPath,
+	typesPath: VINEXT_TYPES_PATH,
 	envInterfaceName,
 } as TemplateConfig;
