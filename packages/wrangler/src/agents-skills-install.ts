@@ -179,7 +179,7 @@ export async function runSkillsInstallFlow(
 
 		const previousSkillNames = existingConfig?.installedSkillNames ?? [];
 		const cacheResult = await fetchSkillNamesFromGitHub();
-		const currentSkillNames = cacheResult?.skillNames ?? [];
+		const currentSkillNames = cacheResult?.skillNames ?? previousSkillNames;
 
 		const { failedAgents } = await installSkillsCleanly(
 			agentNames,
@@ -224,8 +224,13 @@ export async function runSkillsInstallFlow(
 				failedAgents.length > 0
 					? undefined
 					: (freshTreeSha ?? cacheResult?.skillsTreeSha),
+			// On partial failure, record the union of previous and current skill
+			// names so that skills newly installed for succeeded agents are still
+			// tracked as Cloudflare-managed and can be cleaned up in future updates.
 			installedSkillNames:
-				failedAgents.length > 0 ? previousSkillNames : currentSkillNames,
+				failedAgents.length > 0
+					? [...new Set([...previousSkillNames, ...currentSkillNames])]
+					: currentSkillNames,
 		});
 
 		sendResultMetricsEvent({
@@ -1356,7 +1361,9 @@ export async function runSkillsUpdateFlow(
 			declinedTreeSha: undefined,
 			installFailed: failedAgents.length > 0 ? failedAgents : false,
 			installedSkillNames:
-				failedAgents.length > 0 ? previousSkillNames : skillNames,
+				failedAgents.length > 0
+					? [...new Set([...previousSkillNames, ...skillNames])]
+					: skillNames,
 		});
 
 		sendMetricsEvent(

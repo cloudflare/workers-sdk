@@ -840,6 +840,82 @@ describe("runSkillsInstallFlow with force-install prompt", () => {
 			expect(metadata.installFailed).toBe(false);
 		});
 
+		test("records union of previous and current skill names on partial install failure", async ({
+			expect,
+		}) => {
+			// Pre-existing metadata with a previous install that had "old-skill"
+			writeMetadataFile({
+				version: 1,
+				accepted: true,
+				date: "2025-01-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosie: { id: "claude", globalPath: "/fake/.claude/skills" },
+					},
+				],
+				installedSkillNames: ["old-skill"],
+			});
+			mockRosieAgents.mockResolvedValueOnce([
+				{
+					name: "claude",
+					display: "Claude Code",
+					detected: true,
+					installPath: "/fake/.claude/skills",
+				},
+				{
+					name: "cursor",
+					display: "Cursor",
+					detected: true,
+					installPath: "/fake/.cursor/skills",
+				},
+			]);
+			mockRosieInstall.mockResolvedValueOnce({
+				skills: [],
+				installedAgents: ["claude"],
+				failedAgents: ["cursor"],
+				installedInstruction: null,
+			});
+			// Upstream now has "cloudflare" and "wrangler" (not "old-skill")
+			mockGitHubSkillsApi(["cloudflare", "wrangler"], "sha-123");
+			const runSkillsInstallFlow = await freshImport();
+
+			await runSkillsInstallFlow({ force: true });
+
+			const metadata = readMetadataFile();
+			// Should be the union: old-skill (previous) + cloudflare, wrangler (current)
+			expect(metadata.installedSkillNames).toEqual(
+				expect.arrayContaining(["old-skill", "cloudflare", "wrangler"])
+			);
+			expect((metadata.installedSkillNames as string[]).length).toBe(3);
+		});
+
+		test("preserves previous skill names when GitHub API fetch fails during install", async ({
+			expect,
+		}) => {
+			writeMetadataFile({
+				version: 1,
+				accepted: true,
+				date: "2025-01-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosie: { id: "claude", globalPath: "/fake/.claude/skills" },
+					},
+				],
+				installedSkillNames: ["cloudflare"],
+			});
+			// Both GitHub API calls fail, and no cache exists
+			mockGitHubSkillsApiNetworkError();
+			const runSkillsInstallFlow = await freshImport();
+
+			await runSkillsInstallFlow({ force: true });
+
+			const metadata = readMetadataFile();
+			// Should preserve the previous list, not overwrite with []
+			expect(metadata.installedSkillNames).toEqual(["cloudflare"]);
+		});
+
 		test("falls back to cached tree SHA when post-install fetchSkillsTreeSha fails", async ({
 			expect,
 		}) => {
