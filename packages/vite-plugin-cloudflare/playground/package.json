@@ -22,6 +22,7 @@
 		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
+		"undici": "catalog:default",
 		"vitest": "catalog:default"
 	}
 }
