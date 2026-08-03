@@ -3,19 +3,17 @@ import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	extractObjectEntryId,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
 	storageOwnerProxyDesignator,
 } from "../shared";
@@ -30,6 +28,7 @@ export const D1OptionsSchema = z.object({
 	d1Databases: z
 		.union([
 			z.record(
+				z.string(),
 				z.union([
 					z.string(),
 					z.object({
@@ -44,30 +43,21 @@ export const D1OptionsSchema = z.object({
 		])
 		.optional(),
 });
-export const D1SharedOptionsSchema = z.object({
-	d1Persist: PersistenceSchema,
-});
-
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
 // A single entry service shared by every *local* database. Each database's id is
 // supplied per-binding via `ctx.props`, so one service serves all of them.
 export const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
-// One shared remote-proxy service for all remote D1 databases (config via props).
-const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
+
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
 const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: D1_DATABASE_SERVICE_PREFIX,
 	className: D1_DATABASE_OBJECT_CLASS_NAME,
 };
 
-export const D1_PLUGIN: Plugin<
-	typeof D1OptionsSchema,
-	typeof D1SharedOptionsSchema
-> = {
+export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
 	options: D1OptionsSchema,
-	sharedOptions: D1SharedOptionsSchema,
 	bindingTypeDescription: "D1 database",
 	getBindings(options) {
 		const databases = namespaceEntries(options.d1Databases);
@@ -82,7 +72,7 @@ export const D1_PLUGIN: Plugin<
 				// databases share one entry service with the id supplied via props.
 				const serviceDesignator = remoteProxyConnectionString
 					? {
-							name: D1_REMOTE_SERVICE_NAME,
+							name: SERVICE_REMOTE_BINDINGS,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 						}
 					: {
@@ -120,14 +110,10 @@ export const D1_PLUGIN: Plugin<
 	},
 	async getServices({
 		options,
-		sharedOptions,
 		tmpPath,
-		defaultPersistRoot,
-		log,
-		unsafeStickyBlobs,
+		resourcePersistencePath,
 		storageOwnerRoutePlugins,
 	}) {
-		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
 
 		const services: Service[] = [];
@@ -148,24 +134,12 @@ export const D1_PLUGIN: Plugin<
 			});
 		}
 
-		// One shared proxy service for all remote (mixed-mode) databases.
-		const hasRemote = databases.some(
-			([, db]) => db.remoteProxyConnectionString
-		);
-		if (hasRemote) {
-			services.push({
-				name: D1_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			});
-		}
-
 		if (hasLocal) {
 			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
 				D1_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
-				persist
+				resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 
@@ -202,30 +176,29 @@ export const D1_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};
 			services.push(storageService, objectService);
-
-			for (const [, database] of databases) {
-				if (database.remoteProxyConnectionString) {
-					continue;
-				}
-				await migrateDatabase(log, uniqueKey, persistPath, database.id);
-			}
 		}
 
 		return services;
 	},
-	routeBindingToStorageOwner(binding, conn) {
+	routeBindingToStorageOwner(binding) {
+		// The owner runs the same D1 plugin code, so its generic entry service is
+		// `D1_LOCAL_ENTRY_SERVICE_NAME`; the id travels as props.
+		const toOwner = (id: string) =>
+			storageOwnerProxyDesignator(D1_LOCAL_ENTRY_SERVICE_NAME, undefined, {
+				[SharedBindings.TEXT_NAMESPACE]: id,
+			});
 		// Pre-Wrangler-3.3 `__D1_BETA__` binding: a bare service designator.
 		if ("service" in binding && binding.service?.name !== undefined) {
 			const id = extractObjectEntryId(binding.service.props?.json);
 			if (id !== undefined) {
 				return {
 					name: binding.name,
-					service: storageOwnerProxyDesignator(conn, `d1:${id}`),
+					service: toOwner(id),
 				};
 			}
 		}
@@ -239,7 +212,7 @@ export const D1_PLUGIN: Plugin<
 						rewrote = true;
 						return {
 							...inner,
-							service: storageOwnerProxyDesignator(conn, `d1:${id}`),
+							service: toOwner(id),
 						};
 					}
 				}
@@ -268,12 +241,6 @@ export const D1_PLUGIN: Plugin<
 		}
 		return {
 			ownerOptions: { d1Databases: [...ids] },
-			ownerBindings: [
-				{ name: "d1", service: { name: D1_LOCAL_ENTRY_SERVICE_NAME } },
-			],
 		};
-	},
-	getPersistPath({ d1Persist }, tmpPath) {
-		return getPersistPath(D1_PLUGIN_NAME, tmpPath, undefined, d1Persist);
 	},
 };

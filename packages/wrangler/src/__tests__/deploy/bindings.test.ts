@@ -81,7 +81,17 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+				HttpResponse.json(
+					createFetchResult(
+						["Foo", "Bar"].map((namespace_name) => ({
+							namespace_id: `${namespace_name}-id`,
+							namespace_name,
+						}))
+					)
+				)
+			)
 		);
 		// Pretend all Agent Memory namespaces exist for the same reason.
 		msw.use(

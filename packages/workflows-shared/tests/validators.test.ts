@@ -96,6 +96,8 @@ describe("Workflow step config validation", () => {
 			retries: { limit: 3, delay: 10, backoff: "constant" },
 			timeout: 0,
 		},
+		{ timeout: "5 minutes", sensitive: "all" },
+		{ timeout: "5 minutes", sensitive: true },
 	])("should reject invalid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(false);
 	});
@@ -116,6 +118,11 @@ describe("Workflow step config validation", () => {
 		{
 			retries: { limit: 5, delay: 0, backoff: "constant" },
 			timeout: "2 minutes",
+		},
+		{
+			retries: { limit: 3, delay: 10, backoff: "constant" },
+			timeout: "2 minutes",
+			sensitive: "output",
 		},
 	])("should accept valid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(true);

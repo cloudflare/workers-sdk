@@ -162,6 +162,7 @@ export {
 	PnpmPackageManager,
 	YarnPackageManager,
 	BunPackageManager,
+	NubPackageManager,
 } from "./package-manager";
 
 export {
@@ -170,3 +171,8 @@ export {
 	getWorkerName,
 	getWorkerNameFromProject,
 } from "./worker-name";
+
+export { _forceColour, formatZodError } from "./zod-format";
+
+export { toUrlPath } from "./url-path";
+export type { UrlPath } from "./url-path";

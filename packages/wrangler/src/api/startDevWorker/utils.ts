@@ -98,6 +98,24 @@ export function rewriteUrlInHeaderValue(
 	);
 }
 
+/**
+ * Whether a loopback request sent to `requestUrl` still targets the current
+ * UserWorker, described by its origin `parts` (e.g. `proxyData.userWorkerUrl`).
+ *
+ * Compares `.origin` only, NOT `.href`: `requestUrl` carries the original
+ * request's path and query, whereas `urlFromParts()` yields an origin-only URL
+ * (path "/"). An href comparison would therefore only ever match requests to
+ * "/", so a genuine network error on any other path would be misclassified as
+ * the UserWorker having been replaced.
+ */
+export function isSameUserWorkerOrigin(
+	requestUrl: URL,
+	parts: Partial<URL> | undefined
+): boolean {
+	const currentUserWorkerUrl = parts && urlFromParts(parts);
+	return requestUrl.origin === currentUserWorkerUrl?.origin;
+}
+
 type UnwrapHook<
 	T extends HookValues | Promise<HookValues>,
 	Args extends unknown[],

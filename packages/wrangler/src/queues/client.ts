@@ -124,8 +124,8 @@ export async function getQueue(
 }
 
 export async function ensureQueuesExistByConfig(config: Config) {
-	const producers = (config.queues.producers || []).map(
-		(producer) => producer.queue
+	const producers = (config.queues.producers || []).flatMap((producer) =>
+		producer.queue ? [producer.queue] : []
 	);
 	const consumers = (config.queues.consumers || []).map(
 		(consumer) => consumer.queue

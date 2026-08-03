@@ -107,7 +107,7 @@ function validateBatchSize(headers: Headers) {
 	const batchSize = headers.get("CF-Queue-Batch-Bytes");
 	if (batchSize !== null && parseInt(batchSize) > MAX_MESSAGE_BATCH_SIZE) {
 		throw new PayloadTooLargeError(
-			`batch size of ${batchSize} bytes exceeds limit of 256000`
+			`batch size of ${batchSize} bytes exceeds limit of ${MAX_MESSAGE_BATCH_SIZE}`
 		);
 	}
 }

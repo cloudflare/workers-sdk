@@ -206,12 +206,5 @@
 				"workers-sdk/no-wrangler-named-imports": "error",
 			},
 		},
-		// TODO: Remove the following override.
-		{
-			"files": ["packages/vite-plugin-cloudflare/**"],
-			"rules": {
-				"@typescript-eslint/no-deprecated": "off",
-			},
-		},
 	],
 }

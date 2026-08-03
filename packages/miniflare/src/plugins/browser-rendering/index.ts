@@ -17,11 +17,11 @@ import {
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Log } from "../../shared";
@@ -41,7 +41,6 @@ export const BrowserRenderingOptionsSchema = z.object({
 });
 
 export const BROWSER_RENDERING_PLUGIN_NAME = "browser-rendering";
-const BROWSER_RENDERING_REMOTE_SERVICE_NAME = `${BROWSER_RENDERING_PLUGIN_NAME}:remote`;
 
 export const BROWSER_RENDERING_PLUGIN: Plugin<
 	typeof BrowserRenderingOptionsSchema
@@ -58,7 +57,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 				name: options.browserRendering.binding,
 				service: options.browserRendering.remoteProxyConnectionString
 					? {
-							name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
+							name: SERVICE_REMOTE_BINDINGS,
 							props: buildRemoteProxyProps(
 								options.browserRendering.remoteProxyConnectionString,
 								options.browserRendering.binding
@@ -87,12 +86,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		}
 
 		if (options.browserRendering.remoteProxyConnectionString) {
-			return [
-				{
-					name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
-					worker: remoteProxyClientWorker(),
-				},
-			];
+			return [];
 		}
 
 		return [

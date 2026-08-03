@@ -1,5 +1,456 @@
 # wrangler
 
+## 4.118.0
+
+### Minor Changes
+
+- [#14057](https://github.com/cloudflare/workers-sdk/pull/14057) [`cc63aae`](https://github.com/cloudflare/workers-sdk/commit/cc63aae658c39ae33169c6dc89f2e6ec1071fc53) Thanks [@matingathani](https://github.com/matingathani)! - Add `--json` flag to `wrangler containers info` for consistent JSON output with sibling commands `list` and `instances`
+
+- [#14944](https://github.com/cloudflare/workers-sdk/pull/14944) [`a249591`](https://github.com/cloudflare/workers-sdk/commit/a249591473321cc2fb88a7b62a8c2b8663ebd4ef) Thanks [@nickpatt](https://github.com/nickpatt)! - Enable local observability capture by default in dev
+
+  `wrangler dev` and the Vite plugin now capture request traces and console logs into the Local Explorer's Observability tab out of the box — previously this was opt-in behind `X_LOCAL_OBSERVABILITY=true`. Set `X_LOCAL_OBSERVABILITY=false` to opt out (for example if the extra per-worker collector/streaming-tail services cause trouble in a multi-process dev-registry setup).
+
+- [#14919](https://github.com/cloudflare/workers-sdk/pull/14919) [`e0bbf55`](https://github.com/cloudflare/workers-sdk/commit/e0bbf55fdce5239a88c78a4350d3287f52d77964) Thanks [@avenceslau](https://github.com/avenceslau)! - Add additional triggers to Workflows
+
+  Workers can now declaratively start a locally defined Workflow. Configure event subscriptions under `triggers.events`; Wrangler validates each target and updates the script's event triggers during deployment.
+
+  ```jsonc
+  {
+    "triggers": {
+      "events": [
+        {
+          "type": "cf.artifacts.repo.pushed",
+          "filter": {
+            "namespace": "my-namespace",
+            "repo_name": "my-repo"
+          },
+          "targets": [
+            {
+              "type": "workflow",
+              "workflow_name": "my-workflow"
+            }
+          ]
+        }
+      ]
+    }
+  }
+  ```
+
+### Patch Changes
+
+- [#14936](https://github.com/cloudflare/workers-sdk/pull/14936) [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix `jsx_fragment` being ignored when `wrangler dev` runs a custom build
+
+  If your project uses a custom build and sets both `jsx_factory` and `jsx_fragment`, `wrangler dev` used your `jsx_factory` value for JSX fragments as well, so fragments compiled incorrectly. Your `jsx_fragment` value is now used.
+
+- [#14936](https://github.com/cloudflare/workers-sdk/pull/14936) [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop `wrangler dev` starting new work after you stop it or it reloads
+
+  Stopping `wrangler dev`, or having it reload after a configuration change, could still leave it starting work for the state it had just left behind: your custom build command could run once more after dev had stopped, a change to a file in your assets directory could be reported against configuration that had already been replaced, and in some cases the process could stay alive instead of exiting.
+
+  That work is now discarded, so stopping or reloading `wrangler dev` leaves nothing running behind it.
+
+- [#14936](https://github.com/cloudflare/workers-sdk/pull/14936) [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop `wrangler dev` from running custom builds concurrently
+
+  When several watched files changed at once — for example during a `git pull` or a "save all" — `wrangler dev` started a custom build for every file that changed, so multiple copies of your build command ran at the same time and fought over the same output files.
+
+  A burst of file changes now results in a single build, and a build only starts once the previous one has finished.
+
+- [#13746](https://github.com/cloudflare/workers-sdk/pull/13746) [`cec9d88`](https://github.com/cloudflare/workers-sdk/commit/cec9d8875d3f103acc813724ded980867bd25ed7) Thanks [@edmundhung](https://github.com/edmundhung)! - Report a clear error for account IDs that can't be used in a Cloudflare API request
+
+  Account IDs are substituted straight into Cloudflare API URL paths, so a value containing non-ASCII characters previously failed deep inside the request layer with an opaque `Cannot convert argument to a ByteString` error that gave no hint about which setting was at fault. Account IDs read from `CLOUDFLARE_ACCOUNT_ID` and from the `account_id` configuration field are now validated up front, and an invalid value fails with a message naming both the offending value and where it came from.
+
+## 4.117.0
+
+### Minor Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove `containerEngine` from the worker options returned by `unstable_getMiniflareWorkerOptions`
+
+  `unstable_getMiniflareWorkerOptions` no longer includes `containerEngine` in the returned `workerOptions`, since the container engine is a Miniflare instance-wide setting rather than a per-worker one. Callers that build a Miniflare instance from these options should set `containerEngine` at the top level instead.
+
+### Patch Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Rewrite local testing paths (`/cdn-cgi/*`)
+
+  Miniflare v5 moved its internal local testing endpoints to `/cdn-cgi/local/*` (and `/__cf_local/*` for endpoints that must remain reachable over tunnels) to prevent any potential collision with production routes. `wrangler dev` and the Vite plugin now transparently rewrite the old paths to the new ones, meaning you can continue to use the old paths without issue.
+
+  These are the new paths:
+
+  - `/cdn-cgi/handler/scheduled` → `/cdn-cgi/local/scheduled`
+  - `/cdn-cgi/handler/email` → `/cdn-cgi/local/email`
+  - `/cdn-cgi/explorer/*` → `/cdn-cgi/local/explorer/*`
+  - `/cdn-cgi/mf/scheduled` → `/cdn-cgi/local/scheduled` (Note `/cdn-cgi/mf/scheduled` is already deprecated)
+  - `/cdn-cgi/mf/stream/*` → `/__cf_local/stream/*`
+  - `/cdn-cgi/mf/imagedelivery/*` → `/__cf_local/imagedelivery/*`
+
+- Updated dependencies [[`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6)]:
+  - miniflare@5.20260730.0-alpha
+
+## 4.116.0
+
+### Minor Changes
+
+- [#14907](https://github.com/cloudflare/workers-sdk/pull/14907) [`beec0fb`](https://github.com/cloudflare/workers-sdk/commit/beec0fbc9d3adec24bc42e31a21fe7f82badb543) Thanks [@NuroDev](https://github.com/NuroDev)! - Avoid Worker and workers.dev naming prompts in agent-driven deploys
+
+  Wrangler now derives the Worker name from the project and automatically registers the same project-derived workers.dev account subdomain on a first deploy when running in a detected agent environment. The deploy output explains how to change both names.
+
+- [#14905](https://github.com/cloudflare/workers-sdk/pull/14905) [`b21eac2`](https://github.com/cloudflare/workers-sdk/commit/b21eac24878f060296915f198fae910268c465ef) Thanks [@jamesopstad](https://github.com/jamesopstad)! - The experimental build output directory now includes the Worker's configuration at `.cloudflare/output/v0/workers/default/config.json` instead of `.cloudflare/output/v0/workers/<worker-name>/worker.config.json`
+
+- [#14893](https://github.com/cloudflare/workers-sdk/pull/14893) [`bb09f1b`](https://github.com/cloudflare/workers-sdk/commit/bb09f1bd77a194520db3e61d733996f4bbe4bad8) Thanks [@apeacock1991](https://github.com/apeacock1991)! - Graduate `wrangler check startup` from alpha and show bundle size and a local timing summary
+
+  The command no longer prints an alpha warning. It now reports its local profile window, sampled active, garbage collection, and idle time alongside the raw and compressed bundle sizes. The existing measurement warning continues to distinguish these local measurements from startup time measured on Cloudflare.
+
+- [#14685](https://github.com/cloudflare/workers-sdk/pull/14685) [`01d7020`](https://github.com/cloudflare/workers-sdk/commit/01d7020806dd523158cf9f26a4575365117f5381) Thanks [@edmundhung](https://github.com/edmundhung)! - Add support for dispatching email handlers with `createTestHarness`
+
+  You can now call `server.getWorker().email({ from, to, raw })` to dispatch directly to a Worker's `email()` handler and inspect its outcome, rejection reason, forwarded messages, and replies.
+
+  ```ts
+  const result = await server.getWorker().email({
+    from: "sender@example.com",
+    to: "inbox@example.com",
+    raw: [
+      "From: Sender <sender@example.com>",
+      "To: Inbox <inbox@example.com>",
+      "Message-ID: <test@example.com>",
+      "Subject: Test email",
+      "",
+      "Hello from the test harness",
+    ].join("\r\n"),
+  });
+
+  expect(result).toMatchObject({
+    outcome: "ok",
+    forwards: [{ recipient: "archive@example.com" }],
+    replies: [
+      {
+        sender: "inbox@example.com",
+        raw: expect.stringContaining("Thanks for your email"),
+      },
+    ],
+  });
+  ```
+
+### Patch Changes
+
+- [#14929](https://github.com/cloudflare/workers-sdk/pull/14929) [`48f0c6c`](https://github.com/cloudflare/workers-sdk/commit/48f0c6cbbc50dfac02e2d76554c181ced233a792) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260722.1 | ^5.20260730.1 |
+  | workerd                   | 1.20260722.1  | 1.20260730.1  |
+
+- [#14838](https://github.com/cloudflare/workers-sdk/pull/14838) [`8049ca4`](https://github.com/cloudflare/workers-sdk/commit/8049ca451c9561e8b72f3eeeb7916a8712f06133) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Fix ctrl+c not being able to interrupt wrangler while waiting for Cloudflare Access authorization
+
+  When a domain is behind Cloudflare Access (for example during remote bindings startup), wrangler runs `cloudflared access login`, which only returns once the user completes the authorization flow in the browser. This was invoked synchronously, blocking Node's event loop, so wrangler could not react to ctrl+c (or anything else) until the authorization completed — abandoning the browser flow left a hung wrangler process that had to be killed externally. `cloudflared` is now spawned asynchronously, keeping wrangler responsive while it waits. The remote runtime passes its abort signal through to the spawn, so tearing down the session kills a still-pending `cloudflared` immediately, with process exit as a last-resort cleanup.
+
+- [#14871](https://github.com/cloudflare/workers-sdk/pull/14871) [`1394867`](https://github.com/cloudflare/workers-sdk/commit/1394867d1dc357d9bddabf8c16aede47d052fb18) Thanks [@nickpatt](https://github.com/nickpatt)! - Include the local observability query endpoint in the agent-facing Local Explorer hint
+
+  The hint `wrangler dev` prints for AI-agent sessions now lists `POST /cdn-cgi/explorer/api/local/observability/query`, so agents can discover the read-only SQL endpoint for captured request traces and console logs (the `spans` and `logs` tables) alongside the existing binding and storage routes.
+
+- [#14918](https://github.com/cloudflare/workers-sdk/pull/14918) [`cc54478`](https://github.com/cloudflare/workers-sdk/commit/cc5447865022ebc602258cfbeb79953181a62ae0) Thanks [@nickpatt](https://github.com/nickpatt)! - Improve the agent-facing Local Explorer hint for the observability query endpoint
+
+  When a `wrangler dev` session is detected as running inside an AI agent, the hint for `POST /local/observability/query` now explains that the endpoint takes a read-only SQL query (SELECT/WITH only) over the captured `spans` and `logs` tables, notes that `attributes` is JSON (read via `json(attributes)`), and includes a copy-pasteable `curl` example. The full OpenAPI schema is demoted to a last-resort footer so agents reach for the small, actionable example first instead of fetching the large schema.
+
+- [#14897](https://github.com/cloudflare/workers-sdk/pull/14897) [`e31ab0f`](https://github.com/cloudflare/workers-sdk/commit/e31ab0f40c5310babd8b493490c0e1ca677e9a8c) Thanks [@ericclemmons](https://github.com/ericclemmons)! - Fix `wrangler triggers deploy` to use Vite-generated redirected configuration
+
+  The command now reads `.wrangler/deploy/config.json`, matching `wrangler deploy` and `wrangler versions upload`, so generated Worker names and trigger settings are applied.
+
+- Updated dependencies [[`01d7020`](https://github.com/cloudflare/workers-sdk/commit/01d7020806dd523158cf9f26a4575365117f5381), [`48f0c6c`](https://github.com/cloudflare/workers-sdk/commit/48f0c6cbbc50dfac02e2d76554c181ced233a792), [`d7f38c3`](https://github.com/cloudflare/workers-sdk/commit/d7f38c311e8cd0f29f56a25250da45f62b20f8ca), [`5c25cfe`](https://github.com/cloudflare/workers-sdk/commit/5c25cfe4e03e0d3d42ddab57adc3274d6f6a1a30), [`1f61001`](https://github.com/cloudflare/workers-sdk/commit/1f61001e5f7a807db7856f5d89e0b26e12a0d0a0)]:
+  - miniflare@4.20260730.0
+
+## 4.115.0
+
+### Minor Changes
+
+- [#14807](https://github.com/cloudflare/workers-sdk/pull/14807) [`4dfb96e`](https://github.com/cloudflare/workers-sdk/commit/4dfb96ed31c30d98ccf670f9e9453a86861c0c5f) Thanks [@oOPa](https://github.com/oOPa)! - Add hidden `--jurisdiction` option to `wrangler kv namespace create` for internal testing
+
+  This option creates a KV namespace within a specific jurisdiction (for example `us`, `eu`, or `fedramp`), backing it with jurisdiction-scoped storage. It is experimental and currently gated to allow-listed accounts, so it is hidden from `--help` until the feature is generally available.
+
+- [#14280](https://github.com/cloudflare/workers-sdk/pull/14280) [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Add experimental `local_dev.experimental_s3_credentials` to `r2_buckets` config
+
+  When set, the R2 bucket is served over a local S3-compatible API at `/cdn-cgi/local/r2/s3/<bucket-id>` during local development, authenticated with the configured AWS SigV4 credentials. `<bucket-id>` is the bucket's `bucket_name`, or the binding name if `bucket_name` is not set:
+
+  ```jsonc
+  {
+    "r2_buckets": [
+      {
+        "binding": "BUCKET",
+        "bucket_name": "my-bucket",
+        "local_dev": {
+          "experimental_s3_credentials": {
+            "accessKeyId": "local-access-key-id",
+            "secretAccessKey": "local-secret-access-key"
+          }
+        }
+      }
+    ]
+  }
+  ```
+
+- [#14877](https://github.com/cloudflare/workers-sdk/pull/14877) [`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb) Thanks [@jasoncabot](https://github.com/jasoncabot)! - Respect and surface the `Retry-After` header on Cloudflare API responses
+
+  Previously, if a Wrangler command (e.g. `wrangler versions upload`, `wrangler deploy`) hit the Cloudflare API's rate limit, the resulting error gave no indication of how long to wait before trying again, and 429 responses weren't retried at all (only `5xx` errors were, with a fixed linear backoff).
+
+  Now:
+
+  - `429 Too Many Requests` responses are automatically retried, alongside the existing `5xx` retry behaviour.
+  - If a retried response includes a `Retry-After` header, Wrangler waits for that duration instead of the default backoff, and logs a message indicating how long it's waiting. To avoid blocking for an excessive amount of time, waits longer than 60 seconds fail fast instead — the surfaced `Retry-After` value lets the caller schedule its own retry.
+  - If a retryable error is ultimately surfaced to the user (e.g. because retries were exhausted), the error message includes a note with the `Retry-After` duration, and the `command-failed` entry written to the Wrangler output file (`WRANGLER_OUTPUT_FILE_PATH`/`WRANGLER_OUTPUT_FILE_DIRECTORY`) gains a `retry_after_ms` field. This lets scripts and CI/CD pipelines calling Wrangler repeatedly (for example, `wrangler versions upload` on every commit) read the wait duration directly instead of regex-parsing stderr.
+
+  `APIError.isRetryable()` is unchanged (still `5xx` only); `retryOnAPIFailure()` separately retries 429s. `retryAfterMs`, when present, is honoured for any retried error, not just 429s.
+
+  `retryAfterMs` is also now populated on `APIError`s raised from direct R2 object requests, the Browser Rendering API, and errors surfaced from commands using the official `cloudflare` SDK client.
+
+- [#14712](https://github.com/cloudflare/workers-sdk/pull/14712) [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1) Thanks [@mack-erel](https://github.com/mack-erel)! - Support `connect()` on remote VPC Network and VPC Service bindings in local development
+
+  Remote VPC Network and VPC Service bindings previously only supported HTTP and JSRPC, so calling `binding.connect(address)` against a private TCP service (for example a database) failed in local dev with `Incoming CONNECT on a worker not supported`. Raw TCP connections through remote VPC Network and VPC Service bindings now work in local development.
+
+  This feature is experimental. Existing HTTP and JSRPC usage of remote VPC Network and VPC Service bindings is unaffected, and no new configuration is required.
+
+### Patch Changes
+
+- [#14833](https://github.com/cloudflare/workers-sdk/pull/14833) [`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Color Email Routing plan change markers
+
+  Wrangler now highlights additions in green, updates in yellow, and deletions and conflicts in red so Email Routing deployment plans are easier to scan before confirmation.
+
+- [#14833](https://github.com/cloudflare/workers-sdk/pull/14833) [`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Apply Email Routing changes across independent zones concurrently
+
+  Wrangler now limits concurrent zone updates while preserving the Email Routing plan order within each zone. Deployments that configure addresses across multiple zones complete faster without breaking delete-before-add transitions at a zone's rule limit.
+
+- [#14815](https://github.com/cloudflare/workers-sdk/pull/14815) [`09b8a44`](https://github.com/cloudflare/workers-sdk/commit/09b8a44e736f28798c733e46ec11eced25fdc897) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix `wrangler cloudchamber curl` mangling header values that contain a colon
+
+  Header values were split on every colon and only the segment between the first and second was sent, so `--header location:https://example.com/x` arrived as `https`. Headers are now split on the first colon only. A header that is not in the documented `--header <name>:<value>` form previously threw an unhandled `TypeError`, and now reports a clear error.
+
+- [#14806](https://github.com/cloudflare/workers-sdk/pull/14806) [`e8b3a9d`](https://github.com/cloudflare/workers-sdk/commit/e8b3a9d8bf5f63f7e318de220d91625f96cfb85a) Thanks [@akim136](https://github.com/akim136)! - Handle and explain authentication failures from remote bindings during local development
+
+  Wrangler now recognizes authentication failures from remote preview sessions and reports that bindings which need to run remotely require Cloudflare authentication even when the rest of the Worker is developed locally.
+
+- [#14801](https://github.com/cloudflare/workers-sdk/pull/14801) [`b737676`](https://github.com/cloudflare/workers-sdk/commit/b737676db01a62e115b7fc56b5af36f5daaf5f6e) Thanks [@emily-shen](https://github.com/emily-shen)! - Speed up old debug log cleanup by reading each log file's date from its filename instead of `stat`-ing every file
+
+  Wrangler periodically deletes debug log files older than 30 days from its logs directory. Previously it made a filesystem `stat` call for each file to read its modification time; it now derives the age from the timestamp already encoded in the log filename, avoiding that extra work.
+
+- Updated dependencies [[`1035f74`](https://github.com/cloudflare/workers-sdk/commit/1035f7450006c5c8b8b003135d2b530193c913a1), [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a), [`3a22ae5`](https://github.com/cloudflare/workers-sdk/commit/3a22ae532c5c75c716d4c219e116eb3e0c5b236e), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1)]:
+  - miniflare@4.20260722.1
+
+## 4.114.0
+
+### Minor Changes
+
+- [#14633](https://github.com/cloudflare/workers-sdk/pull/14633) [`3203b5d`](https://github.com/cloudflare/workers-sdk/commit/3203b5d34488b2b14d6066db705acef267d1229a) Thanks [@nickpatt](https://github.com/nickpatt)! - Add local-dev observability
+
+  `wrangler dev` and the Vite plugin now capture a trace for every local Worker invocation - spans, logs, and `console.*` output, including requests that cross worker or Durable Object boundaries.
+
+  You can explore this data two ways:
+
+  - A new Observability tab in the Local Explorer, with a Traces view (recent invocations, an inline timeline waterfall, and filters) and an Events view.
+  - A read-only SQL endpoint at `/cdn-cgi/explorer/api/local/observability/query`, discoverable via the Local Explorer's OpenAPI document, so coding agents and tools can query the same `spans` and `logs` tables.
+
+  While this is in testing it's off by default; set `X_LOCAL_OBSERVABILITY=true` to turn it on. It will be on by default in the public release.
+
+### Patch Changes
+
+- [#14373](https://github.com/cloudflare/workers-sdk/pull/14373) [`246ce92`](https://github.com/cloudflare/workers-sdk/commit/246ce92d1d24974678eb23a03290f9391fe9b272) Thanks [@Jacroney](https://github.com/Jacroney)! - Improve the D1 database-limit error message
+
+  When creating a D1 database fails because the account has hit its database limit, the error now points to the relevant next steps — upgrading on the Workers Free plan or requesting a higher limit on a paid plan — alongside the existing commands to list and delete databases. Previously it only suggested deleting unused databases. This applies both to `wrangler d1 create` and to the D1 database that is created during resource provisioning on deploy.
+
+- [#14796](https://github.com/cloudflare/workers-sdk/pull/14796) [`c38a2c3`](https://github.com/cloudflare/workers-sdk/commit/c38a2c358ef5c8628ce26fa8c62f002dda0dcb3d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260721.1 | ^5.20260722.1 |
+  | workerd                   | 1.20260721.1  | 1.20260722.1  |
+
+- [#14788](https://github.com/cloudflare/workers-sdk/pull/14788) [`8416b33`](https://github.com/cloudflare/workers-sdk/commit/8416b33d9ba0109195ce8fd5a0c185366c41af5a) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix grammar in the container image-too-large error
+
+  The error thrown when a container image exceeds the available disk size ended with "Your need more disk for this image." It now reads "You need more disk for this image."
+
+- [#14809](https://github.com/cloudflare/workers-sdk/pull/14809) [`4683ff8`](https://github.com/cloudflare/workers-sdk/commit/4683ff8aa72e1ba559108f7074d8f6aa5d73eaaa) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ignore the removed `legacy_env` field when reading a redirected configuration
+
+  Older versions of tools such as the Vite plugin can generate a redirected configuration (`.wrangler/deploy/config.json`) that still includes the removed `legacy_env` field. Since these files are tool-generated, users could not easily remove the field themselves, and Wrangler would error out. Wrangler now silently strips `legacy_env` from redirected configurations. User-authored configurations still report an error so that the field can be removed.
+
+- [#14593](https://github.com/cloudflare/workers-sdk/pull/14593) [`02232f3`](https://github.com/cloudflare/workers-sdk/commit/02232f348002d8dc002c108ac7095119d34d1b35) Thanks [@spk-ai](https://github.com/spk-ai)! - Fix dev proxy silently hanging or returning a misleading 503 on network errors for non-root-path requests
+
+  During `wrangler dev`, a transient network error on any request path other than `/` could be misclassified as the worker being reloaded, even when it wasn't: `GET`/`HEAD` requests would silently hang (with nothing logged) until the client timed out, and other methods would receive a misleading `Your worker restarted mid-request` 503. Such errors are now reported and surfaced immediately when the worker has not actually changed.
+
+- [#14797](https://github.com/cloudflare/workers-sdk/pull/14797) [`f8a8c2c`](https://github.com/cloudflare/workers-sdk/commit/f8a8c2c0001c669a731b947755bb68208d7e6f43) Thanks [@roerohan](https://github.com/roerohan)! - Explain how to provision Flagship bindings if `app_id` missing in remote development
+
+  Wrangler now reports that a Flagship binding without an `app_id` must first be created with `wrangler flagship apps create`.
+
+- Updated dependencies [[`c38a2c3`](https://github.com/cloudflare/workers-sdk/commit/c38a2c358ef5c8628ce26fa8c62f002dda0dcb3d), [`c079ba3`](https://github.com/cloudflare/workers-sdk/commit/c079ba33f1df98e38f7cebc82a64886a7e495879), [`95b026e`](https://github.com/cloudflare/workers-sdk/commit/95b026edfdf0c6b6e40994cd8fa06a350bc868f2), [`c4bacec`](https://github.com/cloudflare/workers-sdk/commit/c4bacec349f2d6e1bf4115f22a4b4eaca62cd0fc), [`3203b5d`](https://github.com/cloudflare/workers-sdk/commit/3203b5d34488b2b14d6066db705acef267d1229a)]:
+  - miniflare@4.20260722.0
+
+## 4.113.0
+
+### Minor Changes
+
+- [#14471](https://github.com/cloudflare/workers-sdk/pull/14471) [`f03b108`](https://github.com/cloudflare/workers-sdk/commit/f03b10854d983c353fd4f3d6621b5ed716379ba3) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Apply Email Routing `addresses` during Worker trigger deployment
+
+  Worker trigger deployment now reconciles the Worker's Email Routing rules with the top-level `addresses` config. This runs for `wrangler deploy`, `wrangler triggers deploy`, and clients of `@cloudflare/deploy-helpers`. After the Worker uploads, or when `wrangler triggers deploy` runs after a version promotion, the deploy helper asks the Email Routing API for a plan, renders the changes grouped by zone (`+` added, `~` updated, `-` deleted, `!` conflict), prompts once for destructive changes in interactive mode, and applies accepted changes through the per-zone rule endpoints. Purely additive plans apply without a prompt, while non-interactive destructive plans fail without modifying rules.
+
+- [#14679](https://github.com/cloudflare/workers-sdk/pull/14679) [`deae171`](https://github.com/cloudflare/workers-sdk/commit/deae1719b276b9ce2bb67a36671b5cf806ef3801) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `exclude_packages` option to `dependencies_instrumentation` configuration
+
+  The `dependencies_instrumentation` config object now accepts an optional `exclude_packages` field — an array of package name patterns (with glob-style `*` wildcards) to exclude from the dependency metadata collected during deploy and version uploads.
+
+  ```jsonc
+  // wrangler.json
+  {
+    "dependencies_instrumentation": {
+      "exclude_packages": ["@internal/*", "secret-tool"]
+    }
+  }
+  ```
+
+- [#14721](https://github.com/cloudflare/workers-sdk/pull/14721) [`4e92e32`](https://github.com/cloudflare/workers-sdk/commit/4e92e32e1f1c27dcd463bcf38ed79e0d1b046679) Thanks [@dmmulroy](https://github.com/dmmulroy)! - Support Artifacts sources when creating Queue event subscriptions
+
+  `wrangler queues subscription create` now accepts the `artifacts` and `artifacts.repo` source types supported by the Cloudflare API.
+
+- [#13352](https://github.com/cloudflare/workers-sdk/pull/13352) [`d1d6945`](https://github.com/cloudflare/workers-sdk/commit/d1d69450decfb319a2bbf61e4c042b0511ab2618) Thanks [@penalosa](https://github.com/penalosa)! - Expand automatic resource provisioning to Queue, Dispatch Namespace, and Flagship bindings
+
+  Deployments can now omit the resource name or ID for these bindings. Wrangler will inherit the existing binding on subsequent deploys, create a deterministically named resource automatically, or offer existing resources during an interactive deploy with automatic creation disabled.
+
+- [#14688](https://github.com/cloudflare/workers-sdk/pull/14688) [`a0c8bb1`](https://github.com/cloudflare/workers-sdk/commit/a0c8bb118e04eebba870a6fbe9f5041095b04637) Thanks [@NuroDev](https://github.com/NuroDev)! - Print Local Explorer API details for headless agent-driven `wrangler dev` sessions
+
+  When `wrangler dev` is started in a headless AI agent environment, Wrangler now prints the Local Explorer API URL and basic resource routes so agents can inspect local Workers and bindings without relying on the interactive UI.
+
+- [#14724](https://github.com/cloudflare/workers-sdk/pull/14724) [`a50f73a`](https://github.com/cloudflare/workers-sdk/commit/a50f73a06bb7b078268ce9cebb4d1c16f79a3144) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add a `settings` export to the experimental `cloudflare.config.ts` config
+
+  Account-level settings (`accountId`, `complianceRegion`) now live in a dedicated, named `settings` export authored via `defineSettings`, rather than on the Worker config. A `cloudflare.config.ts` can export at most one `settings` object; the Worker itself is the `default` export.
+
+  ```ts
+  // cloudflare.config.ts
+  import { defineSettings, defineWorker } from "wrangler/experimental-config";
+  import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+
+  export const settings = defineSettings({
+  	accountId: "<your-account-id>",
+  });
+
+  export default defineWorker({
+  	name: "my-worker",
+  	entrypoint,
+  	compatibilityDate: "2026-05-18",
+  });
+  ```
+
+  This is only used behind the experimental new-config path (`wrangler --experimental-new-config` and the `@cloudflare/vite-plugin` `experimental.newConfig` option).
+
+- [#14595](https://github.com/cloudflare/workers-sdk/pull/14595) [`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924) Thanks [@colinhacks](https://github.com/colinhacks)! - Recognise nub as a package manager
+
+  wrangler now detects nub — from its `npm_config_user_agent` and an installed `nub` binary — and autoconfig detects nub projects by their `nub.lock`, alongside npm, pnpm, yarn, and bun.
+
+- [#14742](https://github.com/cloudflare/workers-sdk/pull/14742) [`34430b3`](https://github.com/cloudflare/workers-sdk/commit/34430b34f468825775377689621e451d730ab0c9) Thanks [@pombosilva](https://github.com/pombosilva)! - Add support for redacting sensitive Workflows step output in local dev.
+
+  Steps configured with `sensitive: "output"` now have their output redacted to `[REDACTED]` in step logs and step-output responses when running Workflows locally, matching production behavior. The real value is still passed to downstream steps, and step errors are never redacted.
+
+### Patch Changes
+
+- [#14715](https://github.com/cloudflare/workers-sdk/pull/14715) [`42af66d`](https://github.com/cloudflare/workers-sdk/commit/42af66d00b255945989726387acf46409b4c5eb3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260714.1 | ^5.20260721.1 |
+  | workerd                   | 1.20260714.1  | 1.20260721.1  |
+
+- [#14744](https://github.com/cloudflare/workers-sdk/pull/14744) [`a0a091b`](https://github.com/cloudflare/workers-sdk/commit/a0a091b9246c5e10408f57342b3275659c9655e3) Thanks [@penalosa](https://github.com/penalosa)! - Drop the "Experimental:" prefix from the resource provisioning header now that automatic provisioning is generally available. The deploy output now reads `The following bindings need to be provisioned:`.
+
+- [#14720](https://github.com/cloudflare/workers-sdk/pull/14720) [`0df3d43`](https://github.com/cloudflare/workers-sdk/commit/0df3d432353f39b6a90c340c268c83a7ac0b7d5c) Thanks [@penalosa](https://github.com/penalosa)! - Fix remote binding previews for accounts without a workers.dev subdomain
+
+  Wrangler now automatically registers a workers.dev subdomain when one is required to start a remote binding preview.
+
+- [#14773](https://github.com/cloudflare/workers-sdk/pull/14773) [`d83a476`](https://github.com/cloudflare/workers-sdk/commit/d83a476bab53f0266a67790242f855aab6e0468c) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix stray characters in the Workers Sites asset-key-too-long error
+
+  The error thrown when an asset path key exceeds the 512-character limit ended with a stray `",` copy-paste artifact, so the message printed to users terminated with `...#kv-limits",` and the trailing documentation URL was malformed. The message now ends cleanly at the URL.
+
+- [#14766](https://github.com/cloudflare/workers-sdk/pull/14766) [`4815711`](https://github.com/cloudflare/workers-sdk/commit/4815711fb5f896a5aa9221b6bddb9ef78c3f288d) Thanks [@gianghungtien](https://github.com/gianghungtien)! - Report the Worker's error for `HEAD` requests instead of an internal JSON parse error
+
+  A Worker that threw on a `HEAD` request (for example `curl -I`) logged `SyntaxError: Unexpected end of JSON input` from miniflare's internals rather than the actual error, and `dispatchFetch()` rejected with that same misleading error. `workerd` drops response bodies for `HEAD` requests, so the serialised error never reached the code that revives it.
+
+  The error is now also carried in a header, which survives `HEAD`, so the original message and source-mapped stack are reported for every method. When no payload is available the reporting degrades to a plain error rather than surfacing a parse failure.
+
+- [#14448](https://github.com/cloudflare/workers-sdk/pull/14448) [`c82d96b`](https://github.com/cloudflare/workers-sdk/commit/c82d96ba63a3b343b520e781a070889251868d9a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Use the new PATCH APIs for versioned secret commands
+
+  Wrangler now updates versioned Worker secrets by patching the latest Worker version instead of downloading the latest version contents and uploading a full replacement version. This avoids reconstructing Worker configuration in Wrangler, which should reduce bugs when Workers use less common features. For example, this avoids regressions like the previous placement preservation bug fixed in [#13843](https://github.com/cloudflare/workers-sdk/pull/13843).
+
+- [#14617](https://github.com/cloudflare/workers-sdk/pull/14617) [`f75ae5d`](https://github.com/cloudflare/workers-sdk/commit/f75ae5d02576d82aad4723b9e17ccb26277b69ab) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Derive `nodejsCompatMode` from the effective compatibility inputs in `unstable_startWorker()`
+
+  The CLI computes the node-compat mode from the effective compatibility date and flags (`args.* ?? parsedConfig.*`), but the programmatic path used `input.build.nodejsCompatMode` raw — leaving it unset meant a worker's `nodejs_compat` flag (from its config file or from input-level `compatibilityFlags`) was silently ignored, so bundling failed to resolve node builtins that `wrangler dev` handles. `startWorker` now derives the mode the same way when the caller does not provide one: input-level `compatibilityDate`/`compatibilityFlags` first, then the resolved config, with no-bundle taken from the resolved `build.bundle` semantics. Passing an explicit `null` still disables it.
+
+- Updated dependencies [[`42af66d`](https://github.com/cloudflare/workers-sdk/commit/42af66d00b255945989726387acf46409b4c5eb3), [`4815711`](https://github.com/cloudflare/workers-sdk/commit/4815711fb5f896a5aa9221b6bddb9ef78c3f288d), [`34430b3`](https://github.com/cloudflare/workers-sdk/commit/34430b34f468825775377689621e451d730ab0c9)]:
+  - miniflare@4.20260721.0
+
+## 4.112.0
+
+### Minor Changes
+
+- [#14470](https://github.com/cloudflare/workers-sdk/pull/14470) [`3de70df`](https://github.com/cloudflare/workers-sdk/commit/3de70dfd32f823677a9d20311ee087fd7e69d51a) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Add a top-level `addresses` field to Wrangler configuration for Email Routing
+
+  You can now declare the inbound email addresses handled by your Worker directly in `wrangler.json`:
+
+  ```json
+  {
+    "name": "my-worker",
+    "main": "src/index.ts",
+    "compatibility_date": "2026-05-21",
+    "addresses": ["support@example.com", "*@example.com"]
+  }
+  ```
+
+- [#14706](https://github.com/cloudflare/workers-sdk/pull/14706) [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c) Thanks [@edmundhung](https://github.com/edmundhung)! - Add Durable Object storage access to `createTestHarness()`
+
+  You can now execute SQL against a SQLite-backed Durable Object to seed or assert the storage state.
+
+  ```ts
+  const server = createTestHarness({
+    workers: [{ configPath: "./wrangler.json" }],
+  });
+  await server.listen();
+
+  const worker = server.getWorker();
+  const storage = await worker.getDurableObjectStorage("COUNTER", {
+    name: "user-123",
+  });
+
+  await worker.fetch("/counter/user-123");
+
+  const rows = await storage.exec(
+    "SELECT value FROM counters WHERE id = ?",
+    "user-123"
+  );
+  expect(rows).toEqual([{ value: 1 }]);
+  ```
+
+- [#14562](https://github.com/cloudflare/workers-sdk/pull/14562) [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Emit a typed `runtimeError` event on the `unstable_startWorker` DevEnv for uncaught Worker exceptions
+
+  Uncaught Worker exceptions were only source-mapped and printed, so programmatic consumers had to scrape terminal output to observe them. The DevEnv now re-emits a `RuntimeErrorEvent` (like `reloadComplete`) carrying the exception text and source-mapped stack — fed from Miniflare's pretty-error seam via the new `handleUncaughtError` option for exceptions the runtime catches, and from the inspector for those it does not.
+
+### Patch Changes
+
+- [#14682](https://github.com/cloudflare/workers-sdk/pull/14682) [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260710.1 | ^5.20260714.1 |
+  | workerd                   | 1.20260710.1  | 1.20260714.1  |
+
+- [#14725](https://github.com/cloudflare/workers-sdk/pull/14725) [`c79504f`](https://github.com/cloudflare/workers-sdk/commit/c79504f90956405f5fab59448ba53dcf44b8d3a2) Thanks [@edmundhung](https://github.com/edmundhung)! - Support containers in `createTestHarness()`
+
+  Workers configured with containers can now be tested using `createTestHarness()`. The harness builds configured images and makes container-backed Durable Objects available during integration tests.
+
+- [#14696](https://github.com/cloudflare/workers-sdk/pull/14696) [`c7dbe1a`](https://github.com/cloudflare/workers-sdk/commit/c7dbe1a3d527d534d4069080c56e364d33d6a455) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Type `unstable_startWorker`, `DevEnv.startWorker`, and `ConfigController.set`/`patch` against `WranglerStartDevWorkerInput`, so the wrangler-specific `dev.structuredLogsHandler` field the runtime already honors is expressible through the public API. Previously the public signatures took the base `StartDevWorkerInput`, and callers passing the handler needed a cast while internal callers (the test harness) routed the wider type around the signature.
+
+- [#14494](https://github.com/cloudflare/workers-sdk/pull/14494) [`4e1a7a7`](https://github.com/cloudflare/workers-sdk/commit/4e1a7a7fe566774dca376c5d569cab56b14f34e3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Register a workers.dev subdomain before uploading a new Worker
+
+  Deploying a Worker for the first time on an account that has no workers.dev subdomain failed with an opaque API error raised by the upload request itself (code 10063, "You need a workers.dev subdomain in order to proceed"). Wrangler now checks for a workers.dev subdomain before uploading a brand-new Worker that publishes to workers.dev and prompts you to register one, so you get a clear, actionable message instead of a cryptic API failure. The check is skipped for deploys that don't target workers.dev (routes-only deploys, or `workers_dev: false`) and for existing Workers, since their account already has a subdomain.
+
+- Updated dependencies [[`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983), [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d), [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c), [`3f3afbb`](https://github.com/cloudflare/workers-sdk/commit/3f3afbbf136c404d26ee39d187a44adb06c1b6e8), [`e6fbc4e`](https://github.com/cloudflare/workers-sdk/commit/e6fbc4e67f76f9b78da3d9a2dd27c6e9786d2645)]:
+  - miniflare@4.20260714.0
+
 ## 4.111.0
 
 ### Minor Changes

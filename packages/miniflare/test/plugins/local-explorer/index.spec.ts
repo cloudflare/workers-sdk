@@ -66,7 +66,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "limit: Number must be greater than or equal to 10",
+						message: "limit: Too small: expected number to be >=10",
 					},
 				],
 			});
@@ -83,7 +83,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "limit: Number must be less than or equal to 1000",
+						message: "limit: Too big: expected number to be <=1000",
 					},
 				],
 			});
@@ -107,7 +107,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "keys: Expected array, received string",
+						message: "keys: Invalid input: expected array, received string",
 					},
 				],
 			});
@@ -129,7 +129,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "keys: Required",
+						message: "keys: Invalid input: expected array, received undefined",
 					},
 				],
 			});
@@ -259,9 +259,11 @@ describe("Local Explorer API validation", () => {
 	});
 
 	describe("routing", () => {
-		test("serves OpenAPI spec at /cdn-cgi/explorer/api", async ({ expect }) => {
+		test("serves OpenAPI spec at /cdn-cgi/local/explorer/api", async ({
+			expect,
+		}) => {
 			const res = await mf.dispatchFetch(
-				"http://localhost/cdn-cgi/explorer/api"
+				"http://localhost/cdn-cgi/local/explorer/api"
 			);
 			expect(res.status).toBe(200);
 			expect(res.headers.get("Content-Type")).toContain("application/json");
@@ -273,28 +275,36 @@ describe("Local Explorer API validation", () => {
 			});
 		});
 
-		test("serves explorer UI at /cdn-cgi/explorer", async ({ expect }) => {
-			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer");
-			expect(res.status).toBe(200);
-			expect(res.headers.get("Content-Type")).toContain("text/html");
-
-			await res.arrayBuffer(); // Drain
-		});
-
-		test("serves explorer UI at /cdn-cgi/explorer/", async ({ expect }) => {
-			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer/");
-			expect(res.status).toBe(200);
-			expect(res.headers.get("Content-Type")).toContain("text/html");
-
-			await res.arrayBuffer(); // Drain
-		});
-
-		test("does not match paths that start with /cdn-cgi/explorer but are not the explorer", async ({
+		test("serves explorer UI at /cdn-cgi/local/explorer", async ({
 			expect,
 		}) => {
-			// This should fall through to the user worker, not match the explorer
 			const res = await mf.dispatchFetch(
-				"http://localhost/cdn-cgi/explorerfoo"
+				"http://localhost/cdn-cgi/local/explorer"
+			);
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("serves explorer UI at /cdn-cgi/local/explorer/", async ({
+			expect,
+		}) => {
+			const res = await mf.dispatchFetch(
+				"http://localhost/cdn-cgi/local/explorer/"
+			);
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("does not match paths that start with /cdn-cgi/local/explorer but are not the explorer", async ({
+			expect,
+		}) => {
+			// /cdn-cgi/local/explorerfoo falls through to the user worker
+			const res = await mf.dispatchFetch(
+				"http://localhost/cdn-cgi/local/explorerfoo"
 			);
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("user worker");

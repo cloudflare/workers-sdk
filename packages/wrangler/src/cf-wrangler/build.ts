@@ -1,7 +1,7 @@
 /**
  * `build` verb runtime for the `cf-wrangler` delegate entrypoint.
  *
- * Runs the same Build Output API path as
+ * Runs the same Build Output Specification path as
  * `wrangler build --experimental-new-config --experimental-cf-build-output`.
  */
 import { runBuildOutput } from "../build/run-build-output";

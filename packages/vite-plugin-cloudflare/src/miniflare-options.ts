@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import * as timers from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { format } from "node:util";
 import {
@@ -12,6 +13,7 @@ import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-binding
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
 } from "@cloudflare/workers-utils";
 import {
 	buildPublicUrl,
@@ -37,7 +39,11 @@ import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
-import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
+import {
+	debuglog,
+	satisfiesMinimumViteVersion,
+	withTrailingSlash,
+} from "./utils";
 import type { Bundle } from "./build-output-preview";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -227,25 +233,76 @@ export async function getDevMiniflareOptions(
 				},
 				__VITE_FETCH_HTML__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const { root, publicDir } = resolvedViteConfig;
-					const isInPublicDir = pathname.startsWith(PUBLIC_DIR_PREFIX);
-					const resolvedPath = isInPublicDir
-						? path.join(publicDir, pathname.slice(PUBLIC_DIR_PREFIX.length))
-						: path.join(root, pathname);
 
 					try {
-						let html = await fsp.readFile(resolvedPath, "utf-8");
+						const { root, publicDir } = resolvedViteConfig;
+						const isInPublicDir = pathname.startsWith(PUBLIC_DIR_PREFIX);
 
-						// HTML files in the public directory should not be transformed
-						if (!isInPublicDir) {
-							html = await viteDevServer.transformIndexHtml(resolvedPath, html);
+						// HTML files in the public directory are served as-is (no
+						// transform) from disk in both bundled and non-bundled dev.
+						if (isInPublicDir) {
+							const resolvedPath = path.join(
+								publicDir,
+								pathname.slice(PUBLIC_DIR_PREFIX.length)
+							);
+							const html = await fsp.readFile(resolvedPath, "utf-8");
+
+							return new MiniflareResponse(html, {
+								headers: { "Content-Type": "text/html" },
+							});
 						}
+
+						const bundledDev = viteDevServer.environments.client.bundledDev;
+
+						if (bundledDev) {
+							// When the client environment runs in bundled dev mode
+							// (`experimental.bundledDev`), the transformed HTML lives in
+							// Vite's in-memory files rather than on disk. Serving it here
+							// ensures the returned HTML references the bundled client
+							// chunks (which Vite serves from `memoryFiles`) instead of the
+							// raw source entry.
+							//
+							// Unlike Vite's `indexHtmlMiddleware`, which serves a fallback
+							// loading page and relies on an HMR reload, we intentionally
+							// block briefly and serve the real HTML.
+							await bundledDev.triggerBundleRegenerationIfStale();
+
+							const key = pathname.slice(1);
+							let file = bundledDev.memoryFiles.get(key);
+							const deadline = Date.now() + 10_000;
+							while (!file && Date.now() < deadline) {
+								await timers.setTimeout(10);
+								file = bundledDev.memoryFiles.get(key);
+							}
+
+							if (!file) {
+								throw new Error(
+									`No bundled file for "${pathname}" after waiting for bundle regeneration.`
+								);
+							}
+
+							const html =
+								typeof file.source === "string"
+									? file.source
+									: Buffer.from(file.source);
+
+							return new MiniflareResponse(html, {
+								headers: { "Content-Type": "text/html" },
+							});
+						}
+
+						// Non-bundled dev: read root HTML from disk and transform via Vite.
+						const resolvedPath = path.join(root, pathname);
+						let html = await fsp.readFile(resolvedPath, "utf-8");
+						html = await viteDevServer.transformIndexHtml(resolvedPath, html);
 
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
 						});
-					} catch {
-						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
+					} catch (error) {
+						throw new Error(`Unexpected error. Failed to load "${pathname}".`, {
+							cause: error,
+						});
 					}
 				},
 			},
@@ -275,6 +332,7 @@ export async function getDevMiniflareOptions(
 	];
 
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	let containerEngine: string | undefined;
 
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
@@ -324,8 +382,7 @@ export async function getDevMiniflareOptions(
 								worker.config.dev.enable_containers
 							) {
 								const dockerPath = getDockerPath();
-								worker.config.dev.container_engine =
-									resolveDockerHost(dockerPath);
+								containerEngine = resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
 
 								const options = getContainerOptions({
@@ -503,16 +560,31 @@ export async function getDevMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// The switch for local observability capture: tells Miniflare core to
+			// attach the trace collector to each user worker. Opt-in via the
+			// `X_LOCAL_OBSERVABILITY` env var (defaults off); enabling it requires
+			// restarting the dev server.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
-			defaultPersistRoot: getPersistenceRoot(
+			async unsafeHandleRuntimeRestart() {
+				// Miniflare has restarted `workerd` after a crash, but the
+				// module runners created over our separate bootstrap channel
+				// died with the previous process. Restarting the Vite dev
+				// server re-creates the environments, hot channels, and module
+				// runners so requests are served again instead of failing with
+				// an opaque `fetch failed`.
+				debuglog(
+					"workerd restarted after a crash; restarting the Vite dev server"
+				);
+				await viteDevServer.restart();
+			},
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+			containerEngine,
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
@@ -601,7 +673,7 @@ function getPreviewModules(
 }
 
 /**
- * Translate a Build Output API module type to a Miniflare module type.
+ * Translate a Build Output Specification module type to a Miniflare module type.
  */
 function toMiniflareModuleType(type: ModuleType): ModuleRuleType | null {
 	switch (type) {
@@ -638,7 +710,7 @@ export function getModulesFromManifest(bundle: Bundle) {
 	const mainEntry = bundle.modules[mainModule];
 	assert(
 		mainEntry !== undefined,
-		`Build Output API: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
+		`Build Output Specification: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
 	);
 
 	const ordered: Array<[string, { type: ModuleType }]> = [
@@ -679,6 +751,7 @@ export async function getPreviewMiniflareOptions(
 	);
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	let containerEngine: string | undefined;
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
@@ -726,7 +799,7 @@ export async function getPreviewMiniflareOptions(
 					workerConfig.dev.enable_containers
 				) {
 					const dockerPath = getDockerPath();
-					workerConfig.dev.container_engine = resolveDockerHost(dockerPath);
+					containerEngine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
 
 					const options = getContainerOptions({
@@ -752,7 +825,7 @@ export async function getPreviewMiniflareOptions(
 				const { modulesRules, ...workerOptions } =
 					miniflareWorkerOptions.workerOptions;
 
-				// Build Output API workers carry an explicit modules manifest
+				// Build Output Specification workers carry an explicit modules manifest
 				// that drives Miniflare's module loader directly, bypassing the
 				// extension-glob-based discovery in `getPreviewModules`. This
 				// preserves the exact module list (with its declared types)
@@ -794,16 +867,17 @@ export async function getPreviewMiniflareOptions(
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+			// The one switch for local observability: this env var tells Miniflare
+			// core to attach the trace collector to each user worker.
+			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
-			defaultPersistRoot: getPersistenceRoot(
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+			containerEngine,
 			workers,
 		},
 		containerTagToOptionsMap,

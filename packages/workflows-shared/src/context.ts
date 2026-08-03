@@ -6,6 +6,7 @@ import {
 	DEFAULT_RETRY_DELAY_MS,
 	DELAY_FUNCTION_TIMEOUT_MS,
 	invokeDelayFunction,
+	raceAgainstAbort,
 } from "./lib/delay";
 import {
 	ABORT_REASONS,
@@ -39,6 +40,7 @@ import {
 	isValidStepConfig,
 	isValidStepName,
 	MAX_STEP_NAME_LENGTH,
+	SENSITIVE_STEP_OUTPUT,
 } from "./lib/validators";
 import { MODIFIER_KEYS } from "./modifier";
 import type { Engine } from "./engine";
@@ -67,6 +69,8 @@ export type Event = {
 // execution.
 const SERIALIZABLE_DELAY_MARKER = "[dynamic]";
 type SerializableDelayMarker = typeof SERIALIZABLE_DELAY_MARKER;
+
+export const REDACTED_STEP_OUTPUT = "[REDACTED]";
 
 // The persisted, fully-merged config. A dynamic delay is stored as the marker.
 export type ResolvedStepConfig = {
@@ -1193,26 +1197,14 @@ export class Context extends RpcTarget {
 					// takes effect immediately during retries
 					{
 						const retryPauseSignal = this.#engine.pauseController.signal;
-						let pausedDuringRetry = false;
-						await Promise.race([
+						await raceAgainstAbort(
 							scheduler.wait(effectiveDuration),
-							new Promise<void>((resolve) => {
-								if (retryPauseSignal.aborted) {
-									resolve();
-									return;
-								}
-								retryPauseSignal.addEventListener("abort", () => resolve(), {
-									once: true,
-								});
-							}),
-						]);
+							retryPauseSignal
+						);
 						const retryStatus = await this.#engine.getStatus();
-						if (
+						const pausedDuringRetry =
 							retryStatus === InstanceStatus.Paused ||
-							retryStatus === InstanceStatus.WaitingForPause
-						) {
-							pausedDuringRetry = true;
-						}
+							retryStatus === InstanceStatus.WaitingForPause;
 						if (pausedDuringRetry) {
 							throw new Error(ABORT_REASONS.USER_PAUSE);
 						}
@@ -1257,12 +1249,18 @@ export class Context extends RpcTarget {
 				}
 			}
 
+			const redactOutput = config.sensitive === SENSITIVE_STEP_OUTPUT;
 			this.#engine.writeLog(events.success, cacheKey, stepNameWithCounter, {
 				// TODO (WOR-86): Add limits, figure out serialization
-				result: lastStreamMeta ? undefined : result,
-				...(lastStreamMeta && {
-					streamOutput: { cacheKey, meta: lastStreamMeta },
-				}),
+				result: redactOutput
+					? REDACTED_STEP_OUTPUT
+					: lastStreamMeta
+						? undefined
+						: result,
+				...(!redactOutput &&
+					lastStreamMeta && {
+						streamOutput: { cacheKey, meta: lastStreamMeta },
+					}),
 				...(!isRollback && rollbackFn ? { hasRollback: true } : {}),
 			});
 			this.#registerRollback({
@@ -1373,28 +1371,13 @@ export class Context extends RpcTarget {
 		const pauseSignal = this.#engine.pauseController.signal;
 		const sleepDuration = disableSleep ? 0 : duration;
 
-		let pausedDuringSleep = false;
-		await Promise.race([
-			scheduler.wait(sleepDuration),
-			new Promise<void>((resolve) => {
-				if (pauseSignal.aborted) {
-					resolve();
-					return;
-				}
-				pauseSignal.addEventListener("abort", () => resolve(), {
-					once: true,
-				});
-			}),
-		]);
+		await raceAgainstAbort(scheduler.wait(sleepDuration), pauseSignal);
 
 		// Check if we were paused during the sleep
 		const statusAfterSleep = await this.#engine.getStatus();
-		if (
+		const pausedDuringSleep =
 			statusAfterSleep === InstanceStatus.Paused ||
-			statusAfterSleep === InstanceStatus.WaitingForPause
-		) {
-			pausedDuringSleep = true;
-		}
+			statusAfterSleep === InstanceStatus.WaitingForPause;
 
 		if (pausedDuringSleep) {
 			// Throw pause error
@@ -1584,26 +1567,17 @@ export class Context extends RpcTarget {
 			this.#engine.waiters.set(options.type, callbacks);
 		});
 
-		// Race event, timeout, and pause signal. The pause promise resolves
-		// when the race settles via event/timeout before the pause signal fires
+		// Race event and timeout against the pause signal.
 		const pauseSignal = this.#engine.pauseController.signal;
-		const pausePromise = new Promise<void>((resolve) => {
-			if (pauseSignal.aborted) {
-				resolve();
-				return;
-			}
-			pauseSignal.addEventListener("abort", () => resolve(), {
-				once: true,
-			});
-		});
-
-		const raceResult = await Promise.race([
-			eventPromise,
-			timeoutEntryPQ !== undefined
-				? timeoutPromise(timeoutEntryPQ.targetTimestamp - Date.now(), false)
-				: timeoutPromise(ms(options.timeout), true),
-			pausePromise,
-		]).catch(async (error) => {
+		const raceResult = await raceAgainstAbort(
+			Promise.race([
+				eventPromise,
+				timeoutEntryPQ !== undefined
+					? timeoutPromise(timeoutEntryPQ.targetTimestamp - Date.now(), false)
+					: timeoutPromise(ms(options.timeout), true),
+			]),
+			pauseSignal
+		).catch(async (error) => {
 			const callbacks = this.#engine.waiters.get(options.type);
 			if (callbacks) {
 				const idx = callbacks.findIndex(([key]) => key === cacheKey);
@@ -1623,18 +1597,19 @@ export class Context extends RpcTarget {
 		});
 
 		// Pause signal won the race — throw to stop the workflow
-		if (raceResult === undefined) {
+		if (raceResult.aborted) {
 			throw new Error(ABORT_REASONS.USER_PAUSE);
 		}
+		const event = raceResult.value;
 
 		this.#engine.writeLog(
 			InstanceEvent.WAIT_COMPLETE,
 			cacheKey,
 			waitForEventNameWithCounter,
-			raceResult as Event
+			event
 		);
-		await this.#state.storage.put(waitForEventKey, raceResult);
+		await this.#state.storage.put(waitForEventKey, event);
 
-		return raceResult as WorkflowStepEvent<T>;
+		return event as WorkflowStepEvent<T>;
 	}
 }

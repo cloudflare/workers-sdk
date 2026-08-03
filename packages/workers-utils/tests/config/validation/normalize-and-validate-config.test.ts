@@ -214,6 +214,89 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should accept a valid dependencies_instrumentation with exclude_packages", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						enabled: true,
+						exclude_packages: ["@internal/*", "secret-pkg"],
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+		});
+
+		it("should error on invalid dependencies_instrumentation.exclude_packages type", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						exclude_packages: "not-an-array" as unknown,
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Expected "dependencies_instrumentation.exclude_packages" to be an array of strings but got "not-an-array""
+			`);
+		});
+
+		it("should error on non-string entries in dependencies_instrumentation.exclude_packages", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						exclude_packages: ["valid", 123] as unknown,
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Expected "dependencies_instrumentation.exclude_packages.[1]" to be of type string but got 123."
+			`);
+		});
+
+		it("should warn on unknown properties in dependencies_instrumentation", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					dependencies_instrumentation: {
+						enabled: true,
+						unknown_field: "bad",
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Unexpected fields found in dependencies_instrumentation field: "unknown_field""
+			`);
+		});
+
 		it("should error if the deprecated `legacy_env` field is present", ({
 			expect,
 		}) => {
@@ -231,6 +314,21 @@ describe("normalizeAndValidateConfig()", () => {
 				    Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
 				    Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information."
 			`);
+		});
+
+		it("should silently strip the deprecated `legacy_env` field from a redirected config", ({
+			expect,
+		}) => {
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				{ legacy_env: true } as unknown as RawConfig,
+				"/some/path/.wrangler/deploy/wrangler.json",
+				"/some/path/wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect("legacy_env" in config).toBe(false);
 		});
 
 		it("should warn on and remove unexpected top level fields", ({
@@ -735,6 +833,116 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing project/wrangler.toml configuration:
 					  - Unexpected fields found in triggers field: "someOtherfield""
 				`);
+		});
+
+		it("should accept Artifacts event triggers", ({ expect }) => {
+			const expectedConfig: RawConfig = {
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							filter: {
+								namespace: "my-namespace",
+								repo_name: "my-repo",
+							},
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "my-workflow",
+								},
+							],
+						},
+					],
+				},
+			};
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				expectedConfig,
+				"wrangler.json",
+				"wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(config.triggers.events).toEqual(expectedConfig.triggers?.events);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+		});
+
+		it.for([
+			{ type: "cf.artifacts.repo.created" },
+			{ type: "cf.artifacts.repo.deleted" },
+			{ type: "cf.artifacts.repo.forked" },
+			{ type: "cf.artifacts.repo.imported" },
+			{ type: "cf.artifacts.repo.pushed" },
+			{ type: "cf.artifacts.repo.cloned" },
+			{ type: "cf.artifacts.repo.fetched" },
+			{ type: "cf.artifacts.repo.token.created" },
+			{ type: "cf.artifacts.repo.token.revoked" },
+		] as const)(
+			"should accept the documented Artifacts event $type",
+			({ type }, { expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						triggers: {
+							events: [
+								{
+									type,
+									targets: [
+										{
+											type: "workflow",
+											workflow_name: "my-workflow",
+										},
+									],
+								},
+							],
+						},
+					},
+					"wrangler.json",
+					"wrangler.json",
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			}
+		);
+
+		it.for([
+			{
+				name: "an unsupported event type",
+				event: {
+					type: "cf.r2.bucket.created",
+					targets: [{ type: "workflow", workflow_name: "my-workflow" }],
+				},
+			},
+			{
+				name: "an unsupported filter",
+				event: {
+					type: "cf.artifacts.repo.pushed",
+					filter: { repoName: "my-repo" },
+					targets: [{ type: "workflow", workflow_name: "my-workflow" }],
+				},
+			},
+			{
+				name: "an empty target list",
+				event: {
+					type: "cf.artifacts.repo.pushed",
+					targets: [],
+				},
+			},
+		])("should reject $name in event triggers", ({ event }, { expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					triggers: {
+						// @ts-expect-error The invalid shapes exercise runtime validation.
+						events: [event],
+					},
+				},
+				"wrangler.json",
+				"wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
 		});
 
 		it("should error on invalid `wasm_modules` paths", ({ expect }) => {
@@ -4488,11 +4696,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "queues.producers[0]" bindings should have a string "binding" field but got {}.
-					  - "queues.producers[0]" bindings should have a string "queue" field but got {}.
-					  - "queues.producers[1]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_1"}.
 					  - "queues.producers[2]" bindings should have a string "binding" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[2]" bindings should have a string "queue" field but got {"binding":2333,"queue":2444}.
-					  - "queues.producers[3]" bindings should have a string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
+					  - "queues.producers[2]" bindings should optionally have a non-empty string "queue" field but got {"binding":2333,"queue":2444}.
+					  - "queues.producers[3]" bindings should optionally have a non-empty string "queue" field but got {"binding":"QUEUE_BINDING_3","queue":""}."
 				`);
 			});
 
@@ -4734,6 +4940,84 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept local_dev.experimental_s3_credentials, with an experimental warning", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: {
+									experimental_s3_credentials: {
+										accessKeyId: "key-id",
+										secretAccessKey: "secret",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "local_dev.experimental_s3_credentials" fields are experimental and may change or break at any time."
+				`);
+			});
+
+			it("should error if local_dev is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: "credentials",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "r2_buckets[0]" bindings should, optionally, have an object "local_dev" field but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":"credentials"}."
+				`);
+			});
+
+			it("should error if local_dev.experimental_s3_credentials is not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: {
+									experimental_s3_credentials: { accessKeyId: "key-id" },
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "r2_buckets[0]" bindings should, optionally, have a "local_dev.experimental_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":{"experimental_s3_credentials":{"accessKeyId":"key-id"}}}."
+				`);
 			});
 		});
 
@@ -5157,11 +5441,10 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "dispatch_namespaces[0]" binding should be objects, but got "a string"
 					  - "dispatch_namespaces[1]" binding should be objects, but got 123
 					  - "dispatch_namespaces[2]" should have a string "binding" field but got {"binding":123,"namespace":456}.
-					  - "dispatch_namespaces[2]" should have a string "namespace" field but got {"binding":123,"namespace":456}.
-					  - "dispatch_namespaces[3]" should have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
+					  - "dispatch_namespaces[2]" should optionally have a string "namespace" field but got {"binding":123,"namespace":456}.
+					  - "dispatch_namespaces[3]" should optionally have a string "namespace" field but got {"binding":"DISPATCH_NAMESPACE_BINDING_1","namespace":456}.
 					  - "dispatch_namespaces[5]" should have a string "binding" field but got {"binding":123,"namespace":"DISPATCH_NAMESPACE_BINDING_SERVICE_1"}.
-					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}.
-					  - "dispatch_namespaces[6]" should have a string "namespace" field but got {"binding":123,"service":456}."
+					  - "dispatch_namespaces[6]" should have a string "binding" field but got {"binding":123,"service":456}."
 				`);
 			});
 
@@ -5987,7 +6270,6 @@ describe("normalizeAndValidateConfig()", () => {
 						flagship: [
 							// @ts-expect-error purposely using an invalid value
 							{},
-							// @ts-expect-error purposely using an invalid value
 							{ binding: "VALID" },
 							// @ts-expect-error purposely using an invalid value
 							{ binding: 2000, app_id: 2111 },
@@ -6006,10 +6288,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "flagship[0]" bindings must have a string "binding" field but got {}.
-					  - "flagship[0]" bindings must have a string "app_id" field but got {}.
-					  - "flagship[1]" bindings must have a string "app_id" field but got {"binding":"VALID"}.
 					  - "flagship[2]" bindings must have a string "binding" field but got {"binding":2000,"app_id":2111}.
-					  - "flagship[2]" bindings must have a string "app_id" field but got {"binding":2000,"app_id":2111}."
+					  - "flagship[2]" bindings may have a string "app_id" field but got {"binding":2000,"app_id":2111}."
 				`);
 			});
 
@@ -9831,6 +10111,22 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
 					  - Expected "observability.head_sampling_rate" to be of type number but got true."
+				`);
+			});
+
+			it("should error if observability is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ observability: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability" should be an object but got null."
 				`);
 			});
 

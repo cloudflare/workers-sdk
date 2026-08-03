@@ -57,6 +57,10 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   workerd: true
+  # miniflare's direct `sharp` (0.35+) has no install script, but the
+  # catalog-pinned published @cloudflare/vitest-pool-workers still pulls in
+  # sharp@0.34.x transitively (via published miniflare), which does. Remove
+  # once that pin uses a published miniflare built on sharp 0.35+.
   sharp: true
   playwright-chromium: true
   prisma: true
@@ -114,13 +118,13 @@ catalog:
   # version of Undici
   undici-types: "7.28.0"
   vitest: "4.1.0"
-  vite: "8.0.13"
+  vite: "8.1.5"
   "ws": "8.21.0"
   esbuild: "0.28.1"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20260714.1"
-  workerd: "1.20260714.1"
+  "@cloudflare/workers-types": "^5.20260731.1"
+  workerd: "1.20260731.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: 2.12.4

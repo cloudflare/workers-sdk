@@ -134,7 +134,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 
 	for (const [pkgName, pkgPath] of pkgs) {
 		debugLog("Publishing package " + pkgName);
-		execSync("pnpm publish", {
+		execSync("pnpm publish --tag latest", {
 			cwd: path.join(repoRoot, pkgPath),
 			stdio: debugLog.enabled ? "inherit" : "ignore",
 		});

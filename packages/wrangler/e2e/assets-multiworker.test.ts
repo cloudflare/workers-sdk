@@ -18,12 +18,12 @@ async function startWorkersDevRegistry(
 	const workerA = helper.runLongLived(wranglerDev, {
 		cwd: regularWorkerFirst ? assetWorker : regularWorker,
 	});
-	await workerA.waitForReady(5_000);
+	await workerA.waitForReady();
 
 	const workerB = helper.runLongLived(wranglerDev, {
 		cwd: regularWorkerFirst ? regularWorker : assetWorker,
 	});
-	const { url } = await workerB.waitForReady(5_000);
+	const { url } = await workerB.waitForReady();
 
 	return url;
 }
@@ -39,7 +39,7 @@ async function startWorkersMultiworker(
 		`${wranglerDev} -c wrangler.toml -c ${regularWorkerFirst ? assetWorker : regularWorker}/wrangler.toml`,
 		{ cwd: regularWorkerFirst ? regularWorker : assetWorker }
 	);
-	const { url } = await worker.waitForReady(5_000);
+	const { url } = await worker.waitForReady();
 	return url;
 }
 

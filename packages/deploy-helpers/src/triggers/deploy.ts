@@ -10,6 +10,7 @@ import chalk from "chalk";
 import PQueue from "p-queue";
 import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
 import { fetchListResult, fetchResult, logger } from "../shared/context";
+import { applyEmailRoutingAddresses } from "./email-routing";
 import {
 	publishCustomDomains,
 	publishRoutes,
@@ -26,6 +27,7 @@ export async function triggersDeploy(
 	props: TriggerProps
 ): Promise<string[] | void> {
 	const { config, accountId, scriptName, routes, crons } = props;
+	validateEventTriggerTargets(config, scriptName);
 
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
@@ -44,6 +46,10 @@ export async function triggersDeploy(
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<TriggerDeployment>[] = [];
+	const workflowDeployments: {
+		name: string;
+		deployment: Promise<TriggerDeployment>;
+	}[] = [];
 	const hasWorkflowsDefinedInThisScript = config.workflows.some((workflow) =>
 		isWorkflowDefinedInThisScript(workflow, scriptName)
 	);
@@ -180,7 +186,7 @@ export async function triggersDeploy(
 					}
 					return { targets: routesOnly.map((route) => renderRoute(route)) };
 				},
-				(error) => ({ targets: [], error })
+				(error) => ({ category: "Routes", targets: [], error })
 			)
 		);
 	}
@@ -193,7 +199,10 @@ export async function triggersDeploy(
 				workerUrl,
 				accountId,
 				customDomainsOnly
-			).catch((error) => ({ targets: [], error }))
+			).then(
+				(result) => ({ ...result, category: "Custom domains" }),
+				(error) => ({ category: "Custom domains", targets: [], error })
+			)
 		);
 	}
 
@@ -213,7 +222,7 @@ export async function triggersDeploy(
 				() => ({
 					targets: crons.map((trigger) => `schedule: ${trigger}`),
 				}),
-				(error) => ({ targets: [], error })
+				(error) => ({ category: "Cron schedules", targets: [], error })
 			)
 		);
 	}
@@ -221,7 +230,9 @@ export async function triggersDeploy(
 	if (config.queues.producers && config.queues.producers.length) {
 		deployments.push(
 			...config.queues.producers.map((producer) =>
-				Promise.resolve({ targets: [`Producer for ${producer.queue}`] })
+				Promise.resolve({
+					targets: [`Producer for ${producer.queue ?? producer.binding}`],
+				})
 			)
 		);
 	}
@@ -233,7 +244,14 @@ export async function triggersDeploy(
 			scriptName,
 			config
 		);
-		deployments.push(...consumerUpdates);
+		deployments.push(
+			...consumerUpdates.map((update) =>
+				update.then((result) => ({
+					...result,
+					category: "Queue consumers",
+				}))
+			)
+		);
 	}
 
 	if (config.workflows?.length) {
@@ -265,8 +283,9 @@ export async function triggersDeploy(
 				continue;
 			}
 
-			deployments.push(
-				fetchResult(
+			workflowDeployments.push({
+				name: workflow.name,
+				deployment: fetchResult(
 					config,
 					`/accounts/${accountId}/workflows/${workflow.name}`,
 					{
@@ -287,7 +306,10 @@ export async function triggersDeploy(
 						},
 					}
 				).then(
-					() => ({ targets: [`workflow: ${workflow.name}`] }),
+					() => ({
+						category: "Workflows",
+						targets: [`workflow: ${workflow.name}`],
+					}),
 					(error) => {
 						if (
 							error instanceof APIError &&
@@ -296,6 +318,7 @@ export async function triggersDeploy(
 						) {
 							error.preventReport();
 							return {
+								category: "Workflows",
 								targets: [],
 								error: new UserError(
 									`Workflow "${workflow.name}" has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
@@ -308,11 +331,95 @@ export async function triggersDeploy(
 							};
 						}
 
-						return { targets: [], error };
+						return {
+							category: "Workflows",
+							resource: `Workflow "${workflow.name}"`,
+							targets: [],
+							error,
+						};
 					}
-				)
-			);
+				),
+			});
 		}
+	}
+
+	const completedWorkflowDeployments = await Promise.all(
+		workflowDeployments.map(async ({ name, deployment }) => ({
+			name,
+			deployment: await deployment,
+		}))
+	);
+	deployments.push(
+		...completedWorkflowDeployments.map(({ deployment }) =>
+			Promise.resolve(deployment)
+		)
+	);
+
+	const eventTriggers = config.triggers?.events;
+	const targetedWorkflowNames = new Set(
+		eventTriggers?.flatMap((event) =>
+			event.targets.map((target) => target.workflow_name)
+		) ?? []
+	);
+	const failedTargetedWorkflowNames = completedWorkflowDeployments
+		.filter(
+			({ name, deployment }) =>
+				deployment.error !== undefined && targetedWorkflowNames.has(name)
+		)
+		.map(({ name }) => name);
+
+	if (eventTriggers !== undefined && failedTargetedWorkflowNames.length === 0) {
+		deployments.push(
+			fetchResult(
+				config,
+				`/accounts/${accountId}/triggers/${encodeURIComponent(scriptName)}`,
+				{
+					method: "PUT",
+					body: JSON.stringify(
+						eventTriggers.map((event) => ({
+							...event,
+							targets: event.targets.map((target) => ({
+								...target,
+								script_name: scriptName,
+							})),
+						}))
+					),
+					headers: { "Content-Type": "application/json" },
+				}
+			).then(
+				() => ({
+					category: "Event triggers",
+					resource: `Worker "${scriptName}"`,
+					targets: [`event triggers: ${eventTriggers.length}`],
+				}),
+				(error) => ({
+					category: "Event triggers",
+					resource: `Worker "${scriptName}"`,
+					targets: [],
+					error,
+				})
+			)
+		);
+	} else if (eventTriggers !== undefined) {
+		const workflowLabel =
+			failedTargetedWorkflowNames.length === 1 ? "Workflow" : "Workflows";
+		const failedWorkflows = failedTargetedWorkflowNames
+			.map((name) => `"${name}"`)
+			.join(", ");
+
+		deployments.push(
+			Promise.resolve({
+				category: "Event triggers",
+				targets: [],
+				error: new UserError(
+					`Not updated because ${workflowLabel} ${failedWorkflows} failed to deploy.`,
+					{
+						telemetryMessage:
+							"triggers deploy event update skipped after workflow failure",
+					}
+				),
+			})
+		);
 	}
 
 	const completedDeployments = await Promise.all(deployments);
@@ -335,21 +442,72 @@ export async function triggersDeploy(
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
 
-	const errors = completedDeployments
-		.map((deployment) => deployment.error)
-		.filter((error): error is Error => error !== undefined);
+	const failedDeployments = completedDeployments.filter(
+		(deployment): deployment is TriggerDeployment & { error: Error } =>
+			deployment.error !== undefined
+	);
 
-	if (errors.length > 0) {
+	try {
+		await applyEmailRoutingAddresses({
+			config,
+			accountId,
+			scriptName,
+			workerTag: props.workerTag,
+		});
+	} catch (error) {
+		if (failedDeployments.length === 0) {
+			throw error;
+		}
+
+		failedDeployments.push({
+			category: "Email routing",
+			targets: [],
+			error: error instanceof Error ? error : new Error(String(error)),
+		});
+	}
+
+	if (failedDeployments.length > 0) {
+		const failuresByCategory = new Map<
+			string,
+			(TriggerDeployment & { error: Error })[]
+		>();
+
+		for (const deployment of failedDeployments) {
+			const category = deployment.category ?? "Other triggers";
+			const categoryDeployments = failuresByCategory.get(category) ?? [];
+
+			categoryDeployments.push(deployment);
+			failuresByCategory.set(category, categoryDeployments);
+		}
+
+		const errors = failedDeployments.map((deployment) => deployment.error);
+		const formattedFailures = [...failuresByCategory]
+			.map(([category, categoryDeployments]) => {
+				const messages = categoryDeployments
+					.map((deployment) => {
+						const resource = deployment.resource
+							? `${deployment.resource}: `
+							: "";
+						const lines = [`    - ${resource}${deployment.error.message}`];
+
+						if (deployment.error instanceof APIError) {
+							lines.push(
+								...deployment.error.notes.map((note) => `      - ${note.text}`)
+							);
+						}
+
+						return lines.join("\n");
+					})
+					.join("\n");
+
+				return `  ${category}:\n${messages}`;
+			})
+			.join("\n\n");
+
 		throw new UserError(
-			`Some triggers failed to deploy for ${workerName}:\n` +
-				errors.map((error) => `  - ${error.message}`).join("\n"),
+			`Trigger configuration for "${workerName}" was only partially updated:\n\n${formattedFailures}\n\nSuccessful trigger changes were not rolled back.`,
 			{
-				// Preserve the original errors (with stacks and subclass info) for
-				// debugging, while still presenting a single aggregated message.
 				cause: new AggregateError(errors),
-				// Aggregate the inner telemetry labels into a single deterministic,
-				// low-cardinality label so failures still group meaningfully. Non-
-				// UserError causes contribute a generic "non-user error" marker.
 				telemetryMessage: `triggers deploy partial failure: ${aggregateTelemetryMessages(errors)}`,
 			}
 		);
@@ -598,6 +756,30 @@ async function subdomainDeploy(
 		workersDevInSync: before.enabled === after.enabled,
 		previewsInSync: before.previews_enabled === after.previews_enabled,
 	};
+}
+
+export function validateEventTriggerTargets(
+	config: Config,
+	scriptName: string
+): void {
+	for (const event of config.triggers?.events ?? []) {
+		for (const target of event.targets) {
+			const isDefinedByThisWorker = config.workflows.some(
+				(workflow) =>
+					workflow.name === target.workflow_name &&
+					isWorkflowDefinedInThisScript(workflow, scriptName)
+			);
+			if (!isDefinedByThisWorker) {
+				throw new UserError(
+					`Event trigger "${event.type}" targets Workflow "${target.workflow_name}", but that Workflow is not defined by this Worker.\n\nAdd it to the "workflows" configuration or remove the event trigger target.`,
+					{
+						telemetryMessage:
+							"triggers deploy event target workflow not defined",
+					}
+				);
+			}
+		}
+	}
 }
 
 function isWorkflowDefinedInThisScript(

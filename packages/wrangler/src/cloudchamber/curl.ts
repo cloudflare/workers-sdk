@@ -8,6 +8,7 @@ import {
 } from "@cloudflare/cli-shared-helpers/colors";
 import { ApiError, OpenAPI } from "@cloudflare/containers-shared";
 import { request } from "@cloudflare/containers-shared/src/client/core/request";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
@@ -94,18 +95,31 @@ async function requestFromCmd(
 	if (args.useStdin) {
 		args.data = await read(process.stdin);
 	}
-	try {
-		const headers: Record<string, string> = (args.header ?? []).reduce(
-			(prev, now) => ({
+	// Parsed outside the try block below so that an invalid header surfaces as a
+	// user-facing error rather than being caught and logged as a request failure.
+	const headers: Record<string, string> = (args.header ?? []).reduce(
+		(prev, now) => {
+			const header = now.toString();
+			// Split on the first colon only: header values may themselves contain
+			// colons, e.g. `--header location:https://example.com/x`.
+			const separatorIndex = header.indexOf(":");
+			if (separatorIndex <= 0) {
+				throw new UserError(
+					`Invalid header "${header}". Headers must be in the form of --header <name>:<value>`,
+					{ telemetryMessage: "cloudchamber curl invalid header" }
+				);
+			}
+			return {
 				...prev,
-				[now.toString().split(":")[0].trim()]: now
-					.toString()
-					.split(":")[1]
+				[header.slice(0, separatorIndex).trim()]: header
+					.slice(separatorIndex + 1)
 					.trim(),
-			}),
-			{ "coordinator-request-id": requestId }
-		);
+			};
+		},
+		{ "coordinator-request-id": requestId }
+	);
 
+	try {
 		const data = args.data ?? args.dataDeprecated;
 		const res = await request(OpenAPI, {
 			url: args.path,

@@ -1,18 +1,13 @@
-import { utimesSync, writeFileSync } from "node:fs";
+import { readFileSync, utimesSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	clearStorageOwner,
-	countLiveStorageClients,
-	heartbeatStorageOwner,
+	getWorkerRegistry,
 	isProcessAlive,
 	Miniflare,
 	OWNER_STALE_MS,
-	readStorageOwner,
-	registerStorageClient,
+	STORAGE_OWNER_CLIENT_PRESENCE_PREFIX,
+	STORAGE_OWNER_WORKER_NAME,
 	tryAcquireOwnerSpawnLock,
-	unregisterStorageClient,
-	writeStorageOwner,
-	type StorageOwnerDefinition,
 } from "miniflare";
 import { describe, it, vi } from "vitest";
 import { useTmp } from "./test-shared";
@@ -20,15 +15,30 @@ import { useTmp } from "./test-shared";
 // A pid that is essentially guaranteed not to exist on the host.
 const DEAD_PID = 0x7fffffff;
 
-function makeDefinition(
-	overrides: Partial<StorageOwnerDefinition> = {}
-): StorageOwnerDefinition {
-	return {
-		pid: process.pid,
-		httpAddress: "127.0.0.1:12345",
-		updatedAt: Date.now(),
-		...overrides,
-	};
+/** The live shared-storage owner's dev registry entry, if any. */
+function readOwnerEntry(registryPath: string) {
+	return getWorkerRegistry(registryPath)[STORAGE_OWNER_WORKER_NAME];
+}
+
+/** Number of live shared-storage client presence entries in the registry. */
+function countClientPresence(registryPath: string): number {
+	return Object.keys(getWorkerRegistry(registryPath)).filter((name) =>
+		name.startsWith(STORAGE_OWNER_CLIENT_PRESENCE_PREFIX)
+	).length;
+}
+
+/** Recover the detached owner's pid from its log file (best-effort, tests only). */
+function readOwnerPidFromLog(persistRoot: string): number | undefined {
+	try {
+		const log = readFileSync(
+			path.join(persistRoot, ".miniflare-owner.log"),
+			"utf8"
+		);
+		const match = log.match(/storage owner (\d+)/);
+		return match ? Number(match[1]) : undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 describe("isProcessAlive", () => {
@@ -44,127 +54,45 @@ describe("isProcessAlive", () => {
 	});
 });
 
-describe("storage owner definition", () => {
-	it("returns undefined when no owner is published", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		expect(readStorageOwner(persistRoot)).toBeUndefined();
-	});
-
-	it("round-trips a published definition", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		const def = makeDefinition();
-		writeStorageOwner(persistRoot, def);
-		expect(readStorageOwner(persistRoot)).toEqual(def);
-	});
-
-	it("treats a definition with a dead pid as absent", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		writeStorageOwner(persistRoot, makeDefinition({ pid: DEAD_PID }));
-		expect(readStorageOwner(persistRoot)).toBeUndefined();
-	});
-
-	it("treats a stale (un-heartbeated) definition as absent", async ({
-		expect,
-	}) => {
-		const persistRoot = await useTmp();
-		writeStorageOwner(persistRoot, makeDefinition());
-		// Backdate the mtime well past the staleness window.
-		const old = new Date(Date.now() - OWNER_STALE_MS - 60_000);
-		utimesSync(path.join(persistRoot, ".miniflare-owner.json"), old, old);
-		expect(readStorageOwner(persistRoot)).toBeUndefined();
-		// A heartbeat refreshes it back to live.
-		heartbeatStorageOwner(persistRoot);
-		expect(readStorageOwner(persistRoot)).toBeDefined();
-	});
-
-	it("ignores a partially-written definition file", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		writeFileSync(
-			path.join(persistRoot, ".miniflare-owner.json"),
-			"{ not valid json"
-		);
-		expect(readStorageOwner(persistRoot)).toBeUndefined();
-	});
-
-	it("clearStorageOwner removes our own definition", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		writeStorageOwner(persistRoot, makeDefinition());
-		clearStorageOwner(persistRoot, process.pid);
-		expect(readStorageOwner(persistRoot)).toBeUndefined();
-	});
-
-	it("clearStorageOwner does not stomp a different live owner", async ({
-		expect,
-	}) => {
-		const persistRoot = await useTmp();
-		// Pretend the current process is a *different* live owner.
-		writeStorageOwner(persistRoot, makeDefinition({ pid: process.pid }));
-		clearStorageOwner(persistRoot, process.pid + 1);
-		expect(readStorageOwner(persistRoot)).toBeDefined();
-	});
-});
-
 describe("owner spawn lock", () => {
 	it("grants the lock to a single acquirer", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		const first = tryAcquireOwnerSpawnLock(persistRoot);
+		const lockDir = await useTmp();
+		const first = tryAcquireOwnerSpawnLock(lockDir);
 		expect(first).toBeDefined();
-		const second = tryAcquireOwnerSpawnLock(persistRoot);
+		const second = tryAcquireOwnerSpawnLock(lockDir);
 		expect(second).toBeUndefined();
 		first?.release();
-		const third = tryAcquireOwnerSpawnLock(persistRoot);
+		const third = tryAcquireOwnerSpawnLock(lockDir);
 		expect(third).toBeDefined();
 		third?.release();
 	});
 
 	it("reclaims a lock held by a dead process", async ({ expect }) => {
-		const persistRoot = await useTmp();
+		const lockDir = await useTmp();
 		// Simulate a crashed holder by writing a dead pid into the lock file.
 		writeFileSync(
-			path.join(persistRoot, ".miniflare-owner.lock"),
+			path.join(lockDir, ".miniflare-owner.lock"),
 			String(DEAD_PID)
 		);
-		const lock = tryAcquireOwnerSpawnLock(persistRoot);
+		const lock = tryAcquireOwnerSpawnLock(lockDir);
 		expect(lock).toBeDefined();
 		lock?.release();
 	});
 
 	it("reclaims a stale lock", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		const lockPath = path.join(persistRoot, ".miniflare-owner.lock");
+		const lockDir = await useTmp();
+		const lockPath = path.join(lockDir, ".miniflare-owner.lock");
 		writeFileSync(lockPath, String(process.pid));
 		const old = new Date(Date.now() - OWNER_STALE_MS - 60_000);
 		utimesSync(lockPath, old, old);
-		const lock = tryAcquireOwnerSpawnLock(persistRoot);
+		const lock = tryAcquireOwnerSpawnLock(lockDir);
 		expect(lock).toBeDefined();
 		lock?.release();
 	});
 });
 
-describe("client presence registry", () => {
-	it("counts live clients and reclaims dead/stale ones", async ({ expect }) => {
-		const persistRoot = await useTmp();
-		expect(countLiveStorageClients(persistRoot)).toBe(0);
-
-		const clientPath = registerStorageClient(persistRoot);
-		expect(countLiveStorageClients(persistRoot)).toBe(1);
-
-		// A dead client is reclaimed and not counted.
-		const deadClient = path.join(
-			persistRoot,
-			".miniflare-owner-clients",
-			String(DEAD_PID)
-		);
-		writeFileSync(deadClient, String(Date.now()));
-		expect(countLiveStorageClients(persistRoot)).toBe(1);
-
-		unregisterStorageClient(clientPath);
-		expect(countLiveStorageClients(persistRoot)).toBe(0);
-	});
-});
-
 describe.sequential("owner presence integration", () => {
-	it("an owner-role instance publishes a live definition and clears it on dispose", async ({
+	it("an owner-role instance registers itself in the dev registry and removes it on dispose", async ({
 		expect,
 	}) => {
 		const persistRoot = await useTmp();
@@ -172,7 +100,7 @@ describe.sequential("owner presence integration", () => {
 		const owner = new Miniflare({
 			unsafeSharedStorageOwner: true,
 			unsafeStorageOwnerRole: "owner",
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -182,42 +110,53 @@ describe.sequential("owner presence integration", () => {
 		});
 		await owner.ready;
 
-		const def = readStorageOwner(persistRoot);
-		expect(def).toBeDefined();
-		expect(def?.pid).toBe(process.pid);
-		expect(def?.httpAddress).toMatch(/^127\.0\.0\.1:\d+$/);
+		const entry = readOwnerEntry(registryPath);
+		expect(entry).toBeDefined();
+		expect(entry?.debugPortAddress).toMatch(/^127\.0\.0\.1:\d+$/);
 
 		await owner.dispose();
-		expect(readStorageOwner(persistRoot)).toBeUndefined();
+		expect(readOwnerEntry(registryPath)).toBeUndefined();
 	});
 
-	it("a client-role instance registers presence and removes it on dispose", async ({
+	it("a client-role instance registers a presence entry and removes it on dispose", async ({
 		expect,
 	}) => {
 		const persistRoot = await useTmp();
 		const registryPath = await useTmp();
-		const client = new Miniflare({
+		const common = {
 			unsafeSharedStorageOwner: true,
-			unsafeStorageOwnerRole: "client",
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
+			compatibilityDate: "2025-01-01",
 			modules: true,
-			script:
-				"export default { async fetch() { return new Response('client'); } }",
+			kvNamespaces: ["NS"],
+			script: "export default { async fetch() { return new Response('ok'); } }",
+		};
+		const owner = new Miniflare({ ...common, unsafeStorageOwnerRole: "owner" });
+		await owner.ready;
+		const client = new Miniflare({
+			...common,
+			unsafeStorageOwnerRole: "client",
 		});
-		await client.ready;
 
-		await vi.waitFor(
-			() => expect(countLiveStorageClients(persistRoot)).toBe(1),
-			{
-				timeout: 5_000,
-				interval: 100,
-			}
-		);
+		try {
+			await client.ready;
 
-		await client.dispose();
-		expect(countLiveStorageClients(persistRoot)).toBe(0);
+			await vi.waitFor(
+				() => expect(countClientPresence(registryPath)).toBe(1),
+				{
+					timeout: 5_000,
+					interval: 100,
+				}
+			);
+
+			await client.dispose();
+			expect(countClientPresence(registryPath)).toBe(0);
+		} finally {
+			await client.dispose().catch(() => {});
+			await owner.dispose();
+		}
 	});
 
 	it("routes a client's KV through the owner so storage is shared", async ({
@@ -239,7 +178,7 @@ describe.sequential("owner presence integration", () => {
 		}`;
 		const common = {
 			unsafeSharedStorageOwner: true,
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			compatibilityDate: "2025-01-01",
@@ -307,7 +246,7 @@ describe.sequential("owner presence integration", () => {
 		}`;
 		const common = {
 			unsafeSharedStorageOwner: true,
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			compatibilityDate: "2025-01-01",
@@ -362,8 +301,8 @@ describe.sequential("owner presence integration", () => {
 	}) => {
 		const persistRoot = await useTmp();
 		const registryPath = await useTmp();
-		// Exercises the JSRPC (capnweb) path of the owner boundary, including
-		// nested RpcTargets (`videos.list()`).
+		// Exercises the JSRPC path of the owner boundary (native RPC over the debug
+		// port), including nested RpcTargets (`videos.list()`).
 		const WORKER = `export default {
 			async fetch(request, env) {
 				try {
@@ -383,7 +322,7 @@ describe.sequential("owner presence integration", () => {
 		}`;
 		const common = {
 			unsafeSharedStorageOwner: true,
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			compatibilityDate: "2025-01-01",
@@ -438,7 +377,7 @@ describe.sequential("owner presence integration", () => {
 		}`;
 		const common = {
 			unsafeSharedStorageOwner: true,
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			compatibilityDate: "2025-01-01",
@@ -480,7 +419,7 @@ describe.sequential("owner presence integration", () => {
 		const registryPath = await useTmp();
 		const common = {
 			unsafeSharedStorageOwner: true,
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			compatibilityDate: "2025-01-01",
@@ -524,7 +463,7 @@ describe.sequential("owner presence integration", () => {
 		const client = new Miniflare({
 			// No role set → behaves as a client and auto-spawns an owner.
 			unsafeSharedStorageOwner: true,
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			compatibilityDate: "2025-01-01",
@@ -544,10 +483,9 @@ describe.sequential("owner presence integration", () => {
 		try {
 			await client.ready;
 
-			// An owner was auto-spawned and published itself.
-			const def = readStorageOwner(persistRoot);
-			expect(def).toBeDefined();
-			ownerPid = def?.pid;
+			// An owner was auto-spawned and registered itself in the dev registry.
+			expect(readOwnerEntry(registryPath)).toBeDefined();
+			ownerPid = readOwnerPidFromLog(persistRoot);
 			expect(ownerPid).toBeDefined();
 			expect(ownerPid).not.toBe(process.pid); // a separate process
 
@@ -564,7 +502,7 @@ describe.sequential("owner presence integration", () => {
 			// Disposing the only client should let the owner self-terminate.
 			await client.dispose();
 			await vi.waitFor(
-				() => expect(readStorageOwner(persistRoot)).toBeUndefined(),
+				() => expect(readOwnerEntry(registryPath)).toBeUndefined(),
 				{ timeout: 15_000, interval: 200 }
 			);
 		} finally {
@@ -613,7 +551,7 @@ describe.sequential("owner presence integration", () => {
 		const make = () =>
 			new Miniflare({
 				unsafeSharedStorageOwner: true,
-				defaultPersistRoot: persistRoot,
+				resourcePersistencePath: persistRoot,
 				unsafeDevRegistryPath: registryPath,
 				compatibilityFlags: ["experimental"],
 				compatibilityDate: "2025-01-01",
@@ -626,8 +564,8 @@ describe.sequential("owner presence integration", () => {
 		let ownerPid: number | undefined;
 		try {
 			await Promise.all(clients.map((c) => c.ready));
-			ownerPid = readStorageOwner(persistRoot)?.pid;
-			expect(ownerPid).toBeDefined();
+			expect(readOwnerEntry(registryPath)).toBeDefined();
+			ownerPid = readOwnerPidFromLog(persistRoot);
 
 			// Create the table once, then hammer it concurrently from every client.
 			await clients[0].dispatchFetch("http://x/?init=1").then((r) => r.text());
@@ -665,7 +603,7 @@ describe.sequential("owner presence integration", () => {
 		const persistRoot = await useTmp();
 		const registryPath = await useTmp();
 		const mf = new Miniflare({
-			defaultPersistRoot: persistRoot,
+			resourcePersistencePath: persistRoot,
 			unsafeDevRegistryPath: registryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -673,8 +611,8 @@ describe.sequential("owner presence integration", () => {
 				"export default { async fetch() { return new Response('plain'); } }",
 		});
 		await mf.ready;
-		expect(readStorageOwner(persistRoot)).toBeUndefined();
-		expect(countLiveStorageClients(persistRoot)).toBe(0);
+		expect(readOwnerEntry(registryPath)).toBeUndefined();
+		expect(countClientPresence(registryPath)).toBe(0);
 		await mf.dispose();
 	});
 });

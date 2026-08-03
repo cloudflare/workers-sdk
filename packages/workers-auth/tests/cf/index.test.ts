@@ -44,6 +44,7 @@ describe("cf auth layer", () => {
 		expect(CF_CLI.commands).toEqual({
 			login: "cf auth login",
 			whoami: "cf auth whoami",
+			createProfile: "cf auth create",
 		});
 	});
 

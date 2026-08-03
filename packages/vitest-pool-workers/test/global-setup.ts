@@ -60,7 +60,14 @@ async function createTestProject() {
 	const workspaceYamlPath = path.join(projectPath, "pnpm-workspace.yaml");
 	await fs.writeFile(
 		workspaceYamlPath,
-		["allowBuilds:", "  esbuild: true", "  workerd: true", ""].join("\n")
+		[
+			"packages:",
+			'  - "."',
+			"allowBuilds:",
+			"  esbuild: true",
+			"  workerd: true",
+			"",
+		].join("\n")
 	);
 	return projectPath;
 }

@@ -40,7 +40,7 @@ updates:
       time: "06:00"
     versioning-strategy: increase
     labels:
-      - "miniflare"
+      - "package:miniflare"
       - "dependencies"
       - "ci:skip-pr-description-validation"
     allow:

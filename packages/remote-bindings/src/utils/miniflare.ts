@@ -1,9 +1,7 @@
-import { Log, LogLevel } from "miniflare";
+import { LogLevel } from "miniflare";
 import { logger } from "../logger";
 import type { LoggerLevel } from "@cloudflare/workers-utils";
 import type { WorkerdStructuredLog } from "miniflare";
-
-export class WranglerLog extends Log {}
 
 export function castLogLevel(level: LoggerLevel): LogLevel {
 	let key = level.toUpperCase() as Uppercase<LoggerLevel>;

@@ -135,20 +135,19 @@ type Export =
  * Fields are validated at runtime by `InputWorkerSchema` and normalised before
  * being passed to downstream tooling.
  */
-export interface UserConfig {
+export interface WorkerConfig {
+	/**
+	 * Discriminates this config as a Worker config.
+	 *
+	 * Injected automatically by `defineWorker`; only needs to be written by
+	 * hand when authoring a raw config object without the helper.
+	 */
+	type: "worker";
+
 	/**
 	 * The name of your Worker.
 	 */
 	name: string;
-
-	/**
-	 * This is the ID of the account associated with your zone.
-	 * You might have more than one account, so make sure to use
-	 * the ID of the account associated with the zone/route you
-	 * provide, if you provide one. It can also be specified through
-	 * the CLOUDFLARE_ACCOUNT_ID environment variable.
-	 */
-	accountId?: string;
 
 	/**
 	 * A date in the form yyyy-mm-dd, which will be used to determine
@@ -351,14 +350,6 @@ export interface UserConfig {
 	previewUrls?: boolean;
 
 	/**
-	 * Specify the compliance region mode of the Worker.
-	 *
-	 * Although if the user does not specify a compliance region, the default is `public`,
-	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
-	 */
-	complianceRegion?: "public" | "fedramp-high";
-
-	/**
 	 * Designates this Worker as an internal-only "first-party" Worker.
 	 *
 	 * @internal
@@ -413,4 +404,36 @@ export interface UserConfig {
 	 *   For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects.
 	 */
 	exports?: Record<string, Export>;
+}
+
+/**
+ * Settings shared by the other exports.
+ * Authored as a named `settings` export via
+ * `defineSettings`.
+ */
+export interface SettingsConfig {
+	/**
+	 * Discriminates this config as a settings config.
+	 *
+	 * Injected automatically by `defineSettings`; only needs to be written by
+	 * hand when authoring a raw config object without the helper.
+	 */
+	type: "settings";
+
+	/**
+	 * This is the ID of the account associated with your zone.
+	 * You might have more than one account, so make sure to use
+	 * the ID of the account associated with the zone/route you
+	 * provide, if you provide one. It can also be specified through
+	 * the CLOUDFLARE_ACCOUNT_ID environment variable.
+	 */
+	accountId?: string;
+
+	/**
+	 * Specify the compliance region mode of the Worker.
+	 *
+	 * Although if the user does not specify a compliance region, the default is `public`,
+	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
+	 */
+	complianceRegion?: "public" | "fedramp-high";
 }

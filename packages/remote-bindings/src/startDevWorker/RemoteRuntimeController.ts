@@ -142,7 +142,7 @@ export class RemoteRuntimeController {
 					{
 						headers: {
 							"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
-							"User-Agent": `wrangler/${packageVersion}`,
+							"User-Agent": `remote-bindings/${packageVersion}`,
 						},
 						signal: this.#abortController.signal,
 					}

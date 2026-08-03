@@ -1,17 +1,14 @@
 import { newWorkersRpcResponse } from "capnweb";
+import { pipeSocketOverWebSocket } from "./remote-bindings-utils";
 
-// Shared server for the remote-bindings boundary. It terminates proxied fetch
-// and capnweb JSRPC calls made by the remote-proxy client worker
+// Shared server for the remote-bindings boundary. It terminates proxied fetch,
+// capnweb JSRPC, and raw TCP connect calls made by the remote-proxy client worker
 // (`remote-proxy-client.worker.ts`) and dispatches them onto locally-bound
-// services. Two consumers share this one implementation:
-//   - Wrangler's remote-bindings proxy server
-//     (`packages/wrangler/templates/remoteBindings/ProxyServerWorker.ts`), which
-//     exposes a session's remote bindings to a local workerd instance.
-//   - Miniflare's shared "storage owner"
-//     (`core/storage-owner-server.worker.ts`), which exposes one process's local
-//     storage to every other instance sharing a persist root.
-// Each consumer supplies its own binding-resolution strategy; the wire protocol
-// (MF-Binding / MF-URL / MF-Header-* / capnweb over WebSocket) is identical.
+// services. Used by the @cloudflare/remote-bindings proxy server
+// (`packages/remote-bindings/templates/remoteBindings/ProxyServerWorker.ts`),
+// which exposes a session's remote bindings to a local workerd instance. The
+// consumer supplies its own binding-resolution strategy; the wire protocol is
+// shared by both servers.
 
 /** Thrown by a resolver when a requested binding is not served. Yields a 400. */
 export class BindingError extends Error {}
@@ -22,8 +19,8 @@ export type RemoteBindingsProxyConfig<Env> = {
 	/** Resolve the capnweb RPC target for a JSRPC (WebSocket) request. */
 	resolveRpcBinding: (request: Request, env: Env) => RpcTarget;
 	/**
-	 * Resolve the fetcher for a plain fetch request, plus an optional hook to
-	 * rewrite the reconstructed request headers before forwarding.
+	 * Resolve the fetcher for a plain fetch or raw TCP connect request, plus an
+	 * optional hook to rewrite reconstructed fetch headers before forwarding.
 	 */
 	resolveFetchBinding: (
 		request: Request,
@@ -41,6 +38,38 @@ export function isJsRpcRequest(request: Request): boolean {
 	);
 }
 
+/**
+ * Raw TCP tunnels arrive as WebSocket upgrades carrying the destination in
+ * `MF-Connect-Address`.
+ */
+export function isConnectRequest(request: Request): boolean {
+	return (
+		request.headers.get("Upgrade") === "websocket" &&
+		request.headers.has("MF-Connect-Address")
+	);
+}
+
+function handleConnectRequest<Env>(
+	request: Request,
+	env: Env,
+	config: RemoteBindingsProxyConfig<Env>
+): Response {
+	const address = request.headers.get("MF-Connect-Address");
+	if (address === null) {
+		return new Response("Missing MF-Connect-Address header", { status: 400 });
+	}
+
+	const { fetcher } = config.resolveFetchBinding(request, env);
+
+	const { 0: client, 1: server } = new WebSocketPair();
+	server.accept();
+
+	const socket = fetcher.connect(address);
+	pipeSocketOverWebSocket(socket, server).catch(() => {});
+
+	return new Response(null, { status: 101, webSocket: client });
+}
+
 export function createRemoteBindingsProxyServer<Env>(
 	config: RemoteBindingsProxyConfig<Env>
 ): ExportedHandler<Env> {
@@ -48,6 +77,10 @@ export function createRemoteBindingsProxyServer<Env>(
 	return {
 		async fetch(request, env) {
 			try {
+				if (isConnectRequest(request)) {
+					return handleConnectRequest(request, env, config);
+				}
+
 				if (isJsRpc(request)) {
 					return await newWorkersRpcResponse(
 						request,

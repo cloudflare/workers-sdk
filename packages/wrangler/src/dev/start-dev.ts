@@ -2,8 +2,8 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getRegistryPath } from "@cloudflare/workers-utils";
-import { isInteractive } from "@cloudflare/workers-utils";
+import { getRegistryPath, isInteractive } from "@cloudflare/workers-utils";
+import { CorePaths } from "miniflare";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/binding-utils";
@@ -123,7 +123,10 @@ export async function startDev(args: StartDevOptions) {
 			tunnelManager?.getTunnel()?.dispose();
 		});
 
-		if (isInteractive() && args.showInteractiveDevSession !== false) {
+		const interactiveDevSession =
+			isInteractive() && args.showInteractiveDevSession !== false;
+
+		if (interactiveDevSession) {
 			unregisterHotKeys = registerDevHotKeys(devEnvs, args, { tunnelManager });
 		}
 
@@ -155,6 +158,9 @@ export async function startDev(args: StartDevOptions) {
 					false
 			);
 			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
+			if (args.showLocalExplorerAgentHint) {
+				printLocalExplorerAgentHint(url);
+			}
 		});
 
 		// Start tunnel early, before the proxy is ready.
@@ -356,9 +362,29 @@ function maybePrintScheduledWorkerWarning(
 	logger.once.warn(
 		`Scheduled Workers are not automatically triggered during local development.\n` +
 			`To manually trigger a scheduled event, run:\n` +
-			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
+			`  curl "http://${host}:${port}/cdn-cgi/local/scheduled"\n` +
 			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
+}
+
+function printLocalExplorerAgentHint(url: URL): void {
+	const displayUrl = new URL(url.href);
+	displayUrl.hostname = formatHostname(url.hostname);
+	const explorerApiUrl = new URL(`${CorePaths.EXPLORER}/api`, displayUrl).href;
+	logger.once.log(dedent`
+		Wrangler detected this dev session is running in an AI agent.
+		The Local Explorer API is available at ${explorerApiUrl}
+		Useful routes:
+		  GET ${explorerApiUrl}/local/workers - local Workers and bindings
+		  GET ${explorerApiUrl}/storage/kv/namespaces - KV namespaces
+		  GET ${explorerApiUrl}/d1/database - D1 databases
+		  GET ${explorerApiUrl}/r2/buckets - R2 buckets
+		  GET ${explorerApiUrl}/workers/durable_objects/namespaces - Durable Object namespaces
+		  GET ${explorerApiUrl}/workflows - Workflows
+		  POST ${explorerApiUrl}/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
+		    curl -X POST ${explorerApiUrl}/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+		If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
+		  GET ${explorerApiUrl} - OpenAPI schema`);
 }
 
 export function formatHostname(hostname: string): string {

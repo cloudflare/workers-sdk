@@ -1,8 +1,10 @@
 import path from "node:path";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
-import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import {
 	formatZodError,
+	getCloudflareComplianceRegion,
+} from "@cloudflare/workers-utils";
+import {
 	getRootPath,
 	Log,
 	LogLevel,
@@ -22,7 +24,7 @@ import type {
 } from "@cloudflare/remote-bindings";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { TestProject } from "vitest/node";
-import type { ParseParams, ZodError } from "zod";
+import type { ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
@@ -40,12 +42,16 @@ const WorkersPoolOptionsSchema = z.object({
 	 * `module` instance as is used internally for the `SELF` and Durable Object
 	 * bindings.
 	 */
-	main: z.ostring(),
+	main: z.string().optional(),
 	/**
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
 	 */
 	remoteBindings: z.boolean().default(true),
+	/**
+	 * Enables verbose workerd logging. Defaults to `true`.
+	 */
+	verbose: z.boolean().optional(),
 	/**
 	 * Additional exports.
 	 * A map of module exports to be made available on the `ctx.exports`
@@ -65,18 +71,25 @@ const WorkersPoolOptionsSchema = z.object({
 		)
 		.default({}),
 	miniflare: z
-		.object({
-			workers: z.array(z.object({}).passthrough()).optional(),
+		.looseObject({
+			workers: z.array(z.looseObject({})).optional(),
 		})
-		.passthrough()
 		.optional(),
 	wrangler: z
-		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.object({
+			configPath: z.string().optional(),
+			environment: z.string().optional(),
+		})
 		.optional(),
 });
 
+type CompatibleWorkerOptions = WorkerOptions & {
+	/** @deprecated Use `cacheAPI` instead. */
+	cache?: WorkerOptions["cacheAPI"];
+};
+
 export type SourcelessWorkerOptions = Omit<
-	WorkerOptions,
+	CompatibleWorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & {
 	// `modulesRules` is not included in all members of the `SourceOptions` type
@@ -86,7 +99,7 @@ export type SourcelessWorkerOptions = Omit<
 
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
-		workers?: WorkerOptions[];
+		workers?: CompatibleWorkerOptions[];
 	};
 };
 
@@ -94,7 +107,14 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 };
 
-type PathParseParams = Pick<ParseParams, "path">;
+type PathParseParams = { path?: (string | number)[] };
+
+function normalizeMiniflareWorkerOptions(value: Record<string, unknown>): void {
+	if (value.cacheAPI === undefined) {
+		value.cacheAPI = value.cache;
+	}
+	delete value.cache;
+}
 
 function isZodErrorLike(value: unknown): value is ZodError {
 	return (
@@ -123,6 +143,8 @@ function parseWorkerOptions(
 	withoutScript: boolean,
 	opts: PathParseParams
 ): WorkerOptions {
+	normalizeMiniflareWorkerOptions(value);
+
 	// If this worker shouldn't have a configurable script, remove all script data
 	// and replace it with an empty `script` that will pass validation
 	if (withoutScript) {

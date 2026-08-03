@@ -51,8 +51,14 @@ describe
 				envInterfaceName: "Env",
 				...getFrameworkConfig(testConfig.name),
 			};
+			// A third `:`-segment in the test name (e.g. `nuxt:pages:minimal`)
+			// is a variant label that disambiguates tests sharing the same
+			// framework id + platform. getFrameworkConfig ignores it.
+			const variantLabel = testConfig.name.split(":")[2];
 			test.runIf(shouldRunTest(testConfig))(
-				`${frameworkConfig.id} (${frameworkConfig.platform ?? "pages"})`,
+				`${frameworkConfig.id} (${frameworkConfig.platform ?? "pages"})${
+					variantLabel ? ` [${variantLabel}]` : ""
+				}`,
 				{
 					retry: testRetries,
 					timeout: testConfig.timeout || TEST_TIMEOUT,

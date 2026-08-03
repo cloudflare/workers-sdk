@@ -584,11 +584,11 @@ export async function usingLocalNamespace<T>(
 	// We need to cast to Config for the getLocalPersistencePath function since
 	// it expects a full Config object, even though it only uses compliance_region
 	const persist = getLocalPersistencePath(persistTo, config);
-	const defaultPersistRoot = getDefaultPersistRoot(persist);
+	const resourcePersistencePath = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		script:
 			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		defaultPersistRoot,
+		resourcePersistencePath,
 		kvNamespaces: { NAMESPACE: namespaceId },
 	});
 	const namespace = await mf.getKVNamespace("NAMESPACE");

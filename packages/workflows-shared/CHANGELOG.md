@@ -1,5 +1,19 @@
 # @cloudflare/workflows-shared
 
+## 0.12.2
+
+### Patch Changes
+
+- [#14840](https://github.com/cloudflare/workers-sdk/pull/14840) [`03a4330`](https://github.com/cloudflare/workers-sdk/commit/03a4330eb11865ef20a7c993a6ebe1f1b10838ad) Thanks [@Kkartik14](https://github.com/Kkartik14)! - Fix local Workflows retaining abort listeners after waits complete
+
+  Workflow sleeps, retry delays, and event waits now share a typed abort-aware race that removes its listener when either side settles. This prevents long-running local Workflow instances from retaining a listener and its captured promise state for every completed wait until the instance is paused or evicted.
+
+## 0.12.1
+
+### Patch Changes
+
+- [#14707](https://github.com/cloudflare/workers-sdk/pull/14707) [`b38f494`](https://github.com/cloudflare/workers-sdk/commit/b38f494204e5e08e561b8f198ef928188e554868) Thanks [@emily-shen](https://github.com/emily-shen)! - Update zod to v4
+
 ## 0.12.0
 
 ### Minor Changes

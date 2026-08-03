@@ -407,14 +407,26 @@ const queuesUrl = (accountId: string, queueId?: string): string => {
 
 export async function ensureQueuesExistByConfig(
 	config: Config,
-	accountId: string
+	accountId: string,
+	includeProducers = true,
+	scriptName?: string
 ) {
-	const producers = (config.queues.producers || []).map(
-		(producer) => producer.queue
-	);
-	const consumers = (config.queues.consumers || []).map(
-		(consumer) => consumer.queue
-	);
+	const producerNames = (config.queues.producers || []).flatMap((producer) => {
+		if (producer.queue) {
+			return [producer.queue];
+		}
+		if (!includeProducers && scriptName) {
+			return [
+				`${scriptName}-${producer.binding.toLowerCase().replaceAll("_", "-")}`,
+			];
+		}
+		return [];
+	});
+	const producers = includeProducers ? producerNames : [];
+	const provisionableQueues = new Set(producerNames);
+	const consumers = (config.queues.consumers || [])
+		.map((consumer) => consumer.queue)
+		.filter((queue) => includeProducers || !provisionableQueues.has(queue));
 
 	const queueNames = producers.concat(consumers);
 	if (queueNames.length > 0) {

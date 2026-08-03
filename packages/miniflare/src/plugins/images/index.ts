@@ -3,6 +3,7 @@ import SCRIPT_IMAGES_SERVICE from "worker:images/images";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
 	buildRemoteProxyProps,
@@ -10,10 +11,9 @@ import {
 	getPersistPath,
 	getUserBindingServiceName,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
@@ -30,24 +30,15 @@ export const ImagesOptionsSchema = z.object({
 	images: ImagesSchema.optional(),
 });
 
-export const ImagesSharedOptionsSchema = z.object({
-	imagesPersist: PersistenceSchema,
-});
-
 export const IMAGES_PLUGIN_NAME = "images";
-const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
 // Fixed namespace backing the Images store (one per instance/owner).
 const IMAGES_DATA_NAMESPACE = "images-data";
 // The object-entry service exposing the Images store. Referenced by the shared
 // storage owner so it can serve a routed client's Images KV operations.
 export const IMAGES_NS_DATA_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:ns:data`;
 
-export const IMAGES_PLUGIN: Plugin<
-	typeof ImagesOptionsSchema,
-	typeof ImagesSharedOptionsSchema
-> = {
+export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 	options: ImagesOptionsSchema,
-	sharedOptions: ImagesSharedOptionsSchema,
 	bindingTypeDescription: "Images",
 	async getBindings(options) {
 		if (!options.images) {
@@ -64,7 +55,7 @@ export const IMAGES_PLUGIN: Plugin<
 							name: "fetcher",
 							service: options.images.remoteProxyConnectionString
 								? {
-										name: IMAGES_REMOTE_SERVICE_NAME,
+										name: SERVICE_REMOTE_BINDINGS,
 										props: buildRemoteProxyProps(
 											options.images.remoteProxyConnectionString,
 											options.images.binding
@@ -92,12 +83,9 @@ export const IMAGES_PLUGIN: Plugin<
 	},
 	async getServices({
 		options,
-		sharedOptions,
 		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
+		resourcePersistencePath,
 		storageOwnerRoutePlugins,
-		storageOwnerConn,
 	}) {
 		if (!options.images) {
 			return [];
@@ -105,16 +93,11 @@ export const IMAGES_PLUGIN: Plugin<
 
 		// Routed to the shared storage owner: keep the transform worker local but
 		// repoint its backing KV store (`IMAGES_STORE`) at the owner, and skip the
-		// local storage/object services (the owner stands them up).
-		if (
-			storageOwnerRoutePlugins.has(IMAGES_PLUGIN_NAME) &&
-			storageOwnerConn !== undefined
-		) {
+		// local storage/object services (the owner stands them up). The owner's
+		// `IMAGES_NS_DATA_SERVICE_NAME` bakes the images namespace id in, so no
+		// per-request id/props are needed.
+		if (storageOwnerRoutePlugins.has(IMAGES_PLUGIN_NAME)) {
 			return [
-				{
-					name: IMAGES_REMOTE_SERVICE_NAME,
-					worker: remoteProxyClientWorker(),
-				},
 				{
 					name: getUserBindingServiceName(
 						IMAGES_PLUGIN_NAME,
@@ -128,13 +111,9 @@ export const IMAGES_PLUGIN: Plugin<
 						bindings: [
 							{
 								name: "IMAGES_STORE",
-								kvNamespace: {
-									name: IMAGES_REMOTE_SERVICE_NAME,
-									props: buildRemoteProxyProps(
-										storageOwnerConn,
-										`images:${IMAGES_DATA_NAMESPACE}`
-									),
-								},
+								kvNamespace: storageOwnerProxyDesignator(
+									IMAGES_NS_DATA_SERVICE_NAME
+								),
 							},
 							WORKER_BINDING_SERVICE_LOOPBACK,
 						],
@@ -144,12 +123,7 @@ export const IMAGES_PLUGIN: Plugin<
 		}
 
 		if (options.images.remoteProxyConnectionString) {
-			return [
-				{
-					name: IMAGES_REMOTE_SERVICE_NAME,
-					worker: remoteProxyClientWorker(),
-				},
-			];
+			return [];
 		}
 
 		const serviceName = getUserBindingServiceName(
@@ -160,8 +134,7 @@ export const IMAGES_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			IMAGES_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.imagesPersist
+			resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -198,7 +171,7 @@ export const IMAGES_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;
@@ -244,23 +217,11 @@ export const IMAGES_PLUGIN: Plugin<
 			return undefined;
 		}
 		// One images store per owner (binding name irrelevant). Served via the
-		// fetch path like KV, under the "images" key. Note the client side is
-		// handled in `getServices` (the transform worker stays local, only its
-		// backing KV store is repointed at the owner), so there is no
-		// `routeBindingToStorageOwner` hook.
+		// fetch path like KV. The client side is handled in `getServices` (the
+		// transform worker stays local, only its backing KV store is repointed at
+		// the owner's `IMAGES_NS_DATA_SERVICE_NAME`).
 		return {
 			ownerOptions: { images: { binding: "images" } },
-			ownerBindings: [
-				{ name: "images", service: { name: IMAGES_NS_DATA_SERVICE_NAME } },
-			],
 		};
-	},
-	getPersistPath({ imagesPersist }, tmpPath) {
-		return getPersistPath(
-			IMAGES_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			imagesPersist
-		);
 	},
 };

@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-	buildRemoteProxyProps,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-} from "../shared";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
+import { buildRemoteProxyProps, ProxyNodeBinding } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const WebsearchEntrySchema = z.object({
@@ -13,13 +10,10 @@ const WebsearchEntrySchema = z.object({
 });
 
 export const WebsearchOptionsSchema = z.object({
-	websearch: z.record(WebsearchEntrySchema).optional(),
+	websearch: z.record(z.string(), WebsearchEntrySchema).optional(),
 });
 
 export const WEBSEARCH_PLUGIN_NAME = "websearch";
-
-const WEBSEARCH_SCOPE = "websearch";
-const WEBSEARCH_REMOTE_SERVICE_NAME = `${WEBSEARCH_SCOPE}:remote`;
 
 export const WEBSEARCH_PLUGIN: Plugin<typeof WebsearchOptionsSchema> = {
 	options: WebsearchOptionsSchema,
@@ -36,7 +30,7 @@ export const WEBSEARCH_PLUGIN: Plugin<typeof WebsearchOptionsSchema> = {
 			bindings.push({
 				name: bindingName,
 				service: {
-					name: WEBSEARCH_REMOTE_SERVICE_NAME,
+					name: SERVICE_REMOTE_BINDINGS,
 					props: buildRemoteProxyProps(
 						entry.remoteProxyConnectionString,
 						bindingName
@@ -56,19 +50,7 @@ export const WEBSEARCH_PLUGIN: Plugin<typeof WebsearchOptionsSchema> = {
 
 		return nodeBindings;
 	},
-	async getServices({ options }) {
-		const services: {
-			name: string;
-			worker: ReturnType<typeof remoteProxyClientWorker>;
-		}[] = [];
-
-		if (Object.keys(options.websearch ?? {}).length > 0) {
-			services.push({
-				name: WEBSEARCH_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			});
-		}
-
-		return services;
+	async getServices() {
+		return [];
 	},
 };

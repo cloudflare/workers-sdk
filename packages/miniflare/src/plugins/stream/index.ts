@@ -3,14 +3,13 @@ import BINDING_SCRIPT from "worker:stream/binding";
 import OBJECT_SCRIPT from "worker:stream/object";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import {
 	buildRemoteProxyProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getUserBindingServiceName,
-	PersistenceSchema,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 	storageOwnerProxyDesignator,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
@@ -28,12 +27,7 @@ export const StreamOptionsSchema = z.object({
 	stream: StreamSchema.optional(),
 });
 
-export const StreamSharedOptionsSchema = z.object({
-	streamPersist: PersistenceSchema,
-});
-
 export const STREAM_PLUGIN_NAME = "stream";
-const STREAM_REMOTE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:remote`;
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
 export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
@@ -44,12 +38,8 @@ export const STREAM_BINDING_ENTRYPOINT = "StreamBinding";
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
-export const STREAM_PLUGIN: Plugin<
-	typeof StreamOptionsSchema,
-	typeof StreamSharedOptionsSchema
-> = {
+export const STREAM_PLUGIN: Plugin<typeof StreamOptionsSchema> = {
 	options: StreamOptionsSchema,
-	sharedOptions: StreamSharedOptionsSchema,
 	bindingTypeDescription: "Stream",
 	async getBindings(options) {
 		if (!options.stream) {
@@ -61,15 +51,15 @@ export const STREAM_PLUGIN: Plugin<
 				name: options.stream.binding,
 				service: options.stream.remoteProxyConnectionString
 					? {
-							name: STREAM_REMOTE_SERVICE_NAME,
+							name: SERVICE_REMOTE_BINDINGS,
 							props: buildRemoteProxyProps(
 								options.stream.remoteProxyConnectionString,
 								options.stream.binding
 							),
 						}
 					: {
-							name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
-							entrypoint: "StreamBinding",
+							name: STREAM_BINDING_SERVICE_NAME,
+							entrypoint: STREAM_BINDING_ENTRYPOINT,
 						},
 			},
 		];
@@ -84,10 +74,8 @@ export const STREAM_PLUGIN: Plugin<
 	},
 	async getServices({
 		options,
-		sharedOptions,
 		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
+		resourcePersistencePath,
 		storageOwnerRoutePlugins,
 	}) {
 		if (!options.stream) {
@@ -102,19 +90,13 @@ export const STREAM_PLUGIN: Plugin<
 		}
 
 		if (options.stream.remoteProxyConnectionString) {
-			return [
-				{
-					name: STREAM_REMOTE_SERVICE_NAME,
-					worker: remoteProxyClientWorker(),
-				},
-			];
+			return [];
 		}
 
 		const persistPath = getPersistPath(
 			STREAM_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.streamPersist
+			resourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 
@@ -149,7 +131,7 @@ export const STREAM_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_BLOBS,
 						service: { name: STREAM_STORAGE_SERVICE_NAME },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 				// Allow the DO to send outbound HTTP requests (fetching watermark images)
 				globalOutbound: { name: "internet" },
@@ -190,14 +172,22 @@ export const STREAM_PLUGIN: Plugin<
 
 		return [storageService, objectService, bindingService];
 	},
-	routeBindingToStorageOwner(binding, conn) {
+	routeBindingToStorageOwner(binding) {
 		// A single per-instance store accessed over RPC. Repoint the whole binding
-		// at the owner proxy (the remote-proxy client carries the RPC); the owner
-		// hosts the stream entrypoint + store under the canonical "stream" key.
-		if ("service" in binding && binding.service?.name !== undefined) {
+		// at the owner's stream RPC entrypoint (reached natively over the debug
+		// port by the client proxy); the owner hosts it under the canonical
+		// `STREAM_BINDING_SERVICE_NAME` / `STREAM_BINDING_ENTRYPOINT`.
+		if (
+			"service" in binding &&
+			binding.service?.name === STREAM_BINDING_SERVICE_NAME &&
+			binding.service.entrypoint === STREAM_BINDING_ENTRYPOINT
+		) {
 			return {
 				name: binding.name,
-				service: storageOwnerProxyDesignator(conn, "stream"),
+				service: storageOwnerProxyDesignator(
+					STREAM_BINDING_SERVICE_NAME,
+					STREAM_BINDING_ENTRYPOINT
+				),
 			};
 		}
 		return undefined;
@@ -210,26 +200,9 @@ export const STREAM_PLUGIN: Plugin<
 			return undefined;
 		}
 		// One stream store per owner; the binding name is irrelevant (the owner
-		// exposes it under the canonical "stream" key, dispatched via JSRPC).
+		// exposes it under the canonical service/entrypoint above).
 		return {
 			ownerOptions: { stream: { binding: "stream" } },
-			ownerBindings: [
-				{
-					name: "stream",
-					service: {
-						name: STREAM_BINDING_SERVICE_NAME,
-						entrypoint: STREAM_BINDING_ENTRYPOINT,
-					},
-				},
-			],
 		};
-	},
-	getPersistPath({ streamPersist }, tmpPath) {
-		return getPersistPath(
-			STREAM_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			streamPersist
-		);
 	},
 };

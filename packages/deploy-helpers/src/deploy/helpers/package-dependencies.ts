@@ -27,6 +27,34 @@ export type PackageDependency = {
 const MAX_PACKAGE_DEPENDENCIES = 200;
 
 /**
+ * Converts a glob pattern (supporting `*` wildcards) to a regular expression.
+ *
+ * The `*` character matches any sequence of characters. All other regex-special
+ * characters in the pattern are escaped.
+ *
+ * @param pattern - A glob-style pattern, e.g. `"@internal/*"` or `"*-utils"`
+ * @returns A `RegExp` that matches strings against the given pattern
+ */
+function globPatternToRegExp(pattern: string): RegExp {
+	const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+	const regexStr = escaped.replace(/\*/g, ".*");
+	return new RegExp(`^${regexStr}$`);
+}
+
+/**
+ * Tests whether a package name matches any of the given exclusion patterns.
+ *
+ * @param name - The package name to test
+ * @param excludePatterns - An array of glob patterns to match against
+ * @returns `true` if the name matches at least one pattern
+ */
+function isExcludedPackage(name: string, excludePatterns: string[]): boolean {
+	return excludePatterns.some((pattern) =>
+		globPatternToRegExp(pattern).test(name)
+	);
+}
+
+/**
  * Collects npm package dependency metadata from the project's package.json.
  *
  * Reads both `dependencies` and `devDependencies`, resolves each package's
@@ -35,15 +63,19 @@ const MAX_PACKAGE_DEPENDENCIES = 200;
  * - Pnpm catalog packages (version prefixed with `catalog:`)
  * - Local packages (version prefixed with `file:` or `link:`)
  * - Packages whose installed version cannot be resolved
+ * - Packages matching any pattern in `excludePackages`
  *
  * The result is capped at {@link MAX_PACKAGE_DEPENDENCIES} entries.
  *
  * @param projectPath - Path to the project directory (where package.json is located)
+ * @param excludePackages - Optional list of package name patterns (glob-style with
+ *        `*` wildcards) to exclude from the collected dependencies
  * @returns An array of package dependency entries, or `undefined` if package.json
  *          cannot be read or no valid dependencies are found
  */
 export async function collectPackageDependencies(
-	projectPath: string
+	projectPath: string,
+	excludePackages?: string[]
 ): Promise<PackageDependency[] | undefined> {
 	const packageJsonPath = path.join(projectPath, "package.json");
 
@@ -76,6 +108,13 @@ export async function collectPackageDependencies(
 				packageJsonVersion.startsWith("catalog:") ||
 				packageJsonVersion.startsWith("file:") ||
 				packageJsonVersion.startsWith("link:")
+			) {
+				continue;
+			}
+
+			if (
+				excludePackages?.length &&
+				isExcludedPackage(dependencyName, excludePackages)
 			) {
 				continue;
 			}

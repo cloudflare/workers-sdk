@@ -89,6 +89,7 @@ const ignoreMessages = [
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
 	"disconnected: WebSocket peer disconnected",
+	"disconnected: peer disconnected without gracefully ending TLS session",
 	"CODE_MOVED for unknown code block",
 	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];
@@ -282,6 +283,27 @@ type ProjectWorkers = [
 const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
+
+function rewriteStreamingTailSelfReferences(
+	worker: WorkerOptions,
+	wranglerWorkerName: string,
+	runnerWorkerName: string
+) {
+	worker.streamingTails = worker.streamingTails?.map((tail) => {
+		if (tail === wranglerWorkerName) {
+			return runnerWorkerName;
+		}
+		if (
+			typeof tail === "object" &&
+			tail !== null &&
+			"name" in tail &&
+			tail.name === wranglerWorkerName
+		) {
+			return { ...tail, name: runnerWorkerName };
+		}
+		return tail;
+	});
+}
 
 async function buildProjectWorkerOptions(
 	project: TestProject,
@@ -585,7 +607,15 @@ async function buildProjectWorkerOptions(
 			}
 
 			// Miniflare will validate these options
-			workers.push(worker as WorkerOptions);
+			const workerOptions = worker as WorkerOptions;
+			if (wranglerWorkerName) {
+				rewriteStreamingTailSelfReferences(
+					workerOptions,
+					wranglerWorkerName,
+					runnerWorker.name
+				);
+			}
+			workers.push(workerOptions);
 		}
 		delete runnerWorker.workers;
 	}
@@ -595,9 +625,7 @@ async function buildProjectWorkerOptions(
 
 const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
-	verbose: true,
 	handleStructuredLogs,
-	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
 
 const DEFAULT_INSPECTOR_PORT = 9229;
@@ -666,6 +694,7 @@ async function buildProjectMiniflareOptions(
 
 	return {
 		...SHARED_MINIFLARE_OPTIONS,
+		verbose: customOptions.verbose ?? true,
 		inspectorPort,
 		unsafeModuleFallbackService: moduleFallbackService,
 		workers: [runnerWorker, ...auxiliaryWorkers],
@@ -725,9 +754,15 @@ export async function connectToMiniflareSocket(
 	const res = await stub.fetch("http://placeholder", {
 		headers: {
 			Upgrade: "websocket",
-			"MF-Vitest-Worker-Data": structuredSerializableStringify({
-				cwd: process.cwd(),
-			}),
+			// Headers are restricted to the Latin-1/ASCII byte range, but `process.cwd()`
+			// may contain non-ASCII characters (e.g. a workspace path with CJK
+			// characters on Windows), so percent-encode the whole serialized value.
+			// See https://github.com/cloudflare/workers-sdk/issues/14655
+			"MF-Vitest-Worker-Data": encodeURIComponent(
+				structuredSerializableStringify({
+					cwd: process.cwd(),
+				})
+			),
 		},
 	});
 

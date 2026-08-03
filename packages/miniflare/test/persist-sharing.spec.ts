@@ -1,4 +1,4 @@
-// Validates whether the existing `defaultPersistRoot` option is sufficient to
+// Validates whether the existing `resourcePersistencePath` option is sufficient to
 // make storage bindings behave as singletons across multiple Miniflare
 // instances (e.g. separate `wrangler dev` / `vite dev` sessions).
 //
@@ -8,7 +8,7 @@
 //
 // These tests deliberately use NO special concurrency handling (no busy-timeout
 // retries, no sticky blobs, no owner election). They characterise the
-// out-of-the-box behaviour of a shared `defaultPersistRoot`.
+// out-of-the-box behaviour of a shared `resourcePersistencePath`.
 
 import { Miniflare } from "miniflare";
 import { afterEach, describe, test } from "vitest";
@@ -18,10 +18,10 @@ import type { MiniflareOptions } from "miniflare";
 const COMPAT_DATE = "2024-11-01";
 
 // When set, route storage through a single shared owner process (all instances
-// sharing a `defaultPersistRoot` elect one owner). Tests branch on this where
-// shared-owner semantics intentionally differ from plain `defaultPersistRoot`
+// sharing a `resourcePersistencePath` elect one owner). Tests branch on this where
+// shared-owner semantics intentionally differ from plain `resourcePersistencePath`
 // (notably: cache is kept per-instance, not shared).
-const sharedOwner = process.env.MINIFLARE_TEST_SHARED_OWNER === "1";
+const sharedOwner = true;
 
 const NOOP_SCRIPT = `export default { async fetch() { return new Response("ok"); } };`;
 
@@ -33,8 +33,6 @@ interface MakeOptions {
 	d1Id?: string;
 	script?: string;
 	durableObjects?: Record<string, string>;
-	/** Explicit `kvPersist` path, to test precedence over `defaultPersistRoot`. */
-	kvPersist?: string;
 	/** Configure a Stream binding (`STREAM`). */
 	stream?: boolean;
 	/** Configure an Images binding (`IMAGES`). */
@@ -53,14 +51,13 @@ function make({
 	d1Id,
 	script,
 	durableObjects,
-	kvPersist,
 	stream,
 	images,
 	secret,
 }: MakeOptions): Miniflare {
 	const opts: MiniflareOptions = {
 		name,
-		defaultPersistRoot: root,
+		resourcePersistencePath: root,
 		modules: true,
 		script: script ?? NOOP_SCRIPT,
 		compatibilityDate: COMPAT_DATE,
@@ -68,8 +65,6 @@ function make({
 		r2Buckets: r2Bucket !== undefined ? { R2: r2Bucket } : {},
 		d1Databases: d1Id !== undefined ? { DB: d1Id } : {},
 		durableObjects,
-		cache: true,
-		kvPersist,
 		...(stream ? { stream: { binding: "STREAM" } } : {}),
 		...(images ? { images: { binding: "IMAGES" } } : {}),
 		...(secret ? { secretsStoreSecrets: { SECRET: secret } } : {}),
@@ -91,7 +86,7 @@ afterEach(async () => {
 	}
 });
 
-describe.sequential("defaultPersistRoot sharing", () => {
+describe.sequential("resourcePersistencePath sharing", () => {
 	// --------------------------------------------------------------- Host API
 	// One smoke test that the documented host-side helper API (getKVNamespace,
 	// etc.) also observes shared storage across instances. The worker-driven
@@ -130,7 +125,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			expect(await kvB.get("k")).toBe(null);
 		});
 
-		test("KV: different defaultPersistRoot is not shared", async ({
+		test("KV: different resourcePersistencePath is not shared", async ({
 			expect,
 		}) => {
 			const rootA = await useTmp();
@@ -143,24 +138,6 @@ describe.sequential("defaultPersistRoot sharing", () => {
 			const kvB = await b.getKVNamespace("KV");
 
 			await kvA.put("k", "v");
-			expect(await kvB.get("k")).toBe(null);
-		});
-
-		test("KV: explicit kvPersist overrides defaultPersistRoot (precedence)", async ({
-			expect,
-		}) => {
-			const root = await useTmp();
-			const kvOnly = await useTmp();
-			// A uses an explicit kvPersist path; B uses the shared default root.
-			const a = make({ root, name: "a", kvId: "ns", kvPersist: kvOnly });
-			const b = make({ root, name: "b", kvId: "ns" });
-			await a.ready;
-			await b.ready;
-			const kvA = await a.getKVNamespace("KV");
-			const kvB = await b.getKVNamespace("KV");
-
-			await kvA.put("k", "v");
-			// Not shared: A wrote to its own kvPersist location.
 			expect(await kvB.get("k")).toBe(null);
 		});
 
@@ -2348,7 +2325,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 	});
 
 	// --------------------------------------------------- Durable Objects (out of scope)
-	// Documents the behaviour of sharing a DO via defaultPersistRoot. DOs are out
+	// Documents the behaviour of sharing a DO via resourcePersistencePath. DOs are out
 	// of scope for the singleton feature; this test records what happens today.
 	describe("Durable Objects (behaviour documentation)", () => {
 		const DO_SCRIPT = `
@@ -2375,7 +2352,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 		function makeDO(root: string, name: string) {
 			const mf = new Miniflare({
 				name,
-				defaultPersistRoot: root,
+				resourcePersistencePath: root,
 				modules: true,
 				script: DO_SCRIPT,
 				compatibilityDate: COMPAT_DATE,
@@ -2441,7 +2418,7 @@ describe.sequential("defaultPersistRoot sharing", () => {
 				// name in both Miniflare instances deliberately points both live
 				// actors at the same persisted DO storage.
 				name: "same-worker",
-				defaultPersistRoot: root,
+				resourcePersistencePath: root,
 				modules: true,
 				script: DO_OUTPUT_GATE_SCRIPT,
 				compatibilityDate: COMPAT_DATE,

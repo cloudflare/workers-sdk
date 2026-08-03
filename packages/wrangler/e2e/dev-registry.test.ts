@@ -141,7 +141,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		it("can fetch b", async ({ expect }) => {
 			const worker = helper.runLongLived(cmd, { cwd: b });
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
 				"hello world"
@@ -151,10 +151,10 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		it("can fetch b through a (start b, start a)", async ({ expect }) => {
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			// We don't need b's URL, but ensure that b starts up before a
-			await workerB.waitForReady(5_000);
+			await workerB.waitForReady();
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(() =>
 				expect(fetchText(url)).resolves.toBe("hello world")
@@ -169,10 +169,10 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 		it("can fetch b through a (start a, start b)", async ({ expect }) => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
-			await workerB.waitForReady(5_000);
+			await workerB.waitForReady();
 
 			await waitForLong(() =>
 				expect(fetchText(url)).resolves.toBe("hello world")
@@ -200,11 +200,11 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		}) => {
 			const workerC = helper.runLongLived(cmd, { cwd: c });
 			// We don't need c's URL, but ensure that c starts up before a
-			await workerC.waitForReady(5_000);
+			await workerC.waitForReady();
 
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(() =>
 				expect(fetchText(`${url}/service`)).resolves.toBe(
@@ -218,11 +218,11 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			"can fetch service worker c through a (start a, start c)",
 			async ({ expect }) => {
 				const workerA = helper.runLongLived(cmd, { cwd: a });
-				const { url } = await workerA.waitForReady(5_000);
+				const { url } = await workerA.waitForReady();
 
 				const workerC = helper.runLongLived(cmd, { cwd: c });
 
-				await workerC.waitForReady(5_000);
+				await workerC.waitForReady();
 
 				await waitForLong(() =>
 					expect(fetchText(`${url}/service`)).resolves.toBe(
@@ -273,14 +273,14 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 		it("can fetch a without b running", async ({ expect }) => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 		});
 
 		it("tail event sent to b", async ({ expect }) => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 
@@ -321,7 +321,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		it("can fetch DO through a", async ({ expect }) => {
 			const worker = helper.runLongLived(cmd, { cwd: a });
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(
 				fetchJson(`${url}/do`, {
@@ -336,11 +336,11 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			"can fetch remote DO attached to a through b (start b, start a)",
 			async ({ expect }) => {
 				const workerB = helper.runLongLived(cmd, { cwd: b });
-				const { url } = await workerB.waitForReady(5_000);
+				const { url } = await workerB.waitForReady();
 
 				const workerA = helper.runLongLived(cmd, { cwd: a });
 
-				await workerA.waitForReady(5_000);
+				await workerA.waitForReady();
 
 				await expect(
 					fetchJson(`${url}/do`, {
@@ -356,11 +356,11 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			expect,
 		}) => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
-			await workerA.waitForReady(5_000);
+			await workerA.waitForReady();
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 
-			const { url } = await workerB.waitForReady(5_000);
+			const { url } = await workerB.waitForReady();
 
 			await waitForLong(() =>
 				expect(
@@ -400,7 +400,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		it("can fetch b", async ({ expect }) => {
 			const worker = helper.runLongLived(cmd, { cwd: b });
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
 				"hello world"
@@ -413,7 +413,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 				{ cwd: a }
 			);
 
-			const { url } = await worker.waitForReady(5_000);
+			const { url } = await worker.waitForReady();
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
 				"Hello from Pages"
@@ -423,13 +423,13 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		it("can fetch b through a (start b, start a)", async ({ expect }) => {
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			// We don't need b's URL, but ensure that b starts up before a
-			await workerB.waitForReady(5_000);
+			await workerB.waitForReady();
 
 			const workerA = helper.runLongLived(
 				`${cmd.replace("wrangler dev", "wrangler pages dev")}`,
 				{ cwd: a }
 			);
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			await waitForLong(() =>
 				expect(fetchText(`${url}/service`)).resolves.toBe("hello world")
@@ -447,10 +447,10 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 				`${cmd.replace("wrangler dev", "wrangler pages dev")}`,
 				{ cwd: a }
 			);
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
-			await workerB.waitForReady(5_000);
+			await workerB.waitForReady();
 
 			await waitForLong(() =>
 				expect(fetchText(`${url}/service`)).resolves.toBe("hello world")
@@ -468,10 +468,10 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 				`${cmd.replace("wrangler dev", "wrangler pages dev")} dist --service BEE=${workerName2}`,
 				{ cwd: a }
 			);
-			const { url } = await workerA.waitForReady(5_000);
+			const { url } = await workerA.waitForReady();
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
-			await workerB.waitForReady(5_000);
+			await workerB.waitForReady();
 
 			await waitForLong(() =>
 				expect(fetchText(`${url}/service`)).resolves.toBe("hello world")

@@ -82,6 +82,15 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		| {
 				/** Whether dependency instrumentation is enabled. Defaults to `true`. */
 				enabled: boolean;
+				/**
+				 * An optional list of package name patterns to exclude from the
+				 * collected dependency metadata.
+				 *
+				 * Each entry can be an exact package name (e.g. `"lodash"`) or a glob
+				 * pattern using `*` as a wildcard (e.g. `"@internal/*"` to exclude all
+				 * packages under the `@internal` scope).
+				 */
+				exclude_packages?: string[];
 		  }
 		| undefined;
 

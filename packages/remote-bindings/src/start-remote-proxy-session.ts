@@ -67,10 +67,41 @@ function formatRemoteProxySessionError(error: unknown): string | undefined {
 	return getErrorMessage(error);
 }
 
+/**
+ * Walk an error's cause chain (including through error events) for a
+ * {@link RemoteSessionAuthenticationError}, mirroring the original Wrangler
+ * `findRemoteSessionAuthError` walk. Only this specific user error is surfaced
+ * verbatim from the chain — generic API errors (which also extend
+ * {@link UserError} via {@link APIError}) fall through to the wrapping logic.
+ */
+function findRemoteSessionAuthError(
+	error: unknown
+): RemoteSessionAuthenticationError | undefined {
+	if (error instanceof RemoteSessionAuthenticationError) {
+		return error;
+	}
+	if (isErrorEvent(error)) {
+		return findRemoteSessionAuthError(error.cause);
+	}
+	if (error instanceof Error) {
+		return findRemoteSessionAuthError(error.cause);
+	}
+	return undefined;
+}
+
 export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
+	for (const [name, binding] of Object.entries(bindings ?? {})) {
+		if (binding.type === "flagship" && binding.app_id === undefined) {
+			throw new UserError(
+				`Flagship binding "${name}" has no \`app_id\` and has not been created, but needs to run remotely. Run \`wrangler flagship apps create\` to create an app.`,
+				{ telemetryMessage: "flagship remote binding missing app_id" }
+			);
+		}
+	}
+
 	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
@@ -124,11 +155,18 @@ export async function startRemoteProxySession(
 		]);
 
 		if (maybeError && maybeError.error) {
-			if (
-				isErrorEvent(maybeError.error) &&
-				maybeError.error.cause instanceof RemoteSessionAuthenticationError
-			) {
-				throw maybeError.error.cause;
+			// A UserError emitted directly (e.g. the Miniflare user-error case that
+			// DevEnv re-emits), and a RemoteSessionAuthenticationError found in the
+			// error event's cause chain, are surfaced verbatim so callers can still
+			// branch on `instanceof UserError` and the user sees a single actionable
+			// message. Everything else — including generic API errors — falls through
+			// to the wrapping below.
+			if (maybeError.error instanceof UserError) {
+				throw maybeError.error;
+			}
+			const authError = findRemoteSessionAuthError(maybeError.error);
+			if (authError) {
+				throw authError;
 			}
 			const details = formatRemoteProxySessionError(maybeError.error);
 			throw new Error(

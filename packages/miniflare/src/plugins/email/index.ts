@@ -3,10 +3,10 @@ import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
-	remoteProxyClientWorker,
 	ProxyNodeBinding,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
@@ -44,7 +44,6 @@ export const EmailOptionsSchema = z.object({
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
-const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
 // Disk service name and binding name for writing temporary files to system temp directory
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
 const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
@@ -57,27 +56,27 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 }
 
 function getEmailProjectParentDirectory(
-	defaultProjectTmpPath: string | undefined
+	resourceTmpPath: string | undefined
 ): string | undefined {
-	if (defaultProjectTmpPath === undefined) {
+	if (resourceTmpPath === undefined) {
 		return undefined;
 	}
-	return path.join(defaultProjectTmpPath, EMAIL_PLUGIN_NAME);
+	return path.join(resourceTmpPath, EMAIL_PLUGIN_NAME);
 }
 
 /**
  * Returns the session directory for email files.
- * Path: `<defaultProjectTmpPath>/email/<session-id>`
+ * Path: `<resourceTmpPath>/email/<session-id>`
  * Example: `/path/to/project/.wrangler/tmp/email/dev-abc123`
  * When an email is logged, it is stored under this directory using a type indicator
  * and a unique ID.
  * Path: `<session-dir>/<email-type>/<message-id>.<ext>`
  */
 function getEmailProjectSessionDirectory(
-	defaultProjectTmpPath: string | undefined,
+	resourceTmpPath: string | undefined,
 	tmpPath: string
 ): string | undefined {
-	const parentDir = getEmailProjectParentDirectory(defaultProjectTmpPath);
+	const parentDir = getEmailProjectParentDirectory(resourceTmpPath);
 	if (parentDir === undefined) {
 		return undefined;
 	}
@@ -85,17 +84,14 @@ function getEmailProjectSessionDirectory(
 }
 
 export function getEmailPathsToClean(
-	defaultProjectTmpPath: string | undefined,
+	resourceTmpPath: string | undefined,
 	tmpPath: string
 ): { sessionDir: string; parentDir: string } | undefined {
-	if (defaultProjectTmpPath === undefined) {
+	if (resourceTmpPath === undefined) {
 		return undefined;
 	}
-	const sessionDir = getEmailProjectSessionDirectory(
-		defaultProjectTmpPath,
-		tmpPath
-	);
-	const parentDir = getEmailProjectParentDirectory(defaultProjectTmpPath);
+	const sessionDir = getEmailProjectSessionDirectory(resourceTmpPath, tmpPath);
+	const parentDir = getEmailProjectParentDirectory(resourceTmpPath);
 	if (sessionDir === undefined || parentDir === undefined) {
 		return undefined;
 	}
@@ -116,7 +112,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			name,
 			service: remoteProxyConnectionString
 				? {
-						name: EMAIL_REMOTE_SERVICE_NAME,
+						name: SERVICE_REMOTE_BINDINGS,
 						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 					}
 				: {
@@ -148,7 +144,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		await mkdir(emailSystemDirectory, { recursive: true });
 
 		// Map binding disk services to names and paths, for concise access when storing emails as files.
-		// When defaultProjectTmpPath is unset, only create system service to avoid duplicates
+		// When resourceTmpPath is unset, only create system service to avoid duplicates
 		const diskServices: Array<{
 			location: "system" | "project";
 			bindingName: string;
@@ -163,9 +159,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			},
 		];
 
-		if (args.defaultProjectTmpPath) {
+		if (args.resourceTmpPath) {
 			const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
-				args.defaultProjectTmpPath,
+				args.resourceTmpPath,
 				args.tmpPath
 			);
 			if (emailProjectSessionDirectory !== undefined) {
@@ -187,11 +183,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			},
 		}));
 
-		let hasRemote = false;
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
 			.email?.send_email ?? []) {
 			if (remoteProxyConnectionString) {
-				hasRemote = true;
 				continue;
 			}
 			services.push({
@@ -216,13 +210,6 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 						},
 					],
 				},
-			});
-		}
-
-		if (hasRemote) {
-			services.push({
-				name: EMAIL_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
 			});
 		}
 

@@ -1,16 +1,21 @@
 import { describe, it } from "vitest";
+import { bindings } from "../bindings";
 import { convertToWranglerConfig } from "../convert";
 import { exports as exportConfig } from "../exports";
 
-const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
+const baseConfig = {
+	type: "worker",
+	name: "my-worker",
+	compatibilityDate: "2026-06-01",
+} as const;
 
 describe("convertToWranglerConfig", () => {
 	describe("top-level fields", () => {
 		it("maps primitive top-level fields", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				type: "worker",
 				name: "my-worker",
 				entrypoint: "./src/index.ts",
-				accountId: "acc-123",
 				compatibilityDate: "2026-01-01",
 				compatibilityFlags: ["nodejs_compat"],
 				workersDev: true,
@@ -21,7 +26,6 @@ describe("convertToWranglerConfig", () => {
 			expect(result).toEqual({
 				name: "my-worker",
 				main: "./src/index.ts",
-				account_id: "acc-123",
 				compatibility_date: "2026-01-01",
 				compatibility_flags: ["nodejs_compat"],
 				workers_dev: true,
@@ -29,24 +33,6 @@ describe("convertToWranglerConfig", () => {
 				logpush: true,
 				first_party_worker: false,
 			});
-		});
-
-		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
-			expect,
-		}) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				complianceRegion: "fedramp-high",
-			});
-			expect(result.compliance_region).toBe("fedramp_high");
-		});
-
-		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				complianceRegion: "public",
-			});
-			expect(result.compliance_region).toBe("public");
 		});
 
 		it("passes placement through unchanged", ({ expect }) => {
@@ -207,6 +193,23 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 
+	it("creates draft provisionable bindings with the binding factories", ({
+		expect,
+	}) => {
+		const result = convertToWranglerConfig({
+			...baseConfig,
+			env: {
+				QUEUE: bindings.queue(),
+				DISPATCH: bindings.dispatchNamespace(),
+				FLAGS: bindings.flagship(),
+			},
+		});
+
+		expect(result.queues?.producers).toEqual([{ binding: "QUEUE" }]);
+		expect(result.dispatch_namespaces).toEqual([{ binding: "DISPATCH" }]);
+		expect(result.flagship).toEqual([{ binding: "FLAGS" }]);
+	});
+
 	describe("array bindings", () => {
 		it("maps kv with id", ({ expect }) => {
 			const result = convertToWranglerConfig({
@@ -316,6 +319,14 @@ describe("convertToWranglerConfig", () => {
 			expect(result.flagship).toEqual([{ binding: "F", app_id: "app-1" }]);
 		});
 
+		it("preserves a draft flagship binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { F: { type: "flagship" } },
+			});
+			expect(result.flagship).toEqual([{ binding: "F" }]);
+		});
+
 		it("maps ai-search.name to instance_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
@@ -398,6 +409,14 @@ describe("convertToWranglerConfig", () => {
 					outbound: { service: "out-worker", parameters: ["p1", "p2"] },
 				},
 			]);
+		});
+
+		it("preserves a draft dispatch namespace binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { DN: { type: "dispatch-namespace" } },
+			});
+			expect(result.dispatch_namespaces).toEqual([{ binding: "DN" }]);
 		});
 
 		it("maps secrets-store-secret to store_id + secret_name", ({ expect }) => {
@@ -532,6 +551,14 @@ describe("convertToWranglerConfig", () => {
 			expect(result.queues).toEqual({
 				producers: [{ binding: "Q", queue: "q-1", delivery_delay: 5 }],
 			});
+		});
+
+		it("preserves a draft queue binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { Q: { type: "queue" } },
+			});
+			expect(result.queues).toEqual({ producers: [{ binding: "Q" }] });
 		});
 
 		it("maps durable-object binding to durable_objects.bindings", ({
@@ -818,6 +845,14 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("preserves empty email trigger addresses", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "email", addresses: [] }],
+			});
+			expect(result.addresses).toEqual([]);
+		});
+
 		it("maps scheduled triggers to triggers.crons", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
@@ -829,6 +864,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.triggers).toEqual({
 				crons: ["0 * * * *", "*/5 * * * *"],
 			});
+			expect(result.addresses).toBeUndefined();
 		});
 
 		it("maps fetch trigger with dot-zone to zone_name", ({ expect }) => {
@@ -1019,6 +1055,48 @@ describe("convertToWranglerConfig", () => {
 				{ service: "c" },
 			]);
 			expect(result.streaming_tail_consumers).toEqual([{ service: "b" }]);
+		});
+	});
+
+	describe("settings", () => {
+		it("maps accountId to account_id", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				accountId: "acc-123",
+			});
+			expect(result.account_id).toBe("acc-123");
+		});
+
+		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "fedramp-high",
+			});
+			expect(result.compliance_region).toBe("fedramp_high");
+		});
+
+		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "public",
+			});
+			expect(result.compliance_region).toBe("public");
+		});
+
+		it("sets no settings fields when none are provided", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, { type: "settings" });
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
+		});
+
+		it("sets no settings fields when settings config is omitted", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig);
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
 		});
 	});
 });

@@ -76,10 +76,13 @@ export type {
 	InferMainModule,
 	UnwrapConfig,
 } from "./inference";
-export type { UserConfig } from "./types";
+export type { ConfigContext } from "./definition";
+export type { SettingsConfig, WorkerConfig } from "./types";
 export type {
-	ConfigContext,
 	TypedWorkerDefinition,
-	UserConfigExport,
+	WorkerConfigExport,
+	WorkerConfigInput,
 } from "./worker-definition";
 export { defineWorker } from "./worker-definition";
+export type { SettingsConfigInput } from "./settings-definition";
+export { defineSettings } from "./settings-definition";

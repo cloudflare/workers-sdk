@@ -1,6 +1,11 @@
 import SCRIPT_OBJECT_ENTRY from "worker:shared/object-entry";
 import SCRIPT_REMOTE_PROXY_CLIENT from "worker:shared/remote-proxy-client";
-import { CoreBindings, SharedBindings } from "../../workers";
+import {
+	CoreBindings,
+	SharedBindings,
+	STORAGE_OWNER_CLIENT_ENTRYPOINT,
+} from "../../workers";
+import { getUserServiceName } from "../core";
 import type { RemoteProxyConnectionString } from ".";
 import type {
 	Worker,
@@ -37,20 +42,11 @@ const WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS: Worker_Binding = {
 	name: SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS,
 	json: "true",
 };
-const WORKER_BINDING_ENABLE_STICKY_BLOBS: Worker_Binding = {
-	name: SharedBindings.MAYBE_JSON_ENABLE_STICKY_BLOBS,
-	json: "true",
-};
 let enableControlEndpoints = false;
-export function getMiniflareObjectBindings(
-	unsafeStickyBlobs: boolean
-): Worker_Binding[] {
+export function getMiniflareObjectBindings(): Worker_Binding[] {
 	const result: Worker_Binding[] = [];
 	if (enableControlEndpoints) {
 		result.push(WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS);
-	}
-	if (unsafeStickyBlobs) {
-		result.push(WORKER_BINDING_ENABLE_STICKY_BLOBS);
 	}
 	return result;
 }
@@ -84,15 +80,32 @@ export function objectEntryWorker(
 	};
 }
 
-// Builds the `props` for a binding that points at a shared object-entry service
-// (KV namespace / R2 bucket / D1 database). The resource id travels via props so
-// that a single entry service can route to any number of resources; it is read
-// back in `object-entry.worker.ts` via `ctx.props` and used as the Durable
-// Object name (`idFromName`).
+// Builds the `props` for a binding that points at a shared object-entry service.
+// The resource id travels via props so a single entry service can route to any
+// number of resources; it is read back in `object-entry.worker.ts` via
+// `ctx.props` and used as the Durable Object name (`idFromName`).
 export function buildObjectEntryProps(id: string): { json: string } {
 	return {
 		json: JSON.stringify({ [SharedBindings.TEXT_NAMESPACE]: id }),
 	};
+}
+
+// Inverse of `buildObjectEntryProps`: reads the resource id back out of a
+// binding's `props.json`, or `undefined` if the props are absent or don't carry
+// one (e.g. remote/mixed-mode bindings, which encode the id elsewhere).
+export function extractObjectEntryId(
+	propsJson: string | undefined
+): string | undefined {
+	if (propsJson === undefined) {
+		return undefined;
+	}
+	try {
+		const parsed = JSON.parse(propsJson) as Record<string, unknown>;
+		const id = parsed[SharedBindings.TEXT_NAMESPACE];
+		return typeof id === "string" ? id : undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 // A single remote-proxy client service can serve any number of remote bindings:
@@ -101,9 +114,22 @@ export function buildObjectEntryProps(id: string): { json: string } {
 // into a per-binding service. The only static, non-props-able binding is the
 // loopback service (used to surface diagnostics back to the Miniflare host,
 // e.g. a Cloudflare Access block detected on the remote proxy response).
-export function remoteProxyClientWorker(script?: () => string) {
+//
+// `options.rawTcp` opts the service into raw TCP `connect()` tunnelling (see the
+// `experimental` compatibility flag below). That is a property of the service
+// itself, not of any individual binding, so it stays valid under the shared,
+// props-based service model.
+export function remoteProxyClientWorker(
+	script?: () => string,
+	options?: { rawTcp?: boolean }
+) {
 	return {
 		compatibilityDate: "2025-01-01",
+		// Raw TCP bindings (e.g. VPC networks) tunnel `binding.connect()` traffic
+		// through this worker's inbound `connect` handler, which requires the
+		// `experimental` compatibility flag (workerd#6059). Other bindings only
+		// proxy HTTP/JSRPC and must not opt in.
+		...(options?.rawTcp ? { compatibilityFlags: ["experimental"] } : {}),
 		modules: [
 			{
 				name: "index.worker.js",
@@ -129,42 +155,25 @@ export function buildRemoteProxyProps(
 	};
 }
 
-// Inverse of `buildObjectEntryProps`: reads the resource id carried in an
-// object-entry binding's `props.json`, or `undefined` if the props don't carry
-// one (e.g. remote/mixed-mode bindings). Used by storage plugins to recognise
-// their own local bindings when routing them to a shared storage owner.
-export function extractObjectEntryId(
-	propsJson: string | undefined
-): string | undefined {
-	if (propsJson === undefined) {
-		return undefined;
-	}
-	try {
-		const parsed = JSON.parse(propsJson) as Record<string, unknown>;
-		const id = parsed[SharedBindings.TEXT_NAMESPACE];
-		return typeof id === "string" ? id : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-// Client-side service that proxies routed storage bindings to the shared storage
-// owner over HTTP. Reuses the remote-bindings ("mixed-mode") client worker: each
-// routed binding carries the owner's address + resource key via props. Stood up
-// by `Miniflare` when acting as a storage-owner client.
-export const SERVICE_STORAGE_OWNER_PROXY = "storage-owner-proxy";
-
 // Builds a binding designator routing a storage op through the client-side
-// storage-owner proxy to the owner. The owner address + resource key travel via
-// props (read by `remote-proxy-client.worker.ts`). The `resourceKey` is the key
-// the owner's storage server dispatches on (see `storage-owner-server.worker.ts`).
+// storage-owner proxy (the `StorageOwnerProxy` entrypoint on the dev-registry
+// proxy service). The proxy resolves the owner from the dev registry and, over
+// its debug port, `getEntrypoint`s the named owner service — forwarding
+// `userProps` into the callee's `ctx.props` (e.g. the resource id read by
+// `object-entry.worker.ts`). `ownerService` / `ownerEntrypoint` are the owner's
+// real storage service coordinates (the owner runs the same plugin code, so
+// these names match); the plugin supplies them in `routeBindingToStorageOwner`.
 export function storageOwnerProxyDesignator(
-	conn: RemoteProxyConnectionString,
-	resourceKey: string
-): { name: string; props: { json: string } } {
+	ownerService: string,
+	ownerEntrypoint?: string,
+	userProps?: Record<string, unknown>
+): { name: string; entrypoint: string; props: { json: string } } {
 	return {
-		name: SERVICE_STORAGE_OWNER_PROXY,
-		props: buildRemoteProxyProps(conn, resourceKey),
+		name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+		entrypoint: STORAGE_OWNER_CLIENT_ENTRYPOINT,
+		props: {
+			json: JSON.stringify({ ownerService, ownerEntrypoint, userProps }),
+		},
 	};
 }
 

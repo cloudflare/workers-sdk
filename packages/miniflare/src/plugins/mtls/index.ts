@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-	buildRemoteProxyProps,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-} from "../shared";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
+import { buildRemoteProxyProps, ProxyNodeBinding } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const MtlsSchema = z.object({
@@ -14,11 +11,10 @@ const MtlsSchema = z.object({
 });
 
 export const MtlsOptionsSchema = z.object({
-	mtlsCertificates: z.record(MtlsSchema).optional(),
+	mtlsCertificates: z.record(z.string(), MtlsSchema).optional(),
 });
 
 export const MTLS_PLUGIN_NAME = "mtls";
-const MTLS_REMOTE_SERVICE_NAME = `${MTLS_PLUGIN_NAME}:remote`;
 
 export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 	options: MtlsOptionsSchema,
@@ -34,7 +30,7 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 					name,
 
 					service: {
-						name: MTLS_REMOTE_SERVICE_NAME,
+						name: SERVICE_REMOTE_BINDINGS,
 						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 					},
 				};
@@ -52,19 +48,7 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 			])
 		);
 	},
-	async getServices({ options }) {
-		if (
-			!options.mtlsCertificates ||
-			Object.keys(options.mtlsCertificates).length === 0
-		) {
-			return [];
-		}
-
-		return [
-			{
-				name: MTLS_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			},
-		];
+	async getServices() {
+		return [];
 	},
 };

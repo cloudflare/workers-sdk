@@ -1,204 +1,95 @@
-import { FatalError } from "@cloudflare/workers-utils";
 import {
-	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
-	MAX_FUNCTIONS_ROUTES_RULES,
-	ROUTES_SPEC_VERSION,
-} from "../constants";
-import { getRoutesValidationErrorMessage } from "../errors";
-import type { RoutesJSONSpec } from "./routes-transformation";
+	RoutesValidationError,
+	isRoutesJSONSpec,
+	validateRoutes as packageValidateRoutes,
+	getRoutesValidationErrorMessage,
+} from "@cloudflare/pages-functions";
+// Re-export from @cloudflare/pages-functions — this file is kept for
+// backward compatibility with existing Wrangler-internal imports and to keep
+// the initial migration minimal without changing lots and lots of files
+// TODO(dario): after the initial pages-functions migration remove these re-exports
+//
+// The package's validateRoutes throws plain Error; Wrangler callers
+// expect FatalError, so we wrap it here with per-validation telemetry labels.
+import { FatalError } from "@cloudflare/workers-utils";
 
-export enum RoutesValidationError {
-	INVALID_JSON_SPEC,
-	NO_INCLUDE_RULES,
-	INVALID_RULES,
-	TOO_MANY_RULES,
-	RULE_TOO_LONG,
-	OVERLAPPING_RULES,
-}
+export {
+	RoutesValidationError,
+	isRoutesJSONSpec,
+	getRoutesValidationErrorMessage,
+};
 
 /**
- *  Check if given routes data is a valid RoutesJSONSpec
+ * Map each `RoutesValidationError` code to the telemetry label that Wrangler
+ * emitted before the pages-functions extraction.  This preserves per-validation
+ * telemetry granularity.
  */
-export function isRoutesJSONSpec(data: unknown): data is RoutesJSONSpec {
-	return (
-		(typeof data === "object" &&
-			data &&
-			"version" in data &&
-			typeof (data as RoutesJSONSpec).version === "number" &&
-			(data as RoutesJSONSpec).version === ROUTES_SPEC_VERSION &&
-			Array.isArray((data as RoutesJSONSpec).include) &&
-			Array.isArray((data as RoutesJSONSpec).exclude)) ||
-		false
-	);
-}
-
-export function validateRoutes(routesJSON: RoutesJSONSpec, routesPath: string) {
-	if (!isRoutesJSONSpec(routesJSON)) {
-		throw new FatalError(
-			getRoutesValidationErrorMessage(
-				RoutesValidationError.INVALID_JSON_SPEC,
-				routesPath
-			),
-			{ code: 1, telemetryMessage: "pages functions routes invalid json spec" }
-		);
-	}
-
-	if (!hasIncludeRules(routesJSON)) {
-		throw new FatalError(
-			getRoutesValidationErrorMessage(
-				RoutesValidationError.NO_INCLUDE_RULES,
-				routesPath
-			),
-			{
-				code: 1,
-				telemetryMessage: "pages functions routes missing include rules",
-			}
-		);
-	}
-
-	if (!hasValidRulesCount(routesJSON)) {
-		throw new FatalError(
-			getRoutesValidationErrorMessage(
-				RoutesValidationError.TOO_MANY_RULES,
-				routesPath
-			),
-			{ code: 1, telemetryMessage: "pages functions routes too many rules" }
-		);
-	}
-
-	if (!hasValidRuleCharCount(routesJSON)) {
-		throw new FatalError(
-			getRoutesValidationErrorMessage(
-				RoutesValidationError.RULE_TOO_LONG,
-				routesPath
-			),
-			{ code: 1, telemetryMessage: "pages functions routes rule too long" }
-		);
-	}
-
-	if (!hasValidRules(routesJSON)) {
-		throw new FatalError(
-			getRoutesValidationErrorMessage(
-				RoutesValidationError.INVALID_RULES,
-				routesPath
-			),
-			{ code: 1, telemetryMessage: "pages functions routes invalid rules" }
-		);
-	}
-
-	if (
-		hasOverlappingRules(routesJSON.include) ||
-		hasOverlappingRules(routesJSON.exclude)
-	) {
-		throw new FatalError(
-			getRoutesValidationErrorMessage(
-				RoutesValidationError.OVERLAPPING_RULES,
-				routesPath
-			),
-			{ code: 1, telemetryMessage: "pages functions routes overlapping rules" }
-		);
-	}
-}
+const VALIDATION_TELEMETRY: Record<RoutesValidationError, string> = {
+	[RoutesValidationError.INVALID_JSON_SPEC]:
+		"pages functions routes invalid json spec",
+	[RoutesValidationError.NO_INCLUDE_RULES]:
+		"pages functions routes missing include rules",
+	[RoutesValidationError.TOO_MANY_RULES]:
+		"pages functions routes too many rules",
+	[RoutesValidationError.RULE_TOO_LONG]: "pages functions routes rule too long",
+	[RoutesValidationError.INVALID_RULES]: "pages functions routes invalid rules",
+	[RoutesValidationError.OVERLAPPING_RULES]:
+		"pages functions routes overlapping rules",
+};
 
 /**
- * Returns true if the given `routingSpec` object contains at least
- * `MIN_FUNCTIONS_ROUTES_INCLUDE_RULES` include routing rules
- */
-function hasIncludeRules(routesJSON: RoutesJSONSpec): boolean {
-	// sanity check
-	// this should never be the case, because of the context from which these validation fns are
-	// called, but let's not assume anything
-	if (!routesJSON || !routesJSON.include) {
-		throw new Error(
-			"Function `hasIncludeRules` was called out of context. Attempting to validate include rules for routes that are undefined or an invalid RoutesJSONSpec"
-		);
-	}
-
-	return routesJSON?.include?.length > 0;
-}
-
-/**
- * Returns true if the given `routesJSON` object contains at most MAX_FUNCTIONS_ROUTES_RULES
- * include and exclude routing rules, combined
- */
-function hasValidRulesCount(routesJSON: RoutesJSONSpec): boolean {
-	// sanity check
-	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
-		throw new Error(
-			"Function `hasValidRulesCount` was called out of context. Attempting to validate maximum rules count for routes that are undefined or an invalid RoutesJSONSpec"
-		);
-	}
-
-	return (
-		routesJSON.include.length + routesJSON.exclude.length <=
-		MAX_FUNCTIONS_ROUTES_RULES
-	);
-}
-
-/**
- * Returns true if each individual routing rule of the given `routesJSON` object is at most
- * MAX_FUNCTIONS_ROUTES_RULE_LENGTH characters long
- */
-function hasValidRuleCharCount(routesJSON: RoutesJSONSpec): boolean {
-	// sanity check
-	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
-		throw new Error(
-			"Function `hasValidRuleCharCount` was called out of context. Attempting to validate rules maximum character count for routes that are undefined or an invalid RoutesJSONSpec"
-		);
-	}
-
-	const rules = [...routesJSON.include, ...routesJSON.exclude];
-	return (
-		rules.filter((rule) => rule.length > MAX_FUNCTIONS_ROUTES_RULE_LENGTH)
-			.length === 0
-	);
-}
-
-/**
- * Returns true if each individual routing rule of the given `routesJSON` object is valid.
- * We consider a rule to be valid if it is prefixed by slash ('/')
- */
-function hasValidRules(routesJSON: RoutesJSONSpec): boolean {
-	// sanity check
-	if (!routesJSON || !routesJSON.include || !routesJSON.exclude) {
-		throw new Error(
-			"Function `hasValidRules` was called out of context. Attempting to validate rules for routes that are undefined or an invalid RoutesJSONSpec"
-		);
-	}
-
-	const rules = [...routesJSON.include, ...routesJSON.exclude];
-	return rules.filter((rule) => !rule.match(/^\//)).length === 0;
-}
-
-/**
- * Returns true if the given routes array has overlapping routing rules (eg. ["/api/*"", "/api/foo"])
+ * Determine which `RoutesValidationError` code produced the given error message
+ * by comparing against the known error messages for the given `routesPath`.
  *
- * based on `consolidateRoutes()`
- * 🚨 O(n2) time complexity 🚨
+ * @param message - The error message thrown by the package
+ * @param routesPath - The routes path passed to `validateRoutes`
+ * @returns The matching error code, or `undefined` if none matched
  */
-function hasOverlappingRules(routes: string[]): boolean {
-	if (!routes) {
-		throw new Error(
-			"Function `hasverlappingRules` was called out of context. Attempting to validate rules for routes that are undefined"
-		);
-	}
-
-	// Find routes that might render other routes redundant
-	const endingSplatRoutes = routes.filter((route) => route.endsWith("/*"));
-
-	for (let i = 0; i < endingSplatRoutes.length; i++) {
-		const crrRoute = endingSplatRoutes[i];
-		// Remove splat at the end, leaving the /
-		// eg. /api/* -> /api/
-		const crrRouteTrimmed = crrRoute.substring(0, crrRoute.length - 1);
-
-		for (let j = 0; j < routes.length; j++) {
-			const nextRoute = routes[j];
-			if (nextRoute !== crrRoute && nextRoute.startsWith(crrRouteTrimmed)) {
-				return true;
+function identifyValidationError(
+	message: string,
+	routesPath: string
+): RoutesValidationError | undefined {
+	for (const code of Object.values(RoutesValidationError)) {
+		if (typeof code === "number") {
+			const expected = getRoutesValidationErrorMessage(code, routesPath);
+			if (message === expected) {
+				return code;
 			}
 		}
 	}
+	return undefined;
+}
 
-	return false;
+/**
+ * Validate a RoutesJSONSpec, throwing a FatalError on failure.
+ *
+ * Wraps the package-level `validateRoutes` to convert plain errors into
+ * Wrangler-compatible `FatalError` instances for consistent CLI error handling,
+ * preserving the original per-validation telemetry labels.
+ *
+ * @param routesJSON - The routes spec to validate
+ * @param routesPath - Path to the _routes.json file
+ * @throws FatalError when the spec is invalid
+ */
+export function validateRoutes(
+	routesJSON: Parameters<typeof packageValidateRoutes>[0],
+	routesPath: string
+) {
+	try {
+		packageValidateRoutes(routesJSON, routesPath);
+	} catch (e) {
+		if (!(e instanceof Error)) {
+			throw e;
+		}
+
+		const errorCode = identifyValidationError(e.message, routesPath);
+		if (errorCode === undefined) {
+			throw e;
+		}
+
+		throw new FatalError(e.message, {
+			code: 1,
+			telemetryMessage: VALIDATION_TELEMETRY[errorCode],
+		});
+	}
 }

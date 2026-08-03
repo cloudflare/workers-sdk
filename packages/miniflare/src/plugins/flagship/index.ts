@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-	buildRemoteProxyProps,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-} from "../shared";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
+import { buildRemoteProxyProps, ProxyNodeBinding } from "../shared";
 import type { Worker_Binding } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
@@ -15,11 +12,10 @@ const FlagshipSchema = z.object({
 });
 
 export const FlagshipOptionsSchema = z.object({
-	flagship: z.record(FlagshipSchema).optional(),
+	flagship: z.record(z.string(), FlagshipSchema).optional(),
 });
 
 export const FLAGSHIP_PLUGIN_NAME = "flagship";
-const FLAGSHIP_REMOTE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}:remote`;
 
 export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 	options: FlagshipOptionsSchema,
@@ -33,7 +29,7 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 			([name, config]) => ({
 				name,
 				service: {
-					name: FLAGSHIP_REMOTE_SERVICE_NAME,
+					name: SERVICE_REMOTE_BINDINGS,
 					props: buildRemoteProxyProps(
 						config.remoteProxyConnectionString,
 						name
@@ -54,15 +50,6 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 		);
 	},
 	async getServices({ options }) {
-		if (!options.flagship || Object.keys(options.flagship).length === 0) {
-			return [];
-		}
-
-		return [
-			{
-				name: FLAGSHIP_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			},
-		];
+		return [];
 	},
 };
