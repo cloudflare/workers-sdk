@@ -13,9 +13,14 @@ export const SOCKET_ENTRY_LOCAL = "entry:local";
 export const SOCKET_DEBUG_PORT = "debug-port";
 export const SOCKET_DEV_REGISTRY = "dev-registry";
 const SOCKET_DIRECT_PREFIX = "direct";
+const SOCKET_TCP_PREFIX = "tcp";
 
 export function getDirectSocketName(workerIndex: number, entrypoint: string) {
 	return `${SOCKET_DIRECT_PREFIX}:${workerIndex}:${entrypoint}`;
+}
+
+export function getTcpSocketName(workerIndex: number, port: number) {
+	return `${SOCKET_TCP_PREFIX}:${workerIndex}:${port}`;
 }
 
 // Service looping back to Miniflare's Node.js process (for storage, etc)

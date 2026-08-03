@@ -42,6 +42,7 @@ import {
 	getEmailPathsToClean,
 	getGlobalServices,
 	getPersistPath,
+	getTcpSocketName,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
@@ -2186,6 +2187,33 @@ export class Miniflare {
 						cfBlobHeader: CoreHeaders.CF_BLOB,
 						capnpConnectHost: HOST_CAPNP_CONNECT,
 					},
+				});
+			}
+
+			// Open raw TCP listening sockets that deliver incoming connections
+			// to this Worker's `connect()`.
+			const tcpHandlers = workerOpts.core.tcpHandlers ?? [];
+			for (let j = 0; j < tcpHandlers.length; j++) {
+				const tcpHandler = tcpHandlers[j];
+				// The socket's name already encodes the configured port, so we can
+				// pass `tcpHandler.port` as both the current and "previous" port:
+				// `#getSocketAddress()` only compares these to detect the `port: 0`
+				// (OS-assigned) case, in which case it looks up the actual
+				// previously-assigned random port by this same `name`.
+				const name = getTcpSocketName(i, tcpHandler.port);
+				const address = this.#getSocketAddress(
+					name,
+					tcpHandler.port,
+					tcpHandler.address,
+					tcpHandler.port,
+					reusePorts
+				);
+
+				sockets.push({
+					name,
+					address,
+					service: { name: getUserServiceName(workerName) },
+					tcp: {},
 				});
 			}
 		}

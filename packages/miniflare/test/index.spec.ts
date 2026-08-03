@@ -12,6 +12,7 @@ import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
 import { _forceColour } from "@cloudflare/workers-utils";
+import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
@@ -2717,6 +2718,44 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 		new TypeError('Direct access disabled in "d" worker for "three" entrypoint')
 	);
 });
+
+test("Miniflare: tcpHandlers deliver raw TCP connections to the Worker's connect() handler", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const port = await getPort();
+	const mf = new Miniflare({
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async connect(socket) {
+					const reader = socket.readable.getReader();
+					const writer = socket.writable.getWriter();
+					const { value } = await reader.read();
+					await writer.write(value);
+					await writer.close();
+				},
+			};
+		`,
+		tcpHandlers: [{ port }],
+	});
+	onTestFinished(() => mf.dispose());
+	await mf.ready;
+
+	const received = await new Promise<Buffer>((resolve, reject) => {
+		const socket = net.connect(port, "127.0.0.1", () => {
+			socket.write("hello");
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+		socket.on("end", () => resolve(Buffer.concat(chunks)));
+		socket.on("error", reject);
+	});
+
+	expect(received.toString()).toBe("hello");
+});
+
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 	const mf1 = new Miniflare({
 		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],

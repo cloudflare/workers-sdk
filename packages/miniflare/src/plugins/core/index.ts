@@ -173,6 +173,17 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		// Opens additional raw TCP listening sockets that deliver incoming
+		// connections to this Worker's `connect()` handler
+		// Populated from wrangler config's `tcp_handlers`.
+		tcpHandlers: z
+			.object({
+				port: z.number(),
+				address: z.string().optional(),
+			})
+			.array()
+			.optional(),
+
 		/**
 		 * When sending a request over the dev registry to a Worker's default entrypoint,
 		 * Miniflare _actually_ serves the request from the associated Assets proxy, so

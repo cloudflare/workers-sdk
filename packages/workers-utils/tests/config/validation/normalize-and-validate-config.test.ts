@@ -75,6 +75,7 @@ describe("normalizeAndValidateConfig()", () => {
 				consumers: [],
 				producers: [],
 			},
+			tcp_handlers: [],
 			r2_buckets: [],
 			secrets_store_secrets: [],
 			artifacts: [],
@@ -4918,6 +4919,130 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The "delivery_delay" field in "queues.producers[1]" is deprecated and has no effect. Queue-level settings should be configured using "wrangler queues update" instead. This setting will be removed in a future version."
+				`);
+			});
+		});
+
+		describe("[tcp_handlers]", () => {
+			it("should error if tcp_handlers is not an array", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ tcp_handlers: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ tcp_handlers: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "tcp_handlers" should be an array but got {}."
+				`);
+			});
+
+			it("should error if a tcp handler entry is missing a port", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						tcp_handlers: [{}, { address: "0.0.0.0" }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "tcp_handlers[0]" should have a number "port" field but got {}.
+					  - "tcp_handlers[1]" should have a number "port" field but got {"address":"0.0.0.0"}."
+				`);
+			});
+
+			it("should error if a tcp handler entry's port is not an integer", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						tcp_handlers: [
+							{ port: 3.14 },
+							{ port: Number.NaN },
+							{ port: Number.POSITIVE_INFINITY },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "tcp_handlers[0]" should have an integer "port" field but got {"port":3.14}.
+					  - "tcp_handlers[1]" should have an integer "port" field but got {"port":null}.
+					  - "tcp_handlers[2]" should have an integer "port" field but got {"port":null}."
+				`);
+			});
+
+			it("should error if a tcp handler entry has unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						tcp_handlers: [{ port: 8081, invalidField: "madeupValue" }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in tcp_handlers[0] field: "invalidField""
+				`);
+			});
+
+			it("should accept a valid tcp_handlers config with multiple unique ports", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						tcp_handlers: [{ port: 8081, address: "*" }, { port: 8082 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.tcp_handlers).toEqual([
+					{ port: 8081, address: "*" },
+					{ port: 8082 },
+				]);
+			});
+
+			it("should error if two tcp handlers share the same port", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						tcp_handlers: [
+							{ port: 8081 },
+							{ port: 8082 },
+							{ port: 8081, address: "0.0.0.0" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "tcp_handlers[2]" has the same "port" (8081) as "tcp_handlers[0]". Each entry in "tcp_handlers" must use a unique port."
 				`);
 			});
 		});

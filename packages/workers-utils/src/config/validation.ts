@@ -1779,6 +1779,16 @@ function normalizeAndValidateEnvironment(
 			validateQueues(envName),
 			{ producers: [], consumers: [] }
 		),
+		tcp_handlers: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"tcp_handlers",
+			validateTcpHandlers(envName),
+			[]
+		),
 		r2_buckets: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -5207,6 +5217,108 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 			);
 			isValid = false;
 		}
+	}
+
+	return isValid;
+};
+
+function validateTcpHandlers(envName: string): ValidatorFn {
+	return (diagnostics, field, value, config) => {
+		if (value === undefined) {
+			return true;
+		}
+
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (!Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an array but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		for (let i = 0; i < value.length; i++) {
+			if (
+				!validateTcpHandler(diagnostics, `${fieldPath}[${i}]`, value[i], config)
+			) {
+				isValid = false;
+			}
+		}
+
+		// Reject duplicate ports within the same worker.
+		const firstIndexByPort = new Map<number, number>();
+		for (let i = 0; i < value.length; i++) {
+			const handler = value[i];
+			if (
+				typeof handler !== "object" ||
+				handler === null ||
+				typeof (handler as { port?: unknown }).port !== "number"
+			) {
+				// Already reported by `validateTcpHandler` above.
+				continue;
+			}
+
+			const port = (handler as { port: number }).port;
+			const firstIndex = firstIndexByPort.get(port);
+			if (firstIndex !== undefined) {
+				diagnostics.errors.push(
+					`"${fieldPath}[${i}]" has the same "port" (${port}) as "${fieldPath}[${firstIndex}]". Each entry in "tcp_handlers" must use a unique port.`
+				);
+				isValid = false;
+			} else {
+				firstIndexByPort.set(port, i);
+			}
+		}
+
+		return isValid;
+	};
+}
+
+const validateTcpHandler: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	if (
+		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"port",
+			"address",
+		])
+	) {
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "port", "number")) {
+		diagnostics.errors.push(
+			`"${field}" should have a number "port" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (!Number.isInteger((value as { port: number }).port)) {
+		diagnostics.errors.push(
+			`"${field}" should have an integer "port" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "address", "string")) {
+		diagnostics.errors.push(
+			`"${field}" should, optionally, have a string "address" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
 	}
 
 	return isValid;
