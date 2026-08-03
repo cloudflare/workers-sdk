@@ -17,6 +17,7 @@ import {
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
+	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
 	Response,
@@ -1609,6 +1610,79 @@ test("Miniflare: accepts https requests", async ({ expect }) => {
 	await res.arrayBuffer(); // (drain)
 
 	expect(log.logs[0][1].startsWith("Ready on https://"));
+});
+
+test("Miniflare: logs browser-made requests at debug, not info", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `export default {
+			fetch(request) {
+				const { pathname } = new URL(request.url);
+				if (pathname === "/boom") {
+					return new Response("boom", { status: 500 });
+				}
+				return new Response("ok");
+			}
+		}`,
+	});
+	useDispose(mf);
+
+	for (const path of [
+		"/api",
+		"/favicon.ico",
+		"/.well-known/appspecific/com.chrome.devtools.json",
+		"/boom",
+	]) {
+		const res = await mf.dispatchFetch(`http://localhost${path}`);
+		await res.arrayBuffer(); // (drain)
+	}
+
+	// The request log is flushed via waitUntil, so key the wait on a real request.
+	await vi.waitFor(() => {
+		expect(log.logsAtLevel(LogLevel.INFO).some((l) => l.includes("/api"))).toBe(
+			true
+		);
+	});
+
+	const info = log.logsAtLevel(LogLevel.INFO);
+	const debug = log.logsAtLevel(LogLevel.DEBUG);
+
+	// Demoted, so a default session stays quiet but nothing is lost.
+	expect(info.some((l) => l.includes("/favicon.ico"))).toBe(false);
+	expect(debug.some((l) => l.includes("/favicon.ico"))).toBe(true);
+	expect(info.some((l) => l.includes("devtools.json"))).toBe(false);
+	expect(debug.some((l) => l.includes("devtools.json"))).toBe(true);
+});
+
+test("Miniflare: keeps a browser-made request at info when it fails", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `export default {
+			fetch() {
+				return new Response("boom", { status: 500 });
+			}
+		}`,
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost/favicon.ico");
+	await res.arrayBuffer(); // (drain)
+
+	await vi.waitFor(() => {
+		expect(
+			log.logsAtLevel(LogLevel.INFO).some((l) => l.includes("/favicon.ico"))
+		).toBe(true);
+	});
 });
 
 // Regression test for https://github.com/cloudflare/workers-sdk/issues/9357
