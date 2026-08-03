@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getGlobalConfigPath } from "@cloudflare/workers-utils";
@@ -2287,5 +2287,242 @@ describe("runSkillsUpdateFlow", () => {
 		await runSkillsUpdateFlow({});
 
 		expect(mockRosieInstall).toHaveBeenCalledOnce();
+	});
+
+	test("removes stale skill directories that no longer exist upstream after a successful update", async ({
+		expect,
+	}) => {
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		writeFileSync(
+			path.join(claudeSkills, "cloudflare", "SKILL.md"),
+			"# Cloudflare"
+		);
+		// "old-skill" was installed previously but has been removed upstream
+		mkdirSync(path.join(claudeSkills, "old-skill"), { recursive: true });
+		writeFileSync(
+			path.join(claudeSkills, "old-skill", "SKILL.md"),
+			"# Old Skill"
+		);
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeSkills },
+				},
+			],
+			installedTreeSha: "old-sha",
+			installFailed: false,
+			installedSkillNames: ["cloudflare", "old-skill"],
+		});
+		// Only "cloudflare" and "wrangler" exist upstream now — "old-skill" is gone
+		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
+		mockConfirm({
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+			result: true,
+		});
+		const runSkillsUpdateFlow = await freshUpdateImport();
+
+		await runSkillsUpdateFlow({});
+
+		expect(mockRosieInstall).toHaveBeenCalledOnce();
+		// "old-skill" should be gone
+		expect(existsSync(path.join(claudeSkills, "old-skill"))).toBe(false);
+
+		const metadata = readMetadataFile();
+		expect(metadata.installedSkillNames).toEqual(["cloudflare", "wrangler"]);
+	});
+
+	test("preserves non-Cloudflare skill directories during update", async ({
+		expect,
+	}) => {
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		// User-installed skill that is NOT managed by Cloudflare
+		mkdirSync(path.join(claudeSkills, "my-custom-skill"), {
+			recursive: true,
+		});
+		writeFileSync(
+			path.join(claudeSkills, "my-custom-skill", "SKILL.md"),
+			"# Custom"
+		);
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeSkills },
+				},
+			],
+			installedTreeSha: "old-sha",
+			installFailed: false,
+			installedSkillNames: ["cloudflare"],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
+		mockConfirm({
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+			result: true,
+		});
+		const runSkillsUpdateFlow = await freshUpdateImport();
+
+		await runSkillsUpdateFlow({});
+
+		expect(mockRosieInstall).toHaveBeenCalledOnce();
+		// User's custom skill must be untouched
+		expect(existsSync(path.join(claudeSkills, "my-custom-skill"))).toBe(true);
+		expect(
+			readFileSync(
+				path.join(claudeSkills, "my-custom-skill", "SKILL.md"),
+				"utf8"
+			)
+		).toBe("# Custom");
+	});
+
+	test("restores backed-up skill directories when rosieInstall throws during update", async ({
+		expect,
+	}) => {
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		writeFileSync(
+			path.join(claudeSkills, "cloudflare", "SKILL.md"),
+			"# Original"
+		);
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeSkills },
+				},
+			],
+			installedTreeSha: "old-sha",
+			installFailed: false,
+			installedSkillNames: ["cloudflare"],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
+		mockConfirm({
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+			result: true,
+		});
+		mockRosieInstall.mockRejectedValueOnce(new Error("Network failure"));
+		const runSkillsUpdateFlow = await freshUpdateImport();
+
+		await runSkillsUpdateFlow({});
+
+		expect(std.warn).toContain("Failed to update Cloudflare skills");
+		// The backed-up skill directory should be restored
+		expect(existsSync(path.join(claudeSkills, "cloudflare"))).toBe(true);
+		expect(
+			readFileSync(path.join(claudeSkills, "cloudflare", "SKILL.md"), "utf8")
+		).toBe("# Original");
+	});
+
+	test("persists installedSkillNames in metadata after successful update", async ({
+		expect,
+	}) => {
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeSkills },
+				},
+			],
+			installedTreeSha: "old-sha",
+			installFailed: false,
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler", "agents-sdk"], "new-sha");
+		mockConfirm({
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+			result: true,
+		});
+		const runSkillsUpdateFlow = await freshUpdateImport();
+
+		await runSkillsUpdateFlow({});
+
+		const metadata = readMetadataFile();
+		expect(metadata.installedSkillNames).toEqual([
+			"cloudflare",
+			"wrangler",
+			"agents-sdk",
+		]);
+	});
+});
+
+describe("runSkillsInstallFlow cleanup", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+
+	beforeEach(() => {
+		setIsTTY(true);
+		mockRosieAgents.mockResolvedValue(DEFAULT_AGENTS);
+		mockRosieInstall.mockResolvedValue(DEFAULT_INSTALL_RESULT);
+	});
+
+	afterEach(() => {
+		clearDialogs();
+	});
+
+	test("persists installedSkillNames in metadata after successful install", async ({
+		expect,
+	}) => {
+		mockGitHubSkillsApi(["cloudflare", "wrangler"], "sha-123");
+		const runSkillsInstallFlow = await freshImport();
+
+		await runSkillsInstallFlow({ force: true });
+
+		const metadata = readMetadataFile();
+		expect(metadata.installedSkillNames).toEqual(["cloudflare", "wrangler"]);
+	});
+
+	test("restores backed-up skill directories when rosieInstall throws during install", async ({
+		expect,
+	}) => {
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		writeFileSync(
+			path.join(claudeSkills, "cloudflare", "SKILL.md"),
+			"# Original"
+		);
+		// Write metadata with previous install
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeSkills },
+				},
+			],
+			installFailed: false,
+			installedSkillNames: ["cloudflare"],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"], "sha-123");
+		mockRosieInstall.mockRejectedValueOnce(
+			new Error("tarball download failed")
+		);
+		const runSkillsInstallFlow = await freshImport();
+
+		await runSkillsInstallFlow({ force: true });
+
+		expect(std.warn).toContain("Failed to install Cloudflare skills");
+		// The backed-up skill directory should be restored
+		expect(existsSync(path.join(claudeSkills, "cloudflare"))).toBe(true);
+		expect(
+			readFileSync(path.join(claudeSkills, "cloudflare", "SKILL.md"), "utf8")
+		).toBe("# Original");
 	});
 });

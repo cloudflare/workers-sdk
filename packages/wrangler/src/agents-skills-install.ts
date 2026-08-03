@@ -1,10 +1,19 @@
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	readdirSync,
+	renameSync,
+	writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
 	getGlobalConfigPath,
 	parseJSONC,
 	isInteractive,
+	removeDirSync,
 } from "@cloudflare/workers-utils";
 import ci from "ci-info";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
@@ -168,15 +177,16 @@ export async function runSkillsInstallFlow(
 
 	try {
 		const agentNames = detectedAgents.map((a) => a.rosie.id);
-		const { failedAgents } = await rosieInstall(SKILLS_REPO, {
-			global: true,
-			agent: agentNames,
-			lockfile: false,
-			// rosie shows a bunch of extra logs regarding the installation
-			// we do not want to show them as standard output so we just log
-			// them at the debug level
-			onLog: ({ message }) => logger.debug(message),
-		});
+
+		const previousSkillNames = existingConfig?.installedSkillNames ?? [];
+		const cacheResult = await fetchSkillNamesFromGitHub();
+		const currentSkillNames = cacheResult?.skillNames ?? [];
+
+		const { failedAgents } = await installSkillsCleanly(
+			agentNames,
+			detectedAgents,
+			previousSkillNames
+		);
 
 		const failedSet = new Set(failedAgents);
 		const succeededAgents = detectedAgents.filter(
@@ -210,6 +220,8 @@ export async function runSkillsInstallFlow(
 			// update flow re-prompts them on the next run instead of treating
 			// them as up to date.
 			installedTreeSha: failedAgents.length > 0 ? undefined : freshTreeSha,
+			installedSkillNames:
+				failedAgents.length > 0 ? previousSkillNames : currentSkillNames,
 		});
 
 		sendResultMetricsEvent({
@@ -325,6 +337,13 @@ interface SkillsInstallMetadata {
 	 * and the `--install-skills` flag still work regardless.
 	 */
 	skipUpdatePrompts?: boolean;
+	/**
+	 * Skill directory names that were installed during the last successful
+	 * Wrangler-managed install or update. Used during updates to identify
+	 * Cloudflare-managed skill directories so stale ones (removed upstream)
+	 * can be cleaned up.
+	 */
+	installedSkillNames?: string[];
 }
 
 /** Jsonc metadata file created when Cloudflare agent skills are installed */
@@ -774,6 +793,76 @@ function directoryContainsAnySkill(
 }
 
 /**
+ * Backs up existing Cloudflare-managed skill directories from each agent's
+ * global skills path into a temporary directory, removes the originals,
+ * runs `rosieInstall`, and on failure restores every backed-up directory.
+ *
+ * This guarantees that stale skills (removed upstream) are cleaned up after a
+ * successful update while keeping the user's existing skills intact if the
+ * install fails.
+ *
+ * @param agentNames - Rosie agent IDs to install for.
+ * @param agents - Agent metadata including global skills paths.
+ * @param cloudflareSkillNames - Previously-installed skill directory names
+ *   (from metadata) — everything we consider "ours".
+ * @returns The `failedAgents` array from `rosieInstall`.
+ */
+async function installSkillsCleanly(
+	agentNames: string[],
+	agents: AgentInfo[],
+	cloudflareSkillNames: string[]
+): Promise<{ failedAgents: string[] }> {
+	// Ideally we'd install the skills into a tmp directory and swap it into place, but
+	// rosieInstall with `global: true` hardcodes output to each agent's
+	// global path (e.g. `~/.claude/skills/`) with no option to redirect.
+	// Instead we back up existing directories, let rosie install in-place,
+	// and restore the backups if it fails.
+	const tmpDir = mkdtempSync(path.join(os.tmpdir(), "wrangler-skills-"));
+
+	const backedUp: Array<{ src: string; backup: string }> = [];
+
+	try {
+		for (const agent of agents) {
+			const skillsDir = path.resolve(agent.rosie.globalPath);
+			for (const skillName of cloudflareSkillNames) {
+				const skillPath = path.join(skillsDir, skillName);
+				if (!existsSync(skillPath)) {
+					continue;
+				}
+				const backupPath = path.join(tmpDir, agent.rosie.id, skillName);
+				mkdirSync(path.dirname(backupPath), { recursive: true });
+				renameSync(skillPath, backupPath);
+				backedUp.push({ src: skillPath, backup: backupPath });
+			}
+		}
+
+		const result = await rosieInstall(SKILLS_REPO, {
+			global: true,
+			agent: agentNames,
+			lockfile: false,
+			onLog: ({ message }) => logger.debug(message),
+		});
+
+		removeDirSync(tmpDir);
+		return result;
+	} catch (err) {
+		for (const { src, backup } of backedUp) {
+			try {
+				mkdirSync(path.dirname(src), { recursive: true });
+				renameSync(backup, src);
+			} catch {
+				// Best-effort restore — log and continue.
+				logger.debug(
+					`Failed to restore backed-up skill directory: ${backup} -> ${src}`
+				);
+			}
+		}
+		removeDirSync(tmpDir);
+		throw err;
+	}
+}
+
+/**
  * Determines whether the currently-running AI coding agent has Cloudflare
  * skills installed. This runs asynchronously and is intended to be started
  * eagerly on process startup so the result is available by the time
@@ -1095,12 +1184,14 @@ export async function runSkillsUpdateFlow(
 
 	try {
 		const agentNames = managedAgentsWithSkills.map((a) => a.rosie.id);
-		const { failedAgents } = await rosieInstall(SKILLS_REPO, {
-			global: true,
-			agent: agentNames,
-			lockfile: false,
-			onLog: ({ message }) => logger.debug(message),
-		});
+
+		const previousSkillNames = metadata.installedSkillNames ?? [];
+
+		const { failedAgents } = await installSkillsCleanly(
+			agentNames,
+			managedAgentsWithSkills,
+			previousSkillNames
+		);
 
 		const failedSet = new Set(failedAgents);
 		const succeededAgents = managedAgentsWithSkills.filter(
@@ -1136,6 +1227,8 @@ export async function runSkillsUpdateFlow(
 					: (freshTreeSha ?? remoteTreeSha),
 			declinedTreeSha: undefined,
 			installFailed: failedAgents.length > 0 ? failedAgents : false,
+			installedSkillNames:
+				failedAgents.length > 0 ? previousSkillNames : skillNames,
 		});
 
 		sendMetricsEvent(
