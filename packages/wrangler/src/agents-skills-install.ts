@@ -1,8 +1,12 @@
 import {
+	cpSync,
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
 	readdirSync,
+	renameSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { access, cp, mkdir, rename, stat, unlink } from "node:fs/promises";
@@ -93,7 +97,7 @@ export async function runSkillsInstallFlow(
 			sendMetricsEvent(
 				"skills_install_completed",
 				{
-					agents: result.targetedAgents,
+					agents: redactAgentsForTelemetry(result.targetedAgents),
 					...(command ? { command } : {}),
 				},
 				{}
@@ -249,6 +253,12 @@ export async function runSkillsInstallFlow(
 			date: new Date().toISOString(),
 			detectedAgents,
 			installFailed: true,
+			// Preserve the record of previously managed skills so they can
+			// still be backed up and cleaned up in future install/update
+			// attempts. installSkillsCleanly restores backed-up directories
+			// before rethrowing, so the on-disk state still matches.
+			installedSkillNames: existingConfig?.installedSkillNames,
+			installedTreeSha: existingConfig?.installedTreeSha,
 		});
 
 		sendResultMetricsEvent({
@@ -297,6 +307,19 @@ type AgentInfo = {
 		globalPath: string;
 	};
 };
+
+/**
+ * Strips privacy-sensitive fields (e.g. `rosie.globalPath`, which embeds the
+ * OS username) from agent objects before including them in telemetry payloads.
+ *
+ * @param agents - The agents to redact.
+ * @returns A new array with only telemetry-safe fields.
+ */
+function redactAgentsForTelemetry(
+	agents: AgentInfo[]
+): Array<{ name: string; rosie: { id: string } }> {
+	return agents.map(({ name, rosie }) => ({ name, rosie: { id: rosie.id } }));
+}
 
 /**
  * Persisted configuration that tracks whether the user has been prompted
@@ -953,6 +976,31 @@ async function installSkillsCleanly(
 
 	const backedUp: Array<{ src: string; backup: string; agentId: string }> = [];
 
+	// Register a synchronous signal handler so that if the process is
+	// interrupted (SIGINT / SIGTERM) mid-download, backed-up skills are
+	// restored before exit instead of being silently lost in the tmp dir.
+	const restoreOnSignal = (signal: NodeJS.Signals) => {
+		for (const { src, backup } of backedUp) {
+			try {
+				if (existsSync(src)) {
+					rmSync(src, { recursive: true, force: true });
+				}
+				try {
+					renameSync(backup, src);
+				} catch (renameErr) {
+					if ((renameErr as NodeJS.ErrnoException).code === "EXDEV") {
+						cpSync(backup, src, { recursive: true });
+					}
+				}
+			} catch {
+				// best-effort — nothing else we can do in a signal handler
+			}
+		}
+		process.exit(signal === "SIGINT" ? 130 : 143);
+	};
+	process.on("SIGINT", restoreOnSignal);
+	process.on("SIGTERM", restoreOnSignal);
+
 	try {
 		for (const agent of agents) {
 			const skillsDir = path.resolve(agent.rosie.globalPath);
@@ -992,6 +1040,9 @@ async function installSkillsCleanly(
 		const restored = await restoreBackupsForAgents(backedUp, allAgentIds);
 		await cleanupOrWarnAboutBackup(tmpDir, restored);
 		throw err;
+	} finally {
+		process.removeListener("SIGINT", restoreOnSignal);
+		process.removeListener("SIGTERM", restoreOnSignal);
 	}
 }
 
@@ -1369,7 +1420,7 @@ export async function runSkillsUpdateFlow(
 		sendMetricsEvent(
 			"skills_update_completed",
 			{
-				agents: succeededAgents,
+				agents: redactAgentsForTelemetry(succeededAgents),
 				...(command ? { command } : {}),
 			},
 			{}
