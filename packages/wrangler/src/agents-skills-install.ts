@@ -1,12 +1,11 @@
 import {
-	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
 	readdirSync,
 	writeFileSync,
 } from "node:fs";
-import { cp, mkdir, rename } from "node:fs/promises";
+import { access, cp, mkdir, rename, stat, unlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -14,7 +13,6 @@ import {
 	parseJSONC,
 	isInteractive,
 	removeDir,
-	removeDirSync,
 } from "@cloudflare/workers-utils";
 import ci from "ci-info";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
@@ -834,23 +832,53 @@ async function moveDir(src: string, dest: string): Promise<void> {
 }
 
 /**
+ * Removes whatever exists at `targetPath`, directory or file, so that
+ * a subsequent `moveDir` can place the restored backup there without
+ * hitting `ENOTEMPTY` or `ENOTDIR`.
+ *
+ * Does nothing if the path does not exist.
+ *
+ * @param targetPath - Absolute path to clear.
+ */
+async function clearPath(targetPath: string): Promise<void> {
+	try {
+		const s = await stat(targetPath);
+		if (s.isDirectory()) {
+			await removeDir(targetPath);
+		} else {
+			await unlink(targetPath);
+		}
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+			throw err;
+		}
+	}
+}
+
+/**
  * Restores backed-up skill directories for the given agent IDs.
  *
  * Used after a partial install/update failure to ensure agents whose
  * installation failed keep their previously-working skills instead of
  * ending up with empty directories.
  *
+ * Before restoring each backup, any existing entry at the destination
+ * (e.g. a partial directory left by a failed install) is removed to
+ * avoid `ENOTEMPTY` errors.
+ *
  * @param backedUp - Backup entries produced by {@link installSkillsCleanly}.
  * @param agentIds - Rosie agent IDs whose backups should be restored.
+ * @returns `true` if every restore succeeded, `false` if any failed.
  */
 async function restoreBackupsForAgents(
 	backedUp: Array<{ src: string; backup: string; agentId: string }>,
 	agentIds: string[]
-): Promise<void> {
+): Promise<boolean> {
 	if (agentIds.length === 0) {
-		return;
+		return true;
 	}
 
+	let allSucceeded = true;
 	const failedSet = new Set(agentIds);
 	for (const { src, backup, agentId } of backedUp) {
 		if (!failedSet.has(agentId)) {
@@ -859,12 +887,35 @@ async function restoreBackupsForAgents(
 
 		try {
 			await mkdir(path.dirname(src), { recursive: true });
+			await clearPath(src);
 			await moveDir(backup, src);
 		} catch {
+			allSucceeded = false;
 			logger.debug(
 				`Failed to restore backed-up skill directory: ${backup} -> ${src}`
 			);
 		}
+	}
+	return allSucceeded;
+}
+
+/**
+ * Removes the temporary backup directory when all restores succeeded,
+ * or warns the user about its location so they can recover manually.
+ *
+ * @param tmpDir - Absolute path to the temporary backup directory.
+ * @param allRestored - Whether every backed-up directory was successfully restored.
+ */
+async function cleanupOrWarnAboutBackup(
+	tmpDir: string,
+	allRestored: boolean
+): Promise<void> {
+	if (allRestored) {
+		await removeDir(tmpDir);
+	} else {
+		logger.warn(
+			`Some skill directories could not be restored automatically. A backup is available at: ${tmpDir}`
+		);
 	}
 }
 
@@ -902,7 +953,9 @@ async function installSkillsCleanly(
 			const skillsDir = path.resolve(agent.rosie.globalPath);
 			for (const skillName of cloudflareSkillNames) {
 				const skillPath = path.join(skillsDir, skillName);
-				if (!existsSync(skillPath)) {
+				try {
+					await access(skillPath);
+				} catch {
 					continue;
 				}
 				const backupPath = path.join(tmpDir, agent.rosie.id, skillName);
@@ -923,13 +976,16 @@ async function installSkillsCleanly(
 			onLog: ({ message }) => logger.debug(message),
 		});
 
-		await restoreBackupsForAgents(backedUp, result.failedAgents);
-		removeDirSync(tmpDir);
+		const restored = await restoreBackupsForAgents(
+			backedUp,
+			result.failedAgents
+		);
+		await cleanupOrWarnAboutBackup(tmpDir, restored);
 		return result;
 	} catch (err) {
 		const allAgentIds = agents.map((a) => a.rosie.id);
-		await restoreBackupsForAgents(backedUp, allAgentIds);
-		removeDirSync(tmpDir);
+		const restored = await restoreBackupsForAgents(backedUp, allAgentIds);
+		await cleanupOrWarnAboutBackup(tmpDir, restored);
 		throw err;
 	}
 }
