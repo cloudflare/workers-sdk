@@ -1,4 +1,7 @@
-import { triggersDeploy } from "@cloudflare/deploy-helpers";
+import {
+	triggersDeploy,
+	validateEventTriggerTargets,
+} from "@cloudflare/deploy-helpers";
 import { createCommand, createNamespace } from "../core/create-command";
 import { resolveTriggersInput } from "../deployment-bundle/resolve-config-args";
 import { logger } from "../logger";
@@ -64,6 +67,7 @@ export const triggersDeployCommand = createCommand({
 			sendMetrics: config.send_metrics,
 		});
 		const props = resolveTriggersInput(args, config);
+		validateEventTriggerTargets(config, props.scriptName);
 
 		if (args.dryRun) {
 			logger.log(`--dry-run: exiting now.`);

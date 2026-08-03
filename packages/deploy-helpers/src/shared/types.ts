@@ -156,6 +156,8 @@ export type WorkerBuildResult = {
 
 export interface TriggerDeployment {
 	targets: string[];
+	category?: string;
+	resource?: string;
 	error?: Error;
 }
 

@@ -1,5 +1,89 @@
 # wrangler
 
+## 4.118.0
+
+### Minor Changes
+
+- [#14057](https://github.com/cloudflare/workers-sdk/pull/14057) [`cc63aae`](https://github.com/cloudflare/workers-sdk/commit/cc63aae658c39ae33169c6dc89f2e6ec1071fc53) Thanks [@matingathani](https://github.com/matingathani)! - Add `--json` flag to `wrangler containers info` for consistent JSON output with sibling commands `list` and `instances`
+
+- [#14944](https://github.com/cloudflare/workers-sdk/pull/14944) [`a249591`](https://github.com/cloudflare/workers-sdk/commit/a249591473321cc2fb88a7b62a8c2b8663ebd4ef) Thanks [@nickpatt](https://github.com/nickpatt)! - Enable local observability capture by default in dev
+
+  `wrangler dev` and the Vite plugin now capture request traces and console logs into the Local Explorer's Observability tab out of the box — previously this was opt-in behind `X_LOCAL_OBSERVABILITY=true`. Set `X_LOCAL_OBSERVABILITY=false` to opt out (for example if the extra per-worker collector/streaming-tail services cause trouble in a multi-process dev-registry setup).
+
+- [#14919](https://github.com/cloudflare/workers-sdk/pull/14919) [`e0bbf55`](https://github.com/cloudflare/workers-sdk/commit/e0bbf55fdce5239a88c78a4350d3287f52d77964) Thanks [@avenceslau](https://github.com/avenceslau)! - Add additional triggers to Workflows
+
+  Workers can now declaratively start a locally defined Workflow. Configure event subscriptions under `triggers.events`; Wrangler validates each target and updates the script's event triggers during deployment.
+
+  ```jsonc
+  {
+    "triggers": {
+      "events": [
+        {
+          "type": "cf.artifacts.repo.pushed",
+          "filter": {
+            "namespace": "my-namespace",
+            "repo_name": "my-repo"
+          },
+          "targets": [
+            {
+              "type": "workflow",
+              "workflow_name": "my-workflow"
+            }
+          ]
+        }
+      ]
+    }
+  }
+  ```
+
+### Patch Changes
+
+- [#14936](https://github.com/cloudflare/workers-sdk/pull/14936) [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix `jsx_fragment` being ignored when `wrangler dev` runs a custom build
+
+  If your project uses a custom build and sets both `jsx_factory` and `jsx_fragment`, `wrangler dev` used your `jsx_factory` value for JSX fragments as well, so fragments compiled incorrectly. Your `jsx_fragment` value is now used.
+
+- [#14936](https://github.com/cloudflare/workers-sdk/pull/14936) [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop `wrangler dev` starting new work after you stop it or it reloads
+
+  Stopping `wrangler dev`, or having it reload after a configuration change, could still leave it starting work for the state it had just left behind: your custom build command could run once more after dev had stopped, a change to a file in your assets directory could be reported against configuration that had already been replaced, and in some cases the process could stay alive instead of exiting.
+
+  That work is now discarded, so stopping or reloading `wrangler dev` leaves nothing running behind it.
+
+- [#14936](https://github.com/cloudflare/workers-sdk/pull/14936) [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop `wrangler dev` from running custom builds concurrently
+
+  When several watched files changed at once — for example during a `git pull` or a "save all" — `wrangler dev` started a custom build for every file that changed, so multiple copies of your build command ran at the same time and fought over the same output files.
+
+  A burst of file changes now results in a single build, and a build only starts once the previous one has finished.
+
+- [#13746](https://github.com/cloudflare/workers-sdk/pull/13746) [`cec9d88`](https://github.com/cloudflare/workers-sdk/commit/cec9d8875d3f103acc813724ded980867bd25ed7) Thanks [@edmundhung](https://github.com/edmundhung)! - Report a clear error for account IDs that can't be used in a Cloudflare API request
+
+  Account IDs are substituted straight into Cloudflare API URL paths, so a value containing non-ASCII characters previously failed deep inside the request layer with an opaque `Cannot convert argument to a ByteString` error that gave no hint about which setting was at fault. Account IDs read from `CLOUDFLARE_ACCOUNT_ID` and from the `account_id` configuration field are now validated up front, and an invalid value fails with a message naming both the offending value and where it came from.
+
+## 4.117.0
+
+### Minor Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove `containerEngine` from the worker options returned by `unstable_getMiniflareWorkerOptions`
+
+  `unstable_getMiniflareWorkerOptions` no longer includes `containerEngine` in the returned `workerOptions`, since the container engine is a Miniflare instance-wide setting rather than a per-worker one. Callers that build a Miniflare instance from these options should set `containerEngine` at the top level instead.
+
+### Patch Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Rewrite local testing paths (`/cdn-cgi/*`)
+
+  Miniflare v5 moved its internal local testing endpoints to `/cdn-cgi/local/*` (and `/__cf_local/*` for endpoints that must remain reachable over tunnels) to prevent any potential collision with production routes. `wrangler dev` and the Vite plugin now transparently rewrite the old paths to the new ones, meaning you can continue to use the old paths without issue.
+
+  These are the new paths:
+
+  - `/cdn-cgi/handler/scheduled` → `/cdn-cgi/local/scheduled`
+  - `/cdn-cgi/handler/email` → `/cdn-cgi/local/email`
+  - `/cdn-cgi/explorer/*` → `/cdn-cgi/local/explorer/*`
+  - `/cdn-cgi/mf/scheduled` → `/cdn-cgi/local/scheduled` (Note `/cdn-cgi/mf/scheduled` is already deprecated)
+  - `/cdn-cgi/mf/stream/*` → `/__cf_local/stream/*`
+  - `/cdn-cgi/mf/imagedelivery/*` → `/__cf_local/imagedelivery/*`
+
+- Updated dependencies [[`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6)]:
+  - miniflare@5.20260730.0-alpha
+
 ## 4.116.0
 
 ### Minor Changes

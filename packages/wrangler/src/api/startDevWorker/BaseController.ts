@@ -39,6 +39,14 @@ export abstract class Controller {
 		this.#tearingDown = true;
 	}
 
+	/**
+	 * Whether `teardown()` has been called, which subclasses should check before
+	 * starting any new work.
+	 */
+	protected get tearingDown() {
+		return this.#tearingDown;
+	}
+
 	protected emitErrorEvent(event: ErrorEvent) {
 		if (this.#tearingDown) {
 			logger.debug("Suppressing error event during teardown");

@@ -181,6 +181,143 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should deploy Artifacts event triggers after their target Workflows", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							filter: {
+								namespace: "my-namespace",
+								repo_name: "my-repo",
+							},
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "my-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			let workflowDeployed = false;
+			msw.use(
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					workflowDeployed = true;
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}),
+				http.put(
+					"*/accounts/:accountId/triggers/:scriptName",
+					async ({ params, request }) => {
+						expect(workflowDeployed).toBe(true);
+						expect(params.scriptName).toBe("test-name");
+						expect(await request.json()).toEqual([
+							{
+								type: "cf.artifacts.repo.pushed",
+								filter: {
+									namespace: "my-namespace",
+									repo_name: "my-repo",
+								},
+								targets: [
+									{
+										type: "workflow",
+										workflow_name: "my-workflow",
+										script_name: "test-name",
+									},
+								],
+							},
+						]);
+						return HttpResponse.json(createFetchResult({}));
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("event triggers: 1");
+		});
+
+		it("should clear event triggers with an empty array", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				triggers: { events: [] },
+			});
+			await fs.promises.writeFile("index.js", "export default {};");
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/triggers/:scriptName",
+					async ({ request }) => {
+						expect(await request.json()).toEqual([]);
+						return HttpResponse.json(createFetchResult({}));
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+
+			await runWrangler("deploy");
+		});
+
+		it("should reject event targets that are not defined by the Worker", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "missing-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", "export default {};");
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Event trigger "cf.artifacts.repo.pushed" targets Workflow "missing-workflow", but that Workflow is not defined by this Worker.\n\nAdd it to the "workflows" configuration or remove the event trigger target.'
+			);
+		});
+
 		it("should prompt to create a workers.dev subdomain before deploying owned Workflows", async ({
 			expect,
 		}) => {
@@ -361,6 +498,19 @@ describe("deploy", () => {
 						schedules: "0 * * * *",
 					},
 				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "my-workflow",
+								},
+							],
+						},
+					],
+				},
 			});
 			await fs.promises.writeFile(
 				"index.js",
@@ -382,6 +532,11 @@ describe("deploy", () => {
 						]),
 						{ status: 403 }
 					);
+				}),
+				http.put("*/accounts/:accountId/triggers/:scriptName", () => {
+					throw new Error(
+						"Event triggers should not be replaced after a Workflow deployment fails."
+					);
 				})
 			);
 			mockSubDomainRequest();
@@ -398,9 +553,108 @@ describe("deploy", () => {
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Some triggers failed to deploy for test-name:
-				  - Workflow "my-workflow" has "schedules" configured, but scheduled Workflows require a paid Workers plan.]
+				[Error: Trigger configuration for "test-name" was only partially updated:
+
+				  Workflows:
+				    - Workflow "my-workflow" has "schedules" configured, but scheduled Workflows require a paid Workers plan.
+
+				  Event triggers:
+				    - Not updated because Workflow "my-workflow" failed to deploy.
+
+				Successful trigger changes were not rolled back.]
 			`);
+		});
+
+		it("should update event triggers when an unrelated Workflow fails", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "TARGET_WORKFLOW",
+						name: "target-workflow",
+						class_name: "TargetWorkflow",
+					},
+					{
+						binding: "UNRELATED_WORKFLOW",
+						name: "unrelated-workflow",
+						class_name: "UnrelatedWorkflow",
+					},
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "target-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class TargetWorkflow extends WorkflowEntrypoint {};
+                export class UnrelatedWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			let eventTriggersUpdated = false;
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					({ params }) => {
+						if (params.workflowName === "unrelated-workflow") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10000,
+										message: "Unrelated Workflow failed",
+									},
+								]),
+								{ status: 500 }
+							);
+						}
+
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-workflow-id" })
+						);
+					}
+				),
+				http.put("*/accounts/:accountId/triggers/:scriptName", () => {
+					eventTriggersUpdated = true;
+					return HttpResponse.json(createFetchResult({}));
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "TARGET_WORKFLOW",
+						workflow_name: "target-workflow",
+						class_name: "TargetWorkflow",
+					},
+					{
+						type: "workflow",
+						name: "UNRELATED_WORKFLOW",
+						workflow_name: "unrelated-workflow",
+						class_name: "UnrelatedWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Trigger configuration for "test-name" was only partially updated'
+			);
+			expect(eventTriggersUpdated).toBe(true);
 		});
 
 		it("should deploy a workflow with schedules as an array of cron expressions", async ({
