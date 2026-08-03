@@ -17,6 +17,7 @@ import {
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
+	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
 	Response,
@@ -2925,6 +2926,43 @@ test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
 	const restartedWorker = await mf.getWorker();
 	const r4 = await restartedWorker.fetch("http://placeholder/");
 	expect(await r4.text()).toBe("ok 2");
+});
+
+test("Miniflare: warns when workerd is restarted after a crash", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const runtimeRestarted = new DeferredPromise<void>();
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+		script: `
+			import { abortIsolate } from "cloudflare:workers";
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response("ok");
+				},
+			}
+		`,
+	});
+	useDispose(mf);
+
+	await mf.ready;
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+	await runtimeRestarted;
+
+	// Recovering silently makes a crash look like an unexplained restart, so the
+	// user must always be told, even though Miniflare goes on to recover.
+	expect(log.logsAtLevel(LogLevel.WARN)).toContain(
+		"The Workers runtime crashed unexpectedly and is being restarted (crash #1). " +
+			"Any additional runtime output above may indicate the cause."
+	);
 });
 
 test("Miniflare: logs post-restart callback failures", async ({ expect }) => {
