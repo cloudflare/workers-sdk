@@ -98,8 +98,9 @@ export function createRequestHandler(
 			// connection protocol (`req.socket.encrypted`).
 			const protocol = getForwardedProto(req);
 			// Prefer Node host/:authority so HTTPS/HTTP2 keeps non-default ports (e.g. :5173).
-			// createHeaders() skips pseudo-headers, so Host can be missing and X-Forwarded-Host
-			// would otherwise not preserve the Vite origin port used by auth libraries (Clerk).
+			// createRequest only applies `options.host` to request.url; Host still comes from
+			// rawHeaders (and createHeaders skips :authority), so we must set Host ourselves
+			// for toMiniflareRequest to populate X-Forwarded-Host with the same origin.
 			const nodeHost =
 				typeof req.headers.host === "string" ? req.headers.host : undefined;
 			const authority =
@@ -113,7 +114,7 @@ export function createRequestHandler(
 				...(host ? { host } : {}),
 			});
 
-			if (host && !request.headers.has("Host")) {
+			if (host) {
 				request.headers.set("Host", host);
 			}
 

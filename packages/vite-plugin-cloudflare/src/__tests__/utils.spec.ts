@@ -197,6 +197,9 @@ describe("createRequestHandler", () => {
 		expect,
 	}) => {
 		await startServer((req) => {
+			// createHeaders reads rawHeaders (and skips pseudo-headers), so drop Host
+			// there to mirror HTTP/2 where only `:authority` carries the origin.
+			deleteRawHeader(req, "host");
 			delete req.headers.host;
 			req.headers[":authority"] = "localhost:5173";
 		});
@@ -209,6 +212,7 @@ describe("createRequestHandler", () => {
 		expect,
 	}) => {
 		await startServer((req) => {
+			setRawHeader(req, "host", "localhost:5173");
 			req.headers.host = "localhost:5173";
 		});
 		await fetch(`http://127.0.0.1:${port}/path`);
@@ -216,3 +220,27 @@ describe("createRequestHandler", () => {
 		expect(capturedForwardedHosts[0]).toBe("localhost:5173");
 	});
 });
+
+/** Mutate `rawHeaders` — `createHeaders` ignores `req.headers` mutations. */
+function deleteRawHeader(req: http.IncomingMessage, name: string) {
+	const lower = name.toLowerCase();
+	const raw = req.rawHeaders;
+	for (let i = 0; i < raw.length; i += 2) {
+		if (raw[i].toLowerCase() === lower) {
+			raw.splice(i, 2);
+			return;
+		}
+	}
+}
+
+function setRawHeader(req: http.IncomingMessage, name: string, value: string) {
+	const lower = name.toLowerCase();
+	const raw = req.rawHeaders;
+	for (let i = 0; i < raw.length; i += 2) {
+		if (raw[i].toLowerCase() === lower) {
+			raw[i + 1] = value;
+			return;
+		}
+	}
+	raw.push(name, value);
+}
