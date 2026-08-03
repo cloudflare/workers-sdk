@@ -48,6 +48,23 @@ async function runViteDev(
 		console.log("::endgroup::");
 	});
 
+	// TEMPORARY DIAGNOSTIC — revert before merging (see #14989).
+	// `onTestFailed` only fires when the test fails, but a workerd crash is often
+	// recovered from within the test's budget, so the crash report never reaches
+	// CI. Dump the session log whenever the runtime crashed, pass or fail.
+	onTestFinished(() => {
+		const output = `${proc.stdout}\n${proc.stderr}`;
+		if (
+			/std::terminate|Fatal uncaught|Received signal|crashed unexpectedly/.test(
+				output
+			)
+		) {
+			console.log(`::group::[RUNTIME CRASH] Vite dev session (${config})`);
+			console.log(output);
+			console.log("::endgroup::");
+		}
+	});
+
 	// Wait for the dev session to be ready
 	await vi.waitFor(async () => {
 		const resposne = await fetch(url, { method: "HEAD" });
