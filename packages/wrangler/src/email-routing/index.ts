@@ -127,14 +127,13 @@ export interface EmailRoutingAddress {
 }
 
 export interface EmailSendingSubdomain {
-	tag: string;
-	name: string;
 	enabled: boolean;
-	status?: string;
-}
-
-export interface EmailSendingSettings extends EmailRoutingSettings {
-	subdomains?: EmailSendingSubdomain[];
+	name: string;
+	tag: string;
+	created?: string;
+	dkim_selector?: string;
+	modified?: string;
+	return_path_domain?: string;
 }
 
 export interface EmailSendingDnsRecord {

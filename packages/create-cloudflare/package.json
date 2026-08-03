@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.70.0",
+	"version": "2.70.16",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -57,13 +57,13 @@
 		"@types/semver": "^7.5.1",
 		"@types/which-pm-runs": "^1.0.0",
 		"@types/yargs": "^17.0.22",
-		"command-exists": "^1.2.9",
+		"command-exists": "catalog:default",
 		"comment-json": "^4.5.0",
 		"cross-spawn": "^7.0.3",
 		"deepmerge": "^4.3.1",
 		"degit": "^2.8.4",
 		"dns2": "^2.1.0",
-		"dotenv": "^16.0.0",
+		"dotenv": "catalog:default",
 		"esbuild": "catalog:default",
 		"execa": "^7.1.1",
 		"exit-hook": "2.2.1",
@@ -86,7 +86,6 @@
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
 		"wrap-ansi": "^9.0.0",
-		"xdg-app-paths": "^8.3.0",
 		"yargs": "^17.7.2"
 	},
 	"engines": {

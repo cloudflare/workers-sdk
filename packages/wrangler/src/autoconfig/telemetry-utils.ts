@@ -84,7 +84,6 @@ export function sendAutoConfigProcessStartedMetricsEvent({
  * @param options.error An error message if the process failed
  * @param options.command The Wrangler command that initiated the autoconfig process
  * @param options.dryRun Whether the command triggering autoconfig was run in dry-run mode
- *
  */
 export function sendAutoConfigProcessEndedMetricsEvent({
 	success,

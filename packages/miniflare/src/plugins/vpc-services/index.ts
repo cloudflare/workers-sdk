@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
@@ -14,29 +14,28 @@ const VpcServicesSchema = z.object({
 });
 
 export const VpcServicesOptionsSchema = z.object({
-	vpcServices: z.record(VpcServicesSchema).optional(),
+	vpcServices: z.record(z.string(), VpcServicesSchema).optional(),
 });
 
 export const VPC_SERVICES_PLUGIN_NAME = "vpc-services";
+const VPC_SERVICES_REMOTE_SERVICE_NAME = `${VPC_SERVICES_PLUGIN_NAME}:remote`;
 
 export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 	options: VpcServicesOptionsSchema,
+	bindingTypeDescription: "VPC service",
 	async getBindings(options) {
 		if (!options.vpcServices) {
 			return [];
 		}
 
 		return Object.entries(options.vpcServices).map(
-			([name, { service_id, remoteProxyConnectionString }]) => {
+			([name, { remoteProxyConnectionString }]) => {
 				return {
 					name,
 
 					service: {
-						name: getUserBindingServiceName(
-							VPC_SERVICES_PLUGIN_NAME,
-							service_id,
-							remoteProxyConnectionString
-						),
+						name: VPC_SERVICES_REMOTE_SERVICE_NAME,
+						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 					},
 				};
 			}
@@ -54,21 +53,20 @@ export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 		);
 	},
 	async getServices({ options }) {
-		if (!options.vpcServices) {
+		if (!options.vpcServices || Object.keys(options.vpcServices).length === 0) {
 			return [];
 		}
 
-		return Object.entries(options.vpcServices).map(
-			([name, { service_id, remoteProxyConnectionString }]) => {
-				return {
-					name: getUserBindingServiceName(
-						VPC_SERVICES_PLUGIN_NAME,
-						service_id,
-						remoteProxyConnectionString
-					),
-					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
-				};
-			}
-		);
+		return [
+			{
+				name: VPC_SERVICES_REMOTE_SERVICE_NAME,
+				// VPC services also expose raw TCP via `binding.connect()`, tunnelled
+				// through the proxy client's inbound `connect` handler. The shared
+				// `vpc-services:remote` service is dedicated to VPC services, so
+				// opting it into raw TCP leaves every other binding's service
+				// untouched.
+				worker: remoteProxyClientWorker(undefined, { rawTcp: true }),
+			},
+		];
 	},
 };

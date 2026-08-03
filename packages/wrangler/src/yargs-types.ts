@@ -13,6 +13,7 @@ export interface CommonYargsOptions {
 	"experimental-provision": boolean | undefined;
 	"experimental-auto-create": boolean;
 	"install-skills": boolean;
+	profile: string | undefined;
 }
 
 export type CommonYargsArgvSanitized<P = CommonYargsOptions> = OnlyCamelCase<

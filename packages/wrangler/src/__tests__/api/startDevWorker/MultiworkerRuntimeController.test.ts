@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from "node:timers/promises";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -46,6 +47,20 @@ function configDefaults(
 		dev: { persist: "./persist", remote: false },
 		...config,
 	};
+}
+
+/**
+ * Miniflare's rate limiter buckets requests into fixed windows aligned to the
+ * wall clock and clears every counter on rollover, so a burst that straddles a
+ * boundary has its count reset part way through. Wait out the tail of the
+ * current window so the burst below is guaranteed to run inside a single one.
+ */
+async function waitForFreshRateLimitWindow(periodSeconds: number) {
+	const periodMs = periodSeconds * 1000;
+	const remainingMs = periodMs - (Date.now() % periodMs);
+	if (remainingMs < 10_000) {
+		await sleep(remainingMs + 50);
+	}
 }
 
 describe("MultiworkerRuntimeController", () => {
@@ -108,6 +123,92 @@ describe("MultiworkerRuntimeController", () => {
 			const event = await bus.waitFor("reloadComplete");
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toContain("hello from");
+		});
+
+		it("supports ratelimit bindings on secondary workers", async ({
+			expect,
+		}) => {
+			const bus = new FakeBus();
+			const controller = new MultiworkerRuntimeController(bus, 2);
+			teardown(() => controller.teardown());
+
+			// The primary forwards every request to the secondary worker via a
+			// service binding; the secondary owns the rate-limit binding. The
+			// runtime controller used to delete ratelimits from secondary workers
+			// to work around a Miniflare crash — this exercises that path
+			// end-to-end to guard against a regression.
+			const primaryConfig = configDefaults({
+				name: "worker-a",
+				bindings: { DOWNSTREAM: { type: "service", service: "worker-b" } },
+				dev: {
+					persist: "./persist",
+					remote: false,
+					multiworkerPrimary: true,
+				},
+			});
+			const secondaryConfig = configDefaults({
+				name: "worker-b",
+				bindings: {
+					RATE: {
+						type: "ratelimit",
+						namespace_id: "b-namespace",
+						simple: { limit: 2, period: 60 },
+					},
+				},
+				dev: {
+					persist: "./persist",
+					remote: false,
+					multiworkerPrimary: false,
+				},
+			});
+
+			const primaryBundle = makeEsbuildBundle(dedent /*javascript*/ `
+				export default {
+					fetch(request, env, ctx) {
+						return env.DOWNSTREAM.fetch(request);
+					}
+				}
+			`);
+			const secondaryBundle = makeEsbuildBundle(dedent /*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						const { success } = await env.RATE.limit({ key: "k" });
+						return new Response(success ? "ok" : "limited", {
+							status: success ? 200 : 429,
+						});
+					}
+				}
+			`);
+
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: primaryConfig,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: primaryConfig,
+				bundle: primaryBundle,
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: secondaryConfig,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: secondaryConfig,
+				bundle: secondaryBundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+
+			await waitForFreshRateLimitWindow(60);
+
+			// limit is 2, so the first two requests succeed and the third is
+			// rate limited — proving the secondary's binding survived the merge.
+			expect((await fetch(url)).status).toBe(200);
+			expect((await fetch(url)).status).toBe(200);
+			expect((await fetch(url)).status).toBe(429);
 		});
 
 		it("should skip stale bundles for the same worker during rapid updates", async ({

@@ -33,41 +33,6 @@ describe("info", () => {
 			],
 		});
 	});
-	it("should display version as valid json when alpha", async ({ expect }) => {
-		msw.use(
-			http.get("*/accounts/:accountId/d1/database/*", async () => {
-				return HttpResponse.json(
-					{
-						result: {
-							uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-							name: "northwind",
-							created_at: "2023-05-23T08:33:54.590Z",
-							version: "alpha",
-							num_tables: 13,
-							file_size: 33067008,
-							running_in_region: "WEUR",
-						},
-						success: true,
-						errors: [],
-						messages: [],
-					},
-					{ status: 200 }
-				);
-			})
-		);
-		await runWrangler("d1 info northwind --json");
-		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
-			{
-			  "created_at": "2023-05-23T08:33:54.590Z",
-			  "database_size": 33067008,
-			  "name": "northwind",
-			  "num_tables": 13,
-			  "running_in_region": "WEUR",
-			  "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-			  "version": "alpha",
-			}
-		`);
-	});
 
 	it("should not display version as valid json when not alpha", async ({
 		expect,

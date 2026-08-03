@@ -1,7 +1,7 @@
 import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { getGlobalConfigPath } from "../global-wrangler-config-path";
 import {
 	getBooleanEnvironmentVariableFactory,
 	getEnvironmentVariableFactory,
@@ -261,7 +261,7 @@ export const getBuildPlatformFromEnv = getEnvironmentVariableFactory({
 export const getRegistryPath = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_REGISTRY_PATH",
 	defaultValue() {
-		return path.join(getGlobalWranglerConfigPath(), "registry");
+		return path.join(getGlobalConfigPath(), "registry");
 	},
 });
 
@@ -345,11 +345,28 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
+ * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/local/explorer.
  */
 export const getLocalExplorerEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "X_LOCAL_EXPLORER",
+		defaultValue: true,
+	});
+
+/**
+ * `X_LOCAL_OBSERVABILITY` turns on local-dev observability capture. Both
+ * `wrangler dev` and the Vite plugin read it and pass it through as the one
+ * `unsafeObservability` Miniflare option, which makes core attach the trace
+ * collector to each user worker.
+ *
+ * Defaults to `true` so the Local Explorer's Observability tab captures traces
+ * and logs out of the box. Set `X_LOCAL_OBSERVABILITY=false` to opt out — for
+ * example if the extra per-worker services (collector + streaming tail) cause
+ * trouble in a multi-process dev-registry setup.
+ */
+export const getLocalObservabilityEnabledFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_LOCAL_OBSERVABILITY",
 		defaultValue: true,
 	});
 

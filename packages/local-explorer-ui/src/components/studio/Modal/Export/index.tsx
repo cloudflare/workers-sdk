@@ -1,5 +1,5 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import {
 	exportCSVFromStudioResult,
 	exportSQLFromStudioResult,

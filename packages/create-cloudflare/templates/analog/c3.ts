@@ -12,7 +12,12 @@ import type { C3Context } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name, "--template=latest"]);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		"--template=latest",
+		// Analog's npm Vite overrides can fail as deps shift; remove once fixed upstream.
+		...(npm === "npm" ? ["--skipViteOverrides"] : []),
+	]);
 	logRaw("");
 };
 

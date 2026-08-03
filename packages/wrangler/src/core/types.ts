@@ -1,4 +1,9 @@
-import type { fetchResult, fetchListResult } from "../cfetch";
+import type {
+	fetchKVGetValue,
+	fetchResult,
+	fetchListResult,
+	fetchPagedListResult,
+} from "../cfetch";
 import type { confirm, prompt } from "../dialogs";
 import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
@@ -111,6 +116,8 @@ export type HandlerContext = {
 	 */
 	fetchResult: typeof fetchResult;
 	fetchListResult: typeof fetchListResult;
+	fetchPagedListResult: typeof fetchPagedListResult;
+	fetchKVGetValue: typeof fetchKVGetValue;
 
 	/**
 	 * Interactive prompts
@@ -218,12 +225,37 @@ export type CommandDefinition<
 		sendMetrics?: boolean;
 
 		/**
-		 * Skip the AI coding agent skills installation prompt for this command.
-		 * Set to `true` for commands whose stdout is captured by the shell (e.g. `complete`),
-		 * where interactive prompts would corrupt the output.
+		 * After the command handler completes successfully, suggest installing
+		 * Cloudflare skills for detected AI coding agents that don't have them.
+		 *
+		 * When set to `true`, the suggestion always runs after the handler.
+		 * When set to a function, it receives the parsed args and should return
+		 * `true` to enable the suggestion — use this to skip the prompt in modes
+		 * where interactive output is inappropriate (e.g. `--json`).
+		 *
 		 * @default false
 		 */
-		skipSkillsPrompt?: boolean;
+		suggestSkillsAfterHandler?:
+			| boolean
+			| ((args: HandlerArgs<NamedArgDefs>) => boolean);
+
+		/**
+		 * Whether this command can authenticate with a temporary preview account
+		 * (via the hidden `--temporary` flag) when no real credentials are available.
+		 * Only enable this for commands whose API calls are covered by the temporary
+		 * preview-account deploy token (Workers, KV, D1, Hyperdrive, Queues, SSL/Certs).
+		 * @default false
+		 */
+		supportTemporary?: boolean;
+
+		/**
+		 * By default, the banner will print "Active profile: <name>" when a non-default
+		 * profile is resolved. Set to `false` to suppress this line while still printing
+		 * the rest of the banner.
+		 *
+		 * @default true
+		 */
+		printActiveProfile?: boolean;
 	};
 
 	/**
@@ -244,8 +276,14 @@ export type CommandDefinition<
 	 * A hook to implement custom validation of the args before the handler is called.
 	 * Throw `CommandLineArgsError` with actionable error message if args are invalid.
 	 * The return value is ignored.
+	 *
+	 * @param args - The parsed CLI arguments
+	 * @param def - The command definition, useful for passing to helpers like `demandOneOfOption`
 	 */
-	validateArgs?: (args: HandlerArgs<NamedArgDefs>) => void | Promise<void>;
+	validateArgs?: (
+		args: HandlerArgs<NamedArgDefs>,
+		def: CommandDefinition<NamedArgDefs>
+	) => void | Promise<void>;
 
 	/**
 	 * The implementation of the command which is given camelCase'd args

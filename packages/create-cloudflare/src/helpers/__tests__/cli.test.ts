@@ -1,12 +1,15 @@
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { SemVer } from "semver";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { version as currentVersion } from "../../../package.json";
-import { isUpdateAvailable } from "../cli";
-import { mockSpinner } from "./mocks";
+import { isUpdateAvailable, runLatest } from "../cli";
+import { mockPackageManager, mockSpinner } from "./mocks";
 
 vi.mock("process");
+vi.mock("@cloudflare/cli-shared-helpers/command");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
+vi.mock("which-pm-runs");
 
 beforeEach(() => {
 	mockSpinner();
@@ -77,4 +80,21 @@ describe("isUpdateAvailable", () => {
 				}
 			);
 	}
+});
+
+describe("runLatest", () => {
+	beforeEach(() => {
+		mockPackageManager("pnpm", "11.0.0");
+		vi.mocked(runCommand).mockResolvedValue("");
+	});
+
+	test("marks the relaunched process so it does not update again", async ({
+		expect,
+	}) => {
+		await runLatest();
+
+		expect(runCommand).toHaveBeenCalledTimes(1);
+		const [, opts] = vi.mocked(runCommand).mock.calls[0];
+		expect(opts?.env).toEqual({ CREATE_CLOUDFLARE_RELAUNCHED: "true" });
+	});
 });

@@ -12,6 +12,7 @@ import { getFlag } from "../experimental-flags";
 import { getBasePath } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
+	BuildFailure,
 	isBuildFailure,
 	rewriteNodeCompatBuildFailure,
 	rewriteUnresolvedModuleBuildFailure,
@@ -563,16 +564,6 @@ export async function bundleWorker(
 			entryDirectory: entry.projectRoot,
 		},
 	};
-}
-
-class BuildFailure extends Error {
-	constructor(
-		message: string,
-		readonly errors: esbuild.Message[],
-		readonly warnings: esbuild.Message[]
-	) {
-		super(message);
-	}
 }
 
 /**

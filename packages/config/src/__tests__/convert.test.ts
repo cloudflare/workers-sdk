@@ -1,17 +1,21 @@
 import { describe, it } from "vitest";
+import { bindings } from "../bindings";
 import { convertToWranglerConfig } from "../convert";
+import { exports as exportConfig } from "../exports";
+
+const baseConfig = {
+	type: "worker",
+	name: "my-worker",
+	compatibilityDate: "2026-06-01",
+} as const;
 
 describe("convertToWranglerConfig", () => {
 	describe("top-level fields", () => {
-		it("returns an empty object for an empty config", ({ expect }) => {
-			expect(convertToWranglerConfig({})).toEqual({});
-		});
-
 		it("maps primitive top-level fields", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				type: "worker",
 				name: "my-worker",
 				entrypoint: "./src/index.ts",
-				accountId: "acc-123",
 				compatibilityDate: "2026-01-01",
 				compatibilityFlags: ["nodejs_compat"],
 				workersDev: true,
@@ -22,7 +26,6 @@ describe("convertToWranglerConfig", () => {
 			expect(result).toEqual({
 				name: "my-worker",
 				main: "./src/index.ts",
-				account_id: "acc-123",
 				compatibility_date: "2026-01-01",
 				compatibility_flags: ["nodejs_compat"],
 				workers_dev: true,
@@ -32,22 +35,9 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
-		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
-			expect,
-		}) => {
-			const result = convertToWranglerConfig({
-				complianceRegion: "fedramp-high",
-			});
-			expect(result.compliance_region).toBe("fedramp_high");
-		});
-
-		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
-			const result = convertToWranglerConfig({ complianceRegion: "public" });
-			expect(result.compliance_region).toBe("public");
-		});
-
 		it("passes placement through unchanged", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				placement: { mode: "smart", hint: "iad" },
 			});
 			expect(result.placement).toEqual({ mode: "smart", hint: "iad" });
@@ -55,6 +45,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps limits.cpuMs to limits.cpu_ms", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				limits: { cpuMs: 50, subrequests: 100 },
 			});
 			expect(result.limits).toEqual({ cpu_ms: 50, subrequests: 100 });
@@ -62,6 +53,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("converts observability camelCase to snake_case", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				observability: {
 					enabled: true,
 					headSamplingRate: 0.5,
@@ -101,12 +93,23 @@ describe("convertToWranglerConfig", () => {
 
 		it("passes cache through unchanged", ({ expect }) => {
 			expect(
-				convertToWranglerConfig({ cache: { enabled: true } }).cache
+				convertToWranglerConfig({ ...baseConfig, cache: { enabled: true } })
+					.cache
 			).toEqual({ enabled: true });
+		});
+
+		it("maps cross version cache to wrangler config", ({ expect }) => {
+			expect(
+				convertToWranglerConfig({
+					...baseConfig,
+					cache: { enabled: false, crossVersionCache: true },
+				}).cache
+			).toEqual({ enabled: false, cross_version_cache: true });
 		});
 
 		it("maps unsafe.metadata directly", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				unsafe: { metadata: { foo: "bar" } },
 			});
 			expect(result.unsafe).toEqual({ metadata: { foo: "bar" } });
@@ -114,6 +117,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps unsafe.capnp basePath variant to snake_case", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				unsafe: {
 					capnp: {
 						basePath: "/schemas",
@@ -133,6 +137,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				unsafe: { capnp: { compiledSchema: "compiled-blob" } },
 			});
 			expect(result.unsafe).toEqual({
@@ -146,6 +151,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					MY_AI: { type: "ai" },
 					MY_BROWSER: { type: "browser" },
@@ -169,6 +175,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { MY_AI: { type: "ai", remote: true } },
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI", remote: true });
@@ -176,6 +183,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("includes the remote flag on web-search", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { MY_WS: { type: "web-search", remote: true } },
 			});
 			expect(result.websearch).toEqual({
@@ -185,9 +193,27 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 
+	it("creates draft provisionable bindings with the binding factories", ({
+		expect,
+	}) => {
+		const result = convertToWranglerConfig({
+			...baseConfig,
+			env: {
+				QUEUE: bindings.queue(),
+				DISPATCH: bindings.dispatchNamespace(),
+				FLAGS: bindings.flagship(),
+			},
+		});
+
+		expect(result.queues?.producers).toEqual([{ binding: "QUEUE" }]);
+		expect(result.dispatch_namespaces).toEqual([{ binding: "DISPATCH" }]);
+		expect(result.flagship).toEqual([{ binding: "FLAGS" }]);
+	});
+
 	describe("array bindings", () => {
 		it("maps kv with id", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { MY_KV: { type: "kv", id: "abc", remote: true } },
 			});
 			expect(result.kv_namespaces).toEqual([
@@ -197,6 +223,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps multiple kv bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					KV_1: { type: "kv" },
 					KV_2: { type: "kv", id: "abc" },
@@ -210,6 +237,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps d1 with id and name", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					MY_DB: { type: "d1", id: "db-id", name: "db-name" },
 				},
@@ -221,6 +249,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps r2 with name and jurisdiction", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					MY_R2: { type: "r2", name: "my-bucket", jurisdiction: "eu" },
 				},
@@ -232,6 +261,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps vectorize.name to index_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { MY_VEC: { type: "vectorize", name: "my-index" } },
 			});
 			expect(result.vectorize).toEqual([
@@ -241,6 +271,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps mtlsCertificate.id to certificate_id", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { MY_MTLS: { type: "mtls-certificate", id: "cert-1" } },
 			});
 			expect(result.mtls_certificates).toEqual([
@@ -252,6 +283,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					HD: {
 						type: "hyperdrive",
@@ -271,6 +303,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps pipeline.name to stream", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { MY_PIPE: { type: "pipeline", name: "pipe-1" } },
 			});
 			expect(result.pipelines).toEqual([
@@ -280,13 +313,23 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps flagship.id to app_id", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { F: { type: "flagship", id: "app-1" } },
 			});
 			expect(result.flagship).toEqual([{ binding: "F", app_id: "app-1" }]);
 		});
 
+		it("preserves a draft flagship binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { F: { type: "flagship" } },
+			});
+			expect(result.flagship).toEqual([{ binding: "F" }]);
+		});
+
 		it("maps ai-search.name to instance_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { S: { type: "ai-search", name: "inst-1" } },
 			});
 			expect(result.ai_search).toEqual([
@@ -296,6 +339,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps ai-search-namespace.namespace to namespace", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { N: { type: "ai-search-namespace", namespace: "ns-1" } },
 			});
 			expect(result.ai_search_namespaces).toEqual([
@@ -305,6 +349,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps agent-memory bindings with namespace", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					MEM: { type: "agent-memory", namespace: "ns-1", remote: true },
 				},
@@ -316,6 +361,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps multiple agent-memory bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					MEM_1: { type: "agent-memory", namespace: "ns-1" },
 					MEM_2: { type: "agent-memory", namespace: "ns-2" },
@@ -329,6 +375,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps analytics-engine-dataset.name to dataset", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { AE: { type: "analytics-engine-dataset", name: "ds-1" } },
 			});
 			expect(result.analytics_engine_datasets).toEqual([
@@ -338,6 +385,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps artifacts.namespace", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { A: { type: "artifacts", namespace: "ns-1" } },
 			});
 			expect(result.artifacts).toEqual([{ binding: "A", namespace: "ns-1" }]);
@@ -345,6 +393,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps dispatch-namespace with outbound", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					DN: {
 						type: "dispatch-namespace",
@@ -362,8 +411,17 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("preserves a draft dispatch namespace binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { DN: { type: "dispatch-namespace" } },
+			});
+			expect(result.dispatch_namespaces).toEqual([{ binding: "DN" }]);
+		});
+
 		it("maps secrets-store-secret to store_id + secret_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					SS: {
 						type: "secrets-store-secret",
@@ -379,6 +437,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps send-email with all address fields", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					EM: {
 						type: "send-email",
@@ -400,6 +459,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps vpc-service.id to service_id", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { V: { type: "vpc-service", id: "svc-1" } },
 			});
 			expect(result.vpc_services).toEqual([
@@ -409,6 +469,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps vpc-network with tunnelId", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { V: { type: "vpc-network", tunnelId: "tun-1" } },
 			});
 			expect(result.vpc_networks).toEqual([
@@ -418,6 +479,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps vpc-network with networkId", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { V: { type: "vpc-network", networkId: "net-1" } },
 			});
 			expect(result.vpc_networks).toEqual([
@@ -427,6 +489,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps worker-loader to a worker_loaders entry", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { WL: { type: "worker-loader" } },
 			});
 			expect(result.worker_loaders).toEqual([{ binding: "WL" }]);
@@ -436,6 +499,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					RL: {
 						type: "rate-limit",
@@ -455,6 +519,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps worker binding to a services entry", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					W: {
 						type: "worker",
@@ -478,6 +543,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps queue binding to queues.producers", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					Q: { type: "queue", name: "q-1", deliveryDelay: 5 },
 				},
@@ -487,10 +553,19 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("preserves a draft queue binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: { Q: { type: "queue" } },
+			});
+			expect(result.queues).toEqual({ producers: [{ binding: "Q" }] });
+		});
+
 		it("maps durable-object binding to durable_objects.bindings", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					DO: {
 						type: "durable-object",
@@ -508,6 +583,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps logfwdr binding to logfwdr.bindings", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { LF: { type: "logfwdr", destination: "dest-1" } },
 			});
 			expect(result.logfwdr).toEqual({
@@ -517,6 +593,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps unsafe binding with all fields", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					U: {
 						type: "unsafe:my-custom",
@@ -545,6 +622,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					CFG: { type: "json", value: { debug: true } },
 					GREETING: { type: "text", value: "hello" },
@@ -560,6 +638,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("collects secret bindings into secrets.required", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: {
 					A: { type: "secret" },
 					B: { type: "secret" },
@@ -570,34 +649,213 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("exports", () => {
-		it("throws when sqlite durable-object exports are present", ({
+		it("converts a sqlite durable-object export to the wrangler shape (no `state` when default)", ({
 			expect,
 		}) => {
-			expect(() =>
-				convertToWranglerConfig({
-					exports: {
-						MyDO: { type: "durable-object", storage: "sqlite" },
-					},
-				})
-			).toThrow(/Durable Object exports/);
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: { type: "durable-object", storage: "sqlite" },
+			});
 		});
 
-		it("throws when legacy-kv durable-object exports are present", ({
+		it("passes a legacy-kv storage value through to the wrangler shape", ({
 			expect,
 		}) => {
-			expect(() =>
-				convertToWranglerConfig({
-					exports: {
-						LegacyDO: { type: "durable-object", storage: "legacy-kv" },
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					LegacyDO: { type: "durable-object", storage: "legacy-kv" },
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				LegacyDO: { type: "durable-object", storage: "legacy-kv" },
+			});
+		});
+
+		it('treats an explicit `state: "created"` like the default and omits it on the wire', ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyDO: {
+						type: "durable-object",
+						state: "created",
+						storage: "sqlite",
 					},
-				})
-			).toThrow(/Durable Object exports/);
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: { type: "durable-object", storage: "sqlite" },
+			});
+		});
+
+		it("converts a deleted tombstone to the (type, state) wrangler shape", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					OldClass: { type: "durable-object", state: "deleted" },
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				OldClass: { type: "durable-object", state: "deleted" },
+			});
+		});
+
+		it("converts a renamed tombstone (camelCase `renamedTo` -> snake_case `renamed_to`)", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					OldName: {
+						type: "durable-object",
+						state: "renamed",
+						renamedTo: "NewName",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				OldName: {
+					type: "durable-object",
+					state: "renamed",
+					renamed_to: "NewName",
+				},
+			});
+		});
+
+		it("converts a transferred tombstone (camelCase `transferredTo` -> snake_case `transferred_to`)", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Movee: {
+						type: "durable-object",
+						state: "transferred",
+						transferredTo: "target-worker",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Movee: {
+					type: "durable-object",
+					state: "transferred",
+					transferred_to: "target-worker",
+				},
+			});
+		});
+
+		it("converts an expecting-transfer entry (camelCase `transferFrom` -> snake_case `transfer_from`)", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Incoming: {
+						type: "durable-object",
+						state: "expecting-transfer",
+						storage: "sqlite",
+						transferFrom: "source-worker",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Incoming: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transfer_from: "source-worker",
+				},
+			});
+		});
+
+		it("passes worker export cache config through", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					default: exportConfig.worker({ cache: { enabled: false } }),
+					Admin: exportConfig.worker({ cache: { enabled: true } }),
+				},
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				default: { type: "worker", cache: { enabled: false } },
+				Admin: { type: "worker", cache: { enabled: true } },
+			});
+		});
+
+		it("passes mixed Durable Object and worker exports through", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Counter: exportConfig.durableObject({ storage: "sqlite" }),
+					Admin: exportConfig.worker({ cache: { enabled: true } }),
+				},
+			});
+
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Counter: { type: "durable-object", storage: "sqlite" },
+				Admin: { type: "worker", cache: { enabled: true } },
+			});
+		});
+
+		it("emits no exports key when the map is empty", ({ expect }) => {
+			const result = convertToWranglerConfig({ ...baseConfig, exports: {} });
+			expect("exports" in (result as object)).toBe(false);
+		});
+
+		it("throws when an export has an unknown type", ({ expect }) => {
+			const config = {
+				...baseConfig,
+				exports: {
+					FutureExport: { type: "workflow" },
+				},
+			} as unknown as Parameters<typeof convertToWranglerConfig>[0];
+
+			expect(() => convertToWranglerConfig(config)).toThrow(
+				/Unknown export types found: - FutureExport : workflow/
+			);
 		});
 	});
 
 	describe("triggers", () => {
+		it("maps email triggers to addresses", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{
+						type: "email",
+						addresses: ["support@example.com", "*@example.com"],
+					},
+				],
+			});
+			expect(result.addresses).toEqual([
+				"support@example.com",
+				"*@example.com",
+			]);
+		});
+
+		it("preserves empty email trigger addresses", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "email", addresses: [] }],
+			});
+			expect(result.addresses).toEqual([]);
+		});
+
 		it("maps scheduled triggers to triggers.crons", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				triggers: [
 					{ type: "scheduled", schedule: "0 * * * *" },
 					{ type: "scheduled", schedule: "*/5 * * * *" },
@@ -606,10 +864,12 @@ describe("convertToWranglerConfig", () => {
 			expect(result.triggers).toEqual({
 				crons: ["0 * * * *", "*/5 * * * *"],
 			});
+			expect(result.addresses).toBeUndefined();
 		});
 
 		it("maps fetch trigger with dot-zone to zone_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				triggers: [
 					{ type: "fetch", pattern: "example.com/*", zone: "example.com" },
 				],
@@ -621,6 +881,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps fetch trigger with non-dot zone to zone_id", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				triggers: [
 					{
 						type: "fetch",
@@ -636,6 +897,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps fetch trigger without zone to pattern only", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				triggers: [{ type: "fetch", pattern: "*/api/*" }],
 			});
 			expect(result.routes).toEqual(["*/api/*"]);
@@ -645,6 +907,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				triggers: [
 					{
 						type: "queue",
@@ -679,6 +942,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { Q: { type: "queue", name: "p-queue" } },
 				triggers: [{ type: "queue", name: "c-queue" }],
 			});
@@ -691,7 +955,10 @@ describe("convertToWranglerConfig", () => {
 
 	describe("domains", () => {
 		it("converts each domain to a custom_domain route", ({ expect }) => {
-			const result = convertToWranglerConfig({ domains: ["a.com", "b.com"] });
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				domains: ["a.com", "b.com"],
+			});
 			expect(result.routes).toEqual([
 				{ pattern: "a.com", custom_domain: true },
 				{ pattern: "b.com", custom_domain: true },
@@ -700,6 +967,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("appends fetch-trigger routes after domain routes", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				triggers: [{ type: "fetch", pattern: "x.com/*", zone: "x.com" }],
 				domains: ["y.com"],
 			});
@@ -713,6 +981,7 @@ describe("convertToWranglerConfig", () => {
 	describe("assets", () => {
 		it("converts the top-level assets block to snake_case", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				assets: {
 					htmlHandling: "none",
 					notFoundHandling: "404-page",
@@ -730,6 +999,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				env: { ASSETS: { type: "assets" } },
 			});
 			expect(result.assets).toEqual({ binding: "ASSETS" });
@@ -739,6 +1009,7 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				assets: { htmlHandling: "none" },
 				env: { ASSETS: { type: "assets" } },
 			});
@@ -752,6 +1023,7 @@ describe("convertToWranglerConfig", () => {
 	describe("tail consumers", () => {
 		it("maps non-streaming consumers to tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				tailConsumers: [{ workerName: "tail-worker" }],
 			});
 			expect(result.tail_consumers).toEqual([{ service: "tail-worker" }]);
@@ -760,6 +1032,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("maps streaming consumers to streaming_tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				tailConsumers: [{ workerName: "stream-worker", streaming: true }],
 			});
 			expect(result.streaming_tail_consumers).toEqual([
@@ -770,6 +1043,7 @@ describe("convertToWranglerConfig", () => {
 
 		it("splits a mixed list of consumers into the two arrays", ({ expect }) => {
 			const result = convertToWranglerConfig({
+				...baseConfig,
 				tailConsumers: [
 					{ workerName: "a" },
 					{ workerName: "b", streaming: true },
@@ -781,6 +1055,48 @@ describe("convertToWranglerConfig", () => {
 				{ service: "c" },
 			]);
 			expect(result.streaming_tail_consumers).toEqual([{ service: "b" }]);
+		});
+	});
+
+	describe("settings", () => {
+		it("maps accountId to account_id", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				accountId: "acc-123",
+			});
+			expect(result.account_id).toBe("acc-123");
+		});
+
+		it("maps complianceRegion: 'fedramp-high' to 'fedramp_high'", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "fedramp-high",
+			});
+			expect(result.compliance_region).toBe("fedramp_high");
+		});
+
+		it("passes complianceRegion: 'public' through unchanged", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, {
+				type: "settings",
+				complianceRegion: "public",
+			});
+			expect(result.compliance_region).toBe("public");
+		});
+
+		it("sets no settings fields when none are provided", ({ expect }) => {
+			const result = convertToWranglerConfig(baseConfig, { type: "settings" });
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
+		});
+
+		it("sets no settings fields when settings config is omitted", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig);
+			expect(result.account_id).toBeUndefined();
+			expect(result.compliance_region).toBeUndefined();
 		});
 	});
 });

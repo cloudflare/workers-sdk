@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import nodePath from "node:path";
-import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 
 export const USER_ID_CACHE_PATH = "user-id.json";
 
@@ -43,7 +43,7 @@ export function readMetricsConfig(): MetricsConfigFile {
  * Get the path to the metrics config file.
  */
 function getMetricsConfigPath(): string {
-	return nodePath.resolve(getGlobalWranglerConfigPath(), "metrics.json");
+	return nodePath.resolve(getGlobalConfigPath(), "metrics.json");
 }
 
 /**

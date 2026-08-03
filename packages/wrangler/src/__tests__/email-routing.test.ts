@@ -69,14 +69,13 @@ const mockAddress = {
 };
 
 const mockSubdomain = {
-	email_sending_enabled: true,
+	enabled: true,
 	name: "sub.example.com",
 	tag: "aabbccdd11223344aabbccdd11223344",
 	created: "2024-01-01T00:00:00Z",
-	email_sending_dkim_selector: "cf-bounce",
-	email_sending_return_path_domain: "cf-bounce.sub.example.com",
-	enabled: true,
+	dkim_selector: "cf-bounce",
 	modified: "2024-01-02T00:00:00Z",
+	return_path_domain: "cf-bounce.sub.example.com",
 };
 
 const mockSendingDnsRecords = [
@@ -743,23 +742,46 @@ describe("email sending commands", () => {
 	// --- list ---
 
 	describe("list", () => {
-		it("should list zones with email sending", async ({ expect }) => {
+		it("should list all subdomains in the account", async ({ expect }) => {
 			mockListEmailSendingZones([mockSettings]);
+			mockListSendingSubdomainsForZone("75610dab9e69410a82cf7e400a09ecec", [
+				mockSubdomain,
+			]);
 
 			await runWrangler("email sending list");
 
-			expect(std.out).toContain("example.com");
+			expect(std.out).toContain("sub.example.com");
+			expect(std.out).toContain("aabbccdd11223344aabbccdd11223344");
 			expect(std.out).toContain("yes");
 		});
 
-		it("should handle no zones", async ({ expect }) => {
-			mockListEmailSendingZones([]);
+		it("should handle no subdomains in the account", async ({ expect }) => {
+			mockListEmailSendingZones([mockSettings]);
+			mockListSendingSubdomainsForZone("75610dab9e69410a82cf7e400a09ecec", []);
 
 			await runWrangler("email sending list");
 
-			expect(std.out).toContain(
-				"No zones found with Email Sending in this account."
-			);
+			expect(std.out).toContain("No sending subdomains found in this account.");
+		});
+
+		it("should list subdomains for a domain", async ({ expect }) => {
+			mockZoneLookup("example.com", "zone-id-1");
+			mockListSendingSubdomains([mockSubdomain]);
+
+			await runWrangler("email sending list example.com");
+
+			expect(std.out).toContain("sub.example.com");
+			expect(std.out).toContain("aabbccdd11223344aabbccdd11223344");
+			expect(std.out).toContain("yes");
+		});
+
+		it("should handle no subdomains for a domain", async ({ expect }) => {
+			mockZoneLookup("example.com", "zone-id-1");
+			mockListSendingSubdomains([]);
+
+			await runWrangler("email sending list example.com");
+
+			expect(std.out).toContain("No sending subdomains found for this domain.");
 		});
 	});
 
@@ -768,13 +790,24 @@ describe("email sending commands", () => {
 	describe("settings", () => {
 		it("should get sending settings", async ({ expect }) => {
 			mockZoneLookup("example.com", "zone-id-1");
-			mockGetSendingSettings("zone-id-1");
+			mockListSendingSubdomains([{ ...mockSubdomain, name: "example.com" }]);
 
 			await runWrangler("email sending settings example.com");
 
 			expect(std.out).toContain("Email Sending for example.com");
-			expect(std.out).toContain("Enabled:  true");
-			expect(std.out).toContain("sub.example.com");
+			expect(std.out).toContain("Enabled:            true");
+			expect(std.out).toContain("cf-bounce");
+		});
+
+		it("should error when the domain has no sending subdomain", async ({
+			expect,
+		}) => {
+			mockZoneLookup("example.com", "zone-id-1");
+			mockListSendingSubdomains([]);
+
+			await expect(
+				runWrangler("email sending settings example.com")
+			).rejects.toThrow("No sending subdomain found for `example.com`");
 		});
 	});
 
@@ -783,7 +816,7 @@ describe("email sending commands", () => {
 	describe("enable", () => {
 		it("should enable sending for a zone", async ({ expect }) => {
 			mockZoneLookup("example.com", "zone-id-1");
-			mockEnableSending("zone-id-1");
+			mockCreateSendingSubdomain();
 
 			await runWrangler("email sending enable example.com");
 
@@ -792,67 +825,60 @@ describe("email sending commands", () => {
 
 		it("should enable sending for a subdomain", async ({ expect }) => {
 			mockZoneLookup("sub.example.com", "zone-id-1");
-			mockEnableSending("zone-id-1");
+			mockCreateSendingSubdomain();
 
 			await runWrangler("email sending enable sub.example.com");
 
 			expect(std.out).toContain("Email Sending enabled for sub.example.com");
 		});
 
-		it("should not send name for zone-level domain with --zone-id", async ({
+		it("should send the zone name for a zone-level domain with --zone-id", async ({
 			expect,
 		}) => {
 			mockZoneDetails("zone-id-1", "example.com");
-			const reqProm = mockEnableSendingCapture();
+			const reqProm = mockCreateSendingSubdomainCapture();
 
 			await runWrangler("email sending enable example.com --zone-id zone-id-1");
 
-			// Zone-level: body should be {} (no name)
-			await expect(reqProm).resolves.toMatchObject({});
-			const body = await reqProm;
-			expect(body).not.toHaveProperty("name");
+			await expect(reqProm).resolves.toMatchObject({ name: "example.com" });
 		});
 
 		it("should send name for subdomain with --zone-id", async ({ expect }) => {
 			mockZoneDetails("zone-id-1", "example.com");
-			const reqProm = mockEnableSendingCapture();
+			const reqProm = mockCreateSendingSubdomainCapture();
 
 			await runWrangler(
 				"email sending enable sub.example.com --zone-id zone-id-1"
 			);
 
-			// Subdomain: body should have { name: "sub.example.com" }
 			await expect(reqProm).resolves.toMatchObject({
 				name: "sub.example.com",
 			});
 		});
 
-		it("should correctly handle multi-label TLD with --zone-id", async ({
+		it("should send the zone name for multi-label TLD with --zone-id", async ({
 			expect,
 		}) => {
 			mockZoneDetails("zone-id-1", "example.co.uk");
-			const reqProm = mockEnableSendingCapture();
+			const reqProm = mockCreateSendingSubdomainCapture();
 
 			await runWrangler(
 				"email sending enable example.co.uk --zone-id zone-id-1"
 			);
 
-			// example.co.uk is the zone itself, not a subdomain
-			const body = await reqProm;
-			expect(body).not.toHaveProperty("name");
+			await expect(reqProm).resolves.toMatchObject({ name: "example.co.uk" });
 		});
 
-		it("should detect subdomain of multi-label TLD with --zone-id", async ({
+		it("should send subdomain of multi-label TLD with --zone-id", async ({
 			expect,
 		}) => {
 			mockZoneDetails("zone-id-1", "example.co.uk");
-			const reqProm = mockEnableSendingCapture();
+			const reqProm = mockCreateSendingSubdomainCapture();
 
 			await runWrangler(
 				"email sending enable notifications.example.co.uk --zone-id zone-id-1"
 			);
 
-			// notifications.example.co.uk is a subdomain of example.co.uk
 			await expect(reqProm).resolves.toMatchObject({
 				name: "notifications.example.co.uk",
 			});
@@ -860,52 +886,54 @@ describe("email sending commands", () => {
 	});
 
 	describe("disable", () => {
-		it("should disable sending for a zone", async ({ expect }) => {
+		it("should disable sending for a domain", async ({ expect }) => {
 			mockConfirm({
 				text: "Are you sure you want to disable Email Sending for example.com?",
 				result: true,
 			});
 			mockZoneLookup("example.com", "zone-id-1");
-			mockDisableSending("zone-id-1");
+			mockListSendingSubdomains([{ ...mockSubdomain, name: "example.com" }]);
+			const reqProm = mockDeleteSendingSubdomainCapture();
 
 			await runWrangler("email sending disable example.com");
 
+			await expect(reqProm).resolves.toBe("aabbccdd11223344aabbccdd11223344");
 			expect(std.out).toContain("Email Sending disabled for example.com");
 		});
 
-		it("should not send name for zone-level domain with --zone-id", async ({
+		it("should delete the matching subdomain with --zone-id", async ({
 			expect,
 		}) => {
-			mockConfirm({
-				text: "Are you sure you want to disable Email Sending for example.com?",
-				result: true,
-			});
-			mockZoneDetails("zone-id-1", "example.com");
-			const reqProm = mockDisableSendingCapture();
-
-			await runWrangler(
-				"email sending disable example.com --zone-id zone-id-1"
-			);
-
-			const body = await reqProm;
-			expect(body).not.toHaveProperty("name");
-		});
-
-		it("should send name for subdomain with --zone-id", async ({ expect }) => {
 			mockConfirm({
 				text: "Are you sure you want to disable Email Sending for sub.example.com?",
 				result: true,
 			});
 			mockZoneDetails("zone-id-1", "example.com");
-			const reqProm = mockDisableSendingCapture();
+			mockListSendingSubdomains([mockSubdomain]);
+			const reqProm = mockDeleteSendingSubdomainCapture();
 
 			await runWrangler(
 				"email sending disable sub.example.com --zone-id zone-id-1"
 			);
 
-			await expect(reqProm).resolves.toMatchObject({
-				name: "sub.example.com",
+			await expect(reqProm).resolves.toBe("aabbccdd11223344aabbccdd11223344");
+		});
+
+		it("should error when the domain has no sending subdomain", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: "Are you sure you want to disable Email Sending for missing.example.com?",
+				result: true,
 			});
+			mockZoneDetails("zone-id-1", "example.com");
+			mockListSendingSubdomains([mockSubdomain]);
+
+			await expect(
+				runWrangler(
+					"email sending disable missing.example.com --zone-id zone-id-1"
+				)
+			).rejects.toThrow("No sending subdomain found for `missing.example.com`");
 		});
 	});
 
@@ -914,7 +942,7 @@ describe("email sending commands", () => {
 	describe("dns get", () => {
 		it("should show sending dns records", async ({ expect }) => {
 			mockZoneLookup("sub.example.com", "zone-id-1");
-			mockGetSendingSettings("zone-id-1");
+			mockListSendingSubdomains([mockSubdomain]);
 			mockGetSendingDns(
 				"zone-id-1",
 				"aabbccdd11223344aabbccdd11223344",
@@ -929,7 +957,7 @@ describe("email sending commands", () => {
 
 		it("should handle no dns records", async ({ expect }) => {
 			mockZoneLookup("sub.example.com", "zone-id-1");
-			mockGetSendingSettings("zone-id-1");
+			mockListSendingSubdomains([mockSubdomain]);
 			mockGetSendingDns("zone-id-1", "aabbccdd11223344aabbccdd11223344", []);
 
 			await runWrangler("email sending dns get sub.example.com");
@@ -939,11 +967,16 @@ describe("email sending commands", () => {
 			);
 		});
 
-		it("should use zone-level dns endpoint for zone domain with --zone-id", async ({
+		it("should get dns records for a zone-apex domain with --zone-id", async ({
 			expect,
 		}) => {
 			mockZoneDetails("zone-id-1", "example.com");
-			mockGetSendingZoneDns(mockSendingDnsRecords);
+			mockListSendingSubdomains([{ ...mockSubdomain, name: "example.com" }]);
+			mockGetSendingDns(
+				"zone-id-1",
+				"aabbccdd11223344aabbccdd11223344",
+				mockSendingDnsRecords
+			);
 
 			await runWrangler(
 				"email sending dns get example.com --zone-id zone-id-1"
@@ -953,11 +986,11 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("v=spf1");
 		});
 
-		it("should use subdomain dns endpoint for subdomain with --zone-id", async ({
+		it("should get dns records for a subdomain with --zone-id", async ({
 			expect,
 		}) => {
 			mockZoneDetails("zone-id-1", "example.com");
-			mockGetSendingSettings("zone-id-1");
+			mockListSendingSubdomains([mockSubdomain]);
 			mockGetSendingDns(
 				"zone-id-1",
 				"aabbccdd11223344aabbccdd11223344",
@@ -1469,15 +1502,41 @@ function mockListEmailSendingZones(settings: (typeof mockSettings)[]) {
 	);
 }
 
-function mockEnableSending(_zoneId: string) {
+function mockListSendingSubdomains(subdomains: (typeof mockSubdomain)[]) {
+	msw.use(
+		http.get(
+			"*/zones/:zoneId/email/sending/subdomains",
+			() => {
+				return HttpResponse.json(createFetchResult(subdomains, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockListSendingSubdomainsForZone(
+	zoneId: string,
+	subdomains: (typeof mockSubdomain)[]
+) {
+	msw.use(
+		http.get("*/zones/:zoneId/email/sending/subdomains", ({ params }) => {
+			if (params.zoneId !== zoneId) {
+				return HttpResponse.json(createFetchResult([], true));
+			}
+			return HttpResponse.json(createFetchResult(subdomains, true));
+		})
+	);
+}
+
+function mockCreateSendingSubdomain() {
 	msw.use(
 		http.post(
-			"*/zones/:zoneId/email/sending/enable",
+			"*/zones/:zoneId/email/sending/subdomains",
 			async ({ request }) => {
 				const body = (await request.json()) as Record<string, unknown>;
 				const name = (body.name as string) || "example.com";
 				return HttpResponse.json(
-					createFetchResult({ ...mockSettings, name, status: "ready" }, true)
+					createFetchResult({ ...mockSubdomain, name, enabled: true }, true)
 				);
 			},
 			{ once: true }
@@ -1485,17 +1544,17 @@ function mockEnableSending(_zoneId: string) {
 	);
 }
 
-function mockEnableSendingCapture(): Promise<Record<string, unknown>> {
+function mockCreateSendingSubdomainCapture(): Promise<Record<string, unknown>> {
 	return new Promise((resolve) => {
 		msw.use(
 			http.post(
-				"*/zones/:zoneId/email/sending/enable",
+				"*/zones/:zoneId/email/sending/subdomains",
 				async ({ request }) => {
 					const body = (await request.json()) as Record<string, unknown>;
 					resolve(body);
 					const name = (body.name as string) || "example.com";
 					return HttpResponse.json(
-						createFetchResult({ ...mockSettings, name, status: "ready" }, true)
+						createFetchResult({ ...mockSubdomain, name, enabled: true }, true)
 					);
 				},
 				{ once: true }
@@ -1504,77 +1563,19 @@ function mockEnableSendingCapture(): Promise<Record<string, unknown>> {
 	});
 }
 
-function mockDisableSending(_zoneId: string) {
-	msw.use(
-		http.post(
-			"*/zones/:zoneId/email/sending/disable",
-			async ({ request }) => {
-				const body = (await request.json()) as Record<string, unknown>;
-				const name = (body.name as string) || "example.com";
-				return HttpResponse.json(
-					createFetchResult(
-						{ ...mockSettings, name, enabled: false, status: "unconfigured" },
-						true
-					)
-				);
-			},
-			{ once: true }
-		)
-	);
-}
-
-function mockDisableSendingCapture(): Promise<Record<string, unknown>> {
+function mockDeleteSendingSubdomainCapture(): Promise<string> {
 	return new Promise((resolve) => {
 		msw.use(
-			http.post(
-				"*/zones/:zoneId/email/sending/disable",
-				async ({ request }) => {
-					const body = (await request.json()) as Record<string, unknown>;
-					resolve(body);
-					const name = (body.name as string) || "example.com";
-					return HttpResponse.json(
-						createFetchResult(
-							{ ...mockSettings, name, enabled: false, status: "unconfigured" },
-							true
-						)
-					);
+			http.delete(
+				"*/zones/:zoneId/email/sending/subdomains/:subdomainId",
+				({ params }) => {
+					resolve(params.subdomainId as string);
+					return HttpResponse.json(createFetchResult(null, true));
 				},
 				{ once: true }
 			)
 		);
 	});
-}
-
-function mockGetSendingZoneDns(records: typeof mockSendingDnsRecords) {
-	msw.use(
-		http.get(
-			"*/zones/:zoneId/email/sending/dns",
-			() => {
-				return HttpResponse.json(createFetchResult(records, true));
-			},
-			{ once: true }
-		)
-	);
-}
-
-function mockGetSendingSettings(_zoneId: string) {
-	msw.use(
-		http.get(
-			"*/zones/:zoneId/email/sending",
-			() => {
-				return HttpResponse.json(
-					createFetchResult(
-						{
-							...mockSettings,
-							subdomains: [mockSubdomain],
-						},
-						true
-					)
-				);
-			},
-			{ once: true }
-		)
-	);
 }
 
 function mockGetSendingDns(

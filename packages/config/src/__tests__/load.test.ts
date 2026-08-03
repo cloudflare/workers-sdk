@@ -3,26 +3,35 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { ConfigSchema } from "../schema";
+import { InputWorkerSchema } from "../schema";
 
 // Vitest's module runner intercepts dynamic imports before Node's
 // `module.registerHooks` can see them, so we cannot exercise `loadConfig`
 // inside a test directly. Instead, we run a small Node program in a
 // subprocess that calls `loadConfig`, serialises the result as JSON, and
 // prints it to stdout for the test to consume.
-function runLoadConfigInSubprocess(args: { cwd: string; configPath: string }): {
+function runLoadConfigInSubprocess(args: {
+	cwd: string;
+	configPath: string;
+	include?: string[];
+}): {
 	config: unknown;
+	exports: Record<string, unknown>;
 	dependencies: string[];
 } {
 	// Use a file:// URL rather than a raw filesystem path so the embedded
 	// `import` specifier is valid on Windows (where absolute paths like
 	// `C:\...` are not accepted as ESM specifiers).
 	const sourceEntry = pathToFileURL(path.resolve(__dirname, "../load.ts")).href;
+	const options = args.include
+		? `, { include: ${JSON.stringify(args.include)} }`
+		: "";
 	const script = `
 		import { loadConfig } from ${JSON.stringify(sourceEntry)};
-		const result = await loadConfig(${JSON.stringify(args.configPath)});
+		const result = await loadConfig(${JSON.stringify(args.configPath)}${options});
 		const serialisable = {
-			config: result.config,
+			config: result.exports.default,
+			exports: result.exports,
 			dependencies: [...result.dependencies],
 		};
 		process.stdout.write(JSON.stringify(serialisable, (_, v) => {
@@ -65,7 +74,44 @@ describe("loadConfig", () => {
 		expect(result.config).toEqual({ name: "my-worker" });
 	});
 
-	it("passes cf-worker specifiers through verbatim without resolving or executing them", async ({
+	it("returns all named exports keyed by name", async ({ expect }) => {
+		await seed({
+			"cloudflare.config.ts": `
+				export default { type: "worker", name: "w" };
+				export const settings = { type: "settings", accountId: "acc-123" };
+			`,
+		});
+
+		const result = runLoadConfigInSubprocess({
+			cwd: process.cwd(),
+			configPath: "./cloudflare.config.ts",
+		});
+
+		expect(result.exports.default).toEqual({ type: "worker", name: "w" });
+		expect(result.exports.settings).toEqual({
+			type: "settings",
+			accountId: "acc-123",
+		});
+	});
+
+	it("filters exports by `include` before resolution", async ({ expect }) => {
+		await seed({
+			"cloudflare.config.ts": `
+				export default { type: "worker", name: "w" };
+				export const settings = { type: "settings" };
+			`,
+		});
+
+		const result = runLoadConfigInSubprocess({
+			cwd: process.cwd(),
+			configPath: "./cloudflare.config.ts",
+			include: ["settings"],
+		});
+
+		expect(Object.keys(result.exports)).toEqual(["settings"]);
+	});
+
+	it("anchors relative cf-worker specifiers to an absolute path without executing them", async ({
 		expect,
 	}) => {
 		await seed({
@@ -81,14 +127,41 @@ describe("loadConfig", () => {
 			configPath: "./cloudflare.config.ts",
 		});
 
+		// The relative specifier is anchored to the importing module and
+		// emitted as an absolute path, but the entrypoint is never loaded or
+		// executed.
 		expect(
 			(result.config as { entrypoint: { default: string } }).entrypoint
-		).toEqual({ default: "./src/index.ts" });
+		).toEqual({ default: path.resolve("src/index.ts") });
 		// The entrypoint is referenced for its specifier only; changes to
 		// its source must not trigger a config reload, so it is not tracked.
 		expect(result.dependencies).not.toContain(path.resolve("src/index.ts"));
 		// The config file itself is still tracked.
 		expect(result.dependencies).toContain(path.resolve("cloudflare.config.ts"));
+	});
+
+	it("anchors relative cf-worker specifiers to the importing module, not the top-level config", async ({
+		expect,
+	}) => {
+		await seed({
+			"nested/src/index.ts": `throw new Error("entrypoint must not be executed at config load time");`,
+			"nested/sub.config.ts": `
+				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+				export default { name: "w", entrypoint };
+			`,
+			"cloudflare.config.ts": `export { default } from "./nested/sub.config.ts";`,
+		});
+
+		const result = runLoadConfigInSubprocess({
+			cwd: process.cwd(),
+			configPath: "./cloudflare.config.ts",
+		});
+
+		// `./src/index.ts` is written in `nested/sub.config.ts`, so it must
+		// resolve relative to that file — not the top-level config file.
+		expect(
+			(result.config as { entrypoint: { default: string } }).entrypoint
+		).toEqual({ default: path.resolve("nested/src/index.ts") });
 	});
 
 	it("passes bare and virtual cf-worker specifiers through verbatim", async ({
@@ -118,14 +191,14 @@ describe("loadConfig", () => {
 		});
 	});
 
-	it("produces an entrypoint namespace that ConfigSchema.parse collapses to a string", async ({
+	it("produces an entrypoint namespace that InputWorkerSchema.parse collapses to a string", async ({
 		expect,
 	}) => {
 		await seed({
 			"src/index.ts": `// not executed`,
 			"cloudflare.config.ts": `
 				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
-				export default { name: "w", entrypoint };
+				export default { type: "worker", name: "worker", compatibilityDate: "2026-06-01", entrypoint };
 			`,
 		});
 
@@ -133,9 +206,9 @@ describe("loadConfig", () => {
 			cwd: process.cwd(),
 			configPath: "./cloudflare.config.ts",
 		});
-		const parsed = ConfigSchema.parse(result.config);
+		const parsed = InputWorkerSchema.parse(result.config);
 
-		expect(parsed.entrypoint).toBe("./src/index.ts");
+		expect(parsed.entrypoint).toBe(path.resolve("src/index.ts"));
 	});
 
 	it("reloads the config when the file changes between calls in the same process", async ({
@@ -155,8 +228,8 @@ describe("loadConfig", () => {
 			writeFileSync("./cloudflare.config.ts", 'export default { name: "second" };');
 			const second = await loadConfig("./cloudflare.config.ts");
 			process.stdout.write(JSON.stringify({
-				first: first.config,
-				second: second.config,
+				first: first.exports.default,
+				second: second.exports.default,
 			}));
 		`;
 		const sub = spawnSync(

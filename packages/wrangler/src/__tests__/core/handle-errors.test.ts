@@ -1,5 +1,11 @@
+import { APIError, ParseError } from "@cloudflare/workers-utils";
+import { Cloudflare } from "cloudflare";
 import { beforeEach, describe, it, vi } from "vitest";
-import { getErrorType, handleError } from "../../core/handle-errors";
+import {
+	getErrorType,
+	handleError,
+	isAuthenticationError,
+} from "../../core/handle-errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
 describe("getErrorType", () => {
@@ -256,6 +262,50 @@ describe("getErrorType", () => {
 		});
 	});
 
+	describe("Authentication errors", () => {
+		it("should return 'AuthenticationError' for code 10000 (expired/revoked token)", ({
+			expect,
+		}) => {
+			const error = new APIError({
+				text: "A request to the Cloudflare API failed.",
+				notes: [{ text: "Authentication error [code: 10000]" }],
+				status: 400,
+				telemetryMessage: false,
+			});
+			error.code = 10000;
+
+			expect(getErrorType(error)).toBe("AuthenticationError");
+		});
+
+		it("should return 'AuthenticationError' for code 9106 (invalid token)", ({
+			expect,
+		}) => {
+			const error = new APIError({
+				text: "A request to the Cloudflare API failed.",
+				notes: [{ text: "Authentication failed (status: 400) [code: 9106]" }],
+				status: 400,
+				telemetryMessage: false,
+			});
+			error.code = 9106;
+
+			expect(getErrorType(error)).toBe("AuthenticationError");
+		});
+
+		it("should NOT return 'AuthenticationError' for other API errors", ({
+			expect,
+		}) => {
+			const error = new APIError({
+				text: "A request to the Cloudflare API failed.",
+				notes: [{ text: "Some other error [code: 10063]" }],
+				status: 400,
+				telemetryMessage: false,
+			});
+			error.code = 10063;
+
+			expect(getErrorType(error)).not.toBe("AuthenticationError");
+		});
+	});
+
 	describe("Fallback behavior", () => {
 		it("should return constructor name for unknown Error types", ({
 			expect,
@@ -270,6 +320,78 @@ describe("getErrorType", () => {
 			expect(getErrorType(null)).toBe(undefined);
 			expect(getErrorType(undefined)).toBe(undefined);
 		});
+	});
+});
+
+describe("isAuthenticationError", () => {
+	it("should return true for APIError with code 10000", ({ expect }) => {
+		const error = new APIError({
+			text: "A request to the Cloudflare API failed.",
+			notes: [{ text: "Authentication error [code: 10000]" }],
+			status: 400,
+			telemetryMessage: false,
+		});
+		error.code = 10000;
+
+		expect(isAuthenticationError(error)).toBe(true);
+	});
+
+	it("should return true for APIError with code 9106", ({ expect }) => {
+		const error = new APIError({
+			text: "A request to the Cloudflare API failed.",
+			notes: [{ text: "Authentication failed (status: 400) [code: 9106]" }],
+			status: 400,
+			telemetryMessage: false,
+		});
+		error.code = 9106;
+
+		expect(isAuthenticationError(error)).toBe(true);
+	});
+
+	it("should return true for ParseError with code 10000", ({ expect }) => {
+		const error = new ParseError({
+			text: "Auth error",
+			telemetryMessage: false,
+		});
+		(error as unknown as { code: number }).code = 10000;
+
+		expect(isAuthenticationError(error)).toBe(true);
+	});
+
+	it("should return false for APIError with a non-auth code", ({ expect }) => {
+		const error = new APIError({
+			text: "A request to the Cloudflare API failed.",
+			notes: [{ text: "Some other error [code: 10063]" }],
+			status: 404,
+			telemetryMessage: false,
+		});
+		error.code = 10063;
+
+		expect(isAuthenticationError(error)).toBe(false);
+	});
+
+	it("should return false for APIError with no code", ({ expect }) => {
+		const error = new APIError({
+			text: "A request to the Cloudflare API failed.",
+			notes: [],
+			status: 500,
+			telemetryMessage: false,
+		});
+
+		expect(isAuthenticationError(error)).toBe(false);
+	});
+
+	it("should return false for a plain Error", ({ expect }) => {
+		const error = new Error("something went wrong");
+
+		expect(isAuthenticationError(error)).toBe(false);
+	});
+
+	it("should return false for non-Error values", ({ expect }) => {
+		expect(isAuthenticationError("string")).toBe(false);
+		expect(isAuthenticationError(null)).toBe(false);
+		expect(isAuthenticationError(undefined)).toBe(false);
+		expect(isAuthenticationError(10000)).toBe(false);
 	});
 });
 
@@ -691,6 +813,39 @@ describe("handleError", () => {
 
 			expect(std.err).toContain("A file or directory could not be found");
 			expect(std.err).toContain("Missing file or directory: .wrangler");
+		});
+	});
+
+	describe("Cloudflare SDK errors", () => {
+		it("should surface the Retry-After header from a 429 SDK error", async ({
+			expect,
+		}) => {
+			const error = new Cloudflare.APIError(
+				429,
+				{ errors: [{ message: "rate limited" }] },
+				"rate limited",
+				{ "retry-after": "42" }
+			);
+
+			await handleError(error, {}, []);
+
+			expect(std.err).toContain("Retry-After");
+			expect(std.err).toContain("42 second(s)");
+		});
+
+		it("should not add a Retry-After note when the header is absent", async ({
+			expect,
+		}) => {
+			const error = new Cloudflare.APIError(
+				500,
+				{ errors: [{ message: "server error" }] },
+				"server error",
+				{}
+			);
+
+			await handleError(error, {}, []);
+
+			expect(std.err).not.toContain("Retry-After");
 		});
 	});
 });

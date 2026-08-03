@@ -1,14 +1,9 @@
-import path from "node:path";
-import readline from "node:readline";
 import {
-	APIError,
-	configFileName,
-	FatalError,
-	parseJSON,
-	readFileSync,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { parse as dotenvParse } from "dotenv";
+	fetchSecrets,
+	isWorkerNotFoundError,
+	parseBulkInputToObject,
+} from "@cloudflare/deploy-helpers";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -16,11 +11,8 @@ import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { fetchSecrets } from "../utils/fetch-secrets";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
@@ -33,12 +25,10 @@ type SecretBindingUpload = {
 
 async function createDraftWorker({
 	config,
-	args,
 	accountId,
 	scriptName,
 }: {
 	config: Config;
-	args: { env?: string; name?: string };
 	accountId: string;
 	scriptName: string;
 }) {
@@ -55,9 +45,7 @@ async function createDraftWorker({
 	}
 	await fetchResult(
 		config,
-		useServiceEnvironments(config) && args.env
-			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
-			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
+		`/accounts/${accountId}/workers/scripts/${scriptName}`,
 		{
 			method: "PUT",
 			body: createWorkerUploadForm(
@@ -71,6 +59,7 @@ async function createDraftWorker({
 					},
 					modules: [],
 					migrations: undefined,
+					exports: undefined,
 					compatibility_date: undefined,
 					compatibility_flags: undefined,
 					keepVars: false, // this doesn't matter since it's a new script anyway
@@ -106,7 +95,9 @@ export const secretPutCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		key: {
@@ -120,11 +111,6 @@ export const secretPutCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -134,8 +120,6 @@ export const secretPutCommand = createCommand({
 				{ telemetryMessage: "secret put pages project" }
 			);
 		}
-
-		const isServiceEnv = Boolean(useServiceEnvironments(config) && args.env);
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
@@ -154,16 +138,10 @@ export const secretPutCommand = createCommand({
 				: await readFromStdin()
 		);
 
-		logger.log(
-			`🌀 Creating the secret for the Worker "${scriptName}" ${
-				isServiceEnv ? `(${args.env})` : ""
-			}`
-		);
+		logger.log(`🌀 Creating the secret for the Worker "${scriptName}"`);
 
 		async function submitSecret() {
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
+			const url = `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
 			try {
 				return await fetchResult(config, url, {
@@ -210,7 +188,6 @@ export const secretPutCommand = createCommand({
 				// create a draft worker and try again
 				const result = await createDraftWorker({
 					config,
-					args,
 					accountId,
 					scriptName,
 				});
@@ -236,7 +213,9 @@ export const secretDeleteCommand = createCommand({
 	},
 	positionalArgs: ["key"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		key: {
@@ -250,14 +229,8 @@ export const secretDeleteCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	async handler(args, { config }) {
-		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -278,20 +251,14 @@ export const secretDeleteCommand = createCommand({
 
 		if (
 			await confirm(
-				`Are you sure you want to permanently delete the secret ${
-					args.key
-				} on the Worker ${scriptName}${isServiceEnv ? ` (${args.env})` : ""}?`
+				`Are you sure you want to permanently delete the secret ${args.key} on the Worker ${scriptName}?`
 			)
 		) {
 			logger.log(
-				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}${
-					isServiceEnv ? ` (${args.env})` : ""
-				}`
+				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}`
 			);
 
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
+			const url = `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
 			await fetchResult(
 				config,
@@ -328,14 +295,11 @@ export const secretListCommand = createCommand({
 			choices: ["json", "pretty"],
 			describe: "The format to print the secrets in",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => args.format === "pretty",
+		suggestSkillsAfterHandler: (args) => args.format === "pretty",
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -354,10 +318,11 @@ export const secretListCommand = createCommand({
 			);
 		}
 
+		const accountId = await requireAuth(config);
 		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
 
 		try {
-			secrets = await fetchSecrets({ ...config, name: scriptName }, args.env);
+			secrets = await fetchSecrets(config, scriptName, accountId);
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				throw new UserError(
@@ -388,16 +353,9 @@ async function putBulkSecrets(
 	config: Config,
 	accountId: string,
 	scriptName: string,
-	environment: string | undefined,
-	content: Record<string, string | null>,
-	options: {
-		isServiceEnv?: boolean;
-	} = {}
+	content: Record<string, string | null>
 ): Promise<[unknown, Array<string>, Array<string>]> {
-	const isServiceEnv = options?.isServiceEnv;
-	const url = isServiceEnv
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${environment}/secrets-bulk`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets-bulk`;
+	const url = `/accounts/${accountId}/workers/scripts/${scriptName}/secrets-bulk`;
 	// Build the merge-patch body using JSON Merge Patch (RFC 7396) semantics:
 	// - Included secrets are created or updated
 	// - Omitted secrets are left unchanged
@@ -432,7 +390,9 @@ export const secretBulkCommand = createCommand({
 	},
 	positionalArgs: ["file"],
 	behaviour: {
+		supportTemporary: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		file: {
@@ -446,11 +406,6 @@ export const secretBulkCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -461,7 +416,6 @@ export const secretBulkCommand = createCommand({
 			);
 		}
 
-		const isServiceEnv = useServiceEnvironments(config) && !!args.env;
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			const error = new UserError(
@@ -474,11 +428,7 @@ export const secretBulkCommand = createCommand({
 
 		const accountId = await requireAuth(config);
 
-		logger.log(
-			`🌀 Processing the secrets for the Worker "${scriptName}" ${
-				isServiceEnv ? `(${args.env})` : ""
-			}`
-		);
+		logger.log(`🌀 Processing the secrets for the Worker "${scriptName}"`);
 
 		const result = await parseBulkInputToObject(args.file, true);
 
@@ -499,9 +449,7 @@ export const secretBulkCommand = createCommand({
 					config,
 					accountId,
 					scriptName,
-					args.env,
-					content,
-					{ isServiceEnv }
+					content
 				);
 			} catch (e) {
 				if (!isWorkerNotFoundError(e)) {
@@ -513,7 +461,6 @@ export const secretBulkCommand = createCommand({
 				// Worker doesn't exist yet — create a draft worker, then retry
 				const draftWorkerResult = await createDraftWorker({
 					config,
-					args,
 					accountId,
 					scriptName,
 				});
@@ -524,9 +471,7 @@ export const secretBulkCommand = createCommand({
 					config,
 					accountId,
 					scriptName,
-					args.env,
-					content,
-					{ isServiceEnv }
+					content
 				);
 			}
 		} catch (e) {
@@ -571,118 +516,12 @@ export const secretBulkCommand = createCommand({
 	},
 });
 
-export function validateFileSecrets(
-	content: unknown,
-	jsonFilePath: string
-): content is Record<string, string | null> {
-	if (content === null || typeof content !== "object") {
-		throw new FatalError(
-			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`,
-			{ telemetryMessage: "secret bulk file invalid contents" }
-		);
-	}
-	const entries = Object.entries(content);
-	for (const [key, value] of entries) {
-		if (value != null && typeof value !== "string") {
-			throw new FatalError(
-				`The value for "${key}" in "${jsonFilePath}" is not null or a "string" instead it is of type "${typeof value}"`,
-				{ telemetryMessage: "secret bulk file invalid value type" }
-			);
-		}
-	}
-	return true;
-}
-
-/** Error thrown when no input is provided to parseBulkInputToObject */
-export class NoInputError extends Error {
-	constructor() {
-		super("No input provided");
-		this.name = "NoInputError";
-	}
-}
-
-/** Result from parsing bulk secret input without nullable values, including metadata for analytics */
-export type BulkInputResult = {
-	content: Record<string, string>;
-	secretSource: "file" | "stdin";
-	secretFormat: "json" | "dotenv";
-};
-
-/** Result from parsing bulk secret input with nullable values, including metadata for analytics */
-export type BulkInputNullableResult = {
-	content: Record<string, string | null>;
-	secretSource: "file" | "stdin";
-	secretFormat: "json" | "dotenv";
-};
-
-/** Override for callers that need non-nullable */
-export async function parseBulkInputToObject(
-	input?: string,
-	includeNull?: false
-): Promise<BulkInputResult | undefined>;
-
-/** Override for callers that need nullable */
-export async function parseBulkInputToObject(
-	input?: string,
-	includeNull?: true
-): Promise<BulkInputNullableResult | undefined>;
-
-export async function parseBulkInputToObject(
-	input?: string,
-	includeNull: boolean = false
-): Promise<BulkInputResult | BulkInputNullableResult | undefined> {
-	let content: Record<string, string | null>;
-	let secretSource: "file" | "stdin";
-	let secretFormat: "json" | "dotenv";
-
-	if (input) {
-		secretSource = "file";
-		const jsonFilePath = path.resolve(input);
-		const fileContent = readFileSync(jsonFilePath);
-		try {
-			content = parseJSON(fileContent) as Record<string, string | null>;
-			secretFormat = "json";
-		} catch {
-			content = dotenvParse(fileContent);
-			secretFormat = "dotenv";
-			// dotenvParse does not error unless fileContent is undefined, no keys === error
-			if (Object.keys(content).length === 0) {
-				throw new UserError(`The contents of "${input}" is not valid.`, {
-					telemetryMessage: "secret bulk invalid input",
-				});
-			}
-		}
-		validateFileSecrets(content, input);
-		if (!includeNull) {
-			content = Object.fromEntries(
-				Object.entries(content).filter(
-					(entry): entry is [string, string] => entry[1] != null
-				)
-			);
-		}
-	} else {
-		secretSource = "stdin";
-		try {
-			const rl = readline.createInterface({ input: process.stdin });
-			const pipedInputLines: string[] = [];
-			for await (const line of rl) {
-				pipedInputLines.push(line);
-			}
-			const pipedInput = pipedInputLines.join("\n");
-			try {
-				content = parseJSON(pipedInput) as Record<string, string | null>;
-				secretFormat = "json";
-			} catch (e) {
-				content = dotenvParse(pipedInput);
-				secretFormat = "dotenv";
-				// dotenvParse does not error unless fileContent is undefined, no keys === error
-				if (Object.keys(content).length === 0) {
-					throw e;
-				}
-			}
-		} catch {
-			return;
-		}
-	}
-	return { content, secretSource, secretFormat };
-}
+export {
+	validateFileSecrets,
+	NoInputError,
+	parseBulkInputToObject,
+} from "@cloudflare/deploy-helpers";
+export type {
+	BulkInputResult,
+	BulkInputNullableResult,
+} from "@cloudflare/deploy-helpers";

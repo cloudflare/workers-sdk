@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import {
-	getGlobalWranglerConfigPath,
+	getGlobalConfigPath,
 	spawnCloudflared,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -168,7 +168,7 @@ export const tunnelRunCommand = createCommand({
 						`\n\nThe cloudflared binary could not be executed.\n` +
 						`This might be a permissions issue or the binary is corrupted.\n\n` +
 						`Try removing the cache and running again:\n` +
-						`  rm -rf ${join(getGlobalWranglerConfigPath(), "cloudflared")}\n` +
+						`  rm -rf ${join(getGlobalConfigPath(), "cloudflared")}\n` +
 						`  wrangler tunnel run ${tunnelId || "--token <token>"}`;
 				}
 

@@ -1,26 +1,27 @@
 /**
- * Reserved `/cdn-cgi/` paths for internal Miniflare endpoints.
- * These paths are reserved by Cloudflare's network and won't conflict with user routes.
+ * Reserved paths for internal Miniflare endpoints.
+ *
+ * Paths under `/cdn-cgi/local/` are reserved by Cloudflare's network
+ * and won't conflict with user routes. Paths under `/__cf_local/` live
+ * outside `/cdn-cgi/` so they remain reachable over tunnels.
  */
 export const CorePaths = {
 	/** Magic proxy used by getPlatformProxy */
-	PLATFORM_PROXY: "/cdn-cgi/platform-proxy",
+	PLATFORM_PROXY: "/cdn-cgi/local/platform-proxy",
 	/** Trigger scheduled event handlers */
-	SCHEDULED: "/cdn-cgi/handler/scheduled",
+	SCHEDULED: "/cdn-cgi/local/scheduled",
 	/** Trigger email event handlers */
-	EMAIL: "/cdn-cgi/handler/email",
-	/** Handler path prefix for validation */
-	HANDLER_PREFIX: "/cdn-cgi/handler/",
-	/** Live reload WebSocket endpoint */
-	LIVE_RELOAD: "/cdn-cgi/mf/reload",
+	EMAIL: "/cdn-cgi/local/email",
 	/** Local explorer UI and API */
-	EXPLORER: "/cdn-cgi/explorer",
-	/** Legacy way to trigger scheduled event handlers */
-	LEGACY_SCHEDULED: "/cdn-cgi/mf/scheduled",
-	/** Stream video serving endpoint */
-	STREAM_VIDEO: "/cdn-cgi/mf/stream",
-	/** Local image delivery endpoint for serving hosted images */
-	IMAGE_DELIVERY: "/cdn-cgi/mf/imagedelivery",
+	EXPLORER: "/cdn-cgi/local/explorer",
+	/** Stream video serving endpoint (outside /cdn-cgi/ for tunnel access) */
+	STREAM_VIDEO: "/__cf_local/stream",
+	/** Local image delivery endpoint (outside /cdn-cgi/ for tunnel access) */
+	IMAGE_DELIVERY: "/__cf_local/imagedelivery",
+	/** Public R2 bucket object serving endpoint */
+	R2_PUBLIC: "/cdn-cgi/local/r2/public",
+	/** S3-compatible API endpoint for local R2 buckets */
+	R2_S3: "/cdn-cgi/local/r2/s3",
 } as const;
 
 export const CoreHeaders = {
@@ -37,6 +38,13 @@ export const CoreHeaders = {
 	PROXY_SHARED_SECRET: "MF-Proxy-Shared-Secret",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
+	/**
+	 * The serialised error, URI-encoded. `workerd` drops response bodies for
+	 * `HEAD` requests, so the body alone cannot carry the error out of the user
+	 * Worker. Producers set this in addition to the body; consumers fall back to
+	 * it whenever the body is unavailable.
+	 */
+	ERROR_STACK_PAYLOAD: "MF-Experimental-Error-Stack-Payload",
 	ROUTE_OVERRIDE: "MF-Route-Override",
 	CF_BLOB: "MF-CF-Blob",
 	/** Used by the Vite plugin to pass through the original `sec-fetch-mode` header */
@@ -58,12 +66,14 @@ export const CoreBindings = {
 	SERVICE_USER_ROUTE_PREFIX: "MINIFLARE_USER_ROUTE_",
 	SERVICE_USER_FALLBACK: "MINIFLARE_USER_FALLBACK",
 	TEXT_CUSTOM_SERVICE: "MINIFLARE_CUSTOM_SERVICE",
-	IMAGES_SERVICE: "MINIFLARE_IMAGES_SERVICE",
+	// Backs the Images binding (`env.IMAGES`) — see imagesLocalFetcher.
+	IMAGES_BINDING_SERVICE: "MINIFLARE_IMAGES_BINDING_SERVICE",
+	// Backs `fetch(url, { cf: { image } })` transforms — see cfImageLocalFetcher.
+	IMAGES_FETCH_SERVICE: "MINIFLARE_IMAGES_FETCH_SERVICE",
 	TEXT_UPSTREAM_URL: "MINIFLARE_UPSTREAM_URL",
 	JSON_CF_BLOB: "CF_BLOB",
 	JSON_ROUTES: "MINIFLARE_ROUTES",
 	JSON_LOG_LEVEL: "MINIFLARE_LOG_LEVEL",
-	DATA_LIVE_RELOAD_SCRIPT: "MINIFLARE_LIVE_RELOAD_SCRIPT",
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
 	DATA_PROXY_SECRET: "MINIFLARE_PROXY_SECRET",
 	DATA_PROXY_SHARED_SECRET: "MINIFLARE_PROXY_SHARED_SECRET",
@@ -76,11 +86,15 @@ export const CoreBindings = {
 	JSON_LOCAL_EXPLORER_WORKER_NAMES: "LOCAL_EXPLORER_WORKER_NAMES",
 	JSON_EXPLORER_WORKER_OPTS: "MINIFLARE_EXPLORER_WORKER_OPTS",
 	SERVICE_CACHE: "MINIFLARE_CACHE",
+	SERVICE_DEV_CONTROL: "MINIFLARE_DEV_CONTROL",
 	SERVICE_DEV_REGISTRY_PROXY: "MINIFLARE_DEV_REGISTRY_PROXY",
 	JSON_TELEMETRY_CONFIG: "MINIFLARE_TELEMETRY_CONFIG",
 	DEV_REGISTRY_DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
 	SERVICE_STREAM: "MINIFLARE_STREAM",
 	SERVICE_IMAGES_DELIVERY: "MINIFLARE_IMAGES_DELIVERY",
+	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
+	SERVICE_R2_S3: "MINIFLARE_R2_S3",
+	SERVICE_OBSERVABILITY_COLLECTOR: "MINIFLARE_OBSERVABILITY_COLLECTOR",
 } as const;
 
 export const ProxyOps = {
@@ -101,6 +115,26 @@ export const ProxyAddresses = {
 	ENV: 1, // env
 	USER_START: 2,
 } as const;
+
+/**
+ * Recovers the serialised error a Worker put in `ERROR_STACK_PAYLOAD`, for the
+ * cases where the response body carrying it has been dropped (`HEAD` requests).
+ * Returns `null` when the header is absent or malformed, so callers can fall
+ * back rather than surfacing a decoding failure as the Worker's error.
+ */
+export function decodeErrorPayload(response: {
+	headers: { get(name: string): string | null };
+}): string | null {
+	const payload = response.headers.get(CoreHeaders.ERROR_STACK_PAYLOAD);
+	if (payload === null) {
+		return null;
+	}
+	try {
+		return decodeURIComponent(payload);
+	} catch {
+		return null;
+	}
+}
 
 // ### Proxy Special Cases
 // The proxy supports serialising `Request`/`Response`s for the Cache API. It

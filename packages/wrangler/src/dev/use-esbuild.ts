@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { watch } from "chokidar";
+import { watch as watchPaths } from "chokidar";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -12,6 +12,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
+import { logger } from "../logger";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type {
 	CfModule,
@@ -19,7 +20,7 @@ import type {
 	Config,
 	Entry,
 } from "@cloudflare/workers-utils";
-import type { Metafile } from "esbuild";
+import type { Metafile, Message } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
@@ -58,8 +59,10 @@ export function runBuild(
 		local,
 		targetConsumer,
 		testScheduled,
+		watch,
 		projectRoot,
 		onStart,
+		onRebuildError,
 		defineNavigatorUserAgent,
 		checkFetch,
 		pythonModulesExcludes,
@@ -86,8 +89,10 @@ export function runBuild(
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
+		watch: boolean;
 		projectRoot: string | undefined;
 		onStart: () => void;
+		onRebuildError?: (errors: Message[], warnings: Message[]) => void;
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
 		pythonModulesExcludes?: string[];
@@ -115,12 +120,14 @@ export function runBuild(
 	async function getAdditionalModules() {
 		return noBundle
 			? dedupeModulesByName([
-					...((await doFindAdditionalModules(
-						entry,
-						rules,
-						false,
-						pythonModulesExcludes ?? []
-					)) ?? []),
+					...(findAdditionalModules !== false
+						? ((await doFindAdditionalModules(
+								entry,
+								rules,
+								false,
+								pythonModulesExcludes ?? []
+							)) ?? [])
+						: []),
 					...additionalModules,
 				])
 			: additionalModules;
@@ -135,13 +142,23 @@ export function runBuild(
 				previousBundle,
 				"Rebuild triggered with no previous build available"
 			);
-			previousBundle.modules = dedupeModulesByName([
-				...(moduleCollector?.modules ?? []),
-				...newAdditionalModules,
-			]);
+			let entrypointSource: string;
+			try {
+				entrypointSource = readFileSync(previousBundle.path, "utf8");
+			} catch (e) {
+				// Entry point was deleted or moved between builds — skip this update.
+				logger.once.warn(
+					`Could not read entrypoint "${previousBundle.path}": ${(e as NodeJS.ErrnoException).message}`
+				);
+				return previousBundle;
+			}
 			return {
 				...previousBundle,
-				entrypointSource: readFileSync(previousBundle.path, "utf8"),
+				modules: dedupeModulesByName([
+					...(moduleCollector?.modules ?? []),
+					...newAdditionalModules,
+				]),
+				entrypointSource,
 				id: previousBundle.id + 1,
 			};
 		});
@@ -161,7 +178,7 @@ export function runBuild(
 						additionalModules: newAdditionalModules,
 						jsxFactory,
 						jsxFragment,
-						watch: true,
+						watch,
 						tsconfig,
 						minify,
 						keepNames,
@@ -174,7 +191,14 @@ export function runBuild(
 						define,
 						targetConsumer,
 						testScheduled,
-						plugins: [logBuildOutput(nodejsCompatMode, onStart, updateBundle)],
+						plugins: [
+							logBuildOutput(
+								nodejsCompatMode,
+								onStart,
+								updateBundle,
+								onRebuildError
+							),
+						],
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
@@ -198,9 +222,9 @@ export function runBuild(
 
 		// if "noBundle" is true, then we need to manually watch all modules and
 		// trigger "builds" when any change
-		if (noBundle) {
+		if (noBundle && watch) {
 			const watching = [path.resolve(entry.moduleRoot)];
-			const watcher = watch(watching, {
+			const watcher = watchPaths(watching, {
 				persistent: true,
 				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
 				// contains miniflare state/cache files written by workerd at

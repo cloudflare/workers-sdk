@@ -6,7 +6,6 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { describe, expect, it, test } from "vitest";
-import { createDeployHelpersContext } from "../core/deploy-helpers-context";
 import { getHostFromUrl, getZoneFromRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
@@ -83,14 +82,10 @@ describe("Zones", () => {
 		test("string route", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(
-					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					{
-						route: "example.com/*",
-						accountId: "some-account-id",
-					},
-					createDeployHelpersContext()
-				)
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+					route: "example.com/*",
+					accountId: "some-account-id",
+				})
 			).toEqual({
 				host: "example.com",
 				id: "example-id",
@@ -100,14 +95,10 @@ describe("Zones", () => {
 		test("string route (not a zone)", async () => {
 			mockGetZones("wrong.com", []);
 			await expect(
-				getZoneForRoute(
-					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					{
-						route: "wrong.com/*",
-						accountId: "some-account-id",
-					},
-					createDeployHelpersContext()
-				)
+				getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+					route: "wrong.com/*",
+					accountId: "some-account-id",
+				})
 			).rejects.toMatchInlineSnapshot(`
 				[Error: Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
 				For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
@@ -118,14 +109,10 @@ describe("Zones", () => {
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(
-					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					{
-						route: { pattern: "example.com/*", zone_id: "other-id" },
-						accountId: "some-account-id",
-					},
-					createDeployHelpersContext()
-				)
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+					route: { pattern: "example.com/*", zone_id: "other-id" },
+					accountId: "some-account-id",
+				})
 			).toEqual({
 				host: "example.com",
 				id: "other-id",
@@ -136,17 +123,13 @@ describe("Zones", () => {
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(
-					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					{
-						route: {
-							pattern: "some.third-party.com/*",
-							zone_id: "other-id",
-						},
-						accountId: "some-account-id",
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+					route: {
+						pattern: "some.third-party.com/*",
+						zone_id: "other-id",
 					},
-					createDeployHelpersContext()
-				)
+					accountId: "some-account-id",
+				})
 			).toEqual({
 				host: "some.third-party.com",
 				id: "other-id",
@@ -156,17 +139,13 @@ describe("Zones", () => {
 		test("zone_name route (apex)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(
-					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					{
-						route: {
-							pattern: "example.com/*",
-							zone_name: "example.com",
-						},
-						accountId: "some-account-id",
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+					route: {
+						pattern: "example.com/*",
+						zone_name: "example.com",
 					},
-					createDeployHelpersContext()
-				)
+					accountId: "some-account-id",
+				})
 			).toEqual({
 				host: "example.com",
 				id: "example-id",
@@ -175,17 +154,13 @@ describe("Zones", () => {
 		test("zone_name route (subdomain)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(
-					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					{
-						route: {
-							pattern: "subdomain.example.com/*",
-							zone_name: "example.com",
-						},
-						accountId: "some-account-id",
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+					route: {
+						pattern: "subdomain.example.com/*",
+						zone_name: "example.com",
 					},
-					createDeployHelpersContext()
-				)
+					accountId: "some-account-id",
+				})
 			).toEqual({
 				host: "subdomain.example.com",
 				id: "example-id",
@@ -194,17 +169,13 @@ describe("Zones", () => {
 		test("zone_name route (custom hostname)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(
-					COMPLIANCE_REGION_CONFIG_UNKNOWN,
-					{
-						route: {
-							pattern: "some.third-party.com/*",
-							zone_name: "example.com",
-						},
-						accountId: "some-account-id",
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
+					route: {
+						pattern: "some.third-party.com/*",
+						zone_name: "example.com",
 					},
-					createDeployHelpersContext()
-				)
+					accountId: "some-account-id",
+				})
 			).toEqual({
 				host: "some.third-party.com",
 				id: "example-id",
@@ -308,7 +279,6 @@ describe("Zones", () => {
 						},
 						accountId: "some-account-id",
 					},
-					createDeployHelpersContext(),
 					zoneIdCache
 				)
 			).toEqual({
@@ -332,7 +302,6 @@ describe("Zones", () => {
 						},
 						accountId: "some-account-id",
 					},
-					createDeployHelpersContext(),
 					zoneIdCache
 				)
 			).toEqual({

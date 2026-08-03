@@ -1,11 +1,16 @@
 import {
+	APIError,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
+	isNonInteractiveOrCI,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
+import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
+import { fetchListResult, fetchResult, logger } from "../shared/context";
+import { applyEmailRoutingAddresses } from "./email-routing";
 import {
 	publishCustomDomains,
 	publishRoutes,
@@ -14,19 +19,15 @@ import {
 import { updateQueueConsumers } from "./queue-consumers";
 import { getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
-import type {
-	DeployHelpersContext,
-	TriggerDeployment,
-	TriggerProps,
-} from "../shared/types";
+import type { TriggerDeployment, TriggerProps } from "../shared/types";
 import type { RouteObject } from "./publish-routes";
 import type { Config, Route } from "@cloudflare/workers-utils";
 
 export async function triggersDeploy(
-	props: TriggerProps,
-	ctx: DeployHelpersContext
+	props: TriggerProps
 ): Promise<string[] | void> {
 	const { config, accountId, scriptName, routes, crons } = props;
+	validateEventTriggerTargets(config, scriptName);
 
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
@@ -39,16 +40,16 @@ export async function triggersDeploy(
 		}
 	}
 
-	const envName = props.env ?? "production";
-
 	const start = Date.now();
 
-	const workerUrl = props.useServiceEnvironments
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<TriggerDeployment>[] = [];
+	const workflowDeployments: {
+		name: string;
+		deployment: Promise<TriggerDeployment>;
+	}[] = [];
 	const hasWorkflowsDefinedInThisScript = config.workflows.some((workflow) =>
 		isWorkflowDefinedInThisScript(workflow, scriptName)
 	);
@@ -57,12 +58,10 @@ export async function triggersDeploy(
 		props,
 		accountId,
 		scriptName,
-		envName,
 		workerUrl,
 		routes,
 		deployments,
-		props.firstDeploy,
-		ctx
+		props.firstDeploy
 	);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
@@ -99,7 +98,6 @@ export async function triggersDeploy(
 					const zone = await getZoneForRoute(
 						config,
 						{ route, accountId },
-						ctx,
 						zoneIdCache
 					);
 					if (!zone) {
@@ -113,11 +111,11 @@ export async function triggersDeploy(
 					if (!routesInZone) {
 						routesInZone = retryOnAPIFailure(
 							() =>
-								ctx.fetchListResult<{
+								fetchListResult<{
 									pattern: string;
 									script: string;
 								}>(config, `/zones/${zone.id}/workers/routes`),
-							ctx.logger
+							logger
 						);
 						zoneRoutesCache.set(zone.id, routesInZone);
 					}
@@ -163,7 +161,7 @@ export async function triggersDeploy(
 	}
 
 	if (!wantWorkersDev && hasWorkflowsDefinedInThisScript) {
-		await getWorkersDevSubdomain(config, accountId, ctx, {
+		await getWorkersDevSubdomain(config, accountId, {
 			configPath: config.configPath,
 			registrationContext: "workflows",
 		});
@@ -172,17 +170,11 @@ export async function triggersDeploy(
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
-			publishRoutes(
-				config,
-				routesOnly,
-				{
-					workerUrl,
-					scriptName,
-					useServiceEnvironments: props.useServiceEnvironments,
-					accountId,
-				},
-				ctx
-			).then(
+			publishRoutes(config, routesOnly, {
+				workerUrl,
+				scriptName,
+				accountId,
+			}).then(
 				() => {
 					if (routesOnly.length > 10) {
 						return {
@@ -194,7 +186,7 @@ export async function triggersDeploy(
 					}
 					return { targets: routesOnly.map((route) => renderRoute(route)) };
 				},
-				(error) => ({ targets: [], error })
+				(error) => ({ category: "Routes", targets: [], error })
 			)
 		);
 	}
@@ -206,9 +198,11 @@ export async function triggersDeploy(
 				config,
 				workerUrl,
 				accountId,
-				customDomainsOnly,
-				ctx
-			).catch((error) => ({ targets: [], error }))
+				customDomainsOnly
+			).then(
+				(result) => ({ ...result, category: "Custom domains" }),
+				(error) => ({ category: "Custom domains", targets: [], error })
+			)
 		);
 	}
 
@@ -217,28 +211,28 @@ export async function triggersDeploy(
 	// If it is an empty array we will remove all schedules.
 	if (crons) {
 		deployments.push(
-			ctx
-				.fetchResult(config, `${workerUrl}/schedules`, {
-					// Note: PUT will override previous schedules on this script.
-					method: "PUT",
-					body: JSON.stringify(crons.map((cron) => ({ cron }))),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				})
-				.then(
-					() => ({
-						targets: crons.map((trigger) => `schedule: ${trigger}`),
-					}),
-					(error) => ({ targets: [], error })
-				)
+			fetchResult(config, `${workerUrl}/schedules`, {
+				// Note: PUT will override previous schedules on this script.
+				method: "PUT",
+				body: JSON.stringify(crons.map((cron) => ({ cron }))),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}).then(
+				() => ({
+					targets: crons.map((trigger) => `schedule: ${trigger}`),
+				}),
+				(error) => ({ category: "Cron schedules", targets: [], error })
+			)
 		);
 	}
 
 	if (config.queues.producers && config.queues.producers.length) {
 		deployments.push(
 			...config.queues.producers.map((producer) =>
-				Promise.resolve({ targets: [`Producer for ${producer.queue}`] })
+				Promise.resolve({
+					targets: [`Producer for ${producer.queue ?? producer.binding}`],
+				})
 			)
 		);
 	}
@@ -248,10 +242,16 @@ export async function triggersDeploy(
 			config,
 			accountId,
 			scriptName,
-			config,
-			ctx
+			config
 		);
-		deployments.push(...consumerUpdates);
+		deployments.push(
+			...consumerUpdates.map((update) =>
+				update.then((result) => ({
+					...result,
+					category: "Queue consumers",
+				}))
+			)
+		);
 	}
 
 	if (config.workflows?.length) {
@@ -283,43 +283,149 @@ export async function triggersDeploy(
 				continue;
 			}
 
-			deployments.push(
-				ctx
-					.fetchResult(
-						config,
-						`/accounts/${accountId}/workflows/${workflow.name}`,
-						{
-							method: "PUT",
-							body: JSON.stringify({
-								script_name: scriptName,
-								class_name: workflow.class_name,
-								...(workflow.limits && { limits: workflow.limits }),
-								...(workflow.schedules && {
-									schedules: (Array.isArray(workflow.schedules)
-										? workflow.schedules
-										: [workflow.schedules]
-									).map((cron) => ({ cron })),
-								}),
+			workflowDeployments.push({
+				name: workflow.name,
+				deployment: fetchResult(
+					config,
+					`/accounts/${accountId}/workflows/${workflow.name}`,
+					{
+						method: "PUT",
+						body: JSON.stringify({
+							script_name: scriptName,
+							class_name: workflow.class_name,
+							...(workflow.limits && { limits: workflow.limits }),
+							...(workflow.schedules && {
+								schedules: (Array.isArray(workflow.schedules)
+									? workflow.schedules
+									: [workflow.schedules]
+								).map((cron) => ({ cron })),
 							}),
-							headers: {
-								"Content-Type": "application/json",
-							},
+						}),
+						headers: {
+							"Content-Type": "application/json",
+						},
+					}
+				).then(
+					() => ({
+						category: "Workflows",
+						targets: [`workflow: ${workflow.name}`],
+					}),
+					(error) => {
+						if (
+							error instanceof APIError &&
+							error.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE &&
+							workflow.schedules
+						) {
+							error.preventReport();
+							return {
+								category: "Workflows",
+								targets: [],
+								error: new UserError(
+									`Workflow "${workflow.name}" has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+									{
+										cause: error,
+										telemetryMessage:
+											"triggers deploy workflow cron requires paid plan",
+									}
+								),
+							};
 						}
-					)
-					.then(
-						() => ({ targets: [`workflow: ${workflow.name}`] }),
-						(error) => ({ targets: [], error })
-					)
-			);
+
+						return {
+							category: "Workflows",
+							resource: `Workflow "${workflow.name}"`,
+							targets: [],
+							error,
+						};
+					}
+				),
+			});
 		}
+	}
+
+	const completedWorkflowDeployments = await Promise.all(
+		workflowDeployments.map(async ({ name, deployment }) => ({
+			name,
+			deployment: await deployment,
+		}))
+	);
+	deployments.push(
+		...completedWorkflowDeployments.map(({ deployment }) =>
+			Promise.resolve(deployment)
+		)
+	);
+
+	const eventTriggers = config.triggers?.events;
+	const targetedWorkflowNames = new Set(
+		eventTriggers?.flatMap((event) =>
+			event.targets.map((target) => target.workflow_name)
+		) ?? []
+	);
+	const failedTargetedWorkflowNames = completedWorkflowDeployments
+		.filter(
+			({ name, deployment }) =>
+				deployment.error !== undefined && targetedWorkflowNames.has(name)
+		)
+		.map(({ name }) => name);
+
+	if (eventTriggers !== undefined && failedTargetedWorkflowNames.length === 0) {
+		deployments.push(
+			fetchResult(
+				config,
+				`/accounts/${accountId}/triggers/${encodeURIComponent(scriptName)}`,
+				{
+					method: "PUT",
+					body: JSON.stringify(
+						eventTriggers.map((event) => ({
+							...event,
+							targets: event.targets.map((target) => ({
+								...target,
+								script_name: scriptName,
+							})),
+						}))
+					),
+					headers: { "Content-Type": "application/json" },
+				}
+			).then(
+				() => ({
+					category: "Event triggers",
+					resource: `Worker "${scriptName}"`,
+					targets: [`event triggers: ${eventTriggers.length}`],
+				}),
+				(error) => ({
+					category: "Event triggers",
+					resource: `Worker "${scriptName}"`,
+					targets: [],
+					error,
+				})
+			)
+		);
+	} else if (eventTriggers !== undefined) {
+		const workflowLabel =
+			failedTargetedWorkflowNames.length === 1 ? "Workflow" : "Workflows";
+		const failedWorkflows = failedTargetedWorkflowNames
+			.map((name) => `"${name}"`)
+			.join(", ");
+
+		deployments.push(
+			Promise.resolve({
+				category: "Event triggers",
+				targets: [],
+				error: new UserError(
+					`Not updated because ${workflowLabel} ${failedWorkflows} failed to deploy.`,
+					{
+						telemetryMessage:
+							"triggers deploy event update skipped after workflow failure",
+					}
+				),
+			})
+		);
 	}
 
 	const completedDeployments = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 
-	const workerName = props.useServiceEnvironments
-		? `${scriptName} (${envName})`
-		: scriptName;
+	const workerName = scriptName;
 
 	const targets = completedDeployments
 		.flatMap((deployment) => deployment.targets)
@@ -328,29 +434,80 @@ export async function triggersDeploy(
 			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
 		);
 	if (targets.length > 0) {
-		ctx.logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
+		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
 		for (const target of targets) {
-			ctx.logger.log(" ", target);
+			logger.log(" ", target);
 		}
 	} else {
-		ctx.logger.log("No targets deployed for", workerName, formatTime(deployMs));
+		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
 
-	const errors = completedDeployments
-		.map((deployment) => deployment.error)
-		.filter((error): error is Error => error !== undefined);
+	const failedDeployments = completedDeployments.filter(
+		(deployment): deployment is TriggerDeployment & { error: Error } =>
+			deployment.error !== undefined
+	);
 
-	if (errors.length > 0) {
+	try {
+		await applyEmailRoutingAddresses({
+			config,
+			accountId,
+			scriptName,
+			workerTag: props.workerTag,
+		});
+	} catch (error) {
+		if (failedDeployments.length === 0) {
+			throw error;
+		}
+
+		failedDeployments.push({
+			category: "Email routing",
+			targets: [],
+			error: error instanceof Error ? error : new Error(String(error)),
+		});
+	}
+
+	if (failedDeployments.length > 0) {
+		const failuresByCategory = new Map<
+			string,
+			(TriggerDeployment & { error: Error })[]
+		>();
+
+		for (const deployment of failedDeployments) {
+			const category = deployment.category ?? "Other triggers";
+			const categoryDeployments = failuresByCategory.get(category) ?? [];
+
+			categoryDeployments.push(deployment);
+			failuresByCategory.set(category, categoryDeployments);
+		}
+
+		const errors = failedDeployments.map((deployment) => deployment.error);
+		const formattedFailures = [...failuresByCategory]
+			.map(([category, categoryDeployments]) => {
+				const messages = categoryDeployments
+					.map((deployment) => {
+						const resource = deployment.resource
+							? `${deployment.resource}: `
+							: "";
+						const lines = [`    - ${resource}${deployment.error.message}`];
+
+						if (deployment.error instanceof APIError) {
+							lines.push(
+								...deployment.error.notes.map((note) => `      - ${note.text}`)
+							);
+						}
+
+						return lines.join("\n");
+					})
+					.join("\n");
+
+				return `  ${category}:\n${messages}`;
+			})
+			.join("\n\n");
+
 		throw new UserError(
-			`Some triggers failed to deploy for ${workerName}:\n` +
-				errors.map((error) => `  - ${error.message}`).join("\n"),
+			`Trigger configuration for "${workerName}" was only partially updated:\n\n${formattedFailures}\n\nSuccessful trigger changes were not rolled back.`,
 			{
-				// Preserve the original errors (with stacks and subclass info) for
-				// debugging, while still presenting a single aggregated message.
 				cause: new AggregateError(errors),
-				// Aggregate the inner telemetry labels into a single deterministic,
-				// low-cardinality label so failures still group meaningfully. Non-
-				// UserError causes contribute a generic "non-user error" marker.
 				telemetryMessage: `triggers deploy partial failure: ${aggregateTelemetryMessages(errors)}`,
 			}
 		);
@@ -419,8 +576,7 @@ async function validateSubdomainMixedState(
 	scriptName: string,
 	before: { workers_dev: boolean; preview_urls: boolean },
 	after: { workers_dev: boolean; preview_urls: boolean },
-	firstDeploy: boolean,
-	ctx: DeployHelpersContext
+	firstDeploy: boolean
 ): Promise<{
 	workers_dev: boolean;
 	preview_urls: boolean;
@@ -442,7 +598,7 @@ async function validateSubdomainMixedState(
 	}
 
 	// Early return if non-interactive or CI
-	if (ctx.isNonInteractiveOrCI()) {
+	if (isNonInteractiveOrCI()) {
 		return after;
 	}
 
@@ -456,14 +612,14 @@ async function validateSubdomainMixedState(
 		return after;
 	}
 
-	const userSubdomain = await getWorkersDevSubdomain(config, accountId, ctx, {
+	const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
 		configPath: config.configPath,
 	});
 	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
 	if (!after.workers_dev && after.preview_urls) {
-		ctx.logger.warn(
+		logger.warn(
 			[
 				"You are disabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still enabled.",
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
@@ -476,7 +632,7 @@ async function validateSubdomainMixedState(
 
 	// Scenario 2: User enables workers.dev when Preview URLs are off
 	if (after.workers_dev && !after.preview_urls) {
-		ctx.logger.warn(
+		logger.warn(
 			[
 				"You are enabling the 'workers.dev' subdomain for this Worker, but Preview URLs are still disabled.",
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
@@ -494,12 +650,10 @@ async function subdomainDeploy(
 	props: TriggerProps,
 	accountId: string,
 	scriptName: string,
-	envName: string,
 	workerUrl: string,
 	routes: Route[],
 	deployments: Promise<TriggerDeployment>[],
-	firstDeploy: boolean,
-	ctx: DeployHelpersContext
+	firstDeploy: boolean
 ) {
 	const { config } = props;
 
@@ -510,18 +664,15 @@ async function subdomainDeploy(
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {
-		const userSubdomain = await getWorkersDevSubdomain(config, accountId, ctx, {
+		const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
 			configPath: config.configPath,
 		});
-		const workersDevURL =
-			!props.useServiceEnvironments || !props.env
-				? `${scriptName}.${userSubdomain}`
-				: `${envName}.${scriptName}.${userSubdomain}`;
+		const workersDevURL = `${scriptName}.${userSubdomain}`;
 		deployments.push(Promise.resolve({ targets: [workersDevURL] }));
 	}
 
 	// Get current subdomain enablement status.
-	const before = await ctx.fetchResult<{
+	const before = await fetchResult<{
 		enabled: boolean;
 		previews_enabled: boolean;
 	}>(config, `${workerUrl}/subdomain`);
@@ -531,7 +682,7 @@ async function subdomainDeploy(
 	// we retry this request a few times to mitigate that.
 	const after = await retryOnAPIFailure(
 		async () =>
-			ctx.fetchResult<{
+			fetchResult<{
 				enabled: boolean;
 				previews_enabled: boolean;
 			}>(config, `${workerUrl}/subdomain`, {
@@ -545,7 +696,7 @@ async function subdomainDeploy(
 					"Cloudflare-Workers-Script-Api-Date": "2025-08-01",
 				},
 			}),
-		ctx.logger
+		logger
 	);
 
 	// Warn about mismatching config and current values.
@@ -561,7 +712,7 @@ async function subdomainDeploy(
 				return enabled ? "enable" : "disable";
 			}
 		};
-		ctx.logger.warn(
+		logger.warn(
 			[
 				`Because 'workers_dev' is not in your Wrangler file, it will be ${status(after.enabled, true)} for this deployment by default.`,
 				`To override this setting, you can ${status(before.enabled, false)} workers.dev by explicitly setting 'workers_dev = ${before.enabled}' in your Wrangler file.`,
@@ -581,7 +732,7 @@ async function subdomainDeploy(
 				return enabled ? "enable" : "disable";
 			}
 		};
-		ctx.logger.warn(
+		logger.warn(
 			[
 				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
 				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting 'preview_urls = ${before.previews_enabled}' in your Wrangler file.`,
@@ -596,8 +747,7 @@ async function subdomainDeploy(
 		scriptName,
 		{ workers_dev: before.enabled, preview_urls: before.previews_enabled },
 		{ workers_dev: after.enabled, preview_urls: after.previews_enabled },
-		firstDeploy,
-		ctx
+		firstDeploy
 	);
 
 	return {
@@ -606,6 +756,30 @@ async function subdomainDeploy(
 		workersDevInSync: before.enabled === after.enabled,
 		previewsInSync: before.previews_enabled === after.previews_enabled,
 	};
+}
+
+export function validateEventTriggerTargets(
+	config: Config,
+	scriptName: string
+): void {
+	for (const event of config.triggers?.events ?? []) {
+		for (const target of event.targets) {
+			const isDefinedByThisWorker = config.workflows.some(
+				(workflow) =>
+					workflow.name === target.workflow_name &&
+					isWorkflowDefinedInThisScript(workflow, scriptName)
+			);
+			if (!isDefinedByThisWorker) {
+				throw new UserError(
+					`Event trigger "${event.type}" targets Workflow "${target.workflow_name}", but that Workflow is not defined by this Worker.\n\nAdd it to the "workflows" configuration or remove the event trigger target.`,
+					{
+						telemetryMessage:
+							"triggers deploy event target workflow not defined",
+					}
+				);
+			}
+		}
+	}
 }
 
 function isWorkflowDefinedInThisScript(

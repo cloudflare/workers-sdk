@@ -327,9 +327,9 @@ describe("DevEnv", { sequential: true }, () => {
 			undiciRes = await undici.fetch(`http://127.0.0.1:${newPort}`);
 			await expect(undiciRes.text()).resolves.toBe("body:1");
 
-			await expect(
-				undici.fetch(`http://127.0.0.1:${oldPort}`)
-			).rejects.toThrowError("fetch failed");
+			await expect(undici.fetch(`http://127.0.0.1:${oldPort}`)).rejects.toThrow(
+				"fetch failed"
+			);
 		});
 
 		it("liveReload", async ({ expect }) => {
@@ -456,7 +456,7 @@ describe("DevEnv", { sequential: true }, () => {
 			});
 			onTestFinished(worker?.dispose);
 
-			await expect(worker.fetch("http://dummy")).rejects.toThrowError("Boom!");
+			await expect(worker.fetch("http://dummy")).rejects.toThrow("Boom!");
 
 			await helper.seed({
 				"src/index.ts": dedent`
@@ -469,9 +469,7 @@ describe("DevEnv", { sequential: true }, () => {
 			});
 
 			await waitFor(async () => {
-				await expect(worker.fetch("http://dummy")).rejects.toThrowError(
-					"Boom 2!"
-				);
+				await expect(worker.fetch("http://dummy")).rejects.toThrow("Boom 2!");
 			});
 
 			// test eyeball requests receive the pretty error page

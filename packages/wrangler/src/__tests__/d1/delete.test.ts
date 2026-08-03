@@ -24,7 +24,7 @@ describe("delete", () => {
 		msw.use(
 			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }])
 		);
-		mockDatabaseList("test-db", "db-uuid-123");
+		mockDatabaseGet("test-db", "db-uuid-123");
 	});
 
 	it("should not delete database when confirmation is rejected", async ({
@@ -93,25 +93,24 @@ describe("delete", () => {
 	});
 });
 
-function mockDatabaseList(name: string, uuid: string) {
+function mockDatabaseGet(name: string, uuid: string) {
 	msw.use(
-		http.get("*/accounts/:accountId/d1/database", async () => {
-			return HttpResponse.json(
-				{
-					result: [
-						{
-							uuid,
-							name,
-							primary_location_hint: "WNAM",
-							created_in_region: "WNAM",
-						},
-					],
-					success: true,
-					errors: [],
-					messages: [],
-				},
-				{ status: 200 }
-			);
+		http.get("*/accounts/:accountId/d1/database/:name", async ({ params }) => {
+			if (params.name !== name) {
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 7404, message: "Not Found" }],
+					},
+					{ status: 404 }
+				);
+			}
+			return HttpResponse.json({
+				result: { uuid },
+				success: true,
+				errors: [],
+				messages: [],
+			});
 		})
 	);
 }

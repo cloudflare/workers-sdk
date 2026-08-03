@@ -36,6 +36,9 @@ export interface R2BucketMetricsGraphQLResponse {
 
 /**
  * Fetch a list of all the buckets under the given `accountId`.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function listR2Buckets(
 	complianceConfig: ComplianceConfig,
@@ -66,6 +69,8 @@ export function tableFromR2BucketsListResponse(buckets: R2BucketInfo[]): {
 	return rows;
 }
 
+// Keep in sync with the local provisioning copy in
+// packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
 export async function getR2Bucket(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -168,6 +173,9 @@ export async function getR2BucketMetrics(
  *
  * A 400 is returned if the account already owns a bucket with this name.
  * A bucket must be explicitly deleted to be replaced.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function createR2Bucket(
 	complianceConfig: ComplianceConfig,

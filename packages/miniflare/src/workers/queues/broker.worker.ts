@@ -10,7 +10,7 @@ import {
 	SharedBindings,
 	viewToBuffer,
 } from "miniflare:shared";
-import { QueueBindings } from "./constants";
+import { HEADER_QUEUE_NAME, QueueBindings } from "./constants";
 import {
 	QueueConsumersSchema,
 	QueueContentTypeSchema,
@@ -107,7 +107,7 @@ function validateBatchSize(headers: Headers) {
 	const batchSize = headers.get("CF-Queue-Batch-Bytes");
 	if (batchSize !== null && parseInt(batchSize) > MAX_MESSAGE_BATCH_SIZE) {
 		throw new PayloadTooLargeError(
-			`batch size of ${batchSize} bytes exceeds limit of 256000`
+			`batch size of ${batchSize} bytes exceeds limit of ${MAX_MESSAGE_BATCH_SIZE}`
 		);
 	}
 }
@@ -218,6 +218,7 @@ type QueueBrokerObjectEnv = MiniflareDurableObjectEnv & {
 	[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT]: DurableObjectNamespace;
 	[QueueBindings.MAYBE_JSON_QUEUE_PRODUCERS]?: unknown;
 	[QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS]?: unknown;
+	[QueueBindings.MAYBE_SERVICE_QUEUE_PROXY]?: Fetcher;
 } & {
 	[K in `${typeof QueueBindings.SERVICE_WORKER_PREFIX}${string}`]:
 		| Fetcher
@@ -434,6 +435,56 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		};
 	}
 
+	// A queue with no local consumer may have its consumer in another dev
+	// session. When the dev registry is enabled, this broker has a service
+	// binding to the dev-registry proxy's `ExternalQueueProxy` entrypoint, which
+	// resolves a consumer process by queue name and relays the request to that
+	// process's broker. Returns `null` when the message should be dropped
+	// instead (no proxy binding, no consumer registered, or forwarding failed),
+	// mirroring the local no-consumer behaviour so the producer's `send()`
+	// still succeeds.
+	async #tryRemoteConsumer(
+		req: Request<unknown, unknown>
+	): Promise<Response | null> {
+		const proxy = this.env[QueueBindings.MAYBE_SERVICE_QUEUE_PROXY];
+		if (proxy === undefined) return null;
+
+		const headers = new Headers(req.headers);
+		headers.set(HEADER_QUEUE_NAME, this.name);
+		// The consumer's broker can't see this process's producer options, so
+		// apply the local producer's default delivery delay before forwarding.
+		const delay = this.#maybeProducer?.deliveryDelay;
+		if (delay !== undefined && !headers.has("X-Msg-Delay-Secs")) {
+			headers.set("X-Msg-Delay-Secs", String(delay));
+		}
+
+		try {
+			// Buffer the body: if the proxy responds without draining the request
+			// (e.g. the 503 no-consumer case), a streamed body would hang the
+			// producer's `send()` on the unconsumed pipe.
+			const response = await proxy.fetch(req.url, {
+				method: req.method,
+				headers,
+				body: await req.arrayBuffer(),
+			});
+			// A 503 means the proxy found no dev session consuming this queue.
+			if (response.status === 503) {
+				await this.logWithLevel(
+					LogLevel.DEBUG,
+					`Dropped message on queue "${this.name}": ${await response.text()}`
+				);
+				return null;
+			}
+			return response;
+		} catch (e) {
+			await this.logWithLevel(
+				LogLevel.WARN,
+				`Failed to forward message on queue "${this.name}" to a consumer in another dev session, dropping it: ${e instanceof Error ? e.message : String(e)}`
+			);
+			return null;
+		}
+	}
+
 	@POST("/message")
 	message: RouteHandler = async (req) => {
 		const messageResponse = {
@@ -442,9 +493,13 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			},
 		};
 
-		// If we don't have a consumer, drop the message
+		// If we don't have a local consumer, try a consumer in another dev
+		// session, then drop the message
 		const consumer = this.#maybeConsumer;
-		if (consumer === undefined) return Response.json(messageResponse);
+		if (consumer === undefined) {
+			const forwarded = await this.#tryRemoteConsumer(req);
+			return forwarded ?? Response.json(messageResponse);
+		}
 
 		validateMessageSize(req.headers);
 		const contentType = validateContentType(req.headers);
@@ -467,9 +522,13 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			},
 		};
 
-		// If we don't have a consumer, drop the message
+		// If we don't have a local consumer, try a consumer in another dev
+		// session, then drop the batch
 		const consumer = this.#maybeConsumer;
-		if (consumer === undefined) return Response.json(batchResponse);
+		if (consumer === undefined) {
+			const forwarded = await this.#tryRemoteConsumer(req);
+			return forwarded ?? Response.json(batchResponse);
+		}
 
 		// NOTE: this endpoint is also used when moving messages to the dead-letter
 		// queue. In this case, size headers won't be added and this validation is

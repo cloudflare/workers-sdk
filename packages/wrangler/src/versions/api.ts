@@ -1,4 +1,13 @@
-import { fetchResult } from "../cfetch";
+import {
+	createDeployment as createDeploymentBase,
+	fetchDeployableVersions as fetchDeployableVersionsBase,
+	fetchDeploymentVersions as fetchDeploymentVersionsBase,
+	fetchLatestDeployment as fetchLatestDeploymentBase,
+	fetchLatestDeployments as fetchLatestDeploymentsBase,
+	fetchVersion as fetchVersionBase,
+	fetchVersions as fetchVersionsBase,
+	patchNonVersionedScriptSettings as patchNonVersionedScriptSettingsBase,
+} from "@cloudflare/deploy-helpers";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -6,12 +15,9 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
-import type {
-	ComplianceConfig,
-	Observability,
-	StreamingTailConsumer,
-	TailConsumer,
-} from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+
+export type { NonVersionedScriptSettings } from "@cloudflare/deploy-helpers";
 
 export async function fetchVersion(
 	complianceConfig: ComplianceConfig,
@@ -20,19 +26,13 @@ export async function fetchVersion(
 	versionId: VersionId,
 	versionCache?: VersionCache
 ): Promise<ApiVersion> {
-	const cachedVersion = versionCache?.get(versionId);
-	if (cachedVersion) {
-		return cachedVersion;
-	}
-
-	const version = await fetchResult<ApiVersion>(
+	return fetchVersionBase(
 		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions/${versionId}`
+		accountId,
+		workerName,
+		versionId,
+		versionCache
 	);
-
-	versionCache?.set(version.id, version);
-
-	return version;
 }
 
 export async function fetchVersions(
@@ -42,16 +42,12 @@ export async function fetchVersions(
 	versionCache: VersionCache | undefined,
 	...versionIds: VersionId[]
 ) {
-	return Promise.all(
-		versionIds.map((versionId) =>
-			fetchVersion(
-				complianceConfig,
-				accountId,
-				workerName,
-				versionId,
-				versionCache
-			)
-		)
+	return fetchVersionsBase(
+		complianceConfig,
+		accountId,
+		workerName,
+		versionCache,
+		versionIds
 	);
 }
 
@@ -60,27 +56,15 @@ export async function fetchLatestDeployments(
 	accountId: string,
 	workerName: string
 ): Promise<ApiDeployment[]> {
-	const { deployments } = await fetchResult<{
-		deployments: ApiDeployment[];
-	}>(
-		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`
-	);
-
-	return deployments;
+	return fetchLatestDeploymentsBase(complianceConfig, accountId, workerName);
 }
+
 export async function fetchLatestDeployment(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string
 ): Promise<ApiDeployment | undefined> {
-	const deployments = await fetchLatestDeployments(
-		complianceConfig,
-		accountId,
-		workerName
-	);
-
-	return deployments.at(0);
+	return fetchLatestDeploymentBase(complianceConfig, accountId, workerName);
 }
 
 export async function fetchDeploymentVersions(
@@ -90,23 +74,13 @@ export async function fetchDeploymentVersions(
 	deployment: ApiDeployment | undefined,
 	versionCache: VersionCache
 ): Promise<[ApiVersion[], Map<VersionId, Percentage>]> {
-	if (!deployment) {
-		return [[], new Map()];
-	}
-
-	const versionTraffic = new Map(
-		deployment.versions.map((v) => [v.version_id, v.percentage])
-	);
-
-	const versions = await fetchVersions(
+	return fetchDeploymentVersionsBase(
 		complianceConfig,
 		accountId,
 		workerName,
-		versionCache,
-		...versionTraffic.keys()
+		deployment,
+		versionCache
 	);
-
-	return [versions, versionTraffic];
 }
 
 export async function fetchDeployableVersions(
@@ -115,18 +89,12 @@ export async function fetchDeployableVersions(
 	workerName: string,
 	versionCache: VersionCache
 ): Promise<ApiVersion[]> {
-	const { items: versions } = await fetchResult<{
-		items: ApiVersion[];
-	}>(
+	return fetchDeployableVersionsBase(
 		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions?deployable=true`
+		accountId,
+		workerName,
+		versionCache
 	);
-
-	for (const version of versions) {
-		versionCache.set(version.id, version);
-	}
-
-	return versions;
 }
 
 export async function createDeployment(
@@ -137,51 +105,28 @@ export async function createDeployment(
 	message: string | undefined,
 	force?: boolean
 ) {
-	return await fetchResult<{ id: string }>(
+	return createDeploymentBase(
 		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${workerName}/deployments${force ? "?force=true" : ""}`,
-
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				strategy: "percentage",
-				versions: Array.from(versionTraffic).map(
-					([version_id, percentage]) => ({ version_id, percentage })
-				),
-				annotations: {
-					"workers/message": message,
-				},
-			}),
-		}
+		accountId,
+		workerName,
+		versionTraffic,
+		message,
+		force
 	);
 }
-
-export type NonVersionedScriptSettings = {
-	logpush: boolean;
-	tags: string[] | null;
-	tail_consumers: TailConsumer[];
-	streaming_tail_consumers: StreamingTailConsumer[];
-	observability: Observability;
-};
 
 export async function patchNonVersionedScriptSettings(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	settings: Partial<NonVersionedScriptSettings>
+	settings: Partial<
+		import("@cloudflare/deploy-helpers").NonVersionedScriptSettings
+	>
 ) {
-	const res = await fetchResult<typeof settings>(
+	return patchNonVersionedScriptSettingsBase(
 		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${workerName}/script-settings`,
-		{
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(settings),
-		}
+		accountId,
+		workerName,
+		settings
 	);
-
-	// TODO: handle specific errors
-
-	return res;
 }

@@ -2,7 +2,8 @@
 
 This Worker implements a counter with Durable Objects. Each object holds a single count.
 
-| Test                                                | Overview                                                              |
-| --------------------------------------------------- | --------------------------------------------------------------------- |
-| [direct-access.test.ts](test/direct-access.test.ts) | Tests for endpoints that also access object instance members directly |
-| [alarm.test.ts](test/alarm.test.ts)                 | Tests that immediately execute object alarms                          |
+| Test                                                | Overview                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------- |
+| [direct-access.test.ts](test/direct-access.test.ts) | Tests for endpoints that also access object instance members directly  |
+| [alarm.test.ts](test/alarm.test.ts)                 | Tests that immediately execute object alarms                           |
+| [eviction.test.ts](test/eviction.test.ts)           | Tests eviction, storage preservation and WebSocket hibernation/closing |

@@ -17,6 +17,13 @@ export function handleStructuredLogsFromStream(
 ) {
 	let streamAccumulator = "";
 
+	// Created once per stream rather than per chunk, because the wrapped handler
+	// keeps state across lines: a fatal crash banner and the stack trace that
+	// follows it can arrive in separate `data` events.
+	const adjustedStructuredLogsHandler = wrapStructuredLogsHandler(
+		structuredLogsHandler
+	);
+
 	stream.on("data", (chunk: Buffer | string) => {
 		const fullStreamOutput = `${streamAccumulator}${chunk}`;
 
@@ -26,10 +33,6 @@ export function handleStructuredLogsFromStream(
 		// last one, we know that anything in between will include
 		// one or more structured logs
 		const lastNewlineIdx = fullStreamOutput.lastIndexOf("\n");
-
-		const adjustedStructuredLogsHandler = wrapStructuredLogsHandler(
-			structuredLogsHandler
-		);
 
 		if (lastNewlineIdx > 0) {
 			// If we've found a newline we will take the structured logs
@@ -79,6 +82,19 @@ const messageClassifiers = {
 			containsHexStack
 		);
 	},
+	// Is this chunk workerd announcing a fatal, process-ending crash?
+	//
+	// These banners come from kj's crash handlers, which write straight to
+	// stderr and so bypass structured logging entirely. Each one is followed by
+	// a `stack:` line that `isInternal` would otherwise discard, leaving users
+	// (and CI logs) with an abort message carrying no context at all.
+	// workerd references:
+	//  - https://github.com/cloudflare/workerd/blob/main/deps/kj/kj/exception.c%2B%2B
+	isFatalCrash(chunk: string) {
+		return /^\*\*\* (?:std::terminate\(\)|Fatal uncaught|Received signal|Uncaught exception)/.test(
+			chunk
+		);
+	},
 	// Is this chunk an Address In Use error?
 	isAddressInUse(chunk: string) {
 		return chunk.includes("Address already in use; toString() = ");
@@ -101,7 +117,23 @@ const messageClassifiers = {
 function wrapStructuredLogsHandler(
 	structuredLogsHandler: StructuredLogsHandler
 ) {
+	// Set when a fatal crash banner is seen, so that the diagnostics printed
+	// immediately afterwards (the `stack:` line, the missing-$LLVM_SYMBOLIZER
+	// notice) are let through instead of being filtered as internal noise.
+	// Cleared by the first line that isn't internal noise, i.e. once the crash
+	// report has been fully emitted.
+	let reportingFatalCrash = false;
+
 	return (structuredLog: WorkerdStructuredLog) => {
+		if (messageClassifiers.isFatalCrash(structuredLog.message)) {
+			reportingFatalCrash = true;
+			return structuredLogsHandler({
+				timestamp: structuredLog.timestamp,
+				level: "error",
+				message: structuredLog.message,
+			});
+		}
+
 		// TODO: the following code analyzes the message without considering its log level,
 		//       ideally, in order to avoid false positives, we should run this logic scoped
 		//       to the relevant log levels (as we do for `isCodeMovedWarning`)
@@ -136,10 +168,24 @@ function wrapStructuredLogsHandler(
 				});
 			}
 
+			if (reportingFatalCrash) {
+				// Part of the crash report started just above: keep it, at `error`
+				// so it isn't lost among ordinary dev server output. Without this
+				// the `stack:` line is dropped and the crash has no context.
+				return structuredLogsHandler({
+					timestamp: structuredLog.timestamp,
+					level: "error",
+					message: structuredLog.message,
+				});
+			}
+
 			// IGNORABLE:
 			// anything else not handled above is considered ignorable
 			return;
 		}
+
+		// An ordinary log line means the crash report (if any) is complete.
+		reportingFatalCrash = false;
 
 		if (
 			(structuredLog.level === "info" || structuredLog.level === "error") &&

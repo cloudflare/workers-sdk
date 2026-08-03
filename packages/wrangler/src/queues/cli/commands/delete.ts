@@ -8,6 +8,7 @@ export const queuesDeleteCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		name: {
 			type: "string",

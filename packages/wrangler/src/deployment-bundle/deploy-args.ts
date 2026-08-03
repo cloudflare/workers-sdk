@@ -185,6 +185,12 @@ export const sharedDeployVersionsArgs = {
 		hidden: true,
 		alias: ["x-deploy-helpers"],
 	},
+	strict: {
+		describe:
+			"Enables strict mode, which prevents uploads when there are conflicting remote changes.",
+		type: "boolean",
+		default: false,
+	},
 } as const satisfies NamedArgDefinitions;
 
 /**

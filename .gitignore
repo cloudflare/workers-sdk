@@ -217,6 +217,7 @@ tools/deployment-status.json
 vendor/vscode/
 
 .wrangler/
+.cloudflare/
 
 # Turbo Repo
 build/**

@@ -1,5 +1,6 @@
+/** Database info, possibly translated from wrangler configs with bits missing */
 export type Database = {
-	uuid: string;
+	uuid?: string;
 	previewDatabaseUuid?: string;
 	name?: string;
 	binding: string;
@@ -17,6 +18,27 @@ export type Database = {
 	 */
 	migrationsPattern?: string;
 };
+
+/** Most --remote commands need a database with a uuid. This may be fetched from the API */
+export type DatabaseWithUuid = Omit<Database, "uuid"> & {
+	uuid: string;
+};
+
+export function hasUuid(db: Database | null): db is DatabaseWithUuid {
+	return !!db?.uuid;
+}
+
+/** If we made a request to get database info then we will have both name and uuid */
+export type ConcreteDatabase = Omit<Database, "name" | "uuid"> & {
+	name: string;
+	uuid: string;
+};
+
+export function isConcreteDatabase(
+	db: Database | null
+): db is ConcreteDatabase {
+	return !!(db?.name && db?.uuid);
+}
 
 export type DatabaseCreationResult = {
 	uuid: string;

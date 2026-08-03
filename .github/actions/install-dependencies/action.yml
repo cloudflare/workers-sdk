@@ -2,9 +2,13 @@ name: "Install Dependencies"
 description: "Install dependencies, fetching from cache when possible"
 inputs:
   # We run all jobs on Node.js 22 by default, as this is the most stable and supported version right now.
+  #
+  # Pinned to 22.23.1 (rather than floating `22`) until it's safe to float back:
+  # Node 22.23.0 regressed node-fetch@2 keep-alive responses with
+  # ERR_STREAM_PREMATURE_CLOSE (nodejs/node#63989, fixed in 22.23.1).
   node-version:
     description: the version of Node.js to install
-    default: 22
+    default: 22.23.1
   turbo-api:
     description: the api URL for connecting to the turbo remote cache
   turbo-team:
@@ -20,11 +24,11 @@ runs:
   using: "composite"
   steps:
     - name: Install pnpm
-      uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+      uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
 
     - name: Install Node.js ${{ inputs.node-version }} (with pnpm cache)
       if: inputs.disable-cache != 'true'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       with:
         node-version: ${{ inputs.node-version }}
         cache: "pnpm"
@@ -32,7 +36,7 @@ runs:
 
     - name: Install Node.js ${{ inputs.node-version }} (without pnpm cache)
       if: inputs.disable-cache == 'true'
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
       with:
         node-version: ${{ inputs.node-version }}
         registry-url: "https://registry.npmjs.org"

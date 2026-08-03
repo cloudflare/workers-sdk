@@ -34,7 +34,8 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 				makeStartupError("Script startup exceeded CPU limit."),
 				{}, // no dependencies
 				new FormData(), // mock worker bundle
-				"/test"
+				"/test",
+				mockAnalyseBundle
 			)
 		).toMatchInlineSnapshot(`
 				"Your Worker failed validation because it exceeded startup limits.
@@ -68,7 +69,8 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 				makeScriptSizeError("Script size exceeded limits."),
 				{ "test.js": { bytesInOutput: 1000 } }, // mock dependencies
 				new FormData(), // mock worker bundle
-				"/test"
+				"/test",
+				mockAnalyseBundle
 			)
 		).toMatchInlineSnapshot(`
 			"Your Worker failed validation because it exceeded size limits.
@@ -102,7 +104,8 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			makeStartupError("Exceeded startup limits."),
 			{}, // no dependencies
 			new FormData(), // mock worker bundle
-			process.cwd() // mock project root (the tmp dir)
+			process.cwd(), // mock project root (the tmp dir)
+			mockAnalyseBundle
 		);
 
 		expect(normalizeString(message ?? "")).toMatchInlineSnapshot(`

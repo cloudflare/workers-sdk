@@ -112,10 +112,13 @@ export async function convertToConfigBundle(
 	const bindings: Record<string, Binding> = { ...event.config.bindings };
 
 	const crons = [];
+	const routes = [];
 	const queueConsumers = [];
 	for (const trigger of event.config.triggers ?? []) {
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
+		} else if (trigger.type === "route") {
+			routes.push(trigger.pattern);
 		} else if (trigger.type === "queue-consumer") {
 			const { type: _, ...consumer } = trigger;
 			queueConsumers.push(consumer);
@@ -157,6 +160,7 @@ export async function convertToConfigBundle(
 
 	return {
 		name: event.config.name,
+		projectRoot: event.config.projectRoot,
 		bundle: event.bundle,
 		format: event.bundle.entry.format,
 		compatibilityDate: event.config.compatibilityDate,
@@ -164,6 +168,7 @@ export async function convertToConfigBundle(
 		complianceRegion: event.config.complianceRegion,
 		bindings,
 		migrations: event.config.migrations,
+		exports: event.config.exports,
 		devRegistry: event.config.dev.registry,
 		legacyAssetPaths: event.config.legacy?.site?.bucket
 			? {
@@ -189,12 +194,11 @@ export async function convertToConfigBundle(
 					inspectorHost: event.config.dev.inspector?.hostname,
 				}),
 		localPersistencePath: event.config.dev.persist,
-		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
+		routes: event.config.dev.routeRequestsByRoutes ? routes : undefined,
 		queueConsumers,
+		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
-		httpsCertPath: event.config.dev?.server?.httpsCertPath,
-		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		testScheduled: !!event.config.dev.testScheduled,
@@ -215,6 +219,7 @@ export async function convertToConfigBundle(
 					secure: event.config.dev.server.secure,
 				})
 			: undefined,
+		structuredLogsHandler: event.config.dev.structuredLogsHandler,
 	};
 }
 
@@ -236,6 +241,10 @@ export class LocalRuntimeController extends RuntimeController {
 	// wrap updates in a mutex, so they're always applied in invocation order.
 	#mutex = new Mutex();
 	#mf?: Miniflare;
+
+	override get mf(): Miniflare | undefined {
+		return this.#mf;
+	}
 
 	#remoteProxySessionData: {
 		session: RemoteProxySession;
@@ -265,6 +274,23 @@ export class LocalRuntimeController extends RuntimeController {
 		process.off("exit", this.cleanupContainers);
 		process.on("exit", this.cleanupContainers);
 	}
+
+	/**
+	 * Surfaces uncaught Worker exceptions as typed `runtimeError` events
+	 * (workerd catches handler exceptions to build the 500 response, so they
+	 * never reach the inspector — Miniflare's pretty-error path is where the
+	 * revived, source-mapped Error exists). Installed as Miniflare's
+	 * `handleUncaughtError` by every code path that builds Miniflare options:
+	 * this controller's and `MultiworkerRuntimeController`'s.
+	 */
+	protected dispatchRuntimeError = (error: Error): void => {
+		this.bus.dispatch({
+			type: "runtimeError",
+			source: "LocalRuntimeController",
+			text: `${error.name ?? "Error"}: ${error.message}`,
+			stack: error.stack ?? "",
+		});
+	};
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
@@ -379,7 +405,7 @@ export class LocalRuntimeController extends RuntimeController {
 					});
 				}
 			);
-			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
+			options.handleUncaughtError = this.dispatchRuntimeError;
 
 			// Bail out if a newer bundle arrived while we were building
 			// miniflare options — avoid a redundant local server reload.

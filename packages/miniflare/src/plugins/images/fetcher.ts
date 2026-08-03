@@ -1,6 +1,9 @@
 import { File } from "node:buffer";
-import type { ImageInfoResponse } from "@cloudflare/workers-types/experimental";
-import type { Sharp } from "sharp";
+import type {
+	ImageInfoResponse,
+	RequestInitCfPropertiesImage,
+} from "@cloudflare/workers-types/experimental";
+import type { FitEnum, Sharp } from "sharp";
 import type { Request } from "undici";
 
 type Transform = {
@@ -8,6 +11,9 @@ type Transform = {
 	rotate?: number;
 	width?: number;
 	height?: number;
+	fit?: RequestInitCfPropertiesImage["fit"];
+	gravity?: RequestInitCfPropertiesImage["gravity"];
+	background?: string;
 };
 
 function validateTransforms(inputTransforms: unknown): Transform[] | null {
@@ -26,6 +32,8 @@ function validateTransforms(inputTransforms: unknown): Transform[] | null {
 	return inputTransforms as Transform[];
 }
 
+// Local Sharp mock for the Images binding (`env.IMAGES`).
+// Low fidelity (resize/rotate/transcode only); unsupported options are ignored.
 export async function imagesLocalFetcher(request: Request): Promise<Response> {
 	let sharp;
 	try {
@@ -41,6 +49,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Workers API for parsing multipart bodies; only deprecated on undici's server-side Request
 	const data = await request.formData();
 
 	const body = data.get("image");
@@ -114,7 +123,9 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 		case "gif":
 			mime = "image/gif";
 			break;
-		case "avif":
+		// libvips reports AVIF (and other HEIF variants) under the `heif`
+		// container format; Cloudflare Images' supported HEIF variant is AVIF.
+		case "heif":
 			mime = "image/avif";
 			break;
 		default:
@@ -167,8 +178,14 @@ async function runTransform(
 		}
 
 		if (transform.width !== undefined || transform.height !== undefined) {
+			const { fit, withoutEnlargement } = resolveFit(transform.fit);
 			transformer.resize(transform.width || null, transform.height || null, {
-				fit: "contain",
+				fit,
+				withoutEnlargement,
+				position: resolveGravity(transform.gravity),
+				background:
+					transform.background ??
+					(transform.fit === "pad" ? "#ffffff" : undefined),
 			});
 		}
 	}
@@ -204,7 +221,13 @@ async function runTransform(
 			break;
 	}
 
-	return new Response(transformer, {
+	// Buffer explicitly rather than passing the raw Sharp Duplex stream
+	// straight into Response() - the latter produced incomplete/corrupted
+	// output in some environments, only caught once pixel-level regression
+	// tests started decoding the response. Matches cfImageLocalFetcher's
+	// (working) pattern below.
+	const output = await transformer.toBuffer();
+	return new Response(output, {
 		headers: {
 			"content-type": outputFormat,
 		},
@@ -218,5 +241,228 @@ function errorResponse(status: number, code: number, message: string) {
 			"content-type": "text/plain",
 			"cf-images-binding": `err=${code}`,
 		},
+	});
+}
+
+// Local Sharp mock for `cf.image` fetches (`fetch(url, { cf: { image } })`).
+// Follows production cf.image semantics; low fidelity (resize/rotate/transcode only).
+
+const NAMED_QUALITIES: Record<string, number> = {
+	low: 35,
+	"medium-low": 50,
+	"medium-high": 70,
+	high: 90,
+};
+
+function resolveQuality(
+	quality: RequestInitCfPropertiesImage["quality"]
+): number | undefined {
+	if (typeof quality === "number") {
+		return Math.min(100, Math.max(1, Math.round(quality)));
+	}
+	if (typeof quality === "string" && quality in NAMED_QUALITIES) {
+		return NAMED_QUALITIES[quality];
+	}
+	return undefined;
+}
+
+// Fit resolution shared by the Images binding (`env.IMAGES.transform()`)
+// and cf.image (`fetch(url, { cf: { image } })`). Despite `fit` being
+// documented per-API, production treats them identically - `contain`
+// shrinks to fit within the box preserving aspect ratio (no padding),
+// same as `scale-down` but allowed to enlarge. See cf-image.spec.ts
+// "fit:contain preserves aspect ratio" and transform.spec.ts.
+function resolveFit(fit: RequestInitCfPropertiesImage["fit"]): {
+	fit: keyof FitEnum;
+	withoutEnlargement?: boolean;
+} {
+	switch (fit) {
+		case "contain":
+			return { fit: "inside" };
+		case "cover":
+			return { fit: "cover" };
+		case "crop":
+			return { fit: "cover", withoutEnlargement: true };
+		case "pad":
+			return { fit: "contain" };
+		case "squeeze":
+			return { fit: "fill" };
+		case "scale-down":
+		default:
+			return { fit: "inside", withoutEnlargement: true };
+	}
+}
+
+function resolveGravity(
+	gravity: RequestInitCfPropertiesImage["gravity"]
+): string | undefined {
+	switch (gravity) {
+		case "left":
+		case "right":
+		case "top":
+		case "bottom":
+			return gravity;
+		case "center":
+			return "centre";
+		default:
+			return undefined;
+	}
+}
+
+function formatToMime(format: string | undefined): string | null {
+	switch (format) {
+		case "jpeg":
+			return "image/jpeg";
+		case "svg":
+			return "image/svg+xml";
+		case "png":
+			return "image/png";
+		case "webp":
+			return "image/webp";
+		case "gif":
+			return "image/gif";
+		// libvips reports AVIF (and other HEIF variants) under the `heif`
+		// container format; Cloudflare Images' supported HEIF variant is AVIF.
+		case "heif":
+			return "image/avif";
+		default:
+			return null;
+	}
+}
+
+function applyCfImageTransforms(
+	transformer: Sharp,
+	options: RequestInitCfPropertiesImage
+): void {
+	if (typeof options.rotate === "number") {
+		transformer.rotate(options.rotate);
+	}
+
+	const dpr =
+		typeof options.dpr === "number" && options.dpr > 0 ? options.dpr : 1;
+	const width =
+		typeof options.width === "number"
+			? Math.round(options.width * dpr)
+			: undefined;
+	const height =
+		typeof options.height === "number"
+			? Math.round(options.height * dpr)
+			: undefined;
+
+	if (width !== undefined || height !== undefined) {
+		const { fit, withoutEnlargement } = resolveFit(options.fit);
+		transformer.resize(width ?? null, height ?? null, {
+			fit,
+			withoutEnlargement,
+			position: resolveGravity(options.gravity),
+			background:
+				options.background ?? (options.fit === "pad" ? "#ffffff" : undefined),
+		});
+	}
+}
+
+export async function cfImageLocalFetcher(request: Request): Promise<Response> {
+	let sharp;
+	try {
+		const { default: importedSharp } = await import("sharp");
+		sharp = importedSharp;
+	} catch {
+		return cfImageError(
+			"The Sharp library is not available, check your version of Node is compatible"
+		);
+	}
+
+	let body: unknown;
+	let options: RequestInitCfPropertiesImage;
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Workers API for parsing multipart bodies; only deprecated on undici's server-side Request
+		const data = await request.formData();
+		body = data.get("image");
+		const optionsJson = data.get("options");
+		options =
+			typeof optionsJson === "string"
+				? (JSON.parse(optionsJson) as RequestInitCfPropertiesImage)
+				: {};
+	} catch {
+		return cfImageError("Could not parse cf.image transform request");
+	}
+
+	if (!body || !(body instanceof File)) {
+		return cfImageError("Expected an image in the cf.image transform request");
+	}
+
+	const source = await body.arrayBuffer();
+
+	try {
+		const metadata = await sharp(source).metadata();
+
+		if (metadata.format === "svg") {
+			return cfImageError("SVG inputs are not transformed in local mode");
+		}
+
+		if (options.format === "json") {
+			const jsonTransformer = sharp(source);
+			applyCfImageTransforms(jsonTransformer, options);
+			const { info } = await jsonTransformer.toBuffer({
+				resolveWithObject: true,
+			});
+			return Response.json({
+				width: info.width,
+				height: info.height,
+				original: {
+					file_size: metadata.size ?? source.byteLength,
+					width: metadata.width,
+					height: metadata.height,
+					format: formatToMime(metadata.format) ?? "application/octet-stream",
+				},
+			});
+		}
+
+		const transformer = sharp(source);
+		applyCfImageTransforms(transformer, options);
+
+		const quality = resolveQuality(options.quality);
+		let contentType: string;
+		switch (options.format) {
+			case "avif":
+				transformer.avif(quality !== undefined ? { quality } : {});
+				contentType = "image/avif";
+				break;
+			case "webp":
+				transformer.webp(quality !== undefined ? { quality } : {});
+				contentType = "image/webp";
+				break;
+			case "jpeg":
+			case "baseline-jpeg":
+				transformer.jpeg(quality !== undefined ? { quality } : {});
+				contentType = "image/jpeg";
+				break;
+			case "png":
+			case "png-force":
+				transformer.png();
+				contentType = "image/png";
+				break;
+			default:
+				contentType = formatToMime(metadata.format) ?? "image/jpeg";
+				break;
+		}
+
+		const output = await transformer.toBuffer();
+		return new Response(output, {
+			headers: {
+				"content-type": contentType,
+				"cf-resized": "internal=ok/m",
+			},
+		});
+	} catch {
+		return cfImageError("Sharp failed to transform the image");
+	}
+}
+
+// 422 isn't surfaced to the user, instead we fail open and return source image
+function cfImageError(message: string): Response {
+	return new Response(`cf.image local transform error: ${message}`, {
+		status: 422,
+		headers: { "content-type": "text/plain" },
 	});
 }

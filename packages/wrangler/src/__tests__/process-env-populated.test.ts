@@ -77,7 +77,7 @@ describe("isProcessEnvPopulated", () => {
 			assert(false, "Unreachable");
 		} catch (e) {
 			expect(e).toMatchInlineSnapshot(
-				`[Error: Can't both enable and disable a flag]`
+				`[Error: Conflicting compatibility flags: "nodejs_compat_populate_process_env" and "nodejs_compat_do_not_populate_process_env" cannot both be set. Remove one of these flags from your configuration.]`
 			);
 		}
 	});

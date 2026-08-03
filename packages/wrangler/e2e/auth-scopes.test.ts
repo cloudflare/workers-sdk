@@ -1,11 +1,11 @@
+import { generateAuthUrl, getAuthUrlFromEnv } from "@cloudflare/workers-auth";
 import {
-	getAuthUrlFromEnv,
+	DefaultScopeKeys,
 	getClientIdFromEnv,
-} from "@cloudflare/workers-auth";
+	OAUTH_CALLBACK_URL,
+} from "@cloudflare/workers-auth/wrangler";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
-import { generateAuthUrl } from "../src/user/generate-auth-url";
-import { DefaultScopeKeys } from "../src/user/user";
 
 describe("auth scopes", () => {
 	it("default OAuth scopes are accepted by the Cloudflare backend", async ({
@@ -17,6 +17,7 @@ describe("auth scopes", () => {
 			scopes: DefaultScopeKeys,
 			stateQueryParam: "test-state",
 			codeChallenge: "test-code-challenge",
+			redirectUri: OAUTH_CALLBACK_URL,
 		});
 
 		const response = await fetch(url, { redirect: "manual" });

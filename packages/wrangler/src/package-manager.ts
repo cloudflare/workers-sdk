@@ -3,19 +3,32 @@ import { UserError } from "@cloudflare/workers-utils";
 import { execaCommandSync } from "execa";
 import { logger } from "./logger";
 
-export interface PackageManager {
-	type: "npm" | "yarn" | "pnpm" | "bun";
-	npx: string;
-	dlx: string[];
-	lockFiles: string[];
-}
+export type { PackageManager } from "@cloudflare/workers-utils";
+
+export {
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+	BunPackageManager,
+	NubPackageManager,
+} from "@cloudflare/workers-utils";
+
+import {
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+	BunPackageManager,
+	NubPackageManager,
+} from "@cloudflare/workers-utils";
+import type { PackageManager } from "@cloudflare/workers-utils";
 
 export async function getPackageManager(): Promise<PackageManager> {
-	const [hasYarn, hasNpm, hasPnpm, hasBun] = await Promise.all([
+	const [hasYarn, hasNpm, hasPnpm, hasBun, hasNub] = await Promise.all([
 		supportsYarn(),
 		supportsNpm(),
 		supportsPnpm(),
 		supportsBun(),
+		supportsNub(),
 	]);
 
 	const userAgent = sniffUserAgent();
@@ -33,6 +46,9 @@ export async function getPackageManager(): Promise<PackageManager> {
 	} else if (userAgent === "bun" && hasBun) {
 		logger.debug("Using bun as package manager.");
 		return { ...BunPackageManager };
+	} else if (userAgent === "nub" && hasNub) {
+		logger.debug("Using nub as package manager.");
+		return { ...NubPackageManager };
 	}
 
 	// lastly, check what's installed
@@ -48,9 +64,12 @@ export async function getPackageManager(): Promise<PackageManager> {
 	} else if (hasBun) {
 		logger.debug("Using bun as package manager.");
 		return { ...BunPackageManager };
+	} else if (hasNub) {
+		logger.debug("Using nub as package manager.");
+		return { ...NubPackageManager };
 	} else {
 		throw new UserError(
-			"Unable to find a package manager. Supported managers are: npm, yarn, pnpm, and bun.",
+			"Unable to find a package manager. Supported managers are: npm, yarn, pnpm, bun, and nub.",
 			{
 				telemetryMessage: "package manager detection missing manager",
 			}
@@ -64,46 +83,6 @@ export async function getPackageManager(): Promise<PackageManager> {
 export function getPackageManagerName(packageManager: PackageManager): string {
 	return packageManager.type ?? "unknown";
 }
-
-/**
- * Manage packages using npm
- */
-export const NpmPackageManager = {
-	type: "npm",
-	npx: "npx",
-	dlx: ["npx"],
-	lockFiles: ["package-lock.json"],
-} as const satisfies PackageManager;
-
-/**
- * Manage packages using pnpm
- */
-export const PnpmPackageManager = {
-	type: "pnpm",
-	npx: "pnpm",
-	lockFiles: ["pnpm-lock.yaml"],
-	dlx: ["pnpm", "dlx"],
-} as const satisfies PackageManager;
-
-/**
- * Manage packages using yarn
- */
-export const YarnPackageManager = {
-	type: "yarn",
-	npx: "yarn",
-	dlx: ["yarn", "dlx"],
-	lockFiles: ["yarn.lock"],
-} as const satisfies PackageManager;
-
-/**
- * Manage packages using bun
- */
-export const BunPackageManager = {
-	type: "bun",
-	npx: "bunx",
-	dlx: ["bunx"],
-	lockFiles: ["bun.lockb", "bun.lock"],
-} as const satisfies PackageManager;
 
 async function supports(name: string): Promise<boolean> {
 	try {
@@ -130,6 +109,10 @@ function supportsBun(): Promise<boolean> {
 	return supports("bun");
 }
 
+function supportsNub(): Promise<boolean> {
+	return supports("nub");
+}
+
 /**
  * The environment variable `npm_config_user_agent` can be used to
  * guess the package manager that was used to execute wrangler.
@@ -141,7 +124,13 @@ function supportsBun(): Promise<boolean> {
  * - [yarn](https://yarnpkg.com/advanced/lifecycle-scripts#environment-variables)
  * - [bun](https://github.com/oven-sh/bun/blob/550522e99b303d8172b7b16c5750d458cb056434/src/Global.zig#L205)
  */
-export function sniffUserAgent(): "npm" | "pnpm" | "yarn" | "bun" | undefined {
+export function sniffUserAgent():
+	| "npm"
+	| "pnpm"
+	| "yarn"
+	| "bun"
+	| "nub"
+	| undefined {
 	const userAgent = env.npm_config_user_agent;
 	if (userAgent === undefined) {
 		return undefined;
@@ -157,6 +146,11 @@ export function sniffUserAgent(): "npm" | "pnpm" | "yarn" | "bun" | undefined {
 
 	if (userAgent.includes("bun")) {
 		return "bun";
+	}
+
+	// nub's user agent contains "npm" (e.g. `nub/0.4.5 npm/? …`), so check it before npm.
+	if (userAgent.includes("nub")) {
+		return "nub";
 	}
 
 	// npm should come last as it is included in the user agent strings of other package managers

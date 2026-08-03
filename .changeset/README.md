@@ -28,6 +28,7 @@ pnpm changeset
 
 - Major versions for `wrangler` are currently **forbidden**. This rule will be removed when we are preparing for the next major release of `wrangler`.
 - Major versions for other packages require strong justification
+- If the change collects more analytics, it should be a minor even though there is no user-visible change.
 
 ## Changeset Message Format
 
@@ -110,6 +111,14 @@ Each changeset should reference all packages that have user-facing changes:
 - Documentation-only changes within a package
 - Test-only changes
 - CI/workflow changes that don't affect package behavior
+
+## Miniflare Prereleases
+
+To begin a Miniflare prerelease, add `"npmPrereleaseIdentifier": "alpha"` to its `workers-sdk` metadata and add a major changeset. This produces a version such as `5.20260723.0-alpha`.
+
+While configured, major, minor, and patch changesets all increment Miniflare's patch version. Updating workerd updates the date and resets the patch to `0`. Change the identifier and add a changeset to move to another stage such as `beta` or `rc`.
+
+To graduate the prerelease, remove `npmPrereleaseIdentifier` and add a Miniflare changeset. The prerelease suffix will be removed while retaining the workerd-aligned version.
 
 ## File Example
 

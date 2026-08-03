@@ -1,7 +1,7 @@
 /**
  * Wrangler configuration types. The JSDoc on these fields is also the source
  * of truth for the equivalent fields in `@cloudflare/config`
- * (`packages/config/src/types.ts` — `UserConfig` — and the binding option
+ * (`packages/config/src/types.ts` — `WorkerConfig` — and the binding option
  * interfaces in `packages/config/src/config.ts`). When editing prose here,
  * mirror the changes there.
  */
@@ -18,6 +18,12 @@ export interface Environment
 	extends EnvironmentInheritable, EnvironmentNonInheritable {}
 
 type SimpleRoute = string;
+/** AWS SigV4 credentials for miniflare's local S3-compatible endpoint */
+export interface LocalS3Credentials {
+	accessKeyId: string;
+	secretAccessKey: string;
+}
+
 export type ZoneIdRoute = {
 	pattern: string;
 	zone_id: string;
@@ -351,6 +357,69 @@ export type DurableObjectMigration = {
 };
 
 /**
+ * Storage backend for a declarative Durable Object export. See
+ * {@link DurableObjectExport}.
+ */
+export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
+
+/**
+ * A single declarative Durable Object export entry in the `exports` config
+ * map. `type` is reserved for the export kind. `state` carries the Durable
+ * Object lifecycle and defaults to `"created"` (live) when omitted.
+ *
+ * Mutually exclusive with {@link DurableObjectMigration} at the config-
+ * validation boundary.
+ *
+ *  - `created` (default, live): `storage` is required.
+ *  - `deleted` (tombstone): retire a provisioned namespace whose class has
+ *    been removed from code.
+ *  - `renamed` (tombstone): rewrite a provisioned namespace's class name to
+ *    `renamed_to`. The target name must also appear as a live (state
+ *    `"created"`) `durable-object` entry in the same map.
+ *  - `transferred` (tombstone): hand ownership of the namespace to another
+ *    script in the same account (`transferred_to`). Two-phase commit;
+ *    the target must first deploy an `expecting-transfer` entry naming this
+ *    script via `transfer_from`.
+ *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
+ *    `storage` and `transfer_from` are both required.
+ */
+export type DurableObjectExport =
+	| {
+			type: "durable-object";
+			state?: "created";
+			storage: DurableObjectExportStorage;
+	  }
+	| { type: "durable-object"; state: "deleted" }
+	| { type: "durable-object"; state: "renamed"; renamed_to: string }
+	| {
+			type: "durable-object";
+			state: "transferred";
+			transferred_to: string;
+	  }
+	| {
+			type: "durable-object";
+			state: "expecting-transfer";
+			storage: DurableObjectExportStorage;
+			transfer_from: string;
+	  };
+
+export interface WorkerEntrypointExport {
+	type: "worker";
+	cache?: {
+		/** Whether cache is enabled for this entrypoint. */
+		enabled: boolean;
+	};
+}
+
+export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+
+/**
+ * The declarative `exports` map keyed by export name. Durable Object exports
+ * are mutually exclusive with `migrations` at the wrangler config layer.
+ */
+export type Exports = Record<string, ConfiguredExport>;
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -511,18 +580,31 @@ interface EnvironmentInheritable {
 	migrations: DurableObjectMigration[];
 
 	/**
-	 * "Cron" definitions to trigger a Worker's "scheduled" function.
+	 * Declarative exports configuration — a map of class name to export configuration.
 	 *
-	 * Lets you call Workers periodically, much like a cron job.
+	 * The configuration of Durable Objects via `exports` is mutually exclusive with `migrations`.
 	 *
-	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
+	 * @default {}
+	 * @inheritable
+	 */
+	exports: Exports;
+
+	/**
+	 * Definitions that trigger a Worker from a schedule or a Cloudflare event.
+	 *
+	 * More details about cron triggers: https://developers.cloudflare.com/workers/platform/cron-triggers
+	 *
+	 * More details about Artifacts events: https://developers.cloudflare.com/artifacts/guides/event-subscriptions/
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 *
 	 * @default {crons:[]}
 	 * @inheritable
 	 */
-	triggers: { crons: string[] | undefined };
+	triggers: {
+		crons?: string[];
+		events?: ArtifactsEventTrigger[];
+	};
 
 	/**
 	 * Specify limits for runtime behavior.
@@ -720,6 +802,32 @@ export type DurableObjectBindings = {
 	environment?: string;
 }[];
 
+export const ARTIFACTS_EVENT_TYPES = [
+	"cf.artifacts.repo.created",
+	"cf.artifacts.repo.deleted",
+	"cf.artifacts.repo.forked",
+	"cf.artifacts.repo.imported",
+	"cf.artifacts.repo.pushed",
+	"cf.artifacts.repo.cloned",
+	"cf.artifacts.repo.fetched",
+	"cf.artifacts.repo.token.created",
+	"cf.artifacts.repo.token.revoked",
+] as const;
+
+export type ArtifactsEventType = (typeof ARTIFACTS_EVENT_TYPES)[number];
+
+export type ArtifactsEventTrigger = {
+	type: ArtifactsEventType;
+	filter?: {
+		namespace?: string;
+		repo_name?: string;
+	};
+	targets: {
+		type: "workflow";
+		workflow_name: string;
+	}[];
+};
+
 export type WorkflowBinding = {
 	/** The name of the binding used to refer to the Workflow */
 	binding: string;
@@ -910,7 +1018,7 @@ export interface EnvironmentNonInheritable {
 			binding: string;
 
 			/** The name of this Queue. */
-			queue: string;
+			queue?: string;
 
 			/** The number of seconds to wait before delivering a message */
 			delivery_delay?: number;
@@ -972,6 +1080,16 @@ export interface EnvironmentNonInheritable {
 		jurisdiction?: string;
 		/** Whether the R2 bucket should be remote or not in local development */
 		remote?: boolean;
+		/** Settings that only apply to local development */
+		local_dev?: {
+			/**
+			 * EXPERIMENTAL: AWS SigV4 credentials for the local S3-compatible
+			 * endpoint. When set, the bucket is served at
+			 * `/cdn-cgi/local/r2/s3/<bucket-name>` during local development.
+			 * Ignored when the bucket runs remotely.
+			 */
+			experimental_s3_credentials?: LocalS3Credentials;
+		};
 	}[];
 
 	/**
@@ -1388,7 +1506,7 @@ export interface EnvironmentNonInheritable {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** The namespace to bind to. */
-		namespace: string;
+		namespace?: string;
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
 		/** Whether the Dispatch Namespace should be remote or not in local development */
@@ -1490,7 +1608,7 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 
 		/** The Flagship app ID to bind to. */
-		app_id: string;
+		app_id?: string;
 
 		/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
 		remote?: boolean;
@@ -1704,6 +1822,8 @@ export interface Observability {
 export interface CacheOptions {
 	/** If cache is enabled for this Worker */
 	enabled: boolean;
+	/** Whether cached assets may be reused across Worker versions. */
+	cross_version_cache?: boolean;
 }
 
 export type DockerConfiguration = {

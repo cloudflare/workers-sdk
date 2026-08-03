@@ -6,7 +6,7 @@ import {
 	getOutputFilePathFromEnv,
 } from "@cloudflare/workers-utils";
 import { ensureDirectoryExistsSync } from "./utils/filesystem";
-import type { AutoConfigSummary } from "./autoconfig/types";
+import type { AutoConfigSummary } from "@cloudflare/autoconfig";
 
 /**
  * Write an entry to the output file.
@@ -197,4 +197,6 @@ interface OutputEntryCommandFailed extends OutputEntryBase<"command-failed"> {
 	code: number | undefined;
 	/** The message in the error. */
 	message: string | undefined;
+	/** How many milliseconds to retry the operation after if available. */
+	retry_after_ms: number | undefined;
 }

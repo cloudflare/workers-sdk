@@ -1,5 +1,634 @@
 # miniflare
 
+## 5.20260730.0-alpha
+
+### Major Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Consolidate persistence and temporary directory options
+
+  The per-resource persistence options (`kvPersist`, `r2Persist`, `d1Persist`, `cachePersist`, `durableObjectsPersist`, `workflowsPersist`, `secretsStorePersist`, `analyticsEngineDatasetsPersist`, `streamPersist`, `imagesPersist`, and `helloWorldPersist`) have been removed. The `Miniflare.unsafeGetPersistPaths()` method, which provided the per-resource persistence paths, has also been removed as they can now be stably inferred from the base path.
+
+  For consistency and clarity, `defaultPersistRoot` and `defaultProjectTmpPath` have been renamed to `resourcePersistencePath` and `resourceTmpPath`, respectively.
+
+  For example:
+
+  ```js
+  new Miniflare({
+    resourcePersistencePath: ".wrangler/state/v3",
+    resourceTmpPath: ".wrangler/tmp",
+  });
+  ```
+
+  When `resourcePersistencePath` is set, each resource persists to a subdirectory named after its plugin (e.g. `.wrangler/state/v3/kv`). When it is omitted, resources are ephemeral and their data is cleared on dispose.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove the `cacheWarnUsage` option
+
+  The `cacheWarnUsage` Worker option, which logged a warning when cache operations were used, has been removed.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove the `fetchMock` option and `createFetchMock` export
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove the `httpsKeyPath` and `httpsCertPath` options
+
+  The `httpsKeyPath` and `httpsCertPath` options have been removed. To use a custom certificate, read the files and pass their contents via the existing `httpsKey` and `httpsCert` options.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Drop `/cdn-cgi/mf/reload` live reload endpoint and `liveReload` option
+
+  The built-in live reload mechanism has been removed from Miniflare. This included a WebSocket endpoint at `/cdn-cgi/mf/reload`, the `liveReload` option, and the automatic injection of a live reload `<script>` tag into HTML responses. For context, Wrangler and the Vite plugin both implement their own independent live reload mechanisms.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Drop miniflare v2 storage migration
+
+  The `migrateDatabase()` helper that migrated KV, R2, and D1 SQLite databases from the miniflare v2/early-v3 storage layout to the current Durable Object-based layout has been removed. This migration path was introduced in 2023 and is no longer needed.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Only support structured workerd logs
+
+  The `handleRuntimeStdio` option (for handling the raw `workerd` stdout/stderr streams) and the `structuredWorkerdLogs` option (for toggling structured `workerd` logs) have been removed. Structured logging is now always enabled.
+
+  To receive `workerd`'s output, use `handleStructuredLogs`, which is passed parsed structured log entries. When no `handleStructuredLogs` handler is provided, logs are written to the console by default (`warn`/`error` to stderr, everything else to stdout).
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Drop the `unsafeStickyBlobs` option
+
+  This prevented blob files from being deleted when overwriting or deleting keys, and only existed to support the Durable Object isolated storage feature in `@cloudflare/vitest-pool-workers`, which was removed in 0.13.0. Blobs are now always cleaned up as expected.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove the `wrappedBindings` option
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Move `containerEngine` from a per-worker option to a top-level option
+
+  `containerEngine` is now a top-level Miniflare option rather than a per-worker option, reflecting that it configures a single container engine for the whole Miniflare instance.
+
+  ```js
+  new Miniflare({
+    containerEngine: "unix:///var/run/docker.sock",
+    workers: [{ name: "my-worker", script: "..." }],
+  });
+  ```
+
+  Previously it was set inside each worker's options.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Move `formatZodError` from `miniflare` to `@cloudflare/workers-utils`
+
+  The `formatZodError` and `_forceColour` helpers are no longer exported from `miniflare`; they are now exported from `@cloudflare/workers-utils`.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remap local testing paths to avoid collision with production `/cdn-cgi` routes
+
+  All miniflare-internal endpoints have moved to more consistent paths. Paths that need to remain reachable over tunnels now live outside `/cdn-cgi/`:
+
+  - `/cdn-cgi/platform-proxy` → `/cdn-cgi/local/platform-proxy`
+  - `/cdn-cgi/handler/scheduled` → `/cdn-cgi/local/scheduled`
+  - `/cdn-cgi/handler/email` → `/cdn-cgi/local/email`
+  - `/cdn-cgi/explorer/*` → `/cdn-cgi/local/explorer/*`
+  - `/cdn-cgi/mf/scheduled` → removed (was already deprecated)
+  - `/cdn-cgi/mf/stream/*` → `/__cf_local/stream/*`
+  - `/cdn-cgi/mf/imagedelivery/*` → `/__cf_local/imagedelivery/*`
+
+  Wrangler and the Vite plugin will add transparent path rewrites so the old paths continue to work for users of those tools.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove deprecated `maxRetires` typo alias in Queue consumer options
+
+  The `maxRetires` option (a typo of `maxRetries`) has been removed from `QueueConsumerOptionsSchema`. Use `maxRetries` instead.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove dummy CLI binary
+
+  The `miniflare` bin entry and `bootstrap.js` stub that printed a "use `npx wrangler dev`" error have been removed. This stub has been present since miniflare v3 and is no longer needed.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove deprecated `supportedCompatibilityDate` export
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Rename the `cache` Worker option to `cacheAPI`
+
+  The boolean option controlling whether the Cache API caches anything has been renamed from `cache` to `cacheAPI`. This is to distinguish it from Workers Cache.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Upgrade to zod v4
+
+  Miniflare's exported schemas now use zod v4.
+
+## 4.20260730.0
+
+### Minor Changes
+
+- [#14685](https://github.com/cloudflare/workers-sdk/pull/14685) [`01d7020`](https://github.com/cloudflare/workers-sdk/commit/01d7020806dd523158cf9f26a4575365117f5381) Thanks [@edmundhung](https://github.com/edmundhung)! - Add JSON output to `/cdn-cgi/handler/email`
+
+  The `/cdn-cgi/handler/email` endpoint now accepts `?format=json` to return the email handler result as JSON, including its outcome, rejection reason, forwarded messages, and replies. Requests without `format=json` still return the existing text outcome for backward compatibility.
+
+### Patch Changes
+
+- [#14929](https://github.com/cloudflare/workers-sdk/pull/14929) [`48f0c6c`](https://github.com/cloudflare/workers-sdk/commit/48f0c6cbbc50dfac02e2d76554c181ced233a792) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260722.1 | ^5.20260730.1 |
+  | workerd                   | 1.20260722.1  | 1.20260730.1  |
+
+- [#14810](https://github.com/cloudflare/workers-sdk/pull/14810) [`d7f38c3`](https://github.com/cloudflare/workers-sdk/commit/d7f38c311e8cd0f29f56a25250da45f62b20f8ca) Thanks [@allocsys](https://github.com/allocsys)! - Fix the local Images binding transform (`env.IMAGES.input(...).transform(...)`) ignoring the `fit`, `gravity`, and `background` options. Previously, local dev always letterboxed transformed images with black bars regardless of the options passed in. Local dev now respects `fit`, `gravity`, and `background`, matching production Images binding behavior.
+
+- [#14850](https://github.com/cloudflare/workers-sdk/pull/14850) [`5c25cfe`](https://github.com/cloudflare/workers-sdk/commit/5c25cfe4e03e0d3d42ddab57adc3274d6f6a1a30) Thanks [@exKAZUu](https://github.com/exKAZUu)! - Disable the keep-alive timeout on the loopback server
+
+  The loopback server (which serves custom service bindings, `@cloudflare/vite-plugin`'s module transport, and other workerd → Node callbacks) used Node's default `server.keepAliveTimeout` of 5 seconds. workerd pools and reuses connections to the loopback server, so Node closing an idle pooled socket raced with workerd sending the next request on it, making that request fail with `Network connection lost`. The failure is probabilistic and load-dependent; under `@cloudflare/vite-plugin` with a large SSR module graph and a cold optimizer cache (thousands of `fetchModule` calls with multi-second idle gaps between bursts), it broke most dev sessions. Disable the idle keep-alive timeout on the loopback server, mirroring the undici pools used for dispatch in the opposite direction.
+
+- [#14914](https://github.com/cloudflare/workers-sdk/pull/14914) [`1f61001`](https://github.com/cloudflare/workers-sdk/commit/1f61001e5f7a807db7856f5d89e0b26e12a0d0a0) Thanks [@nickpatt](https://github.com/nickpatt)! - Capture Workflows invocations in local observability
+
+  When local observability is enabled, the Workflows engine service is now attached to the trace collector (like every user worker), so workflow runs show up in the Local Explorer's Observability view attributed to the workflow. Previously the engine ran outside the per-user-worker tail wiring, so workflow invocations left no traces, spans, or logs in the local store.
+
+## 4.20260722.1
+
+### Minor Changes
+
+- [#14702](https://github.com/cloudflare/workers-sdk/pull/14702) [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a) Thanks [@Sipixer](https://github.com/Sipixer)! - Support passing V8 flags to `workerd` via the `MINIFLARE_WORKERD_V8_FLAGS` environment variable
+
+  The generated `workerd` config already supports `v8Flags`, but Miniflare never populated it, so the runtime always ran with V8's default heap limit (~1.4 GB). Large dev applications (e.g. big SSR module graphs under `@cloudflare/vite-plugin`, where each server-file edit grows the runner isolate's heap) can reach that limit, at which point `workerd` aborts with `V8 fatal error; location = Reached heap limit` and every subsequent `dispatchFetch()` fails with `fetch failed` until the dev server is manually restarted.
+
+  Setting e.g. `MINIFLARE_WORKERD_V8_FLAGS="--max-old-space-size=4096"` raises the limit and keeps long dev sessions alive. The variable follows the same space-separated format as `MINIFLARE_WORKERD_AUTOGATES`.
+
+- [#14280](https://github.com/cloudflare/workers-sdk/pull/14280) [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Add a local S3-compatible API for R2 buckets at `/cdn-cgi/local/r2/s3/<bucket-id>`, where `<bucket-id>` is the ID the bucket is configured with in the `r2Buckets` option
+
+  Buckets configured with `s3Credentials: { accessKeyId, secretAccessKey }` in `r2Buckets` are served over an S3-compatible HTTP API, authenticated with AWS Signature Version 4 (both `Authorization` header and presigned URL query authentication). Supported operations: GetObject, HeadObject, PutObject, CopyObject, DeleteObject, DeleteObjects, ListObjects, ListObjectsV2, HeadBucket, ListBuckets, CreateMultipartUpload, UploadPart, UploadPartCopy, CompleteMultipartUpload, and AbortMultipartUpload. Status codes, error responses, and unsupported-header screening mirror R2's S3 endpoint, including its static responses for bucket-configuration reads and its named errors for unimplemented operations.
+
+- [#14712](https://github.com/cloudflare/workers-sdk/pull/14712) [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1) Thanks [@mack-erel](https://github.com/mack-erel)! - Support `connect()` on remote VPC Network and VPC Service bindings in local development
+
+  Remote VPC Network and VPC Service bindings previously only supported HTTP and JSRPC, so calling `binding.connect(address)` against a private TCP service (for example a database) failed in local dev with `Incoming CONNECT on a worker not supported`. Raw TCP connections through remote VPC Network and VPC Service bindings now work in local development.
+
+  This feature is experimental. Existing HTTP and JSRPC usage of remote VPC Network and VPC Service bindings is unaffected, and no new configuration is required.
+
+### Patch Changes
+
+- [#14784](https://github.com/cloudflare/workers-sdk/pull/14784) [`1035f74`](https://github.com/cloudflare/workers-sdk/commit/1035f7450006c5c8b8b003135d2b530193c913a1) Thanks [@ATKasem](https://github.com/ATKasem)! - Fix `getWithMetadata` dropping metadata for falsy KV values
+
+  `KVNamespace.getWithMetadata` returned `null` metadata whenever the stored value was falsy — an empty string or `"0"` — because the metadata branch was guarded by a truthiness check on the value. The guard now checks for `null` explicitly, so metadata is preserved for empty-string and `"0"` values while genuinely missing keys still return `null`.
+
+- [#14864](https://github.com/cloudflare/workers-sdk/pull/14864) [`3a22ae5`](https://github.com/cloudflare/workers-sdk/commit/3a22ae532c5c75c716d4c219e116eb3e0c5b236e) Thanks [@Hashim1999164](https://github.com/Hashim1999164)! - Hide the workerd console window on Windows when the parent process has no console. Spawning workerd without `windowsHide: true` caused Windows Terminal to open a visible, focus-stealing window for background or detached parents (for example Astro's `astro dev --background`).
+
+## 4.20260722.0
+
+### Minor Changes
+
+- [#14633](https://github.com/cloudflare/workers-sdk/pull/14633) [`3203b5d`](https://github.com/cloudflare/workers-sdk/commit/3203b5d34488b2b14d6066db705acef267d1229a) Thanks [@nickpatt](https://github.com/nickpatt)! - Add local-dev observability
+
+  `wrangler dev` and the Vite plugin now capture a trace for every local Worker invocation - spans, logs, and `console.*` output, including requests that cross worker or Durable Object boundaries.
+
+  You can explore this data two ways:
+
+  - A new Observability tab in the Local Explorer, with a Traces view (recent invocations, an inline timeline waterfall, and filters) and an Events view.
+  - A read-only SQL endpoint at `/cdn-cgi/explorer/api/local/observability/query`, discoverable via the Local Explorer's OpenAPI document, so coding agents and tools can query the same `spans` and `logs` tables.
+
+  While this is in testing it's off by default; set `X_LOCAL_OBSERVABILITY=true` to turn it on. It will be on by default in the public release.
+
+### Patch Changes
+
+- [#14796](https://github.com/cloudflare/workers-sdk/pull/14796) [`c38a2c3`](https://github.com/cloudflare/workers-sdk/commit/c38a2c358ef5c8628ce26fa8c62f002dda0dcb3d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260721.1 | ^5.20260722.1 |
+  | workerd                   | 1.20260721.1  | 1.20260722.1  |
+
+- [#14772](https://github.com/cloudflare/workers-sdk/pull/14772) [`c079ba3`](https://github.com/cloudflare/workers-sdk/commit/c079ba33f1df98e38f7cebc82a64886a7e495879) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix incorrect byte limit reported in the local Queues batch-size error
+
+  When a queue batch exceeded the maximum batch byte size in local dev, the thrown `PayloadTooLargeError` hardcoded the limit as `256000`, even though the value actually enforced is `288000` bytes (`(256 + 32) * 1000`). The message now interpolates the real limit, consistent with the other Queue limit errors in the same file.
+
+- [#14493](https://github.com/cloudflare/workers-sdk/pull/14493) [`95b026e`](https://github.com/cloudflare/workers-sdk/commit/95b026edfdf0c6b6e40994cd8fa06a350bc868f2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update `sharp` to 0.35.2
+
+  `sharp` 0.35 removes its `install` lifecycle script, so package managers that block dependency build scripts by default (such as pnpm 11+) no longer require an explicit build approval for it when installing `miniflare`/`wrangler`. The local Images binding keeps using the same prebuilt `sharp` binaries, so image transforms in local dev are unaffected.
+
+  This release also reworked `sharp`'s `FormatEnum` types: libvips reports AVIF inputs under the `heif` container. The local Images binding `/info` endpoint and the `cf.image` transform path now correctly report AVIF as `image/avif` instead of treating it as an unsupported/unknown type.
+
+- [#14792](https://github.com/cloudflare/workers-sdk/pull/14792) [`c4bacec`](https://github.com/cloudflare/workers-sdk/commit/c4bacec349f2d6e1bf4115f22a4b4eaca62cd0fc) Thanks [@matthewp](https://github.com/matthewp)! - Recover local development after the Workers runtime crashes
+
+  Previously, an unexpected workerd crash left Miniflare running but unable to serve subsequent requests. Miniflare now restarts workerd after post-startup crashes, while continuing to surface startup crashes as fatal errors.
+
+  The Cloudflare Vite plugin also restarts the Vite development server after workerd recovers so its environments, hot channels, and module runners are recreated.
+
+## 4.20260721.0
+
+### Minor Changes
+
+- [#14742](https://github.com/cloudflare/workers-sdk/pull/14742) [`34430b3`](https://github.com/cloudflare/workers-sdk/commit/34430b34f468825775377689621e451d730ab0c9) Thanks [@pombosilva](https://github.com/pombosilva)! - Add support for redacting sensitive Workflows step output in local dev.
+
+  Steps configured with `sensitive: "output"` now have their output redacted to `[REDACTED]` in step logs and step-output responses when running Workflows locally, matching production behavior. The real value is still passed to downstream steps, and step errors are never redacted.
+
+### Patch Changes
+
+- [#14715](https://github.com/cloudflare/workers-sdk/pull/14715) [`42af66d`](https://github.com/cloudflare/workers-sdk/commit/42af66d00b255945989726387acf46409b4c5eb3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260714.1 | ^5.20260721.1 |
+  | workerd                   | 1.20260714.1  | 1.20260721.1  |
+
+- [#14766](https://github.com/cloudflare/workers-sdk/pull/14766) [`4815711`](https://github.com/cloudflare/workers-sdk/commit/4815711fb5f896a5aa9221b6bddb9ef78c3f288d) Thanks [@gianghungtien](https://github.com/gianghungtien)! - Report the Worker's error for `HEAD` requests instead of an internal JSON parse error
+
+  A Worker that threw on a `HEAD` request (for example `curl -I`) logged `SyntaxError: Unexpected end of JSON input` from miniflare's internals rather than the actual error, and `dispatchFetch()` rejected with that same misleading error. `workerd` drops response bodies for `HEAD` requests, so the serialised error never reached the code that revives it.
+
+  The error is now also carried in a header, which survives `HEAD`, so the original message and source-mapped stack are reported for every method. When no payload is available the reporting degrades to a plain error rather than surfacing a parse failure.
+
+## 4.20260714.0
+
+### Minor Changes
+
+- [#14562](https://github.com/cloudflare/workers-sdk/pull/14562) [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Add a `handleUncaughtError` shared option that receives uncaught Worker exceptions
+
+  The runtime catches handler exceptions to build the 500 response, so they never reach the inspector — the one place an uncaught exception exists as a structured value in Node is the pretty-error path, where the error report from the Worker is revived into a source-mapped `Error`. Embedders can now pass `handleUncaughtError: (error: Error) => void` to observe that revived error programmatically; logging behavior is unchanged.
+
+  The hook fires only where the pretty-error path does: requests reaching the Worker through the entry socket (a browser or another HTTP client against the dev server). `dispatchFetch()` is unaffected — it always sets `MF-Disable-Pretty-Error`, and the entry worker then propagates the exception by rejecting the returned promise instead, so `dispatchFetch()` callers already receive the error directly and the hook is not invoked.
+
+- [#14706](https://github.com/cloudflare/workers-sdk/pull/14706) [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c) Thanks [@edmundhung](https://github.com/edmundhung)! - Add Durable Object storage access to `createTestHarness()`
+
+  You can now execute SQL against a SQLite-backed Durable Object to seed or assert the storage state.
+
+  ```ts
+  const server = createTestHarness({
+    workers: [{ configPath: "./wrangler.json" }],
+  });
+  await server.listen();
+
+  const worker = server.getWorker();
+  const storage = await worker.getDurableObjectStorage("COUNTER", {
+    name: "user-123",
+  });
+
+  await worker.fetch("/counter/user-123");
+
+  const rows = await storage.exec(
+    "SELECT value FROM counters WHERE id = ?",
+    "user-123"
+  );
+  expect(rows).toEqual([{ value: 1 }]);
+  ```
+
+### Patch Changes
+
+- [#14417](https://github.com/cloudflare/workers-sdk/pull/14417) [`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Improve asset serving performance by removing an unnecessary internal dispatch hop
+
+  Asset requests and RPC calls now avoid an extra internal forwarding layer, reducing latency. The forwarding infrastructure is preserved for future use by cohort-based deployments.
+
+- [#14682](https://github.com/cloudflare/workers-sdk/pull/14682) [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260710.1 | ^5.20260714.1 |
+  | workerd                   | 1.20260710.1  | 1.20260714.1  |
+
+- [#14562](https://github.com/cloudflare/workers-sdk/pull/14562) [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981) Thanks [@martijnwalraven](https://github.com/martijnwalraven)! - Keep reporting uncaught Worker errors when a stack frame's file URL has no local path
+
+  `fileURLToPath` throws on `file://` URLs that cannot be represented as a local path (a non-local host; on Windows, any drive-less path — which is every `file:///...` URL reported by a POSIX-built bundle). Both the source-mapping machinery and `youch`'s error-page frame parsing convert stack-frame specifiers this way, so one such frame previously failed the whole pretty-error request: the error page was replaced by a raw Node stack, the error was not logged, and `handleUncaughtError` did not fire. Source mapping now degrades to the unmapped stack and the pretty page falls back to a plain stack response instead.
+
+- [#14418](https://github.com/cloudflare/workers-sdk/pull/14418) [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Improve routing performance for Workers with assets
+
+  Reduce request handling latency by streamlining the router Worker's request path. The loopback infrastructure remains available for future use.
+
+- [#14727](https://github.com/cloudflare/workers-sdk/pull/14727) [`3f3afbb`](https://github.com/cloudflare/workers-sdk/commit/3f3afbbf136c404d26ee39d187a44adb06c1b6e8) Thanks [@ascorbic](https://github.com/ascorbic)! - Prevent local Browser Rendering teardown from hanging when Chrome does not exit
+
+  Miniflare now bounds graceful Chrome shutdown and forcefully terminates the browser process tree when needed, preventing disposal from waiting indefinitely.
+
+- [#14723](https://github.com/cloudflare/workers-sdk/pull/14723) [`e6fbc4e`](https://github.com/cloudflare/workers-sdk/commit/e6fbc4e67f76f9b78da3d9a2dd27c6e9786d2645) Thanks [@ascorbic](https://github.com/ascorbic)! - Prevent concurrent Miniflare instances from deleting each other's temporary email sessions
+
+  Email session cleanup now removes only the current instance's session directory and leaves the shared parent intact, avoiding startup failures when multiple local runtimes use the same project.
+
+## 4.20260710.0
+
+### Minor Changes
+
+- [#14602](https://github.com/cloudflare/workers-sdk/pull/14602) [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `unsafeEvictDurableObject()` for targeted Durable Object eviction
+
+  This lets users verify how a Durable Object recovers after its instance is torn down.
+
+- [#14602](https://github.com/cloudflare/workers-sdk/pull/14602) [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36) Thanks [@edmundhung](https://github.com/edmundhung)! - Allow `listDurableObjectIds()` to accept Durable Object class names as well as binding names.
+
+### Patch Changes
+
+- [#14627](https://github.com/cloudflare/workers-sdk/pull/14627) [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add convenient logging for worker emails in the project directory. In addition to the system's temp directory, logs for emails sent by workers are also written to a local temp directory defined by the calling process, e.g for an simple text email sent via Wrangler this is `.wrangler/tmp/email/<session>/email-text/<message-uuid>.txt` (and related files) in the project root. Callers of Miniflare can control this location via the new `defaultProjectTmpPath` option, which Wrangler and Vite plugin now set automatically.
+
+- [#14642](https://github.com/cloudflare/workers-sdk/pull/14642) [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260708.1 | ^5.20260710.1 |
+  | workerd                   | 1.20260708.1  | 1.20260710.1  |
+
+## 4.20260708.1
+
+### Minor Changes
+
+- [#14535](https://github.com/cloudflare/workers-sdk/pull/14535) [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support dynamic retry delays for Workflow steps in local dev
+
+  A step's `retries.delay` can now be a function that computes the delay per failed attempt, in addition to a static duration. The function receives `{ ctx, error }` and returns a delay (a number of milliseconds or a duration string like `"30 seconds"`), and its result is fed into the configured `backoff`.
+
+  ```js
+  await step.do(
+    "call flaky API",
+    {
+      retries: {
+        limit: 5,
+        backoff: "constant",
+        delay: ({ ctx }) => ctx.attempt * 1000,
+      },
+    },
+    async () => {
+      /* ... */
+    }
+  );
+  ```
+
+  The function is invoked once per failed attempt with a 5 second timeout. If it throws, times out, or returns an invalid value, the step fails without further retries.
+
+## 4.20260708.0
+
+### Minor Changes
+
+- [#14489](https://github.com/cloudflare/workers-sdk/pull/14489) [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `listDurableObjectIds()` to Miniflare
+
+  Miniflare now exposes `listDurableObjectIds()` for listing persisted Durable Object instance IDs by binding name. The Vitest pool now uses this shared Miniflare API internally instead of duplicating Miniflare's storage listing logic.
+
+- [#14465](https://github.com/cloudflare/workers-sdk/pull/14465) [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add rollback support when terminating Workflow instances
+
+  `WorkflowInstance.terminate({ rollback: true })` now runs registered rollback handlers before marking a local Workflow instance as terminated. Wrangler also supports this via `wrangler workflows instances terminate --rollback`, including local mode.
+
+  The rollback option is only sent for terminate operations and is rejected by the Local Explorer API for pause, resume, and restart actions.
+
+### Patch Changes
+
+- [#14596](https://github.com/cloudflare/workers-sdk/pull/14596) [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20260706.1  | 1.20260708.1  |
+  | @cloudflare/workers-types | ^5.20260706.1 | ^5.20260708.1 |
+
+## 4.20260706.0
+
+### Patch Changes
+
+- [#14567](https://github.com/cloudflare/workers-sdk/pull/14567) [`0852346`](https://github.com/cloudflare/workers-sdk/commit/08523467752daa79f0f8950a01f35797aa6f3052) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler", "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From         | To           |
+  | ------------------------- | ------------ | ------------ |
+  | workerd                   | 1.20260702.1 | 1.20260706.1 |
+  | @cloudflare/workers-types | 4.20260702.1 | 5.20260706.1 |
+
+## 4.20260702.0
+
+### Minor Changes
+
+- [#14469](https://github.com/cloudflare/workers-sdk/pull/14469) [`e7e5780`](https://github.com/cloudflare/workers-sdk/commit/e7e5780ea2db48fe43233ecedf01979db6c5ce9d) Thanks [@connyay](https://github.com/connyay)! - Support Queues across separate local dev processes
+
+  Queue producers can now send messages to consumers running in a separate local dev process. Messages produced before the consumer process has registered, or while it is down or reloading, are dropped rather than buffered, with a debug-level log emitted.
+
+### Patch Changes
+
+- [#14514](https://github.com/cloudflare/workers-sdk/pull/14514) [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260701.1 | 1.20260702.1 |
+
+- [#14492](https://github.com/cloudflare/workers-sdk/pull/14492) [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5) Thanks [@penalosa](https://github.com/penalosa)! - Replace the CommonJS `xdg-app-paths` dependency with a vendored pure-ESM implementation
+
+  `xdg-app-paths` (and its `xdg-portable`/`os-paths` dependencies) are CommonJS only, which caused "Dynamic require of 'path' is not supported" errors when the surrounding code was bundled to ESM. The global config/cache directory resolution is now provided by a small, dependency-free pure-ESM module in `@cloudflare/workers-utils` that reproduces the previous path resolution exactly (verified against the real package in unit tests), so existing config and credential locations are unchanged. This also drops the transitive `fsevents` optional dependency that `xdg-app-paths` pulled in.
+
+  Miniflare and create-cloudflare now consume the shared helpers from `@cloudflare/workers-utils` instead of maintaining their own copies, importing node-only leaf entry points (`@cloudflare/workers-utils/fs-helpers`, `@cloudflare/workers-utils/global-wrangler-config-path`) where ESM bundling is required.
+
+- [#14572](https://github.com/cloudflare/workers-sdk/pull/14572) [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Key local rate limit counters by `namespace_id` instead of binding name
+
+  `wrangler dev` and Miniflare previously tracked each rate limit binding's counter by its binding name, so two bindings that referenced the same `namespace_id` were treated as separate limiters. Counters are now keyed by `namespace_id`, matching production: bindings that share a `namespace_id` share a limit, while distinct namespaces stay isolated. This also re-enables rate limit bindings in multiworker `wrangler dev` sessions, where they were previously stripped from secondary Workers to avoid a startup crash.
+
+- [#14409](https://github.com/cloudflare/workers-sdk/pull/14409) [`16fbf81`](https://github.com/cloudflare/workers-sdk/commit/16fbf81d923760d295c7f05b0bd660b7be510e5d) Thanks [@matingathani](https://github.com/matingathani)! - `reset()` from `cloudflare:test` now resets ratelimit binding state between tests. Previously, `RATE_LIMITERS` bindings retained their in-memory bucket counts across test boundaries, causing later tests in the same file to see stale rate-limit exhaustion state.
+
+## 4.20260701.0
+
+### Patch Changes
+
+- [#14502](https://github.com/cloudflare/workers-sdk/pull/14502) [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260630.1 | 1.20260701.1 |
+
+## 4.20260630.0
+
+### Patch Changes
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260625.1 | 1.20260629.1 |
+
+- [#14478](https://github.com/cloudflare/workers-sdk/pull/14478) [`f10d4ad`](https://github.com/cloudflare/workers-sdk/commit/f10d4ad99a3e67e04c16425fe25b6c61ec0c54db) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260629.1 | 1.20260630.1 |
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix edge cases on the local R2 public bucket endpoint (`/cdn-cgi/local/r2/public`) to match r2.dev: write methods are rejected with 401, malformed/multiple/inverted ranges with 400 and unsatisfiable ranges (including `bytes=-0`) with 416, `Range` is honored on HEAD requests with a bodyless 206, `Content-Range` is correct for suffix ranges, object keys are percent-decoded exactly once (keys containing a literal `%` no longer fail), and objects stored without a content type are served as `application/octet-stream` instead of omitting the `Content-Type` header. Unread object bodies are also cancelled (on HEAD and unsatisfiable-range responses) instead of leaking a read stream until garbage collection.
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add Workflow introspection to `createTestHarness()`
+
+  Worker handles can now introspect Workflow bindings by name, allowing tests to disable sleeps, mock step results, and wait for Workflow outcomes. Tests can introspect a known Workflow instance by ID or track instances created after introspection starts.
+
+  ```ts
+  const harness = createTestHarness({
+  	workers: [{ configPath: "./wrangler.json" }],
+  });
+
+  const worker = harness.getWorker();
+  await using workflow = await worker.introspectWorkflow("MY_WORKFLOW");
+
+  await workflow.modifyAll((modifier) =>
+  	modifier.disableSleeps([{ name: "wait-for-approval" }])
+  );
+
+  const response = await worker.fetch("/start-workflow");
+  const [instance] = await workflow.get();
+  await instance.waitForStatus("complete");
+  ```
+
+## 4.20260625.0
+
+### Patch Changes
+
+- [#14406](https://github.com/cloudflare/workers-sdk/pull/14406) [`3b743c1`](https://github.com/cloudflare/workers-sdk/commit/3b743c1b86ad80c40fd9d2d678cd5a8cb66e86fa) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260623.1 | 1.20260625.1 |
+
+## 4.20260623.0
+
+### Patch Changes
+
+- [#14364](https://github.com/cloudflare/workers-sdk/pull/14364) [`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260617.1 | 1.20260619.1 |
+
+- [#14383](https://github.com/cloudflare/workers-sdk/pull/14383) [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260619.1 | 1.20260621.1 |
+
+- [#14397](https://github.com/cloudflare/workers-sdk/pull/14397) [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260621.1 | 1.20260623.1 |
+
+## 4.20260617.1
+
+### Patch Changes
+
+- [#14118](https://github.com/cloudflare/workers-sdk/pull/14118) [`b38823f`](https://github.com/cloudflare/workers-sdk/commit/b38823fb35a8bdcd00004e74404ab18d7b070dbf) Thanks [@aicayzer](https://github.com/aicayzer)! - Fix `Uint8Array` step outputs in local Workflows being persisted with the full backing `ArrayBuffer`
+
+  A `Uint8Array` returned from a Workflows step under `wrangler dev` was serialised together with its full underlying `ArrayBuffer`, causing a raw `SQLITE_TOOBIG` error at view sizes well below the documented 1MiB step-output limit. For example, a 200KB view sliced from an 800KB buffer (a common pattern from `crypto.getRandomValues` or `arr.slice(...)` on a larger pool) would fail. The view's bytes are now copied to a tight buffer before persistence, bringing local behaviour in line with production. Fixes #14101.
+
+## 4.20260617.0
+
+### Patch Changes
+
+- [#14347](https://github.com/cloudflare/workers-sdk/pull/14347) [`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update undici from 7.24.8 to 7.28.0
+
+- [#14346](https://github.com/cloudflare/workers-sdk/pull/14346) [`e930bd4`](https://github.com/cloudflare/workers-sdk/commit/e930bd4ca9880eb0b68ce6d1933c1d9ce290317d) Thanks [@haidargit](https://github.com/haidargit)! - Bump `ws` from 8.20.1 to 8.21.0 to address GHSA-96hv-2xvq-fx4p
+
+  [GHSA-96hv-2xvq-fx4p](https://github.com/advisories/GHSA-96hv-2xvq-fx4p) / [CVE-2026-48779](https://www.cve.org/CVERecord?id=CVE-2026-48779) (high severity) reports a remote memory-exhaustion DoS in `ws@<8.21.0`: a peer sending a high volume of tiny fragments and data chunks over modest network traffic can crash a `ws` server or client via OOM. The fix shipped in [ws@8.21.0](https://github.com/websockets/ws/releases/tag/8.21.0) (commit `2b2abd45`, released 2026-05-22), which also introduces the `maxBufferedChunks` and `maxFragments` options. This change bumps the workspace catalog entry so that `miniflare`, `wrangler`, and `@cloudflare/vite-plugin` all pick up the patched release.
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
+- [#14331](https://github.com/cloudflare/workers-sdk/pull/14331) [`296ad65`](https://github.com/cloudflare/workers-sdk/commit/296ad659305ee150d61451991f04a135fe99d264) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260616.1 | 1.20260617.1 |
+
+## 4.20260616.0
+
+### Minor Changes
+
+- [#14221](https://github.com/cloudflare/workers-sdk/pull/14221) [`0e055d3`](https://github.com/cloudflare/workers-sdk/commit/0e055d39c51dda77717515adb1a33610d385a724) Thanks [@mglewis](https://github.com/mglewis)! - Support `cf.image` (transform via Workers) image transformations in local dev
+
+  `fetch(url, { cf: { image: { ... } } })` now transforms images locally via Sharp, instead of returning the original bytes unchanged. This mirrors the production "transform via Workers" feature, so Workers already using `cf.image` behave much more closely to production in `wrangler dev`.
+
+  As with the Images binding, `cf.image` transforms require Sharp to be installed — transforms are silently skipped if Sharp is unavailable.
+
+### Patch Changes
+
+- [#14271](https://github.com/cloudflare/workers-sdk/pull/14271) [`27db82c`](https://github.com/cloudflare/workers-sdk/commit/27db82c808743f690f023f84be5cde9e223c22d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260611.1 | 1.20260612.1 |
+
+- [#14298](https://github.com/cloudflare/workers-sdk/pull/14298) [`2a6a26b`](https://github.com/cloudflare/workers-sdk/commit/2a6a26b02f27ac18b1773a5460e1e7e37721a5cb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260612.1 | 1.20260615.1 |
+
+- [#14317](https://github.com/cloudflare/workers-sdk/pull/14317) [`9a424ed`](https://github.com/cloudflare/workers-sdk/commit/9a424ed747009c716db77463c72f8d974e048914) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260615.1 | 1.20260616.1 |
+
+- [#14287](https://github.com/cloudflare/workers-sdk/pull/14287) [`41f391f`](https://github.com/cloudflare/workers-sdk/commit/41f391fdda4112ee333782aad02d16dacaa95f8f) Thanks [@edmundhung](https://github.com/edmundhung)! - Improve errors for missing resource bindings
+
+  When methods like `getKVNamespace()` or `getR2Bucket()` are called with a binding name that is not configured for that resource type, Miniflare now reports the expected binding type in the error message.
+
+## 4.20260611.0
+
+### Minor Changes
+
+- [#14119](https://github.com/cloudflare/workers-sdk/pull/14119) [`2047a32`](https://github.com/cloudflare/workers-sdk/commit/2047a32cf78886b71b794a3dfac946a146ab3ffe) Thanks [@tahmid-23](https://github.com/tahmid-23)! - Add support for serving R2 bucket objects publicly via the dev server
+
+  Each local R2 bucket is now exposed under `/cdn-cgi/local/r2/public/<bucket-id>/<key>` on the existing user-facing dev server. The `<bucket-id>` is the bucket's `id` when set, otherwise its binding name. Buckets with a `remoteProxyConnectionString` are not exposed. The endpoint supports GET and HEAD, range requests, conditional headers, and forwards stored HTTP metadata.
+
+### Patch Changes
+
+- [#14246](https://github.com/cloudflare/workers-sdk/pull/14246) [`f3990b2`](https://github.com/cloudflare/workers-sdk/commit/f3990b2358ef49cd6e1ab16de27e25dcd949896f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260609.1 | 1.20260610.1 |
+
+- [#14256](https://github.com/cloudflare/workers-sdk/pull/14256) [`4597f08`](https://github.com/cloudflare/workers-sdk/commit/4597f085d25c7d066ecf056de313e194f41094d1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260610.1 | 1.20260611.1 |
+
+## 4.20260609.0
+
+### Patch Changes
+
+- [#14192](https://github.com/cloudflare/workers-sdk/pull/14192) [`d076bcc`](https://github.com/cloudflare/workers-sdk/commit/d076bcc847adc0cb52c34863d3ad77f8faee5fbb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260603.1 | 1.20260605.1 |
+
+- [#14217](https://github.com/cloudflare/workers-sdk/pull/14217) [`24497d0`](https://github.com/cloudflare/workers-sdk/commit/24497d0f5fb327d7c86f5f3022510b53cfec931d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260605.1 | 1.20260608.1 |
+
+- [#14231](https://github.com/cloudflare/workers-sdk/pull/14231) [`4bb572f`](https://github.com/cloudflare/workers-sdk/commit/4bb572f264089b2ec1ce3a4b0d2f48c226cb4431) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260608.1 | 1.20260609.1 |
+
+- [#14177](https://github.com/cloudflare/workers-sdk/pull/14177) [`48c4ff0`](https://github.com/cloudflare/workers-sdk/commit/48c4ff00483e9346c9fe6dcb981009b081c0a204) Thanks [@ktKongTong](https://github.com/ktKongTong)! - Enable local scheduled handler dispatch for Workers + Assets (#9882)
+
+  It is now possible to trigger a scheduled handler on a Worker that has assets.
+
 ## 4.20260603.0
 
 ### Minor Changes

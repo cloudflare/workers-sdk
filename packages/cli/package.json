@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/cli-shared-helpers",
-	"version": "0.1.7",
+	"version": "0.1.19",
 	"description": "Internal shared CLI helpers for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"keywords": [
 		"cli",
@@ -70,7 +70,7 @@
 	"dependencies": {
 		"@clack/core": "1.2.0",
 		"@cloudflare/workers-utils": "workspace:*",
-		"chalk": "5.3.0",
+		"chalk": "catalog:default",
 		"ci-info": "catalog:default",
 		"cross-spawn": "7.0.6",
 		"log-update": "5.0.1"

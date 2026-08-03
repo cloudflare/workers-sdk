@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
+import { verifyDockerInstalled } from "./utils";
 import type {
 	BuildArgs,
 	ContainerDevOptions,
@@ -40,13 +41,37 @@ export async function constructBuildCommand(
 	return { buildCmd, dockerfile };
 }
 
-export function dockerBuild(
+/**
+ * Spawns a Docker build process and returns a handle to abort or await the build.
+ *
+ * By default this function first verifies that the Docker daemon is reachable.
+ * Callers that have already performed this check (e.g. the dev and deploy flows)
+ * should pass `verifyDockerIsRunning: false` to avoid a redundant check.
+ *
+ * @param dockerPath - Path to the Docker CLI executable.
+ * @param options - Build options including the command arguments and Dockerfile content.
+ * @param options.buildCmd - The Docker build command arguments.
+ * @param options.dockerfile - The Dockerfile content to pipe into stdin.
+ * @param options.verifyDockerIsRunning - When `true` (the default), verifies Docker is installed
+ *   and the daemon is running before spawning the build. Set to `false` to skip the check.
+ *
+ * @returns An object with an `abort` function and a `ready` promise.
+ */
+export async function dockerBuild(
 	dockerPath: string,
 	options: {
 		buildCmd: string[];
 		dockerfile: string;
+		verifyDockerIsRunning?: boolean;
 	}
-): { abort: () => void; ready: Promise<void> } {
+): Promise<{ abort: () => void; ready: Promise<void> }> {
+	if (options.verifyDockerIsRunning !== false) {
+		await verifyDockerInstalled({
+			dockerPath,
+			imageNoun: "the image",
+		});
+	}
+
 	let errorHandled = false;
 	let resolve: () => void;
 	let reject: (err: unknown) => void;
@@ -109,9 +134,21 @@ export function dockerBuild(
 	};
 }
 
+/**
+ * Builds a container image from the given container dev options.
+ *
+ * @param dockerPath - Path to the Docker CLI executable.
+ * @param options - Container configuration including the Dockerfile path, build context, and image tag.
+ * @param verifyDockerIsRunning - When `true` (the default), verifies Docker is installed
+ *   and the daemon is running before building. Set to `false` when the caller has already
+ *   performed this check.
+ *
+ * @returns An object with an `abort` function and a `ready` promise.
+ */
 export async function buildImage(
 	dockerPath: string,
-	options: Exclude<ContainerDevOptions, ImageURIConfig>
+	options: Exclude<ContainerDevOptions, ImageURIConfig>,
+	verifyDockerIsRunning?: boolean
 ) {
 	const { buildCmd, dockerfile } = await constructBuildCommand({
 		tag: options.image_tag,
@@ -121,5 +158,9 @@ export async function buildImage(
 		platform: "linux/amd64",
 	});
 
-	return dockerBuild(dockerPath, { buildCmd, dockerfile });
+	return dockerBuild(dockerPath, {
+		buildCmd,
+		dockerfile,
+		verifyDockerIsRunning,
+	});
 }

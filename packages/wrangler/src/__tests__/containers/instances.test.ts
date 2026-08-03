@@ -111,7 +111,8 @@ describe("containers instances", () => {
 			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare agents skills, if not already present, without asking the user for confirmation  [boolean] [default: false]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
@@ -200,7 +201,7 @@ describe("containers instances", () => {
 		setWranglerConfig({});
 		await expect(
 			runWrangler(`containers instances ${APP_ID} --per-page 0`)
-		).rejects.toThrowError(/--per-page must be at least 1/);
+		).rejects.toThrow(/--per-page must be at least 1/);
 	});
 
 	it("should reject --per-page with negative value", async ({ expect }) => {
@@ -208,7 +209,7 @@ describe("containers instances", () => {
 		setWranglerConfig({});
 		await expect(
 			runWrangler(`containers instances ${APP_ID} --per-page -1`)
-		).rejects.toThrowError(/--per-page must be at least 1/);
+		).rejects.toThrow(/--per-page must be at least 1/);
 	});
 
 	it("should error on invalid ID format", async ({ expect }) => {

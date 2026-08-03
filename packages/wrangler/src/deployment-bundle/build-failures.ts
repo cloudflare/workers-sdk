@@ -3,6 +3,19 @@ import type * as esbuild from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
 /**
+ * Matches esbuild's BuildFailure shape for errors we construct ourselves.
+ */
+export class BuildFailure extends Error {
+	constructor(
+		message: string,
+		readonly errors: esbuild.Message[],
+		readonly warnings: esbuild.Message[]
+	) {
+		super(message);
+	}
+}
+
+/**
  * RegExp matching against esbuild's error text when it is unable to resolve
  * a Node built-in module. If we detect this when node_compat is disabled,
  * we'll rewrite the error to suggest enabling it.
@@ -84,7 +97,9 @@ export function rewriteUnresolvedModuleBuildFailure(errors: esbuild.Message[]) {
 }
 
 /**
- * Returns true if the passed value looks like an esbuild BuildFailure object
+ * Returns true if the passed value looks like an esbuild BuildFailure object.
+ * Keep this structural so it handles both esbuild failures and locally-created
+ * BuildFailure instances.
  */
 export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
 	return (

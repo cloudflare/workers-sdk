@@ -116,18 +116,31 @@ export async function updateTsConfig(
 		let newTypes = new Set(currentTypes);
 		if (ctx.template.workersTypes === "installed") {
 			const entrypointVersion = getLatestTypesEntrypoint(ctx);
-			if (entrypointVersion === null) {
-				return;
-			}
-			const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
 			const explicitEntrypoint = currentTypes.some((t) =>
 				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/)
 			);
 			// If a type declaration with an explicit entrypoint exists, leave the types as is.
-			// Otherwise, add the latest entrypoint
+			// Otherwise add the workers-types entry:
+			// - `@cloudflare/workers-types` v4 and earlier ship date-versioned entrypoints,
+			//   so use the latest one (e.g. `@cloudflare/workers-types/2024-01-01`).
+			// - v5+ dropped the date-versioned entrypoints (getLatestTypesEntrypoint returns
+			//   null), so fall back to the bare package import when it is actually installed.
 			if (!explicitEntrypoint) {
 				newTypes.delete("@cloudflare/workers-types");
-				newTypes.add(typesEntrypoint);
+				if (entrypointVersion !== null) {
+					newTypes.add(`@cloudflare/workers-types/${entrypointVersion}`);
+				} else if (
+					existsSync(
+						join(
+							ctx.project.path,
+							"node_modules",
+							"@cloudflare",
+							"workers-types"
+						)
+					)
+				) {
+					newTypes.add("@cloudflare/workers-types");
+				}
 			}
 		} else if (ctx.template.workersTypes === "generated") {
 			newTypes.add(ctx.template.typesPath ?? "./worker-configuration.d.ts");

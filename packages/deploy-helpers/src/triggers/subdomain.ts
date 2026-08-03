@@ -4,16 +4,28 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import type { DeployHelpersContext } from "../shared/types";
+import { confirm, fetchResult, logger, prompt } from "../shared/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 type WorkersDevSubdomainRegistrationContext = "workers_dev" | "workflows";
 
 type GetWorkersDevSubdomainOptions = {
-	configPath?: string | undefined;
 	abortSignal?: AbortSignal | undefined;
+	autoRegisterSubdomain?: string | undefined;
+	configPath?: string | undefined;
 	registrationContext?: WorkersDevSubdomainRegistrationContext | undefined;
 };
+
+function toValidSubdomain(input: string): string {
+	const subdomain = input
+		.toLowerCase()
+		.replace(/[^a-z0-9-]+/g, "-")
+		.replace(/^-+/, "")
+		.slice(0, 63)
+		.replace(/-+$/, "");
+
+	return subdomain || "my-worker";
+}
 
 /**
  * Gets the <user-subdomain>.(fed.)workers.dev URL for the given account.
@@ -21,18 +33,18 @@ type GetWorkersDevSubdomainOptions = {
 export async function getWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	ctx: DeployHelpersContext,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string> {
 	const {
-		configPath,
 		abortSignal,
+		autoRegisterSubdomain,
+		configPath,
 		registrationContext = "workers_dev",
 	} = options;
 
 	try {
 		// note: API docs say that this field is "name", but they're lying.
-		const { subdomain } = await ctx.fetchResult<{ subdomain: string }>(
+		const { subdomain } = await fetchResult<{ subdomain: string }>(
 			complianceConfig,
 			`/accounts/${accountId}/workers/subdomain`,
 			undefined,
@@ -48,9 +60,18 @@ export async function getWorkersDevSubdomain(
 
 		// 10007 error code: not found
 		// https://api.cloudflare.com/#worker-subdomain-get-subdomain
-		ctx.logger.warn(getRegistrationWarning(registrationContext));
+		logger.warn(getRegistrationWarning(registrationContext));
+		if (autoRegisterSubdomain) {
+			return await registerSubdomain(
+				complianceConfig,
+				accountId,
+				configPath,
+				registrationContext,
+				autoRegisterSubdomain
+			);
+		}
 
-		const wantsToRegister = await ctx.confirm(
+		const wantsToRegister = await confirm(
 			"Would you like to register a workers.dev subdomain now?",
 			{ fallbackValue: false }
 		);
@@ -66,8 +87,7 @@ export async function getWorkersDevSubdomain(
 			complianceConfig,
 			accountId,
 			configPath,
-			registrationContext,
-			ctx
+			registrationContext
 		);
 	}
 }
@@ -119,24 +139,30 @@ async function registerSubdomain(
 	accountId: string,
 	configPath: string | undefined,
 	registrationContext: WorkersDevSubdomainRegistrationContext,
-	ctx: DeployHelpersContext
+	automaticSubdomain?: string
 ): Promise<string> {
 	let subdomain: string | undefined;
+	let suggestedSubdomain = automaticSubdomain
+		? toValidSubdomain(automaticSubdomain)
+		: undefined;
 
 	while (subdomain === undefined) {
-		const potentialName = await ctx.prompt(
-			"What would you like your workers.dev subdomain to be? It will be accessible at https://<subdomain>.workers.dev"
-		);
+		const potentialName =
+			suggestedSubdomain ??
+			(await prompt(
+				"What would you like your workers.dev subdomain to be? It will be accessible at https://<subdomain>.workers.dev"
+			));
+		suggestedSubdomain = undefined;
 
 		if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(potentialName)) {
-			ctx.logger.warn(
+			logger.warn(
 				`${potentialName} is invalid, please choose another subdomain.`
 			);
 			continue;
 		}
 
 		try {
-			await ctx.fetchResult<{ subdomain: string }>(
+			await fetchResult<{ subdomain: string }>(
 				complianceConfig,
 				`/accounts/${accountId}/workers/subdomains/${potentialName}`
 			);
@@ -151,24 +177,44 @@ async function registerSubdomain(
 					// oddly enough, this is a `subdomain_unavailable` error, meaning...that the subdomain
 					// doesn't exist. and we can register it. this is exactly how the dashboard does it.
 				} else if (subdomainAvailabilityCheckError.code === 10031) {
-					ctx.logger.error(
+					if (automaticSubdomain) {
+						throw new UserError(
+							`Wrangler could not automatically register "${potentialName}" as your workers.dev subdomain because the name is unavailable. Register a different subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+							{
+								telemetryMessage:
+									"workers dev automatic registration name unavailable",
+							}
+						);
+					}
+					logger.error(
 						"Subdomain is unavailable, please try a different subdomain"
 					);
 					continue;
 				} else {
-					ctx.logger.error("An unexpected error occurred, please try again.");
+					if (automaticSubdomain) {
+						throw new UserError(
+							`Wrangler could not verify whether "${potentialName}" is available as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+							{
+								telemetryMessage:
+									"workers dev automatic registration availability check failed",
+							}
+						);
+					}
+					logger.error("An unexpected error occurred, please try again.");
 					continue;
 				}
 			}
 		}
 
-		const ok = await ctx.confirm(
-			`Creating a workers.dev subdomain for your account at ${chalk.blue(
-				chalk.underline(
-					`https://${potentialName}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`
-				)
-			)}. Ok to proceed?`
-		);
+		const ok =
+			automaticSubdomain !== undefined ||
+			(await confirm(
+				`Creating a workers.dev subdomain for your account at ${chalk.blue(
+					chalk.underline(
+						`https://${potentialName}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`
+					)
+				)}. Ok to proceed?`
+			));
 		if (!ok) {
 			throw getRegistrationDeclinedError(
 				registrationContext,
@@ -178,7 +224,7 @@ async function registerSubdomain(
 		}
 
 		try {
-			const result = await ctx.fetchResult<{ subdomain: string }>(
+			const result = await fetchResult<{ subdomain: string }>(
 				complianceConfig,
 				`/accounts/${accountId}/workers/subdomain`,
 				{
@@ -189,6 +235,15 @@ async function registerSubdomain(
 			subdomain = result.subdomain;
 		} catch (err) {
 			const subdomainCreationError = err as { code?: number };
+			if (automaticSubdomain) {
+				throw new UserError(
+					`Wrangler could not automatically register "${potentialName}" as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+					{
+						telemetryMessage:
+							"workers dev automatic registration creation failed",
+					}
+				);
+			}
 			if (
 				typeof subdomainCreationError === "object" &&
 				!!subdomainCreationError &&
@@ -196,22 +251,20 @@ async function registerSubdomain(
 			) {
 				switch (subdomainCreationError.code) {
 					case 10031:
-						ctx.logger.error(
+						logger.error(
 							"Subdomain is unavailable, please try a different subdomain."
 						);
 						break;
 					default:
-						ctx.logger.error("An unexpected error occurred, please try again.");
+						logger.error("An unexpected error occurred, please try again.");
 						break;
 				}
 			}
 		}
 	}
 
-	ctx.logger.log(
-		"Success! It may take a few minutes for DNS records to update."
-	);
-	ctx.logger.log(
+	logger.log("Success! It may take a few minutes for DNS records to update.");
+	logger.log(
 		`Visit ${chalk.blue(
 			chalk.underline(
 				`https://dash.cloudflare.com/${accountId}/workers/subdomain`

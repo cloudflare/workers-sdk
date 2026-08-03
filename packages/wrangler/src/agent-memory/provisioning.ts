@@ -9,6 +9,9 @@ import type { AgentMemoryNamespace } from "./client";
  * Used by the provisioning system at deploy time to decide whether a
  * configured namespace needs to be created. The caller (not this function)
  * is responsible for provisioning when `null` is returned.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function getAgentMemoryNamespace(
 	complianceConfig: ComplianceConfig,
@@ -32,6 +35,9 @@ export async function getAgentMemoryNamespace(
 /**
  * Create an Agent Memory namespace for the given account.
  * Used by the provisioning system when a namespace doesn't exist at deploy time.
+ *
+ * Keep in sync with the local provisioning copy in
+ * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
  */
 export async function createAgentMemoryNamespace(
 	complianceConfig: ComplianceConfig,

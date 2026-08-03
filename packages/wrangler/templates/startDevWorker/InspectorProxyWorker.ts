@@ -414,10 +414,16 @@ export class InspectorProxyWorker implements DurableObject {
 				runtime
 			);
 		}
-		this.sendRuntimeMessage(
-			{ method: "Network.enable", id: this.nextCounter() },
-			runtime
-		);
+		// Only enable the Network domain when DevTools is attached. Otherwise the
+		// runtime streams a Network.dataReceived per response body chunk into a
+		// buffer that is never drained without a client (headless `wrangler dev`),
+		// flooding the inspector until the dev server stops accepting connections.
+		if (this.websockets.devtools !== undefined) {
+			this.sendRuntimeMessage(
+				{ method: "Network.enable", id: this.nextCounter() },
+				runtime
+			);
+		}
 
 		clearInterval(this.runtimeKeepAliveInterval);
 		this.runtimeKeepAliveInterval = setInterval(() => {
@@ -563,11 +569,19 @@ export class InspectorProxyWorker implements DurableObject {
 				if (this.websockets.devtools === devtools) {
 					this.websockets.devtools = undefined;
 
-					// Notify the runtime to disable the debugger when DevTools disconnects.
+					// Notify the runtime to disable the Debugger and Network domains when
+					// DevTools disconnects. Without disabling Network the runtime keeps
+					// streaming Network.dataReceived into runtimeMessageBuffer, which is no
+					// longer drained once devtools is undefined, reintroducing the same
+					// headless flood this proxy otherwise avoids.
 					if (this.websockets.runtime) {
 						this.sendRuntimeMessage({
 							id: this.nextCounter(),
 							method: "Debugger.disable",
+						});
+						this.sendRuntimeMessage({
+							id: this.nextCounter(),
+							method: "Network.disable",
 						});
 					}
 				}

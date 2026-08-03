@@ -5,7 +5,12 @@ import {
 	Sidebar,
 	useSidebar,
 } from "@cloudflare/kumo";
-import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react";
+import {
+	MonitorIcon,
+	MoonIcon,
+	PulseIcon,
+	SunIcon,
+} from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
@@ -13,6 +18,7 @@ import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { LOCAL_EXPLORER_BASE_PATH } from "../constants";
 import { loadGroupState, saveGroupState } from "../utils/sidebar-state";
 import { getNextThemeMode } from "../utils/theme-state";
 import { SidebarGroupPopup } from "./SidebarGroupPopup";
@@ -81,6 +87,33 @@ export function AppSidebar({
 
 	const showWorkerSelector = workers.length > 1;
 	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
+
+	// Observability is global (not per-binding); expose its views as a group so
+	// both pages are discoverable instead of hidden behind an in-header switcher.
+	const observabilityItems = [
+		{
+			id: "traces",
+			isActive:
+				currentPath === "/observability" || currentPath === "/observability/",
+			label: "Traces",
+			link: { params: {}, search: workerSearch, to: "/observability" },
+		},
+		{
+			id: "events",
+			isActive: currentPath.startsWith("/observability/events"),
+			label: "Events",
+			link: { params: {}, search: workerSearch, to: "/observability/events" },
+		},
+	] satisfies Array<{
+		id: string;
+		isActive: boolean;
+		label: string;
+		link: {
+			params: object;
+			search?: object;
+			to: FileRouteTypes["to"];
+		};
+	}>;
 
 	const d1Databases = bindings?.d1 ?? [];
 	const doNamespaces = (bindings?.do ?? []).filter((ns) => ns.useSqlite);
@@ -198,7 +231,7 @@ export function AppSidebar({
 				<div className="flex w-full items-center justify-between">
 					<a
 						className="box-border flex items-center gap-2.5 px-1"
-						href="/cdn-cgi/explorer/"
+						href={`${LOCAL_EXPLORER_BASE_PATH}/`}
 					>
 						<CloudflareLogo
 							className={cn(
@@ -237,6 +270,49 @@ export function AppSidebar({
 						onWorkerChange={onWorkerChange}
 					/>
 				)}
+
+				<Sidebar.MenuItem className="space-y-1">
+					{sidebar.open ? (
+						<Sidebar.Collapsible
+							open={groupOpen.observability}
+							onOpenChange={(open) => {
+								handleGroupOpenChange("observability", open);
+							}}
+						>
+							<Sidebar.CollapsibleTrigger
+								render={
+									<Sidebar.MenuButton
+										icon={<PulseIcon width={20} height={20} />}
+									>
+										Observability <Sidebar.MenuChevron />
+									</Sidebar.MenuButton>
+								}
+							/>
+
+							<Sidebar.CollapsibleContent>
+								<Sidebar.MenuSub className="mt-1 ml-5.5 space-y-0.5">
+									{observabilityItems.map((item) => (
+										<Sidebar.MenuSubButton
+											active={item.isActive}
+											className="cursor-pointer"
+											href={router.buildLocation(item.link).href}
+											key={item.id}
+										>
+											{item.label}
+										</Sidebar.MenuSubButton>
+									))}
+								</Sidebar.MenuSub>
+							</Sidebar.CollapsibleContent>
+						</Sidebar.Collapsible>
+					) : (
+						<SidebarGroupPopup
+							emptyLabel=""
+							icon={<PulseIcon width={20} height={20} />}
+							items={observabilityItems}
+							title="Observability"
+						/>
+					)}
+				</Sidebar.MenuItem>
 
 				{sidebar.open ? (
 					<Sidebar.MenuItem className="space-y-1">

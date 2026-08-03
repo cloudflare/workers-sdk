@@ -65,8 +65,24 @@ declare module "cloudflare:mock-agent" {
 }
 
 declare module "workerd:unsafe" {
+	export interface DurableObjectEvictionOptions {
+		webSockets?: "close" | "hibernate";
+	}
+
 	function abortAllDurableObjects(): Promise<void>;
 	function deleteAllDurableObjects(): Promise<void>;
+	function evict(
+		stub: DurableObjectStub,
+		options?: DurableObjectEvictionOptions
+	): Promise<void>;
+	function evictAllDurableObjects(
+		options?: DurableObjectEvictionOptions
+	): Promise<void>;
 
-	export default { abortAllDurableObjects, deleteAllDurableObjects };
+	export default {
+		abortAllDurableObjects,
+		deleteAllDurableObjects,
+		evict,
+		evictAllDurableObjects,
+	};
 }

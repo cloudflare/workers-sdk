@@ -4,6 +4,7 @@ on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] dependabot-only job requires write access to push generated changesets; checkout v6 persists credentials under RUNNER_TEMP
     paths:
       - "packages/miniflare/package.json"
+      - "pnpm-workspace.yaml"
 
 permissions:
   # content:write permission needed to update add changesets to dependabot PRs
@@ -14,6 +15,7 @@ jobs:
   generate-changeset:
     runs-on: ubuntu-slim
     if: |
+      github.actor == 'dependabot[bot]' &&
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository
     steps:

@@ -1,4 +1,5 @@
 import { instrument } from "@microlabs/otel-cf-workers";
+import addFromCjsWasmModuleDep from "cjs-wasm-module-dep";
 import { exports } from "cloudflare:workers";
 import { Utils } from "discord-api-types/v10";
 import { value as esmDepValue } from "esm-dep";
@@ -21,6 +22,10 @@ describe("test", () => {
 
 	test("resolves a dependency importing .wasm?module", async () => {
 		assert.equal(await addFromWasmModuleDep(2, 3), 5);
+	});
+
+	test("resolves a CJS dependency requiring .wasm?module", async () => {
+		assert.equal(await addFromCjsWasmModuleDep(2, 3), 5);
 	});
 
 	test("resolves dependency with mapping on the browser field", async () => {

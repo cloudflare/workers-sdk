@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { describe, it, vi } from "vitest";
 import {
 	getAssetFilename,
@@ -20,7 +20,7 @@ describe("cloudflared binary management", () => {
 			const version = "2026.1.0";
 			const binPath = getCloudflaredBinPath(version);
 			const expectedDir = path.join(
-				getGlobalWranglerConfigPath(),
+				getGlobalConfigPath(),
 				"cloudflared",
 				version
 			);

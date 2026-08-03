@@ -50,6 +50,7 @@ export const d1ExecuteCommand = createCommand({
 			"You must provide either --command or --file for this command to run successfully.",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 		printResourceLocation: (args) => !args.json,
 	},
@@ -238,9 +239,12 @@ export async function executeSql({
 				? ({ command } as ExecuteInput)
 				: null;
 		if (!input) {
-			throw new UserError(`Error: must provide --command or --file.`, {
-				telemetryMessage: "d1 execute missing command or file",
-			});
+			throw new UserError(
+				`Missing required option --command or --file. Provide a SQL command inline with --command="<SQL>", or a path to a SQL file with --file=<path>.`,
+				{
+					telemetryMessage: "d1 execute missing command or file",
+				}
+			);
 		}
 		if (local && remote) {
 			throw new UserError(
@@ -251,14 +255,20 @@ export async function executeSql({
 			);
 		}
 		if (preview && !remote) {
-			throw new UserError(`Error: can't use --preview without --remote`, {
-				telemetryMessage: "d1 execute preview requires remote",
-			});
+			throw new UserError(
+				`Cannot use --preview without --remote. The --preview flag targets a preview D1 database, which requires the --remote flag. Remove --preview or add --remote.`,
+				{
+					telemetryMessage: "d1 execute preview requires remote",
+				}
+			);
 		}
 		if (persistTo && !local) {
-			throw new UserError(`Error: can't use --persist-to without --local`, {
-				telemetryMessage: "d1 execute persist-to requires local",
-			});
+			throw new UserError(
+				`Cannot use --persist-to without --local. The --persist-to flag specifies a local persistence directory, which requires the --local flag. Remove --persist-to or add --local.`,
+				{
+					telemetryMessage: "d1 execute persist-to requires local",
+				}
+			);
 		}
 		if (input.file) {
 			await checkForSQLiteBinary(input.file);
@@ -296,9 +306,7 @@ async function executeLocally({
 	input: ExecuteInput;
 	persistTo: string | undefined;
 }) {
-	const localDB = getDatabaseInfoFromConfig(config, name, {
-		requireDatabaseId: false,
-	});
+	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`,
@@ -306,9 +314,11 @@ async function executeLocally({
 		);
 	}
 
-	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	// TODO(#11870): Really we should prefer localDB.name here, but that would break users with existing local databases.
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid ?? localDB.binding;
 	const persistencePath = getLocalPersistencePath(persistTo, config);
-	const d1Persist = path.join(persistencePath, "v3", "d1");
+	const resourcePersistencePath = path.join(persistencePath, "v3");
+	const d1Persist = path.join(resourcePersistencePath, "d1");
 
 	logger.log(
 		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
@@ -322,7 +332,7 @@ async function executeLocally({
 	const mf = new Miniflare({
 		modules: true,
 		script: "",
-		d1Persist,
+		resourcePersistencePath,
 		d1Databases: { DATABASE: id },
 	});
 	const db = await mf.getD1Database("DATABASE");

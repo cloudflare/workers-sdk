@@ -16,6 +16,7 @@ export const d1DeleteCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: true,
 	},
 	args: {

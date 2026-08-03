@@ -1,5 +1,6 @@
 import {
 	configFormat,
+	experimental_readRawConfig,
 	experimental_patchConfig,
 	formatConfigSnippet,
 	friendlyBindingNames,
@@ -44,7 +45,6 @@ type ValidKeys = Exclude<
 	| "secrets_store_secrets"
 	| "artifacts"
 	| "unsafe_hello_world"
-	| "flagship"
 >;
 
 export const sharedResourceCreationArgs = {
@@ -83,8 +83,10 @@ export async function createdResourceConfig<K extends ValidKeys>(
 	}
 ) {
 	const envString = env ? ` in the "${env}" environment` : "";
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- friendlyBindingNames is keyed by config field name; getBindingTypeFriendlyName uses a different key space
+	const resourceName = friendlyBindingNames[resource];
 	logger.log(
-		`To access your new ${friendlyBindingNames[resource]} in your Worker, add the following snippet to your configuration file${envString}:`
+		`To access your new ${resourceName} in your Worker, add the following snippet to your configuration file${envString}:`
 	);
 
 	logger.log(
@@ -129,16 +131,39 @@ export async function createdResourceConfig<K extends ValidKeys>(
 							{ defaultValue: false }
 						));
 
-			const configFilePatch = {
-				[resource]: [
-					{ ...snippet(bindingName), ...(useRemote ? { remote: true } : {}) },
-				],
+			const { rawConfig } = experimental_readRawConfig({ config: configPath });
+			const environment = env ? rawConfig.env?.[env] : rawConfig;
+
+			const binding = {
+				...snippet(bindingName),
+				remote: useRemote ? true : undefined,
 			};
 
+			const existingBindings = environment?.[resource];
+			const matchingBindingIndex = existingBindings?.findIndex(
+				(existingBinding) => existingBinding.binding === binding.binding
+			);
+
+			const shouldReplaceExistingBinding =
+				existingBindings !== undefined &&
+				matchingBindingIndex !== undefined &&
+				matchingBindingIndex !== -1;
+
+			let bindings: Partial<NonNullable<RawConfig[K]>[number]>[] = [binding];
+			if (shouldReplaceExistingBinding) {
+				bindings = existingBindings.map((existingBinding, index) => {
+					if (index !== matchingBindingIndex) {
+						return existingBinding;
+					}
+					return { ...existingBinding, ...binding };
+				});
+			}
+
+			const configFilePatch = { [resource]: bindings };
 			experimental_patchConfig(
 				configPath,
 				env ? { env: { [env]: configFilePatch } } : configFilePatch,
-				true
+				!shouldReplaceExistingBinding
 			);
 		}
 	}

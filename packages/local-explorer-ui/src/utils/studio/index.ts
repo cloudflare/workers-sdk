@@ -1,3 +1,4 @@
+import { isEqual } from "../is-equal";
 import { formatSqlError, getStudioTableNameFromSQL } from "./formatter";
 import type {
 	IStudioDriver,
@@ -5,7 +6,25 @@ import type {
 	StudioMultipleQueryResult,
 	StudioResultHeader,
 	StudioResultSet,
+	StudioTableSchemaChange,
 } from "../../types/studio";
+
+/**
+ * Determines whether a table schema change contains any unsaved modifications.
+ *
+ * Checks if the table name, any column, or any constraint differs between its
+ * current (`new`) and original (`old`) state.
+ *
+ * @param value - The schema change object to inspect.
+ * @returns `true` if the schema has been modified, `false` otherwise.
+ */
+export function getIsSchemaDirty(value: StudioTableSchemaChange): boolean {
+	return (
+		value.name.new !== value.name.old ||
+		value.columns.some((change) => !isEqual(change.new, change.old)) ||
+		value.constraints.some((change) => !isEqual(change.new, change.old))
+	);
+}
 
 function escapeSqlString(str: string): string {
 	return `'${str.replace(/'/g, `''`)}'`;

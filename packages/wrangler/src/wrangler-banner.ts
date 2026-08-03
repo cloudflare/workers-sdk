@@ -6,6 +6,7 @@ import supportsColor from "supports-color";
 import { version as wranglerVersion } from "../package.json";
 import { logger } from "./logger";
 import { updateCheck } from "./update-check";
+import { getActiveProfile, getAuthFromEnv } from "./user";
 import type { NpmVersionCheckResult } from "@cloudflare/workers-utils";
 
 const MIN_NODE_VERSION = "22.0.0";
@@ -19,7 +20,10 @@ const UPDATE_CHECK_GRACE_MS = 100;
 // Otherwise it is left undefined, which signals that this isn't a prerelease
 declare const WRANGLER_PRERELEASE_LABEL: string;
 
-export async function printWranglerBanner(performUpdateCheck = true) {
+export async function printWranglerBanner(
+	performUpdateCheck = true,
+	showActiveProfile = true
+) {
 	if (getWranglerHideBanner()) {
 		return;
 	}
@@ -60,6 +64,13 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 					)
 				: "─".repeat(text.length))
 	);
+
+	if (showActiveProfile && getAuthFromEnv() === undefined) {
+		const resolvedProfile = getActiveProfile();
+		if (resolvedProfile !== "default") {
+			logger.log(`Active profile: ${chalk.blue(resolvedProfile)}`);
+		}
+	}
 
 	if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
 		logger.warn(

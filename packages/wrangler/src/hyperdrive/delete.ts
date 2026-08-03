@@ -8,6 +8,7 @@ export const hyperdriveDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		id: {
 			type: "string",

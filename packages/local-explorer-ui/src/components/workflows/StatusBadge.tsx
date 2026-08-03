@@ -1,5 +1,6 @@
 import { cn } from "@cloudflare/kumo";
 import type { WorkflowsInstance } from "../../api";
+import type { JSX } from "react";
 
 type WorkflowStatus = NonNullable<WorkflowsInstance["status"]>;
 

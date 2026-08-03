@@ -1,10 +1,11 @@
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
-import { getDetailsForAutoConfig } from "./autoconfig/details";
-import { runAutoConfig } from "./autoconfig/run";
 import {
+	runAutoConfigDetection,
+	runAutoConfigLogic,
 	sendAutoConfigProcessEndedMetricsEvent,
 	sendAutoConfigProcessStartedMetricsEvent,
-} from "./autoconfig/telemetry-utils";
+} from "./autoconfig";
+import { createWranglerAutoConfigContext } from "./autoconfig-context";
 import { createCommand } from "./core/create-command";
 import { logger } from "./logger";
 import { writeOutput } from "./output";
@@ -16,6 +17,9 @@ export const setupCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Compute & AI",
+	},
+	behaviour: {
+		suggestSkillsAfterHandler: true,
 	},
 	args: {
 		yes: {
@@ -55,9 +59,24 @@ export const setupCommand = createCommand({
 			dryRun: !!args.dryRun,
 		});
 
-		const details = await getDetailsForAutoConfig({
-			wranglerConfig: config,
-		});
+		const context = createWranglerAutoConfigContext();
+
+		let details;
+		try {
+			details = await runAutoConfigDetection({
+				command: "wrangler setup",
+				wranglerConfig: config,
+				context,
+			});
+		} catch (error) {
+			sendAutoConfigProcessEndedMetricsEvent({
+				command: "wrangler setup",
+				dryRun: !!args.dryRun,
+				success: false,
+				error,
+			});
+			throw error;
+		}
 
 		function logCompletionMessage(message: string) {
 			if (args.completionMessage) {
@@ -67,12 +86,16 @@ export const setupCommand = createCommand({
 
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
-			const autoConfigSummary = await runAutoConfig(details, {
-				runBuild: args.build,
-				skipConfirmations: args.yes,
-				dryRun: args.dryRun,
-				enableWranglerInstallation: args.installWrangler,
-			}).catch((error) => {
+			let autoConfigSummary;
+			try {
+				autoConfigSummary = await runAutoConfigLogic(details, {
+					context,
+					runBuild: args.build,
+					skipConfirmations: args.yes,
+					dryRun: !!args.dryRun,
+					enableWranglerInstallation: args.installWrangler,
+				});
+			} catch (error) {
 				sendAutoConfigProcessEndedMetricsEvent({
 					command: "wrangler setup",
 					dryRun: !!args.dryRun,
@@ -80,7 +103,8 @@ export const setupCommand = createCommand({
 					error,
 				});
 				throw error;
-			});
+			}
+
 			writeOutput({
 				type: "autoconfig",
 				version: 1,

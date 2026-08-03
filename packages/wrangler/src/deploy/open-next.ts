@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import { readdir } from "node:fs/promises";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { getOpenNextDeployFromEnv } from "@cloudflare/workers-utils";
-import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 

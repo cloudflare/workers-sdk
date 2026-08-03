@@ -1,7 +1,14 @@
 import { Button, DropdownMenu } from "@cloudflare/kumo";
 import { SplitPane } from "@cloudflare/workers-editor-shared";
 import { BinocularsIcon, CaretDownIcon, PlayIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type JSX,
+} from "react";
 import { runStudioMultipleSQLStatements } from "../../../utils/studio";
 import { beautifySQLQuery } from "../../../utils/studio/formatter";
 import { useStudioContext } from "../Context";

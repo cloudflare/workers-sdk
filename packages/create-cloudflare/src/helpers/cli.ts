@@ -1,10 +1,12 @@
 import { updateStatus, warn } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
+import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import {
 	spinner,
 	spinnerFrames,
 } from "@cloudflare/cli-shared-helpers/interactive";
 import Haikunator from "haikunator";
+import { detectPackageManager } from "helpers/packageManagers";
 import { getLatestPackageVersion } from "helpers/packages";
 import open from "open";
 import semver from "semver";
@@ -46,6 +48,25 @@ export const isUpdateAvailable = async () => {
 	} finally {
 		s.stop();
 	}
+};
+
+// Spawn a separate process running the most recent version of c3
+export const runLatest = async () => {
+	const { npm } = detectPackageManager();
+	const args = process.argv.slice(2);
+
+	// the parsing logic of `npm create` requires `--` to be supplied
+	// before any flags intended for the target command.
+	if (npm === "npm") {
+		args.unshift("--");
+	}
+
+	await runCommand([npm, "create", "cloudflare@latest", ...args], {
+		// Mark the spawned process so it doesn't attempt to update and re-spawn
+		// again, which would loop indefinitely when the package manager keeps
+		// resolving the same version of `cloudflare@latest`.
+		env: { CREATE_CLOUDFLARE_RELAUNCHED: "true" },
+	});
 };
 
 export const C3_DEFAULTS: C3Args = {

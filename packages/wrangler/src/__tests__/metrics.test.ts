@@ -3,7 +3,6 @@ import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
-import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -26,13 +25,15 @@ import {
 	getMetricsDispatcher,
 } from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
+import { detectAgent } from "../utils/detect-agent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ExpectStatic } from "vitest";
 
-vi.mock("am-i-vibing");
+vi.mock("../utils/detect-agent");
+const mockDetectAgent = vi.mocked(detectAgent);
 vi.mock("../metrics/helpers");
 vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
@@ -90,11 +91,9 @@ describe("metrics", () => {
 		describe("sendAdhocEvent()", () => {
 			beforeEach(() => {
 				// Default: no agent detected
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: false,
+				mockDetectAgent.mockReturnValue({
+					isAgent: false,
 					id: null,
-					name: null,
-					type: null,
 				});
 			});
 
@@ -196,11 +195,9 @@ describe("metrics", () => {
 			});
 
 			it("should include agent ID when detected", async ({ expect }) => {
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: true,
+				mockDetectAgent.mockReturnValue({
+					isAgent: true,
 					id: "claude-code",
-					name: "Claude Code",
-					type: "agent",
 				});
 
 				const requests = mockMetricRequest();
@@ -214,9 +211,12 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"agent":"claude-code"');
 			});
 
-			it("should set agent to null if detection throws", async ({ expect }) => {
-				vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
-					throw new Error("Detection failed");
+			it("should set agent to null if detection returns null id", async ({
+				expect,
+			}) => {
+				mockDetectAgent.mockReturnValue({
+					isAgent: false,
+					id: null,
 				});
 
 				const requests = mockMetricRequest();
@@ -257,11 +257,9 @@ describe("metrics", () => {
 			};
 			beforeEach(() => {
 				// Default: no agent detected
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: false,
+				mockDetectAgent.mockReturnValue({
+					isAgent: false,
 					id: null,
-					name: null,
-					type: null,
 				});
 				globalThis.ALGOLIA_APP_ID = "FAKE-ID";
 				globalThis.ALGOLIA_PUBLIC_KEY = "FAKE-KEY";
@@ -530,11 +528,9 @@ describe("metrics", () => {
 			it("should include agent ID in command events when detected", async ({
 				expect,
 			}) => {
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: true,
+				mockDetectAgent.mockReturnValue({
+					isAgent: true,
 					id: "cursor-agent",
-					name: "Cursor Agent",
-					type: "agent",
 				});
 
 				writeWranglerConfig();

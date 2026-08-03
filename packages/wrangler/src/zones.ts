@@ -1,7 +1,7 @@
 import { getZoneForRoute, getZoneIdFromHost } from "@cloudflare/deploy-helpers";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchListResult } from "./cfetch";
-import { createDeployHelpersContext } from "./core/deploy-helpers-context";
+import { levenshteinDistance } from "./utils/levenshtein";
 import type { ZoneIdCache } from "@cloudflare/deploy-helpers";
 import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
 
@@ -19,7 +19,6 @@ export async function getZoneIdForPreview(
 		accountId: string;
 	}
 ) {
-	const ctx = createDeployHelpersContext();
 	const zoneIdCache: ZoneIdCache = new Map();
 	const { host, routes, accountId } = from;
 	let zoneId: string | undefined;
@@ -27,7 +26,6 @@ export async function getZoneIdForPreview(
 		zoneId = await getZoneIdFromHost(
 			complianceConfig,
 			{ host, accountId },
-			ctx,
 			zoneIdCache
 		);
 	}
@@ -39,7 +37,6 @@ export async function getZoneIdForPreview(
 				route: firstRoute,
 				accountId,
 			},
-			ctx,
 			zoneIdCache
 		);
 		if (zone) {
@@ -73,33 +70,6 @@ async function getRoutesForZone(
 }
 
 /**
- * Given two strings, return the levenshtein distance between them as a simple text match heuristic
- */
-function distanceBetween(a: string, b: string, cache = new Map()): number {
-	if (cache.has(`${a}|${b}`)) {
-		return cache.get(`${a}|${b}`);
-	}
-	let result;
-	if (b == "") {
-		result = a.length;
-	} else if (a == "") {
-		result = b.length;
-	} else if (a[0] === b[0]) {
-		result = distanceBetween(a.slice(1), b.slice(1), cache);
-	} else {
-		result =
-			1 +
-			Math.min(
-				distanceBetween(a.slice(1), b, cache),
-				distanceBetween(a, b.slice(1), cache),
-				distanceBetween(a.slice(1), b.slice(1), cache)
-			);
-	}
-	cache.set(`${a}|${b}`, result);
-	return result;
-}
-
-/**
  * Given an invalid route, sort the valid routes by closeness to the invalid route (levenstein distance)
  */
 function findClosestRoute(
@@ -107,8 +77,8 @@ function findClosestRoute(
 	assignedRoutes: WorkerRoute[]
 ): WorkerRoute[] {
 	return assignedRoutes.sort((a, b) => {
-		const distanceA = distanceBetween(providedRoute, a.pattern);
-		const distanceB = distanceBetween(providedRoute, b.pattern);
+		const distanceA = levenshteinDistance(providedRoute, a.pattern);
+		const distanceB = levenshteinDistance(providedRoute, b.pattern);
 		return distanceA - distanceB;
 	});
 }
@@ -125,14 +95,10 @@ export async function getWorkerForZone(
 	configPath: string | undefined
 ) {
 	const { worker, accountId } = from;
-	const zone = await getZoneForRoute(
-		complianceConfig,
-		{
-			route: worker,
-			accountId,
-		},
-		createDeployHelpersContext()
-	);
+	const zone = await getZoneForRoute(complianceConfig, {
+		route: worker,
+		accountId,
+	});
 	if (!zone) {
 		throw new UserError(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`,

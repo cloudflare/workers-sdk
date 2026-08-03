@@ -9,14 +9,12 @@ export async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
 	outDir: string | undefined,
-	pythonModulesExcludes: string[] = []
+	pythonModulesExcludes: string[] = [],
+	findAdditionalModulesEnabled: boolean = true
 ) {
-	const modules = await findAdditionalModules(
-		entry,
-		rules,
-		false,
-		pythonModulesExcludes
-	);
+	const modules = findAdditionalModulesEnabled
+		? await findAdditionalModules(entry, rules, false, pythonModulesExcludes)
+		: [];
 	if (outDir) {
 		await writeAdditionalModules(modules, outDir);
 	}

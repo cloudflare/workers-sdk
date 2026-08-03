@@ -10,7 +10,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { RawSourceMap } from "source-map";
+interface RawSourceMap {
+	file?: string;
+	sourceRoot?: string;
+	sources: string[];
+}
 
 export function isAllowedSourcePath(
 	bundle: EsbuildBundle,

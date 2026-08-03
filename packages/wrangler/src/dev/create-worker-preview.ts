@@ -4,7 +4,6 @@ import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
-import { createDeployHelpersContext } from "../core/deploy-helpers-context";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
 import { getAccessHeaders } from "../user/access";
@@ -219,7 +218,6 @@ export async function createPreviewSession(
 			const subdomain = await getWorkersDevSubdomain(
 				complianceConfig,
 				account.accountId,
-				createDeployHelpersContext({ apiToken }),
 				{
 					abortSignal: withTimeout(abortSignal),
 				}
@@ -261,10 +259,7 @@ async function createPreviewToken(
 ): Promise<CfPreviewToken> {
 	const { value, host } = session;
 	const { accountId } = account;
-	const url =
-		ctx.env && ctx.useServiceEnvironments
-			? `/accounts/${accountId}/workers/services/${worker.name}/environments/${ctx.env}/edge-preview`
-			: `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
+	const url = `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
 
 	const mode: CfPreviewMode = ctx.zone
 		? {

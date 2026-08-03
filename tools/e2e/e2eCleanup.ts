@@ -115,11 +115,11 @@ async function deleteWorkers() {
 	const workersToDelete = await listTmpE2EWorkers();
 
 	for (const worker of workersToDelete) {
-		console.log("Deleting worker: " + worker.id);
-		if (await deleteWorker(worker.id)) {
-			console.log(`Successfully deleted Worker ${worker.id}`);
+		console.log("Deleting worker: " + worker.script_name);
+		if (await deleteWorker(worker.script_name)) {
+			console.log(`Successfully deleted Worker ${worker.script_name}`);
 		} else {
-			console.log(`Failed to delete Worker ${worker.id}`);
+			console.log(`Failed to delete Worker ${worker.script_name}`);
 		}
 	}
 

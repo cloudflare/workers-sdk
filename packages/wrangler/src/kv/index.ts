@@ -84,6 +84,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: { supportTemporary: true },
 
 	args: {
 		namespace: {
@@ -95,6 +96,13 @@ export const kvNamespaceCreateCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		jurisdiction: {
+			type: "string",
+			describe:
+				'The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")',
+			requiresArg: true,
+			hidden: true,
+		},
 		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["namespace"],
@@ -103,18 +111,27 @@ export const kvNamespaceCreateCommand = createCommand({
 		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
 		const title = `${environment}${args.namespace}${preview}`;
+		const { jurisdiction } = args;
 
 		const accountId = await requireAuth(config);
 		printResourceLocation("remote");
 		// TODO: generate a binding name stripping non alphanumeric chars
-		logger.log(`🌀 Creating namespace with title "${title}"`);
+		logger.log(
+			`🌀 Creating namespace with title "${title}"${
+				jurisdiction ? ` (jurisdiction: ${jurisdiction})` : ""
+			}`
+		);
 
 		let namespaceId: string;
 		try {
-			const result = await sdk.kv.namespaces.create({
+			const createParams: Cloudflare.KV.Namespaces.NamespaceCreateParams & {
+				jurisdiction?: string;
+			} = {
 				account_id: accountId,
 				title,
-			});
+				jurisdiction,
+			};
+			const result = await sdk.kv.namespaces.create(createParams);
 			namespaceId = result.id;
 		} catch (e) {
 			if (
@@ -168,7 +185,11 @@ export const kvNamespaceListCommand = createCommand({
 
 	args: {},
 
-	behaviour: { printBanner: false, printResourceLocation: false },
+	behaviour: {
+		supportTemporary: true,
+		printBanner: false,
+		printResourceLocation: false,
+	},
 	async handler(_, { config, sdk }) {
 		const accountId = await requireAuth(config);
 
@@ -196,6 +217,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: { supportTemporary: true },
 	positionalArgs: ["namespace"],
 	args: {
 		namespace: {
@@ -234,14 +256,14 @@ export const kvNamespaceDeleteCommand = createCommand({
 
 		if (providedOptions.length === 0) {
 			throw new CommandLineArgsError(
-				"Must specify one of: namespace name (as positional argument), --binding, or --namespace-id",
+				"No KV namespace specified. Provide a namespace name as a positional argument, or use `--binding` or `--namespace-id`.",
 				{ telemetryMessage: "kv namespace delete missing namespace selector" }
 			);
 		}
 
 		if (providedOptions.length > 1) {
 			throw new CommandLineArgsError(
-				"Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one.",
+				"Only one namespace selector is allowed. Provide exactly one of: a positional namespace name, `--binding`, or `--namespace-id`.",
 				{
 					telemetryMessage:
 						"kv namespace delete conflicting namespace selectors",
@@ -315,6 +337,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: { supportTemporary: true },
 	positionalArgs: ["old-name"],
 	args: {
 		"old-name": {
@@ -336,7 +359,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		// Check if both name and namespace-id are provided
 		if (args.oldName && args.namespaceId) {
 			throw new CommandLineArgsError(
-				"Cannot specify both old-name and --namespace-id. Use either old-name (as first argument) or --namespace-id flag, not both.",
+				"Cannot specify both a positional namespace name and `--namespace-id`. Use one or the other to identify the namespace to rename.",
 				{
 					telemetryMessage:
 						"kv namespace rename conflicting namespace selectors",
@@ -347,7 +370,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		// Require either old-name or namespace-id
 		if (!args.namespaceId && !args.oldName) {
 			throw new CommandLineArgsError(
-				"Either old-name (as first argument) or --namespace-id must be specified",
+				"No KV namespace specified. Provide the current namespace name as a positional argument, or use `--namespace-id` to identify the namespace to rename.",
 				{ telemetryMessage: "kv namespace rename missing namespace selector" }
 			);
 		}
@@ -355,7 +378,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		// Validate new-name length (API limit is 512 characters)
 		if (args.newName && args.newName.length > 512) {
 			throw new CommandLineArgsError(
-				`new-name must be 512 characters or less (current: ${args.newName.length})`,
+				`The new namespace name exceeds the 512-character limit (got ${args.newName.length} characters). Provide a shorter name with \`--new-name\`.`,
 				{ telemetryMessage: "kv namespace rename new name too long" }
 			);
 		}
@@ -375,8 +398,7 @@ export const kvNamespaceRenameCommand = createCommand({
 
 			if (!namespace) {
 				throw new UserError(
-					`No namespace found with the name "${args.oldName}". ` +
-						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`,
+					`No KV namespace named "${args.oldName}" was found in your account. Use \`--namespace-id\` to identify the namespace by ID, or run \`wrangler kv namespace list\` to see all available namespaces.`,
 					{ telemetryMessage: "kv namespace rename namespace not found" }
 				);
 			}
@@ -471,6 +493,7 @@ export const kvKeyPutCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["key", "value"],
@@ -491,9 +514,9 @@ export const kvKeyPutCommand = createCommand({
 		},
 		...putCommonArgs,
 	},
-	validateArgs(args) {
-		demandOneOfOption("binding", "namespace-id")(args);
-		demandOneOfOption("value", "path")(args);
+	validateArgs(args, def) {
+		demandOneOfOption(["binding", "namespace-id"])(args);
+		demandOneOfOption(["value", "path"], def)(args);
 	},
 
 	async handler({ key, ttl, expiration, metadata, ...args }) {
@@ -564,6 +587,7 @@ export const kvKeyListCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		// implicitly expects to output JSON only
 		printResourceLocation: false,
 		printBanner: false,
@@ -606,7 +630,7 @@ export const kvKeyListCommand = createCommand({
 		},
 	},
 	validateArgs(args) {
-		demandOneOfOption("binding", "namespace-id")(args);
+		demandOneOfOption(["binding", "namespace-id"])(args);
 	},
 
 	async handler({ prefix, ...args }) {
@@ -688,6 +712,7 @@ export const kvKeyGetCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 	},
@@ -706,7 +731,7 @@ export const kvKeyGetCommand = createCommand({
 		...getCommonArgs,
 	},
 	validateArgs(args) {
-		demandOneOfOption("binding", "namespace-id")(args);
+		demandOneOfOption(["binding", "namespace-id"])(args);
 	},
 	async handler({ key, ...args }) {
 		const localMode = isLocal(args);
@@ -795,6 +820,7 @@ export const kvKeyDeleteCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["key"],
@@ -847,6 +873,7 @@ export const kvBulkGetCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 	},
@@ -944,6 +971,7 @@ export const kvBulkPutCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["filename"],
@@ -1069,6 +1097,7 @@ export const kvBulkDeleteCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	positionalArgs: ["filename"],

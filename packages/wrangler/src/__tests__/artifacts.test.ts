@@ -133,7 +133,7 @@ describe("artifacts", () => {
 		});
 
 		it("should require --namespace for repo commands", async ({ expect }) => {
-			await expect(runWrangler("artifacts repos list")).rejects.toThrowError(
+			await expect(runWrangler("artifacts repos list")).rejects.toThrow(
 				/Missing required argument: namespace/
 			);
 		});
@@ -381,7 +381,7 @@ describe("artifacts", () => {
 				runWrangler(
 					"artifacts repos issue-token starter-repo --namespace default --ttl 0"
 				)
-			).rejects.toThrowError(/--ttl must be greater than 0/);
+			).rejects.toThrow(/--ttl must be greater than 0/);
 		});
 
 		it("should issue a repo token with JSON output", async ({ expect }) => {

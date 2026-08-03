@@ -1,6 +1,6 @@
-import { resolveDockerHost } from "@cloudflare/containers-shared";
+import path from "node:path";
+import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
-	getDockerPath,
 	getRegistryPath,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
@@ -15,13 +15,13 @@ import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
+	getDefaultProjectTmpPath,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
-import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
@@ -77,7 +77,6 @@ function getZoneFromConfig(config: Config): string | undefined {
 	return undefined;
 }
 
-export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,
 	RawConfig as Unstable_RawConfig,
@@ -289,6 +288,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			bindings,
 			queueConsumers: undefined,
 			migrations: config.migrations,
+			exports: config.exports,
 			tails: [],
 			streamingTails: [],
 			containerDOClassNames: new Set(
@@ -319,7 +319,11 @@ async function getMiniflareOptionsFromConfig(args: {
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
-	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
+	const resourcePersistencePath = getMiniflarePersistRoot(options.persist);
+	const projectRoot = config.userConfigPath
+		? path.dirname(config.userConfigPath)
+		: process.cwd();
+	const resourceTmpPath = getDefaultProjectTmpPath(projectRoot);
 
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
@@ -333,7 +337,8 @@ async function getMiniflareOptionsFromConfig(args: {
 			},
 			...externalWorkers,
 		],
-		defaultPersistRoot,
+		resourcePersistencePath,
+		resourceTmpPath,
 	};
 
 	return {
@@ -462,6 +467,7 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings,
 			queueConsumers: config.queues.consumers,
 			migrations: config.migrations,
+			exports: config.exports,
 			tails: config.tail_consumers,
 			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,
@@ -494,15 +500,10 @@ export function unstable_getMiniflareWorkerOptions(
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};
 
-	const useContainers =
-		config.dev?.enable_containers && config.containers?.length;
 	const workerOptions: SourcelessWorkerOptions = {
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
-		containerEngine: useContainers
-			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
-			: undefined,
 		zone: getZoneFromConfig(config),
 
 		...bindingOptions,

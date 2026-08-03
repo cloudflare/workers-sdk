@@ -1,4 +1,10 @@
-import type { CacheOptions, Observability, Route } from "./config/environment";
+import type {
+	CacheOptions,
+	Exports,
+	LocalS3Credentials,
+	Observability,
+	Route,
+} from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -197,7 +203,7 @@ export interface CfWorkflow {
 
 export interface CfQueue {
 	binding: string;
-	queue_name: string;
+	queue_name?: string | typeof INHERIT_SYMBOL;
 	delivery_delay?: number;
 	remote?: boolean;
 	raw?: boolean;
@@ -209,6 +215,11 @@ export interface CfR2Bucket {
 	jurisdiction?: string;
 	remote?: boolean;
 	raw?: boolean;
+	/** Settings that only apply to local development */
+	local_dev?: {
+		/** EXPERIMENTAL: credentials for the local S3-compatible endpoint */
+		experimental_s3_credentials?: LocalS3Credentials;
+	};
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
@@ -274,7 +285,7 @@ export interface CfHelloWorld {
 
 export interface CfFlagship {
 	binding: string;
-	app_id: string;
+	app_id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 
@@ -297,6 +308,26 @@ export interface CfHyperdrive {
 	localConnectionString?: string;
 }
 
+export interface CfDevPluginCfg {
+	plugin: {
+		/**
+		 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
+		 * @example "@cloudflare/my-external-miniflare-plugin"
+		 */
+		package: string;
+		/**
+		 * Plugin is the name of the plugin exposed by the package.
+		 * @example "my-unsafe-plugin"
+		 */
+		name: string;
+	};
+
+	/**
+	 * dev-only options to pass to the plugin.
+	 */
+	options?: Record<string, unknown>;
+}
+
 export interface CfService {
 	binding: string;
 	service: string;
@@ -305,6 +336,7 @@ export interface CfService {
 	props?: Record<string, unknown>;
 	remote?: boolean;
 	cross_account_grant?: string;
+	dev?: CfDevPluginCfg;
 }
 
 export interface CfVpcService {
@@ -327,7 +359,7 @@ export interface CfAnalyticsEngineDataset {
 
 export interface CfDispatchNamespace {
 	binding: string;
-	namespace: string;
+	namespace?: string | typeof INHERIT_SYMBOL;
 	outbound?: {
 		service: string;
 		environment?: string;
@@ -366,25 +398,7 @@ export interface CfUnsafeBinding {
 	name: string;
 	type: string;
 
-	dev?: {
-		plugin: {
-			/**
-			 * Package is the bare specifier of the package that exposes plugins to integrate into Miniflare via a named `plugins` export.
-			 * @example "@cloudflare/my-external-miniflare-plugin"
-			 */
-			package: string;
-			/**
-			 * Plugin is the name of the plugin exposed by the package.
-			 * @example "my-unsafe-plugin"
-			 */
-			name: string;
-		};
-
-		/**
-		 * dev-only options to pass to the plugin.
-		 */
-		options?: Record<string, unknown>;
-	};
+	dev?: CfDevPluginCfg;
 }
 
 type CfUnsafeMetadata = Record<string, unknown>;
@@ -420,6 +434,13 @@ export interface CfDurableObjectMigrations {
 		deleted_classes?: string[];
 	}[];
 }
+
+/**
+ * The declarative `exports` map keyed by class name.
+ *
+ * Durable Objects can only be configured by `exports` or `migrations`, not both.
+ */
+export type CfExports = Exports;
 
 export type CfPlacement =
 	| { mode: "smart"; hint?: string }
@@ -461,6 +482,11 @@ export interface CfWorkerInit {
 	containers: { class_name: string }[] | undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	/**
+	 * Declarative exports configuration. Durable Object entries are sent instead
+	 * of `migrations`.
+	 */
+	exports: CfExports | undefined;
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	keepVars: boolean | undefined;
@@ -485,11 +511,21 @@ export interface CfWorkerInit {
 		| undefined;
 	observability: Observability | undefined;
 	cache: CacheOptions | undefined;
+	/**
+	 * The list of npm package dependencies collected from the project's package.json.
+	 * Sent to the API for instrumentation and analytics purposes.
+	 */
+	package_dependencies?:
+		| Array<{
+				name: string;
+				packageJsonVersion: string;
+				installedVersion: string;
+		  }>
+		| undefined;
 }
 
 export interface CfWorkerContext {
 	env: string | undefined;
-	useServiceEnvironments: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;

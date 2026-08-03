@@ -19,7 +19,7 @@ it("workflow should be able to reach the end and be successful", async ({
 
 	await exports.default.fetch(`https://mock-worker.local/moderate`);
 
-	const instances = introspector.get();
+	const instances = await introspector.get();
 	expect(instances.length).toBe(1);
 
 	// ASSERTIONS:
@@ -49,7 +49,7 @@ it("workflow batch should be able to reach the end and be successful", async ({
 
 		await exports.default.fetch(`https://mock-worker.local/moderate-batch`);
 
-		const instances = introspector.get();
+		const instances = await introspector.get();
 		expect(instances.length).toBe(3);
 
 		// ASSERTIONS:
@@ -86,7 +86,7 @@ describe("workflow instance lifecycle methods", () => {
 		);
 		const data = (await res.json()) as { id: string; details: unknown };
 
-		const instances = introspector.get();
+		const instances = await introspector.get();
 		expect(instances.length).toBe(1);
 		const instance = instances[0];
 
@@ -120,7 +120,7 @@ describe("workflow instance lifecycle methods", () => {
 		);
 		const data = (await res.json()) as { id: string; details: unknown };
 
-		const instances = introspector.get();
+		const instances = await introspector.get();
 		expect(instances.length).toBe(1);
 		const instance = instances[0];
 
@@ -155,7 +155,7 @@ describe("workflow instance lifecycle methods", () => {
 		);
 		const data = (await res.json()) as { id: string; details: unknown };
 
-		const instances = introspector.get();
+		const instances = await introspector.get();
 		expect(instances.length).toBe(1);
 		const instance = instances[0];
 

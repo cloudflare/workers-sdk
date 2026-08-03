@@ -79,10 +79,29 @@ export interface ScheduledTrigger extends ScheduledTriggerOptions {
 	type: "scheduled";
 }
 
+interface EmailTriggerOptions {
+	/**
+	 * Inbound Email Routing addresses handled by this Worker.
+	 *
+	 * Each entry is a literal recipient address (e.g. `"support@example.com"`)
+	 * or a `*@domain` catch-all (e.g. `"*@example.com"`).
+	 */
+	addresses: string[];
+}
+
 /**
- * Event triggers — fetch routes, queue consumers, and cron schedules
- * — that invoke this Worker. Construct entries with `triggers.fetch(...)`,
- * `triggers.queue(...)`, or `triggers.scheduled(...)`.
+ * Email trigger — invokes this Worker for the configured Email Routing
+ * addresses.
+ */
+export interface EmailTrigger extends EmailTriggerOptions {
+	type: "email";
+}
+
+/**
+ * Event triggers — fetch routes, queue consumers, cron schedules, and Email
+ * Routing addresses — that invoke this Worker. Construct entries with
+ * `triggers.fetch(...)`, `triggers.queue(...)`, `triggers.scheduled(...)`, or
+ * `triggers.email(...)`.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
  */
@@ -106,6 +125,11 @@ export interface Triggers {
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 */
 	scheduled(options: ScheduledTriggerOptions): ScheduledTrigger;
+	/**
+	 * Email trigger — invokes this Worker for the configured Email Routing
+	 * addresses.
+	 */
+	email(options: EmailTriggerOptions): EmailTrigger;
 }
 
 /**
@@ -121,6 +145,7 @@ export interface Triggers {
  *     triggers.queue({ name: "my-queue" }),
  *     triggers.scheduled({ schedule: "0 * * * *" }),
  *     triggers.scheduled({ schedule: "30 0 * * *" }),
+ *     triggers.email({ addresses: ["support@example.com"] }),
  *   ],
  * });
  * ```
@@ -129,4 +154,5 @@ export const triggers: Triggers = {
 	fetch: (options) => ({ type: "fetch", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
 	scheduled: (options) => ({ type: "scheduled", ...options }),
+	email: (options) => ({ type: "email", ...options }),
 };

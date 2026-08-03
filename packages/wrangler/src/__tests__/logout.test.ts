@@ -1,11 +1,17 @@
 import fs from "node:fs";
+import path from "node:path";
+import {
+	resetCredentialStorageState,
+	setKeyProviderFactoryForTesting,
+} from "@cloudflare/workers-auth";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { describe, it } from "vitest";
-import { getAuthConfigFilePath, writeAuthConfigFile } from "../user";
+import { afterEach, describe, it } from "vitest";
+import { getAuthConfigFilePath, writeAuthCredentials } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -13,6 +19,15 @@ import { runWrangler } from "./helpers/run-wrangler";
 describe("logout", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	// Tear down the keyring test seam after every test so a failed
+	// assertion mid-test does not leak the stubbed `KeyProvider` factory
+	// or the session-level resolver warning latches into the next test.
+	// No-op when the seam was never installed.
+	afterEach(() => {
+		setKeyProviderFactoryForTesting(undefined);
+		resetCredentialStorageState();
+	});
 
 	it("should exit with a message stating the user is not logged in", async ({
 		expect,
@@ -24,6 +39,30 @@ describe("logout", () => {
 			──────────────────
 			Not logged in, exiting..."
 		`);
+	});
+
+	it("should clear a cached temporary preview account when not logged in via OAuth", async ({
+		expect,
+	}) => {
+		const temporaryAccountConfigPath = path.join(
+			getGlobalConfigPath(),
+			"wrangler-temporary-account.toml"
+		);
+		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
+		fs.writeFileSync(
+			temporaryAccountConfigPath,
+			JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
+		);
+
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Cleared temporary preview account."
+		`);
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
 	});
 
 	it("should exit with a message stating the user logged in via API token", async ({
@@ -43,10 +82,19 @@ describe("logout", () => {
 	it("should logout user that has been properly logged in", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({
+		const temporaryAccountConfigPath = path.join(
+			getGlobalConfigPath(),
+			"wrangler-temporary-account.toml"
+		);
+		writeAuthCredentials({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
 		});
+		fs.mkdirSync(path.dirname(temporaryAccountConfigPath), { recursive: true });
+		fs.writeFileSync(
+			temporaryAccountConfigPath,
+			JSON.stringify({ temporaryPreviewAccount: { account: {}, claim: {} } })
+		);
 		// Make sure that logout removed the config file containing the auth tokens.
 		const config = getAuthConfigFilePath();
 		let counter = 0;
@@ -63,6 +111,7 @@ describe("logout", () => {
 		);
 
 		expect(fs.existsSync(config)).toBeTruthy();
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeTruthy();
 
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 
@@ -73,13 +122,14 @@ describe("logout", () => {
 			Successfully logged out."
 		`);
 		expect(fs.existsSync(config)).toBeFalsy();
+		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
 		expect(counter).toBe(1);
 	});
 
 	it("should not display warnings from wrangler configuration parsing when logging out", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({
+		writeAuthCredentials({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
 		});
@@ -116,7 +166,7 @@ describe("logout", () => {
 	it("should still log out when wrangler configuration is unparsable", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({
+		writeAuthCredentials({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
 		});
@@ -152,7 +202,7 @@ describe("logout", () => {
 	it("should still log out when wrangler configuration contains an error", async ({
 		expect,
 	}) => {
-		writeAuthConfigFile({
+		writeAuthCredentials({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
 		});
@@ -186,5 +236,65 @@ describe("logout", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(fs.existsSync(config)).toBeFalsy();
+	});
+
+	it("should clear the keyring entry, the encrypted file, and any plaintext TOML when keyring storage is active", async ({
+		expect,
+	}) => {
+		const { getEncryptedAuthConfigFilePath } =
+			await import("@cloudflare/workers-auth/wrangler");
+		const { updateUserPreferences } =
+			await import("@cloudflare/workers-auth/wrangler");
+
+		const keyringStore = new Map<string, Uint8Array>();
+		setKeyProviderFactoryForTesting((serviceName) => ({
+			getKey: () => keyringStore.get(`${serviceName}::default`),
+			setKey: (key) => {
+				keyringStore.set(`${serviceName}::default`, key);
+			},
+			deleteKey: () => {
+				keyringStore.delete(`${serviceName}::default`);
+			},
+			describe: () => "in-memory test keyring",
+		}));
+		updateUserPreferences({ keyring_enabled: true });
+
+		// Pre-populate the encrypted file + keyring with credentials (as
+		// `wrangler login --use-keyring` would).
+		writeAuthCredentials({
+			oauth_token: "kr-token",
+			refresh_token: "kr-refresh",
+		});
+
+		// And pre-populate the plaintext file (as a previous wrangler
+		// install would have). Write directly to disk so we can prove
+		// `logout()` removes it defensively.
+		const plaintextPath = getAuthConfigFilePath();
+		fs.mkdirSync(path.dirname(plaintextPath), { recursive: true });
+		fs.writeFileSync(plaintextPath, 'oauth_token = "stale-leftover"');
+
+		expect(keyringStore.size).toBe(1);
+		expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+		expect(fs.existsSync(plaintextPath)).toBe(true);
+
+		msw.use(
+			http.post(
+				"*/oauth2/revoke",
+				() => HttpResponse.text("", { status: 200 }),
+				{ once: true }
+			)
+		);
+
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully logged out."
+		`);
+		expect(keyringStore.size).toBe(0);
+		expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(false);
+		expect(fs.existsSync(plaintextPath)).toBe(false);
 	});
 });

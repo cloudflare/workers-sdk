@@ -1,7 +1,9 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { retryOnAPIFailure, UserError } from "@cloudflare/workers-utils";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { retryOnAPIFailure } from "../utils/retry";
+import { listEmailSendingSubdomains } from "./client";
+import type { EmailSendingSubdomain } from "./index";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export async function resolveZoneId(
@@ -27,16 +29,18 @@ async function getZoneIdByDomain(
 	domain: string,
 	accountId: string
 ): Promise<string> {
-	const zones = await retryOnAPIFailure(() =>
-		fetchListResult<{ id: string }>(
-			complianceConfig,
-			`/zones`,
-			{},
-			new URLSearchParams({
-				name: domain,
-				"account.id": accountId,
-			})
-		)
+	const zones = await retryOnAPIFailure(
+		() =>
+			fetchListResult<{ id: string }>(
+				complianceConfig,
+				`/zones`,
+				{},
+				new URLSearchParams({
+					name: domain,
+					"account.id": accountId,
+				})
+			),
+		logger
 	);
 
 	const zoneId = zones[0]?.id;
@@ -65,8 +69,10 @@ export async function resolveDomain(
 	// If zone ID is provided directly, fetch the zone name to determine subdomain status
 	if (zoneId) {
 		await requireAuth(config);
-		const zone = await retryOnAPIFailure(() =>
-			fetchResult<{ id: string; name: string }>(config, `/zones/${zoneId}`)
+		const zone = await retryOnAPIFailure(
+			() =>
+				fetchResult<{ id: string; name: string }>(config, `/zones/${zoneId}`),
+			logger
 		);
 		return {
 			zoneId,
@@ -82,16 +88,18 @@ export async function resolveDomain(
 	const labels = domain.split(".");
 	for (let i = 0; i <= labels.length - 2; i++) {
 		const candidate = labels.slice(i).join(".");
-		const zones = await retryOnAPIFailure(() =>
-			fetchListResult<{ id: string; name: string }>(
-				config,
-				`/zones`,
-				{},
-				new URLSearchParams({
-					name: candidate,
-					"account.id": accountId,
-				})
-			)
+		const zones = await retryOnAPIFailure(
+			() =>
+				fetchListResult<{ id: string; name: string }>(
+					config,
+					`/zones`,
+					{},
+					new URLSearchParams({
+						name: candidate,
+						"account.id": accountId,
+					})
+				),
+			logger
 		);
 		if (zones[0]) {
 			return {
@@ -107,4 +115,20 @@ export async function resolveDomain(
 		`Could not find a zone for \`${domain}\`. Make sure the domain or its parent zone exists in your account.`,
 		{ telemetryMessage: "email routing domain zone not found" }
 	);
+}
+
+export async function resolveSendingSubdomain(
+	config: Config,
+	zoneId: string,
+	name: string
+): Promise<EmailSendingSubdomain> {
+	const subdomains = await listEmailSendingSubdomains(config, zoneId);
+	const match = subdomains.find((s) => s.name === name);
+	if (!match) {
+		throw new UserError(
+			`No sending subdomain found for \`${name}\`. Run \`wrangler email sending list ${name}\` to see configured subdomains.`,
+			{ telemetryMessage: "email sending subdomain not found" }
+		);
+	}
+	return match;
 }

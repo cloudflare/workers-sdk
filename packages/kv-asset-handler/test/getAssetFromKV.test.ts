@@ -66,7 +66,7 @@ test("getAssetFromKV if no asset manifest /client -> client fails", async ({
 	const event = getEvent(new Request(`https://foo.com/client`));
 	await expect(() =>
 		getAssetFromKV(event, { ASSET_MANIFEST: {} })
-	).rejects.toThrowError(expect.objectContaining({ status: 404 }));
+	).rejects.toThrow(expect.objectContaining({ status: 404 }));
 });
 
 test("getAssetFromKV if sub/ -> sub/index.html served", async ({ expect }) => {

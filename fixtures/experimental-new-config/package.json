@@ -1,0 +1,21 @@
+{
+	"name": "@fixture/experimental-new-config",
+	"private": true,
+	"scripts": {
+		"build": "wrangler deploy --x-new-config --dry-run --outdir=dist",
+		"check:type": "tsc --build",
+		"deploy": "wrangler deploy --x-new-config",
+		"dev": "wrangler dev --x-new-config",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@fixture/shared": "workspace:*",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}

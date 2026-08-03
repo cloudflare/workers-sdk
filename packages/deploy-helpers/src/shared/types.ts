@@ -1,17 +1,18 @@
 import type {
-	AssetsOptions,
+	ValidatedAssetsOptions,
 	LegacyAssetPaths,
 	CfModule,
 	CfModuleType,
+	CfWorkerSourceMap,
 	Config,
-	EphemeralDirectory,
+	FetchKVGetValueFetcher,
 	FetchResultFetcher,
 	FetchListResultFetcher,
+	FetchPagedListResultFetcher,
 	Logger,
 	Route,
 	Entry,
 } from "@cloudflare/workers-utils";
-import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * client needs to handle logger and fetch/auth implementation
@@ -20,6 +21,8 @@ import type { NodeJSCompatMode } from "miniflare";
 export type DeployHelpersContext = {
 	fetchResult: FetchResultFetcher;
 	fetchListResult: FetchListResultFetcher;
+	fetchPagedListResult: FetchPagedListResultFetcher;
+	fetchKVGetValue: FetchKVGetValueFetcher;
 	logger: Logger;
 	confirm: (
 		text: string,
@@ -29,7 +32,18 @@ export type DeployHelpersContext = {
 		text: string,
 		options?: { defaultValue?: string }
 	) => Promise<string>;
-	isNonInteractiveOrCI: () => boolean;
+	select: <Values extends string>(
+		text: string,
+		options: {
+			choices: {
+				title: string;
+				description?: string;
+				value: Values;
+			}[];
+			defaultOption?: number;
+			fallbackOption?: number;
+		}
+	) => Promise<Values>;
 };
 
 /**
@@ -49,41 +63,25 @@ export type SharedDeployVersionsProps = {
 	compatibilityDate: string | undefined;
 	/** Merged: --compatibility-flags arg ?? config.compatibility_flags. */
 	compatibilityFlags: string[];
-	/** Merged from --assets arg and config.assets. */
-	assetsOptions: AssetsOptions | undefined;
-	/** Merged: --jsx-factory arg || config.jsx_factory. */
-	jsxFactory: string;
-	/** Merged: --jsx-fragment arg || config.jsx_fragment. */
-	jsxFragment: string;
-	/** Merged: --tsconfig arg ?? config.tsconfig. */
-	tsconfig: string | undefined;
-	/** Merged: --minify arg ?? config.minify. */
-	minify: boolean | undefined;
-	/** Merged: !(--bundle arg ?? !config.no_bundle). */
-	noBundle: boolean;
-	/** Merged: --upload-source-maps arg ?? config.upload_source_maps. */
-	uploadSourceMaps: boolean | undefined;
+	/**
+	 * Validated/resolved assets directory, merged from --assets arg and
+	 * config.assets. The full AssetsOptions are resolved later via
+	 * `resolveAssetOptions`.
+	 */
+	assetsDir: ValidatedAssetsOptions | undefined;
+	/**
+	 * The user Worker entry, merged: --script arg ?? config.main. Undefined for
+	 * assets-only Workers. Drives `has_user_worker` when resolving assets.
+	 */
+	main: string | undefined;
 	/** Merged: --keep-vars arg || config.keep_vars. */
 	keepVars: boolean;
 	/** Merged from --site arg and config.site. */
 	isWorkersSite: boolean;
-	/** Merged: { ...config.define, ...--define arg }. CLI overrides config. */
-	defines: Record<string, string>;
-	/** Merged: { ...config.alias, ...--alias arg }. CLI overrides config. */
-	alias: Record<string, string>;
-	/**
-	 * Whether to use the deprecated service environments API path.
-	 * True only when config opts in (legacy_env: false) AND --env is specified.
-	 */
-	useServiceEnvApiPath: boolean;
-	/** Output directory for the bundled Worker. From --outdir arg or a temp directory. */
-	destination: string | EphemeralDirectory;
 	/** From --dry-run arg. */
 	dryRun: boolean;
 	/** From --env arg. */
 	env: string | undefined;
-	/** From --outdir arg. Already used to derive `destination`, but also needed for outdir README and noBundleWorker. */
-	outdir: string | undefined;
 	/** From --outfile arg. */
 	outfile: string | undefined;
 	/** From --tag arg. */
@@ -102,11 +100,17 @@ export type SharedDeployVersionsProps = {
 	sendMetrics: boolean;
 	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
 	resourcesProvision: boolean;
+	/** Controls whether provisioned resource IDs are written back to the config file. */
+	skipProvisioningConfigWriteback: boolean;
+	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
+	strict: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {
 	/** Discriminant for DeployProps vs VersionsUploadProps */
 	command: "deploy";
+	/** If set, automatically register this `workers.dev` account subdomain when the account has none. */
+	autoRegisterWorkersDevSubdomain?: string;
 	/** Merged from --site arg and config.site. */
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	/** Merged: --triggers arg ?? config.triggers.crons. */
@@ -117,14 +121,21 @@ export type DeployProps = SharedDeployVersionsProps & {
 	logpush: boolean | undefined;
 	/** From --dispatch-namespace arg. Deploy-only (Workers for Platforms). */
 	dispatchNamespace: string | undefined;
-	/** From --strict arg. Deploy-only. */
-	strict: boolean;
-	/** From --metafile arg. Deploy-only. */
-	metafile: string | boolean | undefined;
 	/** From --old-asset-ttl arg. Deploy-only. */
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/**
+	 * When true, an existing Worker with the same name aborts the deploy instead
+	 * of updating it, because this run cannot confirm the local project owns the
+	 * remote Worker. Set for non-interactive deploys with no pre-existing config
+	 * file when either the name was generated automatically (no user-supplied
+	 * name) or the deploy is the Pages-to-Workers delegation (where the name is a
+	 * Pages project name carried across, not proof of Worker ownership). Deploys
+	 * that carry a config file naming the Worker leave this false and update it as
+	 * normal.
+	 */
+	failIfWorkerNameTaken?: boolean;
 };
 
 export type VersionsUploadProps = SharedDeployVersionsProps & {
@@ -134,33 +145,19 @@ export type VersionsUploadProps = SharedDeployVersionsProps & {
 	previewAlias: string | undefined;
 };
 
-export type BuildBundleInfo = {
-	sourceMapPath?: string | undefined;
-	sourceMapMetadata?: { tmpDir: string; entryDirectory: string } | undefined;
-};
-
-export type HandleBuildResult = {
+export type WorkerBuildResult = {
 	modules: CfModule[];
+	sourceMaps: CfWorkerSourceMap[] | undefined;
 	dependencies: Record<string, { bytesInOutput: number }>;
 	resolvedEntryPointPath: string;
 	bundleType: CfModuleType;
 	content: string;
-	bundle: BuildBundleInfo;
-};
-
-export type HandleBuild = {
-	build: (
-		props: SharedDeployVersionsProps,
-		config: Config,
-		options: {
-			nodejsCompatMode: NodeJSCompatMode;
-			metafile?: string | boolean;
-		}
-	) => Promise<HandleBuildResult>;
 };
 
 export interface TriggerDeployment {
 	targets: string[];
+	category?: string;
+	resource?: string;
 	error?: Error;
 }
 
@@ -168,9 +165,9 @@ export type TriggerProps = {
 	config: Config;
 	accountId: string;
 	scriptName: string;
+	workerTag?: string | null;
 	env: string | undefined;
 	crons: string[] | undefined;
 	routes: Route[];
-	useServiceEnvironments: boolean;
 	firstDeploy: boolean;
 };

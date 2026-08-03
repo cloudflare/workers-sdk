@@ -11,6 +11,7 @@ export const queuesConsumerListCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	args: {

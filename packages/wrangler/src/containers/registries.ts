@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import {
 	cancel,
 	endSection,
@@ -10,20 +11,22 @@ import {
 	ExternalRegistryKind,
 	getAndValidateRegistryType,
 	getCloudflareContainerRegistry,
+	validateAndEncodeGarKey,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import {
 	APIError,
 	getCloudflareComplianceRegion,
+	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import {
 	fillOpenAPIConfiguration,
 	promiseSpinner,
 } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
 	createSecret,
@@ -45,6 +48,44 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
+const providerSpecificCredentialFlags = [
+	{
+		argName: "awsAccessKeyId",
+		flagName: "aws-access-key-id",
+		registryType: ExternalRegistryKind.ECR,
+		registryName: "AWS ECR",
+		telemetryMessage:
+			"containers registries configure aws access key id unsupported registry",
+	},
+	{
+		argName: "dockerhubUsername",
+		flagName: "dockerhub-username",
+		registryType: ExternalRegistryKind.DOCKER_HUB,
+		registryName: "DockerHub",
+		telemetryMessage:
+			"containers registries configure dockerhub username unsupported registry",
+	},
+	{
+		argName: "garEmail",
+		flagName: "gar-email",
+		registryType: ExternalRegistryKind.GAR,
+		registryName: "Google Artifact Registry",
+		telemetryMessage:
+			"containers registries configure gar email unsupported registry",
+	},
+] as const;
+
+const providerSpecificCredentialFlagNames = providerSpecificCredentialFlags.map(
+	(flag) => flag.flagName
+);
+
+function providerSpecificCredentialFlagConflicts(flagName: string): string[] {
+	return [
+		"public-credential",
+		...providerSpecificCredentialFlagNames.filter((name) => name !== flagName),
+	];
+}
+
 const registryConfigureArgs = {
 	DOMAIN: {
 		describe: "Domain to configure for the registry",
@@ -56,19 +97,27 @@ const registryConfigureArgs = {
 		demandOption: false,
 		hidden: true,
 		deprecated: true,
-		conflicts: ["dockerhub-username", "aws-access-key-id"],
+		conflicts: providerSpecificCredentialFlagNames,
 	},
 	"aws-access-key-id": {
 		type: "string",
 		description: "When configuring Amazon ECR, `AWS_ACCESS_KEY_ID`",
 		demandOption: false,
-		conflicts: ["public-credential", "dockerhub-username"],
+		conflicts: providerSpecificCredentialFlagConflicts("aws-access-key-id"),
 	},
 	"dockerhub-username": {
 		type: "string",
 		description: "When configuring DockerHub, the DockerHub username",
 		demandOption: false,
-		conflicts: ["public-credential", "aws-access-key-id"],
+		conflicts: providerSpecificCredentialFlagConflicts("dockerhub-username"),
+	},
+	"gar-email": {
+		type: "string",
+		description:
+			"When configuring Google Artifact Registry, the Google service account email. Must match the `client_email` in the service account key.",
+		demandOption: false,
+		requiresArg: true,
+		conflicts: providerSpecificCredentialFlagConflicts("gar-email"),
 	},
 	"secret-store-id": {
 		type: "string",
@@ -115,9 +164,12 @@ async function registryConfigureCommand(
 		return;
 	}
 
+	validateProviderSpecificCredentialFlags(configureArgs, registryType.type);
+
 	const publicCredential =
 		configureArgs.awsAccessKeyId ??
 		configureArgs.dockerhubUsername ??
+		configureArgs.garEmail ??
 		configureArgs.publicCredential;
 	if (!publicCredential) {
 		const arg =
@@ -125,7 +177,9 @@ async function registryConfigureCommand(
 				? "dockerhub-username"
 				: registryType.type === ExternalRegistryKind.ECR
 					? "aws-access-key-id"
-					: "public-credential";
+					: registryType.type === ExternalRegistryKind.GAR
+						? "gar-email"
+						: "public-credential";
 		throw new UserError(`Missing required argument: ${arg}`, {
 			telemetryMessage:
 				"containers registries configure missing public credential",
@@ -159,15 +213,9 @@ async function registryConfigureCommand(
 	}
 
 	let secretStoreId = configureArgs.secretStoreId;
-	let secretName = configureArgs.secretName;
 	if (configureArgs.secretName) {
 		validateSecretName(configureArgs.secretName);
 	}
-
-	log(`Getting ${registryType.secretType}...\n`);
-	const privateCredential = await promptForRegistryPrivateCredential(
-		registryType.secretType
-	);
 
 	// Secret Store is not available in FedRAMP High
 	let private_credential: ImageRegistryAuth["private_credential"];
@@ -213,14 +261,38 @@ async function registryConfigureCommand(
 
 		log("\n");
 
-		secretName = await getOrCreateSecret({
+		const { secretName, secretExists } = await resolveSecretSelection({
 			configureArgs: configureArgs,
 			config: config,
 			accountId: accountId,
 			storeId: secretStoreId,
-			privateCredential,
 			secretType: registryType.secretType,
 		});
+
+		if (!secretExists) {
+			// New secret: read the private credential and store it.
+			log(`Getting ${registryType.secretType}...\n`);
+			const privateCredential = await resolvePrivateCredential(
+				registryType.type,
+				registryType.secretType,
+				publicCredential
+			);
+			await promiseSpinner(
+				createSecret(config, accountId, secretStoreId, {
+					name: secretName,
+					value: privateCredential,
+					scopes: ["containers"],
+					comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
+				})
+			);
+			log(
+				`Container-scoped secret "${secretName}" created in Secrets Store.\n`
+			);
+		} else if (registryType.type === ExternalRegistryKind.GAR) {
+			log(
+				`Reusing existing secret "${secretName}". Wrangler cannot verify it matches --gar-email "${publicCredential}"; the email is validated against the key when images are pulled.\n`
+			);
+		}
 
 		private_credential = {
 			store_id: secretStoreId,
@@ -228,7 +300,12 @@ async function registryConfigureCommand(
 		};
 	} else {
 		// If we are not using the secret store, we will be passing in the secret directly
-		private_credential = privateCredential;
+		log(`Getting ${registryType.secretType}...\n`);
+		private_credential = await resolvePrivateCredential(
+			registryType.type,
+			registryType.secretType,
+			publicCredential
+		);
 	}
 
 	try {
@@ -283,18 +360,22 @@ async function promptForSecretName(secretType?: string): Promise<string> {
 	}
 }
 
-interface GetOrCreateSecretOptions {
+interface ResolveSecretSelectionOptions {
 	configureArgs: HandlerArgs<typeof registryConfigureArgs>;
 	config: Config;
 	accountId: string;
 	storeId: string;
-	privateCredential: string;
 	secretType?: string;
 }
 
-async function getOrCreateSecret(
-	options: GetOrCreateSecretOptions
-): Promise<string> {
+/**
+ * If the Secrets Store secret already exists, it is reused by reference and no
+ * private credential is read; otherwise the caller reads the private credential
+ * and creates the secret.
+ */
+async function resolveSecretSelection(
+	options: ResolveSecretSelectionOptions
+): Promise<{ secretName: string; secretExists: boolean }> {
 	let secretName =
 		options.configureArgs.secretName ??
 		(await promptForSecretName(options.secretType));
@@ -307,22 +388,9 @@ async function getOrCreateSecret(
 			secretName
 		);
 
-		// secret doesn't exist - make a new one
+		// secret doesn't exist - caller will create it
 		if (!existingSecretId) {
-			await promiseSpinner(
-				createSecret(options.config, options.accountId, options.storeId, {
-					name: secretName,
-					value: options.privateCredential,
-					scopes: ["containers"],
-					comment: `Created by Wrangler: credentials for image registry ${options.configureArgs.DOMAIN}`,
-				})
-			);
-
-			log(
-				`Container-scoped secret "${secretName}" created in Secrets Store.\n`
-			);
-
-			return secretName;
+			return { secretName, secretExists: false };
 		}
 
 		// secret exists + skipConfirmation - default to reusing the secret
@@ -330,7 +398,7 @@ async function getOrCreateSecret(
 			log(
 				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
 			);
-			return secretName;
+			return { secretName, secretExists: true };
 		}
 
 		// secret exists but not skipping confirmation - ask user if they want to reuse the secret
@@ -346,7 +414,7 @@ async function getOrCreateSecret(
 			log(
 				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
 			);
-			return secretName;
+			return { secretName, secretExists: true };
 		}
 
 		secretName = await promptForSecretName(options.secretType);
@@ -379,6 +447,85 @@ async function promptForRegistryPrivateCredential(
 		});
 	}
 	return secret;
+}
+
+function validateProviderSpecificCredentialFlags(
+	configureArgs: HandlerArgs<typeof registryConfigureArgs>,
+	registryType: ExternalRegistryKind | "cloudflare"
+) {
+	for (const flag of providerSpecificCredentialFlags) {
+		if (
+			configureArgs[flag.argName] !== undefined &&
+			registryType !== flag.registryType
+		) {
+			throw new UserError(
+				`--${flag.flagName} can only be used with ${flag.registryName}.`,
+				{ telemetryMessage: flag.telemetryMessage }
+			);
+		}
+	}
+}
+
+async function resolvePrivateCredential(
+	registryType: ExternalRegistryKind,
+	secretType: string | undefined,
+	publicCredential: string
+): Promise<string> {
+	if (registryType === ExternalRegistryKind.GAR) {
+		const rawKey = await getGarServiceAccountKey(secretType);
+		return validateAndEncodeGarKey(rawKey, publicCredential);
+	}
+	return promptForRegistryPrivateCredential(secretType);
+}
+
+/**
+ * Resolves the Google service-account key contents for a GAR registry from:
+ *  - stdin (non-interactive): a file path, or the key contents (raw JSON or base64).
+ *  - an interactive prompt: a file path, or base64-encoded key contents.
+ */
+async function getGarServiceAccountKey(secretType?: string): Promise<string> {
+	if (isNonInteractiveOrCI()) {
+		const stdinInput = trimTrailingWhitespace(await readFromStdin());
+		if (!stdinInput) {
+			throw new UserError(
+				"No input provided. In non-interactive mode, pipe the Google service account key (a file path, raw JSON, or base64) via stdin.",
+				{
+					telemetryMessage:
+						"containers registries configure missing gar key input",
+				}
+			);
+		}
+		return existsSync(stdinInput)
+			? readGarServiceAccountKeyFile(stdinInput)
+			: stdinInput;
+	}
+
+	const input = await prompt(
+		`Enter ${secretType ?? "secret"} (file path or base64):`,
+		{ isSecret: true }
+	);
+	if (!input) {
+		throw new UserError("Secret cannot be empty.", {
+			telemetryMessage: "containers registries configure empty secret",
+		});
+	}
+
+	const trimmed = input.trim();
+	return existsSync(trimmed) ? readGarServiceAccountKeyFile(trimmed) : input;
+}
+
+function readGarServiceAccountKeyFile(path: string): string {
+	try {
+		return readFileSync(path);
+	} catch {
+		throw new UserError(
+			`Could not read the Google service account key file at "${path}".`,
+			{
+				telemetryMessage:
+					"containers registries configure gar key file unreadable",
+			}
+		);
+	}
 }
 
 const registryListArgs = {

@@ -1,0 +1,23 @@
+{
+	"name": "durable-objects-exports-app",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-01-01",
+	"durable_objects": {
+		"bindings": [
+			{ "name": "COUNTER_A", "class_name": "CounterA" },
+			{ "name": "COUNTER_B", "class_name": "CounterB" },
+		],
+	},
+	"exports": {
+		"CounterA": { "type": "durable-object", "storage": "sqlite" },
+		"CounterB": { "type": "durable-object", "storage": "sqlite" },
+		// CounterC is declared via `exports` only — no binding.
+		"CounterC": { "type": "durable-object", "storage": "sqlite" },
+		"OldCounter": { "type": "durable-object", "state": "deleted" },
+		"LegacyName": {
+			"type": "durable-object",
+			"state": "renamed",
+			"renamed_to": "CounterB",
+		},
+	},
+}

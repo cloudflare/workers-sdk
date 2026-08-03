@@ -1,7 +1,12 @@
 import { blue, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
-import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
+import {
+	CoreBindings,
+	CoreHeaders,
+	CorePaths,
+	decodeErrorPayload,
+} from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
 import { matchRoutes } from "./routing";
@@ -15,12 +20,13 @@ type Env = {
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
+	[CoreBindings.SERVICE_R2_PUBLIC]?: Fetcher;
+	[CoreBindings.SERVICE_R2_S3]?: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
-	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
@@ -268,54 +274,24 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 		return response;
 	}
 
+	// `workerd` drops response bodies for `HEAD` requests, so fall back to the
+	// header copy of the serialised error. Without a payload there is nothing to
+	// prettify, and POSTing an empty body would surface a JSON parse error from
+	// miniflare's internals instead of the user's error.
+	const body = response.body ?? decodeErrorPayload(response);
+	if (body === null) {
+		return response;
+	}
+
 	return env[CoreBindings.SERVICE_LOOPBACK].fetch(
 		"http://localhost/core/error",
 		{
 			method: "POST",
 			headers: request.headers,
-			body: response.body,
+			body,
 			cf: { prettyErrorOriginalUrl: request.url },
 		}
 	);
-}
-
-function maybeInjectLiveReload(
-	response: Response,
-	env: Env,
-	ctx: ExecutionContext
-) {
-	const liveReloadScript = env[CoreBindings.DATA_LIVE_RELOAD_SCRIPT];
-	if (
-		liveReloadScript === undefined ||
-		!response.headers.get("Content-Type")?.toLowerCase().includes("text/html")
-	) {
-		return response;
-	}
-
-	const headers = new Headers(response.headers);
-	const contentLength = parseInt(headers.get("content-length") ?? "NaN");
-	if (!isNaN(contentLength)) {
-		headers.set(
-			"content-length",
-			String(contentLength + liveReloadScript.byteLength)
-		);
-	}
-
-	const { readable, writable } = new IdentityTransformStream();
-	ctx.waitUntil(
-		(async () => {
-			await response.body?.pipeTo(writable, { preventClose: true });
-			const writer = writable.getWriter();
-			await writer.write(liveReloadScript);
-			await writer.close();
-		})()
-	);
-
-	return new Response(readable, {
-		status: response.status,
-		statusText: response.statusText,
-		headers,
-	});
 }
 
 const acceptEncodingElement =
@@ -557,24 +533,7 @@ export default <ExportedHandler<Env>>{
 				return await imagesDelivery.fetch(request);
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
-				if (
-					url.pathname === CorePaths.SCHEDULED ||
-					/* legacy URL path */ url.pathname === CorePaths.LEGACY_SCHEDULED
-				) {
-					if (url.pathname === CorePaths.LEGACY_SCHEDULED) {
-						ctx.waitUntil(
-							env[CoreBindings.SERVICE_LOOPBACK].fetch(
-								"http://localhost/core/log",
-								{
-									method: "POST",
-									headers: {
-										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
-									},
-									body: `Triggering scheduled handlers via a request to \`${CorePaths.LEGACY_SCHEDULED}\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`${CorePaths.SCHEDULED}\``,
-								}
-							)
-						);
-					}
+				if (url.pathname === CorePaths.SCHEDULED) {
 					return await handleScheduled(url.searchParams, service);
 				}
 
@@ -585,13 +544,6 @@ export default <ExportedHandler<Env>>{
 						service,
 						env,
 						ctx
-					);
-				}
-
-				if (url.pathname.startsWith(CorePaths.HANDLER_PREFIX)) {
-					return new Response(
-						`"${url.pathname}" is not a valid handler. Did you mean to use "${CorePaths.SCHEDULED}" or "${CorePaths.EMAIL}"?`,
-						{ status: 404 }
 					);
 				}
 			}
@@ -605,11 +557,41 @@ export default <ExportedHandler<Env>>{
 				return await streamService.fetch(request);
 			}
 
+			const r2PublicService = env[CoreBindings.SERVICE_R2_PUBLIC];
+			if (
+				(url.pathname === CorePaths.R2_PUBLIC ||
+					url.pathname.startsWith(`${CorePaths.R2_PUBLIC}/`)) &&
+				r2PublicService
+			) {
+				return await r2PublicService.fetch(request);
+			}
+
+			const r2S3Service = env[CoreBindings.SERVICE_R2_S3];
+			if (
+				(url.pathname === CorePaths.R2_S3 ||
+					url.pathname.startsWith(`${CorePaths.R2_S3}/`)) &&
+				r2S3Service
+			) {
+				// SigV4 verification compares against the host the client
+				// signed, so undo the `upstream` URL/Host rewrite from
+				// `getUserRequest()`
+				let s3Request = request;
+				const originalHostname = request.headers.get(
+					CoreHeaders.ORIGINAL_HOSTNAME
+				);
+				if (originalHostname !== null) {
+					const s3Url = new URL(url);
+					s3Url.host = originalHostname;
+					s3Request = new Request(s3Url, request);
+					s3Request.headers.set("Host", originalHostname);
+				}
+				return await r2S3Service.fetch(s3Request);
+			}
+
 			let response = await service.fetch(request);
 			if (!disablePrettyErrorPage) {
 				response = await maybePrettifyError(request, response, env);
 			}
-			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
 			if (env[CoreBindings.LOG_REQUESTS]) {
 				response = maybeLogRequest(request, response, env, ctx, startTime);

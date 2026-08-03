@@ -40,7 +40,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - PRs in the merge queue.
 - Actions
   - Runs the E2E tests for Wrangler.
-  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
+  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `ci:run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
 
 ### Vite Plugin E2E tests (e2e-vite.yml)
 
@@ -49,7 +49,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - PRs in the merge queue.
 - Actions
   - Runs the E2E tests for the Vite plugin.
-  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
+  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `ci:run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
 
 ## Deploy Pages Previews (deploy-pages-preview.yml)
 
@@ -82,6 +82,18 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Updates to issues.
 - Actions
   - Add the issue to a GitHub project.
+
+### Triage Issue (triage-issue.yml)
+
+- Triggers
+  - A new issue is opened (skips PRs and bot-authored issues).
+  - A new comment is created on an issue — re-triages with the latest context. Skips PRs, bot comments, and the triage bot's own report comment (matched by a marker) to avoid re-triage loops.
+  - Manual `workflow_dispatch` with an `issue-number` input.
+- Actions
+  - Runs an OpenCode agent with the `.github/skills/issue-review.md` skill against the pre-fetched issue data (including existing comments) to produce a markdown triage report (`report.md`) and a structured JSON summary (`summary.json`).
+  - Uploads the report to the triage dashboard.
+  - Posts the report and structured summary as a maintainer-facing comment on the issue and applies the suggested labels (validated against existing repo labels). The comment carries a hidden marker so that re-triage updates the existing comment (via `gh`) rather than posting a duplicate. Comments and labels are attributed to the workers-devprod bot via `GH_ACCESS_TOKEN`.
+  - The AI agent itself runs sandboxed (no shell or network access); all GitHub writes happen in workflow steps from the generated files.
 
 ### Generate changesets for dependabot PRs (c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml)
 
@@ -119,7 +131,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Updates to PRs.
 - Actions
   - Runs the E2E tests for C3.
-  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
+  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `ci:run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
 
 ### Rerun Code Owners (rerun-codeowners.yml + rerun-codeowners-privileged.yml)
 
@@ -132,8 +144,8 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 ### Rerun Remote Tests (rerun-remote-tests.yml)
 
 - Triggers
-  - The `run-remote-tests` or `run-c3-frameworks-tests` label is added to or removed from a PR.
+  - The `ci:run-remote-tests` or `run-c3-frameworks-tests` label is added to or removed from a PR.
 - Actions
   - Re-runs the E2E workflows for the PR so they pick up the label change and pass (or withhold) API credentials to the test steps.
-  - `run-remote-tests` re-runs Wrangler, Vite, and C3 E2E workflows; `run-c3-frameworks-tests` re-runs only C3 E2E.
+  - `ci:run-remote-tests` re-runs Wrangler, Vite, and C3 E2E workflows; `run-c3-frameworks-tests` re-runs only C3 E2E.
   - Uses `pull_request_target` to get a privileged token even for fork PRs (safe because no untrusted code is checked out).

@@ -8,6 +8,7 @@ import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
+import { ARTIFACTS_EVENT_TYPES } from "./environment";
 import {
 	all,
 	appendEnvName,
@@ -16,7 +17,6 @@ import {
 	getBindingNames,
 	hasProperty,
 	inheritable,
-	inheritableInWranglerEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
 	isOneOf,
@@ -44,6 +44,7 @@ import type {
 	ContainerApp,
 	CustomDomainRoute,
 	DispatchNamespaceOutbound,
+	DurableObjectExport,
 	Environment,
 	Observability,
 	RawEnvironment,
@@ -114,9 +115,6 @@ export type ConfigBindingFieldName =
 	| "vpc_services"
 	| "vpc_networks";
 
-/**
- * @deprecated new code should use getBindingTypeFriendlyName() instead
- */
 export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	data_blobs: "Data Blob",
 	durable_objects: "Durable Object",
@@ -229,7 +227,6 @@ export function getBindingTypeFriendlyName(
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
 	env?: string;
-	"legacy-env"?: boolean;
 	// This is not relevant in dev. It's only purpose is loosening Worker name validation when deploying to a dispatch namespace
 	"dispatch-namespace"?: string;
 	remote?: boolean;
@@ -288,13 +285,31 @@ export function normalizeAndValidateConfig(
 		} configuration:`
 	);
 
-	validateOptionalProperty(
-		diagnostics,
-		"",
-		"legacy_env",
-		rawConfig.legacy_env,
-		"boolean"
+	const isRedirectedConfig = isRedirectedRawConfig(
+		rawConfig,
+		configPath,
+		userConfigPath
 	);
+
+	if ("legacy_env" in rawConfig) {
+		// Older versions of tools such as the Vite plugin can generate redirected
+		// configurations that still include the removed `legacy_env` field.
+		// `legacy_env = true` was the historical default (so removing it does not
+		// change how the Worker is deployed), we silently strip it here rather than
+		// erroring. For user-authored configurations we still surface the error so
+		// that they know to remove the field.
+		if (!isRedirectedConfig) {
+			diagnostics.errors.push(
+				dedent`
+					The "legacy_env" field is no longer supported, so please remove it from your configuration file.
+					Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
+					Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information.
+				`
+			);
+		}
+		// Remove the field so it is not also reported as an unexpected top-level field.
+		delete (rawConfig as Record<string, unknown>).legacy_env;
+	}
 
 	validateOptionalProperty(
 		diagnostics,
@@ -304,12 +319,55 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	if (
+		validateOptionalProperty(
+			diagnostics,
+			"",
+			"dependencies_instrumentation",
+			rawConfig.dependencies_instrumentation,
+			"object"
+		)
+	) {
+		if (typeof rawConfig.dependencies_instrumentation === "object") {
+			validateOptionalProperty(
+				diagnostics,
+				"dependencies_instrumentation",
+				"enabled",
+				rawConfig.dependencies_instrumentation.enabled,
+				"boolean"
+			);
+
+			validateOptionalTypedArray(
+				diagnostics,
+				"dependencies_instrumentation.exclude_packages",
+				rawConfig.dependencies_instrumentation.exclude_packages,
+				"string"
+			);
+
+			validateAdditionalProperties(
+				diagnostics,
+				"dependencies_instrumentation",
+				Object.keys(
+					rawConfig.dependencies_instrumentation as Record<string, unknown>
+				),
+				["enabled", "exclude_packages"]
+			);
+		}
+	}
+
 	validateOptionalProperty(
 		diagnostics,
 		"",
 		"keep_vars",
 		rawConfig.keep_vars,
 		"boolean"
+	);
+
+	validateOptionalTypedArray(
+		diagnostics,
+		"addresses",
+		rawConfig.addresses,
+		"string"
 	);
 
 	validateOptionalProperty(
@@ -329,25 +387,6 @@ export function normalizeAndValidateConfig(
 		"string"
 	);
 
-	/**
-	 * Legacy env refers to wrangler environments, which are not actually legacy in any way.
-	 * This is opposed to service environments, which are deprecated.
-	 * Unfortunately legacy-env is a public facing arg and config option, so we have to leave the name.
-	 * However we can change the internal handling to be less confusing.
-	 */
-
-	const useServiceEnvironments = !(
-		args["legacy-env"] ??
-		rawConfig.legacy_env ??
-		true
-	);
-
-	if (useServiceEnvironments) {
-		diagnostics.warnings.push(
-			"Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-		);
-	}
-
 	const isDispatchNamespace =
 		typeof args["dispatch-namespace"] === "string" &&
 		args["dispatch-namespace"].trim() !== "";
@@ -358,12 +397,6 @@ export function normalizeAndValidateConfig(
 		rawConfig,
 		isDispatchNamespace,
 		preserveOriginalMain
-	);
-
-	const isRedirectedConfig = isRedirectedRawConfig(
-		rawConfig,
-		configPath,
-		userConfigPath
 	);
 
 	const definedEnvironments = Object.keys(rawConfig.env ?? {});
@@ -440,7 +473,6 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					useServiceEnvironments,
 					rawConfig
 				);
 				diagnostics.addChild(envDiagnostics);
@@ -453,7 +485,6 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					useServiceEnvironments,
 					rawConfig
 				);
 				const envNames = rawConfig.env
@@ -495,10 +526,10 @@ export function normalizeAndValidateConfig(
 			configPath,
 			rawConfig.pages_build_output_dir
 		),
-		/** Legacy_env is wrangler environments, as opposed to service environments. Wrangler environments is not legacy.  */
-		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
+		dependencies_instrumentation: rawConfig.dependencies_instrumentation,
 		keep_vars: rawConfig.keep_vars,
+		addresses: rawConfig.addresses,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		site: normalizeAndValidateSite(
@@ -841,11 +872,15 @@ function normalizeAndValidateSite(
 		validateRequiredProperty(diagnostics, "site", "bucket", bucket, "string");
 		validateTypedArray(diagnostics, "sites.include", include, "string");
 		validateTypedArray(diagnostics, "sites.exclude", exclude, "string");
+
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- this code handles the deprecated site.entry-point field
+		const legacySiteEntryPoint = rawConfig.site["entry-point"];
+
 		validateOptionalProperty(
 			diagnostics,
 			"site",
 			"entry-point",
-			rawConfig.site["entry-point"],
+			legacySiteEntryPoint,
 			"string"
 		);
 
@@ -856,8 +891,8 @@ function normalizeAndValidateSite(
 			`Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:\n` +
 				`\`\`\`\n` +
 				`main = "${path.join(
-					String(rawConfig.site["entry-point"]) || "workers-site",
-					path.extname(String(rawConfig.site["entry-point"]) || "workers-site")
+					String(legacySiteEntryPoint) || "workers-site",
+					path.extname(String(legacySiteEntryPoint) || "workers-site")
 						? ""
 						: "index.js"
 				)}"\n` +
@@ -867,7 +902,7 @@ function normalizeAndValidateSite(
 			"warning"
 		);
 
-		let siteEntryPoint = rawConfig.site["entry-point"];
+		let siteEntryPoint = legacySiteEntryPoint;
 
 		if (!mainEntryPoint && !siteEntryPoint) {
 			// this means that we're defaulting to "workers-site"
@@ -1435,7 +1470,6 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName: string,
 	topLevelEnv: Environment,
-	useServiceEnvironments: boolean,
 	rawConfig: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
@@ -1446,7 +1480,6 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
-	useServiceEnvironments?: boolean,
 	rawConfig?: RawConfig | undefined
 ): Environment {
 	deprecated(
@@ -1466,14 +1499,12 @@ function normalizeAndValidateEnvironment(
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
-	const account_id = inheritableInWranglerEnvironments(
+	const account_id = inheritable(
 		diagnostics,
-		useServiceEnvironments,
 		topLevelEnv,
 		mutateEmptyStringAccountIDValue(diagnostics, rawEnv),
 		"account_id",
 		isString,
-		undefined,
 		undefined
 	);
 
@@ -1551,15 +1582,14 @@ function normalizeAndValidateEnvironment(
 			configPath
 		),
 		rules: validateAndNormalizeRules(diagnostics, topLevelEnv, rawEnv, envName),
-		name: inheritableInWranglerEnvironments(
+		name: inheritable(
 			diagnostics,
-			useServiceEnvironments,
 			topLevelEnv,
 			rawEnv,
 			"name",
 			isDispatchNamespace ? isString : isValidName,
-			appendEnvName(envName),
-			undefined
+			undefined,
+			appendEnvName(envName)
 		),
 		main: preserveOriginalMain
 			? inheritable(
@@ -1687,6 +1717,14 @@ function normalizeAndValidateEnvironment(
 			"migrations",
 			validateMigrations,
 			[]
+		),
+		exports: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"exports",
+			validateExports,
+			{}
 		),
 		kv_namespaces: notInheritable(
 			diagnostics,
@@ -2138,11 +2176,18 @@ function normalizeAndValidateEnvironment(
 		),
 	};
 
-	warnIfDurableObjectsHaveNoMigrations(
+	warnIfDurableObjectsHaveNoLifecycleConfig(
 		diagnostics,
 		environment.durable_objects,
 		environment.migrations,
+		environment.exports,
 		configPath
+	);
+
+	errorIfMigrationsAndExportsBothSet(
+		diagnostics,
+		environment.migrations,
+		environment.exports
 	);
 
 	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
@@ -2196,6 +2241,10 @@ const validateAndNormalizeRules = (
 	);
 };
 
+const ARTIFACTS_EVENT_TYPE_SET: ReadonlySet<string> = new Set(
+	ARTIFACTS_EVENT_TYPES
+);
+
 const validateTriggers: ValidatorFn = (
 	diagnostics,
 	triggersFieldName,
@@ -2205,7 +2254,7 @@ const validateTriggers: ValidatorFn = (
 		return true;
 	}
 
-	if (typeof triggersValue !== "object") {
+	if (typeof triggersValue !== "object" || Array.isArray(triggersValue)) {
 		diagnostics.errors.push(
 			`Expected "${triggersFieldName}" to be of type object but got ${JSON.stringify(
 				triggersValue
@@ -2223,12 +2272,113 @@ const validateTriggers: ValidatorFn = (
 		isValid = false;
 	}
 
+	if (
+		hasProperty(triggersValue, "events") &&
+		!Array.isArray(triggersValue.events)
+	) {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}.events" to be of type array, but got ${JSON.stringify(triggersValue)}.`
+		);
+		isValid = false;
+	} else if (
+		hasProperty(triggersValue, "events") &&
+		Array.isArray(triggersValue.events)
+	) {
+		for (const [eventIndex, event] of triggersValue.events.entries()) {
+			const eventFieldName = `${triggersFieldName}.events[${eventIndex}]`;
+			if (typeof event !== "object" || event === null || Array.isArray(event)) {
+				diagnostics.errors.push(
+					`Expected "${eventFieldName}" to be of type object, but got ${JSON.stringify(event)}.`
+				);
+				isValid = false;
+				continue;
+			}
+
+			if (
+				!isRequiredProperty(event, "type", "string") ||
+				!ARTIFACTS_EVENT_TYPE_SET.has(event.type)
+			) {
+				diagnostics.errors.push(
+					`Expected "${eventFieldName}.type" to be a supported Artifacts event type, but got ${JSON.stringify(event.type)}.`
+				);
+				isValid = false;
+			}
+
+			if (hasProperty(event, "filter") && event.filter !== undefined) {
+				if (
+					typeof event.filter !== "object" ||
+					event.filter === null ||
+					Array.isArray(event.filter)
+				) {
+					diagnostics.errors.push(
+						`Expected "${eventFieldName}.filter" to be of type object, but got ${JSON.stringify(event.filter)}.`
+					);
+					isValid = false;
+				} else {
+					for (const [filterName, filterValue] of Object.entries(
+						event.filter
+					)) {
+						if (
+							(filterName !== "namespace" && filterName !== "repo_name") ||
+							typeof filterValue !== "string"
+						) {
+							diagnostics.errors.push(
+								`Expected "${eventFieldName}.filter" to contain only string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
+							);
+							isValid = false;
+							break;
+						}
+					}
+				}
+			}
+
+			if (!Array.isArray(event.targets) || event.targets.length === 0) {
+				diagnostics.errors.push(
+					`Expected "${eventFieldName}.targets" to be a non-empty array, but got ${JSON.stringify(event.targets)}.`
+				);
+				isValid = false;
+			} else {
+				for (const [targetIndex, target] of event.targets.entries()) {
+					const targetFieldName = `${eventFieldName}.targets[${targetIndex}]`;
+					if (
+						typeof target !== "object" ||
+						target === null ||
+						Array.isArray(target) ||
+						target.type !== "workflow" ||
+						typeof target.workflow_name !== "string" ||
+						target.workflow_name.length === 0
+					) {
+						diagnostics.errors.push(
+							`Expected "${targetFieldName}" to be a workflow target with a non-empty "workflow_name", but got ${JSON.stringify(target)}.`
+						);
+						isValid = false;
+						continue;
+					}
+
+					validateAdditionalProperties(
+						diagnostics,
+						targetFieldName,
+						Object.keys(target),
+						["type", "workflow_name"]
+					);
+				}
+			}
+
+			validateAdditionalProperties(
+				diagnostics,
+				eventFieldName,
+				Object.keys(event),
+				["type", "filter", "targets"]
+			);
+		}
+	}
+
 	isValid =
 		validateAdditionalProperties(
 			diagnostics,
 			triggersFieldName,
 			Object.keys(triggersValue),
-			["crons"]
+			["crons", "events"]
 		) && isValid;
 
 	return isValid;
@@ -3961,7 +4111,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 
-	// Queue bindings must have a binding and queue.
+	// Queue bindings must have a binding. The queue can be provisioned at deploy time.
 	let isValid = true;
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -3973,11 +4123,11 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (
-		!isRequiredProperty(value, "queue", "string") ||
-		(value as { queue: string }).queue.length === 0
+		!isOptionalProperty(value, "queue", "string") ||
+		(hasProperty(value, "queue") && value.queue === "")
 	) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "queue" field but got ${JSON.stringify(
+			`"${field}" bindings should optionally have a non-empty string "queue" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4091,12 +4241,55 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "local_dev")) {
+		const localDev = value.local_dev;
+		if (typeof localDev !== "object" || localDev === null) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "local_dev" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			experimental(
+				diagnostics,
+				{ local_dev: localDev } as {
+					local_dev: { experimental_s3_credentials?: unknown };
+				},
+				"local_dev.experimental_s3_credentials"
+			);
+			if (hasProperty(localDev, "experimental_s3_credentials")) {
+				const credentials = localDev.experimental_s3_credentials;
+				if (
+					typeof credentials !== "object" ||
+					credentials === null ||
+					!isRequiredProperty(credentials, "accessKeyId", "string") ||
+					!isRequiredProperty(credentials, "secretAccessKey", "string")
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings should, optionally, have a "local_dev.experimental_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got ${JSON.stringify(
+							value
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.local_dev`,
+				Object.keys(localDev),
+				["experimental_s3_credentials"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
 		"remote",
+		"local_dev",
 	]);
 
 	return isValid;
@@ -4146,6 +4339,42 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isOptionalProperty(value, "migrations_pattern", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "migrations_pattern" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "database_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "database_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "migrations_dir", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_dir" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "migrations_table", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "migrations_table" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "database_internal_env", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "database_internal_env" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4589,6 +4818,70 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (hasProperty(value, "dev") && value.dev !== undefined) {
+		if (
+			typeof value.dev !== "object" ||
+			value.dev === null ||
+			Array.isArray(value.dev)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should have an object "dev" field but got ${JSON.stringify(
+					value.dev
+				)}.`
+			);
+			isValid = false;
+		} else {
+			if (
+				!hasProperty(value.dev, "plugin") ||
+				typeof value.dev.plugin !== "object" ||
+				value.dev.plugin === null ||
+				Array.isArray(value.dev.plugin)
+			) {
+				diagnostics.errors.push(
+					`"${field}.dev" should have an object "plugin" field but got ${JSON.stringify(
+						(value.dev as { plugin?: unknown }).plugin
+					)}.`
+				);
+				isValid = false;
+			} else {
+				if (!isRequiredProperty(value.dev.plugin, "package", "string")) {
+					diagnostics.errors.push(
+						`"${field}.dev.plugin" should have a string "package" field but got ${JSON.stringify(
+							(value.dev.plugin as { package?: unknown }).package
+						)}.`
+					);
+					isValid = false;
+				}
+				if (!isRequiredProperty(value.dev.plugin, "name", "string")) {
+					diagnostics.errors.push(
+						`"${field}.dev.plugin" should have a string "name" field but got ${JSON.stringify(
+							(value.dev.plugin as { name?: unknown }).name
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+			if (
+				hasProperty(value.dev, "options") &&
+				value.dev.options !== undefined &&
+				(typeof value.dev.options !== "object" ||
+					value.dev.options === null ||
+					Array.isArray(value.dev.options))
+			) {
+				diagnostics.errors.push(
+					`"${field}.dev.options" should be an object but got ${JSON.stringify(
+						value.dev.options
+					)}.`
+				);
+				isValid = false;
+			}
+		}
+		if ((value as { remote?: unknown }).remote === true) {
+			diagnostics.warnings.push(
+				`"${field}" binding has both "dev" and "remote" set; "remote" is ignored when "dev" is present and the binding is routed through the local Miniflare plugin.`
+			);
+		}
+	}
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
@@ -4650,7 +4943,7 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		return false;
 	}
 	let isValid = true;
-	// Worker namespace bindings must have a binding, and a namespace.
+	// Worker namespace bindings must have a binding. The namespace can be provisioned at deploy time.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" should have a string "binding" field but got ${JSON.stringify(
@@ -4659,9 +4952,9 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "namespace", "string")) {
+	if (!isOptionalProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
-			`"${field}" should have a string "namespace" field but got ${JSON.stringify(
+			`"${field}" should optionally have a string "namespace" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -5119,9 +5412,9 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "app_id", "string")) {
+	if (!isOptionalProperty(value, "app_id", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+			`"${field}" bindings may have a string "app_id" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -5771,12 +6064,291 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 	return valid;
 };
 
+const VALID_EXPORT_STORAGES = new Set(["sqlite", "legacy-kv"]);
+
+/**
+ * Approximate JavaScript IdentifierName matcher used for tombstone `renamed_to`
+ * validation. This catches common mistakes locally; full grammar validation
+ * still happens server-side.
+ */
+const JS_IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+function validateDurableObjectExportProperties(
+	diagnostics: Diagnostics,
+	className: string,
+	durableObjectExport: DurableObjectExport,
+	allowedProperties: string[]
+): boolean {
+	let valid = true;
+	for (const key of Object.keys(durableObjectExport)) {
+		if (!allowedProperties.includes(key)) {
+			diagnostics.errors.push(
+				`"exports.${className}.${key}" is forbidden on state "${durableObjectExport.state ?? "created"}".`
+			);
+			valid = false;
+		}
+	}
+	if (!valid) {
+		diagnostics.errors.push(
+			`Allowed properties are: ${ENGLISH.format(allowedProperties)}.`
+		);
+	}
+	return valid;
+}
+
+/**
+ * Validate a Durable Object `exports` configuration.
+ *
+ * - `type` carries the export kind and must be `"durable-object"`.
+ * - `state` carries the lifecycle: `"created"`, `"deleted"`, `"renamed"`,
+ *   `"transferred"`, or `"expecting-transfer"`.
+ * - Depending on `state`, some properties are required or forbidden.
+ *
+ * Deeper validation of `renamed_to` and `transferred_to` happens in the API.
+ */
+function validateDurableObjectExport(
+	diagnostics: Diagnostics,
+	className: string,
+	durableObjectExport: DurableObjectExport
+): boolean {
+	let valid = true;
+
+	if (className === "") {
+		diagnostics.errors.push(`"export" keys cannot be the empty string.`);
+		valid = false;
+	}
+
+	switch (durableObjectExport.state) {
+		case undefined:
+		case "created": {
+			if (
+				typeof durableObjectExport.storage !== "string" ||
+				!VALID_EXPORT_STORAGES.has(durableObjectExport.storage)
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.storage" is required for state "created" and must be one of ${ENGLISH.format(VALID_EXPORT_STORAGES)}, but got ${JSON.stringify(durableObjectExport.storage)}`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "storage"]
+				) && valid;
+			break;
+		}
+		case "deleted": {
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state"]
+				) && valid;
+			break;
+		}
+		case "renamed": {
+			if (
+				typeof durableObjectExport.renamed_to !== "string" ||
+				durableObjectExport.renamed_to === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.renamed_to" is required for state "renamed" and must be a non-empty string.`
+				);
+				valid = false;
+			} else {
+				if (!JS_IDENTIFIER_RE.test(durableObjectExport.renamed_to)) {
+					diagnostics.errors.push(
+						`"exports.${className}.renamed_to" must be a valid JavaScript identifier (got "${durableObjectExport.renamed_to}").`
+					);
+					valid = false;
+				}
+				if (durableObjectExport.renamed_to === className) {
+					diagnostics.errors.push(
+						`"exports.${className}.renamed_to" cannot equal the source class name "${className}".`
+					);
+					valid = false;
+				}
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "renamed_to"]
+				) && valid;
+			break;
+		}
+		case "transferred": {
+			if (
+				typeof durableObjectExport.transferred_to !== "string" ||
+				durableObjectExport.transferred_to === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.transferred_to" is required for state "transferred" and must be a non-empty string.`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "transferred_to"]
+				) && valid;
+			break;
+		}
+		case "expecting-transfer": {
+			if (
+				typeof durableObjectExport.storage !== "string" ||
+				!VALID_EXPORT_STORAGES.has(durableObjectExport.storage)
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.storage" is required for state "expecting-transfer" and must be one of ${ENGLISH.format(VALID_EXPORT_STORAGES)}, but got ${JSON.stringify(durableObjectExport.storage)}`
+				);
+				valid = false;
+			}
+			if (
+				typeof durableObjectExport.transfer_from !== "string" ||
+				durableObjectExport.transfer_from === ""
+			) {
+				diagnostics.errors.push(
+					`"exports.${className}.transfer_from" is required for state "expecting-transfer" and must be a non-empty string.`
+				);
+				valid = false;
+			}
+			valid =
+				validateDurableObjectExportProperties(
+					diagnostics,
+					className,
+					durableObjectExport,
+					["type", "state", "storage", "transfer_from"]
+				) && valid;
+			break;
+		}
+		default: {
+			// Need to cast here because we have exhausted all the possible values of `state` in the switch above.
+			const state = (durableObjectExport as { state: string }).state;
+			diagnostics.errors.push(
+				`"exports.${className}.state" must be one of "created", "deleted", "renamed", "transferred", or "expecting-transfer" but got ${JSON.stringify(state)}.`
+			);
+			valid = false;
+		}
+	}
+	return valid;
+}
+
+function validateWorkerExport(
+	diagnostics: Diagnostics,
+	exportName: string,
+	workerExport: { cache?: unknown } & Record<string, unknown>
+): boolean {
+	let valid = true;
+
+	valid =
+		validateAdditionalProperties(
+			diagnostics,
+			`exports.${exportName}`,
+			Object.keys(workerExport),
+			["type", "cache"]
+		) && valid;
+
+	valid =
+		validateWorkerExportCache(
+			diagnostics,
+			`exports.${exportName}.cache`,
+			workerExport.cache
+		) && valid;
+
+	return valid;
+}
+
+function validateWorkerExportCache(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): boolean {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const cache = value as Record<string, unknown>;
+	let valid = true;
+
+	valid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"enabled",
+			cache.enabled,
+			"boolean"
+		) && valid;
+
+	valid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(cache), [
+			"enabled",
+		]) && valid;
+
+	return valid;
+}
+
+const validateExports: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined || value === null) {
+		return true;
+	}
+	if (typeof value !== "object" || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`The optional "${field}" field should be an object keyed by class name, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+
+	let valid = true;
+	for (const [exportName, exportConfig] of Object.entries(value)) {
+		if (typeof exportConfig !== "object" || exportConfig === null) {
+			diagnostics.errors.push(
+				`"exports.${exportName}" should be an object but got ${JSON.stringify(
+					exportConfig
+				)}.`
+			);
+			valid = false;
+			continue;
+		}
+		if (exportConfig.type === "durable-object") {
+			valid =
+				validateDurableObjectExport(diagnostics, exportName, exportConfig) &&
+				valid;
+		} else if (exportConfig.type === "worker") {
+			valid =
+				validateWorkerExport(diagnostics, exportName, exportConfig) && valid;
+		} else {
+			valid = false;
+			diagnostics.errors.push(
+				`"exports.${exportName}.type" must be "durable-object" or "worker", but got ${JSON.stringify(exportConfig.type)}.`
+			);
+		}
+	}
+
+	return valid;
+};
+
 const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {
 		return true;
 	}
 
-	if (typeof value !== "object") {
+	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
 			`"${field}" should be an object but got ${JSON.stringify(value)}.`
 		);
@@ -5980,55 +6552,110 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"cross_version_cache",
+			val.cross_version_cache,
+			"boolean"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
+			"cross_version_cache",
 		]) && isValid;
 
 	return isValid;
 };
 
-function warnIfDurableObjectsHaveNoMigrations(
+/**
+ * Emit a warning if a local Durable Object binding is not covered by either a
+ * live `exports` entry or a `migrations` block.
+ */
+function warnIfDurableObjectsHaveNoLifecycleConfig(
 	diagnostics: Diagnostics,
 	durableObjects: Config["durable_objects"],
 	migrations: Config["migrations"],
+	exports: Config["exports"],
 	configPath: string | undefined
 ) {
 	if (
-		Array.isArray(durableObjects.bindings) &&
-		durableObjects.bindings.length > 0
+		!Array.isArray(durableObjects.bindings) ||
+		durableObjects.bindings.length === 0
 	) {
-		// intrinsic [durable_objects] implies [migrations]
-		const exportedDurableObjects = (durableObjects.bindings || []).filter(
-			(binding) => !binding.script_name
-		);
-		if (exportedDurableObjects.length > 0 && migrations.length === 0) {
-			if (
-				!exportedDurableObjects.some(
-					(exportedDurableObject) =>
-						typeof exportedDurableObject.class_name !== "string"
-				)
-			) {
-				const durableObjectClassnames = exportedDurableObjects.map(
-					(durable) => durable.class_name
-				);
+		return;
+	}
 
-				diagnostics.warnings.push(dedent`
-				In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no \`migrations\` for them. This may not work as expected until you add a \`migrations\` section to your ${configFileName(configPath)} file. Add the following configuration:
-
-				\`\`\`
-				${formatConfigSnippet(
-					{
-						migrations: [
-							{ tag: "v1", new_sqlite_classes: durableObjectClassnames },
-						],
-					},
-					configPath
-				)}
-				\`\`\`
-
-				Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
-			}
+	// intrinsic [durable_objects] implies [migrations] (or `exports`)
+	const exportedDurableObjects = durableObjects.bindings.filter(
+		(binding) => !binding.script_name
+	);
+	// Tombstones do not cover a local binding because the class is being
+	// retired or moved.
+	const exportsCovers = (className: string) => {
+		const entry = exports?.[className];
+		if (entry === undefined || entry.type !== "durable-object") {
+			return false;
 		}
+		const state = entry.state ?? "created";
+		return state === "created" || state === "expecting-transfer";
+	};
+	const uncoveredByExports = exportedDurableObjects.filter(
+		(binding) =>
+			typeof binding.class_name !== "string" ||
+			!exportsCovers(binding.class_name)
+	);
+
+	if (uncoveredByExports.length === 0 || migrations.length > 0) {
+		return;
+	}
+	if (
+		uncoveredByExports.some(
+			(exportedDurableObject) =>
+				typeof exportedDurableObject.class_name !== "string"
+		)
+	) {
+		return;
+	}
+
+	const durableObjectClassnames = uncoveredByExports.map(
+		(durable) => durable.class_name
+	) as string[];
+
+	const suggestedExports: NonNullable<RawConfig["exports"]> = {};
+	for (const className of durableObjectClassnames) {
+		suggestedExports[className] = {
+			type: "durable-object",
+			storage: "sqlite",
+		};
+	}
+
+	diagnostics.warnings.push(dedent`
+	In your ${configFileName(configPath)} file, you have configured \`durable_objects\` exported by this Worker (${durableObjectClassnames.join(", ")}), but no live \`exports\` entry for them. This may not work as expected until you add a live \`durable-object\` entry to \`exports\` for each. Add the following configuration:
+
+	\`\`\`
+	${formatConfigSnippet({ exports: suggestedExports }, configPath)}
+	\`\`\``);
+}
+
+/**
+ * `migrations` and `exports` are mutually exclusive ways to declare Durable
+ * Object lifecycle. Validate this before any upload starts.
+ */
+function errorIfMigrationsAndExportsBothSet(
+	diagnostics: Diagnostics,
+	migrations: Config["migrations"],
+	exports: Config["exports"]
+) {
+	if (
+		migrations.length > 0 &&
+		exports !== undefined &&
+		Object.values(exports).some((entry) => entry.type === "durable-object")
+	) {
+		diagnostics.errors.push(
+			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
+		);
 	}
 }
 

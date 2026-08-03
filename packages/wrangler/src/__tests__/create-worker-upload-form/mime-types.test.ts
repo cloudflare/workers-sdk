@@ -35,7 +35,7 @@ describe("fromMimeType", () => {
 	);
 
 	it("should throw for unsupported mime types", ({ expect }) => {
-		expect(() => fromMimeType("image/png")).toThrowError(
+		expect(() => fromMimeType("image/png")).toThrow(
 			"Unsupported mime type: image/png"
 		);
 	});

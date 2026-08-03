@@ -1,43 +1,73 @@
+import {
+	UserError,
+	type RawConfig,
+	type Exports,
+} from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
-import type { ParsedConfig } from "./schema";
+import type { ParsedInputWorkerConfig, ParsedSettingsConfig } from "./schema";
 import type { Json } from "./utils";
-import type { RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
  * The caller is responsible for unwrapping any function/promise wrapper around
- * the config and validating it against `ConfigSchema` before passing it in.
+ * the config and validating it against `InputWorkerSchema` before passing it in.
  *
- * @param config The parsed (post-validation) config.
+ * @param workerConfig The parsed (post-validation) Worker config.
+ * @param settingsConfig The optional parsed settings config, whose fields
+ * are merged onto the result.
  * @returns The corresponding Wrangler `RawConfig`.
  */
-export function convertToWranglerConfig(config: ParsedConfig): RawConfig {
+export function convertToWranglerConfig(
+	workerConfig: ParsedInputWorkerConfig,
+	settingsConfig?: ParsedSettingsConfig
+): RawConfig {
 	const result: RawConfig = {};
 
-	convertTopLevel(config, result);
-	convertBindingsAndAssets(config, result);
-	convertExports(config, result);
-	convertDomains(config, result);
-	convertTriggers(config, result);
-	convertTailConsumers(config, result);
+	convertTopLevel(workerConfig, result);
+	convertBindingsAndAssets(workerConfig, result);
+	convertExports(workerConfig, result);
+	convertDomains(workerConfig, result);
+	convertTriggers(workerConfig, result);
+	convertTailConsumers(workerConfig, result);
+
+	if (settingsConfig !== undefined) {
+		convertSettings(settingsConfig, result);
+	}
 
 	return result;
+}
+
+/**
+ * Merge a parsed settings config's fields (`account_id`, `compliance_region`)
+ * onto an existing Wrangler `RawConfig`.
+ */
+function convertSettings(
+	settings: ParsedSettingsConfig,
+	result: RawConfig
+): void {
+	if (settings.accountId !== undefined) {
+		result.account_id = settings.accountId;
+	}
+	if (settings.complianceRegion !== undefined) {
+		result.compliance_region =
+			settings.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
+	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TOP-LEVEL FIELDS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTopLevel(config: ParsedConfig, result: RawConfig): void {
+function convertTopLevel(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	if (config.name !== undefined) {
 		result.name = config.name;
 	}
 	if (typeof config.entrypoint === "string") {
 		result.main = config.entrypoint;
-	}
-	if (config.accountId !== undefined) {
-		result.account_id = config.accountId;
 	}
 	if (config.compatibilityDate !== undefined) {
 		result.compatibility_date = config.compatibilityDate;
@@ -53,10 +83,6 @@ function convertTopLevel(config: ParsedConfig, result: RawConfig): void {
 	}
 	if (config.logpush !== undefined) {
 		result.logpush = config.logpush;
-	}
-	if (config.complianceRegion !== undefined) {
-		result.compliance_region =
-			config.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
 	}
 	if (config.firstPartyWorker !== undefined) {
 		result.first_party_worker = config.firstPartyWorker;
@@ -79,7 +105,14 @@ function convertTopLevel(config: ParsedConfig, result: RawConfig): void {
 		result.observability = convertObservability(config.observability);
 	}
 	if (config.cache !== undefined) {
-		result.cache = { enabled: config.cache.enabled };
+		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
+		const cache: RawCacheConfig = {
+			enabled: config.cache.enabled,
+		};
+		if (config.cache.crossVersionCache !== undefined) {
+			cache.cross_version_cache = config.cache.crossVersionCache;
+		}
+		result.cache = cache;
 	}
 	if (config.unsafe !== undefined) {
 		result.unsafe = convertUnsafeTopLevel(config.unsafe);
@@ -87,7 +120,7 @@ function convertTopLevel(config: ParsedConfig, result: RawConfig): void {
 }
 
 function convertObservability(
-	observability: NonNullable<ParsedConfig["observability"]>
+	observability: NonNullable<ParsedInputWorkerConfig["observability"]>
 ): NonNullable<RawConfig["observability"]> {
 	const out: NonNullable<RawConfig["observability"]> = {};
 	if (observability.enabled !== undefined) {
@@ -140,7 +173,7 @@ function convertObservability(
 }
 
 function convertUnsafeTopLevel(
-	unsafe: NonNullable<ParsedConfig["unsafe"]>
+	unsafe: NonNullable<ParsedInputWorkerConfig["unsafe"]>
 ): NonNullable<RawConfig["unsafe"]> {
 	const out: NonNullable<RawConfig["unsafe"]> = {};
 	if (unsafe.metadata !== undefined) {
@@ -164,7 +197,7 @@ function convertUnsafeTopLevel(
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertBindingsAndAssets(
-	config: ParsedConfig,
+	config: ParsedInputWorkerConfig,
 	result: RawConfig
 ): void {
 	let assetsBindingName: string | undefined;
@@ -648,28 +681,98 @@ function convertBindingsAndAssets(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXPORTS (Durable Objects + Workflows)
+// EXPORTS (Workers + Durable Objects)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertExports(config: ParsedConfig, _result: RawConfig): void {
+function convertExports(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	const exports = config.exports;
 	if (!exports) {
 		return;
 	}
 
-	for (const value of Object.values(exports)) {
-		if (value.type === "durable-object") {
-			throw new Error("Durable Object exports are not currently supported.");
+	const converted: Exports = {};
+	const unknownExports: typeof exports = {};
+	for (const [exportName, value] of Object.entries(exports)) {
+		if (value.type === "worker") {
+			converted[exportName] = value;
+			continue;
 		}
-		// TODO: support Workflows
+
+		if (value.type !== "durable-object") {
+			unknownExports[exportName] = value;
+			continue;
+		}
+		switch (value.state) {
+			case undefined:
+			case "created": {
+				converted[exportName] = {
+					type: "durable-object",
+					storage: value.storage,
+				};
+				break;
+			}
+			case "deleted": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "deleted",
+				};
+				break;
+			}
+			case "renamed": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "renamed",
+					renamed_to: value.renamedTo,
+				};
+				break;
+			}
+			case "transferred": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "transferred",
+					transferred_to: value.transferredTo,
+				};
+				break;
+			}
+			case "expecting-transfer": {
+				converted[exportName] = {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: value.storage,
+					transfer_from: value.transferFrom,
+				};
+				break;
+			}
+		}
+	}
+	if (Object.keys(unknownExports).length > 0) {
+		throw new UserError(
+			"Unknown export types found: " +
+				Object.entries(unknownExports)
+					.map(([exportName, { type }]) => `- ${exportName} : ${type}`)
+					.join("\n"),
+			{
+				telemetryMessage: "Unknown export types found",
+			}
+		);
+	}
+
+	if (Object.keys(converted).length > 0) {
+		result.exports = converted;
 	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIGGERS (scheduled + fetch + queue consumer)
+// TRIGGERS (scheduled + fetch + queue consumer + email)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTriggers(config: ParsedConfig, result: RawConfig): void {
+function convertTriggers(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	const triggers = config.triggers;
 	if (!triggers || triggers.length === 0) {
 		return;
@@ -682,9 +785,15 @@ function convertTriggers(config: ParsedConfig, result: RawConfig): void {
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
+	let addresses: string[] | undefined;
 
 	for (const trigger of triggers) {
 		switch (trigger.type) {
+			case "email": {
+				addresses ??= [];
+				addresses.push(...trigger.addresses);
+				break;
+			}
 			case "scheduled": {
 				crons.push(trigger.schedule);
 				break;
@@ -726,13 +835,20 @@ function convertTriggers(config: ParsedConfig, result: RawConfig): void {
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
 	}
+	// An empty array removes managed addresses; undefined means no email trigger.
+	if (addresses !== undefined) {
+		result.addresses = addresses;
+	}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DOMAINS (top-level domains -> custom-domain routes)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertDomains(config: ParsedConfig, result: RawConfig): void {
+function convertDomains(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	if (!config.domains || config.domains.length === 0) {
 		return;
 	}
@@ -749,7 +865,10 @@ function convertDomains(config: ParsedConfig, result: RawConfig): void {
 // TAIL CONSUMERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function convertTailConsumers(config: ParsedConfig, result: RawConfig): void {
+function convertTailConsumers(
+	config: ParsedInputWorkerConfig,
+	result: RawConfig
+): void {
 	const consumers = config.tailConsumers;
 	if (!consumers || consumers.length === 0) {
 		return;

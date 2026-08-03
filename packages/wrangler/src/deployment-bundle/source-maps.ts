@@ -1,8 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { BundleResult, SourceMapMetadata } from "./bundle";
 import type { CfModule, CfWorkerSourceMap } from "@cloudflare/workers-utils";
-import type { RawSourceMap } from "source-map";
+
+interface SourceMapMetadata {
+	tmpDir: string;
+	entryDirectory: string;
+}
+
+export interface SourceMapBundle {
+	sourceMapPath?: string | undefined;
+	sourceMapMetadata?: SourceMapMetadata | undefined;
+	[key: string]: unknown;
+}
 
 /**
  * Loads source maps that appear in the given build output.
@@ -10,7 +19,7 @@ import type { RawSourceMap } from "source-map";
 export function loadSourceMaps(
 	main: CfModule,
 	modules: CfModule[],
-	bundle: Partial<BundleResult>
+	bundle: SourceMapBundle
 ): CfWorkerSourceMap[] {
 	const { sourceMapPath, sourceMapMetadata } = bundle;
 	if (sourceMapPath && sourceMapMetadata) {
@@ -120,8 +129,8 @@ function getSourceMappingUrl(module: CfModule): string | undefined {
 			return commentPath;
 		}
 		// Skip past other trailing magic comments (`//# debugId=`, `//# sourceURL=`,
-		// etc.) and keep looking for the sourceMappingURL above them. Stop as
-		// soon as we hit any non-magic-comment content.
+		// etc.) and keep looking for the `//# sourceMappingURL=` comment above them.
+		// Stop as soon as we hit any non-magic-comment content.
 		if (!line.startsWith("//#") && !line.startsWith("//@")) {
 			return undefined;
 		}
@@ -181,4 +190,13 @@ function stripPrefix(prefix: string, input: string): string {
 		stripped = stripped.slice(prefix.length);
 	}
 	return stripped;
+}
+
+/**
+ * Minimal source map type — only the fields used by this module.
+ */
+interface RawSourceMap {
+	file?: string;
+	sourceRoot?: string;
+	sources: string[];
 }

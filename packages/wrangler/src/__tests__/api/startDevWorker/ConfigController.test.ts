@@ -9,6 +9,29 @@ import { FakeBus } from "../../helpers/fake-bus";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
+import type * as StartDevWorkerApi from "../../../api/startDevWorker";
+
+// Declaration-level pins for the exported input chain: a fresh object
+// literal gets excess-property checking, which fails to compile if any of
+// these signatures regresses to the base `StartDevWorkerInput` (the
+// runtime test below exercises only `ConfigController.set`). Never
+// executed.
+type StartWorkerInput = Parameters<typeof StartDevWorkerApi.startWorker>[0];
+type DevEnvStartInput = Parameters<StartDevWorkerApi.DevEnv["startWorker"]>[0];
+type SetConfigInput = Parameters<StartDevWorkerApi.Worker["setConfig"]>[0];
+type PatchConfigInput = Parameters<StartDevWorkerApi.Worker["patchConfig"]>[0];
+const _publicInputPins: [
+	StartWorkerInput,
+	DevEnvStartInput,
+	SetConfigInput,
+	PatchConfigInput,
+] = [
+	{ entrypoint: "pin.ts", dev: { structuredLogsHandler: () => {} } },
+	{ entrypoint: "pin.ts", dev: { structuredLogsHandler: () => {} } },
+	{ entrypoint: "pin.ts", dev: { structuredLogsHandler: () => {} } },
+	{ dev: { structuredLogsHandler: () => {} } },
+];
+void _publicInputPins;
 
 describe("ConfigController", () => {
 	runInTempDir();
@@ -139,6 +162,88 @@ describe("ConfigController", () => {
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
 			},
 		});
+	});
+
+	it("should accept wrangler-specific dev fields through the public input", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+		});
+
+		// Would not compile against the base `StartDevWorkerInput`: the
+		// wrangler-specific dev fields live on `WranglerStartDevWorkerInput`,
+		// which is the public input type `set()` (and `startWorker`) accept.
+		const structuredLogsHandler = () => {};
+		await controller.set({
+			entrypoint: "src/index.ts",
+			dev: { structuredLogsHandler },
+		});
+
+		const { config } = await event;
+		expect(config.dev?.structuredLogsHandler).toBe(structuredLogsHandler);
+	});
+
+	it("should derive nodejsCompatMode from the config like the CLI", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+			"wrangler.toml": dedent /* toml */ `
+				name = "nodejs-compat-worker"
+				main = "src/index.ts"
+				compatibility_date = "2026-06-01"
+				compatibility_flags = ["nodejs_compat"]
+			`,
+		});
+
+		// Unset: derived from the resolved config's date + flags.
+		const derived = bus.waitFor("configUpdate");
+		await controller.set({ config: "./wrangler.toml" });
+		await expect(derived).resolves.toMatchObject({
+			config: { build: { nodejsCompatMode: "v2" } },
+		});
+
+		// Input-level overrides win over the config file, like the CLI's
+		// `args.* ?? parsedConfig.*`: a programmatic worker passing the
+		// flag without a config-file entry still gets the mode.
+		await seed({
+			"wrangler-no-flag.toml": dedent /* toml */ `
+				name = "nodejs-compat-worker"
+				main = "src/index.ts"
+				compatibility_date = "2026-06-01"
+			`,
+		});
+		const overridden = bus.waitFor("configUpdate");
+		await controller.set({
+			config: "./wrangler-no-flag.toml",
+			compatibilityFlags: ["nodejs_compat"],
+		});
+		await expect(overridden).resolves.toMatchObject({
+			config: { build: { nodejsCompatMode: "v2" } },
+		});
+
+		// Explicit null still disables (callers owning the mode keep it).
+		const disabled = bus.waitFor("configUpdate");
+		await controller.set({
+			config: "./wrangler.toml",
+			build: { nodejsCompatMode: null },
+		});
+		const disabledEvent = await disabled;
+		expect(disabledEvent.config.build.nodejsCompatMode).toBeNull();
 	});
 
 	it("should apply module root to parent if main is nested from base_dir", async ({

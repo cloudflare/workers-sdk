@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
@@ -15,7 +16,6 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
@@ -320,8 +320,11 @@ export const pagesDownloadConfigCommand = createCommand({
 		const projectConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(projectConfig));
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...projectConfig,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		projectName ??= projectConfig.project_name;
 

@@ -77,7 +77,7 @@ function updateAngularJson(ctx: C3Context) {
 	const architectSection = angularJson.projects[ctx.project.name].architect;
 	architectSection.build.options.outputPath = "dist";
 	architectSection.build.options.outputMode = "server";
-	architectSection.build.options.ssr.experimentalPlatform = "neutral";
+	architectSection.build.options.ssr.platform = "neutral";
 	architectSection.build.options.assets.push("src/_routes.json");
 
 	writeFile(resolve("angular.json"), JSON.stringify(angularJson, null, 2));

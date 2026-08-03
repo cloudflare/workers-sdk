@@ -31,7 +31,8 @@
 		"test:e2e:c3": "dotenv -- node -r esbuild-register packages/create-cloudflare/scripts/e2e/run-tests.ts",
 		"test:e2e:wrangler": "dotenv -- node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
 		"test:watch": "turbo test:watch",
-		"type:tests": "dotenv -- turbo type:tests"
+		"type:tests": "dotenv -- turbo type:tests",
+		"deprecate-packages": "node -r esbuild-register tools/deployments/deprecate.ts"
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.5.0",

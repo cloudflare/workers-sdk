@@ -482,7 +482,7 @@ declare module "*.bin" {
 			return "";
 		}
 
-		return path.substr(path.lastIndexOf("/") + 1);
+		return path.substring(path.lastIndexOf("/") + 1);
 	}
 
 	private _dirname(path: string): string {
@@ -491,7 +491,7 @@ declare module "*.bin" {
 			return "/";
 		}
 
-		return path.substr(0, path.lastIndexOf("/"));
+		return path.substring(0, path.lastIndexOf("/"));
 	}
 
 	private _rtrim(haystack: string, needle: string): string {

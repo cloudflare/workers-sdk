@@ -42,7 +42,8 @@ function getWorkerNameToDurableObjectExportsMap(
 			new Set(
 				wrangler
 					.unstable_getDurableObjectClassNameToUseSQLiteMap(
-						worker.config.migrations
+						worker.config.migrations,
+						worker.config.exports
 					)
 					.keys()
 			),

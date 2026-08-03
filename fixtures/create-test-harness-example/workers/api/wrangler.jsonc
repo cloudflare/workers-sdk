@@ -1,0 +1,14 @@
+{
+	"name": "api-worker",
+	"main": "index.ts",
+	"compatibility_date": "2026-06-01",
+	"routes": ["api.example.com/v1/*"],
+	"kv_namespaces": [{ "binding": "STORE", "id": "shared-store" }],
+	"d1_databases": [
+		{
+			"binding": "DATABASE",
+			"database_name": "report-database",
+			"database_id": "fake-database-id",
+		},
+	],
+}

@@ -82,21 +82,107 @@ export function pushYargs(yargs: CommonYargsArgv) {
 
 /**
  *
- * `{ remoteDigest: string }` implies the image already exists remotely. we will
- * try and replace this with the image tag from the last deployment if possible.
- * If a deployment failed between push and deploy, we can't know for certain
- * what the tag of the last push was, so we will use the digest instead.
+ * `{ remoteDigest: string }` implies the image was pushed to, or already exists in,
+ * the managed registry. Deployments should use this digest-pinned reference.
  *
- * `{ newTag: string }` implies the image was built and pushed and the deployment
- * should be associated with a new tag.
+ * `{ newTag: string }` implies the image was built locally without pushing.
  */
 export type ImageRef = { remoteDigest: string } | { newTag: string };
 
+// Based on the Docker reference grammar used by containers/image. These only
+// strip suffixes from refs that have already been normalized by resolveImageName().
+const DIGEST_SUFFIX_REGEXP =
+	/@[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*:[a-fA-F0-9]{32,}$/;
+const DIGEST_VALUE_REGEXP =
+	/^[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*:[a-fA-F0-9]{32,}$/;
+const TAG_SUFFIX_REGEXP = /:[\w][\w.-]{0,127}$/;
+
+function getRepositoryOnly(
+	externalAccountId: string,
+	imageTag: string
+): string {
+	return resolveImageName(externalAccountId, imageTag)
+		.replace(DIGEST_SUFFIX_REGEXP, "")
+		.replace(TAG_SUFFIX_REGEXP, "");
+}
+
+function imageRefWithDigest(
+	externalAccountId: string,
+	imageTag: string,
+	digest: string
+): string {
+	if (!DIGEST_VALUE_REGEXP.test(digest)) {
+		throw new Error(
+			`Expected image digest to match algorithm:hex format, got ${digest}`
+		);
+	}
+	return `${getRepositoryOnly(externalAccountId, imageTag)}@${digest}`;
+}
+
+function findManifestDigest(manifestOutput: string): string {
+	const parsedManifest = JSON.parse(manifestOutput);
+	const digest = parsedManifest?.Descriptor?.digest;
+	if (typeof digest !== "string" || digest.length === 0) {
+		throw new Error(
+			`Expected docker manifest inspect output to include Descriptor.digest, got ${manifestOutput}`
+		);
+	}
+	return digest;
+}
+
+function findRemoteDigest(
+	repoDigestsJson: string,
+	externalAccountId: string,
+	imageTag: string
+): string {
+	const parsedDigests = JSON.parse(repoDigestsJson);
+	if (!Array.isArray(parsedDigests)) {
+		throw new Error(
+			`Expected RepoDigests from docker inspect to be an array but got ${JSON.stringify(parsedDigests)}`
+		);
+	}
+
+	const repositoryOnly = getRepositoryOnly(externalAccountId, imageTag);
+	logger.debug("respositoryOnly:", repositoryOnly);
+
+	// make sure the repository + name provided in wrangler config
+	// matches the repository + name from the digests
+	const digest = parsedDigests.find((d): d is string => {
+		if (typeof d !== "string" || !d.includes("@")) {
+			return false;
+		}
+		const resolved = resolveImageName(externalAccountId, d);
+		logger.debug(`Comparing ${resolved.split("@")[0]} to ${repositoryOnly}`);
+		return typeof d === "string" && resolved.split("@")[0] === repositoryOnly;
+	});
+	if (!digest) {
+		throw new Error(
+			`Could not find a digest for the image ${repositoryOnly}. Found digests: ${parsedDigests.join(", ")}`
+		);
+	}
+
+	const [, hash] = digest.split("@");
+	return imageRefWithDigest(externalAccountId, imageTag, hash);
+}
+
+/**
+ * Builds a Docker image and optionally pushes it to the Cloudflare managed registry.
+ *
+ * @param args - Build arguments including tag, Dockerfile path, build context, and platform.
+ * @param pathToDocker - Path to the Docker CLI executable.
+ * @param push - Whether to push the built image to the remote registry.
+ * @param containerConfig - Optional container configuration for limit validation.
+ * @param verifyDockerIsRunning - When `true` (the default), verifies Docker is installed and the
+ *   daemon is running before building. Set to `false` when the caller has already performed this check.
+ *
+ * @returns An {@link ImageRef} describing the built/pushed image.
+ */
 export async function buildAndMaybePush(
 	args: BuildArgs,
 	pathToDocker: string,
 	push: boolean,
-	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>
+	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
+	verifyDockerIsRunning?: boolean
 ): Promise<ImageRef> {
 	try {
 		const imageTag = args.tag;
@@ -112,10 +198,12 @@ export async function buildAndMaybePush(
 			logger
 		);
 
-		await dockerBuild(pathToDocker, {
+		const build = await dockerBuild(pathToDocker, {
 			buildCmd,
 			dockerfile,
-		}).ready;
+			verifyDockerIsRunning,
+		});
+		await build.ready;
 
 		if (push) {
 			/**
@@ -150,52 +238,14 @@ export async function buildAndMaybePush(
 				getCloudflareContainerRegistry()
 			);
 			try {
-				const [digests] = imageInfo.split(" ");
-
-				// We don't try to parse until this point
-				// because we don't want to fail on parse errors if we
-				// won't be pushing the image anyways.
-				const parsedDigests = JSON.parse(digests);
-				if (!Array.isArray(parsedDigests)) {
-					// If it's not the format we expect, fall back to pushing
-					// since it's annoying but safe.
-					throw new Error(
-						`Expected RepoDigests from docker inspect to be an array but got ${JSON.stringify(parsedDigests)}`
-					);
-				}
-
-				const imageUrl = new URL(
-					`http://${resolveImageName(account.external_account_id, imageTag)}`
-				);
-				const repositoryOnly = `${imageUrl.host}${imageUrl.pathname.split(":")[0]}`;
-				logger.debug("respositoryOnly:", repositoryOnly);
-
-				// make sure the repository + name provided in wrangler config
-				// matches the repository + name from the digests
-				const digest = parsedDigests.find((d): d is string => {
-					const resolved = resolveImageName(account.external_account_id, d);
-					logger.debug(
-						`Comparing ${resolved.split("@")[0]} to ${repositoryOnly}`
-					);
-					return (
-						typeof d === "string" && resolved.split("@")[0] === repositoryOnly
-					);
-				});
-				if (!digest) {
-					throw new Error(
-						`Could not find a digest for the image ${repositoryOnly}. Found digests: ${parsedDigests.join(", ")}`
-					);
-				}
-				// Resolve the image name to include the user's
-				// account ID before checking if it exists in
-				// the managed registry.
-				const [image, hash] = digest.split("@");
-				const resolvedImage = resolveImageName(
+				// We don't try to parse until this point because we don't want to fail on
+				// parse errors if we won't be pushing the image anyways.
+				const remoteDigest = findRemoteDigest(
+					imageInfo,
 					account.external_account_id,
-					image
+					imageTag
 				);
-
-				const remoteDigest = `${resolvedImage}@${hash}`;
+				const [, hash] = remoteDigest.split("@");
 
 				// NOTE: this is an experimental docker command so the API may change
 				// and break this flow. Hopefully not!
@@ -242,6 +292,38 @@ export async function buildAndMaybePush(
 			);
 			await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
 			await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
+
+			let remoteDigest: string;
+			try {
+				const pushedImageInfo = await dockerImageInspect(pathToDocker, {
+					imageTag: namespacedImageTag,
+					formatString: "{{ json .RepoDigests }}",
+				});
+				remoteDigest = findRemoteDigest(
+					pushedImageInfo,
+					account.external_account_id,
+					namespacedImageTag
+				);
+			} catch (error) {
+				if (error instanceof Error) {
+					logger.debug(
+						`Inspecting pushed image ${namespacedImageTag} failed with error: ${error.message}`
+					);
+				}
+				const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
+					"manifest",
+					"inspect",
+					"-v",
+					namespacedImageTag,
+				]);
+				remoteDigest = imageRefWithDigest(
+					account.external_account_id,
+					namespacedImageTag,
+					findManifestDigest(remoteManifest)
+				);
+			}
+
+			return { remoteDigest };
 		}
 
 		return { newTag: imageTag };

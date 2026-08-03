@@ -3,7 +3,7 @@ import {
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
-import type { DeployHelpersContext } from "../shared/types";
+import { fetchListResult, logger } from "../shared/context";
 import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
 
 export interface Zone {
@@ -19,7 +19,6 @@ export async function getZoneForRoute(
 		route: Route;
 		accountId: string;
 	},
-	ctx: DeployHelpersContext,
 	zoneIdCache: ZoneIdCache = new Map()
 ): Promise<Zone | undefined> {
 	const { route, accountId } = from;
@@ -32,14 +31,12 @@ export async function getZoneForRoute(
 		id = await getZoneIdFromHost(
 			complianceConfig,
 			{ host: route.zone_name, accountId },
-			ctx,
 			zoneIdCache
 		);
 	} else if (host) {
 		id = await getZoneIdFromHost(
 			complianceConfig,
 			{ host, accountId },
-			ctx,
 			zoneIdCache
 		);
 	}
@@ -60,7 +57,6 @@ export async function getZoneIdFromHost(
 		host: string;
 		accountId: string;
 	},
-	ctx: DeployHelpersContext,
 	zoneIdCache: ZoneIdCache = new Map()
 ): Promise<string> {
 	const hostPieces = from.host.split(".");
@@ -72,7 +68,7 @@ export async function getZoneIdFromHost(
 				cacheKey,
 				retryOnAPIFailure(
 					() =>
-						ctx.fetchListResult<{ id: string }>(
+						fetchListResult<{ id: string }>(
 							complianceConfig,
 							`/zones`,
 							{},
@@ -81,7 +77,7 @@ export async function getZoneIdFromHost(
 								"account.id": from.accountId,
 							})
 						),
-					ctx.logger
+					logger
 				).then((zones) => zones[0]?.id ?? null)
 			);
 		}

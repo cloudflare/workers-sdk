@@ -8,9 +8,12 @@ export function isProcessEnvPopulated(
 		compatibility_flags.includes("nodejs_compat_populate_process_env") &&
 		compatibility_flags.includes("nodejs_compat_do_not_populate_process_env")
 	) {
-		throw new UserError("Can't both enable and disable a flag", {
-			telemetryMessage: "process env compatibility flags conflict",
-		});
+		throw new UserError(
+			'Conflicting compatibility flags: "nodejs_compat_populate_process_env" and "nodejs_compat_do_not_populate_process_env" cannot both be set. Remove one of these flags from your configuration.',
+			{
+				telemetryMessage: "process env compatibility flags conflict",
+			}
+		);
 	}
 
 	if (

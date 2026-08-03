@@ -28,6 +28,7 @@ export const d1MigrationsCreateCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: true,
 	},
 	args: {
@@ -51,9 +52,7 @@ export const d1MigrationsCreateCommand = createCommand({
 			);
 		}
 
-		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
-			requireDatabaseId: false,
-		});
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`,

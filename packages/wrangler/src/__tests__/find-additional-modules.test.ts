@@ -284,7 +284,7 @@ describe("traverse module graph", () => {
 		expect(modules[0].name).toStrictEqual("other.txt");
 	});
 
-	it("should error if a rule is ignored because the previous was not marked 'fall-through'", async ({
+	it("should not error when a discovered file matches a rule that was shadowed by a previous rule of the same type", async ({
 		expect,
 	}) => {
 		await mkdir("./src", { recursive: true });
@@ -305,25 +305,72 @@ describe("traverse module graph", () => {
 			`
 		);
 
-		await expect(
-			findAdditionalModules(
-				{
-					file: path.join(process.cwd(), "./src/index.js"),
-					projectRoot: path.join(process.cwd(), "./src"),
-					configPath: undefined,
-					format: "modules",
-					// The default module root is dirname(file)
-					moduleRoot: path.join(process.cwd(), "./src"),
-					exports: [],
-				},
-				[
-					{ type: "Text", globs: ["**/*.txt"] },
-					{ type: "Text", globs: ["other.txt"] },
-				]
-			)
-		).rejects.toMatchInlineSnapshot(
-			`[Error: The file other.txt matched a module rule in your configuration ({"type":"Text","globs":["other.txt"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.]`
+		// Two Text rules of the same type — the second is "shadowed" by the first
+		// (which has the default `fallthrough` behavior). The discovered file
+		// `other.txt` matches both rules' globs, but should be silently included
+		// under the first (live) rule rather than throwing.
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./src/index.js"),
+				projectRoot: path.join(process.cwd(), "./src"),
+				configPath: undefined,
+				format: "modules",
+				// The default module root is dirname(file)
+				moduleRoot: path.join(process.cwd(), "./src"),
+				exports: [],
+			},
+			[
+				{ type: "Text", globs: ["**/*.txt"] },
+				{ type: "Text", globs: ["other.txt"] },
+			]
 		);
+
+		expect(modules.map((m) => m.name)).toStrictEqual(["other.txt"]);
+	});
+
+	it("should silently skip a discovered file that only matches a shadowed rule (issue #14257)", async ({
+		expect,
+	}) => {
+		// Mirrors the reproduction from
+		// https://github.com/cloudflare/workers-sdk/issues/14257
+		// The user has a custom Text rule with `fallthrough: false`, which shadows
+		// the default Text rule (`**/*.txt`, `**/*.html`, `**/*.sql`). A file on
+		// disk that only matches the shadowed default rule should be silently
+		// excluded from the bundle, not error out the build.
+		await mkdir("./src/html", { recursive: true });
+		await writeFile(
+			"./src/index.js",
+			dedent /* javascript */ `
+			import text from './html/includeme.html'
+			export default {
+				async fetch(request) {
+					return new Response(text, {headers: {'Content-Type': 'text/html'}})
+				},
+			}
+			`
+		);
+		await writeFile("./src/html/includeme.html", "<p>include me</p>");
+		await writeFile("./src/html/dontincludeme.html", "<p>don't include me</p>");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./src/index.js"),
+				projectRoot: path.join(process.cwd(), "./src"),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: path.join(process.cwd(), "./src"),
+				exports: [],
+			},
+			[
+				{
+					type: "Text",
+					globs: ["html/includeme.html"],
+					fallthrough: false,
+				},
+			]
+		);
+
+		expect(modules.map((m) => m.name)).toStrictEqual(["html/includeme.html"]);
 	});
 });
 

@@ -1,5 +1,12 @@
 import { Miniflare } from "miniflare";
-import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	test,
+	type TestOptions,
+	vi,
+} from "vitest";
 import { useDispose } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
@@ -55,6 +62,14 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 	});
 }
 
+const BROWSER_RENDERING_RETRY = {
+	retry: {
+		condition: /Chrome readiness probe .* timed out|Test timed out/i,
+		count: 3,
+		delay: 1_000,
+	},
+} satisfies TestOptions;
+
 const BROWSER_WORKER_SCRIPT = () => `
 export default {
 	async fetch(request, env) {
@@ -77,25 +92,29 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 		vi.restoreAllMocks();
 	});
 
-	test("it creates a browser session", { retry: 3 }, async ({ expect }) => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: BROWSER_WORKER_SCRIPT(),
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		useDispose(mf);
+	test(
+		"it creates a browser session",
+		BROWSER_RENDERING_RETRY,
+		async ({ expect }) => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: BROWSER_WORKER_SCRIPT(),
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-		const res = await mf.dispatchFetch("https://localhost/session");
-		const text = await res.text();
-		expect(text.includes("sessionId")).toBe(true);
-	});
+			const res = await mf.dispatchFetch("https://localhost/session");
+			const text = await res.text();
+			expect(text.includes("sessionId")).toBe(true);
+		}
+	);
 
 	test(
 		"two workers with different browser bindings can coexist",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const workerScript = (bindingName: string) => `
 			export default {
@@ -154,20 +173,24 @@ export default {
 };
 `;
 
-	test("it closes a browser session", { retry: 3 }, async ({ expect }) => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: BROWSER_WORKER_CLOSE_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		useDispose(mf);
+	test(
+		"it closes a browser session",
+		BROWSER_RENDERING_RETRY,
+		async ({ expect }) => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: BROWSER_WORKER_CLOSE_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-		const res = await mf.dispatchFetch("https://localhost/close");
-		expect(await res.text()).toBe("Browser closed");
-	});
+			const res = await mf.dispatchFetch("https://localhost/close");
+			expect(await res.text()).toBe("Browser closed");
+		}
+	);
 
 	const BROWSER_WORKER_REUSE_SCRIPT = `
 ${sendMessage.toString()}
@@ -197,20 +220,24 @@ export default {
 };
 `;
 
-	test("it reuses a browser session", { retry: 3 }, async ({ expect }) => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: BROWSER_WORKER_REUSE_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		useDispose(mf);
+	test(
+		"it reuses a browser session",
+		BROWSER_RENDERING_RETRY,
+		async ({ expect }) => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: BROWSER_WORKER_REUSE_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-		const res = await mf.dispatchFetch("https://localhost");
-		expect(await res.text()).toBe("Browser session reused");
-	});
+			const res = await mf.dispatchFetch("https://localhost");
+			expect(await res.text()).toBe("Browser session reused");
+		}
+	);
 
 	const BROWSER_WORKER_RECONNECT_SCRIPT = `
 ${sendMessage.toString()}
@@ -286,7 +313,7 @@ export default {
 
 	test(
 		"it reconnects and sends CDP commands after disconnect",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
 				name: "worker",
@@ -330,6 +357,7 @@ export default {
 
 	test.skipIf(process.platform === "win32")(
 		"fails if browser session already in use",
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
 				name: "worker",
@@ -377,7 +405,7 @@ export default {
 
 	test(
 		"gets sessions while acquiring and closing session",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
 				name: "worker",
@@ -429,7 +457,7 @@ export default {
 
 	test(
 		"gets sessions while connecting and disconnecting session",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const opts: MiniflareOptions = {
 				name: "worker",
@@ -509,7 +537,7 @@ export default {
 
 	test(
 		"devtools session list and detail endpoints",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -556,7 +584,7 @@ export default {
 
 	test(
 		"devtools json/version, json/list, json endpoints",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -616,7 +644,7 @@ export default {
 
 	test(
 		"DELETE /v1/devtools/browser/:session_id closes browser",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -674,7 +702,7 @@ export default {
 
 	test(
 		"POST /v1/devtools/browser acquires session, GET /v1/devtools/browser/:id connects and returns cf-browser-session-id",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -706,7 +734,7 @@ export default {
 
 	test(
 		"GET /v1/devtools/browser acquires and connects",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -755,22 +783,26 @@ export default {
 };
 `;
 
-	test("devtools json/protocol endpoint", { retry: 3 }, async ({ expect }) => {
-		const mf = new Miniflare({
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: DEVTOOLS_JSON_PROTOCOL_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		});
-		useDispose(mf);
+	test(
+		"devtools json/protocol endpoint",
+		BROWSER_RENDERING_RETRY,
+		async ({ expect }) => {
+			const mf = new Miniflare({
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: DEVTOOLS_JSON_PROTOCOL_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			});
+			useDispose(mf);
 
-		const { hasDomains } = (await mf
-			.dispatchFetch("https://localhost")
-			.then((r) => r.json())) as any;
+			const { hasDomains } = (await mf
+				.dispatchFetch("https://localhost")
+				.then((r) => r.json())) as any;
 
-		expect(hasDomains).toBe(true);
-	});
+			expect(hasDomains).toBe(true);
+		}
+	);
 
 	const DEVTOOLS_JSON_NEW_ACTIVATE_CLOSE_SCRIPT = `
 export default {
@@ -797,7 +829,7 @@ export default {
 
 	test(
 		"devtools json/new, json/activate, json/close endpoints",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -843,7 +875,7 @@ export default {
 
 	test(
 		"devtools page/:target_id WebSocket endpoint",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -864,7 +896,7 @@ export default {
 
 	test(
 		"DELETE without prior WebSocket connection",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -948,7 +980,7 @@ export default {
 
 	test(
 		"DELETE closes all WebSocket connections (browser + page)",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",
@@ -973,7 +1005,7 @@ export default {
 
 	test(
 		"multiple concurrent raw WebSocket connections to same session",
-		{ retry: 3 },
+		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const mf = new Miniflare({
 				name: "worker",

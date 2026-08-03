@@ -1,9 +1,9 @@
 import path from "node:path";
 import { parseJSON, readFileSync, UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetchPagedListResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { confirm, prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { createR2Bucket, listR2Buckets } from "../r2/helpers/bucket";
 import { requireAuth } from "../user";
@@ -17,6 +17,7 @@ import {
 import type {
 	AiSearchCustomMetadata,
 	AiSearchCustomMetadataDataType,
+	AiSearchParseType,
 } from "./types";
 
 const CREATE_NEW_BUCKET = "__create_new__";
@@ -28,6 +29,11 @@ const CUSTOM_METADATA_DATA_TYPES = [
 	"boolean",
 	"datetime",
 ] as const satisfies readonly AiSearchCustomMetadataDataType[];
+
+const PARSE_TYPES = [
+	"sitemap",
+	"discover",
+] as const satisfies readonly AiSearchParseType[];
 
 // Reserved field names rejected by the AI Search backend; validated client-side
 // for fast feedback. Keep in sync with apps/config-api validation rules.
@@ -229,6 +235,21 @@ export const aiSearchCreateCommand = createCommand({
 			type: "string",
 			choices: ["builtin", "r2", "web-crawler"],
 			description: "The source type for the instance.",
+		},
+		"parse-type": {
+			type: "string",
+			choices: PARSE_TYPES,
+			description:
+				"How website URLs are discovered (--type web-crawler only). " +
+				"'sitemap' reads XML sitemaps; 'discover' follows links recursively. " +
+				"Defaults to 'sitemap'.",
+		},
+		"source-jurisdiction": {
+			type: "string",
+			requiresArg: true,
+			description:
+				"The R2 jurisdiction of the source bucket (e.g. eu, fedramp). " +
+				"Only valid with --type r2; omit for no specific jurisdiction.",
 		},
 		"embedding-model": {
 			type: "string",
@@ -465,10 +486,61 @@ export const aiSearchCreateCommand = createCommand({
 			}
 		}
 
-		// 2. Source selection — depends on the type
+		// --source-jurisdiction only applies to R2 source buckets.
+		if (instanceType !== "r2" && args.sourceJurisdiction !== undefined) {
+			throw new UserError(
+				`--source-jurisdiction is only supported with --type r2 (got --type ${instanceType}).`,
+				{
+					telemetryMessage:
+						"ai search create source-jurisdiction unsupported type",
+				}
+			);
+		}
+
+		// --parse-type only applies to web-crawler sources. The API stores it for
+		// other types but never reads it, so reject rather than silently no-op.
+		if (instanceType !== "web-crawler" && args.parseType !== undefined) {
+			throw new UserError(
+				`--parse-type is only supported with --type web-crawler (got --type ${instanceType}).`,
+				{
+					telemetryMessage: "ai search create parse-type unsupported type",
+				}
+			);
+		}
+
+		// 2. Parse type — how a web-crawler source discovers URLs. Resolved before
+		// source selection so that it is honored even when --source is supplied.
+		let webParseType: AiSearchParseType | undefined;
+		if (instanceType === "web-crawler") {
+			if (args.parseType !== undefined) {
+				webParseType = args.parseType;
+			} else if (!isNonInteractiveOrCI() && !args.json) {
+				webParseType = await select("Select the web source type:", {
+					choices: [
+						{
+							title: "Sitemap",
+							description: "Crawl and index pages from a sitemap",
+							value: "sitemap" as const,
+						},
+						{
+							title: "Discover",
+							description: "Follow links recursively to discover pages",
+							value: "discover" as const,
+						},
+					],
+					defaultOption: 0,
+				});
+			}
+			// Non-interactive without the flag: omit it and let the API default to
+			// "sitemap", preserving behaviour for existing scripted invocations.
+		}
+
+		// 3. Source selection — depends on the type
 		let instanceSource = args.source;
-		// Track whether the user went through the web/sitemap interactive flow
-		let webParseType: string | undefined;
+		// R2 jurisdiction of the source bucket. May be supplied via flag or
+		// entered interactively; passed through to the API as-is (server-side
+		// validated) so future jurisdictions work without a Wrangler upgrade.
+		let sourceJurisdiction = args.sourceJurisdiction;
 
 		if (instanceType === "r2" && !instanceSource) {
 			if (isNonInteractiveOrCI()) {
@@ -478,8 +550,20 @@ export const aiSearchCreateCommand = createCommand({
 					{ telemetryMessage: "ai search create missing r2 source" }
 				);
 			}
-			// 2.1 R2: list buckets and let user pick, with "Create new" option
-			const buckets = await listR2Buckets(config, accountId);
+			// 3.0 R2 jurisdiction: ask where the source bucket lives so we list
+			// (and optionally create) buckets in the matching jurisdiction.
+			if (sourceJurisdiction === undefined) {
+				sourceJurisdiction = await prompt(
+					"R2 jurisdiction (optional, e.g. eu, fedramp; leave blank for none):"
+				);
+			}
+			const effectiveJurisdiction = sourceJurisdiction?.trim() || undefined;
+			// 3.1 R2: list buckets and let user pick, with "Create new" option
+			const buckets = await listR2Buckets(
+				config,
+				accountId,
+				effectiveJurisdiction
+			);
 			const bucketChoices = [
 				...buckets.map((b) => ({
 					title: b.name,
@@ -506,7 +590,13 @@ export const aiSearchCreateCommand = createCommand({
 					}
 				);
 				logger.log(`Creating R2 bucket "${newBucketName}"...`);
-				await createR2Bucket(config, accountId, newBucketName);
+				await createR2Bucket(
+					config,
+					accountId,
+					newBucketName,
+					undefined,
+					effectiveJurisdiction
+				);
 				logger.log(`Successfully created R2 bucket "${newBucketName}".`);
 				instanceSource = newBucketName;
 			} else {
@@ -520,21 +610,7 @@ export const aiSearchCreateCommand = createCommand({
 					{ telemetryMessage: "ai search create missing web crawler source" }
 				);
 			}
-			// 2.2 Web: select source type (sitemap only for now), then list zones
-			// fallbackOption: 0 is safe — sitemap is the only available option
-			webParseType = await select("Select the web source type:", {
-				choices: [
-					{
-						title: "Sitemap",
-						description: "Crawl and index pages from a sitemap",
-						value: "sitemap" as const,
-					},
-				],
-				defaultOption: 0,
-				fallbackOption: 0,
-			});
-
-			// List all zones for the account
+			// 3.2 Web: list the account's zones so the user can pick one as the source
 			const zones = await fetchPagedListResult<{
 				id: string;
 				name: string;
@@ -572,7 +648,7 @@ export const aiSearchCreateCommand = createCommand({
 				instanceSource = `https://${selectedZone}`;
 			}
 		}
-		// 3. Custom metadata (optional). Honors --custom-metadata or
+		// 4. Custom metadata (optional). Honors --custom-metadata or
 		// --custom-metadata-schema; otherwise prompts interactively when
 		// running attached to a TTY.
 		if (
@@ -686,6 +762,10 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.excludeItems) {
 			sourceParams.exclude_items = args.excludeItems;
 		}
+		const sourceJurisdictionValue = sourceJurisdiction?.trim() || undefined;
+		if (instanceType === "r2" && sourceJurisdictionValue) {
+			sourceParams.r2_jurisdiction = sourceJurisdictionValue;
+		}
 		if (webParseType) {
 			sourceParams.web_crawler = {
 				parse_type: webParseType,
@@ -710,12 +790,20 @@ export const aiSearchCreateCommand = createCommand({
 		if (args.json) {
 			logger.log(JSON.stringify(instance, null, 2));
 		} else {
+			const jurisdiction =
+				instance.source_params?.r2_jurisdiction ?? sourceJurisdictionValue;
+			const sourceDisplay =
+				instance.source != null
+					? jurisdiction
+						? `${instance.source} (${jurisdiction})`
+						: instance.source
+					: "-";
 			let summary =
 				`Successfully created AI Search instance "${instance.id}"\n` +
 				`  Name:       ${instance.id}\n` +
 				`  Namespace:  ${instance.namespace ?? instanceNamespace}\n` +
 				`  Type:       ${instance.type ?? "builtin"}\n` +
-				`  Source:     ${instance.source ?? "-"}\n` +
+				`  Source:     ${sourceDisplay}\n` +
 				`  Model:      ${instance.ai_search_model ?? "default"}\n` +
 				`  Embedding:  ${instance.embedding_model ?? "default"}`;
 			if (instance.custom_metadata && instance.custom_metadata.length > 0) {

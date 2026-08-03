@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- this e2e test intentionally exercises deprecated Node.js util methods and cluster APIs to verify unenv polyfill behavior */
 import assert from "node:assert";
 
 export default {

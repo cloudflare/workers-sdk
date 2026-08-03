@@ -10,6 +10,7 @@ export const queuesSubscriptionListCommand = createCommand({
 		status: "stable",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	positionalArgs: ["queue"],

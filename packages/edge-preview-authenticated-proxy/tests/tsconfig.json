@@ -6,7 +6,7 @@
 		"moduleResolution": "bundler",
 		"types": [
 			"@types/node",
-			"@cloudflare/workers-types",
+			"@cloudflare/workers-types/experimental",
 			"@cloudflare/vitest-pool-workers/types"
 		],
 		"allowJs": true,
@@ -18,5 +18,5 @@
 		"strict": true,
 		"skipLibCheck": true
 	},
-	"include": ["**/*.test.ts", "../src/env.d.ts"]
+	"include": ["**/*.test.ts", "../worker-configuration.d.ts"]
 }

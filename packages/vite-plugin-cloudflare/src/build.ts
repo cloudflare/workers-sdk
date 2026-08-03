@@ -22,6 +22,9 @@ export function createBuildApp(
 		assert(clientEnvironment, `No "client" environment`);
 		const defaultHtmlPath = path.resolve(builder.config.root, "index.html");
 		const hasClientEntry =
+			/* eslint-disable-next-line @typescript-eslint/no-deprecated --
+				We use `rollupOptions` for backward compatibility with Vite 6 and 7, where `rolldownOptions` does not exist.
+				In Vite 8, `rollupOptions` is aliased to `rolldownOptions` so this works across all supported versions. */
 			clientEnvironment.config.build.rollupOptions.input ||
 			fs.existsSync(defaultHtmlPath);
 
@@ -83,11 +86,12 @@ export function createBuildApp(
 		) {
 			await fallbackBuild(builder, clientEnvironment);
 		} else {
-			// In Vite 7 and above we do this in the `buildApp` hook
-			if (!satisfiesMinimumViteVersion("7.0.0")) {
+			const cfBuildOutput =
+				resolvedPluginConfig.experimental.newConfig?.cfBuildOutput === true;
+			// In Vite 7 and above we do this in the `buildApp` hook.
+			if (!satisfiesMinimumViteVersion("7.0.0") && !cfBuildOutput) {
 				removeAssetsField(entryWorkerBuildDirectory);
 			}
-
 			// Return early as there is no client build
 			return;
 		}
@@ -154,6 +158,9 @@ async function fallbackBuild(
 	builder: vite.ViteBuilder,
 	environment: vite.BuildEnvironment
 ): Promise<void> {
+	/* eslint-disable-next-line @typescript-eslint/no-deprecated --
+		We use `rollupOptions` for backward compatibility with Vite 6 and 7, where `rolldownOptions` does not exist.
+		In Vite 8, `rollupOptions` is aliased to `rolldownOptions` so this works across all supported versions. */
 	environment.config.build.rollupOptions = {
 		input: VIRTUAL_CLIENT_FALLBACK_ENTRY,
 		logLevel: "silent",

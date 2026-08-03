@@ -19,7 +19,7 @@ describe("pipe test", () => {
 		);
 		await runWrangler("r2 object get bucket-object-test/wormhole.txt");
 
-		expect(stdSpy).not.toBeCalled();
+		expect(stdSpy).not.toHaveBeenCalled();
 		expect(consoleSpy.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x

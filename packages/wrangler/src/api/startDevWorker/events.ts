@@ -1,5 +1,6 @@
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
+import type Protocol from "devtools-protocol";
 import type { Miniflare, WorkerRegistry } from "miniflare";
 
 export type ErrorEvent =
@@ -79,7 +80,25 @@ export type DevRegistryUpdateEvent = {
 	registry: WorkerRegistry;
 };
 
-// ProxyController
+// LocalRuntimeController (uncaught Worker exceptions, revived and
+// source-mapped by Miniflare's pretty-error path) and ProxyController
+// (inspector-relayed Runtime.exceptionThrown). The two sources are disjoint
+// for a given exception: the pretty-error path only sees exceptions the
+// runtime caught to build a 500 response — which therefore never reach the
+// inspector — while the inspector only reports exceptions the runtime did
+// not catch. `source` distinguishes them should that invariant ever change.
+export type RuntimeErrorEvent = {
+	type: "runtimeError";
+	source: "LocalRuntimeController" | "ProxyController";
+
+	/** The exception summary line. */
+	text: string;
+	/** The source-mapped stack. */
+	stack: string;
+	/** The raw Chrome DevTools Protocol exception details, when the event
+	 * came over the inspector. */
+	exceptionDetails?: Protocol.Runtime.ExceptionDetails;
+};
 export type PreviewTokenExpiredEvent = {
 	type: "previewTokenExpired";
 

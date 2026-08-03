@@ -40,30 +40,23 @@ export function mockGetWorkerSubdomain({
 	enabled,
 	previews_enabled = enabled,
 	env,
-	useServiceEnvironments = true,
-	expectedScriptName = "test-name" +
-		(!useServiceEnvironments && env ? `-${env}` : ""),
+	expectedAccountId = "some-account-id",
+	expectedScriptName = "test-name" + (env ? `-${env}` : ""),
 }: {
 	enabled: boolean;
 	previews_enabled?: boolean;
 	env?: string | undefined;
-	useServiceEnvironments?: boolean | undefined;
+	expectedAccountId?: string;
 	expectedScriptName?: string | false;
 }) {
-	const url =
-		useServiceEnvironments && env
-			? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
-			: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
+	const url = `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
 	msw.use(
 		http.get(
 			url,
 			({ params }) => {
-				assert(params.accountId === "some-account-id");
+				assert(params.accountId === expectedAccountId);
 				if (expectedScriptName !== false) {
 					assert(params.scriptName === expectedScriptName);
-				}
-				if (useServiceEnvironments) {
-					assert(params.envName === env);
 				}
 
 				return HttpResponse.json(
@@ -84,9 +77,8 @@ export function mockUpdateWorkerSubdomain({
 		previews_enabled: previews_enabled ?? enabled, // Mimics API behavior.
 	},
 	env,
-	useServiceEnvironments = true,
-	expectedScriptName = "test-name" +
-		(!useServiceEnvironments && env ? `-${env}` : ""),
+	expectedAccountId = "some-account-id",
+	expectedScriptName = "test-name" + (env ? `-${env}` : ""),
 	flakeCount = 0,
 }: {
 	// Request values (kept as separate fields and not an object to avoid having to change all tests).
@@ -98,25 +90,19 @@ export function mockUpdateWorkerSubdomain({
 		previews_enabled: boolean;
 	};
 	env?: string | undefined;
-	useServiceEnvironments?: boolean | undefined;
+	expectedAccountId?: string;
 	expectedScriptName?: string | false;
 	flakeCount?: number; // The first `flakeCount` requests will fail with a 500 error
 }) {
-	const url =
-		env && useServiceEnvironments
-			? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
-			: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
+	const url = `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
 
 	const handlers = [
 		http.post(
 			url,
 			async ({ request, params }) => {
-				assert(params.accountId === "some-account-id");
+				assert(params.accountId === expectedAccountId);
 				if (expectedScriptName !== false) {
 					assert(params.scriptName === expectedScriptName);
-				}
-				if (useServiceEnvironments) {
-					assert(params.envName === env);
 				}
 				const body = await request.json();
 				assert(body instanceof Object);

@@ -61,7 +61,10 @@ export const getNormalizedContainerOptions = async (
 
 	for (const container of config.containers) {
 		assert(container.name, "container name should have been set by validation");
-		const allDOs = getDurableObjectClassNameToUseSQLiteMap(config.migrations);
+		const allDOs = getDurableObjectClassNameToUseSQLiteMap(
+			config.migrations,
+			config.exports
+		);
 
 		if (
 			!allDOs.has(container.class_name) &&
@@ -96,9 +99,12 @@ export const getNormalizedContainerOptions = async (
 		let tiers: number[] | undefined;
 		if (container.constraints?.tiers) {
 			tiers = container.constraints.tiers;
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `tier` when `tiers` is not set
 		} else if (container.constraints?.tier === -1) {
 			tiers = undefined;
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `tier` when `tiers` is not set
 		} else if (container.constraints?.tier) {
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `tier` when `tiers` is not set
 			tiers = [container.constraints.tier];
 		} else {
 			tiers = [1, 2];
@@ -136,6 +142,7 @@ export const getNormalizedContainerOptions = async (
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `wrangler_ssh` when `ssh` is not set
 			wrangler_ssh: container.ssh ?? container.wrangler_ssh,
 			authorized_keys: container.authorized_keys,
 			trusted_user_ca_keys: container.trusted_user_ca_keys,
@@ -144,15 +151,21 @@ export const getNormalizedContainerOptions = async (
 		let instanceTypeOrLimits: InstanceTypeOrLimits;
 		const MB = 1000 * 1000;
 		if (
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, deprecated `configuration` path for custom instance types
 			container.configuration?.disk !== undefined ||
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, deprecated `configuration` path for custom instance types
 			container.configuration?.vcpu !== undefined ||
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, deprecated `configuration` path for custom instance types
 			container.configuration?.memory_mib !== undefined
 		) {
 			// deprecated path to set a custom instance type
 			// if an individual limit is not set, default to the dev instance type values
 			instanceTypeOrLimits = {
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, deprecated `configuration` path for custom instance types
 				disk_bytes: (container.configuration?.disk?.size_mb ?? 2000) * MB, // defaults to 2GB in bytes
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, deprecated `configuration` path for custom instance types
 				vcpu: container.configuration?.vcpu ?? 0.0625,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, deprecated `configuration` path for custom instance types
 				memory_mib: container.configuration?.memory_mib ?? 256,
 			};
 		} else if (

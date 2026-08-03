@@ -1,5 +1,364 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.20.1
+
+### Patch Changes
+
+- Updated dependencies [[`cc63aae`](https://github.com/cloudflare/workers-sdk/commit/cc63aae658c39ae33169c6dc89f2e6ec1071fc53), [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2), [`a249591`](https://github.com/cloudflare/workers-sdk/commit/a249591473321cc2fb88a7b62a8c2b8663ebd4ef), [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2), [`f92d1fc`](https://github.com/cloudflare/workers-sdk/commit/f92d1fc1316ba4e5f7e308c79943cb9e34b308c2), [`cec9d88`](https://github.com/cloudflare/workers-sdk/commit/cec9d8875d3f103acc813724ded980867bd25ed7), [`e0bbf55`](https://github.com/cloudflare/workers-sdk/commit/e0bbf55fdce5239a88c78a4350d3287f52d77964)]:
+  - wrangler@4.118.0
+
+## 0.20.0
+
+### Minor Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Breaking change: Remove several options from the `miniflare` override options
+
+  The following options have been removed from the `miniflare` override options, as they were not intended to be exposed, were not functional, or have been superseded by other options:
+
+  - `wrappedBindings`
+  - `cacheWarnUsage`
+  - `fetchMock`: you should use `outboundService` instead
+  - `containerEngine`: containers were not supported in vitest-pool-workers. Consider using [`createTestHarness()`](https://developers.cloudflare.com/workers/testing/test-harness/) instead if you want to test against actual containers.
+
+  Additionally, `cache` has been deprecated and renamed to `cacheAPI`, but `cache` remains functional.
+
+### Patch Changes
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Preserve the deprecated Miniflare `cache` option
+
+  Vitest configurations using `cache` continue to work after the internal Miniflare v5 upgrade. The option is translated to `cacheAPI`; new configurations should use `cacheAPI` directly.
+
+- [#14586](https://github.com/cloudflare/workers-sdk/pull/14586) [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6) Thanks [@emily-shen](https://github.com/emily-shen)! - Stop enabling Miniflare's removed `unsafeStickyBlobs` option
+
+  The pool no longer sets the `unsafeStickyBlobs` Miniflare option, which has been removed. This option was only needed for the Durable Object isolated storage feature that was dropped in 0.13.0, so there is no change in behaviour.
+
+- Updated dependencies [[`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6), [`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6)]:
+  - miniflare@5.20260730.0-alpha
+  - wrangler@4.117.0
+
+## 0.19.1
+
+### Patch Changes
+
+- Updated dependencies [[`01d7020`](https://github.com/cloudflare/workers-sdk/commit/01d7020806dd523158cf9f26a4575365117f5381), [`beec0fb`](https://github.com/cloudflare/workers-sdk/commit/beec0fbc9d3adec24bc42e31a21fe7f82badb543), [`48f0c6c`](https://github.com/cloudflare/workers-sdk/commit/48f0c6cbbc50dfac02e2d76554c181ced233a792), [`8049ca4`](https://github.com/cloudflare/workers-sdk/commit/8049ca451c9561e8b72f3eeeb7916a8712f06133), [`d7f38c3`](https://github.com/cloudflare/workers-sdk/commit/d7f38c311e8cd0f29f56a25250da45f62b20f8ca), [`1394867`](https://github.com/cloudflare/workers-sdk/commit/1394867d1dc357d9bddabf8c16aede47d052fb18), [`cc54478`](https://github.com/cloudflare/workers-sdk/commit/cc5447865022ebc602258cfbeb79953181a62ae0), [`5c25cfe`](https://github.com/cloudflare/workers-sdk/commit/5c25cfe4e03e0d3d42ddab57adc3274d6f6a1a30), [`b21eac2`](https://github.com/cloudflare/workers-sdk/commit/b21eac24878f060296915f198fae910268c465ef), [`bb09f1b`](https://github.com/cloudflare/workers-sdk/commit/bb09f1bd77a194520db3e61d733996f4bbe4bad8), [`1f61001`](https://github.com/cloudflare/workers-sdk/commit/1f61001e5f7a807db7856f5d89e0b26e12a0d0a0), [`01d7020`](https://github.com/cloudflare/workers-sdk/commit/01d7020806dd523158cf9f26a4575365117f5381), [`e31ab0f`](https://github.com/cloudflare/workers-sdk/commit/e31ab0f40c5310babd8b493490c0e1ca677e9a8c)]:
+  - miniflare@4.20260730.0
+  - wrangler@4.116.0
+
+## 0.19.0
+
+### Minor Changes
+
+- [#14879](https://github.com/cloudflare/workers-sdk/pull/14879) [`e6480e3`](https://github.com/cloudflare/workers-sdk/commit/e6480e3c26e849034e9e511a2fd1216257975656) Thanks [@dmmulroy](https://github.com/dmmulroy)! - Add a `verbose` option to `cloudflareTest()` and `cloudflarePool()` configuration
+
+  Set `verbose: false` to suppress verbose workerd runtime logs, such as caught Durable Object RPC errors. The option defaults to `true` to preserve existing output.
+
+### Patch Changes
+
+- [#14821](https://github.com/cloudflare/workers-sdk/pull/14821) [`edc203e`](https://github.com/cloudflare/workers-sdk/commit/edc203e42a10a52f8d2af305fecd2fed4807274e) Thanks [@mishushakov](https://github.com/mishushakov)! - Ignore workerd's `disconnected: peer disconnected without gracefully ending TLS session` exception logs
+
+  When tests make real `fetch()` calls to external TLS endpoints, servers and load balancers routinely close idle keepalive connections without sending a TLS `close_notify`. No request fails — the connection is idle — but workerd logs a `kj/compat/tls.c++` exception with a full stack trace each time, flooding otherwise green test runs. This is the TLS sibling of the `disconnected: ...` messages already in the ignore list, so filter it the same way.
+
+- Updated dependencies [[`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7), [`773ead4`](https://github.com/cloudflare/workers-sdk/commit/773ead41c7b9338b566a268fd0d88eb8613a3de7), [`09b8a44`](https://github.com/cloudflare/workers-sdk/commit/09b8a44e736f28798c733e46ec11eced25fdc897), [`4dfb96e`](https://github.com/cloudflare/workers-sdk/commit/4dfb96ed31c30d98ccf670f9e9453a86861c0c5f), [`1035f74`](https://github.com/cloudflare/workers-sdk/commit/1035f7450006c5c8b8b003135d2b530193c913a1), [`e426cb9`](https://github.com/cloudflare/workers-sdk/commit/e426cb998dce7ecb43ee7ddea1a0b1987add5e1a), [`3a22ae5`](https://github.com/cloudflare/workers-sdk/commit/3a22ae532c5c75c716d4c219e116eb3e0c5b236e), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`465c0fb`](https://github.com/cloudflare/workers-sdk/commit/465c0fb53dbce3613b39f6436d88e15d60caa468), [`e8b3a9d`](https://github.com/cloudflare/workers-sdk/commit/e8b3a9d8bf5f63f7e318de220d91625f96cfb85a), [`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb), [`b737676`](https://github.com/cloudflare/workers-sdk/commit/b737676db01a62e115b7fc56b5af36f5daaf5f6e), [`6e0bf6e`](https://github.com/cloudflare/workers-sdk/commit/6e0bf6e917bf4a2b9cd3ee741e625174075e38e1)]:
+  - wrangler@4.115.0
+  - miniflare@4.20260722.1
+
+## 0.18.8
+
+### Patch Changes
+
+- [#14793](https://github.com/cloudflare/workers-sdk/pull/14793) [`7b3fea6`](https://github.com/cloudflare/workers-sdk/commit/7b3fea69d6001c993887c3eff04d134d2485390f) Thanks [@trafgals](https://github.com/trafgals)! - Prevent worker disposal errors from failing otherwise successful test runs
+
+  Errors raised while disposing test Workers are now logged for diagnostics rather than overriding the test result. Set `NODE_DEBUG=vitest-pool-workers` to view these errors.
+
+- Updated dependencies [[`246ce92`](https://github.com/cloudflare/workers-sdk/commit/246ce92d1d24974678eb23a03290f9391fe9b272), [`c38a2c3`](https://github.com/cloudflare/workers-sdk/commit/c38a2c358ef5c8628ce26fa8c62f002dda0dcb3d), [`8416b33`](https://github.com/cloudflare/workers-sdk/commit/8416b33d9ba0109195ce8fd5a0c185366c41af5a), [`c079ba3`](https://github.com/cloudflare/workers-sdk/commit/c079ba33f1df98e38f7cebc82a64886a7e495879), [`4683ff8`](https://github.com/cloudflare/workers-sdk/commit/4683ff8aa72e1ba559108f7074d8f6aa5d73eaaa), [`95b026e`](https://github.com/cloudflare/workers-sdk/commit/95b026edfdf0c6b6e40994cd8fa06a350bc868f2), [`02232f3`](https://github.com/cloudflare/workers-sdk/commit/02232f348002d8dc002c108ac7095119d34d1b35), [`c4bacec`](https://github.com/cloudflare/workers-sdk/commit/c4bacec349f2d6e1bf4115f22a4b4eaca62cd0fc), [`f8a8c2c`](https://github.com/cloudflare/workers-sdk/commit/f8a8c2c0001c669a731b947755bb68208d7e6f43), [`3203b5d`](https://github.com/cloudflare/workers-sdk/commit/3203b5d34488b2b14d6066db705acef267d1229a)]:
+  - wrangler@4.114.0
+  - miniflare@4.20260722.0
+
+## 0.18.7
+
+### Patch Changes
+
+- [#14713](https://github.com/cloudflare/workers-sdk/pull/14713) [`de34449`](https://github.com/cloudflare/workers-sdk/commit/de344496160da4c2b9aacc34e8a2fc25684437f8) Thanks [@allocsys](https://github.com/allocsys)! - Fix a non-ASCII path failure during the Miniflare WebSocket handshake: the `MF-Vitest-Worker-Data` header embedded the raw `process.cwd()` value, which threw a Latin-1/ASCII header encoding error when the workspace path contained non-ASCII characters (e.g. CJK characters) on Windows. The value is now percent-encoded on write and decoded on read, matching the fix applied to the module fallback redirect response.
+
+- [#14713](https://github.com/cloudflare/workers-sdk/pull/14713) [`de34449`](https://github.com/cloudflare/workers-sdk/commit/de344496160da4c2b9aacc34e8a2fc25684437f8) Thanks [@allocsys](https://github.com/allocsys)! - Fix a runtime start-up failure ("No such module \"cloudflare:test-internal\"") when the project workspace path contains non-ASCII characters (e.g. CJK characters) on Windows. The module fallback service's redirect response set the target file path directly as an HTTP `Location` header value, but headers are restricted to the Latin-1/ASCII byte range, so any non-ASCII byte in the path caused header construction to throw. Such paths are now percent-encoded (and tagged with a sentinel prefix) before being used as a header value, and decoded again only for the values we encoded, so the round-trip is unambiguous and a workspace path containing a literal `%` is left untouched instead of being mis-decoded.
+
+- [#14739](https://github.com/cloudflare/workers-sdk/pull/14739) [`5eac99e`](https://github.com/cloudflare/workers-sdk/commit/5eac99ec34858f3943f71bf132aa1ba2f5ea3415) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Support testing Streaming Tail Workers in Vitest Pool Workers.
+
+- [#14763](https://github.com/cloudflare/workers-sdk/pull/14763) [`538e867`](https://github.com/cloudflare/workers-sdk/commit/538e8678b32aee68636f60b7a84f35f3375a501b) Thanks [@gianghungtien](https://github.com/gianghungtien)! - Treat `webSocketMessage()`, `webSocketClose()` and `webSocketError()` as optional Durable Object handlers
+
+  The pool wraps each Durable Object class and installs a prototype method for every default handler before user code is loaded, so `workerd` always sees a handler and always dispatches. When the wrapped class didn't actually define one, the wrapper threw `` <ClassName> exported by <path> does not define a `webSocketClose()` method ``, even though deployed Workers silently ignore these events for classes that omit them. A hibernatable Durable Object defining only `webSocketMessage()` would log an uncaught `TypeError` on every close.
+
+  These three handlers now no-op when absent, matching deployed behaviour. `alarm()` is unchanged and still reports a missing handler, since `workerd` rejects `setAlarm()` up front on a class without one.
+
+- Updated dependencies [[`42af66d`](https://github.com/cloudflare/workers-sdk/commit/42af66d00b255945989726387acf46409b4c5eb3), [`a0a091b`](https://github.com/cloudflare/workers-sdk/commit/a0a091b9246c5e10408f57342b3275659c9655e3), [`f03b108`](https://github.com/cloudflare/workers-sdk/commit/f03b10854d983c353fd4f3d6621b5ed716379ba3), [`deae171`](https://github.com/cloudflare/workers-sdk/commit/deae1719b276b9ce2bb67a36671b5cf806ef3801), [`0df3d43`](https://github.com/cloudflare/workers-sdk/commit/0df3d432353f39b6a90c340c268c83a7ac0b7d5c), [`d83a476`](https://github.com/cloudflare/workers-sdk/commit/d83a476bab53f0266a67790242f855aab6e0468c), [`4e92e32`](https://github.com/cloudflare/workers-sdk/commit/4e92e32e1f1c27dcd463bcf38ed79e0d1b046679), [`d1d6945`](https://github.com/cloudflare/workers-sdk/commit/d1d69450decfb319a2bbf61e4c042b0511ab2618), [`4815711`](https://github.com/cloudflare/workers-sdk/commit/4815711fb5f896a5aa9221b6bddb9ef78c3f288d), [`a0c8bb1`](https://github.com/cloudflare/workers-sdk/commit/a0c8bb118e04eebba870a6fbe9f5041095b04637), [`a50f73a`](https://github.com/cloudflare/workers-sdk/commit/a50f73a06bb7b078268ce9cebb4d1c16f79a3144), [`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924), [`c82d96b`](https://github.com/cloudflare/workers-sdk/commit/c82d96ba63a3b343b520e781a070889251868d9a), [`34430b3`](https://github.com/cloudflare/workers-sdk/commit/34430b34f468825775377689621e451d730ab0c9), [`f75ae5d`](https://github.com/cloudflare/workers-sdk/commit/f75ae5d02576d82aad4723b9e17ccb26277b69ab)]:
+  - miniflare@4.20260721.0
+  - wrangler@4.113.0
+
+## 0.18.6
+
+### Patch Changes
+
+- [#14678](https://github.com/cloudflare/workers-sdk/pull/14678) [`4e62bba`](https://github.com/cloudflare/workers-sdk/commit/4e62bba52d8c540328bc9b3399bba4dcb7cde799) Thanks [@apeacock1991](https://github.com/apeacock1991)! - Fix test runs hanging after a Durable Object logs and rejects `blockConcurrencyWhile()`
+
+  Console messages emitted from another Durable Object are now buffered until execution returns to the test runner, avoiding I/O that cannot complete after the object's input gate breaks.
+
+- Updated dependencies [[`34e696d`](https://github.com/cloudflare/workers-sdk/commit/34e696dc60dcd7ea04cdab8a6267d255efab9983), [`d39ae01`](https://github.com/cloudflare/workers-sdk/commit/d39ae0131018088f8b4c31ba3f5506e224796cce), [`3de70df`](https://github.com/cloudflare/workers-sdk/commit/3de70dfd32f823677a9d20311ee087fd7e69d51a), [`c79504f`](https://github.com/cloudflare/workers-sdk/commit/c79504f90956405f5fab59448ba53dcf44b8d3a2), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981), [`cb30df3`](https://github.com/cloudflare/workers-sdk/commit/cb30df3a9f19e15535349643c1089e90ba16a80d), [`cb6c3f9`](https://github.com/cloudflare/workers-sdk/commit/cb6c3f9a5c6d67804cd0cb447cc0837a9f75848c), [`c7dbe1a`](https://github.com/cloudflare/workers-sdk/commit/c7dbe1a3d527d534d4069080c56e364d33d6a455), [`3f3afbb`](https://github.com/cloudflare/workers-sdk/commit/3f3afbbf136c404d26ee39d187a44adb06c1b6e8), [`e6fbc4e`](https://github.com/cloudflare/workers-sdk/commit/e6fbc4e67f76f9b78da3d9a2dd27c6e9786d2645), [`4e1a7a7`](https://github.com/cloudflare/workers-sdk/commit/4e1a7a7fe566774dca376c5d569cab56b14f34e3), [`9f04a7e`](https://github.com/cloudflare/workers-sdk/commit/9f04a7e96bffe42a5a53d7396624da5374bff981)]:
+  - miniflare@4.20260714.0
+  - wrangler@4.112.0
+
+## 0.18.5
+
+### Patch Changes
+
+- Updated dependencies [[`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`ed33326`](https://github.com/cloudflare/workers-sdk/commit/ed3332620a15dff35b0875eb9ded87086104b2f0), [`018574b`](https://github.com/cloudflare/workers-sdk/commit/018574b5ab22cc0e3141d1f09c2c383d76d59b2c), [`eb99ab1`](https://github.com/cloudflare/workers-sdk/commit/eb99ab10c83de2599a7a234bbcc57bc739864288), [`cdf3148`](https://github.com/cloudflare/workers-sdk/commit/cdf3148976e274ef834e82ccc98eee3af30ef373), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`7692a61`](https://github.com/cloudflare/workers-sdk/commit/7692a6119f49d11289af4ec8cdf9afe95604ef36), [`3015320`](https://github.com/cloudflare/workers-sdk/commit/3015320cf32d7bfe6f63121e19c9b469d028a9a8), [`899c297`](https://github.com/cloudflare/workers-sdk/commit/899c29763aa64c2a0c954105d7ff85c368d63f6d), [`9da77ac`](https://github.com/cloudflare/workers-sdk/commit/9da77ace05e3e63d491e39e672d91f4dd7e31e7a), [`317ce1f`](https://github.com/cloudflare/workers-sdk/commit/317ce1f32511a0e0b52b8bd81ea5a163e0821646)]:
+  - miniflare@4.20260710.0
+  - wrangler@4.111.0
+
+## 0.18.4
+
+### Patch Changes
+
+- [#14535](https://github.com/cloudflare/workers-sdk/pull/14535) [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f) Thanks [@Naapperas](https://github.com/Naapperas)! - Support dynamic retry delays for Workflow steps in local dev
+
+  A step's `retries.delay` can now be a function that computes the delay per failed attempt, in addition to a static duration. The function receives `{ ctx, error }` and returns a delay (a number of milliseconds or a duration string like `"30 seconds"`), and its result is fed into the configured `backoff`.
+
+  ```js
+  await step.do(
+    "call flaky API",
+    {
+      retries: {
+        limit: 5,
+        backoff: "constant",
+        delay: ({ ctx }) => ctx.attempt * 1000,
+      },
+    },
+    async () => {
+      /* ... */
+    }
+  );
+  ```
+
+  The function is invoked once per failed attempt with a 5 second timeout. If it throws, times out, or returns an invalid value, the step fails without further retries.
+
+- Updated dependencies [[`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3), [`7b28392`](https://github.com/cloudflare/workers-sdk/commit/7b2839290a707e7ee22dde17de68116e88f8a2dc), [`1b965c5`](https://github.com/cloudflare/workers-sdk/commit/1b965c51babff16ae7657335d93badebd50c310f)]:
+  - wrangler@4.110.0
+  - miniflare@4.20260708.1
+
+## 0.18.3
+
+### Patch Changes
+
+- [#14489](https://github.com/cloudflare/workers-sdk/pull/14489) [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `listDurableObjectIds()` to Miniflare
+
+  Miniflare now exposes `listDurableObjectIds()` for listing persisted Durable Object instance IDs by binding name. The Vitest pool now uses this shared Miniflare API internally instead of duplicating Miniflare's storage listing logic.
+
+- Updated dependencies [[`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`8511ddf`](https://github.com/cloudflare/workers-sdk/commit/8511ddf769a603f49576b8cf632ea330c353001f), [`9f74a5f`](https://github.com/cloudflare/workers-sdk/commit/9f74a5ff4a89e3bf2103e51fa2d66752f26f8217), [`e3f0cd6`](https://github.com/cloudflare/workers-sdk/commit/e3f0cd69e08c0eed9d75f61221d1076b6c287eef), [`c782e2a`](https://github.com/cloudflare/workers-sdk/commit/c782e2a7282bfa27064f62408b691e4936c5f33a), [`2fedb1f`](https://github.com/cloudflare/workers-sdk/commit/2fedb1fc811efb3f7544c569e57383cabd4f14f8), [`17d2fc1`](https://github.com/cloudflare/workers-sdk/commit/17d2fc12989f72a2fcd42e62fb152f270d61ab38)]:
+  - miniflare@4.20260708.0
+  - wrangler@4.109.0
+
+## 0.18.2
+
+### Patch Changes
+
+- Updated dependencies [[`54f74b8`](https://github.com/cloudflare/workers-sdk/commit/54f74b857cf6688a0577a214aa0b6dddb9192aaa), [`0852346`](https://github.com/cloudflare/workers-sdk/commit/08523467752daa79f0f8950a01f35797aa6f3052), [`54f74b8`](https://github.com/cloudflare/workers-sdk/commit/54f74b857cf6688a0577a214aa0b6dddb9192aaa)]:
+  - wrangler@4.108.0
+  - miniflare@4.20260706.0
+
+## 0.18.1
+
+### Patch Changes
+
+- [#14409](https://github.com/cloudflare/workers-sdk/pull/14409) [`16fbf81`](https://github.com/cloudflare/workers-sdk/commit/16fbf81d923760d295c7f05b0bd660b7be510e5d) Thanks [@matingathani](https://github.com/matingathani)! - `reset()` from `cloudflare:test` now resets ratelimit binding state between tests. Previously, `RATE_LIMITERS` bindings retained their in-memory bucket counts across test boundaries, causing later tests in the same file to see stale rate-limit exhaustion state.
+
+- Updated dependencies [[`e7e5780`](https://github.com/cloudflare/workers-sdk/commit/e7e5780ea2db48fe43233ecedf01979db6c5ce9d), [`d88555e`](https://github.com/cloudflare/workers-sdk/commit/d88555edb671668ed7f73e587af9effe6e782f53), [`5fd8bee`](https://github.com/cloudflare/workers-sdk/commit/5fd8bee9eb73a140f8ddb02830851e15d486ca3e), [`5d9990e`](https://github.com/cloudflare/workers-sdk/commit/5d9990e1d7ee51041ce70c9df359b0352ae57ec6), [`bf49a41`](https://github.com/cloudflare/workers-sdk/commit/bf49a419e2f98ac770d5ecbf7e9cecdf95d87ce7), [`1ac96a1`](https://github.com/cloudflare/workers-sdk/commit/1ac96a14b7fb022acada114ab8793fe8a4ba79a5), [`f416dd9`](https://github.com/cloudflare/workers-sdk/commit/f416dd983e9c6e4d292317e077dfbe839d2f30c8), [`1ca8d8f`](https://github.com/cloudflare/workers-sdk/commit/1ca8d8f0bbd012a1d65cabadf7b6987b252775e9), [`16fbf81`](https://github.com/cloudflare/workers-sdk/commit/16fbf81d923760d295c7f05b0bd660b7be510e5d), [`b973ed3`](https://github.com/cloudflare/workers-sdk/commit/b973ed30015e4e4bface3c0733c33f624066523a)]:
+  - miniflare@4.20260702.0
+  - wrangler@4.107.1
+
+## 0.18.0
+
+### Minor Changes
+
+- [#14382](https://github.com/cloudflare/workers-sdk/pull/14382) [`fd92d56`](https://github.com/cloudflare/workers-sdk/commit/fd92d5657c4d35758ce42c4f706611623be80a8e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for declarative Durable Object exports
+
+  `wrangler deploy` now accepts an `exports` map in `wrangler.json` as a declarative alternative to the legacy `migrations` array.
+
+  Each entry in `exports` is keyed by Durable Object class name. `type` carries the export _kind_ (currently always `"durable-object"`); the `state` field carries the lifecycle and defaults to `"created"` (live) when omitted:
+
+  ```jsonc
+  {
+    "exports": {
+      // Provision a new Durable Object class (`MyDO`)
+      "MyDO": { "type": "durable-object", "storage": "sqlite" },
+      // Delete Durable Object class (`OldGone`)
+      "OldGone": { "type": "durable-object", "state": "deleted" },
+      // Rename a Durable Object class (from `OldName` to `NewName`)
+      "OldName": {
+        "type": "durable-object",
+        "state": "renamed",
+        "renamed_to": "NewName"
+      },
+      "NewName": { "type": "durable-object", "storage": "sqlite" },
+      // Transfer a Durable Object (`Outgoing`) to a new Worker (`target-worker`)
+      "Outgoing": {
+        "type": "durable-object",
+        "state": "transferred",
+        "transferred_to": "target-worker"
+      },
+      // Prepare to receive the transfer of a Durable Object (`Incoming`) from another Worker (`source-worker`)
+      "Incoming": {
+        "type": "durable-object",
+        "state": "expecting-transfer",
+        "storage": "sqlite",
+        "transfer_from": "source-worker"
+      }
+    }
+  }
+  ```
+
+  When a Worker declares Durable Object class bindings but no lifecycle for them (neither a `migrations` array nor an `exports` map), wrangler warns and now suggests a declarative `exports` entry for each class (previously it suggested a legacy `migrations` block).
+
+  The deployment response now surfaces the server's reconciliation result — created namespaces, applied tombstones, structured per-scenario info entries, and a `removable_entries` hint for stale tombstones that are safe to delete from the config. Blocking errors return the structured per-class detail with scenario tags, suggested remediation, and any referencing-script context.
+
+  `wrangler versions upload` also forwards `exports`. Declarative `exports` lifecycle changes are reconciled when the version is deployed (`wrangler versions deploy` or `wrangler deploy`), so a `versions upload` payload can declare new classes in `exports` without immediately provisioning them. An actor binding (`durable_objects.bindings`) to a class declared only in `exports` on the same `versions upload` is rejected with a clear error (code 100406) — the binding cannot be resolved until the namespace is provisioned. Either stage the new class via `ctx.exports.X` (no binding required) on `versions upload` and add the binding at deploy time, or use `wrangler deploy` to provision and bind in one step (the same constraint applies to the `migrations` flow).
+
+  Multi-version deploys (`wrangler versions deploy A@50% B@50%`) where the selected versions disagree on declarative `exports` are rejected server-side with a clear message: deploy the version that changes `exports` at 100% first, then run the percentage-split deploy. This prevents traffic on one branch routing to code that references unprovisioned or just-deleted DO namespaces. Single-version (100%) deploys are unaffected.
+
+  Local development (`wrangler dev`, `vite dev` and `unstable_startWorker`) reads Durable Object SQLite storage settings from the new `exports` field, so applications using the declarative flow get correct local-dev storage without needing to also declare a `migrations` block.
+
+  `@cloudflare/vitest-pool-workers` also picks up Durable Object configuration from `exports`, so tests against an `exports`-only Worker run with the correct local SQLite storage and can reach unbound Durable Object classes via `ctx.exports.X`.
+
+  `wrangler types` is also aware of `exports`. Live entries (including `expecting-transfer`, the receiving side of a two-phase transfer) are added to `Cloudflare.GlobalProps.durableNamespaces`, which types `ctx.exports.X` for unbound Durable Objects declared only via `exports`.
+
+### Patch Changes
+
+- Updated dependencies [[`aa5d580`](https://github.com/cloudflare/workers-sdk/commit/aa5d5801450b7e4417bfdbd477f86de3a4bc6933), [`6b0ce98`](https://github.com/cloudflare/workers-sdk/commit/6b0ce986b01ec4559e2ac16feb410a186c42f9e1), [`fd92d56`](https://github.com/cloudflare/workers-sdk/commit/fd92d5657c4d35758ce42c4f706611623be80a8e), [`bfe48db`](https://github.com/cloudflare/workers-sdk/commit/bfe48db29d41f4963170e80dbdba8f80a55c6098), [`be3f792`](https://github.com/cloudflare/workers-sdk/commit/be3f792f8e004857e60a58f823435784c2423868), [`0277bfa`](https://github.com/cloudflare/workers-sdk/commit/0277bfa153acae7bef9597ef0a13ece913fa286f), [`98793d8`](https://github.com/cloudflare/workers-sdk/commit/98793d8e00567462518d983d974e0e89b6a474c3), [`e1532eb`](https://github.com/cloudflare/workers-sdk/commit/e1532eba6681f4552ae02f6b435cc04f42cc9bdd)]:
+  - wrangler@4.107.0
+  - miniflare@4.20260701.0
+
+## 0.17.0
+
+### Minor Changes
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Make Workflow introspector `get()` async
+
+  The `introspectWorkflow(...).get()` method now returns a promise, so callers must await it:
+
+  ```ts
+  const introspector = await introspectWorkflow(env.MY_WORKFLOW);
+
+  // Before
+  const instances = introspector.get();
+
+  // After
+  const instances = await introspector.get();
+  ```
+
+  This aligns Workflow introspection with the shared implementation used by `createTestHarness()`.
+
+### Patch Changes
+
+- [#14490](https://github.com/cloudflare/workers-sdk/pull/14490) [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support `require("./x.wasm?module")` in CommonJS dependencies
+
+  Previously, only literal `await import("./x.wasm?module")` specifiers were rewritten through the static analysis path added in #11094. CommonJS dependencies that use `require("./x.wasm?module")` reach the module-fallback service at runtime, where the `?module` suffix went unhandled. The fallback either failed with `No such module "<abs>/x.wasm?module"` or, when a `CompiledWasm` rule was configured, attempted to evaluate the WebAssembly bytes as JavaScript.
+
+  However, these `require()`s work in deployed workers because esbuild's bundler statically rewrites these `require()` calls into ES dynamic imports. vitest-pool-workers' Vite-based pipeline doesn't do that rewrite and instead defers to the module-fallback at runtime.
+
+  The module-fallback now strips `?module` from the resolved target and synthesizes a CommonJS wrapper that re-`require`s the underlying `.wasm` by absolute path, exposing it on `default` to match what workerd produces for `CompiledWasm` modules.
+
+- Updated dependencies [[`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`f10d4ad`](https://github.com/cloudflare/workers-sdk/commit/f10d4ad99a3e67e04c16425fe25b6c61ec0c54db), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`d292046`](https://github.com/cloudflare/workers-sdk/commit/d2920467490d53eacde2a1e31013699bd212ee88), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`e0cc2cb`](https://github.com/cloudflare/workers-sdk/commit/e0cc2cb864da208fe6ce1ff98eda67c6dcfb9bf7), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a), [`75d8cb0`](https://github.com/cloudflare/workers-sdk/commit/75d8cb0e32e0f4d66b699e88016d01f1666d8d8a)]:
+  - wrangler@4.106.0
+  - miniflare@4.20260630.0
+
+## 0.16.20
+
+### Patch Changes
+
+- [#14398](https://github.com/cloudflare/workers-sdk/pull/14398) [`c5014cc`](https://github.com/cloudflare/workers-sdk/commit/c5014ccc363f70d2a48eb1ba6113e3e62784e09f) Thanks [@apeacock1991](https://github.com/apeacock1991)! - Add `evictDurableObject` and `evictAllDurableObjects` test helpers to `cloudflare:test`
+
+  These helpers let you exercise how a Durable Object behaves across evictions in your tests. Eviction is graceful: durable storage is preserved, in-memory state is reset by tearing down the instance, hibernatable WebSockets are hibernated rather than closed, and eviction waits for in-flight requests to drain.
+
+  ```ts
+  import { evictDurableObject, evictAllDurableObjects } from "cloudflare:test";
+  import { env } from "cloudflare:workers";
+
+  const id = env.COUNTER.idFromName("my-counter");
+  const stub = env.COUNTER.get(id);
+
+  // Evict the Durable Object instance pointed to by a specific stub
+  await evictDurableObject(stub);
+  await evictDurableObject(stub, { webSockets: "close" });
+
+  // Evict all currently-running Durable Objects in evictable namespaces
+  await evictAllDurableObjects();
+  ```
+
+- [#14394](https://github.com/cloudflare/workers-sdk/pull/14394) [`8a5cf8c`](https://github.com/cloudflare/workers-sdk/commit/8a5cf8c2e61bf3c01a836aad260fa3a5f29e1e7c) Thanks [@Partha-Shankar](https://github.com/Partha-Shankar)! - fix(d1): escape `migrationsTableName` and filenames in SQLite queries
+
+  D1 migration commands in both `wrangler` and `@cloudflare/vitest-pool-workers` interpolated the `migrationsTableName` config value and migration filenames directly into SQL strings without any escaping. This meant:
+
+  - A table name such as `my"table` would produce invalid SQL in `CREATE TABLE`, `SELECT`, and `INSERT` statements, and
+  - A migration filename containing an apostrophe (e.g. `what's-new.sql`) would break the `INSERT INTO ... VALUES ('...')` statement appended after each migration in `wrangler`.
+
+  Both identifiers are now properly escaped before interpolation: `migrationsTableName` is wrapped in double-quotes with internal double-quotes doubled (SQL-standard identifier quoting), and migration filenames used as string literals have their single-quotes doubled before insertion.
+
+- Updated dependencies [[`5f40dd5`](https://github.com/cloudflare/workers-sdk/commit/5f40dd5d2897c4c8a1fb30f29af038baefcf67a4), [`34e0cef`](https://github.com/cloudflare/workers-sdk/commit/34e0cefcd54130be4ca3f9cf4de1e9867252ead0), [`3b743c1`](https://github.com/cloudflare/workers-sdk/commit/3b743c1b86ad80c40fd9d2d678cd5a8cb66e86fa), [`daa5389`](https://github.com/cloudflare/workers-sdk/commit/daa5389863bd20ab655cf68a5f7cd63afeb30904), [`8a5cf8c`](https://github.com/cloudflare/workers-sdk/commit/8a5cf8c2e61bf3c01a836aad260fa3a5f29e1e7c)]:
+  - wrangler@4.105.0
+  - miniflare@4.20260625.0
+
+## 0.16.19
+
+### Patch Changes
+
+- Updated dependencies [[`a085dec`](https://github.com/cloudflare/workers-sdk/commit/a085deca12d7126c21e500b3dd4298edfd13f8cd), [`9a0de8f`](https://github.com/cloudflare/workers-sdk/commit/9a0de8f71f50bb7d1884288e376259082084a315), [`fab565f`](https://github.com/cloudflare/workers-sdk/commit/fab565fdb1a912c73232d72ccdf1963fd96f9ad5), [`3f02864`](https://github.com/cloudflare/workers-sdk/commit/3f028644284236fbfe36567052200cf00e707d85), [`4ef872f`](https://github.com/cloudflare/workers-sdk/commit/4ef872fe530282d26ec8f2f8c52f23b8702ae757), [`2a02858`](https://github.com/cloudflare/workers-sdk/commit/2a028589543aa7692f99a053952bfc1c5eb8302f), [`e312dec`](https://github.com/cloudflare/workers-sdk/commit/e312decf71f8d1a435ca178f209844363f24014a)]:
+  - miniflare@4.20260623.0
+  - wrangler@4.104.0
+
+## 0.16.18
+
+### Patch Changes
+
+- Updated dependencies [[`c6579d3`](https://github.com/cloudflare/workers-sdk/commit/c6579d30bd6fd7705fe3f10c7655d74a0476df86), [`444b75e`](https://github.com/cloudflare/workers-sdk/commit/444b75e75492738d10e7dc89ec645f7e2fad6b97), [`b38823f`](https://github.com/cloudflare/workers-sdk/commit/b38823fb35a8bdcd00004e74404ab18d7b070dbf), [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359), [`cfd6205`](https://github.com/cloudflare/workers-sdk/commit/cfd6205fe86f6afd74b5881f09524c93c83b8359)]:
+  - wrangler@4.103.0
+  - miniflare@4.20260617.1
+
+## 0.16.17
+
+### Patch Changes
+
+- [#14347](https://github.com/cloudflare/workers-sdk/pull/14347) [`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update undici from 7.24.8 to 7.28.0
+
+- [#14314](https://github.com/cloudflare/workers-sdk/pull/14314) [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6) Thanks [@harryzcy](https://github.com/harryzcy)! - Bump esbuild to 0.28.1
+
+  This update includes several bug fixes from esbuild versions 0.27.3 through 0.28.1. See the [esbuild changelog](https://github.com/evanw/esbuild/blob/v0.28.1/CHANGELOG.md) for details.
+
+- Updated dependencies [[`673b09e`](https://github.com/cloudflare/workers-sdk/commit/673b09e0fa26368125fb527596a8eb5d31c27302), [`e930bd4`](https://github.com/cloudflare/workers-sdk/commit/e930bd4ca9880eb0b68ce6d1933c1d9ce290317d), [`f6e49dd`](https://github.com/cloudflare/workers-sdk/commit/f6e49dd59190328007331477450651e8bca2def8), [`5c3bb11`](https://github.com/cloudflare/workers-sdk/commit/5c3bb118a99da70c5c1efb07df37f685e7044ba6), [`296ad65`](https://github.com/cloudflare/workers-sdk/commit/296ad659305ee150d61451991f04a135fe99d264), [`594544d`](https://github.com/cloudflare/workers-sdk/commit/594544da71e570f878d1dfa80c8f646ec2cf7df2), [`a79b899`](https://github.com/cloudflare/workers-sdk/commit/a79b899e284d46a8f0f9c4df113068ba66aaad0f), [`5dfb788`](https://github.com/cloudflare/workers-sdk/commit/5dfb788595a2104b4b0922cfce3d69a2f1d881eb), [`ca61558`](https://github.com/cloudflare/workers-sdk/commit/ca6155879c2027765977ff14d17b4d6ad53473e1), [`36777db`](https://github.com/cloudflare/workers-sdk/commit/36777dbd694acdf0a2d1fc2be322a47bd409e7fe)]:
+  - miniflare@4.20260617.0
+  - wrangler@4.102.0
+
+## 0.16.16
+
+### Patch Changes
+
+- Updated dependencies [[`0e055d3`](https://github.com/cloudflare/workers-sdk/commit/0e055d39c51dda77717515adb1a33610d385a724), [`27db82c`](https://github.com/cloudflare/workers-sdk/commit/27db82c808743f690f023f84be5cde9e223c22d1), [`2a6a26b`](https://github.com/cloudflare/workers-sdk/commit/2a6a26b02f27ac18b1773a5460e1e7e37721a5cb), [`9a424ed`](https://github.com/cloudflare/workers-sdk/commit/9a424ed747009c716db77463c72f8d974e048914), [`ecfdd5a`](https://github.com/cloudflare/workers-sdk/commit/ecfdd5a6c60b9c6f99c28f9294da656933c2a5fd), [`604be26`](https://github.com/cloudflare/workers-sdk/commit/604be263afacdaf14d143b56943dff66ec26f518), [`1fb7ba5`](https://github.com/cloudflare/workers-sdk/commit/1fb7ba5f02b20260aec5314bc7eb488dce760253), [`208b3bb`](https://github.com/cloudflare/workers-sdk/commit/208b3bb411e41599cda0f5090fd5d2eaa5f6b9f3), [`41f391f`](https://github.com/cloudflare/workers-sdk/commit/41f391fdda4112ee333782aad02d16dacaa95f8f), [`32f9307`](https://github.com/cloudflare/workers-sdk/commit/32f9307862ced8d25c44fd3b0161b60354559cd8), [`8b2ce41`](https://github.com/cloudflare/workers-sdk/commit/8b2ce41762b8875a2ae8247c67518a45edb6c9e7), [`3578919`](https://github.com/cloudflare/workers-sdk/commit/3578919b85582cd1fa261554af03b4b16f9bd5be), [`ee82c76`](https://github.com/cloudflare/workers-sdk/commit/ee82c76b07844f7ae9068b01d29a2a0adf34eed0), [`41f391f`](https://github.com/cloudflare/workers-sdk/commit/41f391fdda4112ee333782aad02d16dacaa95f8f), [`21dbc12`](https://github.com/cloudflare/workers-sdk/commit/21dbc1242ed097ce209a24bf61a2dad6e3d46d08), [`7e63948`](https://github.com/cloudflare/workers-sdk/commit/7e63948f9b31fce998b4902102395629e439a8e0), [`035917f`](https://github.com/cloudflare/workers-sdk/commit/035917f617c8fa1b40d43fe78a9771c389911abf)]:
+  - miniflare@4.20260616.0
+  - wrangler@4.101.0
+
+## 0.16.15
+
+### Patch Changes
+
+- Updated dependencies [[`98c9afe`](https://github.com/cloudflare/workers-sdk/commit/98c9afe2e3bb6cbed6d56d8ad781d50e9a604926), [`e305126`](https://github.com/cloudflare/workers-sdk/commit/e30512641a194a628767ca9c44ff0499a4b326c1), [`f3990b2`](https://github.com/cloudflare/workers-sdk/commit/f3990b2358ef49cd6e1ab16de27e25dcd949896f), [`4597f08`](https://github.com/cloudflare/workers-sdk/commit/4597f085d25c7d066ecf056de313e194f41094d1), [`25722ac`](https://github.com/cloudflare/workers-sdk/commit/25722acff7a195cffb858791cfcd43c79a70e217), [`41f75c0`](https://github.com/cloudflare/workers-sdk/commit/41f75c0b2ba3f0f4a88ca792c1b5c8914374d61d), [`10b5538`](https://github.com/cloudflare/workers-sdk/commit/10b553819addbcd1224f66d5b52bb7c7f7c8e602), [`818c105`](https://github.com/cloudflare/workers-sdk/commit/818c105522e6d198f92cc31fd465477774c1bcf2), [`2ae6099`](https://github.com/cloudflare/workers-sdk/commit/2ae6099db77c076fb7e6e782d2f0ebd7ba86dbbb), [`2047a32`](https://github.com/cloudflare/workers-sdk/commit/2047a32cf78886b71b794a3dfac946a146ab3ffe), [`2047a32`](https://github.com/cloudflare/workers-sdk/commit/2047a32cf78886b71b794a3dfac946a146ab3ffe), [`e8561c2`](https://github.com/cloudflare/workers-sdk/commit/e8561c2621ebc5e0c28848fb5a87a982dc77647f)]:
+  - wrangler@4.100.0
+  - miniflare@4.20260611.0
+
+## 0.16.14
+
+### Patch Changes
+
+- Updated dependencies [[`23aecac`](https://github.com/cloudflare/workers-sdk/commit/23aecac6a2d57ee5d4888405bd12cac66ab8a725), [`b932e47`](https://github.com/cloudflare/workers-sdk/commit/b932e47d49e736cb59159341a92045dcc65df0c6), [`d076bcc`](https://github.com/cloudflare/workers-sdk/commit/d076bcc847adc0cb52c34863d3ad77f8faee5fbb), [`24497d0`](https://github.com/cloudflare/workers-sdk/commit/24497d0f5fb327d7c86f5f3022510b53cfec931d), [`4bb572f`](https://github.com/cloudflare/workers-sdk/commit/4bb572f264089b2ec1ce3a4b0d2f48c226cb4431), [`165adb2`](https://github.com/cloudflare/workers-sdk/commit/165adb2084bde4bff453b54c4a984012b6999f29), [`776098c`](https://github.com/cloudflare/workers-sdk/commit/776098c79672e4b16c53aea1c127f45fe66a14bf), [`0706fbf`](https://github.com/cloudflare/workers-sdk/commit/0706fbf950548aaa8177a062a7c5d41822dfba0d), [`7993711`](https://github.com/cloudflare/workers-sdk/commit/79937112ff580c34b182b73ef830cdb17b5b798d), [`48c4ff0`](https://github.com/cloudflare/workers-sdk/commit/48c4ff00483e9346c9fe6dcb981009b081c0a204), [`8cf8c61`](https://github.com/cloudflare/workers-sdk/commit/8cf8c61efb9fd99892bcb250db12d7052b5fef08), [`8923f97`](https://github.com/cloudflare/workers-sdk/commit/8923f9769aaa13229d1cda535f95a9813465d765), [`b205fb7`](https://github.com/cloudflare/workers-sdk/commit/b205fb7ff0a1d897b5cbe2a9149978d9e581684c), [`a61ac29`](https://github.com/cloudflare/workers-sdk/commit/a61ac2936ae6b35146d637c18beb94567bb40bfa)]:
+  - wrangler@4.99.0
+  - miniflare@4.20260609.0
+
 ## 0.16.13
 
 ### Patch Changes

@@ -6,9 +6,11 @@ import type {
 	DevRegistryUpdateEvent,
 	ErrorEvent,
 	PreviewTokenExpiredEvent,
+	RuntimeErrorEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
+import type { Miniflare } from "miniflare";
 
 export type ControllerEvent =
 	| ErrorEvent
@@ -18,6 +20,7 @@ export type ControllerEvent =
 	| ReloadStartEvent
 	| ReloadCompleteEvent
 	| DevRegistryUpdateEvent
+	| RuntimeErrorEvent
 	| PreviewTokenExpiredEvent;
 
 export interface ControllerBus {
@@ -34,6 +37,14 @@ export abstract class Controller {
 
 	async teardown(): Promise<void> {
 		this.#tearingDown = true;
+	}
+
+	/**
+	 * Whether `teardown()` has been called, which subclasses should check before
+	 * starting any new work.
+	 */
+	protected get tearingDown() {
+		return this.#tearingDown;
 	}
 
 	protected emitErrorEvent(event: ErrorEvent) {
@@ -56,6 +67,11 @@ export abstract class RuntimeController extends Controller {
 	abstract onBundleStart(_: BundleStartEvent): void;
 	abstract onBundleComplete(_: BundleCompleteEvent): void;
 	abstract onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void;
+
+	// *********************
+	//   Runtime Accessors
+	// *********************
+	abstract get mf(): Miniflare | undefined;
 
 	// *********************
 	//   Event Dispatchers

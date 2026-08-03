@@ -51,28 +51,18 @@ export function mockLastDeploymentRequest() {
 export function mockPublishSchedulesRequest({
 	crons = [],
 	env = undefined,
-	useServiceEnvironments = true,
 }: {
 	crons: Config["triggers"]["crons"];
 	env?: string | undefined;
-	useServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts =
-		env && useServiceEnvironments ? "services" : "scripts";
-	const environment =
-		env && useServiceEnvironments ? "/environments/:envName" : "";
-
 	msw.use(
 		http.put(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/schedules`,
+			`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					!useServiceEnvironments && env ? `test-name-${env}` : "test-name"
+					env ? `test-name-${env}` : "test-name"
 				);
-				if (useServiceEnvironments) {
-					expect(params.envName).toEqual(env);
-				}
 				const body = (await request.json()) as [{ cron: string }];
 				expect(body).toEqual(crons.map((cron) => ({ cron })));
 				return HttpResponse.json(createFetchResult(null));
@@ -85,28 +75,18 @@ export function mockPublishSchedulesRequest({
 export function mockPublishRoutesRequest({
 	routes = [],
 	env = undefined,
-	useServiceEnvironments = true,
 }: {
 	routes: Config["routes"];
 	env?: string | undefined;
-	useServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts =
-		env && useServiceEnvironments ? "services" : "scripts";
-	const environment =
-		env && useServiceEnvironments ? "/environments/:envName" : "";
-
 	msw.use(
 		http.put(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
+			`*/accounts/:accountId/workers/scripts/:scriptName/routes`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					!useServiceEnvironments && env ? `test-name-${env}` : "test-name"
+					env ? `test-name-${env}` : "test-name"
 				);
-				if (useServiceEnvironments) {
-					expect(params.envName).toEqual(env);
-				}
 				const body = await request.json();
 				expect(body).toEqual(
 					routes.map((route) =>
@@ -120,21 +100,14 @@ export function mockPublishRoutesRequest({
 	);
 }
 
-export function mockUnauthorizedPublishRoutesRequest({
-	env = undefined,
-	useServiceEnvironments = true,
-}: {
-	env?: string | undefined;
-	useServiceEnvironments?: boolean | undefined;
-} = {}) {
-	const servicesOrScripts =
-		env && useServiceEnvironments ? "services" : "scripts";
-	const environment =
-		env && useServiceEnvironments ? "/environments/:envName" : "";
-
+export function mockUnauthorizedPublishRoutesRequest(
+	_options: {
+		env?: string | undefined;
+	} = {}
+) {
 	msw.use(
 		http.put(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
+			`*/accounts/:accountId/workers/scripts/:scriptName/routes`,
 			() => {
 				return HttpResponse.json(
 					createFetchResult(null, false, [
@@ -184,28 +157,19 @@ export function mockCustomDomainsChangesetRequest({
 	originConflicts = [],
 	dnsRecordConflicts = [],
 	env = undefined,
-	useServiceEnvironments = true,
 }: {
 	originConflicts?: Array<CustomDomain>;
 	dnsRecordConflicts?: Array<CustomDomain>;
 	env?: string | undefined;
-	useServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts =
-		env && useServiceEnvironments ? "services" : "scripts";
-	const environment =
-		env && useServiceEnvironments ? "/environments/:envName" : "";
 	msw.use(
 		http.post<{ accountId: string; scriptName: string; envName: string }>(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
+			`*/accounts/:accountId/workers/scripts/:scriptName/domains/changeset`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					!useServiceEnvironments && env ? `test-name-${env}` : "test-name"
+					env ? `test-name-${env}` : "test-name"
 				);
-				if (useServiceEnvironments) {
-					expect(params.envName).toEqual(env);
-				}
 
 				const domains = (await request.json()) as Array<
 					{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
@@ -217,7 +181,7 @@ export function mockCustomDomainsChangesetRequest({
 							...domain,
 							id: "",
 							service: params.scriptName,
-							environment: params.envName,
+							environment: env ?? "",
 							zone_name: "",
 							zone_id: "",
 							enabled: true,
@@ -246,7 +210,6 @@ export function mockPublishCustomDomainsRequest({
 	publishFlags,
 	domains = [],
 	env = undefined,
-	useServiceEnvironments = true,
 }: {
 	publishFlags: {
 		override_scope: boolean;
@@ -261,24 +224,15 @@ export function mockPublishCustomDomainsRequest({
 		} & ({ zone_id?: string } | { zone_name?: string })
 	>;
 	env?: string | undefined;
-	useServiceEnvironments?: boolean | undefined;
 }) {
-	const servicesOrScripts =
-		env && useServiceEnvironments ? "services" : "scripts";
-	const environment =
-		env && useServiceEnvironments ? "/environments/:envName" : "";
-
 	msw.use(
 		http.put(
-			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/records`,
+			`*/accounts/:accountId/workers/scripts/:scriptName/domains/records`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					!useServiceEnvironments && env ? `test-name-${env}` : "test-name"
+					env ? `test-name-${env}` : "test-name"
 				);
-				if (useServiceEnvironments) {
-					expect(params.envName).toEqual(env);
-				}
 				const body = await request.json();
 				expect(body).toEqual({
 					...publishFlags,
@@ -434,92 +388,59 @@ export function mockServiceScriptData(options: {
 			)
 		);
 	} else {
-		if (options.env) {
-			if (!script) {
-				msw.use(
-					http.get(
-						"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-						() => {
-							return HttpResponse.json({
-								success: false,
-								errors: [
-									{
-										code: 10092,
-										message: "workers.api.error.environment_not_found",
-									},
-								],
-								messages: [],
-								result: null,
-							});
-						},
-						{ once: true }
-					)
-				);
-				return;
-			}
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						expect(params.scriptName).toEqual(
-							options.scriptName || "test-name"
-						);
-						expect(params.envName).toEqual(options.env);
+		const baseName = options.scriptName || "test-name";
+		const expectedScriptName = options.env
+			? `${baseName}-${options.env}`
+			: baseName;
+		// The Durable Object migrations flow (`getMigrationsToUpload`) lists all
+		// scripts and finds the deployed Worker by its (legacy) name.
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts",
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: script ? [{ ...script, id: expectedScriptName }] : [],
+					});
+				},
+				{ once: true }
+			)
+		);
+		// The CI tag match flow (`verifyWorkerMatchesCITag`) fetches the Worker's
+		// service metadata.
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					if (!script) {
 						return HttpResponse.json({
-							success: true,
-							errors: [],
+							success: false,
+							errors: [
+								{
+									code: 10090,
+									message: "workers.api.error.service_not_found",
+								},
+							],
 							messages: [],
-							result: { script },
+							result: null,
 						});
-					},
-					{ once: true }
-				)
-			);
-		} else {
-			if (!script) {
-				msw.use(
-					http.get(
-						"*/accounts/:accountId/workers/services/:scriptName",
-						() => {
-							return HttpResponse.json({
-								success: false,
-								errors: [
-									{
-										code: 10090,
-										message: "workers.api.error.service_not_found",
-									},
-								],
-								messages: [],
-								result: null,
-							});
+					}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							default_environment: { environment: "production", script },
 						},
-						{ once: true }
-					)
-				);
-				return;
-			}
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/services/:scriptName",
-					({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						expect(params.scriptName).toEqual(
-							options.scriptName || "test-name"
-						);
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								default_environment: { environment: "production", script },
-							},
-						});
-					},
-					{ once: true }
-				)
-			);
-		}
+					});
+				},
+				{ once: true }
+			)
+		);
 	}
 }
 
@@ -717,14 +638,17 @@ export const mockAssetUploadRequest = async (
 	numberOfBuckets: number,
 	bodies: FormData[],
 	uploadContentTypeHeaders: (string | null)[],
-	uploadAuthHeaders: (string | null)[]
+	uploadAuthHeaders: (string | null)[],
+	uploadUrls?: string[]
 ) => {
 	msw.use(
 		http.post(
 			"*/accounts/some-account-id/workers/assets/upload",
 			async ({ request }) => {
+				uploadUrls?.push(request.url);
 				uploadContentTypeHeaders.push(request.headers.get("Content-Type"));
 				uploadAuthHeaders.push(request.headers.get("Authorization"));
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 				const formData = await request.formData();
 				bodies.push(formData);
 				if (bodies.length === numberOfBuckets) {

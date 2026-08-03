@@ -1,17 +1,19 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { UserError, getDurableObjectExports } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**
- * Based on the migrations, infer what the current Durable Object class names are.
- * This includes unbound (ctx.exports) and bound DOs.
- * Returns class name mapped to whether it uses SQLite storage.
- * This is imperfect because you can delete a migration after it has been applied.
+ * Infer Durable Object class names and storage backends from migrations and
+ * live declarative `exports` entries.
+ *
+ * In practice only one of `migrations` or `exports` will have the Durable Object configuration.
  */
 export function getDurableObjectClassNameToUseSQLiteMap(
-	migrations: Config["migrations"] | undefined
+	migrations: Config["migrations"] | undefined,
+	exports?: Config["exports"] | undefined
 ) {
 	const durableObjectClassNameToUseSQLiteMap = new Map<string, boolean>();
-	(migrations || []).forEach((migration) => {
+
+	(migrations ?? []).forEach((migration) => {
 		migration.deleted_classes?.forEach((deleted_class) => {
 			if (!durableObjectClassNameToUseSQLiteMap.delete(deleted_class)) {
 				throw new UserError(
@@ -68,6 +70,23 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 			}
 		});
 	});
+
+	const durableObjectExports = getDurableObjectExports(exports ?? {});
+	for (const [className, entry] of Object.entries(durableObjectExports)) {
+		if (entry.type !== "durable-object") {
+			continue;
+		}
+		if (
+			entry.state === undefined ||
+			entry.state === "created" ||
+			entry.state === "expecting-transfer"
+		) {
+			durableObjectClassNameToUseSQLiteMap.set(
+				className,
+				entry.storage === "sqlite"
+			);
+		}
+	}
 
 	return durableObjectClassNameToUseSQLiteMap;
 }

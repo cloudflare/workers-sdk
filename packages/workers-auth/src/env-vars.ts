@@ -1,23 +1,9 @@
 import {
+	getBooleanEnvironmentVariableFactory,
 	getCloudflareApiEnvironmentFromEnv,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
-
-/**
- * `WRANGLER_CLIENT_ID` is a UUID that is used to identify Wrangler
- * to the Cloudflare APIs.
- *
- * Normally you should not need to set this explicitly.
- * If you want to switch to the staging environment set the
- * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
- */
-export const getClientIdFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CLIENT_ID",
-	defaultValue: () =>
-		getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "4b2ea6cc-9421-4761-874b-ce550e0e3def"
-			: "54d11594-84e4-41aa-b438-e81b8fa78ee7",
-});
+import { validateAccountId } from "./account-id";
 
 /**
  * `WRANGLER_AUTH_DOMAIN` is the URL base domain that is used
@@ -74,6 +60,35 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
+const readCloudflareAccountIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCOUNT_ID",
+	deprecatedName: "CF_ACCOUNT_ID",
+});
+
+/**
+ * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
+ *
+ * This is a Cloudflare-wide variable (not wrangler-specific), so it lives in the
+ * shared core rather than a consumer layer. `CF_ACCOUNT_ID` is the deprecated
+ * spelling.
+ *
+ * Every caller feeds the result into a Cloudflare API URL path, so the value is
+ * validated here rather than at each call site. An empty string is treated as
+ * unset so callers keep falling back to the cached / interactively selected
+ * account.
+ */
+export function getCloudflareAccountIdFromEnv(): string | undefined {
+	const accountId = readCloudflareAccountIdFromEnv();
+	if (!accountId) {
+		return undefined;
+	}
+
+	return validateAccountId(
+		accountId,
+		"set in the `CLOUDFLARE_ACCOUNT_ID` environment variable"
+	);
+}
+
 /**
  * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
  * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
@@ -105,3 +120,21 @@ export const getAccessClientSecretFromEnv = getEnvironmentVariableFactory({
 export const getCfAuthorizationTokenFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
 });
+
+/**
+ * `CLOUDFLARE_AUTH_USE_KEYRING` overrides where OAuth credentials are stored.
+ *
+ * - `true`  — force-store credentials in the OS keychain. If the keychain
+ *             cannot be reached, the resolver throws rather than silently
+ *             falling back, so security-sensitive callers know their
+ *             explicit opt-in did not take effect.
+ * - `false` — force-store credentials in the plaintext TOML file,
+ *             even if the consumer's persistent `keyring_enabled` preference
+ *             is set.
+ * - unset   — fall back to the consumer's persistent preference (e.g. the
+ *             one written by `wrangler login --use-keyring`).
+ */
+export const getCloudflareAuthUseKeyringFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "CLOUDFLARE_AUTH_USE_KEYRING",
+	});

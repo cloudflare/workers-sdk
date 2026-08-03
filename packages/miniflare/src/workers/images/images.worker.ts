@@ -233,7 +233,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		});
 		infoRequest.headers.set(
 			CoreHeaders.CUSTOM_FETCH_SERVICE,
-			CoreBindings.IMAGES_SERVICE
+			CoreBindings.IMAGES_BINDING_SERVICE
 		);
 
 		const response =
@@ -251,7 +251,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 
-		// Serve image bytes at /cdn-cgi/mf/imagedelivery/<id>/<variant>
+		// Serve image bytes at /__cf_local/imagedelivery/<id>/<variant>
 		if (url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`)) {
 			const parts = url.pathname
 				.slice(CorePaths.IMAGE_DELIVERY.length + 1)
@@ -276,7 +276,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		const forwardRequest = new Request(request);
 		forwardRequest.headers.set(
 			CoreHeaders.CUSTOM_FETCH_SERVICE,
-			CoreBindings.IMAGES_SERVICE
+			CoreBindings.IMAGES_BINDING_SERVICE
 		);
 		forwardRequest.headers.set(CoreHeaders.ORIGINAL_URL, request.url);
 		return this.env[CoreBindings.SERVICE_LOOPBACK].fetch(forwardRequest);

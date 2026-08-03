@@ -1,3 +1,7 @@
+import { initApiDeployHelpersContext } from "./deploy-helpers-context";
+
+initApiDeployHelpersContext();
+
 export { unstable_dev } from "./dev";
 export type { Unstable_DevWorker, Unstable_DevOptions } from "./dev";
 export { unstable_pages } from "./pages";
@@ -17,7 +21,7 @@ export {
 } from "./mtls-certificate";
 
 // Exports from ./startDevWorker
-export { convertConfigBindingsToStartWorkerBindings } from "./startDevWorker/utils";
+export { convertConfigBindingsToStartWorkerBindings } from "./startDevWorker/binding-utils";
 export { DevEnv } from "./startDevWorker/DevEnv";
 export { startWorker } from "./startDevWorker";
 export type {
@@ -44,6 +48,7 @@ export type {
 	ReloadStartEvent,
 	ReloadCompleteEvent,
 	DevRegistryUpdateEvent,
+	RuntimeErrorEvent,
 	PreviewTokenExpiredEvent,
 	ReadyEvent,
 	ProxyWorkerIncomingRequestBody,
@@ -58,13 +63,21 @@ export type {
 } from "./startDevWorker/events";
 export type { DevToolsEvent } from "./startDevWorker/devtools";
 
+// Exports from ./server
+export { createTestHarness } from "./test-harness";
+export type {
+	TestHarnessOptions,
+	WorkerHandle,
+	TestHarness,
+} from "./test-harness";
+
 // Exports from ./integrations
 export {
 	unstable_getVarsForDev,
 	unstable_readConfig,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- re-exporting deprecated public API for backward compatibility
 	unstable_getDevCompatibilityDate,
-	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
 } from "./integrations";

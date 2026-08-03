@@ -1,12 +1,10 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchGraphqlResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import {
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromIdOrName,
-} from "./utils";
-import type { D1QueriesGraphQLResponse, Database } from "./types";
+import { getDatabaseByNameOrBinding } from "./utils";
+import type { D1QueriesGraphQLResponse } from "./types";
 
 const cliOptionToGraphQLOption = {
 	time: "queryDurationMs",
@@ -25,7 +23,10 @@ export function getDurationDates(durationString: string) {
 	switch (durationUnit) {
 		case "d":
 			if (durationValue > 31) {
-				throw new Error("Duration cannot be greater than 31 days");
+				throw new UserError(
+					`Invalid --time-period value "${durationString}": ${durationValue} days exceeds the maximum of 31 days. Provide a value of 31d or less.`,
+					{ telemetryMessage: "d1 insights duration exceeds maximum" }
+				);
 			}
 			startDate = new Date(
 				endDate.getTime() - durationValue * 24 * 60 * 60 * 1000
@@ -33,22 +34,27 @@ export function getDurationDates(durationString: string) {
 			break;
 		case "m":
 			if (durationValue > 31 * 24 * 60) {
-				throw new Error(
-					`Duration cannot be greater than ${31 * 24 * 60} minutes (31 days)`
+				throw new UserError(
+					`Invalid --time-period value "${durationString}": ${durationValue} minutes exceeds the maximum of ${31 * 24 * 60} minutes (31 days). Provide a value of ${31 * 24 * 60}m or less.`,
+					{ telemetryMessage: "d1 insights duration exceeds maximum" }
 				);
 			}
 			startDate = new Date(endDate.getTime() - durationValue * 60 * 1000);
 			break;
 		case "h":
 			if (durationValue > 31 * 24) {
-				throw new Error(
-					`Duration cannot be greater than ${31 * 24} hours (31 days)`
+				throw new UserError(
+					`Invalid --time-period value "${durationString}": ${durationValue} hours exceeds the maximum of ${31 * 24} hours (31 days). Provide a value of ${31 * 24}h or less.`,
+					{ telemetryMessage: "d1 insights duration exceeds maximum" }
 				);
 			}
 			startDate = new Date(endDate.getTime() - durationValue * 60 * 60 * 1000);
 			break;
 		default:
-			throw new Error("Invalid duration unit");
+			throw new UserError(
+				`Invalid --time-period unit "${durationUnit}" in "${durationString}". Supported units: d (days), h (hours), m (minutes). Example: --time-period=7d.`,
+				{ telemetryMessage: "d1 insights invalid duration unit" }
+			);
 	}
 
 	return [startDate.toISOString(), endDate.toISOString()];
@@ -62,6 +68,7 @@ export const d1InsightsCommand = createCommand({
 		owner: "Product: D1",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json,
 	},
 	args: {
@@ -117,32 +124,21 @@ export const d1InsightsCommand = createCommand({
 		{ config }
 	) {
 		const accountId = await requireAuth(config);
-		const db: Database = await getDatabaseByNameOrBinding(
-			config,
-			accountId,
-			name
-		);
-
-		const result = await getDatabaseInfoFromIdOrName(
-			config,
-			accountId,
-			db.uuid
-		);
+		const db = await getDatabaseByNameOrBinding(config, accountId, name);
 
 		const output: Record<string, string | number>[] = [];
 
-		if (result.version !== "alpha") {
-			const [startDate, endDate] = getDurationDates(timePeriod);
-			const parsedSortBy = cliOptionToGraphQLOption[sortBy];
-			const orderByClause =
-				parsedSortBy === "count"
-					? `${parsedSortBy}_${sortDirection}`
-					: `${sortType}_${parsedSortBy}_${sortDirection}`;
-			const graphqlQueriesResult =
-				await fetchGraphqlResult<D1QueriesGraphQLResponse>(config, {
-					method: "POST",
-					body: JSON.stringify({
-						query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
+		const [startDate, endDate] = getDurationDates(timePeriod);
+		const parsedSortBy = cliOptionToGraphQLOption[sortBy];
+		const orderByClause =
+			parsedSortBy === "count"
+				? `${parsedSortBy}_${sortDirection}`
+				: `${sortType}_${parsedSortBy}_${sortDirection}`;
+		const graphqlQueriesResult =
+			await fetchGraphqlResult<D1QueriesGraphQLResponse>(config, {
+				method: "POST",
+				body: JSON.stringify({
+					query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
 								viewer {
 									accounts(filter: {accountTag: $accountTag}) {
 										d1QueriesAdaptiveGroups(limit: ${limit}, filter: $filter, orderBy: [${orderByClause}]) {
@@ -166,47 +162,46 @@ export const d1InsightsCommand = createCommand({
 									}
 								}
 							}`,
-						operationName: "getD1QueriesOverviewQuery",
-						variables: {
-							accountTag: accountId,
-							filter: {
-								AND: [
-									{
-										datetimeHour_geq: startDate,
-										datetimeHour_leq: endDate,
-										databaseId: db.uuid,
-									},
-								],
-							},
+					operationName: "getD1QueriesOverviewQuery",
+					variables: {
+						accountTag: accountId,
+						filter: {
+							AND: [
+								{
+									datetimeHour_geq: startDate,
+									datetimeHour_leq: endDate,
+									databaseId: db.uuid,
+								},
+							],
 						},
-					}),
-					headers: {
-						"Content-Type": "application/json",
 					},
-				});
+				}),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
 
-			graphqlQueriesResult?.data?.viewer?.accounts[0]?.d1QueriesAdaptiveGroups?.forEach(
-				(row) => {
-					if (!row.dimensions.query) {
-						return;
-					}
-					output.push({
-						query: row.dimensions.query,
-						avgRowsRead: row?.avg?.rowsRead ?? 0,
-						totalRowsRead: row?.sum?.rowsRead ?? 0,
-						avgRowsWritten: row?.avg?.rowsWritten ?? 0,
-						totalRowsWritten: row?.sum?.rowsWritten ?? 0,
-						avgDurationMs: row?.avg?.queryDurationMs ?? 0,
-						totalDurationMs: row?.sum?.queryDurationMs ?? 0,
-						numberOfTimesRun: row?.count ?? 0,
-						queryEfficiency:
-							row?.avg?.rowsReturned && row?.avg?.rowsRead
-								? row?.avg?.rowsReturned / row?.avg?.rowsRead
-								: 0,
-					});
+		graphqlQueriesResult?.data?.viewer?.accounts[0]?.d1QueriesAdaptiveGroups?.forEach(
+			(row) => {
+				if (!row.dimensions.query) {
+					return;
 				}
-			);
-		}
+				output.push({
+					query: row.dimensions.query,
+					avgRowsRead: row?.avg?.rowsRead ?? 0,
+					totalRowsRead: row?.sum?.rowsRead ?? 0,
+					avgRowsWritten: row?.avg?.rowsWritten ?? 0,
+					totalRowsWritten: row?.sum?.rowsWritten ?? 0,
+					avgDurationMs: row?.avg?.queryDurationMs ?? 0,
+					totalDurationMs: row?.sum?.queryDurationMs ?? 0,
+					numberOfTimesRun: row?.count ?? 0,
+					queryEfficiency:
+						row?.avg?.rowsReturned && row?.avg?.rowsRead
+							? row?.avg?.rowsReturned / row?.avg?.rowsRead
+							: 0,
+				});
+			}
+		);
 
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));

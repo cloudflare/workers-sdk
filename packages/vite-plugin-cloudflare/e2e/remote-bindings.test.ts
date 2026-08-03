@@ -1,4 +1,6 @@
+import { mkdirSync, writeFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { assert, beforeAll, describe, test, vi } from "vitest";
 import {
@@ -192,6 +194,60 @@ if (isWindows) {
 		});
 	});
 }
+
+describe.skipIf(isWindows)(
+	"remote bindings resolve auth profile from vite config root",
+	() => {
+		const projectPath = seed("remote-bindings-config-account-id", {
+			pm: "pnpm",
+		});
+
+		test("uses directory-bound auth profile instead of triggering oauth", async ({
+			expect,
+		}) => {
+			// Set up a fake HOME with a .wrangler global config directory containing:
+			//  - a named profile with a dummy oauth token
+			//  - a directory binding mapping the project path to that profile
+			const fakeHome = path.join(projectPath, ".fake-home");
+			const wranglerDir = path.join(fakeHome, ".wrangler");
+
+			mkdirSync(path.join(wranglerDir, "config"), { recursive: true });
+			writeFileSync(
+				path.join(wranglerDir, "config", "e2e-test-profile.toml"),
+				[
+					'oauth_token = "fake-oauth-token-for-e2e-test"',
+					'refresh_token = "fake-refresh-token"',
+					`expiration_time = "2099-01-01T00:00:00+00:00"`,
+				].join("\n")
+			);
+
+			mkdirSync(path.join(wranglerDir, "profiles"), { recursive: true });
+			writeFileSync(
+				path.join(wranglerDir, "profiles", "directory-bindings.json"),
+				JSON.stringify({ [projectPath]: "e2e-test-profile" })
+			);
+
+			const proc = await runLongLived("pnpm", "dev", projectPath, {
+				HOME: fakeHome,
+				CLOUDFLARE_API_TOKEN: undefined,
+				CLOUDFLARE_API_KEY: undefined,
+				CLOUDFLARE_EMAIL: undefined,
+			});
+
+			// as opposed to hitting the OAuth path, which would indicate that the profile did not register
+			await vi.waitFor(
+				async () => {
+					expect(proc.stderr).toMatch(
+						/A request to the Cloudflare API \(\/accounts\/not-a-valid-account-id-abc\/.*?\) failed/
+					);
+				},
+				{
+					timeout: 10_000,
+				}
+			);
+		});
+	}
+);
 
 describe.skipIf(isWindows)("remote bindings disabled", () => {
 	const projectPath = seed("remote-bindings-disabled", { pm: "pnpm" });

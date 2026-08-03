@@ -10,7 +10,12 @@ import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import type { EsbuildBundle } from "../dev/use-esbuild";
 import type Protocol from "devtools-protocol";
-import type { RawSourceMap } from "source-map";
+
+interface RawSourceMap {
+	file?: string;
+	sourceRoot?: string;
+	sources: string[];
+}
 
 /**
  * This function converts a message serialized as a devtools event

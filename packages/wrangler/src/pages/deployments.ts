@@ -1,17 +1,17 @@
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import type { PagesConfigCache } from "./types";
@@ -49,8 +49,11 @@ export const pagesDeploymentListCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		projectName ??= config.project_name;
 
@@ -149,8 +152,11 @@ export const pagesDeploymentDeleteCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		projectName ??= config.project_name;
 

@@ -16,7 +16,7 @@ permissions:
 jobs:
   build:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}

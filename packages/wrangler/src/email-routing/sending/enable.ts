@@ -1,6 +1,6 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { enableEmailSending } from "../client";
+import { createEmailSendingSubdomain } from "../client";
 import { resolveDomain } from "../utils";
 
 export const emailSendingEnableCommand = createCommand({
@@ -23,16 +23,15 @@ export const emailSendingEnableCommand = createCommand({
 	},
 	positionalArgs: ["domain"],
 	async handler(args, { config }) {
-		const { zoneId, isSubdomain, domain } = await resolveDomain(
+		const { zoneId, domain } = await resolveDomain(
 			config,
 			args.domain,
 			args.zoneId
 		);
-		const name = isSubdomain ? domain : undefined;
-		const settings = await enableEmailSending(config, zoneId, name);
+		const subdomain = await createEmailSendingSubdomain(config, zoneId, domain);
 
 		logger.log(
-			`Email Sending enabled for ${settings.name} (status: ${settings.status})`
+			`Email Sending enabled for ${subdomain.name} (enabled: ${subdomain.enabled})`
 		);
 	},
 });

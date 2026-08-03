@@ -6,6 +6,7 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	JsonFriendlyFatalError,
 	ParseError,
+	parseRetryAfterValue,
 	renderError,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -22,6 +23,7 @@ import { logBuildFailure, logger } from "../logger";
 import { captureGlobalException } from "../sentry";
 import { getAuthFromEnv } from "../user";
 import { whoami } from "../user/whoami";
+import { logDidYouMean } from "../utils/did-you-mean";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import type { ReadConfigCommandArgs } from "../config";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -259,10 +261,26 @@ function isContainersAuthenticationError(e: unknown): e is UserError {
 }
 
 /**
- * @returns whether `e` is a standard Cloudflare API authentication error
+ * Cloudflare API error codes that indicate an authentication problem.
+ *
+ * - 9106: "Authentication failed" — token not recognized (invalid or malformed).
+ * - 10000: "Authentication error" — token is structurally valid but rejected
+ *          (expired, revoked server-side, or wrong scope).
+ */
+const AUTHENTICATION_ERROR_CODES = [9106, 10000];
+
+/**
+ * Checks whether `e` is a standard Cloudflare API authentication error.
+ *
+ * @param e - the error to inspect
+ * @returns whether the error is an APIError with an auth error code
  */
 export function isAuthenticationError(e: unknown): e is ParseError {
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
+	if (!(e instanceof ParseError)) {
+		return false;
+	}
+	const code = (e as { code?: number }).code;
+	return code !== undefined && AUTHENTICATION_ERROR_CODES.includes(code);
 }
 
 /**
@@ -298,7 +316,8 @@ export function getErrorType(e: unknown): string | undefined {
 export async function handleError(
 	e: unknown,
 	args: ReadConfigCommandArgs,
-	subCommandParts: string[]
+	subCommandParts: string[],
+	commandResolver?: (path: string[]) => Set<string> | undefined
 ): Promise<void> {
 	let mayReport = true;
 	let loggableException = e;
@@ -495,8 +514,31 @@ export async function handleError(
 		]);
 
 		if (isRootLevelError) {
+			if (commandResolver && unknownArgs.length > 0) {
+				const knownCommands = commandResolver([]);
+				if (knownCommands) {
+					logDidYouMean(unknownArgs[0], knownCommands, "wrangler");
+				}
+			}
 			await showHelpWithCategories();
 			return;
+		}
+
+		// For non-root-level errors, check if the unknown arg is a subcommand typo.
+		// e.g. "wrangler kv namespase" -> unknownArgs=["namespase"], nonFlagArgs=["kv","namespase"]
+		// The parent path is the valid command segments before the typo.
+		if (isUnknownArgOrCommand && commandResolver && unknownArgs.length > 0) {
+			const unknownArg = unknownArgs[0];
+			const typoIndex = nonFlagArgs.indexOf(unknownArg);
+			if (typoIndex > 0) {
+				const parentPath = nonFlagArgs.slice(0, typoIndex);
+				const trailingArgs = nonFlagArgs.slice(typoIndex + 1);
+				const knownSubcommands = commandResolver(parentPath);
+				if (knownSubcommands) {
+					const prefix = ["wrangler", ...parentPath].join(" ");
+					logDidYouMean(unknownArg, knownSubcommands, prefix, trailingArgs);
+				}
+			}
 		}
 
 		await wrangler.parse();
@@ -568,15 +610,25 @@ export async function handleError(
 		mayReport = false;
 		logBuildFailure(e.cause.errors, e.cause.warnings);
 	} else if (e instanceof Cloudflare.APIError) {
-		const error = new APIError({
-			text: `A request to the Cloudflare API failed.`,
-			notes: [...e.errors.map((err) => ({ text: renderError(err) }))],
-			telemetryMessage: false,
-		});
-		error.notes.push({
+		const retryAfterMs = parseRetryAfterValue(e.headers?.["retry-after"]);
+		const notes = [...e.errors.map((err) => ({ text: renderError(err) }))];
+		if (retryAfterMs !== undefined) {
+			notes.push({
+				text: `The API responded with a "Retry-After" header indicating you should wait ${Math.ceil(retryAfterMs / 1000)} second(s) before retrying.`,
+			});
+		}
+		notes.push({
 			text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 		});
-		logger.error(error);
+		logger.error(
+			new APIError({
+				text: `A request to the Cloudflare API failed.`,
+				notes,
+				status: e.status,
+				retryAfterMs,
+				telemetryMessage: false,
+			})
+		);
 	} else {
 		if (
 			// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error

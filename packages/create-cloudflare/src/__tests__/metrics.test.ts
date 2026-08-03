@@ -58,7 +58,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -77,7 +77,7 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(1);
+		expect(sendEvent).toHaveBeenCalledTimes(1);
 
 		deferred.resolve("test result");
 
@@ -85,7 +85,7 @@ describe("createReporter", () => {
 
 		await expect(operation).resolves.toBe("test result");
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session completed",
 				deviceId,
@@ -105,7 +105,7 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(2);
+		expect(sendEvent).toHaveBeenCalledTimes(2);
 	});
 
 	test("sends event with logs enabled if CREATE_CLOUDFLARE_TELEMETRY_DEBUG is set to `1`", async ({
@@ -125,7 +125,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -144,7 +144,7 @@ describe("createReporter", () => {
 			},
 			true
 		);
-		expect(sendEvent).toBeCalledTimes(1);
+		expect(sendEvent).toHaveBeenCalledTimes(1);
 
 		deferred.resolve("test result");
 
@@ -152,7 +152,7 @@ describe("createReporter", () => {
 
 		await expect(operation).resolves.toBe("test result");
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session completed",
 				deviceId,
@@ -172,7 +172,7 @@ describe("createReporter", () => {
 			},
 			true
 		);
-		expect(sendEvent).toBeCalledTimes(2);
+		expect(sendEvent).toHaveBeenCalledTimes(2);
 	});
 
 	test("sends no event if no sparrow source key", async ({ expect }) => {
@@ -192,12 +192,12 @@ describe("createReporter", () => {
 
 		expect(reporter.isEnabled).toBe(false);
 
-		expect(sendEvent).toBeCalledTimes(0);
+		expect(sendEvent).toHaveBeenCalledTimes(0);
 
 		deferred.resolve("test result");
 
 		await expect(operation).resolves.toBe("test result");
-		expect(sendEvent).toBeCalledTimes(0);
+		expect(sendEvent).toHaveBeenCalledTimes(0);
 	});
 
 	test("sends no event if the c3 permission is disabled", async ({
@@ -224,12 +224,12 @@ describe("createReporter", () => {
 
 		expect(reporter.isEnabled).toBe(false);
 
-		expect(sendEvent).toBeCalledTimes(0);
+		expect(sendEvent).toHaveBeenCalledTimes(0);
 
 		deferred.resolve("test result");
 
 		await expect(operation).resolves.toBe("test result");
-		expect(sendEvent).toBeCalledTimes(0);
+		expect(sendEvent).toHaveBeenCalledTimes(0);
 	});
 
 	test("sends no event if the CREATE_CLOUDFLARE_TELEMETRY_DISABLED env is set to '1'", async ({
@@ -251,12 +251,12 @@ describe("createReporter", () => {
 
 		expect(reporter.isEnabled).toBe(false);
 
-		expect(sendEvent).toBeCalledTimes(0);
+		expect(sendEvent).toHaveBeenCalledTimes(0);
 
 		deferred.resolve("test result");
 
 		await expect(operation).resolves.toBe("test result");
-		expect(sendEvent).toBeCalledTimes(0);
+		expect(sendEvent).toHaveBeenCalledTimes(0);
 	});
 
 	test("sends started and cancelled event to sparrow if the promise reject with a CancelError", async ({
@@ -274,7 +274,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -293,14 +293,14 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(1);
+		expect(sendEvent).toHaveBeenCalledTimes(1);
 
 		deferred.reject(new CancelError("test cancel"));
 		vi.advanceTimersByTime(1234);
 
 		await expect(operation).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session cancelled",
 				deviceId,
@@ -320,7 +320,7 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(2);
+		expect(sendEvent).toHaveBeenCalledTimes(2);
 	});
 
 	test("sends started and errored event to sparrow if the promise reject with a non CancelError", async ({
@@ -336,7 +336,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -355,14 +355,14 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(1);
+		expect(sendEvent).toHaveBeenCalledTimes(1);
 
 		deferred.reject(new Error("test error"));
 		vi.advanceTimersByTime(1234);
 
 		await expect(process).rejects.toThrow(Error);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session errored",
 				deviceId,
@@ -387,7 +387,7 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(2);
+		expect(sendEvent).toHaveBeenCalledTimes(2);
 	});
 
 	test("sends cancelled event if a SIGINT signal is received", async ({
@@ -406,7 +406,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -425,14 +425,14 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(1);
+		expect(sendEvent).toHaveBeenCalledTimes(1);
 
 		process.emit("SIGINT", "SIGINT");
 		vi.advanceTimersByTime(1234);
 
 		await expect(run).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session cancelled",
 				deviceId,
@@ -453,7 +453,7 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(2);
+		expect(sendEvent).toHaveBeenCalledTimes(2);
 	});
 
 	test("sends cancelled event if a SIGTERM signal is received", async ({
@@ -471,7 +471,7 @@ describe("createReporter", () => {
 			promise: () => deferred.promise,
 		});
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session started",
 				deviceId,
@@ -490,14 +490,14 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(1);
+		expect(sendEvent).toHaveBeenCalledTimes(1);
 
 		process.emit("SIGTERM", "SIGTERM");
 		vi.advanceTimersByTime(1234);
 
 		await expect(run).rejects.toThrow(CancelError);
 
-		expect(sendEvent).toBeCalledWith(
+		expect(sendEvent).toHaveBeenCalledWith(
 			{
 				event: "c3 session cancelled",
 				deviceId,
@@ -518,7 +518,7 @@ describe("createReporter", () => {
 			},
 			false
 		);
-		expect(sendEvent).toBeCalledTimes(2);
+		expect(sendEvent).toHaveBeenCalledTimes(2);
 	});
 });
 
@@ -583,7 +583,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("enable");
 
-		expect(writeMetricsConfig).toBeCalledWith({
+		expect(writeMetricsConfig).toHaveBeenCalledWith({
 			c3permission: {
 				enabled: true,
 				date: new Date(),
@@ -609,7 +609,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("enable");
 
-		expect(writeMetricsConfig).not.toBeCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
 		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Status: Enabled
 
@@ -630,7 +630,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("disable");
 
-		expect(writeMetricsConfig).toBeCalledWith({
+		expect(writeMetricsConfig).toHaveBeenCalledWith({
 			c3permission: {
 				enabled: false,
 				date: new Date(),
@@ -656,7 +656,7 @@ describe("runTelemetryCommand", () => {
 
 		runTelemetryCommand("disable");
 
-		expect(writeMetricsConfig).not.toBeCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
 		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Status: Disabled
 

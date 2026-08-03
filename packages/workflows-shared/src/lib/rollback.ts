@@ -1,6 +1,7 @@
 import { InstanceEvent } from "../instance";
 import { WorkflowFatalError } from "./errors";
 import { isValidStepConfig } from "./validators";
+import type { WorkflowStepContext } from "../context";
 import type { Engine } from "../engine";
 import type { WorkflowStepConfig } from "cloudflare:workers";
 
@@ -12,8 +13,10 @@ type UserErrorField = {
 export const ROLLBACK_CACHE_KEY_PREFIX = "rollback:";
 
 export type RollbackContext = {
+	ctx: WorkflowStepContext;
 	error: Error;
 	output: unknown;
+	/** @deprecated Use `${ctx.step.name}-${ctx.step.count}` instead. */
 	stepName: string;
 };
 
@@ -24,14 +27,19 @@ export type RollbackFn = ((ctx: RollbackContext) => Promise<void>) & {
 	[Symbol.dispose]?: () => void;
 };
 
+export type WorkflowStepRollbackConfig = Pick<
+	WorkflowStepConfig,
+	"retries" | "timeout"
+>;
+
 export type WorkflowStepRollbackOptions = {
 	rollback: RollbackFn;
-	rollbackConfig?: WorkflowStepConfig;
+	rollbackConfig?: WorkflowStepRollbackConfig;
 };
 
 export type RollbackRegistryEntry = {
 	fn: RollbackFn;
-	stepName: string;
+	stepContext: WorkflowStepContext;
 	output?: unknown;
 	config?: WorkflowStepConfig;
 };
@@ -99,14 +107,21 @@ export function registerRollbackFn(
 	registry: Map<string, RollbackRegistryEntry>,
 	registration: RollbackRegistration
 ): void {
-	const { cacheKey, fn, stepName, output, config } = registration;
+	const { cacheKey, fn, stepContext, output, config } = registration;
 	const existing = registry.get(cacheKey);
 	if (existing) {
-		disposeRollbackStub(existing.fn);
+		// Existing entry already owns the duped rollback stub. Duplicate registrations
+		// refresh context/output only; this helper has not duped the incoming fn.
+		registry.set(cacheKey, {
+			...existing,
+			stepContext,
+			...("output" in registration && { output }),
+		});
+		return;
 	}
 	registry.set(cacheKey, {
 		fn: dupRollbackStub(fn),
-		stepName,
+		stepContext,
 		...("output" in registration && { output }),
 		...(config !== undefined && { config }),
 	});
@@ -121,80 +136,67 @@ export function clearRollbackRegistry(
 	registry.clear();
 }
 
-function getRollbackRegistryEntriesInExecutionOrder(
-	engine: Engine
-): Array<[string, RollbackRegistryEntry]> {
-	const entries: Array<[string, RollbackRegistryEntry]> = [];
-	const seen = new Set<string>();
-	const stepStartGroupKeysDesc = engine.readStepStartGroupKeysDesc();
-	const rollbackRegistryEntriesDesc = [
-		...engine.rollbackRegistry.entries(),
-	].reverse();
-
-	for (const cacheKey of stepStartGroupKeysDesc) {
-		const entry = engine.rollbackRegistry.get(cacheKey);
-		if (entry === undefined || seen.has(cacheKey)) {
-			continue;
-		}
-		entries.push([cacheKey, entry]);
-		seen.add(cacheKey);
-	}
-
-	for (const [cacheKey, entry] of rollbackRegistryEntriesDesc) {
-		if (!seen.has(cacheKey)) {
-			entries.push([cacheKey, entry]);
-		}
-	}
-
-	return entries;
-}
-
 // LIFO; halts on first failure. Goes through Context.do so each rollback
 // inherits retries/timeouts/attempt-logging.
 export async function executeRollbacks(
 	engine: Engine,
 	triggerError: Error
 ): Promise<{ ranAny: boolean; allSucceeded: boolean }> {
-	if (engine.rollbackRegistry.size === 0) {
+	const eligibleSteps = engine.readEligibleRollbackStepsDesc();
+	if (eligibleSteps.length === 0) {
+		clearRollbackRegistry(engine.rollbackRegistry);
 		return { ranAny: false, allSucceeded: true };
 	}
 
-	const entries = getRollbackRegistryEntriesInExecutionOrder(engine);
-	engine.rollbackRegistry.clear();
-
 	engine.writeLog(InstanceEvent.ROLLBACK_START, null, null, {
 		triggerError: { name: triggerError.name, message: triggerError.message },
-		totalSteps: entries.length,
+		totalSteps: eligibleSteps.length,
 	});
 
 	let allSucceeded = true;
 	let completed = 0;
-	let stoppedAt = entries.length;
 
-	for (const [i, [cacheKey, entry]] of entries.entries()) {
-		const ctx = engine.createRollbackContext({ cacheKey });
-		try {
-			await ctx.do(entry.stepName, entry.config ?? {}, async () => {
-				await entry.fn({
-					error: triggerError,
-					output: entry.output,
-					stepName: entry.stepName,
+	try {
+		for (const step of eligibleSteps) {
+			const entry = engine.rollbackRegistry.get(step.cacheKey);
+			if (entry === undefined) {
+				engine.writeLog(
+					InstanceEvent.ROLLBACK_STEP_FAILURE,
+					step.cacheKey,
+					step.target,
+					{
+						error: {
+							name: "RollbackMissing",
+							message: "Rollback function not available in registry",
+						},
+					}
+				);
+				allSucceeded = false;
+				break;
+			}
+
+			const ctx = engine.createRollbackContext({ cacheKey: step.cacheKey });
+			try {
+				await ctx.do(step.target, entry.config ?? {}, async () => {
+					await entry.fn({
+						ctx: structuredClone(entry.stepContext),
+						error: triggerError,
+						output: entry.output,
+						stepName: step.target,
+					});
 				});
-			});
-			completed++;
-		} catch {
-			// Context.do already wrote ROLLBACK_STEP_FAILURE; halt the chain.
-			allSucceeded = false;
-			stoppedAt = i + 1;
-			break;
-		} finally {
-			disposeRollbackStub(entry.fn);
+				completed++;
+			} catch {
+				// Context.do already wrote ROLLBACK_STEP_FAILURE; halt the chain.
+				allSucceeded = false;
+				break;
+			} finally {
+				disposeRollbackStub(entry.fn);
+				engine.rollbackRegistry.delete(step.cacheKey);
+			}
 		}
-	}
-
-	const remainingEntries = entries.slice(stoppedAt);
-	for (const [, entry] of remainingEntries) {
-		disposeRollbackStub(entry.fn);
+	} finally {
+		clearRollbackRegistry(engine.rollbackRegistry);
 	}
 
 	engine.writeLog(
@@ -203,7 +205,7 @@ export async function executeRollbacks(
 			: InstanceEvent.ROLLBACK_FAILED,
 		null,
 		null,
-		{ totalSteps: entries.length, completedSteps: completed }
+		{ totalSteps: eligibleSteps.length, completedSteps: completed }
 	);
 	return { ranAny: completed > 0, allSucceeded };
 }

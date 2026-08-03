@@ -1,14 +1,14 @@
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
+import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { WORKFLOW_NOT_FOUND_CODE } from "../../deploy/check-workflow-conflicts";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -36,8 +36,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 	};
 });
 
-vi.mock("../../utils/fetch-secrets");
-
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -49,8 +47,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -76,9 +77,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -175,6 +179,143 @@ describe("deploy", () => {
 				  workflow: my-workflow
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+
+		it("should deploy Artifacts event triggers after their target Workflows", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							filter: {
+								namespace: "my-namespace",
+								repo_name: "my-repo",
+							},
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "my-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			let workflowDeployed = false;
+			msw.use(
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					workflowDeployed = true;
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}),
+				http.put(
+					"*/accounts/:accountId/triggers/:scriptName",
+					async ({ params, request }) => {
+						expect(workflowDeployed).toBe(true);
+						expect(params.scriptName).toBe("test-name");
+						expect(await request.json()).toEqual([
+							{
+								type: "cf.artifacts.repo.pushed",
+								filter: {
+									namespace: "my-namespace",
+									repo_name: "my-repo",
+								},
+								targets: [
+									{
+										type: "workflow",
+										workflow_name: "my-workflow",
+										script_name: "test-name",
+									},
+								],
+							},
+						]);
+						return HttpResponse.json(createFetchResult({}));
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("event triggers: 1");
+		});
+
+		it("should clear event triggers with an empty array", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				triggers: { events: [] },
+			});
+			await fs.promises.writeFile("index.js", "export default {};");
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/triggers/:scriptName",
+					async ({ request }) => {
+						expect(await request.json()).toEqual([]);
+						return HttpResponse.json(createFetchResult({}));
+					}
+				)
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+
+			await runWrangler("deploy");
+		});
+
+		it("should reject event targets that are not defined by the Worker", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "missing-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", "export default {};");
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Event trigger "cf.artifacts.repo.pushed" targets Workflow "missing-workflow", but that Workflow is not defined by this Worker.\n\nAdd it to the "workflows" configuration or remove the event trigger target.'
+			);
 		});
 
 		it("should prompt to create a workers.dev subdomain before deploying owned Workflows", async ({
@@ -342,6 +483,178 @@ describe("deploy", () => {
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.out).toContain("workflow: my-workflow");
+		});
+
+		it("should explain that cron-triggered workflows require a paid plan", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						schedules: "0 * * * *",
+					},
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "my-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			msw.use(
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+								message: "Cron-triggered workflows require a paid plan",
+							},
+						]),
+						{ status: 403 }
+					);
+				}),
+				http.put("*/accounts/:accountId/triggers/:scriptName", () => {
+					throw new Error(
+						"Event triggers should not be replaced after a Workflow deployment fails."
+					);
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Trigger configuration for "test-name" was only partially updated:
+
+				  Workflows:
+				    - Workflow "my-workflow" has "schedules" configured, but scheduled Workflows require a paid Workers plan.
+
+				  Event triggers:
+				    - Not updated because Workflow "my-workflow" failed to deploy.
+
+				Successful trigger changes were not rolled back.]
+			`);
+		});
+
+		it("should update event triggers when an unrelated Workflow fails", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "TARGET_WORKFLOW",
+						name: "target-workflow",
+						class_name: "TargetWorkflow",
+					},
+					{
+						binding: "UNRELATED_WORKFLOW",
+						name: "unrelated-workflow",
+						class_name: "UnrelatedWorkflow",
+					},
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "target-workflow",
+								},
+							],
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class TargetWorkflow extends WorkflowEntrypoint {};
+                export class UnrelatedWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			let eventTriggersUpdated = false;
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					({ params }) => {
+						if (params.workflowName === "unrelated-workflow") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10000,
+										message: "Unrelated Workflow failed",
+									},
+								]),
+								{ status: 500 }
+							);
+						}
+
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-workflow-id" })
+						);
+					}
+				),
+				http.put("*/accounts/:accountId/triggers/:scriptName", () => {
+					eventTriggersUpdated = true;
+					return HttpResponse.json(createFetchResult({}));
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "TARGET_WORKFLOW",
+						workflow_name: "target-workflow",
+						class_name: "TargetWorkflow",
+					},
+					{
+						type: "workflow",
+						name: "UNRELATED_WORKFLOW",
+						workflow_name: "unrelated-workflow",
+						class_name: "UnrelatedWorkflow",
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Trigger configuration for "test-name" was only partially updated'
+			);
+			expect(eventTriggersUpdated).toBe(true);
 		});
 
 		it("should deploy a workflow with schedules as an array of cron expressions", async ({
@@ -984,6 +1297,12 @@ describe("deploy", () => {
 				expect(std.warn).toContain(
 					'Deploying will reassign these workflows to "test-name".'
 				);
+				expect(std.warn).toContain(
+					"Workflow names must be unique per account."
+				);
+				expect(std.warn).toContain(
+					"If this reassignment is unintended, rename the workflow(s) in the Wrangler config."
+				);
 			});
 
 			it("should abort deploy when user declines the workflow conflict confirmation", async ({
@@ -1256,12 +1575,21 @@ describe("deploy", () => {
 
 				await runWrangler("deploy --strict");
 
-				expect(std.warn).toContain(
-					"already exist and belong to different workers"
-				);
-				expect(std.err).toContain(
-					"Aborting the deployment operation because of conflicts"
-				);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe following workflow(s) already exist and belong to different workers:[0m
+
+					    - "my-workflow" (currently belongs to "other-worker")
+
+					  Deploying will reassign these workflows to "test-name". Workflow names must be unique per account.
+					  If this reassignment is unintended, rename the workflow(s) in the Wrangler config.
+
+					"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the upload operation because of conflicts. To override and upload anyway, remove the \`--strict\` flag[0m
+
+					"
+				`);
 				expect(std.out).not.toContain("Uploaded");
 				expect(process.exitCode).not.toBe(0);
 			});

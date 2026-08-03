@@ -8,6 +8,7 @@ export const queuesListCommand = createCommand({
 		status: "stable",
 		owner: "Product: Queues",
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		page: {
 			type: "number",

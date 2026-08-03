@@ -1,3 +1,4 @@
+import { bold, red } from "@cloudflare/cli-shared-helpers/colors";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
@@ -59,12 +60,20 @@ export const pipelinesGetCommand = createCommand({
 		const general: Record<string, string> = {
 			ID: pipeline.id,
 			Name: pipeline.name,
+			Status: pipeline.status,
 			"Created At": new Date(pipeline.created_at).toLocaleString(),
 			"Modified At": new Date(pipeline.modified_at).toLocaleString(),
 		};
 
 		logger.log("General:");
 		logger.log(formatLabelledValues(general, { indentationCount: 2 }));
+
+		if (pipeline.status === "failed") {
+			logger.log(`\n${bold(red("✘ This pipeline is in a failed state."))}`);
+			logger.log(
+				red(`  Reason: ${pipeline.failure_reason ?? "Unknown failure"}`)
+			);
+		}
 
 		logger.log("\nPipeline SQL:");
 		logger.log(pipeline.sql);

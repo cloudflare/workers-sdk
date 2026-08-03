@@ -1,36 +1,49 @@
-/* Based heavily on code from https://github.com/BitySA/oauth2-auth-code-pkce
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-import { rmSync } from "node:fs";
 import {
 	getCloudflareComplianceRegion,
 	UserError,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { getAuthConfigFilePath, writeAuthConfigFile } from "./auth-config-file";
 import { getOauthToken } from "./callback-server";
-import { getClientIdFromEnv, getRevokeUrlFromEnv } from "./env-vars";
-import {
-	generateAuthUrl as defaultGenerateAuthUrl,
-	OAUTH_CALLBACK_URL,
-} from "./generate-auth-url";
+import { getAPIToken, requireApiToken } from "./credentials";
+import { getRevokeUrlFromEnv } from "./env-vars";
+import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
+import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
+import type { AuthConfigStorage } from "./config-file/auth";
+import type { TemporaryPreviewAccount } from "./config-file/temporary";
 import type { OAuthFlowContext } from "./context";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ApiCredentials,
+	ComplianceConfig,
+} from "@cloudflare/workers-utils";
+
+/**
+ * Reason why {@link OAuthFlowAPI.loginOrRefreshIfRequired} could not
+ * authenticate the user.
+ */
+export type LoginOrRefreshFailureReason =
+	/** no stored credentials and the environment is non-interactive (CI, piped stdin, etc.) so a browser login cannot be started. */
+	| "no-credentials-non-interactive"
+	/** stored credentials and the interactive login attempt was unsuccessful (user cancelled, etc.). */
+	| "no-credentials-login-failed"
+	/** the stored token has expired, refresh failed, and the environment is non-interactive so a browser login cannot be started. */
+	| "token-expired-non-interactive"
+	/** the stored token has expired, refresh failed, and the interactive login attempt was unsuccessful. */
+	| "token-expired-login-failed";
+
+/**
+ * Discriminated union returned by {@link OAuthFlowAPI.loginOrRefreshIfRequired}.
+ *
+ * When `loggedIn` is `true` the caller can proceed. When `false`, `reason`
+ * describes why authentication failed so the caller can surface a
+ * targeted error message.
+ */
+export type LoginOrRefreshResult =
+	| { loggedIn: true }
+	| { loggedIn: false; reason: LoginOrRefreshFailureReason };
 
 /**
  * Options for an interactive OAuth login.
@@ -51,6 +64,12 @@ export interface LoginProps {
 	callbackHost?: string;
 	/** Port the local callback server listens on. Defaults to `8976`. */
 	callbackPort?: number;
+	/**
+	 * Named auth profile to store the token under. When omitted, the default
+	 * profile (`default.toml`) is used.
+	 * Only for use by 'auth create', not exposed to the user
+	 */
+	profile?: string;
 }
 
 /**
@@ -58,12 +77,25 @@ export interface LoginProps {
  */
 export interface OAuthFlowAPI {
 	/**
+	 * Set the active auth profile for all subsequent storage lookups.
+	 *
+	 * Called once at top of command dispatch by the consumer after resolving the
+	 * active profile. `"default"` if never called.
+	 */
+	setProfile(profile: string): void;
+
+	getActiveProfile(): string;
+
+	/**
 	 * Open the authorize URL in the user's browser, wait for the callback to be
 	 * hit on the local HTTP server, exchange the code for an access token, and
 	 * persist the result to disk.
 	 *
 	 * Refuses to start when `ctx.hasEnvCredentials()` returns `true`.
 	 * Refuses to start when the compliance region is `fedramp_high`.
+	 *
+	 * When `props.profile` is set, the token is stored under that profile
+	 * instead of the active one. This is used by `auth create <name>`.
 	 *
 	 * @returns `true` on success, `false` when env credentials are present.
 	 */
@@ -75,8 +107,11 @@ export interface OAuthFlowAPI {
 	 *
 	 * No-op when `ctx.hasEnvCredentials()` returns `true` (env credentials
 	 * cannot be revoked).
+	 *
+	 * When `profile` is passed, operates on that profile instead of the
+	 * active one. This is used by `auth delete <name>`.
 	 */
-	logout(): Promise<void>;
+	logout(profile?: string): Promise<void>;
 
 	/**
 	 * If the user has no stored OAuth token, attempt an interactive login.
@@ -86,11 +121,12 @@ export interface OAuthFlowAPI {
 	 * Scopes are required in case an interactive login is triggered — the
 	 * consumer's scope catalog lives outside this package.
 	 *
-	 * @returns `true` when the user is logged in (or env credentials are
-	 * present), `false` when interactive login was needed but skipped (e.g.
-	 * non-interactive environment).
+	 * @returns `{ loggedIn: true }` when the user is authenticated (or env
+	 * credentials are present). When authentication fails, returns
+	 * `{ loggedIn: false, reason }` describing why — see
+	 * {@link LoginOrRefreshFailureReason}.
 	 */
-	loginOrRefreshIfRequired(props: LoginProps): Promise<boolean>;
+	loginOrRefreshIfRequired(props: LoginProps): Promise<LoginOrRefreshResult>;
 
 	/**
 	 * Read the OAuth access token from local state, refreshing it first if
@@ -103,18 +139,56 @@ export interface OAuthFlowAPI {
 	getOAuthTokenFromLocalState(): Promise<string | undefined>;
 
 	/**
-	 * Whether the stored OAuth access token has expired and a refresh is
-	 * required before it can be used. Returns `false` when env credentials are
-	 * present (per `ctx.hasEnvCredentials`), because the stored OAuth state is
-	 * not consulted in that case.
+	 * Resolve API credentials, preferring an active temporary preview account
+	 * (when one has been latched via {@link activateTemporaryAccount}) over the
+	 * env / stored-OAuth resolution performed by the shared credential resolver.
+	 *
+	 * Returns `undefined` when no credentials are available.
 	 */
-	isRefreshNeeded(): boolean;
+	getAPIToken(): ApiCredentials | undefined;
 
 	/**
-	 * Trigger an OAuth refresh-token rotation. Persists the new access/refresh
-	 * tokens to disk on success. Returns `false` on any failure.
+	 * Like {@link getAPIToken}, but throws a `UserError` when no credentials are
+	 * available.
 	 */
-	refreshToken(): Promise<boolean>;
+	requireApiToken(): ApiCredentials;
+
+	/**
+	 * Return the scopes granted to the stored OAuth token for the active
+	 * profile, or `undefined` when no OAuth token is stored.
+	 */
+	getScopes(): string[] | undefined;
+
+	/**
+	 * Establish whether `--temporary` is permitted for this invocation. Called
+	 * once at command dispatch by the consumer. Also drops any temporary account
+	 * latched by a previous dispatch, so that — when multiple commands share a
+	 * process (e.g. in tests) — each invocation starts a fresh temporary session.
+	 * No-op when the flow was created without a `temporary` context.
+	 */
+	setTemporaryAllowed(allowed: boolean): void;
+
+	/**
+	 * Whether `--temporary` is permitted for this invocation (see
+	 * {@link setTemporaryAllowed}). Always `false` without a `temporary` context.
+	 */
+	isTemporaryAllowed(): boolean;
+
+	/**
+	 * The temporary preview account latched for this invocation, or `undefined`.
+	 * Only set after {@link activateTemporaryAccount} has run.
+	 */
+	getActiveTemporaryAccount(): TemporaryPreviewAccount | undefined;
+
+	/**
+	 * The sole creator of the temporary-account latch: mint a fresh temporary
+	 * preview account (or reuse a cached one), latch it for this invocation, and
+	 * return it. Requires a `temporary` context.
+	 */
+	activateTemporaryAccount(): Promise<{
+		account: TemporaryPreviewAccount;
+		cached: boolean;
+	}>;
 }
 
 /**
@@ -130,6 +204,23 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		generateAuthUrl: ctx.generateAuthUrl ?? defaultGenerateAuthUrl,
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
 	};
+
+	let activeProfile = "default";
+
+	function getStorage(profile?: string): AuthConfigStorage {
+		return ctx.storageFactory(profile ?? activeProfile);
+	}
+
+	const getClientId = () =>
+		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
+	const consent = ctx.consent;
+
+	let temporaryAllowed = false;
+	let activeTemporaryAccount: TemporaryPreviewAccount | undefined;
+
+	const redirectUrl = new URL(ctx.redirectUri);
+	const defaultCallbackHost = redirectUrl.hostname;
+	const defaultCallbackPort = Number(redirectUrl.port);
 
 	async function login(props: LoginProps): Promise<boolean> {
 		if (ctx.hasEnvCredentials()) {
@@ -166,25 +257,19 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			{
 				browser: props.browser ?? true,
 				scopes: props.scopes,
-				clientId: getClientIdFromEnv(),
-				denied: {
-					url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
-					error:
-						"Error: Consent denied. You must grant consent to Wrangler in order to login.\n" +
-						"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable",
-				},
-				granted: {
-					url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
-				},
-				callbackHost: props.callbackHost ?? "localhost",
-				callbackPort: props.callbackPort ?? 8976,
+				clientId: getClientId(),
+				redirectUri: ctx.redirectUri,
+				denied: consent.denied,
+				granted: consent.granted,
+				callbackHost: props.callbackHost ?? defaultCallbackHost,
+				callbackPort: props.callbackPort ?? defaultCallbackPort,
 			},
 			oauthFlowState,
 			ctx,
 			generators
 		);
 
-		writeAuthConfigFile({
+		getStorage(props.profile).write({
 			oauth_token: oauth.token?.value ?? "",
 			expiration_time: oauth.token?.expiry,
 			refresh_token: oauth.refreshToken?.value,
@@ -193,25 +278,30 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 		ctx.logger.log(`Successfully logged in.`);
 
+		clearTemporaryAccount();
 		ctx.purgeOnLoginOrLogout?.();
 
 		return true;
 	}
 
-	function isRefreshNeeded(): boolean {
+	function isRefreshNeeded(profile?: string): boolean {
 		if (ctx.hasEnvCredentials()) {
 			return false;
 		}
-		const { accessToken } = readStoredAuthState({ warningLogger: ctx.logger });
+		const { accessToken } = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage: getStorage(profile),
+		});
 		return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 	}
 
-	async function refreshToken(): Promise<boolean> {
+	async function refreshToken(profile?: string): Promise<boolean> {
 		// `exchangeRefreshTokenForAccessToken` reads the refresh token fresh from
 		// disk on every call, so we always pick up the latest rotation written by a
 		// sibling Wrangler process. Refresh tokens are single-use, so a long-lived
 		// process such as `wrangler dev` would otherwise send a stale value and get
 		// a 401 from the token endpoint.
+		const storage = getStorage(profile);
 
 		try {
 			const {
@@ -223,9 +313,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				scopes,
 			} = await exchangeRefreshTokenForAccessToken(
 				ctx.logger,
-				ctx.isNonInteractiveOrCI
+				ctx.isNonInteractiveOrCI,
+				getClientId(),
+				storage
 			);
-			writeAuthConfigFile({
+			storage.write({
 				oauth_token,
 				expiration_time,
 				refresh_token,
@@ -240,36 +332,61 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 	}
 
-	async function loginOrRefreshIfRequired(props: LoginProps): Promise<boolean> {
+	async function loginOrRefreshIfRequired(
+		props: LoginProps
+	): Promise<LoginOrRefreshResult> {
 		// If env credentials are present, the consumer's credential resolver
 		// will use those rather than the stored OAuth token, so we don't need
 		// to refresh or log in.
 		if (ctx.hasEnvCredentials()) {
-			return true;
+			return { loggedIn: true };
 		}
 		// TODO: ask permission before opening browser
-		const stored = readStoredAuthState({ warningLogger: ctx.logger });
+		const stored = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage: getStorage(props.profile),
+		});
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecatedApiToken is a deprecated property, but still needs to be supported for backwards compatibility so we need to handle appropriately here */
 		if (!stored.accessToken && !stored.deprecatedApiToken) {
 			// Not logged in.
 			// If we are not interactive, we cannot ask the user to login
-			return !ctx.isNonInteractiveOrCI() && (await login(props));
-		} else if (isRefreshNeeded()) {
+			if (ctx.isNonInteractiveOrCI()) {
+				return {
+					loggedIn: false,
+					reason: "no-credentials-non-interactive",
+				};
+			}
+			if (await login(props)) {
+				return { loggedIn: true };
+			}
+			return { loggedIn: false, reason: "no-credentials-login-failed" };
+		} else if (isRefreshNeeded(props.profile)) {
 			// We're logged in, but the refresh token seems to have expired,
 			// so let's try to refresh it
-			const didRefresh = await refreshToken();
+			const didRefresh = await refreshToken(props.profile);
 			if (didRefresh) {
 				// The token was refreshed, so we're done here
-				return true;
-			} else {
-				// If the refresh token isn't valid, then we ask the user to login again
-				return !ctx.isNonInteractiveOrCI() && (await login(props));
+				return { loggedIn: true };
 			}
+			// If the refresh token isn't valid, then we ask the user to login again
+			if (ctx.isNonInteractiveOrCI()) {
+				return {
+					loggedIn: false,
+					reason: "token-expired-non-interactive",
+				};
+			}
+			if (await login(props)) {
+				return { loggedIn: true };
+			}
+			return { loggedIn: false, reason: "token-expired-login-failed" };
 		} else {
-			return true;
+			return { loggedIn: true };
 		}
 	}
 
-	async function logout(): Promise<void> {
+	async function logout(profile?: string): Promise<void> {
+		const clearedTemporary = clearTemporaryAccount();
+
 		if (ctx.hasEnvCredentials()) {
 			// Env credentials override any login details, so we cannot log out.
 			ctx.logger.log(
@@ -281,14 +398,19 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 		const storedRefreshToken = readStoredAuthState({
 			warningLogger: ctx.logger,
+			storage: getStorage(profile),
 		}).refreshToken;
 		if (!storedRefreshToken) {
-			ctx.logger.log("Not logged in, exiting...");
+			ctx.logger.log(
+				clearedTemporary
+					? "Cleared temporary preview account."
+					: "Not logged in, exiting..."
+			);
 			return;
 		}
 
 		const body =
-			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
+			`client_id=${encodeURIComponent(getClientId())}&` +
 			`token_type_hint=refresh_token&` +
 			`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
 
@@ -300,14 +422,17 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			},
 		});
 		await response.text(); // blank text? would be nice if it was something meaningful
-		rmSync(getAuthConfigFilePath());
+		getStorage(profile).clear();
 		ctx.logger.log(`Successfully logged out.`);
 		ctx.purgeOnLoginOrLogout?.();
 	}
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {
 		// Check if we have an OAuth token
-		let stored = readStoredAuthState({ warningLogger: ctx.logger });
+		let stored = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage: getStorage(),
+		});
 		if (!stored.accessToken) {
 			return undefined;
 		}
@@ -325,22 +450,104 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.
-			stored = readStoredAuthState({ warningLogger: ctx.logger });
+			stored = readStoredAuthState({
+				warningLogger: ctx.logger,
+				storage: getStorage(),
+			});
 		}
 
 		return stored.accessToken?.value;
 	}
 
+	function getAPITokenInternal(): ApiCredentials | undefined {
+		if (activeTemporaryAccount) {
+			return { apiToken: activeTemporaryAccount.account.apiToken };
+		}
+
+		return getAPIToken({
+			storage: getStorage(),
+			warningLogger: ctx.logger,
+			allowGlobalAuthKey: ctx.allowGlobalAuthKey,
+		});
+	}
+
+	function requireApiTokenInternal(): ApiCredentials {
+		if (activeTemporaryAccount) {
+			return { apiToken: activeTemporaryAccount.account.apiToken };
+		}
+
+		return requireApiToken({
+			storage: getStorage(),
+			warningLogger: ctx.logger,
+			allowGlobalAuthKey: ctx.allowGlobalAuthKey,
+		});
+	}
+
+	function setTemporaryAllowed(allowed: boolean): void {
+		temporaryAllowed = allowed && ctx.temporary !== undefined;
+		activeTemporaryAccount = undefined;
+	}
+
+	function isTemporaryAllowed(): boolean {
+		return temporaryAllowed;
+	}
+
+	function getActiveTemporaryAccount(): TemporaryPreviewAccount | undefined {
+		return activeTemporaryAccount;
+	}
+
+	async function activateTemporaryAccount(): Promise<{
+		account: TemporaryPreviewAccount;
+		cached: boolean;
+	}> {
+		if (!ctx.temporary) {
+			throw new UserError(
+				"Temporary preview accounts are not supported by this CLI.",
+				{ telemetryMessage: "user temporary account unsupported" }
+			);
+		}
+
+		const result = await getOrCreateTemporaryPreviewAccount({
+			...ctx.temporary,
+			logger: ctx.logger,
+		});
+		activeTemporaryAccount = result.account;
+		return result;
+	}
+
+	function clearTemporaryAccount(): boolean {
+		activeTemporaryAccount = undefined;
+		return ctx.temporary?.storage.clear() ?? false;
+	}
+
+	function setProfile(profile: string): void {
+		activeProfile = profile;
+	}
+
+	function getActiveProfile(): string {
+		return activeProfile;
+	}
+
+	function getScopes(): string[] | undefined {
+		return readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage: getStorage(),
+		}).scopes;
+	}
+
 	return {
+		setProfile,
+		getActiveProfile,
 		login,
 		logout,
 		loginOrRefreshIfRequired,
 		getOAuthTokenFromLocalState,
-		isRefreshNeeded,
-		refreshToken,
+		getAPIToken: getAPITokenInternal,
+		requireApiToken: requireApiTokenInternal,
+		getScopes,
+		setTemporaryAllowed,
+		isTemporaryAllowed,
+		getActiveTemporaryAccount,
+		activateTemporaryAccount,
 	};
 }
-
-// Re-export the constant for callers that want to know about the redirect URI
-// without depending on `./generate-auth-url`.
-export { OAUTH_CALLBACK_URL };

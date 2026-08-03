@@ -1,20 +1,43 @@
-import type {
-	generateAuthUrl as defaultGenerateAuthUrl,
-	OAUTH_CALLBACK_URL,
-} from "./generate-auth-url";
+import type { AuthConfigStorage } from "./config-file/auth";
+import type { TemporaryAccountStorage } from "./config-file/temporary";
+import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+import type { Logger } from "@cloudflare/workers-utils";
+
+/**
+ * The dependencies the OAuth flow needs to mint/reuse a short-lived "temporary
+ * preview account"
+ */
+export interface OAuthFlowTemporaryContext {
+	/** Persistence backend for the cached temporary preview account. */
+	storage: TemporaryAccountStorage;
+	/**
+	 * Hook to customise the terms-acceptance interactive prompt
+	 *  - question: the question to ask a user in interactive mode.
+	 *    return answer === "yes" (must be the literal string)
+	 *  - notice: the notice to print on stderr if in non-interactive mode
+	 *    always return true
+	 */
+	prompt: (question: string, notice: string) => Promise<boolean>;
+}
+
+/**
+ * The branded OAuth consent pages the provider redirects the browser to after
+ * the user grants or denies consent.
+ */
+export interface OAuthConsentPages {
+	/** Redirect target shown after the user grants consent. */
+	granted: { url: string };
+	/** Redirect target shown after the user denies consent, plus the error
+	 * surfaced to the terminal. */
+	denied: { url: string; error: string };
+}
 
 /**
  * Subset of the wrangler `logger` singleton used by the OAuth flow.
  * Consumers pass in an implementation that maps to their own logging surface.
  */
-export interface OAuthFlowLogger {
-	debug(...args: unknown[]): void;
-	info(...args: unknown[]): void;
-	log(...args: unknown[]): void;
-	warn(...args: unknown[]): void;
-	error(...args: unknown[]): void;
-}
+export type OAuthFlowLogger = Logger;
 
 /**
  * Dependency-injection surface for {@link createOAuthFlow}.
@@ -57,6 +80,56 @@ export interface OAuthFlowContext {
 	purgeOnLoginOrLogout?: () => void;
 
 	/**
+	 * The OAuth client ID identifying the consuming CLI to the Cloudflare OAuth
+	 * server. Consumer-specific (each CLI registers its own OAuth app), so it is
+	 * required. Pass a function to resolve it lazily — e.g. so an env-var read at
+	 * call time can switch between production and staging apps.
+	 */
+	clientId: string | (() => string);
+
+	/**
+	 * The branded consent pages the provider redirects to after the user grants
+	 * or denies consent.
+	 */
+	consent: OAuthConsentPages;
+
+	/**
+	 * The `redirect_uri` registered on the consumer's OAuth app
+	 */
+	redirectUri: string;
+
+	/**
+	 * Factory that returns a persistence backend for the given auth profile.
+	 *
+	 * Called with the active profile name (e.g. `"default"`) on every storage
+	 * access so the flow always reads/writes the correct backing store.
+	 * The consumer is responsible for mapping profile names to concrete storage
+	 * backends (e.g. wrangler maps each profile to a separate TOML file under
+	 * the global config directory).
+	 *
+	 * Consumers that want OS-keyring-backed encryption pass the
+	 * `storageFactory` from {@link createCredentialStorageContext} (in the
+	 * `credential-store` module) — for each profile that adapter resolves
+	 * between the plaintext TOML file and the encrypted-file-with-keyring-key
+	 * implementation on every call, so runtime preference changes
+	 * (`--use-keyring` / `CLOUDFLARE_AUTH_USE_KEYRING`) take effect without
+	 * rebuilding the flow.
+	 */
+	storageFactory: (profile?: string) => AuthConfigStorage;
+
+	/**
+	 * Whether the flow's credential resolvers (`getAPIToken` / `requireApiToken`)
+	 * should honour the global API key + email pair in addition to scoped API
+	 * tokens.
+	 */
+	allowGlobalAuthKey: boolean;
+
+	/**
+	 * Dependencies for minting/reusing a temporary preview account.
+	 */
+	temporary: OAuthFlowTemporaryContext | undefined;
+
+	/**
 	 * Override the OAuth authorize URL generator. Used by tests to produce a
 	 * deterministic URL for snapshot testing. Defaults to the standard
 	 * implementation.
@@ -70,5 +143,3 @@ export interface OAuthFlowContext {
 	 */
 	generateRandomState?: typeof defaultGenerateRandomState;
 }
-
-export type { OAUTH_CALLBACK_URL };

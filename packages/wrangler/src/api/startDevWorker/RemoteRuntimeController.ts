@@ -1,7 +1,10 @@
 import assert from "node:assert";
-import { MissingConfigError } from "@cloudflare/workers-utils";
+import {
+	MissingConfigError,
+	retryOnAPIFailure,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Mutex } from "miniflare";
+import { Mutex, type Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../../package.json";
 import {
@@ -18,7 +21,6 @@ import { logger } from "../../logger";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
 import { getAccessHeaders } from "../../user/access";
-import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
@@ -76,6 +78,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						this.#abortController.signal,
 						props.name
 					),
+				logger,
 				undefined,
 				undefined,
 				this.#abortController.signal
@@ -131,7 +134,6 @@ export class RemoteRuntimeController extends RuntimeController {
 					complianceConfig: props.complianceConfig,
 					accountId: props.accountId,
 					env: props.env,
-					useServiceEnvironments: props.useServiceEnvironments,
 					host: props.host,
 					routes: props.routes,
 					sendMetrics: props.sendMetrics,
@@ -150,7 +152,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				modules: props.modules,
 				accountId: props.accountId,
 				name: props.name,
-				useServiceEnvironments: props.useServiceEnvironments,
 				env: props.env,
 				isWorkersSite: props.isWorkersSite,
 				assets: props.assets,
@@ -177,6 +178,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						this.#abortController.signal,
 						props.minimal_mode
 					),
+				logger,
 				undefined,
 				undefined,
 				this.#abortController.signal
@@ -244,7 +246,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			accountId: auth.accountId,
 			apiToken: auth.apiToken,
 			env: config.env,
-			useServiceEnvironments: config.legacy?.useServiceEnvironments,
 			host: config.dev.origin?.hostname,
 			routes,
 			sendMetrics: config.sendMetrics,
@@ -292,7 +293,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			accountId: auth.accountId,
 			complianceConfig: { compliance_region: config.complianceRegion },
 			name: config.name,
-			useServiceEnvironments: config.legacy?.useServiceEnvironments,
 			env: config.env,
 			isWorkersSite: config.legacy?.site !== undefined,
 			assets: config.assets,
@@ -322,7 +322,10 @@ export class RemoteRuntimeController extends RuntimeController {
 			return false;
 		}
 
-		const accessHeaders = await getAccessHeaders(token.host);
+		const accessHeaders = await getAccessHeaders(
+			token.host,
+			this.#abortController.signal
+		);
 
 		const proxyData: ProxyData = {
 			userWorkerUrl: {
@@ -486,6 +489,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
 		logger.log(chalk.dim("⎔ Refreshing preview token..."));
 		void this.#mutex.runWith(() => this.#refreshPreviewToken());
+	}
+
+	override get mf(): Miniflare | undefined {
+		return undefined;
 	}
 
 	override async teardown() {

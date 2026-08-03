@@ -79,7 +79,9 @@ export default defineConfig((options) => [
 		entry: ["src/cli.ts"],
 		platform: "node",
 		format: "cjs",
-		dts: true,
+		dts: {
+			resolve: ["@cloudflare/workflows-shared/src/types"],
+		},
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,
@@ -110,5 +112,19 @@ export default defineConfig((options) => [
 				: {}),
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
+		esbuildOptions(esbuildOptions) {
+			esbuildOptions.logOverride = {
+				...esbuildOptions.logOverride,
+				// Suppress the warning for the intentional runtime dynamic
+				// `import()` in `@cloudflare/config`'s `loadConfig`
+				// (packages/config/src/load.ts). The import is unanalyzable by
+				// design: the specifier is computed at runtime and the
+				// `with: { cf: "no-cache" }` attribute is consumed by a Node
+				// `registerHooks` resolver. esbuild already preserves the call
+				// verbatim — only the warning is noise. This suppression is
+				// needed as long as wrangler bundles `@cloudflare/config`.
+				"unsupported-dynamic-import": "silent",
+			};
+		},
 	},
 ]);

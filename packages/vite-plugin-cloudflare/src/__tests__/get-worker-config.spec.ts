@@ -177,7 +177,7 @@ describe("resolveWorkerType", () => {
 		);
 		expect(() =>
 			resolveWorkerType(config, raw, nonApplicable, { configPath })
-		).toThrowError(
+		).toThrow(
 			/The provided Wrangler config main field \(.*?index\.ts\) doesn't point to an existing file/
 		);
 	});

@@ -1,7 +1,22 @@
 export * from "./public";
-export { ConfigSchema } from "./schema";
+export {
+	ConfigExportsSchema,
+	InputWorkerSchema,
+	OutputWorkerSchema,
+	ModuleTypeSchema,
+	SettingsSchema,
+} from "./schema";
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
-export { resolveWorkerDefinition } from "./worker-definition";
+export { loadAndValidateConfig } from "./config-loader";
+export { resolveExportDefinition } from "./definition";
 export type { LoadConfigResult } from "./load";
+export type { LoadAndValidateConfigResult } from "./config-loader";
+export type {
+	ParsedConfigExports,
+	ParsedInputWorkerConfig,
+	ParsedOutputWorkerConfig,
+	ParsedSettingsConfig,
+	ModuleType,
+} from "./schema";

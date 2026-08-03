@@ -20,6 +20,8 @@ import {
 import type { DatabaseCreationResult } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
+// Keep in sync with the local provisioning copy in
+// packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
 export async function createD1Database(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -56,8 +58,14 @@ export async function createD1Database(
 			throw new UserError(
 				dedent`
 					You have reached the maximum number of D1 databases for your account.
-					Please consider deleting unused databases, or visit the D1 documentation to learn more: ${D1_DOCS_URL}
 
+					On the Workers Free plan? Upgrade to create more:
+					https://dash.cloudflare.com/${accountId}/workers/plans
+
+					Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
+					${D1_DOCS_URL}
+
+					Or free up space:
 					To list your existing databases, run: wrangler d1 list
 					To delete a database, run: wrangler d1 delete <database-name>
 				`,
@@ -77,6 +85,7 @@ export const d1CreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: D1",
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		name: {
 			type: "string",

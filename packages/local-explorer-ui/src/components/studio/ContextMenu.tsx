@@ -9,7 +9,7 @@ import {
 } from "react";
 import type { VirtualElement } from "@floating-ui/react";
 import type { Icon } from "@phosphor-icons/react";
-import type { PropsWithChildren, ReactNode } from "react";
+import type { JSX, PropsWithChildren, ReactNode } from "react";
 
 interface DropdownButtonItem {
 	destructiveAction?: boolean;

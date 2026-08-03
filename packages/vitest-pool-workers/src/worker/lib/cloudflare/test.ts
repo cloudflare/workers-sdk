@@ -10,6 +10,8 @@ export {
 	runInDurableObject,
 	runDurableObjectAlarm,
 	listDurableObjectIds,
+	evictDurableObject,
+	evictAllDurableObjects,
 	createExecutionContext,
 	waitOnExecutionContext,
 	createScheduledController,

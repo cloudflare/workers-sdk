@@ -48,10 +48,6 @@ export class Counter extends DurableObject {
 		this.#webSocketMessages.push(value);
 		ws.send(value);
 	}
-
-	webSocketClose() {}
-
-	webSocketError() {}
 }
 
 export class SQLiteDurableObject extends DurableObject {

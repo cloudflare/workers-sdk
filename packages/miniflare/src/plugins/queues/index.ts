@@ -2,16 +2,20 @@ import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
 import {
+	getQueueServiceName,
 	QueueBindings,
 	QueueConsumerOptionsSchema,
 	QueueProducerOptionsSchema,
+	SERVICE_QUEUE_PREFIX,
 	SharedBindings,
 } from "../../workers";
 import { getUserServiceName } from "../core";
 import {
 	getMiniflareObjectBindings,
+	namespaceKeys,
 	objectEntryWorker,
 	ProxyNodeBinding,
+	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_LOOPBACK,
 } from "../shared";
 import type {
@@ -25,25 +29,26 @@ export const QueuesOptionsSchema = z.object({
 	queueProducers: z
 		.union([
 			z.record(
-				QueueProducerOptionsSchema.merge(
-					z.object({
-						remoteProxyConnectionString: z
-							.custom<RemoteProxyConnectionString>()
-							.optional(),
-					})
-				)
+				z.string(),
+				QueueProducerOptionsSchema.extend({
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
+						.optional(),
+				})
 			),
 			z.string().array(),
-			z.record(z.string()),
+			z.record(z.string(), z.string()),
 		])
 		.optional(),
 	queueConsumers: z
-		.union([z.record(QueueConsumerOptionsSchema), z.string().array()])
+		.union([
+			z.record(z.string(), QueueConsumerOptionsSchema),
+			z.string().array(),
+		])
 		.optional(),
 });
 
 export const QUEUES_PLUGIN_NAME = "queues";
-const SERVICE_QUEUE_PREFIX = `${QUEUES_PLUGIN_NAME}:queue`;
 const QUEUE_BROKER_OBJECT_CLASS_NAME = "QueueBrokerObject";
 const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: SERVICE_QUEUE_PREFIX,
@@ -52,15 +57,16 @@ const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 
 export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	options: QueuesOptionsSchema,
+	bindingTypeDescription: "Queue producer",
 	getBindings(options) {
 		const queues = bindingEntries(options.queueProducers);
 		return queues.map<Worker_Binding>(([name, id]) => ({
 			name,
-			queue: { name: `${SERVICE_QUEUE_PREFIX}:${id}` },
+			queue: { name: getQueueServiceName(id) },
 		}));
 	},
 	getNodeBindings(options) {
-		const queues = bindingKeys(options.queueProducers);
+		const queues = namespaceKeys(options.queueProducers);
 		return Object.fromEntries(
 			queues.map((name) => [name, new ProxyNodeBinding()])
 		);
@@ -70,13 +76,18 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		workerNames,
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
-		unsafeStickyBlobs,
+		devRegistryEnabled,
 	}) {
-		const queues = bindingEntries(options.queueProducers);
-		if (queues.length === 0) return [];
+		const produced = bindingEntries(options.queueProducers).map(([, id]) => id);
+		// Consumed queues get a broker service even without a local producer so
+		// producers in other dev sessions can reach this process's broker through
+		// the dev registry's debug port.
+		const consumed = namespaceKeys(options.queueConsumers);
+		const queueIds = new Set([...produced, ...consumed]);
+		if (queueIds.size === 0) return [];
 
-		const services = queues.map<Service>(([_, id]) => ({
-			name: `${SERVICE_QUEUE_PREFIX}:${id}`,
+		const services = Array.from(queueIds).map<Service>((id) => ({
+			name: getQueueServiceName(id),
 			worker: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
 		}));
 
@@ -107,7 +118,7 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 					{
 						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 						durableObjectNamespace: {
@@ -126,6 +137,21 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						name: QueueBindings.SERVICE_WORKER_PREFIX + name,
 						service: { name: getUserServiceName(name) },
 					})),
+					// When the dev registry is enabled, a produced queue's consumer may
+					// live in another dev session: the broker delivers otherwise-dropped
+					// messages through the dev-registry proxy (see
+					// `QueueBrokerObject.#tryRemoteConsumer`).
+					...(devRegistryEnabled
+						? [
+								{
+									name: QueueBindings.MAYBE_SERVICE_QUEUE_PROXY,
+									service: {
+										name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+										entrypoint: "ExternalQueueProxy",
+									},
+								},
+							]
+						: []),
 				],
 			},
 		};
@@ -148,21 +174,6 @@ function bindingEntries(
 			name,
 			typeof opts === "string" ? opts : opts.queueName,
 		]);
-	} else {
-		return [];
-	}
-}
-
-function bindingKeys(
-	namespaces?:
-		| Record<string, { queueName: string; deliveryDelay?: number }>
-		| string[]
-		| Record<string, string>
-): string[] {
-	if (Array.isArray(namespaces)) {
-		return namespaces;
-	} else if (namespaces !== undefined) {
-		return Object.keys(namespaces);
 	} else {
 		return [];
 	}

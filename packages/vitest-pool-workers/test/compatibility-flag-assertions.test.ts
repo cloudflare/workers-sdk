@@ -145,7 +145,7 @@ describe("FlagAssertions", () => {
 					enableFlag: "enable-flag",
 					defaultOnDate: "invalid-date",
 				});
-			}).toThrowError('Invalid date format: "invalid-date"');
+			}).toThrow('Invalid date format: "invalid-date"');
 		});
 
 		it("throws error when compatibilityDate is invalid", ({ expect }) => {
@@ -161,7 +161,7 @@ describe("FlagAssertions", () => {
 					enableFlag: "enable-flag",
 					defaultOnDate: "2023-01-01",
 				});
-			}).toThrowError('Invalid date format: "invalid-date"');
+			}).toThrow('Invalid date format: "invalid-date"');
 		});
 	});
 

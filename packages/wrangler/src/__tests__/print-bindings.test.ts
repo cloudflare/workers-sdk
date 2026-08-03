@@ -167,7 +167,7 @@ describe("warnOrError", () => {
 		it("throws when `remote: true` is set on a local-only binding", ({
 			expect,
 		}) => {
-			expect(() => warnOrError("ratelimit", true)).toThrowError(
+			expect(() => warnOrError("ratelimit", true)).toThrow(
 				"Rate Limit bindings do not support accessing remote resources."
 			);
 		});
@@ -185,7 +185,7 @@ describe("warnOrError", () => {
 		it("throws when `remote: false` is set on a remote-only binding", ({
 			expect,
 		}) => {
-			expect(() => warnOrError("vectorize", false)).toThrowError(
+			expect(() => warnOrError("vectorize", false)).toThrow(
 				"Vectorize Index bindings do not support local development. You can set `remote: true` for the binding definition in your configuration file to access a remote version of the resource."
 			);
 		});
@@ -211,7 +211,7 @@ describe("warnOrError", () => {
 		it("throws when `remote: false` is set on an always-remote binding", ({
 			expect,
 		}) => {
-			expect(() => warnOrError("ai", false)).toThrowError(
+			expect(() => warnOrError("ai", false)).toThrow(
 				"AI bindings do not support local development. You can set `remote: true` for the binding definition in your configuration file to access a remote version of the resource."
 			);
 		});

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import onExit from "signal-exit";
+import { onExit } from "signal-exit";
 import { removeDirSync } from "./fs-helpers";
 
 /**

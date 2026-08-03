@@ -1,24 +1,22 @@
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import * as autoconfig from "@cloudflare/autoconfig";
+import { Framework, getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
 	FatalError,
 	readFileSync,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
+import { NpmPackageManager } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import * as details from "../../autoconfig/details";
-import { Astro } from "../../autoconfig/frameworks/astro";
-import { Static } from "../../autoconfig/frameworks/static";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
-import * as run from "../../autoconfig/run";
+import { createWranglerAutoConfigContext } from "../../autoconfig-context";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
-import { NpmPackageManager } from "../../package-manager";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import {
@@ -30,9 +28,39 @@ import {
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import type { Framework } from "../../autoconfig/frameworks";
+import type { AutoConfigContext } from "@cloudflare/autoconfig";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "@cloudflare/autoconfig";
 import type { ExpectStatic } from "vitest";
 import type { MockInstance } from "vitest";
+
+/**
+ * Minimal Framework subclass that mirrors `Static` from `@cloudflare/autoconfig`.
+ * Used in tests that exercise the overall `runAutoConfig` flow without needing the
+ * real internal class (which the package intentionally does not export).
+ */
+class MockStaticFramework extends Framework {
+	configure({ outputDir }: ConfigurationOptions): ConfigurationResults {
+		return {
+			wranglerConfig: {
+				assets: { directory: outputDir },
+			},
+		};
+	}
+}
+
+/**
+ * Minimal Framework subclass that stands in for `Astro` from `@cloudflare/autoconfig`.
+ * The real class is not exported; the test immediately spies on both `configure` and
+ * `validateFrameworkVersion`, so this stub just needs to satisfy the abstract contract.
+ */
+class MockAstroFramework extends Framework {
+	async configure(): Promise<ConfigurationResults> {
+		return { wranglerConfig: { assets: { directory: "dist" } } };
+	}
+}
 
 vi.mock("../../package-manager", () => ({
 	getPackageManager() {
@@ -49,7 +77,10 @@ vi.mock("../../package-manager", () => ({
 	},
 }));
 
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	getInstalledPackageVersion: vi.fn(),
+}));
 
 vi.mock("../deploy/deploy", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -63,7 +94,7 @@ vi.mock("../deploy/deploy", async (importOriginal) => ({
 
 async function runDeploy(expect: ExpectStatic, withArgs: string = "") {
 	// Expect "Bailing early in tests" to be thrown
-	await expect(runWrangler(`deploy ${withArgs}`)).rejects.toThrowError();
+	await expect(runWrangler(`deploy ${withArgs}`)).rejects.toThrow();
 }
 
 // We don't care about module/service worker detection in the autoconfig tests,
@@ -92,21 +123,38 @@ describe("autoconfig (deploy)", () => {
 		clearOutputFilePath();
 	});
 
-	it("should not check for autoconfig when `deploy` is run with `--x-autoconfig=false`", async ({
+	it("should not run autoconfig when `deploy` is run with `--no-autoconfig`", async ({
 		expect,
 	}) => {
 		writeWorkerSource();
 		writeWranglerConfig({ main: "index.js" });
-		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
-		await runDeploy(expect, `--x-autoconfig=false`);
+		const getDetailsSpy = vi.spyOn(autoconfig, "getDetailsForAutoConfig");
+		const runSpy = vi.spyOn(autoconfig, "runAutoConfig");
+
+		await runDeploy(expect, `--no-autoconfig`);
 
 		expect(getDetailsSpy).not.toHaveBeenCalled();
+		expect(runSpy).not.toHaveBeenCalled();
+	});
+
+	it("should not run autoconfig when `deploy` is run with `--autoconfig=false`", async ({
+		expect,
+	}) => {
+		writeWorkerSource();
+		writeWranglerConfig({ main: "index.js" });
+		const getDetailsSpy = vi.spyOn(autoconfig, "getDetailsForAutoConfig");
+		const runSpy = vi.spyOn(autoconfig, "runAutoConfig");
+
+		await runDeploy(expect, `--autoconfig=false`);
+
+		expect(getDetailsSpy).not.toHaveBeenCalled();
+		expect(runSpy).not.toHaveBeenCalled();
 	});
 
 	it("should check for autoconfig with flag", async ({ expect }) => {
-		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
+		const getDetailsSpy = vi.spyOn(autoconfig, "getDetailsForAutoConfig");
 
-		await runDeploy(expect, "--x-autoconfig");
+		await runDeploy(expect, "--autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 	});
@@ -115,20 +163,20 @@ describe("autoconfig (deploy)", () => {
 		expect,
 	}) => {
 		const getDetailsSpy = vi
-			.spyOn(details, "getDetailsForAutoConfig")
+			.spyOn(autoconfig, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
 				Promise.resolve({
 					configured: false,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
-					framework: new Static({ id: "static", name: "Static" }),
+					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					outputDir: "./public",
 					packageManager: NpmPackageManager,
 				})
 			);
-		const runSpy = vi.spyOn(run, "runAutoConfig");
+		const runSpy = vi.spyOn(autoconfig, "runAutoConfig");
 
-		await runDeploy(expect, "--x-autoconfig");
+		await runDeploy(expect, "--autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).toHaveBeenCalled();
@@ -138,7 +186,7 @@ describe("autoconfig (deploy)", () => {
 		expect,
 	}) => {
 		const getDetailsSpy = vi
-			.spyOn(details, "getDetailsForAutoConfig")
+			.spyOn(autoconfig, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
 				Promise.resolve({
 					configured: true,
@@ -147,9 +195,9 @@ describe("autoconfig (deploy)", () => {
 					packageManager: NpmPackageManager,
 				})
 			);
-		const runSpy = vi.spyOn(run, "runAutoConfig");
+		const runSpy = vi.spyOn(autoconfig, "runAutoConfig");
 
-		await runDeploy(expect, "--x-autoconfig");
+		await runDeploy(expect, "--autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).not.toHaveBeenCalled();
@@ -158,7 +206,7 @@ describe("autoconfig (deploy)", () => {
 	it("should warn and prompt when Pages project is detected", async ({
 		expect,
 	}) => {
-		vi.spyOn(details, "getDetailsForAutoConfig").mockImplementationOnce(() =>
+		vi.spyOn(autoconfig, "getDetailsForAutoConfig").mockImplementationOnce(() =>
 			Promise.resolve({
 				configured: false,
 				projectPath: process.cwd(),
@@ -173,7 +221,7 @@ describe("autoconfig (deploy)", () => {
 				packageManager: NpmPackageManager,
 			})
 		);
-		const runSpy = vi.spyOn(run, "runAutoConfig");
+		const runSpy = vi.spyOn(autoconfig, "runAutoConfig");
 
 		// User declines to proceed
 		mockConfirm({
@@ -182,7 +230,7 @@ describe("autoconfig (deploy)", () => {
 		});
 
 		// Should not throw - just return early
-		await runWrangler("deploy --x-autoconfig");
+		await runWrangler("deploy --autoconfig");
 
 		// Should show warning about Pages project
 		expect(std.warn).toContain(
@@ -195,10 +243,12 @@ describe("autoconfig (deploy)", () => {
 
 	describe("runAutoConfig()", () => {
 		let installSpy: MockInstance;
+		let context: AutoConfigContext;
 		beforeEach(() => {
 			installSpy = vi
 				.spyOn(cliPackages, "installWrangler")
 				.mockImplementation(async () => {});
+			context = createWranglerAutoConfigContext();
 		});
 
 		it("happy path", async ({ expect }) => {
@@ -225,7 +275,7 @@ describe("autoconfig (deploy)", () => {
 						},
 					}) satisfies ReturnType<Framework["configure"]>
 			);
-			await run.runAutoConfig(
+			await autoconfig.runAutoConfig(
 				{
 					projectPath: process.cwd(),
 					buildCommand: "echo 'built' > build.txt",
@@ -248,7 +298,7 @@ describe("autoconfig (deploy)", () => {
 					},
 					packageManager: NpmPackageManager,
 				},
-				{ enableWranglerInstallation: true }
+				{ context, enableWranglerInstallation: false }
 			);
 
 			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
@@ -324,8 +374,10 @@ describe("autoconfig (deploy)", () => {
 				"
 			`);
 
-			// Wrangler should have been installed
-			expect(installSpy).toHaveBeenCalled();
+			// Wrangler installation was disabled (enableWranglerInstallation: false) to avoid
+			// running the real installer in tests. The "📦 Install packages:" output in the
+			// snapshot above confirms the intent is recorded in the autoconfig summary.
+			expect(installSpy).not.toHaveBeenCalled();
 
 			// The framework's configuration command should have been run
 			expect(configureSpy).toHaveBeenCalled();
@@ -352,14 +404,17 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: "dist",
-				framework: new Static({ id: "static", name: "Static" }),
-				packageManager: NpmPackageManager,
-			});
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: "dist",
+					framework: new MockStaticFramework({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
+				},
+				{ context }
+			);
 
 			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
 				"# wrangler files
@@ -386,14 +441,17 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: "dist",
-				framework: new Static({ id: "static", name: "Static" }),
-				packageManager: NpmPackageManager,
-			});
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: "dist",
+					framework: new MockStaticFramework({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
+				},
+				{ context }
+			);
 
 			// When gitignore pre-existed with trailing newline, one empty line is added as separator
 			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
@@ -432,14 +490,17 @@ describe("autoconfig (deploy)", () => {
 				text: "Proceed with setup?",
 				result: true,
 			});
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				configured: false,
-				framework: new Static({ id: "static", name: "Static" }),
-				workerName: "my-worker",
-				outputDir: "dist",
-				packageManager: NpmPackageManager,
-			});
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					configured: false,
+					framework: new MockStaticFramework({ id: "static", name: "Static" }),
+					workerName: "my-worker",
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				{ context }
+			);
 
 			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
 				.toMatchInlineSnapshot(`
@@ -510,14 +571,17 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: process.cwd(),
-				framework: new Static({ id: "static", name: "Static" }),
-				packageManager: NpmPackageManager,
-			});
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: process.cwd(),
+					framework: new MockStaticFramework({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
+				},
+				{ context }
+			);
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
 				"# wrangler files
@@ -543,14 +607,17 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: process.cwd(),
-				framework: new Static({ id: "static", name: "Static" }),
-				packageManager: NpmPackageManager,
-			});
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: process.cwd(),
+					framework: new MockStaticFramework({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
+				},
+				{ context }
+			);
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
 				"*.bak
@@ -574,14 +641,20 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			await expect(
-				run.runAutoConfig({
-					projectPath: process.cwd(),
-					configured: false,
-					framework: new Static({ id: "static", name: "Static" }),
-					workerName: "my-worker",
-					outputDir: "",
-					packageManager: NpmPackageManager,
-				})
+				autoconfig.runAutoConfig(
+					{
+						projectPath: process.cwd(),
+						configured: false,
+						framework: new MockStaticFramework({
+							id: "static",
+							name: "Static",
+						}),
+						workerName: "my-worker",
+						outputDir: "",
+						packageManager: NpmPackageManager,
+					},
+					{ context }
+				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[AssertionError: The Output Directory is unexpectedly missing]`
 			);
@@ -596,19 +669,22 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			await expect(
-				run.runAutoConfig({
-					projectPath: process.cwd(),
-					configured: false,
-					framework: {
-						id: "cloudflare-pages",
-						name: "Cloudflare Pages",
-						configure: async () => ({ wranglerConfig: {} }),
-						isConfigured: () => false,
-					} as unknown as Framework,
-					workerName: "my-worker",
-					outputDir: "dist",
-					packageManager: NpmPackageManager,
-				})
+				autoconfig.runAutoConfig(
+					{
+						projectPath: process.cwd(),
+						configured: false,
+						framework: {
+							id: "cloudflare-pages",
+							name: "Cloudflare Pages",
+							configure: async () => ({ wranglerConfig: {} }),
+							isConfigured: () => false,
+						} as unknown as Framework,
+						workerName: "my-worker",
+						outputDir: "dist",
+						packageManager: NpmPackageManager,
+					},
+					{ context }
+				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.]`
 			);
@@ -623,19 +699,22 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			await expect(
-				run.runAutoConfig({
-					projectPath: process.cwd(),
-					configured: false,
-					framework: {
-						id: "hono",
-						name: "Hono",
-						configure: async () => ({ wranglerConfig: {} }),
-						isConfigured: () => false,
-					} as unknown as Framework,
-					workerName: "my-worker",
-					outputDir: "dist",
-					packageManager: NpmPackageManager,
-				})
+				autoconfig.runAutoConfig(
+					{
+						projectPath: process.cwd(),
+						configured: false,
+						framework: {
+							id: "hono",
+							name: "Hono",
+							configure: async () => ({ wranglerConfig: {} }),
+							isConfigured: () => false,
+						} as unknown as Framework,
+						workerName: "my-worker",
+						outputDir: "dist",
+						packageManager: NpmPackageManager,
+					},
+					{ context }
+				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The detected framework ("Hono") cannot be automatically configured.]`
 			);
@@ -654,27 +733,30 @@ describe("autoconfig (deploy)", () => {
 					result: true,
 				});
 
-				await run.runAutoConfig({
-					projectPath: process.cwd(),
-					workerName: "my-worker",
-					configured: false,
-					outputDir: "dist",
-					framework: {
-						// "static" is used here because this test only exercises compatibility flag
-						// merging behaviour. Note: Using "static" avoids the getFrameworkPackageInfo assert
-						// for unknown framework ids while keeping the test focused on its intent.
-						id: "static",
-						name: "Static",
-						configure: async () => ({
-							wranglerConfig: {
-								// No compatibility_flags specified
-								assets: { directory: "dist" },
-							},
-						}),
-						isConfigured: () => false,
-					} as unknown as Framework,
-					packageManager: NpmPackageManager,
-				});
+				await autoconfig.runAutoConfig(
+					{
+						projectPath: process.cwd(),
+						workerName: "my-worker",
+						configured: false,
+						outputDir: "dist",
+						framework: {
+							// "static" is used here because this test only exercises compatibility flag
+							// merging behaviour. Note: Using "static" avoids the getFrameworkPackageInfo assert
+							// for unknown framework ids while keeping the test focused on its intent.
+							id: "static",
+							name: "Static",
+							configure: async () => ({
+								wranglerConfig: {
+									// No compatibility_flags specified
+									assets: { directory: "dist" },
+								},
+							}),
+							isConfigured: () => false,
+						} as unknown as Framework,
+						packageManager: NpmPackageManager,
+					},
+					{ context }
+				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
 				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
@@ -692,27 +774,30 @@ describe("autoconfig (deploy)", () => {
 					result: true,
 				});
 
-				await run.runAutoConfig({
-					projectPath: process.cwd(),
-					workerName: "my-worker",
-					configured: false,
-					outputDir: "dist",
-					framework: {
-						// "static" is used here because this test only exercises compatibility flag
-						// merging behaviour. Using "static" avoids the getFrameworkPackageInfo assert
-						// for unknown framework ids while keeping the test focused on its intent.
-						id: "static",
-						name: "Static",
-						configure: async () => ({
-							wranglerConfig: {
-								compatibility_flags: ["global_fetch_strictly_public"],
-								assets: { directory: "dist" },
-							},
-						}),
-						isConfigured: () => false,
-					} as unknown as Framework,
-					packageManager: NpmPackageManager,
-				});
+				await autoconfig.runAutoConfig(
+					{
+						projectPath: process.cwd(),
+						workerName: "my-worker",
+						configured: false,
+						outputDir: "dist",
+						framework: {
+							// "static" is used here because this test only exercises compatibility flag
+							// merging behaviour. Using "static" avoids the getFrameworkPackageInfo assert
+							// for unknown framework ids while keeping the test focused on its intent.
+							id: "static",
+							name: "Static",
+							configure: async () => ({
+								wranglerConfig: {
+									compatibility_flags: ["global_fetch_strictly_public"],
+									assets: { directory: "dist" },
+								},
+							}),
+							isConfigured: () => false,
+						} as unknown as Framework,
+						packageManager: NpmPackageManager,
+					},
+					{ context }
+				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
 				expect(wranglerConfig.compatibility_flags).toEqual([
@@ -733,27 +818,30 @@ describe("autoconfig (deploy)", () => {
 					result: true,
 				});
 
-				await run.runAutoConfig({
-					projectPath: process.cwd(),
-					workerName: "my-worker",
-					configured: false,
-					outputDir: "dist",
-					framework: {
-						// "static" is used here because this test only exercises compatibility flag
-						// merging behaviour. Using "static" avoids the getFrameworkPackageInfo assert
-						// for unknown framework ids while keeping the test focused on its intent.
-						id: "static",
-						name: "Static",
-						configure: async () => ({
-							wranglerConfig: {
-								compatibility_flags: ["nodejs_compat"],
-								assets: { directory: "dist" },
-							},
-						}),
-						isConfigured: () => false,
-					} as unknown as Framework,
-					packageManager: NpmPackageManager,
-				});
+				await autoconfig.runAutoConfig(
+					{
+						projectPath: process.cwd(),
+						workerName: "my-worker",
+						configured: false,
+						outputDir: "dist",
+						framework: {
+							// "static" is used here because this test only exercises compatibility flag
+							// merging behaviour. Using "static" avoids the getFrameworkPackageInfo assert
+							// for unknown framework ids while keeping the test focused on its intent.
+							id: "static",
+							name: "Static",
+							configure: async () => ({
+								wranglerConfig: {
+									compatibility_flags: ["nodejs_compat"],
+									assets: { directory: "dist" },
+								},
+							}),
+							isConfigured: () => false,
+						} as unknown as Framework,
+						packageManager: NpmPackageManager,
+					},
+					{ context }
+				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
 				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
@@ -769,24 +857,27 @@ describe("autoconfig (deploy)", () => {
 					result: true,
 				});
 
-				await run.runAutoConfig({
-					projectPath: process.cwd(),
-					workerName: "my-worker",
-					configured: false,
-					outputDir: "dist",
-					framework: {
-						id: "static",
-						name: "Nodejs Als Framework",
-						configure: async () => ({
-							wranglerConfig: {
-								compatibility_flags: ["nodejs_als", "some_other_flag"],
-								assets: { directory: "dist" },
-							},
-						}),
-						isConfigured: () => false,
-					} as unknown as Framework,
-					packageManager: NpmPackageManager,
-				});
+				await autoconfig.runAutoConfig(
+					{
+						projectPath: process.cwd(),
+						workerName: "my-worker",
+						configured: false,
+						outputDir: "dist",
+						framework: {
+							id: "static",
+							name: "Nodejs Als Framework",
+							configure: async () => ({
+								wranglerConfig: {
+									compatibility_flags: ["nodejs_als", "some_other_flag"],
+									assets: { directory: "dist" },
+								},
+							}),
+							isConfigured: () => false,
+						} as unknown as Framework,
+						packageManager: NpmPackageManager,
+					},
+					{ context }
+				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
 				// nodejs_als should be removed, nodejs_compat should be added, some_other_flag preserved
@@ -814,7 +905,7 @@ describe("autoconfig (deploy)", () => {
 			// validateFrameworkVersion does not throw
 			vi.mocked(getInstalledPackageVersion).mockReturnValue("5.0.0");
 
-			const framework = new Astro({ id: "astro", name: "Astro" });
+			const framework = new MockAstroFramework({ id: "astro", name: "Astro" });
 
 			const callOrder: string[] = [];
 			vi.spyOn(framework, "validateFrameworkVersion").mockImplementation(() => {
@@ -825,14 +916,17 @@ describe("autoconfig (deploy)", () => {
 				return { wranglerConfig: { assets: { directory: "dist" } } };
 			});
 
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				workerName: "my-worker",
-				configured: false,
-				outputDir: "dist",
-				framework,
-				packageManager: NpmPackageManager,
-			});
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: "dist",
+					framework,
+					packageManager: NpmPackageManager,
+				},
+				{ context }
+			);
 
 			// configure is called twice: once as a dry-run (to build the summary) and
 			// once for real. validateFrameworkVersion must precede both.

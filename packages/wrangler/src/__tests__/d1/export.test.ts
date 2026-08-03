@@ -22,7 +22,7 @@ describe("export", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should throw if output is missing", async ({ expect }) => {
-		await expect(runWrangler("d1 export db")).rejects.toThrowError(
+		await expect(runWrangler("d1 export db")).rejects.toThrow(
 			`Missing required argument: output`
 		);
 	});
@@ -30,9 +30,7 @@ describe("export", () => {
 	it("should throw if output is a directory", async ({ expect }) => {
 		fs.mkdirSync("test-dir");
 
-		await expect(
-			runWrangler("d1 export db --output test-dir")
-		).rejects.toThrowError(
+		await expect(runWrangler("d1 export db --output test-dir")).rejects.toThrow(
 			`Please specify a file path for --output, not a directory.`
 		);
 	});
@@ -40,7 +38,7 @@ describe("export", () => {
 	it("should throw if local and remote are both set", async ({ expect }) => {
 		await expect(
 			runWrangler("d1 export db --local --remote --output test-local.sql")
-		).rejects.toThrowError("Arguments local and remote are mutually exclusive");
+		).rejects.toThrow("Arguments local and remote are mutually exclusive");
 	});
 
 	it("should handle local", async ({ expect }) => {
@@ -249,7 +247,7 @@ describe("export", () => {
 
 		await expect(
 			runWrangler("d1 export db --remote --output test-remote.sql")
-		).rejects.toThrowError(
+		).rejects.toThrow(
 			/There was an error while downloading from the presigned URL with status code: 403/
 		);
 	});
@@ -264,7 +262,9 @@ describe("export", () => {
 		expect(std.out).toContain("Exporting SQL to test-remote.sql...");
 	});
 
-	it("should not export remotely without database_id", async ({ expect }) => {
+	it("should fail when database_id absent from config and not found in API", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [{ binding: "D1", database_name: "D1" }],
@@ -272,13 +272,19 @@ describe("export", () => {
 		msw.use(
 			...getMswSuccessMembershipHandlers([
 				{ id: "some-account-id", name: "test-account" },
-			])
+			]),
+			http.get("*/accounts/:accountId/d1/database/:name", () => {
+				return HttpResponse.json(
+					{ success: false, errors: [{ code: 7404, message: "Not Found" }] },
+					{ status: 404 }
+				);
+			})
 		);
 
 		await expect(
 			runWrangler("d1 export D1 --output test-remote.sql --remote")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Found a database with name or binding D1 but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create D1'.]`
+			`[Error: Couldn't find a D1 DB named 'D1' (bound as 'D1') in the API. Run 'wrangler d1 create D1' to create it.]`
 		);
 	});
 

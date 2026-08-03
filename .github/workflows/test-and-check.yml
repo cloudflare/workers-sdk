@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # We run `playwright install` manually instead
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
 jobs:
   add-to-project:
     if: github.head_ref != 'changeset-release/main'
@@ -45,11 +49,6 @@ jobs:
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
-      - name: Bump package versions
-        run: node .github/changeset-version.js
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
       - name: Check for errors
         run: pnpm run check --summarize
         env:
@@ -57,7 +56,7 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Filter changed paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
         with:
           filters: |
@@ -75,7 +74,7 @@ jobs:
 
       # Check for old Node.js version warnings and errors
       - name: Use Node.js v20
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 20
 
@@ -116,7 +115,7 @@ jobs:
           persist-credentials: false
 
       - name: Filter changed paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
         with:
           filters: |
@@ -132,12 +131,6 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Bump package versions
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: node .github/changeset-version.js
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
       # Browser Run tests in `packages/miniflare/test/plugins/browser/index.spec.ts`
       # and the `fixtures/browser-run` fixture use `@puppeteer/browsers` to
       # download Chrome into the global Wrangler cache. Caching that binary
@@ -152,7 +145,7 @@ jobs:
       # `fixtures`.
       - name: Restore Chrome browser cache (Browser Run)
         if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'packages-and-tools' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-latest'))
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           # The Chrome version lives in
           # `packages/miniflare/src/plugins/browser-rendering/browser-version.ts`.
@@ -203,7 +196,7 @@ jobs:
 
       - name: Upload turbo logs
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}
           path: .turbo/runs

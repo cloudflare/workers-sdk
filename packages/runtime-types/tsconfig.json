@@ -1,0 +1,7 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/base.json",
+	"compilerOptions": {
+		"types": ["@types/node"]
+	},
+	"include": ["src"]
+}

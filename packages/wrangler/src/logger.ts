@@ -3,6 +3,7 @@ import { format } from "node:util";
 import {
 	getEnvironmentVariableFactory,
 	getSanitizeLogs,
+	LOGGER_LEVELS,
 	ParseError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -10,18 +11,11 @@ import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { formatMessage } from "./utils/format-message";
 import { appendToDebugLogFile } from "./utils/log-file";
+import type { LoggerLevel } from "@cloudflare/workers-utils";
 import type { Message } from "esbuild";
 
-export const LOGGER_LEVELS = {
-	none: -1,
-	error: 0,
-	warn: 1,
-	info: 2,
-	log: 3,
-	debug: 4,
-} as const;
-
-export type LoggerLevel = keyof typeof LOGGER_LEVELS;
+export { LOGGER_LEVELS };
+export type { LoggerLevel };
 
 /** A map from LOGGER_LEVEL to the error `kind` needed by `formatMessagesSync()`. */
 const LOGGER_LEVEL_FORMAT_TYPE_MAP = {

@@ -1,31 +1,29 @@
-import { join, resolve } from "path";
+import { resolve } from "path";
 import { afterAll, beforeAll, describe, it } from "vitest";
-import { unstable_startWorker } from "wrangler";
+import { createTestHarness } from "wrangler";
 
 const basePath = resolve(__dirname, "..");
+const server = createTestHarness({
+	root: basePath,
+	workers: [{ configPath: "wrangler.jsonc" }],
+});
 
 describe("Unbound DO is available through `ctx.exports`", () => {
-	let worker: Awaited<ReturnType<typeof unstable_startWorker>>;
-
 	beforeAll(async () => {
-		worker = await unstable_startWorker({
-			config: join(basePath, "wrangler.jsonc"),
-		});
+		await server.listen();
 	});
 
 	afterAll(async () => {
-		await worker.dispose();
+		await server.close();
 	});
 
 	it("can execute storage operations", async ({ expect }) => {
 		const doName = crypto.randomUUID();
-		let response = await worker.fetch(`http://example.com?name=${doName}`);
+		let response = await server.fetch(`/?name=${doName}`);
 		let content = await response.text();
 		expect(content).toMatchInlineSnapshot(`"count: 0"`);
 
-		response = await worker.fetch(
-			`http://example.com/increment?name=${doName}`
-		);
+		response = await server.fetch(`/increment?name=${doName}`);
 		content = await response.text();
 		expect(content).toMatchInlineSnapshot(`"count: 1"`);
 	});

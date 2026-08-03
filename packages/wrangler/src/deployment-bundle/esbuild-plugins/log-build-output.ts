@@ -1,14 +1,19 @@
 import { logBuildFailure, logBuildWarnings } from "../../logger";
-import type { Plugin } from "esbuild";
+import type { Message, Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * Log esbuild warnings and errors
+ *
+ * When `onRebuildError` is provided, watch-mode rebuild failures are
+ * delegated to it instead of being logged here, so the caller can route
+ * them through its own error handling (which owns the logging).
  */
 export function logBuildOutput(
 	nodejsCompatMode: NodeJSCompatMode | undefined,
 	onStart?: () => void,
-	updateBundle?: () => void
+	updateBundle?: () => void,
+	onRebuildError?: (errors: Message[], warnings: Message[]) => void
 ): Plugin {
 	let bundled = false;
 
@@ -29,7 +34,11 @@ export function logBuildOutput(
 					}
 				} else {
 					if (errors.length > 0) {
-						logBuildFailure(errors, warnings);
+						if (onRebuildError) {
+							onRebuildError(errors, warnings);
+						} else {
+							logBuildFailure(errors, warnings);
+						}
 						return;
 					}
 

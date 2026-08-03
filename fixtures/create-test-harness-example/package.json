@@ -1,0 +1,35 @@
+{
+	"name": "@fixture/create-test-harness-example",
+	"private": true,
+	"description": "Integration tests with the createTestHarness() API",
+	"type": "module",
+	"scripts": {
+		"cf-typegen": "pnpm typegen:web && pnpm typegen:api",
+		"typegen:web": "wrangler types ./workers/web/worker-configuration.d.ts -c ./workers/web/wrangler.jsonc -c ./workers/api/wrangler.jsonc --env-interface WebEnv --no-include-runtime",
+		"typegen:api": "wrangler types ./workers/api/worker-configuration.d.ts -c ./workers/api/wrangler.jsonc --env-interface ApiEnv --no-include-runtime",
+		"check:type": "tsc",
+		"build": "vite build",
+		"playwright:install": "pnpm playwright install chromium",
+		"pretest:ci": "pnpm playwright:install",
+		"pretest:playwright": "pnpm playwright:install",
+		"test:playwright": "playwright test",
+		"test:vitest": "vitest run",
+		"test:ci": "vitest run && playwright test",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@playwright/test": "catalog:default",
+		"@types/node": "catalog:default",
+		"msw": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

@@ -65,6 +65,10 @@ export const deleteCommand = createCommand({
 		status: "stable",
 		category: "Compute & AI",
 	},
+	behaviour: {
+		supportTemporary: true,
+		suggestSkillsAfterHandler: true,
+	},
 	args: {
 		script: {
 			describe: "The path to an entry point for your worker",
@@ -87,11 +91,6 @@ export const deleteCommand = createCommand({
 			describe:
 				"Delete even if doing so will break other Workers that depend on this one",
 			type: "boolean",
-		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
 		},
 	},
 	positionalArgs: ["name"],

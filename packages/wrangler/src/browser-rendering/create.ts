@@ -1,8 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { openInBrowser } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
 import { fetchBrowserRendering } from "./utils";
 import type { BrowserAcquireResponse } from "./types";
@@ -98,7 +98,7 @@ export const browserCreateCommand = createCommand({
 			if (pageTarget.devtoolsFrontendUrl) {
 				if (shouldOpen) {
 					logger.log(`Opening DevTools...`);
-					await openInBrowser(pageTarget.devtoolsFrontendUrl);
+					await openInBrowser(pageTarget.devtoolsFrontendUrl, logger);
 				} else {
 					// Print URL for piping/scripting
 					logger.log(pageTarget.devtoolsFrontendUrl);

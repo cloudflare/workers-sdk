@@ -50,7 +50,7 @@ describe("validateCatalogPins()", () => {
 		const errors = validateCatalogPins(
 			new Map([
 				["undici", "7.24.8"],
-				["esbuild", "0.27.3"],
+				["esbuild", "0.28.1"],
 				["youch", "4.1.0-beta.10"],
 			])
 		);

@@ -1,12 +1,15 @@
 import * as childProcess from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
+import {
+	extractConfigBindings,
+	getBranchName,
+} from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
-import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -978,7 +981,6 @@ describe("wrangler preview", () => {
 						"/Users/cina/src/github/example/project/wrangler.jsonc",
 					topLevelName: "entry-worker",
 					definedEnvironments: [],
-					legacy_env: true,
 					compatibility_date: "2025-01-01",
 					compatibility_flags: ["nodejs_compat"],
 					rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],

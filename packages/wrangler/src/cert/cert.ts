@@ -38,6 +38,7 @@ export const certUploadMtlsCommand = createCommand({
 		status: "stable",
 		owner: "Product: SSL",
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		cert: {
 			description:
@@ -87,6 +88,7 @@ export const certUploadCaCertCommand = createCommand({
 		status: "stable",
 		owner: "Product: SSL",
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		name: {
 			describe: "The name for the certificate",
@@ -130,6 +132,7 @@ export const certListCommand = createCommand({
 		status: "stable",
 		owner: "Product: SSL",
 	},
+	behaviour: { supportTemporary: true },
 	async handler(_, { config }) {
 		const accountId = await requireAuth(config);
 		const certificates = await listMTlsCertificates(
@@ -165,6 +168,7 @@ export const certDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: SSL",
 	},
+	behaviour: { supportTemporary: true },
 	args: {
 		id: {
 			description: "The id of the mTLS certificate to delete",

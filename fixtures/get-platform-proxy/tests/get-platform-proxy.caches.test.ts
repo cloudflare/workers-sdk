@@ -39,31 +39,31 @@ describe("getPlatformProxy - caches", () => {
 
 			expect(() => {
 				caches.has("my-cache");
-			}).toThrowError(
+			}).toThrow(
 				"Failed to execute 'has' on 'CacheStorage': the method is not implemented."
 			);
 
 			expect(() => {
 				caches.delete("my-cache");
-			}).toThrowError(
+			}).toThrow(
 				"Failed to execute 'delete' on 'CacheStorage': the method is not implemented."
 			);
 
 			expect(() => {
 				caches.keys();
-			}).toThrowError(
+			}).toThrow(
 				"Failed to execute 'keys' on 'CacheStorage': the method is not implemented."
 			);
 
 			expect(() => {
 				caches.match(new URL("https://localhost"));
-			}).toThrowError(
+			}).toThrow(
 				"Failed to execute 'match' on 'CacheStorage': the method is not implemented."
 			);
 
 			expect(() => {
 				caches.nonExistentMethod();
-			}).toThrowError("caches.nonExistentMethod is not a function");
+			}).toThrow("caches.nonExistentMethod is not a function");
 		} finally {
 			await dispose();
 		}

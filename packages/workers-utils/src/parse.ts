@@ -55,11 +55,27 @@ export class APIError extends ParseError {
 	#status?: number;
 	code?: number;
 	accountTag?: string;
+	/**
+	 * Optional structured metadata hoisted from the first `FetchError.meta`
+	 * on the v4 response envelope. Consumers can inspect this to render
+	 * endpoint-specific structured error payloads.
+	 */
+	meta?: { details?: unknown } & Record<string, unknown>;
+	/**
+	 * Optional number of milliseconds the API asked us to wait before retrying,
+	 * derived from the response's `Retry-After` header (if present).
+	 */
+	retryAfterMs?: number;
 
-	constructor({ status, ...rest }: MessageInit & { status?: number }) {
+	constructor({
+		status,
+		retryAfterMs,
+		...rest
+	}: MessageInit & { status?: number; retryAfterMs?: number }) {
 		super(rest);
 		this.name = this.constructor.name;
 		this.#status = status;
+		this.retryAfterMs = retryAfterMs;
 	}
 
 	get status(): number | undefined {
@@ -125,9 +141,22 @@ export function parseTOML(tomlContent: string, filePath?: string): unknown {
 export type PackageJSON = {
 	name?: string;
 	version?: string;
+	private?: boolean;
 	devDependencies?: Record<string, unknown>;
 	dependencies?: Record<string, unknown>;
 	scripts?: Record<string, unknown>;
+	/**
+	 * NOTE: This is **not** a standard `package.json` field — don't confuse it
+	 * with the standard `bundledDependencies`. It is a convention introduced by
+	 * vite+ (https://viteplus.dev): vite+ installs `@voidzero-dev/vite-plus-core`
+	 * under the `vite` npm alias and records the versions of the tools it bundles
+	 * here, keyed by package name
+	 * (e.g. `{ "vite": "8.1.2", "rolldown": "...", "tsdown": "..." }`).
+	 *
+	 * We read it to recover the underlying Vite version when Vite is installed via
+	 * such an alias. It is optional and absent for the vast majority of packages.
+	 */
+	bundledVersions?: Record<string, string | undefined>;
 };
 
 /**

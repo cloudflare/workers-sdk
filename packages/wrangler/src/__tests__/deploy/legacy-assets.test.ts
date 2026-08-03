@@ -1,13 +1,12 @@
 import * as fs from "node:fs";
+import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
-import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
@@ -43,8 +42,6 @@ vi.mock("../../check/commands", async (importOriginal) => {
 	};
 });
 
-vi.mock("../../utils/fetch-secrets");
-
 vi.mock("../../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -56,8 +53,11 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
+	...(await importOriginal()),
+	runAutoConfig: vi.fn(),
+	getInstalledPackageVersion: vi.fn(),
+}));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
 describe("deploy", () => {
@@ -83,9 +83,12 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() => HttpResponse.json(createFetchResult([]))
+			)
 		);
-		vi.mocked(fetchSecrets).mockResolvedValue([]);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
@@ -395,71 +398,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should make environment specific kv namespace for assets, even for service envs", async ({
-			expect,
-		}) => {
-			// This is the same test as the one before this, but with an env arg
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-some-env-workers_sites_assets",
-				id: "__test-name-some-env-workers_sites_assets-id",
-			};
-			writeWranglerConfig({
-				main: "./index.js",
-				site: {
-					bucket: "assets",
-				},
-				env: { "some-env": {} },
-			});
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				env: "some-env",
-				expectedBindings: [
-					{
-						name: "__STATIC_CONTENT",
-						namespace_id: "__test-name-some-env-workers_sites_assets-id",
-						type: "kv_namespace",
-					},
-				],
-				useOldUploadApi: true,
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(expect, kvNamespace);
-			mockKeyListRequest(expect, kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("deploy --env some-env --legacy-env false");
-
-			expect(std.info).toMatchInlineSnapshot(`
-			"Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]"
-		`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (some-env) (TIMINGS)
-				Deployed test-name (some-env) triggers (TIMINGS)
-				  https://some-env.test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
 		it("should make environment specific kv namespace for assets, even for wrangler environments", async ({
 			expect,
 		}) => {
-			// And this is the same test as the one before this, but with useServiceEnvironments:false
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -478,7 +419,6 @@ describe("deploy", () => {
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				useServiceEnvironments: false,
 				env: "some-env",
 				expectedBindings: [
 					{
@@ -492,7 +432,7 @@ describe("deploy", () => {
 			mockListKVNamespacesRequest(expect, kvNamespace);
 			mockKeyListRequest(expect, kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("deploy --env some-env --legacy-env true");
+			await runWrangler("deploy --env some-env");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -1171,7 +1111,7 @@ describe("deploy", () => {
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The asset path key "folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",]`
+				`[Error: The asset path key "folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits]`
 			);
 
 			expect(std.info).toMatchInlineSnapshot(`
@@ -1185,7 +1125,7 @@ describe("deploy", () => {
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key "folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key "folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
 
 				"
 			`);

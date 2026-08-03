@@ -75,7 +75,7 @@ describe("quoteForDotenv", () => {
 
 	test("throws when a value cannot be losslessly serialized", ({ expect }) => {
 		// Contains all three quote characters — no safe encoding under dotenv.
-		expect(() => quoteForDotenv("'`\"")).toThrowError(
+		expect(() => quoteForDotenv("'`\"")).toThrow(
 			/Unable to serialize value to \.dev\.vars/
 		);
 	});

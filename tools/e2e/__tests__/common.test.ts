@@ -12,6 +12,7 @@ import {
 	listTmpKVNamespaces,
 	listTmpR2Buckets,
 } from "../common";
+import type { Worker } from "../common";
 
 const originalAccountID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const MOCK_CLOUDFLARE_ACCOUNT_ID = "mock-cloudflare-account";
@@ -307,34 +308,49 @@ describe("listTmpE2EWorkers()", () => {
 	it("makes a REST request and returns a filtered list of workers", async ({
 		expect,
 	}) => {
+		// First page has results
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
-				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/workers/scripts`,
-				query: { page: 1 },
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/workers/scripts-search`,
+				query: { page: 1, per_page: 100 },
 				method: "GET",
 			})
 			.reply(
 				200,
 				JSON.stringify({
 					result: [
-						{ id: "wprker-1", created_on: nowStr },
-						{ id: "wprker-2", created_on: oldTimeStr },
-						{ id: "tmp-e2e-worker-1", created_on: nowStr },
-						{ id: "tmp-e2e-worker-2", created_on: oldTimeStr },
-						{ id: "wprker-3", created_on: nowStr },
-						{ id: "wprker-4", created_on: oldTimeStr },
-						{ id: "tmp-e2e-worker-3", created_on: nowStr },
-						{ id: "tmp-e2e-worker-4", created_on: oldTimeStr },
-						{ id: "wprker-5", created_on: nowStr },
-						{ id: "wprker-6", created_on: oldTimeStr },
-					],
+						{ script_name: "wprker-1", created_on: nowStr },
+						{ script_name: "wprker-2", created_on: oldTimeStr },
+						{ script_name: "tmp-e2e-worker-1", created_on: nowStr },
+						{ script_name: "tmp-e2e-worker-2", created_on: oldTimeStr },
+						{ script_name: "wprker-3", created_on: nowStr },
+						{ script_name: "wprker-4", created_on: oldTimeStr },
+						{ script_name: "tmp-e2e-worker-3", created_on: nowStr },
+						{ script_name: "tmp-e2e-worker-4", created_on: oldTimeStr },
+						{ script_name: "wprker-5", created_on: nowStr },
+						{ script_name: "wprker-6", created_on: oldTimeStr },
+					] satisfies Worker[],
+				})
+			);
+		// Second page is empty
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/workers/scripts-search`,
+				query: { page: 2, per_page: 100 },
+				method: "GET",
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: [],
 				})
 			);
 
 		const result = await listTmpE2EWorkers();
 
-		expect(result.map((p) => p.id)).toMatchInlineSnapshot(`
+		expect(result.map((p) => p.script_name)).toMatchInlineSnapshot(`
 			[
 			  "wprker-2",
 			  "tmp-e2e-worker-2",

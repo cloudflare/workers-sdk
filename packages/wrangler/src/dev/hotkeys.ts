@@ -1,9 +1,9 @@
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+import { openInBrowser } from "@cloudflare/workers-utils";
 import { CorePaths } from "miniflare";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
-import openInBrowser from "../open-in-browser";
 import { debounce } from "../utils/debounce";
 import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
@@ -31,7 +31,7 @@ export default function registerDevHotKeys(
 				label: "open a browser",
 				handler: async () => {
 					const { url } = await primaryDevEnv.proxy.ready.promise;
-					await openInBrowser(url.href);
+					await openInBrowser(url.href, logger);
 				},
 			},
 			{
@@ -59,7 +59,7 @@ export default function registerDevHotKeys(
 				handler: async () => {
 					const { url } = await primaryDevEnv.proxy.ready.promise;
 					const explorerUrl = new URL(CorePaths.EXPLORER, url);
-					await openInBrowser(explorerUrl.href);
+					await openInBrowser(explorerUrl.href, logger);
 				},
 			},
 			{

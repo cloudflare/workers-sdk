@@ -101,7 +101,7 @@ export async function getEntry(
 		paths.relativePath,
 		config.build,
 		config.configPath,
-		command
+		{ wranglerCommand: command }
 	);
 
 	const projectRoot = paths.projectRoot ?? process.cwd();
@@ -113,19 +113,34 @@ export async function getEntry(
 
 	const { localBindings } = partitionDurableObjectBindings(config);
 
-	if (format === "service-worker" && localBindings.length > 0) {
-		const errorMessage =
-			"You seem to be trying to use Durable Objects in a Worker written as a service-worker.";
-		const addScriptName = `You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your ${configFileName(config.configPath)} file, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:`;
-		const addScriptNameExamples = generateAddScriptNameExamples(localBindings);
-		const migrateText =
-			"Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
-		const migrateUrl =
-			"https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
-		throw new UserError(
-			`${errorMessage}\n${addScriptName}\n${addScriptNameExamples}\n${migrateText}\n${migrateUrl}`,
-			{ telemetryMessage: "tried to use DO with service worker" }
-		);
+	if (format === "service-worker") {
+		if (localBindings.length > 0) {
+			const errorMessage =
+				"You seem to be trying to use Durable Objects in a Worker written as a service-worker.";
+			const addScriptName = `You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your ${configFileName(config.configPath)} file, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:`;
+			const addScriptNameExamples =
+				generateAddScriptNameExamples(localBindings);
+			const migrateText =
+				"Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
+			const migrateUrl =
+				"https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
+			throw new UserError(
+				`${errorMessage}\n${addScriptName}\n${addScriptNameExamples}\n${migrateText}\n${migrateUrl}`,
+				{ telemetryMessage: "tried to use DO with service worker" }
+			);
+		}
+		if (config.migrations?.length) {
+			const errorMessage =
+				"Durable Object migrations require ES Module format Workers, but yours is being built as service-worker format. Migrations cannot be applied to service-worker format Workers.";
+			const migrateText =
+				'To use Durable Object migrations, deploy in ES Module format by adding a default export handler (e.g. "export default { fetch() {} }"), or remove "migrations" from your config if you don\'t need them. See:';
+			const migrateUrl =
+				"https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
+			throw new UserError(`${errorMessage}\n${migrateText}\n${migrateUrl}`, {
+				telemetryMessage:
+					"durable object migrations unsupported service worker",
+			});
+		}
 	}
 
 	return {

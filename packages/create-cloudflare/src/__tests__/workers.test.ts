@@ -53,13 +53,37 @@ describe("updateTsConfig", () => {
 		expect(writeFile).not.toHaveBeenCalled();
 	});
 
-	test("latest entrypoint not found", async ({ expect }) => {
+	test("falls back to bare workers-types when no date-versioned entrypoint is available", async ({
+		expect,
+	}) => {
 		ctx.template.workersTypes = "installed";
 
+		// `@cloudflare/workers-types` v5+ has no date-versioned entrypoints, but the
+		// package (mocked as existing via existsSync) is still installed.
 		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(null);
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 
-		expect(writeFile).not.toHaveBeenCalled();
+		const written = vi.mocked(writeFile).mock.calls[0][1];
+		expect(written).toContain(`"@cloudflare/workers-types"`);
+		expect(written).not.toContain(`@cloudflare/workers-types/`);
+	});
+
+	test("does not add bare workers-types when the package is not installed", async ({
+		expect,
+	}) => {
+		ctx.template.workersTypes = "installed";
+		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(null);
+		vi.mocked(readFile).mockImplementation(
+			() => `{ "compilerOptions": { "types": [] } }`
+		);
+		// tsconfig.json exists, but node_modules/@cloudflare/workers-types does not.
+		vi.mocked(existsSync).mockImplementation((p) =>
+			String(p).includes("tsconfig.json")
+		);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
+
+		const written = vi.mocked(writeFile).mock.calls[0][1];
+		expect(written).not.toContain("@cloudflare/workers-types");
 	});
 
 	test("don't clobber existing entrypoints", async ({ expect }) => {

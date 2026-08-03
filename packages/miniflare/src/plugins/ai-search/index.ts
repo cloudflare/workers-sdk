@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
@@ -15,50 +15,35 @@ const AISearchEntrySchema = z.object({
 });
 
 export const AISearchOptionsSchema = z.object({
-	aiSearchNamespaces: z.record(AISearchEntrySchema).optional(),
-	aiSearchInstances: z.record(AISearchEntrySchema).optional(),
+	aiSearchNamespaces: z.record(z.string(), AISearchEntrySchema).optional(),
+	aiSearchInstances: z.record(z.string(), AISearchEntrySchema).optional(),
 });
 
 export const AI_SEARCH_PLUGIN_NAME = "ai-search";
 
-// Distinct scopes for service name generation to avoid collisions
-// between namespace and instance bindings with the same binding name.
-const AI_SEARCH_NS_SCOPE = "ai-search-ns";
-const AI_SEARCH_INST_SCOPE = "ai-search-inst";
+// One shared remote-proxy service for all AI Search bindings (config via props).
+const AI_SEARCH_REMOTE_SERVICE_NAME = `${AI_SEARCH_PLUGIN_NAME}:remote`;
 
 export const AI_SEARCH_PLUGIN: Plugin<typeof AISearchOptionsSchema> = {
 	options: AISearchOptionsSchema,
+	bindingTypeDescription: "AI Search",
 	async getBindings(options) {
 		const bindings: {
 			name: string;
-			service: { name: string };
+			service: { name: string; props?: { json: string } };
 		}[] = [];
 
-		for (const [bindingName, entry] of Object.entries(
-			options.aiSearchNamespaces ?? {}
-		)) {
+		for (const [bindingName, entry] of [
+			...Object.entries(options.aiSearchNamespaces ?? {}),
+			...Object.entries(options.aiSearchInstances ?? {}),
+		]) {
 			bindings.push({
 				name: bindingName,
 				service: {
-					name: getUserBindingServiceName(
-						AI_SEARCH_NS_SCOPE,
-						bindingName,
-						entry.remoteProxyConnectionString
-					),
-				},
-			});
-		}
-
-		for (const [bindingName, entry] of Object.entries(
-			options.aiSearchInstances ?? {}
-		)) {
-			bindings.push({
-				name: bindingName,
-				service: {
-					name: getUserBindingServiceName(
-						AI_SEARCH_INST_SCOPE,
-						bindingName,
-						entry.remoteProxyConnectionString
+					name: AI_SEARCH_REMOTE_SERVICE_NAME,
+					props: buildRemoteProxyProps(
+						entry.remoteProxyConnectionString,
+						bindingName
 					),
 				},
 			});
@@ -84,35 +69,13 @@ export const AI_SEARCH_PLUGIN: Plugin<typeof AISearchOptionsSchema> = {
 			worker: ReturnType<typeof remoteProxyClientWorker>;
 		}[] = [];
 
-		for (const [bindingName, entry] of Object.entries(
-			options.aiSearchNamespaces ?? {}
-		)) {
+		const hasAny =
+			Object.keys(options.aiSearchNamespaces ?? {}).length > 0 ||
+			Object.keys(options.aiSearchInstances ?? {}).length > 0;
+		if (hasAny) {
 			services.push({
-				name: getUserBindingServiceName(
-					AI_SEARCH_NS_SCOPE,
-					bindingName,
-					entry.remoteProxyConnectionString
-				),
-				worker: remoteProxyClientWorker(
-					entry.remoteProxyConnectionString,
-					bindingName
-				),
-			});
-		}
-
-		for (const [bindingName, entry] of Object.entries(
-			options.aiSearchInstances ?? {}
-		)) {
-			services.push({
-				name: getUserBindingServiceName(
-					AI_SEARCH_INST_SCOPE,
-					bindingName,
-					entry.remoteProxyConnectionString
-				),
-				worker: remoteProxyClientWorker(
-					entry.remoteProxyConnectionString,
-					bindingName
-				),
+				name: AI_SEARCH_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
 			});
 		}
 

@@ -1,8 +1,8 @@
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
-import { disableEmailSending } from "../client";
-import { resolveDomain } from "../utils";
+import { deleteEmailSendingSubdomain } from "../client";
+import { resolveDomain, resolveSendingSubdomain } from "../utils";
 
 export const emailSendingDisableCommand = createCommand({
 	metadata: {
@@ -30,7 +30,7 @@ export const emailSendingDisableCommand = createCommand({
 	},
 	positionalArgs: ["domain"],
 	async handler(args, { config }) {
-		const { zoneId, isSubdomain, domain } = await resolveDomain(
+		const { zoneId, domain } = await resolveDomain(
 			config,
 			args.domain,
 			args.zoneId
@@ -47,11 +47,9 @@ export const emailSendingDisableCommand = createCommand({
 			}
 		}
 
-		const name = isSubdomain ? domain : undefined;
-		const settings = await disableEmailSending(config, zoneId, name);
+		const subdomain = await resolveSendingSubdomain(config, zoneId, domain);
+		await deleteEmailSendingSubdomain(config, zoneId, subdomain.tag);
 
-		logger.log(
-			`Email Sending disabled for ${settings.name} (status: ${settings.status})`
-		);
+		logger.log(`Email Sending disabled for ${subdomain.name}`);
 	},
 });

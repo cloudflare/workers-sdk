@@ -1,19 +1,23 @@
 // Emulated Ratelimit Binding
+//
+// Thin client: keeps option validation local (so error messages surface
+// synchronously in the caller's isolate), forwards each `.limit()` call to
+// the `RateLimiterObject` Durable Object, which owns the bucket/epoch state.
 
 // ENV configuration
 interface RatelimitConfig {
-	namespaceId: number;
 	limit: number;
 	period: number;
+	fetcher: Fetcher;
 }
 
 // options for Ratelimit
-//   (should be kept in sync with https://bitbucket.cfdata.org/projects/EW/repos/edgeworker/browse/src/edgeworker/internal-api/ratelimit.capnp)
+//   (should be kept in sync with `RatelimitOptions` in https://gitlab.cfdata.org/cloudflare/ew/edgeworker/-/blob/master/src/edgeworker/internal-api/ratelimit.h)
 const RatelimitOptionKeys = ["key", "limit", "period"];
 const RatelimitPeriodValues = [10, 60];
 
 // result from Ratelimit call
-//   (should be kept in sync with https://bitbucket.cfdata.org/projects/EW/repos/edgeworker/browse/src/edgeworker/internal-api/ratelimit.capnp)
+//   (should be kept in sync with `RatelimitResult` in https://gitlab.cfdata.org/cloudflare/ew/edgeworker/-/blob/master/src/edgeworker/internal-api/ratelimit.h)
 interface RatelimitResult {
 	success: boolean;
 }
@@ -25,22 +29,18 @@ function validate(test: boolean, message: string): asserts test {
 }
 
 class Ratelimit {
-	namespaceId: number;
+	fetcher: Fetcher;
 	limitVal: number;
 	period: number;
-	buckets: Map<string, number>;
-	epoch: number;
 
 	constructor(config: RatelimitConfig) {
-		this.namespaceId = config.namespaceId;
+		this.fetcher = config.fetcher;
 		this.limitVal = config.limit;
 		this.period = config.period;
-
-		this.buckets = new Map<string, number>();
-		this.epoch = 0;
 	}
 
-	// method that counts and checks against the limit in in-memory buckets
+	// method that counts and checks against the limit, delegating the actual
+	// bucket/epoch bookkeeping to the `RateLimiterObject` Durable Object
 	async limit(options: unknown): Promise<RatelimitResult> {
 		// validate options input
 		validate(
@@ -67,22 +67,11 @@ class Ratelimit {
 			`unsupported period: ${period}`
 		);
 
-		const epoch = Math.floor(Date.now() / (period * 1000));
-		if (epoch != this.epoch) {
-			// clear counters
-			this.epoch = epoch;
-			this.buckets.clear();
-		}
-		const val = this.buckets.get(key) || 0;
-		if (val >= limit) {
-			return {
-				success: false,
-			};
-		}
-		this.buckets.set(key, val + 1);
-		return {
-			success: true,
-		};
+		const res = await this.fetcher.fetch("http://ratelimit/limit", {
+			method: "POST",
+			body: JSON.stringify({ key, limit, period }),
+		});
+		return await res.json<RatelimitResult>();
 	}
 }
 

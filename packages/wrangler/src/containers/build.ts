@@ -95,7 +95,8 @@ export async function buildContainer(
 	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
 	dryRun: boolean,
-	pathToDocker: string
+	pathToDocker: string,
+	verifyDockerIsRunning?: boolean
 ): Promise<ImageRef> {
 	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
 	logger.log("Building image", imageFullName);
@@ -109,6 +110,7 @@ export async function buildContainer(
 		},
 		pathToDocker,
 		!dryRun,
-		containerConfig
+		containerConfig,
+		verifyDockerIsRunning
 	);
 }

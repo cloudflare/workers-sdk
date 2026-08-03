@@ -15,6 +15,7 @@ import {
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "../../../api/startDevWorker/LocalRuntimeController";
+import { MultiworkerRuntimeController } from "../../../api/startDevWorker/MultiworkerRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
 import { usingLocalSecretsStoreSecretAPI } from "../../../secrets-store/commands";
@@ -182,6 +183,78 @@ describe("LocalRuntimeController", () => {
 	});
 
 	describe("Core", () => {
+		it("dispatches a typed runtimeError for an uncaught Worker exception", async ({
+			expect,
+		}) => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const config = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				compatibilityDate: "2023-10-01",
+			};
+			// This virtual bundle bypasses the real bundler, so it speaks the
+			// json-error middleware's documented contract directly (a 500 JSON
+			// error with the MF-Experimental-Error-Stack header) — exactly what
+			// wrangler's injected middleware produces for an uncaught throw.
+			const bundle: Bundle = {
+				type: "esm",
+				modules: [],
+				id: 0,
+				path: "/virtual/esm/index.mjs",
+				entrypointSource: dedent /*javascript*/ `
+					export default {
+						fetch(request, env, ctx) {
+							return Response.json(
+								{
+									name: "Error",
+									message: "uncaught boom",
+									stack: "Error: uncaught boom\\n    at fetch (file:///virtual/esm/index.mjs:3:9)",
+								},
+								{
+									status: 500,
+									headers: { "MF-Experimental-Error-Stack": "true" },
+								}
+							);
+						}
+					}
+				`,
+				entry: {
+					file: "esm/index.mjs",
+					projectRoot: "/virtual/",
+					configPath: undefined,
+					format: "modules",
+					moduleRoot: "/virtual",
+					name: undefined,
+					exports: [],
+				},
+				dependencies: {},
+				sourceMapPath: undefined,
+				sourceMapMetadata: undefined,
+			};
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: configDefaults(config),
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: configDefaults(config),
+				bundle,
+			});
+			const reload = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(reload.proxyData.userWorkerUrl);
+
+			const errorEvent = bus.waitFor("runtimeError");
+			const res = await fetch(url);
+			expect(res.status).toBe(500);
+			const event = await errorEvent;
+			expect(event.source).toBe("LocalRuntimeController");
+			expect(event.text).toContain("uncaught boom");
+			expect(event.stack).toContain("uncaught boom");
+		});
+
 		it("should start Miniflare with module worker", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
@@ -1609,6 +1682,134 @@ describe("LocalRuntimeController", () => {
 		it.todo("exposes Analytics Engine bindings");
 		it.todo("exposes dispatch namespace bindings");
 		it.todo("exposes mTLS bindings");
+	});
+});
+
+describe("MultiworkerRuntimeController", () => {
+	mockConsoleMethods();
+	runInTempDir();
+	// Make sure teardown is declared after runInTempDir so it runs before we delete the temp directory
+	const teardown = useTeardown();
+
+	// The multiworker controller builds its Miniflare options through its own
+	// code path, so the runtimeError wiring must be pinned separately from the
+	// single-worker test above.
+	it("dispatches a typed runtimeError for an uncaught Worker exception", async ({
+		expect,
+	}) => {
+		const bus = new FakeBus();
+		const controller = new MultiworkerRuntimeController(bus, 2);
+		teardown(() => controller.teardown());
+
+		const primaryConfig = configDefaults({
+			name: "primary-worker",
+			dev: {
+				persist: "./persist",
+				remote: false,
+				multiworkerPrimary: true,
+			},
+		});
+		const secondaryConfig = configDefaults({
+			name: "secondary-worker",
+			dev: {
+				persist: "./persist",
+				remote: false,
+				multiworkerPrimary: false,
+			},
+		});
+
+		// Same virtual-bundle shape as the single-worker runtimeError test:
+		// speaks the json-error middleware's documented contract directly.
+		const throwingBundle: Bundle = {
+			type: "esm",
+			modules: [],
+			id: 0,
+			path: "/virtual/esm/primary.mjs",
+			entrypointSource: dedent /*javascript*/ `
+				export default {
+					fetch(request, env, ctx) {
+						return Response.json(
+							{
+								name: "Error",
+								message: "uncaught boom",
+								stack: "Error: uncaught boom\\n    at fetch (file:///virtual/esm/primary.mjs:3:9)",
+							},
+							{
+								status: 500,
+								headers: { "MF-Experimental-Error-Stack": "true" },
+							}
+						);
+					}
+				}
+			`,
+			entry: {
+				file: "esm/primary.mjs",
+				projectRoot: "/virtual/",
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: "/virtual",
+				name: undefined,
+				exports: [],
+			},
+			dependencies: {},
+			sourceMapPath: undefined,
+			sourceMapMetadata: undefined,
+		};
+		const quietBundle: Bundle = {
+			type: "esm",
+			modules: [],
+			id: 0,
+			path: "/virtual/esm/secondary.mjs",
+			entrypointSource: dedent /*javascript*/ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("ok");
+					}
+				}
+			`,
+			entry: {
+				file: "esm/secondary.mjs",
+				projectRoot: "/virtual/",
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: "/virtual",
+				name: undefined,
+				exports: [],
+			},
+			dependencies: {},
+			sourceMapPath: undefined,
+			sourceMapMetadata: undefined,
+		};
+
+		controller.onBundleStart({
+			type: "bundleStart",
+			config: primaryConfig,
+		});
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: primaryConfig,
+			bundle: throwingBundle,
+		});
+		controller.onBundleStart({
+			type: "bundleStart",
+			config: secondaryConfig,
+		});
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: secondaryConfig,
+			bundle: quietBundle,
+		});
+
+		const reload = await bus.waitFor("reloadComplete");
+		const url = urlFromParts(reload.proxyData.userWorkerUrl);
+
+		const errorEvent = bus.waitFor("runtimeError");
+		const res = await fetch(url);
+		expect(res.status).toBe(500);
+		const event = await errorEvent;
+		expect(event.source).toBe("LocalRuntimeController");
+		expect(event.text).toContain("uncaught boom");
+		expect(event.stack).toContain("uncaught boom");
 	});
 });
 
