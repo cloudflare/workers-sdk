@@ -560,9 +560,19 @@ const GITHUB_API_HEADERS = {
 async function fetchSkillNamesFromGitHub(): Promise<
 	SkillsRepoCacheResult | undefined
 > {
-	// Return fresh cached data if available.
+	// Return fresh cached data if available. If the cached entry lacks a
+	// tree SHA (written by an older Wrangler or after a failed fetch), try
+	// to back-fill it so the update flow can compare SHAs immediately
+	// instead of waiting up to 24h for the cache to expire.
 	const cached = readSkillsRepoCache();
 	if (cached) {
+		if (!cached.skillsTreeSha) {
+			const treeSha = await fetchSkillsTreeSha();
+			if (treeSha) {
+				writeSkillsRepoCache(cached.skillNames, treeSha);
+				return { ...cached, skillsTreeSha: treeSha };
+			}
+		}
 		return cached;
 	}
 
