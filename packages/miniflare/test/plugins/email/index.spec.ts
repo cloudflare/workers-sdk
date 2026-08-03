@@ -147,6 +147,45 @@ test("Invalid email throws", async ({ expect }) => {
 	expect(res.status).toBe(500);
 });
 
+test("Oversized email throws the local size-limit error", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: SEND_EMAIL_WORKER,
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	// A valid MIME message whose body pushes the total past the 1 MiB local cap.
+	const raw =
+		dedent /* email */ `
+			From: someone@example.com
+			To: someone-else@example.com
+			Message-ID: <oversized@example.com>
+			Subject: Big
+			MIME-Version: 1.0
+			Content-Type: text/plain
+
+		` + "x".repeat(1024 * 1024 + 1);
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/?" +
+			new URLSearchParams({
+				from: "someone@example.com",
+				to: "someone-else@example.com",
+			}).toString(),
+		{ body: raw, method: "POST" }
+	);
+
+	expect(res.status).toBe(500);
+	expect(await res.text()).toContain("exceeds the lower 1MiB limit");
+});
+
 test("Single allowed destination send_email binding works", async ({
 	expect,
 }) => {

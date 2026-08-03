@@ -3,7 +3,7 @@ import { $, blue } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
 import { CoreBindings } from "../core/constants";
-import { RAW_EMAIL } from "./constants";
+import { MAX_LOCAL_EMAIL_BYTES, RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 import { bytesToBase64 } from "./encoding";
 import {
@@ -183,7 +183,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			}
 		);
 
-		return await resp.text();
+		const text = await resp.text();
+		if (!resp.ok) {
+			// A non-2xx body is an error message, not a path; surface it so the
+			// caller doesn't log an error string as if it were a file path.
+			throw new Error(`could not store email temporary file: ${text}`);
+		}
+		return text;
 	}
 
 	private checkDestinationAllowed(to: string) {
@@ -261,6 +267,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				await new Response(rawEmail).arrayBuffer()
 			);
 
+			if (rawEmailBuffer.byteLength > MAX_LOCAL_EMAIL_BYTES) {
+				throw new Error(
+					"Email message size is within the production size limit of 25MiB, but exceeds the lower 1MiB limit for testing locally."
+				);
+			}
+
 			let parsedEmail: Email;
 
 			try {
@@ -295,27 +307,30 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const messageId = parsedEmail.messageId;
 			const id = messageIdToStorageId(messageId);
 
-			await this.reportSentEmail({
-				from: emailMessage.from,
-				to: [emailMessage.to],
-				subject: parsedEmail.subject ?? "(no subject)",
-				sentAt: new Date().toISOString(),
-				messageId,
-				text: parsedEmail.text,
-				html: parsedEmail.html,
-				attachments: (parsedEmail.attachments ?? []).map((attachment) => ({
-					filename: attachment.filename ?? "attachment",
-					contentType: attachment.mimeType ?? "application/octet-stream",
-					disposition:
-						attachment.disposition === "inline" ? "inline" : "attachment",
-					size: contentByteLength(attachment.content),
-				})),
-				raw: new TextDecoder().decode(rawEmailBuffer),
-				rawBase64: bytesToBase64(rawEmailBuffer),
-			});
-
+			// Capturing and persisting are deferred so `send()` returns without
+			// blocking on the email-store DO round-trip. Awaiting it inline can
+			// deadlock when the binding is driven through the synchronous platform
+			// proxy (`getBindings()`), which holds the Node main thread.
 			this.ctx.waitUntil(
 				(async () => {
+					await this.reportSentEmail({
+						from: emailMessage.from,
+						to: [emailMessage.to],
+						subject: parsedEmail.subject ?? "(no subject)",
+						sentAt: new Date().toISOString(),
+						messageId,
+						text: parsedEmail.text,
+						html: parsedEmail.html,
+						attachments: (parsedEmail.attachments ?? []).map((attachment) => ({
+							filename: attachment.filename ?? "attachment",
+							contentType: attachment.mimeType ?? "application/octet-stream",
+							disposition:
+								attachment.disposition === "inline" ? "inline" : "attachment",
+							size: contentByteLength(attachment.content),
+						})),
+						raw: new TextDecoder().decode(rawEmailBuffer),
+						rawBase64: bytesToBase64(rawEmailBuffer),
+					});
 					const filePath = await this.storeTempFile(
 						rawEmailBuffer,
 						"eml",
@@ -367,25 +382,37 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				size: contentByteLength(attachment.content),
 			}));
 
-			await this.reportSentEmail({
-				from: formatEmailAddress(builder.from),
-				to: toDisplay(builder.to),
-				cc: builder.cc ? toDisplay(builder.cc) : undefined,
-				bcc: builder.bcc ? toDisplay(builder.bcc) : undefined,
-				replyTo: builder.replyTo
-					? formatEmailAddress(builder.replyTo)
-					: undefined,
-				subject: builder.subject,
-				sentAt: new Date().toISOString(),
-				messageId,
-				text: builder.text,
-				html: builder.html,
-				headers: builder.headers,
-				attachments: sentAttachments,
-			});
+			const totalContentBytes =
+				(builder.text ? contentByteLength(builder.text) : 0) +
+				(builder.html ? contentByteLength(builder.html) : 0) +
+				sentAttachments.reduce((sum, { size }) => sum + size, 0);
+			if (totalContentBytes > MAX_LOCAL_EMAIL_BYTES) {
+				throw new Error(
+					"Email message size is within the production size limit of 25MiB, but exceeds the lower 1MiB limit for testing locally."
+				);
+			}
 
+			// Deferred for the same reason as the EmailMessage path above: awaiting
+			// the store RPC inline can deadlock under the synchronous platform proxy.
 			this.ctx.waitUntil(
 				(async () => {
+					await this.reportSentEmail({
+						from: formatEmailAddress(builder.from),
+						to: toDisplay(builder.to),
+						cc: builder.cc ? toDisplay(builder.cc) : undefined,
+						bcc: builder.bcc ? toDisplay(builder.bcc) : undefined,
+						replyTo: builder.replyTo
+							? formatEmailAddress(builder.replyTo)
+							: undefined,
+						subject: builder.subject,
+						sentAt: new Date().toISOString(),
+						messageId,
+						text: builder.text,
+						html: builder.html,
+						headers: builder.headers,
+						attachments: sentAttachments,
+					});
+
 					const files: string[] = [];
 
 					if (builder.text) {
