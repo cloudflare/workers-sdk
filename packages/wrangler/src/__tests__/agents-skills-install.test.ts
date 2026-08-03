@@ -2579,58 +2579,62 @@ describe("runSkillsUpdateFlow", () => {
 		).toBe("# Cursor Original");
 	});
 
-	test("preserves backup directory and warns when restore fails after a thrown install", async ({
-		expect,
-	}) => {
-		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
-		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
-		writeFileSync(
-			path.join(claudeSkills, "cloudflare", "SKILL.md"),
-			"# Original"
-		);
-		writeMetadataFile({
-			version: 1,
-			accepted: true,
-			date: "2025-01-01T00:00:00Z",
-			detectedAgents: [
-				{
-					name: "Claude Code",
-					rosie: { id: "claude", globalPath: claudeSkills },
-				},
-			],
-			installedTreeSha: "old-sha",
-			installFailed: false,
-			installedSkillNames: ["cloudflare"],
-		});
-		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockConfirm({
-			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
-			result: true,
-		});
-		const { chmodSync } = await import("node:fs");
-		mockRosieInstall.mockImplementationOnce(async () => {
-			// Make the skills directory unwritable so the restore cannot
-			// create the "cloudflare" subdirectory back inside it.
-			chmodSync(claudeSkills, 0o444);
-			throw new Error("Network failure");
-		});
-		const runSkillsUpdateFlow = await freshUpdateImport();
+	// Windows does not enforce POSIX permission bits, so chmodSync(dir, 0o444)
+	// cannot make a directory unwritable there. This test is skipped on Windows
+	// because the restore-failure scenario cannot be reliably simulated.
+	test.skipIf(process.platform === "win32")(
+		"preserves backup directory and warns when restore fails after a thrown install",
+		async ({ expect }) => {
+			const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+			mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+			writeFileSync(
+				path.join(claudeSkills, "cloudflare", "SKILL.md"),
+				"# Original"
+			);
+			writeMetadataFile({
+				version: 1,
+				accepted: true,
+				date: "2025-01-01T00:00:00Z",
+				detectedAgents: [
+					{
+						name: "Claude Code",
+						rosie: { id: "claude", globalPath: claudeSkills },
+					},
+				],
+				installedTreeSha: "old-sha",
+				installFailed: false,
+				installedSkillNames: ["cloudflare"],
+			});
+			mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
+			mockConfirm({
+				text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+				result: true,
+			});
+			const { chmodSync } = await import("node:fs");
+			mockRosieInstall.mockImplementationOnce(async () => {
+				// Make the skills directory unwritable so the restore cannot
+				// create the "cloudflare" subdirectory back inside it.
+				chmodSync(claudeSkills, 0o444);
+				throw new Error("Network failure");
+			});
+			const runSkillsUpdateFlow = await freshUpdateImport();
 
-		try {
-			await runSkillsUpdateFlow({});
-		} finally {
-			// Restore permissions so the temp dir cleanup can proceed.
-			chmodSync(claudeSkills, 0o755);
+			try {
+				await runSkillsUpdateFlow({});
+			} finally {
+				// Restore permissions so the temp dir cleanup can proceed.
+				chmodSync(claudeSkills, 0o755);
+			}
+
+			expect(std.warn).toContain("Failed to update Cloudflare skills");
+			// The restore should have failed because the directory is unwritable,
+			// so the backup directory should be preserved and a warning logged.
+			expect(std.warn).toContain(
+				"Some skill directories could not be restored automatically"
+			);
+			expect(std.warn).toContain("A backup is available at:");
 		}
-
-		expect(std.warn).toContain("Failed to update Cloudflare skills");
-		// The restore should have failed because the directory is unwritable,
-		// so the backup directory should be preserved and a warning logged.
-		expect(std.warn).toContain(
-			"Some skill directories could not be restored automatically"
-		);
-		expect(std.warn).toContain("A backup is available at:");
-	});
+	);
 
 	test("persists installedSkillNames in metadata after successful update", async ({
 		expect,
