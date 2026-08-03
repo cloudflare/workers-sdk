@@ -54,13 +54,21 @@ describe("Local Explorer agent hint", () => {
 		expect(originalBindCLIShortcuts).toHaveBeenCalledOnce();
 		const output = serverLogs.info.join("\n");
 		expect(output).toContain(
-			"This dev session seems to be running in an AI agent."
+			"The Cloudflare Vite plugin detected this dev session is running in an AI agent."
 		);
 		expect(output).toContain(
-			"The Local Explorer API is available at http://localhost:5173/cdn-cgi/explorer/api"
+			"The Local Explorer API is available at http://localhost:5173/cdn-cgi/local/explorer/api"
 		);
 		expect(output).toContain(
-			"GET http://localhost:5173/cdn-cgi/explorer/api/local/workers - local Workers and bindings"
+			"GET http://localhost:5173/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings"
+		);
+		expect(output).toContain(
+			"POST http://localhost:5173/cdn-cgi/local/explorer/api/local/observability/query"
+		);
+		// The OpenAPI schema is listed last, as a fallback, so agents reach for the
+		// specific routes first.
+		expect(output.indexOf("- OpenAPI schema")).toBeGreaterThan(
+			output.indexOf("- Workflows")
 		);
 	});
 
@@ -73,7 +81,7 @@ describe("Local Explorer agent hint", () => {
 
 		const output = serverLogs.info.join("\n");
 		expect(output).toContain(
-			"This preview session seems to be running in an AI agent."
+			"The Cloudflare Vite plugin detected this preview session is running in an AI agent."
 		);
 	});
 
