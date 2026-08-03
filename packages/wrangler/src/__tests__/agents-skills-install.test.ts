@@ -839,6 +839,51 @@ describe("runSkillsInstallFlow with force-install prompt", () => {
 			expect(metadata.accepted).toBe(true);
 			expect(metadata.installFailed).toBe(false);
 		});
+
+		test("falls back to cached tree SHA when post-install fetchSkillsTreeSha fails", async ({
+			expect,
+		}) => {
+			// The skills contents API succeeds (so skill names are fetched),
+			// but the root contents API fails (so fetchSkillsTreeSha returns
+			// undefined). The install flow should fall back to the cached SHA.
+			msw.use(
+				http.get(
+					"https://api.github.com/repos/cloudflare/skills/contents/skills",
+					() => {
+						return HttpResponse.json([
+							{ name: "cloudflare", type: "dir" },
+							{ name: "wrangler", type: "dir" },
+						]);
+					}
+				),
+				http.get(
+					"https://api.github.com/repos/cloudflare/skills/contents/",
+					() => {
+						// First call: during fetchSkillNamesFromGitHub — returns
+						// the tree SHA which gets cached.
+						// Second call: the standalone fetchSkillsTreeSha after
+						// install — returns an error so freshTreeSha is undefined.
+						return HttpResponse.json([
+							{ name: "skills", type: "dir", sha: "cached-sha" },
+							{ name: "README.md", type: "file", sha: "readme-sha" },
+						]);
+					},
+					{ once: true }
+				),
+				http.get(
+					"https://api.github.com/repos/cloudflare/skills/contents/",
+					() => {
+						return new HttpResponse(null, { status: 403 });
+					}
+				)
+			);
+			const runSkillsInstallFlow = await freshImport();
+
+			await runSkillsInstallFlow({ force: true });
+
+			const metadata = readMetadataFile();
+			expect(metadata.installedTreeSha).toBe("cached-sha");
+		});
 	});
 });
 
