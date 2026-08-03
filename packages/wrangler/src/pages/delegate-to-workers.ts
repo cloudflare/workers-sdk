@@ -8,7 +8,8 @@
  * platform) without disrupting humans or existing Pages projects.
  *
  * The delegation is intentionally conservative: it only triggers for agents,
- * never for accounts that already have Pages projects, and never for projects
+ * only for a new Pages project (never an existing project's deploy — but the
+ * account is free to already have other Pages projects), and never for projects
  * that use any Pages feature we can't carry across to Workers (Pages Functions,
  * advanced-mode `_worker.js`, or `_routes.json`).
  *
@@ -32,17 +33,23 @@ export interface MaybeDelegatePagesToWorkersOptions {
 	/** The static-assets directory the user asked to deploy (pages deploy only) */
 	assetsDirectory?: string;
 	/**
-	 * Resolves whether the account already has any Cloudflare Pages projects.
-	 * When it resolves true we never delegate: an account that already uses Pages
-	 * keeps using Pages, whatever command or project name was targeted.
+	 * Whether the specific Pages project this command targets already exists.
+	 * When it resolves true we never delegate: the command is updating an
+	 * existing Pages project (or, for `pages project create`, clashing with an
+	 * existing name), not creating a new one, so we leave it on Pages.
 	 *
-	 * A lazy callback rather than a boolean so the (paginated) list-projects API
-	 * call only runs for agent sessions that have already passed every cheaper,
-	 * local skip check. Non-agents, `--force` opt-outs, unsupported args, and
-	 * unsupported Pages features all short-circuit before it is invoked, so they
-	 * never pay for the extra request.
+	 * This is deliberately per-project, not per-account: an account that already
+	 * has other Pages projects is still delegated when the targeted project is
+	 * new.
+	 *
+	 * A boolean when the caller already knows (e.g. `pages deploy` looks the
+	 * project up for its own reasons), or a lazy resolver when it does not (e.g.
+	 * `pages project create`), so the lookup only runs for agent sessions that
+	 * have passed every cheaper, local skip check — humans and opted-out agents
+	 * never pay for it. If the resolver throws we leave the command on Pages
+	 * rather than risk delegating a project that may already exist.
 	 */
-	accountHasPagesProjects?: () => Promise<boolean>;
+	projectExists?: boolean | (() => Promise<boolean>);
 	/** When true, the user explicitly forced a direct Pages deployment (`--force`), so we never delegate. */
 	force?: boolean;
 	/** Project/worker name to carry across to the Workers deploy. */
@@ -157,8 +164,8 @@ export function logPagesToWorkersForceOptOutNotice(
  *
  * Returns `{ delegate: true }` once we commit to the delegation and the caller
  * should NOT run the original Pages command. Returns `{ delegate: false }` when
- * we deliberately did not delegate (not an agent, `--force`, an account that
- * already has Pages projects, Pages-only CLI args, or an unsupported Pages
+ * we deliberately did not delegate (not an agent, `--force`, a Pages project
+ * that already exists, Pages-only CLI args, or an unsupported Pages
  * feature) so the caller proceeds with the original Pages command. If the
  * Workers deploy fails after the caller runs it, the caller must re-throw
  * rather than falling back to Pages.
@@ -202,26 +209,31 @@ export async function maybeDelegatePagesToWorkers(
 		return { delegate: false };
 	}
 
-	// An account that already has Pages projects keeps using Pages — we only
-	// steer brand-new accounts onto Workers. Checked last because it is the only
-	// network call here: every cheaper, local skip reason above avoids it. If the
-	// lookup itself fails we skip delegation rather than risk disrupting a Pages
-	// user.
-	if (options.accountHasPagesProjects) {
-		let hasPagesProjects: boolean;
+	// A Pages project that already exists is an update (or, for `pages project
+	// create`, a clash with an existing name), not a new project, so we leave it
+	// on Pages. This is per-project, not per-account: an account with other Pages
+	// projects is still delegated when this project is new. Resolved last because
+	// the resolver may make a network call: every cheaper, local skip reason above
+	// avoids it. If the lookup fails we skip delegation rather than risk
+	// delegating a project that may already exist.
+	if (options.projectExists !== undefined) {
+		let projectExists: boolean;
 		try {
-			hasPagesProjects = await options.accountHasPagesProjects();
+			projectExists =
+				typeof options.projectExists === "function"
+					? await options.projectExists()
+					: options.projectExists;
 		} catch (e) {
 			logger.debug(
-				`Pages-to-Workers delegation: could not list account Pages projects (${
+				`Pages-to-Workers delegation: could not determine whether the target Pages project exists (${
 					e instanceof Error ? e.message : String(e)
 				})`
 			);
-			skipDelegate("account pages projects lookup failed");
+			skipDelegate("target project existence lookup failed");
 			return { delegate: false };
 		}
-		if (hasPagesProjects) {
-			skipDelegate("account has pages projects");
+		if (projectExists) {
+			skipDelegate("target pages project already exists");
 			return { delegate: false };
 		}
 	}
@@ -299,8 +311,8 @@ function buildWorkersDeployArgs(
  * Logs (at debug level, for local visibility) why a delegation was skipped.
  *
  * Skips are deliberately not sent to telemetry: they are deterministic, expected
- * non-cases (not an agent's brand-new static project — e.g. the account already
- * has Pages projects, or the project uses an unsupported Pages feature), so the
+ * non-cases (not an agent's brand-new static project — e.g. the target project
+ * already exists, or the project uses an unsupported Pages feature), so the
  * volume carries no signal. The number of skipped commands is derivable from the
  * Pages command's own telemetry, so a dedicated event is not needed.
  */

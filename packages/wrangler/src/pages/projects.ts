@@ -102,6 +102,39 @@ export const listProjects = async ({
 	return results;
 };
 
+/**
+ * Whether a Pages project with the given name already exists on the account.
+ *
+ * Returns false for a missing name or a not-found project; any other API error
+ * propagates so the caller can decide how to treat a failed lookup (the
+ * delegation gate skips delegation rather than risk delegating over a project
+ * that may already exist).
+ */
+async function pagesProjectExists({
+	accountId,
+	projectName,
+}: {
+	accountId: string;
+	projectName: string | undefined;
+}): Promise<boolean> {
+	if (!projectName) {
+		return false;
+	}
+	try {
+		await fetchResult<Project>(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
+			`/accounts/${accountId}/pages/projects/${projectName}`
+		);
+		return true;
+	} catch (err) {
+		// code `8000007` corresponds to project not found
+		if ((err as { code: number }).code === 8000007) {
+			return false;
+		}
+		throw err;
+	}
+}
+
 export const pagesProjectCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new Cloudflare Pages project",
@@ -160,14 +193,18 @@ export const pagesProjectCreateCommand = createCommand({
 		});
 
 		// When run by an AI agent, delegate new static Pages projects to a Workers
-		// static-assets deploy of the current directory. Accounts that already
-		// have Pages projects, projects using unsupported Pages features, and
-		// `--force` are never delegated.
+		// static-assets deploy of the current directory. `pages project create`
+		// always targets a new project, so it is eligible regardless of whether the
+		// account already has other Pages projects. Projects using unsupported Pages
+		// features and `--force` are never delegated.
 		const delegation = await maybeDelegatePagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
-			accountHasPagesProjects: async () =>
-				(await listProjects({ accountId })).length > 0,
+			// Resolved lazily (so only agent sessions pay for it) to avoid
+			// delegating a create that clashes with an existing project name: an
+			// existing project is left on Pages, which reports the clash, rather
+			// than being deployed to Workers under that name.
+			projectExists: () => pagesProjectExists({ accountId, projectName }),
 			force,
 			projectName,
 			compatibilityDate,

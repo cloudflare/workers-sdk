@@ -215,14 +215,15 @@ export const pagesDeployCommand = createCommand({
 		}
 
 		// When run by an AI agent, delegate brand-new static Pages deploys to a
-		// Workers static-assets deploy. Existing projects, projects using
-		// unsupported Pages features, and `--force` are never delegated.
+		// Workers static-assets deploy. Deploys to an existing project, projects
+		// using unsupported Pages features, and `--force` are never delegated. The
+		// account is free to already have other Pages projects — only the specific
+		// project being targeted must be new.
 		const delegation = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
-			accountHasPagesProjects: async () =>
-				(await listProjects({ accountId })).length > 0,
+			projectExists: Boolean(projectName) && isExistingProject,
 			force: args.force,
 			projectName,
 			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
@@ -654,9 +655,8 @@ export const pagesDeployCommand = createCommand({
  *
  * `--branch` is deliberately absent. It exists to target a Pages preview
  * deployment, which only has meaning relative to an existing project's
- * production. Delegation only ever fires when the account has no existing Pages
- * projects (the `accountHasPagesProjects` gate in `maybeDelegatePagesToWorkers`),
- * so the targeted project is necessarily brand-new, and on a new project
+ * production. Delegation only ever fires for a brand-new project (the
+ * `projectExists` gate in `maybeDelegatePagesToWorkers`), and on a new project
  * `--branch` merely names the production branch — exactly what a Workers deploy
  * targets — so there are no preview semantics to preserve. If delegation is ever
  * widened to existing projects, re-examine this omission.
