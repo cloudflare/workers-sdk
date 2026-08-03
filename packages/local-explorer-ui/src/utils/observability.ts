@@ -152,6 +152,9 @@ const VITE_WRAPPER_MARKERS = [
 	"__vite_plugin_cloudflare", // init + get-export-types internal paths
 ];
 
+/** Path prefix of the internal requests Vite makes to drive the module runner. */
+const VITE_INTERNAL_PATH_PREFIX = "/__vite_plugin_cloudflare";
+
 /** True if the span comes from Vite's runner/wrapper plumbing, not user code. */
 export function isViteWrapperSpan(
 	span: Pick<Span, "service" | "name" | "attributes">
@@ -159,6 +162,16 @@ export function isViteWrapperSpan(
 	const haystack = `${span.service ?? ""} ${span.name ?? ""} ${span.attributes ?? ""}`;
 	return VITE_WRAPPER_MARKERS.some((marker) => haystack.includes(marker));
 }
+
+/**
+ * The Vite dev module-runner's jsrpc dispatch method. User code is evaluated
+ * inside the runner Durable Object via `stub.executeCallback(id)`, which shows
+ * up as a `jsrpc` span with this method (verified against a real `vite dev`
+ * capture — these spans do NOT carry the runner class name in their attributes,
+ * so we recognise them by shape rather than by a `__VITE_RUNNER_OBJECT__`
+ * string).
+ */
+const RUNNER_DISPATCH_METHOD = "executeCallback";
 
 /**
  * Order spans into a depth-first waterfall: each span nested under its parent
@@ -333,6 +346,64 @@ export interface TraceFilters {
 // 4xx/5xx request otherwise looks like a successful ("ok") invocation.
 const SPAN_IS_ERROR = `(error IS NOT NULL OR (outcome IS NOT NULL AND outcome != 'ok') OR CAST(json_extract(json(attributes), '$."http.response.status_code"') AS INTEGER) >= 400)`;
 
+/** SQL: the path of span `alias`'s request URL, without scheme, host or query. */
+function urlPathSql(alias: string): string {
+	const url = `json_extract(json(${alias}.attributes), '$."url.full"')`;
+	const afterScheme = `substr(${url}, instr(${url}, '//') + 2)`;
+	return `substr(${afterScheme}, instr(${afterScheme}, '/'))`;
+}
+
+/**
+ * SQL: request `alias` didn't just go unserved, it broke — an uncaught error, a
+ * non-ok outcome, or a 5xx. Narrower than `SPAN_IS_ERROR`, which counts any 4xx:
+ * a hidden request that answers 404 is still just noise, so only a 5xx is worth
+ * pulling back into view.
+ */
+function isFailedRequestSql(alias: string): string {
+	const status = `CAST(json_extract(json(${alias}.attributes), '$."http.response.status_code"') AS INTEGER)`;
+	return `COALESCE(${alias}.error IS NOT NULL OR (${alias}.outcome IS NOT NULL AND ${alias}.outcome != 'ok') OR ${status} >= 500, 0)`;
+}
+
+/**
+ * SQL: span `alias` is one of Vite's own internal requests (module init,
+ * export-type probing), which the developer never made.
+ *
+ * Matched on the request path, not the wrapper-service marker: Vite routes
+ * *every* request through its router worker, so marker-matching a root span
+ * would hide the user's real traffic along with the plumbing.
+ */
+function isViteInternalRequestSql(alias: string): string {
+	const url = `json_extract(json(${alias}.attributes), '$."url.full"')`;
+	return `(${url} IS NOT NULL AND instr(${urlPathSql(alias)}, '${VITE_INTERNAL_PATH_PREFIX}') = 1)`;
+}
+
+/** SQL counterpart of `isViteWrapperSpan` for the span aliased `alias`. */
+function viteWrapperSpanSql(alias: string): string {
+	const haystack = `(COALESCE(${alias}.service, '') || ' ' || COALESCE(${alias}.name, '') || ' ' || COALESCE(json(${alias}.attributes), ''))`;
+	return `(${VITE_WRAPPER_MARKERS.map(
+		(marker) => `instr(${haystack}, '${marker}') > 0`
+	).join(" OR ")})`;
+}
+
+/** SQL counterpart of `isRunnerDispatchJsrpc` for the span aliased `alias`. */
+function runnerDispatchJsrpcSql(alias: string): string {
+	return `(${alias}.name = 'jsrpc' AND json_extract(json(${alias}.attributes), '$."jsrpc.method"') = '${RUNNER_DISPATCH_METHOD}')`;
+}
+
+/**
+ * SQL: log `l` (joined to its emitting span `sp`) came from Vite's plumbing.
+ *
+ * As in `stripDevRunnerSpans`, the shape match only counts once the trace is
+ * known to be Vite dev — a `wrangler dev` user may have their own
+ * `executeCallback` RPC method, and hiding their logs would be silent data loss.
+ * COALESCE guards the NULL a span-less log would otherwise produce.
+ */
+const LOG_IS_VITE_INTERNAL = `COALESCE(${viteWrapperSpanSql("sp")} OR (${runnerDispatchJsrpcSql(
+	"sp"
+)} AND EXISTS (
+			SELECT 1 FROM spans v WHERE v.trace_id = l.trace_id AND ${viteWrapperSpanSql("v")}
+		)), 0)`;
+
 // Chrome DevTools auto-probes this well-known path on every page load to look for
 // a workspace mapping; it's tooling traffic, not a request the developer made, so
 // keep it out of the trace list. Guard the NULL case so non-fetch roots (which
@@ -477,6 +548,9 @@ const LOG_CLAUSE_COLUMNS: Record<string, string> = {
 export function listTraces(filters: TraceFilters = {}): Promise<TraceRow[]> {
 	const limit = Number(filters.limit ?? 100);
 	const where: string[] = ["s.parent_id IS NULL", HIDE_DEVTOOLS_PROBE];
+	where.push(
+		`NOT (${isViteInternalRequestSql("s")} AND NOT ${isFailedRequestSql("s")})`
+	);
 	const params: unknown[] = [];
 
 	if (filters.status === "success") {
@@ -632,10 +706,13 @@ export function listEvents(filters: EventFilters = {}): Promise<LogEvent[]> {
 		}
 	}
 
+	// Filter in SQL, not on the returned rows, so LIMIT counts only visible logs.
+	where.push(`(l.level = 'error' OR NOT ${LOG_IS_VITE_INTERNAL})`);
+
 	params.push(limit);
 	const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 	// The `logs` table has no service column, so resolve the owning worker name
-	// from the emitting span (matched by trace_id + span_id).
+	// from the emitting span.
 	const sql = `SELECT l.trace_id, l.span_id, l.seq, l.ts_ms, l.level, l.message, l.operation, l.created_at, sp.service AS service
 		FROM logs l
 		LEFT JOIN spans sp ON sp.trace_id = l.trace_id AND sp.span_id = l.span_id
@@ -708,16 +785,6 @@ export function operationLabel(
 	}
 	return name;
 }
-
-/**
- * The Vite dev module-runner's jsrpc dispatch method. User code is evaluated
- * inside the runner Durable Object via `stub.executeCallback(id)`, which shows
- * up as a `jsrpc` span with this method (verified against a real `vite dev`
- * capture — these spans do NOT carry the runner class name in their attributes,
- * so we recognise them by shape rather than by a `__VITE_RUNNER_OBJECT__`
- * string).
- */
-const RUNNER_DISPATCH_METHOD = "executeCallback";
 
 /** True if a jsrpc span is the runner's "evaluate user code" dispatch. */
 function isRunnerDispatchJsrpc(span: Span): boolean {
