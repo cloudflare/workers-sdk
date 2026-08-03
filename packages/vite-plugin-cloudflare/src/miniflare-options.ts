@@ -332,6 +332,7 @@ export async function getDevMiniflareOptions(
 	];
 
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	let containerEngine: string | undefined;
 
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
@@ -381,8 +382,7 @@ export async function getDevMiniflareOptions(
 								worker.config.dev.enable_containers
 							) {
 								const dockerPath = getDockerPath();
-								worker.config.dev.container_engine =
-									resolveDockerHost(dockerPath);
+								containerEngine = resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
 
 								const options = getContainerOptions({
@@ -579,14 +579,12 @@ export async function getDevMiniflareOptions(
 				);
 				await viteDevServer.restart();
 			},
-			defaultPersistRoot: getPersistenceRoot(
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+			containerEngine,
 			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const parsed = await parseModuleFallbackRequest(request);
@@ -675,7 +673,7 @@ function getPreviewModules(
 }
 
 /**
- * Translate a Build Output API module type to a Miniflare module type.
+ * Translate a Build Output Specification module type to a Miniflare module type.
  */
 function toMiniflareModuleType(type: ModuleType): ModuleRuleType | null {
 	switch (type) {
@@ -712,7 +710,7 @@ export function getModulesFromManifest(bundle: Bundle) {
 	const mainEntry = bundle.modules[mainModule];
 	assert(
 		mainEntry !== undefined,
-		`Build Output API: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
+		`Build Output Specification: \`mainModule\` "${mainModule}" is missing from \`modules\`.`
 	);
 
 	const ordered: Array<[string, { type: ModuleType }]> = [
@@ -753,6 +751,7 @@ export async function getPreviewMiniflareOptions(
 	);
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
+	let containerEngine: string | undefined;
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
@@ -800,7 +799,7 @@ export async function getPreviewMiniflareOptions(
 					workerConfig.dev.enable_containers
 				) {
 					const dockerPath = getDockerPath();
-					workerConfig.dev.container_engine = resolveDockerHost(dockerPath);
+					containerEngine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
 
 					const options = getContainerOptions({
@@ -826,7 +825,7 @@ export async function getPreviewMiniflareOptions(
 				const { modulesRules, ...workerOptions } =
 					miniflareWorkerOptions.workerOptions;
 
-				// Build Output API workers carry an explicit modules manifest
+				// Build Output Specification workers carry an explicit modules manifest
 				// that drives Miniflare's module loader directly, bypassing the
 				// extension-glob-based discovery in `getPreviewModules`. This
 				// preserves the exact module list (with its declared types)
@@ -873,14 +872,12 @@ export async function getPreviewMiniflareOptions(
 			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
 			telemetry: { enabled: false },
 			handleStructuredLogs: getStructuredLogsLogger(logger),
-			defaultPersistRoot: getPersistenceRoot(
+			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			defaultProjectTmpPath: path.resolve(
-				resolvedViteConfig.root,
-				".wrangler/tmp"
-			),
+			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+			containerEngine,
 			workers,
 		},
 		containerTagToOptionsMap,

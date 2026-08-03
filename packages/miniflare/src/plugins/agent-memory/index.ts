@@ -14,7 +14,7 @@ const AgentMemoryEntrySchema = z.object({
 });
 
 export const AgentMemoryOptionsSchema = z.object({
-	agentMemory: z.record(AgentMemoryEntrySchema).optional(),
+	agentMemory: z.record(z.string(), AgentMemoryEntrySchema).optional(),
 });
 
 export const AGENT_MEMORY_PLUGIN_NAME = "agent-memory";

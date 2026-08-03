@@ -236,7 +236,7 @@ Map the issue to a package based on labels, title, and body content:
 | Signal                                                                   | Package                                         |
 | ------------------------------------------------------------------------ | ----------------------------------------------- |
 | `wrangler` label, wrangler CLI commands, `wrangler.toml`/`wrangler.json` | `packages/wrangler`                             |
-| `miniflare` label, local dev simulation                                  | `packages/miniflare`                            |
+| `package:miniflare` label, local dev simulation                          | `packages/miniflare`                            |
 | `d1` label, D1 database, `d1 execute`, migrations                        | `packages/wrangler` (D1 code is in wrangler)    |
 | `vitest` label, worker tests, `vitest-pool-workers`                      | `packages/vitest-pool-workers`                  |
 | `vite-plugin` label, vite dev, `@cloudflare/vite-plugin`                 | `packages/vite-plugin-cloudflare`               |

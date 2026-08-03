@@ -12,6 +12,7 @@ import type { Plugin, RemoteProxyConnectionString } from "../shared";
 export const DispatchNamespaceOptionsSchema = z.object({
 	dispatchNamespaces: z
 		.record(
+			z.string(),
 			z.object({
 				namespace: z.string(),
 				remoteProxyConnectionString: z

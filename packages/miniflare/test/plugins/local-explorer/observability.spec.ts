@@ -14,7 +14,7 @@ const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 // A user worker that seeds the internal TraceStore (cross-script DO binding) so
 // the Observability API has deterministic data to read back. `/seed` runs on the
-// user worker; the `/cdn-cgi/explorer/api/local/observability/query` route hits the
+// user worker; the `/cdn-cgi/local/explorer/api/local/observability/query` route hits the
 // explorer worker, which proxies to the collector.
 const SEED_WORKER = `
 const SPANS = [

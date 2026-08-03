@@ -28,7 +28,8 @@
 				"E2E_FRAMEWORK_TEMPLATE_TO_TEST",
 				"E2E_PROJECT_PATH",
 				"E2E_TEST_RETRIES",
-				"E2E_RUN_DEPLOY_TESTS"
+				"E2E_RUN_DEPLOY_TESTS",
+				"pnpm_config_manage_package_manager_versions"
 			],
 			"dependsOn": ["build"],
 			"inputs": ["e2e/**", "vitest-e2e.config.ts", "!e2e/README.md"],

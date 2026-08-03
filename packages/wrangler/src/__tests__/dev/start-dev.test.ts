@@ -104,13 +104,21 @@ describe("startDev", () => {
 			"Wrangler detected this dev session is running in an AI agent."
 		);
 		expect(std.out).toContain(
-			"The Local Explorer API is available at http://127.0.0.1:8787/cdn-cgi/explorer/api"
+			"The Local Explorer API is available at http://127.0.0.1:8787/cdn-cgi/local/explorer/api"
 		);
 		expect(std.out).toContain(
-			"GET http://127.0.0.1:8787/cdn-cgi/explorer/api/local/workers - local Workers and bindings"
+			"GET http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings"
 		);
 		expect(std.out).toContain(
-			"POST http://127.0.0.1:8787/cdn-cgi/explorer/api/local/observability/query - query request traces and console logs"
+			"POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:"
+		);
+		// The query route ships a copy-pasteable example that also documents the request body shape.
+		expect(std.out).toContain(
+			`curl -X POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'`
+		);
+		// The OpenAPI schema is demoted to a last-resort footer after the functional routes.
+		expect(std.out).toContain(
+			"fetch the full OpenAPI schema (large - use only as a last resort):"
 		);
 	});
 
