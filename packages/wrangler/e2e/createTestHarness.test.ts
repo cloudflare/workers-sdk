@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -92,6 +94,123 @@ describe("createTestHarness", () => {
 		const relativeWorkerResponse = await server.getWorker().fetch("/url");
 		await expect(relativeWorkerResponse.text()).resolves.toBe(
 			new URL("/url", url).href
+		);
+	});
+
+	it("runs existing dry-run output without rebuilding it", async ({
+		expect,
+		onTestFailed,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "prebuilt-worker",
+					"main": "src/worker.ts",
+					"compatibility_date": "2026-05-20",
+					"vars": { "ENVIRONMENT": "top-level" },
+					"rules": [
+						{ "type": "Text", "globs": ["**/*.txt"] }
+					],
+					"build": { "command": "node build.mjs" },
+					"env": {
+						"test": {
+							"vars": { "ENVIRONMENT": "test" }
+						}
+					}
+				}
+			`,
+			"build.mjs": dedent`
+				import { writeFileSync } from "node:fs";
+
+				writeFileSync(
+					"src/generated.ts",
+					'export default "from custom build";'
+				);
+			`,
+			"src/message.txt": "from emitted text module",
+			"src/worker.ts": dedent`
+				import generated from "./generated";
+				import message from "./message.txt";
+
+				export default {
+					fetch(_request, env) {
+						return new Response(generated + ":" + message + ":" + env.ENVIRONMENT);
+					}
+				};
+			`,
+		});
+
+		await helper.run(
+			"wrangler deploy --dry-run --env test --outdir worker-output"
+		);
+
+		const outputPath = path.join(helper.tmpPath, "worker-output", "worker.js");
+		const originalOutput = await readFile(outputPath);
+		await helper.seed({
+			"build.mjs": 'throw new Error("The test harness ran the custom build");',
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.jsonc",
+					env: "test",
+					outDir: pathToFileURL(path.join(helper.tmpPath, "worker-output")),
+				},
+			],
+		});
+		onTestFinished(server.close);
+		onTestFailed(server.debug);
+
+		await server.listen();
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe(
+			"from custom build:from emitted text module:test"
+		);
+		expect(await readFile(outputPath)).toEqual(originalOutput);
+
+		await server.reset();
+		const resetResponse = await server.fetch("/");
+		await expect(resetResponse.text()).resolves.toBe(
+			"from custom build:from emitted text module:test"
+		);
+		expect(await readFile(outputPath)).toEqual(originalOutput);
+	});
+
+	it("fails when the expected dry-run entrypoint is missing", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "missing-prebuilt-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch() {
+						return new Response("source fallback");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.jsonc",
+					outDir: "./missing-output",
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await expect(server.listen()).rejects.toThrow(
+			'wrangler deploy --dry-run --config "./wrangler.jsonc" --outdir "./missing-output"'
 		);
 	});
 
