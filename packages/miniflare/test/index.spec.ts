@@ -2077,9 +2077,8 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 	}
 
 	const okResult = await dispatchEmail("ok");
-	// Forwards and replies both report a message id synthesized in mimetext's
-	// shape - `<{base36 random}@{domain}>` - taken from the forward recipient and
-	// the reply sender respectively.
+	// Forwards have no local MIME message, so their id is synthesized. Replies
+	// return the Message-ID from the reply MIME itself.
 	const syntheticMessageId = (domain: string) =>
 		expect.stringMatching(
 			new RegExp(`^<[a-z0-9]+@${domain.replace(/\./g, "\\.")}>$`)
@@ -2096,7 +2095,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		replies: [
 			{
 				sender: "reply-ok@example.com",
-				messageId: syntheticMessageId("example.com"),
+				messageId: "<reply-ok@example.com>",
 				raw: expect.stringContaining("Reply for ok"),
 			},
 		],
@@ -2139,7 +2138,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		],
 		replies: [
 			{
-				messageId: syntheticMessageId("example.com"),
+				messageId: "<reply-exception@example.com>",
 				sender: "reply-exception@example.com",
 				raw: expect.stringContaining("Reply for exception"),
 			},

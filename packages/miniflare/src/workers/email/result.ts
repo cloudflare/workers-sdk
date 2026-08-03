@@ -45,6 +45,8 @@ export interface EmailHandlerReply {
 	sender: string;
 	/** Raw MIME content of the reply. */
 	raw: string;
+	/** Lossless base64 representation of the reply MIME. */
+	rawBase64?: string;
 }
 
 export interface EmailHandlerResult {

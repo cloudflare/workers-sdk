@@ -548,21 +548,7 @@ export const zEmailHandlerReply = z.object({
 	messageId: z.string(),
 	sender: z.string(),
 	raw: z.string().optional(),
-});
-
-export const zEmailRoutingItem = z.object({
-	worker: z.string().optional(),
-	from: z.string(),
-	to: z.string(),
-	subject: z.string(),
-	messageId: z.string(),
-	receivedAt: z.string(),
-	rawSize: z.number(),
-	outcome: z.enum(["ok", "exception"]),
-	rejectReason: z.string().optional(),
-	forwards: z.array(zEmailHandlerForward),
-	replies: z.array(zEmailHandlerReply),
-	events: z.array(zEmailHandlerEvent),
+	rawBase64: z.string().optional(),
 });
 
 /**
@@ -570,7 +556,7 @@ export const zEmailRoutingItem = z.object({
  */
 export const zEmailSendRequest = z.object({
 	from: z.string(),
-	to: z.array(z.string()),
+	to: z.array(z.string()).min(1),
 	cc: z.array(z.string()).optional(),
 	bcc: z.array(z.string()).optional(),
 	replyTo: z.string().optional(),
@@ -584,6 +570,7 @@ export const zEmailSendRequest = z.object({
 				filename: z.string(),
 				type: z.string(),
 				content: z.string(),
+				contentId: z.string().optional(),
 				disposition: z.enum(["inline", "attachment"]).optional(),
 			})
 		)
@@ -600,6 +587,22 @@ export const zEmailAttachment = z.object({
 	size: z.number(),
 });
 
+export const zEmailRoutingItem = z.object({
+	worker: z.string().optional(),
+	from: z.string(),
+	to: z.string(),
+	subject: z.string(),
+	messageId: z.string(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply),
+	events: z.array(zEmailHandlerEvent),
+	attachments: z.array(zEmailAttachment),
+});
+
 export const zEmailRoutingDetail = z.object({
 	worker: z.string().optional(),
 	from: z.string(),
@@ -609,6 +612,7 @@ export const zEmailRoutingDetail = z.object({
 	receivedAt: z.string(),
 	rawSize: z.number(),
 	raw: z.string(),
+	rawBase64: z.string().optional(),
 	attachments: z.array(zEmailAttachment),
 	outcome: z.enum(["ok", "exception"]),
 	rejectReason: z.string().optional(),
@@ -626,6 +630,7 @@ export const zEmailSendingItem = z.object({
 	subject: z.string(),
 	messageId: z.string(),
 	sentAt: z.string(),
+	headers: z.record(z.string()).optional(),
 	attachments: z.array(zEmailAttachment),
 });
 
@@ -643,6 +648,7 @@ export const zEmailSendingDetail = z.object({
 	headers: z.record(z.string(), z.string()).optional(),
 	attachments: z.array(zEmailAttachment),
 	raw: z.string().optional(),
+	rawBase64: z.string().optional(),
 });
 
 export const zR2ResultInfoWritable = z.record(z.string(), z.unknown());

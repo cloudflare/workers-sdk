@@ -15,14 +15,29 @@ export async function writeTempFile(options: {
 	extension: string;
 	contents: string;
 }): Promise<string> {
+	if (
+		(options.prefix !== null &&
+			(options.prefix === "." ||
+				options.prefix === ".." ||
+				options.prefix.includes("/") ||
+				options.prefix.includes("\\"))) ||
+		options.extension.includes("/") ||
+		options.extension.includes("\\")
+	) {
+		throw new Error("Invalid temporary-file path component");
+	}
 	const folder = options.prefix ? `files/${options.prefix}` : "files";
 	const directory = path.join(options.tmpPath, folder);
 	await mkdir(directory, { recursive: true });
 
-	const filePath = path.join(
+	const filePath = path.resolve(
 		directory,
 		`${crypto.randomUUID()}.${options.extension}`
 	);
+	const root = path.resolve(directory);
+	if (!filePath.startsWith(`${root}${path.sep}`)) {
+		throw new Error("Invalid temporary-file path");
+	}
 	await writeFile(filePath, options.contents);
 	return filePath;
 }

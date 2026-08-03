@@ -5,12 +5,14 @@ import PostalMime from "postal-mime";
 import { CoreBindings } from "../core/constants";
 import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
+import { bytesToBase64 } from "./encoding";
 import {
 	getHeader,
 	messageIdToStorageId,
 	synthesizeMessageId,
 } from "./message-id";
 import type {
+	EmailArtifact,
 	EmailStoreService,
 	StoredEmailAttachment,
 	StoredSendingEmail,
@@ -32,6 +34,14 @@ function contentByteLength(
 		return new TextEncoder().encode(content).byteLength;
 	}
 	return content.byteLength;
+}
+
+function getAttachmentExtension(filename: string): string {
+	const extension = filename.match(/\.([^.]+)$/u)?.[1];
+	return extension !== undefined &&
+		/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(extension)
+		? extension
+		: "bin";
 }
 
 /**
@@ -108,7 +118,19 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	 */
 	private async reportSentEmail(email: StoredSendingEmail): Promise<void> {
 		try {
-			await this.env[CoreBindings.SERVICE_EMAIL_STORE]?.storeSent(email);
+			const artifacts =
+				await this.env[CoreBindings.SERVICE_EMAIL_STORE]?.storeSent(email);
+			if (artifacts !== undefined && artifacts.length > 0) {
+				await this.env.MINIFLARE_LOOPBACK.fetch(
+					"http://localhost/core/delete-email-temp-files",
+					{
+						method: "POST",
+						body: JSON.stringify({ artifacts } satisfies {
+							artifacts: EmailArtifact[];
+						}),
+					}
+				);
+			}
 		} catch {
 			// Ignore capture failures - they must not affect sending.
 		}
@@ -128,7 +150,8 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		content: string | ArrayBuffer | ArrayBufferView,
 		extension: string,
 		prefix: string,
-		id: string
+		id: string,
+		recordId = id
 	): Promise<string> {
 		let body: string | Uint8Array;
 		if (typeof content === "string") {
@@ -149,6 +172,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			extension,
 			email: "true",
 			id,
+			record: recordId,
 		});
 
 		const resp = await this.env.MINIFLARE_LOOPBACK.fetch(
@@ -287,6 +311,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					size: contentByteLength(attachment.content),
 				})),
 				raw: new TextDecoder().decode(rawEmailBuffer),
+				rawBase64: bytesToBase64(rawEmailBuffer),
 			});
 
 			this.ctx.waitUntil(
@@ -295,12 +320,19 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						rawEmailBuffer,
 						"eml",
 						"email",
+						id,
 						id
 					);
 					await this.log(
 						`${blue("send_email binding called with the following message:")}\nEmail: ${filePath}`
 					);
-				})()
+				})().catch(async (error: unknown) => {
+					try {
+						await this.log(`Failed to persist sent email: ${String(error)}`);
+					} catch {
+						// Logging failures must not create another unhandled rejection.
+					}
+				})
 			);
 
 			// Production returns the RFC Message-ID with angle brackets; keep parity.
@@ -320,7 +352,6 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				getHeader(builder.headers, "Message-ID") ??
 				synthesizeMessageId(extractEmailAddress(builder.from));
 			const id = messageIdToStorageId(messageId);
-			const systemId = id.split("@")[0];
 
 			const toDisplay = (
 				addr: string | EmailAddress | (string | EmailAddress)[]
@@ -362,6 +393,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 							builder.text,
 							"txt",
 							"email-text",
+							id,
 							id
 						);
 						files.push(`Text: ${textPath}`);
@@ -372,6 +404,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 							builder.html,
 							"html",
 							"email-html",
+							id,
 							id
 						);
 						files.push(`HTML: ${htmlPath}`);
@@ -379,18 +412,14 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 					if (builder.attachments) {
 						for (const [index, attachment] of builder.attachments.entries()) {
-							// Extract file extension from filename or use generic extension
-							const extMatch = attachment.filename.match(/\.([^.]+)$/);
-							const extension = extMatch ? extMatch[1] : "bin";
+							const extension = getAttachmentExtension(attachment.filename);
 
 							const attachmentPath = await this.storeTempFile(
 								attachment.content,
 								extension,
 								"email-attachment",
-								// A message can carry several attachments, so suffix the
-								// message id with the attachment's position to keep the
-								// filenames unique while still grouping them by message.
-								`${id}-${index + 1}`
+								`${id}-${index + 1}`,
+								id
 							);
 							files.push(
 								`Attachment (${attachment.disposition}): ${attachment.filename} -> ${attachmentPath}`
@@ -398,13 +427,18 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						}
 					}
 
-					// Format and log the message details with file paths
 					const formatted = formatMessageBuilder(builder);
 					const fileInfo = files.length > 0 ? `\n\n${files.join("\n")}` : "";
 					await this.log(
 						`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
 					);
-				})()
+				})().catch(async (error: unknown) => {
+					try {
+						await this.log(`Failed to persist sent email: ${String(error)}`);
+					} catch {
+						// Logging failures must not create another unhandled rejection.
+					}
+				})
 			);
 
 			// Production returns the ID with angle brackets; keep parity.

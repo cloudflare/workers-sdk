@@ -1,9 +1,9 @@
 // Shared types for the local email store.
 //
 // Received ("routing") and sent ("sending") emails are captured at runtime and
-// held in memory on the `Miniflare` instance. Workers push records over the
-// loopback service, and the local explorer reads them back. Emails do not
-// persist across dev-server restarts.
+// held in the instance-local email-store Durable Object. Workers push records
+// over workerd-internal RPC, and the local explorer reads them back. Emails do
+// not persist across dev-server restarts.
 
 import type { EmailHandlerResult } from "./result";
 
@@ -24,15 +24,33 @@ export interface StoredRoutingEmail extends EmailHandlerResult {
 	rawSize: number;
 	/** Raw MIME content (capped at 1MiB by the email handler). */
 	raw: string;
+	/** Lossless base64 representation of the raw MIME content. */
+	rawBase64?: string;
 	/** Attachments parsed out of `raw`. Metadata only.*/
 	attachments: StoredEmailAttachment[];
 }
+
+export type StoredRoutingEmailSummary = Omit<
+	StoredRoutingEmail,
+	"raw" | "rawBase64" | "replies"
+> & {
+	replies: Array<
+		Omit<StoredRoutingEmail["replies"][number], "raw" | "rawBase64">
+	>;
+};
 
 export interface StoredEmailAttachment {
 	filename: string;
 	contentType: string;
 	disposition: "inline" | "attachment";
 	size: number;
+}
+
+export interface EmailArtifact {
+	recordId: string;
+	prefix: string;
+	id: string;
+	extension: string;
 }
 
 export interface StoredSendingEmail {
@@ -54,7 +72,14 @@ export interface StoredSendingEmail {
 	attachments: StoredEmailAttachment[];
 	/** Raw MIME content, present when sent via the `EmailMessage` API. */
 	raw?: string;
+	/** Lossless base64 representation of the raw MIME content. */
+	rawBase64?: string;
 }
+
+export type StoredSendingEmailSummary = Omit<
+	StoredSendingEmail,
+	"text" | "html" | "raw" | "rawBase64"
+>;
 
 /**
  * RPC surface of the email store host worker (see email-store.worker.ts). Used
@@ -63,13 +88,13 @@ export interface StoredSendingEmail {
  * emails.
  */
 export interface EmailStoreService {
-	storeReceived(email: StoredRoutingEmail): Promise<void>;
+	storeReceived(email: StoredRoutingEmail): Promise<EmailArtifact[]>;
 	/** Looks up a received email by its bracket-stripped Message-ID. */
 	findReceived(id: string): Promise<StoredRoutingEmail | undefined>;
-	listReceived(): Promise<StoredRoutingEmail[]>;
-	storeSent(email: StoredSendingEmail): Promise<void>;
+	listReceived(): Promise<StoredRoutingEmailSummary[]>;
+	storeSent(email: StoredSendingEmail): Promise<EmailArtifact[]>;
 	/** Looks up a sent email by its bracket-stripped Message-ID. */
 	findSent(id: string): Promise<StoredSendingEmail | undefined>;
-	listSent(): Promise<StoredSendingEmail[]>;
+	listSent(): Promise<StoredSendingEmailSummary[]>;
 	clear(): Promise<void>;
 }

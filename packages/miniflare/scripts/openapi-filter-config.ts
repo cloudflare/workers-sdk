@@ -2197,6 +2197,10 @@ const config = {
 						description:
 							"Raw MIME content of the reply. Omitted from the routing list; present on the detail response.",
 					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of the reply MIME.",
+					},
 				},
 				required: ["messageId", "sender"],
 			},
@@ -2240,6 +2244,10 @@ const config = {
 						type: "array",
 						items: { $ref: "#/components/schemas/email_handler-event" },
 					},
+					attachments: {
+						type: "array",
+						items: { $ref: "#/components/schemas/email_attachment" },
+					},
 				},
 				required: [
 					"messageId",
@@ -2252,6 +2260,7 @@ const config = {
 					"forwards",
 					"replies",
 					"events",
+					"attachments",
 				],
 			},
 			"email_routing-detail": {
@@ -2271,6 +2280,10 @@ const config = {
 					raw: {
 						type: "string",
 						description: "Raw MIME content of the received email.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of the received MIME.",
 					},
 					attachments: {
 						type: "array",
@@ -2327,6 +2340,7 @@ const config = {
 					to: {
 						type: "array",
 						items: { type: "string" },
+						minItems: 1,
 						description: "Recipient addresses.",
 					},
 					cc: { type: "array", items: { type: "string" } },
@@ -2360,6 +2374,10 @@ const config = {
 									type: "string",
 									description:
 										"Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded.",
+								},
+								contentId: {
+									type: "string",
+									description: "Content-ID for an inline attachment.",
 								},
 								disposition: {
 									type: "string",
@@ -2404,6 +2422,10 @@ const config = {
 							"RFC Message-ID header value. Identifies the email in the store.",
 					},
 					sentAt: { type: "string" },
+					headers: {
+						type: "object",
+						additionalProperties: { type: "string" },
+					},
 					attachments: {
 						type: "array",
 						items: {
@@ -2451,6 +2473,10 @@ const config = {
 						type: "string",
 						description:
 							"Raw MIME content, present when sent via the EmailMessage API.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of sent MIME.",
 					},
 				},
 				required: [

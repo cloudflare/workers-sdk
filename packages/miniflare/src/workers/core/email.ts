@@ -2,6 +2,8 @@ import assert from "node:assert";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
+import { MAX_LOCAL_EMAIL_BYTES } from "../email/constants";
+import { bytesToBase64 } from "../email/encoding";
 import { messageIdToStorageId, synthesizeMessageId } from "../email/message-id";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
@@ -11,7 +13,11 @@ import type {
 	EmailHandlerForward,
 	EmailHandlerReply,
 } from "../email/result";
-import type { EmailStoreService, StoredRoutingEmail } from "../email/storage";
+import type {
+	EmailArtifact,
+	EmailStoreService,
+	StoredRoutingEmail,
+} from "../email/storage";
 import type { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
 import type { Email } from "postal-mime";
 
@@ -35,6 +41,17 @@ function isMissingEmailHandlerError(e: unknown): boolean {
 		e instanceof Error &&
 		e.message.includes('does not implement the method "email"')
 	);
+}
+
+async function removeEmailArtifacts(
+	loopback: Fetcher,
+	artifacts: EmailArtifact[]
+): Promise<void> {
+	if (artifacts.length === 0) return;
+	await loopback.fetch("http://localhost/core/delete-email-temp-files", {
+		method: "POST",
+		body: JSON.stringify({ artifacts }),
+	});
 }
 
 export async function handleEmail(
@@ -83,7 +100,7 @@ export async function handleEmail(
 			}
 		);
 	}
-	if (incomingEmailRaw.byteLength > 1024 * 1024) {
+	if (incomingEmailRaw.byteLength > MAX_LOCAL_EMAIL_BYTES) {
 		return new Response(
 			"Email message size is within the production size limit of 25MiB, but exceeds the lower 1Mib limit for testing locally.",
 			{
@@ -147,12 +164,8 @@ export async function handleEmail(
 	events.push({ type: "received", timestamp: new Date().toISOString() });
 
 	// Capture this email for the local explorer "Routing" interface. The store
-	// indexes records by their Message-ID; `emailId` is used only to name any
-	// files written to disk so they can be matched to this message.
-	// TODO(miniflare v5): switch on-disk file naming to a mimetext-style id (or a
-	// `crypto.randomUUID()`), decoupling the file name from the Message-ID.
-	const emailId =
-		params.get("id") ?? messageIdToStorageId(parsedIncomingEmail.messageId);
+	// indexes records by their Message-ID; reply files are named after each
+	// reply's own Message-ID below.
 	const storedEmail: StoredRoutingEmail = {
 		worker: params.get("worker") ?? undefined,
 		from,
@@ -162,6 +175,7 @@ export async function handleEmail(
 		receivedAt: new Date().toISOString(),
 		rawSize: incomingEmailRaw.byteLength,
 		raw: new TextDecoder().decode(incomingEmailRaw),
+		rawBase64: bytesToBase64(incomingEmailRaw),
 		attachments: (parsedIncomingEmail.attachments ?? []).map((attachment) => ({
 			filename: attachment.filename ?? "attachment",
 			contentType: attachment.mimeType ?? "application/octet-stream",
@@ -169,7 +183,7 @@ export async function handleEmail(
 				attachment.disposition === "inline" ? "inline" : "attachment",
 			size:
 				typeof attachment.content === "string"
-					? attachment.content.length
+					? new TextEncoder().encode(attachment.content).byteLength
 					: attachment.content.byteLength,
 		})),
 		outcome,
@@ -188,7 +202,18 @@ export async function handleEmail(
 		storedEmail.outcome = outcome;
 		storedEmail.rejectReason = rejectReason;
 		try {
-			await env[CoreBindings.SERVICE_EMAIL_STORE]?.storeReceived(storedEmail);
+			const artifacts =
+				await env[CoreBindings.SERVICE_EMAIL_STORE]?.storeReceived(storedEmail);
+			if (artifacts !== undefined) {
+				try {
+					await removeEmailArtifacts(
+						env[CoreBindings.SERVICE_LOOPBACK],
+						artifacts
+					);
+				} catch {
+					// Cleanup failures must not cause the record to be stored again.
+				}
+			}
 		} catch {
 			// Ignore storage failures - they must not affect email handling.
 			stored = false;
@@ -283,20 +308,30 @@ export async function handleEmail(
 					) {
 						throw new Error("Original email is not replyable");
 					}
-					const finalReply = await validateReply(
+					const validatedReply = await validateReply(
 						parsedIncomingEmail,
 						replyMessage as MiniflareEmailMessage
 					);
+					const finalReply = validatedReply.raw;
+					const replyId = messageIdToStorageId(validatedReply.messageId);
+					const parentRecordId = messageIdToStorageId(
+						parsedIncomingEmail.messageId
+					);
 
-					// Store the reply under `email/<session-id>/reply/<emailId>.eml` -
+					// Store the reply under `email/<session-id>/reply/<replyId>.eml` -
 					// grouped under `reply/` (keeping it separate from sent emails)
 					const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-						`http://localhost/core/store-temp-file?email=true&extension=eml&prefix=reply&id=${encodeURIComponent(emailId)}`,
+						`http://localhost/core/store-temp-file?email=true&extension=eml&prefix=reply&id=${encodeURIComponent(replyId)}&record=${encodeURIComponent(parentRecordId)}`,
 						{
 							method: "POST",
 							body: finalReply,
 						}
 					);
+					if (!resp.ok) {
+						throw new Error(
+							`could not store reply temporary file: ${await resp.text()}`
+						);
+					}
 					const file = await resp.text();
 
 					await env[CoreBindings.SERVICE_LOOPBACK].fetch(
@@ -308,10 +343,9 @@ export async function handleEmail(
 						}
 					);
 
-					// Production returns a message id identifying the reply, used for
-					// e.g. linking up threads. Locally we have no such id, so synthesize
-					// one in the production shape, using the reply sender's domain.
-					const result = { messageId: synthesizeMessageId(replyMessage.from) };
+					// The reply MIME already has the message id that identifies this
+					// simulated outbound message, so use it consistently everywhere.
+					const result = { messageId: validatedReply.messageId };
 					events.push({
 						type: "reply",
 						timestamp: new Date().toISOString(),
@@ -321,6 +355,7 @@ export async function handleEmail(
 						messageId: result.messageId,
 						sender: replyMessage.from,
 						raw: new TextDecoder().decode(finalReply),
+						rawBase64: bytesToBase64(finalReply),
 					});
 					return result;
 				},
@@ -370,7 +405,7 @@ export async function handleEmail(
 				outcome,
 				rejectReason,
 				forwards,
-				replies,
+				replies: replies.map(({ rawBase64: _rawBase64, ...reply }) => reply),
 				events,
 			},
 			{ status: outcome === "ok" ? 200 : 500 }

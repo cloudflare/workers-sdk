@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
-import { CoreBindings } from "../../workers";
+import { CoreBindings, sanitisePath } from "../../workers";
 import { EMAIL_STORE_SERVICE_NAME } from "../core/constants";
 import {
 	buildRemoteProxyProps,
@@ -13,6 +13,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
+import type { EmailArtifact } from "../../workers/email/storage";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 // Define the mutually exclusive schema
@@ -91,6 +92,15 @@ function getEmailProjectSessionDirectory(
 	return path.join(parentDir, path.basename(tmpPath));
 }
 
+function resolveContainedPath(directory: string, fileName: string): string {
+	const root = path.resolve(directory);
+	const resolved = path.resolve(root, fileName);
+	if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+		throw new Error("Invalid email temporary-file path");
+	}
+	return resolved;
+}
+
 /**
  * Resolves the directories email files are written to for a given `prefix`
  * (e.g. `"email"`).
@@ -129,6 +139,15 @@ export async function writeEmailTempFile(options: {
 	fileName: string;
 	contents: Buffer;
 }): Promise<string> {
+	if (
+		options.prefix.length === 0 ||
+		options.prefix === "." ||
+		options.prefix === ".." ||
+		options.prefix.includes("/") ||
+		options.prefix.includes("\\")
+	) {
+		throw new Error("Invalid email temporary-file prefix");
+	}
 	const { system, project } = getEmailFileDirectories(
 		options.defaultProjectTmpPath,
 		options.tmpPath,
@@ -136,7 +155,7 @@ export async function writeEmailTempFile(options: {
 	);
 
 	await mkdir(system, { recursive: true });
-	const systemPath = path.join(system, options.fileName);
+	const systemPath = resolveContainedPath(system, options.fileName);
 	await writeFile(systemPath, options.contents);
 
 	if (project === undefined) {
@@ -144,9 +163,35 @@ export async function writeEmailTempFile(options: {
 	}
 
 	await mkdir(project, { recursive: true });
-	const projectPath = path.join(project, options.fileName);
+	const projectPath = resolveContainedPath(project, options.fileName);
 	await writeFile(projectPath, options.contents);
 	return projectPath;
+}
+
+export async function removeEmailTempFiles(options: {
+	defaultProjectTmpPath: string | undefined;
+	tmpPath: string;
+	artifacts: EmailArtifact[];
+}): Promise<void> {
+	await Promise.all(
+		options.artifacts.map(async (artifact) => {
+			const { system, project } = getEmailFileDirectories(
+				options.defaultProjectTmpPath,
+				options.tmpPath,
+				artifact.prefix
+			);
+			const fileName = `${sanitisePath(artifact.id)}.${artifact.extension}`;
+			const paths = [
+				resolveContainedPath(system, fileName),
+				...(project === undefined
+					? []
+					: [resolveContainedPath(project, fileName)]),
+			];
+			await Promise.all(
+				paths.map((filePath) => unlink(filePath).catch(() => {}))
+			);
+		})
+	);
 }
 
 export function getEmailPathsToClean(

@@ -7,7 +7,13 @@
  */
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { EmailStore } from "./email-store";
-import type { StoredRoutingEmail, StoredSendingEmail } from "./storage";
+import type {
+	StoredRoutingEmail,
+	StoredRoutingEmailSummary,
+	StoredSendingEmail,
+	StoredSendingEmailSummary,
+	EmailArtifact,
+} from "./storage";
 
 // Re-export so the embedded worker registers the DO class under its namespace.
 export { EmailStore };
@@ -23,8 +29,8 @@ export default class EmailStoreHost extends WorkerEntrypoint<Env> {
 		);
 	}
 
-	async storeReceived(email: StoredRoutingEmail): Promise<void> {
-		await this.#store().storeReceived(email);
+	async storeReceived(email: StoredRoutingEmail): Promise<EmailArtifact[]> {
+		return await this.#store().storeReceived(email);
 	}
 
 	async findReceived(id: string): Promise<StoredRoutingEmail | undefined> {
@@ -33,19 +39,19 @@ export default class EmailStoreHost extends WorkerEntrypoint<Env> {
 			| undefined;
 	}
 
-	async listReceived(): Promise<StoredRoutingEmail[]> {
-		return (await this.#store().listReceived()) as unknown as StoredRoutingEmail[];
+	async listReceived(): Promise<StoredRoutingEmailSummary[]> {
+		return (await this.#store().listReceived()) as unknown as StoredRoutingEmailSummary[];
 	}
 
-	async storeSent(email: StoredSendingEmail): Promise<void> {
-		await this.#store().storeSent(email);
+	async storeSent(email: StoredSendingEmail): Promise<EmailArtifact[]> {
+		return await this.#store().storeSent(email);
 	}
 
 	async findSent(id: string): Promise<StoredSendingEmail | undefined> {
 		return await this.#store().findSent(id);
 	}
 
-	async listSent(): Promise<StoredSendingEmail[]> {
+	async listSent(): Promise<StoredSendingEmailSummary[]> {
 		return await this.#store().listSent();
 	}
 

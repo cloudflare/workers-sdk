@@ -61,3 +61,18 @@ test("names files randomly with the requested extension", async ({
 	expect(first.endsWith(".eml")).toBe(true);
 	expect(second.endsWith(".eml")).toBe(true);
 });
+
+test("rejects path traversal in temporary-file components", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+
+	await expect(
+		writeTempFile({
+			tmpPath: tmp,
+			prefix: "safe",
+			extension: "../../outside",
+			contents: "nope",
+		})
+	).rejects.toThrow("Invalid temporary-file path component");
+});

@@ -118,7 +118,6 @@ describe("Email API - Routing", () => {
 				subject: "Hello from the explorer",
 			})
 		);
-
 		// And the detail endpoint must resolve that same email, exposing the raw
 		// MIME and the handling path the list view omits.
 		const detailResponse = await mf.dispatchFetch(
@@ -131,6 +130,10 @@ describe("Email API - Routing", () => {
 		);
 		expect(detail.result?.messageId).toBe(sentMessageId);
 		expect(detail.result?.raw).toContain("Subject: Hello from the explorer");
+		expect(detail.result?.rawBase64).toBeDefined();
+		expect(
+			Buffer.from(detail.result?.rawBase64 ?? "", "base64").toString("utf8")
+		).toContain("Subject: Hello from the explorer");
 		expect(detail.result?.events[0]?.type).toBe("received");
 
 		// The synthesized Message-ID follows mimetext's shape: a base36 random id
@@ -317,6 +320,44 @@ describe("Email API - Routing attachments", () => {
 		return (await sendAndReadDetail(body, expect))?.raw ?? "";
 	}
 
+	test("rejects MIME header injection and invalid base64", async ({
+		expect,
+	}) => {
+		const injected = await mf.dispatchFetch(`${BASE_URL}/email/routing/send`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "bad\r\nX-Injected: yes",
+			}),
+		});
+		expect(injected.status).toBe(400);
+		await injected.text();
+
+		const invalidBase64 = await mf.dispatchFetch(
+			`${BASE_URL}/email/routing/send`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "bad attachment",
+					attachments: [
+						{
+							filename: "bad.txt",
+							type: "text/plain",
+							content: "not-base64",
+						},
+					],
+				}),
+			}
+		);
+		expect(invalidBase64.status).toBe(400);
+		await invalidBase64.text();
+	});
+
 	test("composes an attachment into a multipart/mixed message", async ({
 		expect,
 	}) => {
@@ -343,6 +384,32 @@ describe("Email API - Routing attachments", () => {
 		expect(raw).toContain(content);
 	});
 
+	test("supports zero-byte attachments", async ({ expect }) => {
+		const detail = await sendAndReadDetail(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Empty attachment",
+				attachments: [
+					{
+						filename: "empty.txt",
+						type: "text/plain",
+						content: "",
+					},
+				],
+			},
+			expect
+		);
+		expect(detail?.attachments).toEqual([
+			{
+				filename: "empty.txt",
+				contentType: "text/plain",
+				disposition: "attachment",
+				size: 0,
+			},
+		]);
+	});
+
 	test("supports multiple attachments and inline disposition", async ({
 		expect,
 	}) => {
@@ -362,6 +429,7 @@ describe("Email API - Routing attachments", () => {
 						filename: "logo.png",
 						type: "image/png",
 						content: Buffer.from("second").toString("base64"),
+						contentId: "logo@example.com",
 						disposition: "inline",
 					},
 				],
@@ -372,6 +440,7 @@ describe("Email API - Routing attachments", () => {
 		expect(raw).toContain('Content-Disposition: attachment; filename="a.txt"');
 		expect(raw).toContain('Content-Type: image/png; name="logo.png"');
 		expect(raw).toContain('Content-Disposition: inline; filename="logo.png"');
+		expect(raw).toContain("Content-ID: <logo@example.com>");
 	});
 
 	test("keeps an html and text body as multipart/alternative alongside attachments", async ({
@@ -643,7 +712,7 @@ describe("Email API - Routing reply file correlation", () => {
 		await disposeWithRetry(mf);
 	});
 
-	test("reply is saved to disk under the routing id logged in the explorer", async ({
+	test("reply is saved to disk under its own message id", async ({
 		expect,
 	}) => {
 		const email = dedent`
@@ -680,8 +749,7 @@ describe("Email API - Routing reply file correlation", () => {
 		// Replies are grouped under `.../email/<session-id>/reply/<id>.eml`.
 		expect(path.basename(path.dirname(String(filePath)))).toBe("reply");
 
-		// The same message must be logged in the explorer's routing inbox, and its
-		// id must match the id the reply file was saved under.
+		// The same message must be logged in the explorer's routing inbox.
 		const listResponse = await mf.dispatchFetch(`${BASE_URL}/email/routing`);
 		const list = await expectValidResponse(
 			listResponse,
@@ -692,10 +760,6 @@ describe("Email API - Routing reply file correlation", () => {
 			(e) => e.messageId === "<im-a-random-parent-message-id@example.com>"
 		);
 		expect(routed).toBeDefined();
-		// The reply file on disk is named after the received email's Message-ID
-		// (angle brackets stripped) - the same value the record is indexed by.
-		expect(routed?.messageId?.replace(/^<|>$/g, "")).toBe(fileId);
-
 		// The reply event is recorded, but the inbox list omits the (potentially
 		// large) reply raw...
 		expect(routed?.events.map((e) => e.type)).toContain("reply");
@@ -715,6 +779,7 @@ describe("Email API - Routing reply file correlation", () => {
 			expect
 		);
 		const detailReply = detail.result?.replies[0];
+		expect(detailReply?.messageId?.replace(/^<|>$/g, "")).toBe(fileId);
 		expect(detailReply?.raw).toContain("This is a reply.");
 		// The reply's MIME encoded-word subject must be surfaced decoded, not raw.
 		expect(detailReply?.raw).toContain(

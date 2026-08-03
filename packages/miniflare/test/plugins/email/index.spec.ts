@@ -2367,6 +2367,20 @@ describe("writeEmailTempFile", () => {
 
 		expect(await readFile(filePath)).toStrictEqual(contents);
 	});
+
+	test("rejects path traversal in email file names", async ({ expect }) => {
+		const tmp = await useTmp();
+
+		await expect(
+			writeEmailTempFile({
+				defaultProjectTmpPath: undefined,
+				tmpPath: tmp,
+				prefix: "email-attachment",
+				fileName: "message./../../outside.txt",
+				contents: Buffer.from("nope"),
+			})
+		).rejects.toThrow("Invalid email temporary-file path");
+	});
 });
 
 describe("EMAIL_PLUGIN.getServices", () => {

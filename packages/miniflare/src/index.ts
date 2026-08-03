@@ -79,7 +79,7 @@ import {
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { writeTempFile } from "./plugins/core/temp-file";
-import { writeEmailTempFile } from "./plugins/email";
+import { removeEmailTempFiles, writeEmailTempFile } from "./plugins/email";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -155,6 +155,7 @@ import type {
 	DurableObjectStorageOptions,
 } from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
+import type { EmailArtifact } from "./workers/email/storage";
 import type {
 	CacheStorage,
 	D1Database,
@@ -1289,20 +1290,53 @@ export class Miniflare {
 	): Promise<Response> {
 		const extension = url.searchParams.get("extension") ?? "txt";
 		const prefix = url.searchParams.get("prefix");
+		if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(extension)) {
+			return new Response("Invalid temporary-file extension", { status: 400 });
+		}
+		if (
+			prefix !== null &&
+			(!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(prefix) ||
+				prefix === "." ||
+				prefix === "..")
+		) {
+			return new Response("Invalid temporary-file prefix", { status: 400 });
+		}
 
 		if (url.searchParams.get("email") === "true") {
 			// `id` is derived from a Message-ID, which Worker code controls, so it
 			// must be sanitised before being used as a path segment.
 			const rawId = url.searchParams.get("id");
 			const id = rawId === null ? crypto.randomUUID() : sanitisePath(rawId);
-			const filePath = await writeEmailTempFile({
-				defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
-				tmpPath: this.#tmpPath,
-				prefix: prefix ?? "files",
-				fileName: `${id}.${extension}`,
-				contents: Buffer.from(await request.arrayBuffer()),
+			const rawRecordId = url.searchParams.get("record") ?? rawId ?? id;
+			const recordId = sanitisePath(rawRecordId);
+			const artifactKey = `${recordId}\0${prefix ?? "files"}\0${id}.${extension}`;
+			const previous = this.#emailArtifactOperations.get(artifactKey);
+			const operation = (previous ?? Promise.resolve(null)).then(async () => {
+				if (this.#emailArtifactTombstones.delete(artifactKey)) {
+					return null;
+				}
+				return await writeEmailTempFile({
+					defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
+					tmpPath: this.#tmpPath,
+					prefix: prefix ?? "files",
+					fileName: `${id}.${extension}`,
+					contents: Buffer.from(await request.arrayBuffer()),
+				});
 			});
-			return new Response(filePath, { status: 200 });
+			this.#emailArtifactOperations.set(artifactKey, operation);
+			try {
+				const filePath = await operation;
+				if (filePath === null) {
+					return new Response("Email temporary file was evicted", {
+						status: 410,
+					});
+				}
+				return new Response(filePath, { status: 200 });
+			} finally {
+				if (this.#emailArtifactOperations.get(artifactKey) === operation) {
+					this.#emailArtifactOperations.delete(artifactKey);
+				}
+			}
 		}
 
 		const filePath = await writeTempFile({
@@ -1312,6 +1346,31 @@ export class Miniflare {
 			contents: await request.text(),
 		});
 		return new Response(filePath, { status: 200 });
+	}
+
+	async #handleLoopbackDeleteEmailTempFilesRequest(
+		request: Request
+	): Promise<Response> {
+		const body = (await request.json()) as { artifacts?: EmailArtifact[] };
+		const artifacts = body.artifacts ?? [];
+		await Promise.all(
+			artifacts.map((artifact) =>
+				this.#emailArtifactOperations.get(
+					`${sanitisePath(artifact.recordId)}\0${artifact.prefix}\0${sanitisePath(artifact.id)}.${artifact.extension}`
+				)
+			)
+		);
+		for (const artifact of artifacts) {
+			this.#emailArtifactTombstones.add(
+				`${sanitisePath(artifact.recordId)}\0${artifact.prefix}\0${sanitisePath(artifact.id)}.${artifact.extension}`
+			);
+		}
+		await removeEmailTempFiles({
+			defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
+			tmpPath: this.#tmpPath,
+			artifacts,
+		});
+		return new Response(null, { status: 204 });
 	}
 
 	/**
@@ -1671,6 +1730,12 @@ export class Miniflare {
 				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
 				response = await this.#handleLoopbackStoreTempFileRequest(request, url);
+			} else if (
+				url.pathname === "/core/delete-email-temp-files" &&
+				request.method === "POST"
+			) {
+				response =
+					await this.#handleLoopbackDeleteEmailTempFilesRequest(request);
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {

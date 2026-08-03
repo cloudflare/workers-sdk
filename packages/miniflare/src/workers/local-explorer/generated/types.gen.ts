@@ -822,6 +822,10 @@ export type EmailHandlerReply = {
 	 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
 	 */
 	raw?: string;
+	/**
+	 * Lossless base64 representation of the reply MIME.
+	 */
+	rawBase64?: string;
 };
 
 export type EmailRoutingItem = {
@@ -855,6 +859,7 @@ export type EmailRoutingItem = {
 	forwards: Array<EmailHandlerForward>;
 	replies: Array<EmailHandlerReply>;
 	events: Array<EmailHandlerEvent>;
+	attachments: Array<EmailAttachment>;
 };
 
 export type EmailRoutingDetail = {
@@ -872,6 +877,10 @@ export type EmailRoutingDetail = {
 	 * Raw MIME content of the received email.
 	 */
 	raw: string;
+	/**
+	 * Lossless base64 representation of the received MIME.
+	 */
+	rawBase64?: string;
 	/**
 	 * Metadata for attachments parsed out of the received message. The content itself is only available in `raw`.
 	 */
@@ -936,6 +945,10 @@ export type EmailSendRequest = {
 		 */
 		content: string;
 		/**
+		 * Content-ID for an inline attachment.
+		 */
+		contentId?: string;
+		/**
 		 * How the attachment is presented. Defaults to 'attachment'.
 		 */
 		disposition?: "inline" | "attachment";
@@ -964,6 +977,9 @@ export type EmailSendingItem = {
 	 */
 	messageId: string;
 	sentAt: string;
+	headers?: {
+		[key: string]: string;
+	};
 	attachments: Array<EmailAttachment>;
 };
 
@@ -989,6 +1005,10 @@ export type EmailSendingDetail = {
 	 * Raw MIME content, present when sent via the EmailMessage API.
 	 */
 	raw?: string;
+	/**
+	 * Lossless base64 representation of sent MIME.
+	 */
+	rawBase64?: string;
 };
 
 export type R2ResultInfoWritable = {

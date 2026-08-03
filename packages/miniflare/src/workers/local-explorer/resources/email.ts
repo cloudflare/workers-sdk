@@ -1,6 +1,7 @@
 import { getPublicUrl } from "miniflare:shared";
 import { decodeWords } from "postal-mime";
 import { CoreBindings, CorePaths } from "../../core";
+import { MAX_LOCAL_EMAIL_BYTES } from "../../email/constants";
 import {
 	getHeader,
 	messageIdToStorageId,
@@ -31,6 +32,70 @@ function getEmailStore(c: AppContext): EmailStoreService | undefined {
 function extractAddress(value: string): string {
 	const match = value.match(/<([^>]+)>/);
 	return (match ? match[1] : value).trim();
+}
+
+function hasUnsafeHeaderCharacters(value: string): boolean {
+	return /[\u0000-\u001f\u007f]/u.test(value);
+}
+
+function isHeaderName(value: string): boolean {
+	return /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/u.test(value);
+}
+
+function isMimeType(value: string): boolean {
+	return /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+\/[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/u.test(
+		value
+	);
+}
+
+function isBase64(value: string): boolean {
+	const normalized = value.replace(/\s/gu, "");
+	if (
+		normalized.length % 4 !== 0 ||
+		!/^[A-Za-z0-9+/]*={0,2}$/u.test(normalized)
+	) {
+		return false;
+	}
+	try {
+		atob(normalized);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function validateEmailRequest(body: EmailSendRequest): string | undefined {
+	const headerValues = [
+		body.from,
+		...body.to,
+		...(body.cc ?? []),
+		...(body.bcc ?? []),
+		body.replyTo,
+		body.subject,
+	].filter((value): value is string => value !== undefined);
+	if (headerValues.some(hasUnsafeHeaderCharacters)) {
+		return "Email fields must not contain control characters.";
+	}
+
+	for (const [name, value] of Object.entries(body.headers ?? {})) {
+		if (!isHeaderName(name) || hasUnsafeHeaderCharacters(value)) {
+			return "Custom headers must use valid names and values.";
+		}
+	}
+
+	for (const attachment of body.attachments ?? []) {
+		if (
+			hasUnsafeHeaderCharacters(attachment.filename) ||
+			(attachment.contentId !== undefined &&
+				hasUnsafeHeaderCharacters(attachment.contentId)) ||
+			!isMimeType(attachment.type) ||
+			!isBase64(attachment.content)
+		) {
+			return "Attachments must have valid filenames, MIME types, and base64 content.";
+		}
+	}
+
+	return undefined;
 }
 
 function buildMimeMessage(body: EmailSendRequest, messageId: string): string {
@@ -109,6 +174,11 @@ function buildMimeMessage(body: EmailSendRequest, messageId: string): string {
 			`Content-Type: ${attachment.type}; name="${filename}"`,
 			`Content-Disposition: ${attachment.disposition ?? "attachment"}; filename="${filename}"`,
 			"Content-Transfer-Encoding: base64",
+			...(attachment.disposition === "inline" && attachment.contentId
+				? [
+						`Content-ID: ${attachment.contentId.startsWith("<") ? attachment.contentId : `<${attachment.contentId}>`}`,
+					]
+				: []),
 			"",
 			// RFC 2045 caps base64 body lines at 76 characters.
 			attachment.content
@@ -131,15 +201,8 @@ export async function listReceivedEmails(c: AppContext): Promise<Response> {
 			"Email store is not available for this dev session."
 		);
 	}
-	// The list omits the (potentially large) raw MIME of both the received
-	// message and each reply; the detail endpoint exposes them.
-	const emails = (await store.listReceived()).map(
-		({ raw: _raw, replies, ...rest }) => ({
-			...rest,
-			replies: replies.map(({ raw: _replyRaw, ...reply }) => reply),
-		})
-	);
-	return c.json(wrapResponse(emails as EmailRoutingItem[]));
+	const emails = (await store.listReceived()) as EmailRoutingItem[];
+	return c.json(wrapResponse(emails));
 }
 
 export async function getReceivedEmail(
@@ -163,8 +226,8 @@ export async function getReceivedEmail(
 		);
 	}
 	// Decode MIME "encoded-word" headers (e.g. `=?utf-8?B?...?=`) in each reply's
-	// raw MIME so the explorer displays readable subjects. The stored raw is kept
-	// byte-identical to the handler response; decoding happens only on read.
+	// display text so the explorer shows readable subjects. The lossless bytes
+	// remain available through rawBase64.
 	const decoded = {
 		...email,
 		replies: email.replies.map((reply) => ({
@@ -182,6 +245,10 @@ export async function sendTestEmail(
 	c: AppContext,
 	body: EmailSendRequest
 ): Promise<Response> {
+	const invalidRequest = validateEmailRequest(body);
+	if (invalidRequest !== undefined) {
+		return errorResponse(400, 10000, invalidRequest);
+	}
 	const from = extractAddress(body.from);
 	const to = extractAddress(body.to[0] ?? "");
 
@@ -198,6 +265,13 @@ export async function sendTestEmail(
 	// to unify the file name with the Message-ID seen in local explorer.
 	const id = messageIdToStorageId(messageId);
 	const mime = buildMimeMessage(body, messageId);
+	if (new TextEncoder().encode(mime).byteLength > MAX_LOCAL_EMAIL_BYTES) {
+		return errorResponse(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			"Email message exceeds the 1 MiB local development limit."
+		);
+	}
 
 	const entryUrl = await getPublicUrl(c.env.MINIFLARE_LOOPBACK);
 	const deliverUrl = new URL(CorePaths.EMAIL, entryUrl);
@@ -242,10 +316,8 @@ export async function listSentEmails(c: AppContext): Promise<Response> {
 			"Email store is not available for this dev session."
 		);
 	}
-	const emails = (await store.listSent()).map(
-		({ text: _text, html: _html, raw: _raw, ...rest }) => rest
-	);
-	return c.json(wrapResponse(emails as EmailSendingItem[]));
+	const emails = (await store.listSent()) as EmailSendingItem[];
+	return c.json(wrapResponse(emails));
 }
 
 export async function getSentEmail(
