@@ -219,8 +219,13 @@ export async function runSkillsInstallFlow(
 			// Only mark this revision as installed when every agent succeeded.
 			// If some agents failed, leave `installedTreeSha` undefined so the
 			// update flow re-prompts them on the next run instead of treating
-			// them as up to date.
-			installedTreeSha: failedAgents.length > 0 ? undefined : freshTreeSha,
+			// them as up to date. Falls back to the cached remote SHA when the
+			// live fetch fails (e.g. rate limit) to avoid a spurious update
+			// prompt after the cooldown expires.
+			installedTreeSha:
+				failedAgents.length > 0
+					? undefined
+					: (freshTreeSha ?? cacheResult?.skillsTreeSha),
 			installedSkillNames:
 				failedAgents.length > 0 ? previousSkillNames : currentSkillNames,
 		});
