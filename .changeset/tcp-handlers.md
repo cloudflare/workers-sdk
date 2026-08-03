@@ -10,7 +10,7 @@ You can now configure a Worker to receive raw TCP connections during `wrangler d
 
 ```jsonc
 {
-  "tcp_handlers": [{ "port": 5432 }]
+	"tcp_handlers": [{ "port": 5432 }],
 }
 ```
 
