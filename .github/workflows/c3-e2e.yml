@@ -287,6 +287,10 @@ jobs:
         run: pnpm run test:e2e:c3
         env:
           NODE_VERSION: ${{ env.NODE_VERSION }}
+          # Some framework generators write a different pnpm version to `packageManager`.
+          # By default pnpm downloads and runs it. Concurrent tests can then provision
+          # that version in the same pnpm tool store, causing recursive installs.
+          pnpm_config_manage_package_manager_versions: "false"
           E2E_EXPERIMENTAL: ${{ matrix.experimental }}
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
