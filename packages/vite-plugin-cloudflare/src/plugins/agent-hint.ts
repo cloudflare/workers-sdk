@@ -56,6 +56,9 @@ export function maybeAddAgentHint(
  * Prints the Local Explorer API URL and useful routes to stdout so that
  * headless AI agents can discover and call them programmatically.
  *
+ * Keep the message in sync with the wrangler copy in
+ * packages/wrangler/src/dev/start-dev.ts.
+ *
  * @param server - The Vite dev or preview server (must have `resolvedUrls` populated)
  * @param mode - Whether this is a "dev" or "preview" session
  */
