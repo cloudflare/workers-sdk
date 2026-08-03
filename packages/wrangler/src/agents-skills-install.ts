@@ -4,16 +4,16 @@ import {
 	mkdtempSync,
 	readFileSync,
 	readdirSync,
-	renameSync,
 	writeFileSync,
 } from "node:fs";
-import { mkdir, rename } from "node:fs/promises";
+import { cp, mkdir, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
 	getGlobalConfigPath,
 	parseJSONC,
 	isInteractive,
+	removeDir,
 	removeDirSync,
 } from "@cloudflare/workers-utils";
 import ci from "ci-info";
@@ -794,6 +794,31 @@ function directoryContainsAnySkill(
 }
 
 /**
+ * Moves a directory from `src` to `dest`, falling back to a recursive
+ * copy + delete when the source and destination are on different
+ * filesystems (`EXDEV`).
+ *
+ * This is necessary because `fs.rename` cannot move files across
+ * filesystem boundaries (e.g. from `$HOME` to a tmpfs-backed `/tmp`
+ * on many Linux distributions).
+ *
+ * @param src - Absolute path of the directory to move.
+ * @param dest - Absolute path of the target location.
+ */
+async function moveDir(src: string, dest: string): Promise<void> {
+	try {
+		await rename(src, dest);
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code === "EXDEV") {
+			await cp(src, dest, { recursive: true });
+			await removeDir(src);
+		} else {
+			throw err;
+		}
+	}
+}
+
+/**
  * Restores backed-up skill directories for the given agent IDs.
  *
  * Used after a partial install/update failure to ensure agents whose
@@ -819,7 +844,7 @@ async function restoreBackupsForAgents(
 
 		try {
 			await mkdir(path.dirname(src), { recursive: true });
-			await rename(backup, src);
+			await moveDir(backup, src);
 		} catch {
 			logger.debug(
 				`Failed to restore backed-up skill directory: ${backup} -> ${src}`
@@ -866,8 +891,8 @@ async function installSkillsCleanly(
 					continue;
 				}
 				const backupPath = path.join(tmpDir, agent.rosie.id, skillName);
-				mkdirSync(path.dirname(backupPath), { recursive: true });
-				renameSync(skillPath, backupPath);
+				await mkdir(path.dirname(backupPath), { recursive: true });
+				await moveDir(skillPath, backupPath);
 				backedUp.push({
 					src: skillPath,
 					backup: backupPath,
