@@ -97,7 +97,7 @@ export type Worker_Module = {
 	| { wasm?: Uint8Array }
 	| { json?: string }
 	| { pythonModule?: string }
-	| { pythonRequirement?: string }
+	| { obsoletePythonRequirement?: string }
 );
 
 export type Worker_Binding = {
