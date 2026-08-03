@@ -2481,8 +2481,22 @@ export class Miniflare {
 			loopbackAddress,
 			requiredSockets,
 			inspectorAddress: runtimeInspectorAddress,
+			// Keep the debug port stable across restarts. Peer dev sessions hold
+			// Cap'n Proto connections to this address and cache `Fetcher`s keyed by
+			// it, so letting it move on every `setOptions()` leaves every peer
+			// pointing at a port nothing is listening on until the registry update
+			// reaches them. On Windows those stale connections surface as
+			// `WSARecv error 64` (`ERROR_NETNAME_DELETED`) rather than a clean
+			// close. Requesting the previous port re-binds the same address, so
+			// existing peers reconnect instead of failing.
 			debugPortAddress: this.#devRegistry.isEnabled()
-				? "127.0.0.1:0"
+				? this.#getSocketAddress(
+						SOCKET_DEBUG_PORT,
+						0,
+						"127.0.0.1",
+						0,
+						reusePorts
+					)
 				: undefined,
 			verbose: this.#sharedOpts.core.verbose,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
