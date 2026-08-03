@@ -1,0 +1,21 @@
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_1356a911e53448::t_634a99c0e22811 455-457
+packages/local-explorer-ui/src/routes/observability/events.tsx
+  s_1356a911e53448::t_73d42df4ab31c4 183-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "73b824f8c0dfd40ad4b6a50f0e66ecafc3f97513",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

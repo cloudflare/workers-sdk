@@ -1,0 +1,38 @@
+.changeset/local-explorer-observability-ui-fixes.md
+  s_1356a911e53448::t_bd7ce81eac8def 1-8
+packages/local-explorer-ui/src/utils/observability.ts
+  s_1356a911e53448::t_c2ebc56c92a96f 604-606
+  s_1356a911e53448::t_21c3ad11becb8d 603,607-628
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_1356a911e53448::t_fc19ca3e8fc03b 379,385-386
+  s_1356a911e53448::t_defe8b7d023c22 626
+  s_1356a911e53448::t_f41780c265246c 37
+  s_1356a911e53448::t_35d869f13ef104 132-133
+  s_1356a911e53448::t_158bfedfe01fdc 353
+  s_1356a911e53448::t_37ea3cde56c61b 350-352,357-370,372-378,380-382,384,387-393
+  s_1356a911e53448::t_61a494eacae6fd 137-138
+  s_1356a911e53448::t_03393183cffb88 139
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_1356a911e53448::t_97606829b0df86 576-599,601-604,606-607
+  s_1356a911e53448::t_f046cdb328cec7 5
+  s_1356a911e53448::t_7cf060e67b2d0d 600,605
+packages/local-explorer-ui/src/routes/observability/events.tsx
+  s_1356a911e53448::t_7bcc47645d9160 331-335,337
+  s_1356a911e53448::t_c34a8cef48c3bc 326-327
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ca16d4ef325ca6e1612a137a1718b8f68612e754",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}
