@@ -350,9 +350,7 @@ describe("kv", () => {
 				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
 			});
 
-			it("should filter namespaces by jurisdiction across pages", async ({
-				expect,
-			}) => {
+			it("should filter namespaces by jurisdiction", async ({ expect }) => {
 				const kvNamespaces: KVNamespaceInfo[] = [
 					{ title: "eu-namespace", id: "eu-id" },
 				];
