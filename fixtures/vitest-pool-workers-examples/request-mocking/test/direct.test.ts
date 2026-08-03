@@ -31,7 +31,7 @@ it("mocks GET requests", async ({ expect }) => {
 
 	// Host `example.com` will be rewritten to `cloudflare.com` by the Worker
 	let ctx = createExecutionContext();
-	let response = await worker.fetch!(
+	let response = await worker.fetch(
 		new Request("https://example.com/once"),
 		env,
 		ctx
@@ -43,7 +43,7 @@ it("mocks GET requests", async ({ expect }) => {
 	// Persistent handlers match forever
 	for (let i = 0; i < 3; i++) {
 		ctx = createExecutionContext();
-		response = await worker.fetch!(
+		response = await worker.fetch(
 			new Request("https://example.com/persistent"),
 			env,
 			ctx
@@ -67,7 +67,7 @@ it("mocks POST requests", async ({ expect }) => {
 
 	// Sending a request without the expected body returns an error response...
 	let ctx = createExecutionContext();
-	let response = await worker.fetch!(
+	let response = await worker.fetch(
 		new Request("https://example.com/path", { method: "POST", body: "🙃" }),
 		env,
 		ctx
@@ -78,7 +78,7 @@ it("mocks POST requests", async ({ expect }) => {
 
 	// ...but the correct body should succeed
 	ctx = createExecutionContext();
-	response = await worker.fetch!(
+	response = await worker.fetch(
 		new Request("https://example.com/path", { method: "POST", body: "✨" }),
 		env,
 		ctx

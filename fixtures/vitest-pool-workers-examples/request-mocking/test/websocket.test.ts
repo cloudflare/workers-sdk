@@ -23,7 +23,7 @@ it("mocks outbound WebSocket connections", async ({ expect }) => {
 	// which then opens an outbound WebSocket connection to that URL. MSW's
 	// WebSocketInterceptor patches the `WebSocket` global to intercept it.
 	const ctx = createExecutionContext();
-	const response = await worker.fetch!(
+	const response = await worker.fetch(
 		new Request("https://example.com/echo-ws"),
 		env,
 		ctx
