@@ -1,0 +1,70 @@
+packages/wrangler/src/__tests__/workflows.test.ts
+  s_b554ffcd7ba695::t_e2da25a60546d0 22,203,692-782,1904-2020
+packages/workflows-shared/src/lib/errors.ts
+  s_b554ffcd7ba695::t_1f4a8dcfd65398 73,114-117
+packages/wrangler/src/workflows/commands/instances/delete.ts
+  s_b554ffcd7ba695::t_35d9508f0f0147 2-104
+  s_1660f46e5b4ae3::t_b79f786b8ec8db 1
+packages/miniflare/test/plugins/workflows/index.spec.ts
+  s_b554ffcd7ba695::t_4507e88a476e17 172-183,320-370
+.changeset/workflows-instances-delete.md
+  s_b554ffcd7ba695::t_9d4d25ce8f20c5 1-9
+packages/wrangler/src/index.ts
+  s_b554ffcd7ba695::t_aa2fbf0e904182 539,2273-2276
+packages/miniflare/src/workers/workflows/wrapped-binding.worker.ts
+  s_b554ffcd7ba695::t_d35f9ae4e503b4 6,38-41,132-137
+packages/wrangler/src/workflows/local.ts
+  s_b554ffcd7ba695::t_c3d02a3ab408d5 8,167-182
+packages/workflows-shared/src/engine.ts
+  s_b554ffcd7ba695::t_4666ee66662360 1040-1051
+packages/workflows-shared/tests/binding.test.ts
+  s_b554ffcd7ba695::t_1ba951ea14d9c4 133,148-310
+packages/wrangler/src/workflows/utils.ts
+  s_b554ffcd7ba695::t_78022911766717 10,147-165
+packages/workflows-shared/src/types.ts
+  s_383f5c3ec55457::t_f905d920713aa8 1-9
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_1660f46e5b4ae3::t_d7386ed33736fd 988-1089
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_b554ffcd7ba695::t_b609d458837d92 177-181
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_b554ffcd7ba695::t_4e36d6464b6f8a 1669-1710
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_b554ffcd7ba695::t_6fd73766973026 1050-1095
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_b554ffcd7ba695::t_c09d391c104338 1635-1743
+packages/workflows-shared/src/binding.ts
+  s_b554ffcd7ba695::t_7c657ab663d47a 4,7,21,27-28,248-314,452-462
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "832e762f0b6de3375687d7e37af3ebee25302e25",
+  "prompts": {},
+  "sessions": {
+    "s_1660f46e5b4ae3": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f8963-9f96-790d-97c9-11dc9aeb98a8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    },
+    "s_383f5c3ec55457": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f7f64-a8f9-770b-998d-af2bac98f1f4",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    },
+    "s_b554ffcd7ba695": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f74df-f5c8-71b4-88d3-30b0c9e17ab0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}

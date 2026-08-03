@@ -1,0 +1,29 @@
+packages/wrangler/src/pages/projects.ts
+  9be30f8e65389668 6,128-133,141,204-205,248-267
+packages/wrangler/src/__tests__/pages/deploy.test.ts
+  9be30f8e65389668 160,184-220,230,263
+packages/wrangler/src/pages/deploy.ts
+  9be30f8e65389668 223-228,292-296,301,646,650,654,664-668,670,673-676
+packages/wrangler/src/__tests__/pages/project-create.test.ts
+  9be30f8e65389668 2,4,11-12,20-27,84-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "1a173b04bbdee7887b3144b0e27eac05403de246",
+  "prompts": {
+    "9be30f8e65389668": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1b34c5ca7ffekHTEqgboffYCCl",
+        "model": "openai/gpt-5.5"
+      },
+      "human_author": "Eric Clemmons",
+      "messages": [],
+      "total_additions": 174,
+      "total_deletions": 11,
+      "accepted_lines": 174,
+      "overriden_lines": 0
+    }
+  }
+}
