@@ -2289,6 +2289,60 @@ describe("runSkillsUpdateFlow", () => {
 		expect(mockRosieInstall).toHaveBeenCalledOnce();
 	});
 
+	test("back-fills missing skillsTreeSha from a fresh cache and proceeds with update check", async ({
+		expect,
+	}) => {
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeSkills },
+				},
+			],
+			installedTreeSha: "old-sha",
+			installFailed: false,
+		});
+		// Write a fresh cache WITHOUT skillsTreeSha (simulates cache from
+		// an older Wrangler version or a failed fetchSkillsTreeSha call).
+		const configDir = getGlobalConfigPath();
+		mkdirSync(configDir, { recursive: true });
+		writeFileSync(
+			path.join(configDir, "cloudflare-skills-repo-cache.json"),
+			JSON.stringify({
+				lastUpdate: Date.now(),
+				skillNames: ["cloudflare", "wrangler"],
+			})
+		);
+		// The root contents API will provide the tree SHA when back-filling.
+		msw.use(
+			http.get(
+				"https://api.github.com/repos/cloudflare/skills/contents/",
+				() => {
+					return HttpResponse.json([
+						{ name: "skills", type: "dir", sha: "new-sha" },
+						{ name: "README.md", type: "file", sha: "readme-sha" },
+					]);
+				}
+			)
+		);
+		mockConfirm({
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+			result: true,
+		});
+		const runSkillsUpdateFlow = await freshUpdateImport();
+
+		await runSkillsUpdateFlow({});
+
+		// The update should proceed because the tree SHA was back-filled,
+		// rather than bailing with "could not determine remote tree SHA".
+		expect(mockRosieInstall).toHaveBeenCalledOnce();
+	});
+
 	test("removes stale skill directories that no longer exist upstream after a successful update", async ({
 		expect,
 	}) => {
