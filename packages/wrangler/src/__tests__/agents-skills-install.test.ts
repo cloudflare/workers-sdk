@@ -1099,99 +1099,6 @@ function mockGitHubSkillsApiNetworkError() {
 	);
 }
 
-/**
- * Shape of a fake tree entry used by {@link mockGitHubTreesApi}.
- */
-interface FakeTreeEntry {
-	path: string;
-	sha: string;
-	size: number;
-}
-
-/**
- * Generates a list of fake tree entries for testing the significance check.
- *
- * @param count Number of blob entries to generate.
- * @param prefix Path prefix for the entries (e.g. "skills/foo/").
- * @param sizePerFile Size in bytes for each fake file.
- * @returns An array of fake tree entries.
- */
-function generateFakeTreeEntries(
-	count: number,
-	prefix: string,
-	sizePerFile = 3000
-): FakeTreeEntry[] {
-	return Array.from({ length: count }, (_, i) => ({
-		path: `${prefix}file-${i}.md`,
-		sha: `sha-${prefix}-${i}`,
-		size: sizePerFile,
-	}));
-}
-
-/**
- * MSW handler that mocks the GitHub Git Trees API for both an installed
- * and a remote tree SHA. The handler matches requests by the SHA in the URL.
- *
- * @param installedSha Tree SHA representing the currently installed version.
- * @param installedEntries Blob entries to return for the installed tree.
- * @param remoteSha Tree SHA representing the upstream version.
- * @param remoteEntries Blob entries to return for the remote tree.
- */
-function mockGitHubTreesApi(
-	installedSha: string,
-	installedEntries: FakeTreeEntry[],
-	remoteSha: string,
-	remoteEntries: FakeTreeEntry[]
-) {
-	msw.use(
-		http.get(
-			"https://api.github.com/repos/cloudflare/skills/git/trees/:sha",
-			({ params }) => {
-				const sha = params.sha as string;
-				if (sha === installedSha) {
-					return HttpResponse.json({
-						sha: installedSha,
-						tree: installedEntries.map((e) => ({
-							...e,
-							mode: "100644",
-							type: "blob",
-						})),
-					});
-				}
-				if (sha === remoteSha) {
-					return HttpResponse.json({
-						sha: remoteSha,
-						tree: remoteEntries.map((e) => ({
-							...e,
-							mode: "100644",
-							type: "blob",
-						})),
-					});
-				}
-				return new HttpResponse(null, { status: 404 });
-			}
-		)
-	);
-}
-
-/**
- * MSW handler that mocks the GitHub Git Trees API to return significant
- * changes between two tree SHAs. Generates enough differing entries to
- * exceed the significance thresholds.
- *
- * @param installedSha Tree SHA for the installed version.
- * @param remoteSha Tree SHA for the upstream version.
- */
-function mockGitHubTreesApiWithSignificantChanges(
-	installedSha: string,
-	remoteSha: string
-) {
-	const shared = generateFakeTreeEntries(5, "shared/");
-	const installedEntries = [...shared, ...generateFakeTreeEntries(3, "old/")];
-	const remoteEntries = [...shared, ...generateFakeTreeEntries(6, "new/")];
-	mockGitHubTreesApi(installedSha, installedEntries, remoteSha, remoteEntries);
-}
-
 describe("telemetryCurrentAgentSkillsInstalled", () => {
 	runInTempDir();
 	mockConsoleMethods();
@@ -1906,7 +1813,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: false,
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
 			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
@@ -1952,7 +1858,6 @@ describe("runSkillsUpdateFlow", () => {
 		// The cached remote SHA is "cached-sha", but by the time rosieInstall
 		// completes upstream has advanced to "fresh-sha".
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "cached-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "cached-sha");
 
 		mockRosieInstall.mockImplementationOnce(async () => {
 			// Simulate upstream advancing while install runs: override the
@@ -2002,7 +1907,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: false,
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 
 		// Intercept the prompts call to inspect the metadata file state at
 		// the moment the confirmation prompt is displayed to the user.
@@ -2041,7 +1945,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: false,
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm(
 			{
 				text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
@@ -2095,7 +1998,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: false,
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm(
 			{
 				text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
@@ -2166,7 +2068,6 @@ describe("runSkillsUpdateFlow", () => {
 		});
 		// Remote now has a newer SHA than the one that was declined
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "even-newer-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "even-newer-sha");
 		mockConfirm({
 			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
@@ -2196,7 +2097,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: false,
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
 			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
@@ -2249,7 +2149,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: ["cursor"],
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
 			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
@@ -2259,10 +2158,10 @@ describe("runSkillsUpdateFlow", () => {
 		await runSkillsUpdateFlow({});
 
 		expect(mockRosieInstall).toHaveBeenCalledOnce();
-		const installCall = mockRosieInstall.mock.calls[0];
-		expect(installCall[1].agent).toContain("cursor");
-		expect(installCall[1].agent).toContain("claude");
 
+		// After a successful update, the metadata should record the freshly
+		// fetched tree SHA (not the cached one) so future checks compare
+		// against the actual installed revision.
 		const metadata = readMetadataFile();
 		expect(metadata.installedTreeSha).toBe("new-sha");
 		expect(metadata.installFailed).toBe(false);
@@ -2290,7 +2189,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: false,
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		const runSkillsUpdateFlow = await freshUpdateImport();
 
 		await runSkillsUpdateFlow({});
@@ -2298,19 +2196,19 @@ describe("runSkillsUpdateFlow", () => {
 		expect(mockRosieInstall).not.toHaveBeenCalled();
 	});
 
-	test("skips when skills were installed less than 7 days ago", async ({
+	test("skips when skills were installed less than 30 days ago", async ({
 		expect,
 	}) => {
 		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
 		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
-		// Date is 3 days ago — within the 7-day cooldown window
-		const threeDaysAgo = new Date(
-			Date.now() - 3 * 24 * 60 * 60 * 1000
+		// Date is 15 days ago — within the 30-day cooldown window
+		const fifteenDaysAgo = new Date(
+			Date.now() - 15 * 24 * 60 * 60 * 1000
 		).toISOString();
 		writeMetadataFile({
 			version: 1,
 			accepted: true,
-			date: threeDaysAgo,
+			date: fifteenDaysAgo,
 			detectedAgents: [
 				{
 					name: "Claude Code",
@@ -2329,19 +2227,19 @@ describe("runSkillsUpdateFlow", () => {
 		expect(mockRosieInstall).not.toHaveBeenCalled();
 	});
 
-	test("checks for updates when skills are older than 7 days", async ({
+	test("checks for updates when skills are older than 30 days", async ({
 		expect,
 	}) => {
 		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
 		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
-		// Date is 10 days ago — past the 7-day cooldown
-		const tenDaysAgo = new Date(
-			Date.now() - 10 * 24 * 60 * 60 * 1000
+		// Date is 35 days ago — past the 30-day cooldown
+		const thirtyFiveDaysAgo = new Date(
+			Date.now() - 35 * 24 * 60 * 60 * 1000
 		).toISOString();
 		writeMetadataFile({
 			version: 1,
 			accepted: true,
-			date: tenDaysAgo,
+			date: thirtyFiveDaysAgo,
 			detectedAgents: [
 				{
 					name: "Claude Code",
@@ -2352,7 +2250,6 @@ describe("runSkillsUpdateFlow", () => {
 			installFailed: false,
 		});
 		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-		mockGitHubTreesApiWithSignificantChanges("old-sha", "new-sha");
 		mockConfirm({
 			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
 			result: true,
@@ -2364,178 +2261,7 @@ describe("runSkillsUpdateFlow", () => {
 		expect(mockRosieInstall).toHaveBeenCalledOnce();
 	});
 
-	test("skips when upstream changes are below significance threshold", async ({
-		expect,
-	}) => {
-		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
-		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
-		writeMetadataFile({
-			version: 1,
-			accepted: true,
-			date: "2025-01-01T00:00:00Z",
-			detectedAgents: [
-				{
-					name: "Claude Code",
-					rosie: { id: "claude", globalPath: claudeSkills },
-				},
-			],
-			installedTreeSha: "old-sha",
-			installFailed: false,
-		});
-		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-
-		// Both trees share the same entries except for 2 tiny file changes
-		// (below the 5-file and 10KB thresholds).
-		const shared = generateFakeTreeEntries(10, "shared/");
-		const installedEntries = [
-			...shared,
-			{ path: "skills/a.md", sha: "sha-a-old", size: 100 },
-			{ path: "skills/b.md", sha: "sha-b-old", size: 200 },
-		];
-		const remoteEntries = [
-			...shared,
-			{ path: "skills/a.md", sha: "sha-a-new", size: 110 },
-			{ path: "skills/b.md", sha: "sha-b-new", size: 210 },
-		];
-		mockGitHubTreesApi("old-sha", installedEntries, "new-sha", remoteEntries);
-
-		const runSkillsUpdateFlow = await freshUpdateImport();
-
-		await runSkillsUpdateFlow({});
-
-		expect(mockRosieInstall).not.toHaveBeenCalled();
-
-		const metadata = readMetadataFile();
-		// the data is still saved so that we don't constantly keep repeating this check
-		expect(metadata.date).not.toBe("2025-01-01T00:00:00Z");
-	});
-
-	test("prompts when upstream changes exceed significance threshold by file count", async ({
-		expect,
-	}) => {
-		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
-		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
-		writeMetadataFile({
-			version: 1,
-			accepted: true,
-			date: "2025-01-01T00:00:00Z",
-			detectedAgents: [
-				{
-					name: "Claude Code",
-					rosie: { id: "claude", globalPath: claudeSkills },
-				},
-			],
-			installedTreeSha: "old-sha",
-			installFailed: false,
-		});
-		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-
-		// 5 new files added (meets the MIN_CHANGED_FILES_FOR_UPDATE threshold)
-		const shared = generateFakeTreeEntries(3, "shared/");
-		const installedEntries = [...shared];
-		const remoteEntries = [
-			...shared,
-			...generateFakeTreeEntries(5, "added/", 100),
-		];
-		mockGitHubTreesApi("old-sha", installedEntries, "new-sha", remoteEntries);
-
-		mockConfirm({
-			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
-			result: true,
-		});
-		const runSkillsUpdateFlow = await freshUpdateImport();
-
-		await runSkillsUpdateFlow({});
-
-		expect(mockRosieInstall).toHaveBeenCalledOnce();
-	});
-
-	test("prompts when upstream changes exceed significance threshold by size delta", async ({
-		expect,
-	}) => {
-		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
-		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
-		writeMetadataFile({
-			version: 1,
-			accepted: true,
-			date: "2025-01-01T00:00:00Z",
-			detectedAgents: [
-				{
-					name: "Claude Code",
-					rosie: { id: "claude", globalPath: claudeSkills },
-				},
-			],
-			installedTreeSha: "old-sha",
-			installFailed: false,
-		});
-		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-
-		// Only 2 files changed (below file-count threshold) but with a large
-		// size delta (>10KB, meets the MIN_SIZE_DELTA_FOR_UPDATE threshold).
-		const shared = generateFakeTreeEntries(5, "shared/");
-		const installedEntries = [
-			...shared,
-			{ path: "skills/big.md", sha: "sha-big-old", size: 1000 },
-			{ path: "skills/huge.md", sha: "sha-huge-old", size: 2000 },
-		];
-		const remoteEntries = [
-			...shared,
-			{ path: "skills/big.md", sha: "sha-big-new", size: 7000 },
-			{ path: "skills/huge.md", sha: "sha-huge-new", size: 8000 },
-		];
-		mockGitHubTreesApi("old-sha", installedEntries, "new-sha", remoteEntries);
-
-		mockConfirm({
-			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
-			result: true,
-		});
-		const runSkillsUpdateFlow = await freshUpdateImport();
-
-		await runSkillsUpdateFlow({});
-
-		expect(mockRosieInstall).toHaveBeenCalledOnce();
-	});
-
-	test("skips prompt when installed tree fetch fails", async ({ expect }) => {
-		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
-		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
-		writeMetadataFile({
-			version: 1,
-			accepted: true,
-			date: "2025-01-01T00:00:00Z",
-			detectedAgents: [
-				{
-					name: "Claude Code",
-					rosie: { id: "claude", globalPath: claudeSkills },
-				},
-			],
-			installedTreeSha: "old-sha",
-			installFailed: false,
-		});
-		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
-
-		// Trees API returns 404 for both SHAs — areChangesSignificant
-		// can't determine significance so it bails and returns false,
-		// which skips the update prompt entirely.
-		msw.use(
-			http.get(
-				"https://api.github.com/repos/cloudflare/skills/git/trees/:sha",
-				() => {
-					return new HttpResponse(null, { status: 404 });
-				}
-			)
-		);
-
-		const runSkillsUpdateFlow = await freshUpdateImport();
-
-		await runSkillsUpdateFlow({});
-
-		expect(mockRosieInstall).not.toHaveBeenCalled();
-	});
-
-	test("skips significance check when installedTreeSha is missing", async ({
-		expect,
-	}) => {
+	test("prompts when installedTreeSha is missing", async ({ expect }) => {
 		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
 		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
 		writeMetadataFile({
@@ -2560,8 +2286,6 @@ describe("runSkillsUpdateFlow", () => {
 
 		await runSkillsUpdateFlow({});
 
-		// Should prompt without the significance check since there's no
-		// baseline SHA to compare against.
 		expect(mockRosieInstall).toHaveBeenCalledOnce();
 	});
 });

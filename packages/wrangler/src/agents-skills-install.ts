@@ -930,11 +930,11 @@ type SkillsUpdateFlowOptions = {
 };
 
 /**
- * Minimum time (7 days in ms) that must have elapsed since the last
+ * Minimum time (30 days in ms) that must have elapsed since the last
  * skills install or update before we check for upstream changes again.
  * This prevents pestering users who just installed/updated recently.
  */
-const SKILLS_UPDATE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const SKILLS_UPDATE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Checks whether Wrangler-installed skills are out of date and, if so, prompts
@@ -946,9 +946,7 @@ const SKILLS_UPDATE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
  *    install or update (avoids pestering users who just updated).
  * 3. The upstream `skills/` tree SHA differs from the recorded
  *    `installedTreeSha` (i.e. content has actually changed).
- * 4. The upstream changes are significant enough (measured by file count and
- *    size delta) to warrant an interruption.
- * 5. The user has not already declined this specific upstream revision
+ * 4. The user has not already declined this specific upstream revision
  *    (`declinedTreeSha`).
  *
  * Callers are responsible for checking config / env-var opt-outs and simply
@@ -1015,23 +1013,6 @@ export async function runSkillsUpdateFlow(
 	if (metadata.declinedTreeSha === remoteTreeSha) {
 		logger.debug("User already declined update for this upstream revision.");
 		return;
-	}
-
-	if (metadata.installedTreeSha) {
-		const significant = await areChangesSignificant(
-			metadata.installedTreeSha,
-			remoteTreeSha
-		);
-		if (!significant) {
-			logger.debug(
-				"Upstream skills changes are below the significance threshold; skipping update prompt."
-			);
-			writeSkillsInstallMetadataFile({
-				...metadata,
-				date: new Date().toISOString(),
-			});
-			return;
-		}
 	}
 
 	const skillNames = cacheResult.skillNames;
@@ -1186,124 +1167,4 @@ export async function runSkillsUpdateFlow(
 			{}
 		);
 	}
-}
-
-/** Shape of a single blob entry from the GitHub Git Trees API. */
-interface TreeBlobEntry {
-	sha: string;
-	size: number;
-}
-
-/**
- * Fetches the full recursive tree for a given tree SHA from the
- * `cloudflare/skills` repository using the GitHub Git Trees API.
- *
- * Returns a map of `path -> { sha, size }` for blob entries only (files,
- * not sub-trees), which is used to diff two revisions of the `skills/`
- * directory.
- *
- * @param treeSha - The git tree SHA to fetch (e.g. the `skills/` directory SHA).
- * @returns A map of blob entries keyed by path, or `undefined` on failure.
- */
-async function fetchSkillsTreeEntries(
-	treeSha: string
-): Promise<Map<string, TreeBlobEntry> | undefined> {
-	try {
-		const url = `https://api.github.com/repos/cloudflare/skills/git/trees/${treeSha}?recursive=1`;
-		const res = await fetch(url, { headers: GITHUB_API_HEADERS });
-		if (!res.ok) {
-			return undefined;
-		}
-		const body = (await res.json()) as {
-			tree: Array<{
-				path: string;
-				type: string;
-				sha: string;
-				size?: number;
-			}>;
-		};
-		const entries = new Map<string, TreeBlobEntry>();
-		for (const entry of body.tree) {
-			if (entry.type === "blob") {
-				entries.set(entry.path, { sha: entry.sha, size: entry.size ?? 0 });
-			}
-		}
-		return entries;
-	} catch {
-		return undefined;
-	}
-}
-
-/**
- * Minimum number of changed files (added + removed + modified) in the
- * upstream `skills/` tree before the user is prompted to update. Changes
- * below this threshold are considered too minor to warrant an interruption.
- */
-const MIN_CHANGED_FILES_FOR_UPDATE = 5;
-
-/**
- * Minimum total size delta (in bytes) of changed blobs in the upstream
- * `skills/` tree before the user is prompted to update. Allows large
- * single-file rewrites to trigger an update even if fewer than
- * {@link MIN_CHANGED_FILES_FOR_UPDATE} files changed.
- */
-const MIN_SIZE_DELTA_FOR_UPDATE = 10 * 1024; // 10 KB
-
-/**
- * Determines whether the changes between two revisions of the `skills/`
- * tree are significant enough to warrant prompting the user to update.
- *
- * Fetches the full recursive tree for both the installed and remote SHAs,
- * then counts the number of changed files (added, removed, or modified)
- * and the total size delta. The changes are considered significant when
- * either the file count or size delta exceeds the configured thresholds
- * ({@link MIN_CHANGED_FILES_FOR_UPDATE} / {@link MIN_SIZE_DELTA_FOR_UPDATE}).
- *
- * If either tree cannot be fetched the result is indeterminate, so returns
- * `false` to avoid pestering the user when we can't reliably compare.
- *
- * @param installedTreeSha - Tree SHA of the currently installed `skills/` revision.
- * @param remoteTreeSha - Tree SHA of the upstream `skills/` revision.
- * @returns `true` if the changes are significant, `false` otherwise (including when indeterminate).
- */
-async function areChangesSignificant(
-	installedTreeSha: string,
-	remoteTreeSha: string
-): Promise<boolean> {
-	const [installedTree, remoteTree] = await Promise.all([
-		fetchSkillsTreeEntries(installedTreeSha),
-		fetchSkillsTreeEntries(remoteTreeSha),
-	]);
-
-	if (!installedTree || !remoteTree) {
-		// If one of the fetches failed we can't determine significance — bail
-		// and skip the update prompt rather than pestering the user.
-		return false;
-	}
-
-	let changedFiles = 0;
-	let sizeDelta = 0;
-
-	for (const [filePath, remote] of remoteTree) {
-		const installed = installedTree.get(filePath);
-		if (!installed) {
-			changedFiles++;
-			sizeDelta += remote.size;
-		} else if (installed.sha !== remote.sha) {
-			changedFiles++;
-			sizeDelta += Math.abs(remote.size - installed.size);
-		}
-	}
-
-	for (const [filePath, installed] of installedTree) {
-		if (!remoteTree.has(filePath)) {
-			changedFiles++;
-			sizeDelta += installed.size;
-		}
-	}
-
-	return (
-		changedFiles >= MIN_CHANGED_FILES_FOR_UPDATE ||
-		sizeDelta >= MIN_SIZE_DELTA_FOR_UPDATE
-	);
 }
