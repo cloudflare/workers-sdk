@@ -303,7 +303,8 @@ describe("kv", () => {
 		describe("list", () => {
 			function mockListRequest(
 				expect: ExpectStatic,
-				namespaces: KVNamespaceInfo[]
+				namespaces: KVNamespaceInfo[],
+				jurisdiction?: string
 			) {
 				const requests = { count: 0 };
 				msw.use(
@@ -316,6 +317,13 @@ describe("kv", () => {
 							expect(params.accountId).toEqual("some-account-id");
 							expect(url.searchParams.get("order")).toEqual("title");
 							expect(url.searchParams.get("direction")).toEqual("asc");
+							if (jurisdiction) {
+								expect(url.searchParams.get("filter")).toEqual(
+									`jurisdiction:${jurisdiction}`
+								);
+							} else {
+								expect(url.searchParams.get("filter")).toBeNull();
+							}
 
 							const pageSize = Number(url.searchParams.get("per_page"));
 							const page = Number(url.searchParams.get("page") ?? 1);
@@ -340,6 +348,20 @@ describe("kv", () => {
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
+			});
+
+			it("should filter namespaces by jurisdiction across pages", async ({
+				expect,
+			}) => {
+				const kvNamespaces: KVNamespaceInfo[] = [
+					{ title: "eu-namespace", id: "eu-id" },
+				];
+				const requests = mockListRequest(expect, kvNamespaces, "eu");
+				await runWrangler("kv namespace list --jurisdiction eu");
+
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
+				expect(requests.count).toBeGreaterThan(1);
 			});
 
 			it("should make multiple requests for paginated results", async ({
