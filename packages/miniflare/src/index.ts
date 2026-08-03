@@ -174,6 +174,16 @@ import type { Abortable } from "node:events";
 import type { Duplex, Transform, Writable } from "node:stream";
 import type { Dispatcher, Response as UndiciResponse } from "undici";
 
+const emailArtifactSchema = z.object({
+	recordId: z.string(),
+	prefix: z.string(),
+	id: z.string(),
+	extension: z.string(),
+});
+const emailArtifactsRequestSchema = z.object({
+	artifacts: z.array(emailArtifactSchema).optional(),
+});
+
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
@@ -1351,8 +1361,17 @@ export class Miniflare {
 	async #handleLoopbackDeleteEmailTempFilesRequest(
 		request: Request
 	): Promise<Response> {
-		const body = (await request.json()) as { artifacts?: EmailArtifact[] };
-		const artifacts = body.artifacts ?? [];
+		let body: unknown;
+		try {
+			body = await request.json();
+		} catch {
+			return new Response("Invalid email artifact request", { status: 400 });
+		}
+		const parsed = emailArtifactsRequestSchema.safeParse(body);
+		if (!parsed.success) {
+			return new Response("Invalid email artifact request", { status: 400 });
+		}
+		const artifacts: EmailArtifact[] = parsed.data.artifacts ?? [];
 		await Promise.all(
 			artifacts.map((artifact) =>
 				this.#emailArtifactOperations.get(

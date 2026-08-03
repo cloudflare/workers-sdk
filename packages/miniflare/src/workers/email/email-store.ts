@@ -14,6 +14,13 @@
  * dev-server restarts (the store is backed by the instance temp directory).
  */
 import { DurableObject } from "cloudflare:workers";
+import { z } from "zod";
+import {
+	zEmailHandlerForward,
+	zEmailHandlerReply,
+	zEmailRoutingDetail,
+	zEmailSendingDetail,
+} from "../local-explorer/generated/zod.gen";
 import { messageIdToStorageId } from "./message-id";
 import type {
 	EmailArtifact,
@@ -81,6 +88,32 @@ const MIGRATION_STATEMENTS = {
 		update: "UPDATE sent SET summary = ? WHERE seq = ?",
 	},
 } as const;
+
+const zStoredEmailForward = zEmailHandlerForward.extend({
+	headers: z.array(z.tuple([z.string(), z.string()])),
+});
+const zStoredEmailReply = zEmailHandlerReply.extend({ raw: z.string() });
+const zStoredEmailEvent = z.discriminatedUnion("type", [
+	z.object({
+		type: z.enum(["forward", "reply"]),
+		timestamp: z.string(),
+		messageId: z.string(),
+	}),
+	z.object({
+		type: z.enum(["received", "reject", "unhandled"]),
+		timestamp: z.string(),
+	}),
+]);
+export const zStoredRoutingEmail = zEmailRoutingDetail.extend({
+	forwards: z.array(zStoredEmailForward),
+	replies: z.array(zStoredEmailReply),
+	events: z.array(zStoredEmailEvent),
+});
+export const zStoredRoutingEmailSummary = zStoredRoutingEmail
+	.omit({ raw: true, rawBase64: true, replies: true })
+	.extend({
+		replies: z.array(zStoredEmailReply.omit({ raw: true, rawBase64: true })),
+	});
 
 type EmailTable = keyof typeof STATEMENTS;
 
@@ -180,8 +213,10 @@ export class EmailStore extends DurableObject {
 			for (const table of ["received", "sent"] as const) {
 				try {
 					this.sql.exec(MIGRATION_STATEMENTS[table].addSummary);
-				} catch {
-					// The column already exists for current databases.
+				} catch (error) {
+					if (!String(error).toLowerCase().includes("duplicate column")) {
+						console.warn("Failed to add email store summary column", error);
+					}
 				}
 			}
 			for (const table of ["received", "sent"] as const) {
@@ -193,13 +228,12 @@ export class EmailStore extends DurableObject {
 					}>(MIGRATION_STATEMENTS[table].rows)
 					.toArray();
 				for (const row of rows) {
-					const email = JSON.parse(row.data) as
-						| StoredRoutingEmail
-						| StoredSendingEmail;
 					const summary =
 						table === "received"
-							? getReceivedSummary(email as StoredRoutingEmail)
-							: getSentSummary(email as StoredSendingEmail);
+							? getReceivedSummary(
+									zStoredRoutingEmail.parse(JSON.parse(row.data))
+								)
+							: getSentSummary(zEmailSendingDetail.parse(JSON.parse(row.data)));
 					this.sql.exec(
 						MIGRATION_STATEMENTS[table].update,
 						JSON.stringify(summary),
@@ -229,7 +263,9 @@ export class EmailStore extends DurableObject {
 			.flatMap(({ data: evictedData }) =>
 				getArtifacts(
 					table,
-					JSON.parse(evictedData) as StoredRoutingEmail | StoredSendingEmail
+					table === "received"
+						? zStoredRoutingEmail.parse(JSON.parse(evictedData))
+						: zEmailSendingDetail.parse(JSON.parse(evictedData))
 				)
 			);
 		this.sql.exec(STATEMENTS[table].evict, MAX_STORED_EMAILS);

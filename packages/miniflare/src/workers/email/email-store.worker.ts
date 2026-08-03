@@ -6,7 +6,11 @@
  * loopback server (see email-store.ts for why that matters).
  */
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { EmailStore } from "./email-store";
+import {
+	EmailStore,
+	zStoredRoutingEmail,
+	zStoredRoutingEmailSummary,
+} from "./email-store";
 import type {
 	StoredRoutingEmail,
 	StoredRoutingEmailSummary,
@@ -34,13 +38,14 @@ export default class EmailStoreHost extends WorkerEntrypoint<Env> {
 	}
 
 	async findReceived(id: string): Promise<StoredRoutingEmail | undefined> {
-		return (await this.#store().findReceived(id)) as unknown as
-			| StoredRoutingEmail
-			| undefined;
+		const email = await this.#store().findReceived(id);
+		return email === undefined ? undefined : zStoredRoutingEmail.parse(email);
 	}
 
 	async listReceived(): Promise<StoredRoutingEmailSummary[]> {
-		return (await this.#store().listReceived()) as unknown as StoredRoutingEmailSummary[];
+		return zStoredRoutingEmailSummary
+			.array()
+			.parse(await this.#store().listReceived());
 	}
 
 	async storeSent(email: StoredSendingEmail): Promise<EmailArtifact[]> {

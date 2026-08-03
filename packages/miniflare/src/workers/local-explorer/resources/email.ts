@@ -1,5 +1,6 @@
 import { getPublicUrl } from "miniflare:shared";
 import { decodeWords } from "postal-mime";
+import { z } from "zod";
 import { CoreBindings, CorePaths } from "../../core";
 import { MAX_LOCAL_EMAIL_BYTES } from "../../email/constants";
 import {
@@ -8,22 +9,32 @@ import {
 	synthesizeMessageId,
 } from "../../email/message-id";
 import { errorResponse, wrapResponse } from "../common";
-import type { EmailHandlerResult } from "../../email/result";
+import {
+	zEmailHandlerEvent,
+	zEmailHandlerForward,
+	zEmailHandlerReply,
+	zEmailRoutingDetail,
+	zEmailRoutingItem,
+	zEmailSendingDetail,
+	zEmailSendingItem,
+} from "../generated/zod.gen";
 import type { EmailStoreService } from "../../email/storage";
 import type { AppContext } from "../common";
-import type {
-	EmailRoutingDetail,
-	EmailRoutingItem,
-	EmailSendingDetail,
-	EmailSendingItem,
-	EmailSendRequest,
-} from "../generated";
+import type { EmailSendRequest } from "../generated";
 
 const EMAIL_ERROR_NOT_FOUND = 10601;
 const EMAIL_ERROR_SEND_FAILED = 10602;
 /** Occurs when the email store binding is missing (should not happen when the explorer is
  * enabled, since the store is registered alongside it). */
 const EMAIL_ERROR_STORE_UNAVAILABLE = 10603;
+
+const zEmailHandlerResult = z.object({
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply.extend({ raw: z.string() })),
+	events: z.array(zEmailHandlerEvent),
+});
 
 function getEmailStore(c: AppContext): EmailStoreService | undefined {
 	return c.env[CoreBindings.SERVICE_EMAIL_STORE];
@@ -201,7 +212,7 @@ export async function listReceivedEmails(c: AppContext): Promise<Response> {
 			"Email store is not available for this dev session."
 		);
 	}
-	const emails = (await store.listReceived()) as EmailRoutingItem[];
+	const emails = z.array(zEmailRoutingItem).parse(await store.listReceived());
 	return c.json(wrapResponse(emails));
 }
 
@@ -235,7 +246,7 @@ export async function getReceivedEmail(
 			raw: decodeWords(reply.raw),
 		})),
 	};
-	return c.json(wrapResponse(decoded as EmailRoutingDetail));
+	return c.json(wrapResponse(zEmailRoutingDetail.parse(decoded)));
 }
 
 /**
@@ -295,7 +306,7 @@ export async function sendTestEmail(
 		);
 	}
 
-	const result = (await response.json()) as EmailHandlerResult;
+	const result = zEmailHandlerResult.parse(await response.json());
 	return c.json(
 		wrapResponse({
 			messageId,
@@ -316,7 +327,7 @@ export async function listSentEmails(c: AppContext): Promise<Response> {
 			"Email store is not available for this dev session."
 		);
 	}
-	const emails = (await store.listSent()) as EmailSendingItem[];
+	const emails = z.array(zEmailSendingItem).parse(await store.listSent());
 	return c.json(wrapResponse(emails));
 }
 
@@ -340,5 +351,5 @@ export async function getSentEmail(
 			`Email '${emailId}' not found.`
 		);
 	}
-	return c.json(wrapResponse(email as EmailSendingDetail));
+	return c.json(wrapResponse(zEmailSendingDetail.parse(email)));
 }
