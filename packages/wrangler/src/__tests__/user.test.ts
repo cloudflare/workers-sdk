@@ -1751,6 +1751,26 @@ describe("User", () => {
 			const result = getActiveAccountId({});
 			expect(result).toBeUndefined();
 		});
+
+		it("should reject a config.account_id that cannot be used in an API URL", ({
+			expect,
+		}) => {
+			expect(() =>
+				getActiveAccountId({ account_id: "ваш-идентификатор-аккаунта" })
+			).toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+			);
+		});
+
+		it("should reject a CLOUDFLARE_ACCOUNT_ID that cannot be used in an API URL", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "ваш-идентификатор-аккаунта");
+
+			expect(() => getActiveAccountId({})).toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in the \`CLOUDFLARE_ACCOUNT_ID\` environment variable. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+			);
+		});
 	});
 
 	describe("fetchAllAccounts", () => {
@@ -2147,6 +2167,20 @@ describe("User", () => {
 				id: "api-account",
 				name: "API Account",
 			});
+		});
+
+		it("should reject an invalid env var without making API calls", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "ваш-идентификатор-аккаунта");
+
+			// No getMswSuccessMembershipHandlers — if an API call is made, it will fail
+			// with an unhandled-request error rather than the validation error below.
+			await expect(
+				getOrSelectAccountId({})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in the \`CLOUDFLARE_ACCOUNT_ID\` environment variable. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+			);
 		});
 	});
 });

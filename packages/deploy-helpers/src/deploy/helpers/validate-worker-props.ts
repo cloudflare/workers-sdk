@@ -8,7 +8,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { confirm, fetchResult, logger } from "../../shared/context";
-import { getSubdomainValues } from "../../triggers/deploy";
+import {
+	getSubdomainValues,
+	validateEventTriggerTargets,
+} from "../../triggers/deploy";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
 import { getWorkersDevSubdomain } from "../../triggers/subdomain";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
@@ -97,6 +100,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	if (props.command === "deploy") {
+		validateEventTriggerTargets(config, name);
 		validateRoutes(props.routes, props.assetsOptions);
 		assert(
 			!config.site || config.site.bucket,
@@ -330,6 +334,7 @@ export async function preUploadApiChecks(
 	//     such deploys still get a correctly-worded prompt in the triggers phase).
 	if (!workerExists && wantsWorkersDev) {
 		await getWorkersDevSubdomain(config, accountId, {
+			autoRegisterSubdomain: props.autoRegisterWorkersDevSubdomain,
 			configPath: config.configPath,
 		});
 	}

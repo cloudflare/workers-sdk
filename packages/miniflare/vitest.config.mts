@@ -18,6 +18,15 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			miniflare: path.resolve(__dirname, "dist/src/index.js"),
+			// Exposes the worker-side raw-TCP relay helper to focused unit tests
+			// without importing it by a real path (which would drag worker-typed
+			// source into the node-side tsconfig, whose `exclude` covers
+			// `src/workers/**`). The spec imports this id with an `@ts-expect-error`
+			// since tsc has no matching path mapping.
+			"@relay-under-test": path.resolve(
+				__dirname,
+				"src/workers/shared/remote-bindings-utils.ts"
+			),
 			"miniflare:shared": path.resolve(
 				__dirname,
 				"src/workers/shared/index.ts"

@@ -213,7 +213,7 @@ beforeAll(async ({}, s) => {
 			await postServe();
 		}
 	};
-}, 40_000);
+});
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;

@@ -37,20 +37,11 @@ const WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS: Worker_Binding = {
 	name: SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS,
 	json: "true",
 };
-const WORKER_BINDING_ENABLE_STICKY_BLOBS: Worker_Binding = {
-	name: SharedBindings.MAYBE_JSON_ENABLE_STICKY_BLOBS,
-	json: "true",
-};
 let enableControlEndpoints = false;
-export function getMiniflareObjectBindings(
-	unsafeStickyBlobs: boolean
-): Worker_Binding[] {
+export function getMiniflareObjectBindings(): Worker_Binding[] {
 	const result: Worker_Binding[] = [];
 	if (enableControlEndpoints) {
 		result.push(WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS);
-	}
-	if (unsafeStickyBlobs) {
-		result.push(WORKER_BINDING_ENABLE_STICKY_BLOBS);
 	}
 	return result;
 }
@@ -118,9 +109,22 @@ export function extractObjectEntryId(
 // into a per-binding service. The only static, non-props-able binding is the
 // loopback service (used to surface diagnostics back to the Miniflare host,
 // e.g. a Cloudflare Access block detected on the remote proxy response).
-export function remoteProxyClientWorker(script?: () => string) {
+//
+// `options.rawTcp` opts the service into raw TCP `connect()` tunnelling (see the
+// `experimental` compatibility flag below). That is a property of the service
+// itself, not of any individual binding, so it stays valid under the shared,
+// props-based service model.
+export function remoteProxyClientWorker(
+	script?: () => string,
+	options?: { rawTcp?: boolean }
+) {
 	return {
 		compatibilityDate: "2025-01-01",
+		// Raw TCP bindings (e.g. VPC networks) tunnel `binding.connect()` traffic
+		// through this worker's inbound `connect` handler, which requires the
+		// `experimental` compatibility flag (workerd#6059). Other bindings only
+		// proxy HTTP/JSRPC and must not opt in.
+		...(options?.rawTcp ? { compatibilityFlags: ["experimental"] } : {}),
 		modules: [
 			{
 				name: "index.worker.js",

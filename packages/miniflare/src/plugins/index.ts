@@ -194,7 +194,6 @@ export {
 	CoreOptionsSchema,
 	CoreSharedOptionsSchema,
 	compileModuleRules,
-	createFetchMock,
 	getGlobalServices,
 	ModuleRuleTypeSchema,
 	ModuleRuleSchema,

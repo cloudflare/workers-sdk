@@ -63,7 +63,7 @@ test("Unbound send_email binding works", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -163,7 +163,7 @@ test("Single allowed destination send_email binding works", async ({
 				{ name: "SEND_EMAIL", destination_address: "someone-else@example.com" },
 			],
 		},
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -478,7 +478,7 @@ test("reply validation: x-auto-response-suppress", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -518,7 +518,7 @@ test("reply validation: Auto-Submitted", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -558,7 +558,7 @@ test("reply validation: only In-Reply-To", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -598,7 +598,7 @@ test("reply validation: only References", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -639,7 +639,7 @@ test("reply validation: >100 References", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -682,7 +682,7 @@ test("reply: mismatched From: header", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -722,7 +722,7 @@ test("reply: unparseable", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -770,7 +770,7 @@ test("reply: no message id", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -820,7 +820,7 @@ test("reply: disallowed header", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -869,7 +869,7 @@ test("reply: missing In-Reply-To", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -921,7 +921,7 @@ test("reply: wrong In-Reply-To", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -976,7 +976,7 @@ test("reply: invalid references", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -1025,7 +1025,7 @@ test("reply: references generated correctly", async ({ expect }) => {
 		This is a random email body.`;
 
 	const res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?" +
+		"http://localhost/cdn-cgi/local/email?" +
 			new URLSearchParams({
 				from: "someone@example.com",
 				to: "someone-else@example.com",
@@ -1079,7 +1079,7 @@ test("MessageBuilder with text only", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -1194,7 +1194,7 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -1260,7 +1260,7 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -2083,7 +2083,7 @@ test("disposing does not remove a concurrent email session", async ({
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -2123,7 +2123,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 			},
 			sharedOptions: {},
 			tmpPath: tmp,
-			defaultProjectTmpPath: projectTmpPath,
+			resourceTmpPath: projectTmpPath,
 			workerNames: ["default"],
 			workerIndex: 0,
 		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
@@ -2206,7 +2206,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
 	});
 
-	test("creates only system disk service when defaultProjectTmpPath is undefined", async ({
+	test("creates only system disk service when resourceTmpPath is undefined", async ({
 		expect,
 	}) => {
 		const tmp = await useTmp();
@@ -2217,7 +2217,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 			},
 			sharedOptions: {},
 			tmpPath: tmp,
-			defaultProjectTmpPath: undefined,
+			resourceTmpPath: undefined,
 			workerNames: ["default"],
 			workerIndex: 0,
 		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
@@ -2307,7 +2307,7 @@ describe("getEmailPathsToClean", () => {
 	});
 });
 
-test("MessageBuilder writes files to system temp when defaultProjectTmpPath is unset", async ({
+test("MessageBuilder writes files to system temp when resourceTmpPath is unset", async ({
 	expect,
 }) => {
 	const log = new TestLog();

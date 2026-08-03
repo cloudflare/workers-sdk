@@ -8,7 +8,6 @@ import { text } from "node:stream/consumers";
 import { Headers, Miniflare, R2_PLUGIN_NAME } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
-	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
@@ -1000,7 +999,7 @@ test("operations persist stored data", async ({ expect }) => {
 		modules: true,
 		script: "",
 		r2Buckets: { BUCKET: "bucket" },
-		r2Persist: tmp,
+		resourcePersistencePath: tmp,
 	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
@@ -1013,8 +1012,8 @@ test("operations persist stored data", async ({ expect }) => {
 	let object = await r2.head("key");
 	expect(object?.size).toBe(5);
 
-	// Check directory created for namespace
-	const names = await fs.readdir(tmp);
+	// Check directory created for namespace under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, R2_PLUGIN_NAME));
 	expect(names.includes("miniflare-R2BucketObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data
@@ -1607,25 +1606,4 @@ test("list: is multipart aware", async ({ expect }) => {
 	expect(object?.checksums.toJSON()).toEqual({});
 	expect(object?.customMetadata).toEqual({ key: "value" });
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });
-});
-
-test("migrates database to new location", async ({ expect }) => {
-	// Copy legacy data to temporary directory
-	const tmp = await useTmp();
-	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
-	const r2Persist = path.join(tmp, "r2");
-	await fs.cp(path.join(persistFixture, "r2"), r2Persist, { recursive: true });
-
-	// Implicitly migrate data
-	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		r2Buckets: ["BUCKET"],
-		r2Persist,
-	});
-	useDispose(mf);
-
-	const bucket = await mf.getR2Bucket("BUCKET");
-	const object = await bucket.get("key");
-	expect(await object?.text()).toBe("value");
 });

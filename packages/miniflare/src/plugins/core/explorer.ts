@@ -18,6 +18,7 @@ import {
 import {
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
 import type { PluginWorkerOptions } from "..";
@@ -40,6 +41,8 @@ export interface ExplorerServicesOptions {
 		enabled: boolean;
 		deviceId?: string;
 	};
+	/** Whether local observability is enabled — gates the collector binding. */
+	observabilityEnabled: boolean;
 }
 
 /**
@@ -56,6 +59,7 @@ export function getExplorerServices(
 		workerNames,
 		explorerWorkerOpts,
 		telemetry,
+		observabilityEnabled,
 	} = options;
 
 	const explorerBindings: Worker_Binding[] = [
@@ -93,6 +97,17 @@ export function getExplorerServices(
 			workerdDebugPort: kVoid,
 		},
 	];
+
+	// Only bind the observability collector when observability is enabled —
+	// otherwise the service doesn't exist and workerd would fail to start.
+	if (observabilityEnabled) {
+		explorerBindings.push({
+			name: CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR,
+			service: {
+				name: getUserServiceName(OBSERVABILITY_COLLECTOR_SERVICE_NAME),
+			},
+		});
+	}
 
 	if (hasDurableObjects) {
 		// Add Durable Object namespace bindings for the explorer

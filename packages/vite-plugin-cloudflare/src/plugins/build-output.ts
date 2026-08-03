@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import {
-	writeOutputWorkerConfig,
-	writeRootOutputConfig,
-} from "@cloudflare/config";
+	writeRootConfig,
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
 
 /**
- * Build Output API plugin. Replaces `outputConfigPlugin` when
+ * Build Output Specification plugin. Replaces `outputConfigPlugin` when
  * `experimental.newConfig.cfBuildOutput` is set.
  */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
@@ -30,11 +30,19 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					workerNewConfig,
 					"Expected a default worker export on assets-only resolved config"
 				);
-				await writeOutputWorkerConfig(
-					ctx.resolvedViteConfig.root,
-					workerNewConfig
-				);
-				await writeRootSettings();
+				await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig);
+				await writeSettingsConfig();
+				return;
+			}
+
+			// The Build Output Specification currently holds a single Worker in
+			// the `default` directory. Only the entry Worker is emitted;
+			// auxiliary Worker environments are ignored for now.
+			if (
+				ctx.resolvedPluginConfig.type === "workers" &&
+				this.environment.name !==
+					ctx.resolvedPluginConfig.entryWorkerEnvironmentName
+			) {
 				return;
 			}
 
@@ -75,19 +83,15 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				modules[fileName] = { type: detectModuleType(fileName) };
 			}
 
-			await writeOutputWorkerConfig(
-				ctx.resolvedViteConfig.root,
-				workerNewConfig,
-				{
-					mainModule: entryChunk.fileName,
-					modules,
-				}
-			);
-			await writeRootSettings();
+			await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig, {
+				mainModule: entryChunk.fileName,
+				modules,
+			});
+			await writeSettingsConfig();
 		},
 	};
 
-	async function writeRootSettings(): Promise<void> {
+	async function writeSettingsConfig(): Promise<void> {
 		if (ctx.resolvedPluginConfig.type === "preview") {
 			return;
 		}
@@ -97,7 +101,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 		if (!settings) {
 			return;
 		}
-		await writeRootOutputConfig(ctx.resolvedViteConfig.root, settings);
+		await writeRootConfig(ctx.resolvedViteConfig.root, settings);
 	}
 });
 

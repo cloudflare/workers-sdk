@@ -1,5 +1,47 @@
 # @cloudflare/autoconfig
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6)]:
+  - @cloudflare/workers-utils@0.31.0
+  - @cloudflare/cli-shared-helpers@0.1.19
+
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`5e6556a`](https://github.com/cloudflare/workers-sdk/commit/5e6556a0c788679b6ac149ba3018a2cfd7cc73e9)]:
+  - @cloudflare/workers-utils@0.30.0
+  - @cloudflare/cli-shared-helpers@0.1.18
+
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb)]:
+  - @cloudflare/workers-utils@0.29.0
+  - @cloudflare/cli-shared-helpers@0.1.17
+
+## 0.2.0
+
+### Minor Changes
+
+- [#14595](https://github.com/cloudflare/workers-sdk/pull/14595) [`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924) Thanks [@colinhacks](https://github.com/colinhacks)! - Recognise nub as a package manager
+
+  wrangler now detects nub — from its `npm_config_user_agent` and an installed `nub` binary — and autoconfig detects nub projects by their `nub.lock`, alongside npm, pnpm, yarn, and bun.
+
+### Patch Changes
+
+- [#14534](https://github.com/cloudflare/workers-sdk/pull/14534) [`a330170`](https://github.com/cloudflare/workers-sdk/commit/a330170e8dfbe481a99597b3e07c1438e20f5ebb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve existing Nuxt `modules` when configuring a project for Cloudflare
+
+  Configuring an existing Nuxt project whose `nuxt.config.ts` already declares a `modules` array previously overwrote that array when adding `nitro-cloudflare-dev`, dropping modules such as `@nuxt/ui`. Existing entries are now retained and the Cloudflare module is appended instead.
+
+- Updated dependencies [[`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924), [`a6c214f`](https://github.com/cloudflare/workers-sdk/commit/a6c214fb311215b1ed09b273171b7995033fb7d7)]:
+  - @cloudflare/workers-utils@0.28.0
+  - @cloudflare/cli-shared-helpers@0.1.16
+
 ## 0.1.6
 
 ### Patch Changes

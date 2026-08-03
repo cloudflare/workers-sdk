@@ -14,7 +14,7 @@ const VpcServicesSchema = z.object({
 });
 
 export const VpcServicesOptionsSchema = z.object({
-	vpcServices: z.record(VpcServicesSchema).optional(),
+	vpcServices: z.record(z.string(), VpcServicesSchema).optional(),
 });
 
 export const VPC_SERVICES_PLUGIN_NAME = "vpc-services";
@@ -60,7 +60,12 @@ export const VPC_SERVICES_PLUGIN: Plugin<typeof VpcServicesOptionsSchema> = {
 		return [
 			{
 				name: VPC_SERVICES_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
+				// VPC services also expose raw TCP via `binding.connect()`, tunnelled
+				// through the proxy client's inbound `connect` handler. The shared
+				// `vpc-services:remote` service is dedicated to VPC services, so
+				// opting it into raw TCP leaves every other binding's service
+				// untouched.
+				worker: remoteProxyClientWorker(undefined, { rawTcp: true }),
 			},
 		];
 	},

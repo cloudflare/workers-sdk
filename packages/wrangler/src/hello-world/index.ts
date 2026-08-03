@@ -23,11 +23,11 @@ export async function usingLocalHelloWorldBinding<T>(
 	) => Promise<T>
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
-	const defaultPersistRoot = getDefaultPersistRoot(persist);
+	const resourcePersistencePath = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		script:
 			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		defaultPersistRoot,
+		resourcePersistencePath,
 		helloWorld: {
 			BINDING: {
 				enable_timer: false,

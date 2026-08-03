@@ -322,7 +322,10 @@ export class RemoteRuntimeController extends RuntimeController {
 			return false;
 		}
 
-		const accessHeaders = await getAccessHeaders(token.host);
+		const accessHeaders = await getAccessHeaders(
+			token.host,
+			this.#abortController.signal
+		);
 
 		const proxyData: ProxyData = {
 			userWorkerUrl: {

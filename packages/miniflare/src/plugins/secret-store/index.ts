@@ -10,7 +10,6 @@ import {
 	getPersistPath,
 	getUserBindingServiceName,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
@@ -18,6 +17,7 @@ import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 const SecretsStoreSecretsSchema = z.record(
+	z.string(),
 	z.object({
 		store_id: z.string(),
 		secret_name: z.string(),
@@ -28,21 +28,15 @@ export const SecretsStoreSecretsOptionsSchema = z.object({
 	secretsStoreSecrets: SecretsStoreSecretsSchema.optional(),
 });
 
-export const SecretsStoreSecretsSharedOptionsSchema = z.object({
-	secretsStorePersist: PersistenceSchema,
-});
-
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
 // A single entry service shared by every secret store. Each store_id is supplied
 // per-binding via `ctx.props`, so one service serves all of them.
 const SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME = `${SECRET_STORE_PLUGIN_NAME}:ns:entry`;
 
 export const SECRET_STORE_PLUGIN: Plugin<
-	typeof SecretsStoreSecretsOptionsSchema,
-	typeof SecretsStoreSecretsSharedOptionsSchema
+	typeof SecretsStoreSecretsOptionsSchema
 > = {
 	options: SecretsStoreSecretsOptionsSchema,
-	sharedOptions: SecretsStoreSecretsSharedOptionsSchema,
 	bindingTypeDescription: "Secrets Store secret",
 	async getBindings(options) {
 		if (!options.secretsStoreSecrets) {
@@ -76,13 +70,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
+	async getServices({ options, tmpPath, resourcePersistencePath }) {
 		const configs = options.secretsStoreSecrets
 			? Object.values(options.secretsStoreSecrets)
 			: [];
@@ -94,8 +82,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			SECRET_STORE_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.secretsStorePersist
+			resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -133,7 +120,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;
@@ -175,13 +162,5 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		}));
 
 		return [...secretServices, entryService, storageService, objectService];
-	},
-	getPersistPath({ secretsStorePersist }, tmpPath) {
-		return getPersistPath(
-			SECRET_STORE_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			secretsStorePersist
-		);
 	},
 };

@@ -106,7 +106,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				}
 				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
 					`
-					"Error: Failed to establish remote session due to an authentication issue.
+					"Error: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
 					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
 					The token may be invalid or lack the required permissions for this operation.
 					To fix this, verify that your token is valid and has the correct permissions.
@@ -173,7 +173,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				}
 				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
 					`
-					"Error: Failed to establish remote session due to an authentication issue.
+					"Error: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
 					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
 					The token may be invalid or lack the required permissions for this operation.
 					To fix this, verify that your token is valid and has the correct permissions.

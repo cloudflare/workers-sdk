@@ -4,6 +4,7 @@ import {
 	fetchInternalBase,
 	fetchKVGetValueBase,
 	getCloudflareApiBaseUrl,
+	parseRetryAfterMs,
 	performApiFetchBase,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -127,7 +128,11 @@ export async function fetchInternal<ResponseType>(
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal,
 	apiToken?: ApiCredentials
-): Promise<{ response: ResponseType; status: number }> {
+): Promise<{
+	response: ResponseType;
+	status: number;
+	retryAfterMs?: number;
+}> {
 	apiToken = await resolveCredentials(complianceConfig, apiToken);
 	return fetchInternalBase(
 		complianceConfig,
@@ -288,6 +293,7 @@ export async function fetchR2Objects(
 			text: `Failed to fetch ${resource} - ${response.status}: ${response.statusText};`,
 			status: response.status,
 			notes,
+			retryAfterMs: parseRetryAfterMs(response.headers),
 			telemetryMessage: false,
 		});
 		if (errorCode !== undefined) {

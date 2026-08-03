@@ -23,13 +23,13 @@ import type {
 export class RemoteSessionAuthenticationError extends UserError {
 	/**
 	 * @param cause - The original error that triggered the authentication
-	 *   failure (e.g. an {@link APIError} with code 9106 or 10000).
+	 *   failure (e.g. an {@link APIError} with code 9106, 10000, or 10405).
 	 */
 	constructor(cause: unknown) {
 		const envAuth = getAuthFromEnv();
 
 		let errorMessage =
-			"Failed to establish remote session due to an authentication issue.\n";
+			"This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.\n";
 		if (envAuth !== undefined) {
 			// The user is authenticating via an environment variable
 			const method =
@@ -165,9 +165,10 @@ export function createRemoteWorkerInit(props: {
 function handleUserFriendlyError(error: unknown, accountId?: string) {
 	if (error instanceof APIError) {
 		switch (error.code) {
-			// code 9106 and 10000 are authentication errors
+			// codes 9106, 10000, and 10405 are authentication errors
 			case 9106:
-			case 10000: {
+			case 10000:
+			case 10405: {
 				throw new RemoteSessionAuthenticationError(error);
 			}
 
