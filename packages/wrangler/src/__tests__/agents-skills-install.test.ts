@@ -2424,6 +2424,62 @@ describe("runSkillsUpdateFlow", () => {
 		).toBe("# Original");
 	});
 
+	test("restores backed-up skill directories for agents that partially failed during update", async ({
+		expect,
+	}) => {
+		const claudeSkills = path.join(os.homedir(), ".claude", "skills");
+		const cursorSkills = path.join(os.homedir(), ".cursor", "skills");
+		mkdirSync(path.join(claudeSkills, "cloudflare"), { recursive: true });
+		mkdirSync(path.join(cursorSkills, "cloudflare"), { recursive: true });
+		writeFileSync(
+			path.join(claudeSkills, "cloudflare", "SKILL.md"),
+			"# Claude Original"
+		);
+		writeFileSync(
+			path.join(cursorSkills, "cloudflare", "SKILL.md"),
+			"# Cursor Original"
+		);
+		writeMetadataFile({
+			version: 1,
+			accepted: true,
+			date: "2025-01-01T00:00:00Z",
+			detectedAgents: [
+				{
+					name: "Claude Code",
+					rosie: { id: "claude", globalPath: claudeSkills },
+				},
+				{
+					name: "Cursor",
+					rosie: { id: "cursor", globalPath: cursorSkills },
+				},
+			],
+			installedTreeSha: "old-sha",
+			installFailed: false,
+			installedSkillNames: ["cloudflare"],
+		});
+		mockGitHubSkillsApi(["cloudflare", "wrangler"], "new-sha");
+		mockConfirm({
+			text: "It looks like your Cloudflare skills might be out of date. Would you like Wrangler to update them for you?",
+			result: true,
+		});
+		// rosieInstall resolves (no throw) but reports cursor as failed
+		mockRosieInstall.mockResolvedValueOnce({
+			skills: [],
+			installedAgents: ["claude"],
+			failedAgents: ["cursor"],
+			installedInstruction: null,
+		});
+		const runSkillsUpdateFlow = await freshUpdateImport();
+
+		await runSkillsUpdateFlow({});
+
+		// Cursor's backed-up skills should be restored since its install failed
+		expect(existsSync(path.join(cursorSkills, "cloudflare"))).toBe(true);
+		expect(
+			readFileSync(path.join(cursorSkills, "cloudflare", "SKILL.md"), "utf8")
+		).toBe("# Cursor Original");
+	});
+
 	test("persists installedSkillNames in metadata after successful update", async ({
 		expect,
 	}) => {

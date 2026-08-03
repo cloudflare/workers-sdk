@@ -7,6 +7,7 @@ import {
 	renameSync,
 	writeFileSync,
 } from "node:fs";
+import { mkdir, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -793,6 +794,41 @@ function directoryContainsAnySkill(
 }
 
 /**
+ * Restores backed-up skill directories for the given agent IDs.
+ *
+ * Used after a partial install/update failure to ensure agents whose
+ * installation failed keep their previously-working skills instead of
+ * ending up with empty directories.
+ *
+ * @param backedUp - Backup entries produced by {@link installSkillsCleanly}.
+ * @param agentIds - Rosie agent IDs whose backups should be restored.
+ */
+async function restoreBackupsForAgents(
+	backedUp: Array<{ src: string; backup: string; agentId: string }>,
+	agentIds: string[]
+): Promise<void> {
+	if (agentIds.length === 0) {
+		return;
+	}
+
+	const failedSet = new Set(agentIds);
+	for (const { src, backup, agentId } of backedUp) {
+		if (!failedSet.has(agentId)) {
+			continue;
+		}
+
+		try {
+			await mkdir(path.dirname(src), { recursive: true });
+			await rename(backup, src);
+		} catch {
+			logger.debug(
+				`Failed to restore backed-up skill directory: ${backup} -> ${src}`
+			);
+		}
+	}
+}
+
+/**
  * Backs up existing Cloudflare-managed skill directories from each agent's
  * global skills path into a temporary directory, removes the originals,
  * runs `rosieInstall`, and on failure restores every backed-up directory.
@@ -819,7 +855,7 @@ async function installSkillsCleanly(
 	// and restore the backups if it fails.
 	const tmpDir = mkdtempSync(path.join(os.tmpdir(), "wrangler-skills-"));
 
-	const backedUp: Array<{ src: string; backup: string }> = [];
+	const backedUp: Array<{ src: string; backup: string; agentId: string }> = [];
 
 	try {
 		for (const agent of agents) {
@@ -832,7 +868,11 @@ async function installSkillsCleanly(
 				const backupPath = path.join(tmpDir, agent.rosie.id, skillName);
 				mkdirSync(path.dirname(backupPath), { recursive: true });
 				renameSync(skillPath, backupPath);
-				backedUp.push({ src: skillPath, backup: backupPath });
+				backedUp.push({
+					src: skillPath,
+					backup: backupPath,
+					agentId: agent.rosie.id,
+				});
 			}
 		}
 
@@ -843,20 +883,12 @@ async function installSkillsCleanly(
 			onLog: ({ message }) => logger.debug(message),
 		});
 
+		await restoreBackupsForAgents(backedUp, result.failedAgents);
 		removeDirSync(tmpDir);
 		return result;
 	} catch (err) {
-		for (const { src, backup } of backedUp) {
-			try {
-				mkdirSync(path.dirname(src), { recursive: true });
-				renameSync(backup, src);
-			} catch {
-				// Best-effort restore — log and continue.
-				logger.debug(
-					`Failed to restore backed-up skill directory: ${backup} -> ${src}`
-				);
-			}
-		}
+		const allAgentIds = agents.map((a) => a.rosie.id);
+		await restoreBackupsForAgents(backedUp, allAgentIds);
 		removeDirSync(tmpDir);
 		throw err;
 	}
