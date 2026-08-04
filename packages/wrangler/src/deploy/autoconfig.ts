@@ -77,7 +77,8 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	args: Args,
 	config: Config,
 	options: { skipConfirmations?: boolean } = {}
-): Promise<{ config: Config; aborted: boolean }> {
+): Promise<{ config: Config; aborted: boolean; configured: boolean }> {
+	let configured = false;
 	const shouldRunAutoConfig =
 		args.autoconfig &&
 		// If there is a positional parameter, an assets directory specified via --assets, or an
@@ -132,7 +133,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 						command: "wrangler deploy",
 						dryRun: !!args.dryRun,
 					});
-					return { config, aborted: true };
+					return { config, aborted: true, configured };
 				}
 			} else if (!details.configured) {
 				const autoConfigSummary = await runAutoConfigLogic(details, {
@@ -140,6 +141,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 					dryRun: !!args.dryRun,
 					skipConfirmations: options.skipConfirmations === true,
 				});
+				configured = !args.dryRun;
 
 				writeOutput({
 					type: "autoconfig",
@@ -171,7 +173,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		});
 	}
 
-	return { config, aborted: false };
+	return { config, aborted: false, configured };
 }
 
 /**
