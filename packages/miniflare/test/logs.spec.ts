@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { onTestFinished, test, vi } from "vitest";
-import { useDispose } from "./test-shared";
+import { singleModuleManifest, useDispose } from "./test-shared";
 import type { WorkerdStructuredLog } from "miniflare";
 
 test("logs are written to the console by default when no `handleStructuredLogs` is provided", async ({
@@ -14,8 +14,13 @@ test("logs are written to the console by default when no `handleStructuredLogs` 
 	});
 
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			export default {
 				async fetch(req, env) {
 				console.log('__LOG__');
@@ -23,7 +28,10 @@ test("logs are written to the console by default when no `handleStructuredLogs` 
 				console.error('__ERROR__');
 				return new Response('Hello world!');
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -46,14 +54,19 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 		timestamp: string;
 	})[] = [];
 	const mf = new Miniflare({
-		modules: true,
 		handleStructuredLogs(log) {
 			collectedLogs.push({
 				...log,
 				timestamp: `<${typeof log.timestamp}>`,
 			});
 		},
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			export default {
 				async fetch(req, env) {
 				console.log('__LOG__');
@@ -63,7 +76,10 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 				console.debug('__DEBUG__');
 				return new Response('Hello world!');
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -106,14 +122,19 @@ test("when using `handleStructuredLogs` some known unhelpful logs are filtered o
 		timestamp: string;
 	})[] = [];
 	const mf = new Miniflare({
-		modules: true,
 		handleStructuredLogs(log) {
 			collectedLogs.push({
 				...log,
 				timestamp: `<${typeof log.timestamp}>`,
 			});
 		},
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			export default {
 				async fetch(req, env) {
 				console.log('__LOG__');
@@ -121,7 +142,10 @@ test("when using `handleStructuredLogs` some known unhelpful logs are filtered o
 				console.error('__ERROR__');
 				return new Response('Hello world!');
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

@@ -1,6 +1,7 @@
 import { Miniflare } from "miniflare";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, test } from "vitest";
+import { singleModuleManifest } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 // A worker that runs env.IMAGES.input(...).transform(...).output(...) with
@@ -59,10 +60,17 @@ describe("Images binding local transforms", () => {
 			.toBuffer();
 
 		mf = new Miniflare({
-			compatibilityDate: "2025-04-01",
-			modules: true,
-			script: WORKER_SCRIPT,
-			images: { binding: "IMAGES" },
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-04-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						env: { IMAGES: { type: "images" } },
+					},
+				},
+			],
 		} satisfies MiniflareOptions);
 	});
 

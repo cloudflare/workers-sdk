@@ -183,6 +183,7 @@ function convertWorkerOptions(
 	dev.unsafeOverrideFetchWorker = worker.unsafeOverrideFetchWorker;
 	dev.unsafeEvalBinding = worker.unsafeEvalBinding;
 	dev.useModuleFallbackService = worker.unsafeUseModuleFallbackService;
+	dev.unsafeRegisterWorker = worker.unsafeRegisterWorker;
 	dev.hasAssetsAndIsVitest = worker.hasAssetsAndIsVitest;
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;
