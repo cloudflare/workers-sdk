@@ -116,8 +116,9 @@ describe("containers instances", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			      --per-page  Number of instances per page  [number] [default: 25]
-			      --json      Return output as JSON  [boolean] [default: false]"
+			      --per-page    Number of instances per page  [number]
+			      --page-token  Continuation token for explicitly paginated JSON output  [string]
+			      --json        Return output as JSON  [boolean] [default: false]"
 		`);
 	});
 
@@ -290,8 +291,19 @@ describe("containers instances", () => {
 		expect(std.out).toContain("22222222-2222-2222-2222-222222222222");
 	});
 
+	it("should reject a page token without JSON output", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+
+		await expect(
+			runWrangler(`containers instances ${APP_ID} --page-token next-page`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: --page-token requires --json]`
+		);
+	});
+
 	describe("--json", () => {
-		it("should output flat JSON matching table columns for non-DO apps", async ({
+		it("should preserve the complete top-level array for non-DO apps", async ({
 			expect,
 		}) => {
 			setIsTTY(false);
@@ -299,7 +311,10 @@ describe("containers instances", () => {
 			msw.use(
 				http.get(
 					"*/dash/applications/*/instances",
-					async () => {
+					async ({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.has("per_page")).toBe(false);
+						expect(url.searchParams.has("page_token")).toBe(false);
 						return HttpResponse.json({
 							success: true,
 							result: MOCK_INSTANCES,
@@ -391,11 +406,10 @@ describe("containers instances", () => {
 				)
 			);
 			await runWrangler(`containers instances ${APP_ID} --json`);
-			const output = JSON.parse(std.out);
-			expect(output).toEqual([]);
+			expect(JSON.parse(std.out)).toEqual([]);
 		});
 
-		it("should fetch all results in a single unpaginated request", async ({
+		it("should return one page and its continuation metadata", async ({
 			expect,
 		}) => {
 			setIsTTY(false);
@@ -407,13 +421,147 @@ describe("containers instances", () => {
 					async ({ request }) => {
 						requestCount++;
 						const url = new URL(request.url);
-						// --json omits per_page so the API returns everything
+						expect(url.searchParams.get("per_page")).toBe("1");
+						expect(url.searchParams.has("page_token")).toBe(false);
+						return HttpResponse.json({
+							success: true,
+							result: {
+								instances: [MOCK_INSTANCES.instances[0]],
+								durable_objects: [],
+							},
+							result_info: {
+								per_page: 1,
+								next_page_token: "next-page",
+							},
+							errors: [],
+							messages: [],
+						});
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(`containers instances ${APP_ID} --json --per-page 1`);
+			expect(requestCount).toBe(1);
+			const output = JSON.parse(std.out);
+			expect(output.instances).toHaveLength(1);
+			expect(output.instances[0].id).toBe(
+				"11111111-1111-1111-1111-111111111111"
+			);
+			expect(output.result_info).toEqual({
+				per_page: 1,
+				page_token: null,
+				next_page_token: "next-page",
+			});
+		});
+
+		it("should continue from an explicit page token", async ({ expect }) => {
+			setIsTTY(false);
+			setWranglerConfig({});
+			msw.use(
+				http.get(
+					"*/dash/applications/*/instances",
+					async ({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.get("per_page")).toBe("1");
+						expect(url.searchParams.get("page_token")).toBe("next-page");
+						return HttpResponse.json({
+							success: true,
+							result: {
+								instances: [MOCK_INSTANCES.instances[1]],
+								durable_objects: [],
+							},
+							result_info: {
+								per_page: 1,
+								page_token: "next-page",
+							},
+							errors: [],
+							messages: [],
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(
+				`containers instances ${APP_ID} --json --per-page 1 --page-token next-page`
+			);
+
+			expect(JSON.parse(std.out)).toEqual({
+				instances: [
+					{
+						id: "22222222-2222-2222-2222-222222222222",
+						state: "provisioning",
+						location: "iad01",
+						version: 2,
+						created: "2025-06-01T11:00:00Z",
+					},
+				],
+				result_info: {
+					per_page: 1,
+					page_token: "next-page",
+					next_page_token: null,
+				},
+			});
+		});
+
+		it("should continue with a page token without sending a default page size", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			setWranglerConfig({});
+			msw.use(
+				http.get(
+					"*/dash/applications/*/instances",
+					async ({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.has("per_page")).toBe(false);
+						expect(url.searchParams.get("page_token")).toBe("next-page");
+						return HttpResponse.json({
+							success: true,
+							result: {
+								instances: [MOCK_INSTANCES.instances[1]],
+								durable_objects: [],
+							},
+							result_info: {
+								per_page: 50,
+								page_token: "next-page",
+							},
+							errors: [],
+							messages: [],
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(
+				`containers instances ${APP_ID} --json --page-token next-page`
+			);
+
+			expect(JSON.parse(std.out).result_info).toEqual({
+				per_page: 50,
+				page_token: "next-page",
+				next_page_token: null,
+			});
+		});
+
+		it("should support APIs that return the complete list without pagination metadata", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			setWranglerConfig({});
+			let requestCount = 0;
+			msw.use(
+				http.get(
+					"*/dash/applications/*/instances",
+					async ({ request }) => {
+						requestCount++;
+						const url = new URL(request.url);
 						expect(url.searchParams.has("per_page")).toBe(false);
 						expect(url.searchParams.has("page_token")).toBe(false);
 						return HttpResponse.json({
 							success: true,
 							result: MOCK_INSTANCES,
-							result_info: { per_page: 50 },
 							errors: [],
 							messages: [],
 						});
@@ -425,8 +573,6 @@ describe("containers instances", () => {
 			expect(requestCount).toBe(1);
 			const output = JSON.parse(std.out);
 			expect(output).toHaveLength(2);
-			expect(output[0].id).toBe("11111111-1111-1111-1111-111111111111");
-			expect(output[1].id).toBe("22222222-2222-2222-2222-222222222222");
 		});
 	});
 });

@@ -13,6 +13,7 @@ import type {
 	DashApplicationDurableObjectInstance,
 	DashApplicationInstance,
 	DashApplicationInstances,
+	ResultInfo,
 } from "@cloudflare/containers-shared";
 
 type InstanceState =
@@ -24,6 +25,8 @@ type InstanceState =
 	| "unhealthy"
 	| "inactive"
 	| "unknown";
+
+const DEFAULT_PER_PAGE = 25;
 
 function deriveInstanceState(instance: DashApplicationInstance): InstanceState {
 	const status = instance.current_placement?.status;
@@ -100,6 +103,7 @@ async function fetchPage(
 ): Promise<{
 	data: DashApplicationInstances;
 	nextPageToken?: string;
+	resultInfo?: ResultInfo;
 }> {
 	try {
 		const page = await ApplicationsService.listDashApplicationInstances(
@@ -110,6 +114,7 @@ async function fetchPage(
 		return {
 			data: page.data,
 			nextPageToken: page.resultInfo?.next_page_token,
+			resultInfo: page.resultInfo,
 		};
 	} catch (err) {
 		if (!(err instanceof Error)) {
@@ -167,6 +172,22 @@ function rowsToJsonOutput(rows: InstanceRow[]): Record<string, unknown>[] {
 	});
 }
 
+function instancesToJsonOutput(
+	rows: InstanceRow[],
+	perPage: number,
+	pageToken?: string,
+	nextPageToken?: string
+) {
+	return {
+		instances: rowsToJsonOutput(rows),
+		result_info: {
+			per_page: perPage,
+			page_token: pageToken ?? null,
+			next_page_token: nextPageToken ?? null,
+		},
+	};
+}
+
 function renderTable(rows: InstanceRow[]): void {
 	const hasDurableObjects = rows.some((r) => r.durableObject);
 
@@ -214,7 +235,6 @@ const instancesArgs = {
 	"per-page": {
 		describe: "Number of instances per page",
 		type: "number",
-		default: 25,
 		coerce: (val: number) => {
 			if (val < 1) {
 				throw new UserError("--per-page must be at least 1", {
@@ -223,6 +243,10 @@ const instancesArgs = {
 			}
 			return val;
 		},
+	},
+	"page-token": {
+		describe: "Continuation token for explicitly paginated JSON output",
+		type: "string",
 	},
 	json: {
 		describe: "Return output as JSON",
@@ -243,12 +267,35 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		);
 	}
 
+	if (args.pageToken !== undefined && !args.json) {
+		throw new UserError("--page-token requires --json", {
+			telemetryMessage: "containers instances page-token without json",
+		});
+	}
+
+	const perPage = args.perPage ?? DEFAULT_PER_PAGE;
+
 	// --json: output JSON and exit
 	if (args.json) {
 		try {
-			const { data } = await fetchPage(args.ID);
-			const rows = buildInstanceRows(data);
-			logger.json(rowsToJsonOutput(rows));
+			const isPaginated =
+				args.perPage !== undefined || args.pageToken !== undefined;
+			const result = await fetchPage(args.ID, args.perPage, args.pageToken);
+			const rows = buildInstanceRows(result.data);
+
+			if (!isPaginated) {
+				logger.json(rowsToJsonOutput(rows));
+				return;
+			}
+
+			logger.json(
+				instancesToJsonOutput(
+					rows,
+					result.resultInfo?.per_page ?? perPage,
+					result.resultInfo?.page_token ?? args.pageToken,
+					result.nextPageToken
+				)
+			);
 			return;
 		} catch (err) {
 			if (err instanceof UserError) {
@@ -286,7 +333,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		let data: DashApplicationInstances;
 		let nextPageToken: string | undefined;
 		try {
-			const result = await fetchPage(args.ID, args.perPage, pageToken);
+			const result = await fetchPage(args.ID, perPage, pageToken);
 			data = result.data;
 			nextPageToken = result.nextPageToken;
 		} finally {
@@ -311,7 +358,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		if (pageToken) {
 			logger.log(
 				dim(
-					`Showing ${totalShown} instances. Press Enter to load ${args.perPage} more, or q/Esc to stop.`
+					`Showing ${totalShown} instances. Press Enter to load ${perPage} more, or q/Esc to stop.`
 				)
 			);
 			await new Promise<void>((resolve) => {
