@@ -3722,6 +3722,102 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
+			it("should provide a name in a named environment that inherits the top level worker name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								containers: [
+									{
+										image: "registry.cloudflare.com/something:hello",
+										class_name: "test-class",
+									},
+								],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "test-class",
+						name: "test-worker-name-test-class-staging",
+						image: "registry.cloudflare.com/something:hello",
+						image_build_context: undefined,
+					},
+				]);
+			});
+
+			it("should prefer a name declared on the named environment over the top level worker name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								name: "staging-worker-name",
+								containers: [
+									{
+										image: "registry.cloudflare.com/something:hello",
+										class_name: "test-class",
+									},
+								],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "test-class",
+						name: "staging-worker-name-test-class-staging",
+						image: "registry.cloudflare.com/something:hello",
+						image_build_context: undefined,
+					},
+				]);
+			});
+
+			it("should error in a named environment when neither the environment nor the top level defines a worker name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: {
+							staging: {
+								containers: [
+									{
+										image: "registry.cloudflare.com/something:hello",
+										class_name: "test-class",
+									},
+								],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - "env.staging" environment configuration
+					    - Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined."
+				`);
+			});
+
 			it("should error for invalid container app fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
