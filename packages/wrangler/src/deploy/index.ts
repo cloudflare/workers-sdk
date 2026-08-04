@@ -1,5 +1,8 @@
 import { deploy } from "@cloudflare/deploy-helpers";
-import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import {
+	getWorkerNameFromProject,
+	isNonInteractiveOrCI,
+} from "@cloudflare/workers-utils";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -15,9 +18,11 @@ import {
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
+import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
@@ -117,28 +122,32 @@ export async function runDeployCommandHandler(
 		pagesToWorkersDelegation = false,
 	}: { config: Config; pagesToWorkersDelegation?: boolean }
 ): Promise<void> {
+	const detectedAgent = detectAgent();
+	const shouldUseProjectName =
+		detectedAgent.isAgent && !args.name && !config.name;
+
 	// Capture whether this project can prove it owns the target Worker name,
 	// BEFORE autoconfig generates or rewrites the config. Ownership is proven by
 	// a config file that names the Worker; without one a same-named remote Worker
 	// could be a collision rather than a redeploy.
 	//
-	// We only guard the Pages-to-Workers delegation: there the name is a Pages
-	// project name carried across (or auto-generated), so an existing Worker of
-	// the same name is a different resource we must not clobber, and being
-	// non-interactive there is no prompt to resolve it. Repeat delegations are
-	// unaffected because the first one writes a config file (so `configPath` is
-	// then set).
+	// We guard both agent-generated names and the Pages-to-Workers delegation.
+	// In either case an existing Worker with the same name may be a different
+	// resource that we must not clobber. Repeat deploys are unaffected because
+	// the first one writes a config file (so `configPath` is then set).
 	//
 	// Plain `wrangler deploy` is NOT guarded, even in CI with an autoconfigured
 	// name: autoconfigured projects are routinely redeployed in CI (e.g. when the
 	// auto-generated config PR has not been merged), and blocking that regressed
 	// those workflows. See `failIfWorkerNameTaken` in preUploadApiChecks.
 	const nameOwnershipUnverified =
-		!config.configPath && isNonInteractiveOrCI() && pagesToWorkersDelegation;
+		!config.configPath &&
+		((isNonInteractiveOrCI() && pagesToWorkersDelegation) ||
+			shouldUseProjectName);
 
 	// --- Step 0. Auto-config --- //
 	const autoConfigResult = await maybeRunAutoConfig(args, config, {
-		skipConfirmations: pagesToWorkersDelegation,
+		skipConfirmations: pagesToWorkersDelegation || detectedAgent.isAgent,
 	});
 	if (autoConfigResult.aborted) {
 		return;
@@ -146,7 +155,15 @@ export async function runDeployCommandHandler(
 	config = autoConfigResult.config;
 
 	// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
-	args = await promptForMissingDeployConfig(args, config);
+	args = await promptForMissingDeployConfig(args, config, {
+		useProjectName: detectedAgent.isAgent,
+	});
+	if (shouldUseProjectName) {
+		const workerName = args.name ?? config.name;
+		logger.log(
+			`Using the project name "${workerName}" as the Worker name. To change it, set the \`name\` field in your Wrangler configuration file or pass \`--name <name>\` when deploying.`
+		);
+	}
 
 	// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
 	// As a precaution we're gating the feature under the autoconfig flag for the time being.
@@ -164,6 +181,9 @@ export async function runDeployCommandHandler(
 	// Merge CLI args with config into props for building and deploying
 	const { props, buildProps } = await mergeDeployConfigArgs(args, config);
 	props.failIfWorkerNameTaken = nameOwnershipUnverified;
+	props.autoRegisterWorkersDevSubdomain = detectedAgent.isAgent
+		? getWorkerNameFromProject(process.cwd())
+		: undefined;
 
 	try {
 		// Derive workerNameOverridden by comparing pre-merge name with post-merge name

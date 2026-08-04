@@ -12,12 +12,16 @@ vi.mock("@cloudflare/config", async (importOriginal) => {
 
 const WORKER_NAME = "build-output-test-worker";
 
+// The Build Output Specification holds a single Worker in the `default`
+// directory (the export name in `cloudflare.config.ts`), regardless of the
+// Worker's configured `name`. Resolve at call time — `runInTempDir` changes
+// the cwd after this module is imported.
+function workerDir(): string {
+	return path.resolve(".cloudflare/output/v0/workers", "default");
+}
+
 function readOutputConfig() {
-	const configPath = path.resolve(
-		".cloudflare/output/v0/workers",
-		WORKER_NAME,
-		"worker.config.json"
-	);
+	const configPath = path.join(workerDir(), "config.json");
 	return JSON.parse(fs.readFileSync(configPath, "utf8")) as Record<
 		string,
 		unknown
@@ -25,28 +29,20 @@ function readOutputConfig() {
 }
 
 function bundlePath(...segments: string[]): string {
-	return path.resolve(
-		".cloudflare/output/v0/workers",
-		WORKER_NAME,
-		"bundle",
-		...segments
-	);
+	return path.join(workerDir(), "bundle", ...segments);
 }
 
 function assetsPath(...segments: string[]): string {
-	return path.resolve(
-		".cloudflare/output/v0/workers",
-		WORKER_NAME,
-		"assets",
-		...segments
-	);
+	return path.join(workerDir(), "assets", ...segments);
 }
 
 describe("wrangler build --experimental-cf-build-output", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("emits the Build Output API tree for a Worker", async ({ expect }) => {
+	it("emits the Build Output Specification tree for a Worker", async ({
+		expect,
+	}) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
 				type: "worker",

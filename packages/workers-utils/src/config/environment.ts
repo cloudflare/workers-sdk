@@ -590,18 +590,21 @@ interface EnvironmentInheritable {
 	exports: Exports;
 
 	/**
-	 * "Cron" definitions to trigger a Worker's "scheduled" function.
+	 * Definitions that trigger a Worker from a schedule or a Cloudflare event.
 	 *
-	 * Lets you call Workers periodically, much like a cron job.
+	 * More details about cron triggers: https://developers.cloudflare.com/workers/platform/cron-triggers
 	 *
-	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
+	 * More details about Artifacts events: https://developers.cloudflare.com/artifacts/guides/event-subscriptions/
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 *
 	 * @default {crons:[]}
 	 * @inheritable
 	 */
-	triggers: { crons: string[] | undefined };
+	triggers: {
+		crons?: string[];
+		events?: ArtifactsEventTrigger[];
+	};
 
 	/**
 	 * Specify limits for runtime behavior.
@@ -799,6 +802,32 @@ export type DurableObjectBindings = {
 	environment?: string;
 }[];
 
+export const ARTIFACTS_EVENT_TYPES = [
+	"cf.artifacts.repo.created",
+	"cf.artifacts.repo.deleted",
+	"cf.artifacts.repo.forked",
+	"cf.artifacts.repo.imported",
+	"cf.artifacts.repo.pushed",
+	"cf.artifacts.repo.cloned",
+	"cf.artifacts.repo.fetched",
+	"cf.artifacts.repo.token.created",
+	"cf.artifacts.repo.token.revoked",
+] as const;
+
+export type ArtifactsEventType = (typeof ARTIFACTS_EVENT_TYPES)[number];
+
+export type ArtifactsEventTrigger = {
+	type: ArtifactsEventType;
+	filter?: {
+		namespace?: string;
+		repo_name?: string;
+	};
+	targets: {
+		type: "workflow";
+		workflow_name: string;
+	}[];
+};
+
 export type WorkflowBinding = {
 	/** The name of the binding used to refer to the Workflow */
 	binding: string;
@@ -943,11 +972,6 @@ export interface EnvironmentNonInheritable {
 		id?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
-		/**
-		 * The jurisdiction to create the KV namespace in when provisioning it
-		 * during `wrangler deploy`. Only read when the namespace does not yet exist. Ignored once the namespace has been created.
-		 */
-		jurisdiction?: string;
 		/** Whether the KV namespace should be remote or not in local development */
 		remote?: boolean;
 	}[];

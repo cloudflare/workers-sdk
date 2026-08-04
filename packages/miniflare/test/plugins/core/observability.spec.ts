@@ -561,6 +561,77 @@ interface DetailSpan {
 	kind: string;
 }
 
+// A Workflow, plus a fetch handler that kicks off an instance and proxies
+// `/wobs/*` to the collector. The Workflows engine runs as its own service (not
+// through the core plugin's per-user-worker path), so it's wired for tailing
+// separately; without that, a workflow run leaves no trace in the store.
+const WORKFLOW_CAPTURE_WORKER = `
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class CaptureWorkflow extends WorkflowEntrypoint {
+	async run(event, step) {
+		await step.do("only-step", async () => "done");
+		return "workflow-complete";
+	}
+}
+export default {
+	async fetch(request, env) {
+		const url = new URL(request.url);
+		if (url.pathname.startsWith("/wobs/")) {
+			return env.WOBS.fetch(
+				new Request("http://collector" + url.pathname.slice("/wobs".length) + url.search, request)
+			);
+		}
+		const instance = await env.CAPTURE_WORKFLOW.create({ id: "obs-wf-1" });
+		return Response.json(await instance.status());
+	},
+};`;
+
+describe("unsafeObservability (workflows)", () => {
+	test("captures the Workflows engine invocation, attributed to the workflow", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			name: "wf-user",
+			modules: true,
+			compatibilityDate: "2026-06-01",
+			script: WORKFLOW_CAPTURE_WORKER,
+			workflows: {
+				CAPTURE_WORKFLOW: {
+					className: "CaptureWorkflow",
+					name: "capture-workflow",
+				},
+			},
+			serviceBindings: { WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME } },
+		});
+		useDispose(mf);
+
+		await (await mf.dispatchFetch("http://localhost/start")).text();
+
+		// The engine runs the workflow asynchronously; poll until its spans land
+		// (attributed to the workflow `name` we pass through the collector props).
+		const begin = performance.now();
+		let workflowSpans: Record<string, unknown>[] = [];
+		while (performance.now() - begin < 5000) {
+			workflowSpans = await queryStore(
+				mf,
+				"SELECT service, name, kind FROM spans WHERE service = ?",
+				["capture-workflow"]
+			);
+			if (workflowSpans.length > 0) {
+				break;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+
+		// Before the engine service was wired for tailing this was always empty.
+		expect(workflowSpans.length).toBeGreaterThan(0);
+		expect(workflowSpans.every((s) => s.service === "capture-workflow")).toBe(
+			true
+		);
+	});
+});
+
 describe("unsafeObservability (multi-worker)", () => {
 	test("captures a cross-worker distributed trace, attributed per worker", async ({
 		expect,

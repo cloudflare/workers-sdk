@@ -7,6 +7,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { clearOutputFilePath } from "../../output";
+import { detectAgent } from "../../utils/detect-agent";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -76,6 +77,7 @@ describe("deploy: interactive deploy config prompts", () => {
 	});
 
 	afterEach(() => {
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 		vi.unstubAllGlobals();
 		clearDialogs();
 		clearOutputFilePath();
@@ -323,6 +325,32 @@ describe("deploy: interactive deploy config prompts", () => {
 			"Do you want Wrangler to write a wrangler.json config file"
 		);
 		expect(std.out).not.toContain("Proceeding with deployment...");
+	});
+
+	it("should use the project name without prompting when run by an agent", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWorkerSource();
+		fs.writeFileSync(
+			"package.json",
+			JSON.stringify({ name: "agent-project-name" })
+		);
+		writeWranglerConfig({ name: undefined as unknown as string });
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+
+		await runWrangler("deploy ./index.js --dry-run");
+
+		expect(std.out).toContain(
+			'Using the project name "agent-project-name" as the Worker name.'
+		);
+		expect(std.out).toContain(
+			"set the `name` field in your Wrangler configuration file or pass `--name <name>`"
+		);
+		expect(std.out).not.toContain("What do you want to name your project?");
 	});
 
 	it("should not prompt for name when config file provides one", async ({

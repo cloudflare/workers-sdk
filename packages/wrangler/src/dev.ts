@@ -18,7 +18,7 @@ import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
 import { logger } from "./logger";
 import { detectAgent } from "./utils/detect-agent";
-import type { StartDevWorkerInput, Trigger } from "./api";
+import type { StartDevWorkerInput, Trigger } from "./api/startDevWorker/types";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
 	Binding,

@@ -31,7 +31,13 @@ export function validateChangesets(
 					);
 				}
 
-				if (release.type === "major" && targetPackage?.private !== true) {
+				if (
+					release.type === "major" &&
+					targetPackage?.private !== true &&
+					(release.name !== "miniflare" ||
+						targetPackage?.["workers-sdk"]?.npmPrereleaseIdentifier ===
+							undefined)
+				) {
 					errors.push(
 						`Major version bumps are not allowed for package "${release.name}" in changeset at "${file}".`
 					);
@@ -106,5 +112,6 @@ export type PackageJSON = {
 	scripts?: Record<string, unknown>;
 	"workers-sdk"?: {
 		deploy?: boolean;
+		npmPrereleaseIdentifier?: string;
 	};
 };

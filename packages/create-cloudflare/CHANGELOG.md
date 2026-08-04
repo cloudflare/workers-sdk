@@ -1,5 +1,143 @@
 # create-cloudflare
 
+## 2.70.16
+
+### Patch Changes
+
+- [#14908](https://github.com/cloudflare/workers-sdk/pull/14908) [`301d6be`](https://github.com/cloudflare/workers-sdk/commit/301d6bed3ec1d4edcaac8f62ced89e5519fd298f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To      |
+  | --------------- | ------- | ------- |
+  | create-next-app | 16.2.11 | 16.2.12 |
+
+- [#14909](https://github.com/cloudflare/workers-sdk/pull/14909) [`62dd693`](https://github.com/cloudflare/workers-sdk/commit/62dd693d2802817a077df091b834952e546de0ea) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.16.5 | 0.16.6 |
+
+- [#14910](https://github.com/cloudflare/workers-sdk/pull/14910) [`6a03ffa`](https://github.com/cloudflare/workers-sdk/commit/6a03ffae1190d4be3532568b02b95830c694603e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.668 | 0.0.670 |
+
+- [#14911](https://github.com/cloudflare/workers-sdk/pull/14911) [`e09da32`](https://github.com/cloudflare/workers-sdk/commit/e09da32b58bc3f6808bce9696e80af0d5f8652b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.2.2 | 5.2.3 |
+
+- [#14930](https://github.com/cloudflare/workers-sdk/pull/14930) [`b89c2ae`](https://github.com/cloudflare/workers-sdk/commit/b89c2aefaf38f9a3a4b8dfa68e19afb241445378) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.670 | 0.0.671 |
+
+- [#14932](https://github.com/cloudflare/workers-sdk/pull/14932) [`f820419`](https://github.com/cloudflare/workers-sdk/commit/f82041942e3e97c4a366c630afa61c0322e190b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.0.8 | 22.0.9 |
+
+## 2.70.15
+
+### Patch Changes
+
+- [#14767](https://github.com/cloudflare/workers-sdk/pull/14767) [`3a141ed`](https://github.com/cloudflare/workers-sdk/commit/3a141ed118b7ed58301c9be57517167ddff10d50) Thanks [@jasoncabot](https://github.com/jasoncabot)! - Fix `git commit` hanging when `commit.gpgsign` is enabled
+
+  If you have GPG commit signing configured with a passphrase-protected key, the initial commit created during project setup would appear to hang: the passphrase prompt couldn't get keyboard input because it had to compete with C3's own progress output for control of the terminal. The only way out was Ctrl+C, which also skipped the rest of setup, including the prompt to deploy your new project.
+
+  `git commit` now runs the same way it would if you ran it yourself, so passphrase-protected signing keys work as expected. A failure while staging files is also now reported correctly instead of leaving the progress indicator spinning indefinitely.
+
+- [#14758](https://github.com/cloudflare/workers-sdk/pull/14758) [`b8b60f2`](https://github.com/cloudflare/workers-sdk/commit/b8b60f210f84ff06ede3057550eac53dace89893) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.69.5 | 0.69.6 |
+
+- [#14852](https://github.com/cloudflare/workers-sdk/pull/14852) [`9caa6ef`](https://github.com/cloudflare/workers-sdk/commit/9caa6ef2acf9d61a26a55dadda1fd1395e3ada9f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.22.4 | 3.23.0 |
+
+- [#14853](https://github.com/cloudflare/workers-sdk/pull/14853) [`0debc23`](https://github.com/cloudflare/workers-sdk/commit/0debc23952a812080159e61d661a704c475f5dd4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.6.3 | 2.6.4 |
+
+- [#14854](https://github.com/cloudflare/workers-sdk/pull/14854) [`afaecee`](https://github.com/cloudflare/workers-sdk/commit/afaecee40d557f515c5bcb3256a8ca13327c6557) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.664 | 0.0.668 |
+
+- [#14855](https://github.com/cloudflare/workers-sdk/pull/14855) [`e015a43`](https://github.com/cloudflare/workers-sdk/commit/e015a433b427aba6882d341cf333ef9102f3262d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.0.7 | 22.0.8 |
+
+- [#14856](https://github.com/cloudflare/workers-sdk/pull/14856) [`7fd99b8`](https://github.com/cloudflare/workers-sdk/commit/7fd99b877187d26529ed93689a3c87a5274de697) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.7.0 | 0.8.0 |
+
+- [#14857](https://github.com/cloudflare/workers-sdk/pull/14857) [`a460a2a`](https://github.com/cloudflare/workers-sdk/commit/a460a2a7f1c9034cdf83ad628661509c54e79670) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.69.6 | 0.70.1 |
+
+- [#14858](https://github.com/cloudflare/workers-sdk/pull/14858) [`dfe39fc`](https://github.com/cloudflare/workers-sdk/commit/dfe39fc64dc8c7f568b820a9bf73deadc8aad291) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.16.3 | 0.16.5 |
+
+- [#14859](https://github.com/cloudflare/workers-sdk/pull/14859) [`d44bd80`](https://github.com/cloudflare/workers-sdk/commit/d44bd80ea275506dd3b170fb85406d7955807f53) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.2.0 | 8.3.0 |
+
+- [#14888](https://github.com/cloudflare/workers-sdk/pull/14888) [`29ea4d2`](https://github.com/cloudflare/workers-sdk/commit/29ea4d21cdeffa3a4f5e0b4ca57c5da27cefcd27) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix the `hello-world-workflows` JavaScript template crashing at runtime
+
+  `MyWorkflow` defined a constructor that assigned to `this` without calling `super()` first, so instantiating the Workflow threw `ReferenceError: Must call super constructor in derived class before accessing 'this'`. The constructor also took `(env)` where `WorkflowEntrypoint` is constructed with `(ctx, env)`. It was redundant in the first place — the base class already assigns `this.env` — so it has been removed, matching the TypeScript variant of the same template.
+
 ## 2.70.14
 
 ### Patch Changes

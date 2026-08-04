@@ -37,20 +37,11 @@ const WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS: Worker_Binding = {
 	name: SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS,
 	json: "true",
 };
-const WORKER_BINDING_ENABLE_STICKY_BLOBS: Worker_Binding = {
-	name: SharedBindings.MAYBE_JSON_ENABLE_STICKY_BLOBS,
-	json: "true",
-};
 let enableControlEndpoints = false;
-export function getMiniflareObjectBindings(
-	unsafeStickyBlobs: boolean
-): Worker_Binding[] {
+export function getMiniflareObjectBindings(): Worker_Binding[] {
 	const result: Worker_Binding[] = [];
 	if (enableControlEndpoints) {
 		result.push(WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS);
-	}
-	if (unsafeStickyBlobs) {
-		result.push(WORKER_BINDING_ENABLE_STICKY_BLOBS);
 	}
 	return result;
 }

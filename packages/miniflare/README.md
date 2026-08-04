@@ -102,26 +102,6 @@ modules.
   disabling the built-in `ESModule` and `CommonJS` rules that match `*.mjs` and
   `*.js`/`*.cjs` files respectively.
 
-### `type Persistence`
-
-`boolean | string | undefined`
-
-Represents where data should be persisted, if anywhere.
-
-- If this is `undefined`, it defaults to `true` if `defaultPersistRoot` is set
-  or otherwise defaults to `false`.
-- If this is`false`, data will be stored in-memory and only
-  persist between `Miniflare#setOptions()` calls, not restarts nor
-  `new Miniflare` instances.
-- If this is `true`, data will be stored in a subdirectory of the `defaultPersistRoot` path if `defaultPersistRoot` is set
-  or otherwise will be stored in a subdirectory of `$PWD/.mf`.
-- If this looks like a URL, then:
-  - If the protocol is `memory:`, data will be stored in-memory as above.
-  - If the protocol is `file:`, data will be stored on the file-system, in the
-    specified directory (e.g. `file:///path/to/directory`).
-- Otherwise, if this is just a regular `string`, data will be stored on the
-  file-system, using the value as the directory path.
-
 ### `enum LogLevel`
 
 `NONE, ERROR, WARN, INFO, DEBUG, VERBOSE`
@@ -363,127 +343,11 @@ parameter in module format Workers.
     from your Worker using fetch `Request` and `Response` objects. Note, `miniflare` will be the `Miniflare` instance
     dispatching the request.
 
-<!--prettier-ignore-start-->
-
-- `wrappedBindings?: Record<string, string | { scriptName: string, entrypoint?: string, bindings?: Record<string, Json> }>`
-
-  Record mapping binding name to designators to inject as
-  [wrapped bindings](https://github.com/cloudflare/workerd/blob/bfcef2d850514c569c039cb84c43bc046af4ffb9/src/workerd/server/workerd.capnp#L469-L487) into this Worker.
-  Wrapped bindings allow custom bindings to be written as JavaScript functions
-  accepting an `env` parameter of "inner bindings" and returning the value to
-  bind. A `string` designator is equivalent to `{ scriptName: <string> }`.
-  `scriptName`'s bindings will be used as "inner bindings". JSON `bindings` in
-  the `designator` also become "inner bindings" and will override any of
-  `scriptName` bindings with the same name. The Worker named `scriptName`...
-
-  - Must define a single `ESModule` as its source, using
-    `{ modules: true, script: "..." }`, `{ modules: true, scriptPath: "..." }`,
-    or `{ modules: [...] }`
-  - Must provide the function to use for the wrapped binding as an `entrypoint`
-    named export or a default export if `entrypoint` is omitted
-  - Must not be the first/entrypoint worker
-  - Must not be bound to with service or Durable Object bindings
-  - Must not define `compatibilityDate` or `compatibilityFlags`
-  - Must not define `outboundService`
-  - Must not directly or indirectly have a wrapped binding to itself
-  - Must not be used as an argument to `Miniflare#getWorker()`
-
-  <details>
-	  <summary><b>Wrapped Bindings Example</b></summary>
-
-  ```ts
-  import { Miniflare } from "miniflare";
-  const store = new Map<string, string>();
-  const mf = new Miniflare({
-    workers: [
-      {
-        wrappedBindings: {
-          MINI_KV: {
-            scriptName: "mini-kv", // Use Worker named `mini-kv` for implementation
-            bindings: { NAMESPACE: "ns" }, // Override `NAMESPACE` inner binding
-          },
-        },
-        modules: true,
-        script: `export default {
-          async fetch(request, env, ctx) {
-            // Example usage of wrapped binding
-            await env.MINI_KV.set("key", "value");
-            return new Response(await env.MINI_KV.get("key"));
-          }
-        }`,
-      },
-      {
-        name: "mini-kv",
-        serviceBindings: {
-          // Function-valued service binding for accessing Node.js state
-          async STORE(request) {
-            const { pathname } = new URL(request.url);
-            const key = pathname.substring(1);
-            if (request.method === "GET") {
-              const value = store.get(key);
-              const status = value === undefined ? 404 : 200;
-              return new Response(value ?? null, { status });
-            } else if (request.method === "PUT") {
-              const value = await request.text();
-              store.set(key, value);
-              return new Response(null, { status: 204 });
-            } else if (request.method === "DELETE") {
-              store.delete(key);
-              return new Response(null, { status: 204 });
-            } else {
-              return new Response(null, { status: 405 });
-            }
-          },
-        },
-        modules: true,
-        script: `
-        // Implementation of binding
-        class MiniKV {
-          constructor(env) {
-            this.STORE = env.STORE;
-            this.baseURL = "http://x/" + (env.NAMESPACE ?? "") + ":";
-          }
-          async get(key) {
-            const res = await this.STORE.fetch(this.baseURL + key);
-            return res.status === 404 ? null : await res.text();
-          }
-          async set(key, body) {
-            await this.STORE.fetch(this.baseURL + key, { method: "PUT", body });
-          }
-          async delete(key) {
-            await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
-          }
-        }
-
-        // env has the type { STORE: Fetcher, NAMESPACE?: string }
-        export default function (env) {
-          return new MiniKV(env);
-        }
-        `,
-      },
-    ],
-  });
-  ```
-
-  </details>
-
-	> :warning: `wrappedBindings` are only supported in modules format Workers.
-
-<!--prettier-ignore-end-->
-
 - `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | { node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> } | (request: Request, miniflare: Miniflare) => Awaitable<Response>`
 
   Dispatch this Worker's global `fetch()` and `connect()` requests to the
   configured service. Service designators follow the same rules above for
   `serviceBindings`.
-
-- `fetchMock?: import("undici").MockAgent`
-
-  An [`undici` `MockAgent`](https://undici.nodejs.org/#/docs/api/MockAgent) to
-  dispatch this Worker's global `fetch()` requests through.
-
-  > :warning: `outboundService` and `fetchMock` are mutually exclusive options.
-  > At most one of them may be specified per Worker.
 
 - `routes?: string[]`
 
@@ -492,40 +356,12 @@ parameter in module format Workers.
   as deployed Workers. If no routes match, Miniflare will fallback to the Worker
   defined first.
 
-- `defaultPersistRoot?: string`
-
-  Specifies the default directory where Miniflare will write persisted data when persistence is enabled.
-
-  ```js
-  // Without `defaultPersistRoot`
-  new Miniflare({
-  	kvPersist: undefined, // → "/(tmp)/kv"
-  	d1Persist: true, // → "$PWD/.mf/d1"
-  	r2Persist: false, // → "/(tmp)/r2"
-  	cachePersist: "/my-cache", // → "/my-cache"
-  });
-
-  // With `defaultPersistRoot`
-  new Miniflare({
-  	defaultPersistRoot: "/storage",
-  	kvPersist: undefined, // → "/storage/kv"
-  	d1Persist: true, // → "/storage/d1"
-  	r2Persist: false, // → "/(tmp)/r2"
-  	cachePersist: "/my-cache", // → "/my-cache"
-  });
-  ```
-
 #### Cache
 
-- `cache?: boolean`
+- `cacheAPI?: boolean`
 
   If `false`, default and named caches will be disabled. The Cache API will
   still be available, it just won't cache anything.
-
-- `cacheWarnUsage?: boolean`
-
-  If `true`, the first use of the Cache API will log a warning stating that the
-  Cache API is unsupported on `workers.dev` subdomains.
 
 #### Durable Objects
 
@@ -642,7 +478,7 @@ parameter in module format Workers.
 
 _Not yet supported_
 
-If you need support for these locally, consider using the `wrappedBindings`
+If you need support for these locally, consider using the `serviceBindings`
 option to mock them out.
 
 #### Workers AI
@@ -687,31 +523,23 @@ Options shared between all Workers/"nanoservices".
   ```
 
   ```js
+  import fs from "node:fs";
+
   new Miniflare({
-  	httpsKeyPath: "key.pem",
-  	httpsCertPath: "cert.pem",
+  	httpsKey: fs.readFileSync("key.pem", "utf8"),
+  	httpsCert: fs.readFileSync("cert.pem", "utf8"),
   });
   ```
 
 - `httpsKey?: string`
 
-  When one of `httpsCert` or `httpCertPath` is also specified, starts an HTTPS
-  server using the value of this option as the PEM encoded private key.
-
-- `httpsKeyPath?: string`
-
-  When one of `httpsCert` or `httpCertPath` is also specified, starts an HTTPS
-  server using the PEM encoded private key stored at this file path.
+  When `httpsCert` is also specified, starts an HTTPS server using the value of
+  this option as the PEM encoded private key.
 
 - `httpsCert?: string`
 
-  When one of `httpsKey` or `httpsKeyPath` is also specified, starts an HTTPS
-  server using the value of this option as the PEM encoded certificate chain.
-
-- `httpsCertPath?: string`
-
-  When one of `httpsKey` or `httpsKeyPath` is also specified, starts an HTTPS
-  server using the PEM encoded certificate chain stored at this file path.
+  When `httpsKey` is also specified, starts an HTTPS server using the value of
+  this option as the PEM encoded certificate chain.
 
 - `inspectorPort?: number`
 
@@ -766,12 +594,6 @@ Options shared between all Workers/"nanoservices".
   - If set to a `string`, a real `cf` object will be fetched and cached at the
     provided path for 30 days
 
-- `liveReload?: boolean`
-
-  If `true`, Miniflare will inject a script into HTML responses that
-  automatically reloads the page in-browser whenever the Miniflare instance's
-  options are updated.
-
 - `unsafeDevRegistryPath?: string`
 
   Path to the dev registry directory. This allows Miniflare to automatically
@@ -797,32 +619,27 @@ Options shared between all Workers/"nanoservices".
   development. Use this option to override those defaults, for example to test
   timezone-dependent code with `unsafeRuntimeEnv: { TZ: "Europe/London" }`.
 
-#### Cache, Durable Objects, KV, R2 and D1
+- `containerEngine?: string | { localDocker: { socketPath: string, containerEgressInterceptorImage?: string } }`
 
-- `cachePersist?: Persistence`
+  Configuration used to connect to the container engine for any Workers that
+  define containers. If a `string` is provided, it is used as the local Docker
+  socket path (e.g. `"unix:///var/run/docker.sock"`).
 
-  Where to persist data cached in default or named caches. See docs for
-  `Persistence`.
+#### Persistence
 
-- `durableObjectsPersist?: Persistence`
+- `resourcePersistencePath?: string`
 
-  Where to persist data stored in Durable Objects. See docs for `Persistence`.
+  Path to the root directory under which all resource data (Cache, Durable
+  Objects, KV, R2, D1, Workflows, etc.) is persisted. Each resource persists to
+  a subdirectory named after its plugin (e.g. `<resourcePersistencePath>/kv`).
+  When unset, persistence is disabled and data is stored in an ephemeral
+  temporary directory that is cleared on `dispose()`.
 
-- `kvPersist?: Persistence`
+- `resourceTmpPath?: string`
 
-  Where to persist data stored in KV namespaces. See docs for `Persistence`.
-
-- `r2Persist?: Persistence`
-
-  Where to persist data stored in R2 buckets. See docs for `Persistence`.
-
-- `d1Persist?: Persistence`
-
-  Where to persist data stored in D1 databases. See docs for `Persistence`.
-
-- `workflowsPersist?: Persistence`
-
-Where to persist data stored in Workflows. See docs for `Persistence`.
+  Path to the temporary directory used by plugins that need one (e.g. email
+  logs). Falls back to a subdirectory of Miniflare's own temporary directory if
+  not set.
 
 #### Analytics Engine, Sending Email, Vectorize, Workers AI and Workers for Platforms
 
@@ -888,8 +705,8 @@ defined at the top-level.
 
   Returns a `Promise` that resolves with the
   [`CacheStorage`](https://developers.cloudflare.com/workers/runtime-apis/cache/)
-  instance of the entrypoint Worker. This means if `cache: false` is set on the
-  entrypoint, calling methods on the resolved value won't do anything.
+  instance of the entrypoint Worker. This means if `cacheAPI: false` is set on
+  the entrypoint, calling methods on the resolved value won't do anything.
 
 - `getD1Database(bindingName: string, workerName?: string): Promise<D1Database>`
 

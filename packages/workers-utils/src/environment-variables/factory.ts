@@ -114,7 +114,7 @@ type VariableNames =
 
 	// ## Experimental Feature Flags
 
-	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
+	/** Enable the local explorer UI at /cdn-cgi/local/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
 	/** Enable local-dev observability capture (experimental, default: false). */
 	| "X_LOCAL_OBSERVABILITY"
