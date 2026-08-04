@@ -2195,6 +2195,12 @@ export class Miniflare {
 			const connectHandlers = workerOpts.core.connectHandlers ?? [];
 			for (let j = 0; j < connectHandlers.length; j++) {
 				const connectHandler = connectHandlers[j];
+				if (connectHandler.protocol !== "tcp") {
+					throw new MiniflareCoreError(
+						"ERR_CONNECT_PROTOCOL_UNSUPPORTED",
+						`Worker "${workerName}" declares a "${connectHandler.protocol}" \`connect\` handler, but only "tcp" is currently supported by workerd for local development.`
+					);
+				}
 				// The socket's name already encodes the configured protocol/port, so
 				// we can pass `connectHandler.port` as both the current and
 				// "previous" port: `#getSocketAddress()` only compares these to
@@ -2217,8 +2223,8 @@ export class Miniflare {
 					name,
 					address,
 					service: { name: getUserServiceName(workerName) },
-					[connectHandler.protocol]: {},
-				} as Socket);
+					tcp: {},
+				});
 			}
 		}
 
