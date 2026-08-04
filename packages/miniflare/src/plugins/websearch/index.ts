@@ -1,74 +1,51 @@
-import { z } from "zod";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-const WebsearchEntrySchema = z.object({
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-});
-
-export const WebsearchOptionsSchema = z.object({
-	websearch: z.record(z.string(), WebsearchEntrySchema).optional(),
-});
+import type { Plugin } from "../shared";
 
 export const WEBSEARCH_PLUGIN_NAME = "websearch";
 
 const WEBSEARCH_SCOPE = "websearch";
 const WEBSEARCH_REMOTE_SERVICE_NAME = `${WEBSEARCH_SCOPE}:remote`;
 
-export const WEBSEARCH_PLUGIN: Plugin<typeof WebsearchOptionsSchema> = {
-	options: WebsearchOptionsSchema,
+export const WEBSEARCH_PLUGIN: Plugin = {
 	bindingTypeDescription: "Web Search",
 	async getBindings(options) {
-		const bindings: {
-			name: string;
-			service: { name: string; props?: { json: string } };
-		}[] = [];
-
-		for (const [bindingName, entry] of Object.entries(
-			options.websearch ?? {}
-		)) {
-			bindings.push({
-				name: bindingName,
+		return getEnvBindingsOfType(options.config, "web-search").map(
+			([name, binding]) => ({
+				name,
 				service: {
 					name: WEBSEARCH_REMOTE_SERVICE_NAME,
 					props: buildRemoteProxyProps(
-						entry.remoteProxyConnectionString,
-						bindingName
+						getRemoteProxyConnectionString(binding, options.dev),
+						name
 					),
 				},
-			});
-		}
-
-		return bindings;
+			})
+		);
 	},
-	getNodeBindings(options: z.infer<typeof WebsearchOptionsSchema>) {
-		const nodeBindings: Record<string, ProxyNodeBinding> = {};
-
-		for (const bindingName of Object.keys(options.websearch ?? {})) {
-			nodeBindings[bindingName] = new ProxyNodeBinding();
-		}
-
-		return nodeBindings;
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			getEnvBindingsOfType(options.config, "web-search").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
+		);
 	},
 	async getServices({ options }) {
-		const services: {
-			name: string;
-			worker: ReturnType<typeof remoteProxyClientWorker>;
-		}[] = [];
-
-		if (Object.keys(options.websearch ?? {}).length > 0) {
-			services.push({
-				name: WEBSEARCH_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			});
+		if (getEnvBindingsOfType(options.config, "web-search").length === 0) {
+			return [];
 		}
 
-		return services;
+		return [
+			{
+				name: WEBSEARCH_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			},
+		];
 	},
 };

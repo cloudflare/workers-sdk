@@ -89,9 +89,9 @@ interface DiskServiceConfig {
 
 interface SendEmailEnv {
 	email_disk_services: DiskServiceConfig[];
-	destination_address: string | undefined;
-	allowed_destination_addresses: string[] | undefined;
-	allowed_sender_addresses: string[] | undefined;
+	destinationAddress: string | undefined;
+	allowedDestinationAddresses: string[] | undefined;
+	allowedSenderAddresses: string[] | undefined;
 	MINIFLARE_EMAIL_DISK_SYSTEM: Fetcher;
 	MINIFLARE_EMAIL_DISK_PROJECT?: Fetcher;
 }
@@ -168,23 +168,23 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 
 	private checkDestinationAllowed(to: string) {
 		if (
-			this.env.destination_address !== undefined &&
-			to !== this.env.destination_address
+			this.env.destinationAddress !== undefined &&
+			to !== this.env.destinationAddress
 		) {
 			throw new Error(`email to ${to} not allowed`);
 		}
 
 		if (
-			this.env.allowed_destination_addresses !== undefined &&
-			!this.env.allowed_destination_addresses.includes(to)
+			this.env.allowedDestinationAddresses !== undefined &&
+			!this.env.allowedDestinationAddresses.includes(to)
 		) {
 			throw new Error(`email to ${to} not allowed`);
 		}
 	}
 	private checkSenderAllowed(from: string) {
 		if (
-			this.env.allowed_sender_addresses !== undefined &&
-			!this.env.allowed_sender_addresses.includes(from)
+			this.env.allowedSenderAddresses !== undefined &&
+			!this.env.allowedSenderAddresses.includes(from)
 		) {
 			throw new Error(`email from ${from} not allowed`);
 		}

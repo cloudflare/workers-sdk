@@ -566,6 +566,8 @@ export const DevConfigSchema = z.strictObject({
 	unsafeOverrideFetchWorker: z.string().optional(),
 	unsafeEvalBinding: z.string().optional(),
 	useModuleFallbackService: z.boolean().optional(),
+	/** Whether this Worker should be advertised in the dev registry. Defaults to `false`. */
+	unsafeRegisterWorker: z.boolean().optional(),
 	hasAssetsAndIsVitest: z.boolean().optional(),
 	// TODO(soon): remove in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 	unsafeEphemeralDurableObjects: z.boolean().optional(),
