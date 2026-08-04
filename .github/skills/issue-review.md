@@ -119,7 +119,7 @@ For account/support issues:
 
 Recommend **CLOSE** (state_reason: `not_planned`) if:
 
-- The issue has the `awaiting reporter response` or `needs reproduction` label AND the last activity was >30 days ago
+- The issue has the `awaiting-response:reporter` or `needs-reproduction` label AND the last activity was >30 days ago
 - The issue is >12 months old with no activity in the last 6 months
 - A maintainer asked for a reproduction or clarification and the reporter never responded
 
@@ -169,13 +169,13 @@ Recommend **KEEP OPEN** if:
 
 The issue should remain open as a tracking item. Do not close it — the team hasn't decided against the change, it's deferred to a future major version.
 
-**Suggested labels:** `breaking change`
+**Suggested labels:** `breaking-change`
 
 **Template:**
 
-> Changing this behavior at this stage would be a breaking change, so it will need to wait for the next major version. I've added the `breaking change` label to track this.
+> Changing this behavior at this stage would be a breaking change, so it will need to wait for the next major version. I've added the `breaking-change` label to track this.
 
-(Set Action field to: "Apply `breaking change` label, then post this comment.")
+(Set Action field to: "Apply `breaking-change` label, then post this comment.")
 
 #### 2j: Won't Fix / By Design
 
@@ -225,7 +225,7 @@ If the issue wasn't caught by Step 2, recommend **NEEDS MORE INFO** if:
 >
 > A minimal reproduction (a GitHub repo or link we can clone and run) would also help us investigate. Without more details, we won't be able to look into this.
 
-**Suggested label:** `awaiting reporter response` (and optionally `needs reproduction`)
+**Suggested label:** `awaiting-response:reporter` (and optionally `needs-reproduction`)
 
 **STOP HERE if** the issue clearly needs more info. Skip to Output.
 
@@ -233,27 +233,27 @@ If the issue wasn't caught by Step 2, recommend **NEEDS MORE INFO** if:
 
 Map the issue to a package based on labels, title, and body content:
 
-| Signal                                                                   | Package                                         |
-| ------------------------------------------------------------------------ | ----------------------------------------------- |
-| `wrangler` label, wrangler CLI commands, `wrangler.toml`/`wrangler.json` | `packages/wrangler`                             |
-| `package:miniflare` label, local dev simulation                          | `packages/miniflare`                            |
-| `d1` label, D1 database, `d1 execute`, migrations                        | `packages/wrangler` (D1 code is in wrangler)    |
-| `vitest` label, worker tests, `vitest-pool-workers`                      | `packages/vitest-pool-workers`                  |
-| `vite-plugin` label, vite dev, `@cloudflare/vite-plugin`                 | `packages/vite-plugin-cloudflare`               |
-| `c3` label, `create-cloudflare`, project scaffolding                     | `packages/create-cloudflare`                    |
-| `pages` label, Pages deployment, `_routes.json`, `_headers`              | `packages/wrangler` (Pages code is in wrangler) |
-| `Workers + Assets` label, static asset serving                           | `packages/wrangler`                             |
-| `containers` label, container registry                                   | `packages/wrangler`                             |
-| `workflows` label, Workflows API                                         | `packages/wrangler`                             |
-| `workers-builds` label                                                   | Workers Builds (may be internal)                |
-| `python` label, Python Workers                                           | `packages/wrangler`                             |
-| `workers for platforms` label, dispatch namespaces                       | `packages/wrangler`                             |
-| `kv-asset-handler` label                                                 | `packages/kv-asset-handler`                     |
-| `types` label, `wrangler types` command                                  | `packages/wrangler`                             |
-| R2, KV, Queues, Durable Objects, Vectorize bindings                      | `packages/wrangler`                             |
-| `node compat`/`nodejs compat` label, Node.js APIs                        | May be workerd or wrangler depending on context |
-| Workers runtime behavior (not tooling)                                   | Likely belongs in cloudflare/workerd            |
-| Cloudflare dashboard, API behavior                                       | Likely a platform issue, not workers-sdk        |
+| Signal                                                                           | Package                                         |
+| -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `package:wrangler` label, wrangler CLI commands, `wrangler.toml`/`wrangler.json` | `packages/wrangler`                             |
+| `package:miniflare` label, local dev simulation                                  | `packages/miniflare`                            |
+| `product:d1` label, D1 database, `d1 execute`, migrations                        | `packages/wrangler` (D1 code is in wrangler)    |
+| `package:vitest` label, worker tests, `vitest-pool-workers`                      | `packages/vitest-pool-workers`                  |
+| `package:vite-plugin` label, vite dev, `@cloudflare/vite-plugin`                 | `packages/vite-plugin-cloudflare`               |
+| `package:c3` label, `create-cloudflare`, project scaffolding                     | `packages/create-cloudflare`                    |
+| `product:pages` label, Pages deployment, `_routes.json`, `_headers`              | `packages/wrangler` (Pages code is in wrangler) |
+| `feature:workers-assets` label, static asset serving                             | `packages/wrangler`                             |
+| `product:containers` label, container registry                                   | `packages/wrangler`                             |
+| `product:workflows` label, Workflows API                                         | `packages/wrangler`                             |
+| `feature:workers-builds` label                                                   | Workers Builds (may be internal)                |
+| `python` label, Python Workers                                                   | `packages/wrangler`                             |
+| `product:workers-for-platforms` label, dispatch namespaces                       | `packages/wrangler`                             |
+| `package:kv-asset-handler` label                                                 | `packages/kv-asset-handler`                     |
+| `feature:types` label, `wrangler types` command                                  | `packages/wrangler`                             |
+| R2, KV, Queues, Durable Objects, Vectorize bindings                              | `packages/wrangler`                             |
+| `node-compat`/`nodejs-compat` label, Node.js APIs                                | May be workerd or wrangler depending on context |
+| Workers runtime behavior (not tooling)                                           | Likely belongs in cloudflare/workerd            |
+| Cloudflare dashboard, API behavior                                               | Likely a platform issue, not workers-sdk        |
 
 ### Step 5: Assess Reproducibility and Severity
 
