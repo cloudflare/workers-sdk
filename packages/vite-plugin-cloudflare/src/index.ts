@@ -4,6 +4,7 @@ import { isForcedBuildOutput } from "./build-output-env";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
+import { agentHintPlugin } from "./plugins/agent-hint";
 import { buildOutputPlugin } from "./plugins/build-output";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
@@ -111,6 +112,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		tunnelPlugin(ctx),
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),
+		agentHintPlugin(ctx),
 		debugPlugin(ctx),
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
