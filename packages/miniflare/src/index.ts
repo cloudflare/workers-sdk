@@ -80,6 +80,7 @@ import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { writeTempFile } from "./plugins/core/temp-file";
 import { removeEmailTempFiles, writeEmailTempFile } from "./plugins/email";
+import { getEmailArtifactManager } from "./plugins/email/artifacts";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -155,7 +156,6 @@ import type {
 	DurableObjectStorageOptions,
 } from "./shared/dev-control";
 import type { WorkerDefinition } from "./shared/dev-registry-types";
-import type { EmailArtifact } from "./workers/email/storage";
 import type {
 	CacheStorage,
 	D1Database,
@@ -183,10 +183,6 @@ const emailArtifactSchema = z.object({
 const emailArtifactsRequestSchema = z.object({
 	artifacts: z.array(emailArtifactSchema).optional(),
 });
-
-function getEmailArtifactKey(artifact: EmailArtifact): string {
-	return `${sanitisePath(artifact.recordId)}\0${sanitisePath(artifact.prefix)}\0${sanitisePath(artifact.id)}.${sanitisePath(artifact.extension)}`;
-}
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -1323,17 +1319,15 @@ export class Miniflare {
 			const id = rawId === null ? crypto.randomUUID() : sanitisePath(rawId);
 			const rawRecordId = url.searchParams.get("record") ?? rawId ?? id;
 			const recordId = sanitisePath(rawRecordId);
-			const artifactKey = getEmailArtifactKey({
+			const artifact = {
 				recordId,
 				prefix: prefix ?? "files",
 				id,
 				extension,
-			});
-			const previous = this.#emailArtifactOperations.get(artifactKey);
-			const operation = (previous ?? Promise.resolve(null)).then(async () => {
-				if (this.#emailArtifactTombstones.delete(artifactKey)) {
-					return null;
-				}
+			};
+			const filePath = await getEmailArtifactManager(
+				this.#disposeController.signal
+			).store(artifact, async () => {
 				return await writeEmailTempFile({
 					defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
 					tmpPath: this.#tmpPath,
@@ -1342,20 +1336,12 @@ export class Miniflare {
 					contents: Buffer.from(await request.arrayBuffer()),
 				});
 			});
-			this.#emailArtifactOperations.set(artifactKey, operation);
-			try {
-				const filePath = await operation;
-				if (filePath === null) {
-					return new Response("Email temporary file was evicted", {
-						status: 410,
-					});
-				}
-				return new Response(filePath, { status: 200 });
-			} finally {
-				if (this.#emailArtifactOperations.get(artifactKey) === operation) {
-					this.#emailArtifactOperations.delete(artifactKey);
-				}
+			if (filePath === null) {
+				return new Response("Email temporary file was evicted", {
+					status: 410,
+				});
 			}
+			return new Response(filePath, { status: 200 });
 		}
 
 		const filePath = await writeTempFile({
@@ -1380,26 +1366,13 @@ export class Miniflare {
 		if (!parsed.success) {
 			return new Response("Invalid email artifact request", { status: 400 });
 		}
-		const artifacts: EmailArtifact[] = (parsed.data.artifacts ?? []).map(
-			(artifact) => ({
-				recordId: sanitisePath(artifact.recordId),
-				prefix: sanitisePath(artifact.prefix),
-				id: sanitisePath(artifact.id),
-				extension: sanitisePath(artifact.extension),
-			})
-		);
-		await Promise.all(
-			artifacts.map((artifact) =>
-				this.#emailArtifactOperations.get(getEmailArtifactKey(artifact))
-			)
-		);
-		for (const artifact of artifacts) {
-			this.#emailArtifactTombstones.add(getEmailArtifactKey(artifact));
-		}
-		await removeEmailTempFiles({
-			defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
-			tmpPath: this.#tmpPath,
-			artifacts,
+		const manager = getEmailArtifactManager(this.#disposeController.signal);
+		await manager.delete(parsed.data.artifacts ?? [], async (artifacts) => {
+			await removeEmailTempFiles({
+				defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
+				tmpPath: this.#tmpPath,
+				artifacts,
+			});
 		});
 		return new Response(null, { status: 204 });
 	}
