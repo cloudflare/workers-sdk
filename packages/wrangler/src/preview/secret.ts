@@ -2,12 +2,18 @@ import {
 	drawBox,
 	editWorkerPreviewDefaults,
 	getBindingValue,
+	getBranchName,
 	getWorkerPreviewDefaults,
 	padToVisibleWidth,
+	patchPreviewDeployment,
 	resolveWorkerName,
 	visibleLength,
 } from "@cloudflare/deploy-helpers";
-import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	getBindingTypeFriendlyName,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
@@ -81,15 +87,77 @@ function formatPreviewSecrets(
 	return drawBox(lines);
 }
 
+function resolvePreviewName(args: { name?: string }): string {
+	const previewName = args.name ?? getBranchName();
+	if (!previewName) {
+		throw new UserError(
+			"Could not determine Preview name. No git branch detected. " +
+				"Please provide a Preview name using --name <preview-name>.",
+			{ telemetryMessage: "preview secret command missing preview name" }
+		);
+	}
+	return previewName;
+}
+
+const NO_PREVIEW_DEPLOYMENT_ERR_CODE = 10032;
+const PREVIEW_NOT_FOUND_ERR_CODE = 10025;
+const noPreviewDeploymentMessage = (previewName: string) =>
+	`There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment before modifying a secret.`;
+const previewNotFoundMessage = (previewName: string) =>
+	`The Preview "${previewName}" was not found. Please check the Preview name, or create it with \`wrangler preview\`.`;
+
+async function patchPreviewDeploymentSecrets(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewName: string,
+	env: Record<string, Binding | null>,
+	annotation: { message: string; tag?: string },
+	telemetryMessages: { noDeployment: string; previewNotFound: string }
+) {
+	try {
+		return await patchPreviewDeployment(
+			config,
+			accountId,
+			workerName,
+			previewName,
+			env,
+			{
+				"workers/message": annotation.message,
+				"workers/tag": annotation.tag,
+			}
+		);
+	} catch (e) {
+		if (e instanceof APIError) {
+			if (e.code === NO_PREVIEW_DEPLOYMENT_ERR_CODE) {
+				throw new UserError(noPreviewDeploymentMessage(previewName), {
+					telemetryMessage: telemetryMessages.noDeployment,
+				});
+			}
+			if (e.code === PREVIEW_NOT_FOUND_ERR_CODE) {
+				throw new UserError(previewNotFoundMessage(previewName), {
+					telemetryMessage: telemetryMessages.previewNotFound,
+				});
+			}
+		}
+		throw e;
+	}
+}
+
 export async function handlePreviewSecretPutCommand(
 	args: {
 		key: string;
+		name?: string;
+		message?: string;
+		tag?: string;
+		env?: string;
 		workerName?: string;
 		"worker-name"?: string;
 	},
 	{ config }: { config: Config }
 ) {
 	const workerName = resolveWorkerName(args, config);
+	const previewName = resolvePreviewName(args);
 	const accountId = await requireAuth(config);
 	const secretValue = trimTrailingWhitespace(
 		process.stdin.isTTY
@@ -97,56 +165,84 @@ export async function handlePreviewSecretPutCommand(
 			: await readFromStdin()
 	);
 
-	const updatedPreviewDefaults = await editWorkerPreviewDefaults(
+	logger.log(
+		`🌀 Creating the secret for the Preview "${previewName}" on the Worker "${workerName}"${args.env ? ` (${args.env})` : ""}`
+	);
+
+	const deployment = await patchPreviewDeploymentSecrets(
 		config,
 		accountId,
 		workerName,
+		previewName,
+		toSecretBindingsPatch({ [args.key]: secretValue }),
+		{ message: args.message ?? `Updated secret "${args.key}"`, tag: args.tag },
 		{
-			env: toSecretBindingsPatch({ [args.key]: secretValue }),
+			noDeployment: "preview secret put no preview deployment",
+			previewNotFound: "preview secret put preview not found",
 		}
 	);
+
+	const liveUrls = deployment.urls ?? [];
 	logger.log(
-		`\n✨ Secret "${args.key}" added to Previews settings for Worker ${chalk.bold.cyan(workerName)}.`
+		`✨ Success! Created Preview deployment ${deployment.id} with secret ${args.key}.` +
+			(liveUrls.length > 0
+				? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
+						.map((url) => chalk.bold.underline(url))
+						.join(", ")}`
+				: "")
 	);
-	logger.log(formatPreviewSecrets(workerName, updatedPreviewDefaults.env));
 }
 
 export async function handlePreviewSecretDeleteCommand(
 	args: {
 		key: string;
+		name?: string;
+		message?: string;
+		tag?: string;
 		skipConfirmation?: boolean;
+		env?: string;
 		workerName?: string;
 		"worker-name"?: string;
 	},
 	{ config }: { config: Config }
 ) {
 	const workerName = resolveWorkerName(args, config);
+	const previewName = resolvePreviewName(args);
 	const accountId = await requireAuth(config);
 
-	if (!args.skipConfirmation) {
-		const confirmed = await confirm(
-			`Are you sure you want to delete the secret "${args.key}" from Previews settings for Worker ${chalk.bold.cyan(workerName)}?`
+	if (
+		args.skipConfirmation ||
+		(await confirm(
+			`Are you sure you want to permanently delete the secret ${args.key} on the Preview "${previewName}" for the Worker ${workerName}${args.env ? ` (${args.env})` : ""}?`
+		))
+	) {
+		logger.log(
+			`🌀 Deleting the secret ${args.key} on the Preview "${previewName}" for the Worker ${workerName}${args.env ? ` (${args.env})` : ""}`
 		);
-		if (!confirmed) {
-			logger.log("Aborted.");
-			return;
-		}
-	}
 
-	const updatedPreviewDefaults = await editWorkerPreviewDefaults(
-		config,
-		accountId,
-		workerName,
-		{
-			env: {
-				[args.key]: null,
-			},
-		}
-	);
-	logger.log(
-		`\n✨ Secret "${args.key}" deleted from Previews settings for Worker ${chalk.bold.cyan(workerName)}.`
-	);
-	logger.log(formatPreviewSecrets(workerName, updatedPreviewDefaults.env));
+		const deployment = await patchPreviewDeploymentSecrets(
+			config,
+			accountId,
+			workerName,
+			previewName,
+			{ [args.key]: null },
+			{ message: args.message ?? `Deleted secret "${args.key}"`, tag: args.tag },
+			{
+				noDeployment: "preview secret delete no preview deployment",
+				previewNotFound: "preview secret delete preview not found",
+			}
+		);
+
+		const liveUrls = deployment.urls ?? [];
+		logger.log(
+			`✨ Success! Created Preview deployment ${deployment.id} with deleted secret ${args.key}.` +
+				(liveUrls.length > 0
+					? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
+							.map((url) => chalk.bold.underline(url))
+							.join(", ")}`
+					: "")
+		);
+	}
 }
 
 export async function handlePreviewSecretListCommand(

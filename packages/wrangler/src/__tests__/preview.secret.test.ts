@@ -1,12 +1,61 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, test } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
+
+type PreviewDeploymentPatchBody = {
+	env?: Record<string, { type: string; text?: string } | null>;
+	annotations?: Record<string, string | undefined>;
+};
+
+function mockPatchLatestPreviewDeployment(
+	onRequest?: (info: { url: string; body: PreviewDeploymentPatchBody }) => void
+) {
+	msw.use(
+		http.patch(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+			async ({ request, params }) => {
+				onRequest?.({
+					url: request.url,
+					body: (await request.json()) as PreviewDeploymentPatchBody,
+				});
+				return HttpResponse.json({
+					success: true,
+					result: {
+						id: "deployment-1",
+						preview_id: "preview-1",
+						preview_name: String(params.previewId),
+						urls: ["https://test-preview.example.workers.dev"],
+						created_on: "2025-01-01T00:00:00Z",
+					},
+				});
+			}
+		)
+	);
+}
+
+function mockPreviewDeploymentNotFound(code: number) {
+	msw.use(
+		http.patch(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+			() =>
+				HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code, message: "no preview deployment" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				)
+		)
+	);
+}
 
 describe("wrangler preview", () => {
 	const std = mockConsoleMethods();
@@ -31,56 +80,71 @@ describe("wrangler preview", () => {
 			msw.resetHandlers();
 		});
 
+		afterEach(() => {
+			vi.unstubAllEnvs();
+		});
+
 		describe("put", () => {
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			test("should add a secret to Previews settings", async ({ expect }) => {
-				mockStdIn.send("defaults-secret");
-				let patchRequestBody:
-					| {
-							preview_defaults?: {
-								env?: Record<string, { type: string; text?: string }>;
-							};
-					  }
-					| undefined;
+			test("creates a new Preview deployment with the secret", async ({
+				expect,
+			}) => {
+				mockStdIn.send("preview-secret");
+				let patchedPreviewDefaults = false;
 				msw.use(
-					http.patch(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						async ({ request }) => {
-							patchRequestBody =
-								(await request.json()) as typeof patchRequestBody;
-							return HttpResponse.json({
-								success: true,
-								result: {
-									preview_defaults: {
-										env: patchRequestBody?.preview_defaults?.env ?? {},
-									},
-								},
-							});
-						}
-					)
+					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						patchedPreviewDefaults = true;
+						return HttpResponse.json({ success: true, result: {} });
+					})
 				);
+				let requestUrl: string | undefined;
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ url, body }) => {
+					requestUrl = url;
+					requestBody = body;
+				});
+
+				await runWrangler(
+					"preview secret put API_KEY --name test-preview --worker-name test-worker"
+				);
+
+				expect(requestUrl).toContain(
+					"/workers/workers/test-worker/previews/test-preview/deployments/latest"
+				);
+				expect(requestBody?.env).toEqual({
+					API_KEY: { type: "secret_text", text: "preview-secret" },
+				});
+				expect(patchedPreviewDefaults).toBe(false);
+				expect(std.out).toContain('Preview "test-preview"');
+				expect(std.out).toContain("test-worker");
+				expect(std.out).toContain("Preview deployment");
+				expect(std.out).toContain(
+					'is now live at https://test-preview.example.workers.dev'
+				);
+				expect(std.out).not.toContain("preview-secret");
+			});
+
+			test("defaults the Preview name to the current git branch", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WORKERS_CI_BRANCH", "branch-preview");
+				mockStdIn.send("preview-secret");
+				let requestUrl: string | undefined;
+				mockPatchLatestPreviewDeployment(({ url }) => {
+					requestUrl = url;
+				});
+
 				await runWrangler(
 					"preview secret put API_KEY --worker-name test-worker"
 				);
-				expect(patchRequestBody?.preview_defaults?.env?.API_KEY).toMatchObject({
-					type: "secret_text",
-					text: "defaults-secret",
-				});
-				expect(patchRequestBody?.preview_defaults?.env).toEqual({
-					API_KEY: { type: "secret_text", text: "defaults-secret" },
-				});
-				expect(std.out).toContain(
-					'Secret "API_KEY" added to Previews settings for Worker test-worker.'
+
+				expect(requestUrl).toContain(
+					"/previews/branch-preview/deployments/latest"
 				);
-				expect(std.out).toContain("Worker: test-worker");
-				expect(std.out).toContain("Previews settings");
-				expect(std.out).toContain("Secrets");
-				expect(std.out).toContain("API_KEY");
-				expect(std.out).toContain("********");
 			});
 
-			test("should respect env-specific worker name when using --env", async ({
+			test("respects env-specific worker name when using --env", async ({
 				expect,
 			}) => {
 				mockStdIn.send("env-secret");
@@ -90,35 +154,87 @@ describe("wrangler preview", () => {
 						name: "top-worker",
 						main: "src/index.ts",
 						compatibility_date: "2025-01-01",
-						env: {
-							staging: {
-								name: "staging-worker",
-							},
-						},
+						env: { staging: { name: "staging-worker" } },
 					})
 				);
+				let requestUrl: string | undefined;
+				mockPatchLatestPreviewDeployment(({ url }) => {
+					requestUrl = url;
+				});
 
-				let patchUrl: string | undefined;
-
-				msw.use(
-					http.patch(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						({ request }) => {
-							patchUrl = request.url;
-							return HttpResponse.json({ success: true, result: {} });
-						}
-					)
+				await runWrangler(
+					"preview secret put API_KEY --name test-preview --env staging"
 				);
 
-				await runWrangler("preview secret put API_KEY --env staging");
-
-				expect(patchUrl).toContain("/workers/workers/staging-worker");
-				expect(std.out).toContain(
-					'Secret "API_KEY" added to Previews settings for Worker staging-worker.'
+				expect(requestUrl).toContain(
+					"/workers/workers/staging-worker/previews/test-preview/deployments/latest"
 				);
 			});
 
-			test("should fail before making API calls when env-specific previews config is invalid", async ({
+			test("sends --message and --tag as deployment annotations", async ({
+				expect,
+			}) => {
+				mockStdIn.send("preview-secret");
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ body }) => {
+					requestBody = body;
+				});
+
+				await runWrangler(
+					'preview secret put API_KEY --name test-preview --worker-name test-worker --message "add a secret" --tag v1'
+				);
+
+				expect(requestBody?.annotations).toMatchObject({
+					"workers/message": "add a secret",
+					"workers/tag": "v1",
+				});
+			});
+
+			test("uses the default annotation message when none is provided", async ({
+				expect,
+			}) => {
+				mockStdIn.send("preview-secret");
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ body }) => {
+					requestBody = body;
+				});
+
+				await runWrangler(
+					"preview secret put API_KEY --name test-preview --worker-name test-worker"
+				);
+
+				expect(requestBody?.annotations?.["workers/message"]).toBe(
+					'Updated secret "API_KEY"'
+				);
+			});
+
+			test("fails clearly when the Preview has no deployments", async ({
+				expect,
+			}) => {
+				mockStdIn.send("preview-secret");
+				mockPreviewDeploymentNotFound(10032);
+
+				await expect(
+					runWrangler(
+						"preview secret put API_KEY --name test-preview --worker-name test-worker"
+					)
+				).rejects.toThrow(/no deployments for the Preview/);
+			});
+
+			test("fails clearly when the Preview is not found", async ({
+				expect,
+			}) => {
+				mockStdIn.send("preview-secret");
+				mockPreviewDeploymentNotFound(10025);
+
+				await expect(
+					runWrangler(
+						"preview secret put API_KEY --name test-preview --worker-name test-worker"
+					)
+				).rejects.toThrow(/Preview "test-preview" was not found/);
+			});
+
+			test("fails before making API calls when env-specific previews config is invalid", async ({
 				expect,
 			}) => {
 				writeFileSync(
@@ -138,64 +254,55 @@ describe("wrangler preview", () => {
 				);
 
 				let requested = false;
-				msw.use(
-					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
-						requested = true;
-						return HttpResponse.json({ success: true, result: {} });
-					})
-				);
+				mockPatchLatestPreviewDeployment(() => {
+					requested = true;
+				});
 
 				await expect(
-					runWrangler("preview secret put API_KEY --env staging")
+					runWrangler(
+						"preview secret put API_KEY --name test-preview --env staging"
+					)
 				).rejects.toThrow(/previews\.browser/);
 				expect(requested).toBe(false);
 			});
 		});
 
 		describe("delete", () => {
-			test("should delete a secret from Previews settings", async ({
+			test("creates a new Preview deployment removing the secret", async ({
 				expect,
 			}) => {
-				let patchRequestBody:
-					| {
-							preview_defaults?: {
-								env?: Record<string, { type: string; text?: string } | null>;
-							};
-					  }
-					| undefined;
+				let patchedPreviewDefaults = false;
 				msw.use(
-					http.patch(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						async ({ request }) => {
-							patchRequestBody =
-								(await request.json()) as typeof patchRequestBody;
-							return HttpResponse.json({
-								success: true,
-								result: {
-									preview_defaults: {
-										env: patchRequestBody?.preview_defaults?.env ?? {},
-									},
-								},
-							});
-						}
-					)
+					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						patchedPreviewDefaults = true;
+						return HttpResponse.json({ success: true, result: {} });
+					})
 				);
-				await runWrangler(
-					"preview secret delete REMOVE_ME --skip-confirmation --worker-name test-worker"
-				);
-				expect(patchRequestBody?.preview_defaults?.env).toEqual({
-					REMOVE_ME: null,
+				let requestUrl: string | undefined;
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ url, body }) => {
+					requestUrl = url;
+					requestBody = body;
 				});
-				expect(std.out).toContain(
-					'Secret "REMOVE_ME" deleted from Previews settings for Worker test-worker.'
+
+				await runWrangler(
+					"preview secret delete REMOVE_ME --name test-preview --skip-confirmation --worker-name test-worker"
 				);
-				expect(std.out).toContain("Worker: test-worker");
-				expect(std.out).toContain("Previews settings");
-				expect(std.out).toContain("Secrets");
-				expect(std.out).toContain("(none)");
+
+				expect(requestUrl).toContain(
+					"/workers/workers/test-worker/previews/test-preview/deployments/latest"
+				);
+				expect(requestBody?.env).toEqual({ REMOVE_ME: null });
+				expect(patchedPreviewDefaults).toBe(false);
+				expect(std.out).toContain('Preview "test-preview"');
+				expect(std.out).toContain("test-worker");
+				expect(std.out).toContain("Preview deployment");
+				expect(std.out).toContain(
+					'is now live at https://test-preview.example.workers.dev'
+				);
 			});
 
-			test("should respect env-specific worker name when deleting a secret", async ({
+			test("respects env-specific worker name when deleting a secret", async ({
 				expect,
 			}) => {
 				writeFileSync(
@@ -207,20 +314,59 @@ describe("wrangler preview", () => {
 						env: { staging: { name: "staging-worker" } },
 					})
 				);
-				let patchUrl: string | undefined;
-				msw.use(
-					http.patch(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						({ request }) => {
-							patchUrl = request.url;
-							return HttpResponse.json({ success: true, result: {} });
-						}
-					)
-				);
+				let requestUrl: string | undefined;
+				mockPatchLatestPreviewDeployment(({ url }) => {
+					requestUrl = url;
+				});
+
 				await runWrangler(
-					"preview secret delete REMOVE_ME --env staging --skip-confirmation"
+					"preview secret delete REMOVE_ME --name test-preview --env staging --skip-confirmation"
 				);
-				expect(patchUrl).toContain("/workers/workers/staging-worker");
+
+				expect(requestUrl).toContain(
+					"/workers/workers/staging-worker/previews/test-preview/deployments/latest"
+				);
+			});
+
+			test("uses the default annotation message when none is provided", async ({
+				expect,
+			}) => {
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ body }) => {
+					requestBody = body;
+				});
+
+				await runWrangler(
+					"preview secret delete REMOVE_ME --name test-preview --skip-confirmation --worker-name test-worker"
+				);
+
+				expect(requestBody?.annotations?.["workers/message"]).toBe(
+					'Deleted secret "REMOVE_ME"'
+				);
+			});
+
+			test("fails clearly when the Preview has no deployments", async ({
+				expect,
+			}) => {
+				mockPreviewDeploymentNotFound(10032);
+
+				await expect(
+					runWrangler(
+						"preview secret delete REMOVE_ME --name test-preview --skip-confirmation --worker-name test-worker"
+					)
+				).rejects.toThrow(/no deployments for the Preview/);
+			});
+
+			test("fails clearly when the Preview is not found", async ({
+				expect,
+			}) => {
+				mockPreviewDeploymentNotFound(10025);
+
+				await expect(
+					runWrangler(
+						"preview secret delete REMOVE_ME --name test-preview --skip-confirmation --worker-name test-worker"
+					)
+				).rejects.toThrow(/Preview "test-preview" was not found/);
 			});
 		});
 

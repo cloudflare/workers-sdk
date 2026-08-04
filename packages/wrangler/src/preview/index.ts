@@ -165,7 +165,8 @@ export const previewSecretNamespace = createNamespace({
 
 export const previewSecretPutCommand = createCommand({
 	metadata: {
-		description: "Create or update a secret in the Worker's Previews settings",
+		description:
+			"Create or update a secret variable on a Worker Preview's latest deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
@@ -176,6 +177,21 @@ export const previewSecretPutCommand = createCommand({
 			describe: "The secret name to be accessible in the Worker",
 			type: "string",
 			demandOption: true,
+		},
+		name: {
+			describe: "Name of the Preview (defaults to current git branch)",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe: "A descriptive message for this Preview deployment",
+			type: "string",
+			requiresArg: true,
+		},
+		tag: {
+			describe: "A tag for this Preview deployment",
+			type: "string",
+			requiresArg: true,
 		},
 		"worker-name": {
 			describe:
@@ -192,7 +208,8 @@ export const previewSecretPutCommand = createCommand({
 
 export const previewSecretDeleteCommand = createCommand({
 	metadata: {
-		description: "Delete a secret from the Worker's Previews settings",
+		description:
+			"Delete a secret variable from a Worker Preview's latest deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
@@ -203,6 +220,21 @@ export const previewSecretDeleteCommand = createCommand({
 			describe: "The secret name to delete",
 			type: "string",
 			demandOption: true,
+		},
+		name: {
+			describe: "Name of the Preview (defaults to current git branch)",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe: "A descriptive message for this Preview deployment",
+			type: "string",
+			requiresArg: true,
+		},
+		tag: {
+			describe: "A tag for this Preview deployment",
+			type: "string",
+			requiresArg: true,
 		},
 		"skip-confirmation": {
 			describe: "Skip the confirmation prompt",
