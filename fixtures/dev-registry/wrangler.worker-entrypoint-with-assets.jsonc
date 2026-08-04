@@ -29,9 +29,4 @@
 			"entrypoint": "NamedEntrypoint",
 		},
 	],
-	"tail_consumers": [
-		{
-			"service": "exported-handler",
-		},
-	],
 }
