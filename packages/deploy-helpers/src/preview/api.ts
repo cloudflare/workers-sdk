@@ -266,6 +266,31 @@ export async function createPreviewDeployment(
 	);
 }
 
+export async function patchPreviewDeployment(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewIdentifier: string,
+	env: Record<string, Binding | null>,
+	annotations?: {
+		"workers/message"?: string;
+		"workers/tag"?: string;
+	},
+	deploymentIdentifier = "latest"
+): Promise<DeploymentResource> {
+	return fetchResult<DeploymentResource>(
+		config,
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}/deployments/${encodeURIComponent(deploymentIdentifier)}`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/merge-patch+json" },
+			body: JSON.stringify({ env, annotations }),
+		}
+	);
+}
+
 export async function getWorkerPreviewDefaults(
 	config: Config,
 	accountId: string,
