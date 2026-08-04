@@ -82,7 +82,7 @@ jobs:
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:
-    timeout-minutes: 30
+    timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.suite }}-test
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
@@ -187,7 +187,26 @@ jobs:
         # Since the dev registry is now file-based (not network-based), fixture tests can safely run in parallel.
         # Concurrency is capped at 2 to avoid CPU starvation on CI runners when multiple fixtures
         # spawn workerd processes simultaneously (Windows runners are especially slow under load).
-        run: pnpm run test:ci --concurrency=2 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
+        shell: bash
+        run: |
+          # TEMPORARY VALIDATION HARNESS — do not merge.
+          # Runs only the dev-registry fixture, repeatedly, without turbo caching,
+          # tallying each iteration so one flake does not hide the rest.
+          pass=0
+          fail=0
+          for i in 1 2 3 4 5 6; do
+            echo "::group::dev-registry iteration $i"
+            if pnpm run test:ci --force --log-order=stream --filter="@fixture/dev-registry"; then
+              pass=$((pass + 1))
+              echo "ITERATION $i RESULT: PASS"
+            else
+              fail=$((fail + 1))
+              echo "ITERATION $i RESULT: FAIL"
+            fi
+            echo "::endgroup::"
+          done
+          echo "TALLY ${{ matrix.description }}: pass=$pass fail=$fail"
+          test "$fail" -eq 0
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
