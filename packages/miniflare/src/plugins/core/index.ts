@@ -281,6 +281,18 @@ export const CoreSharedOptionsSchema = z.object({
 
 	// Enable auto service / durable objects discovery with the dev registry
 	unsafeDevRegistryPath: z.string().optional(),
+	// Don't advertise this instance's Workers in the dev registry until
+	// `unsafeRegisterInDevRegistry()` is called.
+	//
+	// Consumers that bring the runtime up in more than one step (the Vite plugin
+	// discovers each Worker's exports by running it, then rebuilds the config and
+	// calls `setOptions()`) would otherwise publish a debug port that is about to
+	// be torn down. Peers who resolve it in that window hold an address that no
+	// longer exists, which on Windows can abort their `workerd` outright.
+	//
+	// Only self-advertisement is held back; the registry is still read, so
+	// external services provided by other sessions keep resolving as usual.
+	unsafeDeferDevRegistryRegistration: z.boolean().optional(),
 	// Called when external workers this instance depends on are updated in the dev registry
 	unsafeHandleDevRegistryUpdate: z
 		.function({
