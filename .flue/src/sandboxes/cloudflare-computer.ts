@@ -60,7 +60,9 @@ export const workspaceHost = extend({
 							"agent initializes its sandbox; retry after the first submission."
 					);
 				}
+
 				await workspace.ready();
+
 				return workspace.stub();
 			}
 		},
@@ -69,6 +71,7 @@ export const workspaceHost = extend({
 export interface GetComputerWorkspaceOptions {
 	/** The Worker Loader binding (`env.LOADER`) the shell backend runs commands through. */
 	loader: WorkerLoader;
+
 	/**
 	 * Reshape the generated `WorkspaceOptions` before construction: add R2
 	 * mounts, an observer, a `defaultGitIdentity`, additional backends, etc.
@@ -103,11 +106,12 @@ export function getComputerWorkspace(
 				"to the agent module so the shell backend can dial back into the workspace."
 		);
 	}
+
 	if (host.workspace) {
 		return host.workspace;
 	}
 
-	const defaults: WorkspaceOptions = {
+	const defaults = {
 		// ctx.storage.sql.exec returns a narrower row type than
 		// DurableObjectStorageLike declares; the runtime shape matches.
 		storage: host.ctx.storage as unknown as DurableObjectStorageLike,
@@ -133,11 +137,12 @@ export function getComputerWorkspace(
 				ctx: host.ctx,
 			}),
 		],
-	};
+	} satisfies WorkspaceOptions;
 
 	host.workspace = new Workspace(
 		options.workspace ? options.workspace(defaults) : defaults
 	);
+
 	return host.workspace;
 }
 
@@ -163,6 +168,7 @@ export function computerWorkspace(sandbox: Sandbox): Workspace {
 				"This agent runs on a different environment."
 		);
 	}
+
 	return workspace;
 }
 
@@ -172,7 +178,7 @@ export function getComputerSandbox(
 	options: GetComputerWorkspaceOptions
 ): SandboxFactory {
 	return {
-		async createSandbox(): Promise<ComputerSandboxEnv> {
+		createSandbox: async (): Promise<ComputerSandboxEnv> => {
 			const workspace = getComputerWorkspace(options);
 			await workspace.fs.mkdir(DEFAULT_CWD, { recursive: true });
 			return {
@@ -198,6 +204,7 @@ function normalizePath(path: string): string {
 		}
 		result.push(part);
 	}
+
 	return `/${result.join("/")}`;
 }
 
@@ -246,6 +253,7 @@ async function settleExec(
 
 function createWorkspaceSandbox(workspace: Workspace, cwd: string): Sandbox {
 	const normalizedCwd = normalizePath(cwd);
+
 	const resolvePath = (path: string): string => {
 		if (path.startsWith("/")) {
 			return normalizePath(path);
@@ -255,6 +263,7 @@ function createWorkspaceSandbox(workspace: Workspace, cwd: string): Sandbox {
 		}
 		return normalizePath(`${normalizedCwd}/${path}`);
 	};
+
 	const fs = workspace.fs;
 	const errorCode = (error: unknown): string | undefined =>
 		(error as { code?: string } | undefined)?.code;
@@ -292,15 +301,15 @@ function createWorkspaceSandbox(workspace: Workspace, cwd: string): Sandbox {
 				options?.recursive ? { recursive: true } : undefined
 			);
 		},
+		readdir: async (path): Promise<string[]> => {
+			return (await fs.readdir(resolvePath(path))).map((entry) => entry.name);
+		},
 		readFile: async (path): Promise<string> => {
 			return fs.readFile(resolvePath(path), "utf8");
 		},
 		readFileBuffer: async (path): Promise<Uint8Array> => {
 			const stream = await fs.readFile(resolvePath(path));
 			return new Uint8Array(await new Response(stream).arrayBuffer());
-		},
-		readdir: async (path): Promise<string[]> => {
-			return (await fs.readdir(resolvePath(path))).map((entry) => entry.name);
 		},
 		resolvePath,
 		rm: async (path, options): Promise<void> => {
