@@ -29,10 +29,10 @@ export async function raceAgainstAbort<T>(
 			value,
 		})
 	);
+	// Observe a later rejection from the losing promise so it doesn't become an
+	// unhandled rejection after an abort wins the race.
+	void resultPromise.catch(() => undefined);
 	if (signal.aborted) {
-		// Observe a later rejection from the losing promise so it doesn't become
-		// an unhandled rejection after returning the already-aborted result.
-		void resultPromise.catch(() => undefined);
 		return { aborted: true };
 	}
 

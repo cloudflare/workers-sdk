@@ -386,6 +386,7 @@ describe("Email API - Routing attachments", () => {
 			{
 				from: "sender@example.com",
 				to: ["recipient@example.com"],
+				bcc: ["hidden@example.com"],
 				subject: "With attachment",
 				text: "See attached.",
 				attachments: [{ filename: "notes.txt", type: "text/plain", content }],
@@ -402,6 +403,7 @@ describe("Email API - Routing attachments", () => {
 		);
 		expect(raw).toContain("Content-Transfer-Encoding: base64");
 		expect(raw).toContain(content);
+		expect(raw).not.toContain("Bcc:");
 	});
 
 	test("supports zero-byte attachments", async ({ expect }) => {

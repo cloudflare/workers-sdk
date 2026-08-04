@@ -57,7 +57,9 @@ export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
 
-function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
+function buildJsonBindings(
+	bindings: Record<string, unknown>
+): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
 		name,
 		json: JSON.stringify(value),

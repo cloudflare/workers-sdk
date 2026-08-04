@@ -46,6 +46,15 @@ function getEmailStore(c: AppContext): EmailStoreService | undefined {
 	return c.env[CoreBindings.SERVICE_EMAIL_STORE];
 }
 
+function isFetcher(value: unknown): value is Fetcher {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"fetch" in value &&
+		typeof value.fetch === "function"
+	);
+}
+
 /** Whether the given worker is served by this Miniflare instance. */
 function isLocalWorker(c: AppContext, worker: string): boolean {
 	return c.env[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES].includes(worker);
@@ -61,9 +70,9 @@ function getUserWorkerService(
 	c: AppContext,
 	worker: string
 ): Fetcher | undefined {
-	return c.env[
-		`${CoreBindings.SERVICE_EXPLORER_USER_WORKER_PREFIX}${worker}`
-	] as Fetcher | undefined;
+	const service =
+		c.env[`${CoreBindings.SERVICE_EXPLORER_USER_WORKER_PREFIX}${worker}`];
+	return isFetcher(service) ? service : undefined;
 }
 
 /**
@@ -183,9 +192,6 @@ function buildMimeMessage(body: EmailSendRequest, messageId: string): string {
 	const headers: string[] = [`From: ${body.from}`, `To: ${body.to.join(", ")}`];
 	if (body.cc?.length) {
 		headers.push(`Cc: ${body.cc.join(", ")}`);
-	}
-	if (body.bcc?.length) {
-		headers.push(`Bcc: ${body.bcc.join(", ")}`);
 	}
 	if (body.replyTo) {
 		headers.push(`Reply-To: ${body.replyTo}`);

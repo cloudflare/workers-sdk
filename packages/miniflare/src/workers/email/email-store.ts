@@ -78,11 +78,13 @@ const STATEMENTS = {
 
 const MIGRATION_STATEMENTS = {
 	received: {
+		tableInfo: "PRAGMA table_info(received)",
 		addSummary: "ALTER TABLE received ADD COLUMN summary TEXT",
 		rows: "SELECT seq, data, summary FROM received WHERE summary IS NULL",
 		update: "UPDATE received SET summary = ? WHERE seq = ?",
 	},
 	sent: {
+		tableInfo: "PRAGMA table_info(sent)",
 		addSummary: "ALTER TABLE sent ADD COLUMN summary TEXT",
 		rows: "SELECT seq, data, summary FROM sent WHERE summary IS NULL",
 		update: "UPDATE sent SET summary = ? WHERE seq = ?",
@@ -154,8 +156,10 @@ function getArtifacts(
 ): EmailArtifact[] {
 	const recordId = messageIdToStorageId(email.messageId);
 	if (table === "received") {
-		const routingEmail = email as StoredRoutingEmail;
-		return routingEmail.replies.map((reply) => ({
+		if (!("receivedAt" in email)) {
+			throw new TypeError("Received email record does not match its table");
+		}
+		return email.replies.map((reply) => ({
 			recordId,
 			prefix: "reply",
 			id: messageIdToStorageId(reply.messageId),
@@ -163,7 +167,10 @@ function getArtifacts(
 		}));
 	}
 
-	const sentEmail = email as StoredSendingEmail;
+	if (!("sentAt" in email)) {
+		throw new TypeError("Sent email record does not match its table");
+	}
+	const sentEmail = email;
 	const artifacts: EmailArtifact[] = [];
 	if (sentEmail.raw !== undefined) {
 		artifacts.push({
@@ -211,12 +218,12 @@ export class EmailStore extends DurableObject {
 				this.sql.exec(stmt);
 			}
 			for (const table of ["received", "sent"] as const) {
-				try {
+				const hasSummaryColumn = this.sql
+					.exec<{ name: string }>(MIGRATION_STATEMENTS[table].tableInfo)
+					.toArray()
+					.some(({ name }) => name === "summary");
+				if (!hasSummaryColumn) {
 					this.sql.exec(MIGRATION_STATEMENTS[table].addSummary);
-				} catch (error) {
-					if (!String(error).toLowerCase().includes("duplicate column")) {
-						console.warn("Failed to add email store summary column", error);
-					}
 				}
 			}
 			for (const table of ["received", "sent"] as const) {

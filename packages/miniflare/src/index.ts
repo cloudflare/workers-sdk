@@ -184,6 +184,10 @@ const emailArtifactsRequestSchema = z.object({
 	artifacts: z.array(emailArtifactSchema).optional(),
 });
 
+function getEmailArtifactKey(artifact: EmailArtifact): string {
+	return `${sanitisePath(artifact.recordId)}\0${sanitisePath(artifact.prefix)}\0${sanitisePath(artifact.id)}.${sanitisePath(artifact.extension)}`;
+}
+
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
@@ -1319,7 +1323,12 @@ export class Miniflare {
 			const id = rawId === null ? crypto.randomUUID() : sanitisePath(rawId);
 			const rawRecordId = url.searchParams.get("record") ?? rawId ?? id;
 			const recordId = sanitisePath(rawRecordId);
-			const artifactKey = `${recordId}\0${prefix ?? "files"}\0${id}.${extension}`;
+			const artifactKey = getEmailArtifactKey({
+				recordId,
+				prefix: prefix ?? "files",
+				id,
+				extension,
+			});
 			const previous = this.#emailArtifactOperations.get(artifactKey);
 			const operation = (previous ?? Promise.resolve(null)).then(async () => {
 				if (this.#emailArtifactTombstones.delete(artifactKey)) {
@@ -1371,18 +1380,21 @@ export class Miniflare {
 		if (!parsed.success) {
 			return new Response("Invalid email artifact request", { status: 400 });
 		}
-		const artifacts: EmailArtifact[] = parsed.data.artifacts ?? [];
+		const artifacts: EmailArtifact[] = (parsed.data.artifacts ?? []).map(
+			(artifact) => ({
+				recordId: sanitisePath(artifact.recordId),
+				prefix: sanitisePath(artifact.prefix),
+				id: sanitisePath(artifact.id),
+				extension: sanitisePath(artifact.extension),
+			})
+		);
 		await Promise.all(
 			artifacts.map((artifact) =>
-				this.#emailArtifactOperations.get(
-					`${sanitisePath(artifact.recordId)}\0${artifact.prefix}\0${sanitisePath(artifact.id)}.${artifact.extension}`
-				)
+				this.#emailArtifactOperations.get(getEmailArtifactKey(artifact))
 			)
 		);
 		for (const artifact of artifacts) {
-			this.#emailArtifactTombstones.add(
-				`${sanitisePath(artifact.recordId)}\0${artifact.prefix}\0${sanitisePath(artifact.id)}.${artifact.extension}`
-			);
+			this.#emailArtifactTombstones.add(getEmailArtifactKey(artifact));
 		}
 		await removeEmailTempFiles({
 			defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
