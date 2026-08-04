@@ -4,6 +4,7 @@ import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
+	getCloudflareEnv,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
@@ -662,8 +663,11 @@ export function createCLIParser(argv: string[]) {
 		.check(demandSingleValue("env"))
 		.check((args) => {
 			// Set process environment params from `.env` files if available.
+			// The environment is resolved the same way as in the config loader, so
+			// that `.env.<env>` files line up with the active config environment when
+			// it comes from `CLOUDFLARE_ENV` rather than `--env`.
 			const resolvedEnvFilePaths = (
-				args["env-file"] ?? getDefaultEnvFiles(args.env)
+				args["env-file"] ?? getDefaultEnvFiles(args.env ?? getCloudflareEnv())
 			).map((p) => resolve(p));
 			process.env = loadDotEnv(resolvedEnvFilePaths, {
 				includeProcessEnv: true,
