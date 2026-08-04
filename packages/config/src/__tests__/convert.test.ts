@@ -951,6 +951,42 @@ describe("convertToWranglerConfig", () => {
 				consumers: [{ queue: "c-queue" }],
 			});
 		});
+
+		it("maps connect trigger to tcp_handlers", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{ type: "connect", tcp: { port: 5432, address: "127.0.0.1" } },
+				],
+			});
+			expect(result.tcp_handlers).toEqual([
+				{ port: 5432, address: "127.0.0.1" },
+			]);
+		});
+
+		it("maps connect trigger without an address", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "connect", tcp: { port: 5432 } }],
+			});
+			expect(result.tcp_handlers).toEqual([{ port: 5432 }]);
+		});
+
+		it("collects multiple connect triggers into a single tcp_handlers array", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{ type: "connect", tcp: { port: 5432 } },
+					{ type: "connect", tcp: { port: 6379, address: "0.0.0.0" } },
+				],
+			});
+			expect(result.tcp_handlers).toEqual([
+				{ port: 5432 },
+				{ port: 6379, address: "0.0.0.0" },
+			]);
+		});
 	});
 
 	describe("domains", () => {

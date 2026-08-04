@@ -97,11 +97,29 @@ export interface EmailTrigger extends EmailTriggerOptions {
 	type: "email";
 }
 
+interface ConnectTriggerOptions {
+	/** The raw TCP socket this Worker should listen on. */
+	tcp: {
+		/** The port to listen on. */
+		port: number;
+		/** The address to bind to. Defaults to `127.0.0.1`. */
+		address?: string;
+	};
+}
+
 /**
- * Event triggers — fetch routes, queue consumers, cron schedules, and Email
- * Routing addresses — that invoke this Worker. Construct entries with
- * `triggers.fetch(...)`, `triggers.queue(...)`, `triggers.scheduled(...)`, or
- * `triggers.email(...)`.
+ * Connect trigger — invokes this Worker's `connect(socket, env, ctx)`
+ * handler for raw TCP connections received on the configured port.
+ */
+export interface ConnectTrigger extends ConnectTriggerOptions {
+	type: "connect";
+}
+
+/**
+ * Event triggers — fetch routes, queue consumers, cron schedules, Email
+ * Routing addresses, and raw TCP sockets — that invoke this Worker.
+ * Construct entries with `triggers.fetch(...)`, `triggers.queue(...)`,
+ * `triggers.scheduled(...)`, `triggers.email(...)`, or `triggers.connect(...)`.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
  */
@@ -130,6 +148,11 @@ export interface Triggers {
 	 * addresses.
 	 */
 	email(options: EmailTriggerOptions): EmailTrigger;
+	/**
+	 * Connect trigger — invokes this Worker's `connect(socket, env, ctx)`
+	 * handler for raw TCP connections received on the configured port.
+	 */
+	connect(options: ConnectTriggerOptions): ConnectTrigger;
 }
 
 /**
@@ -146,6 +169,7 @@ export interface Triggers {
  *     triggers.scheduled({ schedule: "0 * * * *" }),
  *     triggers.scheduled({ schedule: "30 0 * * *" }),
  *     triggers.email({ addresses: ["support@example.com"] }),
+ *     triggers.connect({ tcp: { port: 5432 } }),
  *   ],
  * });
  * ```
@@ -155,4 +179,5 @@ export const triggers: Triggers = {
 	queue: (options) => ({ type: "queue", ...options }),
 	scheduled: (options) => ({ type: "scheduled", ...options }),
 	email: (options) => ({ type: "email", ...options }),
+	connect: (options) => ({ type: "connect", ...options }),
 };

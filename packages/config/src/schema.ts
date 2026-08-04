@@ -405,6 +405,13 @@ const TriggerSchema = z.discriminatedUnion("type", [
 		type: z.literal("scheduled"),
 		schedule: z.string(),
 	}),
+	z.strictObject({
+		type: z.literal("connect"),
+		tcp: z.strictObject({
+			port: z.number(),
+			address: z.string().optional(),
+		}),
+	}),
 ]);
 
 const UnsafeSchema = z.strictObject({
