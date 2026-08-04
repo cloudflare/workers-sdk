@@ -80,7 +80,10 @@ import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { writeTempFile } from "./plugins/core/temp-file";
 import { removeEmailTempFiles, writeEmailTempFile } from "./plugins/email";
-import { getEmailArtifactManager } from "./plugins/email/artifacts";
+import {
+	drainEmailArtifactManager,
+	getEmailArtifactManager,
+} from "./plugins/email/artifacts";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -1329,7 +1332,7 @@ export class Miniflare {
 				this.#disposeController.signal
 			).store(artifact, async () => {
 				return await writeEmailTempFile({
-					defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
+					resourceTmpPath: this.#sharedOpts.core.resourceTmpPath,
 					tmpPath: this.#tmpPath,
 					prefix: prefix ?? "files",
 					fileName: `${id}.${extension}`,
@@ -1369,7 +1372,7 @@ export class Miniflare {
 		const manager = getEmailArtifactManager(this.#disposeController.signal);
 		await manager.delete(parsed.data.artifacts ?? [], async (artifacts) => {
 			await removeEmailTempFiles({
-				defaultProjectTmpPath: this.#sharedOpts.core.defaultProjectTmpPath,
+				resourceTmpPath: this.#sharedOpts.core.resourceTmpPath,
 				tmpPath: this.#tmpPath,
 				artifacts,
 			});
@@ -2418,6 +2421,8 @@ export class Miniflare {
 				)
 					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
+			fallbackWorkerPublicName: this.#workerOpts[0].core.name,
+			loopbackPort,
 			tmpPath: this.#tmpPath,
 			log: this.#log,
 			proxyBindings,
@@ -3473,6 +3478,7 @@ export class Miniflare {
 			// `noServer: true` so it doesn't own an HTTP server, but connected
 			// WebSocket clients still hold open sockets.
 			this.#webSocketServer.close();
+			await drainEmailArtifactManager(this.#disposeController.signal);
 			// Best-effort cleanup: on Windows, workerd may not release file handles
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.

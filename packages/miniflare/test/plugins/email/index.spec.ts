@@ -1053,7 +1053,7 @@ test("reply: references generated correctly and written to the project directory
 				This is a random email body.`)
 		),
 		unsafeTriggerHandlers: true,
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -1512,7 +1512,7 @@ test("MessageBuilder file names sanitise a path-traversing Message-ID", async ({
 		email: {
 			send_email: [{ name: "SEND_EMAIL" }],
 		},
-		defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 		compatibilityDate: "2025-03-17",
 	});
 
@@ -2348,7 +2348,7 @@ describe("writeEmailTempFile", () => {
 		const projectTmpPath = path.join(tmp, ".wrangler", "tmp");
 
 		const filePath = await writeEmailTempFile({
-			defaultProjectTmpPath: projectTmpPath,
+		resourceTmpPath: projectTmpPath,
 			tmpPath: tmp,
 			prefix: "reply",
 			fileName: "abc123.eml",
@@ -2379,7 +2379,7 @@ describe("writeEmailTempFile", () => {
 		const tmp = await useTmp();
 
 		const filePath = await writeEmailTempFile({
-			defaultProjectTmpPath: undefined,
+		resourceTmpPath: undefined,
 			tmpPath: tmp,
 			prefix: "sent",
 			fileName: "def456.eml",
@@ -2397,7 +2397,7 @@ describe("writeEmailTempFile", () => {
 		const contents = Buffer.from([0x00, 0xff, 0xfe, 0x80, 0x01]);
 
 		const filePath = await writeEmailTempFile({
-			defaultProjectTmpPath: undefined,
+		resourceTmpPath: undefined,
 			tmpPath: tmp,
 			prefix: "sent",
 			fileName: "binary.bin",
@@ -2412,7 +2412,7 @@ describe("writeEmailTempFile", () => {
 
 		await expect(
 			writeEmailTempFile({
-				defaultProjectTmpPath: undefined,
+				resourceTmpPath: undefined,
 				tmpPath: tmp,
 				prefix: "email-attachment",
 				fileName: "message./../../outside.txt",
@@ -2470,97 +2470,6 @@ describe("EMAIL_PLUGIN.getServices", () => {
 
 		const bindings = workerService.worker.bindings;
 
-		// Each disk service is bound so the worker can write to it via fetch.
-		const systemServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_SYSTEM"
-		) as { name: string; service?: { name: string } } | undefined;
-		const projectServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_PROJECT"
-		) as { name: string; service?: { name: string } } | undefined;
-		expect(systemServiceBinding?.service?.name).toBe("email:disk:system");
-		expect(projectServiceBinding?.service?.name).toBe("email:disk:project");
-
-		const emailDiskServicesBinding = bindings.find(
-			(b) => b.name === "email_disk_services"
-		);
-		if (!emailDiskServicesBinding?.json) {
-			throw new Error("Expected email_disk_services binding with JSON value");
-		}
-
-		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
-		expect(emailDiskServices).toHaveLength(2);
-		expect(emailDiskServices[0].bindingName).toBe(
-			"MINIFLARE_EMAIL_DISK_SYSTEM"
-		);
-		expect(emailDiskServices[0].location).toBe("system");
-		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
-		expect(emailDiskServices[1].bindingName).toBe(
-			"MINIFLARE_EMAIL_DISK_PROJECT"
-		);
-		expect(emailDiskServices[1].location).toBe("project");
-		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
-	});
-
-	test("creates only system disk service when resourceTmpPath is undefined", async ({
-		expect,
-	}) => {
-		const tmp = await useTmp();
-
-		const result = await EMAIL_PLUGIN.getServices({
-			options: {
-				email: { send_email: [{ name: "SEND_EMAIL" }] },
-			},
-			sharedOptions: {},
-			tmpPath: tmp,
-			resourceTmpPath: undefined,
-			workerNames: ["default"],
-			workerIndex: 0,
-		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
-
-		if (!Array.isArray(result)) {
-			throw new Error("Expected getServices to return an array of services");
-		}
-		const services = result;
-
-		expect(services).toHaveLength(2);
-
-		const diskServices = services.filter((s) => "disk" in s) as Array<{
-			name: string;
-			disk: { path: string; writable?: boolean };
-		}>;
-		expect(diskServices).toHaveLength(1);
-
-		const systemTempDisk = diskServices.find(
-			(s) => s.name === "email:disk:system"
-		);
-		if (!systemTempDisk) {
-			throw new Error("Expected system disk service to be present");
-		}
-
-		expect(systemTempDisk.disk.path).toBe(path.join(tmp, "email"));
-		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
-
-		const workerService = services.find(
-			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
-		) as
-			| {
-					name: string;
-					worker: {
-						bindings: {
-							name: string;
-							json?: string;
-							service?: { name: string };
-						}[];
-					};
-			  }
-			| undefined;
-		if (!workerService) {
-			throw new Error("Expected send_email worker service to be present");
-		}
-
-		const bindings = workerService.worker.bindings;
-
-		// The worker reaches the loopback service to store files and log.
 		const loopbackBinding = bindings.find(
 			(b) => b.name === "MINIFLARE_LOOPBACK"
 		);
@@ -2577,8 +2486,8 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		const options = {
 			email: { send_email: [{ name: "SEND_EMAIL" }] },
 		};
-		const firstBindings = EMAIL_PLUGIN.getBindings(options, 0, "first");
-		const secondBindings = EMAIL_PLUGIN.getBindings(options, 1, "second");
+		const firstBindings = await EMAIL_PLUGIN.getBindings(options, 0, "first");
+		const secondBindings = await EMAIL_PLUGIN.getBindings(options, 1, "second");
 		expect(firstBindings?.[0]).toMatchObject({
 			service: { name: "SEND-EMAIL-WORKER:first:SEND_EMAIL" },
 		});
@@ -2590,7 +2499,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 			options,
 			sharedOptions: {},
 			tmpPath: "/tmp/first",
-			defaultProjectTmpPath: undefined,
+			resourceTmpPath: undefined,
 			workerNames: ["first", "second"],
 			workerIndex: 0,
 		} as unknown as Parameters<typeof getServices>[0]);
@@ -2598,7 +2507,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 			options,
 			sharedOptions: {},
 			tmpPath: "/tmp/second",
-			defaultProjectTmpPath: undefined,
+			resourceTmpPath: undefined,
 			workerNames: ["first", "second"],
 			workerIndex: 1,
 		} as unknown as Parameters<typeof getServices>[0]);

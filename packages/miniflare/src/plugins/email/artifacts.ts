@@ -27,7 +27,6 @@ export function getEmailArtifactManager(
 			"abort",
 			() => {
 				manager?.dispose();
-				managers.delete(signal);
 			},
 			{ once: true }
 		);
@@ -66,19 +65,38 @@ export class EmailArtifactManager {
 		remove: (artifacts: EmailArtifact[]) => Promise<void>
 	): Promise<void> {
 		const normalisedArtifacts = artifacts.map(normaliseArtifact);
-		await Promise.all(
-			normalisedArtifacts.map((artifact) =>
-				this.#operations.get(getArtifactKey(artifact))
-			)
-		);
 		for (const artifact of normalisedArtifacts) {
 			this.#tombstones.add(getArtifactKey(artifact));
 		}
-		await remove(normalisedArtifacts);
+		try {
+			await Promise.all(
+				normalisedArtifacts.map((artifact) =>
+					this.#operations.get(getArtifactKey(artifact))
+				)
+			);
+			await remove(normalisedArtifacts);
+		} catch (error) {
+			for (const artifact of normalisedArtifacts) {
+				this.#tombstones.delete(getArtifactKey(artifact));
+			}
+			throw error;
+		}
 	}
 
 	dispose(): void {
-		this.#operations.clear();
 		this.#tombstones.clear();
 	}
+
+	async drain(): Promise<void> {
+		await Promise.allSettled(this.#operations.values());
+		this.#operations.clear();
+	}
+}
+
+export async function drainEmailArtifactManager(
+	signal: AbortSignal
+): Promise<void> {
+	const manager = managers.get(signal);
+	await manager?.drain();
+	managers.delete(signal);
 }

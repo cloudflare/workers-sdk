@@ -3,6 +3,7 @@ import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+import { isFileNotFoundError } from "../../shared";
 import { CoreBindings, sanitisePath } from "../../workers";
 import { EMAIL_STORE_SERVICE_NAME } from "../core/constants";
 import {
@@ -146,7 +147,7 @@ export function getEmailFileDirectories(
  * the project copy since that is the one a user can navigate to.
  */
 export async function writeEmailTempFile(options: {
-	defaultProjectTmpPath: string | undefined;
+	resourceTmpPath: string | undefined;
 	tmpPath: string;
 	prefix: string;
 	fileName: string;
@@ -162,7 +163,7 @@ export async function writeEmailTempFile(options: {
 		throw new Error("Invalid email temporary-file prefix");
 	}
 	const { system, project } = getEmailFileDirectories(
-		options.defaultProjectTmpPath,
+		options.resourceTmpPath,
 		options.tmpPath,
 		options.prefix
 	);
@@ -182,14 +183,14 @@ export async function writeEmailTempFile(options: {
 }
 
 export async function removeEmailTempFiles(options: {
-	defaultProjectTmpPath: string | undefined;
+	resourceTmpPath: string | undefined;
 	tmpPath: string;
 	artifacts: EmailArtifact[];
 }): Promise<void> {
 	await Promise.all(
 		options.artifacts.map(async (artifact) => {
 			const { system, project } = getEmailFileDirectories(
-				options.defaultProjectTmpPath,
+				options.resourceTmpPath,
 				options.tmpPath,
 				artifact.prefix
 			);
@@ -201,7 +202,15 @@ export async function removeEmailTempFiles(options: {
 					: [resolveContainedPath(project, fileName)]),
 			];
 			await Promise.all(
-				paths.map((filePath) => unlink(filePath).catch(() => {}))
+				paths.map(async (filePath) => {
+					try {
+						await unlink(filePath);
+					} catch (error) {
+						if (!isFileNotFoundError(error)) {
+							throw error;
+						}
+					}
+				})
 			);
 		})
 	);

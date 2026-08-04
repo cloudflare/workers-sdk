@@ -123,7 +123,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const artifacts =
 				await this.env[CoreBindings.SERVICE_EMAIL_STORE]?.storeSent(email);
 			if (artifacts !== undefined && artifacts.length > 0) {
-				await this.env.MINIFLARE_LOOPBACK.fetch(
+				const response = await this.env.MINIFLARE_LOOPBACK.fetch(
 					"http://localhost/core/delete-email-temp-files",
 					{
 						method: "POST",
@@ -132,9 +132,18 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						}),
 					}
 				);
+				if (!response.ok) {
+					throw new Error(
+						`could not delete email temporary files: ${await response.text()}`
+					);
+				}
 			}
 		} catch {
-			// Ignore capture failures - they must not affect sending.
+			try {
+				await this.log("Failed to capture sent email or clean up artifacts.");
+			} catch {
+				// Capture failures must not affect sending.
+			}
 		}
 	}
 	/**

@@ -440,10 +440,6 @@ async function deliverTestEmail(
 	// Request the JSON result so we can surface the handler outcome (including a
 	// `setReject()` reason) instead of just a text status.
 	deliverUrl.searchParams.set("format", "json");
-	// Tag the stored email with the worker so the Routing inbox can filter by it.
-	if (worker !== undefined) {
-		deliverUrl.searchParams.set("worker", worker);
-	}
 
 	if (worker === undefined) {
 		// No specific worker: let the entry worker route by address.
@@ -465,6 +461,7 @@ async function deliverTestEmail(
 		deliverUrl.searchParams,
 		deliverRequest,
 		targetService,
+		worker,
 		c.env,
 		// Hono's `executionCtx` and workerd's `ExecutionContext` differ only by
 		// the `@cloudflare/workers-types` version in scope; `handleEmail` uses

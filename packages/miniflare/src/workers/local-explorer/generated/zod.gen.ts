@@ -631,7 +631,7 @@ export const zEmailSendingItem = z.object({
 	subject: z.string(),
 	messageId: z.string(),
 	sentAt: z.string(),
-	headers: z.record(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
 	attachments: z.array(zEmailAttachment),
 });
 

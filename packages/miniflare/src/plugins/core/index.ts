@@ -947,6 +947,8 @@ export interface GlobalServicesOptions {
 	sharedOptions: z.infer<typeof CoreSharedOptionsSchema>;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
+	fallbackWorkerPublicName: string | undefined;
+	loopbackPort: number;
 	tmpPath: string;
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
@@ -962,6 +964,8 @@ export function getGlobalServices({
 	sharedOptions,
 	allWorkerRoutes,
 	fallbackWorkerName,
+	fallbackWorkerPublicName,
+	loopbackPort,
 	tmpPath,
 	log,
 	proxyBindings,
@@ -990,6 +994,10 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
 			service: { name: fallbackWorkerName },
+		},
+		{
+			name: CoreBindings.TEXT_FALLBACK_WORKER_NAME,
+			json: JSON.stringify(fallbackWorkerPublicName ?? ""),
 		},
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,

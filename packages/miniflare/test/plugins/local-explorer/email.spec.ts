@@ -747,7 +747,7 @@ describe("Email API - Routing reply file correlation", () => {
 			This is a random email body.`;
 
 		const res = await mf.dispatchFetch(
-			"http://localhost/cdn-cgi/handler/email?" +
+			"http://localhost/cdn-cgi/local/email?" +
 				new URLSearchParams({
 					from: "someone@example.com",
 					to: "someone-else@example.com",
@@ -812,6 +812,35 @@ describe("Email API - Routing reply file correlation", () => {
 		expect(detailReply?.raw).toContain(
 			"Message-ID: <im-a-random-reply-message-id@example.com>"
 		);
+	});
+
+	test("escapes control characters in email warning logs", async ({
+		expect,
+	}) => {
+		const response = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EMAIL}?${new URLSearchParams({
+				from: "attacker@example.com\nInjected: yes",
+				to: "someone-else@example.com",
+			}).toString()}`,
+			{
+				method: "POST",
+				body: dedent`
+					From: someone@example.com
+					To: someone-else@example.com
+					Message-ID: <log-escape@example.com>
+					MIME-Version: 1.0
+					Content-Type: text/plain
+
+					body`,
+			}
+		);
+
+		await response.text();
+		const warning = log.logs.find(([, message]) =>
+			message.includes("MAIL FROM address")
+		);
+		expect(warning?.[1]).toContain("\\x0a");
+		expect(warning?.[1]).not.toContain("attacker@example.com\nInjected");
 	});
 });
 
@@ -1015,14 +1044,14 @@ describe("Email API - multiple workers on one instance", () => {
 					modules: true,
 					script: EMAIL_ROUNDTRIP_WORKER,
 					email: { send_email: [{ name: "SEND_EMAIL" }] },
-					routes: ["*/a/*"],
+					routes: ["worker-a.example.com/*"],
 				},
 				{
 					name: "worker-b",
 					modules: true,
 					script: EMAIL_ROUNDTRIP_WORKER,
 					email: { send_email: [{ name: "SEND_EMAIL" }] },
-					routes: ["*/b/*"],
+					routes: ["worker-b.example.com/*"],
 				},
 			],
 		});
@@ -1093,6 +1122,37 @@ describe("Email API - multiple workers on one instance", () => {
 			(listAll.result ?? []).map((email) => email.worker)
 		);
 		expect(workers).toEqual(new Set(["worker-a", "worker-b"]));
+	});
+
+	test("attributes routed emails to the resolved worker", async ({
+		expect,
+	}) => {
+		const messageId = "<routed-worker@example.com>";
+		const raw = dedent`
+			From: sender@example.com
+			To: recipient@example.com
+			Message-ID: ${messageId}
+			MIME-Version: 1.0
+			Content-Type: text/plain
+
+			body`;
+		const response = await mf.dispatchFetch(
+			`http://worker-a.example.com${CorePaths.EMAIL}?${new URLSearchParams({
+				from: "sender@example.com",
+				to: "recipient@example.com",
+				worker: "worker-b",
+			}).toString()}`,
+			{ method: "POST", body: raw }
+		);
+
+		expect(await response.text()).toBe("Worker successfully processed email");
+		const listA = await expectValidResponse(
+			await mf.dispatchFetch(`${BASE_URL}/email/routing?worker=worker-a`),
+			zEmailListRoutingResponse,
+			expect
+		);
+		const routed = listA.result?.find((email) => email.messageId === messageId);
+		expect(routed?.worker).toBe("worker-a");
 	});
 });
 

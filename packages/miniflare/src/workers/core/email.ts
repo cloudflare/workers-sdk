@@ -32,8 +32,15 @@ type Env = {
 
 function renderEmailHeaders(headers: Headers | undefined) {
 	return headers
-		? `\n  headers:\n${[...headers.entries()].map(([k, v]) => `    ${k}: ${v}`).join("\n")}`
+		? `\n  headers:\n${[...headers.entries()].map(([k, v]) => `    ${escapeLogValue(k)}: ${escapeLogValue(v)}`).join("\n")}`
 		: "";
+}
+
+function escapeLogValue(value: string): string {
+	return value.replace(/[\u0000-\u001f\u007f]/gu, (character) => {
+		const code = character.codePointAt(0) ?? 0;
+		return `\\x${code.toString(16).padStart(2, "0")}`;
+	});
 }
 
 function isMissingEmailHandlerError(e: unknown): boolean {
@@ -48,16 +55,25 @@ async function removeEmailArtifacts(
 	artifacts: EmailArtifact[]
 ): Promise<void> {
 	if (artifacts.length === 0) return;
-	await loopback.fetch("http://localhost/core/delete-email-temp-files", {
-		method: "POST",
-		body: JSON.stringify({ artifacts }),
-	});
+	const response = await loopback.fetch(
+		"http://localhost/core/delete-email-temp-files",
+		{
+			method: "POST",
+			body: JSON.stringify({ artifacts }),
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			`could not delete email temporary files: ${await response.text()}`
+		);
+	}
 }
 
 export async function handleEmail(
 	params: URLSearchParams,
 	request: Request,
 	service: Fetcher,
+	workerName: string | undefined,
 	env: Env,
 	ctx: ExecutionContext
 ): Promise<Response> {
@@ -135,7 +151,7 @@ export async function handleEmail(
 			{
 				method: "POST",
 				headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
-				body: `${yellow("Provided MAIL FROM address doesn't match the email message's \"From\" header")}:\n  MAIL FROM: ${from}\n  "From" header: ${parsedIncomingEmail.from.address}`,
+				body: `${yellow("Provided MAIL FROM address doesn't match the email message's \"From\" header")}:\n  MAIL FROM: ${escapeLogValue(from)}\n  "From" header: ${escapeLogValue(parsedIncomingEmail.from.address ?? "")}`,
 			}
 		);
 	}
@@ -146,7 +162,7 @@ export async function handleEmail(
 			{
 				method: "POST",
 				headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
-				body: `${yellow('Provided RCPT TO address doesn\'t match any "To" header in the email message')}:\n  RCPT TO: ${to}\n  "To" header: ${parsedIncomingEmail.to?.map((addr) => addr.address).join(", ")}`,
+				body: `${yellow('Provided RCPT TO address doesn\'t match any "To" header in the email message')}:\n  RCPT TO: ${escapeLogValue(to)}\n  "To" header: ${escapeLogValue(parsedIncomingEmail.to?.map((addr) => addr.address).join(", ") ?? "")}`,
 			}
 		);
 	}
@@ -167,7 +183,7 @@ export async function handleEmail(
 	// indexes records by their Message-ID; reply files are named after each
 	// reply's own Message-ID below.
 	const storedEmail: StoredRoutingEmail = {
-		worker: params.get("worker") ?? undefined,
+		worker: workerName,
 		from,
 		to,
 		subject: parsedIncomingEmail.subject ?? "(no subject)",
@@ -211,7 +227,17 @@ export async function handleEmail(
 						artifacts
 					);
 				} catch {
-					// Cleanup failures must not cause the record to be stored again.
+					ctx.waitUntil(
+						env[CoreBindings.SERVICE_LOOPBACK]
+							.fetch("http://localhost/core/log", {
+								method: "POST",
+								headers: {
+									[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+								},
+								body: "Failed to clean up evicted email artifacts.",
+							})
+							.catch(() => undefined)
+					);
 				}
 			}
 		} catch {
@@ -242,7 +268,7 @@ export async function handleEmail(
 								headers: {
 									[SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString(),
 								},
-								body: `${red("Email handler rejected message")}${reset(` with the following reason: "${reason}"`)}`,
+								body: `${red("Email handler rejected message")}${reset(` with the following reason: "${escapeLogValue(reason)}"`)}`,
 							}
 						)
 					);
@@ -262,7 +288,7 @@ export async function handleEmail(
 						{
 							method: "POST",
 							headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
-							body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`)}`,
+							body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${escapeLogValue(rcptTo)}${renderEmailHeaders(headers)}`)}`,
 						}
 					);
 					// Production returns a message id identifying the forwarded message.
@@ -339,7 +365,7 @@ export async function handleEmail(
 						{
 							method: "POST",
 							headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
-							body: `${blue("Email handler replied to sender")}${reset(` with the following message:\n  ${file}`)}`,
+							body: `${blue("Email handler replied to sender")}${reset(` with the following message:\n  ${escapeLogValue(file)}`)}`,
 						}
 					);
 
