@@ -81,6 +81,71 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
+	it("should resolve class_name from a durable object export that references the container by name", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					image: "registry.cloudflare.com/hello:world",
+					name: "my-container",
+				},
+			],
+			exports: {
+				MyContainerDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			},
+			durable_objects: {
+				bindings: [],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {
+			dryRun: true,
+		});
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "my-container",
+			class_name: "MyContainerDO",
+		});
+	});
+
+	it("should throw error when a container is not linked to any durable object", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					image: "registry.cloudflare.com/hello:world",
+					name: "my-container",
+				},
+			],
+			exports: {
+				MyContainerDO: { type: "durable-object", storage: "sqlite" },
+			},
+			durable_objects: {
+				bindings: [],
+			},
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, { dryRun: true })
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container "my-container" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.]`
+		);
+	});
+
 	it("should throw error when durable object has script_name defined", async ({
 		expect,
 	}) => {

@@ -296,6 +296,7 @@ const ExportSchema = z.union([
 		type: z.literal("durable-object"),
 		state: z.literal("created").optional(),
 		storage: z.enum(["sqlite", "legacy-kv"]),
+		container: z.string().optional(),
 	}),
 	z.strictObject({
 		type: z.literal("durable-object"),
@@ -316,6 +317,7 @@ const ExportSchema = z.union([
 		state: z.literal("expecting-transfer"),
 		storage: z.enum(["sqlite", "legacy-kv"]),
 		transferFrom: z.string(),
+		container: z.string().optional(),
 	}),
 	z.strictObject({
 		type: z.literal("worker"),
