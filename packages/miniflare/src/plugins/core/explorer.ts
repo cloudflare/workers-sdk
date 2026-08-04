@@ -102,6 +102,16 @@ export function getExplorerServices(
 			name: CoreBindings.SERVICE_EMAIL_STORE,
 			service: { name: EMAIL_STORE_SERVICE_NAME },
 		},
+		// Direct service bindings to each user worker in this instance. These let
+		// the explorer invoke a worker's handlers (e.g. `email()` for "Send Test
+		// Email") by name, mirroring the direct resource bindings it holds for
+		// D1/R2/KV. Routing through the entry worker instead would fail under
+		// `wrangler dev`, where the public entry sits behind an outer proxy
+		// instance that only knows about wrangler's own proxy workers.
+		...workerNames.map((name) => ({
+			name: `${CoreBindings.SERVICE_EXPLORER_USER_WORKER_PREFIX}${name}`,
+			service: { name: getUserServiceName(name) },
+		})),
 	];
 
 	// Only bind the observability collector when observability is enabled —

@@ -96,6 +96,13 @@ export const CoreBindings = {
 	SERVICE_R2_S3: "MINIFLARE_R2_S3",
 	SERVICE_OBSERVABILITY_COLLECTOR: "MINIFLARE_OBSERVABILITY_COLLECTOR",
 	SERVICE_EMAIL_STORE: "MINIFLARE_EMAIL_STORE",
+	// Prefix for the local explorer's direct service bindings to each user
+	// worker in this instance. Lets the explorer invoke a specific worker's
+	// handlers (e.g. `email()` for "Send Test Email") by name, the same way it
+	// holds direct bindings to user resources like D1/R2/KV. Avoids routing
+	// through the entry worker, which under `wrangler dev` sits behind an outer
+	// proxy instance that doesn't know the user worker names.
+	SERVICE_EXPLORER_USER_WORKER_PREFIX: "MINIFLARE_EXPLORER_USER_WORKER_",
 } as const;
 
 export const ProxyOps = {
