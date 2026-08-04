@@ -1,0 +1,87 @@
+import { describe, test } from "vitest";
+import { getContainerOptions } from "../containers";
+import type { ResolvedWorkerConfig } from "../plugin-config";
+
+type Containers = ResolvedWorkerConfig["containers"];
+type Exports = ResolvedWorkerConfig["exports"];
+
+describe("getContainerOptions", () => {
+	test("returns undefined when no containers are configured", ({ expect }) => {
+		expect(
+			getContainerOptions({
+				containersConfig: undefined,
+				exports: {},
+				containerBuildId: "build-id",
+			})
+		).toBeUndefined();
+	});
+
+	test("uses the container's own class_name when set", ({ expect }) => {
+		const containersConfig: Containers = [
+			{
+				name: "my-container",
+				class_name: "MyDO",
+				image: "registry.cloudflare.com/hello:world",
+			},
+		];
+
+		expect(
+			getContainerOptions({
+				containersConfig,
+				exports: {},
+				containerBuildId: "build-id",
+			})
+		).toEqual([
+			{
+				image_uri: "registry.cloudflare.com/hello:world",
+				class_name: "MyDO",
+				image_tag: "cloudflare-dev/mydo:build-id",
+			},
+		]);
+	});
+
+	test("resolves class_name from a durable object export that references the container", ({
+		expect,
+	}) => {
+		const containersConfig: Containers = [
+			{ name: "my-container", image: "registry.cloudflare.com/hello:world" },
+		];
+		const exports: Exports = {
+			MyContainerDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "my-container",
+			},
+		};
+
+		expect(
+			getContainerOptions({
+				containersConfig,
+				exports,
+				containerBuildId: "build-id",
+			})
+		).toEqual([
+			{
+				image_uri: "registry.cloudflare.com/hello:world",
+				class_name: "MyContainerDO",
+				image_tag: "cloudflare-dev/mycontainerdo:build-id",
+			},
+		]);
+	});
+
+	test("skips containers that are not linked to a durable object", ({
+		expect,
+	}) => {
+		const containersConfig: Containers = [
+			{ name: "my-container", image: "registry.cloudflare.com/hello:world" },
+		];
+
+		expect(
+			getContainerOptions({
+				containersConfig,
+				exports: {},
+				containerBuildId: "build-id",
+			})
+		).toEqual([]);
+	});
+});

@@ -30,6 +30,12 @@ export interface DurableObjectCreatedExportOptions {
 	 * - `"legacy-kv"`: selects the legacy key-value storage engine.
 	 */
 	storage: "sqlite" | "legacy-kv";
+	/**
+	 * Attach a container to this Durable Object, by container name.
+	 *
+	 * Requires `storage: "sqlite"`.
+	 */
+	container?: string;
 }
 
 /**
@@ -81,6 +87,12 @@ export interface DurableObjectExpectingTransferExportOptions {
 	 * The source Worker for the two-phase cross-Worker transfer.
 	 */
 	transferFrom: string;
+	/**
+	 * Attach a container to this Durable Object, by container name.
+	 *
+	 * Requires `storage: "sqlite"`.
+	 */
+	container?: string;
 }
 
 export interface DurableObjectCreatedExport extends DurableObjectCreatedExportOptions {
@@ -223,6 +235,7 @@ function worker(
  * export default defineWorker({
  *   exports: {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
+ *     MyContainerDO:   exports.durableObject({ storage: "sqlite", container: "my-container" }),
  *     OldClass:        exports.durableObject({ state: "deleted" }),
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),

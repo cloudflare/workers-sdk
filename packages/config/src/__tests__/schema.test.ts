@@ -724,3 +724,55 @@ describe("ConfigExportsSchema", () => {
 		expect(result.success).toBe(true);
 	});
 });
+
+describe("ExportSchema", () => {
+	function parseExports(exports: unknown) {
+		return InputWorkerSchema.safeParse({ ...baseConfig, exports });
+	}
+
+	it("accepts `container` on a live durable-object export", ({ expect }) => {
+		const result = parseExports({
+			MyDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts `container` on an expecting-transfer export", ({ expect }) => {
+		const result = parseExports({
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "source-worker",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects `container` on a tombstone", ({ expect }) => {
+		const result = parseExports({
+			OldDO: {
+				type: "durable-object",
+				state: "deleted",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a non-string `container`", ({ expect }) => {
+		const result = parseExports({
+			MyDO: { type: "durable-object", storage: "sqlite", container: 1 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+});

@@ -316,6 +316,7 @@ export const DurableObjectCreatedExportSchema = z.strictObject({
 	type: z.literal("durable-object"),
 	state: z.literal("created").optional(),
 	storage: z.enum(["sqlite", "legacy-kv"]),
+	container: z.string().optional(),
 });
 
 export const DurableObjectDeletedExportSchema = z.strictObject({
@@ -340,6 +341,7 @@ export const DurableObjectExpectingTransferExportSchema = z.strictObject({
 	state: z.literal("expecting-transfer"),
 	storage: z.enum(["sqlite", "legacy-kv"]),
 	transferFrom: z.string(),
+	container: z.string().optional(),
 });
 
 export const WorkerEntrypointExportSchema = z.strictObject({

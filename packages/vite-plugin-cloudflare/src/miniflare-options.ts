@@ -393,6 +393,7 @@ export async function getDevMiniflareOptions(
 
 								const options = getContainerOptions({
 									containersConfig: worker.config.containers,
+									exports: worker.config.exports,
 									containerBuildId,
 									configPath: worker.config.configPath,
 								});
@@ -814,6 +815,7 @@ export async function getPreviewMiniflareOptions(
 
 					const options = getContainerOptions({
 						containersConfig: workerConfig.containers,
+						exports: workerConfig.exports,
 						containerBuildId,
 						configPath: workerConfig.configPath,
 					});

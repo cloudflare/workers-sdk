@@ -529,5 +529,92 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(output.stdout).toContain("SUCCESS");
 			});
 		});
+
+		describe("containers attached via `exports`", () => {
+			const workerName = generateResourceName();
+			const helper = new WranglerE2ETestHelper();
+
+			it("accepts a container that is referenced from a Durable Object export", async ({
+				expect,
+			}) => {
+				await helper.seed({
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2025-04-03",
+							"compatibility_flags": ["enable_ctx_exports"],
+							"containers": [
+								{
+									"name": "${workerName}-container",
+									"image": "registry.cloudflare.com/hello:world",
+									"max_instances": 1,
+								},
+							],
+							"exports": {
+								"MyContainerDO": {
+									"type": "durable-object",
+									"storage": "sqlite",
+									"container": "${workerName}-container",
+								},
+							},
+						}
+					`,
+					"src/index.ts": dedent`
+						import { DurableObject } from "cloudflare:workers";
+						export class MyContainerDO extends DurableObject {}
+						export default {
+							fetch() { return new Response("hello"); },
+						};
+					`,
+					"package.json": dedent`
+						{
+							"name": "${workerName}",
+							"version": "0.0.0",
+							"private": true
+						}
+					`,
+				});
+
+				const output = await helper.run(`wrangler deploy --dry-run`);
+
+				expect(output.stdout).toContain(
+					"The following containers are available:"
+				);
+				expect(output.stdout).toContain(`${workerName}-container`);
+				expect(output.stderr).toBe("");
+			});
+
+			it("rejects a container that is not linked to a Durable Object", async ({
+				expect,
+			}) => {
+				await helper.seed({
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2025-04-03",
+							"containers": [
+								{
+									"name": "${workerName}-container",
+									"image": "registry.cloudflare.com/hello:world",
+									"max_instances": 1,
+								},
+							],
+							"exports": {
+								"MyContainerDO": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
+					`,
+				});
+
+				const output = await helper.run(`wrangler deploy --dry-run`);
+
+				expect(output.status).not.toBe(0);
+				expect(output.stderr).toContain(
+					`The container "${workerName}-container" is not linked to a Durable Object`
+				);
+			});
+		});
 	}
 );

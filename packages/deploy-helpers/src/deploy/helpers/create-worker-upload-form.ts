@@ -869,10 +869,16 @@ export function createWorkerUploadForm(
 			? { main_module: main.name }
 			: { body_part: main.name }),
 		bindings: metadataBindings,
+		// Both directions of the container/Durable Object link are sent as
+		// configured: the API resolves a container's Durable Object from either this
+		// `class_name` or an `exports` entry naming the container by `name`.
 		containers:
 			worker.containers === undefined
 				? undefined
-				: worker.containers.map((c) => ({ class_name: c.class_name })),
+				: worker.containers.map((c) => ({
+						...(c.name !== undefined && { name: c.name }),
+						...(c.class_name !== undefined && { class_name: c.class_name }),
+					})),
 
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {

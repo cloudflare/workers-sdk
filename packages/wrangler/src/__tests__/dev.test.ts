@@ -1842,6 +1842,38 @@ describe.sequential("wrangler dev", () => {
 				const config = await runWranglerUntilConfig("dev");
 				expect(config.name).toBe("test-do-exports-dev");
 			});
+
+			it("resolves a container referenced from a durable object export", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					name: "test-container-exports-dev",
+					main: "index.js",
+					containers: [
+						{
+							name: "my-container",
+							max_instances: 1,
+							image: "registry.cloudflare.com/hello:world",
+						},
+					],
+					exports: {
+						MyContainerDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "my-container",
+						},
+					},
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+
+				const config = await runWranglerUntilConfig("dev");
+				expect(config.containers).toEqual([
+					expect.objectContaining({
+						name: "my-container",
+						class_name: "MyContainerDO",
+					}),
+				]);
+			});
 		});
 	});
 
