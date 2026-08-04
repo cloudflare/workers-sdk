@@ -30,11 +30,16 @@ interface BatchStore {
 const FLUSH_THRESHOLD = 16;
 
 /**
- * Flush if this much time has passed since the last one. Keeps a long-running
+ * Once this much time has passed, the next event flushes. Keeps a long-running
  * invocation (an agent waiting on a model, a streamed response) visible while it
  * runs, without costing a short request anything — a few-millisecond request
- * never reaches it. Measured from tail-event timestamps rather than `Date.now()`,
- * which a Worker only advances on I/O.
+ * never reaches it.
+ *
+ * Time comes from tail-event timestamps, not `Date.now()`, which a Worker only
+ * advances on I/O. So this bounds staleness *between events*, not in wall-clock
+ * time: an invocation that goes completely quiet flushes nothing further until
+ * its outcome. Logs and closing spans are written as they happen, which is what
+ * covers the quiet case in practice.
  */
 const FLUSH_INTERVAL_MS = 100;
 
@@ -485,9 +490,10 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		const spans: SpanInput[] = [];
 		for (const key of this.#dirty) {
 			const row = this.#rows.get(key);
-			if (row) {
-				spans.push(row);
+			if (!row) {
+				continue;
 			}
+			spans.push(row);
 		}
 		const logs = this.#logs;
 		this.#dirty.clear();
@@ -521,6 +527,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 			row.attributes = { ...(row.attributes ?? {}), ...attributes };
 		}
 		this.#dirty.add(key);
+		this.#maybeFlush();
 	}
 
 	/** Track an in-flight store write so `outcome` can await completion. */
