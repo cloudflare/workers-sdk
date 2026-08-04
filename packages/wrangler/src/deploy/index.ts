@@ -26,6 +26,7 @@ import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
+import { maybeDelegateToVinextDeployCommand } from "./vinext";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const deployCommand = createCommand({
@@ -165,7 +166,7 @@ export async function runDeployCommandHandler(
 		);
 	}
 
-	// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
+	// Needs to happen after auto-config logic to capture newly auto-configured framework apps.
 	// As a precaution we're gating the feature under the autoconfig flag for the time being.
 	// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
 	if (
@@ -173,7 +174,10 @@ export async function runDeployCommandHandler(
 		args.autoconfig &&
 		!args.config &&
 		!args.dryRun &&
-		(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
+		((await maybeDelegateToVinextDeployCommand(process.cwd(), {
+			skipBuild: autoConfigResult.configured && !args.env,
+		})) ||
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd())))
 	) {
 		return;
 	}

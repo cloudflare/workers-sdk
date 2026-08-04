@@ -17,12 +17,14 @@ export class NextJs extends Framework {
 			await runCommand(
 				[
 					...dlx,
-					"@opennextjs/cloudflare",
-					"migrate",
-					// Note: we force-install so that even if an incompatible version of
-					//       Next.js is used this installation still succeeds, moving users
-					//       (hopefully) in right direction (instead of failing at this step)
-					"--force-install",
+					"vinext",
+					"init",
+					"--platform=cloudflare",
+					"--cdn-cache=workers-cache",
+					"--data-cache=none",
+					"--image-optimization=cloudflare-images",
+					"--no-prerender",
+					"--no-experimental-warm-cdn-cache",
 				],
 				{
 					cwd: projectPath,
@@ -31,18 +33,19 @@ export class NextJs extends Framework {
 		}
 
 		return {
-			// `@opennextjs/cloudflare migrate` creates the wrangler config file
-			wranglerConfig: {},
+			// `vinext init` creates the Wrangler and Vite configuration files.
+			wranglerConfig: null,
 			packageJsonScriptsOverrides: {
-				preview: "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-				deploy: "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+				preview:
+					"vinext build && wrangler dev --config dist/server/wrangler.json",
+				deploy: "vinext-cloudflare deploy --config dist/server/wrangler.json",
 			},
-			buildCommandOverride: `${npx} opennextjs-cloudflare build`,
-			deployCommandOverride: `${npx} opennextjs-cloudflare deploy`,
-			versionCommandOverride: `${npx} opennextjs-cloudflare upload`,
+			buildCommandOverride: `${npx} vinext build`,
+			deployCommandOverride: `${npx} vinext-cloudflare deploy`,
+			versionCommandOverride: `${npx} wrangler versions upload --config dist/server/wrangler.json`,
 		};
 	}
 
 	configurationDescription =
-		"Configuring project for Next.js with OpenNext by running `@opennextjs/cloudflare migrate`";
+		"Configuring project for Next.js with vinext by running `vinext init`";
 }

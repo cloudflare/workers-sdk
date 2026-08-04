@@ -5,6 +5,7 @@ import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { getOpenNextDeployFromEnv } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
+import { getVinextDeployFromEnv } from "./vinext";
 
 /**
  * If appropriate (when `wrangler deploy` is run in an OpenNext project without setting the `OPEN_NEXT_DEPLOY` environment variable)
@@ -16,6 +17,10 @@ import { getPackageManager } from "../package-manager";
 export async function maybeDelegateToOpenNextDeployCommand(
 	projectRoot: string
 ): Promise<boolean> {
+	if (getVinextDeployFromEnv()) {
+		return false;
+	}
+
 	if (await isOpenNextProject(projectRoot)) {
 		const openNextDeploy = getOpenNextDeployFromEnv();
 		if (!openNextDeploy) {
