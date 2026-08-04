@@ -3,7 +3,11 @@ import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
-import { downloadRemoteTemplate, updatePackageName } from "../../src/templates";
+import {
+	downloadRemoteTemplate,
+	updatePackageName,
+	updatePackageScripts,
+} from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -86,6 +90,10 @@ async function generateVinext(ctx: C3Context) {
 		"--disable-git",
 		pmFlag,
 	]);
+
+	if (ctx.args.experimental) {
+		await updatePackageScripts(ctx);
+	}
 
 	logRaw("");
 }

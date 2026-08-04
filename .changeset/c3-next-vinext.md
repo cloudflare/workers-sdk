@@ -2,7 +2,7 @@
 "create-cloudflare": minor
 ---
 
-feat: make vinext the default Next.js scaffold, keep OpenNext as a variant
+Make vinext the default Next.js scaffold, keep OpenNext as a variant
 
 `create-cloudflare --framework=next` now prompts for a Next.js adapter:
 
