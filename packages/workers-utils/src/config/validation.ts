@@ -6416,7 +6416,14 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	/**
 	 * Validate the optional nested logs configuration
 	 */
-	if (typeof val.logs === "object") {
+	if (val.logs === null) {
+		// `typeof null === "object"`, so the check above accepts null; reject it
+		// here rather than crashing on the nested property checks below.
+		diagnostics.errors.push(
+			`Expected "${field}.logs" to be of type object but got null.`
+		);
+		isValid = false;
+	} else if (typeof val.logs === "object") {
 		isValid =
 			validateOptionalProperty(
 				diagnostics,
@@ -6474,7 +6481,14 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	/**
 	 * Validate the optional nested traces configuration
 	 */
-	if (typeof val.traces === "object") {
+	if (val.traces === null) {
+		// `typeof null === "object"`, so the check above accepts null; reject it
+		// here rather than crashing on the nested property checks below.
+		diagnostics.errors.push(
+			`Expected "${field}.traces" to be of type object but got null.`
+		);
+		isValid = false;
+	} else if (typeof val.traces === "object") {
 		isValid =
 			validateOptionalProperty(
 				diagnostics,

@@ -10226,6 +10226,42 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if observability.logs is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: { enabled: true, logs: null },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "observability.logs" to be of type object but got null."
+				`);
+			});
+
+			it("should error if observability.traces is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: { enabled: true, traces: null },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "observability.traces" to be of type object but got null."
+				`);
+			});
+
 			it("should not warn on full observability config", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
