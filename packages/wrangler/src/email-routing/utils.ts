@@ -1,7 +1,7 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { retryOnAPIFailure, UserError } from "@cloudflare/workers-utils";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { retryOnAPIFailure } from "../utils/retry";
 import { listEmailSendingSubdomains } from "./client";
 import type { EmailSendingSubdomain } from "./index";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
@@ -29,16 +29,18 @@ async function getZoneIdByDomain(
 	domain: string,
 	accountId: string
 ): Promise<string> {
-	const zones = await retryOnAPIFailure(() =>
-		fetchListResult<{ id: string }>(
-			complianceConfig,
-			`/zones`,
-			{},
-			new URLSearchParams({
-				name: domain,
-				"account.id": accountId,
-			})
-		)
+	const zones = await retryOnAPIFailure(
+		() =>
+			fetchListResult<{ id: string }>(
+				complianceConfig,
+				`/zones`,
+				{},
+				new URLSearchParams({
+					name: domain,
+					"account.id": accountId,
+				})
+			),
+		logger
 	);
 
 	const zoneId = zones[0]?.id;
@@ -67,8 +69,10 @@ export async function resolveDomain(
 	// If zone ID is provided directly, fetch the zone name to determine subdomain status
 	if (zoneId) {
 		await requireAuth(config);
-		const zone = await retryOnAPIFailure(() =>
-			fetchResult<{ id: string; name: string }>(config, `/zones/${zoneId}`)
+		const zone = await retryOnAPIFailure(
+			() =>
+				fetchResult<{ id: string; name: string }>(config, `/zones/${zoneId}`),
+			logger
 		);
 		return {
 			zoneId,
@@ -84,16 +88,18 @@ export async function resolveDomain(
 	const labels = domain.split(".");
 	for (let i = 0; i <= labels.length - 2; i++) {
 		const candidate = labels.slice(i).join(".");
-		const zones = await retryOnAPIFailure(() =>
-			fetchListResult<{ id: string; name: string }>(
-				config,
-				`/zones`,
-				{},
-				new URLSearchParams({
-					name: candidate,
-					"account.id": accountId,
-				})
-			)
+		const zones = await retryOnAPIFailure(
+			() =>
+				fetchListResult<{ id: string; name: string }>(
+					config,
+					`/zones`,
+					{},
+					new URLSearchParams({
+						name: candidate,
+						"account.id": accountId,
+					})
+				),
+			logger
 		);
 		if (zones[0]) {
 			return {

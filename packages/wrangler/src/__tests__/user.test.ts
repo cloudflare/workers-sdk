@@ -7,6 +7,7 @@ import {
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalConfigPath,
+	openInBrowser,
 	UserError,
 } from "@cloudflare/workers-utils";
 import {
@@ -1169,6 +1170,445 @@ describe("User", () => {
 		});
 	});
 
+	describe("login (device flow)", () => {
+		/**
+		 * Register an MSW handler for `POST /oauth2/device/auth` that returns
+		 * a successful device authorization response.
+		 */
+		function mockDeviceAuthSuccess(
+			overrides: {
+				verification_uri_complete?: string | null;
+				interval?: number;
+				expires_in?: number;
+			} = {}
+		) {
+			let calls = 0;
+			msw.use(
+				http.post(
+					"*/oauth2/device/auth",
+					() => {
+						calls += 1;
+						const body: Record<string, unknown> = {
+							device_code: "test-device-code",
+							user_code: "WDJB-MJHT",
+							verification_uri: "https://dash.cloudflare.com/oauth2/device",
+							expires_in: overrides.expires_in ?? 600,
+							interval: overrides.interval ?? 5,
+						};
+						// `null` means "deliberately omit this field"; undefined means
+						// "use the default".
+						if (overrides.verification_uri_complete === undefined) {
+							body.verification_uri_complete =
+								"https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT";
+						} else if (overrides.verification_uri_complete !== null) {
+							body.verification_uri_complete =
+								overrides.verification_uri_complete;
+						}
+						return HttpResponse.json(body);
+					},
+					{ once: true }
+				)
+			);
+			return {
+				get calls() {
+					return calls;
+				},
+			};
+		}
+
+		/**
+		 * Register an MSW handler for `POST /oauth2/token` that returns the
+		 * supplied sequence of responses in order. After exhausting the
+		 * sequence the handler is removed.
+		 */
+		function mockDevicePollSequence(
+			responses: Array<{ status: number; body: Record<string, unknown> }>
+		) {
+			let i = 0;
+			const counts = { calls: 0 };
+			msw.use(
+				http.post("*/oauth2/token", async () => {
+					counts.calls += 1;
+					const response = responses[Math.min(i, responses.length - 1)];
+					i += 1;
+					return HttpResponse.json(response.body, {
+						status: response.status,
+					});
+				})
+			);
+			return counts;
+		}
+
+		beforeEach(() => {
+			// Reset openInBrowser to a no-op for device flow tests. The
+			// `mockOAuthFlow()` helper used elsewhere in this file installs a
+			// callback-flow-specific implementation that tries to parse a
+			// `redirect_uri` out of the URL — which the device flow URL does
+			// not have. mockReset clears both the implementation and call
+			// history.
+			vi.mocked(openInBrowser).mockReset();
+		});
+
+		// Tear down the keyring test seam so the stubbed `KeyProvider`
+		// factory installed by the credential-storage regression test below
+		// cannot leak into other tests. No-op when never installed.
+		afterEach(() => {
+			setKeyProviderFactoryForTesting(undefined);
+			resetCredentialStorageState();
+		});
+
+		it("should complete login on the first successful poll", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			const poll = mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --device");
+
+			expect(poll.calls).toBe(1);
+			expect(openInBrowser).toHaveBeenCalledWith(
+				"https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT",
+				expect.anything()
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Attempting to login via OAuth Device Authorization Grant...
+				To authorize Wrangler, please visit:
+
+				  https://dash.cloudflare.com/oauth2/device
+
+				and enter the code:
+
+				  WDJB-MJHT
+
+				You have 5 minutes to approve this request.
+
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT
+				Successfully logged in."
+			`);
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+		});
+
+		it("should display the effective timeout when the server's `expires_in` is shorter than the 5-minute cap", async ({
+			expect,
+		}) => {
+			// Server grants only 2 minutes; the displayed timeout must reflect
+			// that, not the 5-minute hard cap.
+			mockDeviceAuthSuccess({ expires_in: 120 });
+			mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --device");
+
+			expect(std.out).toContain("You have 2 minutes to approve this request.");
+			expect(std.out).not.toContain("You have 5 minutes");
+		});
+
+		it("should fall back to constructing a verification URL when the server omits `verification_uri_complete`", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess({ verification_uri_complete: null });
+			mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --device");
+
+			// We synthesised the verification URL by appending the user code
+			// because the server didn't give us a complete one.
+			expect(openInBrowser).toHaveBeenCalledWith(
+				"https://dash.cloudflare.com/oauth2/device?user_code=WDJB-MJHT",
+				expect.anything()
+			);
+		});
+
+		it("should not open the browser when `--browser=false`", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			mockDevicePollSequence([
+				{
+					status: 200,
+					body: {
+						access_token: "test-access-token",
+						expires_in: 100000,
+						refresh_token: "test-refresh-token",
+						scope: "account:read",
+					},
+				},
+			]);
+
+			await runWrangler("login --device --browser=false");
+
+			expect(openInBrowser).not.toHaveBeenCalled();
+			expect(std.out).not.toContain("Opening a link in your default browser");
+		});
+
+		it("should keep polling while the server returns `authorization_pending`, then succeed", async ({
+			expect,
+		}) => {
+			// Use fake timers so the polling sleep is instant.
+			vi.useFakeTimers();
+			try {
+				mockDeviceAuthSuccess({ interval: 1 });
+				const poll = mockDevicePollSequence([
+					{ status: 400, body: { error: "authorization_pending" } },
+					{ status: 400, body: { error: "authorization_pending" } },
+					{
+						status: 200,
+						body: {
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						},
+					},
+				]);
+
+				const runPromise = runWrangler("login --device");
+				// Drain microtasks + fake-timer waits until the polling loop
+				// completes. `runAllTimersAsync` cycles until no pending timers.
+				await vi.runAllTimersAsync();
+				await runPromise;
+
+				expect(poll.calls).toBe(3);
+				expect(readAuthConfigFile()).toMatchObject({
+					oauth_token: "test-access-token",
+					refresh_token: "test-refresh-token",
+				});
+				// RFC 8628 §3.5: HTTP 400 with `authorization_pending` is the
+				// expected polling-control mechanism, not an error. Verify that
+				// the polling loop does NOT log spurious "Failed to fetch auth
+				// token" errors to stderr while the user is approving.
+				expect(std.err).toBe("");
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it("should keep polling when a poll fails transiently (non-JSON body), then succeed", async ({
+			expect,
+		}) => {
+			// Use fake timers so the polling sleep is instant.
+			vi.useFakeTimers();
+			try {
+				mockDeviceAuthSuccess({ interval: 1 });
+
+				// The token endpoint sits behind the Cloudflare edge, which can
+				// occasionally return a transient HTML 5xx or bot-challenge page
+				// instead of JSON. A single such poll must not abort the login —
+				// it should be treated like `authorization_pending` and polling
+				// should continue.
+				let calls = 0;
+				msw.use(
+					http.post("*/oauth2/token", () => {
+						calls += 1;
+						if (calls === 1) {
+							return new HttpResponse(
+								"<!DOCTYPE html><html><body>challenge-platform</body></html>",
+								{
+									status: 503,
+									headers: {
+										"content-type": "text/html",
+										"cf-ray": "test-ray",
+									},
+								}
+							);
+						}
+						return HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						});
+					})
+				);
+
+				const runPromise = runWrangler("login --device");
+				await vi.runAllTimersAsync();
+				await runPromise;
+
+				// First poll failed transiently, second succeeded.
+				expect(calls).toBe(2);
+				expect(readAuthConfigFile()).toMatchObject({
+					oauth_token: "test-access-token",
+					refresh_token: "test-refresh-token",
+				});
+				// A transient poll failure is not a user-facing error: nothing
+				// should be logged to stderr while we keep polling.
+				expect(std.err).toBe("");
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it("should time out with a message reflecting the server's `expires_in` when shorter than the cap", async ({
+			expect,
+		}) => {
+			// Use fake timers so the polling sleeps are instant.
+			vi.useFakeTimers();
+			try {
+				// Server grants 2 minutes and never approves; the timeout error
+				// must quote the effective 2-minute window, not the 5-minute cap.
+				mockDeviceAuthSuccess({ interval: 1, expires_in: 120 });
+				mockDevicePollSequence([
+					{ status: 400, body: { error: "authorization_pending" } },
+				]);
+
+				const runPromise = runWrangler("login --device");
+				const assertion = expect(runPromise).rejects.toThrow(
+					"Device authorization timed out after 2 minutes. Please run `wrangler login --device` again to obtain a new code."
+				);
+				await vi.runAllTimersAsync();
+				await assertion;
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it("should error with a clear message when the user denies consent", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			mockDevicePollSequence([
+				{ status: 400, body: { error: "access_denied" } },
+			]);
+
+			await expect(
+				runWrangler("login --device")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Consent denied. You must grant consent to Wrangler in order to login.
+				If you don't want to do this consider passing an API token via the \`CLOUDFLARE_API_TOKEN\` environment variable.]
+			`
+			);
+		});
+
+		it("should error with a clear message when the device code expires", async ({
+			expect,
+		}) => {
+			mockDeviceAuthSuccess();
+			mockDevicePollSequence([
+				{ status: 400, body: { error: "expired_token" } },
+			]);
+
+			await expect(
+				runWrangler("login --device")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Device code expired before the request was approved. Please run \`wrangler login --device\` again to obtain a new code.]`
+			);
+		});
+
+		it("should error when `--callback-host` is passed alongside `--device`", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --device --callback-host=0.0.0.0")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: \`--callback-host\` and \`--callback-port\` cannot be used with \`--device\`; the device authorization flow does not use a local callback server.]`
+			);
+		});
+
+		it("should error when `--callback-port` is passed alongside `--device`", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("login --device --callback-port=9999")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: \`--callback-host\` and \`--callback-port\` cannot be used with \`--device\`; the device authorization flow does not use a local callback server.]`
+			);
+		});
+
+		it("should reject the incompatible flag combination before `--no-use-keyring` mutates any credential-storage state", async ({
+			expect,
+		}) => {
+			// Regression: the incompatibility guard used to live in the
+			// command handler, *after* `setKeyringPreference(...)` had
+			// already persisted the preference and scrubbed every
+			// encrypted profile. Combining the invalid flags with
+			// `--no-use-keyring` therefore destroyed stored credentials
+			// before the command errored. The guard now runs in
+			// `validateArgs`, which executes before the handler, so an
+			// invalid invocation must be inert.
+			const {
+				getEncryptedAuthConfigFilePath,
+				readUserPreferences,
+				updateUserPreferences,
+			} = await import("@cloudflare/workers-auth/wrangler");
+			const keyringStore = new Map<string, Uint8Array>();
+			setKeyProviderFactoryForTesting((serviceName) => ({
+				getKey: () => keyringStore.get(`${serviceName}::default`),
+				setKey: (key) => {
+					keyringStore.set(`${serviceName}::default`, key);
+				},
+				deleteKey: () => {
+					keyringStore.delete(`${serviceName}::default`);
+				},
+				describe: () => "in-memory test keyring",
+			}));
+			// Seed the persistent opt-in plus encrypted credentials so the
+			// opt-out scrub has something real to destroy if it runs.
+			updateUserPreferences({ keyring_enabled: true });
+			writeAuthCredentials({
+				oauth_token: "existing-encrypted-token",
+				refresh_token: "existing-encrypted-refresh",
+			});
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+
+			await expect(
+				runWrangler("login --device --callback-host=0.0.0.0 --no-use-keyring")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: \`--callback-host\` and \`--callback-port\` cannot be used with \`--device\`; the device authorization flow does not use a local callback server.]`
+			);
+
+			// Nothing may have been scrubbed, migrated, or re-persisted.
+			expect(fs.existsSync(getEncryptedAuthConfigFilePath())).toBe(true);
+			expect(keyringStore.size).toBe(1);
+			expect(readUserPreferences().keyring_enabled).toBe(true);
+			// The credentials must remain readable and unchanged.
+			expect(readAuthCredentials()).toMatchObject({
+				oauth_token: "existing-encrypted-token",
+				refresh_token: "existing-encrypted-refresh",
+			});
+		});
+	});
+
 	describe("CLOUDFLARE_API_TOKEN priority over stored OAuth state", () => {
 		// Regression coverage for https://github.com/cloudflare/workers-sdk/issues/13744
 		//
@@ -1751,6 +2191,26 @@ describe("User", () => {
 			const result = getActiveAccountId({});
 			expect(result).toBeUndefined();
 		});
+
+		it("should reject a config.account_id that cannot be used in an API URL", ({
+			expect,
+		}) => {
+			expect(() =>
+				getActiveAccountId({ account_id: "ваш-идентификатор-аккаунта" })
+			).toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+			);
+		});
+
+		it("should reject a CLOUDFLARE_ACCOUNT_ID that cannot be used in an API URL", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "ваш-идентификатор-аккаунта");
+
+			expect(() => getActiveAccountId({})).toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in the \`CLOUDFLARE_ACCOUNT_ID\` environment variable. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+			);
+		});
 	});
 
 	describe("fetchAllAccounts", () => {
@@ -2147,6 +2607,20 @@ describe("User", () => {
 				id: "api-account",
 				name: "API Account",
 			});
+		});
+
+		it("should reject an invalid env var without making API calls", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "ваш-идентификатор-аккаунта");
+
+			// No getMswSuccessMembershipHandlers — if an API call is made, it will fail
+			// with an unhandled-request error rather than the validation error below.
+			await expect(
+				getOrSelectAccountId({})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in the \`CLOUDFLARE_ACCOUNT_ID\` environment variable. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+			);
 		});
 	});
 });

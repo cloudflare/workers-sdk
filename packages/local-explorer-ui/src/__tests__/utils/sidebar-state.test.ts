@@ -106,6 +106,7 @@ describe("sidebar-state", () => {
 
 		test("respects all stored boolean values", ({ expect }) => {
 			const stored: SidebarGroupState = {
+				observability: true,
 				d1: false,
 				do: false,
 				kv: true,
@@ -152,6 +153,7 @@ describe("sidebar-state", () => {
 	describe("saveGroupState", () => {
 		test("persists state to localStorage", ({ expect }) => {
 			const state: SidebarGroupState = {
+				observability: false,
 				d1: false,
 				do: true,
 				kv: false,
@@ -177,6 +179,7 @@ describe("sidebar-state", () => {
 			expect,
 		}) => {
 			const state: SidebarGroupState = {
+				observability: true,
 				d1: false,
 				do: false,
 				kv: true,

@@ -197,4 +197,6 @@ interface OutputEntryCommandFailed extends OutputEntryBase<"command-failed"> {
 	code: number | undefined;
 	/** The message in the error. */
 	message: string | undefined;
+	/** How many milliseconds to retry the operation after if available. */
+	retry_after_ms: number | undefined;
 }

@@ -14,7 +14,7 @@ describe("cf-wrangler build", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("emits the Build Output API tree", async ({ expect }) => {
+	it("emits the Build Output Specification tree", async ({ expect }) => {
 		await seed({
 			"cloudflare.config.ts": `export default {
 				type: "worker",
@@ -32,16 +32,12 @@ describe("cf-wrangler build", () => {
 		expect(exitCode).toBe(0);
 		expect(
 			fs.existsSync(
-				path.resolve(
-					".cloudflare/output/v0/workers/cf-wrangler-build-worker/worker.config.json"
-				)
+				path.resolve(".cloudflare/output/v0/workers/default/config.json")
 			)
 		).toBe(true);
 		expect(
 			fs.existsSync(
-				path.resolve(
-					".cloudflare/output/v0/workers/cf-wrangler-build-worker/bundle/index.js"
-				)
+				path.resolve(".cloudflare/output/v0/workers/default/bundle/index.js")
 			)
 		).toBe(true);
 	});

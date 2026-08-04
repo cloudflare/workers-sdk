@@ -1,7 +1,7 @@
 import { afterEach, describe, test } from "vitest";
 import { page, viteUrl } from "./utils";
 
-const WORKERS_ROUTE = "**/cdn-cgi/explorer/api/local/workers";
+const WORKERS_ROUTE = "**/cdn-cgi/local/explorer/api/local/workers";
 
 function createWorkers(count: number) {
 	return Array.from({ length: count }, (_, index) => ({
@@ -28,7 +28,7 @@ async function loadWorkers(count: number): Promise<void> {
 
 function waitForWorkersResponse() {
 	return page.waitForResponse((response) =>
-		response.url().endsWith("/cdn-cgi/explorer/api/local/workers")
+		response.url().endsWith("/cdn-cgi/local/explorer/api/local/workers")
 	);
 }
 

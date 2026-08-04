@@ -3,13 +3,11 @@ import * as path from "node:path";
 import { describe, test } from "vitest";
 import { getTextResponse, isBuild, rootDir } from "../../__test-utils__";
 
-const WORKER_NAME = "build-output-worker";
-
 function getBuildOutputDir() {
-	return path.join(rootDir, ".cloudflare/output/v0/workers", WORKER_NAME);
+	return path.join(rootDir, ".cloudflare/output/v0/workers", "default");
 }
 
-describe("Build Output API", () => {
+describe("Build Output Specification", () => {
 	test("serves the worker", async ({ expect }) => {
 		const response = await getTextResponse("/");
 		expect(response).toBe("hello from worker");
@@ -26,14 +24,14 @@ describe("Build Output API", () => {
 	});
 });
 
-describe.runIf(isBuild)("Build Output API spec", () => {
-	test("emits worker.config.json at the correct location", ({ expect }) => {
-		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
+describe.runIf(isBuild)("Build Output Specification files", () => {
+	test("emits config.json at the correct location", ({ expect }) => {
+		const configPath = path.join(getBuildOutputDir(), "config.json");
 		expect(fs.existsSync(configPath)).toBe(true);
 	});
 
 	test("emits a bundle/ directory with the entry chunk", ({ expect }) => {
-		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
+		const configPath = path.join(getBuildOutputDir(), "config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: { mainModule: string };
 		};
@@ -50,10 +48,10 @@ describe.runIf(isBuild)("Build Output API spec", () => {
 		expect(fs.existsSync(assetsDir)).toBe(true);
 	});
 
-	test("strips `entrypoint` in worker.config.json and adds `manifest`", ({
+	test("strips `entrypoint` in config.json and adds `manifest`", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
+		const configPath = path.join(getBuildOutputDir(), "config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<
 			string,
 			unknown
@@ -68,7 +66,7 @@ describe.runIf(isBuild)("Build Output API spec", () => {
 	test("includes every module in `manifest.modules` on disk under bundle/", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
+		const configPath = path.join(getBuildOutputDir(), "config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: { modules: Record<string, { type: string }> };
 		};
@@ -83,7 +81,7 @@ describe.runIf(isBuild)("Build Output API spec", () => {
 	test("includes source maps in `manifest.modules` with type `sourcemap`", ({
 		expect,
 	}) => {
-		const configPath = path.join(getBuildOutputDir(), "worker.config.json");
+		const configPath = path.join(getBuildOutputDir(), "config.json");
 		const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
 			manifest: {
 				mainModule: string;

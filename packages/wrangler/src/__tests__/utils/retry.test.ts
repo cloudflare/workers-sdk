@@ -1,7 +1,9 @@
-import { APIError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	retryOnAPIFailure as retryOnAPIFailureWithLogger,
+} from "@cloudflare/workers-utils";
 import { beforeEach, describe, it } from "vitest";
 import { logger } from "../../logger";
-import { retryOnAPIFailure } from "../../utils/retry";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
 describe("retryOnAPIFailure", () => {
@@ -59,10 +61,152 @@ describe("retryOnAPIFailure", () => {
 			  "APIError: 500 error",
 			  "Retrying API call after error...",
 			  "APIError: 500 error",
-			  "Retrying API call after error...",
-			  "APIError: 500 error",
 			]
 		`);
+	});
+
+	it("should retry 429 errors and succeed if the 3rd try succeeds", async ({
+		expect,
+	}) => {
+		let attempts = 0;
+
+		await retryOnAPIFailure(() => {
+			attempts++;
+			if (attempts < 3) {
+				throw new APIError({
+					status: 429,
+					text: "429 error",
+					telemetryMessage: false,
+				});
+			}
+		});
+		expect(attempts).toBe(3);
+	});
+
+	it("should wait for the duration in retryAfterMs instead of the computed backoff", async ({
+		expect,
+	}) => {
+		let attempts = 0;
+		const start = Date.now();
+
+		// Pass a large initial `backoff` (3s) so that, if `retryAfterMs` were
+		// *not* being honoured, this test would take several seconds. The
+		// thrown error's `retryAfterMs` (10ms) should take precedence.
+		await retryOnAPIFailure(
+			() => {
+				attempts++;
+				if (attempts < 2) {
+					const err = new APIError({
+						status: 429,
+						text: "429 error",
+						telemetryMessage: false,
+					});
+					err.retryAfterMs = 10;
+					throw err;
+				}
+			},
+			3000,
+			2
+		);
+
+		expect(attempts).toBe(2);
+		// Comfortably above the 10ms retryAfterMs (plus up to 1s jitter), but
+		// well below the 3s backoff that would apply if retryAfterMs were ignored.
+		expect(Date.now() - start).toBeLessThan(2000);
+	});
+
+	it("should honour Retry-After on 5xx errors too, instead of the computed backoff", async ({
+		expect,
+	}) => {
+		let attempts = 0;
+		const start = Date.now();
+
+		await retryOnAPIFailure(
+			() => {
+				attempts++;
+				if (attempts < 2) {
+					const err = new APIError({
+						status: 500,
+						text: "500 error",
+						telemetryMessage: false,
+					});
+					err.retryAfterMs = 10;
+					throw err;
+				}
+			},
+			3000,
+			2
+		);
+
+		expect(attempts).toBe(2);
+		expect(Date.now() - start).toBeLessThan(2000);
+	});
+
+	it("should fail fast without retrying when Retry-After exceeds the cap", async ({
+		expect,
+	}) => {
+		let attempts = 0;
+
+		await expect(() =>
+			retryOnAPIFailure(() => {
+				attempts++;
+				const err = new APIError({
+					status: 429,
+					text: "429 error",
+					telemetryMessage: false,
+				});
+				// Longer than MAX_RETRY_AFTER_MS (60s) — we should not block on it.
+				err.retryAfterMs = 120_000;
+				throw err;
+			})
+		).rejects.toMatchObject({ retryAfterMs: 120_000 });
+		expect(attempts).toBe(1);
+	});
+
+	it("should fail fast on a 5xx whose Retry-After exceeds the cap, rather than exhausting retries", async ({
+		expect,
+	}) => {
+		let attempts = 0;
+
+		await expect(() =>
+			retryOnAPIFailure(() => {
+				attempts++;
+				const err = new APIError({
+					status: 503,
+					text: "503 error",
+					telemetryMessage: false,
+				});
+				// Longer than MAX_RETRY_AFTER_MS (60s) — we should not block on it,
+				// even though 5xx errors are otherwise always retried.
+				err.retryAfterMs = 120_000;
+				throw err;
+			})
+		).rejects.toMatchObject({ retryAfterMs: 120_000 });
+		expect(attempts).toBe(1);
+	});
+
+	it("should log a message when waiting on a Retry-After header", async ({
+		expect,
+	}) => {
+		let attempts = 0;
+
+		await retryOnAPIFailure(() => {
+			attempts++;
+			if (attempts < 2) {
+				const err = new APIError({
+					status: 429,
+					text: "429 error",
+					telemetryMessage: false,
+				});
+				err.retryAfterMs = 0;
+				throw err;
+			}
+		});
+
+		expect(attempts).toBe(2);
+		expect(std.info).toContain(
+			'Received a "Retry-After" header from the Cloudflare API. Waiting 0 second(s) before retrying...'
+		);
 	});
 
 	it("should not retry non-5xx errors", async ({ expect }) => {
@@ -94,7 +238,6 @@ describe("retryOnAPIFailure", () => {
 		expect(attempts).toBe(3);
 		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`
 			[
-			  "Retrying API call after error...",
 			  "Retrying API call after error...",
 			  "Retrying API call after error...",
 			]
@@ -183,7 +326,6 @@ describe("retryOnAPIFailure", () => {
 			[
 			  "Retrying API call after error...",
 			  "Retrying API call after error...",
-			  "Retrying API call after error...",
 			]
 		`);
 	});
@@ -219,8 +361,6 @@ describe("retryOnAPIFailure", () => {
 			  "CustomAPIError: 401 error",
 			  "Retrying API call after error...",
 			  "CustomAPIError: 401 error",
-			  "Retrying API call after error...",
-			  "CustomAPIError: 401 error",
 			]
 		`);
 	});
@@ -230,4 +370,19 @@ function getRetryAndErrorLogs(debugOutput: string): string[] {
 	return debugOutput
 		.split("\n")
 		.filter((line) => line.includes("Retrying") || line.includes("APIError"));
+}
+
+function retryOnAPIFailure<T>(
+	action: () => T | Promise<T>,
+	backoff?: number,
+	attempts?: number,
+	abortSignal?: AbortSignal
+): Promise<T> {
+	return retryOnAPIFailureWithLogger(
+		action,
+		logger,
+		backoff,
+		attempts,
+		abortSignal
+	);
 }

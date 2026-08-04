@@ -13,6 +13,7 @@ export const PipelineOptionsSchema = z.object({
 	pipelines: z
 		.union([
 			z.record(
+				z.string(),
 				z.union([
 					z.string(),
 					z.object({

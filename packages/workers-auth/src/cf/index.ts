@@ -14,6 +14,7 @@ import { createCloudflareProfileStore } from "../core/profile-store";
 import {
 	CF_CLI_NAME,
 	CF_CONSENT_PAGES,
+	CF_DISPLAY_NAME,
 	CF_KEYRING_SERVICE_NAME,
 	CF_OAUTH_CALLBACK_URL,
 } from "./constants";
@@ -66,9 +67,12 @@ export type { UserPreferences } from "../core/preferences";
  */
 export const CF_CLI: CliDescriptor = {
 	cliName: CF_CLI_NAME,
+	displayName: CF_DISPLAY_NAME,
 	commands: {
 		login: "cf auth login",
 		whoami: "cf auth whoami",
+		createProfile: "cf auth create",
+		deviceLogin: "cf auth login --device",
 	},
 	keyringServiceName: CF_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,

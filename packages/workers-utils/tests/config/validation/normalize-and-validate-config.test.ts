@@ -316,6 +316,21 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should silently strip the deprecated `legacy_env` field from a redirected config", ({
+			expect,
+		}) => {
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				{ legacy_env: true } as unknown as RawConfig,
+				"/some/path/.wrangler/deploy/wrangler.json",
+				"/some/path/wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect("legacy_env" in config).toBe(false);
+		});
+
 		it("should warn on and remove unexpected top level fields", ({
 			expect,
 		}) => {
@@ -818,6 +833,116 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing project/wrangler.toml configuration:
 					  - Unexpected fields found in triggers field: "someOtherfield""
 				`);
+		});
+
+		it("should accept Artifacts event triggers", ({ expect }) => {
+			const expectedConfig: RawConfig = {
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							filter: {
+								namespace: "my-namespace",
+								repo_name: "my-repo",
+							},
+							targets: [
+								{
+									type: "workflow",
+									workflow_name: "my-workflow",
+								},
+							],
+						},
+					],
+				},
+			};
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				expectedConfig,
+				"wrangler.json",
+				"wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(config.triggers.events).toEqual(expectedConfig.triggers?.events);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+		});
+
+		it.for([
+			{ type: "cf.artifacts.repo.created" },
+			{ type: "cf.artifacts.repo.deleted" },
+			{ type: "cf.artifacts.repo.forked" },
+			{ type: "cf.artifacts.repo.imported" },
+			{ type: "cf.artifacts.repo.pushed" },
+			{ type: "cf.artifacts.repo.cloned" },
+			{ type: "cf.artifacts.repo.fetched" },
+			{ type: "cf.artifacts.repo.token.created" },
+			{ type: "cf.artifacts.repo.token.revoked" },
+		] as const)(
+			"should accept the documented Artifacts event $type",
+			({ type }, { expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						triggers: {
+							events: [
+								{
+									type,
+									targets: [
+										{
+											type: "workflow",
+											workflow_name: "my-workflow",
+										},
+									],
+								},
+							],
+						},
+					},
+					"wrangler.json",
+					"wrangler.json",
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			}
+		);
+
+		it.for([
+			{
+				name: "an unsupported event type",
+				event: {
+					type: "cf.r2.bucket.created",
+					targets: [{ type: "workflow", workflow_name: "my-workflow" }],
+				},
+			},
+			{
+				name: "an unsupported filter",
+				event: {
+					type: "cf.artifacts.repo.pushed",
+					filter: { repoName: "my-repo" },
+					targets: [{ type: "workflow", workflow_name: "my-workflow" }],
+				},
+			},
+			{
+				name: "an empty target list",
+				event: {
+					type: "cf.artifacts.repo.pushed",
+					targets: [],
+				},
+			},
+		])("should reject $name in event triggers", ({ event }, { expect }) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					triggers: {
+						// @ts-expect-error The invalid shapes exercise runtime validation.
+						events: [event],
+					},
+				},
+				"wrangler.json",
+				"wrangler.json",
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
 		});
 
 		it("should error on invalid `wasm_modules` paths", ({ expect }) => {
@@ -3597,6 +3722,102 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
+			it("should provide a name in a named environment that inherits the top level worker name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								containers: [
+									{
+										image: "registry.cloudflare.com/something:hello",
+										class_name: "test-class",
+									},
+								],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "test-class",
+						name: "test-worker-name-test-class-staging",
+						image: "registry.cloudflare.com/something:hello",
+						image_build_context: undefined,
+					},
+				]);
+			});
+
+			it("should prefer a name declared on the named environment over the top level worker name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								name: "staging-worker-name",
+								containers: [
+									{
+										image: "registry.cloudflare.com/something:hello",
+										class_name: "test-class",
+									},
+								],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "test-class",
+						name: "staging-worker-name-test-class-staging",
+						image: "registry.cloudflare.com/something:hello",
+						image_build_context: undefined,
+					},
+				]);
+			});
+
+			it("should error in a named environment when neither the environment nor the top level defines a worker name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: {
+							staging: {
+								containers: [
+									{
+										image: "registry.cloudflare.com/something:hello",
+										class_name: "test-class",
+									},
+								],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - "env.staging" environment configuration
+					    - Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined."
+				`);
+			});
+
 			it("should error for invalid container app fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -4815,6 +5036,84 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept local_dev.experimental_s3_credentials, with an experimental warning", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: {
+									experimental_s3_credentials: {
+										accessKeyId: "key-id",
+										secretAccessKey: "secret",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "local_dev.experimental_s3_credentials" fields are experimental and may change or break at any time."
+				`);
+			});
+
+			it("should error if local_dev is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: "credentials",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "r2_buckets[0]" bindings should, optionally, have an object "local_dev" field but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":"credentials"}."
+				`);
+			});
+
+			it("should error if local_dev.experimental_s3_credentials is not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						r2_buckets: [
+							{
+								binding: "R2_BINDING",
+								bucket_name: "my-bucket",
+								local_dev: {
+									experimental_s3_credentials: { accessKeyId: "key-id" },
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "r2_buckets[0]" bindings should, optionally, have a "local_dev.experimental_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got {"binding":"R2_BINDING","bucket_name":"my-bucket","local_dev":{"experimental_s3_credentials":{"accessKeyId":"key-id"}}}."
+				`);
 			});
 		});
 

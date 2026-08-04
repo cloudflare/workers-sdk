@@ -2,7 +2,9 @@ import { test } from "vitest";
 import { getResponse, getTextResponse } from "../../__test-utils__";
 
 test("serves Local Explorer UI", async ({ expect }) => {
-	const response = await getResponse("/cdn-cgi/explorer");
+	let response = await getResponse("/cdn-cgi/local/explorer");
+	expect(response.status()).toBe(200);
+	response = await getResponse("/cdn-cgi/explorer");
 	expect(response.status()).toBe(200);
 });
 

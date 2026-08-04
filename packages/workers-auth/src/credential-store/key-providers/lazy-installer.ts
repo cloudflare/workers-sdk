@@ -258,13 +258,6 @@ interface KeyringModule {
 	Entry: new (service: string, account: string) => KeyringEntry;
 }
 
-// `createRequire` is used to load the lazy-installed binding from an
-// absolute path computed at runtime, defeating esbuild's static analysis
-// of `require(...)`. The anchor `__filename` is provided in both the
-// bundled CJS output and the source-loaded test environment.
-// eslint-disable-next-line no-restricted-globals -- runtime resolution requires a CJS anchor
-const dynamicRequire = createRequire(__filename);
-
 /**
  * Resolve the active keyring entry factory, loading the lazy-installed
  * binding from `installDir` when no test override is registered.
@@ -281,6 +274,6 @@ export function resolveKeyringEntryFactory(
 			"`@napi-rs/keyring` binding not found. Call `installKeyringBindingSync()` first."
 		);
 	}
-	const mod = dynamicRequire(bindingPath) as KeyringModule;
+	const mod = createRequire(bindingPath)(bindingPath) as KeyringModule;
 	return (service, account) => new mod.Entry(service, account);
 }

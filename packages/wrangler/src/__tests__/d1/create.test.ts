@@ -175,8 +175,14 @@ describe("create", () => {
 		await expect(runWrangler("d1 create test")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: You have reached the maximum number of D1 databases for your account.
-			Please consider deleting unused databases, or visit the D1 documentation to learn more: https://developers.cloudflare.com/d1/
 
+			On the Workers Free plan? Upgrade to create more:
+			https://dash.cloudflare.com/1701/workers/plans
+
+			Already on a paid plan? You can request a higher limit — learn more in the D1 docs:
+			https://developers.cloudflare.com/d1/
+
+			Or free up space:
 			To list your existing databases, run: wrangler d1 list
 			To delete a database, run: wrangler d1 delete <database-name>]
 		`);

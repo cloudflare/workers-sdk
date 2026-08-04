@@ -1,5 +1,53 @@
 # @cloudflare/workers-auth
 
+## 0.5.6
+
+### Patch Changes
+
+- [#13746](https://github.com/cloudflare/workers-sdk/pull/13746) [`cec9d88`](https://github.com/cloudflare/workers-sdk/commit/cec9d8875d3f103acc813724ded980867bd25ed7) Thanks [@edmundhung](https://github.com/edmundhung)! - Report a clear error for account IDs that can't be used in a Cloudflare API request
+
+  Account IDs are substituted straight into Cloudflare API URL paths, so a value containing non-ASCII characters previously failed deep inside the request layer with an opaque `Cannot convert argument to a ByteString` error that gave no hint about which setting was at fault. Account IDs read from `CLOUDFLARE_ACCOUNT_ID` and from the `account_id` configuration field are now validated up front, and an invalid value fails with a message naming both the offending value and where it came from.
+
+## 0.5.5
+
+### Patch Changes
+
+- Updated dependencies [[`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6)]:
+  - @cloudflare/workers-utils@0.31.0
+
+## 0.5.4
+
+### Patch Changes
+
+- [#14838](https://github.com/cloudflare/workers-sdk/pull/14838) [`8049ca4`](https://github.com/cloudflare/workers-sdk/commit/8049ca451c9561e8b72f3eeeb7916a8712f06133) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Fix ctrl+c not being able to interrupt wrangler while waiting for Cloudflare Access authorization
+
+  When a domain is behind Cloudflare Access (for example during remote bindings startup), wrangler runs `cloudflared access login`, which only returns once the user completes the authorization flow in the browser. This was invoked synchronously, blocking Node's event loop, so wrangler could not react to ctrl+c (or anything else) until the authorization completed — abandoning the browser flow left a hung wrangler process that had to be killed externally. `cloudflared` is now spawned asynchronously, keeping wrangler responsive while it waits. The remote runtime passes its abort signal through to the spawn, so tearing down the session kills a still-pending `cloudflared` immediately, with process exit as a last-resort cleanup.
+
+- Updated dependencies [[`5e6556a`](https://github.com/cloudflare/workers-sdk/commit/5e6556a0c788679b6ac149ba3018a2cfd7cc73e9)]:
+  - @cloudflare/workers-utils@0.30.0
+
+## 0.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb)]:
+  - @cloudflare/workers-utils@0.29.0
+
+## 0.5.2
+
+### Patch Changes
+
+- [#14781](https://github.com/cloudflare/workers-sdk/pull/14781) [`fe3ae91`](https://github.com/cloudflare/workers-sdk/commit/fe3ae91e5c7da16da9e27a66bd11dc45291b3119) Thanks [@edmundhung](https://github.com/edmundhung)! - Make auth profile guidance CLI agnostic
+
+  Remove Wrangler-specific wording from shared profile errors and add `cf auth create` to cf's auth descriptor.
+
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924), [`a6c214f`](https://github.com/cloudflare/workers-sdk/commit/a6c214fb311215b1ed09b273171b7995033fb7d7)]:
+  - @cloudflare/workers-utils@0.28.0
+
 ## 0.5.0
 
 ### Minor Changes

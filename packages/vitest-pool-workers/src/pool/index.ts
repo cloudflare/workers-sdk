@@ -89,6 +89,7 @@ const ignoreMessages = [
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
 	"disconnected: WebSocket peer disconnected",
+	"disconnected: peer disconnected without gracefully ending TLS session",
 	"CODE_MOVED for unknown code block",
 	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];
@@ -624,9 +625,7 @@ async function buildProjectWorkerOptions(
 
 const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
-	verbose: true,
 	handleStructuredLogs,
-	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
 
 const DEFAULT_INSPECTOR_PORT = 9229;
@@ -695,6 +694,7 @@ async function buildProjectMiniflareOptions(
 
 	return {
 		...SHARED_MINIFLARE_OPTIONS,
+		verbose: customOptions.verbose ?? true,
 		inspectorPort,
 		unsafeModuleFallbackService: moduleFallbackService,
 		workers: [runnerWorker, ...auxiliaryWorkers],

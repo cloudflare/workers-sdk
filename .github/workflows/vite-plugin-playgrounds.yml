@@ -17,7 +17,10 @@ env:
 
 jobs:
   test:
-    timeout-minutes: 30
+    # Windows jobs that miss the turbo cache already take 15-25 minutes, and the
+    # timeouts/retries in `playground/vitest.config.e2e.ts` give slow tests more
+    # room to finish, so leave headroom before the hard job kill.
+    timeout-minutes: 45
     name: ${{ format('Vite Plugin Playground ({0}, {1})', matrix.os, matrix.vite) }}
     strategy:
       fail-fast: false
@@ -58,6 +61,34 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: |
           pnpm dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+      # The test steps below pass `--only`, which does not merely skip *running*
+      # dependencies — it strips them from the cache key as well. Left alone,
+      # the playground tests are cached on a key that ignores
+      # `@cloudflare/vite-plugin`, `wrangler`, `miniflare` and `workerd`, so
+      # they replay from cache and never actually run on internal PRs (#14967).
+      #
+      # The turbo hash for `@cloudflare/vite-plugin#build` covers that whole
+      # dependency graph, so exporting it here and declaring it as a task `env`
+      # in `playground/turbo.json` restores the invalidation `--only` removed.
+      #
+      # This must run before the Vite downgrade steps so that the hash
+      # describes the plugin that was actually built and tested.
+      - name: Export plugin build hash for the playground cache key
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        shell: bash
+        run: |
+          pnpm dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin --dry=json |
+            node --input-type=module -e '
+              import { readFileSync } from "node:fs";
+              const { tasks } = JSON.parse(readFileSync(0, "utf8"));
+              const task = tasks.find((t) => t.taskId === "@cloudflare/vite-plugin#build");
+              if (!task) {
+                throw new Error("No @cloudflare/vite-plugin#build task in the turbo summary");
+              }
+              console.log(`VITE_PLUGIN_BUILD_HASH=${task.hash}`);
+            ' >> "$GITHUB_ENV"
       - name: Downgrade to Vite 6
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
         run: |
@@ -70,6 +101,8 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
+        # `VITE_PLUGIN_BUILD_HASH` puts the stripped dependency hashes back into
+        # the cache key — see "Export plugin build hash" above
         run: |
           pnpm dotenv -- pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
         env:
@@ -83,6 +116,8 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
+        # `VITE_PLUGIN_BUILD_HASH` puts the stripped dependency hashes back into
+        # the cache key — see "Export plugin build hash" above
         run: |
           pnpm dotenv -- pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
         env:

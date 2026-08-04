@@ -112,6 +112,14 @@ Each changeset should reference all packages that have user-facing changes:
 - Test-only changes
 - CI/workflow changes that don't affect package behavior
 
+## Miniflare Prereleases
+
+To begin a Miniflare prerelease, add `"npmPrereleaseIdentifier": "alpha"` to its `workers-sdk` metadata and add a major changeset. This produces a version such as `5.20260723.0-alpha`.
+
+While configured, major, minor, and patch changesets all increment Miniflare's patch version. Updating workerd updates the date and resets the patch to `0`. Change the identifier and add a changeset to move to another stage such as `beta` or `rc`.
+
+To graduate the prerelease, remove `npmPrereleaseIdentifier` and add a Miniflare changeset. The prerelease suffix will be removed while retaining the workerd-aligned version.
+
 ## File Example
 
 Here's a complete example of a patch changeset file:

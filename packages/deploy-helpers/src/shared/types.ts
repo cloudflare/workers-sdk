@@ -109,6 +109,8 @@ export type SharedDeployVersionsProps = {
 export type DeployProps = SharedDeployVersionsProps & {
 	/** Discriminant for DeployProps vs VersionsUploadProps */
 	command: "deploy";
+	/** If set, automatically register this `workers.dev` account subdomain when the account has none. */
+	autoRegisterWorkersDevSubdomain?: string;
 	/** Merged from --site arg and config.site. */
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	/** Merged: --triggers arg ?? config.triggers.crons. */
@@ -154,6 +156,8 @@ export type WorkerBuildResult = {
 
 export interface TriggerDeployment {
 	targets: string[];
+	category?: string;
+	resource?: string;
 	error?: Error;
 }
 

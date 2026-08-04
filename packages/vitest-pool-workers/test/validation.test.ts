@@ -23,9 +23,9 @@ test(
 			TypeError: Unexpected options in project ${path.join(tmpPathName, "vitest.config.mts")}:
 			{
 			  miniflare: [],
-			             ^ Expected object, received array
+			             ^ Invalid input: expected object, received array
 			  wrangler: './wrangler.toml',
-			            ^ Expected object, received string
+			            ^ Invalid input: expected object, received string
 			}
 		`;
 		expect(result.stderr).toMatch(expected);
@@ -46,11 +46,78 @@ test(
 			{
 			  miniflare: {
 			    compatibilityDate: { year: 2024, month: 1, day: 1 },
-			                       ^ Expected string, received object
+			                       ^ Invalid input: expected string, received object
 			  },
 			}
 		`;
 		expect(result.stderr).toMatch(expected);
+	}
+);
+
+test(
+	"normalizes the deprecated cache option",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					cache: false,
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.test.ts": dedent /* javascript */ `
+				import { it } from "vitest";
+
+				it("disables the cache", async ({ expect }) => {
+					const key = "https://example.com/cache";
+					await caches.default.put(
+						key,
+						new Response("cached", {
+							headers: { "Cache-Control": "max-age=3600" },
+						})
+					);
+					expect(await caches.default.match(key)).toBeUndefined();
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
+	}
+);
+
+test(
+	"gives cacheAPI precedence over the deprecated cache option",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					cache: true,
+					cacheAPI: false,
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.test.ts": dedent /* javascript */ `
+				import { it } from "vitest";
+
+				it("disables the cache", async ({ expect }) => {
+					const key = "https://example.com/cache";
+					await caches.default.put(
+						key,
+						new Response("cached", {
+							headers: { "Cache-Control": "max-age=3600" },
+						})
+					);
+					expect(await caches.default.match(key)).toBeUndefined();
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
 	}
 );
 

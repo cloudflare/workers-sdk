@@ -12,6 +12,9 @@ export const CF_KEYRING_SERVICE_NAME = "cloudflare";
 /** CLI name used for keyring install-dir scoping and user-facing messaging. */
 export const CF_CLI_NAME = "cf";
 
+/** cf's branded name, used in prose addressed to the user. */
+export const CF_DISPLAY_NAME = "cf";
+
 /**
  * The `redirect_uri` registered on cf's OAuth app; also the local callback URL.
  * cf uses the fixed local callback port 8877 (from its historical 8877–8886

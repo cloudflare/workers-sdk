@@ -315,6 +315,34 @@ describe("git helpers", () => {
 			expect(ctx.commitMessage).toBeDefined();
 		});
 
+		test("runs `git commit` without a silent/piped stdio or an active spinner", async ({
+			expect,
+		}) => {
+			// `git commit` may show an interactive GPG prompt, so it must not be
+			// silent/piped, and the spinner must be stopped before it runs.
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
+
+			await gitCommit(ctx);
+
+			const commitCall = vi
+				.mocked(runCommand)
+				.mock.calls.find(([command]) => command.includes("commit"));
+			expect(commitCall).toBeDefined();
+			if (!commitCall) {
+				throw new Error("missing commit call");
+			}
+			const [, commitOpts] = commitCall;
+			expect(commitOpts).not.toHaveProperty("silent");
+
+			const stopOrder = spinner.stop.mock.invocationCallOrder[0];
+			const commitCallOrder =
+				vi.mocked(runCommand).mock.invocationCallOrder[
+					vi.mocked(runCommand).mock.calls.indexOf(commitCall)
+				];
+			expect(stopOrder).toBeLessThan(commitCallOrder);
+		});
+
 		test("git not selected", async ({ expect }) => {
 			const ctx = createTestContext("test", { projectName: "test" });
 			ctx.args.git = false;
@@ -371,6 +399,34 @@ describe("git helpers", () => {
 
 			expect(spinner.start).toHaveBeenCalledOnce();
 			expect(spinner.stop).toHaveBeenCalledOnce();
+			expect(updateStatus).toHaveBeenCalledWith(
+				expect.stringContaining("Failed to create initial commit")
+			);
+			expect(ctx.commitMessage).toBeDefined();
+		});
+
+		test("staging failure is handled gracefully and stops the spinner", async ({
+			expect,
+		}) => {
+			// If `git add .` throws, the spinner must still be stopped.
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
+
+			// Note: beforeEach already sets up git --version mock via mockGitInstalled(true)
+			vi.mocked(runCommand).mockRejectedValueOnce(
+				new Error("fatal: unable to stage changes")
+			);
+
+			// Should not throw
+			await expect(gitCommit(ctx)).resolves.not.toThrow();
+
+			expect(spinner.start).toHaveBeenCalledOnce();
+			expect(spinner.stop).toHaveBeenCalledOnce();
+			// `git commit` should never have been attempted
+			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
+				expect.arrayContaining(["git", "commit"]),
+				expect.any(Object)
+			);
 			expect(updateStatus).toHaveBeenCalledWith(
 				expect.stringContaining("Failed to create initial commit")
 			);

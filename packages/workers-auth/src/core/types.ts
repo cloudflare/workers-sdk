@@ -45,14 +45,31 @@ export interface AuthContext {
  * rather than a fork of the factory.
  */
 export interface CliDescriptor {
-	/** CLI name used in user-facing messaging and keyring install-dir scoping (e.g. `"wrangler"`). */
+	/**
+	 * The CLI's invocation name, used for keyring install-dir scoping and in
+	 * messaging that refers to the executable (e.g. `"wrangler"`, `"cf"`).
+	 */
 	cliName: string;
+
+	/**
+	 * The CLI's branded name, used in prose addressed to the user (e.g.
+	 * `"Wrangler"` for wrangler, `"cf"` for cf). Distinct from
+	 * {@link CliDescriptor.cliName}, which names the executable.
+	 */
+	displayName: string;
 
 	/** Commands surfaced in auth guidance. */
 	commands: {
 		login: string;
 		whoami: string;
-		createProfile?: string;
+		createProfile: string;
+		/**
+		 * The command that restarts the OAuth 2.0 Device Authorization Grant,
+		 * surfaced when a device code is denied, expires, or times out. Spelled
+		 * out per CLI rather than derived from {@link CliDescriptor.commands.login}
+		 * so the flag name stays the CLI's business.
+		 */
+		deviceLogin: string;
 	};
 
 	/**
