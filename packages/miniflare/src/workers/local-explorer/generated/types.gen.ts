@@ -966,6 +966,10 @@ export type EmailAttachment = {
 };
 
 export type EmailSendingItem = {
+	/**
+	 * Worker that owns the send_email binding the message was sent through, if known.
+	 */
+	worker?: string;
 	from: string;
 	to: Array<string>;
 	cc?: Array<string>;
@@ -984,6 +988,10 @@ export type EmailSendingItem = {
 };
 
 export type EmailSendingDetail = {
+	/**
+	 * Worker that owns the send_email binding the message was sent through, if known.
+	 */
+	worker?: string;
 	from: string;
 	to: Array<string>;
 	cc?: Array<string>;
@@ -1702,7 +1710,12 @@ export type LocalExplorerListWorkersResponse =
 export type EmailListRoutingData = {
 	body?: never;
 	path?: never;
-	query?: never;
+	query?: {
+		/**
+		 * Only return emails received by this worker's email() handler.
+		 */
+		worker?: string;
+	};
 	url: "/email/routing";
 };
 
@@ -1731,7 +1744,12 @@ export type EmailListRoutingResponse =
 export type EmailSendRoutingData = {
 	body: EmailSendRequest;
 	path?: never;
-	query?: never;
+	query?: {
+		/**
+		 * Deliver the test email to this worker's email() handler, regardless of address-based routing.
+		 */
+		worker?: string;
+	};
 	url: "/email/routing/send";
 };
 
@@ -1775,7 +1793,12 @@ export type EmailGetRoutingData = {
 	path: {
 		email_id: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Only return the email if it was received by this worker's email() handler.
+		 */
+		worker?: string;
+	};
 	url: "/email/routing/{email_id}";
 };
 
@@ -1804,7 +1827,12 @@ export type EmailGetRoutingResponse =
 export type EmailListSendingData = {
 	body?: never;
 	path?: never;
-	query?: never;
+	query?: {
+		/**
+		 * Only return emails sent through this worker's send_email bindings.
+		 */
+		worker?: string;
+	};
 	url: "/email/sending";
 };
 
@@ -1835,7 +1863,12 @@ export type EmailGetSendingData = {
 	path: {
 		email_id: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Only return the email if it was sent through this worker's send_email bindings.
+		 */
+		worker?: string;
+	};
 	url: "/email/sending/{email_id}";
 };
 
