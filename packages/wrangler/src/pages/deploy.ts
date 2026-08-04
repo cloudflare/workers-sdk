@@ -648,10 +648,13 @@ export const pagesDeployCommand = createCommand({
 });
 
 /**
- * The Pages-only `pages deploy` flags that cannot be represented by a Workers
- * static-assets deploy, so their presence disqualifies the command from
- * delegation: git-integration metadata (`--commit-*`) and a Pages build option
- * (`--skip-caching`), none of which have a Workers equivalent.
+ * Collects the Pages-only `pages deploy` flags that are set on this command, so
+ * their presence can disqualify it from delegation.
+ *
+ * @param args The parsed `pages deploy` command arguments.
+ * @returns The names of any set flags that cannot be represented by a Workers
+ * static-assets deploy — git-integration metadata (`--commit-*`) and a Pages
+ * build option (`--skip-caching`). Empty when none are set.
  *
  * `--branch` is deliberately absent. It exists to target a Pages preview
  * deployment, which only has meaning relative to an existing project's
