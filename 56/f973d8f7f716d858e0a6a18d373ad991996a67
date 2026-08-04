@@ -1,0 +1,21 @@
+packages/wrangler/src/pages/deploy.ts
+  s_2489d2aaf9340d::t_9043a26c777df7 651-657
+packages/wrangler/src/pages/projects.ts
+  s_2489d2aaf9340d::t_afcd1644b89ecb 101-102,104-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "56f973d8f7f716d858e0a6a18d373ad991996a67",
+  "prompts": {},
+  "sessions": {
+    "s_2489d2aaf9340d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5079628b-04c8-4765-bfd7-b44c0e11003e",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
