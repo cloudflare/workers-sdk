@@ -1,0 +1,11 @@
+packages/wrangler/src/__tests__/deploy/core.test.ts
+  ai_agent 1106-1180
+packages/wrangler/src/deploy/anonymous-account.ts
+  ai_agent 83-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "a68b9051fb10050ee3923e9691c7cd3cf00153a4",
+  "prompts": {}
+}

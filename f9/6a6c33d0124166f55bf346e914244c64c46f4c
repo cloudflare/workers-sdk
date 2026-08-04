@@ -1,0 +1,19 @@
+packages/local-explorer-ui/src/components/email/EmailServiceEmptyState.tsx
+  s_d939666b5a2795::t_07120973049cb3 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f96a6c33d0124166f55bf346e914244c64c46f4c",
+  "prompts": {},
+  "sessions": {
+    "s_d939666b5a2795": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_099c0b41bffeIuVejxQuHs5FCK",
+        "model": "@cf/moonshotai/kimi-k2.6"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

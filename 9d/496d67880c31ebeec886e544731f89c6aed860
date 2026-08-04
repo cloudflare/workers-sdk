@@ -1,0 +1,40 @@
+packages/local-explorer-ui/src/components/observability/FilterSelect.tsx
+  s_9fff95db50b440::t_a689a03f9a63ac 1,4,9,14-15,18-28
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_9fff95db50b440::t_edc5e44ae6046e 348-356
+  s_9fff95db50b440::t_3a75378bedd7ec 36
+  s_9fff95db50b440::t_b997cd681918b2 384-387,389
+  s_9fff95db50b440::t_e1a41241b0d94e 500-519,521,524-525,527-545
+  s_9fff95db50b440::t_8b95984ec4ba9d 2-7
+  s_9fff95db50b440::t_1b781accf6e8a9 50-53
+  s_9fff95db50b440::t_25f8fc6fcb166c 295
+  s_9fff95db50b440::t_a5d72177fad93c 13
+  s_9fff95db50b440::t_c5aeb12d8c8309 383,388,390-391
+  s_9fff95db50b440::t_87f607dec16ebf 520,522-523,526
+  s_9fff95db50b440::t_317c1c004ace73 10
+  s_9fff95db50b440::t_8ade100877497b 266-269,271-272,275-279,281
+  s_9fff95db50b440::t_52ffa6328c4316 286-289,291,293,298-301,304-305,307-308,310,320,334
+  s_9fff95db50b440::t_61fddb58d30fd3 8,546-548
+packages/local-explorer-ui/src/components/observability/icons.tsx
+  s_9fff95db50b440::t_bcfbae4f4e5f2f 2-5,7-12,15-16,18-21,23-24,26-40,42-50,52-58,61,63,68,70,72,74,76,78
+packages/local-explorer-ui/src/routes/observability/logs.tsx
+  s_9fff95db50b440::t_b9f2b0b8caf748 139
+  s_9fff95db50b440::t_1870761b01a5d9 1,6
+  s_9fff95db50b440::t_da122f22aaf4de 107-110,112,116-119,121,123,125,128-131,134-135,137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9d496d67880c31ebeec886e544731f89c6aed860",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+packages/build-output-utils/src/__tests__/paths.test.ts
+  s_e39e618fd25267::t_4cd12d1f997594 1-42
+packages/build-output-utils/src/read.ts
+  s_e39e618fd25267::t_fba3242759753a 18,25,27-28,36,43-49,53-54,56-58,60-61,63-65,67,71-72,74,77-78,81,88,92-100,111
+packages/config/src/schema.ts
+  s_e39e618fd25267::t_d53286784b35bf 544
+packages/vite-plugin-cloudflare/src/build-output-preview.ts
+  s_e39e618fd25267::t_0c8f442154eb96 1-2,20-25,30-33,35-36,38-44,46-50,53-58,60-66,68-70
+packages/vite-plugin-cloudflare/src/plugins/config.ts
+  s_e39e618fd25267::t_1cd8ae8dd6af90 8,226,372-375,378-381,386
+packages/wrangler/src/__tests__/build-output.test.ts
+  s_e39e618fd25267::t_a8f93b7576b269 15-22,24,32,36
+packages/wrangler/src/__tests__/cf-wrangler/build.test.ts
+  s_e39e618fd25267::t_a07b438426bbfc 35,40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d91ab7644bbf6d4d46950e6cf49b6bbea5df52b8",
+  "prompts": {},
+  "sessions": {
+    "s_e39e618fd25267": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05fb0a8ebffeHKtix6DRvGwn5a",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

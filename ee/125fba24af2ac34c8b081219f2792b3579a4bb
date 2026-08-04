@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_d939666b5a2795::t_d07d6e7c253dd9 610-613,777-906,1957-2107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ee125fba24af2ac34c8b081219f2792b3579a4bb",
+  "prompts": {},
+  "sessions": {
+    "s_d939666b5a2795": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_099c0b41bffeIuVejxQuHs5FCK",
+        "model": "@cf/moonshotai/kimi-k2.6"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

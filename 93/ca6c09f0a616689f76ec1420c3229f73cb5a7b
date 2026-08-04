@@ -1,0 +1,29 @@
+packages/wrangler/src/workflows/commands/instances/describe.ts
+  s_98a259550c0665::t_c6f61983cc71dd 51
+packages/wrangler/src/workflows/commands/instances/pause.ts
+  s_98a259550c0665::t_a0c1d16cd255d9 27
+packages/wrangler/src/workflows/commands/instances/restart.ts
+  s_98a259550c0665::t_c7b7083ebb06bf 64
+packages/wrangler/src/workflows/commands/instances/resume.ts
+  s_98a259550c0665::t_0ef791b1e96f74 27
+packages/wrangler/src/workflows/commands/instances/send-event.ts
+  s_98a259550c0665::t_10e61e04ce5758 29
+packages/wrangler/src/workflows/commands/instances/terminate.ts
+  s_98a259550c0665::t_a5c1693c494508 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "93ca6c09f0a616689f76ec1420c3229f73cb5a7b",
+  "prompts": {},
+  "sessions": {
+    "s_98a259550c0665": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f671f-e536-7ecc-8fad-e740d54fa0bb",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}
