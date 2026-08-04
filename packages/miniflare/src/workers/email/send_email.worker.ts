@@ -99,6 +99,8 @@ interface SendEmailEnv {
 	allowed_sender_addresses: string[] | undefined;
 	MINIFLARE_LOOPBACK: Fetcher;
 	[CoreBindings.SERVICE_EMAIL_STORE]?: EmailStoreService;
+	/** Worker that owns this send_email binding, set when the local explorer is enabled. */
+	SEND_EMAIL_OWNER_WORKER?: string;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
@@ -314,6 +316,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.ctx.waitUntil(
 				(async () => {
 					await this.reportSentEmail({
+						worker: this.env.SEND_EMAIL_OWNER_WORKER,
 						from: emailMessage.from,
 						to: [emailMessage.to],
 						subject: parsedEmail.subject ?? "(no subject)",
@@ -397,6 +400,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			this.ctx.waitUntil(
 				(async () => {
 					await this.reportSentEmail({
+						worker: this.env.SEND_EMAIL_OWNER_WORKER,
 						from: formatEmailAddress(builder.from),
 						to: toDisplay(builder.to),
 						cc: builder.cc ? toDisplay(builder.cc) : undefined,

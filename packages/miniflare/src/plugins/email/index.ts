@@ -264,6 +264,16 @@ export const EMAIL_PLUGIN: Plugin<
 				]
 			: [];
 
+		// The worker that owns these send_email bindings. `getServices` is called
+		// once per worker, so this identifies which worker sent a message and lets
+		// the local explorer filter the "Sending" inbox by the selected worker.
+		const ownerWorkerBinding: Worker_Binding[] = args.sharedOptions
+			.unsafeLocalExplorer
+			? buildJsonBindings({
+					SEND_EMAIL_OWNER_WORKER: args.workerNames[args.workerIndex],
+				})
+			: [];
+
 		const services: Service[] = [];
 		let hasRemote = false;
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
@@ -286,6 +296,7 @@ export const EMAIL_PLUGIN: Plugin<
 						...buildJsonBindings(config),
 						WORKER_BINDING_SERVICE_LOOPBACK,
 						...emailStoreBinding,
+						...ownerWorkerBinding,
 					],
 				},
 			});

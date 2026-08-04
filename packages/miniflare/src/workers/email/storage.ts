@@ -54,6 +54,8 @@ export interface EmailArtifact {
 }
 
 export interface StoredSendingEmail {
+	/** Worker that owns the `send_email` binding the message was sent through, if known. */
+	worker?: string;
 	from: string;
 	to: string[];
 	cc?: string[];
