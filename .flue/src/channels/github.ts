@@ -14,7 +14,7 @@ export const channel = createGitHubChannel({
 	webhook: async ({ delivery }) => {
 		// Follow-up PRs will add event-specific dispatch for new issues, pull
 		// requests, failed CI runs, and explicit bot mentions. Reproduction work
-		// will be delegated to one shared execution workflow rather than handled
+		// will be delegated to one shared sandbox-backed tool rather than handled
 		// inside the webhook request.
 		if (
 			delivery.name === "issue_comment" &&
@@ -149,8 +149,10 @@ export function commentOnIssue(ref: {
 			});
 
 			return {
-				commentId: result.data.id,
-				url: result.data.html_url,
+				output: {
+					commentId: result.data.id,
+					url: result.data.html_url,
+				},
 			};
 		},
 	});

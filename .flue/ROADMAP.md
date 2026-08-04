@@ -7,9 +7,9 @@ The goal is not to create one large agent that can mutate anything in the reposi
 ## Principles
 
 - Keep maintainers in control. Suggestions, labels, and duplicate candidates are advisory unless a later pull request explicitly introduces stronger automation.
-- Prefer one coordinating agent for each major domain, such as issue triage or pull request triage, with shared tools for focused capabilities. Do not create a separate agent or workflow for every individual check.
+- Prefer one coordinating agent for each major domain, such as issue triage or pull request triage, with shared tools for focused capabilities. Do not create a separate agent or tool for every individual check.
 - Use GitHub webhooks for event-driven analysis. A GitHub Actions workflow is not required merely to notify Flue that an issue, pull request, comment, or CI run changed.
-- Use a Flue workflow only when work is durable or multi-step, such as checking out a repository, running tests, reproducing an issue, or recovering from an interrupted task.
+- Use sandbox-backed Flue tools for bounded checkout, test, and reproduction work. Introduce an external durable-workflow engine only when the task needs orchestration or checkpoints beyond the durable agent conversation.
 - Keep all GitHub writes scoped to the repository and issue or pull request that caused the verified webhook event.
 - Deliver features independently so each pull request can establish its own behaviour, tests, permissions, and rollback path.
 - Reuse useful behaviour from existing Workers SDK automation rather than replacing proven workflows all at once.
@@ -19,7 +19,7 @@ The goal is not to create one large agent that can mutate anything in the reposi
 ### Flue foundation completed on this branch
 
 - `.flue` is a private member of the main pnpm and Turbo workspaces rather than a standalone pnpm workspace.
-- The project targets Flue v2, currently using the v2 nightly packages, Vite, and the Cloudflare target.
+- The project targets Flue v2.0.2, Vite, and the Cloudflare target.
 - The Worker uses Cloudflare Workers AI through Flue's Cloudflare provider.
 - The Hono application exposes the Flue GitHub channel and does not expose a public agent route.
 - Incoming GitHub webhook signatures are verified with `GITHUB_WEBHOOK_SECRET`.
@@ -27,9 +27,9 @@ The goal is not to create one large agent that can mutate anything in the reposi
 - Created issue comments and pull request review comments are dispatched to a typed, dispatch-only `GithubAssistant` agent.
 - The assistant has a narrowly scoped tool for commenting only on the issue or pull request associated with the verified event.
 - The GitHub channel records delivery and thread metadata that later routing and deduplication can use.
-- The temporary workspace smoke agent, smoke route, `FLUE_BEARER_TOKEN`, and bearer authentication middleware have been removed. They were useful only for validating the initial Cloudflare Shell integration and are not part of the product architecture.
-- A Cloudflare Shell sandbox adapter remains available for future agents that need an isolated, durable workspace, structured file operations, or JavaScript execution through Codemode.
-- The Cloudflare Shell adapter intentionally does not provide a general shell `exec()` implementation. Tasks that need Git, native binaries, package installation, or real test commands will need Cloudflare Sandbox, GitHub Actions, or another isolated Linux execution environment.
+- The temporary workspace smoke agent, smoke route, `FLUE_BEARER_TOKEN`, and bearer authentication middleware have been removed. They were useful only for validating the initial workspace integration and are not part of the product architecture.
+- The project uses the current Flue Cloudflare Computer blueprint rather than the predecessor Cloudflare Shell and Codemode adapter. The adapter is available to future sandbox-backed agents but is not used by the current `GithubAssistant`.
+- Cloudflare Computer is the selected experimental dogfooding workspace for durable files, shallow Git checkouts, and shell-expressible analysis. Its default Worker shell does not provide native binaries or package managers; tasks that require those capabilities should explicitly escalate to its container backend, Cloudflare Sandbox, GitHub Actions, or another isolated Linux execution environment.
 - Build, local development, type generation, strict TypeScript configuration, generated-file ignores, and setup documentation are present.
 - Repository validation includes the hidden `.flue/package.json` explicitly without scanning unrelated hidden workspaces such as `.opencode`.
 
@@ -58,21 +58,21 @@ The current `GithubAssistant` is a foundation for verified, scoped replies. It d
 - analyse failed CI logs; or
 - route explicit bot mentions to named actions.
 
-## Agent and workflow shape
+## Agent and execution shape
 
 The intended structure is:
 
-| Capability                     | Agent or tool                                                  | Flue workflow                                    |
-| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------ |
-| Issue merit and overall triage | One `IssueTriage` agent with focused tools                     | Only when reproduction is requested              |
-| Duplicate detection            | Shared GitHub search and similarity tool used by triage agents | No                                               |
-| Possible AI detection          | Shared deterministic signals plus model assessment             | No                                               |
-| Issue reproduction             | Handoff from `IssueTriage`                                     | One shared checkout and execution workflow       |
-| Pull request analysis          | One `PullRequestTriage` agent with review tools                | Only when checkout or test execution is required |
-| Changeset analysis             | Focused tool or task within `PullRequestTriage`                | No, unless repository execution is required      |
-| Remote E2E recommendation      | Focused check within `PullRequestTriage`                       | No                                               |
-| Failed CI analysis             | Focused tool or subagent associated with pull request triage   | Only for durable log or reproduction work        |
-| Explicit bot mentions          | Deterministic router into the relevant agent or task           | Depends on the requested action                  |
+| Capability                     | Agent or tool                                                  | Durable execution                                  |
+| ------------------------------ | -------------------------------------------------------------- | -------------------------------------------------- |
+| Issue merit and overall triage | One `IssueTriage` agent with focused tools                     | Sandbox only when reproduction is requested        |
+| Duplicate detection            | Shared GitHub search and similarity tool used by triage agents | None                                               |
+| Possible AI detection          | Shared deterministic signals plus model assessment             | None                                               |
+| Issue reproduction             | Handoff from `IssueTriage`                                     | One shared sandbox-backed reproduction tool        |
+| Pull request analysis          | One `PullRequestTriage` agent with review tools                | Sandbox only when checkout or tests are required   |
+| Changeset analysis             | Focused tool or task within `PullRequestTriage`                | Sandbox only when repository execution is required |
+| Remote E2E recommendation      | Focused check within `PullRequestTriage`                       | None                                               |
+| Failed CI analysis             | Focused tool or subagent associated with pull request triage   | Sandbox for bounded log or reproduction work       |
+| Explicit bot mentions          | Deterministic router into the relevant agent or task           | Depends on the requested action                    |
 
 This keeps conversational context at the issue or pull request level without turning every check into a long-lived agent instance.
 
@@ -117,12 +117,13 @@ Each phase below should normally be its own pull request.
 - Leave the final close or merge decision to a maintainer. Do not automatically close reports as duplicates in the first version.
 - Cache or bound searches so this feature does not make an excessive number of GitHub API calls.
 
-### 5. Reproduction workflow
+### 5. Reproduction execution
 
 - Let `IssueTriage` decide whether reproduction would materially improve the assessment. Do not reproduce every issue by default.
-- Hand reproduction to one shared Flue workflow rather than embedding a long checkout and test process in the webhook request or creating one workflow per issue type.
+- Hand reproduction to one shared sandbox-backed tool rather than embedding a long checkout and test process in the webhook request or creating one tool per issue type.
+- Use Cloudflare Computer as the default durable workspace for reproduction. Use a shallow Workers SDK checkout with a depth of one or two to avoid downloading repository history that the task does not need.
+- Prefer Computer's Worker shell and typed Git client for repository inspection and text-oriented work. Escalate to a container-backed environment only when reproduction requires native binaries, package installation, or real test commands.
 - Run untrusted issue instructions and repository code in an isolated environment with no unnecessary credentials.
-- Use Cloudflare Shell for structured workspace analysis where it is sufficient. Use Cloudflare Sandbox, GitHub Actions, or an equivalent isolated Linux environment when real shell commands and tests are required.
 - Record the exact revision, commands, environment, and relevant output.
 - Return a concise result to `IssueTriage`, which updates the existing advisory comment with whether the issue was reproduced and what failed.
 - Add explicit time, cost, output-size, and concurrency limits before enabling reproduction broadly.
@@ -197,7 +198,7 @@ Review these projects again when implementing the relevant feature rather than c
 
 - [withastro/triagebot-action](https://github.com/withastro/triagebot-action) for prior art in repository triage automation.
 - [Emdash's Flue configuration](https://github.com/emdash-cms/emdash/tree/main/.flue) for an in-house example of a larger Flue setup.
-- The current Flue v2 documentation and checked-in Cloudflare examples. Flue is still evolving, so generated blueprints and nightly APIs must be verified against the installed version before each feature is implemented.
+- The current Flue v2 documentation and checked-in Cloudflare examples. Flue and Cloudflare Computer are still evolving, so generated blueprints and preview APIs must be verified against the installed versions before each feature is implemented.
 
 ## Long-term outcome
 

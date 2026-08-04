@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "workers-sdk-flue",
 	"compatibility_date": "2026-07-21",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": ["nodejs_compat", "experimental"],
 	"ai": {
 		"binding": "AI",
 		"remote": true,

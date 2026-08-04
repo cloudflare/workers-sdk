@@ -37,13 +37,18 @@ blockExoticSubdeps: true
 # Value is in minutes (1440 = 24 hours).
 minimumReleaseAge: 1440
 
-# First-party Cloudflare packages are exempt from the cooldown so they can be
-# adopted same-day.
+# Trusted packages are exempt from the cooldown so they can be adopted
+# same-day.
 minimumReleaseAgeExclude:
   - "workerd"
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"
   - "@cloudflare/workers-types"
+  # Flue 2.0.2 is a trusted automation release.
+  - "@flue/cli@2.0.2"
+  - "@flue/github@2.0.2"
+  - "@flue/runtime@2.0.2"
+  - "@flue/vite@2.0.2"
   # The below is to install the rosie-skills package and remove the problematic
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
