@@ -2451,7 +2451,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		expect(services.some((s) => "disk" in s)).toBe(false);
 
 		const workerService = services.find(
-			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
+			(s) => s.name === "SEND-EMAIL-WORKER:default:SEND_EMAIL"
 		) as
 			| {
 					name: string;
@@ -2571,6 +2571,44 @@ describe("EMAIL_PLUGIN.getServices", () => {
 			bindings.some((b) => b.name.startsWith("MINIFLARE_EMAIL_DISK"))
 		).toBe(false);
 		expect(bindings.some((b) => b.name === "email_disk_services")).toBe(false);
+	});
+
+	test("names same send_email bindings per worker", async ({ expect }) => {
+		const options = {
+			email: { send_email: [{ name: "SEND_EMAIL" }] },
+		};
+		const firstBindings = EMAIL_PLUGIN.getBindings(options, 0, "first");
+		const secondBindings = EMAIL_PLUGIN.getBindings(options, 1, "second");
+		expect(firstBindings?.[0]).toMatchObject({
+			service: { name: "SEND-EMAIL-WORKER:first:SEND_EMAIL" },
+		});
+		expect(secondBindings?.[0]).toMatchObject({
+			service: { name: "SEND-EMAIL-WORKER:second:SEND_EMAIL" },
+		});
+		const getServices = EMAIL_PLUGIN.getServices;
+		const first = await getServices({
+			options,
+			sharedOptions: {},
+			tmpPath: "/tmp/first",
+			defaultProjectTmpPath: undefined,
+			workerNames: ["first", "second"],
+			workerIndex: 0,
+		} as unknown as Parameters<typeof getServices>[0]);
+		const second = await getServices({
+			options,
+			sharedOptions: {},
+			tmpPath: "/tmp/second",
+			defaultProjectTmpPath: undefined,
+			workerNames: ["first", "second"],
+			workerIndex: 1,
+		} as unknown as Parameters<typeof getServices>[0]);
+
+		expect(Array.isArray(first) && Array.isArray(second)).toBe(true);
+		if (!Array.isArray(first) || !Array.isArray(second)) {
+			throw new Error("Expected getServices to return arrays");
+		}
+		expect(first[0]?.name).toBe("SEND-EMAIL-WORKER:first:SEND_EMAIL");
+		expect(second[0]?.name).toBe("SEND-EMAIL-WORKER:second:SEND_EMAIL");
 	});
 });
 

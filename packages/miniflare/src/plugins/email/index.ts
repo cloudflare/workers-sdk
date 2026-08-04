@@ -57,6 +57,17 @@ export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
 
+function getSendEmailServiceName(
+	workerName: string | undefined,
+	bindingName: string
+): string {
+	const scope =
+		workerName === undefined
+			? SERVICE_SEND_EMAIL_WORKER_PREFIX
+			: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${workerName}`;
+	return getUserBindingServiceName(scope, bindingName);
+}
+
 function buildJsonBindings(
 	bindings: Record<string, unknown>
 ): Worker_Binding[] {
@@ -218,7 +229,7 @@ export const EMAIL_PLUGIN: Plugin<
 	options: EmailOptionsSchema,
 	sharedOptions: EmailSharedOptionsSchema,
 	bindingTypeDescription: "Email",
-	getBindings(options): Worker_Binding[] {
+	getBindings(options, _workerIndex, workerName): Worker_Binding[] {
 		if (!options.email?.send_email) {
 			return [];
 		}
@@ -234,10 +245,7 @@ export const EMAIL_PLUGIN: Plugin<
 					}
 				: {
 						entrypoint: "SendEmailBinding",
-						name: getUserBindingServiceName(
-							SERVICE_SEND_EMAIL_WORKER_PREFIX,
-							name
-						),
+						name: getSendEmailServiceName(workerName, name),
 					},
 		}));
 	},
@@ -285,7 +293,7 @@ export const EMAIL_PLUGIN: Plugin<
 				continue;
 			}
 			services.push({
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
+				name: getSendEmailServiceName(args.workerNames[args.workerIndex], name),
 				worker: {
 					compatibilityDate: "2025-03-17",
 					modules: [

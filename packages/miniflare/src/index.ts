@@ -2134,7 +2134,8 @@ export class Miniflare {
 					// @ts-expect-error dynamic plugin dispatch: external plugins return
 					// a different type than internal plugin options
 					this.#getWorkerOptsForPlugin(key, workerOpts),
-					i
+					i,
+					workerName
 				);
 				if (pluginBindings !== undefined) {
 					for (const binding of pluginBindings) {
