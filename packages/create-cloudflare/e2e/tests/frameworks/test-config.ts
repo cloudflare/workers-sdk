@@ -383,7 +383,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "nuxt:pages",
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,
@@ -393,7 +392,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			// yarn: nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18.
+			// npm: nuxt project creation fails on npm with "Cannot read properties of null (reading 'edgesOut')".
+			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
 			// The Nuxt `ui` template pins `packageManager: pnpm@11.9.0`, so run
 			// it only on pnpm 11+: under pnpm 10 the cross-version self-provision
@@ -413,7 +414,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "nuxt:workers",
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,
@@ -423,7 +423,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			// yarn: nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18.
+			// npm: nuxt project creation fails on npm with "Cannot read properties of null (reading 'edgesOut')".
+			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
 			// See note on nuxt:pages above.
 			unsupportedPmRanges: { pnpm: "<11.0.0" },

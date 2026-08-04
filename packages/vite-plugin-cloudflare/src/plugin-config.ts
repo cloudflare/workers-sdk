@@ -120,7 +120,7 @@ interface ExperimentalNewConfig {
 		includeRuntime?: boolean;
 	};
 	/**
-	 * Whether to emit the experimental Build Output API (`.cloudflare/output/v0/`)
+	 * Whether to emit the experimental Build Output Specification (`.cloudflare/output/v0/`)
 	 * intended for consumption by the new `cf` CLI.
 	 */
 	cfBuildOutput?: boolean;
@@ -150,8 +150,8 @@ function normalizeNewConfig(
 	option: boolean | ExperimentalNewConfig | undefined
 ): ResolvedExperimentalNewConfig | undefined {
 	// The `cf-vite build` delegate sets `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT`
-	// to enable the Build Output API by default. This forces
-	// `experimental.newConfig` on (the Build Output API requires
+	// to enable the Build Output Specification by default. This forces
+	// `experimental.newConfig` on (the Build Output Specification requires
 	// `cloudflare.config.ts`) and `cfBuildOutput` to `true`, overriding the
 	// values in the plugin config.
 	if (isForcedBuildOutput()) {
@@ -270,7 +270,7 @@ export interface WorkersResolvedConfig extends NonPreviewResolvedConfig {
 /**
  * Tagged union of the preview-mode worker shapes. `legacy` workers come
  * from `.wrangler/deploy/config.json`; `build-output` workers come from
- * the Build Output API tree at `.cloudflare/output/v0/workers/`.
+ * the Build Output Specification tree at `.cloudflare/output/v0/workers/`.
  */
 export type PreviewWorker =
 	| { source: "legacy"; config: Unstable_Config }
@@ -515,7 +515,7 @@ export async function resolvePluginConfig(
 			pluginConfig.viteEnvironment?.childEnvironments?.length
 		) {
 			throw new Error(
-				"`viteEnvironment.childEnvironments` cannot be used together with `experimental.newConfig.cfBuildOutput`. Child environments are not yet supported in the Build Output API."
+				"`viteEnvironment.childEnvironments` cannot be used together with `experimental.newConfig.cfBuildOutput`. Child environments are not yet supported in the Build Output Specification."
 			);
 		}
 		const result = await loadNewConfig({
@@ -798,7 +798,7 @@ const EXPERIMENTAL_CONFIG_PKG = "@cloudflare/vite-plugin/experimental-config";
 /**
  * Load and convert a `cloudflare.config.ts` file via `@cloudflare/config`. Returns
  * the resulting Wrangler `RawConfig`, the parsed new-config shape (for
- * downstream Build Output API emission), the absolute path of the loaded
+ * downstream Build Output Specification emission), the absolute path of the loaded
  * file, and the set of files imported while resolving the config (for
  * watch-mode).
  *

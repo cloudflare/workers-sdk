@@ -345,7 +345,7 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
+ * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/local/explorer.
  */
 export const getLocalExplorerEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({
@@ -359,18 +359,15 @@ export const getLocalExplorerEnabledFromEnv =
  * `unsafeObservability` Miniflare option, which makes core attach the trace
  * collector to each user worker.
  *
- * Temporarily defaults to `false` for release: defaulting it on attaches extra
- * per-worker services (collector + streaming tail) that destabilise the
- * multi-process dev-registry scenario on Windows (workerd socket "fetch
- * failed"). Capture is now opt-in — set `X_LOCAL_OBSERVABILITY=true`, or turn it
- * on from the Local Explorer's Observability tab (Vite dev), which reloads the
- * runtime with capture enabled. The explorer UI itself (`X_LOCAL_EXPLORER`)
- * stays on by default so the tab is always available.
+ * Defaults to `true` so the Local Explorer's Observability tab captures traces
+ * and logs out of the box. Set `X_LOCAL_OBSERVABILITY=false` to opt out — for
+ * example if the extra per-worker services (collector + streaming tail) cause
+ * trouble in a multi-process dev-registry setup.
  */
 export const getLocalObservabilityEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "X_LOCAL_OBSERVABILITY",
-		defaultValue: false,
+		defaultValue: true,
 	});
 
 /**

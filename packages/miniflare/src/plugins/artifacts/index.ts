@@ -14,7 +14,7 @@ const ArtifactsSchema = z.object({
 });
 
 export const ArtifactsOptionsSchema = z.object({
-	artifacts: z.record(ArtifactsSchema).optional(),
+	artifacts: z.record(z.string(), ArtifactsSchema).optional(),
 });
 
 export const ARTIFACTS_PLUGIN_NAME = "artifacts";

@@ -6,7 +6,7 @@ import type {
 	WorkflowInstanceRestartFrom,
 } from "./types";
 
-const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer/api";
+const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/local/explorer/api";
 const DEFAULT_LOCAL_PORT = 8787;
 
 /**

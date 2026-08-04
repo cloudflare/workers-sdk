@@ -249,7 +249,9 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 				resolve(null);
 			});
 		});
+	},
 
+	async testDnsCaa() {
 		const dnsPromises = await import("node:dns/promises");
 		const results = await dnsPromises.resolveCaa("google.com");
 		assert.ok(Array.isArray(results));

@@ -12,7 +12,7 @@ import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
-import { Headers, Request } from "miniflare";
+import { CorePaths, Headers, Request } from "miniflare";
 import {
 	buildMigrationQuery,
 	getCreateMigrationsTableQuery,
@@ -98,6 +98,38 @@ export type DurableObjectIdentifier =
 	| { name: string; id?: never }
 	| { id: string; name?: never };
 
+export type FetcherEmailOptions = {
+	from: string;
+	to: string;
+	raw: string | ReadableStream<Uint8Array>;
+};
+
+export type FetcherEmailResult = {
+	outcome: "ok" | "exception";
+	rejectReason?: string;
+	forwards: Array<{
+		messageId: string;
+		recipient: string;
+		headers: [string, string][];
+	}>;
+	replies: Array<{
+		messageId: string;
+		sender: string;
+		raw: string;
+	}>;
+	events: Array<
+		| {
+				type: "forward" | "reply";
+				timestamp: string;
+				messageId: string;
+		  }
+		| {
+				type: "reject";
+				timestamp: string;
+		  }
+	>;
+};
+
 export type WorkerDefaultExport =
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
 	| (new (...args: any[]) => Rpc.WorkerEntrypointBranded)
@@ -133,6 +165,19 @@ export type WorkerHandle<
 	 * ```
 	 */
 	fetch: DispatchFetch;
+	/**
+	 * Dispatches an email event directly to this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await worker.email({
+	 *   from: "sender@example.com",
+	 *   to: "recipient@example.com",
+	 *   raw: "From: sender@example.com\\r\\n...",
+	 * });
+	 * ```
+	 */
+	email(options: FetcherEmailOptions): Promise<FetcherEmailResult>;
 	/**
 	 * Dispatches a scheduled event directly to this Worker.
 	 *
@@ -968,6 +1013,42 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					return dispatchFetch(miniflare, input, init, workerName);
 				},
+				async email(emailOptions) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const searchParams = new URLSearchParams({
+						format: "json",
+						from: emailOptions.from,
+						to: emailOptions.to,
+					});
+					const requestInit: RequestInit & { duplex?: "half" } = {
+						method: "POST",
+						body: emailOptions.raw,
+					};
+
+					if (typeof emailOptions.raw !== "string") {
+						requestInit.duplex = "half";
+					}
+
+					const response = await dispatchFetch(
+						miniflare,
+						`${CorePaths.EMAIL}?${searchParams.toString()}`,
+						requestInit,
+						workerName,
+						"email"
+					);
+
+					if (response.status >= 400 && response.status < 500) {
+						throw new Error(
+							`Failed to dispatch email event: ${await response.text()}`
+						);
+					}
+
+					const result = await response.json();
+
+					return result as FetcherEmailResult;
+				},
 				async scheduled(scheduledOptions) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
@@ -989,7 +1070,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 					const response = await dispatchFetch(
 						miniflare,
-						`/cdn-cgi/handler/scheduled?${searchParams.toString()}`,
+						`/cdn-cgi/local/scheduled?${searchParams.toString()}`,
 						undefined,
 						workerName,
 						"scheduled"

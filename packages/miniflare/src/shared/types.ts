@@ -1,16 +1,14 @@
 import assert from "node:assert";
 import path from "node:path";
 import { z } from "zod";
-import type { ParseParams } from "zod";
-
-export function zAwaitable<T extends z.ZodTypeAny>(
+export function zAwaitable<T extends z.ZodType>(
 	type: T
 ): z.ZodUnion<[T, z.ZodPromise<T>]> {
 	return type.or(z.promise(type));
 }
 
-export type OptionalZodTypeOf<T extends z.ZodTypeAny | undefined> =
-	T extends z.ZodTypeAny ? z.TypeOf<T> : undefined;
+export type OptionalZodTypeOf<T extends z.ZodType | undefined> =
+	T extends z.ZodType ? z.output<T> : undefined;
 
 // https://github.com/colinhacks/zod/blob/59768246aa57133184b2cf3f7c2a1ba5c3ab08c3/README.md?plain=1#L1302-L1317
 export const LiteralSchema = z.union([
@@ -22,19 +20,30 @@ export const LiteralSchema = z.union([
 export type Literal = z.infer<typeof LiteralSchema>;
 export type Json = Literal | { [key: string]: Json } | Json[];
 export const JsonSchema: z.ZodType<Json> = z.lazy(() =>
-	z.union([LiteralSchema, z.array(JsonSchema), z.record(JsonSchema)])
+	z.union([
+		LiteralSchema,
+		z.array(JsonSchema),
+		z.record(z.string(), JsonSchema),
+	])
 );
 
 let rootPath: string | undefined;
-export function parseWithRootPath<Z extends z.ZodTypeAny>(
+export function parseWithRootPath<Z extends z.ZodType>(
 	newRootPath: string,
 	schema: Z,
 	data: unknown,
-	params?: Partial<ParseParams>
+	options?: { path?: (string | number)[] }
 ): z.infer<Z> {
 	rootPath = newRootPath;
 	try {
-		return schema.parse(data, params);
+		return schema.parse(data);
+	} catch (e) {
+		if (options?.path && e instanceof z.ZodError) {
+			for (const issue of e.issues) {
+				issue.path.unshift(...options.path);
+			}
+		}
+		throw e;
 	} finally {
 		rootPath = undefined;
 	}

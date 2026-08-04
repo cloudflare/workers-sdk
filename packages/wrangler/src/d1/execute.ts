@@ -317,7 +317,8 @@ async function executeLocally({
 	// TODO(#11870): Really we should prefer localDB.name here, but that would break users with existing local databases.
 	const id = localDB.previewDatabaseUuid ?? localDB.uuid ?? localDB.binding;
 	const persistencePath = getLocalPersistencePath(persistTo, config);
-	const d1Persist = path.join(persistencePath, "v3", "d1");
+	const resourcePersistencePath = path.join(persistencePath, "v3");
+	const d1Persist = path.join(resourcePersistencePath, "d1");
 
 	logger.log(
 		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
@@ -331,7 +332,7 @@ async function executeLocally({
 	const mf = new Miniflare({
 		modules: true,
 		script: "",
-		d1Persist,
+		resourcePersistencePath,
 		d1Databases: { DATABASE: id },
 	});
 	const db = await mf.getD1Database("DATABASE");

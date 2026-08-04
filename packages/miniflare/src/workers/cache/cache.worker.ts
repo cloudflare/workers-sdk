@@ -6,7 +6,6 @@ import {
 	DELETE,
 	GET,
 	KeyValueStorage,
-	LogLevel,
 	MiniflareDurableObject,
 	parseRanges,
 	PURGE,
@@ -19,7 +18,6 @@ import {
 	RangeNotSatisfiable,
 	StorageFailure,
 } from "./errors.worker";
-import type { CacheObjectCf } from "./constants";
 import type {
 	InclusiveRange,
 	MiniflareDurableObjectCf,
@@ -36,7 +34,7 @@ interface CacheMetadata {
 
 type CacheRouteHandler = RouteHandler<
 	unknown,
-	RequestInitCfProperties & MiniflareDurableObjectCf & CacheObjectCf
+	RequestInitCfProperties & MiniflareDurableObjectCf
 >;
 
 function getCacheKey(req: Request<unknown, RequestInitCfProperties>) {
@@ -265,17 +263,6 @@ class SizingStream extends TransformStream<Uint8Array, Uint8Array> {
 }
 
 export class CacheObject extends MiniflareDurableObject {
-	#warnedUsage = false;
-	async #maybeWarnUsage(request: Request<unknown, CacheObjectCf>) {
-		if (!this.#warnedUsage && request.cf?.miniflare?.cacheWarnUsage === true) {
-			this.#warnedUsage = true;
-			await this.logWithLevel(
-				LogLevel.WARN,
-				"Cache operations will have no impact if you deploy to a workers.dev subdomain!"
-			);
-		}
-	}
-
 	#storage?: KeyValueStorage<CacheMetadata>;
 	get storage() {
 		// `KeyValueStorage` can only be constructed once `this.blob` is initialised
@@ -284,7 +271,6 @@ export class CacheObject extends MiniflareDurableObject {
 
 	@GET()
 	match: CacheRouteHandler = async (req) => {
-		await this.#maybeWarnUsage(req);
 		const cacheKey = getCacheKey(req);
 
 		// Never cache Workers Sites requests, so we always return on-disk files
@@ -330,7 +316,6 @@ export class CacheObject extends MiniflareDurableObject {
 
 	@PUT()
 	put: CacheRouteHandler = async (req) => {
-		await this.#maybeWarnUsage(req);
 		const cacheKey = getCacheKey(req);
 
 		// Never cache Workers Sites requests, so we always return on-disk files
@@ -384,7 +369,6 @@ export class CacheObject extends MiniflareDurableObject {
 
 	@PURGE()
 	delete: CacheRouteHandler = async (req) => {
-		await this.#maybeWarnUsage(req);
 		const cacheKey = getCacheKey(req);
 
 		const deleted = await this.storage.delete(cacheKey);

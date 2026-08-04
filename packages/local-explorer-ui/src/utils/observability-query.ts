@@ -4,6 +4,7 @@
  * Supported (AND-only):
  *   status:error|success        kind:d1|http|fetch|kv|r2|do
  *   dur:>100  dur:<=50          <attr>:<value>   (e.g. db.query.text:orders)
+ *   trace:<id>  span:<id>       (look up by id)
  *   level:error  op:/checkout   (Logs)
  * Any bare words (or quoted "phrases") become free-text search.
  */
@@ -140,6 +141,8 @@ export interface ParsedTraceQuery {
 	text: string;
 	status?: "success" | "error";
 	kind?: string;
+	traceId?: string;
+	spanId?: string;
 	clauses: QueryClause[];
 }
 
@@ -167,6 +170,16 @@ export function parseTraceQuery(input: string): ParsedTraceQuery {
 			case "type":
 				result.kind = kv.value.toLowerCase();
 				break;
+			case "trace":
+			case "traceid":
+			case "trace_id":
+				result.traceId = kv.value;
+				break;
+			case "span":
+			case "spanid":
+			case "span_id":
+				result.spanId = kv.value;
+				break;
 			case "dur":
 			case "duration": {
 				const { op, value } = splitComparator(kv.value);
@@ -187,6 +200,8 @@ export interface ParsedEventQuery {
 	text: string;
 	level?: string;
 	operation?: string;
+	traceId?: string;
+	spanId?: string;
 }
 
 export function parseEventQuery(input: string): ParsedEventQuery {
@@ -207,6 +222,18 @@ export function parseEventQuery(input: string): ParsedEventQuery {
 			kv.key === "route"
 		) {
 			result.operation = kv.value;
+		} else if (
+			kv.key === "trace" ||
+			kv.key === "traceid" ||
+			kv.key === "trace_id"
+		) {
+			result.traceId = kv.value;
+		} else if (
+			kv.key === "span" ||
+			kv.key === "spanid" ||
+			kv.key === "span_id"
+		) {
+			result.spanId = kv.value;
 		} else {
 			free.push(token);
 		}

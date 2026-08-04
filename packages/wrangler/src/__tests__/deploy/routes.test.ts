@@ -760,8 +760,12 @@ Update them to point to this script instead?`,
 				});
 				await expect(runWrangler("deploy ./index")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-					[Error: Some triggers failed to deploy for test-name:
-					  - Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again]
+					[Error: Trigger configuration for "test-name" was only partially updated:
+
+					  Custom domains:
+					    - Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again
+
+					Successful trigger changes were not rolled back.]
 				`);
 			});
 			it("should deploy domains passed via --domain flag as custom domains", async ({
@@ -1474,9 +1478,16 @@ Update them to point to this script instead?`,
 
 			await expect(runWrangler("deploy ./index")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Some triggers failed to deploy for test-name:
-				  - Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again
-				  - A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/schedules) failed.]
+				[Error: Trigger configuration for "test-name" was only partially updated:
+
+				  Custom domains:
+				    - Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again
+
+				  Cron schedules:
+				    - A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/schedules) failed.
+				      - Schedules API failed [code: 10005]
+
+				Successful trigger changes were not rolled back.]
 			`);
 			// The successful workers.dev subdomain target should still have been
 			// logged before the aggregated error was thrown.

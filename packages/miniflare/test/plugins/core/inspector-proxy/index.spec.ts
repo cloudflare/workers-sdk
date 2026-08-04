@@ -38,7 +38,9 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 
 	const versionDetails = (await res.json()) as Record<string, string>;
 
-	expect(versionDetails["Browser"]).toMatch(/^miniflare\/v\d\.\d{8}\.\d+$/);
+	expect(versionDetails["Browser"]).toMatch(
+		/^miniflare\/v\d\.\d{8}\.\d+(-\w+)?$/
+	);
 	expect(versionDetails["Protocol-Version"]).toMatch(/^\d+\.\d+$/);
 });
 
@@ -706,12 +708,10 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		inspectorPort: 0,
-		// Avoid the default handling of stdio since that will console log the very large string in the test output.
-		handleRuntimeStdio(stdout, stderr) {
-			// We need to add these handlers otherwise the streams will not be consumed and the process will hang.
-			stdout.on("data", () => {});
-			stderr.on("data", () => {});
-		},
+		// Avoid the default handling of stdio since that will console log the very
+		// large string in the test output. A no-op structured log handler consumes
+		// the runtime output without forwarding it to the console.
+		handleStructuredLogs() {},
 		workers: [
 			{
 				script: `

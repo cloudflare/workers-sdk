@@ -2,6 +2,7 @@ import {
 	Button,
 	cn,
 	InputGroup,
+	LinkButton,
 	RefreshButton,
 	Select,
 	useKumoToastManager,
@@ -10,19 +11,20 @@ import {
 	CopyIcon,
 	MagnifyingGlassIcon,
 	PulseIcon,
+	TreeStructureIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, createLink, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClearButton } from "../../components/observability/ClearButton";
 import { FilterBuilder } from "../../components/observability/FilterBuilder";
 import { ObservabilityDisabled } from "../../components/observability/ObservabilityDisabled";
-import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
 import { QuerySyntaxHint } from "../../components/observability/QuerySyntaxHint";
 import { ResourceError } from "../../components/ResourceError";
 import { copyTextToClipboard } from "../../utils/agent-prompt";
 import {
 	clearTraces,
+	formatLogMessage,
 	isObservabilityDisabledError,
 	listEvents,
 } from "../../utils/observability";
@@ -55,6 +57,10 @@ export const Route = createFileRoute("/observability/events")({
 	errorComponent: ResourceError,
 });
 
+// A real anchor (new-tab / copy-link) that navigates via the router, so we keep
+// typed search params instead of building an href by hand.
+const TraceLinkButton = createLink(LinkButton);
+
 function parseMessage(message: string | null): unknown {
 	if (!message) {
 		return null;
@@ -64,17 +70,6 @@ function parseMessage(message: string | null): unknown {
 	} catch {
 		return message;
 	}
-}
-
-function previewMessage(message: string | null): string {
-	const parsed = parseMessage(message);
-	if (parsed == null) {
-		return "";
-	}
-	if (typeof parsed === "string") {
-		return parsed;
-	}
-	return JSON.stringify(parsed);
 }
 
 function levelClass(level: string | null): string {
@@ -128,6 +123,8 @@ function EventsView(): JSX.Element {
 					search: parsed.text,
 					level: parsed.level ?? level,
 					operation: parsed.operation,
+					traceId: parsed.traceId,
+					spanId: parsed.spanId,
 					clauses: filterClauses,
 				})
 			);
@@ -183,7 +180,9 @@ function EventsView(): JSX.Element {
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-6">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<ObservabilityViewSwitcher current="events" />
+					<span className="pl-1 text-sm leading-tight font-semibold text-kumo-default">
+						Events
+					</span>
 					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
 						{events.length} event{events.length === 1 ? "" : "s"}
 					</span>
@@ -294,6 +293,7 @@ function EventsView(): JSX.Element {
 									<th className="w-20 py-2 pr-3 font-medium">Level</th>
 									<th className="py-2 pr-3 font-medium">Message</th>
 									<th className="w-48 py-2 pr-3 font-medium">Service</th>
+									<th className="w-28 py-2 pr-3 font-medium">Trace</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -328,6 +328,12 @@ function EventRow({
 	onToggle: () => void;
 }): JSX.Element {
 	const toast = useKumoToastManager();
+	// Keep the selected worker when jumping to the Traces view, but don't carry
+	// over the rest of the Events view's search state.
+	const worker = useSearch({
+		strict: false,
+		select: (s) => (s as { worker?: string }).worker,
+	});
 	const blob = useMemo(() => {
 		const obj = {
 			timestamp: event.created_at,
@@ -379,15 +385,37 @@ function EventRow({
 					</span>
 				</td>
 				<td className="truncate py-2 pr-3 font-mono text-xs text-kumo-default">
-					{previewMessage(event.message)}
+					{formatLogMessage(event.message ?? undefined) || (
+						<span className="text-kumo-subtle italic">(no message)</span>
+					)}
 				</td>
 				<td className="py-2 pr-3 font-mono text-xs text-kumo-subtle">
 					{event.service ?? "-"}
 				</td>
+				<td className="py-2 pr-3">
+					{event.span_id ? (
+						<TraceLinkButton
+							to="/observability"
+							search={{
+								worker,
+								trace: event.trace_id,
+								span: event.span_id,
+							}}
+							size="sm"
+							variant="secondary"
+							icon={TreeStructureIcon}
+							title="Open this event's trace in the Traces view"
+							// Stop the row's toggle handler; the link handles navigation.
+							onClick={(e) => e.stopPropagation()}
+						>
+							View trace
+						</TraceLinkButton>
+					) : null}
+				</td>
 			</tr>
 			{isOpen ? (
 				<tr className="bg-kumo-base">
-					<td colSpan={4} className="px-4 py-3">
+					<td colSpan={5} className="px-4 py-3">
 						<div className="relative rounded-lg border border-kumo-fill bg-kumo-elevated p-3">
 							<Button
 								size="sm"

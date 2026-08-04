@@ -27,11 +27,11 @@
 
 ## BUILD
 
-`scripts/bundle.mjs` runs 3 separate esbuild builds:
+`tsdown.config.ts` defines 3 separate builds (all ESM):
 
-1. `undici` mock-agent (CJS)
-2. pool + worker (ESM)
-3. config + libs (CJS)
+1. pool — `src/pool/index.ts` → `dist/pool` (emits type declarations)
+2. worker + libs — `src/worker/index.ts` plus `src/worker/lib` and `src/worker/node` → `dist/worker`
+3. codemods — `src/codemods/vitest-v3-to-v4.ts` → `dist/codemods`
 
 Types entry `types/cloudflare-test.d.ts` is hand-written (NOT generated from source).
 
