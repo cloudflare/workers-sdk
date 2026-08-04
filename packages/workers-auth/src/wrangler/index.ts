@@ -18,6 +18,7 @@ import {
 	OAUTH_CALLBACK_URL,
 	WRANGLER_CLI_NAME,
 	WRANGLER_CONSENT_PAGES,
+	WRANGLER_DISPLAY_NAME,
 	WRANGLER_KEYRING_SERVICE_NAME,
 } from "./constants";
 import { getClientIdFromEnv } from "./env";
@@ -68,10 +69,12 @@ export type WranglerLoginProps = CloudflareLoginProps;
  */
 export const WRANGLER_CLI: CliDescriptor = {
 	cliName: WRANGLER_CLI_NAME,
+	displayName: WRANGLER_DISPLAY_NAME,
 	commands: {
 		login: "wrangler login",
 		whoami: "wrangler whoami",
 		createProfile: "wrangler auth create",
+		deviceLogin: "wrangler login --device",
 	},
 	keyringServiceName: WRANGLER_KEYRING_SERVICE_NAME,
 	clientId: getClientIdFromEnv,
