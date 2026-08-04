@@ -330,3 +330,73 @@ describe("workflow instance lifecycle methods", () => {
 		expect(finalStatus.output).toBe("workflow-complete");
 	});
 });
+
+// Worker that surfaces a binding error's `retryable` hint to the caller so we can
+// assert the typed-error behavior end-to-end through the real miniflare stack.
+const TYPED_ERROR_WORKFLOW_SCRIPT = () => `
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class TypedErrorWorkflow extends WorkflowEntrypoint {
+	async run(event, step) {
+		return "done";
+	}
+}
+export default {
+	async fetch(request, env, ctx) {
+		try {
+			// Getting a non-existent instance throws instance.not_found (non-retryable).
+			await env.TYPED_ERROR_WORKFLOW.get("does-not-exist");
+			return Response.json({ threw: false });
+		} catch (err) {
+			return Response.json({
+				threw: true,
+				message: err.message,
+				retryable: err.retryable,
+				hasRetryable: "retryable" in err,
+			});
+		}
+	},
+};`;
+
+function typedErrorMiniflareOpts(
+	tmp: string,
+	extraFlags: string[]
+): MiniflareOptions {
+	return {
+		name: "typed-error-worker",
+		compatibilityDate: "2026-03-09",
+		modules: true,
+		script: TYPED_ERROR_WORKFLOW_SCRIPT(),
+		workflows: {
+			TYPED_ERROR_WORKFLOW: {
+				className: "TypedErrorWorkflow",
+				name: "TYPED_ERROR_WORKFLOW",
+				compatibilityFlags: ["nodejs_compat", "experimental", ...extraFlags],
+			},
+		},
+		resourcePersistencePath: tmp,
+	};
+}
+
+describe("workflows_typed_errors flag", () => {
+	// NOTE: the flag-ON path is covered by the `withRetryableHint` unit tests in
+	// @cloudflare/workflows-shared. It cannot be exercised here until the bundled
+	// `workerd` binary ships the `workflows_typed_errors` compatibility flag —
+	// workerd rejects unknown flags at startup. This test asserts the opt-in
+	// contract: with the flag off, the wrapped binding leaves errors untouched.
+	test("does not set retryable when the flag is off", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare(typedErrorMiniflareOpts(tmp, []));
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch("http://localhost");
+		const data = (await res.json()) as {
+			threw: boolean;
+			message: string;
+			hasRetryable: boolean;
+		};
+
+		expect(data.threw).toBe(true);
+		expect(data.message).toBe("instance.not_found");
+		expect(data.hasRetryable).toBe(false);
+	});
+});

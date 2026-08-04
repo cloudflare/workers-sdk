@@ -119,6 +119,42 @@ export function shouldPreserveNonRetryableError(): boolean {
 	return getCompatFlag("workflows_preserve_non_retryable_error_message");
 }
 
+export function shouldSetTypedErrors(): boolean {
+	return getCompatFlag("workflows_typed_errors");
+}
+
+// Kept in sync with the workerd table in
+// `workerd/src/cloudflare/internal/workflows-api.ts`.
+const RETRYABLE_CODES: ReadonlySet<string> = new Set([
+	"instance.too_many_queued",
+	"rate_limit.workflow_instance_creation",
+	"rate-limit.workflows_control_plane",
+	"rate_limit.instance_step_output",
+	"migration.in_progress",
+]);
+
+const OVERLOAD_MESSAGE = "too many requests";
+const WORKFLOW_ERROR_CODE_REGEXP = /^\s*\(([a-zA-Z._-]+)\) /;
+
+function classifyRetryable(message: string): boolean {
+	if (message === OVERLOAD_MESSAGE) {
+		return true;
+	}
+	const code = WORKFLOW_ERROR_CODE_REGEXP.exec(message)?.[1];
+	return code !== undefined && RETRYABLE_CODES.has(code);
+}
+
+// Attaches a `retryable` hint when `workflows_typed_errors` is enabled; no-op
+// otherwise. Returns the same error for `throw withRetryableHint(err)` use.
+export function withRetryableHint<T extends Error>(error: T): T {
+	if (shouldSetTypedErrors()) {
+		(error as T & { retryable?: boolean }).retryable = classifyRetryable(
+			error.message
+		);
+	}
+	return error;
+}
+
 export function stepNotFoundError(name: string): WorkflowError {
 	return createWorkflowError(
 		`Step "${name}" not found in execution history`,

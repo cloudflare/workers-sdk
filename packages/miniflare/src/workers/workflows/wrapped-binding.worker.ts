@@ -1,3 +1,4 @@
+import { withRetryableHint } from "@cloudflare/workflows-shared/src/lib/errors";
 import type {
 	WorkflowBinding,
 	WorkflowInstanceRestartOptions,
@@ -5,32 +6,52 @@ import type {
 } from "@cloudflare/workflows-shared/src/binding";
 import type { WorkflowIntrospectionOperation } from "@cloudflare/workflows-shared/src/types";
 
+// Classify here (user's isolate) rather than in the binding: a `retryable`
+// own-property would be dropped crossing the JSRPC boundary, but the message
+// survives. No-op unless `workflows_typed_errors` is enabled.
+async function withTypedErrors<T>(op: () => Promise<T>): Promise<T> {
+	try {
+		return await op();
+	} catch (err) {
+		if (err instanceof Error) {
+			throw withRetryableHint(err);
+		}
+		throw err;
+	}
+}
+
 class WorkflowImpl implements Workflow {
 	constructor(private binding: WorkflowBinding) {}
 
 	async get(id: string): Promise<WorkflowInstance> {
-		const instanceHandle = new InstanceImpl(id, this.binding);
-		// throws instance.not_found if instance doesn't exist
-		// this is needed for backwards compat
-		await instanceHandle.status();
-		return instanceHandle;
+		return withTypedErrors(async () => {
+			const instanceHandle = new InstanceImpl(id, this.binding);
+			// throws instance.not_found if instance doesn't exist
+			// this is needed for backwards compat
+			await instanceHandle.status();
+			return instanceHandle;
+		});
 	}
 
 	async create(
 		options?: WorkflowInstanceCreateOptions
 	): Promise<WorkflowInstance> {
-		using result = (await this.binding.create(options)) as WorkflowInstance &
-			Disposable;
+		return withTypedErrors(async () => {
+			using result = (await this.binding.create(options)) as WorkflowInstance &
+				Disposable;
 
-		return new InstanceImpl(result.id, this.binding);
+			return new InstanceImpl(result.id, this.binding);
+		});
 	}
 
 	async createBatch(
 		options: WorkflowInstanceCreateOptions[]
 	): Promise<WorkflowInstance[]> {
-		const result = await this.binding.createBatch(options);
-		return result.map((res) => {
-			return new InstanceImpl(res.id, this.binding);
+		return withTypedErrors(async () => {
+			const result = await this.binding.createBatch(options);
+			return result.map((res) => {
+				return new InstanceImpl(res.id, this.binding);
+			});
 		});
 	}
 
@@ -96,46 +117,58 @@ class InstanceImpl implements WorkflowInstance {
 	}
 
 	public async pause(): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.pause();
+		return withTypedErrors(async () => {
+			using instance = await this.getInstance();
+			await instance.pause();
+		});
 	}
 
 	public async resume(): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.resume();
+		return withTypedErrors(async () => {
+			using instance = await this.getInstance();
+			await instance.resume();
+		});
 	}
 
 	public async terminate(
 		options?: WorkflowInstanceTerminateOptions
 	): Promise<void> {
-		using instance = await this.getInstance();
-		// TODO(vaish): remove cast once @cloudflare/workers-types ships terminate options
-		await (
-			instance.terminate as (
-				options?: WorkflowInstanceTerminateOptions
-			) => Promise<void>
-		)(options);
+		return withTypedErrors(async () => {
+			using instance = await this.getInstance();
+			// TODO(vaish): remove cast once @cloudflare/workers-types ships terminate options
+			await (
+				instance.terminate as (
+					options?: WorkflowInstanceTerminateOptions
+				) => Promise<void>
+			)(options);
+		});
 	}
 
 	public async restart(
 		options?: WorkflowInstanceRestartOptions
 	): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.restart(options);
+		return withTypedErrors(async () => {
+			using instance = await this.getInstance();
+			await instance.restart(options);
+		});
 	}
 
 	public async status(): Promise<InstanceStatus> {
-		using instance = await this.getInstance();
-		using res = (await instance.status()) as InstanceStatus & Disposable;
-		return structuredClone(res);
+		return withTypedErrors(async () => {
+			using instance = await this.getInstance();
+			using res = (await instance.status()) as InstanceStatus & Disposable;
+			return structuredClone(res);
+		});
 	}
 
 	public async sendEvent(args: {
 		payload: unknown;
 		type: string;
 	}): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.sendEvent(args);
+		return withTypedErrors(async () => {
+			using instance = await this.getInstance();
+			await instance.sendEvent(args);
+		});
 	}
 }
 
