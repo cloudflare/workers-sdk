@@ -328,6 +328,25 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should handle a lowercase compound statement END", ({ expect }) => {
+		expect(
+			splitSqlQuery(`
+	CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+	begin
+		DELETE FROM updates WHERE item_id=old.id;
+	end;
+	CREATE TABLE tasks (id INTEGER PRIMARY KEY);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+				begin
+					DELETE FROM updates WHERE item_id=old.id;
+				end",
+			  "CREATE TABLE tasks (id INTEGER PRIMARY KEY)",
+			]
+		`);
+	});
+
 	it("should handle compound statements for CASEs", ({ expect }) => {
 		expect(
 			splitSqlQuery(`
