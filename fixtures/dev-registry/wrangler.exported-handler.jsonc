@@ -27,11 +27,6 @@
 			"entrypoint": "NamedEntrypoint",
 		},
 	],
-	"tail_consumers": [
-		{
-			"service": "worker-entrypoint-with-assets",
-		},
-	],
 	"queues": {
 		"producers": [
 			{
