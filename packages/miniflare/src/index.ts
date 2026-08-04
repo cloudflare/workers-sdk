@@ -984,6 +984,12 @@ export class Miniflare {
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 	readonly #devRegistry: DevRegistry;
+	// Whether `unsafeRegisterInDevRegistry()` has released the hold that
+	// `unsafeDeferDevRegistryRegistration` puts on advertising our Workers.
+	// Reset by every `setOptions()` that asks to defer again, so a consumer that
+	// rebuilds its config (a Vite dev server restart, for instance) gets the same
+	// protection on each cycle rather than only on the first one.
+	#devRegistryRegistrationReleased = false;
 
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
@@ -2588,7 +2594,15 @@ export class Miniflare {
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
-		await this.#registerWorkers();
+		// Deferred registration only holds back advertising *our* Workers. The
+		// registry push below is what lets us reach everyone else's, so it always
+		// runs.
+		if (
+			!this.#sharedOpts.core.unsafeDeferDevRegistryRegistration ||
+			this.#devRegistryRegistrationReleased
+		) {
+			await this.#registerWorkers();
+		}
 
 		// Catch any registry updates that occurred while workerd was booting.
 		if (this.#devRegistry.isEnabled()) {
@@ -2729,6 +2743,24 @@ export class Miniflare {
 		this.#devRegistry.register(Object.fromEntries(entries));
 	}
 
+	/**
+	 * Advertise this instance's Workers in the dev registry, releasing the hold
+	 * put in place by `unsafeDeferDevRegistryRegistration`.
+	 *
+	 * Call this once the runtime is the one peers should actually connect to. It
+	 * is idempotent, and a no-op unless `unsafeDeferDevRegistryRegistration` is
+	 * set. Registration does not restart `workerd`, so this is cheap.
+	 */
+	async unsafeRegisterInDevRegistry(): Promise<void> {
+		this.#checkDisposed();
+		await this.ready;
+
+		return this.#runtimeMutex.runWith(async () => {
+			this.#devRegistryRegistrationReleased = true;
+			await this.#registerWorkers();
+		});
+	}
+
 	get ready(): Promise<URL> {
 		return this.#waitForReady();
 	}
@@ -2824,6 +2856,13 @@ export class Miniflare {
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 		this.#hyperdriveProxyController.log = this.#log;
+
+		// `updateRegistryPath()` below unregisters our Workers, and the runtime is
+		// about to be replaced, so re-arm the hold and wait to be told that the new
+		// runtime is the one to advertise.
+		if (sharedOpts.core.unsafeDeferDevRegistryRegistration) {
+			this.#devRegistryRegistrationReleased = false;
+		}
 
 		const newExternalOnUpdate = sharedOpts.core.unsafeHandleDevRegistryUpdate;
 		await this.#devRegistry.updateRegistryPath(

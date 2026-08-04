@@ -808,6 +808,47 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			);
 		}, waitForTimeout);
 	});
+
+	it("only ever advertises one debug port while starting up", async ({
+		expect,
+		devRegistryPath,
+	}) => {
+		// The plugin brings the runtime up twice during startup: once to discover
+		// each Worker's exports by running it, then again with a config built from
+		// what it found. The second runtime gets a new debug port, so advertising the
+		// first one hands peers an address that is about to disappear - and a peer
+		// holding a dead address can have its own `workerd` aborted.
+		//
+		// Sampling the registry throughout startup catches any intermediate address:
+		// before the fix the first one stayed published for well over a second.
+		const definitionPath = path.join(devRegistryPath, "worker-entrypoint");
+		const advertised = new Set<string>();
+		let sampling = true;
+		const sampler = (async () => {
+			while (sampling) {
+				try {
+					const { debugPortAddress } = JSON.parse(
+						await fs.readFile(definitionPath, "utf8")
+					);
+					if (typeof debugPortAddress === "string") {
+						advertised.add(debugPortAddress);
+					}
+				} catch {
+					// Not registered yet, or a partially written file.
+				}
+				await new Promise((resolve) => setTimeout(resolve, 15));
+			}
+		})();
+
+		try {
+			await runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath);
+		} finally {
+			sampling = false;
+			await sampler;
+		}
+
+		expect([...advertised]).toHaveLength(1);
+	});
 });
 
 describe("Dev Registry: vite dev <-> wrangler dev", () => {

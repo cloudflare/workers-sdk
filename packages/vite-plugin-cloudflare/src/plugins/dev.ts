@@ -311,6 +311,17 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				}
 			}
 
+			// The runtime we are leaving behind is the one peers should connect to, so
+			// it is now safe to advertise it. Everything above may have replaced the
+			// runtime (rediscovering Worker exports, rebuilding container images), and
+			// publishing a debug port before that settles hands peers an address that
+			// is about to disappear.
+			//
+			// This runs for every plugin config type, and whether or not the export
+			// types turned out to differ, because `unsafeDevRegistryRegistration` is
+			// deferred unconditionally in `getDevMiniflareOptions`.
+			await ctx.miniflare.unsafeRegisterInDevRegistry();
+
 			return () => {
 				// In Vite 6, pre-middleware is placed before the host check middleware,
 				// leaving the server vulnerable to DNS rebinding attacks. We move it to

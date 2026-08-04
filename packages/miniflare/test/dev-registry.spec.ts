@@ -1787,4 +1787,117 @@ describe.sequential("DevRegistry", () => {
 			{ timeout: 10_000, interval: 100 }
 		);
 	});
+
+	describe("unsafeDeferDevRegistryRegistration", () => {
+		test("withholds advertisement until registration is released, and re-arms on setOptions", async ({
+			expect,
+		}) => {
+			const unsafeDevRegistryPath = await useTmp();
+			const sharedOptions = {
+				name: "deferred-worker",
+				unsafeDevRegistryPath,
+				unsafeDeferDevRegistryRegistration: true,
+				modules: true,
+			} satisfies Partial<MiniflareOptions>;
+			const mf = new Miniflare({
+				...sharedOptions,
+				script: `export default { fetch() { return new Response("one"); } }`,
+			});
+			useDispose(mf);
+
+			await mf.ready;
+
+			// A peer resolving us now would get a debug port we are about to replace.
+			expect(
+				getWorkerRegistry(unsafeDevRegistryPath)["deferred-worker"]
+			).toBeUndefined();
+
+			await mf.unsafeRegisterInDevRegistry();
+
+			const firstEntry = getWorkerRegistry(unsafeDevRegistryPath)[
+				"deferred-worker"
+			];
+			expect(firstEntry).toBeDefined();
+			expect(firstEntry.debugPortAddress).toMatch(/^127\.0\.0\.1:\d+$/);
+
+			// A fresh runtime means a fresh debug port, so the hold goes back on
+			// rather than leaving the previous address advertised.
+			await mf.setOptions({
+				...sharedOptions,
+				script: `export default { fetch() { return new Response("two"); } }`,
+			});
+
+			expect(
+				getWorkerRegistry(unsafeDevRegistryPath)["deferred-worker"]
+			).toBeUndefined();
+
+			await mf.unsafeRegisterInDevRegistry();
+
+			expect(
+				getWorkerRegistry(unsafeDevRegistryPath)["deferred-worker"]
+			).toBeDefined();
+		});
+
+		test("still resolves external services while its own advertisement is held back", async ({
+			expect,
+		}) => {
+			const unsafeDevRegistryPath = await useTmp();
+			const remote = new Miniflare({
+				name: "remote-worker",
+				unsafeDevRegistryPath,
+				modules: true,
+				script: `export default { fetch() { return new Response("Hello from remote!"); } }`,
+			});
+			useDispose(remote);
+			await remote.ready;
+
+			// Deferring only holds back what we publish about ourselves; reading the
+			// registry has to keep working or startup would not be able to talk to
+			// sessions that are already running.
+			const local = new Miniflare({
+				name: "local-worker",
+				unsafeDevRegistryPath,
+				unsafeDeferDevRegistryRegistration: true,
+				serviceBindings: { SERVICE: { name: "remote-worker" } },
+				modules: true,
+				script: `
+					export default {
+						fetch(request, env) {
+							return env.SERVICE.fetch(request);
+						}
+					}
+				`,
+			});
+			useDispose(local);
+
+			await vi.waitFor(
+				async () => {
+					const res = await local.dispatchFetch("http://placeholder");
+					expect(await res.text()).toBe("Hello from remote!");
+				},
+				{ timeout: 10_000, interval: 100 }
+			);
+
+			expect(
+				getWorkerRegistry(unsafeDevRegistryPath)["local-worker"]
+			).toBeUndefined();
+		});
+
+		test("advertises immediately when not deferring", async ({ expect }) => {
+			const unsafeDevRegistryPath = await useTmp();
+			const mf = new Miniflare({
+				name: "eager-worker",
+				unsafeDevRegistryPath,
+				modules: true,
+				script: `export default { fetch() { return new Response("ok"); } }`,
+			});
+			useDispose(mf);
+
+			await mf.ready;
+
+			expect(
+				getWorkerRegistry(unsafeDevRegistryPath)["eager-worker"]
+			).toBeDefined();
+		});
+	});
 });

@@ -558,6 +558,13 @@ export async function getDevMiniflareOptions(
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+			// We bring the runtime up in two steps: once to discover each Worker's
+			// exports by running it, then again with a config built from what we
+			// found. Advertising the first runtime would publish a debug port we are
+			// about to tear down, and a peer holding a dead address can have its own
+			// `workerd` aborted. `configureServer` releases the hold once the runtime
+			// it leaves behind is the one peers should connect to.
+			unsafeDeferDevRegistryRegistration: true,
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			// The switch for local observability capture: tells Miniflare core to
