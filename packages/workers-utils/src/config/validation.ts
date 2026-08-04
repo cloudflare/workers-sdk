@@ -5131,13 +5131,13 @@ function validateQueues(envName: string): ValidatorFn {
 					)}.`
 				);
 				isValid = false;
-			}
-
-			for (let i = 0; i < consumers.length; i++) {
-				const consumer = consumers[i];
-				const consumerPath = `${fieldPath}.consumers[${i}]`;
-				if (!validateConsumer(diagnostics, consumerPath, consumer, config)) {
-					isValid = false;
+			} else {
+				for (let i = 0; i < consumers.length; i++) {
+					const consumer = consumers[i];
+					const consumerPath = `${fieldPath}.consumers[${i}]`;
+					if (!validateConsumer(diagnostics, consumerPath, consumer, config)) {
+						isValid = false;
+					}
 				}
 			}
 		}
