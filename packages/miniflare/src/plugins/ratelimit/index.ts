@@ -103,20 +103,16 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 		);
 	},
 	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		// One shared entry service; each namespace_id is supplied per-binding via
-		// props, so a single service serves every rate limiter. Multiple bindings
-		// sharing a namespace still collapse to a single counter (same DO name).
-		const namespaceIds = new Set(
-			Object.values(options.ratelimits ?? {}).map((c) => c.namespace_id)
-		);
 		// Wrangler passes `ratelimits: {}` rather than omitting it when a Worker
 		// has no rate limit bindings, so bail on emptiness rather than presence.
 		// Otherwise every `wrangler dev` session would create an unused storage
 		// directory in the user's persistence directory.
-		if (namespaceIds.size === 0) {
+		if (Object.keys(options.ratelimits ?? {}).length === 0) {
 			return [];
 		}
 
+		// Each namespace_id is supplied per-binding via props, so one service serves
+		// every rate limiter while shared namespaces still use the same DO name.
 		const services: Service[] = [
 			{
 				name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,

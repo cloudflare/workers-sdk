@@ -990,6 +990,10 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
+	// Number of times workerd has crashed and been restarted for this instance.
+	// Reported to the user so a repeatedly-crashing runtime is distinguishable
+	// from a one-off, and so the restart isn't silent.
+	#workerdCrashCount = 0;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -2434,6 +2438,14 @@ export class Miniflare {
 	}
 
 	#handleWorkerdCrash(): void {
+		this.#workerdCrashCount++;
+		// Recovery used to be entirely silent, which made a crash look like an
+		// unexplained dev server restart. Always say something: any crash is a
+		// bug worth reporting, and the count distinguishes a one-off from a loop.
+		this.#log.warn(
+			`The Workers runtime crashed unexpectedly and is being restarted (crash #${this.#workerdCrashCount}). ` +
+				"Any additional runtime output above may indicate the cause."
+		);
 		// A crash destroys the proxy server heap just like a config update.
 		this.#proxyClient?.poisonProxies();
 		void this.#runtimeMutex

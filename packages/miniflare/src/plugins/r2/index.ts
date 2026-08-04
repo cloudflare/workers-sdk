@@ -61,7 +61,6 @@ const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
 // A single entry service shared by every *local* bucket. Each bucket's id is
 // supplied per-binding via `ctx.props`, so one service serves all of them.
 export const R2_LOCAL_ENTRY_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:entry`;
-
 export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
 export const R2_S3_SERVICE_NAME = `${R2_PLUGIN_NAME}:s3`;
 const R2_BUCKET_OBJECT_CLASS_NAME = "R2BucketObject";

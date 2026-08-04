@@ -268,14 +268,30 @@ export function spanIsError(
 	return Number.isFinite(code) && code >= 400;
 }
 
+/**
+ * console.log is captured as a JSON-encoded array of its arguments, so render
+ * it the way the console would — strings verbatim, everything else as JSON,
+ * space-joined — rather than dumping the raw array.
+ */
+function formatLogValue(value: unknown): string {
+	if (typeof value === "string") {
+		return value;
+	}
+	if (Array.isArray(value)) {
+		return value
+			.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg)))
+			.join(" ");
+	}
+	return JSON.stringify(value);
+}
+
 /** Parse a JSON-encoded log message back to a display string. */
 export function formatLogMessage(message?: string): string {
 	if (message === undefined) {
 		return "";
 	}
 	try {
-		const value = JSON.parse(message);
-		return typeof value === "string" ? value : JSON.stringify(value);
+		return formatLogValue(JSON.parse(message));
 	} catch {
 		return message;
 	}
@@ -312,8 +328,12 @@ export interface TraceRow {
 
 /** Filters for the trace list — a simpler version of the dashboard query builder. */
 export interface TraceFilters {
-	/** free-text: matches operation name, any span name, or any span attribute. */
+	/** free-text: matches operation name, any span name/id, trace id, or attribute. */
 	search?: string;
+	/** exact/prefix match on the trace id. */
+	traceId?: string;
+	/** match traces containing a span with this id (prefix). */
+	spanId?: string;
 	/** "all" | "success" | "error" */
 	status?: "all" | "success" | "error";
 	/** "all" or a span kind: http | fetch | d1 | kv | r2 | do */
@@ -494,6 +514,17 @@ export function listTraces(filters: TraceFilters = {}): Promise<TraceRow[]> {
 		params.push(filters.kind);
 	}
 
+	if (filters.traceId) {
+		where.push("s.trace_id LIKE ?");
+		params.push(`${filters.traceId}%`);
+	}
+	if (filters.spanId) {
+		where.push(
+			"s.trace_id IN (SELECT trace_id FROM spans WHERE span_id LIKE ?)"
+		);
+		params.push(`${filters.spanId}%`);
+	}
+
 	if (filters.tagKey && filters.tagKey !== "all") {
 		const v = filters.tagValue?.trim();
 		if (v) {
@@ -528,10 +559,13 @@ export function listTraces(filters: TraceFilters = {}): Promise<TraceRow[]> {
 	const q = filters.search?.trim();
 	if (q) {
 		const like = `%${q}%`;
+		// ids match as a prefix (like the trace:/span: filters) — a substring
+		// match on hex ids means any short term matches almost everything.
+		const idPrefix = `${q}%`;
 		where.push(
-			"(s.name LIKE ? OR s.trace_id IN (SELECT trace_id FROM spans WHERE name LIKE ? OR json(attributes) LIKE ?))"
+			"(s.name LIKE ? OR s.trace_id LIKE ? OR s.trace_id IN (SELECT trace_id FROM spans WHERE name LIKE ? OR span_id LIKE ? OR json(attributes) LIKE ?))"
 		);
-		params.push(like, like, like);
+		params.push(like, idPrefix, like, idPrefix, like);
 	}
 
 	params.push(limit);
@@ -569,6 +603,32 @@ export async function getInvocationRootIds(traceId: string): Promise<string[]> {
 	return rows.map((r) => String(r.span_id)).filter(Boolean);
 }
 
+/**
+ * Walks up `parent_id` to the parent-less root `spanId` descends from. A
+ * trace_id with multiple invocations (e.g. a self fetch) has several such
+ * roots — one per Traces-view row — so this maps an event's span to its row.
+ */
+export function findInvocationRoot(
+	spans: Span[],
+	spanId: string
+): string | undefined {
+	const byId = new Map(spans.map((s) => [s.span_id, s]));
+	let current = byId.get(spanId);
+	if (!current) {
+		return undefined;
+	}
+	const seen = new Set<string>();
+	while (current.parent_id && !seen.has(current.span_id)) {
+		seen.add(current.span_id);
+		const parent = byId.get(current.parent_id);
+		if (!parent) {
+			break;
+		}
+		current = parent;
+	}
+	return current.span_id;
+}
+
 /** A persisted console.log event (the "Logs" view). */
 export interface LogEvent {
 	trace_id: string;
@@ -586,6 +646,10 @@ export interface LogEvent {
 
 export interface EventFilters {
 	search?: string;
+	/** prefix match on the event's trace id. */
+	traceId?: string;
+	/** prefix match on the emitting span id. */
+	spanId?: string;
 	/** "all" | debug | info | log | warn | error */
 	level?: string;
 	/** substring match on the emitting operation/route. */
@@ -610,11 +674,24 @@ export function listEvents(filters: EventFilters = {}): Promise<LogEvent[]> {
 		where.push("l.operation LIKE ?");
 		params.push(`%${op}%`);
 	}
+	if (filters.traceId) {
+		where.push("l.trace_id LIKE ?");
+		params.push(`${filters.traceId}%`);
+	}
+	if (filters.spanId) {
+		where.push("l.span_id LIKE ?");
+		params.push(`${filters.spanId}%`);
+	}
 	const q = filters.search?.trim();
 	if (q) {
 		const like = `%${q}%`;
-		where.push("(l.message LIKE ? OR l.operation LIKE ? OR sp.service LIKE ?)");
-		params.push(like, like, like);
+		// ids match as a prefix (like the trace:/span: filters) — a substring
+		// match on hex ids means any short term matches almost everything.
+		const idPrefix = `${q}%`;
+		where.push(
+			"(l.message LIKE ? OR l.operation LIKE ? OR sp.service LIKE ? OR l.trace_id LIKE ? OR l.span_id LIKE ?)"
+		);
+		params.push(like, like, like, idPrefix, idPrefix);
 	}
 
 	// Structured clauses from the filter modal. Fields map to a concrete log

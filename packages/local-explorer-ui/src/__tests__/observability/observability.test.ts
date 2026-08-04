@@ -2,6 +2,7 @@ import { describe, test } from "vitest";
 import {
 	buildSpanTree,
 	buildWaterfall,
+	findInvocationRoot,
 	formatDuration,
 	formatLogMessage,
 	isRunning,
@@ -563,7 +564,44 @@ describe("formatLogMessage", () => {
 	test("stringifies non-string JSON", ({ expect }) => {
 		expect(formatLogMessage(JSON.stringify({ a: 1 }))).toBe(`{"a":1}`);
 	});
+	test("joins a console arg array the way the console would", ({ expect }) => {
+		expect(
+			formatLogMessage(JSON.stringify(["request failed:", { a: 1 }]))
+		).toBe(`request failed: {"a":1}`);
+	});
 	test("falls back to the raw value on invalid JSON", ({ expect }) => {
 		expect(formatLogMessage("raw")).toBe("raw");
+	});
+});
+
+describe("findInvocationRoot", () => {
+	// Two invocations sharing one trace_id: roots A and X, each parent-less.
+	const spans = [
+		span({ span_id: "A" }),
+		span({ span_id: "B", parent_id: "A" }),
+		span({ span_id: "C", parent_id: "B" }),
+		span({ span_id: "X" }),
+		span({ span_id: "Y", parent_id: "X" }),
+	];
+
+	test("walks a nested span up to its invocation root", ({ expect }) => {
+		expect(findInvocationRoot(spans, "C")).toBe("A");
+		expect(findInvocationRoot(spans, "Y")).toBe("X");
+	});
+
+	test("returns the span itself when it is a root", ({ expect }) => {
+		expect(findInvocationRoot(spans, "X")).toBe("X");
+	});
+
+	test("returns undefined for an unknown span", ({ expect }) => {
+		expect(findInvocationRoot(spans, "nope")).toBeUndefined();
+	});
+
+	test("terminates on a cyclic parent link", ({ expect }) => {
+		const cyclic = [
+			span({ span_id: "P", parent_id: "Q" }),
+			span({ span_id: "Q", parent_id: "P" }),
+		];
+		expect(findInvocationRoot(cyclic, "P")).toBe("P");
 	});
 });

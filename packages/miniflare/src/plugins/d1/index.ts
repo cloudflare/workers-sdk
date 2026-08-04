@@ -49,7 +49,6 @@ const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
 // A single entry service shared by every *local* database. Each database's id is
 // supplied per-binding via `ctx.props`, so one service serves all of them.
 export const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
-
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
 const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: D1_DATABASE_SERVICE_PREFIX,

@@ -9,6 +9,19 @@ import { retry } from "../helpers/retry";
 import { waitForLong } from "../helpers/wait-for";
 import { WorkerdTests } from "./worker/index";
 
+// Tests from `WorkerdTests` that are known to be broken, keyed by test name with
+// the reason reported by vitest. Prefer this over deleting the test so the
+// coverage is easy to restore once the underlying issue is fixed.
+const SKIPPED_TESTS: Record<string, string> = {
+	// Cloudflare's 1.1.1.1 DoH JSON API is rolling out presentation-format `data`
+	// values (`0 issue "pki.goog"`) in place of the RFC 3597 hex encoding that
+	// workerd's `node:dns` CAA parser requires, so `dns.resolveCaa()` throws on
+	// the colos that have already switched.
+	// See https://github.com/cloudflare/workerd/issues/6912.
+	testDnsCaa:
+		"workerd cannot parse presentation-format CAA records (cloudflare/workerd#6912)",
+};
+
 type TestConfig = {
 	name: string;
 	compatibilityDate: string;
@@ -894,7 +907,12 @@ describe.each(groupedLocalConfigs)(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName, { expect }) => {
+			async (testName, { expect, skip }) => {
+				const skipReason = SKIPPED_TESTS[testName];
+				if (skipReason !== undefined) {
+					skip(skipReason);
+				}
+
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await waitForLong(
@@ -960,7 +978,12 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName, { expect }) => {
+			async (testName, { expect, skip }) => {
+				const skipReason = SKIPPED_TESTS[testName];
+				if (skipReason !== undefined) {
+					skip(skipReason);
+				}
+
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await waitForLong(
@@ -1027,7 +1050,12 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName, { expect }) => {
+			async (testName, { expect, skip }) => {
+				const skipReason = SKIPPED_TESTS[testName];
+				if (skipReason !== undefined) {
+					skip(skipReason);
+				}
+
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await waitForLong(
