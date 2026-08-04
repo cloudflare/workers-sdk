@@ -27,7 +27,16 @@ interface BatchStore {
  * module-heavy app under the Vite plugin dominated request latency. Batching
  * turns that into one call per flush.
  */
-const FLUSH_THRESHOLD = 64;
+const FLUSH_THRESHOLD = 16;
+
+/**
+ * Flush if this much time has passed since the last one. Keeps a long-running
+ * invocation (an agent waiting on a model, a streamed response) visible while it
+ * runs, without costing a short request anything — a few-millisecond request
+ * never reaches it. Measured from tail-event timestamps rather than `Date.now()`,
+ * which a Worker only advances on I/O.
+ */
+const FLUSH_INTERVAL_MS = 100;
 
 /** A tail event's `timestamp` is a `Date` (or ms number); normalise to epoch ms. */
 function toMs(timestamp: Date | number): number {
@@ -197,6 +206,8 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	#rows = new Map<string, SpanInput>();
 	#dirty = new Set<string>();
 	#logs: LogInput[] = [];
+	#latestEventMs = 0;
+	#lastFlushMs = 0;
 
 	constructor(
 		private readonly store: BatchStore,
@@ -211,6 +222,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		this.#rootSpanId = spanId;
 		this.#traceId = traceId;
 		this.#startMs = toMs(onset.timestamp);
+		this.#latestEventMs = this.#startMs;
 
 		const { name, attributes: triggerAttributes } = describeTrigger(
 			onset.event.info
@@ -266,6 +278,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	spanOpen(event: TailStream.TailEvent<TailStream.SpanOpen>) {
+		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId, parentId } = ids(event);
 		if (!spanId) {
 			return;
@@ -296,6 +309,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	spanClose(event: TailStream.TailEvent<TailStream.SpanClose>) {
+		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		const pending = spanId ? this.#spans.get(spanId) : undefined;
 		if (spanId && pending) {
@@ -311,6 +325,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	attributes(event: TailStream.TailEvent<TailStream.Attributes>) {
+		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		if (!spanId || !this.#spans.has(spanId)) {
 			return;
@@ -325,6 +340,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	return(event: TailStream.TailEvent<TailStream.Return>) {
+		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		const pending = spanId ? this.#spans.get(spanId) : undefined;
 		if (spanId && pending && event.event.info?.type === "fetch") {
@@ -335,6 +351,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	log(event: TailStream.TailEvent<TailStream.Log>) {
+		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		// `console.log` surfaces as level "log"; fold into "info" so the stored set
 		// stays {debug, info, warn, error}.
@@ -350,6 +367,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 	}
 
 	exception(event: TailStream.TailEvent<TailStream.Exception>) {
+		this.#latestEventMs = toMs(event.timestamp);
 		const { traceId, spanId } = ids(event);
 		const pending = spanId ? this.#spans.get(spanId) : undefined;
 		const type = event.event.name || "Error";
@@ -376,6 +394,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 
 	async outcome(event: TailStream.TailEvent<TailStream.Outcome>) {
 		const endMs = toMs(event.timestamp);
+		this.#latestEventMs = endMs;
 		const traceId = this.#traceId ?? event.spanContext.traceId;
 		const root = this.#rootSpanId
 			? this.#spans.get(this.#rootSpanId)
@@ -438,11 +457,18 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 
 	#append(log: LogInput) {
 		this.#logs.push(log);
-		this.#maybeFlush();
+		this.#flush();
 	}
 
 	#maybeFlush() {
-		if (this.#dirty.size + this.#logs.length >= FLUSH_THRESHOLD) {
+		const buffered = this.#dirty.size + this.#logs.length;
+		if (buffered === 0) {
+			return;
+		}
+		if (
+			buffered >= FLUSH_THRESHOLD ||
+			this.#latestEventMs - this.#lastFlushMs >= FLUSH_INTERVAL_MS
+		) {
 			this.#flush();
 		}
 	}
@@ -466,6 +492,7 @@ export class TailToStoreHandler implements TailStream.TailEventHandlerObject {
 		const logs = this.#logs;
 		this.#dirty.clear();
 		this.#logs = [];
+		this.#lastFlushMs = this.#latestEventMs;
 		this.#track(this.store.persist(spans, logs));
 	}
 
