@@ -38,8 +38,9 @@ const FLUSH_THRESHOLD = 16;
  * Time comes from tail-event timestamps, not `Date.now()`, which a Worker only
  * advances on I/O. So this bounds staleness *between events*, not in wall-clock
  * time: an invocation that goes completely quiet flushes nothing further until
- * its outcome. Logs and closing spans are written as they happen, which is what
- * covers the quiet case in practice.
+ * its outcome. Logs and exceptions are written as they arrive, so a quiet
+ * invocation can still report what it's doing; a closing span is buffered like
+ * any other row, so its duration can trail the close event by one flush.
  */
 const FLUSH_INTERVAL_MS = 100;
 
