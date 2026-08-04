@@ -1753,7 +1753,10 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"containers",
-			validateContainerApp(envName, rawEnv.name, configPath),
+			// `name` is inheritable, so a named environment that doesn't redeclare it
+			// still runs under the top level Worker name — fall back to it so the
+			// generated container name isn't built from `undefined`.
+			validateContainerApp(envName, rawEnv.name ?? rawConfig?.name, configPath),
 			undefined
 		),
 		send_email: notInheritable(

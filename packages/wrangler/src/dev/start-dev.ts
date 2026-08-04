@@ -367,6 +367,10 @@ function maybePrintScheduledWorkerWarning(
 	);
 }
 
+/**
+ * Keep the message in sync with the Vite plugin copy in
+ * packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts.
+ */
 function printLocalExplorerAgentHint(url: URL): void {
 	const displayUrl = new URL(url.href);
 	displayUrl.hostname = formatHostname(url.hostname);
