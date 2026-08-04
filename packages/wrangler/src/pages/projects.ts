@@ -98,12 +98,17 @@ export const listProjects = async ({
 };
 
 /**
- * Whether a Pages project with the given name already exists on the account.
+ * Checks whether a Pages project with the given name already exists on the
+ * account.
  *
- * Returns false for a missing name or a not-found project; any other API error
- * propagates so the caller can decide how to treat a failed lookup (the
- * delegation gate skips delegation rather than risk delegating over a project
- * that may already exist).
+ * @param accountId The account to look the project up in.
+ * @param projectName The project name to check, or `undefined` when no name is
+ * available (in which case no lookup is performed).
+ * @returns `true` if the project exists; `false` for a missing name or a
+ * not-found project.
+ * @throws Any API error other than "not found", so the caller can decide how to
+ * treat a failed lookup (the delegation gate skips delegation rather than risk
+ * delegating over a project that may already exist).
  */
 async function pagesProjectExists({
 	accountId,
