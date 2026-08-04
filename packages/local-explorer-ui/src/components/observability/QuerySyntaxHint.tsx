@@ -51,6 +51,9 @@ export function QuerySyntaxHint({
 							<li>
 								<code>db.query.text:orders</code> — any attribute key
 							</li>
+							<li>
+								<code>trace:</code> / <code>span:</code> — look up by id
+							</li>
 							<li>Bare words become free-text search.</li>
 						</>
 					) : (
@@ -61,6 +64,9 @@ export function QuerySyntaxHint({
 							</li>
 							<li>
 								<code>op:/checkout</code> — filter by operation/route
+							</li>
+							<li>
+								<code>trace:</code> / <code>span:</code> — look up by id
 							</li>
 							<li>Bare words search the message and service.</li>
 						</>
