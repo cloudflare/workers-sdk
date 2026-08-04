@@ -98,18 +98,18 @@ export interface EmailTrigger extends EmailTriggerOptions {
 }
 
 interface ConnectTriggerOptions {
-	/** The raw TCP socket this Worker should listen on. */
-	tcp: {
-		/** The port to listen on. */
-		port: number;
-		/** The address to bind to. Defaults to `127.0.0.1`. */
-		address?: string;
-	};
+	/** The transport protocol to listen for. */
+	protocol: "tcp" | "udp";
+	/** The port to listen on. */
+	port: number;
+	/** The address to bind to. Defaults to `127.0.0.1`. */
+	address?: string;
 }
 
 /**
  * Connect trigger — invokes this Worker's `connect(socket, env, ctx)`
- * handler for raw TCP connections received on the configured port.
+ * handler for raw socket connections received on the configured
+ * protocol/port.
  */
 export interface ConnectTrigger extends ConnectTriggerOptions {
 	type: "connect";
@@ -117,7 +117,7 @@ export interface ConnectTrigger extends ConnectTriggerOptions {
 
 /**
  * Event triggers — fetch routes, queue consumers, cron schedules, Email
- * Routing addresses, and raw TCP sockets — that invoke this Worker.
+ * Routing addresses, and raw sockets — that invoke this Worker.
  * Construct entries with `triggers.fetch(...)`, `triggers.queue(...)`,
  * `triggers.scheduled(...)`, `triggers.email(...)`, or `triggers.connect(...)`.
  *
@@ -150,7 +150,8 @@ export interface Triggers {
 	email(options: EmailTriggerOptions): EmailTrigger;
 	/**
 	 * Connect trigger — invokes this Worker's `connect(socket, env, ctx)`
-	 * handler for raw TCP connections received on the configured port.
+	 * handler for raw socket connections received on the configured
+	 * protocol/port.
 	 */
 	connect(options: ConnectTriggerOptions): ConnectTrigger;
 }
@@ -169,7 +170,7 @@ export interface Triggers {
  *     triggers.scheduled({ schedule: "0 * * * *" }),
  *     triggers.scheduled({ schedule: "30 0 * * *" }),
  *     triggers.email({ addresses: ["support@example.com"] }),
- *     triggers.connect({ tcp: { port: 5432 } }),
+ *     triggers.connect({ protocol: "tcp", port: 5432 }),
  *   ],
  * });
  * ```

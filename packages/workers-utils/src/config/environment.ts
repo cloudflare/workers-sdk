@@ -1059,7 +1059,7 @@ export interface EnvironmentNonInheritable {
 	};
 
 	/**
-	 * Specifies raw TCP sockets that this Worker should listen on.
+	 * Specifies raw sockets that this Worker should listen on.
 	 * Each entry opens a listening socket on the
 	 * given port that delivers incoming connections directly to the Worker's
 	 * `connect(socket, env, ctx)` handler.
@@ -1070,7 +1070,10 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	tcp_handlers: {
+	connect: {
+		/** The transport protocol to listen for. */
+		protocol: "tcp" | "udp";
+
 		/** The port to listen on. */
 		port: number;
 

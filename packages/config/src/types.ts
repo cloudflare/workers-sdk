@@ -218,7 +218,7 @@ export interface WorkerConfig {
 
 	/**
 	 * Event triggers — fetch routes, queue consumers, cron schedules, Email
-	 * Routing addresses, and raw TCP sockets — that invoke this Worker.
+	 * Routing addresses, and raw sockets — that invoke this Worker.
 	 * Construct entries with `triggers.fetch(...)`, `triggers.queue(...)`,
 	 * `triggers.scheduled(...)`, `triggers.email(...)`, or
 	 * `triggers.connect(...)`.

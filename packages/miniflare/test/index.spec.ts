@@ -2719,7 +2719,7 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 	);
 });
 
-test("Miniflare: tcpHandlers deliver raw TCP connections to the Worker's connect() handler", async ({
+test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's connect() handler", async ({
 	expect,
 	onTestFinished,
 }) => {
@@ -2738,7 +2738,7 @@ test("Miniflare: tcpHandlers deliver raw TCP connections to the Worker's connect
 				},
 			};
 		`,
-		tcpHandlers: [{ port }],
+		connectHandlers: [{ protocol: "tcp", port }],
 	});
 	onTestFinished(() => mf.dispose());
 	await mf.ready;

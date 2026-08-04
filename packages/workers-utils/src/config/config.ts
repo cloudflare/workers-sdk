@@ -368,7 +368,7 @@ export const defaultWranglerConfig: Config = {
 		producers: [],
 		consumers: [], // WORKERS SUPPORT ONLY!!
 	},
-	tcp_handlers: [],
+	connect: [],
 	r2_buckets: [],
 	d1_databases: [],
 	vectorize: [],

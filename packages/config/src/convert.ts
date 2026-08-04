@@ -785,8 +785,9 @@ function convertTriggers(
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
-	const tcpHandlers: NonNullable<RawConfig["tcp_handlers"]> =
-		result.tcp_handlers ? [...result.tcp_handlers] : [];
+	const connectHandlers: NonNullable<RawConfig["connect"]> = result.connect
+		? [...result.connect]
+		: [];
 	let addresses: string[] | undefined;
 
 	for (const trigger of triggers) {
@@ -826,10 +827,11 @@ function convertTriggers(
 				break;
 			}
 			case "connect": {
-				tcpHandlers.push(
+				connectHandlers.push(
 					omitUndefined({
-						port: trigger.tcp.port,
-						address: trigger.tcp.address,
+						protocol: trigger.protocol,
+						port: trigger.port,
+						address: trigger.address,
 					})
 				);
 				break;
@@ -846,8 +848,8 @@ function convertTriggers(
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
 	}
-	if (tcpHandlers.length) {
-		result.tcp_handlers = tcpHandlers;
+	if (connectHandlers.length) {
+		result.connect = connectHandlers;
 	}
 	// An empty array removes managed addresses; undefined means no email trigger.
 	if (addresses !== undefined) {

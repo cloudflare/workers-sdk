@@ -37,12 +37,12 @@ import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	FLAGSHIP_PLUGIN_NAME,
+	getConnectSocketName,
 	getDirectSocketName,
 	getDurableObjectUniqueKey,
 	getEmailPathsToClean,
 	getGlobalServices,
 	getPersistPath,
-	getTcpSocketName,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
@@ -2190,22 +2190,26 @@ export class Miniflare {
 				});
 			}
 
-			// Open raw TCP listening sockets that deliver incoming connections
+			// Open raw listening sockets that deliver incoming connections
 			// to this Worker's `connect()`.
-			const tcpHandlers = workerOpts.core.tcpHandlers ?? [];
-			for (let j = 0; j < tcpHandlers.length; j++) {
-				const tcpHandler = tcpHandlers[j];
-				// The socket's name already encodes the configured port, so we can
-				// pass `tcpHandler.port` as both the current and "previous" port:
-				// `#getSocketAddress()` only compares these to detect the `port: 0`
-				// (OS-assigned) case, in which case it looks up the actual
-				// previously-assigned random port by this same `name`.
-				const name = getTcpSocketName(i, tcpHandler.port);
+			const connectHandlers = workerOpts.core.connectHandlers ?? [];
+			for (let j = 0; j < connectHandlers.length; j++) {
+				const connectHandler = connectHandlers[j];
+				// The socket's name already encodes the configured protocol/port, so
+				// we can pass `connectHandler.port` as both the current and
+				// "previous" port: `#getSocketAddress()` only compares these to
+				// detect the `port: 0` (OS-assigned) case, in which case it looks up
+				// the actual previously-assigned random port by this same `name`.
+				const name = getConnectSocketName(
+					i,
+					connectHandler.protocol,
+					connectHandler.port
+				);
 				const address = this.#getSocketAddress(
 					name,
-					tcpHandler.port,
-					tcpHandler.address,
-					tcpHandler.port,
+					connectHandler.port,
+					connectHandler.address,
+					connectHandler.port,
 					reusePorts
 				);
 
@@ -2213,8 +2217,8 @@ export class Miniflare {
 					name,
 					address,
 					service: { name: getUserServiceName(workerName) },
-					tcp: {},
-				});
+					[connectHandler.protocol]: {},
+				} as Socket);
 			}
 		}
 

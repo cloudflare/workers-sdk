@@ -395,7 +395,9 @@ describe("InputWorkerSchema", () => {
 				triggers: [
 					{
 						type: "connect",
-						tcp: { port: 5432, address: "127.0.0.1" },
+						protocol: "tcp",
+						port: 5432,
+						address: "127.0.0.1",
 					},
 				],
 			});
@@ -403,15 +405,33 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
-		it("rejects unknown keys inside a connect trigger's tcp options", ({
-			expect,
-		}) => {
+		it("accepts a udp connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "udp", port: 5432 }],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "ftp", port: 5432 }],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects unknown keys inside a connect trigger", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
 				triggers: [
 					{
 						type: "connect",
-						tcp: { port: 5432, hostname: "127.0.0.1" },
+						protocol: "tcp",
+						port: 5432,
+						hostname: "127.0.0.1",
 					},
 				],
 			});
@@ -422,7 +442,7 @@ describe("InputWorkerSchema", () => {
 					(i) => i.code === "unrecognized_keys"
 				);
 				expect(issue).toBeDefined();
-				expect(issue?.path).toEqual(["triggers", 0, "tcp"]);
+				expect(issue?.path).toEqual(["triggers", 0]);
 				expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
 					"hostname"
 				);

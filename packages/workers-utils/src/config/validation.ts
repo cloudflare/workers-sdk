@@ -1779,14 +1779,14 @@ function normalizeAndValidateEnvironment(
 			validateQueues(envName),
 			{ producers: [], consumers: [] }
 		),
-		tcp_handlers: notInheritable(
+		connect: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"tcp_handlers",
-			validateTcpHandlers(envName),
+			"connect",
+			validateConnectHandlers(envName),
 			[]
 		),
 		r2_buckets: notInheritable(
@@ -5222,7 +5222,7 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	return isValid;
 };
 
-function validateTcpHandlers(envName: string): ValidatorFn {
+function validateConnectHandlers(envName: string): ValidatorFn {
 	return (diagnostics, field, value, config) => {
 		if (value === undefined) {
 			return true;
@@ -5243,34 +5243,44 @@ function validateTcpHandlers(envName: string): ValidatorFn {
 		let isValid = true;
 		for (let i = 0; i < value.length; i++) {
 			if (
-				!validateTcpHandler(diagnostics, `${fieldPath}[${i}]`, value[i], config)
+				!validateConnectHandler(
+					diagnostics,
+					`${fieldPath}[${i}]`,
+					value[i],
+					config
+				)
 			) {
 				isValid = false;
 			}
 		}
 
-		// Reject duplicate ports within the same worker.
-		const firstIndexByPort = new Map<number, number>();
+		// Reject duplicate protocol+port combinations within the same worker.
+		const firstIndexByKey = new Map<string, number>();
 		for (let i = 0; i < value.length; i++) {
 			const handler = value[i];
 			if (
 				typeof handler !== "object" ||
 				handler === null ||
-				typeof (handler as { port?: unknown }).port !== "number"
+				typeof (handler as { port?: unknown }).port !== "number" ||
+				typeof (handler as { protocol?: unknown }).protocol !== "string"
 			) {
-				// Already reported by `validateTcpHandler` above.
+				// Already reported by `validateConnectHandler` above.
 				continue;
 			}
 
-			const port = (handler as { port: number }).port;
-			const firstIndex = firstIndexByPort.get(port);
+			const { protocol, port } = handler as {
+				protocol: string;
+				port: number;
+			};
+			const key = `${protocol}:${port}`;
+			const firstIndex = firstIndexByKey.get(key);
 			if (firstIndex !== undefined) {
 				diagnostics.errors.push(
-					`"${fieldPath}[${i}]" has the same "port" (${port}) as "${fieldPath}[${firstIndex}]". Each entry in "tcp_handlers" must use a unique port.`
+					`"${fieldPath}[${i}]" has the same "protocol" (${protocol}) and "port" (${port}) as "${fieldPath}[${firstIndex}]". Each entry in "connect" must use a unique protocol/port combination.`
 				);
 				isValid = false;
 			} else {
-				firstIndexByPort.set(port, i);
+				firstIndexByKey.set(key, i);
 			}
 		}
 
@@ -5278,7 +5288,7 @@ function validateTcpHandlers(envName: string): ValidatorFn {
 	};
 }
 
-const validateTcpHandler: ValidatorFn = (diagnostics, field, value) => {
+const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
 			`"${field}" should be an object, but got ${JSON.stringify(value)}`
@@ -5289,10 +5299,31 @@ const validateTcpHandler: ValidatorFn = (diagnostics, field, value) => {
 	let isValid = true;
 	if (
 		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"protocol",
 			"port",
 			"address",
 		])
 	) {
+		isValid = false;
+	}
+
+	if (
+		"protocol" in value &&
+		value.protocol !== "tcp" &&
+		value.protocol !== "udp"
+	) {
+		diagnostics.errors.push(
+			`"${field}" should have a "protocol" field of either "tcp" or "udp" but got ${JSON.stringify(
+				value.protocol
+			)}.`
+		);
+		isValid = false;
+	} else if (!("protocol" in value)) {
+		diagnostics.errors.push(
+			`"${field}" should have a "protocol" field of either "tcp" or "udp" but got ${JSON.stringify(
+				value
+			)}.`
+		);
 		isValid = false;
 	}
 

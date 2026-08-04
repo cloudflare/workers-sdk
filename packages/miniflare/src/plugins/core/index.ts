@@ -173,11 +173,12 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
-		// Opens additional raw TCP listening sockets that deliver incoming
+		// Opens additional raw listening sockets that deliver incoming
 		// connections to this Worker's `connect()` handler
-		// Populated from wrangler config's `tcp_handlers`.
-		tcpHandlers: z
+		// Populated from wrangler config's `connect`.
+		connectHandlers: z
 			.object({
+				protocol: z.enum(["tcp", "udp"]),
 				port: z.number(),
 				address: z.string().optional(),
 			})
