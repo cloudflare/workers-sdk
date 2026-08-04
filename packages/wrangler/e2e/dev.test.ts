@@ -114,7 +114,9 @@ describe.each([
 		await worker.waitForReload();
 
 		// Regression test for issue where multiple request logs were being logged per request
-		expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
+		expect(
+			[...worker.currentOutput.matchAll(/\[wrangler:info\] GET /g)].length
+		).toBe(1);
 
 		await waitForLong(() => expect(fetchText(url)).resolves.toMatchSnapshot());
 	});

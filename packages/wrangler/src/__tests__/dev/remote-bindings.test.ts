@@ -25,7 +25,7 @@ import type { Binding } from "../../api";
 import type { StartDevOptions } from "../../dev";
 import type { StartRemoteProxySessionOptions } from "@cloudflare/remote-bindings";
 import type { RawConfig } from "@cloudflare/workers-utils";
-import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
+import type { RemoteProxyConnectionString, V4WorkerOptions } from "miniflare";
 
 // Mock the startDev function to capture the devEnv so we can stop it later
 // The `stopWrangler` function will be assigned in the startDev mock implementation where it has access to the `devEnv.teardown()` method.
@@ -79,7 +79,7 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 
 // Mock the buildMiniflareOptions function to capture the WorkerOptions that would be passed to Miniflare
 // The `workerOptions` variable will be assigned in the mock implementation.
-let workerOptions: Omit<WorkerOptions, "modules">[] = [];
+let workerOptions: Omit<V4WorkerOptions, "modules">[] = [];
 vi.mock("../../dev/miniflare/index.ts", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../dev/miniflare/index.ts")
@@ -130,7 +130,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		name: string;
 		config: RawConfig;
 		expectedProxyWorkerBindings: Record<string, Binding>;
-		expectedWorkerOptions: Omit<WorkerOptions, "modules">[];
+		expectedWorkerOptions: Omit<V4WorkerOptions, "modules">[];
 	}[] = [
 		{
 			name: "service",
