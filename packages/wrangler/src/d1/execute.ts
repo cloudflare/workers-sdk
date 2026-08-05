@@ -503,14 +503,17 @@ async function executeRemotely({
 			},
 		];
 	} else {
+		// The D1 query API splits multi-statement SQL on `;` server-side, and
+		// mishandles CRLF line endings inside compound statements such as a
+		// `CREATE TRIGGER ... BEGIN ... END;` body (issue #14991). Normalize
+		// to LF so the server receives the same input that works for LF files.
+		const sql = input.command?.replace(/\r\n/g, "\n");
 		const result = await d1ApiPost<QueryResult[]>(
 			config,
 			accountId,
 			db,
 			"query",
-			{
-				sql: input.command,
-			}
+			{ sql }
 		);
 		logResult(result);
 		return result;
