@@ -16,8 +16,8 @@ export function synthesizeMessageId(senderEmail: string): string {
 }
 
 /**
- * Derives the id an email is indexed under from its Message-ID, by stripping the
- * enclosing angle brackets (`<id@domain>` becomes `id@domain`).
+ * Derives the id an email is indexed under from its Message-ID by stripping the
+ * enclosing angle brackets.
  *
  * This id keys the local explorer record, so a message listed in the explorer
  * can be looked up by it.

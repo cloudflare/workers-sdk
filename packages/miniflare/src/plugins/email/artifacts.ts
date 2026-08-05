@@ -65,21 +65,17 @@ export class EmailArtifactManager {
 		remove: (artifacts: EmailArtifact[]) => Promise<void>
 	): Promise<void> {
 		const normalisedArtifacts = artifacts.map(normaliseArtifact);
+		const keys = normalisedArtifacts.map(getArtifactKey);
 		for (const artifact of normalisedArtifacts) {
 			this.#tombstones.add(getArtifactKey(artifact));
 		}
 		try {
-			await Promise.all(
-				normalisedArtifacts.map((artifact) =>
-					this.#operations.get(getArtifactKey(artifact))
-				)
-			);
+			await Promise.all(keys.map((key) => this.#operations.get(key)));
 			await remove(normalisedArtifacts);
-		} catch (error) {
-			for (const artifact of normalisedArtifacts) {
-				this.#tombstones.delete(getArtifactKey(artifact));
+		} finally {
+			for (const key of keys) {
+				this.#tombstones.delete(key);
 			}
-			throw error;
 		}
 	}
 

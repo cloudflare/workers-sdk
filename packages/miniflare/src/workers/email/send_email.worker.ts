@@ -67,6 +67,16 @@ function formatEmailAddress(addr: string | EmailAddress): string {
 	return `"${addr.name}" <${addr.email}>`;
 }
 
+function formatParsedAddress(addr: {
+	address?: string;
+	name?: string;
+}): string {
+	const email = addr.address ?? "";
+	return addr.name === undefined || addr.name === ""
+		? email
+		: `"${addr.name}" <${email}>`;
+}
+
 /**
  * Formats a MessageBuilder for logging
  */
@@ -118,32 +128,41 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	/**
 	 * Captures a sent email into the local email store for the explorer.
 	 */
-	private async reportSentEmail(email: StoredSendingEmail): Promise<void> {
+	private async reportSentEmail(
+		email: StoredSendingEmail
+	): Promise<EmailArtifact[]> {
 		try {
-			const artifacts =
-				await this.env[CoreBindings.SERVICE_EMAIL_STORE]?.storeSent(email);
-			if (artifacts !== undefined && artifacts.length > 0) {
-				const response = await this.env.MINIFLARE_LOOPBACK.fetch(
-					"http://localhost/core/delete-email-temp-files",
-					{
-						method: "POST",
-						body: JSON.stringify({ artifacts } satisfies {
-							artifacts: EmailArtifact[];
-						}),
-					}
-				);
-				if (!response.ok) {
-					throw new Error(
-						`could not delete email temporary files: ${await response.text()}`
-					);
-				}
-			}
+			return (
+				(await this.env[CoreBindings.SERVICE_EMAIL_STORE]?.storeSent(email)) ??
+				[]
+			);
 		} catch {
 			try {
 				await this.log("Failed to capture sent email or clean up artifacts.");
 			} catch {
 				// Capture failures must not affect sending.
 			}
+			return [];
+		}
+	}
+
+	private async removeSentArtifacts(artifacts: EmailArtifact[]): Promise<void> {
+		if (artifacts.length === 0) {
+			return;
+		}
+		const response = await this.env.MINIFLARE_LOOPBACK.fetch(
+			"http://localhost/core/delete-email-temp-files",
+			{
+				method: "POST",
+				body: JSON.stringify({ artifacts } satisfies {
+					artifacts: EmailArtifact[];
+				}),
+			}
+		);
+		if (!response.ok) {
+			throw new Error(
+				`could not delete email temporary files: ${await response.text()}`
+			);
 		}
 	}
 	/**
@@ -318,31 +337,38 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const messageId = parsedEmail.messageId;
 			const id = messageIdToStorageId(messageId);
 
-			// Capturing and persisting are deferred so `send()` returns without
-			// blocking on the email-store DO round-trip. Awaiting it inline can
-			// deadlock when the binding is driven through the synchronous platform
-			// proxy (`getBindings()`), which holds the Node main thread.
+			// Complete the workerd-side capture before resolving send(). File writes
+			// remain deferred because they cross the Node loopback service.
+			const evictedArtifacts = await this.reportSentEmail({
+				worker: this.env.SEND_EMAIL_OWNER_WORKER,
+				from: emailMessage.from,
+				to: [emailMessage.to],
+				cc: parsedEmail.cc?.map(formatParsedAddress),
+				bcc: parsedEmail.bcc?.map(formatParsedAddress),
+				replyTo: parsedEmail.replyTo
+					? parsedEmail.replyTo.map(formatParsedAddress).join(", ")
+					: undefined,
+				subject: parsedEmail.subject ?? "(no subject)",
+				sentAt: new Date().toISOString(),
+				messageId,
+				headers: Object.fromEntries(
+					parsedEmail.headers.map(({ key, value }) => [key, value])
+				),
+				text: parsedEmail.text,
+				html: parsedEmail.html,
+				attachments: (parsedEmail.attachments ?? []).map((attachment) => ({
+					filename: attachment.filename ?? "attachment",
+					contentType: attachment.mimeType ?? "application/octet-stream",
+					disposition:
+						attachment.disposition === "inline" ? "inline" : "attachment",
+					size: contentByteLength(attachment.content),
+				})),
+				raw: new TextDecoder().decode(rawEmailBuffer),
+				rawBase64: bytesToBase64(rawEmailBuffer),
+			});
+
 			this.ctx.waitUntil(
 				(async () => {
-					await this.reportSentEmail({
-						worker: this.env.SEND_EMAIL_OWNER_WORKER,
-						from: emailMessage.from,
-						to: [emailMessage.to],
-						subject: parsedEmail.subject ?? "(no subject)",
-						sentAt: new Date().toISOString(),
-						messageId,
-						text: parsedEmail.text,
-						html: parsedEmail.html,
-						attachments: (parsedEmail.attachments ?? []).map((attachment) => ({
-							filename: attachment.filename ?? "attachment",
-							contentType: attachment.mimeType ?? "application/octet-stream",
-							disposition:
-								attachment.disposition === "inline" ? "inline" : "attachment",
-							size: contentByteLength(attachment.content),
-						})),
-						raw: new TextDecoder().decode(rawEmailBuffer),
-						rawBase64: bytesToBase64(rawEmailBuffer),
-					});
 					const filePath = await this.storeTempFile(
 						rawEmailBuffer,
 						"eml",
@@ -350,6 +376,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						id,
 						id
 					);
+					await this.removeSentArtifacts(evictedArtifacts);
 					await this.log(
 						`${blue("send_email binding called with the following message:")}\nEmail: ${filePath}`
 					);
@@ -404,28 +431,28 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				);
 			}
 
-			// Deferred for the same reason as the EmailMessage path above: awaiting
-			// the store RPC inline can deadlock under the synchronous platform proxy.
+			// Complete the workerd-side capture before resolving send(). File writes
+			// remain deferred because they cross the Node loopback service.
+			const evictedArtifacts = await this.reportSentEmail({
+				worker: this.env.SEND_EMAIL_OWNER_WORKER,
+				from: formatEmailAddress(builder.from),
+				to: toDisplay(builder.to),
+				cc: builder.cc ? toDisplay(builder.cc) : undefined,
+				bcc: builder.bcc ? toDisplay(builder.bcc) : undefined,
+				replyTo: builder.replyTo
+					? formatEmailAddress(builder.replyTo)
+					: undefined,
+				subject: builder.subject,
+				sentAt: new Date().toISOString(),
+				messageId,
+				text: builder.text,
+				html: builder.html,
+				headers: builder.headers,
+				attachments: sentAttachments,
+			});
+
 			this.ctx.waitUntil(
 				(async () => {
-					await this.reportSentEmail({
-						worker: this.env.SEND_EMAIL_OWNER_WORKER,
-						from: formatEmailAddress(builder.from),
-						to: toDisplay(builder.to),
-						cc: builder.cc ? toDisplay(builder.cc) : undefined,
-						bcc: builder.bcc ? toDisplay(builder.bcc) : undefined,
-						replyTo: builder.replyTo
-							? formatEmailAddress(builder.replyTo)
-							: undefined,
-						subject: builder.subject,
-						sentAt: new Date().toISOString(),
-						messageId,
-						text: builder.text,
-						html: builder.html,
-						headers: builder.headers,
-						attachments: sentAttachments,
-					});
-
 					const files: string[] = [];
 
 					if (builder.text) {
@@ -467,6 +494,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						}
 					}
 
+					await this.removeSentArtifacts(evictedArtifacts);
 					const formatted = formatMessageBuilder(builder);
 					const fileInfo = files.length > 0 ? `\n\n${files.join("\n")}` : "";
 					await this.log(

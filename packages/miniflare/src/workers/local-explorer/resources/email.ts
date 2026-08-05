@@ -311,7 +311,7 @@ export async function getReceivedEmail(
 			"Email store is not available for this dev session."
 		);
 	}
-	const email = await store.findReceived(emailId);
+	const email = await store.findReceived(messageIdToStorageId(emailId));
 	if (!email) {
 		// The email may have been captured by a worker in another Miniflare
 		// instance; look it up there before giving up.
@@ -601,7 +601,7 @@ export async function getSentEmail(
 			"Email store is not available for this dev session."
 		);
 	}
-	const email = await store.findSent(emailId);
+	const email = await store.findSent(messageIdToStorageId(emailId));
 	if (!email || (worker !== undefined && email.worker !== worker)) {
 		// The email may have been sent by a worker in another Miniflare instance;
 		// look it up there before giving up.

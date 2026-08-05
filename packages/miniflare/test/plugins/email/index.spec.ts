@@ -10,7 +10,9 @@ import {
 } from "miniflare";
 import dedent from "ts-dedent";
 import { describe, type ExpectStatic, test, vi } from "vitest";
+import { EmailArtifactManager } from "../../../src/plugins/email/artifacts";
 import { CorePaths } from "../../../src/workers/core/constants";
+import { messageIdToStorageId } from "../../../src/workers/email/message-id";
 import { TestLog, useDispose, useTmp } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent /* javascript */ `
@@ -18,6 +20,16 @@ const SEND_EMAIL_WORKER = dedent /* javascript */ `
 
 	export default {
 		async fetch(request, env, ctx) {
+			if (new URL(request.url).pathname === "/legacy") {
+				await env.SEND_EMAIL.send(
+					new EmailMessage(
+						"sender@example.com",
+						"recipient@example.com",
+						request.body
+					)
+				);
+				return new Response("ok");
+			}
 
 			const url = new URL(request.url);
 
@@ -1480,9 +1492,9 @@ test("MessageBuilder file names match the id the local explorer lists", async ({
 	};
 	const messageId = result[0]?.messageId;
 	expect(messageId).toBeDefined();
-	// Files on disk are named after the Message-ID with its angle brackets
-	// stripped - the same value the local explorer indexes the record by.
-	const id = messageId?.replace(/^<|>$/g, "");
+	// Files on disk use the local storage ID derived from the Message-ID.
+	const id =
+		messageId === undefined ? undefined : messageIdToStorageId(messageId);
 
 	const files = await readLoggedFilePaths(log, expect);
 	expect(path.basename(String(files.text))).toBe(`${id}.txt`);
@@ -1532,7 +1544,7 @@ test("MessageBuilder file names sanitise a path-traversing Message-ID", async ({
 
 	const files = await readLoggedFilePaths(log, expect);
 	const textPath = String(files.text);
-	// Each `.` and `/` of the traversal is replaced, so the id stays a single
+	// Each `.` and `/` of the traversal is replaced so the id stays a single
 	// path segment inside the directory it names a file in.
 	expect(path.basename(textPath)).toBe("____________escaped@example.com.txt");
 	expect(path.basename(path.dirname(textPath))).toBe("email-text");
@@ -2278,6 +2290,74 @@ test("send_email binding is available from getBindings", async ({ expect }) => {
 	});
 });
 
+test("getBindings send captures the local explorer record before resolving", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		email: {
+			send_email: [{ name: "SEND_EMAIL" }],
+		},
+		unsafeLocalExplorer: true,
+		compatibilityDate: "2025-03-17",
+	});
+
+	useDispose(mf);
+
+	const env = await mf.getBindings<{
+		SEND_EMAIL: {
+			send(message: {
+				from: string;
+				to: string;
+				subject: string;
+				text: string;
+			}): Promise<{ messageId: string }>;
+		};
+	}>();
+	await env.SEND_EMAIL.send({
+		from: "sender@example.com",
+		to: "recipient@example.com",
+		subject: "Immediate capture",
+		text: "The record is available before send resolves.",
+	});
+
+	const response = await mf.dispatchFetch(
+		`http://localhost${CorePaths.EXPLORER}/api/email/sending`
+	);
+	const body = (await response.json()) as {
+		result?: Array<{ subject: string }>;
+	};
+	expect(
+		body.result?.some((email) => email.subject === "Immediate capture")
+	).toBe(true);
+});
+
+test("allows an artifact ID to be reused after deletion", async ({
+	expect,
+}) => {
+	const manager = new EmailArtifactManager();
+	const artifact = {
+		recordId: "record-1234",
+		prefix: "email",
+		id: "record-1234",
+		extension: "eml",
+	};
+	let writes = 0;
+
+	await manager.store(artifact, async () => {
+		writes++;
+		return "/tmp/first.eml";
+	});
+	await manager.delete([artifact], async () => {});
+	await manager.store(artifact, async () => {
+		writes++;
+		return "/tmp/second.eml";
+	});
+
+	expect(writes).toBe(2);
+});
+
 test("disposing does not remove a concurrent email session", async ({
 	expect,
 }) => {
@@ -2348,7 +2428,7 @@ describe("writeEmailTempFile", () => {
 		const projectTmpPath = path.join(tmp, ".wrangler", "tmp");
 
 		const filePath = await writeEmailTempFile({
-		resourceTmpPath: projectTmpPath,
+			resourceTmpPath: projectTmpPath,
 			tmpPath: tmp,
 			prefix: "reply",
 			fileName: "abc123.eml",
@@ -2379,7 +2459,7 @@ describe("writeEmailTempFile", () => {
 		const tmp = await useTmp();
 
 		const filePath = await writeEmailTempFile({
-		resourceTmpPath: undefined,
+			resourceTmpPath: undefined,
 			tmpPath: tmp,
 			prefix: "sent",
 			fileName: "def456.eml",
@@ -2397,7 +2477,7 @@ describe("writeEmailTempFile", () => {
 		const contents = Buffer.from([0x00, 0xff, 0xfe, 0x80, 0x01]);
 
 		const filePath = await writeEmailTempFile({
-		resourceTmpPath: undefined,
+			resourceTmpPath: undefined,
 			tmpPath: tmp,
 			prefix: "sent",
 			fileName: "binary.bin",

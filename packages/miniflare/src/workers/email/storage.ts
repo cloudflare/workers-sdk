@@ -91,11 +91,11 @@ export type StoredSendingEmailSummary = Omit<
  */
 export interface EmailStoreService {
 	storeReceived(email: StoredRoutingEmail): Promise<EmailArtifact[]>;
-	/** Looks up a received email by its bracket-stripped Message-ID. */
+	/** Looks up a received email by its local storage ID. */
 	findReceived(id: string): Promise<StoredRoutingEmail | undefined>;
 	listReceived(): Promise<StoredRoutingEmailSummary[]>;
 	storeSent(email: StoredSendingEmail): Promise<EmailArtifact[]>;
-	/** Looks up a sent email by its bracket-stripped Message-ID. */
+	/** Looks up a sent email by its local storage ID. */
 	findSent(id: string): Promise<StoredSendingEmail | undefined>;
 	listSent(): Promise<StoredSendingEmailSummary[]>;
 	clear(): Promise<void>;

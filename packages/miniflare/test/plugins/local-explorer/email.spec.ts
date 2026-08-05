@@ -7,6 +7,7 @@ import { Miniflare } from "miniflare";
 import dedent from "ts-dedent";
 import { afterAll, beforeAll, describe, type ExpectStatic, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
+import { messageIdToStorageId } from "../../../src/workers/email/message-id";
 import {
 	zEmailGetRoutingResponse,
 	zEmailGetSendingResponse,
@@ -46,8 +47,20 @@ const EMAIL_HANDLER_WORKER = dedent /* javascript */ `
 // Worker that sends an email through a send_email binding using a
 // MessageBuilder-style payload posted in the request body.
 const SEND_EMAIL_WORKER = dedent /* javascript */ `
+	import { EmailMessage } from "cloudflare:email";
+
 	export default {
 		async fetch(request, env) {
+			if (new URL(request.url).pathname === "/legacy") {
+				await env.SEND_EMAIL.send(
+					new EmailMessage(
+						"sender@example.com",
+						"recipient@example.com",
+						request.body
+					)
+				);
+				return new Response("ok");
+			}
 			const builder = await request.json();
 			await env.SEND_EMAIL.send(builder);
 			return new Response("ok");
@@ -284,6 +297,35 @@ describe("Email API - Routing", () => {
 			errors: [expect.objectContaining({ code: 10601 })],
 		});
 	});
+
+	// The composed MIME is capped at the 1 MiB local-dev limit before it is
+	// delivered to the handler, so an oversized test email is rejected as a send
+	// failure rather than reaching the worker.
+	test("rejects a test email larger than the 1 MiB local limit", async ({
+		expect,
+	}) => {
+		const response = await mf.dispatchFetch(`${BASE_URL}/email/routing/send`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "too big",
+				// Comfortably over 1 MiB once composed into MIME.
+				text: "a".repeat(1024 * 1024 + 1024),
+			}),
+		});
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({
+			success: false,
+			errors: [
+				expect.objectContaining({
+					code: 10602,
+					message: expect.stringContaining("1 MiB local development limit"),
+				}),
+			],
+		});
+	});
 });
 
 describe("Email API - Routing attachments", () => {
@@ -353,7 +395,17 @@ describe("Email API - Routing attachments", () => {
 			}),
 		});
 		expect(injected.status).toBe(400);
-		await injected.text();
+		// A control character in a header field is rejected with the control-char
+		// message, distinct from the attachment failure below.
+		expect(await injected.json()).toMatchObject({
+			success: false,
+			errors: [
+				expect.objectContaining({
+					code: 10000,
+					message: expect.stringContaining("control characters"),
+				}),
+			],
+		});
 
 		const invalidBase64 = await mf.dispatchFetch(
 			`${BASE_URL}/email/routing/send`,
@@ -375,7 +427,19 @@ describe("Email API - Routing attachments", () => {
 			}
 		);
 		expect(invalidBase64.status).toBe(400);
-		await invalidBase64.text();
+		// Non-base64 attachment content is rejected with the attachment message,
+		// so a regression that swapped the two validations would be caught.
+		expect(await invalidBase64.json()).toMatchObject({
+			success: false,
+			errors: [
+				expect.objectContaining({
+					code: 10000,
+					message: expect.stringContaining(
+						"valid filenames, MIME types, and base64 content"
+					),
+				}),
+			],
+		});
 	});
 
 	test("composes an attachment into a multipart/mixed message", async ({
@@ -801,7 +865,11 @@ describe("Email API - Routing reply file correlation", () => {
 			expect
 		);
 		const detailReply = detail.result?.replies[0];
-		expect(detailReply?.messageId?.replace(/^<|>$/g, "")).toBe(fileId);
+		expect(
+			detailReply?.messageId === undefined
+				? undefined
+				: messageIdToStorageId(detailReply.messageId)
+		).toBe(fileId);
 		expect(detailReply?.raw).toContain("This is a reply.");
 		// The reply's MIME encoded-word subject must be surfaced decoded, not raw.
 		expect(detailReply?.raw).toContain(
@@ -915,6 +983,51 @@ describe("Email API - Sending", () => {
 			expect
 		);
 		expect(detail.result?.text).toBe("Hello from the worker");
+	});
+
+	test("captures legacy EmailMessage headers in the sending detail", async ({
+		expect,
+	}) => {
+		const response = await mf.dispatchFetch("http://localhost/legacy", {
+			method: "POST",
+			body: [
+				"From: sender@example.com",
+				"To: recipient@example.com",
+				"Cc: copy@example.com",
+				"Reply-To: replies@example.com",
+				"Message-ID: <legacy-metadata@example.com>",
+				"X-Test: preserved",
+				"Content-Type: text/plain",
+				"",
+				"Legacy message",
+			].join("\r\n"),
+		});
+		expect(await response.text()).toBe("ok");
+
+		const listResponse = await mf.dispatchFetch(`${BASE_URL}/email/sending`);
+		const list = await expectValidResponse(
+			listResponse,
+			zEmailListSendingResponse,
+			expect
+		);
+		const listed = list.result?.find(
+			(email) => email.messageId === "<legacy-metadata@example.com>"
+		);
+		expect(listed).toBeDefined();
+
+		const detailResponse = await mf.dispatchFetch(
+			`${BASE_URL}/email/sending/legacy-metadata@example.com`
+		);
+		const detail = await expectValidResponse(
+			detailResponse,
+			zEmailGetSendingResponse,
+			expect
+		);
+		expect(detail.result).toMatchObject({
+			cc: ["copy@example.com"],
+			replyTo: "replies@example.com",
+			headers: expect.objectContaining({ "x-test": "preserved" }),
+		});
 	});
 
 	test("returns 404 for an unknown email", async ({ expect }) => {
@@ -1406,5 +1519,82 @@ describe("Email API - workers across instances", () => {
 				subject: "unfiltered open",
 			})
 		);
+	});
+});
+
+describe("Email API - store eviction", () => {
+	let mf: Miniflare;
+
+	beforeAll(async () => {
+		mf = new Miniflare({
+			inspectorPort: 0,
+			compatibilityDate: "2025-03-17",
+			modules: true,
+			script: EMAIL_HANDLER_WORKER,
+			unsafeLocalExplorer: true,
+			unsafeTriggerHandlers: true,
+		});
+	});
+
+	afterAll(async () => {
+		await disposeWithRetry(mf);
+	});
+
+	// The store retains at most MAX_STORED_EMAILS (500) records per table and
+	// evicts oldest-first, so a long dev session cannot grow the inbox without
+	// bound. Send a handful more than the cap and assert the window slides.
+	test("caps the received list at the retention limit, evicting oldest first", async ({
+		expect,
+	}) => {
+		const total = 505;
+		// A stable, ordered Message-ID per email so we can reason about which
+		// records should survive eviction.
+		const messageId = (index: number) =>
+			`<evict-${index.toString().padStart(4, "0")}@example.com>`;
+
+		for (let index = 0; index < total; index++) {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/email/routing/send`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						from: "sender@example.com",
+						to: ["recipient@example.com"],
+						subject: `message ${index}`,
+						text: "body",
+						headers: { "message-id": messageId(index) },
+					}),
+				}
+			);
+			// Drain the body so MINIFLARE_ASSERT_BODIES_CONSUMED stays happy.
+			await response.text();
+		}
+
+		const list = await expectValidResponse(
+			await mf.dispatchFetch(`${BASE_URL}/email/routing`),
+			zEmailListRoutingResponse,
+			expect
+		);
+
+		// Exactly the cap is retained.
+		expect(list.result).toHaveLength(500);
+
+		const storedIds = new Set(list.result?.map((email) => email.messageId));
+		// The five oldest were evicted...
+		for (let index = 0; index < total - 500; index++) {
+			expect(storedIds.has(messageId(index))).toBe(false);
+		}
+		// ...and the newest 500 remain, including the very last one sent.
+		expect(storedIds.has(messageId(total - 1))).toBe(true);
+		expect(storedIds.has(messageId(total - 500))).toBe(true);
+
+		// The evicted records are gone from the detail endpoint too, not just the
+		// list, so lookups don't resurrect them.
+		const evictedDetail = await mf.dispatchFetch(
+			`${BASE_URL}/email/routing/${messageIdToStorageId(messageId(0))}`
+		);
+		expect(evictedDetail.status).toBe(404);
+		await evictedDetail.text();
 	});
 });
