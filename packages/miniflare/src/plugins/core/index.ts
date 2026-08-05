@@ -948,7 +948,6 @@ export interface GlobalServicesOptions {
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
 	fallbackWorkerPublicName: string | undefined;
-	loopbackPort: number;
 	tmpPath: string;
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
@@ -965,7 +964,6 @@ export function getGlobalServices({
 	allWorkerRoutes,
 	fallbackWorkerName,
 	fallbackWorkerPublicName,
-	loopbackPort,
 	tmpPath,
 	log,
 	proxyBindings,
