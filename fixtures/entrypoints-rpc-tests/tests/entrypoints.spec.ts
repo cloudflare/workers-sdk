@@ -890,6 +890,7 @@ describe("entrypoints", () => {
 		const boundWorker = new Miniflare({
 			name: "bound",
 			unsafeDevRegistryPath: isolatedDevRegistryPath,
+			unsafeRegisterWorker: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			https: true,

@@ -605,6 +605,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			workers: [
 				{
 					name: "worker-a1",
+					unsafeRegisterWorker: true,
 					modules: true,
 					script: `
 						export class TestDO {
@@ -628,6 +629,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 				},
 				{
 					name: "worker-a2",
+					unsafeRegisterWorker: true,
 					modules: true,
 					script: `export default { fetch() { return new Response("Worker A2"); } }`,
 					kvNamespaces: {
@@ -640,6 +642,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 		// Instance B has one worker
 		instanceB = new Miniflare({
 			name: "worker-b",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,

@@ -331,6 +331,7 @@ async function getMiniflareOptionsFromConfig(args: {
 				script: "",
 				modules: true,
 				name: config.name,
+				unsafeRegisterWorker: true,
 				zone: getZoneFromConfig(config),
 				...bindingOptions,
 				...assetOptions,
