@@ -188,4 +188,78 @@ describe("createRequestHandler", () => {
 		});
 		expect(capturedUrls[0]).toBe(`http://127.0.0.1:${port}/path`);
 	});
+
+	test("returns the Worker response when the Worker cancels an oversized body", async ({
+		expect,
+	}) => {
+		const handler = createRequestHandler(async (request) => {
+			const reader = request.body?.getReader();
+			let total = 0;
+
+			if (!reader) {
+				return new MiniflareResponse(null, { status: 204 });
+			}
+
+			try {
+				while (true) {
+					const result = await reader.read();
+					if (result.done) {
+						break;
+					}
+					total += result.value.byteLength;
+
+					if (total > 64 * 1024) {
+						await reader.cancel();
+						return MiniflareResponse.json(
+							{ error: "The request body is too large." },
+							{ status: 413 }
+						);
+					}
+				}
+			} finally {
+				reader.releaseLock();
+			}
+
+			return new MiniflareResponse(null, { status: 204 });
+		});
+
+		httpServer = http.createServer((req, res) => {
+			void handler(
+				req as unknown as Parameters<typeof handler>[0],
+				res,
+				(error: unknown) => {
+					res.statusCode = 500;
+					res.setHeader("content-type", "text/plain");
+					res.end(error instanceof Error ? error.message : String(error));
+				}
+			);
+		});
+
+		await new Promise<void>((r) =>
+			httpServer.listen(0, "127.0.0.1", () => {
+				port = (httpServer.address() as AddressInfo).port;
+				r();
+			})
+		);
+
+		for (let i = 0; i < 300; i++) {
+			const response = await fetch(`http://127.0.0.1:${port}/upload`, {
+				method: "POST",
+				body: new ReadableStream({
+					start(controller) {
+						for (let j = 0; j < 8; j++) {
+							controller.enqueue(new Uint8Array(16 * 1024));
+						}
+						controller.close();
+					},
+				}),
+				duplex: "half",
+			} as RequestInit & { duplex: "half" });
+
+			expect(response.status).toBe(413);
+			expect(await response.json()).toEqual({
+				error: "The request body is too large.",
+			});
+		}
+	});
 });
