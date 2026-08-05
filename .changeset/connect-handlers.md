@@ -23,6 +23,8 @@ Each entry opens a listening socket on `127.0.0.1` (or the given `address`) that
 import { defineWorker, triggers } from "@cloudflare/config";
 
 export default defineWorker({
-  triggers: [triggers.connect({ protocol: "tcp", port: 5432, address: "127.0.0.1" })],
+	triggers: [
+		triggers.connect({ protocol: "tcp", port: 5432, address: "127.0.0.1" }),
+	],
 });
 ```
