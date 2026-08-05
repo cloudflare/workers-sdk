@@ -291,12 +291,22 @@ const EnvSchema = z
 // `state` defaults to `"created"` (live) when omitted. Tombstones use one of
 // `"deleted"`, `"renamed"`, `"transferred"`; `"expecting-transfer"` is a live
 // entry awaiting incoming data via the two-phase cross-script transfer flow.
+// Containers are only supported on the SQLite storage engine, so each live
+// variant is split by `storage`: `container` exists on the `sqlite` branch and
+// is absent from the `legacy-kv` one. Splitting rather than validating the pair
+// keeps the inferred type honest, so `container` on a `legacy-kv` export is a
+// type error and not just a parse failure.
 const ExportSchema = z.union([
 	z.strictObject({
 		type: z.literal("durable-object"),
 		state: z.literal("created").optional(),
-		storage: z.enum(["sqlite", "legacy-kv"]),
+		storage: z.literal("sqlite"),
 		container: z.string().optional(),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("created").optional(),
+		storage: z.literal("legacy-kv"),
 	}),
 	z.strictObject({
 		type: z.literal("durable-object"),
@@ -315,9 +325,15 @@ const ExportSchema = z.union([
 	z.strictObject({
 		type: z.literal("durable-object"),
 		state: z.literal("expecting-transfer"),
-		storage: z.enum(["sqlite", "legacy-kv"]),
+		storage: z.literal("sqlite"),
 		transferFrom: z.string(),
 		container: z.string().optional(),
+	}),
+	z.strictObject({
+		type: z.literal("durable-object"),
+		state: z.literal("expecting-transfer"),
+		storage: z.literal("legacy-kv"),
+		transferFrom: z.string(),
 	}),
 	z.strictObject({
 		type: z.literal("worker"),

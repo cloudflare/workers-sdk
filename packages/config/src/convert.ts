@@ -711,7 +711,8 @@ function convertExports(
 				converted[exportName] = {
 					type: "durable-object",
 					storage: value.storage,
-					...(value.container !== undefined && { container: value.container }),
+					...(value.storage === "sqlite" &&
+						value.container !== undefined && { container: value.container }),
 				};
 				break;
 			}
@@ -744,7 +745,8 @@ function convertExports(
 					state: "expecting-transfer",
 					storage: value.storage,
 					transfer_from: value.transferFrom,
-					...(value.container !== undefined && { container: value.container }),
+					...(value.storage === "sqlite" &&
+						value.container !== undefined && { container: value.container }),
 				};
 				break;
 			}
