@@ -82,7 +82,8 @@ jobs:
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:
-    timeout-minutes: 30
+    # TEMPORARY VALIDATION — not for merge.
+    timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.suite }}-test
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
@@ -187,7 +188,9 @@ jobs:
         # Since the dev registry is now file-based (not network-based), fixture tests can safely run in parallel.
         # Concurrency is capped at 2 to avoid CPU starvation on CI runners when multiple fixtures
         # spawn workerd processes simultaneously (Windows runners are especially slow under load).
-        run: pnpm run test:ci --concurrency=2 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-run"' || '' }}
+        # TEMPORARY VALIDATION — not for merge. Isolated so an unrelated fixture
+        # flake can't abort the job before dev-registry runs.
+        run: pnpm run test:ci --log-order=stream --filter="@fixture/dev-registry"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
