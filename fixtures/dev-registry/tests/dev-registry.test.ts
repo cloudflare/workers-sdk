@@ -49,8 +49,13 @@ async function runViteDev(
 	});
 	const url = await waitForReady(proc);
 
-	onTestFailed(() => {
-		console.log(`::group::Vite dev session (${config})`);
+	// TEMPORARY VALIDATION — not for merge. Dump on *finish*, not only on
+	// failure: dumping only failed tests biases the breadcrumb record, and a
+	// buffer that ends mid-recovery is then indistinguishable from a real stall.
+	onTestFinished(() => {
+		console.log(
+			`::group::Vite dev session (${config}) captured-at ${new Date().toISOString()}`
+		);
 		console.log(proc.stdout);
 		console.log(proc.stderr);
 		console.log("::endgroup::");

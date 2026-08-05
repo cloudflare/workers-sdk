@@ -321,15 +321,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			// types turned out to differ, because `unsafeDevRegistryRegistration` is
 			// deferred unconditionally in `getDevMiniflareOptions`.
 			if (process.env.DEFER_DEV_REGISTRY !== "0") {
-				viteDevServer.config.logger.warn(
-					"DEV-STEP 1 releasing dev registry registration"
-				);
+				viteDevServer.config.logger.warn(`[${new Date().toISOString()}] DEV-STEP 1 releasing dev registry registration`);
 				await ctx.miniflare.unsafeRegisterInDevRegistry();
-				viteDevServer.config.logger.warn(
-					"DEV-STEP 2 dev registry registration released"
-				);
+				viteDevServer.config.logger.warn(`[${new Date().toISOString()}] DEV-STEP 2 dev registry registration released`);
 			} else {
-				viteDevServer.config.logger.warn("DEV-STEP 0 control arm, not deferring");
+				viteDevServer.config.logger.warn(`[${new Date().toISOString()}] DEV-STEP 0 control arm, not deferring`);
 			}
 
 			return () => {

@@ -1178,6 +1178,9 @@ export class Miniflare {
 		// call-time: if the registry changes between the initial call and a retry,
 		// the retry should push the most-recent state, not a stale one.
 		const registry = this.#devRegistry.getRegistry();
+		this.#crumb(
+			`PUSH-STEP 1 pushing registry: ${Object.keys(registry ?? {}).join(",") || "(empty)"}`
+		);
 
 		try {
 			const response = await this.#devRegistryDispatcher.request({
@@ -1190,6 +1193,7 @@ export class Miniflare {
 			});
 			// Drain the response body to release the connection back to the pool
 			await response.body.dump();
+			this.#crumb(`PUSH-STEP 2 pushed (status ${response.statusCode})`);
 			if (response.statusCode < 200 || response.statusCode >= 300) {
 				this.#log.debug(`Registry push failed with ${response.statusCode}`);
 				if (retries > 0) {
@@ -2351,6 +2355,12 @@ export class Miniflare {
 		};
 	}
 
+	// TEMP(validation): timestamped breadcrumb so a stalled step is
+	// distinguishable from a session buffer truncated at teardown.
+	#crumb(message: string): void {
+		this.#log.warn(`[${new Date().toISOString()}] ${message}`);
+	}
+
 	#handleWorkerdCrash(): void {
 		this.#workerdCrashCount++;
 		// Recovery used to be entirely silent, which made a crash look like an
@@ -2360,16 +2370,16 @@ export class Miniflare {
 			`The Workers runtime crashed unexpectedly and is being restarted (crash #${this.#workerdCrashCount}). ` +
 				"Any additional runtime output above may indicate the cause."
 		);
-		this.#log.warn("CRASH-STEP 1 handler entered");
+		this.#crumb("CRASH-STEP 1 handler entered");
 		// A crash destroys the proxy server heap just like a config update.
 		this.#proxyClient?.poisonProxies();
-		this.#log.warn("CRASH-STEP 2 proxies poisoned, acquiring mutex");
+		this.#crumb("CRASH-STEP 2 proxies poisoned, acquiring mutex");
 		void this.#runtimeMutex
 			.runWith(async () => {
-				this.#log.warn("CRASH-STEP 3 mutex acquired, reassembling config");
+				this.#crumb("CRASH-STEP 3 mutex acquired, reassembling config");
 				try {
 					await this.#assembleAndUpdateConfig(true);
-					this.#log.warn("CRASH-STEP 4 config reassembled");
+					this.#crumb("CRASH-STEP 4 config reassembled");
 				} catch (error) {
 					const cause =
 						error instanceof Error ? error : new Error(String(error));
@@ -2387,9 +2397,9 @@ export class Miniflare {
 						return;
 					}
 					try {
-						this.#log.warn("CRASH-STEP 5 invoking restart callback");
+						this.#crumb("CRASH-STEP 5 invoking restart callback");
 						await this.#sharedOpts.core.unsafeHandleRuntimeRestart?.();
-						this.#log.warn("CRASH-STEP 6 restart callback returned");
+						this.#crumb("CRASH-STEP 6 restart callback returned");
 					} catch (error) {
 						const cause =
 							error instanceof Error ? error : new Error(String(error));
@@ -2413,9 +2423,9 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig(reusePorts = false) {
-		this.#log.warn(`ASM-STEP 1 entered (reusePorts=${reusePorts})`);
+		this.#crumb(`ASM-STEP 1 entered (reusePorts=${reusePorts})`);
 		await this.#closeBrowserProcesses();
-		this.#log.warn("ASM-STEP 2 browsers closed");
+		this.#crumb("ASM-STEP 2 browsers closed");
 
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
@@ -2430,14 +2440,14 @@ export class Miniflare {
 			maybeGetLocallyAccessibleHost(configuredHost) ??
 			getURLSafeHost(configuredHost);
 		const loopbackPort = await this.#getLoopbackPort();
-		this.#log.warn(`ASM-STEP 3 loopback port ${loopbackPort}`);
+		this.#crumb(`ASM-STEP 3 loopback port ${loopbackPort}`);
 		const config = await this.#assembleConfig(
 			loopbackHost,
 			loopbackPort,
 			this.#devRegistry.isEnabled(),
 			reusePorts
 		);
-		this.#log.warn("ASM-STEP 4 config assembled");
+		this.#crumb("ASM-STEP 4 config assembled");
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2505,7 +2515,7 @@ export class Miniflare {
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
-		this.#log.warn(
+		this.#crumb(
 			`ASM-STEP 5 updating runtime (entry=${entryAddress} inspector=${runtimeInspectorAddress} sockets=${requiredSockets.join(",")})`
 		);
 		const maybeSocketPorts = await this.#runtime.updateConfig(
@@ -2514,7 +2524,7 @@ export class Miniflare {
 			this.#workerOpts.flatMap((w) => w.core.name ?? []),
 			this.#disposeController.signal
 		);
-		this.#log.warn("ASM-STEP 6 runtime updated");
+		this.#crumb("ASM-STEP 6 runtime updated");
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {
 			throw new MiniflareCoreError(
@@ -2766,19 +2776,19 @@ export class Miniflare {
 	 * set. Registration does not restart `workerd`, so this is cheap.
 	 */
 	async unsafeRegisterInDevRegistry(): Promise<void> {
-		this.#log.warn("REG-STEP 1 entered");
+		this.#crumb("REG-STEP 1 entered");
 		this.#checkDisposed();
-		this.#log.warn(
+		this.#crumb(
 			`REG-STEP 2 awaiting ready (mutexHasWaiting=${this.#runtimeMutex.hasWaiting})`
 		);
 		await this.ready;
-		this.#log.warn("REG-STEP 3 ready resolved, acquiring mutex");
+		this.#crumb("REG-STEP 3 ready resolved, acquiring mutex");
 
 		return this.#runtimeMutex.runWith(async () => {
-			this.#log.warn("REG-STEP 4 mutex acquired, registering");
+			this.#crumb("REG-STEP 4 mutex acquired, registering");
 			this.#devRegistryRegistrationReleased = true;
 			await this.#registerWorkers();
-			this.#log.warn("REG-STEP 5 registered");
+			this.#crumb("REG-STEP 5 registered");
 		});
 	}
 
