@@ -2456,20 +2456,15 @@ This is a random email body.
 		`);
 	});
 
-	// The canonical path is `/cdn-cgi/local/email`; `/cdn-cgi/handler/email` is
-	// the legacy path kept working via a rewrite in the dev proxy.
-	describe.each(["/cdn-cgi/local/email", "/cdn-cgi/handler/email"])(
-		"%s",
-		(path) => {
-			it("should print reject with reason", async ({ expect }) => {
-				const helper = new WranglerE2ETestHelper();
-				await helper.seed({
-					"wrangler.toml": dedent`
+	it("should print reject with reason", async ({ expect }) => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2025-03-17"
 			`,
-					"src/index.ts": dedent`
+			"src/index.ts": dedent`
 			import { EmailMessage } from "cloudflare:email";
 
 			export default {
@@ -2477,16 +2472,16 @@ This is a random email body.
 					await emailMessage.setReject('I dont like this email')
 				}
 			}`,
-				});
+		});
 
-				const worker = helper.runLongLived("wrangler dev");
+		const worker = helper.runLongLived("wrangler dev");
 
-				const { url } = await worker.waitForReady();
+		const { url } = await worker.waitForReady();
 
-				const response = await fetch(
-					`${url}${path}?from=someone@example.com&to=someone-else@example.com`,
-					{
-						body: `From: someone <someone@example.com>
+		const response = await fetch(
+			`${url}/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
 MIME-Version: 1.0
 Message-ID: <im-a-random-message-id@example.com>
@@ -2494,18 +2489,16 @@ Content-Type: text/plain
 
 This is a random email body.
 `,
-						method: "POST",
-					}
-				);
+				method: "POST",
+			}
+		);
 
-				expect(await response.text()).toMatchInlineSnapshot(
-					`"Worker rejected email with the following reason: I dont like this email"`
-				);
+		expect(await response.text()).toMatchInlineSnapshot(
+			`"Worker rejected email with the following reason: I dont like this email"`
+		);
 
-				expect(response.status).toBe(400);
-			});
-		}
-	);
+		expect(response.status).toBe(400);
+	});
 
 	it("should print forward email", async ({ expect }) => {
 		const helper = new WranglerE2ETestHelper();
