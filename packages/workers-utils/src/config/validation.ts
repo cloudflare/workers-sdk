@@ -6748,9 +6748,11 @@ function errorIfMigrationsAndExportsBothSet(
  * Object names the container via `exports[Class].container`. Validate that the
  * two arrays agree.
  *
- * Note that several containers may share a `class_name` — a Durable Object can
- * be backed by more than one container — but a container backs at most one
- * Durable Object.
+ * The relationship is one-to-one in both directions: a container backs at most
+ * one Durable Object, and a Durable Object has at most one container. workerd
+ * attaches a single container per Durable Object namespace, and in local dev
+ * every container for a class builds into the same image tag, so a second
+ * container for the same class cannot be honoured.
  */
 function validateContainerExportLinks(
 	diagnostics: Diagnostics,
@@ -6786,6 +6788,28 @@ function validateContainerExportLinks(
 	for (const name of [...duplicateNames].sort()) {
 		diagnostics.errors.push(
 			`"containers" contains more than one container named "${name}". Container names must be unique.`
+		);
+	}
+
+	const containerCountByClassName = new Map<string, number>();
+	for (const container of containers ?? []) {
+		// A non-string class_name has already been reported by `validateContainerApp`.
+		if (typeof container.class_name !== "string") {
+			continue;
+		}
+		containerCountByClassName.set(
+			container.class_name,
+			(containerCountByClassName.get(container.class_name) ?? 0) + 1
+		);
+	}
+	const overSubscribedClassNames = new Set(
+		[...containerCountByClassName]
+			.filter(([, count]) => count > 1)
+			.map(([className]) => className)
+	);
+	for (const className of [...overSubscribedClassNames].sort()) {
+		diagnostics.errors.push(
+			`More than one container is attached to the Durable Object "${className}". A Durable Object can only have one container attached to it.`
 		);
 	}
 
@@ -6843,6 +6867,13 @@ function validateContainerExportLinks(
 					`The container "${container.name}" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.`
 				);
 			}
+			continue;
+		}
+
+		if (overSubscribedClassNames.has(container.class_name)) {
+			// Already reported above. The checks below compare this container against
+			// the class's single `container` field, which a sibling may legitimately
+			// own, so they would add noise on top of the real error.
 			continue;
 		}
 
