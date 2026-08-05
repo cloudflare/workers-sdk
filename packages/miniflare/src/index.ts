@@ -2695,7 +2695,7 @@ export class Miniflare {
 
 		const entries: [string, WorkerDefinition][] = [];
 		for (const workerOpts of this.#workerOpts) {
-			if (!workerOpts.core.name) {
+			if (!workerOpts.core.name || !workerOpts.core.unsafeRegisterWorker) {
 				continue;
 			}
 

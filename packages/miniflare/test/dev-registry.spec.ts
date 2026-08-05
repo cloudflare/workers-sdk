@@ -4,10 +4,30 @@ import { useDispose, useTmp } from "./test-shared";
 import type { MiniflareOptions, WorkerRegistry } from "miniflare";
 
 describe.sequential("DevRegistry", () => {
+	test("only registers workers that opt in", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const workerOptions = {
+			name: "worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `export default { fetch() { return new Response("ok"); } };`,
+		} satisfies MiniflareOptions;
+		const mf = new Miniflare(workerOptions);
+		useDispose(mf);
+		await mf.ready;
+
+		expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+
+		await mf.setOptions({ ...workerOptions, unsafeRegisterWorker: true });
+		expect(getWorkerRegistry(unsafeDevRegistryPath)["worker"]).toBeDefined();
+	});
+
 	test("fetch to service worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			script: `addEventListener("fetch", (event) => {
@@ -92,6 +112,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -169,6 +190,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -245,6 +267,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -316,6 +339,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -356,6 +380,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -444,6 +469,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -527,6 +553,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -568,6 +595,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -635,6 +663,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -735,6 +764,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -813,6 +843,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -873,6 +904,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			workflows: {
@@ -916,6 +948,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
@@ -979,6 +1012,7 @@ describe.sequential("DevRegistry", () => {
 		// Restart remote — gets a new debug port, registry file updates
 		await remote.setOptions({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
@@ -1017,6 +1051,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1066,6 +1101,7 @@ describe.sequential("DevRegistry", () => {
 		// Restart remote — gets a new debug port, registry file updates
 		await remote.setOptions({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1093,6 +1129,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			unsafeTriggerHandlers: true,
 			compatibilityFlags: ["experimental"],
@@ -1155,6 +1192,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1264,6 +1302,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1366,6 +1405,7 @@ describe.sequential("DevRegistry", () => {
 		};
 		const remoteOptions: MiniflareOptions = {
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			script: `
@@ -1471,6 +1511,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1538,6 +1579,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			https: true,
@@ -1622,6 +1664,7 @@ describe.sequential("DevRegistry", () => {
 		const unrelated = new Miniflare({
 			name: "unrelated-worker",
 			unsafeDevRegistryPath,
+			unsafeRegisterWorker: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			script: `
@@ -1643,6 +1686,7 @@ describe.sequential("DevRegistry", () => {
 		// Create remote worker (one we're actually bound to) - this should trigger the callback
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1746,6 +1790,7 @@ describe.sequential("DevRegistry", () => {
 		const sharedOptions = {
 			name: "consumer-worker",
 			unsafeDevRegistryPath,
+			unsafeRegisterWorker: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 		} satisfies Partial<MiniflareOptions>;
