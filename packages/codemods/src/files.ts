@@ -1,7 +1,7 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { glob } from "tinyglobby";
-import type { CodemodContext } from "./types";
+import type { RunContext } from "./types";
 
 const DEFAULT_IGNORES = [
 	"**/.git/**",
@@ -14,7 +14,7 @@ const DEFAULT_IGNORES = [
 ];
 
 export async function transformFiles(
-	context: CodemodContext,
+	context: RunContext,
 	patterns: string[],
 	transform: (source: string, filePath: string) => string
 ): Promise<string[]> {
@@ -34,7 +34,7 @@ export async function transformFiles(
 		.filter((candidate) => !restrictedPaths || restrictedPaths.has(candidate))
 		.sort()) {
 		const source =
-			context.stagedFiles?.get(filePath) ?? (await readFile(filePath, "utf8"));
+			context.stagedFiles.get(filePath) ?? (await readFile(filePath, "utf8"));
 		const output = transform(source, filePath);
 		if (output === source) {
 			continue;
@@ -43,14 +43,8 @@ export async function transformFiles(
 		changes.push({ filePath, output });
 	}
 
-	if (context.stagedFiles) {
-		for (const { filePath, output } of changes) {
-			context.stagedFiles.set(filePath, output);
-		}
-	} else if (!context.dryRun) {
-		await Promise.all(
-			changes.map(({ filePath, output }) => writeFile(filePath, output))
-		);
+	for (const { filePath, output } of changes) {
+		context.stagedFiles.set(filePath, output);
 	}
 
 	return changes.map(({ filePath }) => path.relative(context.cwd, filePath));
