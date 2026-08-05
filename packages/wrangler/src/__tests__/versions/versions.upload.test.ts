@@ -1235,7 +1235,12 @@ describe("versions upload", () => {
 				await toString(formBody.get("metadata"))
 			) as WorkerMetadata;
 
-			expect(metadata.containers).toEqual([{ class_name: "MyDurableObject" }]);
+			// The container has no explicit `name`, so validation derives
+			// `<worker>-<class>`. Both directions of the container/Durable Object link
+			// are sent so that the API can resolve it from either side.
+			expect(metadata.containers).toEqual([
+				{ name: "test-name-mydurableobject", class_name: "MyDurableObject" },
+			]);
 
 			expect(std.warn).toContain(
 				"Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions"
