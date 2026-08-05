@@ -13,6 +13,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
+import { validateSecretName } from "../utils/validateSecretName";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
@@ -120,6 +121,8 @@ export const secretPutCommand = createCommand({
 				{ telemetryMessage: "secret put pages project" }
 			);
 		}
+
+		validateSecretName(args.key);
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
@@ -366,6 +369,9 @@ async function putBulkSecrets(
 	const toDelete: Array<string> = [];
 	for (const [key, value] of secretEntries) {
 		if (value != null) {
+			// Only validate create/update keys: deleting a legacy
+			// whitespace-prefixed secret must stay possible.
+			validateSecretName(key);
 			toCreate.push(key);
 			secrets[key] = { name: key, text: value, type: "secret_text" };
 		} else {

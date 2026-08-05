@@ -5,6 +5,7 @@ import * as metrics from "../../metrics";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
+import { validateSecretName } from "../../utils/validateSecretName";
 import { patchLatestWorkerVersionWithSecrets } from "./index";
 
 export const versionsSecretBulkCommand = createCommand({
@@ -65,6 +66,13 @@ export const versionsSecretBulkCommand = createCommand({
 		const { content: secrets, secretSource, secretFormat } = result;
 
 		const secretEntries = Object.entries(secrets);
+		for (const [name, value] of secretEntries) {
+			// Only validate create/update keys: deleting a legacy
+			// whitespace-prefixed secret must stay possible.
+			if (value != null) {
+				validateSecretName(name);
+			}
+		}
 
 		const newVersion = await patchLatestWorkerVersionWithSecrets({
 			config,

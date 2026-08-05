@@ -6,6 +6,7 @@ import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
+import { validateSecretName } from "../../utils/validateSecretName";
 import { patchLatestWorkerVersionWithSecrets } from "./index";
 
 export const versionsSecretPutCommand = createCommand({
@@ -58,6 +59,8 @@ export const versionsSecretPutCommand = createCommand({
 				{ telemetryMessage: "versions secrets put missing secret name" }
 			);
 		}
+
+		validateSecretName(args.key);
 
 		const accountId = await requireAuth(config);
 

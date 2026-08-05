@@ -146,6 +146,16 @@ describe("wrangler secret", () => {
 			);
 		});
 
+		it("should reject secret names with leading or trailing whitespace", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("secret put ' secret-name ' --name script-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The secret name " secret-name " must not start or end with whitespace, otherwise the binding would be inaccessible as env.secret-name. Please recreate the secret without surrounding whitespace.]`
+			);
+		});
+
 		describe("interactive", () => {
 			beforeEach(() => {
 				setIsTTY(true);
@@ -1020,6 +1030,21 @@ describe("wrangler secret", () => {
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should reject bulk secret names with leading or trailing whitespace", async ({
+			expect,
+		}) => {
+			mockReadlineInput(
+				JSON.stringify({
+					" secret1 ": "secret-value",
+				})
+			);
+			await expect(
+				runWrangler(`secret bulk --name script-name`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The secret name " secret1 " must not start or end with whitespace, otherwise the binding would be inaccessible as env.secret1. Please recreate the secret without surrounding whitespace.]`
+			);
 		});
 
 		it("should use secret bulk w/ pipe input", async ({ expect }) => {
