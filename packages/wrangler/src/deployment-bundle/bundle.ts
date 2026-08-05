@@ -446,7 +446,7 @@ export async function bundleWorker(
 	// alive and preventing clean exit.
 	let ctx: esbuild.BuildContext<typeof buildOptions> | undefined;
 	try {
-		if (watch && bundle) {
+		if (watch) {
 			ctx = await esbuild.context(buildOptions);
 			await ctx.watch();
 			result = await initialBuildResultPromise;
