@@ -3,6 +3,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { TextDecoder, TextEncoder } from "node:util";
 import { type ModuleType } from "@cloudflare/config";
+import { globsToRegExps } from "../../shared";
+import type { V4ModuleRule, V4ModuleRuleType } from "../../config/v4-schema";
 import type { Worker_Module } from "../../runtime";
 
 // Module identifier used if script came from `script` option
@@ -18,6 +20,30 @@ export function maybeGetStringScriptPathIndex(
 }
 
 type JavaScriptModuleRuleType = "ESModule" | "CommonJS";
+
+export interface CompiledModuleRule {
+	type: V4ModuleRuleType;
+	include: ReturnType<typeof globsToRegExps>;
+}
+
+export function compileModuleRules(rules: V4ModuleRule[]) {
+	const compiledRules: CompiledModuleRule[] = [];
+	const finalisedTypes = new Set<V4ModuleRuleType>();
+	for (const rule of rules) {
+		// Ignore rule if type didn't enable fallthrough
+		if (finalisedTypes.has(rule.type)) {
+			continue;
+		}
+		compiledRules.push({
+			type: rule.type,
+			include: globsToRegExps(rule.include, { endAnchor: true }),
+		});
+		if (!rule.fallthrough) {
+			finalisedTypes.add(rule.type);
+		}
+	}
+	return compiledRules;
+}
 
 export function withSourceURL(script: string, scriptPath: string): string {
 	// If we've already got a `//# sourceURL` comment, return `script` as is

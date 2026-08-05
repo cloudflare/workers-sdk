@@ -104,10 +104,15 @@ export {
 	getFreshSourceMapSupport,
 	kCurrentWorker,
 	getNodeCompat,
+	compileModuleRules,
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
 	INTROSPECT_SQLITE_METHOD,
 } from "./core";
-export type { GlobalServicesOptions, NodeJSCompatMode } from "./core";
+export type {
+	CompiledModuleRule,
+	GlobalServicesOptions,
+	NodeJSCompatMode,
+} from "./core";
 export type * from "./core/proxy/types";
 export * from "./d1";
 export * from "./do";
