@@ -43,7 +43,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",
 				"@cloudflare/vite-plugin",
-				"@cloudflare/vitest-pool-workers",
+				"@cloudflare/vitest-plugin",
 				"@cloudflare/workers-auth",
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
