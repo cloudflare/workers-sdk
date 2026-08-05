@@ -584,7 +584,9 @@ export async function getDevMiniflareOptions(
 				debuglog(
 					"workerd restarted after a crash; restarting the Vite dev server"
 				);
+				viteDevServer.config.logger.warn("VITE-STEP 1 calling viteDevServer.restart()");
 				await viteDevServer.restart();
+				viteDevServer.config.logger.warn("VITE-STEP 2 viteDevServer.restart() returned");
 			},
 			resourcePersistencePath: getPersistenceRoot(
 				resolvedViteConfig.root,

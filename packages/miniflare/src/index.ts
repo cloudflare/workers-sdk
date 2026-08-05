@@ -2360,12 +2360,16 @@ export class Miniflare {
 			`The Workers runtime crashed unexpectedly and is being restarted (crash #${this.#workerdCrashCount}). ` +
 				"Any additional runtime output above may indicate the cause."
 		);
+		this.#log.warn("CRASH-STEP 1 handler entered");
 		// A crash destroys the proxy server heap just like a config update.
 		this.#proxyClient?.poisonProxies();
+		this.#log.warn("CRASH-STEP 2 proxies poisoned, acquiring mutex");
 		void this.#runtimeMutex
 			.runWith(async () => {
+				this.#log.warn("CRASH-STEP 3 mutex acquired, reassembling config");
 				try {
 					await this.#assembleAndUpdateConfig(true);
+					this.#log.warn("CRASH-STEP 4 config reassembled");
 				} catch (error) {
 					const cause =
 						error instanceof Error ? error : new Error(String(error));
@@ -2383,7 +2387,9 @@ export class Miniflare {
 						return;
 					}
 					try {
+						this.#log.warn("CRASH-STEP 5 invoking restart callback");
 						await this.#sharedOpts.core.unsafeHandleRuntimeRestart?.();
+						this.#log.warn("CRASH-STEP 6 restart callback returned");
 					} catch (error) {
 						const cause =
 							error instanceof Error ? error : new Error(String(error));
@@ -2752,12 +2758,19 @@ export class Miniflare {
 	 * set. Registration does not restart `workerd`, so this is cheap.
 	 */
 	async unsafeRegisterInDevRegistry(): Promise<void> {
+		this.#log.warn("REG-STEP 1 entered");
 		this.#checkDisposed();
+		this.#log.warn(
+			`REG-STEP 2 awaiting ready (mutexHasWaiting=${this.#runtimeMutex.hasWaiting})`
+		);
 		await this.ready;
+		this.#log.warn("REG-STEP 3 ready resolved, acquiring mutex");
 
 		return this.#runtimeMutex.runWith(async () => {
+			this.#log.warn("REG-STEP 4 mutex acquired, registering");
 			this.#devRegistryRegistrationReleased = true;
 			await this.#registerWorkers();
+			this.#log.warn("REG-STEP 5 registered");
 		});
 	}
 
