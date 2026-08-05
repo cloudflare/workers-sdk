@@ -2686,7 +2686,7 @@ export class Miniflare {
 			);
 			// Nothing we advertised before is reachable, so withdraw it rather than
 			// leaving peers pointed at an address we can no longer serve.
-			this.#devRegistry.register({});
+			this.#devRegistry.unregisterWorkers();
 			return;
 		}
 		const debugPortAddress = `127.0.0.1:${debugPort}`;

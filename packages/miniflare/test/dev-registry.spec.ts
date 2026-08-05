@@ -1857,6 +1857,48 @@ describe("registry churn across config updates", () => {
 		).toBeDefined();
 	});
 
+	test("withdraws a removed Worker named after an inherited property", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{ name: "kept-worker", modules: true, script: script("kept") },
+				// A name that exists on `Object.prototype`, so a membership test that
+				// walks the prototype chain would report it as still configured.
+				{ name: "constructor", modules: true, script: script("dropped") },
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		// `hasOwn` throughout: a plain object resolves `registry["constructor"]`
+		// through its prototype, so a plain lookup would assert nothing here.
+		await vi.waitFor(
+			() => {
+				expect(
+					Object.hasOwn(getWorkerRegistry(unsafeDevRegistryPath), "constructor")
+				).toBe(true);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [{ name: "kept-worker", modules: true, script: script("kept") }],
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(Object.hasOwn(registry, "constructor")).toBe(false);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
 	test("withdraws the entry for a Worker removed from the config", async ({
 		expect,
 	}) => {

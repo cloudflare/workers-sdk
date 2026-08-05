@@ -89,7 +89,10 @@ export class DevRegistry {
 		});
 	}
 
-	private unregisterWorkers() {
+	/**
+	 * Withdraw every entry this instance has registered.
+	 */
+	public unregisterWorkers() {
 		for (const worker of this.registeredWorkers) {
 			this.unregister(worker);
 		}
@@ -170,7 +173,10 @@ export class DevRegistry {
 		// recreated, so a peer never observes one of its service binding or
 		// `tail_consumers` targets disappearing during a routine config update.
 		for (const name of [...this.registeredWorkers]) {
-			if (!(name in workers)) {
+			// `hasOwn` rather than `in`: a Worker may legitimately be named after an
+			// inherited property such as `constructor`, and `in` would report it as
+			// still present and leave its entry behind.
+			if (!Object.hasOwn(workers, name)) {
 				this.unregister(name);
 				this.registeredWorkers.delete(name);
 			}
