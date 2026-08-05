@@ -18,12 +18,12 @@ import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
 //
 // - Module workers: `config.manifest.modules` is a record keyed by module path,
 //   each with inline `contents`. These are reported as "file://<path>", where
-//   `<path>` is `rootPath` + module path when `rootPath` is set, or the module
-//   path otherwise.
+//   `<path>` is the module path resolved against `manifest.modulesRoot` (itself
+//   relative to `dev.rootPath` if needed), `dev.rootPath`, or cwd.
 // - Service workers: `legacy.serviceWorkerScript` holds the script. If
-//   `rootPath` is set, these are reported as "file://<rootPath>". Otherwise,
-//   they are reported as "<script:n>" for the nth worker (see
-//   `buildStringScriptPath`).
+//   `legacy.serviceWorkerScriptPath` is set, these are reported as
+//   "file://<serviceWorkerScriptPath>". Otherwise, they are reported as
+//   "<script:n>" for the nth worker (see `buildStringScriptPath`).
 
 interface SourceFile {
 	path?: string; // Path may be undefined if file is in-memory
@@ -41,6 +41,13 @@ function maybeGetDiskFile(filePath: string): Required<SourceFile> | undefined {
 	}
 }
 
+function resolvePath(rootPath: string | undefined, filePath: string) {
+	if (rootPath !== undefined && !path.isAbsolute(filePath)) {
+		return path.resolve(rootPath, filePath);
+	}
+	return path.resolve(filePath);
+}
+
 // Try to extract the path and contents of a `file` reported in a JavaScript
 // stack-trace. See the big comment above for the forms these take.
 function maybeGetFile(
@@ -54,11 +61,10 @@ function maybeGetFile(
 
 		// Check if this `filePath` matches inline worker source...
 		for (const { config, legacy, dev } of allWorkerOpts) {
-			const rootPath = dev?.rootPath;
 			if (
-				rootPath !== undefined &&
+				legacy?.serviceWorkerScriptPath !== undefined &&
 				legacy?.serviceWorkerScript !== undefined &&
-				path.resolve(rootPath) === filePath
+				resolvePath(dev?.rootPath, legacy.serviceWorkerScriptPath) === filePath
 			) {
 				return {
 					path: filePath,
@@ -68,11 +74,15 @@ function maybeGetFile(
 
 			const modules = config.manifest?.modules;
 			if (modules === undefined) continue;
+			const modulesRoot =
+				config.manifest?.modulesRoot === undefined
+					? dev?.rootPath
+					: resolvePath(dev?.rootPath, config.manifest.modulesRoot);
 			for (const [modulePath, module] of Object.entries(modules)) {
 				const resolvedModulePath =
-					rootPath === undefined
+					modulesRoot === undefined
 						? path.resolve(modulePath)
-						: path.resolve(rootPath, modulePath);
+						: path.resolve(modulesRoot, modulePath);
 				if (resolvedModulePath === filePath) {
 					return {
 						path: filePath,
@@ -344,11 +354,11 @@ export async function handlePrettyErrorRequest(
 		}
 
 		for (const { legacy, dev } of workerSrcOpts) {
-			const rootPath = dev?.rootPath;
 			if (
-				rootPath !== undefined &&
+				legacy?.serviceWorkerScriptPath !== undefined &&
 				legacy?.serviceWorkerScript !== undefined &&
-				path.resolve(rootPath) === path.resolve(stackFrame.fileName)
+				resolvePath(dev?.rootPath, legacy.serviceWorkerScriptPath) ===
+					path.resolve(stackFrame.fileName)
 			) {
 				return { contents: legacy.serviceWorkerScript };
 			}

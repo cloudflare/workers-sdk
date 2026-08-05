@@ -169,6 +169,18 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts pipeline array bindings", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			pipelines: ["PIPELINE"],
+		});
+
+		expect(converted.workers[0].config.env?.PIPELINE).toEqual({
+			type: "pipeline",
+			name: "PIPELINE",
+		});
+	});
+
 	test("prefers explicit workers over top-level source options", ({
 		expect,
 	}) => {
@@ -192,14 +204,19 @@ describe("convertV4MiniflareOptions", () => {
 		});
 	});
 
-	test("preserves service-worker source paths with rootPath", ({ expect }) => {
+	test("preserves service-worker source paths separately from rootPath", ({
+		expect,
+	}) => {
 		const converted = convertV4MiniflareOptions({
 			scriptPath: __filename,
 		});
 
-		expect(converted.workers[0].dev?.rootPath).toBe(__filename);
+		expect(converted.workers[0].dev?.rootPath).toBeUndefined();
+		expect(converted.workers[0].legacy?.serviceWorkerScriptPath).toBe(
+			__filename
+		);
 		expect(converted.workers[0].legacy?.serviceWorkerScript).toContain(
-			"preserves service-worker source paths with rootPath"
+			"preserves service-worker source paths separately from rootPath"
 		);
 	});
 
@@ -215,6 +232,7 @@ describe("convertV4MiniflareOptions", () => {
 		});
 
 		expect(converted.workers[0].dev?.rootPath).toBe(__dirname);
+		expect(converted.workers[0].config.manifest?.modulesRoot).toBe(__dirname);
 		expect(converted.workers[0].config.manifest).toMatchObject({
 			mainModule: "v4-convert.spec.ts",
 			modules: {
@@ -240,6 +258,29 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].legacy?.sitePath).toBe(
 			path.join(__dirname, "public")
 		);
+	});
+
+	test("keeps v4 rootPath separate from modulesRoot", ({ expect }) => {
+		const rootPath = path.join(__dirname, "project");
+		const modulesRoot = path.join(rootPath, ".wrangler/tmp/dev");
+		const converted = convertV4MiniflareOptions({
+			rootPath,
+			modulesRoot,
+			modules: [
+				{
+					type: "ESModule",
+					path: path.join(modulesRoot, "index.js"),
+					contents: "export default {};",
+				},
+			],
+			textBlobBindings: { TEXT: "data/message.txt" },
+		});
+
+		expect(converted.workers[0].dev?.rootPath).toBe(rootPath);
+		expect(converted.workers[0].config.manifest?.modulesRoot).toBe(modulesRoot);
+		expect(converted.workers[0].legacy?.textBlobBindings).toEqual({
+			TEXT: "data/message.txt",
+		});
 	});
 
 	test("throws for v4 module auto-collection options", ({ expect }) => {

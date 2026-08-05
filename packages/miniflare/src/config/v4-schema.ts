@@ -4,13 +4,13 @@ import {
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
 import { Log } from "../shared";
+import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
 import type { Awaitable } from "../workers";
 import type * as http from "node:http";
 
-const kCurrentWorker = Symbol.for("miniflare.kCurrentWorker");
 const kUnsafeEphemeralUniqueKey = Symbol.for(
 	"miniflare.kUnsafeEphemeralUniqueKey"
 );
@@ -62,6 +62,7 @@ const V4ModuleRuleSchema = z.object({
 
 const V4ModuleDefinitionSchema = z.object({
 	type: V4ModuleRuleTypeSchema,
+	/** Module file path; relative to `modulesRoot` if not absolute. */
 	path: z.string(),
 	contents: z.union([z.string(), z.instanceof(Uint8Array)]).optional(),
 });
@@ -69,19 +70,24 @@ const V4ModuleDefinitionSchema = z.object({
 const V4SourceOptionsSchema = z.union([
 	z.object({
 		modules: z.array(V4ModuleDefinitionSchema),
+		/** Source directory for module paths; relative to `rootPath` if not absolute. */
 		modulesRoot: z.string().optional(),
 	}),
 	z.object({
 		script: z.string(),
+		/** Worker script source path; relative to `rootPath` if not absolute. */
 		scriptPath: z.string().optional(),
 		modules: z.boolean().optional(),
 		modulesRules: z.array(V4ModuleRuleSchema).optional(),
+		/** Source directory for module paths; relative to `rootPath` if not absolute. */
 		modulesRoot: z.string().optional(),
 	}),
 	z.object({
+		/** Worker script source path; relative to `rootPath` if not absolute. */
 		scriptPath: z.string(),
 		modules: z.boolean().optional(),
 		modulesRules: z.array(V4ModuleRuleSchema).optional(),
+		/** Source directory for module paths; relative to `rootPath` if not absolute. */
 		modulesRoot: z.string().optional(),
 	}),
 ]);
@@ -136,6 +142,7 @@ const V4ExternalServerSchema = z
 	});
 
 const V4DiskDirectorySchema = z.object({
+	/** Directory served by the workerd disk service; passed through as-is. */
 	path: z.string(),
 	writable: z.boolean().optional(),
 });
@@ -320,16 +327,20 @@ const V4RemoteBindingWithNameSchema = z.object({
 
 const V4WorkerOptionsShapeSchema = z.object({
 	name: z.string().optional(),
+	/** Base directory for relative worker path options; may itself be relative to cwd. */
 	rootPath: z.string().optional(),
 	compatibilityDate: z.string().optional(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
+	/** WASM binding file paths; string values are relative to `rootPath` if not absolute. */
 	wasmBindings: z
 		.record(z.string(), z.union([z.string(), z.instanceof(Uint8Array)]))
 		.optional(),
+	/** Text blob binding file paths; values are relative to `rootPath` if not absolute. */
 	textBlobBindings: z.record(z.string(), z.string()).optional(),
+	/** Data blob binding file paths; string values are relative to `rootPath` if not absolute. */
 	dataBlobBindings: z
 		.record(z.string(), z.union([z.string(), z.instanceof(Uint8Array)]))
 		.optional(),
@@ -364,6 +375,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 		.optional(),
 	additionalUnboundDurableObjects: z.array(V4DurableObjectSchema).optional(),
 	kvNamespaces: V4NamespaceSchema.optional(),
+	/** Workers Sites asset directory; relative to `rootPath` if not absolute. */
 	sitePath: z.string().optional(),
 	siteInclude: z.array(z.string()).optional(),
 	siteExclude: z.array(z.string()).optional(),
@@ -400,6 +412,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 	assets: z
 		.object({
 			workerName: z.string().optional(),
+			/** Assets directory to serve; relative to `rootPath` if not absolute. */
 			directory: z.string(),
 			binding: z.string().optional(),
 			run_worker_first: z.union([z.boolean(), z.array(z.string())]).optional(),
@@ -569,6 +582,7 @@ export const V4WorkerOptionsSchema = V4SourceOptionsSchema.and(
 );
 
 export const V4SharedOptionsSchema = z.object({
+	/** Base directory for relative worker path options; may itself be relative to cwd. */
 	rootPath: z.string().optional(),
 	host: z.string().optional(),
 	port: z.number().optional(),
@@ -594,6 +608,7 @@ export const V4SharedOptionsSchema = z.object({
 	cf: z
 		.union([z.boolean(), z.string(), z.record(z.string(), z.unknown())])
 		.optional(),
+	/** Dev registry filesystem path; relative to cwd if not absolute. */
 	unsafeDevRegistryPath: z.string().optional(),
 	unsafeHandleDevRegistryUpdate: z
 		.custom<(registry: unknown) => void>((value) => typeof value === "function")
@@ -606,7 +621,9 @@ export const V4SharedOptionsSchema = z.object({
 	unsafeObservability: z.boolean().optional(),
 	unsafeInspectDurableObjects: z.boolean().optional(),
 	logRequests: z.boolean().default(true),
+	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
 	resourcePersistencePath: z.string().optional(),
+	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
 	stripDisablePrettyError: z.boolean().default(true),
 	telemetry: z
@@ -620,6 +637,7 @@ export const V4SharedOptionsSchema = z.object({
 		.union([
 			z.object({
 				localDocker: z.object({
+					/** Docker socket path; passed through as-is. */
 					socketPath: z.string(),
 					containerEgressInterceptorImage: z.string().optional(),
 				}),

@@ -1171,6 +1171,7 @@ describe("LocalRuntimeController", () => {
 			let config: Partial<StartDevWorkerOptions> = {
 				name: "worker",
 				entrypoint: "NOT_REAL",
+				projectRoot: process.cwd(),
 				legacy: { site: { bucket: ".", include: ["*.txt"] } },
 			};
 			const bundle = makeEsbuildBundle(dedent /*javascript*/ `

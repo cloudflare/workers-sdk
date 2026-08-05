@@ -24,6 +24,7 @@ import {
 	HttpOptions_Style,
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
+import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type {
 	Miniflare,
@@ -48,6 +49,8 @@ export const MiniflareModuleSchema = z.strictObject({
 
 export const MiniflareManifestSchema = z.strictObject({
 	mainModule: z.string(),
+	/** Source directory for manifest module names; relative to `dev.rootPath` if not absolute. */
+	modulesRoot: z.string().optional(),
 	modules: z.record(z.string(), MiniflareModuleSchema),
 });
 
@@ -55,10 +58,7 @@ export const MiniflareManifestSchema = z.strictObject({
 // Miniflare-only binding extensions
 // ---------------------------------------------------------------------------
 
-// Service binding designator that always points to the worker with the binding.
-// Using `Symbol.for()` instead of `Symbol()` in case multiple copies of
-// `miniflare` are loaded (e.g. when configuring Vitest and when running pool)
-export const kCurrentWorker = Symbol.for("miniflare.kCurrentWorker");
+export { kCurrentWorker };
 
 /**
  * A function-backed "service binding".
@@ -157,6 +157,7 @@ const ExternalServiceBindingSchema = z
  */
 const DiskServiceBindingSchema = z.strictObject({
 	type: z.literal("disk"),
+	/** Directory served by the workerd disk service; passed through as-is. */
 	path: z.string(),
 	writable: z.boolean().optional(),
 });
@@ -377,13 +378,14 @@ const MiniflareExportSchema = z.union([
 
 /**
  * Extends the config `assets` block with:
- * - `directory` — resolved to an absolute path by the caller.
+ * - `directory` — directory to serve, resolved against `dev.rootPath` if relative.
  * - `hasUserWorker` — whether the worker has a user-authored script the asset
  *   router should fall back to for unmatched requests. Cannot be inferred from
  *   manifest presence: wrangler injects a placeholder script for assets-only
  *   workers, so this must be supplied explicitly (defaults to `false`).
  */
 const MiniflareAssetsSchema = RawAssetsConfigSchema.extend({
+	/** Assets directory to serve; relative to `dev.rootPath` if not absolute. */
 	directory: z.string(),
 	hasUserWorker: z.boolean().default(false),
 });
@@ -553,6 +555,7 @@ const OutboundServiceSchema = z.discriminatedUnion("type", [
 ]);
 
 export const DevConfigSchema = z.strictObject({
+	/** Base directory for relative path options; may itself be relative to cwd. */
 	rootPath: z.string().optional(),
 	// Enables the Cache API (NOT Workers cache).
 	// not user-configurable (only Wrangler's internal ProxyWorker disables it).
@@ -588,13 +591,19 @@ export const LegacyConfigSchema = z.strictObject({
 	// Service-worker format (non-module, global `addEventListener`) script,
 	// provided directly by the caller (e.g. wrangler for service-worker workers).
 	serviceWorkerScript: z.string().optional(),
+	/** Source path for `serviceWorkerScript`; relative to `dev.rootPath` if not absolute. */
+	serviceWorkerScriptPath: z.string().optional(),
+	/** WASM binding file paths; string values are relative to `dev.rootPath` if not absolute. */
 	wasmBindings: z
 		.record(z.string(), z.union([z.string(), z.instanceof(Uint8Array)]))
 		.optional(),
+	/** Text blob binding file paths; values are relative to `dev.rootPath` if not absolute. */
 	textBlobBindings: z.record(z.string(), z.string()).optional(),
+	/** Data blob binding file paths; string values are relative to `dev.rootPath` if not absolute. */
 	dataBlobBindings: z
 		.record(z.string(), z.union([z.string(), z.instanceof(Uint8Array)]))
 		.optional(),
+	/** Workers Sites asset directory; relative to `dev.rootPath` if not absolute. */
 	sitePath: z.string().optional(),
 	siteInclude: z.array(z.string()).optional(),
 	siteExclude: z.array(z.string()).optional(),
@@ -654,7 +663,9 @@ export const InstanceOptionsSchema = z.object({
 	stripDisablePrettyError: z.boolean().default(true),
 
 	// Persistence
+	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
 	resourcePersistencePath: z.string().optional(),
+	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
 
 	containerEngine: z
@@ -662,6 +673,7 @@ export const InstanceOptionsSchema = z.object({
 			z.string(),
 			z.object({
 				localDocker: z.object({
+					/** Docker socket path; passed through as-is. */
 					socketPath: z.string(),
 				}),
 			}),
@@ -678,6 +690,7 @@ export const InstanceOptionsSchema = z.object({
 
 	// Internal
 	publicUrl: z.url().optional(),
+	/** Dev registry filesystem path; relative to cwd if not absolute. */
 	unsafeDevRegistryPath: z.string().optional(),
 	unsafeHandleDevRegistryUpdate: z
 		.custom<(registry: WorkerRegistry) => void>()

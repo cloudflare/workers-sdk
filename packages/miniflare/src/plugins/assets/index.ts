@@ -58,6 +58,16 @@ import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 // orphaned temp directories when getServices is called repeatedly
 const tempDirCache = new Map<string, string>();
 
+function resolveAssetDirectory(
+	rootPath: string | undefined,
+	directory: string
+) {
+	if (rootPath !== undefined && !path.isAbsolute(directory)) {
+		return path.resolve(rootPath, directory);
+	}
+	return directory;
+}
+
 /**
  * Builds the router worker's `RouterConfig` from the parsed worker config,
  * mirroring `resolveAssetOptions` in `@cloudflare/deploy-helpers`:
@@ -119,7 +129,10 @@ export const ASSETS_PLUGIN: Plugin = {
 			return [];
 		}
 
-		let assetDirectory = assets.directory;
+		let assetDirectory = resolveAssetDirectory(
+			options.dev?.rootPath,
+			assets.directory
+		);
 		const directoryStats = await fs.stat(assetDirectory).catch((err) => {
 			if (err?.code === "ENOENT") {
 				return undefined;

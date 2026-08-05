@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { kCurrentWorker } from "./current-worker";
 import { V4MiniflareOptionsSchema } from "./v4-schema";
 import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type {
@@ -13,10 +14,10 @@ import type {
 	ParsedV4MiniflareOptions,
 	ParsedV4WorkerOptions,
 	V4MiniflareOptions,
+	V4ModuleRuleType,
 } from "./v4-schema";
 
 const FALLBACK_COMPATIBILITY_DATE = "2023-07-24";
-const kCurrentWorkerSymbol = Symbol.for("miniflare.kCurrentWorker");
 
 type Env = NonNullable<MiniflareWorkerConfig["env"]>;
 type Exports = NonNullable<MiniflareWorkerConfig["exports"]>;
@@ -113,20 +114,12 @@ function convertWorkerOptions(
 		return value !== undefined;
 	};
 
-	let manifest: Manifest | undefined;
 	const optionsRootPath = worker.rootPath ?? sharedRootPath;
-	let rootPath = optionsRootPath;
-	addSourceOptions(
+	const manifest = addSourceOptions(
 		worker,
 		workerIndex,
 		legacy,
-		rootPath,
-		(value) => {
-			manifest = value;
-		},
-		(value) => {
-			rootPath = value;
-		}
+		optionsRootPath
 	);
 
 	const config: MiniflareWorkerConfig = {
@@ -171,7 +164,7 @@ function convertWorkerOptions(
 	legacy.siteInclude = worker.siteInclude;
 	legacy.siteExclude = worker.siteExclude;
 
-	dev.rootPath = rootPath;
+	dev.rootPath = optionsRootPath;
 	dev.cacheAPI = worker.cacheAPI;
 	dev.outboundService = convertOutboundService(
 		worker.outboundService,
@@ -203,19 +196,14 @@ function addSourceOptions(
 	worker: ParsedV4WorkerOptions,
 	workerIndex: number,
 	legacy: LegacyConfig,
-	rootPath: string | undefined,
-	setManifest: (manifest: Manifest) => void,
-	setRootPath: (rootPath: string | undefined) => void
-) {
+	rootPath: string | undefined
+): Manifest | undefined {
 	if ("modulesRules" in worker && worker.modulesRules !== undefined) {
 		throwUnsupportedOption("modulesRules");
 	}
 	if (Array.isArray(worker.modules)) {
-		const modulesRoot = worker.modulesRoot ?? rootPath;
-		const manifest = createManifestFromModules(worker.modules, modulesRoot);
-		setManifest(manifest);
-		setRootPath(modulesRoot);
-		return;
+		const modulesRoot = resolveOptionalSourcePath(worker.modulesRoot, rootPath);
+		return createManifestFromModules(worker.modules, modulesRoot);
 	}
 
 	const scriptPath =
@@ -233,22 +221,22 @@ function addSourceOptions(
 	}
 
 	if (worker.modules === true) {
-		const modulesRoot = worker.modulesRoot ?? rootPath;
+		const modulesRoot = resolveOptionalSourcePath(worker.modulesRoot, rootPath);
 		const mainModule =
 			scriptPath !== undefined
 				? getModuleName(scriptPath, modulesRoot)
 				: `script-${workerIndex}.mjs`;
-		setManifest({
+		return {
 			mainModule,
+			modulesRoot,
 			modules: {
 				[mainModule]: { type: "esm", contents: script },
 			},
-		});
-		setRootPath(modulesRoot);
+		};
 	} else {
 		legacy.serviceWorkerScript = script;
 		if (scriptPath !== undefined) {
-			setRootPath(scriptPath);
+			legacy.serviceWorkerScriptPath = scriptPath;
 		}
 	}
 }
@@ -280,7 +268,7 @@ function createManifestFromModules(
 		);
 	}
 
-	return { mainModule, modules: manifestModules };
+	return { mainModule, modulesRoot, modules: manifestModules };
 }
 
 function getModuleName(modulePath: string, modulesRoot: string | undefined) {
@@ -300,16 +288,18 @@ function resolveSourcePath(sourcePath: string, rootPath: string | undefined) {
 	return sourcePath;
 }
 
+function resolveOptionalSourcePath(
+	sourcePath: string | undefined,
+	rootPath: string | undefined
+) {
+	return sourcePath === undefined
+		? rootPath
+		: resolveSourcePath(sourcePath, rootPath);
+}
+
 function readModuleContents(
 	modulePath: string,
-	type:
-		| "ESModule"
-		| "CommonJS"
-		| "Text"
-		| "Data"
-		| "CompiledWasm"
-		| "PythonModule"
-		| "PythonRequirement"
+	type: V4ModuleRuleType
 ): ManifestModule["contents"] {
 	if (type === "Data" || type === "CompiledWasm") {
 		return toUint8Array(readFileSync(modulePath));
@@ -323,16 +313,7 @@ function toUint8Array(buffer: Buffer): Uint8Array<ArrayBuffer> {
 	return copy;
 }
 
-function convertModuleType(
-	type:
-		| "ESModule"
-		| "CommonJS"
-		| "Text"
-		| "Data"
-		| "CompiledWasm"
-		| "PythonModule"
-		| "PythonRequirement"
-): ManifestModule["type"] {
+function convertModuleType(type: V4ModuleRuleType): ManifestModule["type"] {
 	switch (type) {
 		case "ESModule":
 			return "esm";
@@ -572,7 +553,6 @@ function convertOutboundService(
 		};
 	}
 	throwUnsupportedOption("outboundService");
-	return undefined;
 }
 
 function convertServiceDesignator(
@@ -585,7 +565,7 @@ function convertServiceDesignator(
 	if (typeof binding === "string") {
 		return { type: "worker", workerName: binding };
 	}
-	if (binding === (kCurrentWorkerSymbol as unknown)) {
+	if (binding === kCurrentWorker) {
 		return {
 			type: "worker",
 			workerName: getCurrentWorkerBindingName(),
@@ -619,7 +599,7 @@ function convertServiceDesignator(
 }
 
 function getCurrentWorkerBindingName(): ServiceBinding["workerName"] {
-	return kCurrentWorkerSymbol as unknown as ServiceBinding["workerName"];
+	return kCurrentWorker;
 }
 
 function convertWorkerName(
@@ -700,21 +680,7 @@ function addProductBindings(
 			simple: binding.simple,
 		};
 	}
-	for (const [name, binding] of Object.entries(worker.pipelines ?? {})) {
-		env[name] = {
-			type: "pipeline",
-			name:
-				typeof binding === "string"
-					? binding
-					: "stream" in binding
-						? binding.stream
-						: binding.pipeline,
-			remote:
-				typeof binding === "string"
-					? undefined
-					: isRemote(binding.remoteProxyConnectionString),
-		};
-	}
+	addPipelineBindings(env, worker.pipelines, isRemote);
 	for (const binding of worker.email?.send_email ?? []) {
 		env[binding.name] = {
 			type: "send-email",
@@ -820,6 +786,37 @@ function addProductBindings(
 	}
 }
 
+function addPipelineBindings(
+	env: Env,
+	pipelines: ParsedV4WorkerOptions["pipelines"],
+	isRemote: (value: RemoteProxyConnectionString | undefined) => boolean
+) {
+	if (pipelines === undefined) {
+		return;
+	}
+	if (Array.isArray(pipelines)) {
+		for (const name of pipelines) {
+			env[name] = { type: "pipeline", name };
+		}
+		return;
+	}
+	for (const [name, binding] of Object.entries(pipelines)) {
+		env[name] = {
+			type: "pipeline",
+			name:
+				typeof binding === "string"
+					? binding
+					: "stream" in binding
+						? binding.stream
+						: binding.pipeline,
+			remote:
+				typeof binding === "string"
+					? undefined
+					: isRemote(binding.remoteProxyConnectionString),
+		};
+	}
+}
+
 function configAssets(
 	env: Env,
 	config: MiniflareWorkerConfig,
@@ -832,27 +829,22 @@ function configAssets(
 	if (assets.workerName !== undefined) {
 		throwUnsupportedOption("assets.workerName");
 	}
-	const routerConfig = getRecord(assets.routerConfig);
-	const assetConfig = getRecord(assets.assetConfig);
 	config.assets = {
 		directory: assets.directory,
-		hasUserWorker: getBooleanProperty(routerConfig, "has_user_worker"),
+		hasUserWorker: getBooleanProperty(assets.routerConfig, "has_user_worker"),
 		htmlHandling: getHtmlHandling(
-			getStringProperty(assetConfig, "html_handling")
+			getStringProperty(assets.assetConfig, "html_handling")
 		),
 		notFoundHandling: getNotFoundHandling(
-			getStringProperty(assetConfig, "not_found_handling")
+			getStringProperty(assets.assetConfig, "not_found_handling")
 		),
-		runWorkerFirst: getRunWorkerFirst(assets.run_worker_first, routerConfig),
+		runWorkerFirst: getRunWorkerFirst(
+			assets.run_worker_first,
+			assets.routerConfig
+		),
 	};
 	if (assets.binding !== undefined) {
 		env[assets.binding] = { type: "assets" };
-	}
-}
-
-function getRecord(value: unknown): Record<string, unknown> | undefined {
-	if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-		return value as Record<string, unknown>;
 	}
 }
 

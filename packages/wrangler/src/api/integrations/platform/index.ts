@@ -326,6 +326,7 @@ async function getMiniflareOptionsFromConfig(args: {
 	const resourceTmpPath = getDefaultProjectTmpPath(projectRoot);
 
 	const miniflareOptions: V4MiniflareOptions = {
+		rootPath: projectRoot,
 		workers: [
 			{
 				script: "",
@@ -480,6 +481,9 @@ export function unstable_getMiniflareWorkerOptions(
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
+	const projectRoot = config.userConfigPath
+		? path.dirname(config.userConfigPath)
+		: process.cwd();
 	// Only resolve assets if a directory is available (from config or overrides).
 	// When assets are configured without a directory (e.g. when using
 	// @cloudflare/vite-plugin, which handles asset serving independently),
@@ -502,6 +506,7 @@ export function unstable_getMiniflareWorkerOptions(
 		: {};
 
 	const workerOptions: SourcelessWorkerOptions = {
+		rootPath: projectRoot,
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,

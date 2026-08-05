@@ -87,8 +87,10 @@ test("source maps workers", async ({ expect }) => {
 					compatibilityDate: "2025-05-01",
 					env: { MESSAGE: { type: "json", value: "unnamed" } },
 				},
-				dev: { rootPath: serviceWorkerPath },
-				legacy: { serviceWorkerScript: serviceWorkerContent },
+				legacy: {
+					serviceWorkerScript: serviceWorkerContent,
+					serviceWorkerScriptPath: serviceWorkerPath,
+				},
 			},
 			{
 				config: {
@@ -98,8 +100,10 @@ test("source maps workers", async ({ expect }) => {
 					triggers: [{ type: "fetch", pattern: "*/a" }],
 					env: { MESSAGE: { type: "json", value: "a" } },
 				},
-				dev: { rootPath: serviceWorkerPath },
-				legacy: { serviceWorkerScript: serviceWorkerContent },
+				legacy: {
+					serviceWorkerScript: serviceWorkerContent,
+					serviceWorkerScriptPath: serviceWorkerPath,
+				},
 			},
 			// Module workers with co-located source maps on disk.
 			{

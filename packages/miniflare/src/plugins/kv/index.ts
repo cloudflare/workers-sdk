@@ -82,7 +82,9 @@ export const KV_PLUGIN: Plugin = {
 		});
 
 		if (isWorkersSitesEnabled(options)) {
-			bindings.push(...(await getSitesBindings(options.legacy)));
+			bindings.push(
+				...(await getSitesBindings(options.legacy, options.dev?.rootPath))
+			);
 		}
 
 		return bindings;
@@ -95,7 +97,10 @@ export const KV_PLUGIN: Plugin = {
 		);
 
 		if (isWorkersSitesEnabled(options)) {
-			Object.assign(bindings, await getSitesNodeBindings(options.legacy));
+			Object.assign(
+				bindings,
+				await getSitesNodeBindings(options.legacy, options.dev?.rootPath)
+			);
 		}
 
 		return bindings;
@@ -174,7 +179,7 @@ export const KV_PLUGIN: Plugin = {
 		}
 
 		if (isWorkersSitesEnabled(options)) {
-			services.push(...getSitesServices(options.legacy));
+			services.push(...getSitesServices(options.legacy, options.dev?.rootPath));
 		}
 
 		return services;

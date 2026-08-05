@@ -4492,7 +4492,7 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 				dev: { rootPath: bPath },
 				legacy: {
 					textBlobBindings: { TEXT: "2.txt" },
-					sitePath: bPath,
+					sitePath: ".",
 					serviceWorkerScript: `addEventListener("fetch", (event) => {
 						event.respondWith(Response.json({
 							text: TEXT,

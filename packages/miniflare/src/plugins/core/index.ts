@@ -371,6 +371,10 @@ function resolveLegacyPath(rootPath: string | undefined, filePath: string) {
 		: path.resolve(rootPath, filePath);
 }
 
+function resolveSourcePath(rootPath: string | undefined, filePath: string) {
+	return resolveLegacyPath(rootPath, filePath);
+}
+
 export const CORE_PLUGIN: Plugin = {
 	getBindings(options, workerIndex) {
 		const { config, legacy, dev } = options;
@@ -557,7 +561,6 @@ export const CORE_PLUGIN: Plugin = {
 
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
-
 		// When local observability is on, attach the collector to every user worker
 		// (as a streaming tail consumer) and add the compatibility flags workerd
 		// needs to emit those tail events. This is done here so wrangler and the
@@ -1064,13 +1067,17 @@ function getWorkerScript(
 	workerIndex: number
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
 	const { config, legacy } = options;
-	const rootPath = options.dev?.rootPath;
 	// Service-worker format scripts are provided directly by the caller.
 	if (legacy?.serviceWorkerScript !== undefined) {
 		return {
 			serviceWorkerScript: withSourceURL(
 				legacy.serviceWorkerScript,
-				rootPath ?? buildStringScriptPath(workerIndex)
+				legacy.serviceWorkerScriptPath === undefined
+					? buildStringScriptPath(workerIndex)
+					: resolveSourcePath(
+							options.dev?.rootPath,
+							legacy.serviceWorkerScriptPath
+						)
 			),
 		};
 	}
@@ -1078,6 +1085,10 @@ function getWorkerScript(
 	// Otherwise, build modules from the manifest (contents are provided inline).
 	const manifest = config.manifest;
 	assert(manifest !== undefined, "Unreachable: Workers must have code");
+	const modulesRoot =
+		manifest.modulesRoot === undefined
+			? options.dev?.rootPath
+			: resolveSourcePath(options.dev?.rootPath, manifest.modulesRoot);
 	const entry = manifest.modules[manifest.mainModule];
 	assert(
 		entry !== undefined,
@@ -1090,7 +1101,7 @@ function getWorkerScript(
 			manifest.mainModule,
 			entry.type,
 			entry.contents,
-			rootPath
+			modulesRoot
 		),
 	];
 	for (const [name, module] of Object.entries(manifest.modules)) {
@@ -1103,7 +1114,7 @@ function getWorkerScript(
 			continue;
 		}
 		modules.push(
-			convertManifestModule(name, module.type, module.contents, rootPath)
+			convertManifestModule(name, module.type, module.contents, modulesRoot)
 		);
 	}
 	return { modules };

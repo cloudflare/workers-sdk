@@ -1161,6 +1161,7 @@ export async function buildMiniflareOptions(
 	const assetOptions = buildAssetOptions(config);
 
 	const options: Options = {
+		rootPath: config.projectRoot,
 		host: config.initialIp,
 		port: config.initialPort,
 		publicUrl: config.publicUrl,
