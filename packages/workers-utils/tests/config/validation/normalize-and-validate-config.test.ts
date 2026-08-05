@@ -3152,6 +3152,83 @@ describe("normalizeAndValidateConfig()", () => {
 					`"containers" exists at the top level, but not on "env.staging"`
 				);
 			});
+
+			// `exports` is inherited by named environments but `containers` is not, so
+			// declaring `exports` once at the top level and repeating `containers` in
+			// every environment is the idiomatic layout. The top level then sees a
+			// `container` reference with no containers to match it against.
+			const exportsAtTopLevelContainersPerEnvironment = {
+				name: "my-worker",
+				exports: {
+					MyDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+				env: {
+					staging: {
+						containers: [
+							{
+								name: "my-container",
+								image: "registry.cloudflare.com/something:hello",
+							},
+						],
+					},
+				},
+			} as unknown as RawConfig;
+
+			it("does not report dangling `container` references when only the named environments declare `containers`", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					exportsAtTopLevelContainersPerEnvironment,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("does not report dangling `container` references from the top level when a named environment is selected", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					exportsAtTopLevelContainersPerEnvironment,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("still reports dangling `container` references when no environment declares `containers`", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "my-container",
+							},
+						},
+						env: { staging: {} },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.MyDO.container" references a container named "my-container", but no container with that name is defined in "containers"."
+				`);
+			});
 		});
 
 		describe("[assets]", () => {
