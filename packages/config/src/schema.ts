@@ -349,12 +349,36 @@ export const WorkerEntrypointExportSchema = z.strictObject({
 	cache: z.strictObject({ enabled: z.boolean() }).optional(),
 });
 
+// Containers are only supported on the SQLite storage engine, so each live
+// variant enters the union split by `storage`: `container` exists on the
+// `sqlite` branch and is absent from the `legacy-kv` one. Splitting rather than
+// validating the pair keeps the inferred type honest, so `container` on a
+// `legacy-kv` export is a type error and not just a parse failure. The branches
+// are derived from the exported variants above, which stay unsplit so that
+// consumers such as miniflare can keep extending them as single objects.
+const DurableObjectCreatedSqliteExportSchema =
+	DurableObjectCreatedExportSchema.extend({ storage: z.literal("sqlite") });
+const DurableObjectCreatedLegacyKvExportSchema =
+	DurableObjectCreatedExportSchema.omit({ container: true }).extend({
+		storage: z.literal("legacy-kv"),
+	});
+const DurableObjectExpectingTransferSqliteExportSchema =
+	DurableObjectExpectingTransferExportSchema.extend({
+		storage: z.literal("sqlite"),
+	});
+const DurableObjectExpectingTransferLegacyKvExportSchema =
+	DurableObjectExpectingTransferExportSchema.omit({ container: true }).extend({
+		storage: z.literal("legacy-kv"),
+	});
+
 export const ExportSchema = z.union([
-	DurableObjectCreatedExportSchema,
+	DurableObjectCreatedSqliteExportSchema,
+	DurableObjectCreatedLegacyKvExportSchema,
 	DurableObjectDeletedExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
-	DurableObjectExpectingTransferExportSchema,
+	DurableObjectExpectingTransferSqliteExportSchema,
+	DurableObjectExpectingTransferLegacyKvExportSchema,
 	WorkerEntrypointExportSchema,
 	// TODO: support Workflows
 	// z.strictObject({
