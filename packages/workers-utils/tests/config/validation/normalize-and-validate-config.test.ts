@@ -2790,6 +2790,46 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("reports the duplicate claim only once when the container also sets `class_name`", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								name: "my-container",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						exports: {
+							MyDO: { type: "durable-object", storage: "sqlite" },
+							OtherDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "my-container",
+							},
+							ThirdDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "my-container",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				// Naming one of the claiming classes as *the* conflicting one would
+				// depend on key order, so the duplicate-claim error stands alone.
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The container "my-container" is referenced by more than one Durable Object export (OtherDO, ThirdDO). A container can only back a single Durable Object."
+				`);
+			});
+
 			it("errors when the container and export reference each other inconsistently", ({
 				expect,
 			}) => {
@@ -2823,6 +2863,42 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The container "container-a" sets "class_name" to "MyDO", but "exports.MyDO.container" is "container-b". A Durable Object and its container must reference each other consistently."
+				`);
+			});
+
+			it("errors when a different export claims a container that already names its class", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								name: "my-container",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						exports: {
+							// `MyDO` does not name a container, so the mismatch is only
+							// visible from the other direction: `OtherDO` claims the
+							// container that `MyDO` has already been given.
+							MyDO: { type: "durable-object", storage: "sqlite" },
+							OtherDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "my-container",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The container "my-container" sets "class_name" to "MyDO", but "exports.OtherDO.container" references it. A Durable Object and its container must reference each other consistently."
 				`);
 			});
 

@@ -25,6 +25,12 @@ A container can now be linked to its Durable Object from the export side, using 
 }
 ```
 
-This decouples container configuration from the Durable Object class, which is a prerequisite for configuring containers as standalone resources. The existing `containers[].class_name` direction keeps working, and either direction may be used, but a Durable Object and its container must reference each other consistently when both are set.
+This decouples container configuration from the Durable Object class, which is a prerequisite for configuring containers as standalone resources. The existing `containers[].class_name` direction keeps working and either direction may be used, but the two must agree: a container that names its Durable Object cannot also be claimed by a different one.
 
-`container` is only valid on live `durable-object` exports (`created` and `expecting-transfer`) and requires `storage: "sqlite"`. Wrangler now also reports an error when a `container` reference names a container that does not exist, when two Durable Object exports claim the same container, when a container ends up linked to no Durable Object at all, and when two containers share a name.
+`container` is only valid on live `durable-object` exports (`created` and `expecting-transfer`) and requires `storage: "sqlite"`. Wrangler now also reports an error when:
+
+- a `container` reference names a container that does not exist
+- two Durable Object exports claim the same container
+- a container and a Durable Object export disagree about which one they are linked to
+- a container ends up linked to no Durable Object at all
+- two containers share a `name`

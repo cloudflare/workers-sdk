@@ -6846,6 +6846,9 @@ function validateContainerExportLinks(
 			continue;
 		}
 
+		// The two directions can disagree in two ways, and each needs checking
+		// separately: the class this container names may point at a *different*
+		// container, or a *different* class may claim this container.
 		const exportEntry = durableObjectExports[container.class_name];
 		const referencedContainerName =
 			exportEntry !== undefined && "container" in exportEntry
@@ -6858,6 +6861,22 @@ function validateContainerExportLinks(
 		) {
 			diagnostics.errors.push(
 				`The container "${container.name}" sets "class_name" to "${container.class_name}", but "exports.${container.class_name}.container" is "${referencedContainerName}". A Durable Object and its container must reference each other consistently.`
+			);
+			continue;
+		}
+
+		// When several exports claim this container, the duplicate-claim error above
+		// already reports it. Singling one of them out as *the* conflicting class
+		// here would depend on the order of the keys in `exports`.
+		const claimingClassNames = classNamesByContainerName.get(container.name);
+		const claimingClassName =
+			claimingClassNames?.length === 1 ? claimingClassNames[0] : undefined;
+		if (
+			claimingClassName !== undefined &&
+			claimingClassName !== container.class_name
+		) {
+			diagnostics.errors.push(
+				`The container "${container.name}" sets "class_name" to "${container.class_name}", but "exports.${claimingClassName}.container" references it. A Durable Object and its container must reference each other consistently.`
 			);
 			continue;
 		}
