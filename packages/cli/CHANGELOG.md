@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Updated dependencies [[`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe)]:
+- Updated dependencies [[`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2)]:
   - @cloudflare/workers-utils@0.31.1
 
 ## 0.1.19

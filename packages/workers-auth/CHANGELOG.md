@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add support for OAuth 2.0 Device Authorization Grant to `wrangler login`
+- [#14064](https://github.com/cloudflare/workers-sdk/pull/14064) [`a9e5abb`](https://github.com/cloudflare/workers-sdk/commit/a9e5abb8c0c2e7895b0bb09c6c8e8ffd3dbc3bc0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for OAuth 2.0 Device Authorization Grant to `wrangler login`
 
   Run `wrangler login --device` to authenticate without a local callback server. Useful in containers, remote SSH sessions, Codespaces, and any other environment where `localhost:8976` is unreachable from your browser.
 
@@ -20,7 +20,7 @@
 
 ### Patch Changes
 
-- Updated dependencies [[`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe)]:
+- Updated dependencies [[`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2)]:
   - @cloudflare/workers-utils@0.31.1
 
 ## 0.5.6

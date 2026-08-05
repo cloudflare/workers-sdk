@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+- [#14974](https://github.com/cloudflare/workers-sdk/pull/14974) [`3dc2ea3`](https://github.com/cloudflare/workers-sdk/commit/3dc2ea3add206d19c9c81db45c82efc76f80f323) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
 
   The following dependency versions have been updated:
 
@@ -12,7 +12,7 @@
   | ---------- | ------ | ------ |
   | sv         | 0.16.6 | 0.17.0 |
 
-- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+- [#14975](https://github.com/cloudflare/workers-sdk/pull/14975) [`1f6844a`](https://github.com/cloudflare/workers-sdk/commit/1f6844a9dcda808d96721c60caf34385048ee59c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
 
   The following dependency versions have been updated:
 
@@ -20,7 +20,7 @@
   | --------------- | ------ | ------ |
   | @angular/create | 22.0.9 | 22.1.2 |
 
-- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+- [#14976](https://github.com/cloudflare/workers-sdk/pull/14976) [`1e1cfc0`](https://github.com/cloudflare/workers-sdk/commit/1e1cfc08ff7d99501da4469839a99796a9b46c93) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
 
   The following dependency versions have been updated:
 

@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use the inherited Worker name when generating container names in named environments
+- [#15009](https://github.com/cloudflare/workers-sdk/pull/15009) [`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2) Thanks [@LeSingh1](https://github.com/LeSingh1)! - Use the inherited Worker name when generating container names in named environments
 
   When `containers` is declared inside a named environment and the container has no explicit `name`, the default container name was built from the environment's own `name` field. `name` is inheritable, so an environment that doesn't redeclare it left that value `undefined`, producing the error `Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.` even though a top level `name` was set — and, if the error was ignored, a container named `undefined-<class_name>-<env>`.
 
