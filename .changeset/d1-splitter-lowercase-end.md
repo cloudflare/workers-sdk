@@ -2,9 +2,9 @@
 "wrangler": patch
 ---
 
-Close a compound SQL statement when its `END` is lowercase
+Run every statement in a D1 SQL file when a trigger or CASE block ends with a lowercase `end`
 
-`splitSqlQuery()` matched the opening `BEGIN`/`CASE` of a compound statement case insensitively but matched the closing `END` case sensitively. SQLite accepts either case, so a trigger written with a lowercase `end` never closed, and every statement after it was swallowed into the trigger body rather than being split out and executed.
+`wrangler d1 execute` and `wrangler d1 migrations apply` split a SQL file into statements before running them. A `BEGIN` or `CASE` block closed with a lowercase `end` was not recognised as closed, so every statement after it was folded into that block instead of being run on its own. SQLite accepts either case, so a file like this applied only the trigger and silently skipped the table:
 
 ```sql
 CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
@@ -14,4 +14,4 @@ end;
 CREATE TABLE after_the_trigger (id TEXT PRIMARY KEY);
 ```
 
-This produced two statements where the trailing `CREATE TABLE` was folded into the first. The existing tests already covered a lowercase `begin`, but always paired it with an uppercase `END`, so the asymmetry went unnoticed.
+Files written with an uppercase `END` were unaffected. Both cases now behave the same.
