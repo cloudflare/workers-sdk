@@ -1857,6 +1857,48 @@ describe("registry churn across config updates", () => {
 		).toBeDefined();
 	});
 
+	test("withdraws its entries when a config update fails to start a runtime", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			name: "doomed-worker",
+			unsafeDevRegistryPath,
+			modules: true,
+			script: script("before"),
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				expect(
+					getWorkerRegistry(unsafeDevRegistryPath)["doomed-worker"]
+				).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// A flag `workerd` rejects. The previous runtime is stopped before the
+		// replacement is started, so this update leaves no runtime behind it.
+		await expect(
+			mf.setOptions({
+				name: "doomed-worker",
+				unsafeDevRegistryPath,
+				modules: true,
+				script: script("after"),
+				compatibilityFlags: ["definitely_not_a_real_compatibility_flag"],
+			})
+		).rejects.toThrow(/runtime failed to start/i);
+
+		// Nothing serves the advertised debug port now, and the entry's heartbeat
+		// would keep it looking fresh, so it has to be withdrawn rather than left
+		// for the stale-entry sweep.
+		expect(
+			getWorkerRegistry(unsafeDevRegistryPath)["doomed-worker"]
+		).toBeUndefined();
+	});
+
 	test("withdraws a removed Worker named after an inherited property", async ({
 		expect,
 	}) => {

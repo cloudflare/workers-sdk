@@ -2361,6 +2361,10 @@ export class Miniflare {
 				try {
 					await this.#assembleAndUpdateConfig(true);
 				} catch (error) {
+					// Same reasoning as the failed-update path in `#setOptions()`: there
+					// is no longer a runtime behind what we advertised, so withdraw it
+					// instead of leaving peers pointed at a dead debug port.
+					this.#devRegistry.unregisterWorkers();
 					const cause =
 						error instanceof Error ? error : new Error(String(error));
 					this.#runtimeRestartError = new MiniflareCoreError(
@@ -2837,7 +2841,17 @@ export class Miniflare {
 			}
 		);
 		// Send to runtime and wait for updates to process
-		await this.#assembleAndUpdateConfig();
+		try {
+			await this.#assembleAndUpdateConfig();
+		} catch (error) {
+			// The runtime this instance was reachable on has already been stopped by
+			// this point, and we never got as far as advertising its replacement. Our
+			// entries would otherwise sit in the registry pointing at a dead debug
+			// port, kept fresh by their heartbeats so the stale-entry sweep never
+			// reclaims them.
+			this.#devRegistry.unregisterWorkers();
+			throw error;
+		}
 	}
 
 	setOptions(opts: MiniflareOptions): Promise<void> {
