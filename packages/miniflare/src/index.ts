@@ -2684,6 +2684,9 @@ export class Miniflare {
 			this.#log.warn(
 				"Debug port not available — skipping dev registry registration"
 			);
+			// Nothing we advertised before is reachable, so withdraw it rather than
+			// leaving peers pointed at an address we can no longer serve.
+			this.#devRegistry.register({});
 			return;
 		}
 		const debugPortAddress = `127.0.0.1:${debugPort}`;

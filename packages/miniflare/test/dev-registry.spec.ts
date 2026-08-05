@@ -1,3 +1,5 @@
+import path from "node:path";
+import { watch } from "chokidar";
 import { getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { useDispose, useTmp } from "./test-shared";
@@ -1783,6 +1785,111 @@ describe.sequential("DevRegistry", () => {
 				// The worker's own entry is still advertised, without the queue.
 				expect(registry["consumer-worker"]).toBeDefined();
 				expect(registry["consumer-worker"].queueConsumers).toBeUndefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+});
+
+describe("registry churn across config updates", () => {
+	const script = (body: string) =>
+		`export default { async fetch() { return new Response("${body}"); } }`;
+
+	test("does not withdraw a Worker's entry during an unrelated config update", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			name: "stable-worker",
+			unsafeDevRegistryPath,
+			modules: true,
+			script: script("before"),
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				expect(
+					getWorkerRegistry(unsafeDevRegistryPath)["stable-worker"]
+				).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Other dev sessions learn about us by watching this directory, so watch it
+		// the same way and record what a peer would actually see.
+		const events: string[] = [];
+		const watcher = watch(unsafeDevRegistryPath, {
+			ignoreInitial: true,
+		});
+		onTestFinished(() => watcher.close());
+		await new Promise((resolve) => watcher.once("ready", resolve));
+		watcher.on("unlink", (file) =>
+			events.push(`unlink:${path.basename(file)}`)
+		);
+		watcher.on("add", (file) => events.push(`add:${path.basename(file)}`));
+		watcher.on("change", (file) =>
+			events.push(`change:${path.basename(file)}`)
+		);
+
+		await mf.setOptions({
+			name: "stable-worker",
+			unsafeDevRegistryPath,
+			modules: true,
+			script: script("after"),
+		});
+
+		// Wait until the update has definitely reached the directory, so that an
+		// empty event list can't be mistaken for a passing assertion.
+		await vi.waitFor(
+			() => {
+				expect(events.some((event) => event.endsWith(":stable-worker"))).toBe(
+					true
+				);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		expect(events).not.toContain("unlink:stable-worker");
+		expect(
+			getWorkerRegistry(unsafeDevRegistryPath)["stable-worker"]
+		).toBeDefined();
+	});
+
+	test("withdraws the entry for a Worker removed from the config", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{ name: "kept-worker", modules: true, script: script("kept") },
+				{ name: "dropped-worker", modules: true, script: script("dropped") },
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(registry["dropped-worker"]).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [{ name: "kept-worker", modules: true, script: script("kept") }],
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(registry["dropped-worker"]).toBeUndefined();
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
