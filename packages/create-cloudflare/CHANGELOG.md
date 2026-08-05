@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.70.17
+
+### Patch Changes
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.16.6 | 0.17.0 |
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.0.9 | 22.1.2 |
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 9.1.1 | 9.1.2 |
+
 ## 2.70.16
 
 ### Patch Changes

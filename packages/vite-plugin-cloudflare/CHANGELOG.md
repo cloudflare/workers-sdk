@@ -1,5 +1,23 @@
 # @cloudflare/vite-plugin
 
+## 1.51.0
+
+### Minor Changes
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve the Local Explorer's Observability views
+
+  `console.log` messages now render the way the console would (JSON-encoded strings are unwrapped and multi-argument logs are joined), traces and events can be looked up by trace or span id from the search bar, and an event's "View trace" button jumps to the exact invocation that emitted it — even when a trace_id spans several invocations (e.g. a subrequest or self fetch).
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Surface Local Explorer API to headless agents
+
+  When a Vite dev or preview server with the Cloudflare plugin is started in a headless AI agent environment, the plugin now prints the Local Explorer API URL and useful resource routes to stdout so agents can discover and call them programmatically.
+
+### Patch Changes
+
+- Updated dependencies [[`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe)]:
+  - wrangler@4.119.0
+  - miniflare@5.20260801.0-alpha
+
 ## 1.50.0
 
 ### Minor Changes

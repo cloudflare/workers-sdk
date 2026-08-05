@@ -1,5 +1,65 @@
 # wrangler
 
+## 4.119.0
+
+### Minor Changes
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `--parse-type` flag to `wrangler ai-search create`
+
+  `wrangler ai-search create` now accepts `--parse-type` to control how a website data source discovers URLs. `sitemap` (the default) reads XML sitemaps; `discover` follows links recursively.
+
+  Previously the parse type could only be chosen through the interactive wizard, which was skipped whenever `--source` was supplied — so it was impossible to create a `discover` instance from a script.
+
+  ```sh
+  wrangler ai-search create my-instance \
+    --type web-crawler \
+    --source https://example.com \
+    --parse-type discover
+  ```
+
+  The interactive wizard now offers `Discover` alongside `Sitemap`. `--parse-type` is only valid with `--type web-crawler`; passing it with `--type builtin` or `--type r2` is rejected, since the API stores the value for those source types but never reads it. When the flag is omitted in non-interactive mode the field is left unset and the API default (`sitemap`) applies.
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve the Local Explorer's Observability views
+
+  `console.log` messages now render the way the console would (JSON-encoded strings are unwrapped and multi-argument logs are joined), traces and events can be looked up by trace or span id from the search bar, and an event's "View trace" button jumps to the exact invocation that emitted it — even when a trace_id spans several invocations (e.g. a subrequest or self fetch).
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add support for OAuth 2.0 Device Authorization Grant to `wrangler login`
+
+  Run `wrangler login --device` to authenticate without a local callback server. Useful in containers, remote SSH sessions, Codespaces, and any other environment where `localhost:8976` is unreachable from your browser.
+
+  The new flow:
+
+  - prints the verification URL and user code to the terminal,
+  - attempts to open the verification URL in your default browser automatically (suppressed via `--browser=false`),
+  - and polls the token endpoint until you approve the request (with a 5-minute hard cap).
+
+  The verification URL is supplied by the authorization server, so it is rejected unless it is an `https` URL on the same auth domain the device code was requested from — it is never printed or opened otherwise.
+
+  `--callback-host` and `--callback-port` cannot be combined with `--device`, since this flow does not start a local callback server.
+
+### Patch Changes
+
+- [#15033](https://github.com/cloudflare/workers-sdk/pull/15033) [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260730.1 | ^5.20260731.1 |
+  | workerd                   | 1.20260730.1  | 1.20260731.1  |
+
+- [#15012](https://github.com/cloudflare/workers-sdk/pull/15012) [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260731.1 | ^5.20260801.1 |
+  | workerd                   | 1.20260731.1  | 1.20260801.1  |
+
+- Updated dependencies [[`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe), [`b6a8629`](https://github.com/cloudflare/workers-sdk/commit/b6a862966aaaa4d2bc7845a349636a6af65313fe)]:
+  - miniflare@5.20260801.0-alpha
+
 ## 4.118.0
 
 ### Minor Changes
