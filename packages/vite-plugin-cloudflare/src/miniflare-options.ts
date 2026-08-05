@@ -564,7 +564,10 @@ export async function getDevMiniflareOptions(
 			// about to tear down, and a peer holding a dead address can have its own
 			// `workerd` aborted. `configureServer` releases the hold once the runtime
 			// it leaves behind is the one peers should connect to.
-			unsafeDeferDevRegistryRegistration: true,
+			// TEMP(validation): control arm. `DEFER_DEV_REGISTRY=0` reproduces the
+			// pre-fix behaviour so one CI round compares both arms.
+			unsafeDeferDevRegistryRegistration:
+				process.env.DEFER_DEV_REGISTRY !== "0",
 			unsafeTriggerHandlers: true,
 			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			// The switch for local observability capture: tells Miniflare core to

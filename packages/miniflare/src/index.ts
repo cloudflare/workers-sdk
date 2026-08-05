@@ -2413,7 +2413,9 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig(reusePorts = false) {
+		this.#log.warn(`ASM-STEP 1 entered (reusePorts=${reusePorts})`);
 		await this.#closeBrowserProcesses();
+		this.#log.warn("ASM-STEP 2 browsers closed");
 
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
@@ -2428,12 +2430,14 @@ export class Miniflare {
 			maybeGetLocallyAccessibleHost(configuredHost) ??
 			getURLSafeHost(configuredHost);
 		const loopbackPort = await this.#getLoopbackPort();
+		this.#log.warn(`ASM-STEP 3 loopback port ${loopbackPort}`);
 		const config = await this.#assembleConfig(
 			loopbackHost,
 			loopbackPort,
 			this.#devRegistry.isEnabled(),
 			reusePorts
 		);
+		this.#log.warn("ASM-STEP 4 config assembled");
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2501,12 +2505,16 @@ export class Miniflare {
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.core.unsafeRuntimeEnv,
 		};
+		this.#log.warn(
+			`ASM-STEP 5 updating runtime (entry=${entryAddress} inspector=${runtimeInspectorAddress} sockets=${requiredSockets.join(",")})`
+		);
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
 			runtimeOpts,
 			this.#workerOpts.flatMap((w) => w.core.name ?? []),
 			this.#disposeController.signal
 		);
+		this.#log.warn("ASM-STEP 6 runtime updated");
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {
 			throw new MiniflareCoreError(

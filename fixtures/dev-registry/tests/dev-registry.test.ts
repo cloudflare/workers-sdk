@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect in module-scope helper functions */
 import {
 	describe as baseDescribe,
+	beforeEach,
 	expect,
 	onTestFailed,
 	onTestFinished,
@@ -34,12 +35,17 @@ const it = test.extend<{
 	},
 });
 
+// TEMPORARY VALIDATION — not for merge. Set per round so a single CI run
+// compares the deferred-registration arm against the pre-fix control arm.
+let deferDevRegistryArm = "1";
+
 async function runViteDev(
 	config: string,
 	devRegistryPath?: string
 ): Promise<string> {
 	const proc = await runLongLived("pnpm", `vite --config ${config}`, cwd, {
 		MINIFLARE_REGISTRY_PATH: devRegistryPath,
+		DEFER_DEV_REGISTRY: deferDevRegistryArm,
 	});
 	const url = await waitForReady(proc);
 
@@ -526,7 +532,11 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 // TEMPORARY VALIDATION — not for merge. The target test is ~50% flaky on Windows,
 // so one CI pass proves nothing. Repeat the vite<->vite suite for a real sample.
 for (const validationRound of [1, 2, 3, 4]) {
-	describe(`Dev Registry: vite dev <-> vite dev [round ${validationRound}]`, () => {
+	const arm = validationRound % 2 === 1 ? "1" : "0";
+	describe(`Dev Registry: vite dev <-> vite dev [round ${validationRound}] [defer=${arm}]`, () => {
+		beforeEach(() => {
+			deferDevRegistryArm = arm;
+		});
 		it("supports exported handler fetch over service binding", async ({
 			devRegistryPath,
 		}) => {

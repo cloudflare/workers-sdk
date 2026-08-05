@@ -320,9 +320,17 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			// This runs for every plugin config type, and whether or not the export
 			// types turned out to differ, because `unsafeDevRegistryRegistration` is
 			// deferred unconditionally in `getDevMiniflareOptions`.
-			viteDevServer.config.logger.warn("DEV-STEP 1 releasing dev registry registration");
-			await ctx.miniflare.unsafeRegisterInDevRegistry();
-			viteDevServer.config.logger.warn("DEV-STEP 2 dev registry registration released");
+			if (process.env.DEFER_DEV_REGISTRY !== "0") {
+				viteDevServer.config.logger.warn(
+					"DEV-STEP 1 releasing dev registry registration"
+				);
+				await ctx.miniflare.unsafeRegisterInDevRegistry();
+				viteDevServer.config.logger.warn(
+					"DEV-STEP 2 dev registry registration released"
+				);
+			} else {
+				viteDevServer.config.logger.warn("DEV-STEP 0 control arm, not deferring");
+			}
 
 			return () => {
 				// In Vite 6, pre-middleware is placed before the host check middleware,
