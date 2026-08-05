@@ -4609,7 +4609,7 @@
   						return "Hello " + name;
   					}
   				}
-
+  
   				export default function (env) {
   					return new Greeter();
   				}
@@ -4651,9 +4651,9 @@
         name: "sum-worker",
         script: `
   				import { WorkerEntrypoint } from 'cloudflare:workers';
-
+  
   				export default { fetch() { return new Response(''); } }
-
+  
   				export class SumEntrypoint extends WorkerEntrypoint {
   					sum(args) {
   						return args.reduce((a, b) => a + b);
@@ -4739,15 +4739,15 @@
         modules: true,
         script: `
   			import { WorkerEntrypoint } from "cloudflare:workers";
-
+  
   			export class RpcEntrypoint extends WorkerEntrypoint {
   				ping() { return "a:rpc:pong"; }
   			}
-
+  
   			export const namedEntrypoint = {
   				fetch(request, env, ctx) { return new Response("a:named:pong"); }
   			};
-
+  
   			...
   			`,
       },
