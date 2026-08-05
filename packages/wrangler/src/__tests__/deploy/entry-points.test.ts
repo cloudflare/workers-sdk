@@ -11,6 +11,7 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
+import { logger } from "../../logger";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -1273,6 +1274,73 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class"
 				`);
 			});
+		});
+	});
+
+	describe("positional path telemetry categorisation", () => {
+		beforeEach(() => {
+			logger.loggerLevel = "debug";
+		});
+		afterEach(() => {
+			logger.resetLoggerLevel();
+		});
+
+		it("records null when no positional is passed", async ({ expect }) => {
+			writeWranglerConfig({ main: "index.js" });
+			fs.writeFileSync("index.js", "export default {};");
+
+			await runWrangler("deploy --dry-run --outdir out");
+
+			expect(std.debug).toContain('"sanitizedCommand":"deploy"');
+			expect(std.debug).toContain('"path":null');
+		});
+
+		it("categorises a file entry-point as 'file'", async ({ expect }) => {
+			writeWranglerConfig();
+			fs.writeFileSync("index.js", "export default {};");
+
+			await runWrangler("deploy index.js --dry-run --outdir out");
+
+			expect(std.debug).toContain('"sanitizedCommand":"deploy"');
+			expect(std.debug).toContain('"path":"file"');
+			// The raw path is never sent in the categorised property.
+			expect(std.debug).not.toContain('"path":"index.js"');
+		});
+
+		it("categorises a directory as 'directory'", async ({ expect }) => {
+			writeWranglerConfig({ name: "test-name" });
+			fs.mkdirSync("public");
+			fs.writeFileSync("public/index.html", "<h1>Hello</h1>");
+
+			await runWrangler("deploy public --dry-run --outdir out --no-autoconfig");
+
+			expect(std.debug).toContain('"path":"directory"');
+		});
+
+		it("categorises the current directory reference as 'current-dir'", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ name: "test-name" });
+			fs.writeFileSync("index.html", "<h1>Hello</h1>");
+
+			await runWrangler("deploy . --dry-run --outdir out --no-autoconfig");
+
+			expect(std.debug).toContain('"path":"current-dir"');
+		});
+
+		it("categorises a parent-relative reference as 'parent-relative'", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+
+			// The path does not need to resolve — the started event (which fires
+			// before the handler) already carries the category. The handler then
+			// fails because the entry-point cannot be found.
+			await expect(
+				runWrangler("deploy ../missing-entry.js --dry-run --outdir out")
+			).rejects.toThrow();
+
+			expect(std.debug).toContain('"path":"parent-relative"');
 		});
 	});
 });

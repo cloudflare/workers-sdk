@@ -18,6 +18,7 @@ import { http, HttpResponse } from "msw";
  * TODO: remove this `expect` import
  */
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { dedent } from "../../utils/dedent";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
@@ -1743,6 +1744,23 @@ describe("versions upload", () => {
 			expect(std.out).toContain("MY_VAR");
 			expect(std.out).toContain("MY_KV");
 			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+
+		test("categorises the positional path in command telemetry", async ({
+			expect,
+		}) => {
+			logger.loggerLevel = "debug";
+			writeWranglerConfig({ name: "test-name" });
+			writeWorkerSource();
+
+			try {
+				await runWrangler("versions upload index.js --dry-run");
+			} finally {
+				logger.resetLoggerLevel();
+			}
+
+			expect(std.debug).toContain('"sanitizedCommand":"versions upload"');
+			expect(std.debug).toContain('"path":"file"');
 		});
 	});
 
