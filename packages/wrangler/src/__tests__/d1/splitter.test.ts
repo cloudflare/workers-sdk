@@ -331,9 +331,6 @@ describe("splitSqlQuery()", () => {
 	it("should handle a lowercase end closing a compound statement", ({
 		expect,
 	}) => {
-		// SQLite accepts either case. Only the BEGIN side was matched case
-		// insensitively, so a lowercase `end` never closed the compound statement
-		// and every following statement was swallowed into the trigger.
 		expect(
 			splitSqlQuery(`
 	CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
