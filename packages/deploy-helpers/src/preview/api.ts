@@ -230,7 +230,7 @@ export async function getPreviewDeployment(
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	deploymentIdentifier: string
+	deploymentIdentifier = "latest"
 ): Promise<DeploymentResource> {
 	return fetchResult<DeploymentResource>(
 		config,
