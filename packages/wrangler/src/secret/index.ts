@@ -369,9 +369,6 @@ async function putBulkSecrets(
 	const toDelete: Array<string> = [];
 	for (const [key, value] of secretEntries) {
 		if (value != null) {
-			// Only validate create/update keys: deleting a legacy
-			// whitespace-prefixed secret must stay possible.
-			validateSecretName(key);
 			toCreate.push(key);
 			secrets[key] = { name: key, text: value, type: "secret_text" };
 		} else {
@@ -443,6 +440,15 @@ export const secretBulkCommand = createCommand({
 		}
 
 		const { content, secretSource, secretFormat } = result;
+		for (const [name, value] of Object.entries(content)) {
+			// Only validate create/update keys: deleting a legacy
+			// whitespace-prefixed secret must stay possible. Validated here,
+			// before the upload try/catch, so a local name error is not
+			// reported as an upload failure.
+			if (value != null) {
+				validateSecretName(name);
+			}
+		}
 		const hasSecretsToCreate = Object.values(content).some(
 			(value) => value != null
 		);
