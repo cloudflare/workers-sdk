@@ -37,10 +37,9 @@
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@types/jscodeshift": "^17.3.0",
 		"@types/node": "catalog:default",
-		"jscodeshift": "^17.3.0",
 		"tinyglobby": "catalog:default",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",

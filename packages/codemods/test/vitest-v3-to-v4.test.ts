@@ -1,12 +1,8 @@
-import jscodeshift from "jscodeshift";
 import { describe, it } from "vitest";
 import transform from "../src/codemods/vitest-v3-to-v4";
 
 function run(source: string): string {
-	return transform(
-		{ path: "vitest.config.ts", source },
-		{ jscodeshift: jscodeshift.withParser("ts") as never }
-	);
+	return transform(source);
 }
 
 describe("vitest-v3-to-v4 codemod", () => {

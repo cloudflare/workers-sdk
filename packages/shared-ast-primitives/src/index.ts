@@ -5,6 +5,13 @@ import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
 import type { Program } from "esprima";
 
+// Re-export the recast primitives needed to author string-in/string-out
+// transforms without taking a direct dependency on `recast`: `print` (AST ->
+// string) and the `ast-types` namespace `types` (node builders, `.check()`
+// guards, and `types.visit`). Re-exported directly so `types` keeps its
+// namespace and can be used in type positions.
+export { print, types } from "recast";
+
 /*
   CODEMOD TIPS & TRICKS
   =====================
@@ -24,9 +31,10 @@ import type { Program } from "esprima";
 
 */
 
-// Parse an input string as javascript and return an ast
-export function parseJs(src: string) {
-	src = src.trim();
+// Parse an input string as javascript and return an ast.
+// Preserves the source verbatim (no trimming) so transforms can print back
+// unchanged files byte-for-byte.
+export function parseJs(src: string): recast.types.namedTypes.File {
 	try {
 		return recast.parse(src, { parser: esprimaParser });
 	} catch {
@@ -34,9 +42,10 @@ export function parseJs(src: string) {
 	}
 }
 
-// Parse an input string as typescript and return an ast
-export function parseTs(src: string) {
-	src = src.trim();
+// Parse an input string as typescript and return an ast.
+// Preserves the source verbatim (no trimming) so transforms can print back
+// unchanged files byte-for-byte.
+export function parseTs(src: string): recast.types.namedTypes.File {
 	try {
 		return recast.parse(src, { parser: typescriptParser });
 	} catch {

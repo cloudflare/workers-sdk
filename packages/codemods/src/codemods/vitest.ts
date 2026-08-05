@@ -1,4 +1,3 @@
-import jscodeshift from "jscodeshift";
 import { transformFiles } from "../files";
 import transformV3ToV4 from "./vitest-v3-to-v4";
 import type { Codemod } from "../types";
@@ -77,11 +76,7 @@ export const vitestCodemods: Codemod[] = [
 			const changedFiles = await transformFiles(
 				context,
 				["**/vitest.config.{js,cjs,mjs,ts,cts,mts}"],
-				(source, filePath) =>
-					transformV3ToV4(
-						{ path: filePath, source },
-						{ jscodeshift: jscodeshift.withParser("ts") as never }
-					)
+				(source) => transformV3ToV4(source)
 			);
 			return { changedFiles };
 		},

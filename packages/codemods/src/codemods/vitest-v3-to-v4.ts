@@ -1,251 +1,177 @@
 /**
  * Migrates @cloudflare/vitest-pool-workers configuration from Vitest v3 to v4.
+ *
+ * Transforms a `defineWorkersProject({ test: { poolOptions: { workers } } })`
+ * config into `defineConfig({ plugins: [cloudflareTest(workers)], test })`,
+ * rewriting the relevant imports.
  */
+import { parseTs, print, types } from "@cloudflare/shared-ast-primitives";
 
-// Minimal jscodeshift types avoid exposing jscodeshift as a runtime dependency.
-interface FileInfo {
-	path: string;
-	source: string;
-}
-interface JSCodeshift {
-	(source: string): Collection;
-	ImportDeclaration: ASTType;
-	CallExpression: ASTType;
-	ObjectExpression: { check(node: unknown): node is ObjectExpressionNode };
-	ObjectProperty: { check(node: unknown): node is PropertyNode };
-	Property: { check(node: unknown): node is PropertyNode };
-	Identifier: { check(node: unknown): node is IdentifierNode };
-	FunctionExpression: { check(node: unknown): boolean };
-	ArrowFunctionExpression: { check(node: unknown): boolean };
-	ArrayExpression: { check(node: unknown): node is ArrayExpressionNode };
-	importDeclaration(
-		specifiers: ImportSpecifierNode[],
-		source: LiteralNode
-	): ImportDeclarationNode;
-	importSpecifier(
-		imported: IdentifierNode,
-		local?: IdentifierNode
-	): ImportSpecifierNode;
-	identifier(name: string): IdentifierNode;
-	stringLiteral(value: string): LiteralNode;
-	callExpression(
-		callee: IdentifierNode,
-		args: ExpressionNode[]
-	): CallExpressionNode;
-	arrayExpression(elements: ExpressionNode[]): ArrayExpressionNode;
-	objectProperty(key: IdentifierNode, value: ExpressionNode): PropertyNode;
-}
+const b = types.builders;
+const n = types.namedTypes;
+const { visit } = types;
 
-interface ASTType {
-	name: string;
-}
+type Node = types.ASTNode;
+type ObjectExpression = types.namedTypes.ObjectExpression;
+type ObjectProperty = types.namedTypes.ObjectProperty;
+type Property = types.namedTypes.Property;
+type ImportDeclaration = types.namedTypes.ImportDeclaration;
+type NamedProp = ObjectProperty | Property;
 
-interface ASTNode {
-	type: string;
-}
-
-interface IdentifierNode extends ASTNode {
-	type: "Identifier";
-	name: string;
-}
-
-interface LiteralNode extends ASTNode {
-	value: string;
-}
-
-interface ImportSpecifierNode extends ASTNode {
-	type: "ImportSpecifier";
-	imported?: IdentifierNode;
-	local?: IdentifierNode;
-}
-
-interface ImportDeclarationNode extends ASTNode {
-	type: "ImportDeclaration";
-	source: LiteralNode;
-	specifiers: ImportSpecifierNode[];
-}
-
-interface PropertyNode extends ASTNode {
-	key: ASTNode;
-	value: ASTNode;
-}
-
-interface ObjectExpressionNode extends ASTNode {
-	type: "ObjectExpression";
-	properties: PropertyNode[];
-}
-
-interface ArrayExpressionNode extends ASTNode {
-	type: "ArrayExpression";
-	elements: ExpressionNode[];
-}
-
-interface CallExpressionNode extends ASTNode {
-	type: "CallExpression";
-	callee: ASTNode;
-	arguments: ASTNode[];
-}
-
-type ExpressionNode = ASTNode;
-
-interface NodePath<T = ASTNode> {
-	node: T;
-	parent: NodePath;
-	insertAfter(node: ASTNode): void;
-}
-
-interface Collection {
-	find(type: ASTType, filter?: Record<string, unknown>): Collection;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jscodeshift narrows NodePath callback types dynamically
-	forEach(callback: (path: NodePath<any>) => void): Collection;
-	at(index: number): Collection;
-	paths(): NodePath[];
-	length: number;
-	toSource(): string;
-}
-
-interface API {
-	jscodeshift: JSCodeshift;
-}
-
-function isNamedProp(
-	j: JSCodeshift,
-	prop: ASTNode,
-	name: string
-): prop is PropertyNode {
+function isNamedProp(prop: Node, name: string): prop is NamedProp {
 	return (
-		(j.Property.check(prop) || j.ObjectProperty.check(prop)) &&
-		j.Identifier.check(prop.key) &&
+		(n.ObjectProperty.check(prop) || n.Property.check(prop)) &&
+		n.Identifier.check(prop.key) &&
 		prop.key.name === name
 	);
 }
 
 function findNamedProp(
-	j: JSCodeshift,
-	properties: PropertyNode[],
+	properties: Node[],
 	name: string
-): PropertyNode | undefined {
-	return properties.find((prop) => isNamedProp(j, prop, name));
+): NamedProp | undefined {
+	return properties.find((prop): prop is NamedProp => isNamedProp(prop, name));
 }
 
-export default function transform(fileInfo: FileInfo, api: API): string {
-	const j = api.jscodeshift;
-	const root = j(fileInfo.source);
-	const configImports = root.find(j.ImportDeclaration, {
-		source: { value: "@cloudflare/vitest-pool-workers/config" },
-	});
+function importSpecifierNamed(imp: ImportDeclaration, imported: string) {
+	return (imp.specifiers ?? []).find(
+		(candidate) =>
+			n.ImportSpecifier.check(candidate) &&
+			n.Identifier.check(candidate.imported) &&
+			candidate.imported.name === imported
+	);
+}
 
-	const matchingImports = configImports.paths().flatMap((path) => {
-		const importPath = path as NodePath<ImportDeclarationNode>;
-		const specifier = importPath.node.specifiers.find(
-			(candidate) =>
-				candidate.type === "ImportSpecifier" &&
-				candidate.imported?.name === "defineWorkersProject"
-		);
-		if (!specifier) {
+export default function transform(source: string): string {
+	const ast = parseTs(source);
+	const body = ast.program.body;
+
+	const importDeclarations = body.filter((node): node is ImportDeclaration =>
+		n.ImportDeclaration.check(node)
+	);
+
+	const configImports = importDeclarations.filter(
+		(imp) =>
+			n.StringLiteral.check(imp.source) &&
+			imp.source.value === "@cloudflare/vitest-pool-workers/config"
+	);
+
+	const matchingImports = configImports.flatMap((imp) => {
+		const specifier = importSpecifierNamed(imp, "defineWorkersProject");
+		if (!specifier || !n.ImportSpecifier.check(specifier)) {
 			return [];
 		}
+		const localName = n.Identifier.check(specifier.local)
+			? specifier.local.name
+			: "defineWorkersProject";
 
-		const localName = specifier.local?.name ?? "defineWorkersProject";
-		const calls = root.find(j.CallExpression, {
-			callee: { name: localName },
+		// Collect matching call expressions across the whole tree.
+		const calls: types.namedTypes.CallExpression[] = [];
+		visit(ast, {
+			visitCallExpression(path) {
+				const callee = path.node.callee;
+				if (n.Identifier.check(callee) && callee.name === localName) {
+					calls.push(path.node);
+				}
+				this.traverse(path);
+			},
 		});
-		return calls.length === 0 ? [] : [{ importPath, localName, calls }];
+
+		return calls.length === 0 ? [] : [{ imp, localName, calls }];
 	});
 
 	if (matchingImports.length === 0) {
-		return fileInfo.source;
+		return source;
 	}
 	if (matchingImports.length > 1) {
 		throw new Error("Multiple defineWorkersProject imports are not supported");
 	}
 
-	const [{ importPath, localName, calls }] = matchingImports;
-	const rootPackageImports = root.find(j.ImportDeclaration, {
-		source: { value: "@cloudflare/vitest-pool-workers" },
-	});
+	const [{ imp: configImport, localName, calls }] = matchingImports;
+
+	// Resolve the local name for `cloudflareTest`, importing it if absent.
+	const rootPackageImports = importDeclarations.filter(
+		(imp) =>
+			n.StringLiteral.check(imp.source) &&
+			imp.source.value === "@cloudflare/vitest-pool-workers"
+	);
 	let cloudflareTestName: string | undefined;
-	for (const path of rootPackageImports.paths()) {
-		const rootImport = path as NodePath<ImportDeclarationNode>;
-		const specifier = rootImport.node.specifiers.find(
-			(candidate) =>
-				candidate.type === "ImportSpecifier" &&
-				candidate.imported?.name === "cloudflareTest"
-		);
-		if (specifier) {
-			cloudflareTestName = specifier.local?.name ?? "cloudflareTest";
+	for (const imp of rootPackageImports) {
+		const specifier = importSpecifierNamed(imp, "cloudflareTest");
+		if (specifier && n.ImportSpecifier.check(specifier)) {
+			cloudflareTestName = n.Identifier.check(specifier.local)
+				? specifier.local.name
+				: "cloudflareTest";
 			break;
 		}
 	}
 
 	if (!cloudflareTestName) {
 		cloudflareTestName = "cloudflareTest";
-		importPath.node.specifiers.unshift(
-			j.importSpecifier(j.identifier(cloudflareTestName))
-		);
+		configImport.specifiers = [
+			b.importSpecifier(b.identifier(cloudflareTestName)),
+			...(configImport.specifiers ?? []),
+		];
 	}
-	importPath.node.source.value = "@cloudflare/vitest-pool-workers";
-	importPath.node.specifiers = importPath.node.specifiers.filter(
+	configImport.source = b.stringLiteral("@cloudflare/vitest-pool-workers");
+	configImport.specifiers = (configImport.specifiers ?? []).filter(
 		(specifier) =>
 			!(
-				specifier.type === "ImportSpecifier" &&
-				specifier.imported?.name === "defineWorkersProject"
+				n.ImportSpecifier.check(specifier) &&
+				n.Identifier.check(specifier.imported) &&
+				specifier.imported.name === "defineWorkersProject"
 			)
 	);
 
-	const vitestConfigImports = root.find(j.ImportDeclaration, {
-		source: { value: "vitest/config" },
-	});
+	// Resolve `defineConfig`, importing from "vitest/config" if absent.
+	const vitestConfigImports = importDeclarations.filter(
+		(imp) =>
+			n.StringLiteral.check(imp.source) && imp.source.value === "vitest/config"
+	);
 	let defineConfigName = "defineConfig";
 	let hasDefineConfigImport = false;
-	for (const path of vitestConfigImports.paths()) {
-		const vitestImport = path as NodePath<ImportDeclarationNode>;
-		const specifier = vitestImport.node.specifiers.find(
-			(candidate) =>
-				candidate.type === "ImportSpecifier" &&
-				candidate.imported?.name === "defineConfig"
-		);
-		if (specifier) {
-			defineConfigName = specifier.local?.name ?? "defineConfig";
+	for (const imp of vitestConfigImports) {
+		const specifier = importSpecifierNamed(imp, "defineConfig");
+		if (specifier && n.ImportSpecifier.check(specifier)) {
+			defineConfigName = n.Identifier.check(specifier.local)
+				? specifier.local.name
+				: "defineConfig";
 			hasDefineConfigImport = true;
 			break;
 		}
 	}
 
 	if (!hasDefineConfigImport) {
-		const vitestImportPath = vitestConfigImports.paths()[0] as
-			| NodePath<ImportDeclarationNode>
-			| undefined;
-		if (vitestImportPath) {
-			vitestImportPath.node.specifiers.push(
-				j.importSpecifier(j.identifier(defineConfigName))
-			);
+		const target = vitestConfigImports[0];
+		if (target) {
+			target.specifiers = [
+				...(target.specifiers ?? []),
+				b.importSpecifier(b.identifier(defineConfigName)),
+			];
 		} else {
-			root
-				.find(j.ImportDeclaration)
-				.at(-1)
-				.forEach((path: NodePath) => {
-					path.insertAfter(
-						j.importDeclaration(
-							[j.importSpecifier(j.identifier(defineConfigName))],
-							j.stringLiteral("vitest/config")
-						)
-					);
-				});
+			const lastImportIndex = body.reduce(
+				(acc, node, index) => (n.ImportDeclaration.check(node) ? index : acc),
+				-1
+			);
+			body.splice(
+				lastImportIndex + 1,
+				0,
+				b.importDeclaration(
+					[b.importSpecifier(b.identifier(defineConfigName))],
+					b.stringLiteral("vitest/config")
+				)
+			);
 		}
 	}
 
-	calls.forEach((path: NodePath<CallExpressionNode>) => {
-		if (
-			!j.Identifier.check(path.node.callee) ||
-			path.node.callee.name !== localName
-		) {
-			return;
+	for (const call of calls) {
+		if (!n.Identifier.check(call.callee) || call.callee.name !== localName) {
+			continue;
 		}
-		path.node.callee.name = defineConfigName;
+		call.callee.name = defineConfigName;
 
-		const config = path.node.arguments[0];
-		if (!j.ObjectExpression.check(config)) {
+		const config = call.arguments[0];
+		if (!n.ObjectExpression.check(config)) {
 			throw new Error(
 				"defineWorkersProject() is called with a function and not an object, " +
 					"and so is too complex to apply a codemod to. " +
@@ -253,25 +179,25 @@ export default function transform(fileInfo: FileInfo, api: API): string {
 			);
 		}
 
-		const testProp = findNamedProp(j, config.properties, "test");
-		if (!testProp || !j.ObjectExpression.check(testProp.value)) {
+		const testProp = findNamedProp(config.properties, "test");
+		if (!testProp || !n.ObjectExpression.check(testProp.value)) {
 			throw new Error("Could not find `test` property in config");
 		}
-		const testObj = testProp.value;
+		const testObj: ObjectExpression = testProp.value;
 
-		const poolOptionsProp = findNamedProp(j, testObj.properties, "poolOptions");
-		if (!poolOptionsProp || !j.ObjectExpression.check(poolOptionsProp.value)) {
+		const poolOptionsProp = findNamedProp(testObj.properties, "poolOptions");
+		if (!poolOptionsProp || !n.ObjectExpression.check(poolOptionsProp.value)) {
 			throw new Error("Could not find `test.poolOptions` property in config");
 		}
-		const poolOptionsObj = poolOptionsProp.value;
+		const poolOptionsObj: ObjectExpression = poolOptionsProp.value;
 
-		const workersProp = findNamedProp(j, poolOptionsObj.properties, "workers");
+		const workersProp = findNamedProp(poolOptionsObj.properties, "workers");
 		if (
 			!workersProp ||
 			!(
-				j.ObjectExpression.check(workersProp.value) ||
-				j.FunctionExpression.check(workersProp.value) ||
-				j.ArrowFunctionExpression.check(workersProp.value)
+				n.ObjectExpression.check(workersProp.value) ||
+				n.FunctionExpression.check(workersProp.value) ||
+				n.ArrowFunctionExpression.check(workersProp.value)
 			)
 		) {
 			throw new Error(
@@ -279,25 +205,25 @@ export default function transform(fileInfo: FileInfo, api: API): string {
 			);
 		}
 
-		const pluginCall = j.callExpression(j.identifier(cloudflareTestName), [
+		const pluginCall = b.callExpression(b.identifier(cloudflareTestName), [
 			workersProp.value,
 		]);
-		const pluginsProp = findNamedProp(j, config.properties, "plugins");
-		if (pluginsProp && j.ArrayExpression.check(pluginsProp.value)) {
+		const pluginsProp = findNamedProp(config.properties, "plugins");
+		if (pluginsProp && n.ArrayExpression.check(pluginsProp.value)) {
 			pluginsProp.value.elements.unshift(pluginCall);
 		} else {
 			config.properties.unshift(
-				j.objectProperty(
-					j.identifier("plugins"),
-					j.arrayExpression([pluginCall])
+				b.objectProperty(
+					b.identifier("plugins"),
+					b.arrayExpression([pluginCall])
 				)
 			);
 		}
 
 		testObj.properties = testObj.properties.filter(
-			(prop) => !isNamedProp(j, prop, "poolOptions")
-		);
-	});
+			(prop) => !isNamedProp(prop, "poolOptions")
+		) as ObjectExpression["properties"];
+	}
 
-	return root.toSource();
+	return print(ast).code;
 }
