@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "vitest";
 import { transformFiles } from "../src/files";
-import { codemods, runCodemods } from "../src/runner";
+import { codemods, runCodemod } from "../src/runner";
 
 const temporaryDirectories: string[] = [];
 
@@ -33,7 +33,7 @@ afterEach(async () => {
 });
 
 describe("codemod runner", () => {
-	it("applies all relevant Vitest migrations in order", async ({ expect }) => {
+	it("runs the Vitest migrations manually, in sequence", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": `${JSON.stringify(
 				{
@@ -56,17 +56,18 @@ export default defineWorkersProject({
 			}),
 		});
 
-		const results = await runCodemods("vitest", undefined, {
+		await runCodemod("vitest:v3-to-v4", { cwd, dryRun: false });
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
 			cwd,
 			dryRun: false,
 		});
+
 		const packageJson = JSON.parse(
 			await readFile(path.join(cwd, "package.json"), "utf8")
 		) as { devDependencies: Record<string, string> };
 		const config = await readFile(path.join(cwd, "vitest.config.ts"), "utf8");
 		const tsconfig = await readFile(path.join(cwd, "tsconfig.json"), "utf8");
 
-		expect(results).toHaveLength(2);
 		expect(packageJson.devDependencies).toEqual({
 			"@cloudflare/vitest-plugin": "^1.0.0",
 		});
@@ -76,21 +77,25 @@ export default defineWorkersProject({
 		expect(tsconfig).toContain("@cloudflare/vitest-plugin/types");
 	});
 
-	it("runs one codemod by its human-readable alias", async ({ expect }) => {
+	it("runs a codemod by its human-readable alias", async ({ expect }) => {
 		const cwd = await createProject({
 			"vitest.config.ts":
 				'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";',
 		});
 
-		const results = await runCodemods("vitest", "vitest v1", {
-			cwd,
-			dryRun: false,
-		});
+		const result = await runCodemod("vitest v1", { cwd, dryRun: false });
 
-		expect(results).toHaveLength(1);
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
 		expect(
 			await readFile(path.join(cwd, "vitest.config.ts"), "utf8")
 		).toContain('from "@cloudflare/vitest-plugin"');
+	});
+
+	it("throws for an unknown codemod", async ({ expect }) => {
+		const cwd = await createProject({});
+		await expect(
+			runCodemod("does-not-exist", { cwd, dryRun: false })
+		).rejects.toThrow("Unknown codemod");
 	});
 
 	it("does not write files in dry-run mode", async ({ expect }) => {
@@ -98,12 +103,9 @@ export default defineWorkersProject({
 			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers";';
 		const cwd = await createProject({ "vitest.config.ts": source });
 
-		const [result] = await runCodemods("vitest", "vitest v1", {
-			cwd,
-			dryRun: true,
-		});
+		const result = await runCodemod("vitest v1", { cwd, dryRun: true });
 
-		expect(result?.result.changedFiles).toEqual(["vitest.config.ts"]);
+		expect(result.changedFiles).toEqual(["vitest.config.ts"]);
 		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
 			source
 		);
@@ -116,17 +118,15 @@ export default defineWorkersProject({
 			}),
 		});
 
-		const results = await runCodemods("vitest", undefined, {
+		const result = await runCodemod("vitest:pool-workers-to-vitest-plugin", {
 			cwd,
 			dryRun: false,
 		});
 
-		expect(
-			results.every(({ result }) => result.changedFiles.length === 0)
-		).toBe(true);
+		expect(result.changedFiles).toEqual([]);
 	});
 
-	it("does not make partial changes when preflight fails", async ({
+	it("does not make partial changes when a codemod fails", async ({
 		expect,
 	}) => {
 		const config = `
@@ -145,52 +145,35 @@ export default defineWorkersProject({
 		});
 
 		await expect(
-			runCodemods("vitest", undefined, { cwd, dryRun: false })
+			runCodemod("vitest:pool-workers-to-vitest-plugin", {
+				cwd,
+				dryRun: false,
+			})
 		).rejects.toThrow("conflicting");
 		expect(await readFile(path.join(cwd, "vitest.config.ts"), "utf8")).toBe(
 			config
 		);
 	});
 
-	it("exposes staged outputs without writing partial changes", async ({
+	it("does not flush staged outputs when a codemod throws", async ({
 		expect,
 	}) => {
 		const cwd = await createProject({ "input.txt": "before" });
 		const initialLength = codemods.length;
-		codemods.push(
-			{
-				category: "transaction-test",
-				name: "first",
-				description: "stage a change",
-				async run(context) {
-					return {
-						changedFiles: await transformFiles(
-							context,
-							["input.txt"],
-							(source) => source.replace("before", "after")
-						),
-					};
-				},
+		codemods.push({
+			name: "transaction-test",
+			description: "stage a change, then reject it",
+			async run(context) {
+				await transformFiles(context, ["input.txt"], (source) =>
+					source.replace("before", "after")
+				);
+				throw new Error("staged output rejected");
 			},
-			{
-				category: "transaction-test",
-				name: "second",
-				description: "reject the staged change",
-				async run(context) {
-					await transformFiles(context, ["input.txt"], (source) => {
-						if (source === "after") {
-							throw new Error("staged output rejected");
-						}
-						return source;
-					});
-					return { changedFiles: [] };
-				},
-			}
-		);
+		});
 
 		try {
 			await expect(
-				runCodemods("transaction-test", undefined, { cwd, dryRun: false })
+				runCodemod("transaction-test", { cwd, dryRun: false })
 			).rejects.toThrow("staged output rejected");
 			expect(await readFile(path.join(cwd, "input.txt"), "utf8")).toBe(
 				"before"
@@ -200,19 +183,19 @@ export default defineWorkersProject({
 		}
 	});
 
-	it("intersects file restrictions with each codemod's scope", async ({
+	it("intersects file restrictions with the codemod's scope", async ({
 		expect,
 	}) => {
 		const source = "@cloudflare/vitest-pool-workers";
 		const cwd = await createProject({ "notes.txt": source });
 
-		const [result] = await runCodemods("vitest", "vitest v1", {
+		const result = await runCodemod("vitest v1", {
 			cwd,
 			dryRun: false,
 			files: ["**/*.txt"],
 		});
 
-		expect(result?.result.changedFiles).toEqual([]);
+		expect(result.changedFiles).toEqual([]);
 		expect(await readFile(path.join(cwd, "notes.txt"), "utf8")).toBe(source);
 	});
 });

@@ -15,7 +15,6 @@ export interface CodemodResult {
 }
 
 export interface Codemod {
-	category: string;
 	name: string;
 	aliases?: string[];
 	description: string;

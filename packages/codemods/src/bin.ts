@@ -2,16 +2,13 @@
 
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { codemods, getCategories, runCodemods } from "./runner";
+import { codemods, runCodemod } from "./runner";
 
 function printHelp(): void {
-	console.log(`Usage: cloudflare-codemods <category> [codemod] [options]
+	console.log(`Usage: cloudflare-codemods <codemod> [options]
 
-Run all relevant codemods in a category:
-  npx @cloudflare/codemods vitest
-
-Run one codemod:
-  npx @cloudflare/codemods vitest vitest-v3-to-v4
+Run a codemod by name:
+  npx @cloudflare/codemods vitest:v3-to-v4
 
 Options:
   --cwd <path>     Project directory (default: current directory)
@@ -19,13 +16,8 @@ Options:
   --dry-run        List changes without writing files
   --help           Show this help
 
-Categories:
-${getCategories()
-	.map((category) => `  ${category}`)
-	.join("\n")}
-
 Codemods:
-${codemods.map((codemod) => `  ${codemod.category} ${codemod.name}\n      ${codemod.description}`).join("\n")}`);
+${codemods.map((codemod) => `  ${codemod.name}\n      ${codemod.description}`).join("\n")}`);
 }
 
 export async function main(args = process.argv.slice(2)): Promise<void> {
@@ -44,33 +36,28 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 		printHelp();
 		return;
 	}
-	if (positionals.length > 2) {
-		throw new Error("Expected a category and optionally one codemod name");
+	if (positionals.length > 1) {
+		throw new Error("Expected a single codemod name");
 	}
 
-	const category = positionals[0];
-	if (!category) {
-		throw new Error("Expected a codemod category");
+	const name = positionals[0];
+	if (!name) {
+		throw new Error("Expected a codemod name");
 	}
 	const cwd = path.resolve(values.cwd ?? process.cwd());
-	const results = await runCodemods(category, positionals[1], {
+	const result = await runCodemod(name, {
 		cwd,
 		dryRun: values["dry-run"],
 		files: values.files,
 	});
-	const changedFiles = new Set(
-		results.flatMap(({ result }) => result.changedFiles)
-	);
 
-	for (const { codemod, result } of results) {
-		if (result.changedFiles.length > 0) {
-			console.log(`${codemod.name}: ${result.changedFiles.length} file(s)`);
-		}
+	if (result.changedFiles.length > 0) {
+		console.log(`${name}: ${result.changedFiles.length} file(s)`);
 	}
 	console.log(
-		changedFiles.size === 0
+		result.changedFiles.length === 0
 			? "Project is already up to date."
-			: `${values["dry-run"] ? "Would update" : "Updated"} ${changedFiles.size} file(s). Run your package manager's install command to refresh its lockfile.`
+			: `${values["dry-run"] ? "Would update" : "Updated"} ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`
 	);
 }
 

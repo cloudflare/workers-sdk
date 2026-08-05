@@ -68,8 +68,7 @@ function renamePackageDependency(source: string): string {
 
 export const vitestCodemods: Codemod[] = [
 	{
-		category: "vitest",
-		name: "vitest-v3-to-v4",
+		name: "vitest:v3-to-v4",
 		aliases: ["vitest v3 to v4"],
 		description: "Migrate Workers Vitest configuration from Vitest v3 to v4",
 		async run(context) {
@@ -82,8 +81,7 @@ export const vitestCodemods: Codemod[] = [
 		},
 	},
 	{
-		category: "vitest",
-		name: "vitest-pool-workers-to-vitest-plugin",
+		name: "vitest:pool-workers-to-vitest-plugin",
 		aliases: ["vitest pool workers to vitest plugin", "vitest v1"],
 		description: `Rename ${OLD_PACKAGE} to ${NEW_PACKAGE} v1`,
 		async run(context) {
