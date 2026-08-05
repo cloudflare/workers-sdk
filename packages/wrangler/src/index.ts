@@ -311,17 +311,17 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import {
-	previewCommand,
-	previewDeleteCommand,
-	previewSettingsCommand,
-	previewSettingsUpdateCommand,
-} from "./preview";
+import { previewDeleteCommand } from "./preview/delete";
+import { previewCommand } from "./preview/preview";
 import { previewSecretNamespace } from "./preview/secrets";
 import { previewSecretBulkCommand } from "./preview/secrets/bulk";
 import { previewSecretDeleteCommand } from "./preview/secrets/delete";
 import { previewSecretListCommand } from "./preview/secrets/list";
 import { previewSecretPutCommand } from "./preview/secrets/put";
+import {
+	previewSettingsCommand,
+	previewSettingsUpdateCommand,
+} from "./preview/settings";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
