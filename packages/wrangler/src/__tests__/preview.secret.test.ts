@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import readline from "node:readline";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
@@ -42,6 +43,48 @@ function mockPatchLatestPreviewDeployment(
 function mockPreviewDeploymentNotFound(code: number) {
 	msw.use(
 		http.patch(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+			() =>
+				HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code, message: "no preview deployment" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				)
+		)
+	);
+}
+
+function mockGetLatestPreviewDeployment(
+	env: Record<string, { type: string; text?: string }>,
+	onRequest?: (info: { url: string }) => void
+) {
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+			({ request, params }) => {
+				onRequest?.({ url: request.url });
+				return HttpResponse.json({
+					success: true,
+					result: {
+						id: "deployment-1",
+						preview_id: "preview-1",
+						preview_name: String(params.previewId),
+						env,
+						created_on: "2025-01-01T00:00:00Z",
+					},
+				});
+			}
+		)
+	);
+}
+
+function mockGetPreviewDeploymentError(code: number) {
+	msw.use(
+		http.get(
 			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
 			() =>
 				HttpResponse.json(
@@ -120,7 +163,7 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain("test-worker");
 				expect(std.out).toContain("Preview deployment");
 				expect(std.out).toContain(
-					'is now live at https://test-preview.example.workers.dev'
+					"is now live at https://test-preview.example.workers.dev"
 				);
 				expect(std.out).not.toContain("preview-secret");
 			});
@@ -298,7 +341,7 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain("test-worker");
 				expect(std.out).toContain("Preview deployment");
 				expect(std.out).toContain(
-					'is now live at https://test-preview.example.workers.dev'
+					"is now live at https://test-preview.example.workers.dev"
 				);
 			});
 
@@ -371,54 +414,62 @@ describe("wrangler preview", () => {
 		});
 
 		describe("list", () => {
-			test("should list secrets as JSON", async ({ expect }) => {
-				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
-						HttpResponse.json({
-							success: true,
-							result: {
-								preview_defaults: {
-									env: {
-										DB_PASSWORD: { type: "secret_text" },
-										API_KEY: { type: "secret_text" },
-										PUBLIC_VAR: { type: "plain_text", text: "visible" },
-									},
-								},
-							},
-						})
-					)
+			test("reads the latest Preview deployment and lists secrets as JSON", async ({
+				expect,
+			}) => {
+				let requestUrl: string | undefined;
+				mockGetLatestPreviewDeployment(
+					{
+						DB_PASSWORD: { type: "secret_text" },
+						API_KEY: { type: "secret_text" },
+						PUBLIC_VAR: { type: "plain_text", text: "visible" },
+					},
+					({ url }) => {
+						requestUrl = url;
+					}
 				);
 				await runWrangler(
-					"preview secret list --json --worker-name test-worker"
+					"preview secret list --json --name test-preview --worker-name test-worker"
+				);
+				expect(requestUrl).toContain(
+					"/workers/workers/test-worker/previews/test-preview/deployments/latest"
 				);
 				expect(std.out).toContain('"name": "DB_PASSWORD"');
 				expect(std.out).toContain('"name": "API_KEY"');
+				expect(std.out).toContain('"type": "secret_text"');
 				expect(std.out).not.toContain("PUBLIC_VAR");
 			});
 
-			test("should list secrets in pretty format", async ({ expect }) => {
-				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
-						HttpResponse.json({
-							success: true,
-							result: {
-								preview_defaults: {
-									env: {
-										MY_SECRET: { type: "secret_text" },
-										PLAIN: { type: "plain_text", text: "not-a-secret" },
-									},
-								},
-							},
-						})
-					)
+			test("should list secrets in pretty format with values masked", async ({
+				expect,
+			}) => {
+				mockGetLatestPreviewDeployment({
+					MY_SECRET: { type: "secret_text", text: "super-secret-value" },
+					PLAIN: { type: "plain_text", text: "not-a-secret" },
+				});
+				await runWrangler(
+					"preview secret list --name test-preview --worker-name test-worker"
 				);
-				await runWrangler("preview secret list --worker-name test-worker");
 				expect(std.out).toContain("Worker: test-worker");
-				expect(std.out).toContain("Previews settings");
 				expect(std.out).toContain("Secrets");
 				expect(std.out).toContain("MY_SECRET");
 				expect(std.out).not.toContain("PLAIN");
 				expect(std.out).toContain("********");
+				expect(std.out).not.toContain("super-secret-value");
+			});
+
+			test("defaults the Preview name to the current git branch", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WORKERS_CI_BRANCH", "branch-preview");
+				let requestUrl: string | undefined;
+				mockGetLatestPreviewDeployment({}, ({ url }) => {
+					requestUrl = url;
+				});
+				await runWrangler("preview secret list --worker-name test-worker");
+				expect(requestUrl).toContain(
+					"/previews/branch-preview/deployments/latest"
+				);
 			});
 
 			test("should respect env-specific worker name when listing secrets", async ({
@@ -433,64 +484,75 @@ describe("wrangler preview", () => {
 						env: { staging: { name: "staging-worker" } },
 					})
 				);
-				let getUrl: string | undefined;
-				msw.use(
-					http.get(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						({ request }) => {
-							getUrl = request.url;
-							return HttpResponse.json({
-								success: true,
-								result: { preview_defaults: { env: {} } },
-							});
-						}
-					)
+				let requestUrl: string | undefined;
+				mockGetLatestPreviewDeployment({}, ({ url }) => {
+					requestUrl = url;
+				});
+				await runWrangler(
+					"preview secret list --name test-preview --env staging"
 				);
-				await runWrangler("preview secret list --env staging");
-				expect(getUrl).toContain("/workers/workers/staging-worker");
+				expect(requestUrl).toContain(
+					"/workers/workers/staging-worker/previews/test-preview/deployments/latest"
+				);
+			});
+
+			test("fails clearly when the Preview has no deployments", async ({
+				expect,
+			}) => {
+				mockGetPreviewDeploymentError(10222);
+				await expect(
+					runWrangler(
+						"preview secret list --name test-preview --worker-name test-worker"
+					)
+				).rejects.toThrow(/no deployments for the Preview/);
+			});
+
+			test("fails clearly when the Preview is not found", async ({
+				expect,
+			}) => {
+				mockGetPreviewDeploymentError(10025);
+				await expect(
+					runWrangler(
+						"preview secret list --name test-preview --worker-name test-worker"
+					)
+				).rejects.toThrow(/Preview "test-preview" was not found/);
 			});
 		});
 
 		describe("bulk", () => {
-			test("should bulk upload secrets to Previews settings", async ({
+			test("creates a new Preview deployment with all secrets", async ({
 				expect,
 			}) => {
 				writeFileSync("secrets.env", "FIRST_KEY=one\nSECOND_KEY=two\n");
-				let patchRequestBody:
-					| {
-							preview_defaults?: {
-								env?: Record<string, { type: string; text?: string }>;
-							};
-					  }
-					| undefined;
-				msw.use(
-					http.patch(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						async ({ request }) => {
-							patchRequestBody =
-								(await request.json()) as typeof patchRequestBody;
-							return HttpResponse.json({
-								success: true,
-								result: {
-									preview_defaults: {
-										env: patchRequestBody?.preview_defaults?.env ?? {},
-									},
-								},
-							});
-						}
-					)
+				let requestUrl: string | undefined;
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ url, body }) => {
+					requestUrl = url;
+					requestBody = body;
+				});
+				await runWrangler(
+					"preview secret bulk secrets.env --name test-preview --worker-name test-worker"
 				);
-				await runWrangler("preview secret bulk secrets.env");
-				const env = patchRequestBody?.preview_defaults?.env ?? {};
-				expect(env).toEqual({
+				expect(requestUrl).toContain(
+					"/workers/workers/test-worker/previews/test-preview/deployments/latest"
+				);
+				expect(requestBody?.env).toEqual({
 					FIRST_KEY: { type: "secret_text", text: "one" },
 					SECOND_KEY: { type: "secret_text", text: "two" },
 				});
-				expect(std.out).toContain("Worker: test-worker");
-				expect(std.out).toContain("Secrets");
-				expect(std.out).toContain("FIRST_KEY");
-				expect(std.out).toContain("SECOND_KEY");
-				expect(std.out).toContain("********");
+				expect(std.out).toContain(
+					"Successfully created secret for key: FIRST_KEY"
+				);
+				expect(std.out).toContain(
+					"Successfully created secret for key: SECOND_KEY"
+				);
+				expect(std.out).toContain("Created Preview deployment deployment-1");
+				expect(std.out).toContain("with 2 secrets");
+				expect(std.out).toContain(
+					"is now live at https://test-preview.example.workers.dev"
+				);
+				expect(std.out).not.toContain("one");
+				expect(std.out).not.toContain("two");
 			});
 
 			test("should respect env-specific worker name when bulk uploading secrets", async ({
@@ -506,18 +568,107 @@ describe("wrangler preview", () => {
 						env: { staging: { name: "staging-worker" } },
 					})
 				);
-				let patchUrl: string | undefined;
-				msw.use(
-					http.patch(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						({ request }) => {
-							patchUrl = request.url;
-							return HttpResponse.json({ success: true, result: {} });
-						}
-					)
+				let requestUrl: string | undefined;
+				mockPatchLatestPreviewDeployment(({ url }) => {
+					requestUrl = url;
+				});
+				await runWrangler(
+					"preview secret bulk secrets.env --name test-preview --env staging"
 				);
-				await runWrangler("preview secret bulk secrets.env --env staging");
-				expect(patchUrl).toContain("/workers/workers/staging-worker");
+				expect(requestUrl).toContain(
+					"/workers/workers/staging-worker/previews/test-preview/deployments/latest"
+				);
+			});
+
+			test("sends --message and --tag as deployment annotations", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "API_KEY=one\n");
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ body }) => {
+					requestBody = body;
+				});
+				await runWrangler(
+					'preview secret bulk secrets.env --name test-preview --worker-name test-worker --message "add secrets" --tag v1'
+				);
+				expect(requestBody?.annotations).toMatchObject({
+					"workers/message": "add secrets",
+					"workers/tag": "v1",
+				});
+			});
+
+			test("uses the default annotation message when none is provided", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "FIRST_KEY=one\nSECOND_KEY=two\n");
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ body }) => {
+					requestBody = body;
+				});
+				await runWrangler(
+					"preview secret bulk secrets.env --name test-preview --worker-name test-worker"
+				);
+				expect(requestBody?.annotations?.["workers/message"]).toBe(
+					"Bulk updated 2 secrets"
+				);
+			});
+
+			test("creates a deployment with an empty patch for null-only input", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"secrets.json",
+					JSON.stringify({ REMOVE_ME: null, ALSO_GONE: null })
+				);
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ body }) => {
+					requestBody = body;
+				});
+				await runWrangler(
+					"preview secret bulk secrets.json --name test-preview --worker-name test-worker"
+				);
+				expect(requestBody?.env).toEqual({});
+				expect(std.out).toContain("Created Preview deployment deployment-1");
+				expect(std.out).toContain("with 0 secrets");
+			});
+
+			test("makes no API call when there is no input", async ({ expect }) => {
+				let requested = false;
+				mockPatchLatestPreviewDeployment(() => {
+					requested = true;
+				});
+				vi.spyOn(readline, "createInterface").mockImplementation(
+					() => null as unknown as readline.Interface
+				);
+				await runWrangler(
+					"preview secret bulk --name test-preview --worker-name test-worker"
+				);
+				expect(requested).toBe(false);
+				expect(std.err).toContain("No content found in file or piped input.");
+			});
+
+			test("fails clearly when the Preview has no deployments", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "API_KEY=one\n");
+				mockPreviewDeploymentNotFound(10032);
+				await expect(
+					runWrangler(
+						"preview secret bulk secrets.env --name test-preview --worker-name test-worker"
+					)
+				).rejects.toThrow(/no deployments for the Preview/);
+			});
+
+			test("fails clearly when the Preview is not found", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "API_KEY=one\n");
+				mockPreviewDeploymentNotFound(10025);
+				await expect(
+					runWrangler(
+						"preview secret bulk secrets.env --name test-preview --worker-name test-worker"
+					)
+				).rejects.toThrow(/Preview "test-preview" was not found/);
 			});
 		});
 	});
