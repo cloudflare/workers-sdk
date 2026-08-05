@@ -152,15 +152,14 @@ export class DevRegistry {
 	}
 
 	public register(workers: Record<string, WorkerDefinition>) {
-		const entries = Object.entries(workers);
-		if (!this.registryPath || entries.length === 0) {
+		if (!this.registryPath) {
 			return;
 		}
 
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
 
-		for (const [name, definition] of entries) {
+		for (const [name, definition] of Object.entries(workers)) {
 			const definitionPath = path.join(this.registryPath, name);
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {
