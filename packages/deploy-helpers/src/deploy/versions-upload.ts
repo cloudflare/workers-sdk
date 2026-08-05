@@ -15,7 +15,11 @@ import { getWorkersDevSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
 	applyServiceAndEnvironmentTags,
@@ -63,6 +67,7 @@ export default async function versionsUpload(
 	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
+	bundleSize?: BundleSize;
 }> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
@@ -199,10 +204,8 @@ export default async function versionsUpload(
 				: undefined,
 	};
 
-	await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	let workerBundle: FormData;
 
@@ -382,7 +385,7 @@ export default async function versionsUpload(
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, bundleSize };
 	}
 	assert(accountId);
 
@@ -433,5 +436,6 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 		assetUploadStats: assetsUploadResult?.assetUploadStats,
 		versionPreviewUrl,
 		versionPreviewAliasUrl,
+		bundleSize,
 	};
 }
