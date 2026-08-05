@@ -1457,7 +1457,7 @@ const validateStreamingTailConsumers: ValidatorFn = (
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
-	topLevelEnv: RawEnvironment,
+	topLevelEnv: RawConfig,
 	isDispatchNamespace: boolean,
 	preserveOriginalMain: boolean
 ): Environment;
@@ -1477,7 +1477,7 @@ function normalizeAndValidateEnvironment(
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
-	rawEnv: RawEnvironment,
+	rawEnv: RawEnvironment | RawConfig,
 	isDispatchNamespace: boolean,
 	preserveOriginalMain: boolean,
 	envName = "top level",
@@ -2195,11 +2195,24 @@ function normalizeAndValidateEnvironment(
 		environment.exports
 	);
 
+	// `exports` is inherited by named environments but `containers` is not, so the
+	// idiomatic multi-environment layout declares `exports` once at the top level
+	// and repeats `containers` in every environment. Both passes then see only one
+	// half of the link and must not cross-check it: on a named environment pass
+	// the top level holds the containers, and on the top level pass the named
+	// environments do.
+	const containersDeclaredElsewhere =
+		rawConfig !== undefined
+			? rawConfig.containers !== undefined
+			: Object.values("env" in rawEnv ? (rawEnv.env ?? {}) : {}).some(
+					(rawNamedEnv) => rawNamedEnv?.containers !== undefined
+				);
+
 	validateContainerExportLinks(
 		diagnostics,
 		environment.containers,
 		environment.exports,
-		rawConfig?.containers !== undefined
+		containersDeclaredElsewhere
 	);
 
 	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
@@ -6758,17 +6771,19 @@ function validateContainerExportLinks(
 	diagnostics: Diagnostics,
 	containers: Config["containers"],
 	exports: Config["exports"],
-	topLevelDeclaresContainers: boolean
+	containersDeclaredElsewhere: boolean
 ) {
 	if (containers !== undefined && !Array.isArray(containers)) {
 		// `validateContainerApp` has already reported the non-array `containers`.
 		return;
 	}
 
-	if (containers === undefined && topLevelDeclaresContainers) {
-		// `containers` is not inherited by named environments and `notInheritable`
-		// has already warned that this one is missing it. Cross-checking inherited
-		// `exports` against an empty container list would only add noise.
+	if (containers === undefined && containersDeclaredElsewhere) {
+		// `containers` is declared at a different environment level, so this level
+		// only sees half of the link, and cross-checking `exports` against an empty
+		// container list would report a link that resolves where the containers are
+		// declared. Every check below either iterates `containers`, or concerns
+		// containers this level does not have, so nothing is left to validate here.
 		return;
 	}
 
