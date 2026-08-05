@@ -1,23 +1,5 @@
 # @cloudflare/vite-plugin
 
-## 1.51.0
-
-### Minor Changes
-
-- [#14941](https://github.com/cloudflare/workers-sdk/pull/14941) [`266172b`](https://github.com/cloudflare/workers-sdk/commit/266172b98c27770e6d48d3fd42790e2125115e5e) Thanks [@nickpatt](https://github.com/nickpatt)! - Improve the Local Explorer's Observability views
-
-  `console.log` messages now render the way the console would (JSON-encoded strings are unwrapped and multi-argument logs are joined), traces and events can be looked up by trace or span id from the search bar, and an event's "View trace" button jumps to the exact invocation that emitted it — even when a trace_id spans several invocations (e.g. a subrequest or self fetch).
-
-- [#14996](https://github.com/cloudflare/workers-sdk/pull/14996) [`ebd1dfd`](https://github.com/cloudflare/workers-sdk/commit/ebd1dfd3778dd3fdb9a63a5596852287eb4029b1) Thanks [@nickpatt](https://github.com/nickpatt)! - Surface Local Explorer API to headless agents
-
-  When a Vite dev or preview server with the Cloudflare plugin is started in a headless AI agent environment, the plugin now prints the Local Explorer API URL and useful resource routes to stdout so agents can discover and call them programmatically.
-
-### Patch Changes
-
-- Updated dependencies [[`20470fa`](https://github.com/cloudflare/workers-sdk/commit/20470fa8b09761c50b5c2c1d6a5f2652b61bd271), [`9c74538`](https://github.com/cloudflare/workers-sdk/commit/9c7453837e3293787c0cb1778520f630aea7e5ca), [`266172b`](https://github.com/cloudflare/workers-sdk/commit/266172b98c27770e6d48d3fd42790e2125115e5e), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`daf65f2`](https://github.com/cloudflare/workers-sdk/commit/daf65f28cecf35e251dc6e476d5bbd82972d68de), [`a9e5abb`](https://github.com/cloudflare/workers-sdk/commit/a9e5abb8c0c2e7895b0bb09c6c8e8ffd3dbc3bc0)]:
-  - wrangler@4.119.0
-  - miniflare@5.20260731.0-alpha
-
 ## 1.50.0
 
 ### Minor Changes
