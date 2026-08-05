@@ -429,15 +429,10 @@ export async function triggersDeploy(
 
 	const targets = completedDeployments
 		.flatMap((deployment) => deployment.targets)
-		.map(
-			// Append protocol only on workers.dev domains
-			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
-		);
+		.map(formatDeployTarget);
 	if (targets.length > 0) {
 		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
-		for (const target of targets) {
-			logger.log(" ", target);
-		}
+		logDeployTargets(completedDeployments);
 	} else {
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
@@ -528,6 +523,37 @@ function aggregateTelemetryMessages(errors: Error[]): string {
 			: "non-user error"
 	);
 	return Array.from(new Set(labels)).sort().join(", ");
+}
+
+function formatDeployTarget(target: string): string {
+	// Append protocol only on workers.dev domains
+	return (target.endsWith("workers.dev") ? "https://" : "") + target;
+}
+
+function logDeployTargets(deployments: TriggerDeployment[]): void {
+	const hasCustomDomains = deployments.some(
+		(deployment) =>
+			deployment.category === "Custom domains" && deployment.targets.length > 0
+	);
+
+	for (const deployment of deployments) {
+		if (deployment.targets.length === 0) {
+			continue;
+		}
+
+		if (hasCustomDomains && deployment.category === "Custom domains") {
+			logger.log("");
+			logger.log("Custom Domains:");
+			for (const target of deployment.targets.map(formatDeployTarget)) {
+				logger.log(" ", target);
+			}
+			continue;
+		}
+
+		for (const target of deployment.targets.map(formatDeployTarget)) {
+			logger.log(" ", target);
+		}
+	}
 }
 
 // getSubdomainValues returns the values for workers_dev and preview_urls.

@@ -102,6 +102,9 @@ export type CreatePreviewDeploymentRequestParams = {
 	compatibility_flags?: string[];
 	annotations?: {
 		"workers/message"?: string;
+		"workers/pull_request_number"?: string;
+		"workers/pull_request_url"?: string;
+		"workers/repository_url"?: string;
 		"workers/tag"?: string;
 	};
 	migrations?: CfWorkerInit["migrations"];

@@ -51,31 +51,10 @@ export function renderRoute(route: Route): string {
 		const isCustomDomain = Boolean(
 			"custom_domain" in route && route.custom_domain
 		);
-		if (isCustomDomain && "zone_id" in route) {
-			result += ` (custom domain - zone id: ${route.zone_id})`;
-		} else if (isCustomDomain && "zone_name" in route) {
-			result += ` (custom domain - zone name: ${route.zone_name})`;
-		} else if (isCustomDomain) {
-			result += ` (custom domain)`;
-		} else if ("zone_id" in route) {
+		if (!isCustomDomain && "zone_id" in route) {
 			result += ` (zone id: ${route.zone_id})`;
-		} else if ("zone_name" in route) {
+		} else if (!isCustomDomain && "zone_name" in route) {
 			result += ` (zone name: ${route.zone_name})`;
-		}
-
-		if (isCustomDomain) {
-			const flags: string[] = [];
-			if ("enabled" in route && route.enabled !== undefined) {
-				flags.push(route.enabled ? "enabled" : "disabled");
-			}
-			if ("previews_enabled" in route && route.previews_enabled !== undefined) {
-				flags.push(
-					route.previews_enabled ? "previews: enabled" : "previews: disabled"
-				);
-			}
-			if (flags.length > 0) {
-				result += ` [${flags.join(", ")}]`;
-			}
 		}
 	}
 	return result;
