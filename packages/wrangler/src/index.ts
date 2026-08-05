@@ -314,14 +314,14 @@ import { pipelinesUpdateCommand } from "./pipelines/cli/update";
 import {
 	previewCommand,
 	previewDeleteCommand,
-	previewSecretBulkCommand,
-	previewSecretDeleteCommand,
-	previewSecretListCommand,
-	previewSecretNamespace,
-	previewSecretPutCommand,
 	previewSettingsCommand,
 	previewSettingsUpdateCommand,
 } from "./preview";
+import { previewSecretNamespace } from "./preview/secrets";
+import { previewSecretBulkCommand } from "./preview/secrets/bulk";
+import { previewSecretDeleteCommand } from "./preview/secrets/delete";
+import { previewSecretListCommand } from "./preview/secrets/list";
+import { previewSecretPutCommand } from "./preview/secrets/put";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
