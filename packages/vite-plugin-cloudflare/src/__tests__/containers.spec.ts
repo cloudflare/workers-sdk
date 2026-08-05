@@ -73,6 +73,39 @@ describe("getContainerOptions", () => {
 		expect,
 	}) => {
 		const containersConfig: Containers = [
+			{ name: "linked", image: "registry.cloudflare.com/hello:world" },
+			{ name: "unlinked", image: "registry.cloudflare.com/goodbye:world" },
+		];
+		const exports: Exports = {
+			MyContainerDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "linked",
+			},
+		};
+
+		expect(
+			getContainerOptions({
+				containersConfig,
+				exports,
+				containerBuildId: "build-id",
+			})
+		).toEqual([
+			{
+				image_uri: "registry.cloudflare.com/hello:world",
+				class_name: "MyContainerDO",
+				image_tag: "cloudflare-dev/mycontainerdo:build-id",
+			},
+		]);
+	});
+
+	// Config validation rejects a container that is linked to nothing, so this is
+	// only reachable defensively. `undefined` and `[]` both mean there is nothing
+	// to build or pull, and both call sites iterate `options ?? []`.
+	test("returns an empty array when no container is linked to a durable object", ({
+		expect,
+	}) => {
+		const containersConfig: Containers = [
 			{ name: "my-container", image: "registry.cloudflare.com/hello:world" },
 		];
 

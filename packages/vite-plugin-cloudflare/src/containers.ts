@@ -21,7 +21,10 @@ export function getDockerPath(): string {
 /**
  * @returns Container options suitable for building or pulling images,
  * with image tag set to well-known dev format, or undefined if
- * containers are not enabled or not configured.
+ * containers are not enabled or not configured. Containers that are
+ * configured but resolve to no Durable Object class are dropped, so the
+ * result may also be an empty array. Both mean there is nothing to build
+ * or pull, and callers treat them alike.
  */
 export function getContainerOptions(options: {
 	containersConfig: ResolvedWorkerConfig["containers"];
