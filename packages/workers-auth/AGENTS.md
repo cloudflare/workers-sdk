@@ -19,6 +19,8 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
 - `src/token-exchange.ts` — auth-code → token + refresh-token rotation + `fetchAuthToken`
 - `src/callback-server.ts` — local HTTP server for the OAuth callback (listens on the host/port from the consumer's `redirectUri`)
+- `src/device-flow.ts` — `getOauthTokenViaDeviceFlow(options, ctx)`: the OAuth 2.0 Device Authorization Grant (RFC 8628) used by `login({device: true})` when the browser cannot reach the local callback URL. No callback server; prints the verification URL + user code and polls `/oauth2/token`. Every user-facing string is parameterised by `ctx.displayName` / `ctx.deviceLoginCommand` so the module carries no per-CLI branding. Both endpoints' bodies are narrowed before use (`asDeviceAuthorizationResponse`, `pollDeviceToken`'s `DevicePollResult`) rather than cast — an intermediary's envelope or a 2xx without a grant must produce a reportable `unexpected`/unusable-response error, never `undefined` arithmetic. `slow_down` / 5xx / 429 / unparseable bodies keep the loop alive; the last such failure is reported in place of the generic timeout if the deadline passes
+- `src/generate-device-auth-url.ts` — `generateVerificationUrl` (fallback `verification_uri_complete` builder for servers that omit it, RFC 8628 §3.3.1) + `assertTrustedVerificationUrl`, which rejects any server-supplied verification URL that is not `https:` on exactly the resolved auth domain (with no embedded credentials) before it is printed or handed to `openInBrowser` — the device flow is the only place this package opens a URL it did not build itself (RFC 8628 §5.4, remote phishing)
 - `src/flow.ts` — `createOAuthFlow(ctx)` factory wiring everything together
 - `src/context.ts` — `OAuthFlowContext` interface (DI surface)
 - `src/credential-store/` — opt-in OS-keyring-backed credential persistence (see below)
@@ -62,6 +64,11 @@ files and its own encryption key.
 - `clientId` (required) — the consumer's registered OAuth app ID; `string` or
   `() => string` for lazy (e.g. env-driven prod/staging) resolution
 - `consent` (required) — the consumer's branded granted/denied consent pages
+- `displayName` (required) — the consumer's branded name (`"Wrangler"`, `"cf"`),
+  interpolated into the device flow's "To authorize \<name\>…" copy
+- `deviceLoginCommand` (required) — the command that restarts the device flow
+  (`"wrangler login --device"`), quoted when a device code is denied, expires,
+  or the flow times out
 - `redirectUri` (required) — the registered redirect URI / local callback URL.
   The callback server's listen host/port and route path are all derived from it
   (per-call bind overrides via `LoginProps.callbackHost`/`callbackPort`)
@@ -75,10 +82,10 @@ files and its own encryption key.
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-`clientId`, `consent`, `redirectUri`, and `storageFactory` are consumer-specific,
-so they are required rather than defaulted here. Wrangler's values live in the
-in-package wrangler layer (`src/wrangler/`, see below) rather than in the
-`wrangler` package itself.
+`clientId`, `consent`, `displayName`, `deviceLoginCommand`, `redirectUri`, and
+`storageFactory` are consumer-specific, so they are required rather than
+defaulted here. Wrangler's values live in the in-package wrangler layer
+(`src/wrangler/`, see below) rather than in the `wrangler` package itself.
 
 The wrangler layer (`src/wrangler/index.ts`, `createWranglerAuth`) wires the
 credential-storage layer once via `createCredentialStorageContext(...)` and
@@ -99,7 +106,9 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   only `@cloudflare/workers-utils`.
 - `types.ts` — `AuthContext` (the injected primitives: `logger`, `userAgent`,
   interactive `prompt` / `select`, `isNoDefaultValueProvidedError`) and
-  `CliDescriptor` (everything that varies per CLI: `cliName`, auth command names, `keyringServiceName`,
+  `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
+  `displayName` (branded name used in prose), auth command names
+  (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `getConfigPath`, `fileFormat`,
   `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).

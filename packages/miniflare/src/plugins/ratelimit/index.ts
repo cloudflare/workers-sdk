@@ -4,9 +4,9 @@ import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit-object";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
@@ -44,6 +44,9 @@ export const RATELIMIT_PLUGIN_NAME = "ratelimit";
 const SERVICE_RATELIMIT_PREFIX = `${RATELIMIT_PLUGIN_NAME}`;
 const SERVICE_RATELIMIT_MODULE = `cloudflare-internal:${SERVICE_RATELIMIT_PREFIX}:module`;
 const RATELIMIT_ENTRY_SERVICE_PREFIX = `${RATELIMIT_PLUGIN_NAME}:ns`;
+// A single entry service shared by every namespace. Each namespace_id is
+// supplied per-binding via `ctx.props`, so one service serves all of them.
+const RATELIMIT_LOCAL_ENTRY_SERVICE_NAME = `${RATELIMIT_PLUGIN_NAME}:ns:entry`;
 const RATELIMIT_STORAGE_SERVICE_NAME = `${RATELIMIT_PLUGIN_NAME}:storage`;
 const RATELIMIT_OBJECT_CLASS_NAME = "RateLimiterObject";
 const RATELIMIT_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
@@ -74,10 +77,8 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 						{
 							name: "fetcher",
 							service: {
-								name: getUserBindingServiceName(
-									RATELIMIT_ENTRY_SERVICE_PREFIX,
-									config.namespace_id
-								),
+								name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
+								props: buildObjectEntryProps(config.namespace_id),
 							},
 						},
 						...buildJsonBindings({
@@ -102,26 +103,22 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 		);
 	},
 	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		// One entry service + Durable Object instance per unique namespace_id.
-		// Multiple bindings sharing a namespace collapse to a single counter.
-		const namespaceIds = new Set(
-			Object.values(options.ratelimits ?? {}).map((c) => c.namespace_id)
-		);
 		// Wrangler passes `ratelimits: {}` rather than omitting it when a Worker
 		// has no rate limit bindings, so bail on emptiness rather than presence.
 		// Otherwise every `wrangler dev` session would create an unused storage
 		// directory in the user's persistence directory.
-		if (namespaceIds.size === 0) {
+		if (Object.keys(options.ratelimits ?? {}).length === 0) {
 			return [];
 		}
 
-		const services: Service[] = [...namespaceIds].map((namespace_id) => ({
-			name: getUserBindingServiceName(
-				RATELIMIT_ENTRY_SERVICE_PREFIX,
-				namespace_id
-			),
-			worker: objectEntryWorker(RATELIMIT_OBJECT, namespace_id),
-		}));
+		// Each namespace_id is supplied per-binding via props, so one service serves
+		// every rate limiter while shared namespaces still use the same DO name.
+		const services: Service[] = [
+			{
+				name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(RATELIMIT_OBJECT),
+			},
+		];
 
 		const persistPath = getPersistPath(
 			RATELIMIT_PLUGIN_NAME,

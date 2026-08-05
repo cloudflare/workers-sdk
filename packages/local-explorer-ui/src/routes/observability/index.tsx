@@ -27,13 +27,13 @@ import { ClearButton } from "../../components/observability/ClearButton";
 import { FilterBuilder } from "../../components/observability/FilterBuilder";
 import { InvocationLogs } from "../../components/observability/InvocationLogs";
 import { ObservabilityDisabled } from "../../components/observability/ObservabilityDisabled";
-import { ObservabilityViewSwitcher } from "../../components/observability/ObservabilityViewSwitcher";
 import { QuerySyntaxHint } from "../../components/observability/QuerySyntaxHint";
 import { TraceWaterfall } from "../../components/observability/TraceWaterfall";
 import { ResourceError } from "../../components/ResourceError";
 import {
 	clearTraces,
 	fetchTraceSpans,
+	findInvocationRoot,
 	formatDuration,
 	getInvocationRootIds,
 	getTagKeys,
@@ -71,6 +71,13 @@ const KIND_LABELS: Record<string, string> = {
 export const Route = createFileRoute("/observability/")({
 	component: ObservabilityView,
 	errorComponent: ResourceError,
+	validateSearch: (
+		search: Record<string, unknown>
+	): { worker?: string; trace?: string; span?: string } => ({
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+		trace: typeof search.trace === "string" ? search.trace : undefined,
+		span: typeof search.span === "string" ? search.span : undefined,
+	}),
 });
 
 function isError(t: TraceRow): boolean {
@@ -128,6 +135,18 @@ function ObservabilityView(): JSX.Element {
 	// render) so the effect can consult the latest cache on the list cadence.
 	const spansByTraceRef = useRef(spansByTrace);
 	spansByTraceRef.current = spansByTrace;
+	// Deep link from an event's "View trace" button (?trace=&span=): open that
+	// trace's waterfall once its row lands. span picks the right invocation row.
+	// Capture it at mount and strip it from the URL below, so returning to this
+	// view later (the switcher preserves search params) doesn't re-apply it.
+	const routeSearch = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const deepLinkRef = useRef<{ trace?: string; span?: string } | null>(null);
+	deepLinkRef.current ??= { trace: routeSearch.trace, span: routeSearch.span };
+	const deepLinkTrace = deepLinkRef.current.trace;
+	const deepLinkSpan = deepLinkRef.current.span;
+	const deepLinkAppliedRef = useRef<string | null>(null);
+	const deepLinkSeededRef = useRef<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	// Capture is off (no collector bound). We show an "off" panel instead of the
@@ -218,6 +237,8 @@ function ObservabilityView(): JSX.Element {
 					search: parsed.text,
 					status: parsed.status ?? status,
 					kind: parsed.kind ?? kind,
+					traceId: parsed.traceId,
+					spanId: parsed.spanId,
 					clauses: [...parsed.clauses, ...filterClauses],
 				})
 			);
@@ -331,6 +352,82 @@ function ObservabilityView(): JSX.Element {
 		}
 	}, [traces, expanded, loadSpans]);
 
+	// Strip the deep-link params from the URL once we've captured them, so they
+	// don't linger and re-seed the query on every later return to this view.
+	useEffect(() => {
+		if (routeSearch.trace === undefined && routeSearch.span === undefined) {
+			return;
+		}
+		void navigate({
+			search: (prev) => ({ ...prev, trace: undefined, span: undefined }),
+			replace: true,
+		});
+	}, [navigate, routeSearch.trace, routeSearch.span]);
+
+	// A deep-linked trace can be older than the default trace-list window, so
+	// seed the search with `trace:<id>` to fetch that specific row. If it still
+	// doesn't come back, the trace is gone and the empty state explains that.
+	useEffect(() => {
+		if (!deepLinkTrace || deepLinkSeededRef.current === deepLinkTrace) {
+			return;
+		}
+		deepLinkSeededRef.current = deepLinkTrace;
+		const query = `trace:${deepLinkTrace}`;
+		setSearch(query);
+		setAppliedSearch(query);
+	}, [deepLinkTrace]);
+
+	// Apply the ?trace=&span= deep link once: expand and scroll to the right
+	// invocation row when the seeded query above brings it into the list.
+	useEffect(() => {
+		if (!deepLinkTrace || deepLinkAppliedRef.current === deepLinkTrace) {
+			return;
+		}
+		const matches = traces.filter((t) => t.trace_id === deepLinkTrace);
+		const first = matches[0];
+		if (!first) {
+			// Seeded query hasn't returned the row yet (or the trace is gone).
+			return;
+		}
+		deepLinkAppliedRef.current = deepLinkTrace;
+
+		// Expand a row's waterfall (loading spans if needed) and scroll to it.
+		const reveal = (row: TraceRow): void => {
+			const key = traceKey(row);
+			setExpanded((prev) => {
+				if (prev.has(key)) {
+					return prev;
+				}
+				const next = new Set(prev);
+				next.add(key);
+				return next;
+			});
+			if (!spansByTraceRef.current[key]) {
+				void loadSpans(row);
+			}
+			requestAnimationFrame(() => {
+				document
+					.getElementById(`trace-row-${key}`)
+					?.scrollIntoView({ block: "center" });
+			});
+		};
+
+		// One invocation, or no span to disambiguate.
+		if (matches.length === 1 || !deepLinkSpan) {
+			reveal(first);
+			return;
+		}
+
+		// Several invocations share this trace_id — reveal the one whose spans
+		// contain the linked span, falling back to the first row.
+		void fetchTraceSpans(deepLinkTrace)
+			.then((spans) => {
+				const root = findInvocationRoot(spans, deepLinkSpan);
+				reveal(matches.find((m) => m.root_span_id === root) ?? first);
+			})
+			.catch(() => reveal(first));
+	}, [deepLinkTrace, deepLinkSpan, traces, loadSpans]);
+
 	const maxDuration = useMemo(
 		() => Math.max(1, ...traces.map((t) => t.duration_ms ?? 0)),
 		[traces]
@@ -355,7 +452,9 @@ function ObservabilityView(): JSX.Element {
 			<header className="flex min-h-14 items-center gap-2.5 border-b border-kumo-fill px-6">
 				<PulseIcon size={18} className="text-kumo-subtle" />
 				<div className="flex flex-col">
-					<ObservabilityViewSwitcher current="traces" />
+					<span className="pl-1 text-sm leading-tight font-semibold text-kumo-default">
+						Traces
+					</span>
 					<span className="pl-1 text-[11px] leading-tight text-kumo-subtle">
 						{traces.length} trace{traces.length === 1 ? "" : "s"}
 					</span>
@@ -562,6 +661,7 @@ function ObservabilityView(): JSX.Element {
 									return (
 										<Fragment key={key}>
 											<tr
+												id={`trace-row-${key}`}
 												onClick={() => void toggleTrace(t)}
 												className={cn(
 													"cursor-pointer border-b border-kumo-fill hover:bg-black/[0.03] dark:hover:bg-white/5",

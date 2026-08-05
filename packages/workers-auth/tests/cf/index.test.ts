@@ -45,7 +45,9 @@ describe("cf auth layer", () => {
 			login: "cf auth login",
 			whoami: "cf auth whoami",
 			createProfile: "cf auth create",
+			deviceLogin: "cf auth login --device",
 		});
+		expect(CF_CLI.displayName).toBe("cf");
 	});
 
 	it("resolves its config directory to `cloudflare` (no leading dot, not `.wrangler`)", ({
