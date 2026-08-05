@@ -179,7 +179,7 @@ function createCancellableRequestBody(
 						error.message.includes("Controller is already closed")
 					) {
 						cleanup?.();
-						req.pause();
+						req.resume();
 						return;
 					}
 					throw error;
@@ -207,7 +207,7 @@ function createCancellableRequestBody(
 		},
 		cancel() {
 			cleanup?.();
-			req.pause();
+			req.resume();
 		},
 	});
 }
