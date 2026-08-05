@@ -34,3 +34,6 @@ This decouples container configuration from the Durable Object class, which is a
 - a container and a Durable Object export disagree about which one they are linked to
 - a container ends up linked to no Durable Object at all
 - two containers share a `name`
+- two containers are attached to the same Durable Object
+
+That last case was previously accepted but could never work: workerd attaches a single container per Durable Object namespace, and in local development every container for a class builds into the same image tag, so one silently overwrote the other. If you have two containers on one `class_name`, give each its own Durable Object class.

@@ -2933,7 +2933,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("allows several containers to share a class_name", ({ expect }) => {
+			it("errors when several containers share a class_name", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "my-worker",
@@ -2958,8 +2958,83 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - More than one container is attached to the Durable Object "MyDO". A Durable Object can only have one container attached to it."
+				`);
+			});
+
+			it("errors once when the over-subscribed class also names one of its containers", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								name: "container-a",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+							{
+								name: "container-b",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "container-a",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				// `container-b` is not additionally reported as disagreeing with `MyDO`
+				// just because its sibling is the one the export names.
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - More than one container is attached to the Durable Object "MyDO". A Durable Object can only have one container attached to it."
+				`);
+			});
+
+			it("errors when two containers with no explicit name share a class_name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+							{
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						exports: {
+							MyDO: { type: "durable-object", storage: "sqlite" },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				// Both containers derive the same default name from the shared class, so
+				// the name collision is reported alongside the root cause.
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers" contains more than one container named "my-worker-mydo". Container names must be unique.
+					  - More than one container is attached to the Durable Object "MyDO". A Durable Object can only have one container attached to it."
+				`);
 			});
 
 			it("errors when a class_name has no live Durable Object export", ({
