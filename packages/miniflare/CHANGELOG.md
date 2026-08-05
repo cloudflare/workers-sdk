@@ -4,14 +4,14 @@
 
 ### Patch Changes
 
-- [#14984](https://github.com/cloudflare/workers-sdk/pull/14984) [`9c74538`](https://github.com/cloudflare/workers-sdk/commit/9c7453837e3293787c0cb1778520f630aea7e5ca) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+- [#15012](https://github.com/cloudflare/workers-sdk/pull/15012) [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
 
   The following dependency versions have been updated:
 
   | Dependency                | From          | To            |
   | ------------------------- | ------------- | ------------- |
-  | @cloudflare/workers-types | ^5.20260730.1 | ^5.20260731.1 |
-  | workerd                   | 1.20260730.1  | 1.20260731.1  |
+  | @cloudflare/workers-types | ^5.20260731.1 | ^5.20260801.1 |
+  | workerd                   | 1.20260731.1  | 1.20260801.1  |
 
 - [#14968](https://github.com/cloudflare/workers-sdk/pull/14968) [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix local rate limiting being disabled entirely when bindings share a `namespace_id` but use different periods
 
@@ -4609,7 +4609,7 @@
   						return "Hello " + name;
   					}
   				}
-  
+
   				export default function (env) {
   					return new Greeter();
   				}
@@ -4651,9 +4651,9 @@
         name: "sum-worker",
         script: `
   				import { WorkerEntrypoint } from 'cloudflare:workers';
-  
+
   				export default { fetch() { return new Response(''); } }
-  
+
   				export class SumEntrypoint extends WorkerEntrypoint {
   					sum(args) {
   						return args.reduce((a, b) => a + b);
@@ -4739,15 +4739,15 @@
         modules: true,
         script: `
   			import { WorkerEntrypoint } from "cloudflare:workers";
-  
+
   			export class RpcEntrypoint extends WorkerEntrypoint {
   				ping() { return "a:rpc:pong"; }
   			}
-  
+
   			export const namedEntrypoint = {
   				fetch(request, env, ctx) { return new Response("a:named:pong"); }
   			};
-  
+
   			...
   			`,
       },
