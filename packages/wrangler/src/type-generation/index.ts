@@ -2468,6 +2468,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, messaging] of (env.messaging ?? []).entries()) {
+			if (!messaging.binding) {
+				throwMissingBindingError({
+					binding: messaging,
+					bindingType: "messaging",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(messaging.binding, "unknown", "messaging", envName);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -3648,6 +3663,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "agent_memory",
 				name: agentMemory.binding,
 				type: "AgentMemoryNamespace",
+			});
+		}
+
+		for (const [index, messaging] of (env.messaging ?? []).entries()) {
+			if (!messaging.binding) {
+				throwMissingBindingError({
+					binding: messaging,
+					bindingType: "messaging",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "messaging",
+				name: messaging.binding,
+				type: "unknown",
 			});
 		}
 

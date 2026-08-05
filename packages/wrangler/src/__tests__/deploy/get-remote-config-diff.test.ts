@@ -405,6 +405,12 @@ describe("getRemoteConfigsDiff", () => {
 						instance_name: "my-instance",
 					},
 				],
+				messaging: [
+					{
+						binding: "MESSAGING",
+						namespace: "my-namespace",
+					},
+				],
 				artifacts: [
 					{
 						binding: "MY_ARTIFACTS",
@@ -537,6 +543,13 @@ describe("getRemoteConfigsDiff", () => {
 					{
 						binding: "MY_AI_SEARCH",
 						instance_name: "my-instance",
+						remote: true,
+					},
+				],
+				messaging: [
+					{
+						binding: "MESSAGING",
+						namespace: "my-namespace",
 						remote: true,
 					},
 				],

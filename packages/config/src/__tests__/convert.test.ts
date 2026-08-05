@@ -373,6 +373,22 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("maps Messaging bindings created by the binding factory", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: {
+					MSG_1: bindings.messaging({ namespace: "ns-1" }),
+					MSG_2: bindings.messaging({ namespace: "ns-2", remote: true }),
+				},
+			});
+			expect(result.messaging).toEqual([
+				{ binding: "MSG_1", namespace: "ns-1" },
+				{ binding: "MSG_2", namespace: "ns-2", remote: true },
+			]);
+		});
+
 		it("maps analytics-engine-dataset.name to dataset", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,

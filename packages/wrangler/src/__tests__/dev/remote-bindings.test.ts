@@ -484,6 +484,33 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			],
 		},
 		{
+			name: "messaging",
+			config: {
+				messaging: [
+					{
+						binding: "MESSAGING",
+						namespace: "mock-messaging-namespace",
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				MESSAGING: {
+					namespace: "mock-messaging-namespace",
+					type: "messaging",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					messaging: {
+						MESSAGING: {
+							namespace: "mock-messaging-namespace",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
+		{
 			name: "email",
 			config: {
 				send_email: [

@@ -71,6 +71,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	vpc_network: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	websearch: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
+	messaging: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 };
 
 export function getBindingLocalSupport(

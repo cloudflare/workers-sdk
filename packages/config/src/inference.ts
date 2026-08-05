@@ -107,6 +107,7 @@ interface BindingTypeMap<TBinding> {
 	images: ImagesBinding;
 	logfwdr: any;
 	media: MediaBinding;
+	messaging: unknown;
 	"mtls-certificate": Fetcher;
 	"rate-limit": RateLimit;
 	r2: R2Bucket;

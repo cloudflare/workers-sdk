@@ -132,6 +132,7 @@ export function createWorkerUploadForm(
 	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const websearch = extractBindingsOfType("websearch", bindings)[0];
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
+	const messaging = extractBindingsOfType("messaging", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -419,6 +420,14 @@ export function createWorkerUploadForm(
 				namespace,
 			});
 		}
+	});
+
+	messaging.forEach(({ binding, namespace }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "messaging",
+			namespace,
+		});
 	});
 
 	hyperdrive.forEach(({ binding, id }) => {
