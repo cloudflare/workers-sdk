@@ -1,5 +1,5 @@
 // The result of dispatching an email to a Worker's `email()` handler, as
-// returned by `/cdn-cgi/handler/email?format=json` and captured for the local
+// returned by `/cdn-cgi/local/email?format=json` and captured for the local
 // explorer's "Routing" view.
 //
 // A single event model describes everything the handler did to a message:

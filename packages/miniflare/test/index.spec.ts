@@ -2046,7 +2046,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 
 	async function dispatchEmail(mode: string) {
 		const response = await mf.dispatchFetch(
-			`http://localhost/cdn-cgi/handler/email?format=json&from=sender@example.com&to=${mode}@example.com`,
+			`http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=${mode}@example.com`,
 			{
 				method: "POST",
 				body: `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`,
