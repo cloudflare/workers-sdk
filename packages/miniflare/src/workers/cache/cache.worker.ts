@@ -304,10 +304,9 @@ export class CacheObject extends MiniflareDurableObject {
 		// case, we just threw a `CacheMiss`)
 		assert(resHeaders !== undefined);
 		const now = this.timers.now();
-		resHeaders.set(
-			"Age",
-			String(Math.round((now - (cached.metadata.stored || now)) / 1000))
-		);
+		const age = parseInt(resHeaders.get("age") || "0", 10);
+		const cachedDuration = Math.round((now - (cached.metadata.stored || now)) / 1000)
+		resHeaders.set("Age", age + cachedDuration);
 		resHeaders.set("CF-Cache-Status", "HIT");
 		resRanges ??= [];
 
