@@ -68,6 +68,26 @@ describe("isProcessEnvPopulated", () => {
 		).toBe(false);
 	});
 
+	test("nodejs_compat default-on date implies process.env population without a flag", ({
+		expect,
+	}) => {
+		expect(isProcessEnvPopulated("2026-08-04")).toBe(true);
+	});
+
+	test("no_nodejs_compat opts out of date-implied process.env population", ({
+		expect,
+	}) => {
+		expect(isProcessEnvPopulated("2026-08-04", ["no_nodejs_compat"])).toBe(
+			false
+		);
+	});
+
+	test("date before nodejs_compat default-on date does not populate process.env without a flag", ({
+		expect,
+	}) => {
+		expect(isProcessEnvPopulated("2026-01-01")).toBe(false);
+	});
+
 	test("errors with disable and enable flags specified", ({ expect }) => {
 		try {
 			isProcessEnvPopulated("2024-01-01", [
