@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
 import { WorkflowBinding } from "../src/binding";
-import { WorkflowError } from "../src/lib/errors";
+import { duplicateInstanceError } from "../src/lib/errors";
 import { setTestWorkflowCallback } from "./test-entry";
 import type { WorkflowHandle } from "../src/binding";
 import type { Engine, EngineLogs } from "../src/engine";
@@ -260,9 +260,7 @@ describe("WorkflowBinding", () => {
 			const realCreate = binding.create.bind(binding);
 			vi.spyOn(binding, "create").mockImplementation(async (options) => {
 				if (options?.id === raced) {
-					throw new WorkflowError(
-						`Workflow instance with id "${raced}" already exists`
-					);
+					throw duplicateInstanceError(raced);
 				}
 				return realCreate(options);
 			});
@@ -287,7 +285,7 @@ describe("WorkflowBinding", () => {
 			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
 
 			await expect(binding.create({ id })).rejects.toThrow(
-				`Workflow instance with id "${id}" already exists`
+				`(instance.already_exists) Workflow instance with id "${id}" already exists`
 			);
 		});
 
