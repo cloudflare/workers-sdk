@@ -68,4 +68,44 @@ describe("MiniflareWorkerConfigSchema", () => {
 			QUEUE: { type: "queue", name: "custom-queue" },
 		});
 	});
+
+	test("strips tombstoned durable object exports", ({ expect }) => {
+		const parsed = MiniflareWorkerConfigSchema.parse({
+			type: "worker",
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			exports: {
+				LiveObject: { type: "durable-object", storage: "sqlite" },
+				IncomingObject: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transferFrom: "old-worker/TransferredObject",
+				},
+				DeletedObject: { type: "durable-object", state: "deleted" },
+				RenamedObject: {
+					type: "durable-object",
+					state: "renamed",
+					renamedTo: "LiveObject",
+				},
+				TransferredObject: {
+					type: "durable-object",
+					state: "transferred",
+					transferredTo: "other-worker/OtherObject",
+				},
+				Entrypoint: { type: "worker" },
+			},
+		});
+
+		expect(parsed.exports).toEqual({
+			LiveObject: { type: "durable-object", storage: "sqlite" },
+			IncomingObject: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "old-worker/TransferredObject",
+			},
+			Entrypoint: { type: "worker" },
+		});
+	});
 });

@@ -8,12 +8,20 @@ import type { MiniflareOptions, WorkerRegistry } from "miniflare";
 describe.sequential("DevRegistry", () => {
 	test("only registers workers that opt in", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
+		const worker = {
+			config: {
+				type: "worker",
+				name: "worker",
+				compatibilityDate: "2025-05-01",
+				compatibilityFlags: ["experimental"],
+				manifest: singleModuleManifest(
+					`export default { fetch() { return new Response("ok"); } };`
+				),
+			},
+		} satisfies MiniflareOptions["workers"][number];
 		const workerOptions = {
-			name: "worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `export default { fetch() { return new Response("ok"); } };`,
+			workers: [worker],
 		} satisfies MiniflareOptions;
 		const mf = new Miniflare(workerOptions);
 		useDispose(mf);
@@ -21,7 +29,10 @@ describe.sequential("DevRegistry", () => {
 
 		expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
 
-		await mf.setOptions({ ...workerOptions, unsafeRegisterWorker: true });
+		await mf.setOptions({
+			...workerOptions,
+			workers: [{ ...worker, dev: { unsafeRegisterWorker: true } }],
+		});
 		expect(getWorkerRegistry(unsafeDevRegistryPath)["worker"]).toBeDefined();
 	});
 
@@ -2206,17 +2217,25 @@ describe.sequential("DevRegistry", () => {
 describe("registry churn across config updates", () => {
 	const script = (body: string) =>
 		`export default { async fetch() { return new Response("${body}"); } }`;
+	const worker = (name: string, body: string, compatibilityFlags?: string[]) =>
+		({
+			dev: { unsafeRegisterWorker: true },
+			config: {
+				type: "worker",
+				name,
+				compatibilityDate: "2025-05-01",
+				compatibilityFlags,
+				manifest: singleModuleManifest(script(body)),
+			},
+		}) satisfies MiniflareOptions["workers"][number];
 
 	test("does not withdraw a Worker's entry during an unrelated config update", async ({
 		expect,
 	}) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const mf = new Miniflare({
-			name: "stable-worker",
-			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
-			modules: true,
-			script: script("before"),
+			workers: [worker("stable-worker", "before")],
 		});
 		useDispose(mf);
 		await mf.ready;
@@ -2247,11 +2266,8 @@ describe("registry churn across config updates", () => {
 		);
 
 		await mf.setOptions({
-			name: "stable-worker",
-			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
-			modules: true,
-			script: script("after"),
+			workers: [worker("stable-worker", "after")],
 		});
 
 		// Wait until the update has definitely reached the directory, so that an
@@ -2276,11 +2292,8 @@ describe("registry churn across config updates", () => {
 	}) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const mf = new Miniflare({
-			name: "doomed-worker",
-			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
-			modules: true,
-			script: script("before"),
+			workers: [worker("doomed-worker", "before")],
 		});
 		useDispose(mf);
 		await mf.ready;
@@ -2298,12 +2311,12 @@ describe("registry churn across config updates", () => {
 		// replacement is started, so this update leaves no runtime behind it.
 		await expect(
 			mf.setOptions({
-				name: "doomed-worker",
-				unsafeRegisterWorker: true,
 				unsafeDevRegistryPath,
-				modules: true,
-				script: script("after"),
-				compatibilityFlags: ["definitely_not_a_real_compatibility_flag"],
+				workers: [
+					worker("doomed-worker", "after", [
+						"definitely_not_a_real_compatibility_flag",
+					]),
+				],
 			})
 		).rejects.toThrow(/runtime failed to start/i);
 
@@ -2322,20 +2335,10 @@ describe("registry churn across config updates", () => {
 		const mf = new Miniflare({
 			unsafeDevRegistryPath,
 			workers: [
-				{
-					name: "kept-worker",
-					unsafeRegisterWorker: true,
-					modules: true,
-					script: script("kept"),
-				},
+				worker("kept-worker", "kept"),
 				// A name that exists on `Object.prototype`, so a membership test that
 				// walks the prototype chain would report it as still configured.
-				{
-					name: "constructor",
-					unsafeRegisterWorker: true,
-					modules: true,
-					script: script("dropped"),
-				},
+				worker("constructor", "dropped"),
 			],
 		});
 		useDispose(mf);
@@ -2354,14 +2357,7 @@ describe("registry churn across config updates", () => {
 
 		await mf.setOptions({
 			unsafeDevRegistryPath,
-			workers: [
-				{
-					name: "kept-worker",
-					unsafeRegisterWorker: true,
-					modules: true,
-					script: script("kept"),
-				},
-			],
+			workers: [worker("kept-worker", "kept")],
 		});
 
 		await vi.waitFor(
@@ -2381,18 +2377,8 @@ describe("registry churn across config updates", () => {
 		const mf = new Miniflare({
 			unsafeDevRegistryPath,
 			workers: [
-				{
-					name: "kept-worker",
-					unsafeRegisterWorker: true,
-					modules: true,
-					script: script("kept"),
-				},
-				{
-					name: "dropped-worker",
-					unsafeRegisterWorker: true,
-					modules: true,
-					script: script("dropped"),
-				},
+				worker("kept-worker", "kept"),
+				worker("dropped-worker", "dropped"),
 			],
 		});
 		useDispose(mf);
@@ -2409,14 +2395,7 @@ describe("registry churn across config updates", () => {
 
 		await mf.setOptions({
 			unsafeDevRegistryPath,
-			workers: [
-				{
-					name: "kept-worker",
-					unsafeRegisterWorker: true,
-					modules: true,
-					script: script("kept"),
-				},
-			],
+			workers: [worker("kept-worker", "kept")],
 		});
 
 		await vi.waitFor(

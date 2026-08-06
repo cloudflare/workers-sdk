@@ -358,11 +358,17 @@ export const MiniflareDurableObjectExportSchema =
 // 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
 // });
 
-// Compose the union explicitly (rather than filtering `ExportSchema.options`)
+// Compose the unions explicitly (rather than filtering `ExportSchema.options`)
 // so the inferred type is precise: the miniflare-extended "created" variant
 // replaces the plain one, and `Array.prototype.filter` can't narrow the element
 // type.
-const MiniflareExportSchema = z.union([
+const MiniflareLiveExportSchema = z.union([
+	MiniflareDurableObjectExportSchema,
+	DurableObjectExpectingTransferExportSchema,
+	WorkerEntrypointExportSchema,
+	// MiniflareWorkflowExportSchema,
+]);
+const MiniflareAcceptedExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
 	DurableObjectDeletedExportSchema,
 	DurableObjectRenamedExportSchema,
@@ -371,6 +377,16 @@ const MiniflareExportSchema = z.union([
 	WorkerEntrypointExportSchema,
 	// MiniflareWorkflowExportSchema,
 ]);
+
+const MiniflareExportsSchema = z
+	.record(z.string(), MiniflareAcceptedExportSchema)
+	.transform((exports) => {
+		return Object.fromEntries(
+			Object.entries(exports).filter(([, exported]) => {
+				return exported.type !== "durable-object" || "storage" in exported;
+			})
+		) as Record<string, z.output<typeof MiniflareLiveExportSchema>>;
+	});
 
 // ---------------------------------------------------------------------------
 // Miniflare-only assets extension
@@ -421,7 +437,7 @@ export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 }).extend({
 	manifest: MiniflareManifestSchema.optional(),
 	env: z.record(z.string(), MiniflareBindingSchema).optional(),
-	exports: z.record(z.string(), MiniflareExportSchema).optional(),
+	exports: MiniflareExportsSchema.optional(),
 	assets: MiniflareAssetsSchema.optional(),
 	tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
 });
