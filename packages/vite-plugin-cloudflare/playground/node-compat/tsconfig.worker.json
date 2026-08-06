@@ -6,6 +6,7 @@
 		"worker-basic",
 		"worker-cross-env",
 		"worker-crypto",
+		"worker-default-compat",
 		"worker-debug",
 		"worker-https",
 		"worker-postgres",

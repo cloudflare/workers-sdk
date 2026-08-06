@@ -1,0 +1,7 @@
+{
+	"name": "nodejs-compat-default",
+	"main": "src/index.ts",
+	// From 2026-08-04 onwards, `nodejs_compat` is enabled by default, so we
+	// intentionally do NOT set the `nodejs_compat` compatibility flag here.
+	"compatibility_date": "2026-08-04",
+}
