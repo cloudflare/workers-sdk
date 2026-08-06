@@ -19,6 +19,7 @@ export {
 	QueueBindingSchema,
 	R2BindingSchema,
 	FlagshipBindingSchema,
+	HyperdriveBindingSchema,
 	SettingsSchema,
 	UnsafeBindingSchema,
 	WorkerBindingSchema,

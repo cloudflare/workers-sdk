@@ -17,6 +17,7 @@ import {
 	KVBindingSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
+	HyperdriveBindingSchema,
 } from "@cloudflare/config";
 import { z } from "zod";
 import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
@@ -185,6 +186,10 @@ const MiniflareR2BindingSchema = R2BindingSchema.extend({
 		.optional() satisfies z.ZodType<S3Credentials | undefined>,
 });
 
+const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.omit({
+	localConnectionString: true,
+}).extend({ localConnectionString: z.string() });
+
 /**
  * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
  * (the SELF marker) in addition to a plain worker name.
@@ -221,6 +226,7 @@ const OVERRIDDEN_BASE_BINDING_SCHEMAS = [
 	BrowserBindingSchema,
 	WorkerBindingSchema,
 	R2BindingSchema,
+	HyperdriveBindingSchema,
 ] as const;
 
 // `Array.prototype.filter` removes the overridden base schemas at runtime, but
@@ -237,6 +243,7 @@ const PassthroughBindingSchemas = KnownBindingSchema.options.filter(
 const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareBrowserBindingSchema,
 	MiniflareR2BindingSchema,
+	MiniflareHyperdriveBindingSchema,
 	MiniflareWorkerBindingSchema,
 	FetcherBindingSchema,
 	NodeHandlerBindingSchema,

@@ -7,20 +7,14 @@ import type { Plugin } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
-/**
- * Resolves the `hyperdrive` env bindings that have a local connection string
- * (the only ones miniflare can serve locally), parsing/validating each
- * connection string into a `URL` via `HyperdriveSchema`.
- */
+/** Resolves `hyperdrive` env bindings, parsing each connection string. */
 function getHyperdrives(
 	config: ParsedMiniflareWorkerConfig
 ): [name: string, url: URL][] {
-	return getEnvBindingsOfType(config, "hyperdrive")
-		.filter(([, binding]) => binding.localConnectionString !== undefined)
-		.map(([name, binding]) => [
-			name,
-			HyperdriveSchema.parse(binding.localConnectionString),
-		]);
+	return getEnvBindingsOfType(config, "hyperdrive").map(([name, binding]) => [
+		name,
+		HyperdriveSchema.parse(binding.localConnectionString),
+	]);
 }
 
 function hasPostgresProtocol(url: URL) {

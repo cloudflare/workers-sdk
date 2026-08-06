@@ -64,6 +64,12 @@ export const FlagshipBindingSchema = z.strictObject({
 	remote: z.boolean().optional(),
 });
 
+export const HyperdriveBindingSchema = z.strictObject({
+	type: z.literal("hyperdrive"),
+	id: z.string(),
+	localConnectionString: z.string().optional(),
+});
+
 export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("agent-memory"),
@@ -110,11 +116,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		exportName: z.string(),
 	}),
 	FlagshipBindingSchema,
-	z.strictObject({
-		type: z.literal("hyperdrive"),
-		id: z.string(),
-		localConnectionString: z.string().optional(),
-	}),
+	HyperdriveBindingSchema,
 	z.strictObject({
 		type: z.literal("images"),
 		remote: z.boolean().optional(),
