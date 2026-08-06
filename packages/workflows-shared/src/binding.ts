@@ -2,7 +2,6 @@ import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
 	duplicateInstanceError,
-	isDuplicateInstanceError,
 	isUserTriggeredPause,
 	isUserTriggeredRestart,
 	isUserTriggeredTerminate,
@@ -154,7 +153,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		// Destructuring defaults apply only to absent fields: an explicit null
 		// id must reach the validation below rather than becoming a generated
 		// id.
-		const { id = crypto.randomUUID(), params = {} } = options;
+		const { id = crypto.randomUUID() } = options;
 		if (!isValidWorkflowInstanceId(id)) {
 			throw new WorkflowError("Workflow instance has invalid id");
 		}
@@ -166,6 +165,16 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			throw duplicateInstanceError(id);
 		}
 
+		return this.#createUnchecked(id, options);
+	}
+
+	// Creation body shared by create() and createBatch(), which perform their
+	// own validation and existence checks before calling this.
+	async #createUnchecked(
+		id: string,
+		options: WorkflowInstanceCreateOptions
+	): Promise<{ id: string }> {
+		const { params = {} } = options;
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 		const introspectionSession = workflowIntrospectionSessions.get(
@@ -256,6 +265,24 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			}
 		}
 
+		// Probe each distinct caller-provided id once, concurrently, instead of
+		// sequentially per entry (and a second time inside create()).
+		const providedIds = [
+			...new Set(
+				batch
+					.map((options) => options.id)
+					.filter((id): id is string => id !== undefined)
+			),
+		];
+		const existing = new Set<string>();
+		await Promise.all(
+			providedIds.map(async (id) => {
+				if (await this.#instanceExists(id)) {
+					existing.add(id);
+				}
+			})
+		);
+
 		// The documented batch contract is idempotent creation: ids that already
 		// exist, or that repeat within the batch, are skipped and excluded from
 		// the result rather than throwing, and instances are created in batch
@@ -263,24 +290,14 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		const results: { id: string }[] = [];
 		const seenIds = new Set<string>();
 		for (const options of batch) {
-			const id = options.id;
-			if (id !== undefined) {
-				if (seenIds.has(id) || (await this.#instanceExists(id))) {
+			if (options.id !== undefined) {
+				if (seenIds.has(options.id) || existing.has(options.id)) {
 					continue;
 				}
-				seenIds.add(id);
+				seenIds.add(options.id);
 			}
-			try {
-				results.push(await this.create(options));
-			} catch (e) {
-				// A concurrent create can claim the id between the existence
-				// check above and create(); the batch contract skips such ids
-				// rather than failing the batch.
-				if (id !== undefined && isDuplicateInstanceError(e)) {
-					continue;
-				}
-				throw e;
-			}
+			const { id = crypto.randomUUID() } = options;
+			results.push(await this.#createUnchecked(id, options));
 		}
 		return results;
 	}

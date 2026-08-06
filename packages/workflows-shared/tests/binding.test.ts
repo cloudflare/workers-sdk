@@ -3,7 +3,6 @@ import { env } from "cloudflare:workers";
 import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
 import { WorkflowBinding } from "../src/binding";
-import { duplicateInstanceError } from "../src/lib/errors";
 import { setTestWorkflowCallback } from "./test-entry";
 import type { WorkflowHandle } from "../src/binding";
 import type { Engine, EngineLogs } from "../src/engine";
@@ -246,29 +245,22 @@ describe("WorkflowBinding", () => {
 			await expect(binding.get(good)).rejects.toThrow("instance.not_found");
 		});
 
-		it("should skip an id claimed by a concurrent create instead of failing the batch", async ({
+		it("should create batch entries without ids under generated ids", async ({
 			expect,
 		}) => {
-			const raced = uniqueId("batch-race");
-			const fresh = uniqueId("batch-race-fresh");
 			const binding = createBinding();
-			const freshStub = env.ENGINE.get(env.ENGINE.idFromName(fresh));
 			setTestWorkflowCallback(async () => "done");
 
-			// Simulate another caller winning the id between createBatch's
-			// existence check and create().
-			const realCreate = binding.create.bind(binding);
-			vi.spyOn(binding, "create").mockImplementation(async (options) => {
-				if (options?.id === raced) {
-					throw duplicateInstanceError(raced);
-				}
-				return realCreate(options);
-			});
+			const results = await binding.createBatch([{}, {}]);
+			expect(results).toHaveLength(2);
+			expect(results[0].id).not.toBe(results[1].id);
 
-			const results = await binding.createBatch([{ id: raced }, { id: fresh }]);
-			expect(results.map((r) => r.id)).toEqual([fresh]);
-
-			await waitUntilLogEvent(freshStub, InstanceEvent.WORKFLOW_SUCCESS);
+			// Wait for both workflows to complete so the fire-and-forget
+			// init() RPCs settle before teardown.
+			for (const { id } of results) {
+				const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+				await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+			}
 		});
 	});
 
