@@ -125,6 +125,26 @@ test("a store issued after delete completes is not suppressed", async ({
 	expect(path).toBe("/tmp/message.eml");
 });
 
+test("allows an artifact ID to be reused after deletion", async ({
+	expect,
+}) => {
+	const manager = new EmailArtifactManager();
+	const reused = artifact({ recordId: "record-1234", id: "record-1234" });
+	let writes = 0;
+
+	await manager.store(reused, async () => {
+		writes++;
+		return "/tmp/first.eml";
+	});
+	await manager.delete([reused], async () => {});
+	await manager.store(reused, async () => {
+		writes++;
+		return "/tmp/second.eml";
+	});
+
+	expect(writes).toBe(2);
+});
+
 test("delete waits for an in-flight write to the same key before removing", async ({
 	expect,
 }) => {
