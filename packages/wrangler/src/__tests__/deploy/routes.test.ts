@@ -504,7 +504,9 @@ describe("deploy", () => {
 				});
 				await runWrangler("deploy ./index");
 				expect(std.out).toContain("Custom Domains:");
-				expect(std.out).toContain("api.example.com");
+				expect(std.out).toContain(
+					"api.example.com (production and preview deployments)"
+				);
 				expect(std.out).not.toContain("api.example.com (custom domain)");
 				expect(std.out).not.toContain("[enabled, previews: enabled]");
 			});

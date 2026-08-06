@@ -156,6 +156,11 @@ export type WorkerBuildResult = {
 
 export interface TriggerDeployment {
 	targets: string[];
+	customDomainTargets?: Array<{
+		target: string;
+		enabled?: boolean;
+		previewsEnabled?: boolean;
+	}>;
 	category?: string;
 	resource?: string;
 	error?: Error;

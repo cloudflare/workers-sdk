@@ -530,6 +530,27 @@ function formatDeployTarget(target: string): string {
 	return (target.endsWith("workers.dev") ? "https://" : "") + target;
 }
 
+function formatCustomDomainTarget(target: {
+	target: string;
+	enabled?: boolean;
+	previewsEnabled?: boolean;
+}): string {
+	const formattedTarget = formatDeployTarget(target.target);
+	if (target.enabled === false && target.previewsEnabled) {
+		return `${formattedTarget} (preview deployments)`;
+	}
+	if (target.enabled === false) {
+		return `${formattedTarget} (disabled)`;
+	}
+	if (target.previewsEnabled) {
+		return `${formattedTarget} (production and preview deployments)`;
+	}
+	if (target.enabled === true && target.previewsEnabled === false) {
+		return `${formattedTarget} (production deployments)`;
+	}
+	return formattedTarget;
+}
+
 function logDeployTargets(deployments: TriggerDeployment[]): void {
 	const hasCustomDomains = deployments.some(
 		(deployment) =>
@@ -544,7 +565,10 @@ function logDeployTargets(deployments: TriggerDeployment[]): void {
 		if (hasCustomDomains && deployment.category === "Custom domains") {
 			logger.log("");
 			logger.log("Custom Domains:");
-			for (const target of deployment.targets.map(formatDeployTarget)) {
+			const targets = deployment.customDomainTargets?.length
+				? deployment.customDomainTargets.map(formatCustomDomainTarget)
+				: deployment.targets.map(formatDeployTarget);
+			for (const target of targets) {
 				logger.log(" ", target);
 			}
 			continue;

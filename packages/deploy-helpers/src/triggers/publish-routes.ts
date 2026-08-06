@@ -330,5 +330,13 @@ Update them to point to this script instead?`;
 		},
 	});
 
-	return { targets: domains.map((domain) => renderRoute(domain)) };
+	return {
+		targets: domains.map((domain) => renderRoute(domain)),
+		customDomainTargets: domains.map((domain) => ({
+			target: renderRoute(domain),
+			enabled: "enabled" in domain ? domain.enabled : undefined,
+			previewsEnabled:
+				"previews_enabled" in domain ? domain.previews_enabled : undefined,
+		})),
+	};
 }
