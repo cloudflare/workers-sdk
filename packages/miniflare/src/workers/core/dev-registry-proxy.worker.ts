@@ -161,7 +161,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	// Forward tail events to the remote worker via RPC.
 	// Events with rpcMethod==="tail" are filtered out to prevent infinite
 	// recursion (the remote tail() call would itself produce a tail event).
-	tail(events: TraceItem[]) {
+	async tail(events: TraceItem[]) {
 		if (!this._fetcher) {
 			return;
 		}
@@ -176,8 +176,12 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 				JSON.stringify(filtered, tailEventsReplacer),
 				tailEventsReviver
 			);
+			// `await` rather than `return`: the RPC rejects when the peer's debug
+			// port has gone away, and returning the promise leaves that rejection
+			// outside this `try`, so it escapes as an unhandled rejection instead of
+			// being reported.
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
-			return this._fetcher.tail(serializedEvents);
+			await this._fetcher.tail(serializedEvents);
 		} catch (e) {
 			console.warn(
 				`[dev-registry] Failed to forward tail events to "${

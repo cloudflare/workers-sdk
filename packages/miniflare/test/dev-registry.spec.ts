@@ -1834,6 +1834,72 @@ describe.sequential("DevRegistry", () => {
 			{ timeout: 10_000, interval: 100 }
 		);
 	});
+	test("reports a failure to forward tail events to a departed peer", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export default class extends WorkerEntrypoint {
+					tail() {}
+				}
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const logs: string[] = [];
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			tails: ["remote-worker"],
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			handleStructuredLogs: ({ message }) => void logs.push(message),
+			script: `
+				export default {
+					fetch() {
+						console.log("tail me");
+						return new Response("ok");
+					}
+				}
+			`,
+		});
+		useDispose(local);
+		await local.ready;
+
+		// Establish the tail forwarding path while the peer is alive.
+		await vi.waitFor(
+			async () => {
+				await (await local.dispatchFetch("http://placeholder")).text();
+				expect(logs.join("\n")).toContain("tail me");
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Drop the peer without letting it deregister, so `local` keeps a registry
+		// entry pointing at a debug port that is no longer accepting connections.
+		// The forwarding RPC now rejects; that rejection must be reported rather
+		// than escaping as an unhandled rejection.
+		await remote.dispose();
+		logs.length = 0;
+
+		await vi.waitFor(
+			async () => {
+				await (await local.dispatchFetch("http://placeholder")).text();
+				expect(logs.join("\n")).toContain(
+					`[dev-registry] Failed to forward tail events to "remote-worker"`
+				);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
 });
 
 describe("registry churn across config updates", () => {
