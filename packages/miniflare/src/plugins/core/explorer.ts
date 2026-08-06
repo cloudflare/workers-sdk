@@ -15,6 +15,7 @@ import {
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
 import {
+	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
@@ -97,6 +98,12 @@ export function getExplorerServices(
 			name: CoreBindings.DEV_REGISTRY_DEBUG_PORT,
 			// workerdDebugPort bindings don't have any additional configuration
 			workerdDebugPort: kVoid,
+		},
+		// The email store service is registered alongside the explorer (see the
+		// core plugin's getServices), so it's always available to read from here.
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
 		},
 	];
 
@@ -339,6 +346,7 @@ export function constructExplorerWorkerOpts(
 			r2: [],
 			do: [],
 			workflows: [],
+			sendEmail: [],
 		};
 
 		for (const [bindingName, binding] of getEnvBindingsOfType(
@@ -394,6 +402,13 @@ export function constructExplorerWorkerOpts(
 				className: workflow.exportName,
 				scriptName: workflow.workerName ?? workerName,
 			});
+		}
+
+		for (const [bindingName] of getEnvBindingsOfType(
+			workerOpts.config,
+			"send-email"
+		) ?? {}) {
+			bindings.sendEmail.push({ bindingName });
 		}
 
 		result[workerName] = bindings;
