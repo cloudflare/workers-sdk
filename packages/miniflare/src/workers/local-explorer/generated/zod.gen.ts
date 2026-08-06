@@ -440,6 +440,7 @@ export const zLocalExplorerWorkerBindings = z.object({
 	r2: z.array(zLocalExplorerResourceBinding).optional(),
 	do: z.array(zLocalExplorerDoBinding).optional(),
 	workflows: z.array(zLocalExplorerWorkflowBinding).optional(),
+	sendEmail: z.array(zLocalExplorerResourceBinding).optional(),
 });
 
 export const zLocalExplorerWorker = z.object({
@@ -526,6 +527,128 @@ export const zWorkflowsInstanceDetails = z.object({
 export const zObservabilityQueryResult = z.object({
 	columns: z.array(z.string()),
 	rows: z.array(z.array(z.unknown())),
+});
+
+/**
+ * One entry in the ordered lifecycle of what the handler did to the message. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
+ */
+export const zEmailHandlerEvent = z.object({
+	type: z.enum(["received", "forward", "reply", "reject", "unhandled"]),
+	timestamp: z.string(),
+	messageId: z.string().optional(),
+});
+
+export const zEmailHandlerForward = z.object({
+	messageId: z.string(),
+	recipient: z.string(),
+	headers: z.array(z.array(z.string())),
+});
+
+export const zEmailHandlerReply = z.object({
+	messageId: z.string(),
+	sender: z.string(),
+	raw: z.string().optional(),
+	rawBase64: z.string().optional(),
+});
+
+/**
+ * Fields for composing a test email, mirroring MessageBuilder.
+ */
+export const zEmailSendRequest = z.object({
+	from: z.string(),
+	to: z.array(z.string()).min(1),
+	cc: z.array(z.string()).optional(),
+	bcc: z.array(z.string()).optional(),
+	replyTo: z.string().optional(),
+	subject: z.string(),
+	text: z.string().optional(),
+	html: z.string().optional(),
+	headers: z.record(z.string(), z.string()).optional(),
+	attachments: z
+		.array(
+			z.object({
+				filename: z.string(),
+				type: z.string(),
+				content: z.string(),
+				contentId: z.string().optional(),
+				disposition: z.enum(["inline", "attachment"]).optional(),
+			})
+		)
+		.optional(),
+});
+
+/**
+ * Metadata describing an attachment on a captured email, without its content.
+ */
+export const zEmailAttachment = z.object({
+	filename: z.string(),
+	contentType: z.string(),
+	disposition: z.enum(["inline", "attachment"]),
+	size: z.number(),
+});
+
+export const zEmailRoutingItem = z.object({
+	worker: z.string().optional(),
+	from: z.string(),
+	to: z.string(),
+	subject: z.string(),
+	messageId: z.string(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply),
+	events: z.array(zEmailHandlerEvent),
+	attachments: z.array(zEmailAttachment),
+});
+
+export const zEmailRoutingDetail = z.object({
+	worker: z.string().optional(),
+	from: z.string(),
+	to: z.string(),
+	subject: z.string(),
+	messageId: z.string(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	raw: z.string(),
+	rawBase64: z.string().optional(),
+	attachments: z.array(zEmailAttachment),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply),
+	events: z.array(zEmailHandlerEvent),
+});
+
+export const zEmailSendingItem = z.object({
+	from: z.string(),
+	to: z.array(z.string()),
+	cc: z.array(z.string()).optional(),
+	bcc: z.array(z.string()).optional(),
+	replyTo: z.string().optional(),
+	subject: z.string(),
+	messageId: z.string(),
+	sentAt: z.string(),
+	headers: z.record(z.string()).optional(),
+	attachments: z.array(zEmailAttachment),
+});
+
+export const zEmailSendingDetail = z.object({
+	from: z.string(),
+	to: z.array(z.string()),
+	cc: z.array(z.string()).optional(),
+	bcc: z.array(z.string()).optional(),
+	replyTo: z.string().optional(),
+	subject: z.string(),
+	messageId: z.string(),
+	sentAt: z.string(),
+	text: z.string().optional(),
+	html: z.string().optional(),
+	headers: z.record(z.string(), z.string()).optional(),
+	attachments: z.array(zEmailAttachment),
+	raw: z.string().optional(),
+	rawBase64: z.string().optional(),
 });
 
 export const zR2ResultInfoWritable = z.record(z.string(), z.unknown());
@@ -925,6 +1048,91 @@ export const zLocalExplorerListWorkersData = z.object({
 export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
 	z.object({
 		result: z.array(zLocalExplorerWorker).optional(),
+	})
+);
+
+export const zEmailListRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List received emails response.
+ */
+export const zEmailListRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zEmailRoutingItem).optional(),
+	})
+);
+
+export const zEmailSendRoutingData = z.object({
+	body: zEmailSendRequest,
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Send test email response.
+ */
+export const zEmailSendRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				messageId: z.string().optional(),
+				outcome: z.enum(["ok", "exception"]).optional(),
+				rejectReason: z.string().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zEmailGetRoutingData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		email_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get received email response.
+ */
+export const zEmailGetRoutingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zEmailRoutingDetail.optional(),
+	})
+);
+
+export const zEmailListSendingData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List sent emails response.
+ */
+export const zEmailListSendingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zEmailSendingItem).optional(),
+	})
+);
+
+export const zEmailGetSendingData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		email_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get sent email response.
+ */
+export const zEmailGetSendingResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zEmailSendingDetail.optional(),
 	})
 );
 

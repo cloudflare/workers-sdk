@@ -607,6 +607,10 @@ export type LocalExplorerWorkerBindings = {
 	 * Workflow bindings
 	 */
 	workflows?: Array<LocalExplorerWorkflowBinding>;
+	/**
+	 * Send Email bindings
+	 */
+	sendEmail?: Array<LocalExplorerResourceBinding>;
 };
 
 export type LocalExplorerResourceBinding = {
@@ -776,6 +780,235 @@ export type WorkflowsInstanceDetails = {
 export type ObservabilityQueryResult = {
 	columns: Array<string>;
 	rows: Array<Array<unknown>>;
+};
+
+/**
+ * One entry in the ordered lifecycle of what the handler did to the message. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
+ */
+export type EmailHandlerEvent = {
+	/**
+	 * The kind of event.
+	 */
+	type: "received" | "forward" | "reply" | "reject" | "unhandled";
+	/**
+	 * ISO 8601 timestamp of when the event occurred.
+	 */
+	timestamp: string;
+	/**
+	 * Present on `forward`/`reply` events; correlates with the matching `forwards`/`replies` entry.
+	 */
+	messageId?: string;
+};
+
+export type EmailHandlerForward = {
+	messageId: string;
+	/**
+	 * Envelope recipient the message was forwarded to.
+	 */
+	recipient: string;
+	/**
+	 * Headers added to the forwarded message, as [key, value] pairs.
+	 */
+	headers: Array<Array<string>>;
+};
+
+export type EmailHandlerReply = {
+	messageId: string;
+	/**
+	 * Address the reply was sent from.
+	 */
+	sender: string;
+	/**
+	 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
+	 */
+	raw?: string;
+	/**
+	 * Lossless base64 representation of the reply MIME.
+	 */
+	rawBase64?: string;
+};
+
+export type EmailRoutingItem = {
+	/**
+	 * Worker whose email() handler processed the message, if known.
+	 */
+	worker?: string;
+	/**
+	 * Envelope MAIL FROM address.
+	 */
+	from: string;
+	/**
+	 * Envelope RCPT TO address.
+	 */
+	to: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
+	receivedAt: string;
+	rawSize: number;
+	/**
+	 * Whether the handler ran to completion or threw.
+	 */
+	outcome: "ok" | "exception";
+	/**
+	 * Reason passed to setReject(), if the handler rejected the message.
+	 */
+	rejectReason?: string;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
+	attachments: Array<EmailAttachment>;
+};
+
+export type EmailRoutingDetail = {
+	worker?: string;
+	from: string;
+	to: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
+	receivedAt: string;
+	rawSize: number;
+	/**
+	 * Raw MIME content of the received email.
+	 */
+	raw: string;
+	/**
+	 * Lossless base64 representation of the received MIME.
+	 */
+	rawBase64?: string;
+	/**
+	 * Metadata for attachments parsed out of the received message. The content itself is only available in `raw`.
+	 */
+	attachments: Array<EmailAttachment>;
+	/**
+	 * Whether the handler ran to completion or threw.
+	 */
+	outcome: "ok" | "exception";
+	/**
+	 * Reason passed to setReject(), if the handler rejected the message.
+	 */
+	rejectReason?: string;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
+};
+
+/**
+ * Fields for composing a test email, mirroring MessageBuilder.
+ */
+export type EmailSendRequest = {
+	/**
+	 * Sender address.
+	 */
+	from: string;
+	/**
+	 * Recipient addresses.
+	 */
+	to: Array<string>;
+	cc?: Array<string>;
+	bcc?: Array<string>;
+	replyTo?: string;
+	subject: string;
+	/**
+	 * Plain text body.
+	 */
+	text?: string;
+	/**
+	 * HTML body.
+	 */
+	html?: string;
+	/**
+	 * Custom headers to include on the message.
+	 */
+	headers?: {
+		[key: string]: string;
+	};
+	/**
+	 * Attachments to include on the message, mirroring the MessageBuilder `attachments` entries accepted by a send_email binding. Adding any attachment composes the message as multipart/mixed.
+	 */
+	attachments?: Array<{
+		/**
+		 * Name the attachment is presented under.
+		 */
+		filename: string;
+		/**
+		 * MIME type of the attachment, e.g. 'application/pdf'.
+		 */
+		type: string;
+		/**
+		 * Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded.
+		 */
+		content: string;
+		/**
+		 * Content-ID for an inline attachment.
+		 */
+		contentId?: string;
+		/**
+		 * How the attachment is presented. Defaults to 'attachment'.
+		 */
+		disposition?: "inline" | "attachment";
+	}>;
+};
+
+/**
+ * Metadata describing an attachment on a captured email, without its content.
+ */
+export type EmailAttachment = {
+	filename: string;
+	contentType: string;
+	disposition: "inline" | "attachment";
+	size: number;
+};
+
+export type EmailSendingItem = {
+	from: string;
+	to: Array<string>;
+	cc?: Array<string>;
+	bcc?: Array<string>;
+	replyTo?: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
+	sentAt: string;
+	headers?: {
+		[key: string]: string;
+	};
+	attachments: Array<EmailAttachment>;
+};
+
+export type EmailSendingDetail = {
+	from: string;
+	to: Array<string>;
+	cc?: Array<string>;
+	bcc?: Array<string>;
+	replyTo?: string;
+	subject: string;
+	/**
+	 * RFC Message-ID header value. Identifies the email in the store.
+	 */
+	messageId: string;
+	sentAt: string;
+	text?: string;
+	html?: string;
+	headers?: {
+		[key: string]: string;
+	};
+	attachments: Array<EmailAttachment>;
+	/**
+	 * Raw MIME content, present when sent via the EmailMessage API.
+	 */
+	raw?: string;
+	/**
+	 * Lossless base64 representation of sent MIME.
+	 */
+	rawBase64?: string;
 };
 
 export type R2ResultInfoWritable = {
@@ -1465,6 +1698,168 @@ export type LocalExplorerListWorkersResponses = {
 
 export type LocalExplorerListWorkersResponse =
 	LocalExplorerListWorkersResponses[keyof LocalExplorerListWorkersResponses];
+
+export type EmailListRoutingData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/email/routing";
+};
+
+export type EmailListRoutingErrors = {
+	/**
+	 * List received emails failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailListRoutingError =
+	EmailListRoutingErrors[keyof EmailListRoutingErrors];
+
+export type EmailListRoutingResponses = {
+	/**
+	 * List received emails response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<EmailRoutingItem>;
+	};
+};
+
+export type EmailListRoutingResponse =
+	EmailListRoutingResponses[keyof EmailListRoutingResponses];
+
+export type EmailSendRoutingData = {
+	body: EmailSendRequest;
+	path?: never;
+	query?: never;
+	url: "/email/routing/send";
+};
+
+export type EmailSendRoutingErrors = {
+	/**
+	 * Send test email failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailSendRoutingError =
+	EmailSendRoutingErrors[keyof EmailSendRoutingErrors];
+
+export type EmailSendRoutingResponses = {
+	/**
+	 * Send test email response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			/**
+			 * RFC Message-ID header value of the delivered test email.
+			 */
+			messageId?: string;
+			/**
+			 * Whether the handler ran to completion or threw.
+			 */
+			outcome?: "ok" | "exception";
+			/**
+			 * Reason passed to setReject(), if the handler rejected the message.
+			 */
+			rejectReason?: string;
+		};
+	};
+};
+
+export type EmailSendRoutingResponse =
+	EmailSendRoutingResponses[keyof EmailSendRoutingResponses];
+
+export type EmailGetRoutingData = {
+	body?: never;
+	path: {
+		email_id: string;
+	};
+	query?: never;
+	url: "/email/routing/{email_id}";
+};
+
+export type EmailGetRoutingErrors = {
+	/**
+	 * Get received email failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailGetRoutingError =
+	EmailGetRoutingErrors[keyof EmailGetRoutingErrors];
+
+export type EmailGetRoutingResponses = {
+	/**
+	 * Get received email response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: EmailRoutingDetail;
+	};
+};
+
+export type EmailGetRoutingResponse =
+	EmailGetRoutingResponses[keyof EmailGetRoutingResponses];
+
+export type EmailListSendingData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/email/sending";
+};
+
+export type EmailListSendingErrors = {
+	/**
+	 * List sent emails failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailListSendingError =
+	EmailListSendingErrors[keyof EmailListSendingErrors];
+
+export type EmailListSendingResponses = {
+	/**
+	 * List sent emails response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<EmailSendingItem>;
+	};
+};
+
+export type EmailListSendingResponse =
+	EmailListSendingResponses[keyof EmailListSendingResponses];
+
+export type EmailGetSendingData = {
+	body?: never;
+	path: {
+		email_id: string;
+	};
+	query?: never;
+	url: "/email/sending/{email_id}";
+};
+
+export type EmailGetSendingErrors = {
+	/**
+	 * Get sent email failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type EmailGetSendingError =
+	EmailGetSendingErrors[keyof EmailGetSendingErrors];
+
+export type EmailGetSendingResponses = {
+	/**
+	 * Get sent email response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: EmailSendingDetail;
+	};
+};
+
+export type EmailGetSendingResponse =
+	EmailGetSendingResponses[keyof EmailGetSendingResponses];
 
 export type WorkflowsListWorkflowsData = {
 	body?: never;
