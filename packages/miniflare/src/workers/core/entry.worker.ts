@@ -17,6 +17,7 @@ import type { Colorize } from "kleur/colors";
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
+	[CoreBindings.TEXT_FALLBACK_WORKER_NAME]: string;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
@@ -140,8 +141,13 @@ function getUserRequest(
 	return request;
 }
 
-function getTargetService(request: Request, url: URL, env: Env) {
+function getTargetService(
+	request: Request,
+	url: URL,
+	env: Env
+): { service: Fetcher | undefined; workerName: string | undefined } {
 	let service: Fetcher | undefined = env[CoreBindings.SERVICE_USER_FALLBACK];
+	let workerName = env[CoreBindings.TEXT_FALLBACK_WORKER_NAME] || undefined;
 
 	const override = request.headers.get(CoreHeaders.ROUTE_OVERRIDE);
 	request.headers.delete(CoreHeaders.ROUTE_OVERRIDE);
@@ -149,8 +155,9 @@ function getTargetService(request: Request, url: URL, env: Env) {
 	const route = override ?? matchRoutes(env[CoreBindings.JSON_ROUTES], url);
 	if (route !== null) {
 		service = env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${route}`];
+		workerName = route;
 	}
-	return service;
+	return { service, workerName };
 }
 
 const LOCALHOST_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
@@ -510,7 +517,7 @@ export default <ExportedHandler<Env>>{
 			throw e;
 		}
 		const url = new URL(request.url);
-		const service = getTargetService(request, url, env);
+		const { service, workerName } = getTargetService(request, url, env);
 		if (service === undefined) {
 			return new Response("No entrypoint worker found", { status: 404 });
 		}
@@ -542,6 +549,7 @@ export default <ExportedHandler<Env>>{
 						url.searchParams,
 						request,
 						service,
+						workerName,
 						env,
 						ctx
 					);
