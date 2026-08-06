@@ -1,0 +1,33 @@
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_e771bd5e618774::t_7a3ec19a2d138b 5-6,37-61,64,160-187
+packages/local-explorer-ui/src/__tests__/utils/worker-navigation.test.ts
+  s_fc02601ea3fdeb::t_625e5788c8ca91 1-50
+packages/local-explorer-ui/src/routes/__root.tsx
+  s_e771bd5e618774::t_c8f1869fc98293 26,80-85,87
+packages/local-explorer-ui/src/utils/worker-navigation.ts
+  s_e771bd5e618774::t_97edc1005a8294 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a89fc440812cb4b802cd5b2d997e0de328174f2d",
+  "prompts": {},
+  "sessions": {
+    "s_e771bd5e618774": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_048515778ffe4EBFGtwSCLtvFn",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_fc02601ea3fdeb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0339645d6ffeCau7OxHl5YLObS",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

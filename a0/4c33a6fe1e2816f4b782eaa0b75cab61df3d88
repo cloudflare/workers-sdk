@@ -1,0 +1,61 @@
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_20890f2bc2d65e::t_498e2d7c562480 2200-2203,2247-2250,2263,2284-2287,2343,2378-2381,2425-2428,2477-2480
+packages/miniflare/src/index.ts
+  s_20890f2bc2d65e::t_29ff24346ed61d 82,163,1011-1012,1352-1362,1369-1383,1385-1398,1410-1434,1798-1803
+packages/miniflare/src/plugins/core/temp-file.ts
+  s_20890f2bc2d65e::t_d25414c226f17c 18-28,33,37-40
+packages/miniflare/src/plugins/email/index.ts
+  s_20890f2bc2d65e::t_25434e627ac328 1,6,16,95-103,142-150,158,166,171-196
+packages/miniflare/src/workers/core/email.ts
+  s_20890f2bc2d65e::t_651d2ca6856ff7 5-6,16-20,46-56,103,167-168,178,186,205-216,311,315-319,321,324,330-334,346-348,358,408
+packages/miniflare/src/workers/email/constants.ts
+  s_20890f2bc2d65e::t_352ef17821db35 2
+packages/miniflare/src/workers/email/email-store.ts
+  s_20890f2bc2d65e::t_b36e82043637c7 10-14,18-24,38-39,45-46,53,55,57-58,62,64,66-67,72-84,87-170,180-209,214-234,236-248,251,254,256-257,260,268-274,281-282,285-291,298-299
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_20890f2bc2d65e::t_0cbf112e766a8e 10-16,32-33,42-43,46-47,54
+packages/miniflare/src/workers/email/encoding.ts
+  s_20890f2bc2d65e::t_c8d005479c8838 1-11
+packages/miniflare/src/workers/email/result.ts
+  s_20890f2bc2d65e::t_cfe2a32c8774bc 48-49
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_20890f2bc2d65e::t_82a53449f984ff 8,15,39-46,121-133,153-154,175,314,323,329-335,396,407,415,421-422,435-441
+packages/miniflare/src/workers/email/storage.ts
+  s_20890f2bc2d65e::t_5a828e181e765c 4-6,27-28,33-41,49-55,75-76,79-83,91,94-95,98
+packages/miniflare/src/workers/email/validate.ts
+  s_20890f2bc2d65e::t_bcdbc80b8fb273 3,67,73-75,132-134,139,142
+packages/miniflare/src/workers/index.ts
+  s_20890f2bc2d65e::t_f7101d864372ad 4
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_20890f2bc2d65e::t_0cfd1d4a3e531f 825-828,862,880-883,947-950,980-982,1008-1011
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_20890f2bc2d65e::t_48f11ee6d941f5 542,550,564,581-596,606,624,642
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_20890f2bc2d65e::t_51db684fba20ed 3730-3733,3792-3797,3810-3811,3843-3846,3910,3964-3967,4037-4042,4117-4120
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_20890f2bc2d65e::t_8d64a2012fff24 4,37-100,177-181,204-205,229-230,248-251,268-274,319-320
+packages/miniflare/test/index.spec.ts
+  s_20890f2bc2d65e::t_5442a59ff1e32b 2142-2143,2160,2203
+packages/miniflare/test/plugins/core/temp-file.spec.ts
+  s_20890f2bc2d65e::t_d22715212cab35 64-78
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_20890f2bc2d65e::t_91452997845f4b 2370-2383
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_20890f2bc2d65e::t_c2da4f04e20e3d 133-136,323-360,387-412,432,443,715,752,782
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a04c33a6fe1e2816f4b782eaa0b75cab61df3d88",
+  "prompts": {},
+  "sessions": {
+    "s_20890f2bc2d65e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_037c6695cffekPS6cQICtHB2o2",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

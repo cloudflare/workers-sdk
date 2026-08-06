@@ -1,0 +1,24 @@
+packages/miniflare/src/workers/observability/tail-to-store.ts
+  s_1356a911e53448::t_c638563cb4a699 41-43
+packages/miniflare/src/workers/observability/trace-store.ts
+  s_1356a911e53448::t_a5382bfa6b7d5c 106-110,112,114-124
+packages/miniflare/test/plugins/core/observability.spec.ts
+  s_1356a911e53448::t_33fe3aba2f6430 386-433
+  s_1356a911e53448::t_f5a21dd9e94ad4 182-194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9763b4a86e55c35f900deced2e0b8eb7a37ed98f",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}
