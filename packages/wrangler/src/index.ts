@@ -222,6 +222,11 @@ import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
 import { hyperdriveGetCommand } from "./hyperdrive/get";
 import { hyperdriveNamespace } from "./hyperdrive/index";
 import { hyperdriveListCommand } from "./hyperdrive/list";
+import {
+	hyperdrivePlanetscaleCreateCommand,
+	hyperdrivePlanetscaleNamespace,
+	hyperdrivePlanetscaleSignatureCommand,
+} from "./hyperdrive/planetscale";
 import { hyperdriveUpdateCommand } from "./hyperdrive/update";
 import { init } from "./init";
 import {
@@ -1589,6 +1594,18 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
 		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
+		{
+			command: "wrangler hyperdrive planetscale",
+			definition: hyperdrivePlanetscaleNamespace,
+		},
+		{
+			command: "wrangler hyperdrive planetscale create",
+			definition: hyperdrivePlanetscaleCreateCommand,
+		},
+		{
+			command: "wrangler hyperdrive planetscale signature",
+			definition: hyperdrivePlanetscaleSignatureCommand,
+		},
 		{
 			command: "wrangler hyperdrive update",
 			definition: hyperdriveUpdateCommand,

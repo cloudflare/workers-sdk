@@ -156,6 +156,11 @@ type VariableNames =
 	/** Docker host configuration (handled separately from environment variable factory). */
 	| "DOCKER_HOST"
 
+	// ## PlanetScale Configuration
+
+	/** Path to the PlanetScale CLI binary (default: "pscale"). */
+	| "WRANGLER_PSCALE_BIN"
+
 	/** Environment variable used to signal that the current process is being run by the open-next deploy command. */
 	| "OPEN_NEXT_DEPLOY";
 
