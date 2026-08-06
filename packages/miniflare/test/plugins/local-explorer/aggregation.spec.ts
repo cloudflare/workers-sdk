@@ -39,6 +39,7 @@ describe("Cross-process aggregation", () => {
 
 		instanceA = new Miniflare({
 			name: "worker-a",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,
@@ -68,6 +69,7 @@ describe("Cross-process aggregation", () => {
 
 		instanceB = new Miniflare({
 			name: "worker-b",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,
@@ -406,6 +408,7 @@ describe("Multi-worker peer deduplication", () => {
 
 		instanceA = new Miniflare({
 			name: "worker-a",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,
@@ -428,6 +431,7 @@ describe("Multi-worker peer deduplication", () => {
 			workers: [
 				{
 					name: "worker-b1",
+					unsafeRegisterWorker: true,
 					modules: true,
 					script: `export default { fetch() { return new Response("Worker B1"); } }`,
 					kvNamespaces: {
@@ -436,6 +440,7 @@ describe("Multi-worker peer deduplication", () => {
 				},
 				{
 					name: "worker-b2",
+					unsafeRegisterWorker: true,
 					modules: true,
 					script: `export default { fetch() { return new Response("Worker B2"); } }`,
 					kvNamespaces: {
@@ -510,6 +515,7 @@ describe("Same ID across multiple instances with different persistence directori
 		// ties it to a specific instance.
 		instanceA = new Miniflare({
 			name: "worker-a",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,
@@ -531,6 +537,7 @@ describe("Same ID across multiple instances with different persistence directori
 
 		instanceB = new Miniflare({
 			name: "worker-b",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,
@@ -627,6 +634,7 @@ describe("Same ID across multiple instances with same persistence directories", 
 		// ties it to a specific instance.
 		instanceA = new Miniflare({
 			name: "worker-a",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,
@@ -646,6 +654,7 @@ describe("Same ID across multiple instances with same persistence directories", 
 
 		instanceB = new Miniflare({
 			name: "worker-b",
+			unsafeRegisterWorker: true,
 			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,

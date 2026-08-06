@@ -189,6 +189,8 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
+		/** Whether this Worker should be advertised in the dev registry. Defaults to `false`. */
+		unsafeRegisterWorker: z.boolean().optional(),
 
 		/** Used to set the vitest pool worker SELF binding to point to the Router Worker if there are assets.
 		 (If there are assets but we're not using vitest, the miniflare entry worker can point directly to
