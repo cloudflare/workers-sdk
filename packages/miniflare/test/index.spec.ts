@@ -1946,6 +1946,44 @@ This is a random email body.
 	expect(await res.text()).toBe("false");
 });
 
+test("Miniflare: manually triggered email handler - missing email() handler", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+			export default {
+				fetch() {
+					return new Response("ok");
+				}
+			}`,
+		unsafeTriggerHandlers: true,
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	expect(await res.text()).toBe(
+		"Worker does not export an email() handler; message stored without delivery."
+	);
+	expect(res.status).toBe(500);
+});
+
 test("Miniflare: manually triggered email handler - reply handler works", async ({
 	expect,
 }) => {
@@ -2071,7 +2109,10 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						timestamp: string;
 						messageId: string;
 				  }
-				| { type: "reject"; timestamp: string }
+				| {
+						type: "received" | "reject" | "unhandled";
+						timestamp: string;
+				  }
 			)[];
 		};
 	}
@@ -2096,6 +2137,10 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 	});
 	expect(okResult.events).toEqual([
 		{
+			type: "received",
+			timestamp: expect.any(String),
+		},
+		{
 			type: "forward",
 			timestamp: expect.any(String),
 			messageId: okResult.forwards[0]?.messageId,
@@ -2115,6 +2160,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		replies: [],
 	});
 	expect(rejectedResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{ type: "reject", timestamp: expect.any(String) },
 	]);
 
@@ -2137,6 +2183,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		],
 	});
 	expect(exceptionResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{
 			type: "forward",
 			timestamp: expect.any(String),
