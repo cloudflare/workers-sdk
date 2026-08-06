@@ -70,27 +70,35 @@ describe("pages project validate", () => {
 		expect(fileMap.size).toBe(11);
 	});
 
-	it.skipIf(process.platform === "win32")(
-		"should skip symlinked files and directories",
-		async ({ expect }) => {
-			// Real entries that must be included.
-			writeFileSync("real.png", "foobar");
-			mkdirSync("dir");
-			writeFileSync("dir/nested.png", "foobar");
+	it("should skip symlinked files and directories", async ({
+		expect,
+		skip,
+	}) => {
+		// Real entries that must be included.
+		writeFileSync("real.png", "foobar");
+		mkdirSync("dir");
+		writeFileSync("dir/nested.png", "foobar");
 
-			// A symlink to a file and a symlink to a directory: both must be
-			// skipped and not followed (relies on lstat so isSymbolicLink() works).
-			symlinkSync("real.png", "link.png");
-			symlinkSync("dir", "linkdir");
-
-			const fileMap = await validate({ directory: "." });
-
-			expect([...fileMap.keys()].sort()).toEqual([
-				"dir/nested.png",
-				"real.png",
-			]);
+		// A symlink to a file and a symlink to a directory: both must be
+		// skipped and not followed (relies on lstat so isSymbolicLink() works).
+		try {
+			symlinkSync("real.png", "link.png", "file");
+			symlinkSync("dir", "linkdir", "dir");
+		} catch (e) {
+			// Windows only lets unprivileged processes create symlinks in
+			// Developer Mode, so skip rather than fail where it is not allowed.
+			// The walker itself works there: lstat() reports both symlinks and
+			// junctions as symbolic links.
+			if ((e as NodeJS.ErrnoException).code !== "EPERM") {
+				throw e;
+			}
+			skip("creating symlinks is not permitted on this machine");
 		}
-	);
+
+		const fileMap = await validate({ directory: "." });
+
+		expect([...fileMap.keys()].sort()).toEqual(["dir/nested.png", "real.png"]);
+	});
 
 	it("should error with custom fileCountLimit when exceeding custom limit", async ({
 		expect,
