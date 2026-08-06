@@ -634,7 +634,15 @@ const config = {
 					description:
 						"Lists emails received by the worker's email() handler during this dev session.",
 					operationId: "email-list-routing",
-					parameters: [],
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return emails received by this worker's email() handler.",
+						},
+					],
 					responses: {
 						"200": {
 							content: {
@@ -681,6 +689,15 @@ const config = {
 					description:
 						"Sends a test email to trigger the worker's email() handler. Only the first `to` address is used as the envelope recipient; any other to/cc/bcc addresses appear only in the composed MIME headers.",
 					operationId: "email-send-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Deliver the test email to this worker's email() handler, regardless of address-based routing.",
+						},
+					],
 					requestBody: {
 						required: true,
 						content: {
@@ -758,6 +775,13 @@ const config = {
 							required: true,
 							schema: { type: "string" },
 						},
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return the email if it was received by this worker's email() handler.",
+						},
 					],
 					responses: {
 						"200": {
@@ -802,7 +826,15 @@ const config = {
 					description:
 						"Lists emails sent through send_email bindings during this dev session.",
 					operationId: "email-list-sending",
-					parameters: [],
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return emails sent through this worker's send_email bindings.",
+						},
+					],
 					responses: {
 						"200": {
 							content: {
@@ -854,6 +886,13 @@ const config = {
 							name: "email_id",
 							required: true,
 							schema: { type: "string" },
+						},
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return the email if it was sent through this worker's send_email bindings.",
 						},
 					],
 					responses: {
@@ -2410,6 +2449,11 @@ const config = {
 			"email_sending-item": {
 				type: "object",
 				properties: {
+					worker: {
+						type: "string",
+						description:
+							"Worker that owns the send_email binding the message was sent through, if known.",
+					},
 					from: { type: "string" },
 					to: { type: "array", items: { type: "string" } },
 					cc: { type: "array", items: { type: "string" } },
@@ -2445,6 +2489,11 @@ const config = {
 			"email_sending-detail": {
 				type: "object",
 				properties: {
+					worker: {
+						type: "string",
+						description:
+							"Worker that owns the send_email binding the message was sent through, if known.",
+					},
 					from: { type: "string" },
 					to: { type: "array", items: { type: "string" } },
 					cc: { type: "array", items: { type: "string" } },

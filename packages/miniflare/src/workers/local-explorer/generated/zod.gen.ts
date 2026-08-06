@@ -622,6 +622,7 @@ export const zEmailRoutingDetail = z.object({
 });
 
 export const zEmailSendingItem = z.object({
+	worker: z.string().optional(),
 	from: z.string(),
 	to: z.array(z.string()),
 	cc: z.array(z.string()).optional(),
@@ -630,11 +631,12 @@ export const zEmailSendingItem = z.object({
 	subject: z.string(),
 	messageId: z.string(),
 	sentAt: z.string(),
-	headers: z.record(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
 	attachments: z.array(zEmailAttachment),
 });
 
 export const zEmailSendingDetail = z.object({
+	worker: z.string().optional(),
 	from: z.string(),
 	to: z.array(z.string()),
 	cc: z.array(z.string()).optional(),
@@ -1054,7 +1056,11 @@ export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
 export const zEmailListRoutingData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1069,7 +1075,11 @@ export const zEmailListRoutingResponse = zWorkersApiResponseCommon.and(
 export const zEmailSendRoutingData = z.object({
 	body: zEmailSendRequest,
 	path: z.never().optional(),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1092,7 +1102,11 @@ export const zEmailGetRoutingData = z.object({
 	path: z.object({
 		email_id: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1107,7 +1121,11 @@ export const zEmailGetRoutingResponse = zWorkersApiResponseCommon.and(
 export const zEmailListSendingData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1124,7 +1142,11 @@ export const zEmailGetSendingData = z.object({
 	path: z.object({
 		email_id: z.string(),
 	}),
-	query: z.never().optional(),
+	query: z
+		.object({
+			worker: z.string().optional(),
+		})
+		.optional(),
 });
 
 /**

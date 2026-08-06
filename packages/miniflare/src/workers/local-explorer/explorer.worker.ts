@@ -12,6 +12,10 @@ import {
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
+	zEmailGetRoutingData,
+	zEmailGetSendingData,
+	zEmailListRoutingData,
+	zEmailListSendingData,
 	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
@@ -382,22 +386,36 @@ app.post("/api/local/observability/clear", (c) => clearTraces(c));
 // Email Endpoints
 // ============================================================================
 
-app.get("/api/email/routing", (c) => listReceivedEmails(c));
+app.get(
+	"/api/email/routing",
+	validateQuery(zEmailListRoutingData.shape.query.unwrap()),
+	(c) => listReceivedEmails(c, c.req.valid("query").worker)
+);
 
 app.post(
 	"/api/email/routing/send",
+	validateQuery(zEmailSendRoutingData.shape.query.unwrap()),
 	validateRequestBody(zEmailSendRoutingData.shape.body),
-	(c) => sendTestEmail(c, c.req.valid("json"))
+	(c) => sendTestEmail(c, c.req.valid("json"), c.req.valid("query").worker)
 );
 
-app.get("/api/email/routing/:email_id", (c) =>
-	getReceivedEmail(c, c.req.param("email_id"))
+app.get(
+	"/api/email/routing/:email_id",
+	validateQuery(zEmailGetRoutingData.shape.query.unwrap()),
+	(c) =>
+		getReceivedEmail(c, c.req.param("email_id"), c.req.valid("query").worker)
 );
 
-app.get("/api/email/sending", (c) => listSentEmails(c));
+app.get(
+	"/api/email/sending",
+	validateQuery(zEmailListSendingData.shape.query.unwrap()),
+	(c) => listSentEmails(c, c.req.valid("query").worker)
+);
 
-app.get("/api/email/sending/:email_id", (c) =>
-	getSentEmail(c, c.req.param("email_id"))
+app.get(
+	"/api/email/sending/:email_id",
+	validateQuery(zEmailGetSendingData.shape.query.unwrap()),
+	(c) => getSentEmail(c, c.req.param("email_id"), c.req.valid("query").worker)
 );
 
 // ============================================================================
