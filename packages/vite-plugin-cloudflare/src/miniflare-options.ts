@@ -157,6 +157,7 @@ export async function getDevMiniflareOptions(
 		{
 			name: ROUTER_WORKER_NAME,
 			unsafeExcludeFromObservability: true,
+			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			compatibilityFlags: ["enable_ctx_exports"],
 			modulesRoot: miniflareModulesRoot,
@@ -182,6 +183,7 @@ export async function getDevMiniflareOptions(
 		{
 			name: ASSET_WORKER_NAME,
 			unsafeExcludeFromObservability: true,
+			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
 			modules: [
@@ -312,6 +314,7 @@ export async function getDevMiniflareOptions(
 		{
 			name: VITE_PROXY_WORKER_NAME,
 			unsafeExcludeFromObservability: true,
+			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
 			modules: [
@@ -445,7 +448,6 @@ export async function getDevMiniflareOptions(
 								worker: {
 									...workerOptions,
 									name: worker.config.name,
-									unsafeRegisterWorker: true,
 									modulesRoot: miniflareModulesRoot,
 									modules: [
 										{
@@ -839,7 +841,6 @@ export async function getPreviewMiniflareOptions(
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						unsafeRegisterWorker: true,
 						...(previewWorker.source === "build-output" && previewWorker.bundle
 							? getModulesFromManifest(previewWorker.bundle)
 							: miniflareWorkerOptions.main

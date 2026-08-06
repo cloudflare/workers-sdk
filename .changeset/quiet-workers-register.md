@@ -1,7 +1,7 @@
 ---
-"miniflare": major
+"miniflare": minor
 ---
 
-Add per-worker control over dev registry registration
+Add an option to disable dev registry registration
 
-Miniflare workers must now opt in to the dev registry with `unsafeRegisterWorker`. Wrangler and the Cloudflare Vite plugin use this option to advertise user workers without exposing internal or external workers.
+Set `unsafeRegisterWorker` to `false` to prevent a Miniflare worker from being advertised in the dev registry. Workers continue to be registered by default.
