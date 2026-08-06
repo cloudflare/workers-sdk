@@ -132,10 +132,3 @@ export function duplicateInstanceError(id: string): WorkflowError {
 		"instance.already_exists"
 	);
 }
-
-export function isDuplicateInstanceError(error: unknown): boolean {
-	return (
-		error instanceof WorkflowError &&
-		error.message.includes("(instance.already_exists)")
-	);
-}
