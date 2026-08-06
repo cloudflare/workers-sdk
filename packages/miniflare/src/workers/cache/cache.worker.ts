@@ -302,6 +302,8 @@ export class CacheObject extends MiniflareDurableObject {
 		// time we don't do this is when the entry isn't found, or expired, in which
 		// case, we just threw a `CacheMiss`)
 		assert(resHeaders !== undefined);
+		const now = this.timers.now();
+		resHeaders.set("Age", Math.round(now - (cached.metadata.stored || now)));
 		resHeaders.set("CF-Cache-Status", "HIT");
 		resRanges ??= [];
 
@@ -356,6 +358,7 @@ export class CacheObject extends MiniflareDurableObject {
 			headers: Object.entries(headers),
 			status: res.status,
 			size,
+			stored: this.timers.now(),
 		}));
 
 		await this.storage.put({
