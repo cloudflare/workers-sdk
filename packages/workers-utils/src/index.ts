@@ -176,3 +176,16 @@ export { _forceColour, formatZodError } from "./zod-format";
 
 export { toUrlPath } from "./url-path";
 export type { UrlPath } from "./url-path";
+
+export {
+	ExperimentalCommonJsGraphBuilder,
+	experimental_classifyJavaScriptFile,
+	experimental_createCommonJsGraph,
+} from "./commonjs-module-graph";
+export type {
+	ExperimentalCommonJsGraph,
+	ExperimentalCommonJsGraphModule,
+	ExperimentalCommonJsGraphOptions,
+	ExperimentalCommonJsResolver,
+	ExperimentalJavaScriptSourceType,
+} from "./commonjs-module-graph";

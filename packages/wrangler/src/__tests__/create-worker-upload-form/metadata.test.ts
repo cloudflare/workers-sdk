@@ -83,6 +83,27 @@ describe("createWorkerUploadForm — basic structure", () => {
 		expect(utilsPart.type).toBe("application/javascript+module");
 	});
 
+	it("should upload additional CommonJS modules as JavaScript parts", ({
+		expect,
+	}) => {
+		const form = createWorkerUploadForm(
+			createEsmWorker({
+				modules: [
+					{
+						name: "dependency.js",
+						filePath: "dependency.js",
+						content: "module.exports = {};",
+						type: "commonjs",
+					},
+				],
+			}),
+			{}
+		);
+		const dependencyPart = form.get("dependency.js") as File;
+		expect(dependencyPart).not.toBeNull();
+		expect(dependencyPart.type).toBe("application/javascript");
+	});
+
 	it("should throw when commonjs worker has additional modules", ({
 		expect,
 	}) => {
