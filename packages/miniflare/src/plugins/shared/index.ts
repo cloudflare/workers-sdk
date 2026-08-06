@@ -93,7 +93,8 @@ export interface PluginBase<
 	bindingTypeDescription?: string;
 	getBindings(
 		options: z.infer<Options>,
-		workerIndex: number
+		workerIndex: number,
+		workerName?: string
 	): Awaitable<Worker_Binding[] | void>;
 	getNodeBindings(
 		options: z.infer<Options>
