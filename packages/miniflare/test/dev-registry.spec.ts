@@ -1096,7 +1096,10 @@ describe.sequential("DevRegistry", () => {
 						let instance;
 						try {
 							instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
-						} catch {
+						} catch (e) {
+							if (!String(e).includes("instance.already_exists")) {
+								throw e;
+							}
 							instance = await env.MY_WORKFLOW.get("cross-worker-instance");
 						}
 						return Response.json({ id: instance.id });

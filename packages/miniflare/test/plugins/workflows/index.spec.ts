@@ -22,7 +22,10 @@ export class MyWorkflow extends WorkflowEntrypoint {
 		let workflow;
 		try {
 			workflow = await env.MY_WORKFLOW.create({id: "an-id"})
-		} catch {
+		} catch (e) {
+			if (!String(e).includes("instance.already_exists")) {
+				throw e;
+			}
 			workflow = await env.MY_WORKFLOW.get("an-id")
 		}
 
