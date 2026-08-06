@@ -530,25 +530,56 @@ function formatDeployTarget(target: string): string {
 	return (target.endsWith("workers.dev") ? "https://" : "") + target;
 }
 
-function formatCustomDomainTarget(target: {
-	target: string;
+function getCustomDomainTargetGroup(target: {
 	enabled?: boolean;
 	previewsEnabled?: boolean;
-}): string {
-	const formattedTarget = formatDeployTarget(target.target);
+}): "Production and Preview" | "Production" | "Preview" | "Disabled" {
 	if (target.enabled === false && target.previewsEnabled) {
-		return `${formattedTarget} (preview deployments)`;
+		return "Preview";
 	}
 	if (target.enabled === false) {
-		return `${formattedTarget} (disabled)`;
+		return "Disabled";
 	}
 	if (target.previewsEnabled) {
-		return `${formattedTarget} (production and preview deployments)`;
+		return "Production and Preview";
 	}
-	if (target.enabled === true && target.previewsEnabled === false) {
-		return `${formattedTarget} (production deployments)`;
+	return "Production";
+}
+
+function logCustomDomainTargets(deployment: TriggerDeployment): void {
+	logger.log("");
+	logger.log("Custom Domains:");
+
+	if (!deployment.customDomainTargets?.length) {
+		for (const target of deployment.targets.map(formatDeployTarget)) {
+			logger.log(" ", target);
+		}
+		return;
 	}
-	return formattedTarget;
+
+	const groups = new Map<string, string[]>();
+	for (const target of deployment.customDomainTargets) {
+		const group = getCustomDomainTargetGroup(target);
+		const targets = groups.get(group) ?? [];
+		targets.push(formatDeployTarget(target.target));
+		groups.set(group, targets);
+	}
+
+	for (const group of [
+		"Production and Preview",
+		"Production",
+		"Preview",
+		"Disabled",
+	]) {
+		const targets = groups.get(group);
+		if (!targets?.length) {
+			continue;
+		}
+		logger.log(`  ${group}:`);
+		for (const target of targets) {
+			logger.log("   ", target);
+		}
+	}
 }
 
 function logDeployTargets(deployments: TriggerDeployment[]): void {
@@ -563,14 +594,7 @@ function logDeployTargets(deployments: TriggerDeployment[]): void {
 		}
 
 		if (hasCustomDomains && deployment.category === "Custom domains") {
-			logger.log("");
-			logger.log("Custom Domains:");
-			const targets = deployment.customDomainTargets?.length
-				? deployment.customDomainTargets.map(formatCustomDomainTarget)
-				: deployment.targets.map(formatDeployTarget);
-			for (const target of targets) {
-				logger.log(" ", target);
-			}
+			logCustomDomainTargets(deployment);
 			continue;
 		}
 
