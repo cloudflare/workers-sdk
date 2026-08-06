@@ -13,7 +13,7 @@ import {
 export const previewSecretBulkCommand = createCommand({
 	metadata: {
 		description:
-			"Upload multiple secrets to a Worker Preview's latest deployment",
+			"Upload multiple secrets to a Worker Preview and create a new deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
@@ -55,18 +55,24 @@ export const previewSecretBulkCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		logger.log(
-			`🌀 Creating the secrets for the Preview "${previewName}" on the Worker "${workerName}"${args.env ? ` (${args.env})` : ""}`
+			`🌀 Processing the secrets for the Preview "${previewName}" on the Worker "${workerName}"${args.env ? ` (${args.env})` : ""}`
 		);
 
-		const result = await parseBulkInputToObject(args.file);
+		// includeNull: true to delete empty secrets - matches wrangler secret bulk
+		const result = await parseBulkInputToObject(args.file, true);
 
 		if (!result) {
-			logger.error("No content found in file or piped input.");
+			logger.error("🚨 No content found in file, or piped input.");
 			return;
 		}
 
 		const { content } = result;
-		const secretEntries = Object.entries(content);
+		const created = Object.keys(content).filter(
+			(name) => content[name] !== null
+		);
+		const deleted = Object.keys(content).filter(
+			(name) => content[name] === null
+		);
 
 		const deployment = await patchPreviewDeploymentSecrets(
 			config,
@@ -75,7 +81,9 @@ export const previewSecretBulkCommand = createCommand({
 			previewName,
 			toSecretBindingsPatch(content),
 			{
-				message: args.message ?? `Bulk updated ${secretEntries.length} secrets`,
+				message:
+					args.message ??
+					`Created ${created.length} and deleted ${deleted.length} secrets`,
 				tag: args.tag,
 			},
 			{
@@ -84,13 +92,16 @@ export const previewSecretBulkCommand = createCommand({
 			}
 		);
 
-		for (const [name] of secretEntries) {
+		for (const name of deleted) {
+			logger.log(`💥 Successfully deleted secret for key: ${name}`);
+		}
+		for (const name of created) {
 			logger.log(`✨ Successfully created secret for key: ${name}`);
 		}
 
 		const liveUrls = deployment.urls ?? [];
 		logger.log(
-			`✨ Success! Created Preview deployment ${deployment.id} with ${secretEntries.length} secrets.` +
+			`✨ Success! Created Preview deployment ${deployment.id} with ${created.length} created and ${deleted.length} deleted secrets.` +
 				(liveUrls.length > 0
 					? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
 							.map((url) => chalk.bold.underline(url))

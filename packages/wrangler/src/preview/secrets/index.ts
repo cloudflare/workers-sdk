@@ -4,7 +4,7 @@ import {
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../../core/create-command";
-import type { Binding, EnvBindings } from "@cloudflare/deploy-helpers";
+import type { Binding } from "@cloudflare/deploy-helpers";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const previewSecretNamespace = createNamespace({
@@ -28,13 +28,15 @@ export function resolvePreviewName(args: { name?: string }): string {
 	return previewName;
 }
 
+// A `null` value maps to `null` in the merge-patch body, which deletes the
+// secret from the deployment — matching `wrangler secret bulk` semantics.
 export function toSecretBindingsPatch(
-	secrets: Record<string, string>
-): EnvBindings {
+	secrets: Record<string, string | null>
+): Record<string, Binding | null> {
 	return Object.fromEntries(
 		Object.entries(secrets).map(([name, text]) => [
 			name,
-			{ type: "secret_text", text },
+			text === null ? null : { type: "secret_text", text },
 		])
 	);
 }
@@ -48,7 +50,7 @@ export const PREVIEW_NOT_FOUND_ERR_CODE = 10025;
 export const noPreviewDeploymentPatchMessage = (previewName: string) =>
 	`There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment before modifying a secret.`;
 export const noPreviewDeploymentListMessage = (previewName: string) =>
-	`There are currently no deployments for the Preview "${previewName}" - please create a Preview deployment.`;
+	`There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment.`;
 export const previewNotFoundMessage = (previewName: string) =>
 	`The Preview "${previewName}" was not found. Please check the Preview name, or create it with \`wrangler preview\`.`;
 
