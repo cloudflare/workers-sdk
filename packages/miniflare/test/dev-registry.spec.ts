@@ -884,7 +884,14 @@ describe.sequential("DevRegistry", () => {
 			script: `
 				export default {
 					async fetch(request, env, ctx) {
-						const instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
+						// Deterministic ids are unique: create() throws once the
+						// instance exists, so later attempts read it instead.
+						let instance;
+						try {
+							instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
+						} catch {
+							instance = await env.MY_WORKFLOW.get("cross-worker-instance");
+						}
 						return Response.json({ id: instance.id });
 					}
 				}
