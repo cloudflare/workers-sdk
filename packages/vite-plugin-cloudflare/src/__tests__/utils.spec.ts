@@ -106,9 +106,11 @@ describe("createRequestHandler", () => {
 	let httpServer: http.Server;
 	let port: number;
 	let capturedUrls: string[];
+	let capturedForwardedHosts: (string | null)[];
 
 	beforeEach(async () => {
 		capturedUrls = [];
+		capturedForwardedHosts = [];
 	});
 
 	afterEach(async () => {
@@ -117,13 +119,15 @@ describe("createRequestHandler", () => {
 		);
 	});
 
-	function startServer() {
+	function startServer(mutateReq?: (req: http.IncomingMessage) => void) {
 		const handler = createRequestHandler(async (request) => {
 			capturedUrls.push(request.url);
+			capturedForwardedHosts.push(request.headers.get("X-Forwarded-Host"));
 			return new MiniflareResponse("OK");
 		});
 
 		httpServer = http.createServer((req, res) => {
+			mutateReq?.(req);
 			void handler(
 				req as unknown as Parameters<typeof handler>[0],
 				res,
@@ -188,4 +192,55 @@ describe("createRequestHandler", () => {
 		});
 		expect(capturedUrls[0]).toBe(`http://127.0.0.1:${port}/path`);
 	});
+
+	test("preserves non-default port from `:authority` when `Host` is missing", async ({
+		expect,
+	}) => {
+		await startServer((req) => {
+			// createHeaders reads rawHeaders (and skips pseudo-headers), so drop Host
+			// there to mirror HTTP/2 where only `:authority` carries the origin.
+			deleteRawHeader(req, "host");
+			delete req.headers.host;
+			req.headers[":authority"] = "localhost:5173";
+		});
+		await fetch(`http://127.0.0.1:${port}/path`);
+		expect(capturedUrls[0]).toBe("http://localhost:5173/path");
+		expect(capturedForwardedHosts[0]).toBe("localhost:5173");
+	});
+
+	test("preserves non-default port from the `Host` header", async ({
+		expect,
+	}) => {
+		await startServer((req) => {
+			setRawHeader(req, "host", "localhost:5173");
+			req.headers.host = "localhost:5173";
+		});
+		await fetch(`http://127.0.0.1:${port}/path`);
+		expect(capturedUrls[0]).toBe("http://localhost:5173/path");
+		expect(capturedForwardedHosts[0]).toBe("localhost:5173");
+	});
 });
+
+/** Mutate `rawHeaders` — `createHeaders` ignores `req.headers` mutations. */
+function deleteRawHeader(req: http.IncomingMessage, name: string) {
+	const lower = name.toLowerCase();
+	const raw = req.rawHeaders;
+	for (let i = 0; i < raw.length; i += 2) {
+		if (raw[i].toLowerCase() === lower) {
+			raw.splice(i, 2);
+			return;
+		}
+	}
+}
+
+function setRawHeader(req: http.IncomingMessage, name: string, value: string) {
+	const lower = name.toLowerCase();
+	const raw = req.rawHeaders;
+	for (let i = 0; i < raw.length; i += 2) {
+		if (raw[i].toLowerCase() === lower) {
+			raw[i + 1] = value;
+			return;
+		}
+	}
+	raw.push(name, value);
+}

@@ -97,7 +97,26 @@ export function createRequestHandler(
 			// If the header is absent or invalid, `createRequest` falls back to the
 			// connection protocol (`req.socket.encrypted`).
 			const protocol = getForwardedProto(req);
-			request = createRequest(req, res, protocol ? { protocol } : undefined);
+			// Prefer Node host/:authority so HTTPS/HTTP2 keeps non-default ports (e.g. :5173).
+			// createRequest only applies `options.host` to request.url; Host still comes from
+			// rawHeaders (and createHeaders skips :authority), so we must set Host ourselves
+			// for toMiniflareRequest to populate X-Forwarded-Host with the same origin.
+			const nodeHost =
+				typeof req.headers.host === "string" ? req.headers.host : undefined;
+			const authority =
+				typeof req.headers[":authority"] === "string"
+					? req.headers[":authority"]
+					: undefined;
+			const host = nodeHost ?? authority;
+
+			request = createRequest(req, res, {
+				...(protocol ? { protocol } : {}),
+				...(host ? { host } : {}),
+			});
+
+			if (host) {
+				request.headers.set("Host", host);
+			}
 
 			let response = await handler(toMiniflareRequest(request), req);
 
