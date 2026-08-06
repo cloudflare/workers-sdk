@@ -38,8 +38,13 @@ export default {
 				);
 			} catch (e) {
 				// Deterministic ids are unique: create() throws once the instance
-				// exists, so read the existing instance instead.
-				if (id === null) {
+				// exists, so read the existing instance instead. Any other
+				// failure is real and should surface.
+				const isDuplicate =
+					id !== null &&
+					e instanceof Error &&
+					e.message.includes("instance.already_exists");
+				if (!isDuplicate) {
 					throw e;
 				}
 				instance = await env.MY_WORKFLOW.get(id);
