@@ -10,7 +10,8 @@ const remoteProxyConnectionString = new URL(
 
 function buildHyperdriveOptions(
 	binding: Extract<Binding, { type: "hyperdrive" }>,
-	connectionString?: RemoteProxyConnectionString
+	connectionString?: RemoteProxyConnectionString,
+	seededConnectionStrings?: ReadonlyMap<string, string>
 ) {
 	const { bindingOptions } = buildMiniflareBindingOptions(
 		{
@@ -26,10 +27,13 @@ function buildHyperdriveOptions(
 			containerBuildId: undefined,
 			enableContainers: false,
 		},
-		connectionString
+		connectionString,
+		seededConnectionStrings
 	);
 	return bindingOptions.hyperdrives;
 }
+
+const SEEDED_CONNECTION_STRING = "postgres://edge-user:edge-pass@edge:5432/db";
 
 describe("hyperdrive bindings in local dev", () => {
 	const std = mockConsoleMethods();
@@ -47,9 +51,35 @@ describe("hyperdrive bindings in local dev", () => {
 		expect(std.warn).toBe("");
 	});
 
-	it("hands miniflare the remote proxy connection string for a remote binding", ({
+	it("hands miniflare the remote proxy connection string and the seeded edge credentials for a remote binding", ({
 		expect,
 	}) => {
+		expect(
+			buildHyperdriveOptions(
+				{
+					type: "hyperdrive",
+					id: "hyperdrive-id",
+					remote: true,
+				},
+				remoteProxyConnectionString,
+				new Map([["HYPERDRIVE", SEEDED_CONNECTION_STRING]])
+			)
+		).toEqual({
+			HYPERDRIVE: {
+				localConnectionString: SEEDED_CONNECTION_STRING,
+				remoteProxyConnectionString,
+			},
+		});
+		expect(std.warn).toBe("");
+	});
+
+	it("warns when a remote binding's edge credentials could not be seeded", ({
+		expect,
+	}) => {
+		// Reached from dev entry points that cannot seed (the binding builder is
+		// synchronous), e.g. `unstable_getMiniflareWorkerOptions`. Without the
+		// warning the binding would silently fall back to placeholder credentials
+		// and fail to authenticate at the edge.
 		expect(
 			buildHyperdriveOptions(
 				{
@@ -65,7 +95,9 @@ describe("hyperdrive bindings in local dev", () => {
 				remoteProxyConnectionString,
 			},
 		});
-		expect(std.warn).toBe("");
+		expect(std.warn).toContain(
+			`The Hyperdrive binding "HYPERDRIVE" is configured with "remote": true, but its edge credentials could not be seeded in this context`
+		);
 	});
 
 	it("explains how to fix a remote binding that has neither a session nor a local database", ({
