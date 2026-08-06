@@ -565,6 +565,7 @@ function logCustomDomainTargets(deployment: TriggerDeployment): void {
 		groups.set(group, targets);
 	}
 
+	let hasLoggedGroup = false;
 	for (const group of [
 		"Production and Preview",
 		"Production",
@@ -575,10 +576,14 @@ function logCustomDomainTargets(deployment: TriggerDeployment): void {
 		if (!targets?.length) {
 			continue;
 		}
+		if (hasLoggedGroup) {
+			logger.log("");
+		}
 		logger.log(`  ${group}:`);
 		for (const target of targets) {
 			logger.log("   ", target);
 		}
+		hasLoggedGroup = true;
 	}
 }
 
