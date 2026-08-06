@@ -1540,13 +1540,17 @@ describe("Email API - store eviction", () => {
 		await disposeWithRetry(mf);
 	});
 
-	// The store retains at most MAX_STORED_EMAILS (500) records per table and
-	// evicts oldest-first, so a long dev session cannot grow the inbox without
-	// bound. Send a handful more than the cap and assert the window slides.
+	// Mirrors MAX_STORED_EMAILS in src/workers/email/email-store.ts. The store
+	// retains at most this many records per table and evicts oldest-first, so a
+	// long dev session cannot grow the inbox without bound. Send a few more than
+	// the cap and assert the window slides.
+	const RETENTION_LIMIT = 200;
+
 	test("caps the received list at the retention limit, evicting oldest first", async ({
 		expect,
 	}) => {
-		const total = 505;
+		const overflow = 5;
+		const total = RETENTION_LIMIT + overflow;
 		// A stable, ordered Message-ID per email so we can reason about which
 		// records should survive eviction.
 		const messageId = (index: number) =>
@@ -1578,16 +1582,17 @@ describe("Email API - store eviction", () => {
 		);
 
 		// Exactly the cap is retained.
-		expect(list.result).toHaveLength(500);
+		expect(list.result).toHaveLength(RETENTION_LIMIT);
 
 		const storedIds = new Set(list.result?.map((email) => email.messageId));
-		// The five oldest were evicted...
-		for (let index = 0; index < total - 500; index++) {
+		// The oldest `overflow` records were evicted...
+		for (let index = 0; index < overflow; index++) {
 			expect(storedIds.has(messageId(index))).toBe(false);
 		}
-		// ...and the newest 500 remain, including the very last one sent.
+		// ...and the newest `RETENTION_LIMIT` remain, including the very last one
+		// sent and the boundary survivor.
 		expect(storedIds.has(messageId(total - 1))).toBe(true);
-		expect(storedIds.has(messageId(total - 500))).toBe(true);
+		expect(storedIds.has(messageId(overflow))).toBe(true);
 
 		// The evicted records are gone from the detail endpoint too, not just the
 		// list, so lookups don't resurrect them.

@@ -36,7 +36,7 @@ export type { StoredRoutingEmail, StoredSendingEmail };
  * Upper bound on the number of received/sent emails retained per dev session.
  * Adjust if the explorer needs a deeper history.
  */
-const MAX_STORED_EMAILS = 500;
+const MAX_STORED_EMAILS = 200;
 
 const SCHEMA = [
 	`CREATE TABLE IF NOT EXISTS received (
