@@ -83,7 +83,7 @@ function logWarningsIfComplianceRegionIsOverridden(
 		return;
 	}
 
-	logger.warn(
+	logger.once.warn(
 		`The compliance region was resolved to "${resolvedRegion}" from the \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable, which takes precedence over the configured value "${configuredRegion}".`
 	);
 }
