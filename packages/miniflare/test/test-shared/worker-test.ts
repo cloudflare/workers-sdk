@@ -62,6 +62,7 @@ export async function runWorkerTest(
 					compatibilityFlags: ["nodejs_compat", "experimental"],
 					manifest: {
 						mainModule: outputFileName,
+						modulesRoot: tmp,
 						modules: {
 							[outputFileName]: { type: "esm", contents },
 						},

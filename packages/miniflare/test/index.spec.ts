@@ -4291,6 +4291,7 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 					// `path` relative to `modulesRoot` ("/"), i.e. "virtual/index.mjs".
 					manifest: {
 						mainModule: "virtual/index.mjs",
+						modulesRoot: "/",
 						modules: {
 							"virtual/index.mjs": {
 								type: "esm",
@@ -4318,6 +4319,7 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 					triggers: [{ type: "fetch", pattern: "*/b" }],
 					manifest: {
 						mainModule: "virtual/index.mjs",
+						modulesRoot: "/",
 						modules: {
 							"virtual/index.mjs": {
 								type: "esm",
@@ -4417,6 +4419,7 @@ test("Miniflare: can use module fallback service with V2 protocol", async ({
 					// `path` relative to `modulesRoot` ("/"), i.e. "virtual/index.mjs".
 					manifest: {
 						mainModule: "virtual/index.mjs",
+						modulesRoot: "/bundle",
 						modules: {
 							"virtual/index.mjs": {
 								type: "esm",
@@ -4573,7 +4576,7 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 					name: "",
 					compatibilityDate: "2025-05-01",
 				},
-				dev: { rootPath: "a" },
+				dev: { rootPath: path.join(tmp, "a") },
 				legacy: {
 					textBlobBindings: { TEXT: "1.txt" },
 					serviceWorkerScript:

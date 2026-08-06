@@ -181,9 +181,14 @@ export function singleModuleManifest(
 	{
 		type = "esm",
 		mainModule = "index.mjs",
-	}: { type?: ModuleType; mainModule?: string } = {}
+		modulesRoot = process.cwd(),
+	}: { type?: ModuleType; mainModule?: string; modulesRoot?: string } = {}
 ): Manifest {
-	return { mainModule, modules: { [mainModule]: { type, contents } } };
+	return {
+		mainModule,
+		modulesRoot,
+		modules: { [mainModule]: { type, contents } },
+	};
 }
 
 /**

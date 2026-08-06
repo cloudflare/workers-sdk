@@ -72,17 +72,14 @@ function maybeGetFile(
 				};
 			}
 
-			const modules = config.manifest?.modules;
-			if (modules === undefined) continue;
-			const modulesRoot =
-				config.manifest?.modulesRoot === undefined
-					? dev?.rootPath
-					: resolvePath(dev?.rootPath, config.manifest.modulesRoot);
+			const manifest = config.manifest;
+			if (manifest === undefined) continue;
+			const modules = manifest.modules;
 			for (const [modulePath, module] of Object.entries(modules)) {
-				const resolvedModulePath =
-					modulesRoot === undefined
-						? path.resolve(modulePath)
-						: path.resolve(modulesRoot, modulePath);
+				const resolvedModulePath = path.resolve(
+					manifest.modulesRoot,
+					modulePath
+				);
 				if (resolvedModulePath === filePath) {
 					return {
 						path: filePath,

@@ -71,6 +71,7 @@ describe("convertV4MiniflareOptions", () => {
 
 	test("converts module source and representative bindings", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
+			rootPath: __dirname,
 			name: "worker",
 			script: "export default {};",
 			modules: true,
@@ -156,6 +157,7 @@ describe("convertV4MiniflareOptions", () => {
 
 	test("converts multiple workers", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
+			rootPath: __dirname,
 			workers: [
 				{ name: "a", script: "export default {};", modules: true },
 				{ name: "b", script: "addEventListener('fetch', () => {});" },
@@ -166,6 +168,47 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.manifest).toBeDefined();
 		expect(converted.workers[1].legacy?.serviceWorkerScript).toBe(
 			"addEventListener('fetch', () => {});"
+		);
+	});
+
+	test("resolves worker rootPath relative to shared rootPath", ({ expect }) => {
+		const sharedRootPath = path.join(__dirname, "project");
+		const workerRootPath = path.join(sharedRootPath, "workers", "api");
+		const converted = convertV4MiniflareOptions({
+			rootPath: sharedRootPath,
+			workers: [
+				{
+					name: "api",
+					rootPath: "workers/api",
+					script: "export default {};",
+					modules: true,
+					modulesRoot: "src",
+					sitePath: "public",
+				},
+			],
+		});
+
+		expect(converted.workers[0].dev?.rootPath).toBe(workerRootPath);
+		expect(converted.workers[0].config.manifest?.modulesRoot).toBe(
+			path.join(workerRootPath, "src")
+		);
+		expect(converted.workers[0].legacy?.sitePath).toBe(
+			path.join(workerRootPath, "public")
+		);
+	});
+
+	test("resolves relative rootPath to cwd", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			rootPath: "project",
+			script: "export default {};",
+			modules: true,
+		});
+
+		expect(converted.workers[0].dev?.rootPath).toBe(
+			path.join(process.cwd(), "project")
+		);
+		expect(converted.workers[0].config.manifest?.modulesRoot).toBe(
+			path.join(process.cwd(), "project")
 		);
 	});
 
@@ -185,11 +228,13 @@ describe("convertV4MiniflareOptions", () => {
 		expect,
 	}) => {
 		const converted = convertV4MiniflareOptions({
+			rootPath: __dirname,
 			script: "",
 			modules: true,
 			workers: [
 				{
 					name: "worker",
+					rootPath: __dirname,
 					script: "export default {};",
 					modules: true,
 					bindings: { TEXT: "value" },
@@ -211,7 +256,7 @@ describe("convertV4MiniflareOptions", () => {
 			scriptPath: __filename,
 		});
 
-		expect(converted.workers[0].dev?.rootPath).toBeUndefined();
+		expect(converted.workers[0].dev?.rootPath).toBe(process.cwd());
 		expect(converted.workers[0].legacy?.serviceWorkerScriptPath).toBe(
 			__filename
 		);
@@ -245,6 +290,17 @@ describe("convertV4MiniflareOptions", () => {
 			converted.workers[0].config.manifest?.modules["v4-convert.spec.ts"]
 				?.contents
 		).toContain("uses rootPath for module source paths");
+	});
+
+	test("defaults missing modulesRoot to cwd", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			modules: true,
+		});
+
+		expect(converted.workers[0].config.manifest?.modulesRoot).toBe(
+			process.cwd()
+		);
 	});
 
 	test("uses rootPath for v4 Workers Sites paths", ({ expect }) => {

@@ -115,6 +115,7 @@ test("source maps workers", async ({ expect }) => {
 					env: { MESSAGE: { type: "json", value: "b" } },
 					manifest: {
 						mainModule: "modules.js",
+						modulesRoot: tmp,
 						modules: {
 							"modules.js": { type: "esm", contents: modulesContent },
 						},
@@ -131,6 +132,7 @@ test("source maps workers", async ({ expect }) => {
 					env: { MESSAGE: { type: "json", value: "c" } },
 					manifest: {
 						mainModule: "modules.js",
+						modulesRoot: tmp,
 						modules: {
 							"modules.js": { type: "esm", contents: modulesContent },
 						},
@@ -148,6 +150,7 @@ test("source maps workers", async ({ expect }) => {
 					env: { MESSAGE: { type: "json", value: "e" } },
 					manifest: {
 						mainModule: "modules.js",
+						modulesRoot: tmp,
 						modules: {
 							"modules.js": { type: "esm", contents: modulesContent },
 							"modules.js.map": {
@@ -171,6 +174,7 @@ test("source maps workers", async ({ expect }) => {
 					triggers: [{ type: "fetch", pattern: "*/h" }],
 					manifest: {
 						mainModule: "index.mjs",
+						modulesRoot: tmp,
 						modules: {
 							"index.mjs": {
 								type: "esm",
@@ -490,14 +494,15 @@ test("responds with pretty error page", async ({ expect }) => {
 	const errorLogs = log
 		.getLogs(LogLevel.ERROR)
 		.map((log) => log.replaceAll(/:\d+:\d+/g, ":N:N"));
+	const scriptUrl = pathToFileURL(path.join(process.cwd(), "script-0")).href;
 	expect(errorLogs).toEqual([
 		`Error: Unusual oops!
-    at connectSocket (script-0:N:N)
-    at Object.fetch (script-0:N:N)
+    at connectSocket (${scriptUrl}:N:N)
+    at Object.fetch (${scriptUrl}:N:N)
 Caused by: TypeError: The value cannot be converted because it is not an integer.
     at connect (cloudflare:sockets:N:N)
-    at connectSocket (script-0:N:N)
-    at Object.fetch (script-0:N:N)`,
+    at connectSocket (${scriptUrl}:N:N)
+    at Object.fetch (${scriptUrl}:N:N)`,
 	]);
 
 	// Check `fetch()` accepting HTML returns pretty-error page

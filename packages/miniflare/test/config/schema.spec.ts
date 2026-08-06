@@ -1,11 +1,84 @@
 import { describe, test, vi } from "vitest";
-import { MiniflareWorkerConfigSchema } from "../../src/config/schema";
+import {
+	MiniflareWorkerConfigSchema,
+	WorkerOptionsSchema,
+} from "../../src/config/schema";
 
 vi.mock("../../src/plugins/shared/constants", () => ({
 	HOST_CAPNP_CONNECT: "localhost:0",
 }));
 
 describe("MiniflareWorkerConfigSchema", () => {
+	test("requires manifest modulesRoot to be absolute", ({ expect }) => {
+		const result = MiniflareWorkerConfigSchema.safeParse({
+			type: "worker",
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			manifest: {
+				mainModule: "index.mjs",
+				modulesRoot: "src",
+				modules: { "index.mjs": { type: "esm", contents: "" } },
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual([
+				expect.objectContaining({
+					path: ["manifest", "modulesRoot"],
+					message: "Path must be absolute",
+				}),
+			]);
+		}
+	});
+
+	test("defaults manifest modulesRoot to cwd", ({ expect }) => {
+		const parsed = MiniflareWorkerConfigSchema.parse({
+			type: "worker",
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			manifest: {
+				mainModule: "index.mjs",
+				modules: { "index.mjs": { type: "esm", contents: "" } },
+			},
+		});
+
+		expect(parsed.manifest?.modulesRoot).toBe(process.cwd());
+	});
+
+	test("requires dev rootPath to be absolute", ({ expect }) => {
+		const result = WorkerOptionsSchema.safeParse({
+			config: {
+				type: "worker",
+				name: "api",
+				compatibilityDate: "2026-01-01",
+			},
+			dev: { rootPath: "project" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual([
+				expect.objectContaining({
+					path: ["dev", "rootPath"],
+					message: "Path must be absolute",
+				}),
+			]);
+		}
+	});
+
+	test("defaults dev rootPath to cwd", ({ expect }) => {
+		const parsed = WorkerOptionsSchema.parse({
+			config: {
+				type: "worker",
+				name: "api",
+				compatibilityDate: "2026-01-01",
+			},
+		});
+
+		expect(parsed.dev.rootPath).toBe(process.cwd());
+	});
+
 	test("defaults resource binding identifiers from binding and worker names", ({
 		expect,
 	}) => {
@@ -66,6 +139,47 @@ describe("MiniflareWorkerConfigSchema", () => {
 			FLAGS: { type: "flagship", id: "custom-flags" },
 			BUCKET: { type: "r2", name: "custom-bucket" },
 			QUEUE: { type: "queue", name: "custom-queue" },
+		});
+	});
+
+	test("requires Hyperdrive localConnectionString", ({ expect }) => {
+		const result = MiniflareWorkerConfigSchema.safeParse({
+			type: "worker",
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			env: {
+				HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive" },
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual([
+				expect.objectContaining({
+					path: ["env", "HYPERDRIVE", "localConnectionString"],
+					message: "Invalid input: expected string, received undefined",
+				}),
+			]);
+		}
+
+		expect(
+			MiniflareWorkerConfigSchema.parse({
+				type: "worker",
+				name: "api",
+				compatibilityDate: "2026-01-01",
+				env: {
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive",
+						localConnectionString:
+							"postgres://user:password@localhost:5432/database",
+					},
+				},
+			}).env?.HYPERDRIVE
+		).toEqual({
+			type: "hyperdrive",
+			id: "hyperdrive",
+			localConnectionString: "postgres://user:password@localhost:5432/database",
 		});
 	});
 

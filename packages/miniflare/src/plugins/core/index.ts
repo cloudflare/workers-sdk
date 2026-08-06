@@ -365,16 +365,6 @@ function getServiceBindings(
 	];
 }
 
-function resolveLegacyPath(rootPath: string | undefined, filePath: string) {
-	return rootPath === undefined || path.isAbsolute(filePath)
-		? filePath
-		: path.resolve(rootPath, filePath);
-}
-
-function resolveSourcePath(rootPath: string | undefined, filePath: string) {
-	return resolveLegacyPath(rootPath, filePath);
-}
-
 export const CORE_PLUGIN: Plugin = {
 	getBindings(options, workerIndex) {
 		const { config, legacy, dev } = options;
@@ -391,8 +381,11 @@ export const CORE_PLUGIN: Plugin = {
 				...Object.entries(legacy.wasmBindings).map(([name, value]) =>
 					typeof value === "string"
 						? fs
-								.readFile(resolveLegacyPath(dev?.rootPath, value))
-								.then((wasmModule) => ({ name, wasmModule }))
+								.readFile(path.resolve(dev.rootPath, value))
+								.then((wasmModule) => ({
+									name,
+									wasmModule,
+								}))
 						: { name, wasmModule: value }
 				)
 			);
@@ -401,7 +394,7 @@ export const CORE_PLUGIN: Plugin = {
 			bindings.push(
 				...Object.entries(legacy.textBlobBindings).map(([name, blobPath]) =>
 					fs
-						.readFile(resolveLegacyPath(dev?.rootPath, blobPath), "utf8")
+						.readFile(path.resolve(dev.rootPath, blobPath), "utf8")
 						.then((text) => ({ name, text }))
 				)
 			);
@@ -410,9 +403,10 @@ export const CORE_PLUGIN: Plugin = {
 			bindings.push(
 				...Object.entries(legacy.dataBlobBindings).map(([name, value]) =>
 					typeof value === "string"
-						? fs
-								.readFile(resolveLegacyPath(dev?.rootPath, value))
-								.then((data) => ({ name, data }))
+						? fs.readFile(path.resolve(dev.rootPath, value)).then((data) => ({
+								name,
+								data,
+							}))
 						: { name, data: value }
 				)
 			);
@@ -455,7 +449,7 @@ export const CORE_PLUGIN: Plugin = {
 				...Object.entries(legacy.wasmBindings).map(([name, value]) =>
 					typeof value === "string"
 						? fs
-								.readFile(resolveLegacyPath(dev?.rootPath, value))
+								.readFile(path.resolve(dev.rootPath, value))
 								.then((buffer) => [name, new WebAssembly.Module(buffer)])
 						: [name, new WebAssembly.Module(value)]
 				)
@@ -465,7 +459,7 @@ export const CORE_PLUGIN: Plugin = {
 			bindingEntries.push(
 				...Object.entries(legacy.textBlobBindings).map(([name, blobPath]) =>
 					fs
-						.readFile(resolveLegacyPath(dev?.rootPath, blobPath), "utf8")
+						.readFile(path.resolve(dev.rootPath, blobPath), "utf8")
 						.then((text) => [name, text])
 				)
 			);
@@ -475,7 +469,7 @@ export const CORE_PLUGIN: Plugin = {
 				...Object.entries(legacy.dataBlobBindings).map(([name, value]) =>
 					typeof value === "string"
 						? fs
-								.readFile(resolveLegacyPath(dev?.rootPath, value))
+								.readFile(path.resolve(dev.rootPath, value))
 								.then((buffer) => [name, viewToBuffer(buffer)])
 						: [name, viewToBuffer(value)]
 				)
@@ -1074,10 +1068,7 @@ function getWorkerScript(
 				legacy.serviceWorkerScript,
 				legacy.serviceWorkerScriptPath === undefined
 					? buildStringScriptPath(workerIndex)
-					: resolveSourcePath(
-							options.dev?.rootPath,
-							legacy.serviceWorkerScriptPath
-						)
+					: path.resolve(options.dev.rootPath, legacy.serviceWorkerScriptPath)
 			),
 		};
 	}
@@ -1085,10 +1076,7 @@ function getWorkerScript(
 	// Otherwise, build modules from the manifest (contents are provided inline).
 	const manifest = config.manifest;
 	assert(manifest !== undefined, "Unreachable: Workers must have code");
-	const modulesRoot =
-		manifest.modulesRoot === undefined
-			? options.dev?.rootPath
-			: resolveSourcePath(options.dev?.rootPath, manifest.modulesRoot);
+	const modulesRoot = path.resolve(options.dev.rootPath, manifest.modulesRoot);
 	const entry = manifest.modules[manifest.mainModule];
 	assert(
 		entry !== undefined,

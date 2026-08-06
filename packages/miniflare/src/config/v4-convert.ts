@@ -30,10 +30,13 @@ export function convertV4MiniflareOptions(
 	options: V4MiniflareOptions
 ): MiniflareOptions {
 	const parsed = V4MiniflareOptionsSchema.parse(options);
+	const sharedRootPath = path.resolve(
+		"workers" in parsed ? (parsed.rootPath ?? ".") : "."
+	);
 	const converted: MiniflareOptions = {
 		...convertSharedOptions(parsed),
 		workers: getV4Workers(parsed).map((worker, index) =>
-			convertWorkerOptions(worker, index, parsed.rootPath)
+			convertWorkerOptions(worker, index, sharedRootPath)
 		),
 	};
 
@@ -87,7 +90,7 @@ function getV4Workers(
 function convertWorkerOptions(
 	worker: ParsedV4WorkerOptions,
 	workerIndex: number,
-	sharedRootPath: string | undefined
+	sharedRootPath: string
 ): WorkerOptions {
 	const env: Env = {};
 	const exports: Exports = {};
@@ -114,7 +117,7 @@ function convertWorkerOptions(
 		return value !== undefined;
 	};
 
-	const optionsRootPath = worker.rootPath ?? sharedRootPath;
+	const optionsRootPath = path.resolve(sharedRootPath, worker.rootPath ?? ".");
 	const manifest = addSourceOptions(
 		worker,
 		workerIndex,
@@ -160,7 +163,7 @@ function convertWorkerOptions(
 	legacy.sitePath =
 		worker.sitePath === undefined
 			? undefined
-			: resolveSourcePath(worker.sitePath, optionsRootPath);
+			: path.resolve(optionsRootPath, worker.sitePath);
 	legacy.siteInclude = worker.siteInclude;
 	legacy.siteExclude = worker.siteExclude;
 
@@ -196,19 +199,19 @@ function addSourceOptions(
 	worker: ParsedV4WorkerOptions,
 	workerIndex: number,
 	legacy: LegacyConfig,
-	rootPath: string | undefined
+	rootPath: string
 ): Manifest | undefined {
 	if ("modulesRules" in worker && worker.modulesRules !== undefined) {
 		throwUnsupportedOption("modulesRules");
 	}
 	if (Array.isArray(worker.modules)) {
-		const modulesRoot = resolveOptionalSourcePath(worker.modulesRoot, rootPath);
+		const modulesRoot = path.resolve(rootPath, worker.modulesRoot ?? ".");
 		return createManifestFromModules(worker.modules, modulesRoot);
 	}
 
 	const scriptPath =
 		"scriptPath" in worker && worker.scriptPath !== undefined
-			? resolveSourcePath(worker.scriptPath, rootPath)
+			? path.resolve(rootPath, worker.scriptPath)
 			: undefined;
 	const script =
 		"script" in worker
@@ -221,7 +224,7 @@ function addSourceOptions(
 	}
 
 	if (worker.modules === true) {
-		const modulesRoot = resolveOptionalSourcePath(worker.modulesRoot, rootPath);
+		const modulesRoot = path.resolve(rootPath, worker.modulesRoot ?? ".");
 		const mainModule =
 			scriptPath !== undefined
 				? getModuleName(scriptPath, modulesRoot)
@@ -243,7 +246,7 @@ function addSourceOptions(
 
 function createManifestFromModules(
 	modules: Extract<ParsedV4WorkerOptions["modules"], unknown[]>,
-	modulesRoot: string | undefined
+	modulesRoot: string
 ): Manifest {
 	const manifestModules: Manifest["modules"] = {};
 	let mainModule: string | undefined;
@@ -255,10 +258,7 @@ function createManifestFromModules(
 			type: convertModuleType(module.type),
 			contents:
 				module.contents ??
-				readModuleContents(
-					resolveSourcePath(module.path, modulesRoot),
-					module.type
-				),
+				readModuleContents(path.resolve(modulesRoot, module.path), module.type),
 		};
 	}
 
@@ -271,30 +271,14 @@ function createManifestFromModules(
 	return { mainModule, modulesRoot, modules: manifestModules };
 }
 
-function getModuleName(modulePath: string, modulesRoot: string | undefined) {
-	if (modulesRoot !== undefined && path.isAbsolute(modulePath)) {
+function getModuleName(modulePath: string, modulesRoot: string) {
+	if (path.isAbsolute(modulePath)) {
 		return path
 			.relative(modulesRoot, modulePath)
 			.split(path.sep)
 			.join(path.posix.sep);
 	}
 	return modulePath.split(path.sep).join(path.posix.sep);
-}
-
-function resolveSourcePath(sourcePath: string, rootPath: string | undefined) {
-	if (rootPath !== undefined && !path.isAbsolute(sourcePath)) {
-		return path.resolve(rootPath, sourcePath);
-	}
-	return sourcePath;
-}
-
-function resolveOptionalSourcePath(
-	sourcePath: string | undefined,
-	rootPath: string | undefined
-) {
-	return sourcePath === undefined
-		? rootPath
-		: resolveSourcePath(sourcePath, rootPath);
 }
 
 function readModuleContents(

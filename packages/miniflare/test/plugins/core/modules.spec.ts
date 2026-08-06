@@ -26,6 +26,7 @@ test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 					compatibilityFlags: ["nodejs_compat_v2"],
 					manifest: {
 						mainModule: "index.mjs",
+						modulesRoot: ROOT,
 						modules: {
 							"index.mjs": {
 								type: "esm",
@@ -111,6 +112,7 @@ test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 					compatibilityFlags: ["nodejs_compat_v2"],
 					manifest: {
 						mainModule: "index.mjs",
+						modulesRoot: ROOT,
 						modules: {
 							"index.mjs": {
 								type: "esm",
@@ -190,6 +192,7 @@ test("Miniflare: automatically collects modules", async ({ expect }) => {
 					compatibilityFlags: ["nodejs_compat_v2"],
 					manifest: {
 						mainModule: "index.mjs",
+						modulesRoot: ROOT,
 						modules: {
 							"index.mjs": {
 								type: "esm",
@@ -273,6 +276,7 @@ test("Miniflare: automatically collects modules", async ({ expect }) => {
 						compatibilityDate: "2023-08-01",
 						manifest: {
 							mainModule: "index.mjs",
+							modulesRoot: ROOT,
 							modules: {
 								// @ts-expect-error intentionally testing incorrect types
 								"index.mjs": { type: "PNG", contents: "" },
@@ -301,6 +305,7 @@ test("Miniflare: automatically collects modules with cycles", async ({
 					compatibilityDate: "2023-08-01",
 					manifest: {
 						mainModule: "index.mjs",
+						modulesRoot: path.join(ROOT, "cyclic"),
 						modules: {
 							"index.mjs": {
 								type: "esm",
@@ -448,6 +453,7 @@ test("Miniflare: parses source phase imports without error", async ({
 					compatibilityDate: "2023-08-01",
 					manifest: {
 						mainModule: "index.mjs",
+						modulesRoot: tmp,
 						modules: {
 							"index.mjs": {
 								type: "esm",

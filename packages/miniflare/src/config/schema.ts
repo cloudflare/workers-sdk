@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
 	AssetsSchema as RawAssetsConfigSchema,
 	BrowserBindingSchema,
@@ -40,6 +41,12 @@ import type { Awaitable } from "../workers";
 import type { S3Credentials } from "../workers/r2/constants";
 import type * as http from "node:http";
 
+const AbsolutePathSchema = z
+	.string()
+	.refine((value) => path.isAbsolute(value), {
+		message: "Path must be absolute",
+	});
+
 /**
  * The modules that make up a Worker, with their contents provided inline.
  */
@@ -50,8 +57,8 @@ export const MiniflareModuleSchema = z.strictObject({
 
 export const MiniflareManifestSchema = z.strictObject({
 	mainModule: z.string(),
-	/** Source directory for manifest module names; relative to `dev.rootPath` if not absolute. */
-	modulesRoot: z.string().optional(),
+	/** Absolute source directory for manifest module names. Defaults to cwd. */
+	modulesRoot: AbsolutePathSchema.default(() => process.cwd()),
 	modules: z.record(z.string(), MiniflareModuleSchema),
 });
 
@@ -584,8 +591,8 @@ const OutboundServiceSchema = z.discriminatedUnion("type", [
 ]);
 
 export const DevConfigSchema = z.strictObject({
-	/** Base directory for relative path options; may itself be relative to cwd. */
-	rootPath: z.string().optional(),
+	/** Absolute base directory for path options. Defaults to cwd. */
+	rootPath: AbsolutePathSchema.default(() => process.cwd()),
 	// Enables the Cache API (NOT Workers cache).
 	// not user-configurable (only Wrangler's internal ProxyWorker disables it).
 	cacheAPI: z.boolean().default(true),
@@ -647,7 +654,7 @@ export type LegacyConfig = z.input<typeof LegacyConfigSchema>;
 export const WorkerOptionsSchema = z.strictObject({
 	config: MiniflareWorkerConfigSchema,
 	legacy: LegacyConfigSchema.optional(),
-	dev: DevConfigSchema.optional(),
+	dev: DevConfigSchema.default(() => DevConfigSchema.parse({})),
 });
 
 export type WorkerOptions = z.input<typeof WorkerOptionsSchema>;
