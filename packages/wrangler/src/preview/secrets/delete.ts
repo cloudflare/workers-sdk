@@ -9,7 +9,7 @@ import { patchPreviewDeploymentSecrets, resolvePreviewName } from "./index";
 export const previewSecretDeleteCommand = createCommand({
 	metadata: {
 		description:
-			"Delete a secret variable from a Worker Preview's latest deployment",
+			"Delete a secret variable from a Worker Preview and create a new deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
