@@ -340,13 +340,19 @@ const MiniflareBindingSchema = z.unknown().transform((value, ctx) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Extends the config's DO "created" export with miniflare-internal fields:
+ * Extends live DO exports with miniflare-internal fields:
  * - `unsafeUniqueKey` — custom unique key for DO namespace identity
  * - `unsafePreventEviction` — prevents the DO from being evicted
  * - `container` — container config for container-attached DOs
  */
 export const MiniflareDurableObjectExportSchema =
 	DurableObjectCreatedExportSchema.extend({
+		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
+		unsafePreventEviction: z.boolean().optional(),
+		container: z.custom<DOContainerOptions>().optional(),
+	});
+export const MiniflareDurableObjectExpectingTransferExportSchema =
+	DurableObjectExpectingTransferExportSchema.extend({
 		unsafeUniqueKey: z.custom<UnsafeUniqueKey>().optional(),
 		unsafePreventEviction: z.boolean().optional(),
 		container: z.custom<DOContainerOptions>().optional(),
@@ -364,7 +370,7 @@ export const MiniflareDurableObjectExportSchema =
 // type.
 const MiniflareLiveExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
-	DurableObjectExpectingTransferExportSchema,
+	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
 	// MiniflareWorkflowExportSchema,
 ]);
@@ -373,7 +379,7 @@ const MiniflareAcceptedExportSchema = z.union([
 	DurableObjectDeletedExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
-	DurableObjectExpectingTransferExportSchema,
+	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
 	// MiniflareWorkflowExportSchema,
 ]);

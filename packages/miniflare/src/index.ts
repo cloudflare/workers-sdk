@@ -336,20 +336,6 @@ function getDurableObjectClassNames(
 			workerOpts.config,
 			"durable-object"
 		)) {
-			// Only live definitions (`created`/`expecting-transfer`) carry
-			// `storage`; tombstones (`deleted`/`renamed`/`transferred`) don't
-			// declare a runnable class.
-			if (!("storage" in exported)) {
-				continue;
-			}
-			// `expecting-transfer` exports are runnable (they carry `storage`) but,
-			// unlike `created` exports, don't carry the miniflare-only unsafe fields.
-			if ("transferFrom" in exported) {
-				classNames.set(className, {
-					enableSql: exported.storage === "sqlite",
-				});
-				continue;
-			}
 			classNames.set(className, {
 				enableSql: exported.storage === "sqlite",
 				unsafeUniqueKey: exported.unsafeUniqueKey,
