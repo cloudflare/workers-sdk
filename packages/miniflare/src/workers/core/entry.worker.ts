@@ -11,12 +11,15 @@ import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
 import { matchRoutes } from "./routing";
 import { handleScheduled } from "./scheduled";
+import type { EmailStoreService } from "../email/storage";
 import type { WorkerRoute } from "./routing";
 import type { Colorize } from "kleur/colors";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
+	[CoreBindings.TEXT_FALLBACK_WORKER_NAME]: string;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
@@ -560,6 +563,7 @@ export default <ExportedHandler<Env>>{
 						url.searchParams,
 						request,
 						service,
+						routeTarget,
 						env,
 						ctx
 					);
