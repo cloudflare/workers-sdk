@@ -1632,6 +1632,114 @@
 				"tags": ["Workflows"]
 			}
 		},
+		"/workflows/{workflow_name}/instances/batch/delete": {
+			"post": {
+				"description": "Deletes multiple workflow instances.",
+				"operationId": "workflows-batch-delete-instances",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "workflow_name",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workflows_workflow-name"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"instances": {
+										"type": "array",
+										"minItems": 1,
+										"maxItems": 100,
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 271
+										}
+									}
+								},
+								"required": ["instances"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"type": "object",
+											"properties": {
+												"result": {
+													"type": "object",
+													"properties": {
+														"deleted": {
+															"type": "array",
+															"items": {
+																"type": "object",
+																"properties": {
+																	"id": {
+																		"type": "string"
+																	}
+																},
+																"required": ["id"]
+															}
+														},
+														"errors": {
+															"type": "array",
+															"items": {
+																"type": "object",
+																"properties": {
+																	"id": {
+																		"type": "string"
+																	},
+																	"code": {
+																		"type": "number"
+																	},
+																	"message": {
+																		"type": "string"
+																	}
+																},
+																"required": ["id", "code", "message"]
+															}
+														}
+													},
+													"required": ["deleted", "errors"]
+												}
+											}
+										}
+									]
+								}
+							}
+						},
+						"description": "Batch delete Workflow Instances response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Batch delete Workflow Instances response failure."
+					}
+				},
+				"summary": "Batch Delete Workflow Instances",
+				"tags": ["Workflows"]
+			}
+		},
 		"/workflows/{workflow_name}/instances/{instance_id}": {
 			"get": {
 				"description": "Returns the status details of a workflow instance.",
