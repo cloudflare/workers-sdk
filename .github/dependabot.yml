@@ -46,3 +46,9 @@ updates:
     allow:
       - dependency-name: "workerd"
       - dependency-name: "@cloudflare/workers-types"
+    # @prisma/adapter-d1 still depends on workers-types v4, which causes
+    # Dependabot to open no-op v4-to-v5 lockfile updates.
+    ignore:
+      - dependency-name: "@cloudflare/workers-types"
+        update-types:
+          - "version-update:semver-major"
