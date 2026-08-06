@@ -26,7 +26,7 @@ export const IssueTriage: Agent = ({ id }) => {
 
 	// TODO(@nurodev): Check for duplicates
 
-	const sandbox = cloudflareSandbox(getSandbox(env.Sandbox, id));
+	const sandbox = cloudflareSandbox(getSandbox(env.SANDBOX, id));
 	useSandbox(sandbox, { cwd: "/workspace" });
 
 	const data = useInitialData<v.InferOutput<typeof InitialDataSchema>>();
