@@ -1,4 +1,5 @@
 packages:
+  - ".flue/"
   - "packages/*"
   - "packages/vite-plugin-cloudflare/playground/*"
   - "packages/vite-plugin-cloudflare/playground"
@@ -47,6 +48,11 @@ minimumReleaseAgeExclude:
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
   - "rosie-skills"
+  # Flue packages are updated together and used by the issue triage bot.
+  - "@flue/cli@2.0.3"
+  - "@flue/github@2.0.3"
+  - "@flue/runtime@2.0.3"
+  - "@flue/vite@2.0.3"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
@@ -55,7 +61,11 @@ minimumReleaseAgeExclude:
 # ──────────────────────────────────────────────────────────────────────────────
 
 allowBuilds:
+  "@google/genai": true
+  "@mongodb-js/zstd": true
+  core-js-pure: true
   esbuild: true
+  node-liblzma: true
   workerd: true
   # miniflare's direct `sharp` (0.35+) has no install script, but the
   # catalog-pinned published @cloudflare/vitest-pool-workers still pulls in
@@ -64,12 +74,11 @@ allowBuilds:
   sharp: true
   playwright-chromium: true
   prisma: true
+  protobufjs: true
   # Explicitly silence warnings for packages whose postinstall scripts are not
   # required for correct operation.
-  protobufjs: false # version-scheme diagnostic warning only
   msw: false # copies mockServiceWorker.js to msw.workerDirectory — unused in this repo
   core-js: false # telemetry
-  core-js-pure: false # telemetry
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Dependency resolution (migrated from package.json "pnpm" field in pnpm 10)

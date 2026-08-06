@@ -1,0 +1,43 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "workers-sdk-auto-triage",
+	"account_id": "f7f78ebb28c2a224a9a46a3007350b7a",
+	"compatibility_date": "2026-08-05",
+	"compatibility_flags": ["nodejs_compat"],
+	"ai": {
+		"binding": "AI",
+		"remote": true,
+	},
+	"containers": [
+		{
+			"class_name": "Sandbox",
+			"image": "./Dockerfile",
+			"instance_type": "standard-4",
+			"max_instances": 25,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "Sandbox",
+				"name": "Sandbox",
+			},
+		],
+	},
+	"exports": {
+		"FlueIssueTriageAgent": {
+			"type": "durable-object",
+			"storage": "sqlite",
+		},
+		"Sandbox": {
+			"type": "durable-object",
+			"storage": "sqlite",
+		},
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"secrets": {
+		"required": ["GITHUB_TOKEN", "GITHUB_WEBHOOK_SECRET"],
+	},
+}
