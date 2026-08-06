@@ -1,6 +1,6 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { InputWorkerSchema, SettingsSchema } from "@cloudflare/config";
+import { InputSettingsSchema, InputWorkerSchema } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { BuildOutputError } from "../errors";
@@ -19,7 +19,7 @@ const manifest: ParsedOutputWorkerConfig["manifest"] = {
 	modules: { "index.js": { type: "esm" } },
 };
 
-const parsedSettingsConfig = SettingsSchema.parse({
+const parsedSettingsConfig = InputSettingsSchema.parse({
 	type: "settings",
 	accountId: "1234567890",
 	complianceRegion: "public",

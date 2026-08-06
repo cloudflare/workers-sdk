@@ -8,9 +8,9 @@ import {
 	getWorkerDir,
 } from "./paths";
 import type {
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 
 /**
@@ -44,7 +44,7 @@ export async function writeWorkerConfig(
  */
 export async function writeRootConfig(
 	root: string,
-	settings: ParsedSettingsConfig
+	settings: ParsedInputSettingsConfig
 ): Promise<void> {
 	const configPath = getRootConfigPath(root);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import { OutputWorkerSchema, SettingsSchema } from "@cloudflare/config";
+import { InputSettingsSchema, OutputWorkerSchema } from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
 	BUILD_OUTPUT_VERSION,
@@ -10,8 +10,8 @@ import {
 	getWorkerConfigPath,
 } from "./paths";
 import type {
+	ParsedInputSettingsConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 
 interface BuildOutputWorkerBase {
@@ -58,7 +58,7 @@ export interface BuildOutput {
 	 * Project-level settings from the optional top-level `config.json`
 	 * (shared by every Worker), or `undefined` when the file is absent.
 	 */
-	settings: ParsedSettingsConfig | undefined;
+	settings: ParsedInputSettingsConfig | undefined;
 	/**
 	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`.
 	 * Guaranteed to contain at least one Worker; currently always exactly one.
@@ -150,7 +150,7 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
  */
 async function readSettings(
 	root: string
-): Promise<ParsedSettingsConfig | undefined> {
+): Promise<ParsedInputSettingsConfig | undefined> {
 	const configPath = getRootConfigPath(root);
 
 	if (!fs.existsSync(configPath)) {
@@ -158,7 +158,7 @@ async function readSettings(
 	}
 
 	const contents = await fsp.readFile(configPath, "utf-8");
-	const result = SettingsSchema.safeParse(parseJson(contents, configPath));
+	const result = InputSettingsSchema.safeParse(parseJson(contents, configPath));
 	if (!result.success) {
 		throw new BuildOutputError(
 			`invalid root config at ${configPath}.\n${result.error.message}`

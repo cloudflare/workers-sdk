@@ -563,16 +563,16 @@ export const InputWorkerSchema = BaseWorkerSchema.extend({
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
 
 /**
- * Settings schema — validates the named `settings` export of a
+ * Input settings schema — validates the named `settings` export of a
  * `cloudflare.config.ts`. Holds account/deployment settings shared by the other exports.
  */
-export const SettingsSchema = z.strictObject({
+export const InputSettingsSchema = z.strictObject({
 	type: z.literal("settings"),
 	accountId: z.string().optional(),
 	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
 });
 
-export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
+export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
 
 const SETTINGS_EXPORT_NAME = "settings";
 const SUPPORTED_EXPORT_TYPES = new Set(["worker", "settings"]);
@@ -619,7 +619,7 @@ const ConfigExportsTypeSchema = z
 
 const ConfigExportsObjectSchema = z
 	.object({
-		settings: SettingsSchema.optional(),
+		settings: InputSettingsSchema.optional(),
 	})
 	.catchall(InputWorkerSchema);
 
@@ -717,15 +717,13 @@ const _assertSchemaEnvMatchesWorkerConfig: _AssertSchemaEnvMatchesWorkerConfig =
 void _assertSchemaEnvMatchesWorkerConfig;
 
 /**
- * Bidirectional drift check between {@link SettingsSchema} and the public
+ * Bidirectional drift check between {@link InputSettingsSchema} and the public
  * {@link SettingsConfig} interface.
  */
-type _AssertSettingsSchemaMatchesConfig = [
-	z.input<typeof SettingsSchema> extends SettingsConfig ? true : false,
-	SettingsConfig extends z.input<typeof SettingsSchema> ? true : false,
+type _AssertInputSettingsSchemaMatchesConfig = [
+	z.input<typeof InputSettingsSchema> extends SettingsConfig ? true : false,
+	SettingsConfig extends z.input<typeof InputSettingsSchema> ? true : false,
 ];
-const _assertSettingsSchemaMatchesConfig: _AssertSettingsSchemaMatchesConfig = [
-	true,
-	true,
-];
-void _assertSettingsSchemaMatchesConfig;
+const _assertInputSettingsSchemaMatchesConfig: _AssertInputSettingsSchemaMatchesConfig =
+	[true, true];
+void _assertInputSettingsSchemaMatchesConfig;

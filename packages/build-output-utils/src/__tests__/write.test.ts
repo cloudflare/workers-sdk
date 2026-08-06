@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
+	InputSettingsSchema,
 	InputWorkerSchema,
 	OutputWorkerSchema,
-	SettingsSchema,
 } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
@@ -25,7 +25,7 @@ const parsedWorkerConfig = InputWorkerSchema.parse({
 	entrypoint: "index.js",
 });
 
-const parsedSettingsConfig = SettingsSchema.parse({
+const parsedSettingsConfig = InputSettingsSchema.parse({
 	type: "settings",
 	accountId: "1234567890",
 	complianceRegion: "public",

@@ -12,6 +12,7 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	InputSettingsSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
@@ -21,7 +22,6 @@ export {
 	R2BindingSchema,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
-	SettingsSchema,
 	TailConsumerSchema,
 	UnsafeBindingSchema,
 	validateSingletonBindings,
@@ -37,8 +37,8 @@ export type { LoadConfigResult } from "./load";
 export type { LoadAndValidateConfigResult } from "./config-loader";
 export type {
 	ParsedConfigExports,
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 	ModuleType,
 } from "./schema";

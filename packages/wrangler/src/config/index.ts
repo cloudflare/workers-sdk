@@ -17,8 +17,8 @@ import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { updateCheck } from "../update-check";
 import type { NormalizedTypes } from "../experimental-config/load";
 import type {
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 import type {
 	Config,
@@ -75,7 +75,7 @@ async function logWarningsWithUpgradeHint(
 export interface NewConfig {
 	config: Config;
 	parsedWorkerConfig: ParsedInputWorkerConfig;
-	parsedSettingsConfig: ParsedSettingsConfig | undefined;
+	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
 	dependencies: Set<string>;
 	types: NormalizedTypes;
 }

@@ -10,9 +10,9 @@ import {
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
@@ -20,7 +20,7 @@ import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 interface WriteBuildOutputArgs {
 	root: string;
 	parsedWorkerConfig: ParsedInputWorkerConfig;
-	parsedSettingsConfig: ParsedSettingsConfig | undefined;
+	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }

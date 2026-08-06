@@ -3,9 +3,9 @@ import { exports as exportConfig } from "../exports";
 import {
 	BindingSchema,
 	ConfigExportsSchema,
+	InputSettingsSchema,
 	InputWorkerSchema,
 	OutputWorkerSchema,
-	SettingsSchema,
 } from "../schema";
 import type { ParsedInputWorkerConfig } from "../schema";
 
@@ -757,15 +757,15 @@ describe("InputWorkerSchema type discriminant", () => {
 	});
 });
 
-describe("SettingsSchema", () => {
+describe("InputSettingsSchema", () => {
 	it("accepts a minimal settings config", ({ expect }) => {
-		const result = SettingsSchema.safeParse({ type: "settings" });
+		const result = InputSettingsSchema.safeParse({ type: "settings" });
 
 		expect(result.success).toBe(true);
 	});
 
 	it("accepts accountId and complianceRegion", ({ expect }) => {
-		const result = SettingsSchema.safeParse({
+		const result = InputSettingsSchema.safeParse({
 			type: "settings",
 			accountId: "acc-123",
 			complianceRegion: "fedramp-high",
@@ -775,7 +775,7 @@ describe("SettingsSchema", () => {
 	});
 
 	it("rejects unknown fields", ({ expect }) => {
-		const result = SettingsSchema.safeParse({
+		const result = InputSettingsSchema.safeParse({
 			type: "settings",
 			name: "my-worker",
 		});
