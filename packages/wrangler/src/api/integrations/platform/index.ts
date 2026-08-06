@@ -22,7 +22,10 @@ import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { getZoneFromRoute } from "../../../zones";
-import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
+import {
+	maybeStartOrUpdateRemoteProxySession,
+	seedRemoteHyperdriveBindings,
+} from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
@@ -295,7 +298,10 @@ async function getMiniflareOptionsFromConfig(args: {
 			// Platform proxy does not prepare local Container images.
 			enableContainers: false,
 		},
-		remoteProxyConnectionString
+		remoteProxyConnectionString,
+		// Remote Hyperdrive bindings authenticate with the edge session's
+		// credentials, which have to be fetched before this synchronous builder.
+		await seedRemoteHyperdriveBindings(bindings, remoteProxyConnectionString)
 	);
 
 	let processedAssetOptions: AssetsOptions | undefined;
