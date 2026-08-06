@@ -1,6 +1,8 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
+	duplicateInstanceError,
+	isDuplicateInstanceError,
 	isUserTriggeredPause,
 	isUserTriggeredRestart,
 	isUserTriggeredTerminate,
@@ -161,9 +163,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		// contract: creating an instance with an id that already exists throws
 		// and the existing instance is retained.
 		if (options.id !== undefined && (await this.#instanceExists(id))) {
-			throw new WorkflowError(
-				`Workflow instance with id "${id}" already exists`
-			);
+			throw duplicateInstanceError(id);
 		}
 
 		const stubId = this.env.ENGINE.idFromName(id);
@@ -276,11 +276,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 				// A concurrent create can claim the id between the existence
 				// check above and create(); the batch contract skips such ids
 				// rather than failing the batch.
-				if (
-					id !== undefined &&
-					e instanceof WorkflowError &&
-					e.message.includes("already exists")
-				) {
+				if (id !== undefined && isDuplicateInstanceError(e)) {
 					continue;
 				}
 				throw e;

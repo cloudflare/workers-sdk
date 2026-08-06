@@ -125,3 +125,17 @@ export function stepNotFoundError(name: string): WorkflowError {
 		"instance.cannot_restart"
 	);
 }
+
+export function duplicateInstanceError(id: string): WorkflowError {
+	return createWorkflowError(
+		`Workflow instance with id "${id}" already exists`,
+		"instance.already_exists"
+	);
+}
+
+export function isDuplicateInstanceError(error: unknown): boolean {
+	return (
+		error instanceof WorkflowError &&
+		error.message.includes("(instance.already_exists)")
+	);
+}
