@@ -14,7 +14,7 @@ import {
 export const previewSecretPutCommand = createCommand({
 	metadata: {
 		description:
-			"Create or update a secret variable on a Worker Preview's latest deployment",
+			"Create or update a secret variable on a Worker Preview and create a new deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
