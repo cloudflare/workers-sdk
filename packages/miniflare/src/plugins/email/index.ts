@@ -3,6 +3,7 @@ import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+import { isFileNotFoundError } from "../../shared";
 import { CoreBindings, sanitisePath } from "../../workers";
 import { EMAIL_STORE_SERVICE_NAME } from "../core/constants";
 import {
@@ -57,7 +58,20 @@ export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
 
-function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
+function getSendEmailServiceName(
+	workerName: string | undefined,
+	bindingName: string
+): string {
+	const scope =
+		workerName === undefined
+			? SERVICE_SEND_EMAIL_WORKER_PREFIX
+			: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${workerName}`;
+	return getUserBindingServiceName(scope, bindingName);
+}
+
+function buildJsonBindings(
+	bindings: Record<string, unknown>
+): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
 		name,
 		json: JSON.stringify(value),
@@ -133,7 +147,7 @@ export function getEmailFileDirectories(
  * the project copy since that is the one a user can navigate to.
  */
 export async function writeEmailTempFile(options: {
-	defaultProjectTmpPath: string | undefined;
+	resourceTmpPath: string | undefined;
 	tmpPath: string;
 	prefix: string;
 	fileName: string;
@@ -149,7 +163,7 @@ export async function writeEmailTempFile(options: {
 		throw new Error("Invalid email temporary-file prefix");
 	}
 	const { system, project } = getEmailFileDirectories(
-		options.defaultProjectTmpPath,
+		options.resourceTmpPath,
 		options.tmpPath,
 		options.prefix
 	);
@@ -169,14 +183,14 @@ export async function writeEmailTempFile(options: {
 }
 
 export async function removeEmailTempFiles(options: {
-	defaultProjectTmpPath: string | undefined;
+	resourceTmpPath: string | undefined;
 	tmpPath: string;
 	artifacts: EmailArtifact[];
 }): Promise<void> {
 	await Promise.all(
 		options.artifacts.map(async (artifact) => {
 			const { system, project } = getEmailFileDirectories(
-				options.defaultProjectTmpPath,
+				options.resourceTmpPath,
 				options.tmpPath,
 				artifact.prefix
 			);
@@ -188,7 +202,15 @@ export async function removeEmailTempFiles(options: {
 					: [resolveContainedPath(project, fileName)]),
 			];
 			await Promise.all(
-				paths.map((filePath) => unlink(filePath).catch(() => {}))
+				paths.map(async (filePath) => {
+					try {
+						await unlink(filePath);
+					} catch (error) {
+						if (!isFileNotFoundError(error)) {
+							throw error;
+						}
+					}
+				})
 			);
 		})
 	);
@@ -216,7 +238,7 @@ export const EMAIL_PLUGIN: Plugin<
 	options: EmailOptionsSchema,
 	sharedOptions: EmailSharedOptionsSchema,
 	bindingTypeDescription: "Email",
-	getBindings(options): Worker_Binding[] {
+	getBindings(options, _workerIndex, workerName): Worker_Binding[] {
 		if (!options.email?.send_email) {
 			return [];
 		}
@@ -232,10 +254,7 @@ export const EMAIL_PLUGIN: Plugin<
 					}
 				: {
 						entrypoint: "SendEmailBinding",
-						name: getUserBindingServiceName(
-							SERVICE_SEND_EMAIL_WORKER_PREFIX,
-							name
-						),
+						name: getSendEmailServiceName(workerName, name),
 					},
 		}));
 	},
@@ -264,6 +283,16 @@ export const EMAIL_PLUGIN: Plugin<
 				]
 			: [];
 
+		// The worker that owns these send_email bindings. `getServices` is called
+		// once per worker, so this identifies which worker sent a message and lets
+		// the local explorer filter the "Sending" inbox by the selected worker.
+		const ownerWorkerBinding: Worker_Binding[] = args.sharedOptions
+			.unsafeLocalExplorer
+			? buildJsonBindings({
+					SEND_EMAIL_OWNER_WORKER: args.workerNames[args.workerIndex],
+				})
+			: [];
+
 		const services: Service[] = [];
 		let hasRemote = false;
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
@@ -273,7 +302,7 @@ export const EMAIL_PLUGIN: Plugin<
 				continue;
 			}
 			services.push({
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
+				name: getSendEmailServiceName(args.workerNames[args.workerIndex], name),
 				worker: {
 					compatibilityDate: "2025-03-17",
 					modules: [
@@ -286,6 +315,7 @@ export const EMAIL_PLUGIN: Plugin<
 						...buildJsonBindings(config),
 						WORKER_BINDING_SERVICE_LOOPBACK,
 						...emailStoreBinding,
+						...ownerWorkerBinding,
 					],
 				},
 			});
