@@ -103,10 +103,25 @@ export class TraceStore extends DurableObject {
 	/** Persist one invocation's spans + logs. Called by the collector. */
 	persist(spans: SpanInput[], logs: LogInput[]): void {
 		for (const s of spans) {
+			// Upsert rather than INSERT OR REPLACE: a span is re-sent on every flush
+			// it's dirty for (open, attribute merges, close), and REPLACE deletes the
+			// row first, so `created_at` would be re-stamped with the latest flush.
+			// The trace list renders the root span's `created_at`, which would then
+			// show when the invocation finished rather than when it started.
 			this.sql.exec(
-				`INSERT OR REPLACE INTO spans
+				`INSERT INTO spans
 					(trace_id, span_id, parent_id, service, name, kind, start_ms, duration_ms, outcome, error, attributes)
-					VALUES (?,?,?,?,?,?,?,?,?,?, jsonb(?))`,
+					VALUES (?,?,?,?,?,?,?,?,?,?, jsonb(?))
+					ON CONFLICT (trace_id, span_id) DO UPDATE SET
+						parent_id = excluded.parent_id,
+						service = excluded.service,
+						name = excluded.name,
+						kind = excluded.kind,
+						start_ms = excluded.start_ms,
+						duration_ms = excluded.duration_ms,
+						outcome = excluded.outcome,
+						error = excluded.error,
+						attributes = excluded.attributes`,
 				s.traceId,
 				s.spanId,
 				s.parentId,
