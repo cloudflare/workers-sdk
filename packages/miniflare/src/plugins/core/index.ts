@@ -29,6 +29,7 @@ import {
 	getDurableObjectUniqueKey,
 	normaliseDurableObject,
 } from "../do";
+import { getEmailStoreServices } from "../email/store";
 import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getR2PublicService,
@@ -49,6 +50,7 @@ import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	EMAIL_STORE_SERVICE_NAME,
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
@@ -947,6 +949,7 @@ export interface GlobalServicesOptions {
 	sharedOptions: z.infer<typeof CoreSharedOptionsSchema>;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
+	fallbackWorkerPublicName: string | undefined;
 	tmpPath: string;
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
@@ -962,6 +965,7 @@ export function getGlobalServices({
 	sharedOptions,
 	allWorkerRoutes,
 	fallbackWorkerName,
+	fallbackWorkerPublicName,
 	tmpPath,
 	log,
 	proxyBindings,
@@ -990,6 +994,10 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
 			service: { name: fallbackWorkerName },
+		},
+		{
+			name: CoreBindings.TEXT_FALLBACK_WORKER_NAME,
+			json: JSON.stringify(fallbackWorkerPublicName ?? ""),
 		},
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
@@ -1025,6 +1033,12 @@ export function getGlobalServices({
 			service: {
 				name: SERVICE_LOCAL_EXPLORER,
 			},
+		});
+		// The entry worker runs the receiving `email()` path (see handleEmail),
+		// which captures received emails into the store over RPC.
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
 		});
 	}
 	const streamServiceEnabled = allWorkerOpts?.some(
@@ -1173,6 +1187,7 @@ export function getGlobalServices({
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
 			})
 		);
+		services.push(...getEmailStoreServices(tmpPath));
 	}
 
 	// Register the trace collector service. It's attached to each user worker's
