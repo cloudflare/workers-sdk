@@ -275,6 +275,10 @@ export class HyperdriveProxyController {
 				}
 			});
 		});
+		// `getServices` re-runs on every `setOptions` (i.e. every dev reload), so
+		// close the bridge from the previous round before replacing it — otherwise
+		// the old listener and its live edge relays leak for the session's lifetime.
+		this.#servers.get(`remote:${name}`)?.close();
 		this.#servers.set(`remote:${name}`, server);
 		return port;
 	}
