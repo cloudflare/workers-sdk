@@ -6519,16 +6519,40 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			) && isValid;
 	}
 
-	const samplingRate = val?.head_sampling_rate;
-
-	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
-		diagnostics.errors.push(
-			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
-		);
-	}
+	validateHeadSamplingRate(
+		diagnostics,
+		field,
+		"head_sampling_rate",
+		val?.head_sampling_rate
+	);
+	validateHeadSamplingRate(
+		diagnostics,
+		field,
+		"logs.head_sampling_rate",
+		val?.logs?.head_sampling_rate
+	);
+	validateHeadSamplingRate(
+		diagnostics,
+		field,
+		"traces.head_sampling_rate",
+		val?.traces?.head_sampling_rate
+	);
 
 	return isValid;
 };
+
+function validateHeadSamplingRate(
+	diagnostics: Diagnostics,
+	container: string,
+	key: string,
+	samplingRate: number | undefined
+) {
+	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
+		diagnostics.errors.push(
+			`"${container}.${key}" must be a value between 0 and 1.`
+		);
+	}
+}
 
 const validateCache: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {

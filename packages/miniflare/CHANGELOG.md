@@ -1,6 +1,6 @@
 # miniflare
 
-## 5.20260731.0-alpha
+## 5.20260801.0-alpha
 
 ### Patch Changes
 
@@ -12,6 +12,15 @@
   | ------------------------- | ------------- | ------------- |
   | @cloudflare/workers-types | ^5.20260730.1 | ^5.20260731.1 |
   | workerd                   | 1.20260730.1  | 1.20260731.1  |
+
+- [#15012](https://github.com/cloudflare/workers-sdk/pull/15012) [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260731.1 | ^5.20260801.1 |
+  | workerd                   | 1.20260731.1  | 1.20260801.1  |
 
 - [#14968](https://github.com/cloudflare/workers-sdk/pull/14968) [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix local rate limiting being disabled entirely when bindings share a `namespace_id` but use different periods
 

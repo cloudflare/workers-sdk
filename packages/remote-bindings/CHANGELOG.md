@@ -6,7 +6,7 @@
 
 - Updated dependencies [[`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2), [`9c74538`](https://github.com/cloudflare/workers-sdk/commit/9c7453837e3293787c0cb1778520f630aea7e5ca), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`daf65f2`](https://github.com/cloudflare/workers-sdk/commit/daf65f28cecf35e251dc6e476d5bbd82972d68de), [`a9e5abb`](https://github.com/cloudflare/workers-sdk/commit/a9e5abb8c0c2e7895b0bb09c6c8e8ffd3dbc3bc0)]:
   - @cloudflare/workers-utils@0.31.1
-  - miniflare@5.20260731.0-alpha
+  - miniflare@5.20260801.0-alpha
   - @cloudflare/workers-auth@0.6.0
   - @cloudflare/cli-shared-helpers@0.1.20
   - @cloudflare/deploy-helpers@0.6.5

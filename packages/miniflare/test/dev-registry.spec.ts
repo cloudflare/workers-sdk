@@ -1,13 +1,35 @@
+import path from "node:path";
+import { watch } from "chokidar";
 import { getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { useDispose, useTmp } from "./test-shared";
 import type { MiniflareOptions, WorkerRegistry } from "miniflare";
 
 describe.sequential("DevRegistry", () => {
+	test("only registers workers that opt in", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const workerOptions = {
+			name: "worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `export default { fetch() { return new Response("ok"); } };`,
+		} satisfies MiniflareOptions;
+		const mf = new Miniflare(workerOptions);
+		useDispose(mf);
+		await mf.ready;
+
+		expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+
+		await mf.setOptions({ ...workerOptions, unsafeRegisterWorker: true });
+		expect(getWorkerRegistry(unsafeDevRegistryPath)["worker"]).toBeDefined();
+	});
+
 	test("fetch to service worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			script: `addEventListener("fetch", (event) => {
@@ -92,6 +114,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -169,6 +192,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -245,6 +269,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -316,6 +341,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -356,6 +382,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -444,6 +471,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -527,6 +555,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -568,6 +597,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -635,6 +665,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -735,6 +766,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -813,6 +845,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			compatibilityFlags: ["experimental"],
@@ -873,6 +906,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			workflows: {
@@ -916,6 +950,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
@@ -979,6 +1014,7 @@ describe.sequential("DevRegistry", () => {
 		// Restart remote — gets a new debug port, registry file updates
 		await remote.setOptions({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
@@ -1017,6 +1053,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1066,6 +1103,7 @@ describe.sequential("DevRegistry", () => {
 		// Restart remote — gets a new debug port, registry file updates
 		await remote.setOptions({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1093,6 +1131,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			unsafeTriggerHandlers: true,
 			compatibilityFlags: ["experimental"],
@@ -1155,6 +1194,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1264,6 +1304,7 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1366,6 +1407,7 @@ describe.sequential("DevRegistry", () => {
 		};
 		const remoteOptions: MiniflareOptions = {
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			script: `
@@ -1471,6 +1513,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1538,6 +1581,7 @@ describe.sequential("DevRegistry", () => {
 
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 
 			https: true,
@@ -1622,6 +1666,7 @@ describe.sequential("DevRegistry", () => {
 		const unrelated = new Miniflare({
 			name: "unrelated-worker",
 			unsafeDevRegistryPath,
+			unsafeRegisterWorker: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			script: `
@@ -1643,6 +1688,7 @@ describe.sequential("DevRegistry", () => {
 		// Create remote worker (one we're actually bound to) - this should trigger the callback
 		const remote = new Miniflare({
 			name: "remote-worker",
+			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			modules: true,
@@ -1746,6 +1792,7 @@ describe.sequential("DevRegistry", () => {
 		const sharedOptions = {
 			name: "consumer-worker",
 			unsafeDevRegistryPath,
+			unsafeRegisterWorker: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 		} satisfies Partial<MiniflareOptions>;
@@ -1783,6 +1830,195 @@ describe.sequential("DevRegistry", () => {
 				// The worker's own entry is still advertised, without the queue.
 				expect(registry["consumer-worker"]).toBeDefined();
 				expect(registry["consumer-worker"].queueConsumers).toBeUndefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+});
+
+describe("registry churn across config updates", () => {
+	const script = (body: string) =>
+		`export default { async fetch() { return new Response("${body}"); } }`;
+
+	test("does not withdraw a Worker's entry during an unrelated config update", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			name: "stable-worker",
+			unsafeDevRegistryPath,
+			modules: true,
+			script: script("before"),
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				expect(
+					getWorkerRegistry(unsafeDevRegistryPath)["stable-worker"]
+				).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Other dev sessions learn about us by watching this directory, so watch it
+		// the same way and record what a peer would actually see.
+		const events: string[] = [];
+		const watcher = watch(unsafeDevRegistryPath, {
+			ignoreInitial: true,
+		});
+		onTestFinished(() => watcher.close());
+		await new Promise((resolve) => watcher.once("ready", resolve));
+		watcher.on("unlink", (file) =>
+			events.push(`unlink:${path.basename(file)}`)
+		);
+		watcher.on("add", (file) => events.push(`add:${path.basename(file)}`));
+		watcher.on("change", (file) =>
+			events.push(`change:${path.basename(file)}`)
+		);
+
+		await mf.setOptions({
+			name: "stable-worker",
+			unsafeDevRegistryPath,
+			modules: true,
+			script: script("after"),
+		});
+
+		// Wait until the update has definitely reached the directory, so that an
+		// empty event list can't be mistaken for a passing assertion.
+		await vi.waitFor(
+			() => {
+				expect(events.some((event) => event.endsWith(":stable-worker"))).toBe(
+					true
+				);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		expect(events).not.toContain("unlink:stable-worker");
+		expect(
+			getWorkerRegistry(unsafeDevRegistryPath)["stable-worker"]
+		).toBeDefined();
+	});
+
+	test("withdraws its entries when a config update fails to start a runtime", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			name: "doomed-worker",
+			unsafeDevRegistryPath,
+			modules: true,
+			script: script("before"),
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				expect(
+					getWorkerRegistry(unsafeDevRegistryPath)["doomed-worker"]
+				).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// A flag `workerd` rejects. The previous runtime is stopped before the
+		// replacement is started, so this update leaves no runtime behind it.
+		await expect(
+			mf.setOptions({
+				name: "doomed-worker",
+				unsafeDevRegistryPath,
+				modules: true,
+				script: script("after"),
+				compatibilityFlags: ["definitely_not_a_real_compatibility_flag"],
+			})
+		).rejects.toThrow(/runtime failed to start/i);
+
+		// Nothing serves the advertised debug port now, and the entry's heartbeat
+		// would keep it looking fresh, so it has to be withdrawn rather than left
+		// for the stale-entry sweep.
+		expect(
+			getWorkerRegistry(unsafeDevRegistryPath)["doomed-worker"]
+		).toBeUndefined();
+	});
+
+	test("withdraws a removed Worker named after an inherited property", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{ name: "kept-worker", modules: true, script: script("kept") },
+				// A name that exists on `Object.prototype`, so a membership test that
+				// walks the prototype chain would report it as still configured.
+				{ name: "constructor", modules: true, script: script("dropped") },
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		// `hasOwn` throughout: a plain object resolves `registry["constructor"]`
+		// through its prototype, so a plain lookup would assert nothing here.
+		await vi.waitFor(
+			() => {
+				expect(
+					Object.hasOwn(getWorkerRegistry(unsafeDevRegistryPath), "constructor")
+				).toBe(true);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [{ name: "kept-worker", modules: true, script: script("kept") }],
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(Object.hasOwn(registry, "constructor")).toBe(false);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("withdraws the entry for a Worker removed from the config", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{ name: "kept-worker", modules: true, script: script("kept") },
+				{ name: "dropped-worker", modules: true, script: script("dropped") },
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(registry["dropped-worker"]).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [{ name: "kept-worker", modules: true, script: script("kept") }],
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(registry["dropped-worker"]).toBeUndefined();
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
