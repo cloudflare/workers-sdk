@@ -50,6 +50,16 @@ export async function getPeerUrlsIfAggregating(
 	return getPeerDebugPortAddresses(registry, workerNames);
 }
 
+export function getPeerEntrypoint(
+	peerDebugPortAddress: string,
+	service: string
+): Fetcher {
+	const client = (env as AppContext["env"]).DEV_REGISTRY_DEBUG_PORT.connect(
+		peerDebugPortAddress
+	);
+	return client.getEntrypoint(service);
+}
+
 /**
  * Fetch data from a peer instance's explorer API.
  * Returns null on any error (silent omission policy).
@@ -64,10 +74,7 @@ export async function fetchFromPeer(
 	init?: RequestInit
 ): Promise<Response | null> {
 	try {
-		const client = (env as AppContext["env"]).DEV_REGISTRY_DEBUG_PORT.connect(
-			peerDebugPortAddress
-		);
-		const fetcher = client.getEntrypoint("core:entry");
+		const fetcher = getPeerEntrypoint(peerDebugPortAddress, "core:entry");
 		const url = new URL(`http://localhost${EXPLORER_API_PATH}${apiPath}`);
 		const response = await fetcher.fetch(url.toString(), {
 			...init,
