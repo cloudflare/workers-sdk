@@ -149,8 +149,10 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	public async create(options: WorkflowInstanceCreateOptions = {}): Promise<{
 		id: string;
 	}> {
-		const id = options.id ?? crypto.randomUUID();
-		const params = options.params ?? {};
+		// Destructuring defaults apply only to absent fields: an explicit null
+		// id must reach the validation below rather than becoming a generated
+		// id.
+		const { id = crypto.randomUUID(), params = {} } = options;
 		if (!isValidWorkflowInstanceId(id)) {
 			throw new WorkflowError("Workflow instance has invalid id");
 		}
@@ -245,6 +247,15 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			);
 		}
 
+		// Reject malformed ids before anything is probed or created: probing
+		// an id constructs its engine Durable Object, which persists storage,
+		// and a bad batch must not be partially applied.
+		for (const options of batch) {
+			if (options.id !== undefined && !isValidWorkflowInstanceId(options.id)) {
+				throw new WorkflowError("Workflow instance has invalid id");
+			}
+		}
+
 		// The documented batch contract is idempotent creation: ids that already
 		// exist, or that repeat within the batch, are skipped and excluded from
 		// the result rather than throwing, and instances are created in batch
@@ -259,7 +270,21 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 				}
 				seenIds.add(id);
 			}
-			results.push(await this.create(options));
+			try {
+				results.push(await this.create(options));
+			} catch (e) {
+				// A concurrent create can claim the id between the existence
+				// check above and create(); the batch contract skips such ids
+				// rather than failing the batch.
+				if (
+					id !== undefined &&
+					e instanceof WorkflowError &&
+					e.message.includes("already exists")
+				) {
+					continue;
+				}
+				throw e;
+			}
 		}
 		return results;
 	}

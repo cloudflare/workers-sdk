@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
 import { WorkflowBinding } from "../src/binding";
+import { WorkflowError } from "../src/lib/errors";
 import { setTestWorkflowCallback } from "./test-entry";
 import type { WorkflowHandle } from "../src/binding";
 import type { Engine, EngineLogs } from "../src/engine";
@@ -107,6 +108,15 @@ describe("WorkflowBinding", () => {
 			await expect(binding.create({ id: "#invalid!" })).rejects.toThrow(
 				"Workflow instance has invalid id"
 			);
+		});
+
+		it("should reject a null id instead of generating one", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			await expect(
+				binding.create({ id: null as unknown as string })
+			).rejects.toThrow("Workflow instance has invalid id");
 		});
 	});
 
@@ -218,6 +228,49 @@ describe("WorkflowBinding", () => {
 			expect(results.map((r) => r.id)).toEqual([id]);
 
 			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+		});
+
+		it("should reject the whole batch before creating anything when an id is invalid", async ({
+			expect,
+		}) => {
+			const good = uniqueId("batch-invalid-good");
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			await expect(
+				binding.createBatch([{ id: good }, { id: "#invalid!" }])
+			).rejects.toThrow("Workflow instance has invalid id");
+
+			// The valid entry listed before the invalid one must not have been
+			// created.
+			await expect(binding.get(good)).rejects.toThrow("instance.not_found");
+		});
+
+		it("should skip an id claimed by a concurrent create instead of failing the batch", async ({
+			expect,
+		}) => {
+			const raced = uniqueId("batch-race");
+			const fresh = uniqueId("batch-race-fresh");
+			const binding = createBinding();
+			const freshStub = env.ENGINE.get(env.ENGINE.idFromName(fresh));
+			setTestWorkflowCallback(async () => "done");
+
+			// Simulate another caller winning the id between createBatch's
+			// existence check and create().
+			const realCreate = binding.create.bind(binding);
+			vi.spyOn(binding, "create").mockImplementation(async (options) => {
+				if (options?.id === raced) {
+					throw new WorkflowError(
+						`Workflow instance with id "${raced}" already exists`
+					);
+				}
+				return realCreate(options);
+			});
+
+			const results = await binding.createBatch([{ id: raced }, { id: fresh }]);
+			expect(results.map((r) => r.id)).toEqual([fresh]);
+
+			await waitUntilLogEvent(freshStub, InstanceEvent.WORKFLOW_SUCCESS);
 		});
 	});
 
