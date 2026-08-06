@@ -1,6 +1,6 @@
 import { red } from "kleur/colors";
 import PostalMime from "postal-mime";
-import { RAW_EMAIL } from "./constants";
+import { RAW_EMAIL } from "./capture";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 import type { Email } from "postal-mime";
 
@@ -64,7 +64,7 @@ export async function isEmailReplyable(
 export async function validateReply(
 	incomingMessage: Email,
 	replyMessage: EmailMessage
-): Promise<Uint8Array> {
+): Promise<{ raw: Uint8Array; messageId: string }> {
 	const rawEmail: ReadableStream<Uint8Array> = replyMessage[RAW_EMAIL];
 
 	const rawEmailBuffer = new Uint8Array(
@@ -130,8 +130,8 @@ export async function validateReply(
 		// prepend References to be in the headers instead of the end of the body
 		finalReplyEmail.set(encodedReferences, 0);
 		finalReplyEmail.set(rawEmailBuffer, encodedReferences.byteLength);
-		return finalReplyEmail;
+		return { raw: finalReplyEmail, messageId: parsedReply.messageId };
 	}
 
-	return rawEmailBuffer;
+	return { raw: rawEmailBuffer, messageId: parsedReply.messageId };
 }
