@@ -32,7 +32,11 @@ describe("V4MiniflareOptionsSchema", () => {
 			},
 			queueProducers: { QUEUE: { queueName: "queue" } },
 			queueConsumers: { queue: { maxBatchSize: 10 } },
-			assets: { directory: "./public", binding: "ASSETS" },
+			assets: {
+				directory: "./public",
+				binding: "ASSETS",
+				run_worker_first: ["/api/*"],
+			},
 			workflows: {
 				WORKFLOW: { name: "workflow", className: "Workflow" },
 			},

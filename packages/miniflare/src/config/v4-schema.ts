@@ -799,6 +799,7 @@ export type V4WorkerOptionsShape = {
 		workerName?: string;
 		directory: string;
 		binding?: string;
+		run_worker_first?: boolean | string[];
 		routerConfig?: Record<string, unknown>;
 		assetConfig?: Record<string, unknown>;
 	};
