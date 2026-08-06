@@ -30,6 +30,7 @@ interface CacheMetadata {
 	headers: string[][];
 	status: number;
 	size: number;
+	stored?: number;
 }
 
 type CacheRouteHandler = RouteHandler<
