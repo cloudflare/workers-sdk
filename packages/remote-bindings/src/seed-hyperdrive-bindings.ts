@@ -44,22 +44,32 @@ async function fetchEdgeConnectionString(
 }
 
 /**
- * Seeds every remote Hyperdrive binding's `localConnectionString` with the
- * connection string of its edge session, so that the local binding presents
- * credentials the edge Hyperdrive proxy will accept.
+ * Fetches the edge session's connection string for every remote Hyperdrive
+ * binding, so that the local binding can present credentials the edge
+ * Hyperdrive proxy will accept.
  *
  * `buildMiniflareBindingOptions` is synchronous, so this async step must run
  * once the remote proxy session is ready and before miniflare options are
- * built. The passed `bindings` objects are mutated in place.
+ * built.
  *
- * No-op when there is no remote proxy session or no remote Hyperdrive bindings.
+ * The seeded values are *returned* rather than written onto the passed
+ * `bindings`: those binding objects are shared by reference with the record the
+ * remote proxy session keeps for change detection (`pickRemoteBindings` copies
+ * the record, not the objects). Mutating them would make the next reload's
+ * freshly-loaded config compare unequal to the stored, seeded one, tearing down
+ * and re-establishing the remote session on every file save.
+ *
+ * Returns an empty map when there is no remote proxy session or no remote
+ * Hyperdrive bindings.
  */
 export async function seedRemoteHyperdriveBindings(
 	bindings: Record<string, Binding> | undefined,
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
-): Promise<void> {
+): Promise<Map<string, string>> {
+	const seeded = new Map<string, string>();
+
 	if (!remoteProxyConnectionString || !bindings) {
-		return;
+		return seeded;
 	}
 
 	const remoteHyperdrives = Object.entries(bindings).filter(
@@ -74,13 +84,14 @@ export async function seedRemoteHyperdriveBindings(
 	);
 
 	await Promise.all(
-		remoteHyperdrives.map(async ([name, binding]) => {
+		remoteHyperdrives.map(async ([name]) => {
 			const connectionString = await fetchEdgeConnectionString(
 				remoteProxyConnectionString,
 				name
 			);
-			(binding as { localConnectionString?: string }).localConnectionString =
-				connectionString;
+			seeded.set(name, connectionString);
 		})
 	);
+
+	return seeded;
 }
