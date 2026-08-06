@@ -1072,7 +1072,7 @@ export interface EnvironmentNonInheritable {
 	 */
 	connect: {
 		/** The transport protocol to listen for. */
-		protocol: "tcp" | "udp";
+		protocol: "tcp";
 
 		/** The port to listen on. */
 		port: number;

@@ -2756,27 +2756,6 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	expect(received.toString()).toBe("hello");
 });
 
-test("Miniflare: connectHandlers reject unsupported protocols", async ({
-	expect,
-	onTestFinished,
-}) => {
-	const port = await getPort();
-	const mf = new Miniflare({
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async connect(socket) {},
-			};
-		`,
-		connectHandlers: [{ protocol: "udp", port }],
-	});
-	// dispose() on a startup-failed instance propagates the same error
-	onTestFinished(() => mf.dispose().catch(() => {}));
-
-	await expect(mf.ready).rejects.toThrow(/only "tcp" is currently supported/);
-});
-
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 	const mf1 = new Miniflare({
 		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],

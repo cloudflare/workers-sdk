@@ -407,7 +407,7 @@ const TriggerSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("connect"),
-		protocol: z.enum(["tcp", "udp"]),
+		protocol: z.enum(["tcp"]),
 		port: z.number(),
 		address: z.string().optional(),
 	}),

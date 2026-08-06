@@ -5307,20 +5307,16 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (
-		"protocol" in value &&
-		value.protocol !== "tcp" &&
-		value.protocol !== "udp"
-	) {
+	if ("protocol" in value && value.protocol !== "tcp") {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of either "tcp" or "udp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
 				value.protocol
 			)}.`
 		);
 		isValid = false;
 	} else if (!("protocol" in value)) {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of either "tcp" or "udp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
 				value
 			)}.`
 		);

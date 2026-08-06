@@ -405,15 +405,6 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
-		it("accepts a udp connect trigger", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
-				...baseConfig,
-				triggers: [{ type: "connect", protocol: "udp", port: 5432 }],
-			});
-
-			expect(result.success).toBe(true);
-		});
-
 		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,

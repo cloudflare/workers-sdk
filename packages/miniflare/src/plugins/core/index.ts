@@ -178,7 +178,7 @@ const CoreOptionsSchemaInput = z.intersection(
 		// Populated from wrangler config's `connect`.
 		connectHandlers: z
 			.object({
-				protocol: z.enum(["tcp", "udp"]),
+				protocol: z.enum(["tcp"]),
 				port: z.number(),
 				address: z.string().optional(),
 			})

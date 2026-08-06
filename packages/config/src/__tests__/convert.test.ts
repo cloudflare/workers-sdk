@@ -977,14 +977,6 @@ describe("convertToWranglerConfig", () => {
 			expect(result.connect).toEqual([{ protocol: "tcp", port: 5432 }]);
 		});
 
-		it("maps a udp connect trigger", ({ expect }) => {
-			const result = convertToWranglerConfig({
-				...baseConfig,
-				triggers: [{ type: "connect", protocol: "udp", port: 5432 }],
-			});
-			expect(result.connect).toEqual([{ protocol: "udp", port: 5432 }]);
-		});
-
 		it("collects multiple connect triggers into a single connect array", ({
 			expect,
 		}) => {
@@ -994,7 +986,7 @@ describe("convertToWranglerConfig", () => {
 					{ type: "connect", protocol: "tcp", port: 5432 },
 					{
 						type: "connect",
-						protocol: "udp",
+						protocol: "tcp",
 						port: 6379,
 						address: "0.0.0.0",
 					},
@@ -1002,7 +994,7 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.connect).toEqual([
 				{ protocol: "tcp", port: 5432 },
-				{ protocol: "udp", port: 6379, address: "0.0.0.0" },
+				{ protocol: "tcp", port: 6379, address: "0.0.0.0" },
 			]);
 		});
 	});

@@ -16,7 +16,6 @@ export const USER_ERROR_CODES = new Set([
 	"ERR_DIFFERENT_S3_CREDENTIALS", // Multiple R2 bucket bindings declared for same bucket with different S3 credentials
 	"ERR_MISSING_INSPECTOR_PROXY_PORT", // An inspector proxy has been requested but no inspector port to use has been specified
 	"ERR_MISSING_EXPLORER_UI", // Local Explorer enabled but assets not found at expected path
-	"ERR_CONNECT_PROTOCOL_UNSUPPORTED", // `connect` handler declared with a protocol not yet supported by workerd (e.g. "udp")
 ] as const);
 
 export const SYSTEM_ERROR_CODES = new Set([

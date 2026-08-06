@@ -4956,7 +4956,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of either "tcp" or "udp" but got {"port":8081}."
+					  - "connect[0]" should have a "protocol" field of "tcp" but got {"port":8081}."
 				`);
 			});
 
@@ -4974,7 +4974,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have a "protocol" field of either "tcp" or "udp" but got "ftp"."
+					  - "connect[0]" should have a "protocol" field of "tcp" but got "ftp"."
 				`);
 			});
 
@@ -4985,7 +4985,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						connect: [
 							{ protocol: "tcp" },
-							{ protocol: "udp", address: "0.0.0.0" },
+							{ protocol: "tcp", address: "0.0.0.0" },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -4996,7 +4996,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "connect[0]" should have a number "port" field but got {"protocol":"tcp"}.
-					  - "connect[1]" should have a number "port" field but got {"protocol":"udp","address":"0.0.0.0"}."
+					  - "connect[1]" should have a number "port" field but got {"protocol":"tcp","address":"0.0.0.0"}."
 				`);
 			});
 
@@ -5053,7 +5053,6 @@ describe("normalizeAndValidateConfig()", () => {
 						connect: [
 							{ protocol: "tcp", port: 8081, address: "*" },
 							{ protocol: "tcp", port: 8082 },
-							{ protocol: "udp", port: 8081 },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -5066,7 +5065,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.connect).toEqual([
 					{ protocol: "tcp", port: 8081, address: "*" },
 					{ protocol: "tcp", port: 8082 },
-					{ protocol: "udp", port: 8081 },
 				]);
 			});
 

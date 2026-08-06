@@ -99,7 +99,7 @@ export interface EmailTrigger extends EmailTriggerOptions {
 
 interface ConnectTriggerOptions {
 	/** The transport protocol to listen for. */
-	protocol: "tcp" | "udp";
+	protocol: "tcp";
 	/** The port to listen on. */
 	port: number;
 	/** The address to bind to. Defaults to `127.0.0.1`. */

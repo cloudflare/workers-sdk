@@ -15,7 +15,7 @@ You can now configure a Worker to receive raw socket connections during `wrangle
 }
 ```
 
-Each entry opens a listening socket on `127.0.0.1` (or the given `address`) that forwards incoming connections straight to the Worker, bypassing the local dev HTTP entry point. This requires the `experimental` compatibility flag. Only `"tcp"` is currently supported locally; `"udp"` is accepted by the schema for forward compatibility but will fail to start until workerd adds support for it.
+Each entry opens a listening socket on `127.0.0.1` (or the given `address`) that forwards incoming connections straight to the Worker, bypassing the local dev HTTP entry point. This requires the `experimental` compatibility flag. Only `"tcp"` is supported at the moment.
 
 `@cloudflare/config` also supports declaring this trigger via `triggers.connect(...)`, which lowers to the `connect` field above:
 
