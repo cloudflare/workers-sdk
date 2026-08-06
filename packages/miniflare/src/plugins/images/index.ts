@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import fs from "node:fs/promises";
 import SCRIPT_IMAGES_SERVICE from "worker:images/images";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
@@ -68,14 +67,7 @@ export const IMAGES_PLUGIN: Plugin = {
 	async getServices({ options, tmpPath, sharedOptions }) {
 		const services: Service[] = [];
 
-		// The Images services use fixed (non binding-scoped) names, so only a
-		// single images binding is supported per worker. This isn't expressible
-		// in the config type, so it's enforced here.
 		const imagesBindings = getEnvBindingsOfType(options.config, "images");
-		assert(
-			imagesBindings.length <= 1,
-			"Only one `images` binding is supported per worker"
-		);
 
 		for (const [name, binding] of imagesBindings) {
 			const remoteProxyConnectionString = getRemoteProxyConnectionString(

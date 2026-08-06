@@ -277,31 +277,36 @@ const SINGLETON_BINDING_TYPES = new Set([
 
 const listFormatter = new Intl.ListFormat("en-US");
 
+export function validateSingletonBindings(
+	env: Record<string, { type: string }>,
+	ctx: z.RefinementCtx
+) {
+	const seen = new Set<string>();
+	const duplicates = new Set<string>();
+
+	for (const binding of Object.values(env)) {
+		const type = binding.type;
+
+		if (SINGLETON_BINDING_TYPES.has(type)) {
+			if (seen.has(type)) {
+				duplicates.add(type);
+			}
+
+			seen.add(type);
+		}
+	}
+
+	if (duplicates.size > 0) {
+		ctx.addIssue({
+			code: "custom",
+			message: `${listFormatter.format([...duplicates].sort())} bindings can only be defined once`,
+		});
+	}
+}
+
 const EnvSchema = z
 	.record(z.string(), BindingSchema)
-	.superRefine((env, ctx) => {
-		const seen = new Set<string>();
-		const duplicates = new Set<string>();
-
-		for (const binding of Object.values(env)) {
-			const type = binding.type;
-
-			if (SINGLETON_BINDING_TYPES.has(type)) {
-				if (seen.has(type)) {
-					duplicates.add(type);
-				}
-
-				seen.add(type);
-			}
-		}
-
-		if (duplicates.size > 0) {
-			ctx.addIssue({
-				code: "custom",
-				message: `${listFormatter.format([...duplicates].sort())} bindings can only be defined once`,
-			});
-		}
-	})
+	.superRefine(validateSingletonBindings)
 	.optional();
 
 // `state` defaults to `"created"` (live) when omitted. Tombstones use one of

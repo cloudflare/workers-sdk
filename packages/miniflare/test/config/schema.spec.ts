@@ -104,6 +104,47 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
+	test("rejects duplicate singleton bindings", ({ expect }) => {
+		const result = MiniflareWorkerConfigSchema.safeParse({
+			type: "worker",
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			env: {
+				BROWSER: { type: "browser" },
+				OTHER_BROWSER: { type: "browser" },
+				IMAGES: { type: "images" },
+				OTHER_IMAGES: { type: "images" },
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual([
+				expect.objectContaining({
+					path: ["env"],
+					message: "browser and images bindings can only be defined once",
+				}),
+			]);
+		}
+	});
+
+	test("allows duplicate non-singleton bindings", ({ expect }) => {
+		const parsed = MiniflareWorkerConfigSchema.parse({
+			type: "worker",
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			env: {
+				KV: { type: "kv" },
+				OTHER_KV: { type: "kv" },
+			},
+		});
+
+		expect(parsed.env).toMatchObject({
+			KV: { type: "kv", id: "KV-api" },
+			OTHER_KV: { type: "kv", id: "OTHER_KV-api" },
+		});
+	});
+
 	test("defaults resource binding identifiers to worker for unnamed workers", ({
 		expect,
 	}) => {

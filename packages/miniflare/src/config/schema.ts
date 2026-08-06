@@ -19,6 +19,7 @@ import {
 	QueueBindingSchema,
 	R2BindingSchema,
 	HyperdriveBindingSchema,
+	validateSingletonBindings,
 } from "@cloudflare/config";
 import { z } from "zod";
 import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
@@ -456,7 +457,10 @@ export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	tailConsumers: true,
 }).extend({
 	manifest: MiniflareManifestSchema.optional(),
-	env: z.record(z.string(), MiniflareBindingSchema).optional(),
+	env: z
+		.record(z.string(), MiniflareBindingSchema)
+		.superRefine(validateSingletonBindings)
+		.optional(),
 	exports: MiniflareExportsSchema.optional(),
 	assets: MiniflareAssetsSchema.optional(),
 	tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),

@@ -22,6 +22,7 @@ export {
 	HyperdriveBindingSchema,
 	SettingsSchema,
 	UnsafeBindingSchema,
+	validateSingletonBindings,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
 } from "./schema";
