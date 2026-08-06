@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { createReadStream } from "node:fs";
-import { lstat, readdir, readFile } from "node:fs/promises";
+import { lstat, readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
@@ -410,7 +410,7 @@ export const buildAssetManifest = async (dir: string) => {
 			}
 
 			const filepath = path.join(dir, relativeFilepath);
-			const filestat = await lstat(filepath);
+			const filestat = await stat(filepath);
 
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
