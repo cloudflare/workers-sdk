@@ -10379,6 +10379,73 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error on a nested logs sampling rate out of range", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							logs: {
+								enabled: true,
+								head_sampling_rate: 10,
+							},
+						},
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.logs.head_sampling_rate" must be a value between 0 and 1."
+				`);
+			});
+
+			it("should error on a nested traces sampling rate out of range", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							traces: {
+								enabled: true,
+								head_sampling_rate: -1,
+							},
+						},
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.traces.head_sampling_rate" must be a value between 0 and 1."
+				`);
+			});
+
+			it("should not error on nested sampling rates within range", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							logs: { enabled: true, head_sampling_rate: 0.5 },
+							traces: { enabled: true, head_sampling_rate: 1 },
+						},
+					} satisfies RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should error on invalid additional fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
