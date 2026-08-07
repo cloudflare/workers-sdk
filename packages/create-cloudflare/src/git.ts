@@ -117,10 +117,7 @@ export const gitCommit = async (ctx: C3Context) => {
 };
 
 const createCommitMessage = async (ctx: C3Context) => {
-	const framework =
-		ctx.template.frameworkCliUsed === false
-			? undefined
-			: ctx.template.frameworkCli;
+	const framework = ctx.template.frameworkCli;
 
 	const header = framework
 		? "Initialize web application via create-cloudflare CLI"
@@ -134,7 +131,7 @@ const createCommitMessage = async (ctx: C3Context) => {
 		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
 		...(framework ? [{ key: "framework", value: ctx.template.id }] : []),
-		...(framework
+		...(framework && ctx.template.frameworkCliUsed !== false
 			? [{ key: "framework cli", value: getFrameworkCli(ctx) }]
 			: []),
 		{

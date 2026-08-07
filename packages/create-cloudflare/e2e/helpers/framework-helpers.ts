@@ -508,17 +508,14 @@ export async function testGitCommitMessage(
 	});
 
 	expect(commitMessage).toMatch(
-		expectFrameworkCli
-			? /Initialize web application via create-cloudflare CLI/
-			: /Initial commit \(by create-cloudflare CLI\)/
+		/Initialize web application via create-cloudflare CLI/
 	);
 	expect(commitMessage).toContain(`C3 = create-cloudflare@${version}`);
 	expect(commitMessage).toContain(`project name = ${projectName}`);
+	expect(commitMessage).toContain(`framework = ${framework}`);
 	if (expectFrameworkCli) {
-		expect(commitMessage).toContain(`framework = ${framework}`);
 		expect(commitMessage).toContain("framework cli =");
 	} else {
-		expect(commitMessage).not.toContain("framework =");
 		expect(commitMessage).not.toContain("framework cli =");
 	}
 }

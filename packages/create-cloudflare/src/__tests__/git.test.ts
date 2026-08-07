@@ -315,7 +315,7 @@ describe("git helpers", () => {
 			expect(ctx.commitMessage).toBeDefined();
 		});
 
-		test("omits framework metadata when the framework CLI was not used", async ({
+		test("omits framework CLI metadata when the framework CLI was not used", async ({
 			expect,
 		}) => {
 			const ctx = createTestContext("test", { projectName: "test" });
@@ -327,8 +327,9 @@ describe("git helpers", () => {
 
 			expect(ctx.template.frameworkCli).toBe("create-vinext-app");
 			expect(ctx.commitMessage).toContain(
-				"Initial commit (by create-cloudflare CLI)"
+				"Initialize web application via create-cloudflare CLI"
 			);
+			expect(ctx.commitMessage).toContain("framework = test");
 			expect(ctx.commitMessage).not.toContain("framework cli =");
 		});
 
