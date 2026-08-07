@@ -21,6 +21,7 @@ export {
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
 	SettingsSchema,
+	TailConsumerSchema,
 	UnsafeBindingSchema,
 	validateSingletonBindings,
 	WorkerBindingSchema,

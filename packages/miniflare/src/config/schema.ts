@@ -18,6 +18,7 @@ import {
 	KVBindingSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
+	TailConsumerSchema,
 	HyperdriveBindingSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
@@ -434,9 +435,7 @@ const MiniflareAssetsSchema = RawAssetsConfigSchema.extend({
  * proxy worker (`ExternalServiceProxy`) when the target worker lives in another
  * Miniflare instance, mirroring the `worker`/`durable-object` reroute.
  */
-const MiniflareTailConsumerSchema = z.strictObject({
-	workerName: z.string(),
-	streaming: z.boolean().optional(),
+const MiniflareTailConsumerSchema = TailConsumerSchema.extend({
 	entrypoint: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
 });

@@ -408,7 +408,7 @@ const PlacementSchema = z.union([
 	}),
 ]);
 
-const TailConsumerSchema = z.strictObject({
+export const TailConsumerSchema = z.strictObject({
 	workerName: z.string(),
 	streaming: z.boolean().optional(),
 });
