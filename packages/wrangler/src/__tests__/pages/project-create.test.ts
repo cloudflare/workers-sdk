@@ -1,11 +1,14 @@
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { mockConsoleMethods } from "./../helpers/mock-console";
 import { msw } from "./../helpers/msw";
 import { runWrangler } from "./../helpers/run-wrangler";
+import type { PagesConfigCache } from "../../pages/types";
 
 describe("pages project create", () => {
 	const std = mockConsoleMethods();
@@ -186,11 +189,9 @@ describe("pages project create", () => {
 				{ once: true }
 			)
 		);
-		vi.mock("getConfigCache", () => {
-			return {
-				account_id: "original-account-id",
-				project_name: "an-existing-project",
-			};
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "original-account-id",
+			project_name: "an-existing-project",
 		});
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
 		await runWrangler(
