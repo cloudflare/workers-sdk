@@ -6,7 +6,7 @@
  */
 
 import { env } from "cloudflare:workers";
-import { CorePaths } from "../core";
+import { CorePaths, isStorageOwnerRegistryName } from "../core";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { AppContext } from "./common";
 
@@ -28,7 +28,9 @@ function getPeerDebugPortAddresses(
 ): string[] {
 	const selfSet = new Set(selfWorkerNames);
 	const addresses = Object.entries(registry)
-		.filter(([name]) => !selfSet.has(name))
+		// Skip the shared-storage owner + client presence entries — they aren't
+		// real user workers and their debug ports don't serve the explorer API.
+		.filter(([name]) => !selfSet.has(name) && !isStorageOwnerRegistryName(name))
 		.map(([, def]) => def.debugPortAddress)
 		.filter((addr): addr is string => typeof addr === "string");
 	// A single Miniflare process with multiple workers registers multiple

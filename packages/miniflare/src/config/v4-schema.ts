@@ -618,6 +618,8 @@ export const V4SharedOptionsSchema = z.object({
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
+	unsafeSharedStorageOwner: z.boolean().optional(),
+	unsafeStorageOwnerRole: z.enum(["owner", "client"]).optional(),
 	unsafeObservability: z.boolean().optional(),
 	unsafeInspectDurableObjects: z.boolean().optional(),
 	logRequests: z.boolean().default(true),
@@ -903,6 +905,8 @@ export type V4SharedOptions = {
 	unsafeTriggerHandlers?: boolean;
 	unsafeRuntimeEnv?: Record<string, string>;
 	unsafeLocalExplorer?: boolean;
+	unsafeSharedStorageOwner?: boolean;
+	unsafeStorageOwnerRole?: "owner" | "client";
 	unsafeObservability?: boolean;
 	unsafeInspectDurableObjects?: boolean;
 	logRequests?: boolean;

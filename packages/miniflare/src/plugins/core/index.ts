@@ -32,6 +32,7 @@ import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
+	R2_PLUGIN_NAME,
 	R2_PUBLIC_SERVICE_NAME,
 	R2_S3_SERVICE_NAME,
 } from "../r2";
@@ -710,6 +711,8 @@ export interface GlobalServicesOptions {
 	durableObjectClassNames: DurableObjectClassNames;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: ParsedWorkerOptions[];
+	/** Storage plugins routed to a shared owner; their global services are skipped. */
+	storageOwnerRoutePlugins?: Set<string>;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -720,6 +723,7 @@ export function getGlobalServices({
 	proxyBindings,
 	durableObjectClassNames,
 	allWorkerOpts,
+	storageOwnerRoutePlugins,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -779,12 +783,14 @@ export function getGlobalServices({
 			},
 		});
 	}
-	const streamServiceEnabled = allWorkerOpts?.some((worker) =>
-		getEnvBindingsOfType(worker.config, "stream").some(
-			([, binding]) =>
-				getRemoteProxyConnectionString(binding, worker.dev) === undefined
-		)
-	);
+	const streamServiceEnabled =
+		!storageOwnerRoutePlugins?.has(STREAM_PLUGIN_NAME) &&
+		allWorkerOpts?.some((worker) =>
+			getEnvBindingsOfType(worker.config, "stream").some(
+				([, binding]) =>
+					getRemoteProxyConnectionString(binding, worker.dev) === undefined
+			)
+		);
 	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
@@ -794,14 +800,18 @@ export function getGlobalServices({
 			},
 		});
 	}
-	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	const routeR2ToOwner = storageOwnerRoutePlugins?.has(R2_PLUGIN_NAME) === true;
+	const r2PublicService = getR2PublicService(
+		allWorkerOpts ?? [],
+		routeR2ToOwner
+	);
 	if (r2PublicService !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_PUBLIC,
 			service: { name: R2_PUBLIC_SERVICE_NAME },
 		});
 	}
-	const r2S3Service = getR2S3Service(allWorkerOpts ?? []);
+	const r2S3Service = getR2S3Service(allWorkerOpts ?? [], routeR2ToOwner);
 	if (r2S3Service !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_S3,
