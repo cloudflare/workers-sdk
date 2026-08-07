@@ -23,7 +23,6 @@ import { kVoid } from "../../runtime";
 import { MiniflareCoreError, type Log } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
-import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import {
 	DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
@@ -156,8 +155,7 @@ function getCustomServiceDesignator(
 	kind: CustomServiceKind,
 	name: string,
 	service: MiniflareServiceBinding,
-	dev: ParsedDevConfig | undefined,
-	hasAssetsAndIsVitest: boolean = false
+	dev: ParsedDevConfig | undefined
 ): ServiceDesignator {
 	let serviceName: string;
 	let entrypoint: string | undefined;
@@ -186,19 +184,10 @@ function getCustomServiceDesignator(
 			// Remote config travels via props to a generic proxy worker.
 			props = buildRemoteProxyProps(remoteProxyConnectionString, name);
 		} else if (service.workerName === kCurrentWorker) {
-			if (service.exportName !== undefined) {
-				// SELF with an explicit entrypoint always points to the user worker.
-				serviceName = getUserServiceName(refererName);
-				entrypoint = service.exportName;
-				if (service.props) {
-					props = { json: JSON.stringify(service.props) };
-				}
-			} else {
-				// Bare SELF: point to the (assets) RPC Proxy Worker if assets are
-				// present and we're running under vitest.
-				serviceName = hasAssetsAndIsVitest
-					? `${RPC_PROXY_SERVICE_NAME}:${refererName}`
-					: getUserServiceName(refererName);
+			serviceName = getUserServiceName(refererName);
+			entrypoint = service.exportName;
+			if (service.props) {
+				props = { json: JSON.stringify(service.props) };
 			}
 		} else {
 			serviceName = getUserServiceName(service.workerName);
@@ -332,8 +321,7 @@ function getGlobalOutbound(
 				CustomServiceKind.KNOWN,
 				CUSTOM_SERVICE_KNOWN_OUTBOUND,
 				dev.outboundService,
-				dev,
-				dev.hasAssetsAndIsVitest
+				dev
 			);
 }
 
@@ -420,8 +408,7 @@ export const CORE_PLUGIN: Plugin = {
 					CustomServiceKind.UNKNOWN,
 					name,
 					service,
-					dev,
-					dev?.hasAssetsAndIsVitest
+					dev
 				),
 			});
 		}
