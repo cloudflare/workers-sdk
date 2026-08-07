@@ -4,6 +4,8 @@ import { stripVTControlCharacters } from "node:util";
 import {
 	extractConfigBindings,
 	getBranchName,
+	getPullRequestMetadata,
+	getRepositoryUrl,
 } from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -37,6 +39,29 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 	};
 }
 
+function clearPreviewMetadataEnvs() {
+	vi.stubEnv("GITHUB_REPOSITORY", "");
+	vi.stubEnv("GITHUB_SERVER_URL", "");
+	vi.stubEnv("GITHUB_EVENT_PATH", "");
+	vi.stubEnv("GITHUB_REF", "");
+	vi.stubEnv("CI_PROJECT_URL", "");
+	vi.stubEnv("CI_REPOSITORY_URL", "");
+	vi.stubEnv("CI_MERGE_REQUEST_IID", "");
+	vi.stubEnv("CI_MERGE_REQUEST_PROJECT_URL", "");
+	vi.stubEnv("CIRCLE_REPOSITORY_URL", "");
+	vi.stubEnv("CIRCLE_PULL_REQUEST", "");
+	vi.stubEnv("BUILDKITE_REPO", "");
+	vi.stubEnv("BITBUCKET_GIT_HTTP_ORIGIN", "");
+	vi.stubEnv("BITBUCKET_GIT_SSH_ORIGIN", "");
+	vi.stubEnv("REPOSITORY_URL", "");
+	vi.stubEnv("PULL_REQUEST_URL", "");
+	vi.stubEnv("PULL_REQUEST_NUMBER", "");
+	vi.stubEnv("PR_URL", "");
+	vi.stubEnv("PR_NUMBER", "");
+	vi.stubEnv("CHANGE_URL", "");
+	vi.stubEnv("CHANGE_ID", "");
+}
+
 describe("wrangler preview", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
@@ -46,13 +71,14 @@ describe("wrangler preview", () => {
 		clearOutputFilePath();
 	});
 
-	describe("getBranchName", () => {
+		describe("getBranchName", () => {
 		beforeEach(() => {
 			vi.unstubAllEnvs();
 			vi.stubEnv("WORKERS_CI_BRANCH", undefined);
 			vi.stubEnv("GITHUB_REF_NAME", undefined);
 			vi.stubEnv("GITHUB_HEAD_REF", undefined);
 			vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
+			clearPreviewMetadataEnvs();
 		});
 
 		afterAll(() => {
@@ -81,6 +107,112 @@ describe("wrangler preview", () => {
 			vi.stubEnv("CI_COMMIT_REF_NAME", "gitlab-branch");
 
 			expect(getBranchName()).toBe("gitlab-branch");
+		});
+	});
+
+	describe("getRepositoryUrl", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use GitHub Actions repository env vars", ({ expect }) => {
+			vi.stubEnv("GITHUB_REPOSITORY", "cloudflare/workers-sdk");
+
+			expect(getRepositoryUrl()).toBe(
+				"https://github.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use GitHub Enterprise server URL", ({ expect }) => {
+			vi.stubEnv("GITHUB_SERVER_URL", "https://github.example.com/");
+			vi.stubEnv("GITHUB_REPOSITORY", "cloudflare/workers-sdk");
+
+			expect(getRepositoryUrl()).toBe(
+				"https://github.example.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use GitLab project URL", ({ expect }) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/cloudflare/workers-sdk.git"
+			);
+
+			expect(getRepositoryUrl()).toBe(
+				"https://gitlab.example.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use and normalize git remote origin URL", ({ expect }) => {
+			vi.mocked(childProcess.execSync)
+				.mockImplementationOnce(() => Buffer.from("true"))
+				.mockImplementationOnce(() =>
+					Buffer.from("git@git.example.com:acme/worker-project.git\n")
+				);
+
+			expect(getRepositoryUrl()).toBe(
+				"https://git.example.com/acme/worker-project"
+			);
+		});
+	});
+
+	describe("getPullRequestMetadata", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use direct pull request URL env vars", ({ expect }) => {
+			vi.stubEnv(
+				"PULL_REQUEST_URL",
+				"https://git.example.com/acme/worker-project/pulls/13"
+			);
+			vi.stubEnv("PULL_REQUEST_NUMBER", "13");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://git.example.com/acme/worker-project/pulls/13",
+			});
+		});
+
+		test("should use GitHub event pull request metadata", ({ expect }) => {
+			writeFileSync(
+				"github-event.json",
+				JSON.stringify({
+					pull_request: {
+						number: 13,
+						html_url: "https://github.com/acme/worker-project/pull/13",
+					},
+				})
+			);
+			vi.stubEnv("GITHUB_EVENT_PATH", "github-event.json");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+			});
+		});
+
+		test("should use GitLab merge request metadata", ({ expect }) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+			});
 		});
 	});
 
@@ -290,6 +422,7 @@ describe("wrangler preview", () => {
 	describe("preview command", () => {
 		beforeEach(() => {
 			vi.stubEnv("CI", undefined);
+			clearPreviewMetadataEnvs();
 			mkdirSync("src", { recursive: true });
 			writeFileSync(
 				"src/index.ts",
@@ -2363,13 +2496,22 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.migrations?.old_tag).toBeUndefined();
 		});
 
-		test("should include deployment annotations from message and tag args", async ({
+		test("should include deployment annotations from metadata and args", async ({
 			expect,
 		}) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project.git"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
 						annotations?: {
 							"workers/message"?: string;
+							"workers/pull_request_number"?: string;
+							"workers/pull_request_url"?: string;
+							"workers/repository_url"?: string;
 							"workers/tag"?: string;
 						};
 				  })
@@ -2436,8 +2578,121 @@ describe("wrangler preview", () => {
 
 			expect(deploymentRequestBody?.annotations).toEqual({
 				"workers/message": "preview note",
+				"workers/pull_request_number": "13",
+				"workers/pull_request_url":
+					"https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+				"workers/repository_url": "https://gitlab.example.com/acme/worker-project",
 				"workers/tag": "v1.2.3",
 			});
+			expect(std.out).toContain("pull_request");
+			expect(std.out).toContain(
+				"https://gitlab.example.com/acme/worker-project/-/merge_requests/13"
+			);
+			expect(std.out).not.toContain("repository_url");
+		});
+
+		test("should show pull request output when the API rejects preview metadata annotations", async ({
+			expect,
+		}) => {
+			vi.stubEnv(
+				"PULL_REQUEST_URL",
+				"https://git.example.com/acme/worker-project/pulls/13"
+			);
+			vi.stubEnv("PULL_REQUEST_NUMBER", "13");
+
+			let deploymentRequests = 0;
+			let fallbackRequestBody:
+				| (Record<string, unknown> & {
+						annotations?: Record<string, string>;
+				  })
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-annotations-fallback",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequests++;
+						const body = (await request.json()) as typeof fallbackRequestBody;
+						if (deploymentRequests === 1) {
+							return HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [
+										{
+											code: 10021,
+											message:
+												"annotations not allowed: workers/pull_request_number, workers/pull_request_url, workers/repository_url",
+										},
+									],
+								},
+								{ status: 400 }
+							);
+						}
+
+						fallbackRequestBody = body;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-annotations-fallback",
+									preview_id: "preview-id-annotations-fallback",
+									preview_name: "test-preview",
+									urls: ["https://fallback123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				'preview --name test-preview --tag v1.2.3 --message "preview note"'
+			);
+
+			expect(deploymentRequests).toBe(2);
+			expect(fallbackRequestBody?.annotations).toEqual({
+				"workers/message": "preview note",
+				"workers/tag": "v1.2.3",
+			});
+			expect(std.out).toContain("pull_request");
+			expect(std.out).toContain(
+				"https://git.example.com/acme/worker-project/pulls/13"
+			);
 		});
 
 		test("should fall back to HEAD commit metadata for annotations in CI", async ({
