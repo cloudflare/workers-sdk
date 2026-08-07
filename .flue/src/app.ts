@@ -14,7 +14,6 @@ setProvider(
 );
 
 const app = new Hono()
-
 	// Channels
 	.route("/channels/github", githubChannel.route());
 
