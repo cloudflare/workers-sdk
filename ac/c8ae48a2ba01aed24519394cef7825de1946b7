@@ -1,0 +1,25 @@
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_b702d30224ef81::t_b609e132f98288 19,28-32,82,225
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_b702d30224ef81::t_a0a2ccbffa2d7f 20-21,24
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_b702d30224ef81::t_e1fb6c2dabe47f 18-22,29,35,42,44,48,51-56,106-114,152
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_b702d30224ef81::t_4533a7723b87ee 23-27,168,173,178,182,190,192,196,199-202,209-222,266-274
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "acc8ae48a2ba01aed24519394cef7825de1946b7",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
