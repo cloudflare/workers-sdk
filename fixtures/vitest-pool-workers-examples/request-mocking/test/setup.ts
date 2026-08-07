@@ -1,10 +1,6 @@
 import { afterAll, afterEach, beforeAll } from "vitest";
-import { server } from "./server";
+import { network } from "./server";
 
-beforeAll(() =>
-	server.listen({
-		onUnhandledRequest: "error",
-	})
-);
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+beforeAll(() => network.enable());
+afterEach(() => network.resetHandlers());
+afterAll(() => network.disable());
