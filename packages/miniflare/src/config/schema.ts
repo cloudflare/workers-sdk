@@ -96,14 +96,14 @@ const NodeHandlerBindingSchema = z.strictObject({
 // Zod validators for workerd's builtin services (`runtime/config/workerd.ts`).
 // All fields are optional except where a value is structurally required.
 
-const HttpOptionsHeaderSchema = z.object({
+const HttpOptionsHeaderSchema = z.strictObject({
 	name: z.string(),
 	// If omitted, the header will be removed.
 	value: z.string().optional(),
 });
 
 const HttpOptionsSchema = z
-	.object({
+	.strictObject({
 		style: z.enum(HttpOptions_Style).optional(),
 		forwardedProtoHeader: z.string().optional(),
 		cfBlobHeader: z.string().optional(),
@@ -115,12 +115,12 @@ const HttpOptionsSchema = z
 		capnpConnectHost: HOST_CAPNP_CONNECT,
 	}));
 
-const TlsOptionsKeypairSchema = z.object({
+const TlsOptionsKeypairSchema = z.strictObject({
 	privateKey: z.string().optional(),
 	certificateChain: z.string().optional(),
 });
 
-const TlsOptionsSchema = z.object({
+const TlsOptionsSchema = z.strictObject({
 	keypair: TlsOptionsKeypairSchema.optional(),
 	requireClientCerts: z.boolean().optional(),
 	trustBrowserCas: z.boolean().optional(),
@@ -149,8 +149,8 @@ const ExternalServiceBindingSchema = z
 		type: z.literal("external"),
 		address: z.string(),
 		http: HttpOptionsSchema.optional(),
-		https: z
-			.object({
+			https: z
+			.strictObject({
 				options: HttpOptionsSchema.optional(),
 				tlsOptions: TlsOptionsSchema.optional(),
 				certificateHost: z.string().optional(),
@@ -187,6 +187,7 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
  */
 const MiniflareR2BindingSchema = R2BindingSchema.extend({
 	s3Credentials: z
+		// Allow internal source metadata used when checking duplicate credentials.
 		.object({
 			accessKeyId: z.string(),
 			secretAccessKey: z.string(),
@@ -433,7 +434,7 @@ const MiniflareAssetsSchema = RawAssetsConfigSchema.extend({
  * proxy worker (`ExternalServiceProxy`) when the target worker lives in another
  * Miniflare instance, mirroring the `worker`/`durable-object` reroute.
  */
-const MiniflareTailConsumerSchema = z.object({
+const MiniflareTailConsumerSchema = z.strictObject({
 	workerName: z.string(),
 	streaming: z.boolean().optional(),
 	entrypoint: z.string().optional(),
@@ -575,7 +576,7 @@ export type MiniflareTrigger = NonNullable<
 // Dev config
 // ---------------------------------------------------------------------------
 
-const UnsafeDirectSocketSchema = z.object({
+const UnsafeDirectSocketSchema = z.strictObject({
 	host: z.string().optional(),
 	port: z.number().optional(),
 	serviceName: z.string().optional(),
@@ -673,7 +674,7 @@ export type ParsedWorkerOptions = z.output<typeof WorkerOptionsSchema>;
 //  Instance-wide options
 // ---------------------------------------------------------------------------
 
-export const InstanceOptionsSchema = z.object({
+export const InstanceOptionsSchema = z.strictObject({
 	// Server
 	host: z.string().optional(),
 	port: z.number().optional(),
@@ -712,8 +713,8 @@ export const InstanceOptionsSchema = z.object({
 	containerEngine: z
 		.union([
 			z.string(),
-			z.object({
-				localDocker: z.object({
+			z.strictObject({
+				localDocker: z.strictObject({
 					/** Docker socket path; passed through as-is. */
 					socketPath: z.string(),
 				}),
@@ -723,7 +724,7 @@ export const InstanceOptionsSchema = z.object({
 
 	// Telemetry
 	telemetry: z
-		.object({
+		.strictObject({
 			enabled: z.boolean().default(false),
 			deviceId: z.string().optional(),
 		})
