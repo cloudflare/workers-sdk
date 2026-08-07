@@ -109,7 +109,7 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config).toMatchObject({
 			type: "worker",
 			name: "worker",
-			compatibilityDate: "2023-07-24",
+			compatibilityDate: "2000-01-01",
 			manifest: {
 				mainModule: "script-0.mjs",
 				modules: {

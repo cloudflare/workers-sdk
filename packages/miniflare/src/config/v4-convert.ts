@@ -17,7 +17,7 @@ import type {
 	V4ModuleRuleType,
 } from "./v4-schema";
 
-const FALLBACK_COMPATIBILITY_DATE = "2023-07-24";
+const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
 type Env = NonNullable<MiniflareWorkerConfig["env"]>;
 type Exports = NonNullable<MiniflareWorkerConfig["exports"]>;
@@ -179,7 +179,7 @@ function convertWorkerOptions(
 	dev.unsafeOverrideFetchWorker = worker.unsafeOverrideFetchWorker;
 	dev.unsafeEvalBinding = worker.unsafeEvalBinding;
 	dev.useModuleFallbackService = worker.unsafeUseModuleFallbackService;
-	dev.unsafeRegisterWorker = worker.unsafeRegisterWorker;
+	dev.unsafeRegisterWorker = worker.unsafeRegisterWorker ?? true;
 	dev.hasAssetsAndIsVitest = worker.hasAssetsAndIsVitest;
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;

@@ -150,7 +150,7 @@ const ExternalServiceBindingSchema = z
 		type: z.literal("external"),
 		address: z.string(),
 		http: HttpOptionsSchema.optional(),
-			https: z
+		https: z
 			.strictObject({
 				options: HttpOptionsSchema.optional(),
 				tlsOptions: TlsOptionsSchema.optional(),
@@ -716,6 +716,7 @@ export const InstanceOptionsSchema = z.strictObject({
 				localDocker: z.strictObject({
 					/** Docker socket path; passed through as-is. */
 					socketPath: z.string(),
+					containerEgressInterceptorImage: z.string().optional(),
 				}),
 			}),
 		])
