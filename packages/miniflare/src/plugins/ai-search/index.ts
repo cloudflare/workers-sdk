@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-	buildRemoteProxyProps,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-} from "../shared";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
+import { buildRemoteProxyProps, ProxyNodeBinding } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const AISearchEntrySchema = z.object({
@@ -21,9 +18,6 @@ export const AISearchOptionsSchema = z.object({
 
 export const AI_SEARCH_PLUGIN_NAME = "ai-search";
 
-// One shared remote-proxy service for all AI Search bindings (config via props).
-const AI_SEARCH_REMOTE_SERVICE_NAME = `${AI_SEARCH_PLUGIN_NAME}:remote`;
-
 export const AI_SEARCH_PLUGIN: Plugin<typeof AISearchOptionsSchema> = {
 	options: AISearchOptionsSchema,
 	bindingTypeDescription: "AI Search",
@@ -40,7 +34,7 @@ export const AI_SEARCH_PLUGIN: Plugin<typeof AISearchOptionsSchema> = {
 			bindings.push({
 				name: bindingName,
 				service: {
-					name: AI_SEARCH_REMOTE_SERVICE_NAME,
+					name: SERVICE_REMOTE_BINDINGS,
 					props: buildRemoteProxyProps(
 						entry.remoteProxyConnectionString,
 						bindingName
@@ -63,22 +57,7 @@ export const AI_SEARCH_PLUGIN: Plugin<typeof AISearchOptionsSchema> = {
 
 		return nodeBindings;
 	},
-	async getServices({ options }) {
-		const services: {
-			name: string;
-			worker: ReturnType<typeof remoteProxyClientWorker>;
-		}[] = [];
-
-		const hasAny =
-			Object.keys(options.aiSearchNamespaces ?? {}).length > 0 ||
-			Object.keys(options.aiSearchInstances ?? {}).length > 0;
-		if (hasAny) {
-			services.push({
-				name: AI_SEARCH_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			});
-		}
-
-		return services;
+	async getServices() {
+		return [];
 	},
 };

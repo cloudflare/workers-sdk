@@ -33,6 +33,7 @@ import { IMAGES_PLUGIN_NAME } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
+	R2_PLUGIN_NAME,
 	R2_PUBLIC_SERVICE_NAME,
 	R2_S3_SERVICE_NAME,
 } from "../r2";
@@ -57,6 +58,7 @@ import {
 	OBSERVABILITY_COMPAT_FLAGS,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
+	SERVICE_REMOTE_BINDINGS,
 } from "./constants";
 import {
 	constructExplorerBindingMap,
@@ -326,6 +328,15 @@ export const CoreSharedOptionsSchema = z.object({
 	// Path to the project temporary directory for plugins that need it
 	// (e.g. `.wrangler/tmp` for email logs). Falls back to a subdirectory of tmpPath if not set.
 	resourceTmpPath: z.string().optional(),
+	// Route supported local storage through a single detached "owner" process,
+	// so exactly one process opens the underlying SQLite/blob files.
+	// No-op when `resourcePersistencePath` is undefined (pure in-memory storage).
+	unsafeSharedStorageOwner: z.boolean().optional(),
+	// Internal: the role this instance plays in the shared-storage-owner
+	// topology. "owner" publishes itself as the storage owner; "client" (the
+	// default when the feature is enabled) routes storage to whichever owner is
+	// published. Set on the detached owner process.
+	unsafeStorageOwnerRole: z.enum(["owner", "client"]).optional(),
 	// Strip the MF-DISABLE_PRETTY_ERROR header from user request
 	stripDisablePrettyError: z.boolean().default(true),
 
@@ -949,6 +960,14 @@ export const CORE_PLUGIN: Plugin<
 			});
 		}
 
+		// Always inject the remote bindings proxy worker, without checking if any are used
+		// This simplifies the logic in each plugin by letting them target a well known service
+		// rather than each plugin having to inject it's own remote bindings proxy
+		services.push({
+			name: SERVICE_REMOTE_BINDINGS,
+			worker: remoteProxyClientWorker(),
+		});
+
 		return { services, extensions };
 	},
 };
@@ -967,6 +986,8 @@ export interface GlobalServicesOptions {
 	workflowOptions?: Map<string, WorkflowOption>;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: PluginWorkerOptions[];
+	/** Storage plugins routed to a shared owner; their global services are skipped. */
+	storageOwnerRoutePlugins?: Set<string>;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -978,6 +999,7 @@ export function getGlobalServices({
 	durableObjectClassNames,
 	workflowOptions,
 	allWorkerOpts,
+	storageOwnerRoutePlugins,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1037,11 +1059,15 @@ export function getGlobalServices({
 			},
 		});
 	}
-	const streamServiceEnabled = allWorkerOpts?.some(
-		(worker) =>
-			worker.stream?.stream !== undefined &&
-			!worker.stream.stream.remoteProxyConnectionString
-	);
+	// When Stream is routed to a shared storage owner, the local stream service
+	// isn't stood up, so the entry worker must not bind it either.
+	const streamServiceEnabled =
+		!storageOwnerRoutePlugins?.has(STREAM_PLUGIN_NAME) &&
+		allWorkerOpts?.some(
+			(worker) =>
+				worker.stream?.stream !== undefined &&
+				!worker.stream.stream.remoteProxyConnectionString
+		);
 	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
@@ -1051,14 +1077,20 @@ export function getGlobalServices({
 			},
 		});
 	}
-	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	// When R2 is routed to a shared storage owner, the local R2 storage services
+	// (incl. the entry service the public worker binds) aren't stood up, so skip
+	// the public-bucket service too.
+	const routeR2ToOwner = storageOwnerRoutePlugins?.has(R2_PLUGIN_NAME) === true;
+	const r2PublicService = routeR2ToOwner
+		? undefined
+		: getR2PublicService(allWorkerOpts ?? []);
 	if (r2PublicService !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_PUBLIC,
 			service: { name: R2_PUBLIC_SERVICE_NAME },
 		});
 	}
-	const r2S3Service = getR2S3Service(allWorkerOpts ?? []);
+	const r2S3Service = getR2S3Service(allWorkerOpts ?? [], routeR2ToOwner);
 	if (r2S3Service !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_S3,

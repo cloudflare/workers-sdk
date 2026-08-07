@@ -1,6 +1,11 @@
 import SCRIPT_OBJECT_ENTRY from "worker:shared/object-entry";
 import SCRIPT_REMOTE_PROXY_CLIENT from "worker:shared/remote-proxy-client";
-import { CoreBindings, SharedBindings } from "../../workers";
+import {
+	CoreBindings,
+	SharedBindings,
+	STORAGE_OWNER_CLIENT_ENTRYPOINT,
+} from "../../workers";
+import { getUserServiceName } from "../core";
 import type { RemoteProxyConnectionString } from ".";
 import type {
 	Worker,
@@ -147,6 +152,28 @@ export function buildRemoteProxyProps(
 			binding,
 			cfTraceId: process.env.CF_TRACE_ID,
 		}),
+	};
+}
+
+// Builds a binding designator routing a storage op through the client-side
+// storage-owner proxy (the `StorageOwnerProxy` entrypoint on the dev-registry
+// proxy service). The proxy resolves the owner from the dev registry and, over
+// its debug port, `getEntrypoint`s the named owner service — forwarding
+// `userProps` into the callee's `ctx.props` (e.g. the resource id read by
+// `object-entry.worker.ts`). `ownerService` / `ownerEntrypoint` are the owner's
+// real storage service coordinates (the owner runs the same plugin code, so
+// these names match); the plugin supplies them in `routeBindingToStorageOwner`.
+export function storageOwnerProxyDesignator(
+	ownerService: string,
+	ownerEntrypoint?: string,
+	userProps?: Record<string, unknown>
+): { name: string; entrypoint: string; props: { json: string } } {
+	return {
+		name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+		entrypoint: STORAGE_OWNER_CLIENT_ENTRYPOINT,
+		props: {
+			json: JSON.stringify({ ownerService, ownerEntrypoint, userProps }),
+		},
 	};
 }
 

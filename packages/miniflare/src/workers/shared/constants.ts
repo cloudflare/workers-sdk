@@ -1,5 +1,6 @@
 export const SharedHeaders = {
 	LOG_LEVEL: "MF-Log-Level",
+	STORAGE_OWNER_NAMESPACE: "MF-Storage-Owner-Namespace",
 } as const;
 
 export const SharedBindings = {

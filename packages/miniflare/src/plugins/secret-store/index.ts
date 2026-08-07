@@ -12,6 +12,7 @@ import {
 	objectEntryWorker,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
@@ -32,6 +33,9 @@ export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
 // A single entry service shared by every secret store. Each store_id is supplied
 // per-binding via `ctx.props`, so one service serves all of them.
 const SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME = `${SECRET_STORE_PLUGIN_NAME}:ns:entry`;
+// RPC entrypoint exposing a single secret. Referenced by the shared storage
+// owner so it can route a client's Secrets Store binding here.
+export const SECRET_STORE_SECRET_ENTRYPOINT = "SecretsStoreSecret";
 
 export const SECRET_STORE_PLUGIN: Plugin<
 	typeof SecretsStoreSecretsOptionsSchema
@@ -53,7 +57,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 						SECRET_STORE_PLUGIN_NAME,
 						`${config.store_id}:${config.secret_name}`
 					),
-					entrypoint: "SecretsStoreSecret",
+					entrypoint: SECRET_STORE_SECRET_ENTRYPOINT,
 				},
 			};
 		});
@@ -70,12 +74,23 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({
+		options,
+		tmpPath,
+		resourcePersistencePath,
+		storageOwnerRoutePlugins,
+	}) {
 		const configs = options.secretsStoreSecrets
 			? Object.values(options.secretsStoreSecrets)
 			: [];
 
 		if (configs.length === 0) {
+			return [];
+		}
+
+		// Routed to the shared storage owner: the owner stands up the secret
+		// services; this instance's bindings are repointed at the owner proxy.
+		if (storageOwnerRoutePlugins.has(SECRET_STORE_PLUGIN_NAME)) {
 			return [];
 		}
 
@@ -162,5 +177,54 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		}));
 
 		return [...secretServices, entryService, storageService, objectService];
+	},
+	routeBindingToStorageOwner(binding) {
+		// Per-secret RPC service. The owner exposes each secret under the same
+		// service name (derived from `<store_id>:<secret_name>`, not the binding
+		// key), so repoint at the client proxy targeting that same service +
+		// entrypoint — reached natively over the owner's debug port.
+		if ("service" in binding && binding.service?.name !== undefined) {
+			return {
+				name: binding.name,
+				service: storageOwnerProxyDesignator(
+					binding.service.name,
+					binding.service.entrypoint
+				),
+			};
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		// Dedupe by "<store_id>:<secret_name>" across all workers.
+		const secrets = new Map<
+			string,
+			{ store_id: string; secret_name: string }
+		>();
+		for (const options of allOptions) {
+			if (!options.secretsStoreSecrets) {
+				continue;
+			}
+			for (const { store_id, secret_name } of Object.values(
+				options.secretsStoreSecrets
+			)) {
+				secrets.set(`${store_id}:${secret_name}`, { store_id, secret_name });
+			}
+		}
+		if (secrets.size === 0) {
+			return undefined;
+		}
+		return {
+			// Recreate each secret resource so the owner stands up the matching
+			// per-secret service (its name derives from `<store_id>:<secret_name>`,
+			// so it matches what the client targets; the record keys are arbitrary).
+			ownerOptions: {
+				secretsStoreSecrets: Object.fromEntries(
+					[...secrets.entries()].map(([resource, secret]) => [
+						`owner:${resource}`,
+						secret,
+					])
+				),
+			},
+		};
 	},
 };

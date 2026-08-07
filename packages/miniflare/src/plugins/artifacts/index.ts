@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-	buildRemoteProxyProps,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-} from "../shared";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
+import { buildRemoteProxyProps, ProxyNodeBinding } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const ArtifactsSchema = z.object({
@@ -18,9 +15,6 @@ export const ArtifactsOptionsSchema = z.object({
 });
 
 export const ARTIFACTS_PLUGIN_NAME = "artifacts";
-// One shared remote-proxy service for every artifacts binding; per-binding
-// config travels via props.
-const ARTIFACTS_REMOTE_SERVICE_NAME = `${ARTIFACTS_PLUGIN_NAME}:remote`;
 
 export const ARTIFACTS_PLUGIN: Plugin<typeof ArtifactsOptionsSchema> = {
 	options: ArtifactsOptionsSchema,
@@ -33,7 +27,7 @@ export const ARTIFACTS_PLUGIN: Plugin<typeof ArtifactsOptionsSchema> = {
 		return Object.entries(options.artifacts).map(([name, config]) => ({
 			name,
 			service: {
-				name: ARTIFACTS_REMOTE_SERVICE_NAME,
+				name: SERVICE_REMOTE_BINDINGS,
 				props: buildRemoteProxyProps(config.remoteProxyConnectionString, name),
 			},
 		}));
@@ -49,16 +43,7 @@ export const ARTIFACTS_PLUGIN: Plugin<typeof ArtifactsOptionsSchema> = {
 			])
 		);
 	},
-	async getServices({ options }) {
-		if (!options.artifacts || Object.keys(options.artifacts).length === 0) {
-			return [];
-		}
-
-		return [
-			{
-				name: ARTIFACTS_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			},
-		];
+	async getServices() {
+		return [];
 	},
 };

@@ -3,6 +3,7 @@ import SCRIPT_IMAGES_SERVICE from "worker:images/images";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
 	buildRemoteProxyProps,
@@ -11,8 +12,8 @@ import {
 	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
@@ -30,7 +31,11 @@ export const ImagesOptionsSchema = z.object({
 });
 
 export const IMAGES_PLUGIN_NAME = "images";
-const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
+// Fixed namespace backing the Images store (one per instance/owner).
+const IMAGES_DATA_NAMESPACE = "images-data";
+// The object-entry service exposing the Images store. Referenced by the shared
+// storage owner so it can serve a routed client's Images KV operations.
+export const IMAGES_NS_DATA_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:ns:data`;
 
 export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 	options: ImagesOptionsSchema,
@@ -50,7 +55,7 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 							name: "fetcher",
 							service: options.images.remoteProxyConnectionString
 								? {
-										name: IMAGES_REMOTE_SERVICE_NAME,
+										name: SERVICE_REMOTE_BINDINGS,
 										props: buildRemoteProxyProps(
 											options.images.remoteProxyConnectionString,
 											options.images.binding
@@ -76,18 +81,49 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 			[options.images.binding]: new ProxyNodeBinding(),
 		};
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({
+		options,
+		tmpPath,
+		resourcePersistencePath,
+		storageOwnerRoutePlugins,
+	}) {
 		if (!options.images) {
 			return [];
 		}
 
-		if (options.images.remoteProxyConnectionString) {
+		// Routed to the shared storage owner: keep the transform worker local but
+		// repoint its backing KV store (`IMAGES_STORE`) at the owner, and skip the
+		// local storage/object services (the owner stands them up). The owner's
+		// `IMAGES_NS_DATA_SERVICE_NAME` bakes the images namespace id in, so no
+		// per-request id/props are needed.
+		if (storageOwnerRoutePlugins.has(IMAGES_PLUGIN_NAME)) {
 			return [
 				{
-					name: IMAGES_REMOTE_SERVICE_NAME,
-					worker: remoteProxyClientWorker(),
+					name: getUserBindingServiceName(
+						IMAGES_PLUGIN_NAME,
+						options.images.binding
+					),
+					worker: {
+						compatibilityDate: "2025-04-01",
+						modules: [
+							{ name: "images.worker.js", esModule: SCRIPT_IMAGES_SERVICE() },
+						],
+						bindings: [
+							{
+								name: "IMAGES_STORE",
+								kvNamespace: storageOwnerProxyDesignator(
+									IMAGES_NS_DATA_SERVICE_NAME
+								),
+							},
+							WORKER_BINDING_SERVICE_LOOPBACK,
+						],
+					},
 				},
 			];
+		}
+
+		if (options.images.remoteProxyConnectionString) {
+			return [];
 		}
 
 		const serviceName = getUserBindingServiceName(
@@ -141,13 +177,13 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 		} satisfies Service;
 
 		const kvNamespaceService = {
-			name: `${IMAGES_PLUGIN_NAME}:ns:data`,
+			name: IMAGES_NS_DATA_SERVICE_NAME,
 			worker: objectEntryWorker(
 				{
 					serviceName: objectService.name,
 					className: KV_NAMESPACE_OBJECT_CLASS_NAME,
 				},
-				"images-data"
+				IMAGES_DATA_NAMESPACE
 			),
 		} satisfies Service;
 
@@ -172,5 +208,20 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 		} satisfies Service;
 
 		return [storageService, objectService, kvNamespaceService, imagesService];
+	},
+	getStorageOwnerHosting(allOptions) {
+		const hasLocal = allOptions.some(
+			(options) => options.images && !options.images.remoteProxyConnectionString
+		);
+		if (!hasLocal) {
+			return undefined;
+		}
+		// One images store per owner (binding name irrelevant). Served via the
+		// fetch path like KV. The client side is handled in `getServices` (the
+		// transform worker stays local, only its backing KV store is repointed at
+		// the owner's `IMAGES_NS_DATA_SERVICE_NAME`).
+		return {
+			ownerOptions: { images: { binding: "images" } },
+		};
 	},
 };

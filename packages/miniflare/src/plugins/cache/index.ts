@@ -47,6 +47,7 @@ export const CACHE_PLUGIN: Plugin<typeof CacheOptionsSchema> = {
 		workerIndex,
 		tmpPath,
 		resourcePersistencePath,
+		isolateLocalStorage,
 	}) {
 		const cache = options.cacheAPI ?? true;
 
@@ -84,10 +85,13 @@ export const CACHE_PLUGIN: Plugin<typeof CacheOptionsSchema> = {
 		if (cache) {
 			const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
 
+			// With the shared storage owner enabled, cache stays local to each
+			// instance so each process uses its own `tmpPath` cache and never
+			// contends cross-process.
 			const persistPath = getPersistPath(
 				CACHE_PLUGIN_NAME,
 				tmpPath,
-				resourcePersistencePath
+				isolateLocalStorage ? undefined : resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {

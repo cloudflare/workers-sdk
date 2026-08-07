@@ -31,6 +31,8 @@ const SERVICE_CUSTOM_FETCH_PREFIX = `${CORE_PLUGIN_NAME}:custom-fetch`;
 // Service prefix for custom Node functions defined in `serviceBindings` option
 const SERVICE_CUSTOM_NODE_PREFIX = `${CORE_PLUGIN_NAME}:custom-node`;
 
+export const SERVICE_REMOTE_BINDINGS = `${CORE_PLUGIN_NAME}:remote-bindings`;
+
 export function getUserServiceName(workerName = "") {
 	return `${SERVICE_USER_PREFIX}:${workerName}`;
 }

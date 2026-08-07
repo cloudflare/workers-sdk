@@ -1,10 +1,10 @@
 import SCRIPT_PIPELINE_OBJECT from "worker:pipelines/pipeline";
 import { z } from "zod";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import {
 	buildRemoteProxyProps,
 	namespaceKeys,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 } from "../shared";
 import type { Service } from "../../runtime";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
@@ -38,7 +38,6 @@ export const PipelineOptionsSchema = z.object({
 
 export const PIPELINES_PLUGIN_NAME = "pipelines";
 const SERVICE_PIPELINE_PREFIX = `${PIPELINES_PLUGIN_NAME}:pipeline`;
-const PIPELINES_REMOTE_SERVICE_NAME = `${PIPELINES_PLUGIN_NAME}:pipeline:remote`;
 
 export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 	options: PipelineOptionsSchema,
@@ -50,7 +49,7 @@ export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 				name,
 				service: remoteProxyConnectionString
 					? {
-							name: PIPELINES_REMOTE_SERVICE_NAME,
+							name: SERVICE_REMOTE_BINDINGS,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 						}
 					: { name: `${SERVICE_PIPELINE_PREFIX}:${id}` },
@@ -67,10 +66,8 @@ export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 		const pipelines = bindingEntries(options.pipelines);
 
 		const services: Service[] = [];
-		let hasRemote = false;
 		for (const [, pipeline] of pipelines) {
 			if (pipeline.remoteProxyConnectionString) {
-				hasRemote = true;
 				continue;
 			}
 			services.push({
@@ -84,13 +81,6 @@ export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 						},
 					],
 				},
-			});
-		}
-
-		if (hasRemote) {
-			services.push({
-				name: PIPELINES_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
 			});
 		}
 

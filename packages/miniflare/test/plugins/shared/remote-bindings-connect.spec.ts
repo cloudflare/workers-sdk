@@ -1,7 +1,7 @@
 import path from "node:path";
 // The relay helper under unit test. It is the same implementation bundled into
-// miniflare's dist and mirrored (byte-for-byte, comments aside) into the edge
-// ProxyServerWorker. It is resolved via a vitest alias (see vitest.config.mts)
+// Miniflare's dist and imported by the edge ProxyServerWorker through the shared
+// proxy-server factory. It is resolved via a vitest alias (see vitest.config.mts)
 // rather than a real path so that its worker-typed source isn't pulled into the
 // node-side tsconfig, which excludes `src/workers/**`. tsc has no matching path
 // mapping, hence the expected error below.

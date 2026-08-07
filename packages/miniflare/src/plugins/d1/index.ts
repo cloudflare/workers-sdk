@@ -3,17 +3,19 @@ import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
 import { SharedBindings } from "../../workers";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
+	extractObjectEntryId,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	ProxyNodeBinding,
-	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import type {
 	Service,
@@ -46,9 +48,7 @@ const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
 // A single entry service shared by every *local* database. Each database's id is
 // supplied per-binding via `ctx.props`, so one service serves all of them.
-const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
-// One shared remote-proxy service for all remote D1 databases (config via props).
-const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
+export const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
 const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: D1_DATABASE_SERVICE_PREFIX,
@@ -71,7 +71,7 @@ export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
 				// databases share one entry service with the id supplied via props.
 				const serviceDesignator = remoteProxyConnectionString
 					? {
-							name: D1_REMOTE_SERVICE_NAME,
+							name: SERVICE_REMOTE_BINDINGS,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 						}
 					: {
@@ -107,30 +107,29 @@ export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
 			databases.map((name) => [name, new ProxyNodeBinding()])
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
+	async getServices({
+		options,
+		tmpPath,
+		resourcePersistencePath,
+		storageOwnerRoutePlugins,
+	}) {
 		const databases = namespaceEntries(options.d1Databases);
 
 		const services: Service[] = [];
 
+		// When routing local D1 to a shared storage owner, this instance must not
+		// stand up its own D1 storage — its bindings are repointed at the owner
+		// proxy by `Miniflare`.
+		const routeToOwner = storageOwnerRoutePlugins.has(D1_PLUGIN_NAME);
+
 		// One shared entry service for all local databases (id supplied via props).
-		const hasLocal = databases.some(
-			([, db]) => !db.remoteProxyConnectionString
-		);
+		const hasLocal =
+			!routeToOwner &&
+			databases.some(([, db]) => !db.remoteProxyConnectionString);
 		if (hasLocal) {
 			services.push({
 				name: D1_LOCAL_ENTRY_SERVICE_NAME,
 				worker: objectEntryWorker(D1_DATABASE_OBJECT),
-			});
-		}
-
-		// One shared proxy service for all remote (mixed-mode) databases.
-		const hasRemote = databases.some(
-			([, db]) => db.remoteProxyConnectionString
-		);
-		if (hasRemote) {
-			services.push({
-				name: D1_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
 			});
 		}
 
@@ -184,5 +183,63 @@ export const D1_PLUGIN: Plugin<typeof D1OptionsSchema> = {
 		}
 
 		return services;
+	},
+	routeBindingToStorageOwner(binding) {
+		// The owner runs the same D1 plugin code, so its generic entry service is
+		// `D1_LOCAL_ENTRY_SERVICE_NAME`; the id travels as props.
+		const toOwner = (id: string) =>
+			storageOwnerProxyDesignator(D1_LOCAL_ENTRY_SERVICE_NAME, undefined, {
+				[SharedBindings.TEXT_NAMESPACE]: id,
+			});
+		// Pre-Wrangler-3.3 `__D1_BETA__` binding: a bare service designator.
+		if ("service" in binding && binding.service?.name !== undefined) {
+			const id = extractObjectEntryId(binding.service.props?.json);
+			if (id !== undefined) {
+				return {
+					name: binding.name,
+					service: toOwner(id),
+				};
+			}
+		}
+		// Post-3.3 wrapped binding: rewrite the inner fetcher service designator.
+		if ("wrapped" in binding && binding.wrapped?.innerBindings !== undefined) {
+			let rewrote = false;
+			const innerBindings = binding.wrapped.innerBindings.map((inner) => {
+				if ("service" in inner && inner.service?.name !== undefined) {
+					const id = extractObjectEntryId(inner.service.props?.json);
+					if (id !== undefined) {
+						rewrote = true;
+						return {
+							...inner,
+							service: toOwner(id),
+						};
+					}
+				}
+				return inner;
+			});
+			if (rewrote) {
+				return {
+					...binding,
+					wrapped: { ...binding.wrapped, innerBindings },
+				};
+			}
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const ids = new Set<string>();
+		for (const options of allOptions) {
+			for (const [, db] of namespaceEntries(options.d1Databases)) {
+				if (!db.remoteProxyConnectionString) {
+					ids.add(db.id);
+				}
+			}
+		}
+		if (ids.size === 0) {
+			return undefined;
+		}
+		return {
+			ownerOptions: { d1Databases: [...ids] },
+		};
 	},
 };

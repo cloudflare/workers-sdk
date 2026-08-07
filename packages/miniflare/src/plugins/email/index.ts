@@ -3,10 +3,10 @@ import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
-	remoteProxyClientWorker,
 	ProxyNodeBinding,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
@@ -44,7 +44,6 @@ export const EmailOptionsSchema = z.object({
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
-const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
 // Disk service name and binding name for writing temporary files to system temp directory
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
 const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
@@ -113,7 +112,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			name,
 			service: remoteProxyConnectionString
 				? {
-						name: EMAIL_REMOTE_SERVICE_NAME,
+						name: SERVICE_REMOTE_BINDINGS,
 						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 					}
 				: {
@@ -184,11 +183,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			},
 		}));
 
-		let hasRemote = false;
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
 			.email?.send_email ?? []) {
 			if (remoteProxyConnectionString) {
-				hasRemote = true;
 				continue;
 			}
 			services.push({
@@ -213,13 +210,6 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 						},
 					],
 				},
-			});
-		}
-
-		if (hasRemote) {
-			services.push({
-				name: EMAIL_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
 			});
 		}
 

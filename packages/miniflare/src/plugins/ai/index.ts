@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-	buildRemoteProxyProps,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-} from "../shared";
+import { SERVICE_REMOTE_BINDINGS } from "../core";
+import { buildRemoteProxyProps, ProxyNodeBinding } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const AISchema = z.object({
@@ -18,7 +15,6 @@ export const AIOptionsSchema = z.object({
 });
 
 export const AI_PLUGIN_NAME = "ai";
-const AI_REMOTE_SERVICE_NAME = `${AI_PLUGIN_NAME}:remote`;
 
 export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 	options: AIOptionsSchema,
@@ -37,7 +33,7 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 						{
 							name: "fetcher",
 							service: {
-								name: AI_REMOTE_SERVICE_NAME,
+								name: SERVICE_REMOTE_BINDINGS,
 								props: buildRemoteProxyProps(
 									options.ai.remoteProxyConnectionString,
 									options.ai.binding
@@ -57,16 +53,7 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 			[options.ai.binding]: new ProxyNodeBinding(),
 		};
 	},
-	async getServices({ options }) {
-		if (!options.ai) {
-			return [];
-		}
-
-		return [
-			{
-				name: AI_REMOTE_SERVICE_NAME,
-				worker: remoteProxyClientWorker(),
-			},
-		];
+	async getServices() {
+		return [];
 	},
 };
