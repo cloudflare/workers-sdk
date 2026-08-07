@@ -7,7 +7,7 @@
 		"build": "vite build",
 		"cf-typegen": "wrangler types --config dist/workers_sdk_auto_triage/wrangler.json --include-runtime=false",
 		"check:type": "tsc",
-		"deploy": "wrangler deploy",
+		"deploy": "pnpm run build && wrangler deploy --config dist/workers_sdk_auto_triage/wrangler.json",
 		"dev": "vite dev"
 	},
 	"devDependencies": {
