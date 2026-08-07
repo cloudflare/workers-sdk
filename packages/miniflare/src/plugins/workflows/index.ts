@@ -69,16 +69,24 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		];
 	},
 
-	async getServices({ options, tmpPath, sharedOptions, workerNames }) {
+	async getServices({
+		options,
+		tmpPath,
+		sharedOptions,
+		workerNames,
+		isolateLocalStorage,
+	}) {
 		const workflows = getEnvBindingsOfType(options.config, "workflow");
 		if (workflows.length === 0) {
 			return [];
 		}
 
+		// Workflows aren't routed to the shared storage owner; keep their storage
+		// per-instance when the feature is on so separate processes don't contend.
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
-			sharedOptions.resourcePersistencePath
+			isolateLocalStorage ? undefined : sharedOptions.resourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 		// each workflow should get its own storage service

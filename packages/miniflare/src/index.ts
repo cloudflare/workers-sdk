@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -59,13 +60,13 @@ import {
 	QueuesError,
 	R2_PLUGIN_NAME,
 	SECRET_STORE_PLUGIN_NAME,
+	STREAM_PLUGIN_NAME,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
 	SOCKET_DEBUG_PORT,
 	SOCKET_DEV_REGISTRY,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
-	STREAM_PLUGIN_NAME,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -98,6 +99,7 @@ import {
 	MiniflareCoreError,
 	NoOpLog,
 	stripAnsi,
+	tryAcquireOwnerSpawnLock,
 } from "./shared";
 import { createDurableObjectStorageHandle } from "./shared/dev-control";
 import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
@@ -115,9 +117,12 @@ import {
 	Mutex,
 	SharedHeaders,
 	SiteBindings,
+	STORAGE_OWNER_CLIENT_PRESENCE_PREFIX,
+	STORAGE_OWNER_WORKER_NAME,
 } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import type {
+	MiniflareBinding,
 	MiniflareOptions,
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
@@ -130,7 +135,9 @@ import type {
 	PluginServicesOptions,
 	QueueConsumers,
 	QueueProducers,
+	RemoteProxyConnectionString,
 	ReplaceWorkersTypes,
+	StorageOwnerHosting,
 } from "./plugins";
 import type {
 	Config,
@@ -172,6 +179,32 @@ import type { Duplex, Transform, Writable } from "node:stream";
 import type { Dispatcher, Response as UndiciResponse } from "undici";
 
 const DEFAULT_HOST = "127.0.0.1";
+// Detached storage-owner process bootstrap. The owner runs the same built
+// miniflare module (its path handed over via env), so we avoid a second build
+// entry point. Kept as a constant string with no interpolation so it satisfies
+// the no-unsafe-command-execution lint rule.
+const STORAGE_OWNER_BOOTSTRAP =
+	"require(process.env.MINIFLARE_STORAGE_OWNER_MAIN).runStorageOwnerProcess()";
+const ENV_STORAGE_OWNER_MAIN = "MINIFLARE_STORAGE_OWNER_MAIN";
+const ENV_STORAGE_OWNER_CONFIG = "MINIFLARE_STORAGE_OWNER_CONFIG";
+// How long a client waits for a freshly spawned owner to register itself.
+const STORAGE_OWNER_SPAWN_TIMEOUT_MS = 30_000;
+const STORAGE_OWNER_POLL_MS = 50;
+// Owner self-teardown tuning: a startup grace period before the owner is
+// eligible to exit, and a debounce so a transient client gap (e.g. a reload)
+// doesn't tear storage down. Overridable via env (read by the spawned owner
+// process, which inherits the spawner's environment) primarily for tests.
+const STORAGE_OWNER_STARTUP_GRACE_MS =
+	Number(process.env.MINIFLARE_STORAGE_OWNER_GRACE_MS) || 10_000;
+const STORAGE_OWNER_IDLE_CHECK_MS =
+	Number(process.env.MINIFLARE_STORAGE_OWNER_IDLE_CHECK_MS) || 1_000;
+const STORAGE_OWNER_IDLE_DEBOUNCE = 3;
+
+// Distinguishes shared-storage client presence entries when several Miniflare
+// instances live in one process (tests, the Vitest pool) and would otherwise
+// collide on `process.pid`.
+let storageOwnerClientCounter = 0;
+
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
@@ -791,6 +824,14 @@ export class Miniflare {
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 	readonly #devRegistry: DevRegistry;
+
+	// Shared-storage-owner (experimental `unsafeSharedStorageOwner`) client state.
+	// `#storageOwnerRoutingActive` records whether this instance actually routed
+	// its storage to an owner during the last assemble; if so it registers a
+	// presence entry (`#storageOwnerPresenceName`) in the dev registry so the
+	// owner can count live clients and tear itself down when none remain.
+	#storageOwnerRoutingActive = false;
+	readonly #storageOwnerPresenceName = `${STORAGE_OWNER_CLIENT_PRESENCE_PREFIX}${process.pid}-${storageOwnerClientCounter++}`;
 
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
@@ -1749,6 +1790,35 @@ export class Miniflare {
 			? getExternalServiceEntrypoints(allWorkerOpts)
 			: null;
 
+		const storageOwnerHostings = new Map<string, StorageOwnerHosting>();
+		if (
+			this.#storageOwnerPersistRoot() !== undefined &&
+			sharedOpts.unsafeStorageOwnerRole !== "owner"
+		) {
+			for (const [key, plugin] of this.#mergedPluginEntries) {
+				const hosting = plugin.getStorageOwnerHosting?.(allWorkerOpts);
+				if (hosting !== undefined) {
+					storageOwnerHostings.set(key, hosting);
+				}
+			}
+		}
+
+		// As a client, ensure an owner exists (spawning a detached one if needed)
+		// before we resolve routing below.
+		await this.#ensureStorageOwner(storageOwnerHostings);
+
+		// When acting as a shared-storage *client*, resolve the owner so local
+		// storage bindings can be routed to it (and local storage services
+		// skipped). `undefined` => behave normally (owner role, feature off, or
+		// no owner currently published).
+		const storageOwnerRouting = this.#getStorageOwnerRouting();
+		const storageOwnerRoutePlugins = storageOwnerRouting
+			? new Set(storageOwnerHostings.keys())
+			: new Set<string>();
+		// Record whether we're a routing client so `#registerWorkers` publishes a
+		// presence entry the owner can count.
+		this.#storageOwnerRoutingActive = storageOwnerRoutePlugins.size > 0;
+
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
@@ -1827,7 +1897,15 @@ export class Miniflare {
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginBindings = await plugin.getBindings(workerOpts, i);
 				if (pluginBindings !== undefined) {
-					for (const binding of pluginBindings) {
+					for (const originalBinding of pluginBindings) {
+						// When routing this plugin's storage to a shared owner, let the
+						// plugin repoint its local storage bindings at the storage-owner
+						// client proxy (plugins own the knowledge of their binding shapes;
+						// the proxy resolves the live owner from the dev registry).
+						const binding = storageOwnerRoutePlugins.has(key)
+							? (plugin.routeBindingToStorageOwner?.(originalBinding) ??
+								originalBinding)
+							: originalBinding;
 						// If this is the Workers Sites manifest, we need to add it as a
 						// module for modules workers. For all other bindings, and in
 						// service workers, just add to worker bindings.
@@ -1901,6 +1979,13 @@ export class Miniflare {
 				queueConsumers,
 				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
+				storageOwnerRoutePlugins,
+				// Plugins not routed to the owner but still disk-backed (Cache,
+				// Durable Objects, Workflows) keep their storage per-instance when
+				// the feature is enabled, so separate processes don't contend on one
+				// database under the shared `resourcePersistencePath`. Applies to every
+				// role (client, fallback-to-local client, and owner).
+				isolateLocalStorage: this.#storageOwnerPersistRoot() !== undefined,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -1980,8 +2065,19 @@ export class Miniflare {
 		if (
 			this.#devRegistry.isEnabled() &&
 			externalServices &&
-			(externalServices.size > 0 || hasQueues)
+			(externalServices.size > 0 ||
+				hasQueues ||
+				storageOwnerRoutePlugins.size > 0)
 		) {
+			// When routing storage to a shared owner, watch the owner's well-known
+			// registry name too, so the client's proxy worker is pushed an updated
+			// registry the moment the owner appears (or its debug port changes).
+			if (storageOwnerRoutePlugins.size > 0) {
+				externalServices.set(STORAGE_OWNER_WORKER_NAME, {
+					classNames: new Set(),
+					entrypoints: new Set(),
+				});
+			}
 			await this.#devRegistry.watch(externalServices, hasQueues);
 
 			const externalObjects = Array.from(externalServices).flatMap(
@@ -1996,8 +2092,8 @@ export class Miniflare {
 			// worker has the correct registry from the moment workerd loads it.
 			const initialRegistry = this.#devRegistry.getRegistry();
 			const mainModuleSource = [
-				`import { ExternalQueueProxy, ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
-				`export { ExternalQueueProxy, ExternalServiceProxy };`,
+				`import { ExternalQueueProxy, ExternalServiceProxy, StorageOwnerProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
+				`export { ExternalQueueProxy, ExternalServiceProxy, StorageOwnerProxy };`,
 				`setRegistry(${JSON.stringify(initialRegistry)});`,
 				`export default {`,
 				`  async fetch(request, env) {`,
@@ -2088,6 +2184,7 @@ export class Miniflare {
 			proxyBindings,
 			durableObjectClassNames,
 			allWorkerOpts,
+			storageOwnerRoutePlugins,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2179,6 +2276,7 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
+		const runtime = this.#runtime;
 		const configuredHost = this.#sharedOpts.host ?? DEFAULT_HOST;
 		// For internal loopback communication with workerd, always use 127.0.0.1
 		// when localhost is configured. This prevents IPv6/IPv4 mismatch issues
@@ -2262,7 +2360,7 @@ export class Miniflare {
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.unsafeRuntimeEnv,
 		};
-		const maybeSocketPorts = await this.#runtime.updateConfig(
+		const maybeSocketPorts = await runtime.updateConfig(
 			configBuffer,
 			runtimeOpts,
 			this.#workerOpts.map((w) => w.config.name),
@@ -2447,6 +2545,189 @@ export class Miniflare {
 		return new URL(this.#runtimeEntryURL.toString());
 	}
 
+	/**
+	 * The persist root this instance participates in as a shared storage
+	 * owner/client, or `undefined` if the feature is off or there is nothing to
+	 * share (pure in-memory storage).
+	 */
+	#storageOwnerPersistRoot(): string | undefined {
+		if (!this.#sharedOpts.unsafeSharedStorageOwner) {
+			return undefined;
+		}
+		// Discovery + transport ride the dev registry and the debug port, so the
+		// feature is a no-op without a registry.
+		if (!this.#devRegistry.isEnabled()) {
+			return undefined;
+		}
+		return this.#sharedOpts.resourcePersistencePath;
+	}
+
+	/** The current owner's dev registry entry, or `undefined` if none is live. */
+	#readStorageOwnerEntry(): WorkerDefinition | undefined {
+		return this.#devRegistry.getRegistry()[STORAGE_OWNER_WORKER_NAME];
+	}
+
+	/**
+	 * Whether this instance (as a *client*) should route its local storage to the
+	 * shared owner. `false` means behave normally (owner role, feature off, no
+	 * persist root, or no owner currently registered). The owner's live address is
+	 * resolved per-request by `StorageOwnerProxy`, so only its presence matters here.
+	 */
+	#getStorageOwnerRouting(): boolean {
+		const persistRoot = this.#storageOwnerPersistRoot();
+		if (
+			persistRoot === undefined ||
+			this.#sharedOpts.unsafeStorageOwnerRole === "owner"
+		) {
+			return false;
+		}
+
+		if (this.#readStorageOwnerEntry() === undefined) {
+			this.#log.warn(
+				"Shared storage owner enabled but no owner is currently registered — " +
+					"using local storage for this instance"
+			);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * As a client, make sure a storage owner is registered in the dev registry
+	 * before we assemble (and therefore route to it). If none is, elect a single
+	 * spawner via the owner spawn-lock, spawn a detached owner process, and wait
+	 * for it to register itself. Other clients just wait.
+	 *
+	 * Best-effort: on any failure we log and fall back to local storage (the
+	 * client simply won't route), so the feature degrades rather than crashes.
+	 */
+	async #ensureStorageOwner(
+		hostings: Map<string, StorageOwnerHosting>
+	): Promise<void> {
+		const persistRoot = this.#storageOwnerPersistRoot();
+		if (
+			persistRoot === undefined ||
+			this.#sharedOpts.unsafeStorageOwnerRole === "owner" ||
+			hostings.size === 0
+		) {
+			return;
+		}
+		if (this.#readStorageOwnerEntry() !== undefined) {
+			return;
+		}
+
+		let lock: ReturnType<typeof tryAcquireOwnerSpawnLock>;
+		try {
+			lock = tryAcquireOwnerSpawnLock(persistRoot);
+			// Re-check under the lock: another client may have just registered one.
+			if (this.#readStorageOwnerEntry() !== undefined) {
+				return;
+			}
+			if (lock !== undefined) {
+				this.#spawnStorageOwner(persistRoot, hostings);
+			}
+			// Wait for the owner (ours or another client's) to register itself. The
+			// registry watcher refreshes `getRegistry()` as files appear.
+			const deadline = Date.now() + STORAGE_OWNER_SPAWN_TIMEOUT_MS;
+			while (
+				this.#readStorageOwnerEntry() === undefined &&
+				Date.now() < deadline &&
+				!this.#disposeController.signal.aborted
+			) {
+				await new Promise((resolve) =>
+					setTimeout(resolve, STORAGE_OWNER_POLL_MS)
+				);
+			}
+			if (this.#readStorageOwnerEntry() === undefined) {
+				this.#log.warn(
+					"Timed out waiting for the shared storage owner to start — " +
+						"using local storage for this instance"
+				);
+			}
+		} catch (e) {
+			this.#log.warn(`Failed to ensure a shared storage owner: ${String(e)}`);
+		} finally {
+			lock?.release();
+		}
+	}
+
+	/**
+	 * Spawns a detached owner process for the persist root, hosting the storage
+	 * resources this instance uses. The owner runs the same built miniflare
+	 * module, registers itself in the dev registry under `STORAGE_OWNER_WORKER_NAME`,
+	 * and self-terminates once no clients remain (see {@link runStorageOwnerProcess}).
+	 */
+	#spawnStorageOwner(
+		persistRoot: string,
+		hostings: Map<string, StorageOwnerHosting>
+	): void {
+		// Each storage plugin describes the options a spawned owner needs to stand
+		// up its local storage (the union of local, non-remote resources across
+		// this instance's workers). The owner's entry services are generic (keyed
+		// by `idFromName`), so they additionally serve ids declared only by other
+		// clients.
+		const ownerBindings: Record<string, MiniflareBinding> = {};
+		for (const hosting of hostings.values()) {
+			Object.assign(ownerBindings, hosting.ownerBindings);
+		}
+
+		const ownerOptions: MiniflareOptions = {
+			resourcePersistencePath: persistRoot,
+			unsafeDevRegistryPath: this.#sharedOpts.unsafeDevRegistryPath,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: STORAGE_OWNER_WORKER_NAME,
+						compatibilityDate: "2025-01-01",
+						compatibilityFlags: ["experimental"],
+						manifest: {
+							mainModule: "index.mjs",
+							modulesRoot: process.cwd(),
+							modules: {
+								"index.mjs": {
+									type: "esm",
+									contents:
+										"export default { fetch() { return new Response('miniflare storage owner', { status: 404 }); } }",
+								},
+							},
+						},
+						env: ownerBindings,
+					},
+					dev: { unsafeRegisterWorker: false },
+				},
+			],
+		};
+
+		const configPath = path.join(
+			persistRoot,
+			`.miniflare-owner-config-${process.pid}.json`
+		);
+		fs.writeFileSync(configPath, JSON.stringify(ownerOptions));
+
+		// The owner is detached and outlives us, so it can't share our stdio.
+		// Redirect its output to a log file in the persist root — otherwise a
+		// crashing or misconfigured owner is invisible and clients just silently
+		// fall back to local storage.
+		const logPath = path.join(persistRoot, ".miniflare-owner.log");
+		const logFd = fs.openSync(logPath, "a");
+		try {
+			const child = spawn(process.execPath, ["-e", STORAGE_OWNER_BOOTSTRAP], {
+				detached: true,
+				stdio: ["ignore", logFd, logFd],
+				env: {
+					...process.env,
+					[ENV_STORAGE_OWNER_MAIN]: __filename,
+					[ENV_STORAGE_OWNER_CONFIG]: configPath,
+				},
+			});
+			child.unref();
+		} finally {
+			// The child has dup'd the fd; close our copy.
+			fs.closeSync(logFd);
+		}
+	}
+
 	async #registerWorkers(): Promise<void> {
 		if (!this.#devRegistry.isEnabled()) {
 			return;
@@ -2501,6 +2782,36 @@ export class Miniflare {
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerName),
 					...(queueConsumers.length > 0 ? { queueConsumers } : {}),
+				},
+			]);
+		}
+
+		// As the shared-storage owner, register under the well-known name so
+		// clients discover our debug port (and reach our storage services over it).
+		// The owner's own worker is a dummy 404, so its default/user service fields
+		// are irrelevant — clients target specific storage services by name.
+		if (this.#sharedOpts.unsafeStorageOwnerRole === "owner") {
+			entries.push([
+				STORAGE_OWNER_WORKER_NAME,
+				{
+					debugPortAddress,
+					defaultEntrypointService: getUserServiceName(),
+					userWorkerService: getUserServiceName(),
+				},
+			]);
+		}
+
+		// As a shared-storage client, publish a presence entry so the owner can
+		// count live clients (from the registry alone) and self-terminate when the
+		// last one leaves. Reserved names are filtered from user-facing registry
+		// enumeration (see `isStorageOwnerRegistryName`).
+		if (this.#storageOwnerRoutingActive) {
+			entries.push([
+				this.#storageOwnerPresenceName,
+				{
+					debugPortAddress,
+					defaultEntrypointService: getUserServiceName(),
+					userWorkerService: getUserServiceName(),
 				},
 			]);
 		}
@@ -3177,7 +3488,8 @@ export class Miniflare {
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
-			// Unregister workers from dev registry and stop the file watcher
+			// Unregister workers from dev registry and stop the file watcher. This
+			// also removes our shared-storage owner/client presence entry, if any.
 			await this.#devRegistry.dispose();
 
 			// shutdown hyperdrive proxies if any exist
@@ -3188,6 +3500,115 @@ export class Miniflare {
 			maybeInstanceRegistry?.delete(this);
 		}
 	}
+}
+
+/**
+ * Entry point for the detached storage-owner process spawned by a client (see
+ * `Miniflare.#spawnStorageOwner`). Reads its config from a temp file named in
+ * the environment, starts a headless owner-role Miniflare, and self-terminates
+ * once no clients have been present for a debounce window (after a startup
+ * grace period), so storage processes don't linger.
+ */
+export async function runStorageOwnerProcess(): Promise<void> {
+	// The owner is detached with its stdio redirected to `.miniflare-owner.log`
+	// in the persist root (see `#spawnStorageOwner`), so these lines are how a
+	// broken owner makes itself heard rather than failing silently. Writes go
+	// straight to the process's own stdout/stderr (there is no host `Log` here).
+	const tag = `[miniflare storage owner ${process.pid}]`;
+	const ownerLog = (message: string) =>
+		process.stdout.write(`${tag} ${message}\n`);
+	const ownerError = (message: string, e: unknown) =>
+		process.stderr.write(
+			`${tag} ${message} ${e instanceof Error ? (e.stack ?? e.message) : String(e)}\n`
+		);
+	// Surface anything that would otherwise kill the process silently.
+	process.on("uncaughtException", (e) => {
+		ownerError("uncaught:", e);
+		process.exit(1);
+	});
+	process.on("unhandledRejection", (e) => {
+		ownerError("unhandled:", e);
+		process.exit(1);
+	});
+
+	const configPath = process.env[ENV_STORAGE_OWNER_CONFIG];
+	assert(configPath !== undefined, `${ENV_STORAGE_OWNER_CONFIG} must be set`);
+	const options = JSON.parse(
+		fs.readFileSync(configPath, "utf8")
+	) as MiniflareOptions;
+	// The config file has served its purpose; remove it.
+	fs.rmSync(configPath, { force: true });
+
+	const persistRoot = options.resourcePersistencePath;
+	assert(
+		persistRoot !== undefined,
+		"storage owner config must set `resourcePersistencePath`"
+	);
+	const registryPath = options.unsafeDevRegistryPath;
+	assert(
+		registryPath !== undefined,
+		"storage owner config must set `unsafeDevRegistryPath`"
+	);
+	ownerLog(`starting for persist root ${persistRoot}`);
+
+	const mf = new Miniflare({
+		...options,
+		unsafeSharedStorageOwner: true,
+		unsafeStorageOwnerRole: "owner",
+	});
+
+	let disposing = false;
+	// Holder so `shutdown` (defined before the interval is created) can clear it.
+	const timers: { idle?: NodeJS.Timeout } = {};
+	const shutdown = async (reason: string) => {
+		if (disposing) {
+			return;
+		}
+		disposing = true;
+		ownerLog(`shutting down (${reason})`);
+		if (timers.idle !== undefined) {
+			clearInterval(timers.idle);
+		}
+		try {
+			await mf.dispose();
+		} finally {
+			process.exit(0);
+		}
+	};
+	process.on("SIGTERM", () => void shutdown("SIGTERM"));
+	process.on("SIGINT", () => void shutdown("SIGINT"));
+
+	try {
+		await mf.ready;
+	} catch (e) {
+		ownerError("failed to start:", e);
+		process.exit(1);
+	}
+	ownerLog("ready");
+
+	// Self-teardown: once past the startup grace, exit after a debounced run of
+	// checks observing zero live clients. A client is any live dev-registry
+	// presence entry (see `#registerWorkers`); the registry's own heartbeat +
+	// staleness reclaim handles crashed clients that never unregistered.
+	const countLiveClients = () =>
+		Object.keys(getWorkerRegistry(registryPath)).filter((name) =>
+			name.startsWith(STORAGE_OWNER_CLIENT_PRESENCE_PREFIX)
+		).length;
+	const startedAt = Date.now();
+	let idleChecks = 0;
+	timers.idle = setInterval(() => {
+		if (Date.now() - startedAt < STORAGE_OWNER_STARTUP_GRACE_MS) {
+			return;
+		}
+		if (countLiveClients() === 0) {
+			idleChecks++;
+			if (idleChecks >= STORAGE_OWNER_IDLE_DEBOUNCE) {
+				void shutdown("no live clients");
+			}
+		} else {
+			idleChecks = 0;
+		}
+	}, STORAGE_OWNER_IDLE_CHECK_MS);
 }
 
 export type { WorkerdStructuredLog } from "./plugins/core";

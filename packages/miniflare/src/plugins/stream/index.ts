@@ -11,6 +11,7 @@ import {
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
+	storageOwnerProxyDesignator,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
@@ -21,6 +22,11 @@ const STREAM_REMOTE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:remote`;
 const STREAM_STORAGE_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:storage`;
 const STREAM_OBJECT_SERVICE_NAME = `${STREAM_PLUGIN_NAME}:object`;
 export const STREAM_OBJECT_CLASS_NAME = "StreamObject";
+export const STREAM_BINDING_SERVICE_NAME = getUserBindingServiceName(
+	STREAM_PLUGIN_NAME,
+	"service"
+);
+export const STREAM_BINDING_ENTRYPOINT = "StreamBinding";
 
 export const STREAM_COMPAT_DATE = "2026-03-23";
 
@@ -41,8 +47,8 @@ export const STREAM_PLUGIN: Plugin = {
 								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 							}
 						: {
-								name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
-								entrypoint: "StreamBinding",
+								name: STREAM_BINDING_SERVICE_NAME,
+								entrypoint: STREAM_BINDING_ENTRYPOINT,
 							},
 				};
 			}
@@ -56,7 +62,12 @@ export const STREAM_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, sharedOptions }) {
+	async getServices({
+		options,
+		tmpPath,
+		sharedOptions,
+		storageOwnerRoutePlugins,
+	}) {
 		const services: Service[] = [];
 
 		for (const [, binding] of getEnvBindingsOfType(options.config, "stream")) {
@@ -70,6 +81,10 @@ export const STREAM_PLUGIN: Plugin = {
 					name: STREAM_REMOTE_SERVICE_NAME,
 					worker: remoteProxyClientWorker(),
 				});
+				continue;
+			}
+
+			if (storageOwnerRoutePlugins.has(STREAM_PLUGIN_NAME)) {
 				continue;
 			}
 
@@ -120,11 +135,7 @@ export const STREAM_PLUGIN: Plugin = {
 
 			// Entrypoint with RPC
 			const bindingService = {
-				name: getUserBindingServiceName(
-					STREAM_PLUGIN_NAME,
-					"service",
-					remoteProxyConnectionString
-				),
+				name: STREAM_BINDING_SERVICE_NAME,
 				worker: {
 					compatibilityDate: STREAM_COMPAT_DATE,
 					compatibilityFlags: ["nodejs_compat", "experimental"],
@@ -154,5 +165,37 @@ export const STREAM_PLUGIN: Plugin = {
 		}
 
 		return services;
+	},
+	routeBindingToStorageOwner(binding) {
+		if (
+			"service" in binding &&
+			binding.service?.name === STREAM_BINDING_SERVICE_NAME &&
+			binding.service.entrypoint === STREAM_BINDING_ENTRYPOINT
+		) {
+			return {
+				name: binding.name,
+				service: storageOwnerProxyDesignator(
+					STREAM_BINDING_SERVICE_NAME,
+					STREAM_BINDING_ENTRYPOINT
+				),
+			};
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const hasLocal = allOptions.some((options) =>
+			getEnvBindingsOfType(options.config, "stream").some(
+				([, binding]) =>
+					getRemoteProxyConnectionString(binding, options.dev) === undefined
+			)
+		);
+		if (!hasLocal) {
+			return undefined;
+		}
+		return {
+			ownerBindings: {
+				stream: { type: "stream" },
+			},
+		};
 	},
 };

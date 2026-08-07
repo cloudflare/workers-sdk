@@ -14,6 +14,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
@@ -21,6 +22,8 @@ import type { Plugin } from "../shared";
 
 export const IMAGES_PLUGIN_NAME = "images";
 const IMAGES_REMOTE_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:remote`;
+const IMAGES_DATA_NAMESPACE = "images-data";
+export const IMAGES_NS_DATA_SERVICE_NAME = `${IMAGES_PLUGIN_NAME}:ns:data`;
 
 export const IMAGES_PLUGIN: Plugin = {
 	bindingTypeDescription: "Images",
@@ -64,12 +67,18 @@ export const IMAGES_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, sharedOptions }) {
+	async getServices({
+		options,
+		tmpPath,
+		sharedOptions,
+		storageOwnerRoutePlugins,
+	}) {
 		const services: Service[] = [];
 
-		const imagesBindings = getEnvBindingsOfType(options.config, "images");
-
-		for (const [name, binding] of imagesBindings) {
+		for (const [name, binding] of getEnvBindingsOfType(
+			options.config,
+			"images"
+		)) {
 			const remoteProxyConnectionString = getRemoteProxyConnectionString(
 				binding,
 				options.dev
@@ -84,6 +93,31 @@ export const IMAGES_PLUGIN: Plugin = {
 			}
 
 			const serviceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
+
+			if (storageOwnerRoutePlugins.has(IMAGES_PLUGIN_NAME)) {
+				services.push({
+					name: serviceName,
+					worker: {
+						compatibilityDate: "2025-04-01",
+						modules: [
+							{
+								name: "images.worker.js",
+								esModule: SCRIPT_IMAGES_SERVICE(),
+							},
+						],
+						bindings: [
+							{
+								name: "IMAGES_STORE",
+								kvNamespace: storageOwnerProxyDesignator(
+									IMAGES_NS_DATA_SERVICE_NAME
+								),
+							},
+							WORKER_BINDING_SERVICE_LOOPBACK,
+						],
+					},
+				});
+				continue;
+			}
 
 			const persistPath = getPersistPath(
 				IMAGES_PLUGIN_NAME,
@@ -131,13 +165,13 @@ export const IMAGES_PLUGIN: Plugin = {
 			} satisfies Service;
 
 			const kvNamespaceService = {
-				name: `${IMAGES_PLUGIN_NAME}:ns:data`,
+				name: IMAGES_NS_DATA_SERVICE_NAME,
 				worker: objectEntryWorker(
 					{
 						serviceName: objectService.name,
 						className: KV_NAMESPACE_OBJECT_CLASS_NAME,
 					},
-					"images-data"
+					IMAGES_DATA_NAMESPACE
 				),
 			} satisfies Service;
 
@@ -170,5 +204,21 @@ export const IMAGES_PLUGIN: Plugin = {
 		}
 
 		return services;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const hasLocal = allOptions.some((options) =>
+			getEnvBindingsOfType(options.config, "images").some(
+				([, binding]) =>
+					getRemoteProxyConnectionString(binding, options.dev) === undefined
+			)
+		);
+		if (!hasLocal) {
+			return undefined;
+		}
+		return {
+			ownerBindings: {
+				images: { type: "images" },
+			},
+		};
 	},
 };
