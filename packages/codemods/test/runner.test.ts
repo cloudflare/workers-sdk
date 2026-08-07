@@ -91,6 +91,50 @@ export default defineWorkersProject({
 		).toContain('from "@cloudflare/vitest-plugin"');
 	});
 
+	it("renames the package in package.json outside dependency groups", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": `${JSON.stringify(
+				{
+					scripts: {
+						test: "vitest && echo @cloudflare/vitest-pool-workers",
+					},
+					devDependencies: {
+						"@cloudflare/vitest-pool-workers": "^0.13.0",
+					},
+					pnpm: {
+						overrides: {
+							"@cloudflare/vitest-pool-workers": "^0.13.0",
+						},
+					},
+				},
+				null,
+				2
+			)}\n`,
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const output = await readFile(path.join(cwd, "package.json"), "utf8");
+		expect(output).not.toContain("@cloudflare/vitest-pool-workers");
+		const packageJson = JSON.parse(output) as {
+			scripts: Record<string, string>;
+			devDependencies: Record<string, string>;
+			pnpm: { overrides: Record<string, string> };
+		};
+		expect(packageJson.devDependencies).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.scripts.test).toContain("@cloudflare/vitest-plugin");
+		expect(packageJson.pnpm.overrides).toHaveProperty(
+			"@cloudflare/vitest-plugin"
+		);
+	});
+
 	it("throws for an unknown codemod", async ({ expect }) => {
 		const cwd = await createProject({});
 		await expect(

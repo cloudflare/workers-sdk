@@ -63,7 +63,15 @@ function renamePackageDependency(source: string): string {
 
 	const indent = source.match(/\n([\t ]+)"/)?.[1] ?? "\t";
 	const trailingNewline = source.endsWith("\n") ? "\n" : "";
-	return JSON.stringify(packageJson, null, indent) + trailingNewline;
+	// Re-serialise the rewritten dependency ranges, then sweep any remaining
+	// textual references (scripts, `pnpm.overrides`, `resolutions`, custom config
+	// keys) so nothing is left pointing at the removed package.
+	return (
+		JSON.stringify(packageJson, null, indent).replaceAll(
+			OLD_PACKAGE,
+			NEW_PACKAGE
+		) + trailingNewline
+	);
 }
 
 export const vitestCodemods: Codemod[] = [
