@@ -1,6 +1,9 @@
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
