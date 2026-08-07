@@ -119,7 +119,7 @@ const generate = async (ctx: C3Context) => {
 		variant.value === "opennext" ? OPENNEXT_TYPES_PATH : VINEXT_TYPES_PATH;
 
 	if (variant.value === "opennext") {
-		ctx.template.frameworkCli = undefined;
+		ctx.template.frameworkCliUsed = false;
 		await generateOpenNext(ctx);
 		return;
 	}
