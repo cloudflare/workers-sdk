@@ -548,7 +548,7 @@ export const CORE_PLUGIN: Plugin = {
 		// Vite plugin don't each have to repeat it.
 		const observabilityEnabled =
 			sharedOptions.unsafeObservability === true &&
-			dev?.unsafeExcludeFromObservability !== true;
+			dev?.unsafeRegisterWorker !== false;
 		const tailConsumers = observabilityEnabled
 			? [
 					...(config.tailConsumers ?? []),

@@ -159,7 +159,6 @@ export async function getDevMiniflareOptions(
 	const assetWorkers: Array<V4WorkerOptions> = [
 		{
 			name: ROUTER_WORKER_NAME,
-			unsafeExcludeFromObservability: true,
 			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			compatibilityFlags: ["enable_ctx_exports"],
@@ -185,7 +184,6 @@ export async function getDevMiniflareOptions(
 		},
 		{
 			name: ASSET_WORKER_NAME,
-			unsafeExcludeFromObservability: true,
 			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
@@ -316,7 +314,6 @@ export async function getDevMiniflareOptions(
 		},
 		{
 			name: VITE_PROXY_WORKER_NAME,
-			unsafeExcludeFromObservability: true,
 			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,

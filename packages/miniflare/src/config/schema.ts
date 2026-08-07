@@ -609,10 +609,9 @@ export const DevConfigSchema = z.strictObject({
 	unsafeOverrideFetchWorker: z.string().optional(),
 	unsafeEvalBinding: z.string().optional(),
 	useModuleFallbackService: z.boolean().optional(),
-	/** Whether this Worker should be advertised in the dev registry. Defaults to `true`. */
+	/** Whether this Worker is 'public' - whether should be advertised in the dev registry
+	 * and whether it should be included in local obs capture. Defaults to `true`. */
 	unsafeRegisterWorker: z.boolean().default(true),
-	/** Keep this worker out of local observability capture. */
-	unsafeExcludeFromObservability: z.boolean().optional(),
 	hasAssetsAndIsVitest: z.boolean().optional(),
 	// TODO(soon): remove in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 	unsafeEphemeralDurableObjects: z.boolean().optional(),

@@ -180,7 +180,6 @@ function convertWorkerOptions(
 	dev.unsafeEvalBinding = worker.unsafeEvalBinding;
 	dev.useModuleFallbackService = worker.unsafeUseModuleFallbackService;
 	dev.unsafeRegisterWorker = worker.unsafeRegisterWorker;
-	dev.unsafeExcludeFromObservability = worker.unsafeExcludeFromObservability;
 	dev.hasAssetsAndIsVitest = worker.hasAssetsAndIsVitest;
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;
