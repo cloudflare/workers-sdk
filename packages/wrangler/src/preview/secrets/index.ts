@@ -47,12 +47,17 @@ export const NO_PREVIEW_DEPLOYMENT_PATCH_ERR_CODE = 10032;
 export const NO_PREVIEW_DEPLOYMENT_GET_ERR_CODE = 10222;
 export const PREVIEW_NOT_FOUND_ERR_CODE = 10025;
 
-export const noPreviewDeploymentPatchMessage = (previewName: string) =>
-	`There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment before modifying a secret.`;
-export const noPreviewDeploymentListMessage = (previewName: string) =>
-	`There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment.`;
-export const previewNotFoundMessage = (previewName: string) =>
-	`The Preview "${previewName}" was not found. Please check the Preview name, or create it with \`wrangler preview\`.`;
+export function noPreviewDeploymentPatchMessage(previewName: string) {
+	return `There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment before modifying a secret.`;
+}
+
+export function noPreviewDeploymentListMessage(previewName: string) {
+	return `There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment.`;
+}
+
+export function previewNotFoundMessage(previewName: string) {
+	return `The Preview "${previewName}" was not found. Please check the Preview name, or create it with \`wrangler preview\`.`;
+}
 
 export async function patchPreviewDeploymentSecrets(
 	config: Config,
