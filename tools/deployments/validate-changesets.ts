@@ -34,6 +34,7 @@ export function validateChangesets(
 				if (
 					release.type === "major" &&
 					targetPackage?.private !== true &&
+					release.name !== "@cloudflare/vitest-plugin" &&
 					(release.name !== "miniflare" ||
 						targetPackage?.["workers-sdk"]?.npmPrereleaseIdentifier ===
 							undefined)
