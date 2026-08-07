@@ -2,4 +2,6 @@
 "@cloudflare/config": minor
 ---
 
-Export various sub-schemas like `BrowserBindingSchema`, `DurableObjectCreatedExportSchema` that need to be extended in Miniflare
+Export binding and export schemas
+
+`@cloudflare/config` now exports individual binding and export schemas, plus `validateSingletonBindings`, for callers that need to compose the Worker config schema.

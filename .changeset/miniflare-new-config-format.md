@@ -2,34 +2,8 @@
 "miniflare": major
 ---
 
-Adopt the `@cloudflare/config` worker configuration format
+Replace Miniflare's options API with Cloudflare config-based worker options
 
-Workers are now configured with a `workers` array of `{ config, legacy, dev }` entries, where `config` follows the shared `@cloudflare/config` output schema (including inline module `manifest`s) rather than the previous flat per-worker options. Service bindings, tail consumers, assets, and source maps are all driven from this format:
+`new Miniflare()` and `setOptions()` now require a `workers` array of worker entries. Binding, service, tail, remote, asset, workflow, unsafe binding, and other worker configuration now follows the schemas in `packages/miniflare/src/config/schema.ts`.
 
-- Service bindings support the `external`, `network`, and `disk` designators alongside worker/fetcher/node-handler bindings.
-- Tail consumers accept `entrypoint` and `props`.
-- Assets expose a `hasUserWorker` flag to control router behaviour.
-- Source maps are provided inline as `sourcemap`-type manifest modules.
-
-```js
-new Miniflare({
-	workers: [
-		{
-			config: {
-				type: "worker",
-				name: "my-worker",
-				compatibilityDate: "2025-05-01",
-				manifest: {
-					mainModule: "index.mjs",
-					modules: {
-						"index.mjs": {
-							type: "esm",
-							contents: "export default { fetch() {} }",
-						},
-					},
-				},
-			},
-		},
-	],
-});
-```
+The previous flat options shape is no longer accepted directly. Existing v4-shaped options can be migrated with `convertV4MiniflareOptions()`.
