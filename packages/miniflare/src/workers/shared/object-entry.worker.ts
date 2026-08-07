@@ -13,9 +13,11 @@ interface Env {
 
 export default <ExportedHandler<Env, unknown, unknown, Props>>{
 	async fetch(request, env, ctx) {
-		// Prefer the namespace passed at runtime via `ctx.props` (props-based
-		// model: one entry service serves many namespaces). Fall back to the
-		// static binding for callers that still bake the namespace in.
+		// Resolve the namespace, in priority order:
+		//  1. `ctx.props` — props-based model: one entry service serves many
+		//     namespaces. Also how the shared storage owner supplies the resource
+		//     id per-request (forwarded via the debug port's `getEntrypoint` props).
+		//  2. The static binding — legacy per-resource model.
 		const name =
 			ctx.props[SharedBindings.TEXT_NAMESPACE] ??
 			env[SharedBindings.TEXT_NAMESPACE];

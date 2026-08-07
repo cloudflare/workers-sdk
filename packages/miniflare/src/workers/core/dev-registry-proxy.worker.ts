@@ -1,6 +1,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
-import { CorePaths } from "./constants";
+import { CorePaths, STORAGE_OWNER_WORKER_NAME } from "./constants";
 import {
 	findQueueConsumer,
 	resolveTarget,
@@ -185,5 +185,91 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 				}": ${e instanceof Error ? e.message : String(e)}`
 			);
 		}
+	}
+}
+
+/**
+ * Props carried by a storage binding routed to the shared storage owner. The
+ * proxy resolves the owner from the dev registry (by its well-known name) and
+ * `getEntrypoint`s the named owner service over the debug port, forwarding
+ * `userProps` into the callee's `ctx.props` (e.g. the resource id read by
+ * `object-entry.worker.ts`).
+ */
+interface StorageProps {
+	/** The workerd service name on the owner process to target. */
+	ownerService: string;
+	/** Optional named entrypoint of that service (RPC-type resources). */
+	ownerEntrypoint?: string;
+	/** Props forwarded to the owner service as `ctx.props`. */
+	userProps?: Record<string, unknown>;
+}
+
+/**
+ * Client-side proxy for the shared storage owner. Every routed storage binding
+ * (KV / R2 / D1 / Images fetch, Streams / Secrets RPC) points here; the proxy
+ * connects to the owner's debug port and forwards both fetch and arbitrary RPC
+ * calls to the owner's real storage service. Resolved lazily per use so the
+ * owner restarting (new debug port) is picked up automatically.
+ */
+export class StorageOwnerProxy extends WorkerEntrypoint<Env, StorageProps> {
+	_cachedFetcher: Fetcher | undefined;
+	_cachedDebugPortAddress: string | undefined;
+
+	_resolve(): Fetcher | null {
+		const target = resolveTarget(STORAGE_OWNER_WORKER_NAME);
+		if (!target || !target.debugPortAddress) {
+			this._cachedFetcher = undefined;
+			this._cachedDebugPortAddress = undefined;
+			return null;
+		}
+		if (
+			this._cachedFetcher &&
+			target.debugPortAddress === this._cachedDebugPortAddress
+		) {
+			return this._cachedFetcher;
+		}
+		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
+			target.debugPortAddress
+		);
+		const fetcher = client.getEntrypoint(
+			this.ctx.props.ownerService,
+			this.ctx.props.ownerEntrypoint,
+			this.ctx.props.userProps
+		);
+		this._cachedFetcher = fetcher;
+		this._cachedDebugPortAddress = target.debugPortAddress;
+		return fetcher;
+	}
+
+	constructor(ctx: ExecutionContext<StorageProps>, env: Env) {
+		super(ctx, env);
+
+		return new Proxy(this, {
+			get(target, prop) {
+				if (Reflect.has(target, prop)) {
+					return Reflect.get(target, prop);
+				}
+				const fetcher = target._resolve();
+				if (!fetcher) {
+					// Return a function-that-throws rather than throwing in the get
+					// trap: workerd probes properties (fetch, etc.) and throwing here
+					// would crash those internal checks.
+					return () => {
+						throw new Error(workerNotFoundMessage(STORAGE_OWNER_WORKER_NAME));
+					};
+				}
+				return Reflect.get(fetcher, prop);
+			},
+		});
+	}
+
+	fetch(request: Request): Promise<Response> | Response {
+		const fetcher = this._resolve();
+		if (!fetcher) {
+			return new Response(workerNotFoundMessage(STORAGE_OWNER_WORKER_NAME), {
+				status: 503,
+			});
+		}
+		return fetcher.fetch(request);
 	}
 }

@@ -2,7 +2,9 @@ import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
 	buildRemoteProxyProps,
+	extractObjectEntryId,
 	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
@@ -11,6 +13,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
 import {
@@ -23,13 +26,17 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { ParsedWorkerOptions, Plugin } from "../shared";
+import type {
+	MiniflareBinding,
+	ParsedWorkerOptions,
+	Plugin,
+} from "../shared";
 import type { SitesOptions } from "./sites";
 
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
 // A single entry service shared by every *local* namespace. Each namespace's id
 // is supplied per-binding via `ctx.props`, so one service serves all of them.
-const KV_LOCAL_ENTRY_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:entry`;
+export const KV_LOCAL_ENTRY_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:entry`;
 // One shared remote-proxy service for all remote namespaces (config via props).
 const KV_REMOTE_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:remote`;
 const KV_STORAGE_SERVICE_NAME = `${KV_PLUGIN_NAME}:storage`;
@@ -72,11 +79,7 @@ export const KV_PLUGIN: Plugin = {
 				name,
 				kvNamespace: {
 					name: KV_LOCAL_ENTRY_SERVICE_NAME,
-					props: {
-						json: JSON.stringify({
-							[SharedBindings.TEXT_NAMESPACE]: id,
-						}),
-					},
+					props: buildObjectEntryProps(id),
 				},
 			};
 		});
@@ -106,13 +109,24 @@ export const KV_PLUGIN: Plugin = {
 		return bindings;
 	},
 
-	async getServices({ options, tmpPath, sharedOptions }) {
+	async getServices({
+		options,
+		tmpPath,
+		sharedOptions,
+		storageOwnerRoutePlugins,
+	}) {
 		const namespaces = getEnvBindingsOfType(options.config, "kv");
 
 		const services: Service[] = [];
 
+		// When routing local KV to a shared storage owner, this instance must not
+		// stand up its own KV storage (disk/DO/migrations) — its bindings are
+		// repointed at the owner proxy by `Miniflare`. Sites are still served
+		// locally as they aren't routed.
+		const routeToOwner = storageOwnerRoutePlugins.has(KV_PLUGIN_NAME);
+
 		// One shared entry service for all local namespaces (id supplied via props).
-		const hasLocalNamespace = namespaces.some(
+		const hasLocalNamespace = !routeToOwner && namespaces.some(
 			([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
 		);
 		if (hasLocalNamespace) {
@@ -122,7 +136,7 @@ export const KV_PLUGIN: Plugin = {
 			});
 		}
 
-		// One shared proxy service for all remote (mixed-mode) namespaces.
+		// Remote bindings keep using this instance's per-plugin proxy service.
 		const hasRemoteNamespace = namespaces.some(([, binding]) =>
 			getRemoteProxyConnectionString(binding, options.dev)
 		);
@@ -132,7 +146,6 @@ export const KV_PLUGIN: Plugin = {
 				worker: remoteProxyClientWorker(),
 			});
 		}
-
 		if (hasLocalNamespace) {
 			const uniqueKey = `miniflare-${KV_NAMESPACE_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
@@ -183,6 +196,41 @@ export const KV_PLUGIN: Plugin = {
 		}
 
 		return services;
+	},
+
+	routeBindingToStorageOwner(binding) {
+		if ("kvNamespace" in binding && binding.kvNamespace?.name !== undefined) {
+			const id = extractObjectEntryId(binding.kvNamespace.props?.json);
+			if (id !== undefined) {
+				return {
+					name: binding.name,
+					// The owner runs the same KV plugin code, so its generic entry
+					// service is `KV_LOCAL_ENTRY_SERVICE_NAME`; the id travels as props
+					// (read by `object-entry.worker.ts` via `ctx.props`).
+					kvNamespace: storageOwnerProxyDesignator(
+						KV_LOCAL_ENTRY_SERVICE_NAME,
+						undefined,
+						{ [SharedBindings.TEXT_NAMESPACE]: id }
+					),
+				};
+			}
+		}
+		return undefined;
+	},
+
+	getStorageOwnerHosting(allOptions) {
+		const ownerBindings: Record<string, MiniflareBinding> = {};
+		for (const options of allOptions) {
+			for (const [, binding] of getEnvBindingsOfType(options.config, "kv")) {
+				if (getRemoteProxyConnectionString(binding, options.dev) === undefined) {
+					ownerBindings[`${KV_PLUGIN_NAME}:${binding.id}`] = binding;
+				}
+			}
+		}
+		if (Object.keys(ownerBindings).length === 0) {
+			return undefined;
+		}
+		return { ownerBindings };
 	},
 };
 

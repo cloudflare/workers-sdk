@@ -66,6 +66,8 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		unsafeTriggerHandlers: options.unsafeTriggerHandlers,
 		unsafeRuntimeEnv: options.unsafeRuntimeEnv,
 		unsafeLocalExplorer: options.unsafeLocalExplorer,
+		unsafeSharedStorageOwner: options.unsafeSharedStorageOwner,
+		unsafeStorageOwnerRole: options.unsafeStorageOwnerRole,
 		unsafeObservability: options.unsafeObservability,
 		unsafeInspectDurableObjects: options.unsafeInspectDurableObjects,
 		logRequests: options.logRequests,

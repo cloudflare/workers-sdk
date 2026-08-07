@@ -4,6 +4,7 @@ import { SharedBindings } from "../../workers";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
+	extractObjectEntryId,
 	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
@@ -12,22 +13,24 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	storageOwnerProxyDesignator,
 } from "../shared";
 import type {
 	Service,
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { Plugin } from "../shared";
+import type { MiniflareBinding, Plugin } from "../shared";
 
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
 const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
 // A single entry service shared by every *local* database. Each database's id is
 // supplied per-binding via `ctx.props`, so one service serves all of them.
-const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
+export const D1_LOCAL_ENTRY_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:entry`;
 // One shared remote-proxy service for all remote D1 databases (config via props).
 const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
+
 const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
 const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: D1_DATABASE_SERVICE_PREFIX,
@@ -80,13 +83,23 @@ export const D1_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, sharedOptions }) {
+	async getServices({
+		options,
+		tmpPath,
+		sharedOptions,
+		storageOwnerRoutePlugins,
+	}) {
 		const databases = getEnvBindingsOfType(options.config, "d1");
 
 		const services: Service[] = [];
 
+		// When routing local D1 to a shared storage owner, this instance must not
+		// stand up its own D1 storage — its bindings are repointed at the owner
+		// proxy by `Miniflare`.
+		const routeToOwner = storageOwnerRoutePlugins.has(D1_PLUGIN_NAME);
+
 		// One shared entry service for all local databases (id supplied via props).
-		const hasLocal = databases.some(
+		const hasLocal = !routeToOwner && databases.some(
 			([, db]) => getRemoteProxyConnectionString(db, options.dev) === undefined
 		);
 		if (hasLocal) {
@@ -96,7 +109,7 @@ export const D1_PLUGIN: Plugin = {
 			});
 		}
 
-		// One shared proxy service for all remote (mixed-mode) databases.
+		// Remote bindings keep using this instance's per-plugin proxy service.
 		const hasRemote = databases.some(
 			([, db]) => getRemoteProxyConnectionString(db, options.dev) !== undefined
 		);
@@ -106,7 +119,6 @@ export const D1_PLUGIN: Plugin = {
 				worker: remoteProxyClientWorker(),
 			});
 		}
-
 		if (hasLocal) {
 			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
@@ -157,5 +169,61 @@ export const D1_PLUGIN: Plugin = {
 		}
 
 		return services;
+	},
+	routeBindingToStorageOwner(binding) {
+		// The owner runs the same D1 plugin code, so its generic entry service is
+		// `D1_LOCAL_ENTRY_SERVICE_NAME`; the id travels as props.
+		const toOwner = (id: string) =>
+			storageOwnerProxyDesignator(D1_LOCAL_ENTRY_SERVICE_NAME, undefined, {
+				[SharedBindings.TEXT_NAMESPACE]: id,
+			});
+		// Pre-Wrangler-3.3 `__D1_BETA__` binding: a bare service designator.
+		if ("service" in binding && binding.service?.name !== undefined) {
+			const id = extractObjectEntryId(binding.service.props?.json);
+			if (id !== undefined) {
+				return {
+					name: binding.name,
+					service: toOwner(id),
+				};
+			}
+		}
+		// Post-3.3 wrapped binding: rewrite the inner fetcher service designator.
+		if ("wrapped" in binding && binding.wrapped?.innerBindings !== undefined) {
+			let rewrote = false;
+			const innerBindings = binding.wrapped.innerBindings.map((inner) => {
+				if ("service" in inner && inner.service?.name !== undefined) {
+					const id = extractObjectEntryId(inner.service.props?.json);
+					if (id !== undefined) {
+						rewrote = true;
+						return {
+							...inner,
+							service: toOwner(id),
+						};
+					}
+				}
+				return inner;
+			});
+			if (rewrote) {
+				return {
+					...binding,
+					wrapped: { ...binding.wrapped, innerBindings },
+				};
+			}
+		}
+		return undefined;
+	},
+	getStorageOwnerHosting(allOptions) {
+		const ownerBindings: Record<string, MiniflareBinding> = {};
+		for (const options of allOptions) {
+			for (const [, binding] of getEnvBindingsOfType(options.config, "d1")) {
+				if (getRemoteProxyConnectionString(binding, options.dev) === undefined) {
+					ownerBindings[`${D1_PLUGIN_NAME}:${binding.id}`] = binding;
+				}
+			}
+		}
+		if (Object.keys(ownerBindings).length === 0) {
+			return undefined;
+		}
+		return { ownerBindings };
 	},
 };

@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MiniflareCoreError } from "../../shared";
 import type {
+	MiniflareBinding,
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
 } from "../../config/schema";
@@ -76,11 +77,26 @@ export interface PluginServicesOptions {
 	// messages to a consumer in another `wrangler dev` process.
 	devRegistryEnabled: boolean;
 	hyperdriveProxyController: HyperdriveProxyController;
+	// Plugin names (e.g. "kv") whose *local* storage is being routed to a shared
+	// storage owner process. Plugins listed here should skip standing up their
+	// local storage services (disk/DO/migrations); their bindings are rewritten
+	// to the storage-owner proxy by `Miniflare`.
+	storageOwnerRoutePlugins: Set<string>;
+	// When the shared storage owner feature is enabled, plugins that aren't
+	// routed to the owner but still persist to `resourcePersistencePath` (Cache,
+	// Durable Objects, Workflows) keep their storage per-instance (under
+	// `tmpPath`) instead of the shared root, so separate processes don't contend
+	// on one database.
+	isolateLocalStorage: boolean;
 }
 
 export interface ServicesExtensions {
 	services: Service[];
 	extensions: Extension[];
+}
+
+export interface StorageOwnerHosting {
+	ownerBindings: Record<string, MiniflareBinding>;
 }
 
 /**
@@ -103,6 +119,25 @@ export interface Plugin {
 	getExtensions?(options: {
 		options: ParsedWorkerOptions[];
 	}): Awaitable<Extension[]>;
+	// Shared storage owner (experimental `unsafeSharedStorageOwner`) hooks. Only
+	// implemented by plugins whose local storage can be routed to a single owner
+	// process. `Miniflare` owns the process/presence/routing orchestration; these
+	// let each plugin own the knowledge of its own binding + resource shapes.
+
+	// Rewrite one of this plugin's *local* storage bindings so the op is served by
+	// the owner process (via the client-side storage-owner proxy, which reaches
+	// the owner's storage service over the debug port), or return `undefined` to
+	// leave `binding` unchanged. Called for each binding this plugin emits when
+	// its storage is routed to an owner.
+	routeBindingToStorageOwner?(
+		binding: Worker_Binding
+	): Worker_Binding | undefined;
+	// Given every worker's options for this plugin, describe how a shared owner
+	// should host its local storage, or `undefined` if there's nothing local to
+	// share. Used to configure the spawned owner process.
+	getStorageOwnerHosting?(
+		allOptions: ParsedWorkerOptions[]
+	): StorageOwnerHosting | undefined;
 }
 
 /**
