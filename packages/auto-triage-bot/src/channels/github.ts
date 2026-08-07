@@ -6,6 +6,25 @@ import { env } from "cloudflare:workers";
 import * as v from "valibot";
 import { IssueTriage } from "../agents/issue-triage";
 
+const COMMENT_BY_OUTCOME = {
+	"not-reproduced": "- **Reproduction:** ❌ Could not reproduce.",
+	reproduced: "- **Reproduction:** ✅ Successfully reproduced.",
+} as const;
+
+const CommentDetailsSchema = v.pipe(
+	v.string(),
+	v.trim(),
+	v.minLength(1),
+	v.maxLength(300),
+	v.regex(/^[^\r\n]+$/u, "Details must fit on one line."),
+	v.regex(/^[^@]*$/u, "Details must not contain @mentions."),
+	v.regex(/^[^<>]*$/u, "Details must not contain HTML."),
+	v.regex(
+		/^(?!.*(?:[a-z][a-z0-9+.-]*:\/\/|www\.|\[[^\]]+\]\([^)]+\))).*$/iu,
+		"Details must not contain links."
+	)
+);
+
 export const client = new Octokit({
 	auth: env.GITHUB_TOKEN,
 });
@@ -26,10 +45,8 @@ export const channel = createGitHubChannel({
 				id: channel.instanceId(issueRef),
 				initialData: {
 					issueNumber: issueRef.issueNumber,
-					openedBy: issue.user.login,
 					owner: issueRef.owner,
 					repo: issueRef.repo,
-					title: issue.title,
 				},
 				message: {
 					attributes: {
@@ -63,14 +80,15 @@ export function commentOnIssue(ref: {
 	repo: string;
 }) {
 	return defineTool({
-		description: `Comment on the GitHub issue or pull request bound to this agent.`,
+		description: `Report whether the GitHub issue bound to this agent was reproduced, with brief factual details.`,
 		input: v.object({
-			body: v.pipe(v.string(), v.minLength(1)),
+			details: CommentDetailsSchema,
+			outcome: v.picklist(["reproduced", "not-reproduced"]),
 		}),
 		name: "comment_on_github_issue",
 		run: async ({ data }) => {
 			const result = await client.rest.issues.createComment({
-				body: data.body,
+				body: `${COMMENT_BY_OUTCOME[data.outcome]} ${data.details}`,
 				issue_number: ref.issueNumber,
 				owner: ref.owner,
 				repo: ref.repo,
