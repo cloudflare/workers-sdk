@@ -345,8 +345,31 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "next",
+			// Default Next.js path: vinext via create-vinext-app.
+			argv: ["--variant", "vinext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
+			// preview script is `build && start` (wrangler dev on build output).
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			verifyDeploy: {
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			nodeCompat: true,
+			unsupportedOSs: ["win32"],
+		},
+		{
+			name: "next:opennext",
+			// Opt-in OpenNext adapter path (previous C3 default).
+			argv: ["--variant", "opennext"],
+			timeout: LONG_TIMEOUT,
+			testCommitMessage: true,
+			expectFrameworkCli: false,
+			typesPath: "./cloudflare-env.d.ts",
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
 				route: "/",
@@ -1100,13 +1123,37 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "next",
-			argv: ["--platform", "workers"],
+			// Default experimental Next.js path: vinext.
+			argv: ["--platform", "workers", "--variant", "vinext"],
 			flags: ["--yes"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
+			quarantine: !CLOUDFLARE_API_TOKEN,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			nodeCompat: true,
+			// vinext does not ship a pre-baked cloudflare-env.d.ts the way the
+			// OpenNext template does.
+			verifyTypes: false,
+		},
+		{
+			name: "next:opennext",
+			// Opt-in OpenNext adapter path under --experimental.
+			argv: ["--platform", "workers", "--variant", "opennext"],
+			flags: ["--yes"],
+			testCommitMessage: true,
+			expectFrameworkCli: false,
+			unsupportedOSs: ["win32"],
 			unsupportedPms: ["npm", "yarn"],
-			// this test creates an R2 bucket, so it requires a Cloudflare API token
-			// and needs to be skipped on forks
+			// OpenNext template may create an R2 bucket; requires a CF API token.
 			quarantine: !CLOUDFLARE_API_TOKEN,
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
