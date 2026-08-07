@@ -21,10 +21,12 @@ describe("delete", () => {
 	const { setIsTTY } = useMockIsTTY();
 	beforeEach(() => {
 		setIsTTY(true);
+		mockClearMetricsExportRequest();
 	});
 	const std = mockConsoleMethods();
 
 	it("should delete an entire service by name", async ({ expect }) => {
+		const calls: string[] = [];
 		mockConfirm({
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
 			result: true,
@@ -32,8 +34,22 @@ describe("delete", () => {
 		mockListKVNamespacesRequest(expect);
 		mockListReferencesRequest(expect, "my-script");
 		mockListTailsByConsumerRequest(expect, "my-script");
-		mockDeleteWorkerRequest(expect, { name: "my-script" });
+		mockClearMetricsExportRequest(async (request) => {
+			expect(await request.json()).toEqual({
+				requester: {
+					requesterType: "workers",
+					requesterId: "my-script",
+				},
+				resources: [],
+			});
+			calls.push("clear");
+		});
+		mockDeleteWorkerRequest(expect, {
+			name: "my-script",
+			onDelete: () => calls.push("delete"),
+		});
 		await runWrangler("delete --name my-script");
+		expect(calls).toEqual(["clear", "delete"]);
 
 		expect(std).toMatchInlineSnapshot(`
 			{
@@ -47,6 +63,36 @@ describe("delete", () => {
 			  "warn": "",
 			}
 		`);
+	});
+
+	it("does not delete the Worker when metrics export cleanup fails", async ({
+		expect,
+	}) => {
+		mockConfirm({
+			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+			result: true,
+		});
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => HttpResponse.json({ success: false }, { status: 400 }),
+				{ once: true }
+			)
+		);
+		let deleteCalled = false;
+		mockDeleteWorkerRequest(expect, {
+			name: "my-script",
+			onDelete: () => {
+				deleteCalled = true;
+			},
+		});
+
+		await expect(runWrangler("delete --name my-script")).rejects.toThrow(
+			"Wrangler could not clean up this Worker's metrics export configuration, so the Worker was not deleted."
+		);
+		expect(deleteCalled).toBe(false);
 	});
 
 	it("should delete a service using positional name argument", async ({
@@ -133,7 +179,12 @@ describe("delete", () => {
 	it("shouldn't delete a service when doing a --dry-run", async ({
 		expect,
 	}) => {
+		let cleanupCalled = false;
+		mockClearMetricsExportRequest(() => {
+			cleanupCalled = true;
+		});
 		await runWrangler("delete --name xyz --dry-run");
+		expect(cleanupCalled).toBe(false);
 
 		expect(std).toMatchInlineSnapshot(`
 			{
@@ -150,12 +201,17 @@ describe("delete", () => {
 	});
 
 	it('shouldn\'t delete when the user says "no"', async ({ expect }) => {
+		let cleanupCalled = false;
+		mockClearMetricsExportRequest(() => {
+			cleanupCalled = true;
+		});
 		mockConfirm({
 			text: `Are you sure you want to delete xyz? This action cannot be undone.`,
 			result: false,
 		});
 
 		await runWrangler("delete --name xyz");
+		expect(cleanupCalled).toBe(false);
 
 		expect(std).toMatchInlineSnapshot(`
 			{
@@ -168,6 +224,28 @@ describe("delete", () => {
 			  "warn": "",
 			}
 		`);
+	});
+
+	it("cleans up the deployed legacy-environment script name", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({ env: { staging: {} } });
+		mockConfirm({
+			text: `Are you sure you want to delete test-name-staging? This action cannot be undone.`,
+			result: true,
+		});
+		mockListKVNamespacesRequest(expect);
+		mockListReferencesRequest(expect, "test-name-staging");
+		mockListTailsByConsumerRequest(expect, "test-name-staging");
+		mockClearMetricsExportRequest(async (request) => {
+			expect(await request.json()).toMatchObject({
+				requester: { requesterId: "test-name-staging" },
+				resources: [],
+			});
+		});
+		mockDeleteWorkerRequest(expect, { env: "staging" });
+
+		await runWrangler("delete --env staging");
 	});
 
 	it("should delete a site namespace associated with a worker", async ({
@@ -596,6 +674,7 @@ function mockDeleteWorkerRequest(
 		env?: string;
 		useServiceEnvironments?: boolean;
 		force?: boolean;
+		onDelete?: () => void;
 	} = {}
 ) {
 	const { env, useServiceEnvironments, name } = options;
@@ -603,6 +682,7 @@ function mockDeleteWorkerRequest(
 		http.delete(
 			"*/accounts/:accountId/workers/services/:scriptName",
 			({ request, params }) => {
+				options.onDelete?.();
 				const url = new URL(request.url);
 
 				expect(params.accountId).toEqual("some-account-id");
@@ -627,6 +707,25 @@ function mockDeleteWorkerRequest(
 				);
 			},
 			{ once: true }
+		)
+	);
+}
+
+function mockClearMetricsExportRequest(
+	onClear?: (request: Request) => void | Promise<void>
+) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/workers/observability/metricsexport",
+			async ({ request }) => {
+				await onClear?.(request);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				});
+			}
 		)
 	);
 }

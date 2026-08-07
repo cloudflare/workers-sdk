@@ -51,11 +51,25 @@ describe("deploy metrics export", () => {
 		clearOutputFilePath();
 	});
 
-	it("reconciles the Worker self-resource when metrics export is enabled", async ({
+	it("reconciles Worker, D1, and R2 resources using canonical identities", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
 			main: "./index.js",
+			d1_databases: [
+				{
+					binding: "DB_ONE",
+					database_id: "11111111-1111-1111-1111-111111111111",
+				},
+				{
+					binding: "DB_ALIAS",
+					database_id: "11111111-1111-1111-1111-111111111111",
+				},
+			],
+			r2_buckets: [
+				{ binding: "BUCKET_ONE", bucket_name: "bucket-one" },
+				{ binding: "BUCKET_ALIAS", bucket_name: "bucket-one" },
+			],
 			observability: {
 				metrics: {
 					enabled: true,
@@ -65,25 +79,19 @@ describe("deploy metrics export", () => {
 		});
 		writeWorkerSource();
 		mockUploadWorkerRequest({ expectedObservability: undefined });
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/:bucketName", () =>
+				HttpResponse.json(
+					createFetchResult({
+						name: "bucket-one",
+						creation_date: "2026-01-01T00:00:00Z",
+					})
+				)
+			)
+		);
 
 		let requestBody: unknown;
 		msw.use(
-			http.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				({ params }) => {
-					return HttpResponse.json(
-						createFetchResult({
-							default_environment: {
-								script: {
-									id: "453134676",
-									last_deployed_from: "wrangler",
-									tag: `tag:${params["scriptName"]}`,
-								},
-							},
-						})
-					);
-				}
-			),
 			http.post(
 				"*/accounts/:accountId/workers/observability/metricsexport",
 				async ({ params, request }) => {
@@ -99,31 +107,55 @@ describe("deploy metrics export", () => {
 		expect(requestBody).toEqual({
 			requester: {
 				requesterType: "workers",
-				requesterId: "test-name/production",
+				requesterId: "test-name",
 			},
 			resources: [
 				{
 					resourceType: "workers",
-					resourceId: "453134676",
-					meta: "self",
+					resourceId: "test-name",
+					destinations: ["opentelemetry-metrics"],
+				},
+				{
+					resourceType: "d1",
+					resourceId: "11111111-1111-1111-1111-111111111111",
+					destinations: ["opentelemetry-metrics"],
+				},
+				{
+					resourceType: "r2",
+					resourceId: "bucket-one",
 					destinations: ["opentelemetry-metrics"],
 				},
 			],
 		});
 	});
 
-	it("removes requester resources when metrics export is disabled", async ({
+	it("resolves inherited D1 and R2 identities from deployed settings", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
 			main: "./index.js",
+			d1_databases: [{ binding: "DB" }],
+			r2_buckets: [{ binding: "BUCKET" }],
 			observability: {
 				metrics: {
-					enabled: false,
+					enabled: true,
+					destinations: ["destination"],
 				},
 			},
 		});
 		writeWorkerSource();
+		mockGetSettings({
+			result: {
+				bindings: [
+					{ type: "d1", name: "DB", id: "remote-database-id" },
+					{
+						type: "r2_bucket",
+						name: "BUCKET",
+						bucket_name: "remote-bucket-name",
+					},
+				],
+			},
+		});
 		mockUploadWorkerRequest({ expectedObservability: undefined });
 
 		let requestBody: unknown;
@@ -142,10 +174,307 @@ describe("deploy metrics export", () => {
 		expect(requestBody).toEqual({
 			requester: {
 				requesterType: "workers",
-				requesterId: "test-name/production",
+				requesterId: "test-name",
+			},
+			resources: [
+				{
+					resourceType: "workers",
+					resourceId: "test-name",
+					destinations: ["destination"],
+				},
+				{
+					resourceType: "d1",
+					resourceId: "remote-database-id",
+					destinations: ["destination"],
+				},
+				{
+					resourceType: "r2",
+					resourceId: "remote-bucket-name",
+					destinations: ["destination"],
+				},
+			],
+		});
+	});
+
+	it("discovers D1 and R2 resources selected during provisioning", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			d1_databases: [{ binding: "DB" }],
+			r2_buckets: [{ binding: "BUCKET" }],
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		writeWorkerSource();
+		msw.use(
+			http.get("*/accounts/:accountId/d1/database", () =>
+				HttpResponse.json(
+					createFetchResult([{ name: "database", uuid: "provisioned-d1-id" }])
+				)
+			),
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(
+					createFetchResult({
+						buckets: [{ name: "provisioned-r2-bucket" }],
+					})
+				)
+			),
+			http.post("*/accounts/:accountId/d1/database", () =>
+				HttpResponse.json(
+					createFetchResult({
+						name: "test-name-d1",
+						uuid: "provisioned-d1-id",
+					})
+				)
+			),
+			http.post("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(createFetchResult({}))
+			)
+		);
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+
+		let requestBody: unknown;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy");
+
+		expect(requestBody).toMatchObject({
+			resources: [
+				{ resourceType: "workers", resourceId: "test-name" },
+				{ resourceType: "d1", resourceId: "provisioned-d1-id" },
+				{ resourceType: "r2", resourceId: "test-name-bucket" },
+			],
+		});
+	});
+
+	it("uses the deployed script name for a legacy environment", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			env: {
+				staging: {
+					observability: {
+						metrics: { enabled: true, destinations: ["destination"] },
+					},
+				},
+			},
+		});
+		writeWorkerSource();
+		msw.use(
+			http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
+				HttpResponse.json(
+					createFetchResult({
+						default_environment: {
+							environment: "production",
+							script: {
+								tag: "existing-tag",
+								tags: null,
+								last_deployed_from: "wrangler",
+							},
+						},
+					})
+				)
+			)
+		);
+		mockUploadWorkerRequest({
+			env: "staging",
+			useServiceEnvironments: false,
+			expectedObservability: undefined,
+		});
+
+		let requestBody: unknown;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy --env staging");
+
+		expect(requestBody).toMatchObject({
+			requester: {
+				requesterType: "workers",
+				requesterId: "test-name-staging",
+			},
+			resources: [{ resourceType: "workers", resourceId: "test-name-staging" }],
+		});
+	});
+
+	it("strips only metrics from native Worker observability settings", async () => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				enabled: true,
+				head_sampling_rate: 0.5,
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		writeWorkerSource();
+		mockUploadWorkerRequest({
+			expectedObservability: { enabled: true, head_sampling_rate: 0.5 },
+		});
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => HttpResponse.json(createFetchResult({}))
+			)
+		);
+
+		await runWrangler("deploy");
+	});
+
+	it("rejects service environments before upload", async ({ expect }) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			legacy_env: false,
+			env: {
+				staging: {
+					observability: {
+						metrics: { enabled: true, destinations: ["destination"] },
+					},
+				},
+			},
+		});
+		writeWorkerSource();
+
+		await expect(runWrangler("deploy --env staging")).rejects.toThrow(
+			"Metrics export is not supported for service environments."
+		);
+	});
+
+	it("rejects dispatch namespace deployments before upload", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		writeWorkerSource();
+
+		await expect(
+			runWrangler("deploy --dispatch-namespace customer-workers")
+		).rejects.toThrow(
+			"Metrics export is not supported for dispatch namespace deployments."
+		);
+	});
+
+	it("does not post a partial resource set when a binding is unresolved", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			d1_databases: [{ binding: "DB" }],
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		writeWorkerSource();
+		let settingsRequests = 0;
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+				() => {
+					settingsRequests += 1;
+					return HttpResponse.json(
+						createFetchResult({
+							bindings:
+								settingsRequests === 1
+									? [{ type: "d1", name: "DB", id: "database-id" }]
+									: [],
+						})
+					);
+				}
+			)
+		);
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+
+		let called = false;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					called = true;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await expect(runWrangler("deploy")).rejects.toThrow(
+			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration."
+		);
+		expect(called).toBe(false);
+	});
+
+	it("removes requester resources when metrics export is disabled", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			d1_databases: [{ binding: "DB" }],
+			observability: {
+				metrics: {
+					enabled: false,
+				},
+			},
+		});
+		writeWorkerSource();
+		let settingsRequests = 0;
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+				() => {
+					settingsRequests += 1;
+					return HttpResponse.json(
+						createFetchResult({
+							bindings:
+								settingsRequests === 1
+									? [{ type: "d1", name: "DB", id: "database-id" }]
+									: [],
+						})
+					);
+				}
+			)
+		);
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+
+		let requestBody: unknown;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy");
+
+		expect(requestBody).toEqual({
+			requester: {
+				requesterType: "workers",
+				requesterId: "test-name",
 			},
 			resources: [],
 		});
+		expect(settingsRequests).toBe(1);
 	});
 
 	it("does not reconcile when metrics export config is absent", async ({
@@ -234,41 +563,5 @@ describe("deploy metrics export", () => {
 			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration."
 		);
 		expect(attempts).toBe(3);
-	});
-
-	it("fails safely when the Workers API does not provide a constant script ID", async ({
-		expect,
-	}) => {
-		writeWranglerConfig({
-			main: "./index.js",
-			observability: {
-				metrics: {
-					enabled: true,
-					destinations: ["opentelemetry-metrics"],
-				},
-			},
-		});
-		writeWorkerSource();
-		mockUploadWorkerRequest({ expectedObservability: undefined });
-
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				({ params }) =>
-					HttpResponse.json(
-						createFetchResult({
-							default_environment: {
-								script: {
-									id: params["scriptName"],
-								},
-							},
-						})
-					)
-			)
-		);
-
-		await expect(runWrangler("deploy")).rejects.toThrow(
-			"The Workers API did not return the numeric script ID required for metrics export."
-		);
 	});
 });

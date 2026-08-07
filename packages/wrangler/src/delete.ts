@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { clearMetricsExportRequester } from "@cloudflare/deploy-helpers";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
 import { createCommand } from "./core/create-command";
@@ -151,6 +152,8 @@ export const deleteCommand = createCommand({
 				// null means the user rejected the extra confirmation - return early
 				return;
 			}
+
+			await clearMetricsExportRequester({ config, accountId, scriptName });
 
 			await fetchResult(
 				config,

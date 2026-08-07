@@ -789,6 +789,15 @@ export async function handlePreviewCommand(
 	},
 	{ config }: { config: Config }
 ) {
+	if (config.observability?.metrics !== undefined) {
+		throw new UserError(
+			"Metrics export is not supported by `wrangler preview`. Use `wrangler deploy` or remove observability.metrics from your configuration.",
+			{
+				telemetryMessage: "metrics export preview unsupported",
+			}
+		);
+	}
+
 	const workerName = resolveWorkerName(args, config);
 
 	let previewName = args.name;

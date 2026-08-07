@@ -766,8 +766,7 @@ export default async function deploy(
 		config,
 		accountId,
 		scriptName,
-		envName,
-		useServiceEnvironments,
+		bindings,
 	});
 
 	// deploy triggers

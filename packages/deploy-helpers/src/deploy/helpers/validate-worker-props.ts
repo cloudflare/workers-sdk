@@ -19,6 +19,7 @@ import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import { getDeployConfirmFunction } from "./deploy-confirm";
 import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
+import { useServiceEnvironments } from "./use-service-environments";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type { DeployProps, VersionsUploadProps } from "../../shared/types";
@@ -95,6 +96,31 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		throw new UserError(
 			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
 			{ telemetryMessage: "data_blobs with es module worker" }
+		);
+	}
+
+	if (
+		config.observability?.metrics !== undefined &&
+		useServiceEnvironments(config)
+	) {
+		throw new UserError(
+			"Metrics export is not supported for service environments. Use legacy environments or remove observability.metrics from your configuration.",
+			{
+				telemetryMessage: "metrics export service environments unsupported",
+			}
+		);
+	}
+
+	if (
+		config.observability?.metrics !== undefined &&
+		props.command === "deploy" &&
+		props.dispatchNamespace !== undefined
+	) {
+		throw new UserError(
+			"Metrics export is not supported for dispatch namespace deployments. Remove observability.metrics from your configuration.",
+			{
+				telemetryMessage: "metrics export dispatch namespace unsupported",
+			}
 		);
 	}
 

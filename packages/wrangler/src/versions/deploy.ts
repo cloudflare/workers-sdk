@@ -11,9 +11,7 @@ import {
 	type ApiVersion,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
 	printVersions,
-	reconcileMetricsExportConfig,
 	renderInconsistentExportsAcrossVersionsError,
-	useServiceEnvironments,
 	withoutMetricsExportConfig,
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
@@ -113,6 +111,15 @@ export const versionsDeployCommand = createCommand({
 	},
 	positionalArgs: ["version-specs"],
 	handler: async function versionsDeployHandler(args, { config }) {
+		if (config.observability?.metrics !== undefined) {
+			throw new UserError(
+				"Metrics export is not supported by `wrangler versions deploy`. Use `wrangler deploy` or remove observability.metrics from your configuration.",
+				{
+					telemetryMessage: "metrics export versions deploy unsupported",
+				}
+			);
+		}
+
 		metrics.sendMetricsEvent("deploy worker versions", {
 			sendMetrics: config.send_metrics,
 		});
@@ -251,13 +258,6 @@ export const versionsDeployCommand = createCommand({
 		}
 
 		await maybePatchSettings(config, accountId, workerName);
-		await reconcileMetricsExportConfig({
-			config,
-			accountId,
-			scriptName: workerName,
-			envName: args.env ?? "production",
-			useServiceEnvironments: useServiceEnvironments(config),
-		});
 
 		const elapsedMilliseconds = Date.now() - start;
 		const elapsedSeconds = elapsedMilliseconds / 1000;

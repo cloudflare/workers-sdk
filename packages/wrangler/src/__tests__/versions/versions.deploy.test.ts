@@ -185,6 +185,22 @@ describe("versions deploy", () => {
 		);
 	});
 
+	test("rejects metrics export before creating a deployment", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+
+		await expect(
+			runWrangler("versions deploy 10000000-0000-0000-0000-000000000000 --yes")
+		).rejects.toThrow(
+			"Metrics export is not supported by `wrangler versions deploy`."
+		);
+	});
+
 	describe("legacy deploy", () => {
 		test("should warn user when worker has deployment with multiple versions", async ({
 			expect,

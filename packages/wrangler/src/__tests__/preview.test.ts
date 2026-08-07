@@ -6,7 +6,11 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
-import { extractConfigBindings, getBranchName } from "../preview/shared";
+import {
+	assemblePreviewScriptSettings,
+	extractConfigBindings,
+	getBranchName,
+} from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -43,13 +47,42 @@ describe("wrangler preview", () => {
 		clearOutputFilePath();
 	});
 
+	test("rejects metrics export before creating a Preview", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			name: "test-worker",
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+
+		await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
+			"Metrics export is not supported by `wrangler preview`."
+		);
+	});
+
+	test("strips metrics export from Preview script settings", ({ expect }) => {
+		const config = {
+			...defaultWranglerConfig,
+			observability: {
+				enabled: true,
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		};
+
+		expect(assemblePreviewScriptSettings(config)).toEqual({
+			observability: { enabled: true },
+		});
+	});
+
 	describe("getBranchName", () => {
 		beforeEach(() => {
 			vi.unstubAllEnvs();
-			vi.stubEnv("WORKERS_CI_BRANCH", undefined);
-			vi.stubEnv("GITHUB_REF_NAME", undefined);
-			vi.stubEnv("GITHUB_HEAD_REF", undefined);
-			vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
+			vi.stubEnv("WORKERS_CI_BRANCH", "");
+			vi.stubEnv("GITHUB_REF_NAME", "");
+			vi.stubEnv("GITHUB_HEAD_REF", "");
+			vi.stubEnv("CI_COMMIT_REF_NAME", "");
 		});
 
 		afterAll(() => {
@@ -69,7 +102,7 @@ describe("wrangler preview", () => {
 			vi.stubEnv("GITHUB_HEAD_REF", "github-pr-branch");
 			expect(getBranchName()).toBe("github-pr-branch");
 
-			vi.stubEnv("GITHUB_HEAD_REF", undefined);
+			vi.stubEnv("GITHUB_HEAD_REF", "");
 			vi.stubEnv("GITHUB_REF_NAME", "github-push-branch");
 			expect(getBranchName()).toBe("github-push-branch");
 		});

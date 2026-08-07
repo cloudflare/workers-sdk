@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { withoutMetricsExportConfig } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	getWorkersCIBranchName,
@@ -349,7 +350,10 @@ export function assemblePreviewScriptSettings(config: Config) {
 
 	const observability = previews?.observability ?? config.observability;
 	if (observability !== undefined) {
-		result.observability = observability;
+		const uploadObservability = withoutMetricsExportConfig(observability);
+		if (uploadObservability !== undefined) {
+			result.observability = uploadObservability;
+		}
 	}
 
 	const logpush = previews?.logpush ?? config.logpush;
