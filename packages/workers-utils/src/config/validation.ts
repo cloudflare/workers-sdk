@@ -7,7 +7,9 @@ import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
+import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
+import { getDurableObjectExports } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
 import {
 	all,
@@ -1455,7 +1457,7 @@ const validateStreamingTailConsumers: ValidatorFn = (
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
-	topLevelEnv: RawEnvironment,
+	topLevelEnv: RawConfig,
 	isDispatchNamespace: boolean,
 	preserveOriginalMain: boolean
 ): Environment;
@@ -1475,7 +1477,7 @@ function normalizeAndValidateEnvironment(
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
-	rawEnv: RawEnvironment,
+	rawEnv: RawEnvironment | RawConfig,
 	isDispatchNamespace: boolean,
 	preserveOriginalMain: boolean,
 	envName = "top level",
@@ -2191,6 +2193,26 @@ function normalizeAndValidateEnvironment(
 		diagnostics,
 		environment.migrations,
 		environment.exports
+	);
+
+	// `exports` is inherited by named environments but `containers` is not, so the
+	// idiomatic multi-environment layout declares `exports` once at the top level
+	// and repeats `containers` in every environment. Both passes then see only one
+	// half of the link and must not cross-check it: on a named environment pass
+	// the top level holds the containers, and on the top level pass the named
+	// environments do.
+	const containersDeclaredElsewhere =
+		rawConfig !== undefined
+			? rawConfig.containers !== undefined
+			: Object.values("env" in rawEnv ? (rawEnv.env ?? {}) : {}).some(
+					(rawNamedEnv) => rawNamedEnv?.containers !== undefined
+				);
+
+	validateContainerExportLinks(
+		diagnostics,
+		environment.containers,
+		environment.exports,
+		containersDeclaredElsewhere
 	);
 
 	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
@@ -3384,14 +3406,7 @@ function validateContainerApp(
 		}
 
 		for (const containerAppOptional of value) {
-			// validate that either a name is set and is a string
-			if (!isOptionalProperty(value, "name", "string")) {
-				diagnostics.errors.push(
-					`Field "name", when present, should be a string, but got ${JSON.stringify(value)}`
-				);
-			}
-
-			validateRequiredProperty(
+			validateOptionalProperty(
 				diagnostics,
 				field,
 				"class_name",
@@ -3407,23 +3422,27 @@ function validateContainerApp(
 			);
 			// try and add a default name
 			if (!containerAppOptional.name) {
-				// we need topLevelName and a containers.class_name if containers.name is not defined
-				if (
-					!topLevelName ||
-					!isOptionalProperty(containerAppOptional, "class_name", "string")
-				) {
+				// The default name is derived from the class name, so without one there
+				// is nothing to derive it from. Such a container must be linked to a
+				// Durable Object from the `exports` side, which references it by name.
+				if (containerAppOptional.class_name === undefined) {
+					diagnostics.errors.push(
+						`"containers.name" is required when "containers.class_name" is not defined, because there is no class name to derive a default name from. Either name this container and reference it from a Durable Object's \`exports\` entry, or set "containers.class_name".`
+					);
+				} else if (!topLevelName) {
 					diagnostics.errors.push(
 						`Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.`
 					);
+				} else {
+					// if there is worker name defined but no name for this container app default to:
+					// worker_name-class_name[-envName].
+					let name = `${topLevelName}-${containerAppOptional.class_name}`;
+					// config is undefined when we are at the top level instead of in a named env
+					// If we are in a named env, append it to the generated name
+					// so that users can re-use container definitions between different envs without issue.
+					name += config === undefined ? "" : `-${envName}`;
+					containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 				}
-				// if there is worker name defined but no name for this container app default to:
-				// worker_name-class_name[-envName].
-				let name = `${topLevelName}-${containerAppOptional.class_name}`;
-				// config is undefined when we are at the top level instead of in a named env
-				// If we are in a named env, append it to the generated name
-				// so that users can re-use container definitions between different envs without issue.
-				name += config === undefined ? "" : `-${envName}`;
-				containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 			}
 			if (
 				!containerAppOptional.configuration?.image &&
@@ -6100,6 +6119,44 @@ function validateDurableObjectExportProperties(
 }
 
 /**
+ * Validate the `container` field of a live Durable Object export. The reference
+ * itself is cross-checked against the `containers` array by
+ * {@link validateContainerExportLinks}; here we only check the shape and the
+ * storage backend, since containers require SQLite-backed Durable Objects.
+ */
+function validateDurableObjectExportContainer(
+	diagnostics: Diagnostics,
+	className: string,
+	durableObjectExport: {
+		container?: unknown;
+		storage?: unknown;
+	}
+): boolean {
+	if (durableObjectExport.container === undefined) {
+		return true;
+	}
+
+	if (
+		typeof durableObjectExport.container !== "string" ||
+		durableObjectExport.container === ""
+	) {
+		diagnostics.errors.push(
+			`"exports.${className}.container" must be a non-empty string naming a container in the "containers" array, but got ${JSON.stringify(durableObjectExport.container)}.`
+		);
+		return false;
+	}
+
+	if (durableObjectExport.storage === "legacy-kv") {
+		diagnostics.errors.push(
+			`"exports.${className}.container" requires "storage" to be "sqlite". Containers are not supported on Durable Objects using the "legacy-kv" storage backend.`
+		);
+		return false;
+	}
+
+	return true;
+}
+
+/**
  * Validate a Durable Object `exports` configuration.
  *
  * - `type` carries the export kind and must be `"durable-object"`.
@@ -6134,11 +6191,17 @@ function validateDurableObjectExport(
 				valid = false;
 			}
 			valid =
+				validateDurableObjectExportContainer(
+					diagnostics,
+					className,
+					durableObjectExport
+				) && valid;
+			valid =
 				validateDurableObjectExportProperties(
 					diagnostics,
 					className,
 					durableObjectExport,
-					["type", "state", "storage"]
+					["type", "state", "storage", "container"]
 				) && valid;
 			break;
 		}
@@ -6223,11 +6286,17 @@ function validateDurableObjectExport(
 				valid = false;
 			}
 			valid =
+				validateDurableObjectExportContainer(
+					diagnostics,
+					className,
+					durableObjectExport
+				) && valid;
+			valid =
 				validateDurableObjectExportProperties(
 					diagnostics,
 					className,
 					durableObjectExport,
-					["type", "state", "storage", "transfer_from"]
+					["type", "state", "storage", "transfer_from", "container"]
 				) && valid;
 			break;
 		}
@@ -6683,6 +6752,192 @@ function errorIfMigrationsAndExportsBothSet(
 		diagnostics.errors.push(
 			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
 		);
+	}
+}
+
+/**
+ * A container is linked to a Durable Object from exactly one direction: either
+ * the container names the class via `containers[].class_name`, or the Durable
+ * Object names the container via `exports[Class].container`. Validate that the
+ * two arrays agree.
+ *
+ * The relationship is one-to-one in both directions: a container backs at most
+ * one Durable Object, and a Durable Object has at most one container. workerd
+ * attaches a single container per Durable Object namespace, and in local dev
+ * every container for a class builds into the same image tag, so a second
+ * container for the same class cannot be honoured.
+ */
+function validateContainerExportLinks(
+	diagnostics: Diagnostics,
+	containers: Config["containers"],
+	exports: Config["exports"],
+	containersDeclaredElsewhere: boolean
+) {
+	if (containers !== undefined && !Array.isArray(containers)) {
+		// `validateContainerApp` has already reported the non-array `containers`.
+		return;
+	}
+
+	if (containers === undefined && containersDeclaredElsewhere) {
+		// `containers` is declared at a different environment level, so this level
+		// only sees half of the link, and cross-checking `exports` against an empty
+		// container list would report a link that resolves where the containers are
+		// declared. Every check below either iterates `containers`, or concerns
+		// containers this level does not have, so nothing is left to validate here.
+		return;
+	}
+
+	const containersByName = new Map<string, ContainerApp>();
+	const duplicateNames = new Set<string>();
+	for (const container of containers ?? []) {
+		// A non-string name has already been reported by `validateContainerApp`.
+		if (typeof container.name !== "string") {
+			continue;
+		}
+		if (containersByName.has(container.name)) {
+			duplicateNames.add(container.name);
+		} else {
+			containersByName.set(container.name, container);
+		}
+	}
+	for (const name of [...duplicateNames].sort()) {
+		diagnostics.errors.push(
+			`"containers" contains more than one container named "${name}". Container names must be unique.`
+		);
+	}
+
+	const containerCountByClassName = new Map<string, number>();
+	for (const container of containers ?? []) {
+		// A non-string class_name has already been reported by `validateContainerApp`.
+		if (typeof container.class_name !== "string") {
+			continue;
+		}
+		containerCountByClassName.set(
+			container.class_name,
+			(containerCountByClassName.get(container.class_name) ?? 0) + 1
+		);
+	}
+	const overSubscribedClassNames = new Set(
+		[...containerCountByClassName]
+			.filter(([, count]) => count > 1)
+			.map(([className]) => className)
+	);
+	for (const className of [...overSubscribedClassNames].sort()) {
+		diagnostics.errors.push(
+			`More than one container is attached to the Durable Object "${className}". A Durable Object can only have one container attached to it.`
+		);
+	}
+
+	const durableObjectExports = getDurableObjectExports(exports);
+	const liveExportClassNames = new Set<string>();
+	const classNamesByContainerName = new Map<string, string[]>();
+
+	for (const [className, entry] of Object.entries(durableObjectExports)) {
+		if (
+			entry.state !== undefined &&
+			entry.state !== "created" &&
+			entry.state !== "expecting-transfer"
+		) {
+			// `container` is forbidden on tombstones, which is reported separately.
+			continue;
+		}
+		liveExportClassNames.add(className);
+
+		// A non-string container reference has already been reported by
+		// `validateDurableObjectExportContainer`.
+		if (typeof entry.container !== "string" || entry.container === "") {
+			continue;
+		}
+		if (!containersByName.has(entry.container)) {
+			diagnostics.errors.push(
+				`"exports.${className}.container" references a container named "${entry.container}", but no container with that name is defined in "containers".`
+			);
+			continue;
+		}
+		classNamesByContainerName.set(entry.container, [
+			...(classNamesByContainerName.get(entry.container) ?? []),
+			className,
+		]);
+	}
+
+	for (const [containerName, classNames] of classNamesByContainerName) {
+		if (classNames.length > 1) {
+			diagnostics.errors.push(
+				`The container "${containerName}" is referenced by more than one Durable Object export (${classNames.join(", ")}). A container can only back a single Durable Object.`
+			);
+		}
+	}
+
+	const containerNameToClassName = getContainerNameToClassNameMap(exports);
+	const usesDurableObjectExports = Object.keys(durableObjectExports).length > 0;
+
+	for (const container of containers ?? []) {
+		if (typeof container.name !== "string") {
+			continue;
+		}
+
+		if (container.class_name === undefined) {
+			if (!containerNameToClassName.has(container.name)) {
+				diagnostics.errors.push(
+					`The container "${container.name}" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.`
+				);
+			}
+			continue;
+		}
+
+		if (overSubscribedClassNames.has(container.class_name)) {
+			// Already reported above. The checks below compare this container against
+			// the class's single `container` field, which a sibling may legitimately
+			// own, so they would add noise on top of the real error.
+			continue;
+		}
+
+		// The two directions can disagree in two ways, and each needs checking
+		// separately: the class this container names may point at a *different*
+		// container, or a *different* class may claim this container.
+		const exportEntry = durableObjectExports[container.class_name];
+		const referencedContainerName =
+			exportEntry !== undefined && "container" in exportEntry
+				? exportEntry.container
+				: undefined;
+
+		if (
+			typeof referencedContainerName === "string" &&
+			referencedContainerName !== container.name
+		) {
+			diagnostics.errors.push(
+				`The container "${container.name}" sets "class_name" to "${container.class_name}", but "exports.${container.class_name}.container" is "${referencedContainerName}". A Durable Object and its container must reference each other consistently.`
+			);
+			continue;
+		}
+
+		// When several exports claim this container, the duplicate-claim error above
+		// already reports it. Singling one of them out as *the* conflicting class
+		// here would depend on the order of the keys in `exports`.
+		const claimingClassNames = classNamesByContainerName.get(container.name);
+		const claimingClassName =
+			claimingClassNames?.length === 1 ? claimingClassNames[0] : undefined;
+		if (
+			claimingClassName !== undefined &&
+			claimingClassName !== container.class_name
+		) {
+			diagnostics.errors.push(
+				`The container "${container.name}" sets "class_name" to "${container.class_name}", but "exports.${claimingClassName}.container" references it. A Durable Object and its container must reference each other consistently.`
+			);
+			continue;
+		}
+
+		// Only enforced when the declarative `exports` flow is in use. The legacy
+		// `migrations` flow silently ignores containers whose class it does not know
+		// about, and we must not break those configs.
+		if (
+			usesDurableObjectExports &&
+			!liveExportClassNames.has(container.class_name)
+		) {
+			diagnostics.errors.push(
+				`The container "${container.name}" sets "class_name" to "${container.class_name}", but "exports" has no live "durable-object" entry for "${container.class_name}".`
+			);
+		}
 	}
 }
 

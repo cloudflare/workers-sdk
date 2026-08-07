@@ -14,6 +14,11 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	getContainerDurableObjectClassNames,
+	getContainerNameToClassNameMap,
+	resolveContainerClassName,
+} from "./config/containers";
+export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
 } from "./config/config";
