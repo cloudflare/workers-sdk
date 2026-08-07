@@ -285,9 +285,7 @@ async function runFetchRequest(
 
 		const config = normalizeConfiguration(env.CONFIG);
 		sentry?.setContext("compatibilityOptions", {
-			compatibilityDate: config.compatibility_date,
 			compatibilityFlags: config.compatibility_flags,
-			originalCompatibilityFlags: env.CONFIG.compatibility_flags,
 		});
 		const userAgent = request.headers.get("user-agent") ?? "UA UNKNOWN";
 

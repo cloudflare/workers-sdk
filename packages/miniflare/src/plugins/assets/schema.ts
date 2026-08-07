@@ -15,7 +15,6 @@ export const AssetsOptionsSchema = z.object({
 			binding: z.string().optional(),
 			routerConfig: RouterConfigSchema.optional(),
 			assetConfig: AssetConfigSchema.omit({
-				compatibility_date: true,
 				compatibility_flags: true,
 			}).optional(),
 		})
