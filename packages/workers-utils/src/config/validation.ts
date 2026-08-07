@@ -4571,10 +4571,18 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	// `remote: true` opts the binding into connecting to the deployed Hyperdrive
+	// configuration at the edge during local dev (via the remote-bindings proxy).
+	// When set, a `localConnectionString` is optional.
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"localConnectionString",
+		"remote",
 	]);
 
 	return isValid;
