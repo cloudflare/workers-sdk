@@ -189,6 +189,8 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
+		/** Whether this Worker should be advertised in the dev registry. Defaults to `true`. */
+		unsafeRegisterWorker: z.boolean().default(true),
 
 		/** Used to set the vitest pool worker SELF binding to point to the Router Worker if there are assets.
 		 (If there are assets but we're not using vitest, the miniflare entry worker can point directly to
@@ -198,6 +200,14 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		tails: z.array(ServiceDesignatorSchema).optional(),
 		streamingTails: z.array(ServiceDesignatorSchema).optional(),
+
+		/**
+		 * Keep this worker out of local observability capture. For infrastructure
+		 * workers a tool adds around the user's own (the Vite plugin's router,
+		 * asset and proxy workers), whose traces are noise the UI hides anyway —
+		 * capturing them costs tail events and store writes on every request.
+		 */
+		unsafeExcludeFromObservability: z.boolean().optional(),
 
 		// Strip the CF-Connecting-IP header from outbound fetches
 		stripCfConnectingIp: z.boolean().default(true),
@@ -758,7 +768,9 @@ export const CORE_PLUGIN: Plugin<
 		// (as a tail consumer) and add the compatibility flags workerd needs to emit
 		// those tail events. This is done here so wrangler and the Vite plugin don't
 		// each have to repeat it.
-		const observabilityEnabled = sharedOptions.unsafeObservability === true;
+		const observabilityEnabled =
+			sharedOptions.unsafeObservability === true &&
+			options.unsafeExcludeFromObservability !== true;
 		const streamingTails = observabilityEnabled
 			? [
 					...(options.streamingTails ?? []),
