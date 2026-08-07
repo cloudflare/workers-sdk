@@ -1,5 +1,32 @@
 # wrangler
 
+## 4.120.0
+
+### Minor Changes
+
+- [#15008](https://github.com/cloudflare/workers-sdk/pull/15008) [`35c87e9`](https://github.com/cloudflare/workers-sdk/commit/35c87e97199fb4548d4d9aaac024c3e07be5734e) Thanks [@skepticfx](https://github.com/skepticfx)! - Adds the ability to find container instances by exact ID or name
+
+  `wrangler containers instances <application_id> --search <instance_id_or_name>` now searches every page and returns exact matches in human-readable or JSON output. JSON returns a top-level array, including an empty array when there is no match, while human-readable output prints a no-match message. If multiple instances have the same exact name, every matching instance is returned.
+
+- [#15008](https://github.com/cloudflare/workers-sdk/pull/15008) [`35c87e9`](https://github.com/cloudflare/workers-sdk/commit/35c87e97199fb4548d4d9aaac024c3e07be5734e) Thanks [@skepticfx](https://github.com/skepticfx)! - Add explicit pagination to container instance JSON output
+
+  Use `wrangler containers instances <application_id> --json --per-page <size>` to return one page with machine-readable `result_info`, then pass its `next_page_token` to `--page-token` to retrieve the next page. Plain `--json` remains backward-compatible: it requests the complete list and returns the existing top-level array.
+
+### Patch Changes
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- [#15015](https://github.com/cloudflare/workers-sdk/pull/15015) [`a60ff4d`](https://github.com/cloudflare/workers-sdk/commit/a60ff4dea0bbae8775726d9cf885655b56460a30) Thanks [@nickpatt](https://github.com/nickpatt)! - Cut the per-request cost of local observability capture
+
+  Every tail event was written to the trace store as its own Durable Object call, so a request paid two or three round-trips per span. On a module-heavy app under the Vite plugin that dominated dev request latency. Rows are now buffered and written in batches, taking a request from roughly thirty calls to three.
+
+  Work in progress still shows up as it happens: the root span is written immediately, console logs and exceptions as they arrive, and a span's completion is written on the next event once 100ms has passed. An invocation that goes completely quiet writes nothing further until it ends, since the flush is driven by tail events rather than a timer.
+
+  The Vite plugin's own router, asset and proxy workers are also no longer captured. Their traces were noise the Observability views already hid, and skipping them cuts the spans recorded per request — a side benefit being that a trace's root is now your Worker rather than `__router-worker__`.
+
+- Updated dependencies [[`b4f0c97`](https://github.com/cloudflare/workers-sdk/commit/b4f0c9760bcab1e04cf1a9c8859feed8b4fc6487), [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25), [`a60ff4d`](https://github.com/cloudflare/workers-sdk/commit/a60ff4dea0bbae8775726d9cf885655b56460a30), [`99eb50c`](https://github.com/cloudflare/workers-sdk/commit/99eb50ce1d3420a50ae0e95958bf49d65874706e)]:
+  - miniflare@5.20260801.1-alpha
+
 ## 4.119.0
 
 ### Minor Changes
@@ -48,8 +75,17 @@
   | @cloudflare/workers-types | ^5.20260730.1 | ^5.20260731.1 |
   | workerd                   | 1.20260730.1  | 1.20260731.1  |
 
-- Updated dependencies [[`9c74538`](https://github.com/cloudflare/workers-sdk/commit/9c7453837e3293787c0cb1778520f630aea7e5ca), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`daf65f2`](https://github.com/cloudflare/workers-sdk/commit/daf65f28cecf35e251dc6e476d5bbd82972d68de)]:
-  - miniflare@5.20260731.0-alpha
+- [#15012](https://github.com/cloudflare/workers-sdk/pull/15012) [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260731.1 | ^5.20260801.1 |
+  | workerd                   | 1.20260731.1  | 1.20260801.1  |
+
+- Updated dependencies [[`9c74538`](https://github.com/cloudflare/workers-sdk/commit/9c7453837e3293787c0cb1778520f630aea7e5ca), [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`daf65f2`](https://github.com/cloudflare/workers-sdk/commit/daf65f28cecf35e251dc6e476d5bbd82972d68de)]:
+  - miniflare@5.20260801.0-alpha
 
 ## 4.118.0
 
