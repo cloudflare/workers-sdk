@@ -1,3 +1,7 @@
+import {
+	AssetConfigSchema,
+	RouterConfigSchema,
+} from "@cloudflare/workers-shared";
 import { z } from "zod";
 import {
 	HttpOptions_Style,
@@ -6,9 +10,12 @@ import {
 import { Log } from "../shared";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
+import type { Miniflare } from "../index";
 import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
+import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type * as http from "node:http";
 
 const kUnsafeEphemeralUniqueKey = Symbol.for(
@@ -21,10 +28,14 @@ export interface V4WorkerdStructuredLog {
 	message: string;
 }
 
-export type V4FetchHandler = (request: Request) => Awaitable<Response>;
+export type V4FetchHandler = (
+	request: Request,
+	miniflare: Miniflare
+) => Awaitable<Response>;
 export type V4NodeHandler = (
 	req: http.IncomingMessage,
-	res: http.ServerResponse
+	res: http.ServerResponse,
+	miniflare: Miniflare
 ) => Awaitable<void>;
 
 const JsonLiteralSchema = z.union([
@@ -43,6 +54,11 @@ const JsonSchema: z.ZodType<Json> = z.lazy(() =>
 
 const RemoteProxyConnectionStringSchema =
 	z.custom<RemoteProxyConnectionString>();
+
+const V4AssetConfigSchema = AssetConfigSchema.omit({
+	compatibility_date: true,
+	compatibility_flags: true,
+});
 
 const V4ModuleRuleTypeSchema = z.enum([
 	"ESModule",
@@ -416,8 +432,8 @@ const V4WorkerOptionsShapeSchema = z.object({
 			directory: z.string(),
 			binding: z.string().optional(),
 			run_worker_first: z.union([z.boolean(), z.array(z.string())]).optional(),
-			routerConfig: z.record(z.string(), z.unknown()).optional(),
-			assetConfig: z.record(z.string(), z.unknown()).optional(),
+			routerConfig: RouterConfigSchema.optional(),
+			assetConfig: V4AssetConfigSchema.optional(),
 		})
 		.optional(),
 	workflows: z
@@ -611,7 +627,9 @@ export const V4SharedOptionsSchema = z.object({
 	/** Dev registry filesystem path; relative to cwd if not absolute. */
 	unsafeDevRegistryPath: z.string().optional(),
 	unsafeHandleDevRegistryUpdate: z
-		.custom<(registry: unknown) => void>((value) => typeof value === "function")
+		.custom<(registry: WorkerRegistry) => void>(
+			(value) => typeof value === "function"
+		)
 		.optional(),
 	unsafeProxySharedSecret: z.string().optional(),
 	unsafeModuleFallbackService: V4CustomFetchServiceSchema.optional(),
@@ -800,8 +818,11 @@ export type V4WorkerOptionsShape = {
 		directory: string;
 		binding?: string;
 		run_worker_first?: boolean | string[];
-		routerConfig?: Record<string, unknown>;
-		assetConfig?: Record<string, unknown>;
+		routerConfig?: RouterConfig;
+		assetConfig?: Omit<
+			AssetConfig,
+			"compatibility_date" | "compatibility_flags"
+		>;
 	};
 	workflows?: Record<
 		string,
@@ -897,7 +918,7 @@ export type V4SharedOptions = {
 	upstream?: string;
 	cf?: boolean | string | Record<string, unknown>;
 	unsafeDevRegistryPath?: string;
-	unsafeHandleDevRegistryUpdate?: (registry: unknown) => void;
+	unsafeHandleDevRegistryUpdate?: (registry: WorkerRegistry) => void;
 	unsafeProxySharedSecret?: string;
 	unsafeModuleFallbackService?: V4FetchHandler;
 	unsafeTriggerHandlers?: boolean;

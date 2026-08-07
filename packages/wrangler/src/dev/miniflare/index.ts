@@ -1169,10 +1169,7 @@ export async function buildMiniflareOptions(
 		inspectorHost: config.inspect ? config.inspectorHost : undefined,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,
-		unsafeHandleDevRegistryUpdate:
-			onDevRegistryUpdate === undefined
-				? undefined
-				: (registry) => onDevRegistryUpdate(registry as WorkerRegistry),
+		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),

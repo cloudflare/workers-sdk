@@ -1,6 +1,7 @@
 import path from "node:path";
 import { describe, test } from "vitest";
 import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
+import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
 	test("converts local, external, and unbound durable objects", ({
@@ -155,12 +156,23 @@ describe("convertV4MiniflareOptions", () => {
 		});
 	});
 
+	test("treats empty versionMetadata binding as absent", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			versionMetadata: "",
+		});
+
+		expect(Object.hasOwn(converted.workers[0].config.env ?? {}, "")).toBe(
+			false
+		);
+	});
+
 	test("converts multiple workers", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			rootPath: __dirname,
 			workers: [
 				{ name: "a", script: "export default {};", modules: true },
-				{ name: "b", script: "addEventListener('fetch', () => {});" },
+				{ name: "ba", script: "addEventListener('fetch', () => {});" },
 			],
 		});
 
@@ -401,6 +413,34 @@ describe("convertV4MiniflareOptions", () => {
 			})
 		).toThrowErrorMatchingInlineSnapshot(
 			`[TypeError: Cannot convert v4 Miniflare option "tails" to v5 options without losing behavior.]`
+		);
+
+		expect(() =>
+			convertV4MiniflareOptions({
+				script: "export default {};",
+				tails: [
+					{
+						name: "tail-worker",
+						remoteProxyConnectionString: new URL(
+							"http://localhost:1234"
+						) as unknown as RemoteProxyConnectionString,
+					},
+				],
+			})
+		).toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Cannot convert v4 Miniflare option "tails[].remoteProxyConnectionString" to v5 options without losing behavior.]`
+		);
+
+		expect(() =>
+			convertV4MiniflareOptions({
+				script: "export default {};",
+				assets: {
+					directory: "./public",
+					routerConfig: { static_routing: { user_worker: ["/api/*"] } },
+				},
+			})
+		).toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Cannot convert v4 Miniflare option "assets.routerConfig.static_routing" to v5 options without losing behavior. Use "assets.run_worker_first" with the original route rules instead; Miniflare parses them automatically.]`
 		);
 	});
 

@@ -113,6 +113,26 @@ describe("V4MiniflareOptionsSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
+	test("rejects malformed known asset config fields", ({ expect }) => {
+		const routerConfigResult = V4MiniflareOptionsSchema.safeParse({
+			script: "export default {}",
+			assets: {
+				directory: "./public",
+				routerConfig: { has_user_worker: "true" },
+			},
+		});
+		const assetConfigResult = V4MiniflareOptionsSchema.safeParse({
+			script: "export default {}",
+			assets: {
+				directory: "./public",
+				assetConfig: { html_handling: "invalid" },
+			},
+		});
+
+		expect(routerConfigResult.success).toBe(false);
+		expect(assetConfigResult.success).toBe(false);
+	});
+
 	test("rejects email bindings with both destination forms", ({ expect }) => {
 		const result = V4MiniflareOptionsSchema.safeParse({
 			script: "export default {}",

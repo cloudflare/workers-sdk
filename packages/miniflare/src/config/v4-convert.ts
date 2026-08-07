@@ -186,7 +186,7 @@ function convertWorkerOptions(
 	dev.zone = worker.zone;
 
 	const options: WorkerOptions = { config };
-	if (Object.keys(legacy).length > 0) {
+	if (Object.values(legacy).some((value) => value !== undefined)) {
 		options.legacy = legacy;
 	}
 	if (Object.values(dev).some((value) => value !== undefined)) {
@@ -500,13 +500,17 @@ function addServiceBindingArray(
 	bindings: ParsedV4WorkerOptions["tails"],
 	streaming: boolean
 ) {
+	const option = streaming ? "streamingTails" : "tails";
 	for (const binding of bindings ?? []) {
+		if (hasRemoteProxyConnectionString(binding)) {
+			throwUnsupportedOption(`${option}[].remoteProxyConnectionString`);
+		}
 		const converted = convertServiceDesignator(binding, () => false);
 		if (
 			converted.type !== "worker" ||
 			typeof converted.workerName !== "string"
 		) {
-			throwUnsupportedOption(streaming ? "streamingTails" : "tails");
+			throwUnsupportedOption(option);
 		}
 		config.tailConsumers ??= [];
 		config.tailConsumers.push({
@@ -516,6 +520,17 @@ function addServiceBindingArray(
 			streaming,
 		});
 	}
+}
+
+function hasRemoteProxyConnectionString(
+	binding: NonNullable<ParsedV4WorkerOptions["tails"]>[number]
+) {
+	return (
+		typeof binding === "object" &&
+		binding !== null &&
+		"remoteProxyConnectionString" in binding &&
+		binding.remoteProxyConnectionString !== undefined
+	);
 }
 
 function convertOutboundService(
@@ -748,7 +763,7 @@ function addProductBindings(
 	addSingletonBinding(env, worker.images, "images", isRemote);
 	addSingletonBinding(env, worker.stream, "stream", isRemote);
 	addSingletonBinding(env, worker.media, "media", isRemote);
-	if (worker.versionMetadata !== undefined) {
+	if (worker.versionMetadata) {
 		env[worker.versionMetadata] = { type: "version-metadata" };
 	}
 	for (const [bindingName, workflow] of Object.entries(
@@ -814,6 +829,11 @@ function configAssets(
 	}
 	if (assets.workerName !== undefined) {
 		throwUnsupportedOption("assets.workerName");
+	}
+	if (assets.routerConfig?.static_routing !== undefined) {
+		throw new TypeError(
+			`Cannot convert v4 Miniflare option "assets.routerConfig.static_routing" to v5 options without losing behavior. Use "assets.run_worker_first" with the original route rules instead; Miniflare parses them automatically.`
+		);
 	}
 	config.assets = {
 		directory: assets.directory,
