@@ -1,5 +1,6 @@
 import path from "node:path";
 import {
+	APIError,
 	configFileName,
 	getBindingTypeFriendlyName,
 	UserError,
@@ -19,14 +20,14 @@ import {
 	getPreviewDeployment,
 	getWorkerPreviewDefaults,
 } from "./api";
-import { drawBox, drawConnectedChildBox } from "./box";
-import { formatAlignedRows, formatBindings } from "./format";
 import {
 	assemblePreviewScriptSettings,
 	extractConfigBindings,
 	getBranchName,
 	getHeadCommitMessage,
 	getHeadCommitRef,
+	getPullRequestMetadata,
+	getRepositoryUrl,
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
@@ -37,61 +38,13 @@ import type {
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
+import type { PullRequestMetadata } from "./shared";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 type PreviewDeploymentModule = {
 	name: string;
 	content_type: string;
 	content_base64: string;
-};
-
-type MergedBinding = Binding & { fromConfig: boolean };
-
-type MergedScriptLevel = {
-	observability?: {
-		enabled?: boolean;
-		head_sampling_rate?: number;
-		fromConfig: boolean;
-	};
-	logpush?: {
-		value: boolean;
-		fromConfig: boolean;
-	};
-	tail_consumers?: Array<{ name: string }>;
-};
-
-type MergedVersionLevel = {
-	compatibility_date?: {
-		value: string;
-		fromConfig: boolean;
-	};
-	compatibility_flags?: {
-		value: string[];
-		fromConfig: boolean;
-	};
-	limits?: {
-		value: Config["limits"];
-		fromConfig: boolean;
-	};
-	placement?: {
-		value: { mode: string };
-		fromConfig: boolean;
-	};
-	cache?: {
-		value: Config["cache"];
-		fromConfig: boolean;
-	};
-	assets?: {
-		value: {
-			directory?: string;
-			binding?: string;
-			html_handling?: string;
-			not_found_handling?: string;
-			run_worker_first?: string[] | boolean;
-		};
-		fromConfig: boolean;
-	};
-	env: Record<string, MergedBinding>;
 };
 
 export type PreviewArgs = {
@@ -240,6 +193,8 @@ async function assemblePreviewDeploymentSettings(
 	options: {
 		message?: string;
 		tag?: string;
+		repositoryUrl?: string;
+		pullRequest?: PullRequestMetadata;
 		assetsOptions?: PreviewAssetsOptions;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
@@ -276,10 +231,25 @@ async function assemblePreviewDeploymentSettings(
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
 	}
-	if (options.message || options.tag) {
+	if (
+		options.message ||
+		options.tag ||
+		options.repositoryUrl ||
+		options.pullRequest?.number ||
+		options.pullRequest?.url
+	) {
 		request.annotations = {
 			...(options.message && { "workers/message": options.message }),
 			...(options.tag && { "workers/tag": options.tag }),
+			...(options.repositoryUrl && {
+				"workers/repository_url": options.repositoryUrl,
+			}),
+			...(options.pullRequest?.number && {
+				"workers/pull_request_number": options.pullRequest.number,
+			}),
+			...(options.pullRequest?.url && {
+				"workers/pull_request_url": options.pullRequest.url,
+			}),
 		};
 	}
 	if (config.migrations.length > 0) {
@@ -336,285 +306,94 @@ async function assemblePreviewDeploymentSettings(
 	return request;
 }
 
-function buildMergedScriptLevel(
-	config: Config,
-	previewResource: PreviewResource
-): MergedScriptLevel {
-	const previews = config.previews as PreviewsConfig | undefined;
-	const result: MergedScriptLevel = {};
-	const configHasObservability =
-		previews?.observability !== undefined || config.observability !== undefined;
-	const configHasLogpush =
-		previews?.logpush !== undefined || config.logpush !== undefined;
-
-	if (previewResource.observability !== undefined) {
-		result.observability = {
-			enabled: previewResource.observability.enabled,
-			head_sampling_rate: previewResource.observability.head_sampling_rate,
-			fromConfig: configHasObservability,
-		};
+function formatUrls(
+	singularLabel: string,
+	pluralLabel: string,
+	urls?: string[]
+) {
+	if (!urls || urls.length === 0) {
+		return [];
 	}
 
-	if (previewResource.logpush !== undefined) {
-		result.logpush = {
-			value: previewResource.logpush,
-			fromConfig: configHasLogpush,
-		};
+	if (urls.length === 1) {
+		return [`${singularLabel}: ${chalk.underline(urls[0])}`];
 	}
 
-	if (
-		previewResource.tail_consumers &&
-		previewResource.tail_consumers.length > 0
-	) {
-		result.tail_consumers = previewResource.tail_consumers;
-	}
-
-	return result;
+	return [`${pluralLabel}:`, ...urls.map((url) => `  ${chalk.underline(url)}`)];
 }
 
-function buildMergedVersionLevel(
-	config: Config,
-	deployment: DeploymentResource
-): MergedVersionLevel {
-	const previews = config.previews as PreviewsConfig | undefined;
-	const configBindingNames = new Set(
-		Object.keys(extractConfigBindings(config))
-	);
-	const result: MergedVersionLevel = { env: {} };
-
-	if (deployment.compatibility_date) {
-		result.compatibility_date = {
-			value: deployment.compatibility_date,
-			fromConfig: !!config.compatibility_date,
-		};
-	}
-	if (
-		deployment.compatibility_flags &&
-		deployment.compatibility_flags.length > 0
-	) {
-		result.compatibility_flags = {
-			value: deployment.compatibility_flags,
-			fromConfig: !!(
-				config.compatibility_flags && config.compatibility_flags.length > 0
-			),
-		};
-	}
-	if (
-		deployment.limits?.cpu_ms !== undefined ||
-		deployment.limits?.subrequests !== undefined
-	) {
-		result.limits = {
-			value: {
-				...(deployment.limits?.cpu_ms !== undefined && {
-					cpu_ms: deployment.limits.cpu_ms,
-				}),
-				...(deployment.limits?.subrequests !== undefined && {
-					subrequests: deployment.limits.subrequests,
-				}),
-			},
-			fromConfig: !!(
-				previews?.limits !== undefined || config.limits !== undefined
-			),
-		};
-	}
-	if (deployment.placement?.mode) {
-		result.placement = {
-			value: { mode: deployment.placement.mode },
-			fromConfig: !!config.placement?.mode,
-		};
-	}
-	if (deployment.cache !== undefined) {
-		result.cache = {
-			value: deployment.cache,
-			fromConfig: previews?.cache !== undefined || config.cache !== undefined,
-		};
-	}
-	if (config.assets) {
-		result.assets = {
-			value: {
-				directory: config.assets.directory,
-				binding: config.assets.binding,
-				html_handling: config.assets.html_handling,
-				not_found_handling: config.assets.not_found_handling,
-				run_worker_first: config.assets.run_worker_first,
-			},
-			fromConfig: true,
-		};
-	}
-	for (const [name, binding] of Object.entries(deployment.env ?? {})) {
-		result.env[name] = { ...binding, fromConfig: configBindingNames.has(name) };
-	}
-
-	return result;
-}
-
-function formatPreviewResource(
+function formatPreviewResult(
 	previewResource: PreviewResource,
-	scriptLevel: MergedScriptLevel,
+	deployment: DeploymentResource,
 	isNew: boolean,
-	configName: string
+	pullRequest: PullRequestMetadata | undefined
 ): string {
 	const statusLabel = isNew ? chalk.green("(new)") : chalk.dim("(updated)");
-	const obsEnabled = scriptLevel.observability?.enabled ?? false;
-	const obsRate = scriptLevel.observability?.head_sampling_rate;
-	const formattedRate = obsRate !== undefined ? obsRate.toFixed(1) : undefined;
-	const obsValue = obsEnabled
-		? `enabled${
-				formattedRate !== undefined ? `, ${formattedRate} sampling` : ""
-			}`
-		: "disabled";
-
 	const lines: string[] = [
 		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
+		...formatUrls("Preview URL", "Preview URLs", previewResource.urls),
 		"",
-		...(previewResource.urls ?? []).map(
-			(url) => `  ${chalk.bold.underline(url)}`
-		),
+		`${chalk.bold("Deployment ID:")} ${deployment.id}`,
+		...formatUrls("Deployment URL", "Deployment URLs", deployment.urls),
 	];
 
-	const settingsRows: Array<[string, string, boolean]> = [];
-	if (scriptLevel.observability !== undefined) {
-		settingsRows.push([
-			"observability",
-			obsValue,
-			scriptLevel.observability.fromConfig,
-		]);
-	}
-	if (scriptLevel.logpush !== undefined) {
-		settingsRows.push([
-			"logpush",
-			scriptLevel.logpush.value ? "enabled" : "disabled",
-			scriptLevel.logpush.fromConfig,
-		]);
-	}
-	if (scriptLevel.tail_consumers && scriptLevel.tail_consumers.length > 0) {
-		settingsRows.push([
-			"tail_consumers",
-			scriptLevel.tail_consumers.map((tc) => tc.name).join(", "),
-			false,
-		]);
-	}
-	if (settingsRows.length > 0) {
+	if (pullRequest?.url) {
 		lines.push("");
-		lines.push(...formatAlignedRows(settingsRows));
+		lines.push(
+			`${chalk.bold("Pull Request:")} ${chalk.underline(pullRequest.url)}`
+		);
 	}
 
-	const hasConfigValues = settingsRows.some(([, , fromConfig]) => fromConfig);
-	const footerLines = hasConfigValues
-		? ["", chalk.hex("#FFA500")(`◆ from ${configName}`)]
-		: undefined;
-
-	return drawBox(lines, { footerLines, connectToChild: true });
+	return lines.join("\n");
 }
 
-function formatDeploymentResource(
-	deployment: DeploymentResource,
-	versionLevel: MergedVersionLevel,
-	configName: string
-): string {
-	const lines: string[] = [
-		`${chalk.bold("Deployment:")} ${deployment.id}`,
-		"",
-		...(deployment.urls ?? []).map((url) => `  ${chalk.bold.underline(url)}`),
-	];
+function hasPreviewMetadataAnnotations(
+	deploymentRequest: CreatePreviewDeploymentRequestParams
+): boolean {
+	return Boolean(
+		deploymentRequest.annotations?.["workers/pull_request_number"] ||
+		deploymentRequest.annotations?.["workers/pull_request_url"] ||
+		deploymentRequest.annotations?.["workers/repository_url"]
+	);
+}
 
-	const settingsRows: Array<[string, string, boolean]> = [];
-	if (versionLevel.compatibility_date) {
-		settingsRows.push([
-			"compatibility_date",
-			versionLevel.compatibility_date.value,
-			versionLevel.compatibility_date.fromConfig,
-		]);
-	}
-	if (versionLevel.compatibility_flags) {
-		settingsRows.push([
-			"compatibility_flags",
-			versionLevel.compatibility_flags.value.join(", "),
-			versionLevel.compatibility_flags.fromConfig,
-		]);
-	}
-	if (
-		versionLevel.limits?.value?.cpu_ms !== undefined ||
-		versionLevel.limits?.value?.subrequests !== undefined
-	) {
-		const limitParts = [
-			versionLevel.limits?.value?.cpu_ms !== undefined
-				? `cpu_ms: ${versionLevel.limits.value.cpu_ms}`
-				: undefined,
-			versionLevel.limits?.value?.subrequests !== undefined
-				? `subrequests: ${versionLevel.limits.value.subrequests}`
-				: undefined,
-		].filter((value): value is string => value !== undefined);
-		settingsRows.push([
-			"limits",
-			limitParts.join(", "),
-			versionLevel.limits.fromConfig,
-		]);
-	}
-	if (versionLevel.placement) {
-		settingsRows.push([
-			"placement",
-			versionLevel.placement.value.mode,
-			versionLevel.placement.fromConfig,
-		]);
-	}
-	if (versionLevel.cache !== undefined) {
-		settingsRows.push([
-			"cache",
-			versionLevel.cache.value?.enabled ? "enabled" : "disabled",
-			versionLevel.cache.fromConfig,
-		]);
-	}
-	if (settingsRows.length > 0) {
-		lines.push("");
-		lines.push(...formatAlignedRows(settingsRows));
-	}
-
-	if (versionLevel.assets) {
-		lines.push("");
-		lines.push(chalk.bold("  Assets"));
-		const assetsRows: Array<[string, string, boolean]> = [];
-		const assets = versionLevel.assets.value;
-		const fromConfig = versionLevel.assets.fromConfig;
-		if (assets.directory) {
-			assetsRows.push(["directory", assets.directory, fromConfig]);
-		}
-		if (assets.binding) {
-			assetsRows.push(["binding", assets.binding, fromConfig]);
-		}
-		if (assets.html_handling) {
-			assetsRows.push(["html_handling", assets.html_handling, fromConfig]);
-		}
-		if (assets.not_found_handling) {
-			assetsRows.push([
-				"not_found_handling",
-				assets.not_found_handling,
-				fromConfig,
-			]);
-		}
-		if (assets.run_worker_first !== undefined) {
-			const value =
-				typeof assets.run_worker_first === "boolean"
-					? String(assets.run_worker_first)
-					: assets.run_worker_first.join(", ");
-			assetsRows.push(["run_worker_first", value, fromConfig]);
-		}
-		lines.push(...formatAlignedRows(assetsRows, "  "));
-	}
-
-	lines.push("");
-	lines.push(chalk.bold("  Bindings"));
-	lines.push(...formatBindings(versionLevel.env));
-
-	const hasConfigValues =
-		settingsRows.some(([, , fromConfig]) => fromConfig) ||
-		versionLevel.assets?.fromConfig ||
-		Object.values(versionLevel.env).some((binding) => binding.fromConfig);
-	const footerLines = hasConfigValues
-		? ["", chalk.hex("#FFA500")(`◆ from ${configName}`)]
+function omitPreviewMetadataAnnotations(
+	deploymentRequest: CreatePreviewDeploymentRequestParams
+): CreatePreviewDeploymentRequestParams {
+	const { annotations, ...rest } = deploymentRequest;
+	const remainingAnnotations = annotations
+		? Object.fromEntries(
+				Object.entries(annotations).filter(
+					([key]) =>
+						key !== "workers/pull_request_number" &&
+						key !== "workers/pull_request_url" &&
+						key !== "workers/repository_url"
+				)
+			)
 		: undefined;
 
-	return drawConnectedChildBox(lines, { footerLines, indent: "  " });
+	return {
+		...rest,
+		...(remainingAnnotations &&
+			Object.keys(remainingAnnotations).length > 0 && {
+				annotations: remainingAnnotations,
+			}),
+	};
+}
+
+function isPreviewMetadataAnnotationsUnsupportedError(error: unknown): boolean {
+	const messages = [
+		error instanceof Error ? error.message : undefined,
+		error instanceof APIError ? error.text : undefined,
+	]
+		.filter(Boolean)
+		.join("\n");
+
+	return (
+		messages.includes("annotations not allowed") &&
+		(messages.includes("workers/pull_request") ||
+			messages.includes("workers/repository_url"))
+	);
 }
 
 function logMissingPreviewsBindingsWarning(
@@ -682,6 +461,8 @@ export async function preview(
 		!args.message && shouldUseCIMetadataFallback()
 			? getHeadCommitMessage()
 			: undefined;
+	const repositoryUrl = getRepositoryUrl();
+	const pullRequest = getPullRequestMetadata();
 
 	let existingPreview: PreviewResource | null = null;
 	try {
@@ -732,35 +513,52 @@ export async function preview(
 		{
 			message: args.message ?? fallbackMessage,
 			tag: args.tag ?? fallbackTag,
+			repositoryUrl,
+			pullRequest,
 			assetsOptions,
 		}
 	);
-	const deployment = await createPreviewDeployment(
-		config,
-		accountId,
-		workerName,
-		previewResource.id,
-		deploymentRequest,
-		{ ignoreDefaults }
-	);
+	let deployment: DeploymentResource;
+	try {
+		deployment = await createPreviewDeployment(
+			config,
+			accountId,
+			workerName,
+			previewResource.id,
+			deploymentRequest,
+			{ ignoreDefaults }
+		);
+	} catch (error) {
+		if (
+			hasPreviewMetadataAnnotations(deploymentRequest) &&
+			isPreviewMetadataAnnotationsUnsupportedError(error)
+		) {
+			deployment = await createPreviewDeployment(
+				config,
+				accountId,
+				workerName,
+				previewResource.id,
+				omitPreviewMetadataAnnotations(deploymentRequest),
+				{ ignoreDefaults }
+			);
+		} else {
+			throw error;
+		}
+	}
 
 	if (args.json) {
 		logger.log(
 			JSON.stringify({ preview: previewResource, deployment }, null, 2)
 		);
 	} else {
-		const scriptLevel = buildMergedScriptLevel(config, previewResource);
-		const versionLevel = buildMergedVersionLevel(config, deployment);
-		const configName = configFileName(config.configPath);
 		logger.log(
-			formatPreviewResource(
+			formatPreviewResult(
 				previewResource,
-				scriptLevel,
+				deployment,
 				isNewPreview,
-				configName
+				pullRequest
 			)
 		);
-		logger.log(formatDeploymentResource(deployment, versionLevel, configName));
 
 		const topLevelBindings = getBindings(config);
 		if (Object.keys(topLevelBindings).length > 0) {

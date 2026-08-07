@@ -464,7 +464,10 @@ describe("deploy", () => {
 					domains: [{ hostname: "api.example.com" }],
 				});
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("Custom Domains:");
+				expect(std.out).toContain("Production:");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
 			});
 
 			it("should pass enabled and previews_enabled to the custom domains API", async ({
@@ -501,8 +504,11 @@ describe("deploy", () => {
 					],
 				});
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
-				expect(std.out).toContain("[enabled, previews: enabled]");
+				expect(std.out).toContain("Custom Domains:");
+				expect(std.out).toContain("Production and Preview:");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
+				expect(std.out).not.toContain("[enabled, previews: enabled]");
 			});
 
 			it("should confirm override if custom domain deploy would override an existing domain", async ({
@@ -558,7 +564,8 @@ Update them to point to this script instead?`,
 					result: true,
 				});
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
 			});
 
 			it("should confirm override if custom domain deploy contains a conflicting DNS record", async ({
@@ -604,7 +611,8 @@ Update them to point to this script instead?`,
 					result: true,
 				});
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
 			});
 
 			it("should confirm for conflicting custom domains and then again for conflicting dns", async ({
@@ -681,7 +689,8 @@ Update them to point to this script instead?`,
 					}
 				);
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
 			});
 
 			it("should throw if an invalid custom domain is requested", async ({
@@ -787,7 +796,9 @@ Update them to point to this script instead?`,
 				});
 
 				await runWrangler("deploy ./index --domain api.example.com");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("Custom Domains:");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
 			});
 
 			it("should deploy multiple domains passed via --domain flags", async ({
@@ -814,8 +825,11 @@ Update them to point to this script instead?`,
 				await runWrangler(
 					"deploy ./index --domain api.example.com --domain app.example.com"
 				);
-				expect(std.out).toContain("api.example.com (custom domain)");
-				expect(std.out).toContain("app.example.com (custom domain)");
+				expect(std.out).toContain("Custom Domains:");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).toContain("app.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
+				expect(std.out).not.toContain("app.example.com (custom domain)");
 			});
 
 			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async ({
@@ -875,7 +889,9 @@ Update them to point to this script instead?`,
 
 				await runWrangler("deploy ./index --domain api.example.com");
 				expect(std.out).toContain("example.com/api/*");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("Custom Domains:");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
 			});
 
 			it("should validate domain flags and reject invalid domains with wildcards", async ({
@@ -971,7 +987,9 @@ Update them to point to this script instead?`,
 					"deploy ./index --route cli.com/override/* --domain api.example.com"
 				);
 				expect(std.out).toContain("cli.com/override/*");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("Custom Domains:");
+				expect(std.out).toContain("api.example.com");
+				expect(std.out).not.toContain("api.example.com (custom domain)");
 				expect(std.out).not.toContain("config.com/api/*");
 			});
 		});

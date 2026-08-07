@@ -4,6 +4,8 @@ import { stripVTControlCharacters } from "node:util";
 import {
 	extractConfigBindings,
 	getBranchName,
+	getPullRequestMetadata,
+	getRepositoryUrl,
 } from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -35,6 +37,29 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 		...defaultWranglerConfig,
 		previews,
 	};
+}
+
+function clearPreviewMetadataEnvs() {
+	vi.stubEnv("GITHUB_REPOSITORY", "");
+	vi.stubEnv("GITHUB_SERVER_URL", "");
+	vi.stubEnv("GITHUB_EVENT_PATH", "");
+	vi.stubEnv("GITHUB_REF", "");
+	vi.stubEnv("CI_PROJECT_URL", "");
+	vi.stubEnv("CI_REPOSITORY_URL", "");
+	vi.stubEnv("CI_MERGE_REQUEST_IID", "");
+	vi.stubEnv("CI_MERGE_REQUEST_PROJECT_URL", "");
+	vi.stubEnv("CIRCLE_REPOSITORY_URL", "");
+	vi.stubEnv("CIRCLE_PULL_REQUEST", "");
+	vi.stubEnv("BUILDKITE_REPO", "");
+	vi.stubEnv("BITBUCKET_GIT_HTTP_ORIGIN", "");
+	vi.stubEnv("BITBUCKET_GIT_SSH_ORIGIN", "");
+	vi.stubEnv("REPOSITORY_URL", "");
+	vi.stubEnv("PULL_REQUEST_URL", "");
+	vi.stubEnv("PULL_REQUEST_NUMBER", "");
+	vi.stubEnv("PR_URL", "");
+	vi.stubEnv("PR_NUMBER", "");
+	vi.stubEnv("CHANGE_URL", "");
+	vi.stubEnv("CHANGE_ID", "");
 }
 
 describe("wrangler preview", () => {
@@ -81,6 +106,92 @@ describe("wrangler preview", () => {
 			vi.stubEnv("CI_COMMIT_REF_NAME", "gitlab-branch");
 
 			expect(getBranchName()).toBe("gitlab-branch");
+		});
+	});
+
+	describe("getRepositoryUrl", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use GitHub Actions repository env vars", ({ expect }) => {
+			vi.stubEnv("GITHUB_REPOSITORY", "cloudflare/workers-sdk");
+
+			expect(getRepositoryUrl()).toBe(
+				"https://github.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use the first non-empty repository env var", ({ expect }) => {
+			vi.stubEnv("CI_PROJECT_URL", "");
+			vi.stubEnv(
+				"CI_REPOSITORY_URL",
+				"git@git.example.com:acme/worker-project.git"
+			);
+
+			expect(getRepositoryUrl()).toBe(
+				"https://git.example.com/acme/worker-project"
+			);
+		});
+	});
+
+	describe("getPullRequestMetadata", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use direct pull request URL env vars", ({ expect }) => {
+			vi.stubEnv(
+				"PULL_REQUEST_URL",
+				"https://git.example.com/acme/worker-project/pulls/13"
+			);
+			vi.stubEnv("PULL_REQUEST_NUMBER", "13");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://git.example.com/acme/worker-project/pulls/13",
+			});
+		});
+
+		test("should use GitHub event pull request metadata", ({ expect }) => {
+			writeFileSync(
+				"github-event.json",
+				JSON.stringify({
+					pull_request: {
+						number: 13,
+						html_url: "https://github.com/acme/worker-project/pull/13",
+					},
+				})
+			);
+			vi.stubEnv("GITHUB_EVENT_PATH", "github-event.json");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+			});
+		});
+
+		test("should use GitLab merge request metadata", ({ expect }) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+			});
 		});
 	});
 
@@ -290,6 +401,7 @@ describe("wrangler preview", () => {
 	describe("preview command", () => {
 		beforeEach(() => {
 			vi.stubEnv("CI", undefined);
+			clearPreviewMetadataEnvs();
 			mkdirSync("src", { recursive: true });
 			writeFileSync(
 				"src/index.ts",
@@ -411,10 +523,18 @@ describe("wrangler preview", () => {
 				"/workers/workers/override-worker/previews/"
 			);
 			expect(std.out).toContain("Preview: test-preview (new)");
-			expect(std.out).toContain("Deployment:");
-			expect(std.out).toContain("DEFAULT_VAR");
-			expect(std.out).toContain('"from-defaults"');
-			expect(std.out).toContain("◆ from wrangler.json");
+			expect(std.out).toContain(
+				"Preview URL: https://test-preview.test-worker.cloudflare.app"
+			);
+			expect(std.out).toContain("Deployment ID: deployment-id-123");
+			expect(std.out).toContain(
+				"Deployment URL: https://abc12345.test-worker.cloudflare.app"
+			);
+			expect(std.out).not.toContain("DEFAULT_VAR");
+			expect(std.out).not.toContain('"from-defaults"');
+			expect(std.out).not.toContain("◆ from wrangler.json");
+			expect(std.out).not.toContain("Bindings");
+			expect(std.out).not.toContain("observability");
 		});
 
 		test("should warn about top-level bindings missing from preview settings", async ({
@@ -662,7 +782,7 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.env?.FLAGS).not.toMatchObject({
 				app_id: "production-app-id",
 			});
-			expect(std.out).toContain("preview-app-id");
+			expect(std.out).not.toContain("preview-app-id");
 			expect(std.warn).not.toContain("FLAGS");
 		});
 
@@ -818,7 +938,7 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain('"id": "preview-id-json"');
 			expect(std.out).toContain('"id": "deployment-id-json"');
 			expect(std.out).not.toContain("Preview: test-preview");
-			expect(std.out).not.toContain("Deployment:");
+			expect(std.out).not.toContain("Deployment ID:");
 
 			const outputEntries = readFileSync(outputFile, "utf8")
 				.split("\n")
@@ -836,6 +956,90 @@ describe("wrangler preview", () => {
 					deployment_id: "deployment-id-json",
 					deployment_urls: ["https://json123.test-worker.cloudflare.app"],
 				})
+			);
+		});
+
+		test("should include and print CI pull request metadata", async ({
+			expect,
+		}) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project.git"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+
+			let deploymentRequestBody:
+				| (Record<string, unknown> & {
+						annotations?: Record<string, string>;
+				  })
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-annotations",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-annotations",
+									preview_id: "preview-id-annotations",
+									preview_name: "test-preview",
+									urls: ["https://annotations123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.annotations).toMatchObject({
+				"workers/pull_request_number": "13",
+				"workers/pull_request_url":
+					"https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+				"workers/repository_url":
+					"https://gitlab.example.com/acme/worker-project",
+			});
+			expect(std.out).toContain(
+				"Pull Request: https://gitlab.example.com/acme/worker-project/-/merge_requests/13"
 			);
 		});
 
@@ -1162,7 +1366,7 @@ describe("wrangler preview", () => {
 			await runWrangler("preview --name test-preview");
 			expect(std.out).toContain("Preview: test-preview");
 			expect(std.out).toContain("(updated)");
-			expect(std.out).toContain("Deployment:");
+			expect(std.out).toContain("Deployment ID: deployment-id-456");
 		});
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
@@ -1299,10 +1503,12 @@ describe("wrangler preview", () => {
 			);
 			await runWrangler("preview --name no-defaults-preview");
 			expect(std.out).toContain("Preview: no-defaults-preview (new)");
-			expect(std.out).toContain("◆ from wrangler.json");
+			expect(std.out).not.toContain("◆ from wrangler.json");
+			expect(std.out).not.toContain("ENVIRONMENT");
+			expect(std.out).not.toContain("MY_KV");
 		});
 
-		test("should show observability settings when configured", async ({
+		test("should not show observability settings in success output", async ({
 			expect,
 		}) => {
 			writeFileSync(
@@ -1369,8 +1575,9 @@ describe("wrangler preview", () => {
 				)
 			);
 			await runWrangler("preview --name test-preview");
-			expect(std.out).toContain("observability");
-			expect(std.out).toContain("enabled");
+			expect(std.out).toContain("Preview: test-preview (new)");
+			expect(std.out).not.toContain("observability");
+			expect(std.out).not.toContain("logpush");
 		});
 
 		test("should include previews tail_consumers in the preview resource request", async ({
@@ -1458,9 +1665,15 @@ describe("wrangler preview", () => {
 			]);
 		});
 
-		test("should show compatibility_date when configured", async ({
+		test("should use compatibility_date when configured", async ({
 			expect,
 		}) => {
+			let deploymentRequestBody:
+				| {
+						compatibility_date?: string;
+				  }
+				| undefined;
+
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1494,8 +1707,11 @@ describe("wrangler preview", () => {
 				),
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					() =>
-						HttpResponse.json(
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+
+						return HttpResponse.json(
 							{
 								success: true,
 								result: {
@@ -1509,12 +1725,13 @@ describe("wrangler preview", () => {
 								},
 							},
 							{ status: 201 }
-						)
+						);
+					}
 				)
 			);
 			await runWrangler("preview --name test-preview");
-			expect(std.out).toContain("compatibility_date");
-			expect(std.out).toContain("2025-01-01");
+			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
+			expect(std.out).not.toContain("compatibility_date");
 		});
 
 		test("should pass ignore_defaults query param when --ignore-defaults flag is used", async ({
