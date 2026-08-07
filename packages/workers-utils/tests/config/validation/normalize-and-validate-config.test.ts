@@ -75,6 +75,7 @@ describe("normalizeAndValidateConfig()", () => {
 				consumers: [],
 				producers: [],
 			},
+			connect: [],
 			r2_buckets: [],
 			secrets_store_secrets: [],
 			artifacts: [],
@@ -4918,6 +4919,174 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The "delivery_delay" field in "queues.producers[1]" is deprecated and has no effect. Queue-level settings should be configured using "wrangler queues update" instead. This setting will be removed in a future version."
+				`);
+			});
+		});
+
+		describe("[connect]", () => {
+			it("should error if connect is not an array", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ connect: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ connect: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "connect" should be an array but got {}."
+				`);
+			});
+
+			it("should error if a connect handler entry is missing a protocol", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ port: 8081 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have a "protocol" field of "tcp" but got {"port":8081}."
+				`);
+			});
+
+			it("should error if a connect handler entry has an invalid protocol", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ protocol: "ftp", port: 8081 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have a "protocol" field of "tcp" but got "ftp"."
+				`);
+			});
+
+			it("should error if a connect handler entry is missing a port", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp" },
+							{ protocol: "tcp", address: "0.0.0.0" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have a number "port" field but got {"protocol":"tcp"}.
+					  - "connect[1]" should have a number "port" field but got {"protocol":"tcp","address":"0.0.0.0"}."
+				`);
+			});
+
+			it("should error if a connect handler entry's port is not an integer", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 3.14 },
+							{ protocol: "tcp", port: Number.NaN },
+							{ protocol: "tcp", port: Number.POSITIVE_INFINITY },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "port" field but got {"protocol":"tcp","port":3.14}.
+					  - "connect[1]" should have an integer "port" field but got {"protocol":"tcp","port":null}.
+					  - "connect[2]" should have an integer "port" field but got {"protocol":"tcp","port":null}."
+				`);
+			});
+
+			it("should error if a connect handler entry has unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 8081, invalidField: "madeupValue" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in connect[0] field: "invalidField""
+				`);
+			});
+
+			it("should accept a valid connect config with multiple unique protocol/port combinations", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 8081, address: "*" },
+							{ protocol: "tcp", port: 8082 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.connect).toEqual([
+					{ protocol: "tcp", port: 8081, address: "*" },
+					{ protocol: "tcp", port: 8082 },
+				]);
+			});
+
+			it("should error if two connect handlers share the same protocol and port", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 8081 },
+							{ protocol: "tcp", port: 8082 },
+							{ protocol: "tcp", port: 8081, address: "0.0.0.0" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[2]" has the same "protocol" (tcp) and "port" (8081) as "connect[0]". Each entry in "connect" must use a unique protocol/port combination."
 				`);
 			});
 		});

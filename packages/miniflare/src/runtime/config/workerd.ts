@@ -28,10 +28,14 @@ export type Socket = {
 	name?: string;
 	address?: string;
 	service?: ServiceDesignator;
-} & ({ http?: HttpOptions } | { https?: Socket_Https });
+} & ({ http?: HttpOptions } | { https?: Socket_Https } | { tcp?: Socket_Tcp });
 
 export interface Socket_Https {
 	options?: HttpOptions;
+	tlsOptions?: TlsOptions;
+}
+
+export interface Socket_Tcp {
 	tlsOptions?: TlsOptions;
 }
 
@@ -93,7 +97,7 @@ export type Worker_Module = {
 	| { wasm?: Uint8Array }
 	| { json?: string }
 	| { pythonModule?: string }
-	| { pythonRequirement?: string }
+	| { obsoletePythonRequirement?: string }
 );
 
 export type Worker_Binding = {
@@ -109,7 +113,6 @@ export type Worker_Binding = {
 	| { durableObjectNamespace?: Worker_Binding_DurableObjectNamespaceDesignator }
 	| { kvNamespace?: ServiceDesignator }
 	| { r2Bucket?: ServiceDesignator }
-	| { r2Admin?: ServiceDesignator }
 	| { wrapped?: Worker_Binding_WrappedBinding }
 	| { queue?: ServiceDesignator }
 	| { fromEnvironment?: string }
@@ -135,7 +138,6 @@ export type Worker_Binding_Type =
 	| { durableObjectNamespace: Void }
 	| { kvNamespace?: Void }
 	| { r2Bucket?: Void }
-	| { r2Admin?: Void }
 	| { queue?: Void }
 	| { analyticsEngine?: Void }
 	| { hyperdrive?: Void };

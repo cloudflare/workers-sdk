@@ -92,6 +92,7 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
+	connectHandlers: Config["connect"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
@@ -1210,6 +1211,7 @@ export async function buildMiniflareOptions(
 				routes: config.routes,
 				outboundService: config.outboundService,
 				zone: config.zone,
+				connectHandlers: config.connectHandlers,
 			},
 			...externalWorkers,
 		],

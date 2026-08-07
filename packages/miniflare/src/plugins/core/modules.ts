@@ -365,7 +365,10 @@ ${dim(modulesConfig)}`;
 				this.modules.push({ name, pythonModule: data.toString("utf-8") });
 				break;
 			case "PythonRequirement":
-				this.modules.push({ name, pythonRequirement: data.toString("utf-8") });
+				this.modules.push({
+					name,
+					obsoletePythonRequirement: data.toString("utf-8"),
+				});
 				break;
 			default:
 				// `type` should've been validated against `ModuleRuleTypeSchema`
@@ -425,7 +428,7 @@ export function convertModuleDefinition(
 		case "PythonModule":
 			return { name, pythonModule: contentsToString(contents) };
 		case "PythonRequirement":
-			return { name, pythonRequirement: contentsToString(contents) };
+			return { name, obsoletePythonRequirement: contentsToString(contents) };
 		default:
 			// `type` should've been validated against `ModuleRuleTypeSchema`
 			const exhaustive: never = def.type;
@@ -445,7 +448,8 @@ function convertWorkerModule(mod: Worker_Module): ModuleDefinition {
 	else if ("data" in m) return { path, type: "Data" };
 	else if ("wasm" in m) return { path, type: "CompiledWasm" };
 	else if ("pythonModule" in m) return { path, type: "PythonModule" };
-	else if ("pythonRequirement" in m) return { path, type: "PythonRequirement" };
+	else if ("obsoletePythonRequirement" in m)
+		return { path, type: "PythonRequirement" };
 
 	// This function is only used for building error messages including
 	// generated modules, and these are the types we generate.
