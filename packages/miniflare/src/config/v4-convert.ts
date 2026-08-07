@@ -206,7 +206,7 @@ function addSourceOptions(
 	}
 	if (Array.isArray(worker.modules)) {
 		const modulesRoot = path.resolve(rootPath, worker.modulesRoot ?? ".");
-		return createManifestFromModules(worker.modules, modulesRoot);
+		return createManifestFromModules(worker.modules, rootPath, modulesRoot);
 	}
 
 	const scriptPath =
@@ -246,6 +246,7 @@ function addSourceOptions(
 
 function createManifestFromModules(
 	modules: Extract<ParsedV4WorkerOptions["modules"], unknown[]>,
+	rootPath: string,
 	modulesRoot: string
 ): Manifest {
 	const manifestModules: Manifest["modules"] = {};
@@ -253,12 +254,13 @@ function createManifestFromModules(
 
 	for (const module of modules) {
 		const name = getModuleName(module.path, modulesRoot);
+		const modulePath = path.isAbsolute(module.path)
+			? module.path
+			: path.resolve(rootPath, module.path);
 		mainModule ??= name;
 		manifestModules[name] = {
 			type: convertModuleType(module.type),
-			contents:
-				module.contents ??
-				readModuleContents(path.resolve(modulesRoot, module.path), module.type),
+			contents: module.contents ?? readModuleContents(modulePath, module.type),
 		};
 	}
 

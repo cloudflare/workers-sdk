@@ -292,6 +292,39 @@ describe("convertV4MiniflareOptions", () => {
 		).toContain("uses rootPath for module source paths");
 	});
 
+	test("uses rootPath for relative module source paths with separate modulesRoot", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			rootPath: __dirname,
+			modulesRoot: "dist",
+			modules: [
+				{
+					type: "ESModule",
+					path: "v4-convert.spec.ts",
+				},
+			],
+		});
+
+		expect(converted.workers[0].config.manifest?.modulesRoot).toBe(
+			path.join(__dirname, "dist")
+		);
+		expect(converted.workers[0].config.manifest).toMatchObject({
+			mainModule: "v4-convert.spec.ts",
+			modules: {
+				"v4-convert.spec.ts": {
+					type: "esm",
+				},
+			},
+		});
+		expect(
+			converted.workers[0].config.manifest?.modules["v4-convert.spec.ts"]
+				?.contents
+		).toContain(
+			"uses rootPath for relative module source paths with separate modulesRoot"
+		);
+	});
+
 	test("defaults missing modulesRoot to cwd", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			script: "export default {};",
