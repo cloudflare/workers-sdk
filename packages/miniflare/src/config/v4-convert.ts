@@ -253,10 +253,10 @@ function createManifestFromModules(
 	let mainModule: string | undefined;
 
 	for (const module of modules) {
-		const name = getModuleName(module.path, modulesRoot);
 		const modulePath = path.isAbsolute(module.path)
 			? module.path
 			: path.resolve(rootPath, module.path);
+		const name = getModuleName(modulePath, modulesRoot);
 		mainModule ??= name;
 		manifestModules[name] = {
 			type: convertModuleType(module.type),

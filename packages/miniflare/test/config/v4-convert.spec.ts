@@ -322,19 +322,48 @@ describe("convertV4MiniflareOptions", () => {
 			path.join(__dirname, "dist")
 		);
 		expect(converted.workers[0].config.manifest).toMatchObject({
-			mainModule: "v4-convert.spec.ts",
+			mainModule: "../v4-convert.spec.ts",
 			modules: {
-				"v4-convert.spec.ts": {
+				"../v4-convert.spec.ts": {
 					type: "esm",
 				},
 			},
 		});
 		expect(
-			converted.workers[0].config.manifest?.modules["v4-convert.spec.ts"]
+			converted.workers[0].config.manifest?.modules["../v4-convert.spec.ts"]
 				?.contents
 		).toContain(
 			"uses rootPath for relative module source paths with separate modulesRoot"
 		);
+	});
+
+	test("derives module names from resolved module paths", ({ expect }) => {
+		const rootPath = path.join(__dirname, "project");
+		const converted = convertV4MiniflareOptions({
+			rootPath,
+			modulesRoot: "src",
+			modules: [
+				{
+					type: "ESModule",
+					path: "src/index.ts",
+					contents: `import "./dep.ts";`,
+				},
+				{
+					type: "ESModule",
+					path: path.join(rootPath, "src", "dep.ts"),
+					contents: "export default {};",
+				},
+			],
+		});
+
+		expect(converted.workers[0].config.manifest).toMatchObject({
+			mainModule: "index.ts",
+			modulesRoot: path.join(rootPath, "src"),
+			modules: {
+				"index.ts": { type: "esm" },
+				"dep.ts": { type: "esm" },
+			},
+		});
 	});
 
 	test("defaults missing modulesRoot to cwd", ({ expect }) => {
