@@ -44,6 +44,7 @@ function extractSecretSummaries(env: EnvBindings | undefined): SecretSummary[] {
 
 function formatPreviewSecrets(
 	workerName: string,
+	previewName: string,
 	env: EnvBindings | undefined
 ): string {
 	const secrets = Object.entries(env ?? {}).filter(
@@ -51,8 +52,9 @@ function formatPreviewSecrets(
 	);
 	const lines: string[] = [];
 	lines.push(`${chalk.bold.hex("#FFA500")("Worker:")} ${workerName}`);
+	lines.push(`${chalk.bold.hex("#FFA500")("Preview:")} ${previewName}`);
 	lines.push("");
-	lines.push(`  ${chalk.bold.underline("Previews settings")}`);
+	lines.push(`  ${chalk.bold.underline("Latest Preview deployment")}`);
 	lines.push("");
 	lines.push(chalk.bold("  Secrets"));
 
@@ -143,6 +145,6 @@ export const previewSecretListCommand = createCommand({
 			return;
 		}
 
-		logger.log(formatPreviewSecrets(workerName, deployment.env));
+		logger.log(formatPreviewSecrets(workerName, previewName, deployment.env));
 	},
 });
