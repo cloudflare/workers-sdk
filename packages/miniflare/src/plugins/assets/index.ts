@@ -175,8 +175,8 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			compatibility_date: options.compatibilityDate,
 			compatibility_flags: options.compatibilityFlags,
 			...options.assets.assetConfig,
-			redirects: parsedRedirects,
-			headers: parsedHeaders,
+			redirects: parsedRedirects ?? options.assets.assetConfig?.redirects,
+			headers: parsedHeaders ?? options.assets.assetConfig?.headers,
 			debug: true,
 			has_static_routing: Boolean(options.assets.routerConfig?.static_routing),
 		};
