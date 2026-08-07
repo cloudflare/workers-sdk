@@ -145,6 +145,24 @@ type WorkerPreviewDefaultsResource = {
 	preview_defaults?: PreviewDefaults;
 };
 
+export type PreviewBaseConfig = {
+	observability?: Observability;
+	logpush?: boolean;
+	limits?: CfUserLimits;
+	placement?: CfPlacement;
+	cache?: CacheOptions;
+	tail_consumers?: Array<{ name: string }>;
+	env?: EnvBindings;
+};
+
+export type PreviewBaseConfigPatch = Partial<Omit<PreviewBaseConfig, "env">> & {
+	env?: Record<string, Binding | null>;
+};
+
+type WorkerPreviewBaseConfigResource = {
+	previews_base_config?: PreviewBaseConfig;
+};
+
 export async function getPreview(
 	config: Config,
 	accountId: string,
@@ -230,7 +248,7 @@ export async function getPreviewDeployment(
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	deploymentIdentifier: string
+	deploymentIdentifier = "latest"
 ): Promise<DeploymentResource> {
 	return fetchResult<DeploymentResource>(
 		config,
@@ -266,6 +284,31 @@ export async function createPreviewDeployment(
 	);
 }
 
+export async function patchPreviewDeployment(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewIdentifier: string,
+	env: Record<string, Binding | null>,
+	annotations?: {
+		"workers/message"?: string;
+		"workers/tag"?: string;
+	},
+	deploymentIdentifier = "latest"
+): Promise<DeploymentResource> {
+	return fetchResult<DeploymentResource>(
+		config,
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}/deployments/${encodeURIComponent(deploymentIdentifier)}`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/merge-patch+json" },
+			body: JSON.stringify({ env, annotations }),
+		}
+	);
+}
+
 export async function getWorkerPreviewDefaults(
 	config: Config,
 	accountId: string,
@@ -295,4 +338,35 @@ export async function editWorkerPreviewDefaults(
 	);
 
 	return worker.preview_defaults ?? {};
+}
+
+export async function getPreviewBaseConfig(
+	config: Config,
+	accountId: string,
+	workerName: string
+): Promise<PreviewBaseConfig> {
+	const worker = await fetchResult<WorkerPreviewBaseConfigResource>(
+		config,
+		`/accounts/${accountId}/workers/workers/${workerName}`
+	);
+	return worker.previews_base_config ?? {};
+}
+
+export async function patchPreviewBaseConfig(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewBaseConfig: PreviewBaseConfigPatch
+): Promise<PreviewBaseConfig> {
+	const worker = await fetchResult<WorkerPreviewBaseConfigResource>(
+		config,
+		`/accounts/${accountId}/workers/workers/${workerName}`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/merge-patch+json" },
+			body: JSON.stringify({ previews_base_config: previewBaseConfig }),
+		}
+	);
+
+	return worker.previews_base_config ?? {};
 }
