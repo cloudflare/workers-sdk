@@ -13,6 +13,7 @@ import {
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
 import { CorePaths, Headers, Request } from "miniflare";
+import { readConfig } from "../config";
 import {
 	buildMigrationQuery,
 	getCreateMigrationsTableQuery,
@@ -403,6 +404,24 @@ type WorkerInput =
 			 */
 			env?: string;
 			/**
+			 * Avoids rebuilding a Worker in a Wrangler project each time the test
+			 * harness starts or resets. Build the Worker once with
+			 * `wrangler deploy --dry-run --outdir`, then specify the same output
+			 * directory here.
+			 *
+			 * When using a named Wrangler environment, `env` must match the environment
+			 * used to build the output. Relative paths resolve from server `root`.
+			 *
+			 * @example
+			 * ```sh
+			 * wrangler deploy --dry-run --env test --outdir ./worker-output
+			 * ```
+			 * ```ts
+			 * { configPath: "./wrangler.jsonc", env: "test", outDir: "./worker-output" }
+			 * ```
+			 */
+			outDir?: string | URL;
+			/**
 			 * Test-only vars that override vars from the Wrangler config.
 			 */
 			vars?: Record<string, Json>;
@@ -517,6 +536,57 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return normalizedConfig;
 	}
 
+	function resolveWorkerConfig(
+		input: WorkerInput,
+		root: string
+	): string | Config {
+		if ("config" in input) {
+			return normalizeInlineWorkerConfig(input.config, root);
+		}
+
+		const configPath = resolvePath(root, input.configPath);
+		if (input.outDir === undefined) {
+			return configPath;
+		}
+
+		const config = readConfig({ config: configPath, env: input.env });
+		const outDir = resolvePath(root, input.outDir);
+		let main = config.main;
+		if (main !== undefined) {
+			const outputFileName = config.no_bundle
+				? path.basename(main)
+				: `${path.parse(main).name}.js`;
+			main = path.join(outDir, outputFileName);
+			if (!fs.existsSync(main)) {
+				const envOption = input.env
+					? ` --env ${JSON.stringify(input.env)}`
+					: "";
+				const commandConfigPath =
+					typeof input.configPath === "string"
+						? input.configPath
+						: path.relative(root, configPath) || ".";
+				const commandOutDir =
+					typeof input.outDir === "string"
+						? input.outDir
+						: path.relative(root, outDir) || ".";
+				const commandEntrypoint = path.join(commandOutDir, outputFileName);
+				throw new UserError(
+					`Could not find the prebuilt Worker entrypoint at "${commandEntrypoint}". From the test harness root, run \`wrangler deploy --dry-run --config ${JSON.stringify(commandConfigPath)}${envOption} --outdir ${JSON.stringify(commandOutDir)}\` before starting the test harness.`,
+					{ telemetryMessage: "test harness prebuilt entrypoint missing" }
+				);
+			}
+		}
+
+		return {
+			...config,
+			main,
+			base_dir: outDir,
+			no_bundle: true,
+			find_additional_modules: true,
+			build: { ...config.build, command: undefined },
+		};
+	}
+
 	function resolveWorkerInputs(
 		serverOptions: TestHarnessOptions
 	): WranglerStartDevWorkerInput[] {
@@ -544,10 +614,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			}
 
 			return {
-				config:
-					"config" in input
-						? normalizeInlineWorkerConfig(input.config, root)
-						: resolvePath(root, input.configPath),
+				config: resolveWorkerConfig(input, root),
 				env: "env" in input ? input.env : undefined,
 				bindings,
 				dev: {
