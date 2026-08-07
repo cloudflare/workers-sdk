@@ -830,11 +830,6 @@ function configAssets(
 	if (assets.workerName !== undefined) {
 		throwUnsupportedOption("assets.workerName");
 	}
-	if (assets.routerConfig?.static_routing !== undefined) {
-		throw new TypeError(
-			`Cannot convert v4 Miniflare option "assets.routerConfig.static_routing" to v5 options without losing behavior. Use "assets.run_worker_first" with the original route rules instead; Miniflare parses them automatically.`
-		);
-	}
 	config.assets = {
 		directory: assets.directory,
 		hasUserWorker: getBooleanProperty(assets.routerConfig, "has_user_worker"),

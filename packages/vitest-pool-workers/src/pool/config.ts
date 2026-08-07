@@ -269,9 +269,7 @@ async function parseCustomPoolOptions(
 	} catch (e) {
 		coalesceZodErrors(errorRef, e);
 	}
-	if (options.miniflare.rootPath === undefined) {
-		options.miniflare.rootPath = rootPath;
-	}
+	options.miniflare.rootPath = rootPath;
 
 	options.miniflare.workers = [];
 	// Try to parse auxiliary worker options
@@ -286,9 +284,7 @@ async function parseCustomPoolOptions(
 					/* withoutScript */ false,
 					["miniflare", "workers", i]
 				);
-				if (parsed.rootPath === undefined) {
-					parsed.rootPath = workerRootPath;
-				}
+				parsed.rootPath = workerRootPath;
 				return parsed;
 			} catch (e) {
 				coalesceZodErrors(errorRef, e);

@@ -459,18 +459,6 @@ describe("convertV4MiniflareOptions", () => {
 		).toThrowErrorMatchingInlineSnapshot(
 			`[TypeError: Cannot convert v4 Miniflare option "tails[].remoteProxyConnectionString" to v5 options without losing behavior.]`
 		);
-
-		expect(() =>
-			convertV4MiniflareOptions({
-				script: "export default {};",
-				assets: {
-					directory: "./public",
-					routerConfig: { static_routing: { user_worker: ["/api/*"] } },
-				},
-			})
-		).toThrowErrorMatchingInlineSnapshot(
-			`[TypeError: Cannot convert v4 Miniflare option "assets.routerConfig.static_routing" to v5 options without losing behavior. Use "assets.run_worker_first" with the original route rules instead; Miniflare parses them automatically.]`
-		);
 	});
 
 	test("preserves supported asset options", ({ expect }) => {
@@ -506,6 +494,12 @@ describe("convertV4MiniflareOptions", () => {
 			assets: {
 				directory: "./public",
 				run_worker_first: ["/api/*", "!/api/asset"],
+				routerConfig: {
+					static_routing: {
+						user_worker: ["/api/*"],
+						asset_worker: ["/api/asset"],
+					},
+				},
 			},
 		});
 
