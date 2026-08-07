@@ -1,0 +1,39 @@
+packages/local-explorer-ui/src/__tests__/utils/sidebar-state.test.ts
+  s_b702d30224ef81::t_25d8a7fa4c1219 115,163,190
+packages/local-explorer-ui/src/assets/icons/email.svg
+  s_b702d30224ef81::t_c0323c76d50b41 1-3
+packages/local-explorer-ui/src/components/Sidebar.tsx
+  s_b702d30224ef81::t_015f20ecc46120 18,212-241
+packages/local-explorer-ui/src/components/email/EmailServiceEmptyState.tsx
+  s_b702d30224ef81::t_d055c57a9058e6 1-26
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_b702d30224ef81::t_91d0614e35bf1d 1-344
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_b702d30224ef81::t_daea0068b63d90 1-75
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_b702d30224ef81::t_90d4b15bf39118 1-231
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_b702d30224ef81::t_bb8c7681d14f1f 1-50
+packages/local-explorer-ui/src/routes/email/shared/InfoLoading.tsx
+  s_b702d30224ef81::t_2a071aab1ac411 1-32
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_b702d30224ef81::t_9e77b877792f12 1-39
+packages/local-explorer-ui/src/utils/sidebar-state.ts
+  s_b702d30224ef81::t_df3a4b405719fa 11,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fb46435764ff63b0a04dbba3c57d5e14b24490ca",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
