@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.20.3
+
+### Patch Changes
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- Updated dependencies [[`35c87e9`](https://github.com/cloudflare/workers-sdk/commit/35c87e97199fb4548d4d9aaac024c3e07be5734e), [`b4f0c97`](https://github.com/cloudflare/workers-sdk/commit/b4f0c9760bcab1e04cf1a9c8859feed8b4fc6487), [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25), [`a60ff4d`](https://github.com/cloudflare/workers-sdk/commit/a60ff4dea0bbae8775726d9cf885655b56460a30), [`99eb50c`](https://github.com/cloudflare/workers-sdk/commit/99eb50ce1d3420a50ae0e95958bf49d65874706e), [`35c87e9`](https://github.com/cloudflare/workers-sdk/commit/35c87e97199fb4548d4d9aaac024c3e07be5734e)]:
+  - wrangler@4.120.0
+  - miniflare@5.20260801.1-alpha
+
 ## 0.20.2
 
 ### Patch Changes

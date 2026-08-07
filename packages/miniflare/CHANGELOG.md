@@ -1,5 +1,31 @@
 # miniflare
 
+## 5.20260801.1-alpha
+
+### Minor Changes
+
+- [#15040](https://github.com/cloudflare/workers-sdk/pull/15040) [`99eb50c`](https://github.com/cloudflare/workers-sdk/commit/99eb50ce1d3420a50ae0e95958bf49d65874706e) Thanks [@edmundhung](https://github.com/edmundhung)! - Add an option to disable dev registry registration
+
+  Set `unsafeRegisterWorker` to `false` to prevent a Miniflare worker from being advertised in the dev registry. Workers continue to be registered by default.
+
+### Patch Changes
+
+- [#15037](https://github.com/cloudflare/workers-sdk/pull/15037) [`b4f0c97`](https://github.com/cloudflare/workers-sdk/commit/b4f0c9760bcab1e04cf1a9c8859feed8b4fc6487) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop deleting and recreating every dev registry entry on each config update
+
+  Applying options rewrote this instance's dev registry entries by removing them and putting them straight back. Other dev sessions find Workers by watching that directory, so each update briefly looked to them like every Worker in the session had gone away — and a session that had already resolved one of those Workers could be left acting on that, up to and including tearing down a binding to a Worker that never actually stopped running.
+
+  Entries are now reconciled instead: Workers that are still present are updated in place, and only the ones that have genuinely gone are removed. Switching to a different registry path still clears the entries from the directory being left behind.
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- [#15015](https://github.com/cloudflare/workers-sdk/pull/15015) [`a60ff4d`](https://github.com/cloudflare/workers-sdk/commit/a60ff4dea0bbae8775726d9cf885655b56460a30) Thanks [@nickpatt](https://github.com/nickpatt)! - Cut the per-request cost of local observability capture
+
+  Every tail event was written to the trace store as its own Durable Object call, so a request paid two or three round-trips per span. On a module-heavy app under the Vite plugin that dominated dev request latency. Rows are now buffered and written in batches, taking a request from roughly thirty calls to three.
+
+  Work in progress still shows up as it happens: the root span is written immediately, console logs and exceptions as they arrive, and a span's completion is written on the next event once 100ms has passed. An invocation that goes completely quiet writes nothing further until it ends, since the flush is driven by tail events rather than a timer.
+
+  The Vite plugin's own router, asset and proxy workers are also no longer captured. Their traces were noise the Observability views already hid, and skipping them cuts the spans recorded per request — a side benefit being that a trace's root is now your Worker rather than `__router-worker__`.
+
 ## 5.20260801.0-alpha
 
 ### Patch Changes
