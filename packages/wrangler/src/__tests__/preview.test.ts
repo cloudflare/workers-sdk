@@ -411,10 +411,13 @@ describe("wrangler preview", () => {
 				"/workers/workers/override-worker/previews/"
 			);
 			expect(std.out).toContain("Preview: test-preview (new)");
-			expect(std.out).toContain("Deployment:");
-			expect(std.out).toContain("DEFAULT_VAR");
-			expect(std.out).toContain('"from-defaults"');
-			expect(std.out).toContain("◆ from wrangler.json");
+			expect(std.out).toContain(
+				"Preview URL: https://test-preview.test-worker.cloudflare.app"
+			);
+			expect(std.out).toContain("Deployment ID: deployment-id-123");
+			expect(std.out).toContain(
+				"Deployment URL: https://abc12345.test-worker.cloudflare.app"
+			);
 		});
 
 		test("should warn about top-level bindings missing from preview settings", async ({
@@ -662,7 +665,6 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.env?.FLAGS).not.toMatchObject({
 				app_id: "production-app-id",
 			});
-			expect(std.out).toContain("preview-app-id");
 			expect(std.warn).not.toContain("FLAGS");
 		});
 
@@ -817,8 +819,6 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain('"deployment"');
 			expect(std.out).toContain('"id": "preview-id-json"');
 			expect(std.out).toContain('"id": "deployment-id-json"');
-			expect(std.out).not.toContain("Preview: test-preview");
-			expect(std.out).not.toContain("Deployment:");
 
 			const outputEntries = readFileSync(outputFile, "utf8")
 				.split("\n")
@@ -828,6 +828,7 @@ describe("wrangler preview", () => {
 			expect(outputEntries).toContainEqual(
 				expect.objectContaining({
 					type: "preview",
+					version: 1,
 					worker_name: "test-worker",
 					preview_id: "preview-id-json",
 					preview_name: "test-preview",
@@ -1129,7 +1130,10 @@ describe("wrangler preview", () => {
 								id: "existing-preview-id",
 								name: "test-preview",
 								slug: "test-preview",
-								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								urls: [
+									"https://one.test-worker.cloudflare.app",
+									"https://two.test-worker.cloudflare.app",
+								],
 								worker_name: "test-worker",
 								observability: { enabled: true },
 								created_on: new Date().toISOString(),
@@ -1147,7 +1151,10 @@ describe("wrangler preview", () => {
 									id: "deployment-id-456",
 									preview_id: "existing-preview-id",
 									preview_name: "test-preview",
-									urls: ["https://def67890.test-worker.cloudflare.app"],
+									urls: [
+										"https://dep-one.test-worker.cloudflare.app",
+										"https://dep-two.test-worker.cloudflare.app",
+									],
 									compatibility_date: "2025-01-01",
 									env: {},
 									created_on: new Date().toISOString(),
@@ -1160,9 +1167,82 @@ describe("wrangler preview", () => {
 			);
 
 			await runWrangler("preview --name test-preview");
-			expect(std.out).toContain("Preview: test-preview");
-			expect(std.out).toContain("(updated)");
-			expect(std.out).toContain("Deployment:");
+			expect(std.out).toContain("Preview: test-preview (updated)");
+			expect(std.out).toContain("Preview URLs:");
+			expect(std.out).toContain("  https://one.test-worker.cloudflare.app");
+			expect(std.out).toContain("  https://two.test-worker.cloudflare.app");
+			expect(std.out).toContain("Deployment ID: deployment-id-456");
+			expect(std.out).toContain("Deployment URLs:");
+			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
+			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
+		});
+
+		test("should show compact success output when URL arrays are empty", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-empty-urls",
+									name: "empty-urls-preview",
+									slug: "empty-urls-preview",
+									urls: [],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-empty-urls",
+									preview_id: "preview-id-empty-urls",
+									preview_name: "empty-urls-preview",
+									urls: [],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				)
+			);
+
+			await runWrangler("preview --name empty-urls-preview");
+
+			const summaryLines = stripVTControlCharacters(std.out)
+				.split("\n")
+				.filter(
+					(line) => line.startsWith("Preview") || line.startsWith("Deployment")
+				);
+			expect(summaryLines).toEqual([
+				"Preview: empty-urls-preview (new)",
+				"Deployment ID: deployment-id-empty-urls",
+			]);
 		});
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
@@ -1299,10 +1379,10 @@ describe("wrangler preview", () => {
 			);
 			await runWrangler("preview --name no-defaults-preview");
 			expect(std.out).toContain("Preview: no-defaults-preview (new)");
-			expect(std.out).toContain("◆ from wrangler.json");
+			expect(std.out).toContain("Deployment ID: deployment-id-789");
 		});
 
-		test("should show observability settings when configured", async ({
+		test("should show compact success output when observability is configured", async ({
 			expect,
 		}) => {
 			writeFileSync(
@@ -1369,8 +1449,8 @@ describe("wrangler preview", () => {
 				)
 			);
 			await runWrangler("preview --name test-preview");
-			expect(std.out).toContain("observability");
-			expect(std.out).toContain("enabled");
+			expect(std.out).toContain("Preview: test-preview (new)");
+			expect(std.out).toContain("Deployment ID: deployment-id-obs");
 		});
 
 		test("should include previews tail_consumers in the preview resource request", async ({
@@ -1458,9 +1538,15 @@ describe("wrangler preview", () => {
 			]);
 		});
 
-		test("should show compatibility_date when configured", async ({
+		test("should include compatibility_date in the deployment request", async ({
 			expect,
 		}) => {
+			let deploymentRequestBody:
+				| {
+						compatibility_date?: string;
+				  }
+				| undefined;
+
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1494,8 +1580,11 @@ describe("wrangler preview", () => {
 				),
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					() =>
-						HttpResponse.json(
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+
+						return HttpResponse.json(
 							{
 								success: true,
 								result: {
@@ -1509,12 +1598,13 @@ describe("wrangler preview", () => {
 								},
 							},
 							{ status: 201 }
-						)
+						);
+					}
 				)
 			);
 			await runWrangler("preview --name test-preview");
-			expect(std.out).toContain("compatibility_date");
-			expect(std.out).toContain("2025-01-01");
+			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
+			expect(std.out).toContain("Deployment ID: deployment-id-compat");
 		});
 
 		test("should pass ignore_defaults query param when --ignore-defaults flag is used", async ({
@@ -2368,10 +2458,7 @@ describe("wrangler preview", () => {
 		}) => {
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
-						annotations?: {
-							"workers/message"?: string;
-							"workers/tag"?: string;
-						};
+						annotations?: Record<string, string>;
 				  })
 				| undefined;
 
@@ -2452,10 +2539,7 @@ describe("wrangler preview", () => {
 
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
-						annotations?: {
-							"workers/message"?: string;
-							"workers/tag"?: string;
-						};
+						annotations?: Record<string, string>;
 				  })
 				| undefined;
 
