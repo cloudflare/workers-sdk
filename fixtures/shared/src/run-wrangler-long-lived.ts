@@ -189,27 +189,37 @@ async function runLongLivedWrangler(
 
 	async function stop() {
 		stopping = true;
-		return new Promise<void>((resolve) => {
-			if (processExited) {
-				// Already dead — nothing to kill. Avoid noisy Windows taskkill errors.
-				resolve();
-				return;
-			}
-			assert(
-				wranglerProcess.pid,
-				`Command "${command.join(" ")}" had no process id`
-			);
-			treeKill(wranglerProcess.pid, (e) => {
+		if (processExited) {
+			// Already dead — nothing to kill. Avoid noisy Windows taskkill errors.
+			return;
+		}
+		const pid = wranglerProcess.pid;
+		assert(pid, `Command "${command.join(" ")}" had no process id`);
+
+		await new Promise<void>((resolve) => {
+			treeKill(pid, (e) => {
 				if (e) {
-					console.error(
-						"Failed to kill command: " + command.join(" "),
-						wranglerProcess.pid,
-						e
-					);
+					console.error("Failed to kill command: " + command.join(" "), pid, e);
 				}
 				// fallthrough to resolve() because either the process is already dead
 				// or don't have permission to kill it or some other reason?
 				// either way, there is nothing we can do and we don't want to fail the test because of this
+				resolve();
+			});
+		});
+
+		// The kill callback only tells us the signal was delivered (on Windows it
+		// is the exit of `taskkill`), not that the process is gone. Tests that
+		// stop several sessions in sequence rely on each one being fully dead
+		// before the next is stopped, so wait for the actual exit — with a bound,
+		// since failing to reap a child should not fail the test.
+		if (processExited) {
+			return;
+		}
+		await new Promise<void>((resolve) => {
+			const timeoutHandle = setTimeout(resolve, 10_000);
+			wranglerProcess.once("exit", () => {
+				clearTimeout(timeoutHandle);
 				resolve();
 			});
 		});
