@@ -1,6 +1,9 @@
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, test, vi } from "vitest";
-import { runSkillsInstallFlow } from "../agents-skills-install";
+import {
+	runSkillsInstallFlow,
+	runSkillsUpdateFlow,
+} from "../agents-skills-install";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -121,5 +124,49 @@ describe("register-yargs-command skills integration", () => {
 		await runWrangler("setup");
 
 		expect(runSkillsInstallFlow).toHaveBeenCalled();
+	});
+
+	test("does not call runSkillsUpdateFlow when runSkillsInstallFlow just installed skills", async ({
+		expect,
+	}) => {
+		// When the install flow returns true it means it just performed a
+		// fresh install, so the update flow should be skipped — the newly
+		// installed skills are already the latest version.
+		vi.mocked(runSkillsInstallFlow).mockResolvedValueOnce(true);
+
+		await runWrangler("setup");
+
+		expect(runSkillsInstallFlow).toHaveBeenCalled();
+		expect(runSkillsUpdateFlow).not.toHaveBeenCalled();
+	});
+
+	test("calls runSkillsUpdateFlow when runSkillsInstallFlow did not install", async ({
+		expect,
+	}) => {
+		// When the install flow returns false (skills already installed or
+		// user was not prompted), the update flow should run to check
+		// whether the existing skills are out of date.
+		vi.mocked(runSkillsInstallFlow).mockResolvedValueOnce(false);
+
+		await runWrangler("setup");
+
+		expect(runSkillsInstallFlow).toHaveBeenCalled();
+		expect(runSkillsUpdateFlow).toHaveBeenCalledWith(
+			expect.objectContaining({
+				command: "setup",
+			})
+		);
+	});
+
+	test("does not call runSkillsUpdateFlow when WRANGLER_NO_SKILLS_UPDATE_PROMPTS env var is set", async ({
+		expect,
+	}) => {
+		vi.mocked(runSkillsInstallFlow).mockResolvedValueOnce(false);
+		vi.stubEnv("WRANGLER_NO_SKILLS_UPDATE_PROMPTS", "true");
+
+		await runWrangler("setup");
+
+		expect(runSkillsInstallFlow).toHaveBeenCalled();
+		expect(runSkillsUpdateFlow).not.toHaveBeenCalled();
 	});
 });
