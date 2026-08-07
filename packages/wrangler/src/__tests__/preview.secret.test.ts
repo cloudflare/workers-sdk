@@ -441,7 +441,7 @@ describe("wrangler preview", () => {
 			// Matrix over output format (json vs. pretty) and whether the API
 			// returns a text value for the secret. In every combination we only
 			// list secret bindings (never plain_text) and never print the value.
-			it.each([
+			test.for([
 				{
 					name: "json, value provided",
 					json: true,
@@ -456,7 +456,7 @@ describe("wrangler preview", () => {
 				{ name: "pretty, no value", json: false, text: undefined },
 			])(
 				"lists only secrets and never leaks their values ($name)",
-				async ({ json, text }) => {
+				async ({ json, text }, { expect }) => {
 					mockGetLatestPreviewDeployment({
 						MY_SECRET:
 							text === undefined
@@ -478,6 +478,9 @@ describe("wrangler preview", () => {
 						expect(std.out).toContain('"type": "secret_text"');
 					} else {
 						expect(std.out).toContain("Worker: test-worker");
+						expect(std.out).toContain("Preview: test-preview");
+						expect(std.out).toContain("Latest Preview deployment");
+						expect(std.out).not.toContain("Previews settings");
 						expect(std.out).toContain("Secrets");
 						expect(std.out).toContain("********");
 					}
