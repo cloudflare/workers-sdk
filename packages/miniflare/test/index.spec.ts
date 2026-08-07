@@ -2071,30 +2071,37 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						timestamp: string;
 						messageId: string;
 				  }
-				| { type: "reject"; timestamp: string }
+				| { type: "received" | "reject" | "unhandled"; timestamp: string }
 			)[];
 		};
 	}
 
 	const okResult = await dispatchEmail("ok");
+	// Forwards have no local MIME message, so their id is synthesized. Replies
+	// return the Message-ID from the reply MIME itself.
+	const syntheticMessageId = (domain: string) =>
+		expect.stringMatching(
+			new RegExp(`^<[a-z0-9]+@${domain.replace(/\./g, "\\.")}>$`)
+		);
 	expect(okResult).toMatchObject({
 		outcome: "ok",
 		forwards: [
 			{
 				recipient: "archive@example.com",
 				headers: [["x-test", "ok"]],
-				messageId: expect.any(String),
+				messageId: syntheticMessageId("example.com"),
 			},
 		],
 		replies: [
 			{
 				sender: "reply-ok@example.com",
-				messageId: expect.any(String),
+				messageId: "<reply-ok@example.com>",
 				raw: expect.stringContaining("Reply for ok"),
 			},
 		],
 	});
 	expect(okResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{
 			type: "forward",
 			timestamp: expect.any(String),
@@ -2115,6 +2122,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		replies: [],
 	});
 	expect(rejectedResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{ type: "reject", timestamp: expect.any(String) },
 	]);
 
@@ -2130,13 +2138,14 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		],
 		replies: [
 			{
-				messageId: expect.any(String),
+				messageId: "<reply-exception@example.com>",
 				sender: "reply-exception@example.com",
 				raw: expect.stringContaining("Reply for exception"),
 			},
 		],
 	});
 	expect(exceptionResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{
 			type: "forward",
 			timestamp: expect.any(String),
@@ -2151,7 +2160,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 	]);
 });
 
-test("Miniflare: unrecognised /cdn-cgi/local/ routes fall through to user worker", async ({
+test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({

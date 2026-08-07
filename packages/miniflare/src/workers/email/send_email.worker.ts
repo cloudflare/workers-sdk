@@ -1,24 +1,47 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { blue } from "kleur/colors";
+import { $, blue } from "kleur/colors";
+import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
-import { RAW_EMAIL } from "./constants";
+import { CoreBindings } from "../core/constants";
+import { MAX_LOCAL_EMAIL_BYTES, RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
+import { bytesToBase64 } from "./encoding";
+import {
+	getHeader,
+	messageIdToStorageId,
+	synthesizeMessageId,
+} from "./message-id";
+import type {
+	EmailArtifact,
+	EmailStoreService,
+	StoredEmailAttachment,
+	StoredSendingEmail,
+} from "./storage";
 import type { EmailAddress, MessageBuilder } from "./types";
 import type { Email } from "postal-mime";
 
+// Force-enable colours.
+$.enabled = true;
+
 /**
- * Build a Message-ID in the shape the production `send_email` binding returns:
- * `<{36 alphanumeric chars}@{sender domain}>`, brackets included. The body is
- * random — production synthesizes its own id rather than echoing any header
- * present in the submitted email.
+ * Byte length of email content, so attachment sizes are accurate for
+ * multi-byte payloads (string `.length` counts UTF-16 code units, not bytes).
  */
-function synthesizeMessageId(senderEmail: string): string {
-	const alphabet =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	const bytes = crypto.getRandomValues(new Uint8Array(36));
-	const id = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
-	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
-	return `<${id}@${domain}>`;
+function contentByteLength(
+	content: string | ArrayBuffer | ArrayBufferView
+): number {
+	if (typeof content === "string") {
+		return new TextEncoder().encode(content).byteLength;
+	}
+	return content.byteLength;
+}
+
+function getAttachmentExtension(filename: string): string {
+	const extension = filename.match(/\.([^.]+)$/u)?.[1];
+	return extension !== undefined &&
+		/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(extension)
+		? extension
+		: "bin";
 }
 
 /**
@@ -42,6 +65,16 @@ function formatEmailAddress(addr: string | EmailAddress): string {
 		return addr;
 	}
 	return `"${addr.name}" <${addr.email}>`;
+}
+
+function formatParsedAddress(addr: {
+	address?: string;
+	name?: string;
+}): string {
+	const email = addr.address ?? "";
+	return addr.name === undefined || addr.name === ""
+		? email
+		: `"${addr.name}" <${email}>`;
 }
 
 /**
@@ -70,64 +103,85 @@ function formatMessageBuilder(builder: MessageBuilder): string {
 	return lines.join("\n");
 }
 
-/**
- * Appends path segments to a base path using the separator already implied by
- * the base path string. This trims trailing `/` and `\` from the base before
- * joining, but does not otherwise normalize the full path.
- */
-function joinPath(base: string, ...segments: string[]): string {
-	const separator = base.includes("\\") ? "\\" : "/";
-	return [base.replace(/[\\/]+$/, ""), ...segments].join(separator);
-}
-
-interface DiskServiceConfig {
-	location: "system" | "project";
-	bindingName: string;
-	serviceName: string;
-	path: string;
-}
-
 interface SendEmailEnv {
-	email_disk_services: DiskServiceConfig[];
 	destination_address: string | undefined;
 	allowed_destination_addresses: string[] | undefined;
 	allowed_sender_addresses: string[] | undefined;
-	MINIFLARE_EMAIL_DISK_SYSTEM: Fetcher;
-	MINIFLARE_EMAIL_DISK_PROJECT?: Fetcher;
+	MINIFLARE_LOOPBACK: Fetcher;
+	[CoreBindings.SERVICE_EMAIL_STORE]?: EmailStoreService;
+	/** Worker that owns this send_email binding, set when the local explorer is enabled. */
+	SEND_EMAIL_OWNER_WORKER?: string;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	/**
-	 * Gets a disk service binding by name
+	 * Logs a message via the loopback `/core/log` endpoint.
 	 */
-	private getServiceBinding(bindingName: string): Fetcher {
-		const binding =
-			this.env[
-				bindingName as
-					| "MINIFLARE_EMAIL_DISK_SYSTEM"
-					| "MINIFLARE_EMAIL_DISK_PROJECT"
-			];
-		if (!binding) {
-			throw new Error(`Disk service binding not found: ${bindingName}`);
-		}
-		return binding;
+	private async log(message: string): Promise<void> {
+		await this.env.MINIFLARE_LOOPBACK.fetch("http://localhost/core/log", {
+			method: "POST",
+			headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+			body: message,
+		});
 	}
 
 	/**
-	 * Logs a message via the runtime console.
+	 * Captures a sent email into the local email store for the explorer.
 	 */
-	private log(message: string): void {
-		console.log(message);
+	private async reportSentEmail(
+		email: StoredSendingEmail
+	): Promise<EmailArtifact[]> {
+		try {
+			return (
+				(await this.env[CoreBindings.SERVICE_EMAIL_STORE]?.storeSent(email)) ??
+				[]
+			);
+		} catch {
+			try {
+				await this.log("Failed to capture sent email or clean up artifacts.");
+			} catch {
+				// Capture failures must not affect sending.
+			}
+			return [];
+		}
+	}
+
+	private async removeSentArtifacts(artifacts: EmailArtifact[]): Promise<void> {
+		if (artifacts.length === 0) {
+			return;
+		}
+		const response = await this.env.MINIFLARE_LOOPBACK.fetch(
+			"http://localhost/core/delete-email-temp-files",
+			{
+				method: "POST",
+				body: JSON.stringify({ artifacts } satisfies {
+					artifacts: EmailArtifact[];
+				}),
+			}
+		);
+		if (!response.ok) {
+			throw new Error(
+				`could not delete email temporary files: ${await response.text()}`
+			);
+		}
 	}
 	/**
-	 * Stores content to a temporary file via the disk service.
+	 * Persists email content to a temp file via the loopback
+	 * `/core/store-temp-file` endpoint and returns the on-disk path.
+	 *
+	 * Always requests the endpoint's email mode so the file lands in the email
+	 * directories and is mirrored into the project directory.
+	 *
+	 * `id` names the file, and is always derived from the message's id so every
+	 * file belonging to a message can be found from the id the local explorer
+	 * shows.
 	 */
 	private async storeTempFile(
 		content: string | ArrayBuffer | ArrayBufferView,
 		extension: string,
 		prefix: string,
-		location: "system" | "project" = "system",
-		messageUUID?: string
+		id: string,
+		recordId = id
 	): Promise<string> {
 		let body: string | Uint8Array;
 		if (typeof content === "string") {
@@ -143,27 +197,29 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			);
 		}
 
-		const fileName = messageUUID
-			? `${messageUUID}.${extension}`
-			: `${crypto.randomUUID()}.${extension}`;
-		const url = new URL(`${prefix}/${fileName}`, "http://placeholder/");
-
-		// Find the disk service config for the requested location.
-		const diskConfig = this.env.email_disk_services.find(
-			(config) => config.location === location
-		);
-
-		if (!diskConfig) {
-			throw new Error(`Disk service for ${location} not found`);
-		}
-
-		const service = this.getServiceBinding(diskConfig.bindingName);
-		await service.fetch(url, {
-			method: "PUT",
-			body,
+		const params = new URLSearchParams({
+			prefix,
+			extension,
+			email: "true",
+			id,
+			record: recordId,
 		});
 
-		return joinPath(diskConfig.path, prefix, fileName);
+		const resp = await this.env.MINIFLARE_LOOPBACK.fetch(
+			`http://localhost/core/store-temp-file?${params.toString()}`,
+			{
+				method: "POST",
+				body,
+			}
+		);
+
+		const text = await resp.text();
+		if (!resp.ok) {
+			// A non-2xx body is an error message, not a path; surface it so the
+			// caller doesn't log an error string as if it were a file path.
+			throw new Error(`could not store email temporary file: ${text}`);
+		}
+		return text;
 	}
 
 	private checkDestinationAllowed(to: string) {
@@ -230,7 +286,6 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		emailMessageOrBuilder: EmailMessage | MessageBuilder
 	): Promise<EmailSendResult> {
 		// Check if this is an EmailMessage (has RAW_EMAIL symbol) or MessageBuilder
-		const messageUUID: string = crypto.randomUUID();
 		if (this.isEmailMessage(emailMessageOrBuilder)) {
 			// Original EmailMessage API - validate and parse MIME
 			const emailMessage = emailMessageOrBuilder;
@@ -241,6 +296,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const rawEmailBuffer = new Uint8Array(
 				await new Response(rawEmail).arrayBuffer()
 			);
+
+			if (rawEmailBuffer.byteLength > MAX_LOCAL_EMAIL_BYTES) {
+				throw new Error(
+					"Email message size is within the production size limit of 25MiB, but exceeds the lower 1MiB limit for testing locally."
+				);
+			}
 
 			let parsedEmail: Email;
 
@@ -273,30 +334,63 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 				throw new Error("invalid headers set");
 			}
 
-			const locations = this.env.email_disk_services.map(
-				(service) => service.location
-			);
-			const filePaths = await Promise.all(
-				locations.map((location) =>
-					this.storeTempFile(
+			const messageId = parsedEmail.messageId;
+			const id = messageIdToStorageId(messageId);
+
+			// Complete the workerd-side capture before resolving send(). File writes
+			// remain deferred because they cross the Node loopback service.
+			const evictedArtifacts = await this.reportSentEmail({
+				worker: this.env.SEND_EMAIL_OWNER_WORKER,
+				from: emailMessage.from,
+				to: [emailMessage.to],
+				cc: parsedEmail.cc?.map(formatParsedAddress),
+				bcc: parsedEmail.bcc?.map(formatParsedAddress),
+				replyTo: parsedEmail.replyTo
+					? parsedEmail.replyTo.map(formatParsedAddress).join(", ")
+					: undefined,
+				subject: parsedEmail.subject ?? "(no subject)",
+				sentAt: new Date().toISOString(),
+				messageId,
+				headers: Object.fromEntries(
+					parsedEmail.headers.map(({ key, value }) => [key, value])
+				),
+				text: parsedEmail.text,
+				html: parsedEmail.html,
+				attachments: (parsedEmail.attachments ?? []).map((attachment) => ({
+					filename: attachment.filename ?? "attachment",
+					contentType: attachment.mimeType ?? "application/octet-stream",
+					disposition:
+						attachment.disposition === "inline" ? "inline" : "attachment",
+					size: contentByteLength(attachment.content),
+				})),
+				raw: new TextDecoder().decode(rawEmailBuffer),
+				rawBase64: bytesToBase64(rawEmailBuffer),
+			});
+
+			this.ctx.waitUntil(
+				(async () => {
+					const filePath = await this.storeTempFile(
 						rawEmailBuffer,
 						"eml",
 						"email",
-						location,
-						messageUUID
-					)
-				)
+						id,
+						id
+					);
+					await this.removeSentArtifacts(evictedArtifacts);
+					await this.log(
+						`${blue("send_email binding called with the following message:")}\nEmail: ${filePath}`
+					);
+				})().catch(async (error: unknown) => {
+					try {
+						await this.log(`Failed to persist sent email: ${String(error)}`);
+					} catch {
+						// Logging failures must not create another unhandled rejection.
+					}
+				})
 			);
 
-			// Log only project location if it exists, otherwise system location
-			const projectIndex = locations.indexOf("project");
-			const logIndex = projectIndex !== -1 ? projectIndex : 0;
-			const fileInfo = `Email: ${filePaths[logIndex]}`;
-			this.log(
-				`${blue("send_email binding called with the following message:")}\n${fileInfo}`
-			);
-
-			return { messageId: synthesizeMessageId(emailMessage.from) };
+			// Production returns the RFC Message-ID with angle brackets; keep parity.
+			return { messageId };
 		} else {
 			// New MessageBuilder API - just validate and log
 			const builder = emailMessageOrBuilder;
@@ -304,82 +398,119 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			// Validate the message builder
 			this.validateMessageBuilder(builder);
 
-			// Store text, HTML content, and attachments to files for easy viewing
-			const locations = this.env.email_disk_services.map(
-				(service) => service.location
-			);
-			const files: string[] = [];
+			// Use the Message-ID the caller supplied (mimetext sets one) if present,
+			// otherwise synthesize one in the same mimetext shape. This keys the
+			// local explorer record (via the Message-ID) and names the on-disk
+			// files.
+			const messageId =
+				getHeader(builder.headers, "Message-ID") ??
+				synthesizeMessageId(extractEmailAddress(builder.from));
+			const id = messageIdToStorageId(messageId);
 
-			if (builder.text) {
-				const text = builder.text;
-				const textResults = await Promise.all(
-					locations.map((location) =>
-						this.storeTempFile(text, "txt", "email-text", location, messageUUID)
-					)
+			const toDisplay = (
+				addr: string | EmailAddress | (string | EmailAddress)[]
+			): string[] =>
+				(Array.isArray(addr) ? addr : [addr]).map(formatEmailAddress);
+
+			const sentAttachments: StoredEmailAttachment[] = (
+				builder.attachments ?? []
+			).map((attachment) => ({
+				filename: attachment.filename,
+				contentType: attachment.type,
+				disposition: attachment.disposition,
+				size: contentByteLength(attachment.content),
+			}));
+
+			const totalContentBytes =
+				(builder.text ? contentByteLength(builder.text) : 0) +
+				(builder.html ? contentByteLength(builder.html) : 0) +
+				sentAttachments.reduce((sum, { size }) => sum + size, 0);
+			if (totalContentBytes > MAX_LOCAL_EMAIL_BYTES) {
+				throw new Error(
+					"Email message size is within the production size limit of 25MiB, but exceeds the lower 1MiB limit for testing locally."
 				);
-				// Log only project location if it exists, otherwise system location
-				const projectIndex = locations.indexOf("project");
-				const logIndex = projectIndex !== -1 ? projectIndex : 0;
-				files.push(`Text: ${textResults[logIndex]}`);
 			}
 
-			if (builder.html) {
-				const html = builder.html;
-				const htmlResults = await Promise.all(
-					locations.map((location) =>
-						this.storeTempFile(
-							html,
+			// Complete the workerd-side capture before resolving send(). File writes
+			// remain deferred because they cross the Node loopback service.
+			const evictedArtifacts = await this.reportSentEmail({
+				worker: this.env.SEND_EMAIL_OWNER_WORKER,
+				from: formatEmailAddress(builder.from),
+				to: toDisplay(builder.to),
+				cc: builder.cc ? toDisplay(builder.cc) : undefined,
+				bcc: builder.bcc ? toDisplay(builder.bcc) : undefined,
+				replyTo: builder.replyTo
+					? formatEmailAddress(builder.replyTo)
+					: undefined,
+				subject: builder.subject,
+				sentAt: new Date().toISOString(),
+				messageId,
+				text: builder.text,
+				html: builder.html,
+				headers: builder.headers,
+				attachments: sentAttachments,
+			});
+
+			this.ctx.waitUntil(
+				(async () => {
+					const files: string[] = [];
+
+					if (builder.text) {
+						const textPath = await this.storeTempFile(
+							builder.text,
+							"txt",
+							"email-text",
+							id,
+							id
+						);
+						files.push(`Text: ${textPath}`);
+					}
+
+					if (builder.html) {
+						const htmlPath = await this.storeTempFile(
+							builder.html,
 							"html",
 							"email-html",
-							location,
-							messageUUID
-						)
-					)
-				);
-				// Log only project location if it exists, otherwise system location
-				const projectIndex = locations.indexOf("project");
-				const logIndex = projectIndex !== -1 ? projectIndex : 0;
-				files.push(`HTML: ${htmlResults[logIndex]}`);
-			}
+							id,
+							id
+						);
+						files.push(`HTML: ${htmlPath}`);
+					}
 
-			// Store attachments
-			if (builder.attachments) {
-				for (const attachment of builder.attachments) {
-					// Extract file extension from filename or use generic extension
-					const extMatch = attachment.filename.match(/\.([^.]+)$/);
-					const extension = extMatch ? extMatch[1] : "bin";
-					const attachmentUUID = crypto.randomUUID();
+					if (builder.attachments) {
+						for (const [index, attachment] of builder.attachments.entries()) {
+							const extension = getAttachmentExtension(attachment.filename);
 
-					const attachmentResults = await Promise.all(
-						locations.map((location) =>
-							this.storeTempFile(
+							const attachmentPath = await this.storeTempFile(
 								attachment.content,
 								extension,
 								"email-attachment",
-								location,
-								attachmentUUID
-							)
-						)
-					);
-					// Log only project location if it exists, otherwise system location
-					const projectIndex = locations.indexOf("project");
-					const logIndex = projectIndex !== -1 ? projectIndex : 0;
-					files.push(
-						`Attachment (${attachment.disposition}): ${attachment.filename} -> ${attachmentResults[logIndex]}`
-					);
-				}
-			}
+								`${id}-${index + 1}`,
+								id
+							);
+							files.push(
+								`Attachment (${attachment.disposition}): ${attachment.filename} -> ${attachmentPath}`
+							);
+						}
+					}
 
-			// Format and log the message details with file paths
-			const formatted = formatMessageBuilder(builder);
-			const fileInfo = files.length > 0 ? `\n\n${files.join("\n")}` : "";
-			this.log(
-				`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
+					await this.removeSentArtifacts(evictedArtifacts);
+					const formatted = formatMessageBuilder(builder);
+					const fileInfo = files.length > 0 ? `\n\n${files.join("\n")}` : "";
+					await this.log(
+						`${blue("send_email binding called with MessageBuilder:")}\n${formatted}${fileInfo}`
+					);
+				})().catch(async (error: unknown) => {
+					try {
+						await this.log(`Failed to persist sent email: ${String(error)}`);
+					} catch {
+						// Logging failures must not create another unhandled rejection.
+					}
+				})
 			);
 
-			return {
-				messageId: synthesizeMessageId(extractEmailAddress(builder.from)),
-			};
+			// Production returns the ID with angle brackets; keep parity.
+			return { messageId };
 		}
 	}
 }

@@ -1,15 +1,20 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+import { isFileNotFoundError } from "../../shared";
+import { CoreBindings, sanitisePath } from "../../workers";
+import { EMAIL_STORE_SERVICE_NAME } from "../core/constants";
 import {
 	buildRemoteProxyProps,
 	getUserBindingServiceName,
 	remoteProxyClientWorker,
 	ProxyNodeBinding,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
+import type { EmailArtifact } from "../../workers/email/storage";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 // Define the mutually exclusive schema
@@ -42,14 +47,31 @@ export const EmailOptionsSchema = z.object({
 		.optional(),
 });
 
+export const EmailSharedOptionsSchema = z.object({
+	// Mirrors the core shared option. When the local explorer is enabled, the
+	// email store service exists, so the send_email worker binds to it to capture
+	// sent emails.
+	unsafeLocalExplorer: z.boolean().optional(),
+});
+
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
-// Disk service name and binding name for writing temporary files to system temp directory
-const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
-const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
 
-function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
+function getSendEmailServiceName(
+	workerName: string | undefined,
+	bindingName: string
+): string {
+	const scope =
+		workerName === undefined
+			? SERVICE_SEND_EMAIL_WORKER_PREFIX
+			: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${workerName}`;
+	return getUserBindingServiceName(scope, bindingName);
+}
+
+function buildJsonBindings(
+	bindings: Record<string, unknown>
+): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
 		name,
 		json: JSON.stringify(value),
@@ -84,6 +106,116 @@ function getEmailProjectSessionDirectory(
 	return path.join(parentDir, path.basename(tmpPath));
 }
 
+function resolveContainedPath(directory: string, fileName: string): string {
+	const root = path.resolve(directory);
+	const resolved = path.resolve(root, fileName);
+	if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+		throw new Error("Invalid email temporary-file path");
+	}
+	return resolved;
+}
+
+/**
+ * Resolves the directories email files are written to for a given `prefix`
+ * (e.g. `"email"`).
+ */
+export function getEmailFileDirectories(
+	resourceTmpPath: string | undefined,
+	tmpPath: string,
+	prefix: string
+): { system: string; project: string | undefined } {
+	const projectSessionDir = getEmailProjectSessionDirectory(
+		resourceTmpPath,
+		tmpPath
+	);
+	return {
+		system: path.join(tmpPath, EMAIL_PLUGIN_NAME, prefix),
+		project:
+			projectSessionDir !== undefined
+				? path.join(projectSessionDir, prefix)
+				: undefined,
+	};
+}
+
+/**
+ * Writes email content to the directories resolved by
+ * {@link getEmailFileDirectories}.
+ *
+ * The file is always written to the instance temp directory, and mirrored into
+ * the project directory when one is configured so that captured messages
+ * outlive the dev session. Returns the path callers should surface, preferring
+ * the project copy since that is the one a user can navigate to.
+ */
+export async function writeEmailTempFile(options: {
+	resourceTmpPath: string | undefined;
+	tmpPath: string;
+	prefix: string;
+	fileName: string;
+	contents: Buffer;
+}): Promise<string> {
+	if (
+		options.prefix.length === 0 ||
+		options.prefix === "." ||
+		options.prefix === ".." ||
+		options.prefix.includes("/") ||
+		options.prefix.includes("\\")
+	) {
+		throw new Error("Invalid email temporary-file prefix");
+	}
+	const { system, project } = getEmailFileDirectories(
+		options.resourceTmpPath,
+		options.tmpPath,
+		options.prefix
+	);
+
+	await mkdir(system, { recursive: true });
+	const systemPath = resolveContainedPath(system, options.fileName);
+	await writeFile(systemPath, options.contents);
+
+	if (project === undefined) {
+		return systemPath;
+	}
+
+	await mkdir(project, { recursive: true });
+	const projectPath = resolveContainedPath(project, options.fileName);
+	await writeFile(projectPath, options.contents);
+	return projectPath;
+}
+
+export async function removeEmailTempFiles(options: {
+	resourceTmpPath: string | undefined;
+	tmpPath: string;
+	artifacts: EmailArtifact[];
+}): Promise<void> {
+	await Promise.all(
+		options.artifacts.map(async (artifact) => {
+			const { system, project } = getEmailFileDirectories(
+				options.resourceTmpPath,
+				options.tmpPath,
+				artifact.prefix
+			);
+			const fileName = `${sanitisePath(artifact.id)}.${artifact.extension}`;
+			const paths = [
+				resolveContainedPath(system, fileName),
+				...(project === undefined
+					? []
+					: [resolveContainedPath(project, fileName)]),
+			];
+			await Promise.all(
+				paths.map(async (filePath) => {
+					try {
+						await unlink(filePath);
+					} catch (error) {
+						if (!isFileNotFoundError(error)) {
+							throw error;
+						}
+					}
+				})
+			);
+		})
+	);
+}
+
 export function getEmailPathsToClean(
 	resourceTmpPath: string | undefined,
 	tmpPath: string
@@ -99,10 +231,14 @@ export function getEmailPathsToClean(
 	return { sessionDir, parentDir };
 }
 
-export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
+export const EMAIL_PLUGIN: Plugin<
+	typeof EmailOptionsSchema,
+	typeof EmailSharedOptionsSchema
+> = {
 	options: EmailOptionsSchema,
+	sharedOptions: EmailSharedOptionsSchema,
 	bindingTypeDescription: "Email",
-	getBindings(options): Worker_Binding[] {
+	getBindings(options, _workerIndex, workerName): Worker_Binding[] {
 		if (!options.email?.send_email) {
 			return [];
 		}
@@ -118,10 +254,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 					}
 				: {
 						entrypoint: "SendEmailBinding",
-						name: getUserBindingServiceName(
-							SERVICE_SEND_EMAIL_WORKER_PREFIX,
-							name
-						),
+						name: getSendEmailServiceName(workerName, name),
 					},
 		}));
 	},
@@ -139,51 +272,28 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			return [];
 		}
 
-		// Root directories for disk services - must exist before service creation
-		// Subdirectories (e.g., email-text/, email-html/) are created lazily on first write
-		const emailSystemDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
-		await mkdir(emailSystemDirectory, { recursive: true });
+		// The email store service only exists when the local explorer is enabled.
+		const emailStoreBinding: Worker_Binding[] = args.sharedOptions
+			.unsafeLocalExplorer
+			? [
+					{
+						name: CoreBindings.SERVICE_EMAIL_STORE,
+						service: { name: EMAIL_STORE_SERVICE_NAME },
+					},
+				]
+			: [];
 
-		// Map binding disk services to names and paths, for concise access when storing emails as files.
-		// When resourceTmpPath is unset, only create system service to avoid duplicates
-		const diskServices: Array<{
-			location: "system" | "project";
-			bindingName: string;
-			serviceName: string;
-			path: string;
-		}> = [
-			{
-				location: "system",
-				bindingName: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
-				serviceName: `${EMAIL_DISK_SERVICE_NAME}:system`,
-				path: emailSystemDirectory,
-			},
-		];
+		// The worker that owns these send_email bindings. `getServices` is called
+		// once per worker, so this identifies which worker sent a message and lets
+		// the local explorer filter the "Sending" inbox by the selected worker.
+		const ownerWorkerBinding: Worker_Binding[] = args.sharedOptions
+			.unsafeLocalExplorer
+			? buildJsonBindings({
+					SEND_EMAIL_OWNER_WORKER: args.workerNames[args.workerIndex],
+				})
+			: [];
 
-		if (args.resourceTmpPath) {
-			const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
-				args.resourceTmpPath,
-				args.tmpPath
-			);
-			if (emailProjectSessionDirectory !== undefined) {
-				await mkdir(emailProjectSessionDirectory, { recursive: true });
-				diskServices.push({
-					location: "project",
-					bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
-					serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
-					path: emailProjectSessionDirectory,
-				});
-			}
-		}
-
-		const services: Service[] = diskServices.map(({ serviceName, path }) => ({
-			name: serviceName,
-			disk: {
-				path,
-				writable: true,
-			},
-		}));
-
+		const services: Service[] = [];
 		let hasRemote = false;
 		for (const { name, remoteProxyConnectionString, ...config } of args.options
 			.email?.send_email ?? []) {
@@ -192,7 +302,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 				continue;
 			}
 			services.push({
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
+				name: getSendEmailServiceName(args.workerNames[args.workerIndex], name),
 				worker: {
 					compatibilityDate: "2025-03-17",
 					modules: [
@@ -203,14 +313,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 					],
 					bindings: [
 						...buildJsonBindings(config),
-						...diskServices.map(({ bindingName, serviceName }) => ({
-							name: bindingName,
-							service: { name: serviceName },
-						})),
-						{
-							name: "email_disk_services",
-							json: JSON.stringify(diskServices),
-						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
+						...emailStoreBinding,
+						...ownerWorkerBinding,
 					],
 				},
 			});

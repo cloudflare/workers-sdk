@@ -65,6 +65,7 @@ export const CoreBindings = {
 	SERVICE_LOOPBACK: "MINIFLARE_LOOPBACK",
 	SERVICE_USER_ROUTE_PREFIX: "MINIFLARE_USER_ROUTE_",
 	SERVICE_USER_FALLBACK: "MINIFLARE_USER_FALLBACK",
+	TEXT_FALLBACK_WORKER_NAME: "MINIFLARE_FALLBACK_WORKER_NAME",
 	TEXT_CUSTOM_SERVICE: "MINIFLARE_CUSTOM_SERVICE",
 	// Backs the Images binding (`env.IMAGES`) — see imagesLocalFetcher.
 	IMAGES_BINDING_SERVICE: "MINIFLARE_IMAGES_BINDING_SERVICE",
@@ -95,6 +96,14 @@ export const CoreBindings = {
 	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
 	SERVICE_R2_S3: "MINIFLARE_R2_S3",
 	SERVICE_OBSERVABILITY_COLLECTOR: "MINIFLARE_OBSERVABILITY_COLLECTOR",
+	SERVICE_EMAIL_STORE: "MINIFLARE_EMAIL_STORE",
+	// Prefix for the local explorer's direct service bindings to each user
+	// worker in this instance. Lets the explorer invoke a specific worker's
+	// handlers (e.g. `email()` for "Send Test Email") by name, the same way it
+	// holds direct bindings to user resources like D1/R2/KV. Avoids routing
+	// through the entry worker, which under `wrangler dev` sits behind an outer
+	// proxy instance that doesn't know the user worker names.
+	SERVICE_EXPLORER_USER_WORKER_PREFIX: "MINIFLARE_EXPLORER_USER_WORKER_",
 } as const;
 
 export const ProxyOps = {

@@ -16,6 +16,7 @@ import {
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
 import {
+	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
@@ -96,6 +97,22 @@ export function getExplorerServices(
 			// workerdDebugPort bindings don't have any additional configuration
 			workerdDebugPort: kVoid,
 		},
+		// The email store service is registered alongside the explorer (see the
+		// core plugin's getServices), so it's always available to read from here.
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
+		// Direct service bindings to each user worker in this instance. These let
+		// the explorer invoke a worker's handlers (e.g. `email()` for "Send Test
+		// Email") by name, mirroring the direct resource bindings it holds for
+		// D1/R2/KV. Routing through the entry worker instead would fail under
+		// `wrangler dev`, where the public entry sits behind an outer proxy
+		// instance that only knows about wrangler's own proxy workers.
+		...workerNames.map((name) => ({
+			name: `${CoreBindings.SERVICE_EXPLORER_USER_WORKER_PREFIX}${name}`,
+			service: { name: getUserServiceName(name) },
+		})),
 	];
 
 	// Only bind the observability collector when observability is enabled —
@@ -337,6 +354,7 @@ export function constructExplorerWorkerOpts(
 			r2: [],
 			do: [],
 			workflows: [],
+			sendEmail: [],
 		};
 
 		for (const [bindingName, ns] of namespaceEntries(
@@ -386,6 +404,13 @@ export function constructExplorerWorkerOpts(
 				bindingName,
 				className: workflow.className,
 				scriptName: workflow.scriptName ?? workerName,
+			});
+		}
+
+		for (const sendEmail of workerOpts.email.email?.send_email ?? []) {
+			bindings.sendEmail.push({
+				id: sendEmail.name,
+				bindingName: sendEmail.name,
 			});
 		}
 

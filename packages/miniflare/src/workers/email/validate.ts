@@ -1,6 +1,6 @@
 import { red } from "kleur/colors";
 import PostalMime from "postal-mime";
-import { RAW_EMAIL } from "./constants";
+import { MAX_LOCAL_EMAIL_BYTES, RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 import type { Email } from "postal-mime";
 
@@ -64,12 +64,15 @@ export async function isEmailReplyable(
 export async function validateReply(
 	incomingMessage: Email,
 	replyMessage: EmailMessage
-): Promise<Uint8Array> {
+): Promise<{ raw: Uint8Array; messageId: string }> {
 	const rawEmail: ReadableStream<Uint8Array> = replyMessage[RAW_EMAIL];
 
 	const rawEmailBuffer = new Uint8Array(
 		await new Response(rawEmail).arrayBuffer()
 	);
+	if (rawEmailBuffer.byteLength > MAX_LOCAL_EMAIL_BYTES) {
+		throw new Error("Reply email exceeds the 1 MiB local development limit.");
+	}
 
 	let parsedReply: Email;
 	try {
@@ -126,12 +129,15 @@ export async function validateReply(
 		const finalReplyEmail = new Uint8Array(
 			encodedReferences.byteLength + rawEmailBuffer.byteLength
 		);
+		if (finalReplyEmail.byteLength > MAX_LOCAL_EMAIL_BYTES) {
+			throw new Error("Reply email exceeds the 1 MiB local development limit.");
+		}
 
 		// prepend References to be in the headers instead of the end of the body
 		finalReplyEmail.set(encodedReferences, 0);
 		finalReplyEmail.set(rawEmailBuffer, encodedReferences.byteLength);
-		return finalReplyEmail;
+		return { raw: finalReplyEmail, messageId: parsedReply.messageId };
 	}
 
-	return rawEmailBuffer;
+	return { raw: rawEmailBuffer, messageId: parsedReply.messageId };
 }

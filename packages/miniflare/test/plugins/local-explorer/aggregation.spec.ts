@@ -3,11 +3,54 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
+import dedent from "ts-dedent";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
+import {
+	zEmailGetRoutingResponse,
+	zEmailListRoutingResponse,
+	zEmailListSendingResponse,
+	zEmailSendRoutingResponse,
+} from "../../../src/workers/local-explorer/generated/zod.gen";
 import { disposeWithRetry, waitForWorkersInRegistry } from "../../test-shared";
+import { expectValidResponse } from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
+
+// Worker with an email() handler, used as the receiving end of a cross-instance
+// routing delivery.
+const EMAIL_HANDLER_WORKER = dedent /* javascript */ `
+	export default {
+		fetch() {
+			return new Response("user worker");
+		},
+		async email(message) {},
+	};
+`;
+
+// Worker that sends an email through a send_email binding using a
+// MessageBuilder-style payload posted in the request body.
+const SEND_EMAIL_WORKER = dedent /* javascript */ `
+	import { EmailMessage } from "cloudflare:email";
+
+	export default {
+		async fetch(request, env) {
+			if (new URL(request.url).pathname === "/legacy") {
+				await env.SEND_EMAIL.send(
+					new EmailMessage(
+						"sender@example.com",
+						"recipient@example.com",
+						request.body
+					)
+				);
+				return new Response("ok");
+			}
+			const builder = await request.json();
+			await env.SEND_EMAIL.send(builder);
+			return new Response("ok");
+		},
+	};
+`;
 
 interface ListResponse {
 	result?: Array<{ id?: string; uuid?: string; [key: string]: unknown }>;
@@ -685,5 +728,181 @@ describe("Same ID across multiple instances with same persistence directories", 
 			`${BASE_URL}/storage/kv/namespaces/shared-kv-id/values/test-key`
 		);
 		expect(await responseB.text()).toBe("value-from-A");
+	});
+});
+
+// Workers can also be spread across separate Miniflare instances that share a
+// dev registry. Selecting a peer worker must surface its emails and route a test
+// email to it, via cross-instance aggregation.
+describe("Email aggregation across instances", () => {
+	let registryPath: string;
+	let instanceA: Miniflare;
+	let instanceB: Miniflare;
+
+	beforeAll(async () => {
+		registryPath = mkdtempSync(path.join(tmpdir(), "mf-email-registry-"));
+
+		instanceA = new Miniflare({
+			name: "worker-a",
+			inspectorPort: 0,
+			compatibilityDate: "2025-03-17",
+			modules: true,
+			script: EMAIL_HANDLER_WORKER,
+			email: { send_email: [{ name: "SEND_EMAIL" }] },
+			unsafeLocalExplorer: true,
+			unsafeTriggerHandlers: true,
+			unsafeDevRegistryPath: registryPath,
+		});
+		instanceB = new Miniflare({
+			name: "worker-b",
+			inspectorPort: 0,
+			compatibilityDate: "2025-03-17",
+			modules: true,
+			script: SEND_EMAIL_WORKER,
+			email: { send_email: [{ name: "SEND_EMAIL" }] },
+			unsafeLocalExplorer: true,
+			unsafeTriggerHandlers: true,
+			unsafeDevRegistryPath: registryPath,
+		});
+		await instanceA.ready;
+		await instanceB.ready;
+		await waitForWorkersInRegistry(registryPath, ["worker-a", "worker-b"]);
+	});
+
+	afterAll(async () => {
+		await Promise.all([
+			disposeWithRetry(instanceA),
+			disposeWithRetry(instanceB),
+		]);
+		removeDirSync(registryPath);
+	});
+
+	test("a peer worker's sent emails are visible when it is selected", async ({
+		expect,
+	}) => {
+		// worker-b (on instance B) sends an email through its send_email binding.
+		const res = await instanceB.dispatchFetch("http://localhost", {
+			method: "POST",
+			body: JSON.stringify({
+				from: "sender@example.com",
+				to: "recipient@example.com",
+				subject: "sent by peer",
+				text: "body",
+			}),
+		});
+		expect(await res.text()).toBe("ok");
+
+		// Instance A aggregates instance B's emails and filters to worker-b.
+		const listFromA = await expectValidResponse(
+			await instanceA.dispatchFetch(
+				`${BASE_URL}/email/sending?worker=worker-b`
+			),
+			zEmailListSendingResponse,
+			expect
+		);
+		expect(listFromA.result).toEqual([
+			expect.objectContaining({ worker: "worker-b", subject: "sent by peer" }),
+		]);
+
+		// Selecting worker-a must not surface worker-b's sent email, even though
+		// the two share an aggregated view.
+		const listForWorkerA = await expectValidResponse(
+			await instanceA.dispatchFetch(
+				`${BASE_URL}/email/sending?worker=worker-a`
+			),
+			zEmailListSendingResponse,
+			expect
+		);
+		expect(listForWorkerA.result).toEqual([]);
+	});
+
+	test("sending a test email to a peer worker delivers to that worker", async ({
+		expect,
+	}) => {
+		// Instance A drives a test email at worker-a's email() handler, which
+		// lives on instance A itself.
+		const sendResponse = await instanceA.dispatchFetch(
+			`${BASE_URL}/email/routing/send?worker=worker-a`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "routed to peer",
+					text: "body",
+				}),
+			}
+		);
+		await expectValidResponse(sendResponse, zEmailSendRoutingResponse, expect);
+
+		// Instance B asks for worker-a's routing inbox; aggregation pulls it from
+		// instance A.
+		const listFromB = await expectValidResponse(
+			await instanceB.dispatchFetch(
+				`${BASE_URL}/email/routing?worker=worker-a`
+			),
+			zEmailListRoutingResponse,
+			expect
+		);
+		expect(listFromB.result).toEqual([
+			expect.objectContaining({
+				worker: "worker-a",
+				subject: "routed to peer",
+			}),
+		]);
+	});
+
+	// Regression: with no `?worker` filter, the unfiltered inbox lists every
+	// instance's emails, so opening one must also work regardless of which
+	// instance owns it. Previously the detail lookup only queried peers when a
+	// worker was selected, so a peer-owned email 404'd in the unfiltered view.
+	test("a peer worker's email opens in the unfiltered view", async ({
+		expect,
+	}) => {
+		// worker-a receives a routing email on instance A.
+		await expectValidResponse(
+			await instanceA.dispatchFetch(
+				`${BASE_URL}/email/routing/send?worker=worker-a`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						from: "sender@example.com",
+						to: ["recipient@example.com"],
+						subject: "unfiltered open",
+						text: "body",
+					}),
+				}
+			),
+			zEmailSendRoutingResponse,
+			expect
+		);
+
+		// From instance B, list the unfiltered inbox and find worker-a's email.
+		const unfilteredList = await expectValidResponse(
+			await instanceB.dispatchFetch(`${BASE_URL}/email/routing`),
+			zEmailListRoutingResponse,
+			expect
+		);
+		const peerEmail = unfilteredList.result?.find(
+			(email) => email.subject === "unfiltered open"
+		);
+		expect(peerEmail).toBeDefined();
+		const emailId = peerEmail?.messageId?.replace(/^<|>$/g, "");
+
+		// Opening it from instance B (no worker filter) must resolve via the
+		// broadcast peer lookup rather than 404.
+		const detail = await expectValidResponse(
+			await instanceB.dispatchFetch(`${BASE_URL}/email/routing/${emailId}`),
+			zEmailGetRoutingResponse,
+			expect
+		);
+		expect(detail.result).toEqual(
+			expect.objectContaining({
+				worker: "worker-a",
+				subject: "unfiltered open",
+			})
+		);
 	});
 });

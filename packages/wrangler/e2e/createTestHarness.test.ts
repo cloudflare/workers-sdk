@@ -1876,6 +1876,7 @@ describe("createTestHarness", () => {
 				},
 			],
 			events: [
+				{ type: "received", timestamp: expect.any(String) },
 				{
 					type: "forward",
 					timestamp: expect.any(String),
@@ -1900,7 +1901,10 @@ describe("createTestHarness", () => {
 			rejectReason: "blocked sender",
 			forwards: [],
 			replies: [],
-			events: [{ type: "reject", timestamp: expect.any(String) }],
+			events: [
+				{ type: "received", timestamp: expect.any(String) },
+				{ type: "reject", timestamp: expect.any(String) },
+			],
 		});
 
 		await expect(
@@ -1927,6 +1931,7 @@ describe("createTestHarness", () => {
 				},
 			],
 			events: [
+				{ type: "received", timestamp: expect.any(String) },
 				{
 					type: "forward",
 					timestamp: expect.any(String),
