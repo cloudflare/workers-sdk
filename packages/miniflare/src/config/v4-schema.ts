@@ -352,6 +352,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 	unsafeEvalBinding: z.string().optional(),
 	unsafeUseModuleFallbackService: z.boolean().optional(),
 	unsafeRegisterWorker: z.boolean().optional(),
+	unsafeExcludeFromObservability: z.boolean().optional(),
 	hasAssetsAndIsVitest: z.boolean().optional(),
 	tails: z.array(V4ServiceDesignatorSchema).optional(),
 	streamingTails: z.array(V4ServiceDesignatorSchema).optional(),
@@ -757,6 +758,7 @@ export type V4WorkerOptionsShape = {
 	unsafeEvalBinding?: string;
 	unsafeUseModuleFallbackService?: boolean;
 	unsafeRegisterWorker?: boolean;
+	unsafeExcludeFromObservability?: boolean;
 	hasAssetsAndIsVitest?: boolean;
 	tails?: V4ServiceDesignator[];
 	streamingTails?: V4ServiceDesignator[];

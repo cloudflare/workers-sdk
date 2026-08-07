@@ -546,7 +546,9 @@ export const CORE_PLUGIN: Plugin = {
 		// (as a streaming tail consumer) and add the compatibility flags workerd
 		// needs to emit those tail events. This is done here so wrangler and the
 		// Vite plugin don't each have to repeat it.
-		const observabilityEnabled = sharedOptions.unsafeObservability === true;
+		const observabilityEnabled =
+			sharedOptions.unsafeObservability === true &&
+			dev?.unsafeExcludeFromObservability !== true;
 		const tailConsumers = observabilityEnabled
 			? [
 					...(config.tailConsumers ?? []),

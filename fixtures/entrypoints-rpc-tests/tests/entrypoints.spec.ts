@@ -893,7 +893,6 @@ describe("entrypoints", () => {
 			convertV4MiniflareOptions({
 				name: "bound",
 				unsafeDevRegistryPath: isolatedDevRegistryPath,
-				unsafeRegisterWorker: true,
 				compatibilityFlags: ["experimental"],
 				modules: true,
 				https: true,

@@ -181,6 +181,19 @@ export default {
 			});
 			return new Response("closed");
 		}
+		if (url.pathname === "/repersist") {
+			const store = env.TRACE_STORE.get(env.TRACE_STORE.idFromName("singleton"));
+			// The same span re-sent as a later batch flush would send it: still
+			// running on the first call, closed on the second.
+			await store.persist([{
+				traceId: "trace-re", spanId: "root", parentId: null,
+				name: "agent run", kind: "http", startMs: 7000,
+				durationMs: url.searchParams.get("close") ? 2500 : null,
+				outcome: url.searchParams.get("close") ? "ok" : null,
+				error: null, attributes: { "faas.trigger": "http" },
+			}], []);
+			return new Response("repersisted");
+		}
 		if (url.pathname.startsWith("/wobs/")) {
 			return env.WOBS.fetch(
 				new Request("http://collector" + url.pathname.slice("/wobs".length) + url.search, request)
@@ -377,6 +390,54 @@ describe("unsafeObservability (write-through capture)", () => {
 		assert(rootClosed, "expected the closed root span");
 		expect(rootClosed.duration_ms).toBe(1234);
 		expect(JSON.parse(rootClosed.attributes ?? "{}")["cpu_time_ms"]).toBe(2);
+	});
+
+	test("re-persisting a span updates it without re-stamping created_at", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			workers: [storeWorker()],
+		});
+		useDispose(mf);
+
+		async function readRe() {
+			const rows = await queryStore(
+				mf,
+				`SELECT duration_ms, outcome, created_at FROM spans
+					WHERE trace_id = ? AND span_id = 'root'`,
+				["trace-re"]
+			);
+			assert(rows[0], "expected the re-persisted span");
+			return rows[0] as {
+				duration_ms: number | null;
+				outcome: string | null;
+				created_at: string;
+			};
+		}
+
+		expect(
+			await (await mf.dispatchFetch("http://localhost/repersist")).text()
+		).toBe("repersisted");
+		const open = await readRe();
+		expect(open.duration_ms).toBe(null);
+
+		// `created_at` defaults to `datetime('now')`, which has whole-second
+		// granularity, so wait long enough that a re-stamp would be visible.
+		await new Promise((resolve) => setTimeout(resolve, 1100));
+
+		expect(
+			await (
+				await mf.dispatchFetch("http://localhost/repersist?close=1")
+			).text()
+		).toBe("repersisted");
+		const closed = await readRe();
+		// The update landed...
+		expect(closed.duration_ms).toBe(2500);
+		expect(closed.outcome).toBe("ok");
+		// ...but the row was upserted, not deleted and re-inserted, so the trace
+		// list still shows when the invocation started rather than when it ended.
+		expect(closed.created_at).toBe(open.created_at);
 	});
 });
 

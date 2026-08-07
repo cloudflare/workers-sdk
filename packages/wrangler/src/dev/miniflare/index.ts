@@ -1197,7 +1197,6 @@ export async function buildMiniflareOptions(
 		workers: [
 			{
 				name: getName(config),
-				unsafeRegisterWorker: true,
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 

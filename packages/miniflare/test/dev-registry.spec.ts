@@ -6,7 +6,7 @@ import { singleModuleManifest, useDispose, useTmp } from "./test-shared";
 import type { MiniflareOptions, WorkerRegistry } from "miniflare";
 
 describe.sequential("DevRegistry", () => {
-	test("only registers workers that opt in", async ({ expect }) => {
+	test("registers workers by default unless opted out", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const worker = {
 			config: {
@@ -27,13 +27,17 @@ describe.sequential("DevRegistry", () => {
 		useDispose(mf);
 		await mf.ready;
 
-		expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+		await vi.waitFor(() => {
+			expect(getWorkerRegistry(unsafeDevRegistryPath)["worker"]).toBeDefined();
+		});
 
 		await mf.setOptions({
 			...workerOptions,
-			workers: [{ ...worker, dev: { unsafeRegisterWorker: true } }],
+			workers: [{ ...worker, dev: { unsafeRegisterWorker: false } }],
 		});
-		expect(getWorkerRegistry(unsafeDevRegistryPath)["worker"]).toBeDefined();
+		await vi.waitFor(() => {
+			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+		});
 	});
 
 	test("fetch to service worker", async ({ expect }) => {
