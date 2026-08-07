@@ -38,6 +38,7 @@ describe("hyperdrive help", () => {
 			  wrangler hyperdrive delete <id>    Delete a Hyperdrive config
 			  wrangler hyperdrive get <id>       Get a Hyperdrive config
 			  wrangler hyperdrive list           List Hyperdrive configs
+			  wrangler hyperdrive planetscale    Provision Cloudflare-billed PlanetScale databases [experimental]
 			  wrangler hyperdrive update <id>    Update a Hyperdrive config
 
 			GLOBAL FLAGS
@@ -75,6 +76,7 @@ describe("hyperdrive help", () => {
 			  wrangler hyperdrive delete <id>    Delete a Hyperdrive config
 			  wrangler hyperdrive get <id>       Get a Hyperdrive config
 			  wrangler hyperdrive list           List Hyperdrive configs
+			  wrangler hyperdrive planetscale    Provision Cloudflare-billed PlanetScale databases [experimental]
 			  wrangler hyperdrive update <id>    Update a Hyperdrive config
 
 			GLOBAL FLAGS
@@ -87,6 +89,116 @@ describe("hyperdrive help", () => {
 			      --profile         Use a specific auth profile  [string]
 			  -v, --version         Show version number  [boolean]"
 		`);
+	});
+});
+
+describe("hyperdrive planetscale signature", () => {
+	mockAccountId();
+	mockApiToken();
+	runInTempDir();
+
+	const std = mockConsoleMethods();
+
+	function mockCreateDatabaseSignature(): Promise<{
+		accountId: string;
+		integration: string;
+		method: string;
+	}> {
+		return new Promise((resolve) => {
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/hyperdrive/integrationsOperations/:integration/createDatabaseSignature",
+					async ({ params, request }) => {
+						resolve({
+							accountId: String(params.accountId),
+							integration: String(params.integration),
+							method: request.method,
+						});
+						return HttpResponse.json(
+							createFetchResult({
+								account_id: "some-account-id",
+								timestamp: "1700000000",
+								signature: "deadbeef",
+							})
+						);
+					}
+				)
+			);
+		});
+	}
+
+	it("should show the planetscale namespace help", async ({ expect }) => {
+		await runWrangler("hyperdrive planetscale");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler hyperdrive planetscale
+
+			Provision Cloudflare-billed PlanetScale databases [experimental]
+
+			COMMANDS
+			  wrangler hyperdrive planetscale signature  Generate a signed authorization for creating a Cloudflare-billed PlanetScale database [experimental]
+
+			GLOBAL FLAGS
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
+			  -v, --version         Show version number  [boolean]"
+		`);
+	});
+
+	it("should show the signature command help", async ({ expect }) => {
+		await runWrangler("hyperdrive planetscale signature --help");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler hyperdrive planetscale signature
+
+			Generate a signed authorization for creating a Cloudflare-billed PlanetScale database [experimental]
+
+			GLOBAL FLAGS
+			  -c, --config          Path to Wrangler configuration file  [string]
+			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help            Show help  [boolean]
+			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+			      --profile         Use a specific auth profile  [string]
+			  -v, --version         Show version number  [boolean]"
+		`);
+	});
+
+	it("should POST to the planetScale integration endpoint", async ({
+		expect,
+	}) => {
+		const reqProm = mockCreateDatabaseSignature();
+		await runWrangler("hyperdrive planetscale signature");
+
+		await expect(reqProm).resolves.toEqual({
+			accountId: "some-account-id",
+			integration: "planetScale",
+			method: "POST",
+		});
+	});
+
+	it("should print only the signature JSON, so it can be piped", async ({
+		expect,
+	}) => {
+		void mockCreateDatabaseSignature();
+		await runWrangler("hyperdrive planetscale signature");
+
+		expect(std.out).not.toContain("wrangler x.x.x");
+		expect(JSON.parse(std.out)).toEqual({
+			account_id: "some-account-id",
+			timestamp: "1700000000",
+			signature: "deadbeef",
+		});
 	});
 });
 
