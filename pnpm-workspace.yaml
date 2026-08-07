@@ -1,5 +1,4 @@
 packages:
-  - ".flue/"
   - "packages/*"
   - "packages/vite-plugin-cloudflare/playground/*"
   - "packages/vite-plugin-cloudflare/playground"

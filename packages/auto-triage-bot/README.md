@@ -1,6 +1,6 @@
-# Workers SDK Flue
+# Workers SDK Auto Triage Bot
 
-This private [Flue](https://flueframework.com/) application hosts agent-powered automation for maintaining the Workers SDK. It connects external events to specialized agents, gives each agent scoped tools and runtime access, and reports results through the originating service.
+This private [Flue](https://flueframework.com/) application in `packages/auto-triage-bot` hosts agent-powered automation for maintaining the Workers SDK. It connects external events to specialized agents, gives each agent scoped tools and runtime access, and reports results through the originating service.
 
 ## Architecture
 
@@ -23,7 +23,7 @@ Install the workers-sdk workspace dependencies from the repository root:
 pnpm install
 ```
 
-Copy `.flue/.env.example` to `.flue/.env`, then replace the placeholder values required by the current GitHub workflow:
+Copy `packages/auto-triage-bot/.env.example` to `packages/auto-triage-bot/.env`, then replace the placeholder values required by the current GitHub workflow:
 
 - `GITHUB_TOKEN`: a fine-grained personal access token with read and write access to issues for every repository the bot handles.
 - `GITHUB_WEBHOOK_SECRET`: a high-entropy secret shared with the GitHub webhook.

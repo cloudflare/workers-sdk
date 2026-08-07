@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains the private Flue application for agent-powered Workers SDK automation. Channels receive events from external services and dispatch specialized agents with narrowly scoped tools and runtime access.
+This package contains the private Flue application for agent-powered Workers SDK automation. Channels receive events from external services and dispatch specialized agents with narrowly scoped tools and runtime access.
 
 GitHub issue reproduction is the first implemented workflow, not the boundary of the application. Keep shared architecture generic enough for additional maintenance and triage workflows without prematurely abstracting code used by only one workflow.
 
@@ -25,7 +25,7 @@ GitHub issue reproduction is the first implemented workflow, not the boundary of
 - Validate agent initial data with Valibot and derive TypeScript types from the schema.
 - Register new channels in `src/app.ts` and keep their routes grouped under `/channels/`.
 - Preserve each existing workflow's external behavior unless the requested change explicitly modifies its contract.
-- Read secrets from Worker bindings. Never commit `.flue/.env` or inline tokens, webhook secrets, or credentials.
+- Read secrets from Worker bindings. Never commit `packages/auto-triage-bot/.env` or inline tokens, webhook secrets, or credentials.
 - Use least-privilege credentials limited to the repositories, services, and actions required by each workflow.
 - Update `.env.example`, `wrangler.jsonc`, and generated binding types together when adding or changing bindings or secrets.
 - Do not edit `dist/`, `.turbo/`, `.wrangler/`, or `worker-configuration.d.ts` directly. Change source or configuration, rebuild, and regenerate types instead.
