@@ -8,6 +8,7 @@ packages/local-explorer-ui/src/routes/email/sending.tsx
   s_b702d30224ef81::t_3cb88541f75c78 17,257-258
 packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
   s_b702d30224ef81::t_14fd632c1ef521 48,191
+  s_20890f2bc2d65e::t_fd8158969d7e2a 191
 packages/local-explorer-ui/src/routes/email/shared/types.ts
   s_b702d30224ef81::t_ef8a25e325fcb7 15-24
 ---
@@ -17,6 +18,14 @@ packages/local-explorer-ui/src/routes/email/shared/types.ts
   "base_commit_sha": "357f2848033aa491aa98f9f0549604eb04585887",
   "prompts": {},
   "sessions": {
+    "s_20890f2bc2d65e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_037c6695cffekPS6cQICtHB2o2",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
     "s_b702d30224ef81": {
       "agent_id": {
         "tool": "opencode",
