@@ -122,6 +122,63 @@ test(
 );
 
 test(
+	"resolves relative runner and auxiliary worker rootPath before conversion",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				main: "./runner/src/index.ts",
+				miniflare: {
+					rootPath: "runner",
+					textBlobBindings: {
+						MESSAGE: "message.txt",
+					},
+					workers: [
+						{
+							name: "auxiliary-worker",
+							rootPath: "auxiliary",
+							modules: true,
+							scriptPath: "./src/index.ts",
+						},
+					],
+					serviceBindings: {
+						AUXILIARY: "auxiliary-worker",
+					},
+				},
+			}),
+			"runner/src/index.ts": dedent /* javascript */ `
+				export default {
+					async fetch(request, env) {
+						const response = await env.AUXILIARY.fetch(request);
+						return new Response(env.MESSAGE + ":" + await response.text());
+					},
+				};
+			`,
+			"runner/message.txt": "from runner",
+			"runner/auxiliary/src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch() {
+						return new Response("from auxiliary");
+					},
+				};
+			`,
+			"index.test.ts": dedent /* javascript */ `
+				import { SELF } from "cloudflare:test";
+				import { it } from "vitest";
+
+				it("fetches through auxiliary worker", async ({ expect }) => {
+					const response = await SELF.fetch("https://example.com/");
+					expect(await response.text()).toBe("from runner:from auxiliary");
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
+	}
+);
+
+test(
 	"requires modules entrypoint to use SELF",
 	{ timeout: 45_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {

@@ -1,4 +1,5 @@
 import { File } from "node:buffer";
+import { Response } from "../../http";
 import type {
 	ImageInfoResponse,
 	RequestInitCfPropertiesImage,

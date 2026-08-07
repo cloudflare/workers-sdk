@@ -7,9 +7,6 @@ export function zAwaitable<T extends z.ZodType>(
 	return type.or(z.promise(type));
 }
 
-export type OptionalZodTypeOf<T extends z.ZodType | undefined> =
-	T extends z.ZodType ? z.output<T> : undefined;
-
 // https://github.com/colinhacks/zod/blob/59768246aa57133184b2cf3f7c2a1ba5c3ab08c3/README.md?plain=1#L1302-L1317
 export const LiteralSchema = z.union([
 	z.string(),

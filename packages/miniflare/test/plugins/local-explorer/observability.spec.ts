@@ -7,7 +7,7 @@ import {
 	zObservabilityQueryResponse,
 	zWorkersApiResponseCommonFailure,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import { disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry, singleModuleManifest } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
@@ -71,20 +71,22 @@ describe("Observability API", () => {
 
 	beforeAll(async () => {
 		mf = new Miniflare({
-			compatibilityDate: "2026-01-01",
 			inspectorPort: 0,
 			unsafeLocalExplorer: true,
 			unsafeObservability: true,
 			workers: [
 				{
-					name: "user",
-					modules: true,
-					compatibilityDate: "2026-01-01",
-					script: SEED_WORKER,
-					durableObjects: {
-						TRACE_STORE: {
-							className: "TraceStore",
-							scriptName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+					config: {
+						type: "worker",
+						name: "user",
+						compatibilityDate: "2026-01-01",
+						manifest: singleModuleManifest(SEED_WORKER),
+						env: {
+							TRACE_STORE: {
+								type: "durable-object",
+								workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+								exportName: "TraceStore",
+							},
 						},
 					},
 				},
@@ -220,11 +222,20 @@ describe("Observability API (observability disabled)", () => {
 
 	beforeAll(() => {
 		mf = new Miniflare({
-			compatibilityDate: "2026-01-01",
 			inspectorPort: 0,
 			unsafeLocalExplorer: true,
-			modules: true,
-			script: `export default { fetch() { return new Response("ok"); } }`,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2026-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("ok"); } }`
+						),
+					},
+				},
+			],
 		});
 	});
 

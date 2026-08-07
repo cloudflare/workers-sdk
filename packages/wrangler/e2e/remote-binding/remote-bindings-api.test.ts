@@ -40,20 +40,40 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			remoteProxyConnectionString: RemoteProxyConnectionString
 		): MiniflareOptions {
 			return {
-				modules: true,
-				script: `
-				export default {
-					async fetch(req, env) {
-						const myServiceMsg = !env.MY_SERVICE ? null : await (await env.MY_SERVICE.fetch(req)).text();
-						return new Response("worker response: " + (myServiceMsg ?? ""));
-					}
-				}`,
-				serviceBindings: {
-					MY_SERVICE: {
-						name: remoteWorkerName,
-						remoteProxyConnectionString,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: {
+								mainModule: "index.js",
+								modules: {
+									"index.js": {
+										type: "esm",
+										contents: `
+											export default {
+												async fetch(req, env) {
+													const myServiceMsg = !env.MY_SERVICE ? null : await (await env.MY_SERVICE.fetch(req)).text();
+													return new Response("worker response: " + (myServiceMsg ?? ""));
+												}
+											}`,
+									},
+								},
+							},
+							env: {
+								MY_SERVICE: {
+									type: "worker",
+									workerName: remoteWorkerName,
+									remote: true,
+								},
+							},
+						},
+						dev: {
+							remoteProxyConnectionString,
+						},
 					},
-				},
+				],
 			};
 		}
 

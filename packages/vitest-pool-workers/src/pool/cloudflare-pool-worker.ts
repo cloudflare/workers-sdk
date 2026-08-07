@@ -207,8 +207,9 @@ export class CloudflarePoolWorker implements PoolWorker {
 			"Message received from Worker before initialisation"
 		);
 
-		const rules = this.parsedPoolOptions.miniflare?.modulesRules;
-		const compiledRules = compileModuleRules(rules ?? []);
+		const compiledRules = compileModuleRules(
+			this.parsedPoolOptions.moduleRules ?? []
+		);
 
 		if (event === "message") {
 			const messageWrapper = (m: { data: string | ArrayBuffer }) => {
