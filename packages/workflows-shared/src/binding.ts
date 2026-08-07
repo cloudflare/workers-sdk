@@ -160,7 +160,11 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 
 		// Deterministic (caller-provided) ids carry a documented uniqueness
 		// contract: creating an instance with an id that already exists throws
-		// and the existing instance is retained.
+		// and the existing instance is retained. The existence marker is
+		// committed by the engine's init(), dispatched fire-and-forget below,
+		// so duplicate creates racing ahead of that commit can all resolve
+		// successfully; the engine's init() guards make the extra dispatch a
+		// no-op, so the race cannot double-execute the workflow body.
 		if (options.id !== undefined && (await this.#instanceExists(id))) {
 			throw duplicateInstanceError(id);
 		}
