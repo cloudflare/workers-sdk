@@ -47,11 +47,6 @@ minimumReleaseAgeExclude:
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
   - "rosie-skills"
-  # Flue packages are updated together and used by the issue triage bot.
-  - "@flue/cli@2.0.3"
-  - "@flue/github@2.0.3"
-  - "@flue/runtime@2.0.3"
-  - "@flue/vite@2.0.3"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
