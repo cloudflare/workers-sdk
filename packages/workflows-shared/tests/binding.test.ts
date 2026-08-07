@@ -108,6 +108,15 @@ describe("WorkflowBinding", () => {
 				"Workflow instance has invalid id"
 			);
 		});
+
+		it("should reject a null id instead of generating one", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			await expect(
+				binding.create({ id: null as unknown as string })
+			).rejects.toThrow("Workflow instance has invalid id");
+		});
 	});
 
 	describe("get()", () => {
@@ -180,6 +189,112 @@ describe("WorkflowBinding", () => {
 			await expect(binding.createBatch([])).rejects.toThrow(
 				"WorkflowError: batchCreate should have at least 1 instance"
 			);
+		});
+
+		it("should skip and exclude ids that already exist", async ({ expect }) => {
+			const existing = uniqueId("dedup-existing");
+			const fresh = uniqueId("dedup-fresh");
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(existing));
+			setTestWorkflowCallback(async () => "done");
+
+			const first = await binding.createBatch([{ id: existing }]);
+			expect(first.map((r) => r.id)).toEqual([existing]);
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+			const second = await binding.createBatch([{ id: existing }]);
+			expect(second).toEqual([]);
+
+			const mixed = await binding.createBatch([
+				{ id: existing },
+				{ id: fresh },
+			]);
+			expect(mixed.map((r) => r.id)).toEqual([fresh]);
+
+			const freshStub = env.ENGINE.get(env.ENGINE.idFromName(fresh));
+			await waitUntilLogEvent(freshStub, InstanceEvent.WORKFLOW_SUCCESS);
+		});
+
+		it("should collapse duplicate ids within a single batch", async ({
+			expect,
+		}) => {
+			const id = uniqueId("dedup-in-batch");
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+			setTestWorkflowCallback(async () => "done");
+
+			const results = await binding.createBatch([{ id }, { id }, { id }]);
+			expect(results.map((r) => r.id)).toEqual([id]);
+
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+		});
+
+		it("should reject the whole batch before creating anything when an id is invalid", async ({
+			expect,
+		}) => {
+			const good = uniqueId("batch-invalid-good");
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			await expect(
+				binding.createBatch([{ id: good }, { id: "#invalid!" }])
+			).rejects.toThrow("Workflow instance has invalid id");
+
+			// The valid entry listed before the invalid one must not have been
+			// created.
+			await expect(binding.get(good)).rejects.toThrow("instance.not_found");
+		});
+
+		it("should create batch entries without ids under generated ids", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			const results = await binding.createBatch([{}, {}]);
+			expect(results).toHaveLength(2);
+			expect(results[0].id).not.toBe(results[1].id);
+
+			// Wait for both workflows to complete so the fire-and-forget
+			// init() RPCs settle before teardown.
+			for (const { id } of results) {
+				const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+				await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+			}
+		});
+	});
+
+	describe("deterministic id uniqueness", () => {
+		it("should throw when creating an instance with an existing id", async ({
+			expect,
+		}) => {
+			const id = uniqueId("dup-create");
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+			setTestWorkflowCallback(async () => "done");
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+			await expect(binding.create({ id })).rejects.toThrow(
+				`(instance.already_exists) Workflow instance with id "${id}" already exists`
+			);
+		});
+
+		it("should not throw for auto-generated ids", async ({ expect }) => {
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			const first = await binding.create();
+			const second = await binding.create();
+			expect(first.id).not.toBe(second.id);
+
+			// Wait for both workflows to complete so the fire-and-forget
+			// init() RPCs settle before teardown.
+			for (const { id } of [first, second]) {
+				const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+				await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+			}
 		});
 	});
 });
