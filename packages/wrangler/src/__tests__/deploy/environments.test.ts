@@ -451,19 +451,23 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index.js");
 		});
 
-		it("should error if the region is set in both env var and configured, and they conflict", async ({
+		it("should warn and use the env var if it conflicts with the configured region", async ({
 			expect,
 		}) => {
 			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "public");
 			writeWranglerConfig({ compliance_region: "fedramp_high" });
 			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
 
-			await expect(runWrangler("deploy ./index.js")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: The compliance region has been set to different values in two places:
-				 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`public\`
-				 - \`compliance_region\` configuration property: \`fedramp_high\`]
-			`);
+			await runWrangler("deploy ./index.js");
+
+			expect(std.warn).toContain(
+				'The compliance region was resolved to "public" from the `CLOUDFLARE_COMPLIANCE_REGION` environment variable, which takes precedence over the configured value "fedramp_high".'
+			);
 		});
 
 		it("should not error if the region is set in both env var and configured, and they are the same", async () => {
