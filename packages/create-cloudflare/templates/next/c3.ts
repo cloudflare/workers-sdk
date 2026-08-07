@@ -119,6 +119,7 @@ const generate = async (ctx: C3Context) => {
 		variant.value === "opennext" ? OPENNEXT_TYPES_PATH : VINEXT_TYPES_PATH;
 
 	if (variant.value === "opennext") {
+		ctx.template.frameworkCli = undefined;
 		await generateOpenNext(ctx);
 		return;
 	}
@@ -147,7 +148,7 @@ export default {
 			scripts: {
 				// Align with OpenNext so the shared previewScript: "preview" works
 				// for both variants (vinext only ships dev/build/start/deploy).
-				preview: `${npm} run build && ${npm} run start`,
+				preview: `${npm} run build && ${npm} run start --`,
 				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
 			},
 		};

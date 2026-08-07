@@ -35,6 +35,7 @@ import type { ExpectStatic } from "vitest";
 
 export type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
+	expectFrameworkCli?: boolean;
 	nodeCompat: boolean;
 	typesPath?: string;
 	unsupportedPms?: string[];
@@ -498,7 +499,8 @@ export async function testGitCommitMessage(
 	expect: ExpectStatic,
 	projectName: string,
 	framework: string,
-	projectPath: string
+	projectPath: string,
+	expectFrameworkCli = true
 ) {
 	const commitMessage = await runCommand(["git", "log", "-1"], {
 		silent: true,
@@ -506,11 +508,19 @@ export async function testGitCommitMessage(
 	});
 
 	expect(commitMessage).toMatch(
-		/Initialize web application via create-cloudflare CLI/
+		expectFrameworkCli
+			? /Initialize web application via create-cloudflare CLI/
+			: /Initial commit \(by create-cloudflare CLI\)/
 	);
 	expect(commitMessage).toContain(`C3 = create-cloudflare@${version}`);
 	expect(commitMessage).toContain(`project name = ${projectName}`);
-	expect(commitMessage).toContain(`framework = ${framework}`);
+	if (expectFrameworkCli) {
+		expect(commitMessage).toContain(`framework = ${framework}`);
+		expect(commitMessage).toContain("framework cli =");
+	} else {
+		expect(commitMessage).not.toContain("framework =");
+		expect(commitMessage).not.toContain("framework cli =");
+	}
 }
 
 /**

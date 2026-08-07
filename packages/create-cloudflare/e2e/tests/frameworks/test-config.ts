@@ -368,6 +368,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--variant", "opennext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
+			expectFrameworkCli: false,
 			typesPath: "./cloudflare-env.d.ts",
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
@@ -1149,6 +1150,7 @@ function getExperimentalFrameworkTestConfig(
 			argv: ["--platform", "workers", "--variant", "opennext"],
 			flags: ["--yes"],
 			testCommitMessage: true,
+			expectFrameworkCli: false,
 			unsupportedOSs: ["win32"],
 			unsupportedPms: ["npm", "yarn"],
 			// OpenNext template may create an R2 bucket; requires a CF API token.

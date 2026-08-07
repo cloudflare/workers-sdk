@@ -112,7 +112,8 @@ describe
 								expect,
 								project.name,
 								frameworkConfig.id,
-								project.path
+								project.path,
+								testConfig.expectFrameworkCli
 							);
 						}
 
