@@ -4,8 +4,12 @@ interface __BaseEnv_Env {
 	AI: Ai;
 	GITHUB_TOKEN: string;
 	GITHUB_WEBHOOK_SECRET: string;
-	SANDBOX: DurableObjectNamespace<import("./dist/workers_sdk_auto_triage/index").Sandbox>;
-	FLUE_ISSUE_TRIAGE_AGENT: DurableObjectNamespace<import("./dist/workers_sdk_auto_triage/index").FlueIssueTriageAgent>;
+	SANDBOX: DurableObjectNamespace<
+		import("./dist/workers_sdk_auto_triage/index").Sandbox
+	>;
+	FLUE_ISSUE_TRIAGE_AGENT: DurableObjectNamespace<
+		import("./dist/workers_sdk_auto_triage/index").FlueIssueTriageAgent
+	>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -16,8 +20,12 @@ declare namespace Cloudflare {
 }
 interface Env extends __BaseEnv_Env {}
 type StringifyValues<EnvType extends Record<string, unknown>> = {
-	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
+	[Binding in keyof EnvType]: EnvType[Binding] extends string
+		? EnvType[Binding]
+		: string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "GITHUB_TOKEN" | "GITHUB_WEBHOOK_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<
+		Pick<Cloudflare.Env, "GITHUB_TOKEN" | "GITHUB_WEBHOOK_SECRET">
+	> {}
 }
