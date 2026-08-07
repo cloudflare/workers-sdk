@@ -1,0 +1,33 @@
+.changeset/email-local-explorer-ui.md
+  s_b702d30224ef81::t_477bc7ef68195e 1-5
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_b702d30224ef81::t_cb7ffff507f4bf 2-10,12,21-39,90,92,111,115-158,208-212,402-459
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_b702d30224ef81::t_de8737484b4b21 10,12,34-35,37-49,60
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_b702d30224ef81::t_cbd32bc3f827c1 2,19-20,23,55,72-97
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_b702d30224ef81::t_cb856b66ddb1af 10,15,18-24,31,36,41,74-75,87-88,91,114,116-123,125,132,135-136,141-144,158,175-178,180-190,193,195
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_b702d30224ef81::t_4aa1e5b0e09367 40
+packages/local-explorer-ui/src/routes/email/shared/InfoLoading.tsx
+  s_b702d30224ef81::t_286119a315b798 1,8-27
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_b702d30224ef81::t_89bb418f5ae225 8-14,18-20,22-27,47-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2ae0bc8ac6875155027c6a524265e37550ee4265",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
