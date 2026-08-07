@@ -26,6 +26,7 @@ import {
 	E2E_ACCOUNT_WORKERS_DEV_DOMAIN,
 } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { fetchJson } from "./helpers/fetch-json";
 import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -2628,6 +2629,149 @@ This is a random email body.
 			This is a random email body.
 			"
 		`);
+	});
+
+	it("should expose captured emails through the local explorer API", async ({
+		expect,
+	}) => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+					send_email = [{ name = "SEND_EMAIL" }]
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.pathname === "/send") {
+							return Response.json(
+								await env.SEND_EMAIL.send(await request.json())
+							);
+						}
+						return new Response("ok");
+					},
+					async email(message) {
+						if (message.headers.get("x-test-mode") === "forward") {
+							await message.forward("forwarded@example.com");
+						} else {
+							message.setReject("Rejected by E2E worker");
+						}
+					},
+				};
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+		const { url } = await worker.waitForReady();
+		const apiUrl = `${url}/cdn-cgi/local/explorer/api`;
+
+		const sentResponse = await fetch(`${url}/send`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				from: "sender@example.com",
+				to: "recipient@example.com",
+				subject: "Explorer sent email",
+				text: "Sent through Wrangler dev",
+				headers: { "Message-ID": "<e2e-sent@example.com>" },
+			}),
+		});
+		expect(sentResponse.status).toBe(200);
+		const sentResult = (await sentResponse.json()) as { messageId: string };
+		expect(sentResult).toEqual({
+			messageId: expect.stringMatching(/^<[A-Za-z0-9]+@example\.com>$/),
+		});
+		const sentMessageId = sentResult.messageId;
+
+		const sentList = await fetchJson<{
+			result: Array<{
+				worker?: string;
+				messageId: string;
+				subject: string;
+				text?: string;
+			}>;
+		}>(`${apiUrl}/email/sending?worker=${workerName}`);
+		const sentItem = sentList.result.find(
+			(email) => email.messageId === sentMessageId
+		);
+		expect(sentItem).toMatchObject({
+			worker: workerName,
+			subject: "Explorer sent email",
+		});
+		expect(sentItem).not.toHaveProperty("text");
+
+		const sentDetail = await fetchJson<{
+			result: { text?: string; messageId: string };
+		}>(`${apiUrl}/email/sending/${encodeURIComponent(sentMessageId)}`);
+		expect(sentDetail.result).toMatchObject({
+			messageId: sentMessageId,
+			text: "Sent through Wrangler dev",
+		});
+
+		const receivedRaw = dedent`
+			From: sender@example.com
+			To: recipient@example.com
+			Message-ID: <e2e-received@example.com>
+			X-Test-Mode: forward
+			MIME-Version: 1.0
+			Content-Type: text/plain
+
+			Received through Wrangler dev.
+		`;
+		const receivedResponse = await fetch(
+			`${url}/cdn-cgi/local/email?` +
+				new URLSearchParams({
+					from: "sender@example.com",
+					to: "recipient@example.com",
+					format: "json",
+				}).toString(),
+			{
+				method: "POST",
+				body: receivedRaw,
+			}
+		);
+		expect(receivedResponse.status).toBe(200);
+		expect(await receivedResponse.json()).toMatchObject({
+			outcome: "ok",
+			forwards: [{ recipient: "forwarded@example.com" }],
+		});
+
+		const receivedList = await fetchJson<{
+			result: Array<{
+				worker?: string;
+				messageId: string;
+				outcome: string;
+				forwards: Array<{ recipient: string }>;
+			}>;
+		}>(`${apiUrl}/email/routing?worker=${workerName}`);
+		expect(receivedList.result).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					worker: workerName,
+					messageId: "<e2e-received@example.com>",
+					outcome: "ok",
+					forwards: expect.arrayContaining([
+						expect.objectContaining({ recipient: "forwarded@example.com" }),
+					]),
+				}),
+			])
+		);
+
+		const receivedDetail = await fetchJson<{
+			result: {
+				raw: string;
+				events: Array<{ type: string }>;
+			};
+		}>(
+			`${apiUrl}/email/routing/${encodeURIComponent("<e2e-received@example.com>")}`
+		);
+		expect(receivedDetail.result).toMatchObject({
+			raw: receivedRaw,
+			events: [{ type: "received" }, { type: "forward" }],
+		});
 	});
 });
 

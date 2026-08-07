@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
@@ -79,6 +78,9 @@ import {
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
+import { writeTempFile } from "./plugins/core/temp-file";
+import { removeEmailTempFiles, writeEmailTempFile } from "./plugins/email";
+import { EmailArtifactManager } from "./plugins/email/artifacts";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -112,6 +114,7 @@ import {
 	decodeErrorPayload,
 	LogLevel,
 	Mutex,
+	sanitisePath,
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
@@ -170,6 +173,16 @@ import type { Process } from "@puppeteer/browsers";
 import type { Abortable } from "node:events";
 import type { Duplex, Transform, Writable } from "node:stream";
 import type { Dispatcher, Response as UndiciResponse } from "undici";
+
+const emailArtifactSchema = z.object({
+	recordId: z.string(),
+	prefix: z.string(),
+	id: z.string(),
+	extension: z.string(),
+});
+const emailArtifactsRequestSchema = z.object({
+	artifacts: z.array(emailArtifactSchema).optional(),
+});
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -979,6 +992,7 @@ export class Miniflare {
 
 	// Aborted when dispose() is called
 	readonly #disposeController: AbortController;
+	readonly #emailArtifactManager = new EmailArtifactManager();
 	#loopbackServer?: StoppableServer;
 	#loopbackHost?: string;
 	readonly #webSocketServer: WebSocketServer;
@@ -1268,6 +1282,102 @@ export class Miniflare {
 			}
 			res.end(getErrorMessage(error));
 		}
+	}
+
+	/**
+	 * Writes a request body to a temp file and responds with its on-disk path.
+	 *
+	 * By default the file is written to a single random path under this
+	 * instance's temp directory. Email callers pass `email=true` to opt into the
+	 * email layout instead, which groups files by session and mirrors them into the
+	 * project directory.
+	 *
+	 * @param url in format: /core/store-temp-file?prefix&extension[&email&id]
+	 */
+	async #handleLoopbackStoreTempFileRequest(
+		request: Request,
+		url: URL
+	): Promise<Response> {
+		const extension = url.searchParams.get("extension") ?? "txt";
+		const prefix = url.searchParams.get("prefix");
+		if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(extension)) {
+			return new Response("Invalid temporary-file extension", { status: 400 });
+		}
+		if (
+			prefix !== null &&
+			(!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(prefix) ||
+				prefix === "." ||
+				prefix === "..")
+		) {
+			return new Response("Invalid temporary-file prefix", { status: 400 });
+		}
+
+		if (url.searchParams.get("email") === "true") {
+			// `id` is derived from a Message-ID, which Worker code controls, so it
+			// must be sanitised before being used as a path segment.
+			const rawId = url.searchParams.get("id");
+			const id = rawId === null ? crypto.randomUUID() : sanitisePath(rawId);
+			const rawRecordId = url.searchParams.get("record") ?? rawId ?? id;
+			const recordId = sanitisePath(rawRecordId);
+			const artifact = {
+				recordId,
+				prefix: prefix ?? "files",
+				id,
+				extension,
+			};
+			const filePath = await this.#emailArtifactManager.store(
+				artifact,
+				async () => {
+					return await writeEmailTempFile({
+						resourceTmpPath: this.#sharedOpts.core.resourceTmpPath,
+						tmpPath: this.#tmpPath,
+						prefix: prefix ?? "files",
+						fileName: `${id}.${extension}`,
+						contents: Buffer.from(await request.arrayBuffer()),
+					});
+				}
+			);
+			if (filePath === null) {
+				return new Response("Email temporary file was evicted", {
+					status: 410,
+				});
+			}
+			return new Response(filePath, { status: 200 });
+		}
+
+		const filePath = await writeTempFile({
+			tmpPath: this.#tmpPath,
+			prefix,
+			extension,
+			contents: await request.text(),
+		});
+		return new Response(filePath, { status: 200 });
+	}
+
+	async #handleLoopbackDeleteEmailTempFilesRequest(
+		request: Request
+	): Promise<Response> {
+		let body: unknown;
+		try {
+			body = await request.json();
+		} catch {
+			return new Response("Invalid email artifact request", { status: 400 });
+		}
+		const parsed = emailArtifactsRequestSchema.safeParse(body);
+		if (!parsed.success) {
+			return new Response("Invalid email artifact request", { status: 400 });
+		}
+		await this.#emailArtifactManager.delete(
+			parsed.data.artifacts ?? [],
+			async (artifacts) => {
+				await removeEmailTempFiles({
+					resourceTmpPath: this.#sharedOpts.core.resourceTmpPath,
+					tmpPath: this.#tmpPath,
+					artifacts,
+				});
+			}
+		);
+		return new Response(null, { status: 204 });
 	}
 
 	/**
@@ -1626,16 +1736,13 @@ export class Miniflare {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
-				const prefix = url.searchParams.get("prefix");
-				const folder = prefix ? `files/${prefix}` : "files";
-				await mkdir(path.join(this.#tmpPath, folder), { recursive: true });
-				const filePath = path.join(
-					this.#tmpPath,
-					folder,
-					`${crypto.randomUUID()}.${url.searchParams.get("extension") ?? "txt"}`
-				);
-				await writeFile(filePath, await request.text());
-				response = new Response(filePath, { status: 200 });
+				response = await this.#handleLoopbackStoreTempFileRequest(request, url);
+			} else if (
+				url.pathname === "/core/delete-email-temp-files" &&
+				request.method === "POST"
+			) {
+				response =
+					await this.#handleLoopbackDeleteEmailTempFilesRequest(request);
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
@@ -2030,7 +2137,8 @@ export class Miniflare {
 					// @ts-expect-error dynamic plugin dispatch: external plugins return
 					// a different type than internal plugin options
 					this.#getWorkerOptsForPlugin(key, workerOpts),
-					i
+					i,
+					workerName
 				);
 				if (pluginBindings !== undefined) {
 					for (const binding of pluginBindings) {
@@ -2313,6 +2421,7 @@ export class Miniflare {
 				)
 					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
+			fallbackWorkerPublicName: this.#workerOpts[0].core.name,
 			tmpPath: this.#tmpPath,
 			log: this.#log,
 			proxyBindings,
@@ -3349,6 +3458,7 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
+		this.#emailArtifactManager.dispose();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
@@ -3385,6 +3495,7 @@ export class Miniflare {
 			// `noServer: true` so it doesn't own an HTTP server, but connected
 			// WebSocket clients still hold open sockets.
 			this.#webSocketServer.close();
+			await this.#emailArtifactManager.drain();
 			// Best-effort cleanup: on Windows, workerd may not release file handles
 			// immediately after disposal, causing EBUSY errors. The temp directory
 			// lives in os.tmpdir() so the OS will clean it up eventually.

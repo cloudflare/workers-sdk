@@ -51,6 +51,11 @@ export type WorkerResourceBindings = {
 		className: string;
 		scriptName: string;
 	}[];
+	sendEmail: {
+		/** id = binding name */
+		id: string;
+		bindingName: string;
+	}[];
 };
 
 export type ExplorerWorkerOpts = Record<string, WorkerResourceBindings>;

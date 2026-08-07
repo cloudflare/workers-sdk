@@ -2,9 +2,21 @@ import assert from "node:assert";
 import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime from "postal-mime";
+import { MAX_LOCAL_EMAIL_BYTES, truncateRawForCapture } from "../email/capture";
+import { messageIdToStorageId, synthesizeMessageId } from "../email/message-id";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
+import type {
+	EmailArtifact,
+	EmailHandlerEvent,
+	EmailHandlerForward,
+	EmailHandlerReply,
+	EmailStoreService,
+	StoredRoutingEmail,
+	StoredRoutingEmailMetadata,
+	StoredRoutingEmailRecord,
+} from "../email/storage";
 import type { ForwardableEmailMessage } from "@cloudflare/workers-types/experimental";
 import type { Email } from "postal-mime";
 
@@ -14,42 +26,59 @@ $.enabled = true;
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	[CoreBindings.SERVICE_EMAIL_STORE]?: EmailStoreService;
 };
 
 function renderEmailHeaders(headers: Headers | undefined) {
 	return headers
-		? `\n  headers:\n${[...headers.entries()].map(([k, v]) => `    ${k}: ${v}`).join("\n")}`
+		? `\n  headers:\n${[...headers.entries()].map(([k, v]) => `    ${escapeLogValue(k)}: ${escapeLogValue(v)}`).join("\n")}`
 		: "";
+}
+
+function escapeLogValue(value: string): string {
+	return value.replace(/[\u0000-\u001f\u007f]/gu, (character) => {
+		const code = character.codePointAt(0) ?? 0;
+		return `\\x${code.toString(16).padStart(2, "0")}`;
+	});
+}
+
+function isMissingEmailHandlerError(e: unknown): boolean {
+	return (
+		e instanceof Error &&
+		e.message.includes('does not implement the method "email"')
+	);
+}
+
+async function removeEmailArtifacts(
+	loopback: Fetcher,
+	artifacts: EmailArtifact[]
+): Promise<void> {
+	if (artifacts.length === 0) return;
+	const response = await loopback.fetch(
+		"http://localhost/core/delete-email-temp-files",
+		{
+			method: "POST",
+			body: JSON.stringify({ artifacts }),
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			`could not delete email temporary files: ${await response.text()}`
+		);
+	}
 }
 
 export async function handleEmail(
 	params: URLSearchParams,
 	request: Request,
 	service: Fetcher,
+	workerName: string | undefined,
 	env: Env,
 	ctx: ExecutionContext
 ): Promise<Response> {
-	const events: Array<
-		| {
-				type: "forward" | "reply";
-				timestamp: string;
-				messageId: string;
-		  }
-		| {
-				type: "reject";
-				timestamp: string;
-		  }
-	> = [];
-	const forwards: Array<{
-		messageId: string;
-		recipient: string;
-		headers: [string, string][];
-	}> = [];
-	const replies: Array<{
-		messageId: string;
-		sender: string;
-		raw: string;
-	}> = [];
+	const events: EmailHandlerEvent[] = [];
+	const forwards: EmailHandlerForward[] = [];
+	const replies: EmailHandlerReply[] = [];
 
 	// Turn an HTTP request into an EmailMessage, using:
 	//  - `from` and `to` from the URL
@@ -76,24 +105,10 @@ export async function handleEmail(
 
 	const incomingEmailRaw = new Uint8Array(await request.arrayBuffer());
 
-	// Email Routing does not support messages bigger than 25Mib: https://developers.cloudflare.com/email-routing/limits/#message-size
-	// In practice, local dev only supports 1MB, since it uses a JSRPC transport.
-	if (incomingEmailRaw.byteLength > 25 * 1024 * 1024) {
-		return new Response(
-			"Email message size is bigger than the production size limit of 25MiB. Local development has a lower limit of 1Mib.",
-			{
-				status: 400,
-			}
-		);
-	}
-	if (incomingEmailRaw.byteLength > 1024 * 1024) {
-		return new Response(
-			"Email message size is within the production size limit of 25MiB, but exceeds the lower 1Mib limit for testing locally.",
-			{
-				status: 400,
-			}
-		);
-	}
+	// Delivery to the user Worker uses the full message regardless of size — the
+	// capture feature must never change what `email()` receives. The captured
+	// copy is truncated to `MAX_LOCAL_EMAIL_BYTES` (see `storeReceivedEmail`) so
+	// the workerd-internal RPC to the store stays under its ~1 MiB argument cap.
 
 	let parsedIncomingEmail: Email;
 	try {
@@ -121,7 +136,7 @@ export async function handleEmail(
 			{
 				method: "POST",
 				headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
-				body: `${yellow("Provided MAIL FROM address doesn't match the email message's \"From\" header")}:\n  MAIL FROM: ${from}\n  "From" header: ${parsedIncomingEmail.from.address}`,
+				body: `${yellow("Provided MAIL FROM address doesn't match the email message's \"From\" header")}:\n  MAIL FROM: ${escapeLogValue(from)}\n  "From" header: ${escapeLogValue(parsedIncomingEmail.from.address ?? "")}`,
 			}
 		);
 	}
@@ -132,7 +147,7 @@ export async function handleEmail(
 			{
 				method: "POST",
 				headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
-				body: `${yellow('Provided RCPT TO address doesn\'t match any "To" header in the email message')}:\n  RCPT TO: ${to}\n  "To" header: ${parsedIncomingEmail.to?.map((addr) => addr.address).join(", ")}`,
+				body: `${yellow('Provided RCPT TO address doesn\'t match any "To" header in the email message')}:\n  RCPT TO: ${escapeLogValue(to)}\n  "To" header: ${escapeLogValue(parsedIncomingEmail.to?.map((addr) => addr.address).join(", ") ?? "")}`,
 			}
 		);
 	}
@@ -141,177 +156,380 @@ export async function handleEmail(
 		parsedIncomingEmail.headers.map((header) => [header.key, header.value])
 	);
 
+	let outcome: "ok" | "exception" = "ok";
 	// Propogate `.setReject()` reasons to the caller
 	let rejectReason: string | undefined = undefined;
+	events.push({ type: "received", timestamp: new Date().toISOString() });
 
-	// @ts-expect-error .email is not in the `Fetcher` but it's a valid RPC call.
-	const emailEvent = service.email(
-		// Construct a ForwardableEmailMessage-like object. We need
-		// - ForwardableEmailMessage to be able to be passed across JSRPC (to support e.g. userWorker.email(ForwardableEmailMessage))
-		// - ForwardableEmailMessage properties to be synchronously available (to match production). This rules out a class extending `RpcStub`
-		// However, unlike EmailMessage (see email.worker.ts) it doesn't need to be user-constructable, and so we can just use an object with `satisfies`
-		{
-			from,
-			to,
-			raw: clonedRequest.body,
-			rawSize: incomingEmailRaw.byteLength,
-			headers: incomingEmailHeaders,
-			setReject: (reason: string): void => {
-				ctx.waitUntil(
-					env[CoreBindings.SERVICE_LOOPBACK].fetch(
+	// Capture this email for the local explorer "Routing" interface. Only the
+	// first `MAX_LOCAL_EMAIL_BYTES` are captured (the full message is still
+	// delivered to the user Worker); larger bodies are truncated so the store
+	// RPC stays under its argument cap. `rawSize` keeps the original size.
+	const capturedRaw = truncateRawForCapture(incomingEmailRaw);
+	const rawBase64 = capturedRaw.rawBase64;
+	if (capturedRaw.truncated) {
+		ctx.waitUntil(
+			env[CoreBindings.SERVICE_LOOPBACK]
+				.fetch("http://localhost/core/log", {
+					method: "POST",
+					headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
+					body: `Received email exceeds the ${MAX_LOCAL_EMAIL_BYTES}-byte local capture limit; the email was delivered, but only the first ${MAX_LOCAL_EMAIL_BYTES} bytes are shown in the Local Explorer.`,
+				})
+				.catch(() => undefined)
+		);
+	}
+	const storedEmail: StoredRoutingEmail = {
+		worker: workerName,
+		from,
+		to,
+		subject: parsedIncomingEmail.subject ?? "(no subject)",
+		messageId: parsedIncomingEmail.messageId,
+		receivedAt: new Date().toISOString(),
+		rawSize: incomingEmailRaw.byteLength,
+		raw: capturedRaw.raw,
+		rawBase64,
+		attachments: (parsedIncomingEmail.attachments ?? []).map((attachment) => ({
+			filename: attachment.filename ?? "attachment",
+			contentType: attachment.mimeType ?? "application/octet-stream",
+			disposition:
+				attachment.disposition === "inline" ? "inline" : "attachment",
+			size:
+				typeof attachment.content === "string"
+					? new TextEncoder().encode(attachment.content).byteLength
+					: attachment.content.byteLength,
+		})),
+		outcome,
+		forwards,
+		replies,
+		events,
+	};
+	// Store exactly once per request, no matter which exit path runs. The result
+	// fields are refreshed from the (possibly mutated) locals on each attempt.
+	let stored = false;
+	async function storeReceivedEmail(): Promise<void> {
+		if (stored) {
+			return;
+		}
+		stored = true;
+		storedEmail.outcome = outcome;
+		storedEmail.rejectReason = rejectReason;
+		try {
+			const {
+				raw: _raw,
+				rawBase64: _rawBase64,
+				...emailMetadata
+			} = storedEmail;
+			const store = env[CoreBindings.SERVICE_EMAIL_STORE];
+			let artifacts: EmailArtifact[] | undefined;
+			if (store !== undefined) {
+				const recordId = messageIdToStorageId(storedEmail.messageId);
+				// Stream when either the received body or any reply body would
+				// exceed workerd's RPC argument limit if sent in a single call.
+				const needsStreaming =
+					rawBase64.length > 64 * 1024 ||
+					emailMetadata.replies.some(
+						(reply) => (reply.rawBase64?.length ?? 0) > 64 * 1024
+					);
+				if (needsStreaming) {
+					// Reply bodies are streamed separately, so drop them from the
+					// prelude to keep it under the RPC argument limit.
+					const metadata: StoredRoutingEmailMetadata = {
+						...emailMetadata,
+						replies: emailMetadata.replies.map(
+							({ raw: _replyRaw, rawBase64: _replyRawBase64, ...reply }) =>
+								reply
+						),
+					};
+					await store.beginReceived(metadata);
+					try {
+						for (
+							let offset = 0;
+							offset < rawBase64.length;
+							offset += 64 * 1024
+						) {
+							await store.appendReceivedRaw(
+								recordId,
+								rawBase64.slice(offset, offset + 64 * 1024)
+							);
+						}
+						for (const [replyIndex, reply] of emailMetadata.replies.entries()) {
+							const replyRawBase64 = reply.rawBase64;
+							if (replyRawBase64 === undefined) {
+								continue;
+							}
+							for (
+								let offset = 0;
+								offset < replyRawBase64.length;
+								offset += 64 * 1024
+							) {
+								await store.appendReplyRaw(
+									recordId,
+									replyIndex,
+									replyRawBase64.slice(offset, offset + 64 * 1024)
+								);
+							}
+						}
+						artifacts = await store.finishReceived(recordId);
+					} catch (error) {
+						await store.discardReceived(recordId).catch(() => undefined);
+						throw error;
+					}
+				} else {
+					const record: StoredRoutingEmailRecord = {
+						...emailMetadata,
+						rawBase64,
+					};
+					artifacts = await store.storeReceived(record);
+				}
+			}
+			if (artifacts !== undefined) {
+				try {
+					await removeEmailArtifacts(
+						env[CoreBindings.SERVICE_LOOPBACK],
+						artifacts
+					);
+				} catch {
+					ctx.waitUntil(
+						env[CoreBindings.SERVICE_LOOPBACK]
+							.fetch("http://localhost/core/log", {
+								method: "POST",
+								headers: {
+									[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+								},
+								body: "Failed to clean up evicted email artifacts.",
+							})
+							.catch(() => undefined)
+					);
+				}
+			}
+		} catch {
+			// Ignore storage failures - they must not affect email handling.
+			stored = false;
+		}
+	}
+
+	try {
+		// @ts-expect-error .email is not in the `Fetcher` but it's a valid RPC call.
+		const emailEvent = service.email(
+			// Construct a ForwardableEmailMessage-like object. We need
+			// - ForwardableEmailMessage to be able to be passed across JSRPC (to support e.g. userWorker.email(ForwardableEmailMessage))
+			// - ForwardableEmailMessage properties to be synchronously available (to match production). This rules out a class extending `RpcStub`
+			// However, unlike EmailMessage (see email.worker.ts) it doesn't need to be user-constructable, and so we can just use an object with `satisfies`
+			{
+				from,
+				to,
+				raw: clonedRequest.body,
+				rawSize: incomingEmailRaw.byteLength,
+				headers: incomingEmailHeaders,
+				setReject: (reason: string): void => {
+					ctx.waitUntil(
+						env[CoreBindings.SERVICE_LOOPBACK].fetch(
+							"http://localhost/core/log",
+							{
+								method: "POST",
+								headers: {
+									[SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString(),
+								},
+								body: `${red("Email handler rejected message")}${reset(` with the following reason: "${escapeLogValue(reason)}"`)}`,
+							}
+						)
+					);
+
+					events.push({
+						type: "reject",
+						timestamp: new Date().toISOString(),
+					});
+					rejectReason = reason;
+				},
+				forward: async (
+					rcptTo: string,
+					headers?: Headers
+				): Promise<EmailSendResult> => {
+					await env[CoreBindings.SERVICE_LOOPBACK].fetch(
 						"http://localhost/core/log",
 						{
 							method: "POST",
-							headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString() },
-							body: `${red("Email handler rejected message")}${reset(` with the following reason: "${reason}"`)}`,
+							headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+							body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${escapeLogValue(rcptTo)}${renderEmailHeaders(headers)}`)}`,
 						}
-					)
-				);
+					);
+					// Production returns a message id identifying the forwarded message.
+					// Locally we have no such id, so synthesize one in the production
+					// shape, using the recipient's domain.
+					const result = { messageId: synthesizeMessageId(rcptTo) };
 
-				events.push({
-					type: "reject",
-					timestamp: new Date().toISOString(),
-				});
-				rejectReason = reason;
-			},
-			forward: async (
-				rcptTo: string,
-				headers?: Headers
-			): Promise<EmailSendResult> => {
-				await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-					"http://localhost/core/log",
-					{
-						method: "POST",
-						headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
-						body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`)}`,
+					events.push({
+						type: "forward",
+						timestamp: new Date().toISOString(),
+						messageId: result.messageId,
+					});
+					forwards.push({
+						recipient: rcptTo,
+						headers: headers ? [...headers.entries()] : [],
+						messageId: result.messageId,
+					});
+
+					return result;
+				},
+				reply: async (replyMessage): Promise<EmailSendResult> => {
+					assert(
+						"from" in replyMessage && "to" in replyMessage,
+						"EmailReplyMessageBuilder is not currently supported"
+					);
+
+					if (
+						!(await isEmailReplyable(
+							parsedIncomingEmail,
+							incomingEmailHeaders,
+							async (msg) =>
+								void (await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+									"http://localhost/core/log",
+									{
+										method: "POST",
+										headers: {
+											[SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString(),
+										},
+										body: msg,
+									}
+								))
+						))
+					) {
+						throw new Error("Original email is not replyable");
 					}
-				);
-				/**
-				 * The message ID in production is a 36 character random string that identifies the message for e.g. linking up threads.
-				 * In production it uses the sender domain rather than example.com. Locally, we have access to none of that information
-				 * so instead we make a dummy message ID that matches the production format (36 characters followed by a domain)
-				 */
-				const uuid = crypto.randomUUID().replaceAll("-", "");
-				const result = { messageId: `${uuid}@example.com` };
-
-				events.push({
-					type: "forward",
-					timestamp: new Date().toISOString(),
-					messageId: result.messageId,
-				});
-				forwards.push({
-					recipient: rcptTo,
-					headers: headers ? [...headers.entries()] : [],
-					messageId: result.messageId,
-				});
-
-				return result;
-			},
-			reply: async (replyMessage): Promise<EmailSendResult> => {
-				assert(
-					"from" in replyMessage && "to" in replyMessage,
-					"EmailReplyMessageBuilder is not currently supported"
-				);
-
-				if (
-					!(await isEmailReplyable(
+					const validatedReply = await validateReply(
 						parsedIncomingEmail,
-						incomingEmailHeaders,
-						async (msg) =>
-							void (await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-								"http://localhost/core/log",
-								{
+						replyMessage as MiniflareEmailMessage
+					);
+					const finalReply = validatedReply.raw;
+					const replyId = messageIdToStorageId(validatedReply.messageId);
+					const parentRecordId = messageIdToStorageId(
+						parsedIncomingEmail.messageId
+					);
+
+					// Store the reply under `email/<session-id>/reply/<replyId>.eml`
+					const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+						`http://localhost/core/store-temp-file?email=true&extension=eml&prefix=reply&id=${encodeURIComponent(replyId)}&record=${encodeURIComponent(parentRecordId)}`,
+						{
+							method: "POST",
+							body: finalReply,
+						}
+					);
+					if (!resp.ok) {
+						throw new Error(
+							`could not store reply temporary file: ${await resp.text()}`
+						);
+					}
+					const file = await resp.text();
+
+					await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+						"http://localhost/core/log",
+						{
+							method: "POST",
+							headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+							body: `${blue("Email handler replied to sender")}${reset(` with the following message:\n  ${escapeLogValue(file)}`)}`,
+						}
+					);
+
+					// The reply MIME already has a message id
+					const result = { messageId: validatedReply.messageId };
+					events.push({
+						type: "reply",
+						timestamp: new Date().toISOString(),
+						messageId: result.messageId,
+					});
+					// The full reply is written to disk above; only capture up to the
+					// local limit in the store record so it stays under the RPC cap.
+					const capturedReply = truncateRawForCapture(finalReply);
+					if (capturedReply.truncated) {
+						ctx.waitUntil(
+							env[CoreBindings.SERVICE_LOOPBACK]
+								.fetch("http://localhost/core/log", {
 									method: "POST",
 									headers: {
-										[SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString(),
+										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
 									},
-									body: msg,
-								}
-							))
-					))
-				) {
-					throw new Error("Original email is not replyable");
-				}
-				const finalReply = await validateReply(
-					parsedIncomingEmail,
-					replyMessage as MiniflareEmailMessage
-				);
-
-				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-					"http://localhost/core/store-temp-file?extension=eml&prefix=email",
-					{
-						method: "POST",
-						body: finalReply,
+									body: `Reply email exceeds the ${MAX_LOCAL_EMAIL_BYTES}-byte local capture limit; the reply was sent, but only the first ${MAX_LOCAL_EMAIL_BYTES} bytes are shown in the Local Explorer.`,
+								})
+								.catch(() => undefined)
+						);
 					}
+					replies.push({
+						messageId: result.messageId,
+						sender: replyMessage.from,
+						raw: capturedReply.raw,
+						rawBase64: capturedReply.rawBase64,
+					});
+					return result;
+				},
+			} satisfies ForwardableEmailMessage
+		);
+
+		if (params.get("format") !== "json") {
+			await emailEvent;
+			// Record the message now the handler has finished, so `events` is
+			// complete. Every exit from here on must store exactly once.
+
+			// Give an un-awaited `setReject()` call time to cross JSRPC.
+			await scheduler.wait(0);
+			await storeReceivedEmail();
+
+			if (rejectReason !== undefined) {
+				return new Response(
+					`Worker rejected email with the following reason: ${rejectReason}`,
+					{ status: 400 }
 				);
-				const file = await resp.text();
+			}
 
-				await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-					"http://localhost/core/log",
-					{
-						method: "POST",
-						headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
-						body: `${blue("Email handler replied to sender")}${reset(` with the following message:\n  ${file}`)}`,
-					}
-				);
-
-				/**
-				 * The message ID in production is a 36 character random string that identifies the message for e.g. linking up threads.
-				 * In production it uses the sender domain rather than example.com. Locally, we have access to none of that information
-				 * so instead we make a dummy message ID that matches the production format (36 characters followed by a domain)
-				 */
-				const uuid = crypto.randomUUID().replaceAll("-", "");
-				const result = { messageId: `${uuid}@example.com` };
-				events.push({
-					type: "reply",
-					timestamp: new Date().toISOString(),
-					messageId: result.messageId,
-				});
-				replies.push({
-					messageId: result.messageId,
-					sender: replyMessage.from,
-					raw: new TextDecoder().decode(finalReply),
-				});
-				return result;
-			},
-		} satisfies ForwardableEmailMessage
-	);
-
-	if (params.get("format") !== "json") {
-		await emailEvent;
-
-		if (rejectReason !== undefined) {
-			return new Response(
-				`Worker rejected email with the following reason: ${rejectReason}`,
-				{ status: 400 }
-			);
+			return new Response("Worker successfully processed email", {
+				status: 200,
+			});
 		}
 
-		return new Response("Worker successfully processed email", {
-			status: 200,
-		});
-	}
+		try {
+			await emailEvent;
+			outcome = "ok";
+		} catch (e) {
+			outcome = "exception";
+			if (isMissingEmailHandlerError(e)) {
+				// The Worker has no `email()` handler, so the message could not be
+				// delivered. Record it as `unhandled``
+				events.splice(0, events.length, {
+					type: "unhandled",
+					timestamp: new Date().toISOString(),
+				});
+			}
+		}
 
-	let outcome: "ok" | "exception";
+		// Give an un-awaited `setReject()` call time to cross JSRPC.
+		await scheduler.wait(0);
+		await storeReceivedEmail();
 
-	try {
-		await emailEvent;
-		outcome = "ok";
-	} catch {
+		return Response.json(
+			{
+				outcome,
+				rejectReason,
+				forwards,
+				replies: replies.map(({ rawBase64: _rawBase64, ...reply }) => reply),
+				events,
+			},
+			{ status: outcome === "ok" ? 200 : 500 }
+		);
+	} catch (e) {
 		outcome = "exception";
+		if (isMissingEmailHandlerError(e)) {
+			// The Worker has no `email()` handler, so the message could not be
+			// delivered. Record it as `unhandled``
+			events.splice(0, events.length, {
+				type: "unhandled",
+				timestamp: new Date().toISOString(),
+			});
+			await storeReceivedEmail();
+			return new Response(
+				"Worker does not export an email() handler; message stored without delivery.",
+				{ status: 500 }
+			);
+		}
+		await storeReceivedEmail();
+		throw e;
 	}
-
-	// Give an un-awaited `setReject()` call time to cross JSRPC.
-	await scheduler.wait(0);
-
-	return Response.json(
-		{
-			outcome,
-			rejectReason,
-			forwards,
-			replies,
-			events,
-		},
-		{ status: outcome === "ok" ? 200 : 500 }
-	);
 }
