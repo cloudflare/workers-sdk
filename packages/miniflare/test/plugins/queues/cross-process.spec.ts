@@ -13,7 +13,6 @@ function createConsumer(
 ): Miniflare {
 	return new Miniflare({
 		name,
-		unsafeRegisterWorker: true,
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		queueConsumers: {
@@ -172,7 +171,6 @@ describe.sequential("cross-process queues", () => {
 		// message moves to "my-dlq", whose consumer lives in the other process.
 		const failingConsumer = new Miniflare({
 			name: "failing-consumer",
-			unsafeRegisterWorker: true,
 			unsafeDevRegistryPath,
 			compatibilityFlags: ["experimental"],
 			queueProducers: { QUEUE: { queueName: "my-queue" } },

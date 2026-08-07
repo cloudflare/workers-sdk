@@ -55,7 +55,7 @@ type WorkerDefinition = {
 ```
 
 - **Heartbeat**: Every 30s, the file's mtime is touched to signal that the Worker is still running.
-- **Registration**: Only workers with `unsafeRegisterWorker: true` are advertised.
+- **Registration**: Named workers are advertised by default. Workers with `unsafeRegisterWorker: false` are not advertised.
 - **Stale cleanup**: On every read, files older than 5 minutes are deleted (5 minutes is much longer than 30s just to provide a safe buffer)
 - **Change detection**: Chokidar watches the registry directory. When a file changes, `refresh()` compares the new state against the previous JSON snapshot and fires `onUpdate` only if a watched external service actually changed.
 
