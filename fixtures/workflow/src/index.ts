@@ -92,6 +92,26 @@ type Env = {
 	WORKFLOW2: Workflow;
 	WORKFLOW3: Workflow<{ doRetry: boolean; errorMessage: string }>;
 };
+
+// Deterministic ids are unique: create() throws once the instance exists, so
+// read the existing instance instead. Any other failure is real and surfaces.
+async function createOrGet<T>(
+	workflow: Workflow<T>,
+	options: WorkflowInstanceCreateOptions<T>
+): Promise<WorkflowInstance> {
+	try {
+		return await workflow.create(options);
+	} catch (e) {
+		if (
+			options.id === undefined ||
+			!(e instanceof Error) ||
+			!e.message.includes("instance.already_exists")
+		) {
+			throw e;
+		}
+		return workflow.get(options.id);
+	}
+}
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(req: Request) {
 		const url = new URL(req.url);
@@ -105,29 +125,35 @@ export default class extends WorkerEntrypoint<Env> {
 
 		let handle: WorkflowInstance;
 		if (url.pathname === "/createBatch") {
-			// creates two instances
-			const batch = await this.env.WORKFLOW.createBatch([
+			// creates two instances; ids that already exist are skipped and
+			// excluded from createBatch's return, so read handles for the full
+			// set to keep this endpoint idempotent across repeat requests
+			const ids = ["batch-1", "batch-2"];
+			await this.env.WORKFLOW.createBatch([
 				{ id: "batch-1", params: "1" },
 				{ id: "batch-2", params: "2" },
 			]);
-			return Response.json(batch.map((instance) => instance.id));
+			const handles = await Promise.all(
+				ids.map((batchId) => this.env.WORKFLOW.get(batchId))
+			);
+			return Response.json(handles.map((instance) => instance.id));
 		} else if (url.pathname === "/create") {
 			if (id === null) {
 				handle = await this.env.WORKFLOW.create();
 			} else {
-				handle = await this.env.WORKFLOW.create({ id });
+				handle = await createOrGet(this.env.WORKFLOW, { id });
 			}
 		} else if (url.pathname === "/createDemo2") {
 			if (id === null) {
 				handle = await this.env.WORKFLOW2.create();
 			} else {
-				handle = await this.env.WORKFLOW2.create({ id });
+				handle = await createOrGet(this.env.WORKFLOW2, { id });
 			}
 		} else if (url.pathname === "/createDemo3") {
 			if (id === null) {
 				handle = await this.env.WORKFLOW3.create();
 			} else {
-				handle = await this.env.WORKFLOW3.create({
+				handle = await createOrGet(this.env.WORKFLOW3, {
 					id,
 					params: {
 						doRetry: doRetry === "false" ? false : true,
