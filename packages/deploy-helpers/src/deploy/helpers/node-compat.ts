@@ -7,7 +7,8 @@ import type { NodeJSCompatMode } from "miniflare";
  * Computes and validates the Node.js compatibility mode we are running.
  *
  * NOTES:
- * - The v2 mode is configured via `nodejs_compat_v2` compat flag or via `nodejs_compat` plus a compatibility date of Sept 23rd. 2024 or later.
+ * - Node.js compatibility is enabled by default for a compatibility date of Aug 4th. 2026 or later (unless the `no_nodejs_compat` flag is set), or explicitly via the `nodejs_compat`/`nodejs_compat_v2` flags.
+ * - The v2 mode is configured via `nodejs_compat_v2` compat flag or via `nodejs_compat` (explicit or implied by the compatibility date) plus a compatibility date of Sept 23rd. 2024 or later.
  * - See `EnvironmentInheritable` for `noBundle`.
  *
  * @param compatibilityDateStr The compatibility date

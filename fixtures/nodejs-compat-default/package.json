@@ -1,0 +1,17 @@
+{
+	"name": "@fixture/nodejs-compat-default",
+	"private": true,
+	"scripts": {
+		"build": "wrangler deploy --dry-run --outdir=./dist",
+		"dev": "wrangler dev",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}
