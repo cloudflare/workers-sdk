@@ -328,6 +328,27 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should treat lowercase end as a compound statement terminator", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+    BEGIN
+        DELETE FROM updates WHERE item_id=old.id;
+    end;
+    SELECT 1;`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+			    BEGIN
+			        DELETE FROM updates WHERE item_id=old.id;
+			    end",
+			  "SELECT 1",
+			]
+		`);
+	});
+
 	it("should handle compound statements for CASEs", ({ expect }) => {
 		expect(
 			splitSqlQuery(`
