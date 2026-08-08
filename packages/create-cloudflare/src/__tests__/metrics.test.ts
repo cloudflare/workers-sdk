@@ -259,6 +259,42 @@ describe("createReporter", () => {
 		expect(sendEvent).toHaveBeenCalledTimes(0);
 	});
 
+	test("sends no event if the DO_NOT_TRACK env is set to '1'", async ({
+		expect,
+	}) => {
+		vi.stubEnv("DO_NOT_TRACK", "1");
+
+		const deferred = promiseWithResolvers<string>();
+		const reporter = createReporter();
+		const operation = reporter.collectAsyncMetrics({
+			eventPrefix: "c3 session",
+			props: {
+				args: {
+					projectName: "app",
+				},
+			},
+			promise: () => deferred.promise,
+		});
+
+		expect(reporter.isEnabled).toBe(false);
+
+		expect(sendEvent).toHaveBeenCalledTimes(0);
+
+		deferred.resolve("test result");
+
+		await expect(operation).resolves.toBe("test result");
+		expect(sendEvent).toHaveBeenCalledTimes(0);
+	});
+
+	test("DO_NOT_TRACK='1' takes precedence over CREATE_CLOUDFLARE_TELEMETRY_DISABLED='0'", ({
+		expect,
+	}) => {
+		vi.stubEnv("DO_NOT_TRACK", "1");
+		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DISABLED", "0");
+
+		expect(createReporter().isEnabled).toBe(false);
+	});
+
 	test("sends started and cancelled event to sparrow if the promise reject with a CancelError", async ({
 		expect,
 	}) => {
@@ -531,6 +567,8 @@ describe("runTelemetryCommand", () => {
 
 	afterEach(() => {
 		vi.useRealTimers();
+		vi.clearAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	test("run telemetry status when c3permission is disabled", async ({
@@ -566,6 +604,36 @@ describe("runTelemetryCommand", () => {
 
 		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 			"Status: Enabled
+
+			"
+		`);
+	});
+
+	test("run telemetry status when DO_NOT_TRACK is enabled", ({ expect }) => {
+		vi.stubEnv("DO_NOT_TRACK", "1");
+
+		runTelemetryCommand("status");
+
+		expect(readMetricsConfig).not.toHaveBeenCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"Status: Disabled (set by DO_NOT_TRACK)
+
+			"
+		`);
+	});
+
+	test("run telemetry status when CREATE_CLOUDFLARE_TELEMETRY_DISABLED is enabled", ({
+		expect,
+	}) => {
+		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DISABLED", "1");
+
+		runTelemetryCommand("status");
+
+		expect(readMetricsConfig).not.toHaveBeenCalled();
+		expect(writeMetricsConfig).not.toHaveBeenCalled();
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"Status: Disabled (set by CREATE_CLOUDFLARE_TELEMETRY_DISABLED)
 
 			"
 		`);
