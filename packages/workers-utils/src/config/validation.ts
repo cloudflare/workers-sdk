@@ -3403,7 +3403,7 @@ function validateSshPublicKeys(
 			diagnostics.errors.push(`${fieldPath}.public_key must be a string`);
 		} else if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
 			diagnostics.errors.push(
-				`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+				`${fieldPath}.public_key is an unsupported key type. Please provide an ED25519 public key.`
 			);
 		}
 	}
@@ -3489,9 +3489,7 @@ function validateContainerApp(
 					diagnostics.errors.push(
 						`"containers.configuration" should be an object`
 					);
-				}
-
-				if (
+				} else if (
 					containerAppOptional.instance_type &&
 					(containerAppOptional.configuration.disk !== undefined ||
 						containerAppOptional.configuration.vcpu !== undefined ||

@@ -4079,6 +4079,59 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if containers.configuration is null and instance_type is set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								configuration: null,
+								instance_type: "lite",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.configuration" should be an object"
+				`);
+			});
+
+			it("should error if an authorized_keys public_key is not an ED25519 key", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: [
+									{ name: "laptop", public_key: "ssh-rsa AAAAB3NzaC1yc2E" },
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.authorized_keys[0].public_key is an unsupported key type. Please provide an ED25519 public key."
+				`);
+			});
+
 			it("should accept valid authorized_keys and trusted_user_ca_keys", ({
 				expect,
 			}) => {
