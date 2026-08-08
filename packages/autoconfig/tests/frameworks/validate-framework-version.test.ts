@@ -25,6 +25,15 @@ const PACKAGE_INFO: AutoConfigFrameworkPackageInfo = {
 	maximumKnownMajorVersion: "4",
 };
 
+const PACKAGE_INFO_WITH_UPGRADES: AutoConfigFrameworkPackageInfo = {
+	...PACKAGE_INFO,
+	upgradeRequired: {
+		">=1.5 <2": "2.0.0",
+		">=2 <2.5.0": "2.5.0",
+		">=3 <3.1.0": "3.1.0",
+	},
+};
+
 describe("Framework.validateFrameworkVersion()", () => {
 	const std = mockConsoleMethods();
 	const context = createMockContext();
@@ -135,6 +144,63 @@ describe("Framework.validateFrameworkVersion()", () => {
 		expect(std.warn).toContain('"5.0.0"');
 		expect(std.warn).toContain("Test");
 		expect(std.warn).toContain("is not officially supported");
+	});
+
+	it("returns the target version when the installed version requires an upgrade", ({
+		expect,
+	}) => {
+		const cases = [
+			["1.5.5", "2.0.0"],
+			["2.0.0", "2.5.0"],
+			["2.5.0-beta.1", "2.5.0"],
+			["3.0.9", "3.1.0"],
+		] as const;
+
+		for (const [installedVersion, upgradeTo] of cases) {
+			vi.mocked(getInstalledPackageVersion).mockReturnValue(installedVersion);
+			const framework = new TestFramework({ id: "test", name: "Test" });
+
+			expect(
+				framework.validateFrameworkVersion(
+					"/project",
+					PACKAGE_INFO_WITH_UPGRADES,
+					context
+				)
+			).toEqual({ installedVersion, upgradeTo });
+			// The version is recorded even though it still needs upgrading
+			expect(framework.frameworkVersion).toBe(installedVersion);
+		}
+	});
+
+	it("does not return an upgrade at the target-version boundary", ({
+		expect,
+	}) => {
+		vi.mocked(getInstalledPackageVersion).mockReturnValue("2.5.0");
+		const framework = new TestFramework({ id: "test", name: "Test" });
+
+		expect(
+			framework.validateFrameworkVersion(
+				"/project",
+				PACKAGE_INFO_WITH_UPGRADES,
+				context
+			)
+		).toBeUndefined();
+	});
+
+	it("returns an upgrade instead of rejecting a below-minimum version", ({
+		expect,
+	}) => {
+		vi.mocked(getInstalledPackageVersion).mockReturnValue("1.5.5");
+		const framework = new TestFramework({ id: "test", name: "Test" });
+
+		expect(
+			framework.validateFrameworkVersion(
+				"/project",
+				PACKAGE_INFO_WITH_UPGRADES,
+				context
+			)
+		).toEqual({ installedVersion: "1.5.5", upgradeTo: "2.0.0" });
+		expect(std.warn).toBe("");
 	});
 
 	it("throws an AssertionError when frameworkVersion getter is accessed before validateFrameworkVersion is called", ({

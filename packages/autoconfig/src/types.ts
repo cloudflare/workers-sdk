@@ -72,6 +72,7 @@ export type AutoConfigSummary = {
 	wranglerInstall: boolean;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
+	frameworkVersionUpgrade?: string;
 	outputDir: string;
 	frameworkId?: string;
 	buildCommand?: string;

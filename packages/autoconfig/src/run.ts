@@ -17,6 +17,7 @@ import {
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
 } from "./details";
+import { AutoConfigFrameworkConfigurationError } from "./errors";
 import {
 	isFrameworkSupported,
 	isKnownFramework,
@@ -110,13 +111,13 @@ export async function runAutoConfig(
 	const frameworkPackageInfo = getFrameworkPackageInfo(
 		autoConfigDetails.framework.id
 	);
-	if (frameworkPackageInfo) {
-		autoConfigDetails.framework.validateFrameworkVersion(
-			autoConfigDetails.projectPath,
-			frameworkPackageInfo,
-			context
-		);
-	}
+	const frameworkVersionUpgrade = frameworkPackageInfo
+		? autoConfigDetails.framework.validateFrameworkVersion(
+				autoConfigDetails.projectPath,
+				frameworkPackageInfo,
+				context
+			)
+		: undefined;
 
 	const dryRunConfigurationResults =
 		await autoConfigDetails.framework.configure({
@@ -151,7 +152,12 @@ export async function runAutoConfig(
 				`${npx} wrangler versions upload`,
 		},
 		context,
-		dryRunConfigurationResults.packageJsonScriptsOverrides
+		dryRunConfigurationResults.packageJsonScriptsOverrides,
+		frameworkVersionUpgrade
+			? `Upgrade ${autoConfigDetails.framework.name} from ${JSON.stringify(
+					frameworkVersionUpgrade.installedVersion
+				)} to ${JSON.stringify(frameworkVersionUpgrade.upgradeTo)}`
+			: undefined
 	);
 
 	if (
@@ -172,6 +178,34 @@ export async function runAutoConfig(
 		logger.log("");
 
 		return autoConfigSummary;
+	}
+
+	if (frameworkVersionUpgrade) {
+		await autoConfigDetails.framework.upgradeFrameworkVersion({
+			...frameworkVersionUpgrade,
+			packageManager,
+			isWorkspaceRoot,
+		});
+
+		assert(frameworkPackageInfo);
+		// Hold the newly installed version to the same bounds as any other supported version
+		const remainingUpgrade =
+			autoConfigDetails.framework.validateFrameworkVersion(
+				autoConfigDetails.projectPath,
+				frameworkPackageInfo,
+				context
+			);
+
+		if (remainingUpgrade) {
+			throw new AutoConfigFrameworkConfigurationError(
+				`${autoConfigDetails.framework.name} was updated to ${JSON.stringify(
+					frameworkVersionUpgrade.upgradeTo
+				)}, but the version installed in the project is still ${JSON.stringify(
+					remainingUpgrade.installedVersion
+				)}. Update it manually and try again.`,
+				{ telemetryMessage: "autoconfig framework version upgrade incomplete" }
+			);
+		}
 	}
 
 	logger.debug(
@@ -320,6 +354,7 @@ async function saveWranglerJsonc(
  * @param projectCommands - The build, deploy, and version commands for the project.
  * @param context - The autoconfig context providing logger and other dependencies.
  * @param packageJsonScriptsOverrides - Optional overrides for package.json script entries.
+ * @param frameworkVersionUpgradeDescription - Optional framework upgrade shown before other setup operations.
  * @returns A summary object describing all planned operations.
  */
 export async function buildOperationsSummary(
@@ -333,7 +368,8 @@ export async function buildOperationsSummary(
 		version?: string;
 	},
 	context: AutoConfigContext,
-	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides,
+	frameworkVersionUpgradeDescription?: string
 ): Promise<AutoConfigSummary> {
 	const { logger } = context;
 	logger.log("");
@@ -408,6 +444,12 @@ export async function buildOperationsSummary(
 			"  " +
 				JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
 		);
+		logger.log("");
+	}
+
+	if (frameworkVersionUpgradeDescription) {
+		summary.frameworkVersionUpgrade = frameworkVersionUpgradeDescription;
+		logger.log(`⬆️  ${summary.frameworkVersionUpgrade}`);
 		logger.log("");
 	}
 
