@@ -326,8 +326,11 @@ describe("splitSqlQuery()", () => {
 				END",
 			]
 		`);
+	});
 
-		// Compound END matching must be case-insensitive, like BEGIN/CASE.
+	it("should treat lowercase end as a compound statement terminator", ({
+		expect,
+	}) => {
 		expect(
 			splitSqlQuery(`
     CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
