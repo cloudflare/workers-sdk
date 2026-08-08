@@ -3366,6 +3366,49 @@ const validateBindingArray =
 		return isValid;
 	};
 
+/**
+ * Validate a list of SSH public key entries, used by both `containers.authorized_keys`
+ * and `containers.trusted_user_ca_keys`. Each check gates the next one, so a malformed
+ * entry is reported as a configuration error rather than dereferenced.
+ */
+function validateSshPublicKeys(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown,
+	nameRequired: boolean
+): void {
+	if (!Array.isArray(value)) {
+		diagnostics.errors.push(`${field} must be an array`);
+		return;
+	}
+
+	for (const [index, key] of value.entries()) {
+		const fieldPath = `${field}[${index}]`;
+
+		if (typeof key !== "object" || key === null || Array.isArray(key)) {
+			diagnostics.errors.push(`${fieldPath} must be an object`);
+			continue;
+		}
+
+		const hasValidName = nameRequired
+			? isRequiredProperty(key, "name", "string")
+			: isOptionalProperty(key, "name", "string");
+		if (!hasValidName) {
+			diagnostics.errors.push(`${fieldPath}.name must be a string`);
+		}
+
+		if (
+			!isRequiredProperty<{ public_key: string }>(key, "public_key", "string")
+		) {
+			diagnostics.errors.push(`${fieldPath}.public_key must be a string`);
+		} else if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+			diagnostics.errors.push(
+				`${fieldPath}.public_key is an unsupported key type. Please provide an ED25519 public key.`
+			);
+		}
+	}
+}
+
 function validateContainerApp(
 	envName: string,
 	topLevelName: string | undefined,
@@ -3440,14 +3483,13 @@ function validateContainerApp(
 				);
 				if (
 					typeof containerAppOptional.configuration !== "object" ||
+					containerAppOptional.configuration === null ||
 					Array.isArray(containerAppOptional.configuration)
 				) {
 					diagnostics.errors.push(
 						`"containers.configuration" should be an object`
 					);
-				}
-
-				if (
+				} else if (
 					containerAppOptional.instance_type &&
 					(containerAppOptional.configuration.disk !== undefined ||
 						containerAppOptional.configuration.vcpu !== undefined ||
@@ -3674,7 +3716,11 @@ function validateContainerApp(
 					"unsafe",
 				]
 			);
-			if ("configuration" in containerAppOptional) {
+			if (
+				typeof containerAppOptional.configuration === "object" &&
+				containerAppOptional.configuration !== null &&
+				!Array.isArray(containerAppOptional.configuration)
+			) {
 				validateAdditionalProperties(
 					diagnostics,
 					`${field}.configuration`,
@@ -3722,59 +3768,21 @@ function validateContainerApp(
 			}
 
 			if ("authorized_keys" in containerAppOptional) {
-				if (!Array.isArray(containerAppOptional.authorized_keys)) {
-					diagnostics.errors.push(`${field}.authorized_keys must be an array`);
-				} else {
-					for (const index in containerAppOptional.authorized_keys) {
-						const fieldPath = `${field}.authorized_keys[${index}]`;
-						const key = containerAppOptional.authorized_keys[index];
-
-						if (!isRequiredProperty(key, "name", "string")) {
-							diagnostics.errors.push(`${fieldPath}.name must be a string`);
-						}
-
-						if (!isRequiredProperty(key, "public_key", "string")) {
-							diagnostics.errors.push(
-								`${fieldPath}.public_key must be a string`
-							);
-						}
-
-						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
-							diagnostics.errors.push(
-								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
-							);
-						}
-					}
-				}
+				validateSshPublicKeys(
+					diagnostics,
+					`${field}.authorized_keys`,
+					containerAppOptional.authorized_keys,
+					true
+				);
 			}
 
 			if ("trusted_user_ca_keys" in containerAppOptional) {
-				if (!Array.isArray(containerAppOptional.trusted_user_ca_keys)) {
-					diagnostics.errors.push(
-						`${field}.trusted_user_ca_keys must be an array`
-					);
-				} else {
-					for (const index in containerAppOptional.trusted_user_ca_keys) {
-						const fieldPath = `${field}.trusted_user_ca_keys[${index}]`;
-						const key = containerAppOptional.trusted_user_ca_keys[index];
-
-						if (!isOptionalProperty(key, "name", "string")) {
-							diagnostics.errors.push(`${fieldPath}.name must be a string`);
-						}
-
-						if (!isRequiredProperty(key, "public_key", "string")) {
-							diagnostics.errors.push(
-								`${fieldPath}.public_key must be a string`
-							);
-						}
-
-						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
-							diagnostics.errors.push(
-								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
-							);
-						}
-					}
-				}
+				validateSshPublicKeys(
+					diagnostics,
+					`${field}.trusted_user_ca_keys`,
+					containerAppOptional.trusted_user_ca_keys,
+					false
+				);
 			}
 
 			if (
