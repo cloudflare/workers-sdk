@@ -166,5 +166,5 @@ function isCompoundStatementStart(str: string) {
  * Returns true if the `str` ends with a compound statement `END` marker.
  */
 function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/.test(str);
+	return /\sEND[;\s]$/i.test(str);
 }
