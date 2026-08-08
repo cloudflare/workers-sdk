@@ -1236,6 +1236,57 @@ describe("wrangler deploy with containers", () => {
 		).resolves.not.toThrow();
 	});
 
+	it("should apply application-level changes without creating a rollout when rollout_kind is none", async ({
+		expect,
+	}) => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{ ...DEFAULT_CONTAINER_FROM_REGISTRY, rollout_kind: "none" },
+			],
+		});
+
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container",
+				instances: 0,
+				max_instances: 5,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 0,
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:world",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 1,
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+
+		// no rollout mock: creating a rollout here would hit an unhandled request error
+		mockModifyApplication(expect, { max_instances: 10 });
+
+		await runWrangler("deploy index.js");
+
+		expect(cliStd.stdout).toContain("Skipping application rollout");
+		expect(cliStd.stdout).toContain("Modified application my-container");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	describe("observability config resolution", () => {
 		const sharedGetApplicationResult = {
 			id: "abc",
