@@ -2283,6 +2283,25 @@ test("Miniflare: dispose() immediately after construction", async ({
 	await readyAssertion;
 });
 
+test("Miniflare: dispose() is single-flight and idempotent", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		script: `export default { fetch() { return new Response("ok"); } }`,
+		modules: true,
+	});
+	await mf.ready;
+
+	const firstDispose = mf.dispose();
+	const concurrentDispose = mf.dispose();
+	expect(concurrentDispose).toBe(firstDispose);
+	await firstDispose;
+
+	const subsequentDispose = mf.dispose();
+	expect(subsequentDispose).toBe(firstDispose);
+	await subsequentDispose;
+});
+
 test("Miniflare: getBindings() returns all bindings", async ({
 	expect,
 	onTestFinished,
@@ -2880,6 +2899,17 @@ test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
 	await expect(mf.ready).rejects.toMatchObject({
 		code: "ERR_RUNTIME_FAILURE",
 		message: expect.stringContaining("The Workers runtime failed to start."),
+	});
+
+	const firstDispose = mf.dispose();
+	await expect(firstDispose).rejects.toMatchObject({
+		code: "ERR_RUNTIME_FAILURE",
+	});
+
+	const secondDispose = mf.dispose();
+	expect(secondDispose).not.toBe(firstDispose);
+	await expect(secondDispose).rejects.toMatchObject({
+		code: "ERR_RUNTIME_FAILURE",
 	});
 });
 

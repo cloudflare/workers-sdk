@@ -22,6 +22,7 @@ export class InspectorProxyController {
 	#proxies: InspectorProxy[] = [];
 
 	#server: Promise<Server>;
+	#disposePromise?: Promise<void>;
 
 	async #getInspectorPort() {
 		const server = await this.#server;
@@ -324,7 +325,14 @@ export class InspectorProxyController {
 		return this.#waitForReady();
 	}
 
-	async dispose(): Promise<void> {
+	dispose(): Promise<void> {
+		return (this.#disposePromise ??= this.#dispose().catch((error) => {
+			this.#disposePromise = undefined;
+			throw error;
+		}));
+	}
+
+	async #dispose(): Promise<void> {
 		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
 		const server = await this.#server;
@@ -332,9 +340,18 @@ export class InspectorProxyController {
 		// Without this, active HTTP keep-alive or WebSocket connections prevent
 		// the close callback from firing, hanging the dispose.
 		server.closeAllConnections();
-		return new Promise((resolve, reject) => {
-			server.close((err) => (err ? reject(err) : resolve()));
+		const { promise, resolve, reject } = Promise.withResolvers<void>();
+		server.close((error) => {
+			if (
+				error &&
+				(error as NodeJS.ErrnoException).code !== "ERR_SERVER_NOT_RUNNING"
+			) {
+				reject(error);
+			} else {
+				resolve();
+			}
 		});
+		return promise;
 	}
 }
 

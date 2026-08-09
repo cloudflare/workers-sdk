@@ -979,6 +979,7 @@ export class Miniflare {
 
 	// Aborted when dispose() is called
 	readonly #disposeController: AbortController;
+	#disposePromise?: Promise<void>;
 	#loopbackServer?: StoppableServer;
 	#loopbackHost?: string;
 	readonly #webSocketServer: WebSocketServer;
@@ -1837,11 +1838,17 @@ export class Miniflare {
 		});
 	}
 
-	#stopLoopbackServer(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			assert(this.#loopbackServer !== undefined);
-			this.#loopbackServer.stop((err) => (err ? reject(err) : resolve()));
+	async #stopLoopbackServer(): Promise<void> {
+		const server = this.#loopbackServer;
+		if (server === undefined) {
+			return;
+		}
+		await new Promise<void>((resolve, reject) => {
+			server.stop((error) => (error ? reject(error) : resolve()));
 		});
+		if (this.#loopbackServer === server) {
+			this.#loopbackServer = undefined;
+		}
 	}
 
 	#getSocketAddress(
@@ -3347,7 +3354,15 @@ export class Miniflare {
 		return [...PLUGIN_ENTRIES, ...this.#externalPlugins.entries()];
 	}
 
-	async dispose(): Promise<void> {
+	dispose(): Promise<void> {
+		return (this.#disposePromise ??= this.#dispose().catch((error) => {
+			// A later call must be able to finish any cleanup skipped by a failure.
+			this.#disposePromise = undefined;
+			throw error;
+		}));
+	}
+
+	async #dispose(): Promise<void> {
 		this.#disposeController.abort();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.

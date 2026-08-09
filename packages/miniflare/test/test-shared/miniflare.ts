@@ -31,11 +31,6 @@ export async function disposeWithRetry(
 			return;
 		} catch (e) {
 			lastError = e;
-			// Treat "already disposed" as success (idempotent disposal)
-			const message = (e as Error).message;
-			if (message === "Server is not running.") {
-				return;
-			}
 			// Only retry on Windows-specific file locking errors
 			const code = (e as NodeJS.ErrnoException).code;
 			if (

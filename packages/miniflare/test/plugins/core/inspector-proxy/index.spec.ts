@@ -1,9 +1,10 @@
 import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
-import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
+import { fetch, Miniflare, MiniflareCoreError, NoOpLog } from "miniflare";
 import { beforeAll, test, vi } from "vitest";
 import WebSocket from "ws";
+import { InspectorProxyController } from "../../../../src/plugins/core/inspector-proxy/inspector-proxy-controller";
 import { useDispose } from "../../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
@@ -15,6 +16,22 @@ beforeAll(() => {
 	// test the debugging/inspector behavior), so we need to skip the bodies check by
 	// setting process.env.MINIFLARE_ASSERT_BODIES_CONSUMED to undefined
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
+});
+
+test("InspectorProxyController: dispose() is single-flight and idempotent", async ({
+	expect,
+}) => {
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		new NoOpLog(),
+		new Set()
+	);
+
+	const firstDispose = controller.dispose();
+	expect(controller.dispose()).toBe(firstDispose);
+	await firstDispose;
+	expect(controller.dispose()).toBe(firstDispose);
 });
 
 test("InspectorProxy: /json/version should provide details about the inspector version", async ({
