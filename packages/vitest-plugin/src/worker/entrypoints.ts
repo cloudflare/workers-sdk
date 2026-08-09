@@ -8,6 +8,7 @@ import {
 import { maybeHandleRunRequest, runInRunnerObject } from "./durable-objects";
 import { getResolvedMainPath } from "./env";
 import { patchAndRunWithHandlerContext } from "./patch-ctx";
+import { createProxyPrototypeClass } from "./proxy-prototype";
 
 // =============================================================================
 // Common Entrypoint Helpers
@@ -29,53 +30,6 @@ async function importModule(
 	return runInRunnerObject(() => {
 		return __vitest_mocker__.moduleRunner.import(specifier);
 	});
-}
-
-const IGNORED_KEYS = ["self"];
-
-/**
- * Create a class extending `superClass` with a `Proxy` as a `prototype`.
- * Unknown accesses on the `prototype` will defer to `getUnknownPrototypeKey()`.
- * `workerd` will only look for RPC methods/properties on the prototype, not the
- * instance. This helps avoid accidentally exposing things over RPC, but makes
- * things a little trickier for us...
- */
-function createProxyPrototypeClass<
-	T extends
-		| typeof WorkerEntrypoint
-		| typeof DurableObjectClass
-		| typeof WorkflowEntrypoint,
-	ExtraPrototype = unknown,
->(
-	superClass: T,
-	getUnknownPrototypeKey: (key: string) => unknown
-): T & { prototype: ExtraPrototype } {
-	// Build a class with a "Proxy"-prototype, so we can intercept RPC calls
-	function Class(...args: ConstructorParameters<typeof superClass>) {
-		// Delay proxying prototype until construction, so workerd sees this as a
-		// regular class when introspecting it. This check fails if we don't do this:
-		// https://github.com/cloudflare/workerd/blob/9e915ed637d65adb3c57522607d2cd8b8d692b6b/src/workerd/io/worker.c%2B%2B#L1920-L1921
-		Class.prototype = new Proxy(Class.prototype, {
-			get(target, key, receiver) {
-				const value = Reflect.get(target, key, receiver);
-				if (value !== undefined) {
-					return value;
-				}
-				// noinspection SuspiciousTypeOfGuard
-				if (typeof key === "symbol" || IGNORED_KEYS.includes(key)) {
-					return;
-				}
-				return getUnknownPrototypeKey.call(receiver, key as string);
-			},
-		});
-
-		return Reflect.construct(superClass, args, Class);
-	}
-
-	Reflect.setPrototypeOf(Class.prototype, superClass.prototype);
-	Reflect.setPrototypeOf(Class, superClass);
-
-	return Class as unknown as T & { prototype: ExtraPrototype };
 }
 
 /**
