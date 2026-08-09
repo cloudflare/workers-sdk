@@ -330,7 +330,7 @@ export const aiSearchCreateCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name"],
-	async handler(args, { config }) {
+	async handler(args, { config, sdk }) {
 		// Get accountId early — needed for listing R2 buckets and zones
 		const accountId = await requireAuth(config);
 
@@ -560,7 +560,7 @@ export const aiSearchCreateCommand = createCommand({
 			const effectiveJurisdiction = sourceJurisdiction?.trim() || undefined;
 			// 3.1 R2: list buckets and let user pick, with "Create new" option
 			const buckets = await listR2Buckets(
-				config,
+				sdk,
 				accountId,
 				effectiveJurisdiction
 			);
