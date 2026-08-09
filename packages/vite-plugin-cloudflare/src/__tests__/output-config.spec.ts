@@ -148,4 +148,32 @@ describe("getWorkerOutputConfig", () => {
 			},
 		]);
 	});
+
+	test("declares preserved CommonJS modules before the broad ESM rule", ({
+		expect,
+	}) => {
+		const root = createRoot();
+		const outputConfig = getOutputConfig({
+			inputWorkerConfig: workerConfig(root),
+			workerOutputDirectory: "dist/api_worker",
+			resolvedViteConfig: resolvedViteConfig(root),
+			entryFileName: "index.js",
+			includeAssets: false,
+			commonJsModuleNames: [
+				"__cloudflare_cjs__/abc/package/index.js",
+				"__cloudflare_cjs__/abc/package/data.json",
+			],
+		});
+
+		expect(outputConfig.rules).toEqual([
+			{
+				type: "CommonJS",
+				globs: [
+					"__cloudflare_cjs__/abc/package/index.js",
+					"__cloudflare_cjs__/abc/package/data.json",
+				],
+			},
+			{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] },
+		]);
+	});
 });

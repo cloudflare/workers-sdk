@@ -4,6 +4,7 @@ import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import { nodeBuiltinsRE } from "./nodejs-compat";
 import { additionalModuleRE } from "./plugins/additional-modules";
+import { isExperimentalCommonJsModuleReference } from "./plugins/commonjs-module-registry";
 import {
 	ENVIRONMENT_NAME_HEADER,
 	GET_EXPORT_TYPES_PATH,
@@ -167,7 +168,10 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		options?: FetchFunctionOptions
 	): Promise<vite.FetchResult> {
 		// Additional modules (CompiledWasm, Data, Text)
-		if (additionalModuleRE.test(id)) {
+		if (
+			additionalModuleRE.test(id) ||
+			isExperimentalCommonJsModuleReference(id)
+		) {
 			return {
 				externalize: id,
 				type: "module",
@@ -222,6 +226,9 @@ export function createCloudflareEnvironmentOptions({
 	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
+	const preserveCommonJs = workerConfig.compatibility_flags?.includes(
+		"new_module_registry"
+	);
 	const rollupOptions = isParentEnvironment
 		? {
 				input: {
@@ -288,7 +295,9 @@ export function createCloudflareEnvironmentOptions({
 		},
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
-			noDiscovery: false,
+			// CommonJS must reach the registry plugin before optimization converts it to ESM.
+			noDiscovery: preserveCommonJs,
+			include: preserveCommonJs ? [] : undefined,
 			// Workaround for https://github.com/vitejs/vite/issues/20867
 			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
 			ignoreOutdatedRequests: true,

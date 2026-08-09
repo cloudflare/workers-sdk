@@ -29,4 +29,12 @@ describe("detectModuleType", () => {
 			expect(detectModuleType(filename)).toBe(expected);
 		}
 	);
+
+	it("prefers a preserved JavaScript module type over the file extension", ({
+		expect,
+	}) => {
+		expect(detectModuleType("package/index.js", "commonjs")).toBe("cjs");
+		expect(detectModuleType("package/data.json", "commonjs")).toBe("cjs");
+		expect(detectModuleType("package/index.cjs", "esmodule")).toBe("esm");
+	});
 });

@@ -3,7 +3,11 @@ import crypto from "node:crypto";
 import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	experimental_classifyJavaScriptFile,
+	experimental_createCommonJsGraph,
+	UserError,
+} from "@cloudflare/workers-utils";
 import globToRegExp from "glob-to-regexp";
 import { sync as resolveSync } from "resolve";
 import { logger } from "../logger";
@@ -18,6 +22,7 @@ import type {
 	CfModuleType,
 	Config,
 	ConfigModuleRuleType,
+	ExperimentalCommonJsGraph,
 } from "@cloudflare/workers-utils";
 import type esbuild from "esbuild";
 
@@ -83,6 +88,200 @@ export const noopModuleCollector: ModuleCollector = {
 		},
 	},
 };
+
+const commonJsInteropNamespace = "wrangler-commonjs-interop";
+const commonJsRootKinds = new Set<esbuild.ImportKind>([
+	"import-statement",
+	"dynamic-import",
+	"require-call",
+]);
+const commonJsGraphPluginData = {
+	skip: true,
+	experimentalCommonJsGraph: true,
+};
+
+function isCommonJsGraphResolution(pluginData: unknown): boolean {
+	return (
+		typeof pluginData === "object" &&
+		pluginData !== null &&
+		"experimentalCommonJsGraph" in pluginData
+	);
+}
+
+function isBareModuleSpecifier(specifier: string): boolean {
+	return (
+		!specifier.startsWith(".") &&
+		!specifier.startsWith("/") &&
+		!specifier.startsWith("\\") &&
+		!path.isAbsolute(specifier)
+	);
+}
+
+function isInNodeModules(filePath: string): boolean {
+	return filePath.split(path.sep).includes("node_modules");
+}
+
+function createCommonJsInteropWrapper(
+	graph: ExperimentalCommonJsGraph,
+	kind: "import" | "require"
+): string {
+	let binding = "__commonJsModule";
+	while (graph.root.namedExports.includes(binding)) {
+		binding = `_${binding}`;
+	}
+
+	if (kind === "require") {
+		return [
+			`import ${binding} from ${JSON.stringify(`./${graph.root.emittedName}`)};`,
+			`module.exports = ${binding};`,
+		].join("\n");
+	}
+
+	return [
+		`import ${binding} from ${JSON.stringify(`./${graph.root.emittedName}`)};`,
+		`export default ${binding};`,
+		...graph.root.namedExports.map(
+			(name) => `export const ${name} = ${binding}.${name};`
+		),
+	].join("\n");
+}
+
+/**
+ * Preserves npm CommonJS dependency boundaries for workerd's experimental
+ * module registry. The caller is responsible for applying the feature gate.
+ */
+export function createExperimentalCommonJsModulePlugin(
+	modules: CfModule[]
+): esbuild.Plugin {
+	return {
+		name: "wrangler-experimental-commonjs-module-collector",
+		setup(build) {
+			let emittedModuleNames = new Set<string>();
+			let roots = new Map<string, Promise<ExperimentalCommonJsGraph>>();
+			let wrappers = new Map<
+				string,
+				{ rootPath: string; kind: "import" | "require" }
+			>();
+			let graphBuilder = experimental_createCommonJsGraph({
+				resolve: resolveGraphEdge,
+			});
+
+			async function resolveGraphEdge(
+				specifier: string,
+				importer: string
+			): Promise<string | undefined> {
+				const result = await build.resolve(specifier, {
+					kind: "require-call",
+					importer,
+					resolveDir: path.dirname(importer),
+					pluginData: commonJsGraphPluginData,
+				});
+				return result.errors.length === 0 &&
+					!result.external &&
+					result.namespace === "file" &&
+					path.isAbsolute(result.path)
+					? result.path
+					: undefined;
+			}
+
+			async function discoverGraph(
+				rootPath: string
+			): Promise<ExperimentalCommonJsGraph> {
+				let graphPromise = roots.get(rootPath);
+				if (graphPromise === undefined) {
+					graphPromise = graphBuilder.discover(rootPath);
+					roots.set(rootPath, graphPromise);
+				}
+				const graph = await graphPromise;
+				for (const module of graph.modules) {
+					if (emittedModuleNames.has(module.emittedName)) {
+						continue;
+					}
+					emittedModuleNames.add(module.emittedName);
+					modules.push({
+						name: module.emittedName,
+						filePath: module.sourcePath,
+						content: module.transformedSource,
+						type: module.sourceType === "commonjs" ? "commonjs" : "esm",
+					});
+				}
+				return graph;
+			}
+
+			build.onStart(() => {
+				emittedModuleNames = new Set();
+				roots = new Map();
+				wrappers = new Map();
+				graphBuilder = experimental_createCommonJsGraph({
+					resolve: resolveGraphEdge,
+				});
+			});
+
+			build.onResolve({ filter: /.*/ }, (args) => {
+				if (
+					args.namespace === commonJsInteropNamespace &&
+					args.path.startsWith("./__cloudflare_cjs__/")
+				) {
+					return { path: args.path, external: true };
+				}
+			});
+
+			build.onResolve({ filter: /.*/ }, async (args) => {
+				if (
+					isCommonJsGraphResolution(args.pluginData) ||
+					!commonJsRootKinds.has(args.kind)
+				) {
+					return;
+				}
+
+				const resolved = await build.resolve(args.path, {
+					kind: args.kind,
+					importer: args.importer,
+					resolveDir: args.resolveDir,
+					pluginData: commonJsGraphPluginData,
+				});
+				if (
+					resolved.errors.length > 0 ||
+					resolved.external ||
+					resolved.namespace !== "file" ||
+					!path.isAbsolute(resolved.path) ||
+					![".js", ".cjs"].includes(path.extname(resolved.path)) ||
+					(!isBareModuleSpecifier(args.path) &&
+						!isInNodeModules(args.importer) &&
+						!isInNodeModules(resolved.path)) ||
+					(await experimental_classifyJavaScriptFile(resolved.path)) !==
+						"commonjs"
+				) {
+					return;
+				}
+
+				await discoverGraph(resolved.path);
+				const kind = args.kind === "require-call" ? "require" : "import";
+				const wrapperPath = `${resolved.path}?wrangler-commonjs-${kind}`;
+				wrappers.set(wrapperPath, { rootPath: resolved.path, kind });
+				return {
+					path: wrapperPath,
+					namespace: commonJsInteropNamespace,
+					sideEffects: resolved.sideEffects,
+				};
+			});
+
+			build.onLoad(
+				{ filter: /.*/, namespace: commonJsInteropNamespace },
+				async (args) => {
+					const wrapper = wrappers.get(args.path);
+					assert(wrapper, `Missing CommonJS wrapper for ${args.path}`);
+					const graph = await discoverGraph(wrapper.rootPath);
+					return {
+						contents: createCommonJsInteropWrapper(graph, wrapper.kind),
+						loader: "js",
+						watchFiles: graph.modules.map((module) => module.sourcePath),
+					};
+				}
+			);
+		},
+	};
+}
 
 export function createModuleCollector(props: {
 	entry: Entry;

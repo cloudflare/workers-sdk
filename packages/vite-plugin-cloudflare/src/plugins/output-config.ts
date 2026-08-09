@@ -7,6 +7,7 @@ import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { getLocalDevVarsForPreview } from "../dev-vars";
 import { createPlugin } from "../utils";
+import { getExperimentalCommonJsModuleTypes } from "./commonjs-module-registry";
 import type { ResolvedWorkerConfig } from "../plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
@@ -54,6 +55,11 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					resolvedViteConfig: ctx.resolvedViteConfig,
 					entryFileName: entryChunk.fileName,
 					includeAssets: isEntryWorker || isPrerenderWorker,
+					commonJsModuleNames: [
+						...getExperimentalCommonJsModuleTypes(ctx, this.environment.name),
+					]
+						.filter(([, type]) => type === "commonjs")
+						.map(([name]) => name),
 				});
 
 				// Infer `upload_source_maps` from Vite's `build.sourcemap` if not explicitly set
@@ -151,12 +157,14 @@ export function getOutputConfig({
 	resolvedViteConfig,
 	entryFileName,
 	includeAssets,
+	commonJsModuleNames = [],
 }: {
 	inputWorkerConfig: ResolvedWorkerConfig;
 	workerOutputDirectory: string;
 	resolvedViteConfig: vite.ResolvedConfig;
 	entryFileName: string;
 	includeAssets: boolean;
+	commonJsModuleNames?: string[];
 }): Unstable_RawConfig {
 	const sourceConfigDirectory = inputWorkerConfig.configPath
 		? path.dirname(inputWorkerConfig.configPath)
@@ -170,7 +178,12 @@ export function getOutputConfig({
 		...inputWorkerConfig,
 		main: entryFileName,
 		no_bundle: true,
-		rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
+		rules: [
+			...(commonJsModuleNames.length > 0
+				? [{ type: "CommonJS" as const, globs: commonJsModuleNames }]
+				: []),
+			{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] },
+		],
 		assets: includeAssets
 			? {
 					...inputWorkerConfig.assets,

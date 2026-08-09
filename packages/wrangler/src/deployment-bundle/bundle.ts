@@ -23,7 +23,10 @@ import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal"
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { getNodeJSCompatPlugins } from "./esbuild-plugins/nodejs-plugins";
 import { writeAdditionalModules } from "./find-additional-modules";
-import { noopModuleCollector } from "./module-collection";
+import {
+	createExperimentalCommonJsModulePlugin,
+	noopModuleCollector,
+} from "./module-collection";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { ModuleCollector } from "./module-collection";
 import type {
@@ -412,6 +415,11 @@ export async function bundleWorker(
 		plugins: [
 			aliasPlugin,
 			moduleCollector.plugin,
+			...(bundle &&
+			entry.format === "modules" &&
+			compatibilityFlags?.includes("new_module_registry")
+				? [createExperimentalCommonJsModulePlugin(moduleCollector.modules)]
+				: []),
 			...getNodeJSCompatPlugins({
 				mode: nodejsCompatMode ?? null,
 				compatibilityDate,

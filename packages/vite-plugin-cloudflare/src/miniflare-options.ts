@@ -37,6 +37,7 @@ import {
 import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
+import { getExperimentalCommonJsModule } from "./plugins/commonjs-module-registry";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
 import {
@@ -602,6 +603,18 @@ export async function getDevMiniflareOptions(
 				}
 
 				const rawSpecifier = parsed.rawSpecifier;
+				const commonJsModule = getExperimentalCommonJsModule(
+					ctx,
+					parsed.specifier
+				);
+				if (commonJsModule !== undefined) {
+					return MiniflareResponse.json({
+						name: parsed.specifier,
+						[commonJsModule.sourceType === "commonjs"
+							? "commonJsModule"
+							: "esModule"]: commonJsModule.transformedSource,
+					});
+				}
 				assert(
 					rawSpecifier,
 					`Unexpected error: no specifier in request to module fallback service.`
@@ -651,7 +664,7 @@ export async function getDevMiniflareOptions(
 	};
 }
 
-function getPreviewModules(
+export function getPreviewModules(
 	main: string,
 	modulesRules: SourcelessWorkerOptions["modulesRules"]
 ) {
@@ -659,6 +672,7 @@ function getPreviewModules(
 	const rootPath = path.dirname(main);
 	const entryPath = path.basename(main);
 
+	const seen = new Set([entryPath]);
 	return {
 		rootPath,
 		modules: [
@@ -667,12 +681,18 @@ function getPreviewModules(
 				path: entryPath,
 			} as const,
 			...modulesRules.flatMap(({ type, include }) =>
-				globSync(include, { cwd: rootPath, ignore: entryPath }).map(
-					(globPath) => ({
+				globSync(include, { cwd: rootPath, ignore: entryPath })
+					.filter((globPath) => {
+						if (seen.has(globPath)) {
+							return false;
+						}
+						seen.add(globPath);
+						return true;
+					})
+					.map((globPath) => ({
 						type,
 						path: globPath,
-					})
-				)
+					}))
 			),
 		],
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
