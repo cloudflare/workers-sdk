@@ -124,10 +124,14 @@ jobs:
 
       - name: Enable auto-merge
         if: steps.meta.outputs.dependency-group == 'workerd-and-workers-types' && steps.verify.outputs.verified == 'true'
+        # Note: we use GH_ACCESS_TOKEN (a PAT) instead of GITHUB_TOKEN because GitHub does
+        # not fire push-event workflows for merges performed with GITHUB_TOKEN,
+        # so using it here silently skips the Handle Changesets workflow that
+        # needs to run on every push to main.
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
       - name: Disable auto-merge if verification failed
         # If a previous run enabled auto-merge but a later push broke the
@@ -138,4 +142,4 @@ jobs:
         run: gh pr merge --disable-auto "$PR_URL" || true
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
