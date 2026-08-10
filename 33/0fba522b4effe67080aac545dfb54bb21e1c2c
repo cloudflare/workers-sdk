@@ -1,0 +1,23 @@
+.changeset/calm-mails-report.md
+  s_5a7ec10d15990b::t_9f951da8de9e07 5,7
+packages/vite-plugin-cloudflare/playground/email-worker/__tests__/email-triggers.spec.ts
+  s_5a7ec10d15990b::t_2cec1bdc07f8c6 4,19-22,24-36,38-41,43-51
+packages/wrangler/e2e/dev.test.ts
+  s_5a7ec10d15990b::t_fc74a4d1026f02 2459-2462,2467,2475,2477,2479,2481-2484,2492-2494,2496-2498,2500-2501
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "330fba522b4effe67080aac545dfb54bb21e1c2c",
+  "prompts": {},
+  "sessions": {
+    "s_5a7ec10d15990b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02ddcca7fffeY5ICxj78cHaxJD",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
