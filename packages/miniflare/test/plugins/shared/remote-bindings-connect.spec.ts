@@ -14,7 +14,7 @@ import {
 	VPC_SERVICES_PLUGIN,
 } from "miniflare";
 import { beforeAll, describe, test } from "vitest";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 // The raw-TCP `connect()` tunnel spans two workers:
@@ -240,27 +240,34 @@ function makeEdge(targetScript: string, directSockets = false): Miniflare {
 	return new Miniflare({
 		workers: [
 			{
-				name: "proxy-server",
-				compatibilityDate: COMPAT_DATE,
-				compatibilityFlags: ["experimental"],
-				modules: [
-					{
-						type: "ESModule",
-						path: "ProxyServerWorker.js",
-						contents: proxyServerBundle,
+				config: {
+					type: "worker",
+					name: "proxy-server",
+					compatibilityDate: COMPAT_DATE,
+					compatibilityFlags: ["experimental"],
+					manifest: {
+						mainModule: "ProxyServerWorker.js",
+						modules: {
+							"ProxyServerWorker.js": {
+								type: "esm",
+								contents: proxyServerBundle,
+							},
+						},
 					},
-				],
-				serviceBindings: { VPC: "vpc-target" },
+					env: { VPC: { type: "worker", workerName: "vpc-target" } },
+				},
 			},
 			{
-				name: "vpc-target",
-				compatibilityDate: COMPAT_DATE,
-				compatibilityFlags: ["experimental"],
-				modules: true,
-				script: targetScript,
+				config: {
+					type: "worker",
+					name: "vpc-target",
+					compatibilityDate: COMPAT_DATE,
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(targetScript),
+				},
 				// Enable direct access so the test can read the target's `/state`.
 				...(directSockets
-					? { unsafeDirectSockets: [{ host: "127.0.0.1" }] }
+					? { dev: { unsafeDirectSockets: [{ host: "127.0.0.1" }] } }
 					: {}),
 			},
 		],
@@ -269,16 +276,27 @@ function makeEdge(targetScript: string, directSockets = false): Miniflare {
 
 function makeLocal(userScript: string, edgeUrl: URL): Miniflare {
 	return new Miniflare({
-		modules: true,
-		compatibilityDate: COMPAT_DATE,
-		script: userScript,
-		vpcNetworks: {
-			VPC: {
-				network_id: "test-network",
-				remoteProxyConnectionString:
-					edgeUrl as unknown as RemoteProxyConnectionString,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: COMPAT_DATE,
+					manifest: singleModuleManifest(userScript),
+					env: {
+						VPC: {
+							type: "vpc-network",
+							networkId: "test-network",
+							remote: true,
+						},
+					},
+				},
+				dev: {
+					remoteProxyConnectionString:
+						edgeUrl as unknown as RemoteProxyConnectionString,
+				},
 			},
-		},
+		],
 	});
 }
 
@@ -287,16 +305,27 @@ function makeLocal(userScript: string, edgeUrl: URL): Miniflare {
 // `connect()`, so the raw-TCP tunnel must work identically.
 function makeLocalService(userScript: string, edgeUrl: URL): Miniflare {
 	return new Miniflare({
-		modules: true,
-		compatibilityDate: COMPAT_DATE,
-		script: userScript,
-		vpcServices: {
-			VPC: {
-				service_id: "test-service",
-				remoteProxyConnectionString:
-					edgeUrl as unknown as RemoteProxyConnectionString,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: COMPAT_DATE,
+					manifest: singleModuleManifest(userScript),
+					env: {
+						VPC: {
+							type: "vpc-service",
+							id: "test-service",
+							remote: true,
+						},
+					},
+				},
+				dev: {
+					remoteProxyConnectionString:
+						edgeUrl as unknown as RemoteProxyConnectionString,
+				},
 			},
-		},
+		],
 	});
 }
 
@@ -724,12 +753,18 @@ describe("VPC_SERVICES plugin: raw TCP opt-in", () => {
 	}) => {
 		const services = await VPC_SERVICES_PLUGIN.getServices({
 			options: {
-				vpcServices: {
-					VPC: { service_id: "test-service" },
+				config: {
+					env: {
+						VPC: {
+							type: "vpc-service",
+							id: "test-service",
+							remote: true,
+						},
+					},
 				},
 			},
-			// The plugin's `getServices` only reads `options`; the remaining fields
-			// of the services context are irrelevant to the raw-TCP opt-in.
+			// The plugin's `getServices` only reads `options.config`; the remaining
+			// fields of the services context are irrelevant to the raw-TCP opt-in.
 		} as unknown as Parameters<typeof VPC_SERVICES_PLUGIN.getServices>[0]);
 
 		const serviceList = services as Array<{

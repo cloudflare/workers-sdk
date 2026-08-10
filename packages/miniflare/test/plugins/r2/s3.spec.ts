@@ -28,7 +28,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { SignatureV4 } from "@smithy/signature-v4";
 import { Miniflare } from "miniflare";
 import { assert, onTestFinished, test } from "vitest";
-import { miniflareTest } from "../../test-shared";
+import { miniflareTest, singleModuleManifest } from "../../test-shared";
 import type { MiniflareTestContext } from "../../test-shared";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ExpectStatic } from "vitest";
@@ -49,11 +49,28 @@ const THIRD_CREDENTIALS = {
 
 const ctx = miniflareTest<{ BUCKET: R2Bucket }, MiniflareTestContext>(
 	{
-		r2Buckets: {
-			BUCKET: { id: "bucket", s3Credentials: CREDENTIALS },
-			OTHER: { id: "other-bucket", s3Credentials: CREDENTIALS },
-			THIRD: { id: "third-bucket", s3Credentials: THIRD_CREDENTIALS },
-		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						BUCKET: { type: "r2", name: "bucket", s3Credentials: CREDENTIALS },
+						OTHER: {
+							type: "r2",
+							name: "other-bucket",
+							s3Credentials: CREDENTIALS,
+						},
+						THIRD: {
+							type: "r2",
+							name: "third-bucket",
+							s3Credentials: THIRD_CREDENTIALS,
+						},
+					},
+				},
+			},
+		],
 	},
 	async (global) => new global.Response(null, { status: 404 })
 );
@@ -2099,21 +2116,30 @@ test("rejects different s3Credentials for the same bucket", async ({
 	const mf = new Miniflare({
 		workers: [
 			{
-				name: "a",
-				modules: true,
-				script: "export default {};",
-				r2Buckets: { BUCKET: { id: "shared", s3Credentials: CREDENTIALS } },
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest("export default {};"),
+					env: {
+						BUCKET: { type: "r2", name: "shared", s3Credentials: CREDENTIALS },
+					},
+				},
 			},
 			{
-				name: "b",
-				modules: true,
-				script: "export default {};",
-				r2Buckets: {
-					BUCKET: {
-						id: "shared",
-						s3Credentials: {
-							accessKeyId: "B".repeat(32),
-							secretAccessKey: "other-secret",
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest("export default {};"),
+					env: {
+						BUCKET: {
+							type: "r2",
+							name: "shared",
+							s3Credentials: {
+								accessKeyId: "B".repeat(32),
+								secretAccessKey: "other-secret",
+							},
 						},
 					},
 				},
@@ -2134,11 +2160,22 @@ test("verifies signatures against the original host when `upstream` is set", asy
 	// and Host header before dispatching to the S3 service; signatures must
 	// still be verified against the host the client signed
 	const mf = new Miniflare({
-		modules: true,
-		script:
-			"export default { fetch: () => new Response(null, { status: 404 }) };",
-		r2Buckets: { BUCKET: { id: "bucket", s3Credentials: CREDENTIALS } },
 		upstream: "https://example.com/",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch: () => new Response(null, { status: 404 }) };"
+					),
+					env: {
+						BUCKET: { type: "r2", name: "bucket", s3Credentials: CREDENTIALS },
+					},
+				},
+			},
+		],
 	});
 	onTestFinished(() => mf.dispose());
 	const url = await mf.ready;

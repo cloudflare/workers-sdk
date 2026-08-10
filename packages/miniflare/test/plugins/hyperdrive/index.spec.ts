@@ -1,14 +1,19 @@
 import { HYPERDRIVE_PLUGIN, Miniflare } from "miniflare";
 import { describe, test, vi } from "vitest";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions } from "miniflare";
 
 test("fields match expected", async ({ expect }) => {
 	const connectionString = `postgresql://user:password@localhost:5432/database`;
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch(request, env) {
 				return Response.json({
 					connectionString: env.HYPERDRIVE.connectionString,
@@ -19,10 +24,17 @@ test("fields match expected", async ({ expect }) => {
 					port: env.HYPERDRIVE.port,
 				});
 			}
-		}`,
-		hyperdrives: {
-			HYPERDRIVE: connectionString,
-		},
+		}`),
+					env: {
+						HYPERDRIVE: {
+							type: "hyperdrive",
+							id: "hyperdrive",
+							localConnectionString: connectionString,
+						},
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost/");
@@ -40,11 +52,23 @@ test("fields match expected", async ({ expect }) => {
 test("fields in binding proxy match expected", async ({ expect }) => {
 	const connectionString = "postgresql://user:password@localhost:5432/database";
 	const mf = new Miniflare({
-		modules: true,
-		script: "export default { fetch() {} }",
-		hyperdrives: {
-			HYPERDRIVE: connectionString,
-		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest("export default { fetch() {} }"),
+					env: {
+						HYPERDRIVE: {
+							type: "hyperdrive",
+							id: "hyperdrive",
+							localConnectionString: connectionString,
+						},
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const { HYPERDRIVE } = await mf.getBindings<{ HYPERDRIVE: Hyperdrive }>();
@@ -62,83 +86,130 @@ test("fields in binding proxy match expected", async ({ expect }) => {
 });
 
 test("validates config", async ({ expect }) => {
-	const opts: MiniflareOptions = { modules: true, script: "" };
+	const opts: MiniflareOptions = {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
+	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
 
+	function withHyperdrive(localConnectionString: string): MiniflareOptions {
+		return {
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(""),
+						env: {
+							HYPERDRIVE: {
+								type: "hyperdrive",
+								id: "hyperdrive",
+								localConnectionString,
+							},
+						},
+					},
+				},
+			],
+		};
+	}
+
 	// Check requires Postgres protocol
 	await expect(
-		mf.setOptions({
-			...opts,
-			hyperdrives: {
-				HYPERDRIVE: "mariadb://user:password@localhost:3306/database",
-			},
-		})
+		mf.setOptions(
+			withHyperdrive("mariadb://user:password@localhost:3306/database")
+		)
 	).rejects.toThrow(
 		/Only PostgreSQL-compatible or MySQL-compatible databases are currently supported./
 	);
 
 	// Check requires host
 	await expect(
-		mf.setOptions({
-			...opts,
-			hyperdrives: { HYPERDRIVE: "postgres:///database" },
-		})
+		mf.setOptions(withHyperdrive("postgres:///database"))
 	).rejects.toThrow(
 		/You must provide a hostname or IP address in your connection string/
 	);
 
 	// Check requires database name
 	await expect(
-		mf.setOptions({
-			...opts,
-			hyperdrives: { HYPERDRIVE: "postgres://user:password@localhost:5432" },
-		})
+		mf.setOptions(withHyperdrive("postgres://user:password@localhost:5432"))
 	).rejects.toThrow(/You must provide a database name as the path component/);
 
 	// Check requires username
 	await expect(
-		mf.setOptions({
-			...opts,
-			hyperdrives: { HYPERDRIVE: "postgres://localhost:5432/database" },
-		})
+		mf.setOptions(withHyperdrive("postgres://localhost:5432/database"))
 	).rejects.toThrow(/You must provide a username/);
 
 	// Check requires password
 	await expect(
-		mf.setOptions({
-			...opts,
-			hyperdrives: { HYPERDRIVE: "postgres://user@localhost:5432/database" },
-		})
+		mf.setOptions(withHyperdrive("postgres://user@localhost:5432/database"))
 	).rejects.toThrow(/You must provide a password/);
 });
 
 test("sets default port based on protocol", async ({ expect }) => {
-	// Check defaults port to 5432 for Postgres
-	const opts = {
-		modules: true,
-		script: `export default {
+	const script = `export default {
 			fetch(request, env) {
 				return new Response(env.HYPERDRIVE.port);
 			}
-		}`,
-		hyperdrives: {
-			HYPERDRIVE: "postgresql://user:password@localhost/database" as
-				| string
-				| URL,
-		},
-	} satisfies MiniflareOptions;
-	const mf = new Miniflare(opts);
+		}`;
+	// Check defaults port to 5432 for Postgres
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(script),
+					env: {
+						HYPERDRIVE: {
+							type: "hyperdrive",
+							id: "hyperdrive",
+							localConnectionString:
+								"postgresql://user:password@localhost/database",
+						},
+					},
+				},
+			},
+		],
+	});
 	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost/");
 	expect(await res.text()).toBe("5432");
 
-	// Check `URL` accepted too
-	opts.hyperdrives.HYPERDRIVE = new URL(
-		"postgres://user:password@localhost/database"
-	);
-	await mf.setOptions(opts);
+	// The config schema types `localConnectionString` as a string, so URL
+	// objects (accepted by the old `hyperdrives` option) must be serialised.
+	await mf.setOptions({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(script),
+					env: {
+						HYPERDRIVE: {
+							type: "hyperdrive",
+							id: "hyperdrive",
+							localConnectionString: new URL(
+								"postgres://user:password@localhost/database"
+							).toString(),
+						},
+					},
+				},
+			},
+		],
+	});
 	res = await mf.dispatchFetch("http://localhost/");
 	expect(await res.text()).toBe("5432");
 });
@@ -165,7 +236,20 @@ describe("proxy server creation", () => {
 	) {
 		// Returns hyperdrive services from the hyperdrive_plugin
 		return {
-			options: { hyperdrives },
+			options: {
+				config: {
+					env: Object.fromEntries(
+						Object.entries(hyperdrives).map(([name, url]) => [
+							name,
+							{
+								type: "hyperdrive",
+								id: name,
+								localConnectionString: url,
+							},
+						])
+					),
+				},
+			},
 			hyperdriveProxyController: controller,
 		} as unknown as Parameters<typeof HYPERDRIVE_PLUGIN.getServices>[0];
 	}

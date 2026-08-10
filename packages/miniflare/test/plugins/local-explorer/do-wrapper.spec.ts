@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry, singleModuleManifest } from "../../test-shared";
 
 const TEST_SCRIPT = `
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
@@ -68,14 +68,28 @@ describe("Durable Object Wrapper", () => {
 
 		beforeAll(async () => {
 			mf = new Miniflare({
-				compatibilityDate: "2024-04-03",
-				compatibilityFlags: ["nodejs_compat"],
-				modules: true,
-				script: TEST_SCRIPT,
 				unsafeLocalExplorer: localExplorer,
-				durableObjects: {
-					TEST_DO: "TestDO",
-				},
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2024-04-03",
+							compatibilityFlags: ["nodejs_compat"],
+							manifest: singleModuleManifest(TEST_SCRIPT),
+							env: {
+								TEST_DO: {
+									type: "durable-object",
+									workerName: "",
+									exportName: "TestDO",
+								},
+							},
+							exports: {
+								TestDO: { type: "durable-object", storage: "legacy-kv" },
+							},
+						},
+					},
+				],
 			});
 		});
 

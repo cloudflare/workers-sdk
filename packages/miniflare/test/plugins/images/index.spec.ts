@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { describe, test } from "vitest";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 import type { ImageList, ImageMetadata } from "@cloudflare/workers-types";
 import type { MiniflareOptions } from "miniflare";
 
@@ -52,10 +52,17 @@ async function handleCommand(images, op, args) {
 
 function createMiniflare(): Miniflare {
 	return new Miniflare({
-		compatibilityDate: "2025-04-01",
-		images: { binding: "IMAGES" },
-		modules: true,
-		script: WORKER_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-04-01",
+					env: { IMAGES: { type: "images" } },
+					manifest: singleModuleManifest(WORKER_SCRIPT),
+				},
+			},
+		],
 	} satisfies MiniflareOptions);
 }
 

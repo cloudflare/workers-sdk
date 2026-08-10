@@ -1,32 +1,55 @@
-import { FlagshipOptionsSchema } from "miniflare";
+import { WorkerOptionsSchema } from "miniflare";
 import { test } from "vitest";
 
-test("FlagshipOptionsSchema: accepts valid flagship options", ({ expect }) => {
-	const result = FlagshipOptionsSchema.safeParse({
-		flagship: {
-			FLAGS: {
-				app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+function workerConfigBase(
+	overrides?: Record<string, unknown>
+): Record<string, unknown> {
+	return {
+		type: "worker",
+		name: "test-worker",
+		compatibilityDate: "2025-01-01",
+		manifest: {
+			mainModule: "index.js",
+			modules: {
+				"index.js": { type: "esm", contents: "export default {}" },
 			},
 		},
+		...overrides,
+	};
+}
+
+test("flagship: accepts valid flagship binding", ({ expect }) => {
+	const result = WorkerOptionsSchema.safeParse({
+		config: workerConfigBase({
+			env: {
+				FLAGS: {
+					type: "flagship",
+					id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+				},
+			},
+		}),
 	});
 	expect(result.success).toBe(true);
 });
 
-test("FlagshipOptionsSchema: accepts flagship with remoteProxyConnectionString", ({
-	expect,
-}) => {
-	const result = FlagshipOptionsSchema.safeParse({
-		flagship: {
-			FLAGS: {
-				app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-				remoteProxyConnectionString: "test-connection-string",
+test("flagship: accepts flagship binding with remote", ({ expect }) => {
+	const result = WorkerOptionsSchema.safeParse({
+		config: workerConfigBase({
+			env: {
+				FLAGS: {
+					type: "flagship",
+					id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+					remote: true,
+				},
 			},
-		},
+		}),
 	});
 	expect(result.success).toBe(true);
 });
 
-test("FlagshipOptionsSchema: accepts empty flagship", ({ expect }) => {
-	const result = FlagshipOptionsSchema.safeParse({});
+test("flagship: accepts config with no flagship binding", ({ expect }) => {
+	const result = WorkerOptionsSchema.safeParse({
+		config: workerConfigBase(),
+	});
 	expect(result.success).toBe(true);
 });

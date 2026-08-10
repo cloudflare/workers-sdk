@@ -8,7 +8,7 @@ import {
 	isRequiredProperty,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
@@ -585,12 +585,14 @@ export async function usingLocalNamespace<T>(
 	// it expects a full Config object, even though it only uses compliance_region
 	const persist = getLocalPersistencePath(persistTo, config);
 	const resourcePersistencePath = getDefaultPersistRoot(persist);
-	const mf = new Miniflare({
-		script:
-			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		resourcePersistencePath,
-		kvNamespaces: { NAMESPACE: namespaceId },
-	});
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			script:
+				'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+			resourcePersistencePath,
+			kvNamespaces: { NAMESPACE: namespaceId },
+		})
+	);
 	const namespace = await mf.getKVNamespace("NAMESPACE");
 	try {
 		return await closure(namespace);

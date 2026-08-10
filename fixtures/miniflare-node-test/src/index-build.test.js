@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { spawnSync } from "node:child_process";
 import test, { after, before, describe } from "node:test";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 
 before(() => {
 	spawnSync("npx wrangler build -c wrangler-build.json", {
@@ -17,14 +17,16 @@ describe("worker build", () => {
 	let worker;
 
 	before(async () => {
-		worker = new Miniflare({
-			modules: [
-				{
-					type: "ESModule",
-					path: "dist/index.js",
-				},
-			],
-		});
+		worker = new Miniflare(
+			convertV4MiniflareOptions({
+				modules: [
+					{
+						type: "ESModule",
+						path: "dist/index.js",
+					},
+				],
+			})
+		);
 		await worker.ready;
 	});
 

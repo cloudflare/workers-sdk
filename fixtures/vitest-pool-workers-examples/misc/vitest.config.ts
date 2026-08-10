@@ -23,6 +23,11 @@ export default mergeConfig(
 							name: "other",
 							modules: true,
 							scriptPath: "./src/other-worker.mjs",
+							durableObjects: {
+								OTHER_OBJECT: {
+									className: "OtherObject",
+								},
+							},
 						},
 					],
 				},
