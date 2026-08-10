@@ -158,6 +158,26 @@ describe("checkRemoteSecretsOverride", () => {
 		);
 	});
 
+	it("should detect when a Messaging binding overrides a secret", async ({
+		expect,
+	}) => {
+		const checkResult = await runCheckRemoteSecretsOverride(
+			{
+				messaging: [
+					{
+						binding: "MY_SECRET",
+						namespace: "my-namespace",
+					},
+				],
+			},
+			["MY_SECRET"]
+		);
+		assert(checkResult.override);
+		expect(checkResult.deployErrorMessage).toBe(
+			"Binding `MY_SECRET` conflicts with an existing remote secret. This deployment will replace the remote secret with your binding."
+		);
+	});
+
 	it("should detect and provide a valid deploy error message when multiple binding names override secrets", async ({
 		expect,
 	}) => {

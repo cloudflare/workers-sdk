@@ -25,6 +25,7 @@ const reorderableBindings = {
 	ai_search_namespaces: true,
 	ai_search: true,
 	agent_memory: true,
+	messaging: true,
 	hyperdrive: true,
 	workflows: true,
 	dispatch_namespaces: true,
@@ -241,6 +242,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	if (normalizedConfig.agent_memory?.length) {
 		normalizedConfig.agent_memory = normalizedConfig.agent_memory.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.messaging?.length) {
+		normalizedConfig.messaging = normalizedConfig.messaging.map(
 			({ remote: _, ...binding }) => binding
 		);
 	}

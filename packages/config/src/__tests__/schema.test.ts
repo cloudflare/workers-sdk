@@ -71,6 +71,27 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts multiple Messaging bindings", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: {
+					MSG_1: { type: "messaging", namespace: "ns-1" },
+					MSG_2: { type: "messaging", namespace: "ns-2", remote: true },
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects a Messaging binding without a namespace", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: { MSG: { type: "messaging" } },
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it.for([
 			["ai"],
 			["assets"],

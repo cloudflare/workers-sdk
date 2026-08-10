@@ -216,6 +216,7 @@ function convertBindingsAndAssets(
 	const aiSearch: NonNullable<RawConfig["ai_search"]> = [];
 	const aiSearchNamespaces: NonNullable<RawConfig["ai_search_namespaces"]> = [];
 	const agentMemory: NonNullable<RawConfig["agent_memory"]> = [];
+	const messaging: NonNullable<RawConfig["messaging"]> = [];
 	const analyticsEngineDatasets: NonNullable<
 		RawConfig["analytics_engine_datasets"]
 	> = [];
@@ -490,6 +491,16 @@ function convertBindingsAndAssets(
 				vars[name] = binding.value;
 				break;
 			}
+			case "messaging": {
+				messaging.push(
+					omitUndefined({
+						binding: name,
+						namespace: binding.namespace,
+						remote: binding.remote,
+					})
+				);
+				break;
+			}
 			case "vectorize": {
 				vectorize.push(
 					omitUndefined({
@@ -608,6 +619,9 @@ function convertBindingsAndAssets(
 	}
 	if (agentMemory.length) {
 		result.agent_memory = agentMemory;
+	}
+	if (messaging.length) {
+		result.messaging = messaging;
 	}
 	if (analyticsEngineDatasets.length) {
 		result.analytics_engine_datasets = analyticsEngineDatasets;

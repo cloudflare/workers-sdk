@@ -1214,6 +1214,24 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Messaging namespace bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	messaging: {
+		/** The binding name used to refer to the Messaging namespace in the Worker. */
+		binding: string;
+		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+		namespace: string;
+		/** Whether the Messaging binding should be remote in local development */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Cloudflare Web Search binding. There is exactly one shared web corpus, so the
 	 * binding is zero-config -- only the variable name is required, declared as a
 	 * single object (not an array).

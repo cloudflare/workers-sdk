@@ -375,6 +375,7 @@ export const defaultWranglerConfig: Config = {
 	ai_search: [],
 	websearch: undefined,
 	agent_memory: [],
+	messaging: [],
 	hyperdrive: [],
 	workflows: [],
 	secrets_store_secrets: [],

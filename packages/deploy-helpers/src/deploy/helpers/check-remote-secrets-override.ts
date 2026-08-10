@@ -118,6 +118,7 @@ function extractBindingNames(config: Config): string[] {
 			case "ai_search_namespaces":
 			case "ai_search":
 			case "agent_memory":
+			case "messaging":
 			case "services":
 			case "mtls_certificates":
 			case "dispatch_namespaces":

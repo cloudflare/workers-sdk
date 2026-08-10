@@ -330,6 +330,17 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
+			case "messaging": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "messaging" }
+				>;
+				output[name] = {
+					type: "messaging",
+					namespace: b.namespace,
+				};
+				break;
+			}
 			case "hyperdrive": {
 				const b = binding as Extract<
 					WorkerMetadataBinding,

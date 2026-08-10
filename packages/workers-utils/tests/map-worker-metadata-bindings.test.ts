@@ -278,6 +278,22 @@ describe("mapWorkerMetadataBindings", () => {
 		});
 	});
 
+	describe("messaging", () => {
+		it("maps messaging bindings", ({ expect }) => {
+			const bindings: WorkerMetadataBinding[] = [
+				{
+					type: "messaging",
+					name: "MESSAGING",
+					namespace: "my-namespace",
+				},
+			];
+			const result = mapWorkerMetadataBindings(bindings);
+			expect(result.messaging).toEqual([
+				{ binding: "MESSAGING", namespace: "my-namespace" },
+			]);
+		});
+	});
+
 	describe("analytics_engine_datasets", () => {
 		it("maps analytics_engine binding", ({ expect }) => {
 			const bindings: WorkerMetadataBinding[] = [

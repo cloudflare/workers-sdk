@@ -23,6 +23,7 @@ export type {
 	KvBinding,
 	LogfwdrBinding,
 	MediaBinding,
+	MessagingBinding,
 	MtlsCertificateBinding,
 	PipelineBinding,
 	QueueBinding,

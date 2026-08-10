@@ -315,6 +315,16 @@ export function mapWorkerMetadataBindings(
 						];
 						break;
 					}
+					case "messaging": {
+						configObj.messaging = [
+							...(configObj.messaging ?? []),
+							{
+								binding: binding.name,
+								namespace: binding.namespace,
+							},
+						];
+						break;
+					}
 					case "hyperdrive":
 						configObj.hyperdrive = [
 							...(configObj.hyperdrive ?? []),

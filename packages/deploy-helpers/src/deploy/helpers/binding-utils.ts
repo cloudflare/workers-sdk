@@ -244,6 +244,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "messaging": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "messaging", ...x };
+				}
+				break;
+			}
 			case "unsafe": {
 				if (pages) {
 					break;

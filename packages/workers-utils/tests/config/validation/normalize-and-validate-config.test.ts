@@ -39,6 +39,7 @@ describe("normalizeAndValidateConfig()", () => {
 			ai_search_namespaces: [],
 			ai_search: [],
 			agent_memory: [],
+			messaging: [],
 			hyperdrive: [],
 			dev: {
 				ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
@@ -3181,6 +3182,85 @@ describe("normalizeAndValidateConfig()", () => {
 						agent_memory: [
 							{
 								binding: "MEMORY",
+								namespace: "my-namespace",
+								extra_field: "unexpected",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
+			});
+		});
+
+		describe("[messaging]", () => {
+			it("should error if messaging bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						messaging: [
+							{},
+							{ binding: "MESSAGING" },
+							{ binding: 2000, namespace: 2111 },
+							{
+								binding: "MESSAGING_REMOTE",
+								namespace: "my-namespace",
+								remote: "yes",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toContain(
+					'"messaging[0]" bindings should have a string "binding" field'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"messaging[0]" bindings must have a "namespace" field'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"messaging[3]" should, optionally, have a boolean "remote" field'
+				);
+			});
+
+			it("should accept valid messaging bindings", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						messaging: [
+							{
+								binding: "MESSAGING",
+								namespace: "my-namespace",
+								remote: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.messaging).toEqual([
+					{
+						binding: "MESSAGING",
+						namespace: "my-namespace",
+						remote: true,
+					},
+				]);
+			});
+
+			it("should warn on additional properties", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						messaging: [
+							{
+								binding: "MESSAGING",
 								namespace: "my-namespace",
 								extra_field: "unexpected",
 							},

@@ -143,6 +143,19 @@ describe("printBindings — AI Search bindings", () => {
 		expect(output).toContain("(inherited)");
 		expect(output).not.toContain("Symbol(inherit_binding)");
 	});
+
+	it("shows Messaging bindings", ({ expect }) => {
+		const output = callPrintBindings({
+			MESSAGING: {
+				type: "messaging",
+				namespace: "my-namespace",
+			},
+		});
+
+		expect(output).toContain("MESSAGING");
+		expect(output).toContain("Messaging");
+		expect(output).toContain("my-namespace");
+	});
 });
 
 describe("printBindings -- Artifacts bindings", () => {
@@ -208,6 +221,17 @@ describe("warnOrError", () => {
 	});
 
 	describe("always-remote bindings (no local simulator, ever)", () => {
+		it("treats Messaging bindings as always remote", ({ expect }) => {
+			expect(() => warnOrError("messaging", false)).toThrow(
+				"Messaging bindings do not support local development. You can set `remote: true` for the binding definition in your configuration file to access a remote version of the resource."
+			);
+
+			expect(() => warnOrError("messaging", undefined)).not.toThrow();
+			expect(std.warn).toContain(
+				"Messaging bindings always access remote resources, and so may incur usage charges even in local dev"
+			);
+		});
+
 		it("throws when `remote: false` is set on an always-remote binding", ({
 			expect,
 		}) => {
