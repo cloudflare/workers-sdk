@@ -20,7 +20,7 @@
 		"@flue/vite": "^2.0.3",
 		"@octokit/rest": "^22.0.1",
 		"agents": "^0.20.1",
-		"hono": "4.12.32",
+		"hono": "4.12.34",
 		"valibot": "^1.4.2",
 		"vite": "catalog:default",
 		"wrangler": "workspace:*"
