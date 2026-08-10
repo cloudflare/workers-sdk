@@ -1819,7 +1819,7 @@ export interface Observability {
 	};
 	metrics?: {
 		/** If metrics should be exported from this Worker. */
-		enabled?: boolean;
+		enabled: boolean;
 		/** What destinations metrics emitted from the Worker should be sent to. */
 		destinations?: string[];
 	};

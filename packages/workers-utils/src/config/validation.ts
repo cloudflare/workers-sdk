@@ -6540,7 +6540,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	 */
 	if (val.metrics !== null && typeof val.metrics === "object") {
 		isValid =
-			validateOptionalProperty(
+			validateRequiredProperty(
 				diagnostics,
 				field,
 				"metrics.enabled",

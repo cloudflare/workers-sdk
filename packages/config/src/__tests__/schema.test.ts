@@ -363,6 +363,27 @@ describe("InputWorkerSchema", () => {
 			}
 		});
 
+		it("requires `enabled` inside `observability.metrics`", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					metrics: {
+						destinations: ["opentelemetry-metrics"],
+					},
+				},
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]?.path).toEqual([
+					"observability",
+					"metrics",
+					"enabled",
+				]);
+			}
+		});
+
 		it("rejects unknown keys inside a trigger", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,

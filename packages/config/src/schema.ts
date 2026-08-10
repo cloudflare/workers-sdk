@@ -356,7 +356,7 @@ const ObservabilitySchema = z.strictObject({
 		.optional(),
 	metrics: z
 		.strictObject({
-			enabled: z.boolean().optional(),
+			enabled: z.boolean(),
 			destinations: z.array(z.string()).optional(),
 		})
 		.optional(),

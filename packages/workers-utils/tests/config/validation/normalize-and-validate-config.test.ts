@@ -10385,6 +10385,30 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should require metrics export to be explicitly enabled or disabled", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							metrics: {
+								destinations: ["opentelemetry-metrics"],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.metrics.enabled" is a required field."
+				`);
+			});
+
 			it("should report invalid null metrics configuration without throwing", ({
 				expect,
 			}) => {
