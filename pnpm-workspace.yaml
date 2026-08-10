@@ -70,6 +70,7 @@ allowBuilds:
   prisma: true
   # Explicitly silence warnings for packages whose postinstall scripts are not
   # required for correct operation.
+  "@google/genai": false # preinstall is a no-op
   protobufjs: false # version-scheme diagnostic warning only
   msw: false # copies mockServiceWorker.js to msw.workerDirectory — unused in this repo
   core-js: false # telemetry
