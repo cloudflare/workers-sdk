@@ -203,6 +203,7 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances pause <name> <id>       Pause a workflow instance
 				  wrangler workflows instances resume <name> <id>      Resume a workflow instance
 				  wrangler workflows instances delete <name> [id..]    Delete workflow instances
+				  wrangler workflows instances step <name> [id]        Get the full, untruncated output of a single step
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
@@ -1042,21 +1043,6 @@ describe("wrangler workflows", () => {
 			expect(output.trigger).toEqual({ source: "unknown" });
 			expect(output.steps).toHaveLength(2);
 			expect(output).not.toHaveProperty("Duration");
-		});
-
-		it("should ignore --truncate-output-limit with --json", async ({
-			expect,
-		}) => {
-			writeWranglerConfig();
-			await mockDescribeInstances();
-
-			await runWrangler(
-				`workflows instances describe some-workflow bar --json --truncate-output-limit 1`
-			);
-
-			const output = JSON.parse(std.out);
-			expect(output.steps[0].output).toEqual({});
-			expect(std.out).not.toContain("[...output truncated]");
 		});
 	});
 
@@ -3251,6 +3237,195 @@ describe("wrangler workflows", () => {
 				expect(std.info).toMatchInlineSnapshot(`""`);
 				expect(JSON.parse(std.out)).toEqual({ success: true });
 			});
+		});
+	});
+
+	describe("instances step", () => {
+		const mockStepOutput = (
+			handler: Parameters<typeof http.get>[1],
+			expect: ExpectStatic
+		) => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/step`,
+					handler,
+					{ once: true }
+				)
+			);
+			return expect;
+		};
+
+		it("prints a step's full JSON output", async ({ expect }) => {
+			writeWranglerConfig();
+			mockStepOutput(async ({ request }) => {
+				const url = new URL(request.url);
+				expect(url.searchParams.get("name")).toBe("greet-1");
+				expect(url.searchParams.get("type")).toBe("step");
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						status: "complete",
+						error: null,
+						output: { hello: "world" },
+					},
+				});
+			}, expect);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step greet-1"
+			);
+			expect(std.out).toContain(`"hello": "world"`);
+		});
+
+		it("outputs the full step result with --json", async ({ expect }) => {
+			writeWranglerConfig();
+			const result = {
+				status: "complete",
+				error: null,
+				output: { hello: "world" },
+			};
+			mockStepOutput(
+				async () =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result,
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step greet-1 --json"
+			);
+
+			expect(JSON.parse(std.out)).toEqual(result);
+			expect(std.info).toBe("");
+			expect(std.warn).toBe("");
+			expect(std.err).toBe("");
+		});
+
+		it("outputs a failed step result with --json", async ({ expect }) => {
+			writeWranglerConfig();
+			const result = {
+				status: "errored",
+				error: { name: "Error", message: "boom" },
+				output: null,
+			};
+			mockStepOutput(
+				async () =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result,
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step fail-1 --json"
+			);
+
+			expect(JSON.parse(std.out)).toEqual(result);
+			expect(std.warn).toBe("");
+			expect(std.err).toBe("");
+		});
+
+		it("prints a streamed output served as octet-stream", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					new HttpResponse("streamed text output", {
+						headers: { "content-type": "application/octet-stream" },
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step big-1"
+			);
+			expect(std.out).toContain("streamed text output");
+		});
+
+		it("rejects streamed output with --json", async ({ expect }) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					new HttpResponse("streamed text output", {
+						headers: { "content-type": "application/octet-stream" },
+					}),
+				expect
+			);
+
+			await expect(
+				runWrangler(
+					"workflows instances step some-workflow inst-1 --step big-1 --json"
+				)
+			).rejects.toThrow("Streamed step output cannot be emitted with --json");
+			expect(std.out).toBe("");
+		});
+
+		it("rejects using --json with --output", async ({ expect }) => {
+			writeWranglerConfig();
+
+			await expect(
+				runWrangler(
+					"workflows instances step some-workflow inst-1 --step big-1 --json --output out.bin"
+				)
+			).rejects.toThrow("'--output' cannot be used with '--json'");
+		});
+
+		it("streams output to a file with --output", async ({ expect }) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					new HttpResponse("streamed to disk", {
+						headers: { "content-type": "application/octet-stream" },
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step big-1 --output out.bin"
+			);
+			expect(fs.readFileSync("out.bin", "utf8")).toBe("streamed to disk");
+		});
+
+		it("prints the error for a failed step", async ({ expect }) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							status: "errored",
+							error: { name: "Error", message: "boom" },
+							output: null,
+						},
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step fail-1"
+			);
+			expect(std.err).toContain("Error: boom");
+		});
+
+		it("rejects --attempt with --type waitForEvent", async ({ expect }) => {
+			writeWranglerConfig();
+			await expect(
+				runWrangler(
+					"workflows instances step some-workflow inst-1 --step evt-1 --type waitForEvent --attempt 1"
+				)
+			).rejects.toThrow(/not supported when '--type' is 'waitForEvent'/);
 		});
 	});
 });

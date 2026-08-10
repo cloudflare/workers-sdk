@@ -129,6 +129,22 @@ describe("isTruncatedStreamPreview", () => {
 		expect(isTruncatedStreamPreview("hello world")).toBe(false);
 	});
 
+	test("rejects strings that merely start with [ReadableStream", ({
+		expect,
+	}) => {
+		for (const value of [
+			"[ReadableStream is my favorite type]",
+			"[ReadableStream]",
+			"[ReadableStream: bytes]",
+			"[ReadableStream: 100]",
+			"[ReadableStream: 100 bytes] and more",
+			"prefix [ReadableStream: 100 bytes]",
+			"[ReadableStream (text): 100 bytes]",
+		]) {
+			expect(isTruncatedStreamPreview(value)).toBe(false);
+		}
+	});
+
 	test("returns false for non-string values", ({ expect }) => {
 		expect(isTruncatedStreamPreview({ foo: "bar" })).toBe(false);
 		expect(isTruncatedStreamPreview(undefined)).toBe(false);
