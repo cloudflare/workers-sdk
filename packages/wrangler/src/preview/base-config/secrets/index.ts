@@ -11,12 +11,8 @@ export const previewBaseConfigSecretNamespace = createNamespace({
 });
 
 export function rejectUnsupportedPreviewArgs(args: Record<string, unknown>) {
-	for (const [key, flag] of [
-		["name", "name"],
-		["tag", "tag"],
-		["message", "message"],
-	] as const) {
-		if (args[key] !== undefined) {
+	for (const flag of ["name", "tag", "message"] as const) {
+		if (args[flag] !== undefined) {
 			throw new CommandLineArgsError(`Unknown argument: ${flag}`, {
 				telemetryMessage: "preview base-config unsupported flag",
 			});

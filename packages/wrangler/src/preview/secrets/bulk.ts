@@ -5,6 +5,7 @@ import { logger } from "../../logger";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import {
+	NO_ACTIVE_PREVIEW_URLS_MESSAGE,
 	patchPreviewDeploymentSecrets,
 	resolvePreviewName,
 	toSecretBindingsPatch,
@@ -106,7 +107,7 @@ export const previewSecretBulkCommand = createCommand({
 					? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
 							.map((url) => chalk.bold.underline(url))
 							.join(", ")}`
-					: "")
+					: `\n${NO_ACTIVE_PREVIEW_URLS_MESSAGE}`)
 		);
 	},
 });

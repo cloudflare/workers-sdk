@@ -13,16 +13,16 @@ import { runWrangler } from "./helpers/run-wrangler";
 
 type PreviewBaseConfigPatchBody = {
 	previews_base_config?: {
-		env?: Record<string, { type: string; text?: string } | null>;
+		env?: Record<string, { type: string; text: string } | null>;
 	};
 };
 
 type PreviewBaseConfigWorkerResult = {
 	previews_base_config?: {
-		env?: Record<string, { type: string; text?: string }>;
+		env?: Record<string, { type: string; text: string }>;
 	};
 	preview_defaults?: {
-		env?: Record<string, { type: string; text?: string }>;
+		env?: Record<string, { type: string; text: string }>;
 	};
 };
 
@@ -49,7 +49,7 @@ function mockPatchWorker(
 }
 
 function mockGetWorker(
-	env: Record<string, { type: string; text?: string }>,
+	env: Record<string, { type: string; text: string }>,
 	onRequest?: (info: { url: string }) => void
 ) {
 	mockGetWorkerResult({ previews_base_config: { env } }, onRequest);
@@ -396,30 +396,24 @@ describe("wrangler preview", () => {
 				expect(requestUrl).not.toContain("/previews/");
 			});
 
-			// Matrix over output format (json vs. pretty) and whether the API
-			// returns a text value for the secret. In every combination we only
-			// list secret bindings (never plain_text) and never print the value.
+			// Matrix over output format (json vs. pretty). In every combination we
+			// only list secret bindings (never plain_text) and never print the value.
 			test.for([
 				{
 					name: "json, value provided",
 					json: true,
 					text: "super-secret-value",
 				},
-				{ name: "json, no value", json: true, text: undefined },
 				{
 					name: "pretty, value provided",
 					json: false,
 					text: "super-secret-value",
 				},
-				{ name: "pretty, no value", json: false, text: undefined },
 			])(
 				"lists only secrets and never leaks their values ($name)",
 				async ({ json, text }, { expect }) => {
 					mockGetWorker({
-						MY_SECRET:
-							text === undefined
-								? { type: "secret_text" }
-								: { type: "secret_text", text },
+						MY_SECRET: { type: "secret_text", text },
 						PLAIN: { type: "plain_text", text: "not-a-secret" },
 					});
 

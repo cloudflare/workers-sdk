@@ -10,7 +10,7 @@ import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 
 type PreviewDeploymentPatchBody = {
-	env?: Record<string, { type: string; text?: string } | null>;
+	env?: Record<string, { type: string; text: string } | null>;
 	annotations?: Record<string, string | undefined>;
 };
 
@@ -20,6 +20,8 @@ const BRANCH_ENV_VARS = [
 	"GITHUB_REF_NAME",
 	"CI_COMMIT_REF_NAME",
 ] as const;
+const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
+	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
 
 async function withoutBranchEnvVars<T>(callback: () => Promise<T>): Promise<T> {
 	const originalBranchEnv = Object.fromEntries(
@@ -43,7 +45,8 @@ async function withoutBranchEnvVars<T>(callback: () => Promise<T>): Promise<T> {
 }
 
 function mockPatchLatestPreviewDeployment(
-	onRequest?: (info: { url: string; body: PreviewDeploymentPatchBody }) => void
+	onRequest?: (info: { url: string; body: PreviewDeploymentPatchBody }) => void,
+	urls: string[] | undefined = ["https://test-preview.example.workers.dev"]
 ) {
 	msw.use(
 		http.patch(
@@ -59,7 +62,7 @@ function mockPatchLatestPreviewDeployment(
 						id: "deployment-1",
 						preview_id: "preview-1",
 						preview_name: String(params.previewId),
-						urls: ["https://test-preview.example.workers.dev"],
+						urls,
 						created_on: "2025-01-01T00:00:00Z",
 					},
 				});
@@ -87,7 +90,7 @@ function mockPatchPreviewDeploymentError(code: number) {
 }
 
 function mockGetLatestPreviewDeployment(
-	env: Record<string, { type: string; text?: string }>,
+	env: Record<string, { type: string; text: string }>,
 	onRequest?: (info: { url: string }) => void
 ) {
 	msw.use(
@@ -186,6 +189,21 @@ describe("wrangler preview", () => {
 					"is now live at https://test-preview.example.workers.dev"
 				);
 				expect(std.out).not.toContain("preview-secret");
+			});
+
+			test("notes when the new Preview deployment has no active URLs", async ({
+				expect,
+			}) => {
+				mockStdIn.send("preview-secret");
+				mockPatchLatestPreviewDeployment(undefined, []);
+
+				await runWrangler(
+					"preview secret put API_KEY --name test-preview --worker-name test-worker"
+				);
+
+				expect(std.out).toContain("Created Preview deployment deployment-1");
+				expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				expect(std.out).not.toContain("is now live at");
 			});
 
 			test("defaults the Preview name to the current git branch", async ({
@@ -378,6 +396,20 @@ describe("wrangler preview", () => {
 				);
 			});
 
+			test("notes when the new Preview deployment has no active URLs", async ({
+				expect,
+			}) => {
+				mockPatchLatestPreviewDeployment(undefined, []);
+
+				await runWrangler(
+					"preview secret delete REMOVE_ME --name test-preview --skip-confirmation --worker-name test-worker"
+				);
+
+				expect(std.out).toContain("Created Preview deployment deployment-1");
+				expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				expect(std.out).not.toContain("is now live at");
+			});
+
 			test("respects env-specific worker name when deleting a secret", async ({
 				expect,
 			}) => {
@@ -450,7 +482,7 @@ describe("wrangler preview", () => {
 			test("reads the latest Preview deployment", async ({ expect }) => {
 				let requestUrl: string | undefined;
 				mockGetLatestPreviewDeployment(
-					{ API_KEY: { type: "secret_text" } },
+					{ API_KEY: { type: "secret_text", text: "preview-secret" } },
 					({ url }) => {
 						requestUrl = url;
 					}
@@ -463,30 +495,24 @@ describe("wrangler preview", () => {
 				);
 			});
 
-			// Matrix over output format (json vs. pretty) and whether the API
-			// returns a text value for the secret. In every combination we only
-			// list secret bindings (never plain_text) and never print the value.
+			// Matrix over output format (json vs. pretty). In every combination we
+			// only list secret bindings (never plain_text) and never print the value.
 			test.for([
 				{
 					name: "json, value provided",
 					json: true,
 					text: "super-secret-value",
 				},
-				{ name: "json, no value", json: true, text: undefined },
 				{
 					name: "pretty, value provided",
 					json: false,
 					text: "super-secret-value",
 				},
-				{ name: "pretty, no value", json: false, text: undefined },
 			])(
 				"lists only secrets and never leaks their values ($name)",
 				async ({ json, text }, { expect }) => {
 					mockGetLatestPreviewDeployment({
-						MY_SECRET:
-							text === undefined
-								? { type: "secret_text" }
-								: { type: "secret_text", text },
+						MY_SECRET: { type: "secret_text", text },
 						PLAIN: { type: "plain_text", text: "not-a-secret" },
 					});
 					await runWrangler(
@@ -607,6 +633,21 @@ describe("wrangler preview", () => {
 				);
 				expect(std.out).not.toContain("one");
 				expect(std.out).not.toContain("two");
+			});
+
+			test("notes when the new Preview deployment has no active URLs", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "FIRST_KEY=one\nSECOND_KEY=two\n");
+				mockPatchLatestPreviewDeployment(undefined, []);
+
+				await runWrangler(
+					"preview secret bulk secrets.env --name test-preview --worker-name test-worker"
+				);
+
+				expect(std.out).toContain("Created Preview deployment deployment-1");
+				expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				expect(std.out).not.toContain("is now live at");
 			});
 
 			test("should respect env-specific worker name when bulk uploading secrets", async ({

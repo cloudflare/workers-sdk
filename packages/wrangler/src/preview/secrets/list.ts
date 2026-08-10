@@ -31,7 +31,7 @@ type SecretSummary = {
 
 function isSecretBinding(binding: Binding): binding is Binding & {
 	type: "secret_text";
-	text?: string;
+	text: string;
 } {
 	return binding.type === "secret_text";
 }

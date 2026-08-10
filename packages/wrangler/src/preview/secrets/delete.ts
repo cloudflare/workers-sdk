@@ -4,7 +4,11 @@ import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { patchPreviewDeploymentSecrets, resolvePreviewName } from "./index";
+import {
+	NO_ACTIVE_PREVIEW_URLS_MESSAGE,
+	patchPreviewDeploymentSecrets,
+	resolvePreviewName,
+} from "./index";
 
 export const previewSecretDeleteCommand = createCommand({
 	metadata: {
@@ -90,7 +94,7 @@ export const previewSecretDeleteCommand = createCommand({
 						? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
 								.map((url) => chalk.bold.underline(url))
 								.join(", ")}`
-						: "")
+						: `\n${NO_ACTIVE_PREVIEW_URLS_MESSAGE}`)
 			);
 		}
 	},

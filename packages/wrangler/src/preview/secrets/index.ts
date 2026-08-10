@@ -46,6 +46,8 @@ export function toSecretBindingsPatch(
 export const NO_PREVIEW_DEPLOYMENT_PATCH_ERR_CODE = 10032;
 export const NO_PREVIEW_DEPLOYMENT_GET_ERR_CODE = 10222;
 export const PREVIEW_NOT_FOUND_ERR_CODE = 10025;
+export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
+	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
 
 export function noPreviewDeploymentPatchMessage(previewName: string) {
 	return `There are currently no deployments for the Preview "${previewName}". Please create a Preview deployment before modifying a secret.`;
