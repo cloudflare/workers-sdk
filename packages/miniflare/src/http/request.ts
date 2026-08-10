@@ -12,12 +12,32 @@ export type RequestInitCfType =
 	| Partial<IncomingRequestCfProperties>
 	| RequestInitCfProperties;
 
-export type RequestInfo = BaseRequestInfo | Request;
+export type RequestInfo = BaseRequestInfo | Request | globalThis.Request;
 
 export interface RequestInit<
 	CfType extends RequestInitCfType = RequestInitCfType,
 > extends BaseRequestInit {
 	cf?: CfType;
+}
+
+/**
+ * Node's global `Request` (and other cross-realm Requests) fail undici's brand
+ * check, so `new undici.Request(globalRequest)` stringifies to
+ * `"[object Request]"` and URL parsing throws. Detect Request-like values that
+ * are not undici's `Request`.
+ *
+ * See https://github.com/cloudflare/workers-sdk/issues/15086
+ */
+function isForeignRequest(value: unknown): value is globalThis.Request {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		!(value instanceof BaseRequest) &&
+		typeof (value as globalThis.Request).url === "string" &&
+		typeof (value as globalThis.Request).method === "string" &&
+		typeof (value as globalThis.Request).headers === "object" &&
+		(value as globalThis.Request).headers !== null
+	);
 }
 
 const kCf = Symbol("kCf");
@@ -31,10 +51,28 @@ export class Request<
 	[kCf]?: CfType;
 
 	constructor(input: RequestInfo, init?: RequestInit<CfType>) {
-		super(input, init);
-		this[kCf] = init?.cf;
-		// Prefer `cf` from `init`, but if it's set on `input`, use that
-		if (input instanceof Request) this[kCf] ??= input.cf;
+		if (isForeignRequest(input)) {
+			const body = input.body;
+			super(input.url, {
+				method: input.method,
+				headers: input.headers,
+				// undici requires `duplex` when a stream body is provided
+				...(body != null ? { body, duplex: "half" as const } : {}),
+				redirect: input.redirect,
+				integrity: input.integrity,
+				signal: input.signal,
+				...init,
+			});
+			this[kCf] = init?.cf;
+			if (this[kCf] === undefined && "cf" in input) {
+				this[kCf] = (input as { cf?: CfType }).cf;
+			}
+		} else {
+			super(input, init);
+			this[kCf] = init?.cf;
+			// Prefer `cf` from `init`, but if it's set on `input`, use that
+			if (input instanceof Request) this[kCf] ??= input.cf;
+		}
 	}
 
 	get cf() {
