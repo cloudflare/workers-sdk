@@ -609,11 +609,12 @@ describe("deploy metrics export", () => {
 		expect(attempts).toBe(3);
 	});
 
-	it("reports when deployment succeeds but metrics export reconciliation fails", async ({
+	it("publishes triggers before reporting a metrics export reconciliation failure", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
 			main: "./index.js",
+			triggers: { crons: ["*/5 * * * *"] },
 			observability: {
 				metrics: {
 					enabled: false,
@@ -624,11 +625,20 @@ describe("deploy metrics export", () => {
 		mockUploadWorkerRequest({ expectedObservability: undefined });
 
 		let attempts = 0;
+		const calls: string[] = [];
 		msw.use(
+			http.put(
+				"*/accounts/:accountId/workers/scripts/:scriptName/schedules",
+				() => {
+					calls.push("triggers");
+					return HttpResponse.json(createFetchResult(null));
+				}
+			),
 			http.post(
 				"*/accounts/:accountId/workers/observability/metricsexport",
 				() => {
 					attempts += 1;
+					calls.push("metrics");
 					return HttpResponse.json(createFetchResult(null, false), {
 						status: 500,
 					});
@@ -640,5 +650,6 @@ describe("deploy metrics export", () => {
 			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration."
 		);
 		expect(attempts).toBe(3);
+		expect(calls).toEqual(["triggers", "metrics", "metrics", "metrics"]);
 	});
 });

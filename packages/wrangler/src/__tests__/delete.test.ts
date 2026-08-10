@@ -26,6 +26,9 @@ describe("delete", () => {
 	const std = mockConsoleMethods();
 
 	it("should delete an entire service by name", async ({ expect }) => {
+		writeWranglerConfig({
+			observability: { metrics: { enabled: false } },
+		});
 		const calls: string[] = [];
 		mockConfirm({
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
@@ -65,15 +68,19 @@ describe("delete", () => {
 		`);
 	});
 
-	it("does not delete the Worker when metrics export cleanup fails", async ({
+	it("warns and deletes the Worker when metrics export cleanup fails", async ({
 		expect,
 	}) => {
+		writeWranglerConfig({
+			observability: { metrics: { enabled: false } },
+		});
 		mockConfirm({
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
 			result: true,
 		});
 		mockListReferencesRequest(expect, "my-script");
 		mockListTailsByConsumerRequest(expect, "my-script");
+		mockListKVNamespacesRequest(expect);
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/workers/observability/metricsexport",
@@ -89,15 +96,20 @@ describe("delete", () => {
 			},
 		});
 
-		await expect(runWrangler("delete --name my-script")).rejects.toThrow(
-			"Wrangler could not clean up this Worker's metrics export configuration, so the Worker was not deleted."
+		await runWrangler("delete --name my-script");
+		expect(deleteCalled).toBe(true);
+		expect(std.warn).toContain(
+			"Wrangler could not clean up this Worker's metrics export configuration. Continuing to delete the Worker."
 		);
-		expect(deleteCalled).toBe(false);
 	});
 
-	it("should delete a service using positional name argument", async ({
+	it("deletes without metrics cleanup when metrics are not configured", async ({
 		expect,
 	}) => {
+		let cleanupCalled = false;
+		mockClearMetricsExportRequest(() => {
+			cleanupCalled = true;
+		});
 		mockConfirm({
 			text: `Are you sure you want to delete my-positional-worker? This action cannot be undone.`,
 			result: true,
@@ -107,6 +119,7 @@ describe("delete", () => {
 		mockListTailsByConsumerRequest(expect, "my-positional-worker");
 		mockDeleteWorkerRequest(expect, { name: "my-positional-worker" });
 		await runWrangler("delete my-positional-worker");
+		expect(cleanupCalled).toBe(false);
 
 		expect(std).toMatchInlineSnapshot(`
 			{
@@ -229,7 +242,11 @@ describe("delete", () => {
 	it("cleans up the deployed legacy-environment script name", async ({
 		expect,
 	}) => {
-		writeWranglerConfig({ env: { staging: {} } });
+		writeWranglerConfig({
+			env: {
+				staging: { observability: { metrics: { enabled: false } } },
+			},
+		});
 		mockConfirm({
 			text: `Are you sure you want to delete test-name-staging? This action cannot be undone.`,
 			result: true,

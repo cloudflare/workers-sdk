@@ -752,12 +752,6 @@ export default async function deploy(
 		return { versionId, workerTag, assetUploadStats };
 	}
 	assert(accountId);
-	await reconcileMetricsExportConfig({
-		config,
-		accountId,
-		scriptName,
-		bindings,
-	});
 
 	// deploy triggers
 	const targets = await triggersDeploy({
@@ -769,6 +763,13 @@ export default async function deploy(
 		crons: props.triggers,
 		firstDeploy: !workerExists,
 		routes: props.routes,
+	});
+
+	await reconcileMetricsExportConfig({
+		config,
+		accountId,
+		scriptName,
+		bindings,
 	});
 
 	logger.log("Current Version ID:", versionId);

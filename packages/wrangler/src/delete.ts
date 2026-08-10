@@ -148,7 +148,15 @@ export const deleteCommand = createCommand({
 				return;
 			}
 
-			await clearMetricsExportRequester({ config, accountId, scriptName });
+			if (config.observability?.metrics !== undefined) {
+				try {
+					await clearMetricsExportRequester({ config, accountId, scriptName });
+				} catch {
+					logger.warn(
+						"Wrangler could not clean up this Worker's metrics export configuration. Continuing to delete the Worker."
+					);
+				}
+			}
 
 			await fetchResult(
 				config,
