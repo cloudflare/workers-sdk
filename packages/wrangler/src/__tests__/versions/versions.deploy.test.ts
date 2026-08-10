@@ -185,7 +185,33 @@ describe("versions deploy", () => {
 		);
 	});
 
-	test("ignores metrics export when creating a versions deployment", async ({
+	test("does not patch native observability for metrics-only config", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		let settingsPatchCalled = false;
+		msw.use(
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:workerName/script-settings",
+				() => {
+					settingsPatchCalled = true;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler(
+			"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+		);
+
+		expect(settingsPatchCalled).toBe(false);
+	});
+
+	test("strips metrics export when creating a versions deployment", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
