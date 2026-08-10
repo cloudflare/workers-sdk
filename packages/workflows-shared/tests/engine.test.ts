@@ -2517,3 +2517,129 @@ describe("Engine - getStepOutput", () => {
 		});
 	});
 });
+
+describe("Engine - readDetailedLogs output truncation", () => {
+	it("truncates a large non-stream step output while getStepOutput stays full", async ({
+		expect,
+	}) => {
+		const bigOutput = "x".repeat(2000);
+		const engineStub = await runWorkflow(
+			"DETAILED-LOGS-TRUNCATE",
+			async (_event, step) => {
+				await step.do("big step", async () => bigOutput);
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const detailed = await engineStub.readDetailedLogs();
+		const success = detailed.find(
+			(l) => l.target === "big step-1" && l.event === InstanceEvent.STEP_SUCCESS
+		);
+		const result = success?.metadata.result as string;
+		expect(typeof result).toBe("string");
+		expect(result.endsWith("[truncated output]")).toBe(true);
+		expect(result.length).toBe(1024 + "[truncated output]".length);
+
+		// The full value is still retrievable via getStepOutput.
+		await runInDurableObject(engineStub, async (engine) => {
+			const output = (await (engine as Engine).getStepOutput({
+				name: "big step-1",
+				type: "step",
+			})) as { output: unknown };
+			expect(output.output).toBe(bigOutput);
+		});
+	});
+
+	it("keeps a small non-stream step output intact", async ({ expect }) => {
+		const engineStub = await runWorkflow(
+			"DETAILED-LOGS-SMALL",
+			async (_event, step) => {
+				await step.do("small step", async () => ({ hello: "world" }));
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const detailed = await engineStub.readDetailedLogs();
+		const success = detailed.find(
+			(l) =>
+				l.target === "small step-1" && l.event === InstanceEvent.STEP_SUCCESS
+		);
+		expect(success?.metadata.result).toEqual({ hello: "world" });
+	});
+
+	it("truncates a large waitForEvent payload while getStepOutput stays full", async ({
+		expect,
+	}) => {
+		const bigPayload = { data: "y".repeat(2000) };
+		const engineStub = await runWorkflow(
+			"DETAILED-LOGS-WAIT-TRUNCATE",
+			async (_event, step) => {
+				return await step.waitForEvent("await big", {
+					type: "big-event",
+					timeout: "10 seconds",
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some((val) => val.event === InstanceEvent.WAIT_START);
+			},
+			{ timeout: 5000 }
+		);
+
+		await engineStub.receiveEvent({
+			type: "big-event",
+			timestamp: new Date(),
+			payload: bigPayload,
+		});
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const detailed = await engineStub.readDetailedLogs();
+		const complete = detailed.find(
+			(l) =>
+				l.target === "await big-1" && l.event === InstanceEvent.WAIT_COMPLETE
+		);
+		const payload = complete?.metadata.payload as string;
+		expect(typeof payload).toBe("string");
+		expect(payload.endsWith("[truncated output]")).toBe(true);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const output = (await (engine as Engine).getStepOutput({
+				name: "await big-1",
+				type: "waitForEvent",
+			})) as { output: unknown };
+			expect(output.output).toEqual(bigPayload);
+		});
+	});
+});

@@ -703,13 +703,9 @@ async function executeGetInstanceDetails(
 								message: waitError.message ?? "",
 							}
 						: null,
-					output: waitComplete
-						? {
-								type: waitMeta?.type ?? "",
-								payload: waitMeta?.payload ?? {},
-								timestamp: waitMeta?.timestamp ?? null,
-							}
-						: null,
+					// The payload is already truncated to 1024 chars by readDetailedLogs;
+					// the UI/CLI refetch it in full via the /step endpoint when truncated.
+					output: waitComplete ? (waitMeta?.payload ?? null) : null,
 				});
 			} else if (stepStart) {
 				// Regular step (step.do) with attempts

@@ -59,11 +59,6 @@ export const workflowsInstancesDescribeCommand = createCommand({
 			type: "boolean",
 			default: true,
 		},
-		"truncate-output-limit": {
-			describe: "Truncate step output after x characters",
-			type: "number",
-			default: 5000,
-		},
 	},
 
 	async handler(args, { config }) {
@@ -229,17 +224,11 @@ function logStep(
 
 	if (step.type == "step" || step.type == "waitForEvent") {
 		if (step.output !== undefined && args.stepOutput) {
-			let output: string;
 			try {
-				output = JSON.stringify(step.output);
+				formattedStep.Output = JSON.stringify(step.output);
 			} catch {
-				output = step.output as string;
+				formattedStep.Output = step.output as string;
 			}
-			formattedStep.Output =
-				output.length > args.truncateOutputLimit
-					? output.substring(0, args.truncateOutputLimit) +
-						"[...output truncated]"
-					: output;
 		}
 	}
 

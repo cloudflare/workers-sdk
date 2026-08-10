@@ -199,6 +199,7 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances restart <name> <id>     Restart a workflow instance
 				  wrangler workflows instances pause <name> <id>       Pause a workflow instance
 				  wrangler workflows instances resume <name> <id>      Resume a workflow instance
+				  wrangler workflows instances step <name> [id]        Get the full, untruncated output of a single step
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]
@@ -1993,6 +1994,112 @@ describe("wrangler workflows", () => {
 				);
 				expect(std.info).toContain("newest-instance");
 			});
+		});
+	});
+
+	describe("instances step", () => {
+		const mockStepOutput = (
+			handler: Parameters<typeof http.get>[1],
+			expect: ExpectStatic
+		) => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/step`,
+					handler,
+					{ once: true }
+				)
+			);
+			return expect;
+		};
+
+		it("prints a step's full JSON output", async ({ expect }) => {
+			writeWranglerConfig();
+			mockStepOutput(async ({ request }) => {
+				const url = new URL(request.url);
+				expect(url.searchParams.get("name")).toBe("greet-1");
+				expect(url.searchParams.get("type")).toBe("step");
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						status: "complete",
+						error: null,
+						output: { hello: "world" },
+					},
+				});
+			}, expect);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step greet-1"
+			);
+			expect(std.out).toContain(`"hello": "world"`);
+		});
+
+		it("prints a streamed output served as octet-stream", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					new HttpResponse("streamed text output", {
+						headers: { "content-type": "application/octet-stream" },
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step big-1"
+			);
+			expect(std.out).toContain("streamed text output");
+		});
+
+		it("streams output to a file with --output", async ({ expect }) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					new HttpResponse("streamed to disk", {
+						headers: { "content-type": "application/octet-stream" },
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step big-1 --output out.bin"
+			);
+			expect(fs.readFileSync("out.bin", "utf8")).toBe("streamed to disk");
+		});
+
+		it("prints the error for a failed step", async ({ expect }) => {
+			writeWranglerConfig();
+			mockStepOutput(
+				async () =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							status: "errored",
+							error: { name: "Error", message: "boom" },
+							output: null,
+						},
+					}),
+				expect
+			);
+
+			await runWrangler(
+				"workflows instances step some-workflow inst-1 --step fail-1"
+			);
+			expect(std.err).toContain("Error: boom");
+		});
+
+		it("rejects --attempt with --type waitForEvent", async ({ expect }) => {
+			writeWranglerConfig();
+			await expect(
+				runWrangler(
+					"workflows instances step some-workflow inst-1 --step evt-1 --type waitForEvent --attempt 1"
+				)
+			).rejects.toThrow(/not supported when '--type' is 'waitForEvent'/);
 		});
 	});
 });
