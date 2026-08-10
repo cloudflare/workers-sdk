@@ -1,5 +1,23 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.21.0
+
+### Minor Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Update the Workers Vitest pool for Miniflare's config-based options
+
+  The Workers Vitest pool now converts the Miniflare options it creates for test sessions to Miniflare's config-based `workers` shape.
+
+  For the most part, users should not expect to notice any changes.
+
+  However, while `miniflare.modulesRules` is preserved for common text and WASM fixture imports, it is not a full replacement for Miniflare's old `modules: true` module graph collection and you may notice some differences in behaviour.
+
+### Patch Changes
+
+- Updated dependencies [[`6dbd192`](https://github.com/cloudflare/workers-sdk/commit/6dbd192f1f3e4899789cd327231ba838c90bb0d5), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3)]:
+  - miniflare@5.20260804.0-alpha
+  - wrangler@4.120.1
+
 ## 0.20.3
 
 ### Patch Changes
