@@ -4,6 +4,6 @@
 
 Fix `console.createTask()` being missing from `node:console` in deployed Workers
 
-Unlike the rest of the console API, `createTask()` is installed by the V8 inspector rather than by V8 itself, so it is only present on the runtime console when an inspector is attached to the isolate. Because the `node:console` polyfill read it straight off the runtime console, `console.createTask` (and `import { createTask } from "node:console"`) was a function during `wrangler dev` but `undefined` in deployed Workers.
+`console.createTask()` — and `import { createTask } from "node:console"` — was available when running locally with `wrangler dev`, but was `undefined` once the Worker was deployed. Code that checked for it locally could therefore take a different path in production. It is now always defined.
 
-The polyfill now falls back to the unenv implementation when the runtime does not provide one, so the shape of `node:console` no longer depends on whether an inspector happens to be attached. This only affects Workers using the polyfill, i.e. those with a compatibility date before `2025-09-21` that do not set the `enable_nodejs_console_module` compatibility flag — workerd's native `node:console` module already installs its own `createTask()` stub.
+In a deployed Worker it throws when called, because tagging async stack traces needs an attached debugger. This is the same behaviour as the built-in `node:console` that Workers get from a compatibility date of `2025-09-21` onwards, so only Workers on an earlier compatibility date without the `enable_nodejs_console_module` compatibility flag are affected.
