@@ -315,7 +315,41 @@ describe("deploy metrics export", () => {
 		});
 	});
 
-	it("strips only metrics from native Worker observability settings", async () => {
+	it("does not disable native observability for metrics-only config", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		writeWorkerSource();
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+		const settingsPatches: unknown[] = [];
+		msw.use(
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
+				async ({ request }) => {
+					settingsPatches.push(await request.json());
+					return HttpResponse.json(createFetchResult({}));
+				}
+			),
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => HttpResponse.json(createFetchResult({}))
+			)
+		);
+
+		await runWrangler("deploy");
+
+		expect(settingsPatches).toHaveLength(1);
+		expect(settingsPatches[0]).not.toHaveProperty("observability");
+	});
+
+	it("strips only metrics from native Worker observability settings", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			main: "./index.js",
 			observability: {
@@ -328,7 +362,15 @@ describe("deploy metrics export", () => {
 		mockUploadWorkerRequest({
 			expectedObservability: { enabled: true, head_sampling_rate: 0.5 },
 		});
+		const settingsPatches: unknown[] = [];
 		msw.use(
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
+				async ({ request }) => {
+					settingsPatches.push(await request.json());
+					return HttpResponse.json(createFetchResult({}));
+				}
+			),
 			http.post(
 				"*/accounts/:accountId/workers/observability/metricsexport",
 				() => HttpResponse.json(createFetchResult({}))
@@ -336,6 +378,49 @@ describe("deploy metrics export", () => {
 		);
 
 		await runWrangler("deploy");
+
+		expect(settingsPatches).toHaveLength(1);
+		expect(settingsPatches[0]).toHaveProperty("observability", {
+			enabled: true,
+			head_sampling_rate: 0.5,
+		});
+		expect(settingsPatches[0]).not.toHaveProperty("observability.metrics");
+	});
+
+	it("preserves explicit native observability disable with metrics", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				enabled: false,
+				metrics: { enabled: false },
+			},
+		});
+		writeWorkerSource();
+		mockUploadWorkerRequest({ expectedObservability: { enabled: false } });
+		const settingsPatches: unknown[] = [];
+		msw.use(
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",
+				async ({ request }) => {
+					settingsPatches.push(await request.json());
+					return HttpResponse.json(createFetchResult({}));
+				}
+			),
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => HttpResponse.json(createFetchResult({}))
+			)
+		);
+
+		await runWrangler("deploy");
+
+		expect(settingsPatches).toHaveLength(1);
+		expect(settingsPatches[0]).toHaveProperty("observability", {
+			enabled: false,
+		});
+		expect(settingsPatches[0]).not.toHaveProperty("observability.metrics");
 	});
 
 	it("ignores metrics export for dispatch namespace deployments", async ({
