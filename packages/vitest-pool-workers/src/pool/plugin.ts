@@ -3,7 +3,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { cloudflarePool } from "./pool";
 import type { WorkersPoolOptions } from "./config";
-import type { inject } from "vitest";
 import type { Vite, VitestPluginContext } from "vitest/node";
 
 const cloudflareTestPath = path.resolve(
@@ -12,9 +11,19 @@ const cloudflareTestPath = path.resolve(
 );
 
 export interface WorkerPoolOptionsContext {
-	// For accessing values from `globalSetup()` (e.g. ports servers started on)
-	// in Miniflare options (e.g. bindings, upstream, hyperdrives, ...)
-	inject: typeof inject;
+	/**
+	 * Access values provided by `globalSetup()` (e.g. ports of servers started
+	 * during setup) for use in Miniflare options (e.g. bindings, upstream,
+	 * hyperdrives, ...).
+	 *
+	 * The type is intentionally wider than vitest's `inject()` to avoid a
+	 * cross-copy `ProvidedContext` mismatch that occurs when pnpm resolves
+	 * separate virtual-store instances of `vitest` for this package and the
+	 * consuming project. Consumer-side module augmentation of `ProvidedContext`
+	 * only applies to the consumer's copy, so binding to `typeof inject` from
+	 * this package's copy causes `keyof ProvidedContext` to resolve to `never`.
+	 */
+	inject: <T = unknown>(key: string) => T;
 }
 
 function ensureArrayIncludes<T>(array: T[], items: T[]) {

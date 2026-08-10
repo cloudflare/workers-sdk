@@ -8,7 +8,7 @@ export default mergeConfig(
 		plugins: [
 			cloudflareTest(({ inject }) => {
 				// Provided in `global-setup.ts`
-				const echoServerPort = inject("echoServerPort");
+				const echoServerPort = inject<number>("echoServerPort");
 
 				return {
 					miniflare: {
