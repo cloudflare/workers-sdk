@@ -1,6 +1,7 @@
 import { preview } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
+import { getNormalizedContainerOptions } from "../containers/config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { buildWorker } from "../deployment-bundle/maybe-build-worker";
@@ -100,7 +101,7 @@ export const previewCommand = createCommand({
 			config,
 			buildResult,
 			assetsOptions,
-			{ deployPreviewContainers }
+			{ getNormalizedContainerOptions, deployPreviewContainers }
 		);
 		cleanupDestination(destination);
 

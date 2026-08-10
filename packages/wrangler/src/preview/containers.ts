@@ -1,6 +1,6 @@
 import { ApplicationsService } from "@cloudflare/containers-shared";
 import {
-	getOwnPreviewBoundDOClassNames,
+	previewContainerAppName,
 	type DeploymentResource,
 } from "@cloudflare/deploy-helpers";
 import { getDockerPath, UserError } from "@cloudflare/workers-utils";
@@ -10,130 +10,57 @@ import {
 } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { buildContainer } from "../containers/build";
-import { getNormalizedContainerOptions } from "../containers/config";
 import { apply } from "../containers/deploy";
 import { logger } from "../logger";
-import type { ImageURIConfig } from "@cloudflare/containers-shared";
 import type {
-	Config,
-	ContainerApp,
-	PreviewsConfig,
-} from "@cloudflare/workers-utils";
+	ContainerNormalizedConfig,
+	ImageURIConfig,
+} from "@cloudflare/containers-shared";
+import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 /**
- * Compose the auto-generated container application name for a preview-scoped
- * container. Mirrors the EWC server-side `PreviewNamer` so wrangler-managed
- * apps can be reliably correlated with the preview's own DO namespaces.
- *
- * Format: `{parentWorkerName}_{previewSlug}_{className}`.
- */
-export function previewContainerAppName(
-	parentWorkerName: string,
-	previewSlug: string,
-	className: string
-): string {
-	return `${parentWorkerName}_${previewSlug}_${className}`;
-}
-
-/**
- * Construct a synthetic `Config` that overlays the previews block onto the
- * top-level config: containers come from `previews.containers` (with
- * auto-generated names), DO bindings come from `previews.durable_objects`,
- * and observability defaults to the previews override if set. This lets us
- * reuse `getNormalizedContainerOptions` and `apply` from the standard
- * `wrangler deploy` container path without forking either.
- *
- * Returns `undefined` if no containers in the previews block resolve to an
- * own (non cross-script) DO binding in the preview.
- */
-function buildPreviewContainerConfig(
-	config: Config,
-	parentWorkerName: string,
-	previewSlug: string,
-	previewContainers: ContainerApp[]
-): Config | undefined {
-	const previews = config.previews as PreviewsConfig | undefined;
-	const ownBoundDOClasses = getOwnPreviewBoundDOClassNames(previews);
-	const filteredContainers = previewContainers
-		.filter((c) => ownBoundDOClasses.has(c.class_name))
-		.map((c) => ({
-			...c,
-			name: previewContainerAppName(
-				parentWorkerName,
-				previewSlug,
-				c.class_name
-			),
-		}));
-
-	if (filteredContainers.length === 0) {
-		return undefined;
-	}
-
-	const observability = previews?.observability ?? config.observability;
-	return {
-		...config,
-		containers: filteredContainers,
-		durable_objects: {
-			bindings: previews?.durable_objects?.bindings ?? [],
-		},
-		observability,
-	};
-}
-
-/**
- * Deploy preview-scoped container applications after a preview deployment
- * has been created. For each container declared in `previews.containers`
- * whose class is bound to an own DO in the preview, we register or update a
- * Cloudchamber application named `{worker}_{previewSlug}_{className}` bound to
- * the DO namespace_id resolved by the preview deployment API.
+ * Build and apply the container applications validated by
+ * `@cloudflare/deploy-helpers`'s `preview()` (via `getNormalizedContainerOptions`).
+ * For each normalised container, register or update a Cloudchamber
+ * application bound to the DO namespace_id resolved by the preview
+ * deployment API.
  *
  * The DO namespace for a preview is provisioned by the workers control plane
- * and returned in the create-deployment response — we read it directly from
+ * and returned in the create-deployment response, so we read it directly from
  * `deployment.env` rather than re-fetching.
  */
 export async function deployPreviewContainers(
-	config: Config,
-	parentWorkerName: string,
-	previewSlug: string,
-	deployment: DeploymentResource,
-	previewContainers: ContainerApp[]
+	scopedConfig: Config,
+	normalisedContainerConfig: ContainerNormalizedConfig[],
+	deployment: DeploymentResource
 ): Promise<void> {
-	const scopedConfig = buildPreviewContainerConfig(
-		config,
-		parentWorkerName,
-		previewSlug,
-		previewContainers
-	);
-	if (!scopedConfig) {
-		return;
-	}
-
-	const normalised = await getNormalizedContainerOptions(scopedConfig, {
-		dryRun: false,
-	});
-	if (normalised.length === 0) {
-		return;
-	}
-
-	await fillOpenAPIConfiguration(config, containersScope);
+	await fillOpenAPIConfiguration(scopedConfig, containersScope);
 	const dockerPath = getDockerPath();
 
+	// Skip bindings carrying `script_name`. Those name a Durable Object
+	// implemented by another Worker, which owns its own container application,
+	// so their namespace belongs to that Worker. A preview may bind the same
+	// class name both locally and cross-script, and since this map is keyed on
+	// class name alone, an unfiltered cross-script entry could overwrite the
+	// preview's own namespace_id and attach the container to the wrong storage.
+	// `wrangler deploy` applies the same restriction (see containers/deploy.ts).
 	const classNameToNamespaceId = new Map<string, string>();
 	for (const binding of Object.values(deployment.env ?? {})) {
 		if (
 			binding.type === "durable_object_namespace" &&
 			binding.class_name &&
-			binding.namespace_id
+			binding.namespace_id &&
+			binding.script_name === undefined
 		) {
 			classNameToNamespaceId.set(binding.class_name, binding.namespace_id);
 		}
 	}
 
-	for (const container of normalised) {
+	for (const container of normalisedContainerConfig) {
 		const namespaceId = classNameToNamespaceId.get(container.class_name);
 		if (!namespaceId) {
 			throw new UserError(
-				`Could not deploy preview container application "${container.name}": the preview deployment API did not return a namespace_id for Durable Object class "${container.class_name}". This is likely a bug in Wrangler — please file an issue.`,
+				`Could not deploy preview container application "${container.name}": the preview deployment API did not return a namespace_id for Durable Object class "${container.class_name}". This is likely a bug in Wrangler. Please file an issue.`,
 				{
 					telemetryMessage: "preview containers deploy missing do namespace id",
 				}
@@ -142,11 +69,19 @@ export async function deployPreviewContainers(
 
 		let imageRef;
 		if ("dockerfile" in container) {
+			// Docker rejects uppercase characters in an image repository name, and
+			// a preview application name embeds the Durable Object class name
+			// verbatim, which is conventionally PascalCase. Lowercase the name for
+			// the local image tag only. `apply` below needs the exact application
+			// name, which the control plane matches on when reconciling previews.
 			imageRef = await buildContainer(
-				container,
+				{ ...container, name: container.name.toLowerCase() },
 				deployment.id,
 				false,
-				dockerPath
+				dockerPath,
+				// `preview()` already verified Docker before creating the
+				// deployment, so skip the redundant per-container check.
+				false
 			);
 		} else {
 			imageRef = { newTag: (container as ImageURIConfig).image_uri };
@@ -161,10 +96,11 @@ export async function deployPreviewContainers(
 }
 
 /**
- * Delete every Cloudchamber application whose name matches the preview
- * scoped naming pattern `{parentWorkerName}_{previewSlug}_*`. Failures on
- * individual apps are logged but do not abort the loop, so a partial cleanup
- * failure does not prevent the preview itself from being deleted.
+ * Delete the Cloudchamber applications for every class currently declared in
+ * `previews.containers`, matched by exact name (see `previewContainerAppName`).
+ * Failures on individual apps are logged but don't abort the others, so a
+ * partial cleanup failure does not prevent the preview itself from being
+ * deleted.
  *
  * Skipped entirely if `previews.containers` is empty, to avoid unnecessary
  * Cloudchamber API calls.
@@ -181,7 +117,18 @@ export async function deletePreviewContainers(
 
 	await fillOpenAPIConfiguration(config, containersScope);
 
-	const prefix = `${parentWorkerName}_${previewSlug}_`;
+	// Match on the exact set of currently declared container app names rather
+	// than a `{parentWorkerName}_{previewSlug}_` prefix. A worker name may
+	// itself contain underscores, so a worker literally named
+	// `{otherWorkerName}_{otherPreviewSlug}` would have every one of its own
+	// container apps swept up by a prefix match when deleting an unrelated
+	// worker's preview.
+	const expectedNames = new Set(
+		previews.containers.map((c) =>
+			previewContainerAppName(parentWorkerName, previewSlug, c.class_name)
+		)
+	);
+
 	let apps;
 	try {
 		apps = await promiseSpinner(ApplicationsService.listApplications(), {
@@ -194,16 +141,18 @@ export async function deletePreviewContainers(
 		return;
 	}
 
-	const matches = apps.filter((app) => app.name.startsWith(prefix));
-	for (const app of matches) {
-		try {
-			await promiseSpinner(ApplicationsService.deleteApplication(app.id), {
-				message: `Deleting container application "${app.name}"`,
-			});
-		} catch (error) {
-			logger.warn(
-				`Failed to delete preview container application "${app.name}": ${error instanceof Error ? error.message : String(error)}`
-			);
-		}
-	}
+	const matches = apps.filter((app) => expectedNames.has(app.name));
+	await Promise.allSettled(
+		matches.map(async (app) => {
+			try {
+				await promiseSpinner(ApplicationsService.deleteApplication(app.id), {
+					message: `Deleting container application "${app.name}"`,
+				});
+			} catch (error) {
+				logger.warn(
+					`Failed to delete preview container application "${app.name}": ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
+		})
+	);
 }

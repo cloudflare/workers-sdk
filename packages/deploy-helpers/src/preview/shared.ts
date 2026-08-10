@@ -360,6 +360,20 @@ export function getOwnPreviewBoundDOClassNames(
 	);
 }
 
+/**
+ * Compose the auto-generated container application name for a preview-scoped
+ * container, in the form `{parentWorkerName}_{previewSlug}_{className}`.
+ * Mirrors the EWC server-side `PreviewNamer` so wrangler-managed apps can be
+ * reliably correlated with the preview's own DO namespaces.
+ */
+export function previewContainerAppName(
+	parentWorkerName: string,
+	previewSlug: string,
+	className: string
+): string {
+	return `${parentWorkerName}_${previewSlug}_${className}`;
+}
+
 export function assemblePreviewScriptSettings(config: Config) {
 	const previews = config.previews;
 	const result: Record<string, unknown> = {};

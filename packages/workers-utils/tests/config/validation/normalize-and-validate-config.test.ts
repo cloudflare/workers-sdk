@@ -11254,6 +11254,62 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should accept previews.containers in a named environment that relies on the inherited top-level name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					env: {
+						staging: {
+							previews: {
+								containers: [
+									{
+										class_name: "MyContainer",
+										image: "registry.cloudflare.com/test:latest",
+									},
+								],
+							},
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.containers when the worker name is omitted", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).not.toContain(
+					'Must have either a top level "name"'
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should reject previews.containers entries that set a name", ({
 				expect,
 			}) => {

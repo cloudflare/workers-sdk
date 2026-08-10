@@ -1,7 +1,9 @@
 import path from "node:path";
+import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	configFileName,
 	getBindingTypeFriendlyName,
+	getDockerPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -26,9 +28,11 @@ import {
 	getHeadCommitMessage,
 	getHeadCommitRef,
 	getOwnPreviewBoundDOClassNames,
+	previewContainerAppName,
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
+import type { DeployCallbacks } from "../deploy/deploy";
 import type { WorkerBuildResult } from "../shared/types";
 import type {
 	Binding,
@@ -36,6 +40,7 @@ import type {
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	ContainerApp,
@@ -83,18 +88,27 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-// Container applications are built and deployed to Cloudchamber, which
-// deploy-helpers has no direct dependency on. As with `DeployCallbacks`
-// (see ../deploy/deploy.ts), the wrangler-specific implementation is
-// injected by the caller.
-export type PreviewCallbacks = {
+// Building and applying a container to Cloudchamber requires wrangler-only
+// dependencies (Docker, the containers API client) that deploy-helpers has
+// no direct dependency on. As with `DeployCallbacks` (see ../deploy/deploy.ts),
+// the wrangler-specific implementation is injected by the caller.
+//
+// `getNormalizedContainerOptions` validates and normalises container config
+// without needing the preview deployment to exist yet, so `preview()` runs it
+// before creating the deployment. A bad config or a missing Docker install
+// then fails before the preview goes live, rather than leaving a preview
+// running that advertises containers nothing ever built. `deployPreviewContainers`
+// does need the deployment, since that's what resolves each container's DO
+// namespace_id, so it still runs after.
+export type PreviewCallbacks = Pick<
+	DeployCallbacks,
+	"getNormalizedContainerOptions"
+> & {
 	deployPreviewContainers:
 		| ((
-				config: Config,
-				workerName: string,
-				previewSlug: string,
-				deployment: DeploymentResource,
-				previewContainers: ContainerApp[]
+				scopedConfig: Config,
+				normalisedContainerConfig: ContainerNormalizedConfig[],
+				deployment: DeploymentResource
 		  ) => Promise<void>)
 		| undefined;
 };
@@ -108,6 +122,141 @@ export type PreviewDeleteCallbacks = {
 		  ) => Promise<void>)
 		| undefined;
 };
+
+/**
+ * Construct a synthetic `Config` that overlays the previews block onto the
+ * top-level config: containers come from `previews.containers` (with
+ * auto-generated names), DO bindings come from `previews.durable_objects`,
+ * and observability defaults to the previews override if set. This lets us
+ * reuse `getNormalizedContainerOptions` and `apply` from the standard
+ * `wrangler deploy` container path without forking either.
+ *
+ * Throws if a container's `class_name` matches no DO binding in
+ * `previews.durable_objects`. Returns `undefined` if every container resolves
+ * only to a cross-script binding, since those are owned by another Worker.
+ */
+function buildPreviewContainerConfig(
+	config: Config,
+	parentWorkerName: string,
+	previewSlug: string,
+	previewContainers: ContainerApp[]
+): Config | undefined {
+	const previews = config.previews as PreviewsConfig | undefined;
+	const previewDOBindings = previews?.durable_objects?.bindings ?? [];
+	const ownBoundDOClasses = getOwnPreviewBoundDOClassNames(previews);
+
+	// A container whose `class_name` matches no preview DO binding at all is a
+	// misconfiguration, almost always a typo, and silently dropping it would
+	// hand back a preview with no container and no explanation. `wrangler
+	// deploy` rejects the same config (see getNormalizedContainerOptions), so
+	// reject it here too, before the preview deployment is created.
+	//
+	// A `class_name` that does match a binding carrying `script_name` is
+	// excluded rather than rejected: that DO is implemented by another Worker,
+	// which owns its own container application.
+	for (const container of previewContainers) {
+		if (
+			ownBoundDOClasses.has(container.class_name) ||
+			previewDOBindings.some((b) => b.class_name === container.class_name)
+		) {
+			continue;
+		}
+		throw new UserError(
+			`The container class_name "${container.class_name}" in "previews.containers" does not match any Durable Object binding in "previews.durable_objects". Container config is not inherited from the top-level config, so the Durable Object must be declared under "previews.durable_objects" in your ${configFileName(config.configPath)} file.`,
+			{
+				telemetryMessage: "no preview DO binding matches container class_name",
+			}
+		);
+	}
+
+	const filteredContainers = previewContainers
+		.filter((c) => ownBoundDOClasses.has(c.class_name))
+		.map((c) => ({
+			...c,
+			name: previewContainerAppName(
+				parentWorkerName,
+				previewSlug,
+				c.class_name
+			),
+		}));
+
+	if (filteredContainers.length === 0) {
+		return undefined;
+	}
+
+	const observability = previews?.observability ?? config.observability;
+	return {
+		...config,
+		containers: filteredContainers,
+		durable_objects: {
+			bindings: previews?.durable_objects?.bindings ?? [],
+		},
+		observability,
+	};
+}
+
+/**
+ * Validate and normalise container config, and confirm Docker is installed
+ * for any container built from a Dockerfile. Called before the preview
+ * deployment is created, so a bad config or a missing Docker install fails
+ * before the preview goes live, rather than leaving a preview running that
+ * advertises containers nothing ever built.
+ *
+ * Returns an empty `normalisedContainerConfig` when there's nothing to
+ * deploy, whether because `previews.containers` is empty or every entry
+ * resolves to a cross-script DO binding owned by another Worker. Throws if an
+ * entry's `class_name` matches no DO binding in `previews.durable_objects`.
+ */
+async function prepareContainersForPreview(
+	config: Config,
+	workerName: string,
+	previewSlug: string,
+	callbacks: PreviewCallbacks
+): Promise<{
+	scopedContainerConfig: Config | undefined;
+	normalisedContainerConfig: ContainerNormalizedConfig[];
+}> {
+	const previewContainers =
+		(config.previews as PreviewsConfig | undefined)?.containers ?? [];
+	if (
+		previewContainers.length === 0 ||
+		!callbacks.getNormalizedContainerOptions
+	) {
+		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
+	}
+
+	const scopedContainerConfig = buildPreviewContainerConfig(
+		config,
+		workerName,
+		previewSlug,
+		previewContainers
+	);
+	if (!scopedContainerConfig) {
+		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
+	}
+
+	const normalisedContainerConfig =
+		await callbacks.getNormalizedContainerOptions(scopedContainerConfig, {
+			dryRun: false,
+		});
+
+	const containersNeedingDocker = normalisedContainerConfig.filter(
+		(container) => "dockerfile" in container
+	);
+	if (containersNeedingDocker.length > 0) {
+		await verifyDockerInstalled({
+			dockerPath: getDockerPath(),
+			operation: "creating a preview",
+			imageNoun:
+				containersNeedingDocker.length !== 1
+					? "the configured images"
+					: "the configured image",
+			hint: 'If you cannot run Docker locally, set "image" to a prebuilt registry image instead of a Dockerfile path for the affected entries in "previews.containers".',
+		});
+	}
+
+	return { scopedContainerConfig, normalisedContainerConfig };
+}
 
 function toBase64(content: string | Uint8Array): string {
 	return Buffer.from(content).toString("base64");
@@ -308,19 +457,19 @@ async function assemblePreviewDeploymentSettings(
 		request.placement = parseConfigPlacement(config);
 	}
 
-	// Containers: declare which DO classes are container-backed so the runtime
-	// populates `ctx.container` on those DO instances, mirroring the metadata
-	// emitted by `wrangler deploy`.
+	// Declare which DO classes are container-backed so the runtime populates
+	// `ctx.container` on those DO instances, mirroring the metadata emitted by
+	// `wrangler deploy`.
 	//
-	// Container config is non-inheritable: only `previews.containers` is read,
+	// Container config is non-inheritable. Only `previews.containers` is read,
 	// not the top-level `containers` field. This matches the behavior of
 	// `previews.durable_objects` and forces users to explicitly opt-in to
 	// containers in previews.
 	//
 	// We only emit `class_name`s that are bound as DOs in this preview AND
-	// where the DO is implemented by THIS script (i.e. no `script_name` is set
-	// — those bindings reference DOs implemented by another worker, which owns
-	// their own container application).
+	// where the DO is implemented by THIS script, meaning no `script_name` is
+	// set. A binding with `script_name` references a DO implemented by another
+	// worker, which owns its own container application.
 	const previewContainers = previews?.containers ?? [];
 	if (previewContainers.length > 0) {
 		const ownBoundDOClasses = getOwnPreviewBoundDOClassNames(previews);
@@ -479,6 +628,14 @@ export async function preview(
 		}
 	}
 
+	const { scopedContainerConfig, normalisedContainerConfig } =
+		await prepareContainersForPreview(
+			config,
+			workerName,
+			previewResource.slug,
+			callbacks
+		);
+
 	const deploymentRequest = await assemblePreviewDeploymentSettings(
 		config,
 		buildResult,
@@ -500,15 +657,15 @@ export async function preview(
 		{ ignoreDefaults }
 	);
 
-	const previewContainers =
-		(config.previews as PreviewsConfig | undefined)?.containers ?? [];
-	if (previewContainers.length > 0 && callbacks.deployPreviewContainers) {
+	if (
+		normalisedContainerConfig.length > 0 &&
+		scopedContainerConfig &&
+		callbacks.deployPreviewContainers
+	) {
 		await callbacks.deployPreviewContainers(
-			config,
-			workerName,
-			previewResource.slug,
-			deployment,
-			previewContainers
+			scopedContainerConfig,
+			normalisedContainerConfig,
+			deployment
 		);
 	}
 
@@ -574,20 +731,16 @@ export async function previewDelete(
 	}
 
 	const hasPreviewContainers =
-		((config.previews as PreviewsConfig | undefined)?.containers?.length ??
-			0) > 0;
+		((config.previews as PreviewsConfig | undefined)?.containers?.length ?? 0) >
+		0;
 	if (hasPreviewContainers && callbacks.deletePreviewContainers) {
+		let previewResource: PreviewResource | undefined;
 		try {
-			const previewResource = await getPreview(
+			previewResource = await getPreview(
 				config,
 				accountId,
 				workerName,
 				previewName
-			);
-			await callbacks.deletePreviewContainers(
-				config,
-				workerName,
-				previewResource.slug
 			);
 		} catch (error) {
 			if (error instanceof Error && "code" in error && error.code === 10025) {
@@ -595,6 +748,20 @@ export async function previewDelete(
 					`Preview "${previewName}" was not found; skipping container application cleanup.`
 				);
 			} else {
+				logger.warn(
+					`Failed to look up Preview "${previewName}" for container application cleanup: ${error instanceof Error ? error.message : String(error)}`
+				);
+			}
+		}
+
+		if (previewResource) {
+			try {
+				await callbacks.deletePreviewContainers(
+					config,
+					workerName,
+					previewResource.slug
+				);
+			} catch (error) {
 				logger.warn(
 					`Failed to clean up preview container applications: ${error instanceof Error ? error.message : String(error)}`
 				);
