@@ -14,6 +14,34 @@ type PreviewDeploymentPatchBody = {
 	annotations?: Record<string, string | undefined>;
 };
 
+const BRANCH_ENV_VARS = [
+	"WORKERS_CI_BRANCH",
+	"GITHUB_HEAD_REF",
+	"GITHUB_REF_NAME",
+	"CI_COMMIT_REF_NAME",
+] as const;
+
+async function withoutBranchEnvVars<T>(callback: () => Promise<T>): Promise<T> {
+	const originalBranchEnv = Object.fromEntries(
+		BRANCH_ENV_VARS.map((envVar) => [envVar, process.env[envVar]])
+	);
+	for (const envVar of BRANCH_ENV_VARS) {
+		delete process.env[envVar];
+	}
+	try {
+		return await callback();
+	} finally {
+		for (const envVar of BRANCH_ENV_VARS) {
+			const originalValue = originalBranchEnv[envVar];
+			if (originalValue === undefined) {
+				delete process.env[envVar];
+			} else {
+				process.env[envVar] = originalValue;
+			}
+		}
+	}
+}
+
 function mockPatchLatestPreviewDeployment(
 	onRequest?: (info: { url: string; body: PreviewDeploymentPatchBody }) => void
 ) {
@@ -185,14 +213,11 @@ describe("wrangler preview", () => {
 				// `runInTempDir` puts us in an `os.tmpdir()` directory that is not a
 				// git worktree, so with no CI branch env vars the Preview name
 				// cannot be inferred.
-				vi.stubEnv("WORKERS_CI_BRANCH", undefined);
-				vi.stubEnv("GITHUB_HEAD_REF", undefined);
-				vi.stubEnv("GITHUB_REF_NAME", undefined);
-				vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
-
-				await expect(
-					runWrangler("preview secret put API_KEY --worker-name test-worker")
-				).rejects.toThrow(/Could not determine Preview name/);
+				await withoutBranchEnvVars(() =>
+					expect(
+						runWrangler("preview secret put API_KEY --worker-name test-worker")
+					).rejects.toThrow(/Could not determine Preview name/)
+				);
 			});
 
 			test("respects env-specific worker name when using --env", async ({
