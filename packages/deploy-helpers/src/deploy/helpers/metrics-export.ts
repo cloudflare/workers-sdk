@@ -1,4 +1,8 @@
-import { retryOnAPIFailure, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	retryOnAPIFailure,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { extractBindingsOfType } from "./binding-utils";
 import { getSettings } from "./provision-bindings";
@@ -67,6 +71,9 @@ export async function reconcileMetricsExportConfig({
 
 		await postMetricsExportRequester(config, accountId, scriptName, resources);
 	} catch (error) {
+		if (error instanceof UserError && !(error instanceof APIError)) {
+			throw error;
+		}
 		throw new UserError(
 			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration. Retry the deployment to reconcile the configuration.",
 			{

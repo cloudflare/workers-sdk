@@ -494,7 +494,7 @@ describe("deploy metrics export", () => {
 		);
 
 		await expect(runWrangler("deploy")).rejects.toThrow(
-			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration."
+			"Wrangler could not resolve the D1 resource used by binding DB."
 		);
 		expect(called).toBe(false);
 	});
