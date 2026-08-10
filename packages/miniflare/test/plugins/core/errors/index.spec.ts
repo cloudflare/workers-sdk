@@ -6,7 +6,7 @@ import esbuild from "esbuild";
 import { DeferredPromise, fetch, Log, LogLevel, Miniflare } from "miniflare";
 import { test } from "vitest";
 import NodeWebSocket from "ws";
-import { useDispose, useTmp } from "../../../test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "../../../test-shared";
 import type Protocol from "devtools-protocol";
 import type { RawSourceMap } from "source-map";
 
@@ -31,6 +31,22 @@ function pathOrUrlRegexp(filePath: string): `(${string}|${string})` {
 	)})`;
 }
 
+// Rewrite a source map's `sources` to absolute paths. esbuild emits `sources`
+// relative to the map's on-disk location, but the new config format feeds the
+// map inline as a `sourcemap`-type module whose name (and thus the resolved
+// location workerd/source-map-support anchors to) is the CWD, not the build
+// directory. Making `sources` absolute lets stack frames map back to the
+// original fixtures regardless of where the map's name resolves to.
+function withAbsoluteSources(
+	mapContents: string,
+	originalMapPath: string
+): string {
+	const map: RawSourceMap = JSON.parse(mapContents);
+	const dir = path.dirname(originalMapPath);
+	map.sources = map.sources.map((source) => path.resolve(dir, source));
+	return JSON.stringify(map);
+}
+
 test("source maps workers", async ({ expect }) => {
 	// Build fixtures
 	const tmp = await useTmp();
@@ -50,6 +66,8 @@ test("source maps workers", async ({ expect }) => {
 	const depPath = path.join(tmp, "nested", "dep.js");
 	const serviceWorkerContent = await fs.readFile(serviceWorkerPath, "utf8");
 	const modulesContent = await fs.readFile(modulesPath, "utf8");
+	const modulesMapContent = await fs.readFile(modulesPath + ".map", "utf8");
+	const depContent = await fs.readFile(depPath, "utf8");
 
 	// Load the inline source map worker from an external file to prevent
 	// Vite from stripping the sourceMappingURL comment during transformation.
@@ -61,85 +79,129 @@ test("source maps workers", async ({ expect }) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
+			// Default service-worker with a co-located source map on disk.
 			{
-				bindings: { MESSAGE: "unnamed" },
-				scriptPath: serviceWorkerPath,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { MESSAGE: { type: "json", value: "unnamed" } },
+				},
+				legacy: {
+					serviceWorkerScript: serviceWorkerContent,
+					serviceWorkerScriptPath: serviceWorkerPath,
+				},
 			},
 			{
-				name: "a",
-				routes: ["*/a"],
-				bindings: { MESSAGE: "a" },
-				script: serviceWorkerContent,
-				scriptPath: serviceWorkerPath,
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/a" }],
+					env: { MESSAGE: { type: "json", value: "a" } },
+				},
+				legacy: {
+					serviceWorkerScript: serviceWorkerContent,
+					serviceWorkerScriptPath: serviceWorkerPath,
+				},
 			},
+			// Module workers with co-located source maps on disk.
 			{
-				name: "b",
-				routes: ["*/b"],
-				modules: true,
-				scriptPath: modulesPath,
-				bindings: { MESSAGE: "b" },
-			},
-			{
-				name: "c",
-				routes: ["*/c"],
-				bindings: { MESSAGE: "c" },
-				modules: true,
-				script: modulesContent,
-				scriptPath: modulesPath,
-			},
-			{
-				name: "d",
-				routes: ["*/d"],
-				bindings: { MESSAGE: "d" },
-				modules: [{ type: "ESModule", path: modulesPath }],
-			},
-			{
-				name: "e",
-				routes: ["*/e"],
-				bindings: { MESSAGE: "e" },
-				modules: [
-					{ type: "ESModule", path: modulesPath, contents: modulesContent },
-				],
-			},
-			{
-				name: "f",
-				routes: ["*/f"],
-				bindings: { MESSAGE: "f" },
-				modulesRoot: tmp,
-				modules: [{ type: "ESModule", path: modulesPath }],
-			},
-			{
-				name: "g",
-				routes: ["*/g"],
-				bindings: { MESSAGE: "g" },
-				modules: true,
-				modulesRoot: tmp,
-				scriptPath: modulesPath,
-			},
-			{
-				name: "h",
-				routes: ["*/h"],
-				modules: [
-					// Check importing module with source map (e.g. Wrangler no bundle with built dependencies)
-					{
-						type: "ESModule",
-						path: modulesPath,
-						contents: `import { createErrorResponse } from "./nested/dep.js"; export default { fetch: createErrorResponse };`,
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/b" }],
+					env: { MESSAGE: { type: "json", value: "b" } },
+					manifest: {
+						mainModule: "modules.js",
+						modulesRoot: tmp,
+						modules: {
+							"modules.js": { type: "esm", contents: modulesContent },
+						},
 					},
-					{ type: "ESModule", path: depPath },
-				],
+				},
+				dev: { rootPath: tmp },
 			},
 			{
-				name: "i",
-				routes: ["*/i"],
-				// Worker with inline source map loaded from external file
-				script: inlineSourceMapWorkerContent,
+				config: {
+					type: "worker",
+					name: "c",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/c" }],
+					env: { MESSAGE: { type: "json", value: "c" } },
+					manifest: {
+						mainModule: "modules.js",
+						modulesRoot: tmp,
+						modules: {
+							"modules.js": { type: "esm", contents: modulesContent },
+						},
+					},
+				},
+				dev: { rootPath: tmp },
+			},
+			// Module worker with a source map provided through the manifest (Wrangler style).
+			{
+				config: {
+					type: "worker",
+					name: "e",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/e" }],
+					env: { MESSAGE: { type: "json", value: "e" } },
+					manifest: {
+						mainModule: "modules.js",
+						modulesRoot: tmp,
+						modules: {
+							"modules.js": { type: "esm", contents: modulesContent },
+							"modules.js.map": {
+								type: "sourcemap",
+								contents: withAbsoluteSources(
+									modulesMapContent,
+									modulesPath + ".map"
+								),
+							},
+						},
+					},
+				},
+			},
+			// Worker importing a nested dependency that carries its own source map
+			// (e.g. Wrangler no-bundle with pre-built dependencies).
+			{
+				config: {
+					type: "worker",
+					name: "h",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/h" }],
+					manifest: {
+						mainModule: "index.mjs",
+						modulesRoot: tmp,
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: `import { createErrorResponse } from "./nested/dep.js"; export default { fetch: createErrorResponse };`,
+							},
+							"nested/dep.js": { type: "esm", contents: depContent },
+						},
+					},
+				},
+				dev: { rootPath: tmp },
+			},
+			// Worker with an inline `data:` source map, provided as a service-worker
+			// script. These are preserved as-is (no rewriting).
+			{
+				config: {
+					type: "worker",
+					name: "i",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/i" }],
+				},
+				legacy: { serviceWorkerScript: inlineSourceMapWorkerContent },
 			},
 		],
 	});
 	useDispose(mf);
 
-	// Check service-workers source mapped
+	// Check service-workers are source mapped
 	const serviceWorkerEntryRegexp = new RegExp(
 		`${pathOrUrlRegexp(SERVICE_WORKER_ENTRY_PATH)}:6:16`
 	);
@@ -160,7 +222,7 @@ test("source maps workers", async ({ expect }) => {
 	expect(error?.message).toMatch("a");
 	expect(String(error?.stack)).toMatch(serviceWorkerEntryRegexp);
 
-	// Check modules workers source mapped
+	// Check modules workers are source mapped
 	const modulesEntryRegexp = new RegExp(
 		`${pathOrUrlRegexp(MODULES_ENTRY_PATH)}:5:17`
 	);
@@ -181,14 +243,6 @@ test("source maps workers", async ({ expect }) => {
 	expect(String(error?.stack)).toMatch(modulesEntryRegexp);
 
 	try {
-		await mf.dispatchFetch("http://localhost/d");
-	} catch (e) {
-		error = e as Error;
-	}
-	expect(error?.message).toMatch("d");
-	expect(String(error?.stack)).toMatch(modulesEntryRegexp);
-
-	try {
 		await mf.dispatchFetch("http://localhost/e");
 	} catch (e) {
 		error = e as Error;
@@ -196,22 +250,7 @@ test("source maps workers", async ({ expect }) => {
 	expect(error?.message).toMatch("e");
 	expect(String(error?.stack)).toMatch(modulesEntryRegexp);
 
-	try {
-		await mf.dispatchFetch("http://localhost/f");
-	} catch (e) {
-		error = e as Error;
-	}
-	expect(error?.message).toMatch("f");
-	expect(String(error?.stack)).toMatch(modulesEntryRegexp);
-
-	try {
-		await mf.dispatchFetch("http://localhost/g");
-	} catch (e) {
-		error = e as Error;
-	}
-	expect(error?.message).toMatch("g");
-	expect(String(error?.stack)).toMatch(modulesEntryRegexp);
-
+	// Check imported modules with their own source map are mapped
 	try {
 		await mf.dispatchFetch("http://localhost/h");
 	} catch (e) {
@@ -230,14 +269,6 @@ test("source maps workers", async ({ expect }) => {
 	sources = await getSources(inspectorBaseURL, "core:user:b");
 	expect(sources).toEqual([MODULES_ENTRY_PATH, REDUCE_PATH]);
 	sources = await getSources(inspectorBaseURL, "core:user:c");
-	expect(sources).toEqual([MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorBaseURL, "core:user:d");
-	expect(sources).toEqual([MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorBaseURL, "core:user:e");
-	expect(sources).toEqual([MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorBaseURL, "core:user:f");
-	expect(sources).toEqual([MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorBaseURL, "core:user:g");
 	expect(sources).toEqual([MODULES_ENTRY_PATH, REDUCE_PATH]);
 	sources = await getSources(inspectorBaseURL, "core:user:h");
 	expect(sources).toEqual([DEP_ENTRY_PATH, REDUCE_PATH]); // (entry point script overridden)
@@ -371,8 +402,17 @@ test("responds with pretty error page", async ({ expect }) => {
 	const log = new CustomLog();
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					// Old `modules: true` + inline `script` reported this module as
+					// `script-0` in stack traces; preserve that name so the error
+					// log assertion below matches.
+					manifest: singleModuleManifest(
+						`
 		import { connect } from "cloudflare:sockets";
 
 		// A function to test error thrown by native code
@@ -422,6 +462,11 @@ test("responds with pretty error page", async ({ expect }) => {
 				}
 			},
 		}`,
+						{ mainModule: "script-0" }
+					),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const url = new URL("/some-unusual-path", await mf.ready);
@@ -449,14 +494,15 @@ test("responds with pretty error page", async ({ expect }) => {
 	const errorLogs = log
 		.getLogs(LogLevel.ERROR)
 		.map((log) => log.replaceAll(/:\d+:\d+/g, ":N:N"));
+	const scriptUrl = pathToFileURL(path.join(process.cwd(), "script-0")).href;
 	expect(errorLogs).toEqual([
 		`Error: Unusual oops!
-    at connectSocket (script-0:N:N)
-    at Object.fetch (script-0:N:N)
+    at connectSocket (${scriptUrl}:N:N)
+    at Object.fetch (${scriptUrl}:N:N)
 Caused by: TypeError: The value cannot be converted because it is not an integer.
     at connect (cloudflare:sockets:N:N)
-    at connectSocket (script-0:N:N)
-    at Object.fetch (script-0:N:N)`,
+    at connectSocket (${scriptUrl}:N:N)
+    at Object.fetch (${scriptUrl}:N:N)`,
 	]);
 
 	// Check `fetch()` accepting HTML returns pretty-error page
@@ -516,11 +562,19 @@ test("invokes handleUncaughtError with the revived error", async ({
 	const errors: Error[] = [];
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		handleUncaughtError(error) {
 			errors.push(error);
 		},
-		script: JSON_ERROR_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -539,11 +593,19 @@ test("reports the revived error for HEAD requests", async ({ expect }) => {
 	const errors: Error[] = [];
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		handleUncaughtError(error) {
 			errors.push(error);
 		},
-		script: JSON_ERROR_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -558,7 +620,18 @@ test("reports the revived error for HEAD requests", async ({ expect }) => {
 test("rejects HEAD dispatchFetch with the user error, not a parse error", async ({
 	expect,
 }) => {
-	const mf = new Miniflare({ modules: true, script: JSON_ERROR_SCRIPT });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
+				},
+			},
+		],
+	});
 	useDispose(mf);
 
 	await expect(
@@ -586,8 +659,16 @@ test("degrades without leaking a parse error when HEAD has no payload header", a
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: NO_PAYLOAD_HEADER_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(NO_PAYLOAD_HEADER_SCRIPT),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const url = await mf.ready;
@@ -633,11 +714,19 @@ test("still reports the error when a stack frame's file URL has no local path", 
 	const errors: Error[] = [];
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		handleUncaughtError(error) {
 			errors.push(error);
 		},
-		script: UNMAPPABLE_STACK_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(UNMAPPABLE_STACK_SCRIPT),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -660,11 +749,19 @@ test("keeps building the error response when handleUncaughtError throws", async 
 	const log = new CustomLog();
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		handleUncaughtError() {
 			throw new Error("Callback oops!");
 		},
-		script: JSON_ERROR_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -688,13 +785,21 @@ test("absorbs a rejecting async handleUncaughtError callback", async ({
 	const log = new CustomLog();
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		// An async callback is type-assignable to the void contract; its
 		// rejection must be absorbed, not left to crash the process
 		async handleUncaughtError() {
 			throw new Error("Async callback oops!");
 		},
-		script: JSON_ERROR_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(JSON_ERROR_SCRIPT),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

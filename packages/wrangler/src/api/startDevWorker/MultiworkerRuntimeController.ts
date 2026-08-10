@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Miniflare, Mutex } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { castErrorCause } from "./events";
@@ -267,14 +267,15 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				}
 
 				const mergedMfOptions = ensureMatchingSql(this.#mergedMfOptions());
+				const miniflareOptions = convertV4MiniflareOptions(mergedMfOptions);
 
 				if (this.#mf === undefined) {
 					logger.log(chalk.dim("⎔ Starting local server..."));
-					this.#mf = new Miniflare(mergedMfOptions);
+					this.#mf = new Miniflare(miniflareOptions);
 				} else {
 					logger.log(chalk.dim("⎔ Reloading local server..."));
 
-					await this.#mf.setOptions(mergedMfOptions);
+					await this.#mf.setOptions(miniflareOptions);
 
 					logger.log(chalk.dim("⎔ Local server updated and ready"));
 				}

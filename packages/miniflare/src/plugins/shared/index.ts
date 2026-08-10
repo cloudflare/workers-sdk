@@ -3,12 +3,16 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MiniflareCoreError } from "../../shared";
 import type {
+	ParsedInstanceOptions,
+	ParsedWorkerOptions,
+} from "../../config/schema";
+import type {
 	Extension,
 	Service,
 	Worker_Binding,
 	Worker_Module,
 } from "../../runtime";
-import type { Log, OptionalZodTypeOf } from "../../shared";
+import type { Log } from "../../shared";
 import type {
 	Awaitable,
 	QueueConsumerSchema,
@@ -49,23 +53,17 @@ export type QueueProducers = Map<string, z.infer<typeof QueueProducerSchema>>;
 // anytime soon.
 export type QueueConsumers = Map<string, z.infer<typeof QueueConsumerSchema>>;
 
-export interface PluginServicesOptions<
-	Options extends z.ZodType,
-	SharedOptions extends z.ZodType | undefined,
-> {
+export interface PluginServicesOptions {
 	log: Log;
-	options: z.infer<Options>;
-	sharedOptions: OptionalZodTypeOf<SharedOptions>;
+	options: ParsedWorkerOptions;
+	sharedOptions: ParsedInstanceOptions;
 	workerBindings: Worker_Binding[];
 	workerIndex: number;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
-	resourcePersistencePath: string | undefined;
-	resourceTmpPath: string | undefined;
 	workerNames: string[];
 	loopbackHost: string;
 	loopbackPort: number;
-	publicUrl: string | undefined;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	durableObjectClassNames: DurableObjectClassNames;
@@ -85,34 +83,27 @@ export interface ServicesExtensions {
 	extensions: Extension[];
 }
 
-export interface PluginBase<
-	Options extends z.ZodType,
-	SharedOptions extends z.ZodType | undefined,
-> {
-	options: Options;
+/**
+ * Every plugin receives the full parsed per-worker `WorkerOptions` and filters
+ * its own bindings out of `options.config.env` / `options.config.exports` /
+ * `options.config.triggers` (plus `options.legacy` / `options.dev`).
+ */
+export interface Plugin {
 	bindingTypeDescription?: string;
 	getBindings(
-		options: z.infer<Options>,
+		options: ParsedWorkerOptions,
 		workerIndex: number
 	): Awaitable<Worker_Binding[] | void>;
 	getNodeBindings(
-		options: z.infer<Options>
+		options: ParsedWorkerOptions
 	): Awaitable<Record<string, unknown>>;
 	getServices(
-		options: PluginServicesOptions<Options, SharedOptions>
+		options: PluginServicesOptions
 	): Awaitable<Service[] | ServicesExtensions | void>;
 	getExtensions?(options: {
-		options: z.infer<Options>[];
+		options: ParsedWorkerOptions[];
 	}): Awaitable<Extension[]>;
 }
-
-export type Plugin<
-	Options extends z.ZodType,
-	SharedOptions extends z.ZodType | undefined = undefined,
-> = PluginBase<Options, SharedOptions> &
-	(SharedOptions extends undefined
-		? { sharedOptions?: undefined }
-		: { sharedOptions: SharedOptions });
 
 /**
  * loadExternalPlugins will take a packageName, and attempt to load additional
@@ -120,7 +111,7 @@ export type Plugin<
  */
 export async function loadExternalPlugins(
 	packageName: string
-): Promise<Record<string, Plugin<z.ZodType>>> {
+): Promise<Record<string, Plugin>> {
 	let pluginModule;
 	try {
 		const pluginPath = require.resolve(packageName);
@@ -147,18 +138,6 @@ export async function loadExternalPlugins(
 // specified overrides (if there is any)
 export class ProxyNodeBinding {
 	constructor(public proxyOverrideHandler?: ProxyHandler<any>) {}
-}
-
-export function namespaceKeys(
-	namespaces?: Record<string, unknown> | string[]
-): string[] {
-	if (Array.isArray(namespaces)) {
-		return namespaces;
-	} else if (namespaces !== undefined) {
-		return Object.keys(namespaces);
-	} else {
-		return [];
-	}
 }
 
 export type RemoteProxyConnectionString = URL & {
@@ -265,3 +244,27 @@ export function getUserBindingServiceName(
 
 export * from "./constants";
 export * from "./routing";
+
+export {
+	getEnvBindingsOfType,
+	getExportsOfType,
+	getRemoteProxyConnectionString,
+	getTriggersOfType,
+} from "../../config/schema";
+export type {
+	MiniflareBinding,
+	MiniflareDiskServiceBinding,
+	MiniflareExport,
+	MiniflareExternalServiceBinding,
+	MiniflareFetcherBinding,
+	MiniflareNetworkServiceBinding,
+	MiniflareNodeHandlerBinding,
+	MiniflareServiceBinding,
+	MiniflareTrigger,
+	MiniflareWorkerBinding,
+	ParsedDevConfig,
+	ParsedInstanceOptions,
+	ParsedLegacyConfig,
+	ParsedMiniflareWorkerConfig,
+	ParsedWorkerOptions,
+} from "../../config/schema";

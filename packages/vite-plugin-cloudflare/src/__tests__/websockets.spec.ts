@@ -39,7 +39,25 @@ describe("handleWebSocket", () => {
 	 * spawn-then-immediately-dispose a throwaway `workerd` process.
 	 */
 	function startMiniflare(script: string = DEFAULT_WORKER_SCRIPT) {
-		miniflare = new Miniflare({ modules: true, script });
+		miniflare = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2023-07-24",
+						manifest: {
+							mainModule: "index.mjs",
+							modules: {
+								"index.mjs": { type: "esm", contents: script },
+							},
+						},
+						env: {},
+						exports: {},
+					},
+				},
+			],
+		});
 		return miniflare;
 	}
 

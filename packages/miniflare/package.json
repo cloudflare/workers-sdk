@@ -57,6 +57,7 @@
 		"@aws-sdk/client-s3": "^3.721.0",
 		"@aws-sdk/s3-request-presigner": "^3.721.0",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/local-explorer-ui": "workspace:*",

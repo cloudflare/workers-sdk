@@ -6,10 +6,10 @@ import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
-import { ModuleRuleTypeSchema, Response } from "miniflare";
+import { Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
-import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
+import type { Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
@@ -54,17 +54,27 @@ function trimViteVersionHash(filePath: string) {
 	return filePath.replace(versionHashRegExp, "");
 }
 
-// RegExp for path suffix to force loading module as specific type.
+type LegacyModuleRuleType =
+	| "ESModule"
+	| "CommonJS"
+	| "Text"
+	| "Data"
+	| "CompiledWasm"
+	| "PythonModule"
+	| "PythonRequirement";
+const legacyModuleRuleTypes: LegacyModuleRuleType[] = [
+	"ESModule",
+	"CommonJS",
+	"Text",
+	"Data",
+	"CompiledWasm",
+	"PythonModule",
+	"PythonRequirement",
+];
+// RegExp for path suffix to force loading WebAssembly modules as workerd modules.
 // (e.g. `/path/to/module.wasm?mf_vitest_force=CompiledWasm`)
-// This suffix will be added by the pool when fetching a module that matches a
-// module rule. In this case, the module will be marked as external with this
-// suffix, causing the fallback service to return a module with the correct
-// type. Note we can't easily implement rules with a Vite plugin, as they:
-// - Depend on `miniflare`/`wrangler` configuration, and we can't modify the
-//   Vite config in the pool
-// - Would require use of an `UnsafeEval` binding to build `WebAssembly.Module`s
 const forceModuleTypeRegexp = new RegExp(
-	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
+	`\\?mf_vitest_force=(${legacyModuleRuleTypes.join("|")})$`
 );
 
 function isFile(filePath: string): boolean {
@@ -449,7 +459,7 @@ function maybeGetForceTypeModuleContents(
 	}
 
 	filePath = trimSuffix(match[0], filePath);
-	const type = match[1] as ModuleRuleType;
+	const type = match[1] as LegacyModuleRuleType;
 	const contents = fs.readFileSync(filePath);
 	switch (type) {
 		case "ESModule":
@@ -467,7 +477,7 @@ function maybeGetForceTypeModuleContents(
 		case "PythonRequirement":
 			return { pythonRequirement: contents.toString() };
 		default: {
-			// `type` should've been validated against `ModuleRuleType`
+			// `type` should've been validated against `LegacyModuleRuleType`
 			const exhaustive: never = type;
 			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
 		}

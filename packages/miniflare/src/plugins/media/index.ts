@@ -1,56 +1,41 @@
-import { z } from "zod";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import type { Plugin } from "../shared";
 
 export const MEDIA_PLUGIN_NAME = "media";
 const MEDIA_REMOTE_SERVICE_NAME = `${MEDIA_PLUGIN_NAME}:remote`;
 
-const MediaSchema = z.object({
-	binding: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-});
-
-export const MediaOptionsSchema = z.object({
-	media: MediaSchema.optional(),
-});
-
-export const MEDIA_PLUGIN: Plugin<typeof MediaOptionsSchema> = {
-	options: MediaOptionsSchema,
+export const MEDIA_PLUGIN: Plugin = {
 	bindingTypeDescription: "Media",
 	async getBindings(options) {
-		if (!options.media) {
-			return [];
-		}
-
-		return [
-			{
-				name: options.media.binding,
+		return getEnvBindingsOfType(options.config, "media").map(
+			([name, binding]) => ({
+				name,
 				service: {
 					name: MEDIA_REMOTE_SERVICE_NAME,
 					props: buildRemoteProxyProps(
-						options.media.remoteProxyConnectionString,
-						options.media.binding
+						getRemoteProxyConnectionString(binding, options.dev),
+						name
 					),
 				},
-			},
-		];
+			})
+		);
 	},
-	getNodeBindings(options: z.infer<typeof MediaOptionsSchema>) {
-		if (!options.media) {
-			return {};
-		}
-		return {
-			[options.media.binding]: new ProxyNodeBinding(),
-		};
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			getEnvBindingsOfType(options.config, "media").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
+		);
 	},
 	async getServices({ options }) {
-		if (!options.media) {
+		if (getEnvBindingsOfType(options.config, "media").length === 0) {
 			return [];
 		}
 
