@@ -8,6 +8,7 @@ import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
+import { ARTIFACTS_EVENT_TYPES } from "./environment";
 import {
 	all,
 	appendEnvName,
@@ -16,7 +17,6 @@ import {
 	getBindingNames,
 	hasProperty,
 	inheritable,
-	inheritableInWranglerEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
 	isOneOf,
@@ -227,7 +227,6 @@ export function getBindingTypeFriendlyName(
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
 	env?: string;
-	"legacy-env"?: boolean;
 	// This is not relevant in dev. It's only purpose is loosening Worker name validation when deploying to a dispatch namespace
 	"dispatch-namespace"?: string;
 	remote?: boolean;
@@ -286,13 +285,31 @@ export function normalizeAndValidateConfig(
 		} configuration:`
 	);
 
-	validateOptionalProperty(
-		diagnostics,
-		"",
-		"legacy_env",
-		rawConfig.legacy_env,
-		"boolean"
+	const isRedirectedConfig = isRedirectedRawConfig(
+		rawConfig,
+		configPath,
+		userConfigPath
 	);
+
+	if ("legacy_env" in rawConfig) {
+		// Older versions of tools such as the Vite plugin can generate redirected
+		// configurations that still include the removed `legacy_env` field.
+		// `legacy_env = true` was the historical default (so removing it does not
+		// change how the Worker is deployed), we silently strip it here rather than
+		// erroring. For user-authored configurations we still surface the error so
+		// that they know to remove the field.
+		if (!isRedirectedConfig) {
+			diagnostics.errors.push(
+				dedent`
+					The "legacy_env" field is no longer supported, so please remove it from your configuration file.
+					Service environments have been removed, and each environment is now deployed as its own Worker named "<name>-<environment>". This matches the behaviour of "legacy_env = true", which was the default, so removing the field will not change how your Worker is deployed.
+					Refer to https://developers.cloudflare.com/workers/wrangler/environments/ for more information.
+				`
+			);
+		}
+		// Remove the field so it is not also reported as an unexpected top-level field.
+		delete (rawConfig as Record<string, unknown>).legacy_env;
+	}
 
 	validateOptionalProperty(
 		diagnostics,
@@ -302,12 +319,55 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	if (
+		validateOptionalProperty(
+			diagnostics,
+			"",
+			"dependencies_instrumentation",
+			rawConfig.dependencies_instrumentation,
+			"object"
+		)
+	) {
+		if (typeof rawConfig.dependencies_instrumentation === "object") {
+			validateOptionalProperty(
+				diagnostics,
+				"dependencies_instrumentation",
+				"enabled",
+				rawConfig.dependencies_instrumentation.enabled,
+				"boolean"
+			);
+
+			validateOptionalTypedArray(
+				diagnostics,
+				"dependencies_instrumentation.exclude_packages",
+				rawConfig.dependencies_instrumentation.exclude_packages,
+				"string"
+			);
+
+			validateAdditionalProperties(
+				diagnostics,
+				"dependencies_instrumentation",
+				Object.keys(
+					rawConfig.dependencies_instrumentation as Record<string, unknown>
+				),
+				["enabled", "exclude_packages"]
+			);
+		}
+	}
+
 	validateOptionalProperty(
 		diagnostics,
 		"",
 		"keep_vars",
 		rawConfig.keep_vars,
 		"boolean"
+	);
+
+	validateOptionalTypedArray(
+		diagnostics,
+		"addresses",
+		rawConfig.addresses,
+		"string"
 	);
 
 	validateOptionalProperty(
@@ -327,25 +387,6 @@ export function normalizeAndValidateConfig(
 		"string"
 	);
 
-	/**
-	 * Legacy env refers to wrangler environments, which are not actually legacy in any way.
-	 * This is opposed to service environments, which are deprecated.
-	 * Unfortunately legacy-env is a public facing arg and config option, so we have to leave the name.
-	 * However we can change the internal handling to be less confusing.
-	 */
-
-	const useServiceEnvironments = !(
-		args["legacy-env"] ??
-		rawConfig.legacy_env ??
-		true
-	);
-
-	if (useServiceEnvironments) {
-		diagnostics.warnings.push(
-			"Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
-		);
-	}
-
 	const isDispatchNamespace =
 		typeof args["dispatch-namespace"] === "string" &&
 		args["dispatch-namespace"].trim() !== "";
@@ -356,12 +397,6 @@ export function normalizeAndValidateConfig(
 		rawConfig,
 		isDispatchNamespace,
 		preserveOriginalMain
-	);
-
-	const isRedirectedConfig = isRedirectedRawConfig(
-		rawConfig,
-		configPath,
-		userConfigPath
 	);
 
 	const definedEnvironments = Object.keys(rawConfig.env ?? {});
@@ -438,7 +473,6 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					useServiceEnvironments,
 					rawConfig
 				);
 				diagnostics.addChild(envDiagnostics);
@@ -451,7 +485,6 @@ export function normalizeAndValidateConfig(
 					preserveOriginalMain,
 					envName,
 					topLevelEnv,
-					useServiceEnvironments,
 					rawConfig
 				);
 				const envNames = rawConfig.env
@@ -493,10 +526,10 @@ export function normalizeAndValidateConfig(
 			configPath,
 			rawConfig.pages_build_output_dir
 		),
-		/** Legacy_env is wrangler environments, as opposed to service environments. Wrangler environments is not legacy.  */
-		legacy_env: !useServiceEnvironments,
 		send_metrics: rawConfig.send_metrics,
+		dependencies_instrumentation: rawConfig.dependencies_instrumentation,
 		keep_vars: rawConfig.keep_vars,
+		addresses: rawConfig.addresses,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		site: normalizeAndValidateSite(
@@ -1437,7 +1470,6 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName: string,
 	topLevelEnv: Environment,
-	useServiceEnvironments: boolean,
 	rawConfig: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
@@ -1448,7 +1480,6 @@ function normalizeAndValidateEnvironment(
 	preserveOriginalMain: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
-	useServiceEnvironments?: boolean,
 	rawConfig?: RawConfig | undefined
 ): Environment {
 	deprecated(
@@ -1468,14 +1499,12 @@ function normalizeAndValidateEnvironment(
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
-	const account_id = inheritableInWranglerEnvironments(
+	const account_id = inheritable(
 		diagnostics,
-		useServiceEnvironments,
 		topLevelEnv,
 		mutateEmptyStringAccountIDValue(diagnostics, rawEnv),
 		"account_id",
 		isString,
-		undefined,
 		undefined
 	);
 
@@ -1553,15 +1582,14 @@ function normalizeAndValidateEnvironment(
 			configPath
 		),
 		rules: validateAndNormalizeRules(diagnostics, topLevelEnv, rawEnv, envName),
-		name: inheritableInWranglerEnvironments(
+		name: inheritable(
 			diagnostics,
-			useServiceEnvironments,
 			topLevelEnv,
 			rawEnv,
 			"name",
 			isDispatchNamespace ? isString : isValidName,
-			appendEnvName(envName),
-			undefined
+			undefined,
+			appendEnvName(envName)
 		),
 		main: preserveOriginalMain
 			? inheritable(
@@ -1725,7 +1753,10 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"containers",
-			validateContainerApp(envName, rawEnv.name, configPath),
+			// `name` is inheritable, so a named environment that doesn't redeclare it
+			// still runs under the top level Worker name — fall back to it so the
+			// generated container name isn't built from `undefined`.
+			validateContainerApp(envName, rawEnv.name ?? rawConfig?.name, configPath),
 			undefined
 		),
 		send_email: notInheritable(
@@ -2213,6 +2244,10 @@ const validateAndNormalizeRules = (
 	);
 };
 
+const ARTIFACTS_EVENT_TYPE_SET: ReadonlySet<string> = new Set(
+	ARTIFACTS_EVENT_TYPES
+);
+
 const validateTriggers: ValidatorFn = (
 	diagnostics,
 	triggersFieldName,
@@ -2222,7 +2257,7 @@ const validateTriggers: ValidatorFn = (
 		return true;
 	}
 
-	if (typeof triggersValue !== "object") {
+	if (typeof triggersValue !== "object" || Array.isArray(triggersValue)) {
 		diagnostics.errors.push(
 			`Expected "${triggersFieldName}" to be of type object but got ${JSON.stringify(
 				triggersValue
@@ -2240,12 +2275,113 @@ const validateTriggers: ValidatorFn = (
 		isValid = false;
 	}
 
+	if (
+		hasProperty(triggersValue, "events") &&
+		!Array.isArray(triggersValue.events)
+	) {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}.events" to be of type array, but got ${JSON.stringify(triggersValue)}.`
+		);
+		isValid = false;
+	} else if (
+		hasProperty(triggersValue, "events") &&
+		Array.isArray(triggersValue.events)
+	) {
+		for (const [eventIndex, event] of triggersValue.events.entries()) {
+			const eventFieldName = `${triggersFieldName}.events[${eventIndex}]`;
+			if (typeof event !== "object" || event === null || Array.isArray(event)) {
+				diagnostics.errors.push(
+					`Expected "${eventFieldName}" to be of type object, but got ${JSON.stringify(event)}.`
+				);
+				isValid = false;
+				continue;
+			}
+
+			if (
+				!isRequiredProperty(event, "type", "string") ||
+				!ARTIFACTS_EVENT_TYPE_SET.has(event.type)
+			) {
+				diagnostics.errors.push(
+					`Expected "${eventFieldName}.type" to be a supported Artifacts event type, but got ${JSON.stringify(event.type)}.`
+				);
+				isValid = false;
+			}
+
+			if (hasProperty(event, "filter") && event.filter !== undefined) {
+				if (
+					typeof event.filter !== "object" ||
+					event.filter === null ||
+					Array.isArray(event.filter)
+				) {
+					diagnostics.errors.push(
+						`Expected "${eventFieldName}.filter" to be of type object, but got ${JSON.stringify(event.filter)}.`
+					);
+					isValid = false;
+				} else {
+					for (const [filterName, filterValue] of Object.entries(
+						event.filter
+					)) {
+						if (
+							(filterName !== "namespace" && filterName !== "repo_name") ||
+							typeof filterValue !== "string"
+						) {
+							diagnostics.errors.push(
+								`Expected "${eventFieldName}.filter" to contain only string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
+							);
+							isValid = false;
+							break;
+						}
+					}
+				}
+			}
+
+			if (!Array.isArray(event.targets) || event.targets.length === 0) {
+				diagnostics.errors.push(
+					`Expected "${eventFieldName}.targets" to be a non-empty array, but got ${JSON.stringify(event.targets)}.`
+				);
+				isValid = false;
+			} else {
+				for (const [targetIndex, target] of event.targets.entries()) {
+					const targetFieldName = `${eventFieldName}.targets[${targetIndex}]`;
+					if (
+						typeof target !== "object" ||
+						target === null ||
+						Array.isArray(target) ||
+						target.type !== "workflow" ||
+						typeof target.workflow_name !== "string" ||
+						target.workflow_name.length === 0
+					) {
+						diagnostics.errors.push(
+							`Expected "${targetFieldName}" to be a workflow target with a non-empty "workflow_name", but got ${JSON.stringify(target)}.`
+						);
+						isValid = false;
+						continue;
+					}
+
+					validateAdditionalProperties(
+						diagnostics,
+						targetFieldName,
+						Object.keys(target),
+						["type", "workflow_name"]
+					);
+				}
+			}
+
+			validateAdditionalProperties(
+				diagnostics,
+				eventFieldName,
+				Object.keys(event),
+				["type", "filter", "targets"]
+			);
+		}
+	}
+
 	isValid =
 		validateAdditionalProperties(
 			diagnostics,
 			triggersFieldName,
 			Object.keys(triggersValue),
-			["crons"]
+			["crons", "events"]
 		) && isValid;
 
 	return isValid;
@@ -3978,7 +4114,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 
-	// Queue bindings must have a binding and queue.
+	// Queue bindings must have a binding. The queue can be provisioned at deploy time.
 	let isValid = true;
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -3990,11 +4126,11 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (
-		!isRequiredProperty(value, "queue", "string") ||
-		(value as { queue: string }).queue.length === 0
+		!isOptionalProperty(value, "queue", "string") ||
+		(hasProperty(value, "queue") && value.queue === "")
 	) {
 		diagnostics.errors.push(
-			`"${field}" bindings should have a string "queue" field but got ${JSON.stringify(
+			`"${field}" bindings should optionally have a non-empty string "queue" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4108,12 +4244,55 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "local_dev")) {
+		const localDev = value.local_dev;
+		if (typeof localDev !== "object" || localDev === null) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "local_dev" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			experimental(
+				diagnostics,
+				{ local_dev: localDev } as {
+					local_dev: { experimental_s3_credentials?: unknown };
+				},
+				"local_dev.experimental_s3_credentials"
+			);
+			if (hasProperty(localDev, "experimental_s3_credentials")) {
+				const credentials = localDev.experimental_s3_credentials;
+				if (
+					typeof credentials !== "object" ||
+					credentials === null ||
+					!isRequiredProperty(credentials, "accessKeyId", "string") ||
+					!isRequiredProperty(credentials, "secretAccessKey", "string")
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings should, optionally, have a "local_dev.experimental_s3_credentials" field with string "accessKeyId" and "secretAccessKey" fields, but got ${JSON.stringify(
+							value
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.local_dev`,
+				Object.keys(localDev),
+				["experimental_s3_credentials"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
 		"remote",
+		"local_dev",
 	]);
 
 	return isValid;
@@ -4767,7 +4946,7 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		return false;
 	}
 	let isValid = true;
-	// Worker namespace bindings must have a binding, and a namespace.
+	// Worker namespace bindings must have a binding. The namespace can be provisioned at deploy time.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" should have a string "binding" field but got ${JSON.stringify(
@@ -4776,9 +4955,9 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "namespace", "string")) {
+	if (!isOptionalProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
-			`"${field}" should have a string "namespace" field but got ${JSON.stringify(
+			`"${field}" should optionally have a string "namespace" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -5236,9 +5415,9 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "app_id", "string")) {
+	if (!isOptionalProperty(value, "app_id", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+			`"${field}" bindings may have a string "app_id" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -6172,7 +6351,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		return true;
 	}
 
-	if (typeof value !== "object") {
+	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
 			`"${field}" should be an object but got ${JSON.stringify(value)}.`
 		);
@@ -6359,7 +6538,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 	/**
 	 * Validate the optional nested metrics configuration
 	 */
-	if (typeof val.metrics === "object") {
+	if (val.metrics !== null && typeof val.metrics === "object") {
 		isValid =
 			validateOptionalProperty(
 				diagnostics,
@@ -6433,16 +6612,40 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			) && isValid;
 	}
 
-	const samplingRate = val?.head_sampling_rate;
-
-	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
-		diagnostics.errors.push(
-			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
-		);
-	}
+	validateHeadSamplingRate(
+		diagnostics,
+		field,
+		"head_sampling_rate",
+		val?.head_sampling_rate
+	);
+	validateHeadSamplingRate(
+		diagnostics,
+		field,
+		"logs.head_sampling_rate",
+		val?.logs?.head_sampling_rate
+	);
+	validateHeadSamplingRate(
+		diagnostics,
+		field,
+		"traces.head_sampling_rate",
+		val?.traces?.head_sampling_rate
+	);
 
 	return isValid;
 };
+
+function validateHeadSamplingRate(
+	diagnostics: Diagnostics,
+	container: string,
+	key: string,
+	samplingRate: number | undefined
+) {
+	if (samplingRate && (samplingRate < 0 || samplingRate > 1)) {
+		diagnostics.errors.push(
+			`"${container}.${key}" must be a value between 0 and 1.`
+		);
+	}
+}
 
 const validateCache: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {

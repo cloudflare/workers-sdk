@@ -1,6 +1,6 @@
 import { Breadcrumbs as KumoBreadcrumbs } from "@cloudflare/kumo";
 import { Fragment } from "react";
-import type { FC, PropsWithChildren, ReactNode } from "react";
+import type { FC, JSX, PropsWithChildren, ReactNode } from "react";
 
 interface BreadcrumbsProps extends PropsWithChildren {
 	icon: FC<{ className?: string }>;

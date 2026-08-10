@@ -119,7 +119,7 @@ For account/support issues:
 
 Recommend **CLOSE** (state_reason: `not_planned`) if:
 
-- The issue has the `awaiting reporter response` or `needs reproduction` label AND the last activity was >30 days ago
+- The issue has the `awaiting-response:reporter` or `needs-reproduction` label AND the last activity was >30 days ago
 - The issue is >12 months old with no activity in the last 6 months
 - A maintainer asked for a reproduction or clarification and the reporter never responded
 
@@ -169,13 +169,13 @@ Recommend **KEEP OPEN** if:
 
 The issue should remain open as a tracking item. Do not close it — the team hasn't decided against the change, it's deferred to a future major version.
 
-**Suggested labels:** `breaking change`
+**Suggested labels:** `breaking-change`
 
 **Template:**
 
-> Changing this behavior at this stage would be a breaking change, so it will need to wait for the next major version. I've added the `breaking change` label to track this.
+> Changing this behavior at this stage would be a breaking change, so it will need to wait for the next major version. I've added the `breaking-change` label to track this.
 
-(Set Action field to: "Apply `breaking change` label, then post this comment.")
+(Set Action field to: "Apply `breaking-change` label, then post this comment.")
 
 #### 2j: Won't Fix / By Design
 
@@ -225,7 +225,7 @@ If the issue wasn't caught by Step 2, recommend **NEEDS MORE INFO** if:
 >
 > A minimal reproduction (a GitHub repo or link we can clone and run) would also help us investigate. Without more details, we won't be able to look into this.
 
-**Suggested label:** `awaiting reporter response` (and optionally `needs reproduction`)
+**Suggested label:** `awaiting-response:reporter` (and optionally `needs-reproduction`)
 
 **STOP HERE if** the issue clearly needs more info. Skip to Output.
 
@@ -233,27 +233,27 @@ If the issue wasn't caught by Step 2, recommend **NEEDS MORE INFO** if:
 
 Map the issue to a package based on labels, title, and body content:
 
-| Signal                                                                   | Package                                         |
-| ------------------------------------------------------------------------ | ----------------------------------------------- |
-| `wrangler` label, wrangler CLI commands, `wrangler.toml`/`wrangler.json` | `packages/wrangler`                             |
-| `miniflare` label, local dev simulation                                  | `packages/miniflare`                            |
-| `d1` label, D1 database, `d1 execute`, migrations                        | `packages/wrangler` (D1 code is in wrangler)    |
-| `vitest` label, worker tests, `vitest-pool-workers`                      | `packages/vitest-pool-workers`                  |
-| `vite-plugin` label, vite dev, `@cloudflare/vite-plugin`                 | `packages/vite-plugin-cloudflare`               |
-| `c3` label, `create-cloudflare`, project scaffolding                     | `packages/create-cloudflare`                    |
-| `pages` label, Pages deployment, `_routes.json`, `_headers`              | `packages/wrangler` (Pages code is in wrangler) |
-| `Workers + Assets` label, static asset serving                           | `packages/wrangler`                             |
-| `containers` label, container registry                                   | `packages/wrangler`                             |
-| `workflows` label, Workflows API                                         | `packages/wrangler`                             |
-| `workers-builds` label                                                   | Workers Builds (may be internal)                |
-| `python` label, Python Workers                                           | `packages/wrangler`                             |
-| `workers for platforms` label, dispatch namespaces                       | `packages/wrangler`                             |
-| `kv-asset-handler` label                                                 | `packages/kv-asset-handler`                     |
-| `types` label, `wrangler types` command                                  | `packages/wrangler`                             |
-| R2, KV, Queues, Durable Objects, Vectorize bindings                      | `packages/wrangler`                             |
-| `node compat`/`nodejs compat` label, Node.js APIs                        | May be workerd or wrangler depending on context |
-| Workers runtime behavior (not tooling)                                   | Likely belongs in cloudflare/workerd            |
-| Cloudflare dashboard, API behavior                                       | Likely a platform issue, not workers-sdk        |
+| Signal                                                                           | Package                                         |
+| -------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `package:wrangler` label, wrangler CLI commands, `wrangler.toml`/`wrangler.json` | `packages/wrangler`                             |
+| `package:miniflare` label, local dev simulation                                  | `packages/miniflare`                            |
+| `product:d1` label, D1 database, `d1 execute`, migrations                        | `packages/wrangler` (D1 code is in wrangler)    |
+| `package:vitest` label, worker tests, `vitest-pool-workers`                      | `packages/vitest-pool-workers`                  |
+| `package:vite-plugin` label, vite dev, `@cloudflare/vite-plugin`                 | `packages/vite-plugin-cloudflare`               |
+| `package:c3` label, `create-cloudflare`, project scaffolding                     | `packages/create-cloudflare`                    |
+| `product:pages` label, Pages deployment, `_routes.json`, `_headers`              | `packages/wrangler` (Pages code is in wrangler) |
+| `feature:workers-assets` label, static asset serving                             | `packages/wrangler`                             |
+| `product:containers` label, container registry                                   | `packages/wrangler`                             |
+| `product:workflows` label, Workflows API                                         | `packages/wrangler`                             |
+| `feature:workers-builds` label                                                   | Workers Builds (may be internal)                |
+| `python` label, Python Workers                                                   | `packages/wrangler`                             |
+| `product:workers-for-platforms` label, dispatch namespaces                       | `packages/wrangler`                             |
+| `package:kv-asset-handler` label                                                 | `packages/kv-asset-handler`                     |
+| `feature:types` label, `wrangler types` command                                  | `packages/wrangler`                             |
+| R2, KV, Queues, Durable Objects, Vectorize bindings                              | `packages/wrangler`                             |
+| `node-compat`/`nodejs-compat` label, Node.js APIs                                | May be workerd or wrangler depending on context |
+| Workers runtime behavior (not tooling)                                           | Likely belongs in cloudflare/workerd            |
+| Cloudflare dashboard, API behavior                                               | Likely a platform issue, not workers-sdk        |
 
 ### Step 5: Assess Reproducibility and Severity
 
@@ -274,12 +274,17 @@ For **feature requests**, evaluate:
 
 ## Output Format
 
+**How the output is used:** `report.md` is posted verbatim as a maintainer-facing triage comment on the issue (attributed to an automated bot), and the labels in `summary.json` are applied automatically. Because of this:
+
+- Write `report.md` for maintainers, not the reporter. The **Suggested Comment** section is a _draft_ for a maintainer to send to the reporter — it is **not** posted automatically, so do not phrase the surrounding report as though a reply has already been made.
+- Only put labels in the **Suggested Labels** fields that already exist in the repository. If unsure whether a label exists, omit it rather than guess — non-existent labels are dropped before applying, so inventing labels only weakens the report's accuracy.
+
 ### Report Directory Structure
 
 ```
 ./data/<issue_number>/
 ├── report.md          # Full detailed report
-└── summary.md         # Single-line tab-separated summary
+└── summary.json       # Structured JSON summary
 ```
 
 ### Output Step 1: Write Full Report
@@ -340,20 +345,32 @@ duplicate candidates. Only include what's relevant.>
 
 ### Output Step 2: Write Summary File
 
-Write a single tab-separated line to `./data/<issue_number>/summary.md` with these 7 fields:
+Write a machine-readable summary as **JSON** to `./data/<issue_number>/summary.json`. This file is parsed by the triage workflow (to build the dashboard payload and apply labels), so it must be valid JSON with exactly these keys:
 
+```json
+{
+  "issueNumber": <issue_number as a number>,
+  "title": "<issue title, with emoji/template prefixes like 'Bug:' removed>",
+  "githubUrl": "https://github.com/<owner>/<repo>/issues/<issue_number>",
+  "recommendation": "<CLOSE | KEEP OPEN | NEEDS MORE INFO | NEEDS VERIFICATION>",
+  "difficulty": "<easy | medium | hard | n/a>",
+  "reasoning": "<brief reasoning, 1-2 sentences>",
+  "suggestedAction": "<brief description of next steps>",
+  "hasSuggestedComment": <true if a Suggested Comment section is present in the report, false otherwise>,
+  "suggestedLabels": ["<label>", "..."]
+}
 ```
-[<issue_number>](https://github.com/<owner>/<repo>/issues/<issue_number>)	<title>	<CLOSE|KEEP OPEN|NEEDS MORE INFO|NEEDS VERIFICATION>	<easy|medium|hard|n/a>	<brief reasoning>	<brief suggested action>	<Yes|No>
-```
 
-**Column definitions:**
+**Key definitions:**
 
-- **Issue #**: Link to the issue in markdown format `[number](url)`
-- **Title**: Issue title (remove any emoji prefixes like "Bug:" or template prefixes)
-- **Recommendation**: One of CLOSE, KEEP OPEN, NEEDS MORE INFO, NEEDS VERIFICATION
-- **Difficulty**: Estimated fix difficulty - `easy`, `medium`, `hard`, or `n/a` (for feature requests or closures)
-- **Reasoning**: Brief summary of why (1-2 sentences)
-- **Suggested Action**: Brief description of next steps
-- **Suggested Comment**: "Yes" if a comment template is provided, "No" otherwise
+- **issueNumber**: The issue number as a JSON number (not a string).
+- **title**: Issue title with any emoji prefixes (e.g. "🐛 Bug:") or template prefixes removed.
+- **githubUrl**: Full URL to the issue.
+- **recommendation**: One of `CLOSE`, `KEEP OPEN`, `NEEDS MORE INFO`, `NEEDS VERIFICATION`.
+- **difficulty**: Estimated fix difficulty — `easy`, `medium`, `hard`, or `n/a` (for feature requests or closures).
+- **reasoning**: Brief summary of why (1-2 sentences).
+- **suggestedAction**: Brief description of next steps.
+- **hasSuggestedComment**: Boolean — `true` if the report includes a Suggested Comment, `false` otherwise.
+- **suggestedLabels**: JSON array of labels to apply, matching the **Suggested Labels** field in the report. Use existing repo labels only (see above). Use an empty array `[]` if there are no labels to apply.
 
-**CRITICAL:** Use actual tab characters (`\t`) as column delimiters. Write only the single data line, no header.
+**CRITICAL:** Write valid, parseable JSON only (no trailing commas, no comments, no surrounding markdown fences). Because JSON strings are escaped, `reasoning`/`suggestedAction` may safely contain any punctuation.

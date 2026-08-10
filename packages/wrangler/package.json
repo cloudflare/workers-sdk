@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.108.0",
+	"version": "4.120.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -84,18 +84,23 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260706.1"
+		"workerd": "catalog:default"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
+		"@aws-sdk/s3-request-presigner": "^3.721.0",
 		"@bomb.sh/tab": "^0.0.12",
 		"@cloudflare/autoconfig": "workspace:*",
+		"@cloudflare/build-output-utils": "workspace:*",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
+		"@cloudflare/pages-functions": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
+		"@cloudflare/remote-bindings": "workspace:*",
+		"@cloudflare/runtime-types": "workspace:*",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
@@ -181,7 +186,7 @@
 		"xxhash-wasm": "^1.0.1",
 		"yaml": "^2.8.1",
 		"yargs": "^17.7.2",
-		"zod": "^4.4.3"
+		"zod": "catalog:default"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": "catalog:default"

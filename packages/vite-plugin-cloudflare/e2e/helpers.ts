@@ -62,7 +62,7 @@ export function seed(
 			errorOnExist: true,
 		});
 		debuglog("Fixture copied to " + projectPath);
-		await updateVitePluginAndWranglerVersion(projectPath);
+		await updateVitePluginAndWranglerVersion(projectPath, pm);
 		debuglog("Fixing up replacements in seeded files");
 		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
@@ -192,7 +192,10 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	return wrappedProc;
 }
 
-async function updateVitePluginAndWranglerVersion(projectPath: string) {
+async function updateVitePluginAndWranglerVersion(
+	projectPath: string,
+	pm: "pnpm" | "yarn" | "npm"
+) {
 	const pkg = JSON.parse(
 		await fs.readFile(path.resolve(projectPath, "package.json"), "utf8")
 	);
@@ -205,6 +208,16 @@ async function updateVitePluginAndWranglerVersion(projectPath: string) {
 		if (pkg[field]?.["wrangler"] === "*") {
 			pkg[field]["wrangler"] = wranglerPackage.version;
 		}
+	}
+	if (pm === "npm") {
+		// @napi-rs/wasm-runtime 1.2.0 requires @emnapi 2, but Rolldown 1.1.5's
+		// WASI binding requires @emnapi 1, causing npm's strict resolver to fail.
+		pkg.overrides = {
+			...pkg.overrides,
+			"@rolldown/binding-wasm32-wasi@1.1.5": {
+				"@napi-rs/wasm-runtime": "1.1.6",
+			},
+		};
 	}
 	await fs.writeFile(
 		path.resolve(projectPath, "package.json"),

@@ -1,16 +1,16 @@
 import * as childProcess from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
+import {
+	assemblePreviewScriptSettings,
+	extractConfigBindings,
+	getBranchName,
+} from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
-import {
-	assemblePreviewScriptSettings,
-	extractConfigBindings,
-	getBranchName,
-} from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -45,21 +45,6 @@ describe("wrangler preview", () => {
 	mockAccountId();
 	afterEach(() => {
 		clearOutputFilePath();
-	});
-
-	test("rejects metrics export before creating a Preview", async ({
-		expect,
-	}) => {
-		writeWranglerConfig({
-			name: "test-worker",
-			observability: {
-				metrics: { enabled: true, destinations: ["destination"] },
-			},
-		});
-
-		await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
-			"Metrics export is not supported by `wrangler preview`."
-		);
 	});
 
 	test("strips metrics export from Preview script settings", ({ expect }) => {
@@ -366,9 +351,21 @@ describe("wrangler preview", () => {
 			);
 		});
 
-		test("should create a new preview with defaults applied", async ({
+		test("should ignore metrics export and create a new preview", async ({
 			expect,
 		}) => {
+			writeWranglerConfig({
+				name: "test-worker",
+				main: "src/index.ts",
+				compatibility_date: "2025-01-01",
+				observability: {
+					metrics: { enabled: true, destinations: ["destination"] },
+				},
+				previews: {
+					vars: { ENVIRONMENT: "preview" },
+					kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
+				},
+			});
 			let lookupPreviewUrl: string | undefined;
 			msw.use(
 				http.get(
@@ -1011,7 +1008,6 @@ describe("wrangler preview", () => {
 						"/Users/cina/src/github/example/project/wrangler.jsonc",
 					topLevelName: "entry-worker",
 					definedEnvironments: [],
-					legacy_env: true,
 					compatibility_date: "2025-01-01",
 					compatibility_flags: ["nodejs_compat"],
 					rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],

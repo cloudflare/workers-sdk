@@ -40,7 +40,6 @@ describe("writePnpmBuildApprovals", () => {
 		expect(calledContent).toMatch(/^allowBuilds:$/m);
 		expect(calledContent).toMatch(/^ {2}esbuild: true$/m);
 		expect(calledContent).toMatch(/^ {2}workerd: true$/m);
-		expect(calledContent).toMatch(/^ {2}sharp: true$/m);
 	});
 
 	test("writes the yaml for pnpm 10 as well (no version gate)", ({
@@ -113,12 +112,12 @@ describe("writePnpmBuildApprovals", () => {
 		const written = vi.mocked(writeFile).mock.calls[0][1] as string;
 		// Our keys: placeholders → `true`; missing keys are added.
 		expect(written).toMatch(/^ {2}esbuild: true$/m);
-		expect(written).toMatch(/^ {2}sharp: true$/m);
 		expect(written).toMatch(/^ {2}workerd: true$/m);
-		// Framework key: untouched.
+		// Framework keys (incl. `sharp`, no longer pre-approved): untouched.
 		expect(written).toMatch(
 			/^ {2}'@parcel\/watcher': set this to true or false$/m
 		);
+		expect(written).toMatch(/^ {2}sharp: set this to true or false$/m);
 	});
 
 	test("respects an explicit `false` for one of our keys", ({ expect }) => {
@@ -127,13 +126,7 @@ describe("writePnpmBuildApprovals", () => {
 			(path) => path.toString() === yamlPath
 		);
 		vi.mocked(readFile).mockReturnValue(
-			[
-				"allowBuilds:",
-				"  esbuild: false",
-				"  workerd: true",
-				"  sharp: true",
-				"",
-			].join("\n")
+			["allowBuilds:", "  esbuild: false", "  workerd: true", ""].join("\n")
 		);
 
 		writePnpmBuildApprovals(projectPath);
@@ -147,13 +140,7 @@ describe("writePnpmBuildApprovals", () => {
 			(path) => path.toString() === yamlPath
 		);
 		vi.mocked(readFile).mockReturnValue(
-			[
-				"allowBuilds:",
-				"  esbuild: true",
-				"  workerd: true",
-				"  sharp: true",
-				"",
-			].join("\n")
+			["allowBuilds:", "  esbuild: true", "  workerd: true", ""].join("\n")
 		);
 
 		writePnpmBuildApprovals(projectPath);
@@ -179,7 +166,6 @@ describe("writePnpmBuildApprovals", () => {
 		expect(written).toMatch(/^allowBuilds:$/m);
 		expect(written).toMatch(/^ {2}esbuild: true$/m);
 		expect(written).toMatch(/^ {2}workerd: true$/m);
-		expect(written).toMatch(/^ {2}sharp: true$/m);
 	});
 });
 
@@ -189,7 +175,6 @@ describe("mergeAllowBuilds", () => {
 			"allowBuilds:",
 			"  esbuild: set this to true or false",
 			"  workerd: set this to true or false",
-			"  sharp: set this to true or false",
 			"",
 		].join("\r\n");
 
@@ -204,7 +189,6 @@ describe("mergeAllowBuilds", () => {
 			"allowBuilds:",
 			"  esbuild: false",
 			"  workerd: true",
-			"  sharp: true",
 			"",
 		].join("\n");
 

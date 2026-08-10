@@ -1,48 +1,35 @@
+import { DEFINITION } from "./definition";
 import type {
 	Bindings,
 	TypedDurableObjectBinding,
 	TypedWorkerBinding,
 } from "./bindings";
+import type { ConfigContext, ConfigInput } from "./definition";
 import type {
 	InferDurableNamespaces,
 	InferWorkerName,
 	InferWorkerEntrypointExports,
 } from "./inference";
-import type { UserConfig } from "./types";
-
-// TODO: Use declaration merging in the consuming package once this package is published
-export interface ConfigContext {
-	/**
-	 * The mode the config is being evaluated in.
-	 * Set via the `--mode` CLI flag.
-	 * In Vite the mode defaults to `development` in `vite dev` and `production` in `vite build` ([more info](https://vite.dev/guide/env-and-mode.html#modes)).
-	 * In Wrangler the mode defaults to `undefined`.
-	 */
-	mode: string | undefined;
-}
-
-// We currently use Symbol.for rather than Symbol so that the symbol matches if duplicated across bundles
-// This wouldn't be necessary if @cloudflare/config was published and included as a dependency
-const CONFIG = Symbol.for("@cloudflare/config:worker-config");
+import type { WorkerConfig } from "./types";
 
 /**
- * Base shape of a Worker definition. Carries the resolved config and the
- * untyped cross-worker binding helpers.
+ * Base shape of a Worker definition. Carries the authored config (under
+ * {@link DEFINITION}) and the untyped cross-worker binding helpers.
  */
 export interface WorkerDefinition<
-	TConfig extends UserConfig = UserConfig,
+	TConfig extends WorkerConfig = WorkerConfig,
 > extends Pick<Bindings, "durableObject" | "worker"> {
-	[CONFIG]:
-		| TConfig
-		| Promise<TConfig>
-		| ((ctx: ConfigContext) => TConfig | Promise<TConfig>);
+	// The authored config is stored without its `type` discriminant (the helper
+	// omits it); `type` sits alongside it and is stamped back on during
+	// resolution. `TConfig` is still referenced so `UnwrapConfig` can recover it.
+	[DEFINITION]: { config: ConfigInput<Omit<TConfig, "type">>; type: "worker" };
 }
 
 /**
  * Worker definition with typed cross-worker binding helpers.
  */
 export interface TypedWorkerDefinition<
-	TConfig extends UserConfig,
+	TConfig extends WorkerConfig,
 	TWorkerName extends string = InferWorkerName<TConfig>,
 > extends WorkerDefinition<TConfig> {
 	/**
@@ -84,20 +71,32 @@ export interface TypedWorkerDefinition<
 	// }): TypedWorkflowBinding<TConfig, TExportName>;
 }
 
-export type UserConfigExport<T extends UserConfig = UserConfig> =
-	| T
-	| Promise<T>
-	| ((ctx: ConfigContext) => T | Promise<T>);
+export type WorkerConfigExport<T extends WorkerConfig = WorkerConfig> =
+	ConfigInput<T>;
 
-export function defineWorker<const T extends UserConfig>(
-	config: (ctx: ConfigContext) => (UserConfig & T) | Promise<UserConfig & T>
-): TypedWorkerDefinition<T>;
-export function defineWorker<const T extends UserConfig>(
-	config: (UserConfig & T) | Promise<UserConfig & T>
-): TypedWorkerDefinition<T>;
-export function defineWorker(config: UserConfigExport): WorkerDefinition {
+/**
+ * Authored Worker config shape — {@link WorkerConfig} without the `type`
+ * discriminant, which `defineWorker` injects.
+ */
+export type WorkerConfigInput = Omit<WorkerConfig, "type">;
+
+export type WorkerConfigInputExport<
+	T extends WorkerConfigInput = WorkerConfigInput,
+> = ConfigInput<T>;
+
+export function defineWorker<const T extends WorkerConfigInput>(
+	config: (
+		ctx: ConfigContext
+	) => (WorkerConfigInput & T) | Promise<WorkerConfigInput & T>
+): TypedWorkerDefinition<T & { type: "worker" }>;
+export function defineWorker<const T extends WorkerConfigInput>(
+	config: (WorkerConfigInput & T) | Promise<WorkerConfigInput & T>
+): TypedWorkerDefinition<T & { type: "worker" }>;
+export function defineWorker(
+	config: WorkerConfigInputExport
+): WorkerDefinition {
 	return {
-		[CONFIG]: config,
+		[DEFINITION]: { config, type: "worker" },
 		durableObject(options) {
 			return { type: "durable-object", ...options };
 		},
@@ -109,21 +108,4 @@ export function defineWorker(config: UserConfigExport): WorkerDefinition {
 		// 	return { type: "workflow", ...options };
 		// },
 	};
-}
-
-export async function resolveWorkerDefinition(
-	def: unknown,
-	ctx: ConfigContext
-): Promise<unknown> {
-	const raw =
-		typeof def === "object" && def !== null && CONFIG in def
-			? (def as Record<symbol, unknown>)[CONFIG]
-			: def;
-
-	const value =
-		typeof raw === "function"
-			? (raw as (ctx: ConfigContext) => unknown)(ctx)
-			: raw;
-
-	return await value;
 }

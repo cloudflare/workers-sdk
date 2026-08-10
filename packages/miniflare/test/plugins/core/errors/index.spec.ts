@@ -479,3 +479,233 @@ Caused by: TypeError: The value cannot be converted because it is not an integer
 	// Check `dispatchFetch()` propagates exception
 	await expect(mf.dispatchFetch(url)).rejects.toThrow("Unusual oops!");
 });
+
+// This emulates a Worker bundled with the Wrangler json-error middleware
+// See packages/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
+const JSON_ERROR_SCRIPT = `
+function reduceError(e) {
+	return {
+		name: e?.name,
+		message: e?.message ?? String(e),
+		stack: e?.stack,
+		cause: e?.cause === undefined ? undefined : reduceError(e.cause),
+	};
+}
+export default {
+	async fetch() {
+		try {
+			throw new Error("Unusual oops!");
+		} catch (e) {
+			const body = JSON.stringify(reduceError(e));
+			return new Response(body, {
+				status: 500,
+				headers: {
+					"Content-Type": "application/json",
+					"MF-Experimental-Error-Stack": "true",
+					"MF-Experimental-Error-Stack-Payload": encodeURIComponent(body),
+				},
+			});
+		}
+	},
+}`;
+
+test("invokes handleUncaughtError with the revived error", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const errors: Error[] = [];
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError(error) {
+			errors.push(error);
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready);
+	expect(res.status).toBe(500);
+	expect(errors.length).toBe(1);
+	expect(errors[0]).toBeInstanceOf(Error);
+	expect(errors[0].message).toBe("Unusual oops!");
+	expect(errors[0].stack).toMatch(/Object\.fetch/);
+});
+
+// `workerd` drops response bodies for `HEAD` requests, so the serialised error
+// cannot be recovered from the body alone — it is carried in a header too.
+test("reports the revived error for HEAD requests", async ({ expect }) => {
+	const log = new CustomLog();
+	const errors: Error[] = [];
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError(error) {
+			errors.push(error);
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready, { method: "HEAD" });
+	expect(res.status).toBe(500);
+	expect(errors.length).toBe(1);
+	expect(errors[0]).toBeInstanceOf(Error);
+	expect(errors[0].message).toBe("Unusual oops!");
+	expect(errors[0].stack).toMatch(/Object\.fetch/);
+});
+
+test("rejects HEAD dispatchFetch with the user error, not a parse error", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({ modules: true, script: JSON_ERROR_SCRIPT });
+	useDispose(mf);
+
+	await expect(
+		mf.dispatchFetch(await mf.ready, { method: "HEAD" })
+	).rejects.toThrow("Unusual oops!");
+});
+
+// A stack too large to fit in a header is sent without the payload copy, so a
+// `HEAD` request has no way to recover it. Reporting must still degrade to a
+// plain error rather than leaking a JSON parse failure from miniflare.
+const NO_PAYLOAD_HEADER_SCRIPT = `
+export default {
+	async fetch() {
+		return new Response(JSON.stringify({ name: "Error", message: "Unusual oops!" }), {
+			status: 500,
+			headers: {
+				"Content-Type": "application/json",
+				"MF-Experimental-Error-Stack": "true",
+			},
+		});
+	},
+}`;
+
+test("degrades without leaking a parse error when HEAD has no payload header", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: NO_PAYLOAD_HEADER_SCRIPT,
+	});
+	useDispose(mf);
+	const url = await mf.ready;
+
+	const res = await fetch(url, { method: "HEAD" });
+	expect(res.status).toBe(500);
+
+	await expect(mf.dispatchFetch(url, { method: "HEAD" })).rejects.toThrow(
+		"Worker threw an uncaught exception"
+	);
+
+	// The GET path still recovers the error from the body
+	await expect(mf.dispatchFetch(url)).rejects.toThrow("Unusual oops!");
+});
+
+// A stack frame may name a `file://` URL that `fileURLToPath` cannot convert
+// to a local path. No single URL is invalid everywhere — a drive-less
+// `file:///...` (every frame a POSIX-built bundle reports) throws on Windows
+// but is fine on POSIX, while a non-local-host URL throws on POSIX but is a
+// valid UNC path on Windows — so the stack carries one of each, and every
+// platform's runner exercises the degradation through its own rejection.
+const UNMAPPABLE_STACK_SCRIPT = `
+export default {
+	async fetch() {
+		return Response.json(
+			{
+				name: "Error",
+				message: "Unmappable oops!",
+				stack: "Error: Unmappable oops!\\n    at fetch (file:///virtual/index.mjs:2:3)\\n    at reroute (file://not-local/index.mjs:1:1)",
+			},
+			{
+				status: 500,
+				headers: { "MF-Experimental-Error-Stack": "true" },
+			}
+		);
+	},
+}`;
+
+test("still reports the error when a stack frame's file URL has no local path", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const errors: Error[] = [];
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError(error) {
+			errors.push(error);
+		},
+		script: UNMAPPABLE_STACK_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready);
+	expect(res.status).toBe(500);
+	// The error response is still built from the revived error...
+	expect(await res.text()).toMatch(/Unmappable oops!/);
+	// ...the error is still logged...
+	expect(log.getLogs(LogLevel.ERROR)[0]).toMatch(/Unmappable oops!/);
+	// ...and the callback still fires, with both frames preserved un-mapped.
+	expect(errors.length).toBe(1);
+	expect(errors[0].message).toBe("Unmappable oops!");
+	expect(errors[0].stack).toContain("file:///virtual/index.mjs");
+	expect(errors[0].stack).toContain("file://not-local/index.mjs");
+});
+
+test("keeps building the error response when handleUncaughtError throws", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		handleUncaughtError() {
+			throw new Error("Callback oops!");
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	// The pretty-error page is still returned...
+	const res = await fetch(await mf.ready, {
+		headers: { Accept: "text/html" },
+	});
+	expect(res.status).toBe(500);
+	expect(res.headers.get("Content-Type") ?? "").toMatch(/^text\/html/);
+	expect(await res.text()).toMatch(/Unusual oops!/);
+
+	// ...and the callback's own error is logged after the Worker error
+	const errorLogs = log.getLogs(LogLevel.ERROR);
+	expect(errorLogs[0]).toMatch(/Unusual oops!/);
+	expect(errorLogs[1]).toMatch(/Callback oops!/);
+});
+
+test("absorbs a rejecting async handleUncaughtError callback", async ({
+	expect,
+}) => {
+	const log = new CustomLog();
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		// An async callback is type-assignable to the void contract; its
+		// rejection must be absorbed, not left to crash the process
+		async handleUncaughtError() {
+			throw new Error("Async callback oops!");
+		},
+		script: JSON_ERROR_SCRIPT,
+	});
+	useDispose(mf);
+
+	const res = await fetch(await mf.ready);
+	expect(res.status).toBe(500);
+	expect(await res.text()).toMatch(/Unusual oops!/);
+
+	// The rejection is absorbed into the log, not left unhandled (an
+	// unhandled rejection would also fail the test file under vitest)
+	await new Promise((resolve) => setTimeout(resolve, 10));
+	const errorLogs = log.getLogs(LogLevel.ERROR);
+	expect(errorLogs[0]).toMatch(/Unusual oops!/);
+	expect(errorLogs[1]).toMatch(/Async callback oops!/);
+});

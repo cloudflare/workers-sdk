@@ -44,7 +44,6 @@ export type DeployHelpersContext = {
 			fallbackOption?: number;
 		}
 	) => Promise<Values>;
-	isNonInteractiveOrCI: () => boolean;
 };
 
 /**
@@ -79,11 +78,6 @@ export type SharedDeployVersionsProps = {
 	keepVars: boolean;
 	/** Merged from --site arg and config.site. */
 	isWorkersSite: boolean;
-	/**
-	 * Whether to use the deprecated service environments API path.
-	 * True only when config opts in (legacy_env: false) AND --env is specified.
-	 */
-	useServiceEnvApiPath: boolean;
 	/** From --dry-run arg. */
 	dryRun: boolean;
 	/** From --env arg. */
@@ -115,6 +109,8 @@ export type SharedDeployVersionsProps = {
 export type DeployProps = SharedDeployVersionsProps & {
 	/** Discriminant for DeployProps vs VersionsUploadProps */
 	command: "deploy";
+	/** If set, automatically register this `workers.dev` account subdomain when the account has none. */
+	autoRegisterWorkersDevSubdomain?: string;
 	/** Merged from --site arg and config.site. */
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	/** Merged: --triggers arg ?? config.triggers.crons. */
@@ -160,6 +156,8 @@ export type WorkerBuildResult = {
 
 export interface TriggerDeployment {
 	targets: string[];
+	category?: string;
+	resource?: string;
 	error?: Error;
 }
 
@@ -167,9 +165,9 @@ export type TriggerProps = {
 	config: Config;
 	accountId: string;
 	scriptName: string;
+	workerTag?: string | null;
 	env: string | undefined;
 	crons: string[] | undefined;
 	routes: Route[];
-	useServiceEnvironments: boolean;
 	firstDeploy: boolean;
 };

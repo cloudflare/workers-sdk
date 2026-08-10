@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- this e2e test intentionally exercises deprecated Node.js util methods and cluster APIs to verify unenv polyfill behavior */
 import assert from "node:assert";
 
 export default {
@@ -248,7 +249,9 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 				resolve(null);
 			});
 		});
+	},
 
+	async testDnsCaa() {
 		const dnsPromises = await import("node:dns/promises");
 		const results = await dnsPromises.resolveCaa("google.com");
 		assert.ok(Array.isArray(results));

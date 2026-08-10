@@ -110,7 +110,6 @@ function createDevOptions(parsedArgs) {
 		jsxFragment: undefined,
 		tsconfig: undefined,
 		minify: undefined,
-		legacyEnv: undefined,
 		logLevel: undefined,
 		showInteractiveDevSession: undefined,
 		liveReload: undefined,

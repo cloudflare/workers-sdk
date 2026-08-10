@@ -9,7 +9,6 @@ import { readConfig } from "../config";
 import { runDeployCommandHandler, type DeployArgs } from "../deploy";
 import { confirm, prompt, select } from "../dialogs";
 import { run } from "../experimental-flags";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
 	recordPagesToWorkersDelegateFailure,
@@ -52,7 +51,6 @@ export async function runPagesToWorkersDeploy(
 		routes: undefined,
 		domains: undefined,
 		metafile: undefined,
-		legacyEnv: undefined,
 		logpush: undefined,
 		oldAssetTtl: undefined,
 		dispatchNamespace: undefined,
@@ -106,7 +104,6 @@ export async function runPagesToWorkersDeploy(
 				confirm,
 				prompt,
 				select,
-				isNonInteractiveOrCI,
 			});
 
 			await runDeployCommandHandler(deployArgs, {

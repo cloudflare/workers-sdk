@@ -1,15 +1,16 @@
 import { setTimeout } from "node:timers/promises";
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isInteractive, isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { onExit } from "signal-exit";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
@@ -19,7 +20,6 @@ import {
 } from "../tail/createTail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";

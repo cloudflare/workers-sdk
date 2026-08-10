@@ -13,7 +13,6 @@ import type {
 	ValidatedAssetsOptions,
 } from "@cloudflare/workers-utils";
 
-export { buildAssetManifest, syncAssets } from "@cloudflare/deploy-helpers";
 export type { AssetManifest } from "@cloudflare/deploy-helpers";
 
 /**

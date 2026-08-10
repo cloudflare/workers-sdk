@@ -9,6 +9,10 @@ export const EXTERNAL_DEPENDENCIES = [
 	// to provide Node.js compatibility polyfills
 	"unenv",
 
+	// workerd contains a native binary, so must be external. Imported by the
+	// bundled `@cloudflare/runtime-types` (runtime type generation).
+	"workerd",
+
 	// Has optional native bindings (bufferutil, utf-8-validate) for performance;
 	// commonly shared with other packages to avoid duplication
 	"ws",

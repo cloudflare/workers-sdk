@@ -108,7 +108,6 @@ describe("RemoteRuntimeController", () => {
 			},
 			workerContext: {
 				env: undefined,
-				useServiceEnvironments: undefined,
 				zone: undefined,
 				host: undefined,
 				routes: undefined,

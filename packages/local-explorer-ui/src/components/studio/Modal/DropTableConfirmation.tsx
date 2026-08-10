@@ -1,7 +1,7 @@
 import { Button, Dialog, Text } from "@cloudflare/kumo";
 import { useState } from "react";
 import type { IStudioDriver } from "../../../types/studio";
-import type { SubmitEvent } from "react";
+import type { JSX, SubmitEvent } from "react";
 
 interface DropTableConfirmationModalProps {
 	closeModal: () => void;

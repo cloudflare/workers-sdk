@@ -4,7 +4,7 @@
  */
 export interface PackageManager {
 	/** The package manager identifier. */
-	type: "npm" | "yarn" | "pnpm" | "bun";
+	type: "npm" | "yarn" | "pnpm" | "bun" | "nub";
 	/** The command used to execute packages (e.g. `npx`, `pnpm`, `bunx`). */
 	npx: string;
 	/** The command segments used to download and execute packages (e.g. `["npx"]`, `["pnpm", "dlx"]`). */
@@ -51,4 +51,14 @@ export const BunPackageManager = {
 	npx: "bunx",
 	dlx: ["bunx"],
 	lockFiles: ["bun.lockb", "bun.lock"],
+} as const satisfies PackageManager;
+
+/**
+ * Manage packages using nub.
+ */
+export const NubPackageManager = {
+	type: "nub",
+	npx: "nubx",
+	dlx: ["nubx"],
+	lockFiles: ["nub.lock"],
 } as const satisfies PackageManager;

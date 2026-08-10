@@ -9,9 +9,11 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { mockGetVersion, mockPostVersion, mockSetupApiCalls } from "./utils";
-import type { VersionDetails } from "../../../versions/secrets";
-import type { CfPlacement } from "@cloudflare/workers-utils";
+import {
+	expectSecretPatch,
+	mockPatchLatestVersion,
+	mockPatchLatestVersionNoVersions,
+} from "./utils";
 
 describe("versions secret delete", () => {
 	const std = mockConsoleMethods();
@@ -31,17 +33,8 @@ describe("versions secret delete", () => {
 			result: true,
 		});
 
-		mockSetupApiCalls(expect);
-		mockGetVersion(expect);
-		mockPostVersion(expect, (metadata) => {
-			// We should have all secrets except the one being deleted
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "inherit", name: "ANOTHER_SECRET" },
-				{ type: "inherit", name: "YET_ANOTHER_SECRET" },
-			]);
-			// We will not be inherting secret_text as that would bring back SECRET
-			expect(metadata.keep_bindings).toStrictEqual(["secret_key"]);
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, { SECRET: null });
 		});
 		await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -59,16 +52,8 @@ describe("versions secret delete", () => {
 	test("can delete a secret (non-interactive)", async ({ expect }) => {
 		setIsTTY(false);
 
-		mockSetupApiCalls(expect);
-		mockGetVersion(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "inherit", name: "ANOTHER_SECRET" },
-				{ type: "inherit", name: "YET_ANOTHER_SECRET" },
-			]);
-			// We will not be inherting secret_text as that would bring back SECRET
-			expect(metadata.keep_bindings).toStrictEqual(["secret_key"]);
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, { SECRET: null });
 		});
 
 		await runWrangler("versions secret delete SECRET --name script-name");
@@ -92,16 +77,8 @@ describe("versions secret delete", () => {
 		writeWranglerConfig({ name: "script-name" });
 		setIsTTY(false);
 
-		mockSetupApiCalls(expect);
-		mockGetVersion(expect);
-		mockPostVersion(expect, (metadata) => {
-			expect(metadata.bindings).toStrictEqual([
-				{ type: "inherit", name: "do-binding" },
-				{ type: "inherit", name: "ANOTHER_SECRET" },
-				{ type: "inherit", name: "YET_ANOTHER_SECRET" },
-			]);
-			// We will not be inherting secret_text as that would bring back SECRET
-			expect(metadata.keep_bindings).toStrictEqual(["secret_key"]);
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, { SECRET: null });
 		});
 
 		await runWrangler("versions secret delete SECRET");
@@ -123,14 +100,27 @@ describe("versions secret delete", () => {
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
 		setIsTTY(false);
 
-		mockSetupApiCalls(expect);
-		mockGetVersion(expect);
-		mockPostVersion(expect);
+		mockPatchLatestVersion(expect, (patch) => {
+			expectSecretPatch(expect, patch, { SECRET: null });
+		});
 
 		await runWrangler("versions secret delete SECRET --name script-name");
 
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("shows a nice error message when the Worker has no versions", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		mockPatchLatestVersionNoVersions(expect);
+
+		await expect(
+			runWrangler("versions secret delete SECRET --name script-name")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: There are currently no uploaded versions of this Worker. Please upload a version before modifying a secret.]`
+		);
 	});
 
 	describe("multi-env warning", () => {
@@ -142,9 +132,9 @@ describe("versions secret delete", () => {
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET: null });
+			});
 
 			await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -168,9 +158,9 @@ describe("versions secret delete", () => {
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET: null });
+			});
 
 			await runWrangler(
 				"versions secret delete SECRET --name script-name -e test"
@@ -185,9 +175,9 @@ describe("versions secret delete", () => {
 			setIsTTY(false);
 
 			writeWranglerConfig();
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET: null });
+			});
 
 			await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -203,9 +193,9 @@ describe("versions secret delete", () => {
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET: null });
+			});
 
 			await runWrangler("versions secret delete SECRET --name script-name");
 
@@ -220,109 +210,15 @@ describe("versions secret delete", () => {
 			writeWranglerConfig({
 				env: { test: {} },
 			});
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect);
-			mockPostVersion(expect);
+			mockPatchLatestVersion(expect, (patch) => {
+				expectSecretPatch(expect, patch, { SECRET: null });
+			});
 
 			await runWrangler(
 				'versions secret delete SECRET --name script-name --env=""'
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-	});
-
-	describe("placement", () => {
-		function buildVersionInfo(placement: CfPlacement): VersionDetails {
-			return {
-				id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
-				metadata: {} as VersionDetails["metadata"],
-				number: 2,
-				resources: {
-					bindings: [
-						{ type: "secret_text", name: "SECRET", text: "Secret shhh" },
-					],
-					script: {
-						etag: "etag",
-						handlers: ["fetch"],
-						last_deployed_from: "api",
-						placement,
-					},
-					script_runtime: {
-						usage_model: "standard",
-						limits: {},
-					},
-				},
-			};
-		}
-
-		// `versions secret delete` fetches the version twice (once directly, once
-		// inside copyWorkerVersionWithNewSecrets), so register the override twice.
-		function mockGetVersionTwice(
-			expect: Parameters<typeof mockGetVersion>[0],
-			versionInfo: VersionDetails
-		) {
-			mockGetVersion(expect, versionInfo);
-			mockGetVersion(expect, versionInfo);
-		}
-
-		test("preserves smart placement on the new version", async ({ expect }) => {
-			setIsTTY(false);
-			const placement: CfPlacement = { mode: "smart" };
-			mockSetupApiCalls(expect);
-			mockGetVersionTwice(expect, buildVersionInfo(placement));
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toStrictEqual(placement);
-			});
-			await runWrangler("versions secret delete SECRET --name script-name");
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		test("preserves targeted placement with service targets on the new version", async ({
-			expect,
-		}) => {
-			setIsTTY(false);
-			const placement = {
-				mode: "targeted",
-				target: [{ hostname: "example.com", id: 410, type: "http" }],
-			} as unknown as CfPlacement;
-			mockSetupApiCalls(expect);
-			mockGetVersionTwice(expect, buildVersionInfo(placement));
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toStrictEqual(placement);
-			});
-			await runWrangler("versions secret delete SECRET --name script-name");
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		test("preserves targeted placement with region targets on the new version", async ({
-			expect,
-		}) => {
-			setIsTTY(false);
-			const placement = {
-				mode: "targeted",
-				target: [{ id: 12, region: "aws:ap-northeast-1", type: "region" }],
-			} as unknown as CfPlacement;
-			mockSetupApiCalls(expect);
-			mockGetVersionTwice(expect, buildVersionInfo(placement));
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toStrictEqual(placement);
-			});
-			await runWrangler("versions secret delete SECRET --name script-name");
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		test("omits placement when the existing version has none", async ({
-			expect,
-		}) => {
-			setIsTTY(false);
-			mockSetupApiCalls(expect);
-			mockGetVersion(expect);
-			mockPostVersion(expect, (metadata) => {
-				expect(metadata.placement).toBeUndefined();
-			});
-			await runWrangler("versions secret delete SECRET --name script-name");
-			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 });

@@ -1,5 +1,5 @@
 import { createCommand, createNamespace } from "../core/create-command";
-import { handlePreviewCommand, handlePreviewDeleteCommand } from "./preview";
+import { handlePreviewCommand, handlePreviewDeleteCommand } from "./commands";
 import {
 	handlePreviewSecretBulkCommand,
 	handlePreviewSecretDeleteCommand,

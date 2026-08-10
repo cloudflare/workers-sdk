@@ -111,15 +111,6 @@ export const versionsDeployCommand = createCommand({
 	},
 	positionalArgs: ["version-specs"],
 	handler: async function versionsDeployHandler(args, { config }) {
-		if (config.observability?.metrics !== undefined) {
-			throw new UserError(
-				"Metrics export is not supported by `wrangler versions deploy`. Use `wrangler deploy` or remove observability.metrics from your configuration.",
-				{
-					telemetryMessage: "metrics export versions deploy unsupported",
-				}
-			);
-		}
-
 		metrics.sendMetricsEvent("deploy worker versions", {
 			sendMetrics: config.send_metrics,
 		});

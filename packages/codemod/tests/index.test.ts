@@ -85,6 +85,44 @@ describe("mergeObjectProperties", () => {
 				},
 			},
 		},
+		{
+			testName: "concatenates array properties, preserving existing entries",
+			sourcePropertiesObject: {
+				modules: ["@nuxt/ui", "@nuxt/eslint"],
+			},
+			newPropertiesObject: {
+				modules: ["nitro-cloudflare-dev"],
+			},
+			expectedPropertiesObject: {
+				modules: ["@nuxt/ui", "@nuxt/eslint", "nitro-cloudflare-dev"],
+			},
+		},
+		{
+			testName: "de-duplicates string entries when concatenating arrays",
+			sourcePropertiesObject: {
+				modules: ["a"],
+			},
+			newPropertiesObject: {
+				modules: ["a", "b"],
+			},
+			expectedPropertiesObject: {
+				modules: ["a", "b"],
+			},
+		},
+		{
+			testName: "merges array and object properties in the same call",
+			sourcePropertiesObject: {
+				modules: ["@nuxt/ui", "@nuxt/eslint"],
+			},
+			newPropertiesObject: {
+				modules: ["nitro-cloudflare-dev"],
+				nitro: { preset: "cloudflare_module" },
+			},
+			expectedPropertiesObject: {
+				modules: ["@nuxt/ui", "@nuxt/eslint", "nitro-cloudflare-dev"],
+				nitro: { preset: "cloudflare_module" },
+			},
+		},
 	] satisfies {
 		testName: string;
 		sourcePropertiesObject: Record<string, unknown>;

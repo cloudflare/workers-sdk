@@ -2,10 +2,12 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
+	getWorkerNameFromProject,
 	getTodaysCompatDate,
 	UserError,
 	type Config,
 } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	runAutoConfigDetection,
@@ -16,7 +18,6 @@ import {
 import { createWranglerAutoConfigContext } from "../autoconfig-context";
 import { readConfig } from "../config";
 import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
 import { collectKeyValues } from "../utils/collectKeyValues";
@@ -48,7 +49,6 @@ type DeployConfigFlags = {
 	// Deployment behavior
 	logpush: boolean | undefined;
 	keepVars: boolean | undefined;
-	legacyEnv: boolean | undefined;
 	dispatchNamespace: string | undefined;
 };
 
@@ -181,9 +181,11 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
  */
 export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 	args: Args,
-	config: { configPath?: string; compatibility_date?: string; name?: string }
+	config: { configPath?: string; compatibility_date?: string; name?: string },
+	options: { useProjectName?: boolean } = {}
 ): Promise<Args> {
-	if (isNonInteractiveOrCI()) {
+	const nonInteractiveOrCI = isNonInteractiveOrCI();
+	if (nonInteractiveOrCI && !options.useProjectName) {
 		return args;
 	}
 
@@ -191,19 +193,26 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 
 	// Prompt for name when missing from both CLI args and config
 	if (!args.name && !config.name) {
-		const defaultName = process
-			.cwd()
-			.split(path.sep)
-			.pop()
-			?.replaceAll("_", "-")
-			.trim();
-		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
-		const projectName = await prompt("What do you want to name your project?", {
-			defaultValue: isValidName ? defaultName : "my-project",
-		});
-		args.name = projectName;
+		if (options.useProjectName) {
+			args.name = getWorkerNameFromProject(process.cwd());
+		} else {
+			const defaultName = process
+				.cwd()
+				.split(path.sep)
+				.pop()
+				?.replaceAll("_", "-")
+				.trim();
+			const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
+			args.name = await prompt("What do you want to name your project?", {
+				defaultValue: isValidName ? defaultName : "my-project",
+			});
+		}
 		logger.log("");
 		promptedForMissing = true;
+	}
+
+	if (nonInteractiveOrCI) {
+		return args;
 	}
 
 	// Prompt for compatibility date when missing
@@ -292,9 +301,6 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		if (args.keepVars) {
 			configContent.keep_vars = true;
 		}
-		if (args.legacyEnv) {
-			configContent.legacy_env = true;
-		}
 
 		const writeConfigFile = await confirm(
 			`Do you want Wrangler to write a wrangler.jsonc config file to store this configuration?\n${chalk.dim(
@@ -343,7 +349,6 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 				...(args.bundle === false ? ["--no-bundle"] : []),
 				...(args.logpush ? ["--logpush"] : []),
 				...(args.keepVars ? ["--keep-vars"] : []),
-				...(args.legacyEnv ? ["--legacy-env"] : []),
 				...(args.dispatchNamespace
 					? [`--dispatch-namespace ${args.dispatchNamespace}`]
 					: []),

@@ -222,13 +222,13 @@ export function createCloudflareEnvironmentOptions({
 	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
-	const rollupOptions: vite.Rollup.RollupOptions = isParentEnvironment
+	const rollupOptions = isParentEnvironment
 		? {
 				input: {
 					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
 				},
 				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-				preserveEntrySignatures: "strict",
+				preserveEntrySignatures: "strict" as const,
 			}
 		: {};
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);

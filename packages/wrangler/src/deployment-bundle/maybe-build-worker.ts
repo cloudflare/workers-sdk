@@ -15,8 +15,10 @@ import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type {
 	CfModule,
 	Config,
+	DurableObjectBindings,
 	EphemeralDirectory,
 	Entry,
+	WorkflowBinding,
 } from "@cloudflare/workers-utils";
 
 /**
@@ -50,6 +52,12 @@ export type BuildProps = {
 	defines: Record<string, string>;
 	/** Merged: { ...config.alias, ...--alias arg }. CLI overrides config. */
 	alias: Record<string, string>;
+	/**
+	 * Durable Object bindings for post-build class-export validation.
+	 */
+	doBindings: DurableObjectBindings;
+	/** Workflow bindings for post-build class-export validation. */
+	workflowBindings: WorkflowBinding[];
 	/** Output directory for the bundled Worker. From --outdir arg or a temp directory. */
 	destination: string | EphemeralDirectory;
 	/** From --outdir arg. Used for the outdir README and noBundleWorker. */
@@ -143,8 +151,8 @@ export async function buildWorker(
 					bundle: true,
 					additionalModules: [],
 					moduleCollector,
-					doBindings: config.durable_objects.bindings,
-					workflowBindings: config.workflows ?? [],
+					doBindings: props.doBindings,
+					workflowBindings: props.workflowBindings,
 					jsxFactory,
 					jsxFragment,
 					tsconfig: props.tsconfig,

@@ -95,6 +95,20 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
+	it("should error before making a request when CLOUDFLARE_ACCOUNT_ID contains characters that are invalid in a URL", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "ваш-идентификатор-аккаунта");
+		const requests = mockProjectListRequest(expect, []);
+
+		await expect(runWrangler("pages project list")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in the \`CLOUDFLARE_ACCOUNT_ID\` environment variable. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]
+		`);
+
+		expect(requests.count).toBe(0);
+	});
+
 	it("should return JSON output when --json flag is provided", async ({
 		expect,
 	}) => {

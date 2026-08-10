@@ -6,6 +6,7 @@ import type {
 	DevRegistryUpdateEvent,
 	ErrorEvent,
 	PreviewTokenExpiredEvent,
+	RuntimeErrorEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
@@ -19,6 +20,7 @@ export type ControllerEvent =
 	| ReloadStartEvent
 	| ReloadCompleteEvent
 	| DevRegistryUpdateEvent
+	| RuntimeErrorEvent
 	| PreviewTokenExpiredEvent;
 
 export interface ControllerBus {
@@ -35,6 +37,14 @@ export abstract class Controller {
 
 	async teardown(): Promise<void> {
 		this.#tearingDown = true;
+	}
+
+	/**
+	 * Whether `teardown()` has been called, which subclasses should check before
+	 * starting any new work.
+	 */
+	protected get tearingDown() {
+		return this.#tearingDown;
 	}
 
 	protected emitErrorEvent(event: ErrorEvent) {

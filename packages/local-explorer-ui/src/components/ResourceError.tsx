@@ -2,6 +2,7 @@ import { Button } from "@cloudflare/kumo";
 import { WarningIcon } from "@phosphor-icons/react";
 import { Link, type ErrorComponentProps } from "@tanstack/react-router";
 import type { WorkersApiResponseCommonFailure } from "../api";
+import type { JSX } from "react";
 
 const DEFAULT_ERROR_DESCRIPTION =
 	"An unknown error occurred. Please report this issue to Cloudflare.";

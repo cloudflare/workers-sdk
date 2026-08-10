@@ -5,8 +5,8 @@ import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeOutputWorkerConfig,
-} from "@cloudflare/config";
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
@@ -113,8 +113,21 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			ctx.setHasShownWorkerConfigWarnings(false);
 		},
 		configureServer(viteDevServer) {
+			// This variable is used to guard against config changes triggering
+			// a restart while another restart is already in flight. Note that we are
+			// deliberately not calling `watcher.off` since on failed restarts
+			// (e.g. the changed config is invalid) vite would resolve without replacing
+			// the server, so a removed handler would never be re-registered and
+			// config changes, including the one that fixes the config, would be
+			// ignored for the rest of the session.
+			let restartInFlight = false;
+
 			const configChangedHandler = async (changedFilePath: string) => {
 				assertIsNotPreview(ctx);
+
+				if (restartInFlight) {
+					return;
+				}
 
 				if (
 					ctx.resolvedPluginConfig.configPaths.has(changedFilePath) ||
@@ -129,9 +142,13 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					)
 				) {
 					debuglog("Config changed: " + changedFilePath);
-					viteDevServer.watcher.off("change", configChangedHandler);
+					restartInFlight = true;
 					debuglog("Restarting dev server and aborting previous setup");
-					await viteDevServer.restart();
+					try {
+						await viteDevServer.restart();
+					} finally {
+						restartInFlight = false;
+					}
 				}
 			};
 
@@ -206,10 +223,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 							entryWorkerNewConfig,
 							`No config found for "${entryWorkerEnvironmentName}" environment`
 						);
-						await writeOutputWorkerConfig(
-							builder.config.root,
-							entryWorkerNewConfig
-						);
+						await writeWorkerConfig(builder.config.root, entryWorkerNewConfig);
 					} else {
 						const entryWorkerConfig = ctx.getWorkerConfig(
 							entryWorkerEnvironmentName
@@ -337,7 +351,7 @@ function getEnvironmentsConfig(
 }
 
 /**
- * When the Build Output API is enabled,
+ * When the Build Output Specification is enabled,
  * force every Worker environment's and the client environment's `build.outDir`
  * to the spec-mandated location.
  *
@@ -354,44 +368,22 @@ function forceBuildOutputDirs(
 	}
 
 	const { root } = resolvedViteConfig;
-	let clientWorkerName: string;
 
+	// The Build Output Specification currently holds a single Worker in the
+	// `default` directory (the default export in `cloudflare.config.ts`). Only
+	// the entry Worker is emitted; auxiliary Worker environments keep their
+	// normal build output and are ignored by the spec.
 	if (resolvedPluginConfig.type === "workers") {
-		for (const [
-			environmentName,
-			worker,
-		] of resolvedPluginConfig.environmentNameToWorkerMap) {
-			const environment = resolvedViteConfig.environments[environmentName];
-			if (!environment) {
-				continue;
-			}
-			assert(worker.parsedNewConfig, "Expected parsedNewConfig to be defined");
-			environment.build.outDir = getWorkerBundleDir(
-				root,
-				worker.parsedNewConfig.name
-			);
-		}
-
 		const entryName = resolvedPluginConfig.entryWorkerEnvironmentName;
-		const entryWorker =
-			resolvedPluginConfig.environmentNameToWorkerMap.get(entryName);
-		assert(entryWorker, `Expected entry worker for environment "${entryName}"`);
-		assert(
-			entryWorker.parsedNewConfig,
-			"Expected parsedNewConfig to be defined"
-		);
-		clientWorkerName = entryWorker.parsedNewConfig.name;
-	} else {
-		assert(
-			resolvedPluginConfig.parsedNewConfig,
-			"Expected parsedNewConfig to be defined"
-		);
-		clientWorkerName = resolvedPluginConfig.parsedNewConfig.name;
+		const entryEnvironment = resolvedViteConfig.environments[entryName];
+		if (entryEnvironment) {
+			entryEnvironment.build.outDir = getWorkerBundleDir(root);
+		}
 	}
 
 	const clientEnvironment = resolvedViteConfig.environments.client;
 	if (clientEnvironment) {
-		clientEnvironment.build.outDir = getWorkerAssetsDir(root, clientWorkerName);
+		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
 	}
 }
 

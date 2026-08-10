@@ -1,7 +1,16 @@
 import { describe, it } from "vitest";
-import { InputWorkerSchema, OutputWorkerSchema } from "../schema";
+import {
+	ConfigExportsSchema,
+	InputWorkerSchema,
+	OutputWorkerSchema,
+	SettingsSchema,
+} from "../schema";
 
-const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
+const baseConfig = {
+	type: "worker",
+	name: "my-worker",
+	compatibilityDate: "2026-06-01",
+} as const;
 
 describe("InputWorkerSchema", () => {
 	describe("env singleton bindings", () => {
@@ -587,5 +596,131 @@ describe("OutputWorkerSchema", () => {
 		});
 
 		expect(result.success).toBe(false);
+	});
+});
+
+describe("InputWorkerSchema type discriminant", () => {
+	it("requires type: 'worker'", ({ expect }) => {
+		const { type: _type, ...withoutType } = baseConfig;
+		const result = InputWorkerSchema.safeParse(withoutType);
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("SettingsSchema", () => {
+	it("accepts a minimal settings config", ({ expect }) => {
+		const result = SettingsSchema.safeParse({ type: "settings" });
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts accountId and complianceRegion", ({ expect }) => {
+		const result = SettingsSchema.safeParse({
+			type: "settings",
+			accountId: "acc-123",
+			complianceRegion: "fedramp-high",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects unknown fields", ({ expect }) => {
+		const result = SettingsSchema.safeParse({
+			type: "settings",
+			name: "my-worker",
+		});
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("ConfigExportsSchema", () => {
+	it("discriminates worker and settings exports by type", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			settings: { type: "settings", accountId: "acc-123" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.default?.type).toBe("worker");
+			expect(result.data.settings?.type).toBe("settings");
+		}
+	});
+
+	it("reports an invalid-discriminator issue keyed by export name", ({
+		expect,
+	}) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: { name: "my-worker", compatibilityDate: "2026-06-01" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual(["default", "type"]);
+		}
+	});
+
+	it("rejects a settings config on a non-`settings` export", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			settings: { type: "settings" },
+			extraSettings: { type: "settings" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find((i) =>
+				i.message.includes(
+					"A `settings` config is only allowed on the `settings` export"
+				)
+			);
+			expect(issue?.path).toEqual(["extraSettings"]);
+		}
+	});
+
+	it("rejects a settings config on the `default` export", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: { type: "settings" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find((i) =>
+				i.message.includes(
+					"A `settings` config is only allowed on the `settings` export"
+				)
+			);
+			expect(issue?.path).toEqual(["default"]);
+		}
+	});
+
+	it("rejects a worker config on the reserved `settings` export", ({
+		expect,
+	}) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			settings: { ...baseConfig, name: "settings" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find((i) =>
+				i.message.includes(
+					"The `settings` export is reserved for a `settings` config"
+				)
+			);
+			expect(issue?.path).toEqual(["settings"]);
+		}
+	});
+
+	it("allows multiple worker exports", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			api: { ...baseConfig, name: "api" },
+		});
+
+		expect(result.success).toBe(true);
 	});
 });

@@ -1,4 +1,4 @@
-import { env } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { setTestWorkflowCallback } from "./test-entry";
 import type {
 	DatabaseInstance,

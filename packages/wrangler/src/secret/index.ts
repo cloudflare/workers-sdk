@@ -13,7 +13,6 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
@@ -26,12 +25,10 @@ type SecretBindingUpload = {
 
 async function createDraftWorker({
 	config,
-	args,
 	accountId,
 	scriptName,
 }: {
 	config: Config;
-	args: { env?: string; name?: string };
 	accountId: string;
 	scriptName: string;
 }) {
@@ -48,9 +45,7 @@ async function createDraftWorker({
 	}
 	await fetchResult(
 		config,
-		useServiceEnvironments(config) && args.env
-			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
-			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
+		`/accounts/${accountId}/workers/scripts/${scriptName}`,
 		{
 			method: "PUT",
 			body: createWorkerUploadForm(
@@ -116,11 +111,6 @@ export const secretPutCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -130,8 +120,6 @@ export const secretPutCommand = createCommand({
 				{ telemetryMessage: "secret put pages project" }
 			);
 		}
-
-		const isServiceEnv = Boolean(useServiceEnvironments(config) && args.env);
 
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
@@ -150,16 +138,10 @@ export const secretPutCommand = createCommand({
 				: await readFromStdin()
 		);
 
-		logger.log(
-			`🌀 Creating the secret for the Worker "${scriptName}" ${
-				isServiceEnv ? `(${args.env})` : ""
-			}`
-		);
+		logger.log(`🌀 Creating the secret for the Worker "${scriptName}"`);
 
 		async function submitSecret() {
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
+			const url = `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
 			try {
 				return await fetchResult(config, url, {
@@ -206,7 +188,6 @@ export const secretPutCommand = createCommand({
 				// create a draft worker and try again
 				const result = await createDraftWorker({
 					config,
-					args,
 					accountId,
 					scriptName,
 				});
@@ -248,14 +229,8 @@ export const secretDeleteCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	async handler(args, { config }) {
-		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -276,20 +251,14 @@ export const secretDeleteCommand = createCommand({
 
 		if (
 			await confirm(
-				`Are you sure you want to permanently delete the secret ${
-					args.key
-				} on the Worker ${scriptName}${isServiceEnv ? ` (${args.env})` : ""}?`
+				`Are you sure you want to permanently delete the secret ${args.key} on the Worker ${scriptName}?`
 			)
 		) {
 			logger.log(
-				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}${
-					isServiceEnv ? ` (${args.env})` : ""
-				}`
+				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}`
 			);
 
-			const url = isServiceEnv
-				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
-				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
+			const url = `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
 			await fetchResult(
 				config,
@@ -326,11 +295,6 @@ export const secretListCommand = createCommand({
 			choices: ["json", "pretty"],
 			describe: "The format to print the secrets in",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	behaviour: {
 		supportTemporary: true,
@@ -358,7 +322,7 @@ export const secretListCommand = createCommand({
 		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
 
 		try {
-			secrets = await fetchSecrets(config, scriptName, accountId, args.env);
+			secrets = await fetchSecrets(config, scriptName, accountId);
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				throw new UserError(
@@ -389,16 +353,9 @@ async function putBulkSecrets(
 	config: Config,
 	accountId: string,
 	scriptName: string,
-	environment: string | undefined,
-	content: Record<string, string | null>,
-	options: {
-		isServiceEnv?: boolean;
-	} = {}
+	content: Record<string, string | null>
 ): Promise<[unknown, Array<string>, Array<string>]> {
-	const isServiceEnv = options?.isServiceEnv;
-	const url = isServiceEnv
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${environment}/secrets-bulk`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets-bulk`;
+	const url = `/accounts/${accountId}/workers/scripts/${scriptName}/secrets-bulk`;
 	// Build the merge-patch body using JSON Merge Patch (RFC 7396) semantics:
 	// - Included secrets are created or updated
 	// - Omitted secrets are left unchanged
@@ -449,11 +406,6 @@ export const secretBulkCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -464,7 +416,6 @@ export const secretBulkCommand = createCommand({
 			);
 		}
 
-		const isServiceEnv = useServiceEnvironments(config) && !!args.env;
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			const error = new UserError(
@@ -477,11 +428,7 @@ export const secretBulkCommand = createCommand({
 
 		const accountId = await requireAuth(config);
 
-		logger.log(
-			`🌀 Processing the secrets for the Worker "${scriptName}" ${
-				isServiceEnv ? `(${args.env})` : ""
-			}`
-		);
+		logger.log(`🌀 Processing the secrets for the Worker "${scriptName}"`);
 
 		const result = await parseBulkInputToObject(args.file, true);
 
@@ -502,9 +449,7 @@ export const secretBulkCommand = createCommand({
 					config,
 					accountId,
 					scriptName,
-					args.env,
-					content,
-					{ isServiceEnv }
+					content
 				);
 			} catch (e) {
 				if (!isWorkerNotFoundError(e)) {
@@ -516,7 +461,6 @@ export const secretBulkCommand = createCommand({
 				// Worker doesn't exist yet — create a draft worker, then retry
 				const draftWorkerResult = await createDraftWorker({
 					config,
-					args,
 					accountId,
 					scriptName,
 				});
@@ -527,9 +471,7 @@ export const secretBulkCommand = createCommand({
 					config,
 					accountId,
 					scriptName,
-					args.env,
-					content,
-					{ isServiceEnv }
+					content
 				);
 			}
 		} catch (e) {

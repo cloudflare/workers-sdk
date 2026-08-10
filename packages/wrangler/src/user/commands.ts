@@ -1,11 +1,13 @@
 import { getCloudflareAuthUseKeyringFromEnv } from "@cloudflare/workers-auth";
+import {
+	readUserPreferences,
+	setKeyringPreference,
+} from "@cloudflare/workers-auth/wrangler";
 import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { setKeyringPreference } from "./keyring-preference";
-import { readUserPreferences } from "./preferences";
 import {
 	DefaultScopeKeys,
 	getActiveProfile,
@@ -81,6 +83,12 @@ export const loginCommand = createCommand({
 			// touches the persisted preference when the user actually opts in
 			// or out.
 		},
+		device: {
+			describe:
+				"Use the OAuth 2.0 Device Authorization Grant (RFC 8628) instead of the localhost callback flow. Useful in containers, remote SSH sessions, or other environments where localhost:8976 is unreachable from your browser.",
+			type: "boolean",
+			default: false,
+		},
 	},
 	validateArgs(args) {
 		if (args.profile) {
@@ -88,6 +96,25 @@ export const loginCommand = createCommand({
 				"--profile cannot be used with the login command, as `wrangler login` is reserved for default, global auth. If you want to create or activate a named profile, run `wrangler auth create` or `wrangler auth activate`.",
 				{
 					telemetryMessage: "profile flag with login",
+				}
+			);
+		}
+
+		// `--callback-host` / `--callback-port` configure the temporary local
+		// callback server used by the authorization-code flow. The device
+		// authorization flow has no callback server, so the combination is
+		// invalid rather than merely ignored. This is validated here rather
+		// than in the handler so the command fails before `--use-keyring` /
+		// `--no-use-keyring` has persisted any credential-storage state.
+		if (
+			args.device &&
+			(args.callbackHost !== "localhost" || args.callbackPort !== 8976)
+		) {
+			throw new CommandLineArgsError(
+				"`--callback-host` and `--callback-port` cannot be used with `--device`; the device authorization flow does not use a local callback server.",
+				{
+					telemetryMessage:
+						"user login callback args incompatible with device flow",
 				}
 			);
 		}
@@ -112,13 +139,14 @@ export const loginCommand = createCommand({
 		// (env-override warning, opt-out scrub of all encrypted profiles, and
 		// eager validation + rollback of an unusable opt-in).
 		if (args.useKeyring !== undefined) {
-			setKeyringPreference(args.useKeyring);
+			setKeyringPreference(args.useKeyring, { logger, getCredentialStore });
 		}
 
 		// Validate `--scopes` up front so we can share a single `login(...)`
 		// call (and a single `sendMetricsEvent("login user", ...)` site) between
 		// the scoped and unscoped paths.
 		let scopes: typeof DefaultScopeKeys | undefined;
+
 		if (args.scopes) {
 			if (args.scopes.length === 0) {
 				// don't allow no scopes to be passed, that would be weird
@@ -141,6 +169,7 @@ export const loginCommand = createCommand({
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
 			profile: "default",
+			device: args.device,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
@@ -372,7 +401,10 @@ export const authKeyringCommand = createCommand({
 		}
 
 		const enable = args.action === "enable";
-		const { enabled } = setKeyringPreference(enable);
+		const { enabled } = setKeyringPreference(enable, {
+			logger,
+			getCredentialStore,
+		});
 		if (enable) {
 			if (enabled) {
 				logger.log(

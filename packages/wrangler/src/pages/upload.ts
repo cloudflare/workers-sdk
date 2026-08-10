@@ -9,10 +9,10 @@ import {
 	formatTime,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isInteractive } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import {
 	BULK_UPLOAD_CONCURRENCY,

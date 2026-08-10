@@ -185,20 +185,42 @@ describe("versions deploy", () => {
 		);
 	});
 
-	test("rejects metrics export before creating a deployment", async ({
+	test("ignores metrics export when creating a versions deployment", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
 			observability: {
+				enabled: true,
 				metrics: { enabled: true, destinations: ["destination"] },
 			},
 		});
-
-		await expect(
-			runWrangler("versions deploy 10000000-0000-0000-0000-000000000000 --yes")
-		).rejects.toThrow(
-			"Metrics export is not supported by `wrangler versions deploy`."
+		let reconciliationCalled = false;
+		let patchedSettings: Record<string, unknown> | undefined;
+		msw.use(
+			http.patch(
+				"*/accounts/:accountId/workers/scripts/:workerName/script-settings",
+				async ({ request }) => {
+					patchedSettings = (await request.json()) as Record<string, unknown>;
+					return HttpResponse.json(createFetchResult(patchedSettings));
+				}
+			),
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					reconciliationCalled = true;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
 		);
+
+		await runWrangler(
+			"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+		);
+		expect(reconciliationCalled).toBe(false);
+		expect(patchedSettings).toMatchObject({
+			observability: { enabled: true },
+		});
+		expect(patchedSettings?.observability).not.toHaveProperty("metrics");
 	});
 
 	describe("legacy deploy", () => {

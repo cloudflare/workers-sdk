@@ -86,23 +86,22 @@ describe("parseDiffForChanges()", () => {
 		expect(changes.size).toBe(0);
 	});
 
-	it("should capture quoted pnpm catalog entries and ignore unquoted keys", ({
+	it("should capture both quoted and unquoted pnpm catalog entries", ({
 		expect,
 	}) => {
 		const changes = parseDiffForChanges([
-			// A literal dependency in a package.json
+			// A literal dependency in a package.json (quoted, JSON key)
 			`-		"workerd": "1.20260702.1",`,
 			`+		"workerd": "1.20260706.1",`,
 			// A quoted catalog entry in pnpm-workspace.yaml (caret preserved)
 			`-  "@cloudflare/workers-types": "^4.20260702.1"`,
 			`+  "@cloudflare/workers-types": "^5.20260706.1"`,
 			// workerd also appears in pnpm-workspace.yaml, but as an *unquoted*
-			// YAML key. The "quoted name" regex must skip it. Distinct versions
-			// are used here so that if the regex ever matched unquoted keys,
-			// these values would overwrite the workerd change captured from the
-			// package.json above and this assertion would fail.
-			`-  workerd: "9.99999990.0"`,
-			`+  workerd: "9.99999999.9"`,
+			// YAML key. The catalog is the source of truth and always carries the
+			// same version as the package.json pin, so capturing it here merges
+			// into the same map entry rather than conflicting.
+			`-  workerd: "1.20260702.1"`,
+			`+  workerd: "1.20260706.1"`,
 		]);
 		expect(changes).toEqual(
 			new Map([
@@ -118,6 +117,38 @@ describe("parseDiffForChanges()", () => {
 					{
 						from: "^4.20260702.1",
 						to: "^5.20260706.1",
+					},
+				],
+			])
+		);
+	});
+
+	it("should capture an unquoted catalog key even when no package.json bumps it", ({
+		expect,
+	}) => {
+		// When Dependabot bumps workerd only in the pnpm-workspace.yaml catalog
+		// (an unquoted YAML key), leaving the package.json pins untouched, workerd
+		// must still make it into the changeset.
+		const changes = parseDiffForChanges([
+			`-  "@cloudflare/workers-types": "^5.20260708.1"`,
+			`+  "@cloudflare/workers-types": "^5.20260710.1"`,
+			`-  workerd: "1.20260708.1"`,
+			`+  workerd: "1.20260710.1"`,
+		]);
+		expect(changes).toEqual(
+			new Map([
+				[
+					"@cloudflare/workers-types",
+					{
+						from: "^5.20260708.1",
+						to: "^5.20260710.1",
+					},
+				],
+				[
+					"workerd",
+					{
+						from: "1.20260708.1",
+						to: "1.20260710.1",
 					},
 				],
 			])

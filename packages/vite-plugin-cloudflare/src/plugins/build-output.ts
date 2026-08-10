@@ -1,12 +1,15 @@
 import assert from "node:assert";
 import * as path from "node:path";
-import { writeOutputWorkerConfig } from "@cloudflare/config";
+import {
+	writeRootConfig,
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
 
 /**
- * Build Output API plugin. Replaces `outputConfigPlugin` when
+ * Build Output Specification plugin. Replaces `outputConfigPlugin` when
  * `experimental.newConfig.cfBuildOutput` is set.
  */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
@@ -20,15 +23,26 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				ctx.resolvedPluginConfig.type === "assets-only" &&
 				this.environment.name === "client"
 			) {
-				const workerNewConfig = ctx.resolvedPluginConfig.parsedNewConfig;
+				const defaultExport = ctx.resolvedPluginConfig.parsedNewConfig?.default;
+				const workerNewConfig =
+					defaultExport?.type === "worker" ? defaultExport : undefined;
 				assert(
 					workerNewConfig,
-					"Expected parsedNewConfig on assets-only resolved config"
+					"Expected a default worker export on assets-only resolved config"
 				);
-				await writeOutputWorkerConfig(
-					ctx.resolvedViteConfig.root,
-					workerNewConfig
-				);
+				await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig);
+				await writeSettingsConfig();
+				return;
+			}
+
+			// The Build Output Specification currently holds a single Worker in
+			// the `default` directory. Only the entry Worker is emitted;
+			// auxiliary Worker environments are ignored for now.
+			if (
+				ctx.resolvedPluginConfig.type === "workers" &&
+				this.environment.name !==
+					ctx.resolvedPluginConfig.entryWorkerEnvironmentName
+			) {
 				return;
 			}
 
@@ -69,16 +83,26 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				modules[fileName] = { type: detectModuleType(fileName) };
 			}
 
-			await writeOutputWorkerConfig(
-				ctx.resolvedViteConfig.root,
-				workerNewConfig,
-				{
-					mainModule: entryChunk.fileName,
-					modules,
-				}
-			);
+			await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig, {
+				mainModule: entryChunk.fileName,
+				modules,
+			});
+			await writeSettingsConfig();
 		},
 	};
+
+	async function writeSettingsConfig(): Promise<void> {
+		if (ctx.resolvedPluginConfig.type === "preview") {
+			return;
+		}
+		const settingsExport = ctx.resolvedPluginConfig.parsedNewConfig?.settings;
+		const settings =
+			settingsExport?.type === "settings" ? settingsExport : undefined;
+		if (!settings) {
+			return;
+		}
+		await writeRootConfig(ctx.resolvedViteConfig.root, settings);
+	}
 });
 
 /**

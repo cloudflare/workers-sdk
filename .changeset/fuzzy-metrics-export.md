@@ -1,4 +1,6 @@
 ---
+"@cloudflare/config": minor
+"@cloudflare/workers-utils": minor
 "wrangler": minor
 ---
 

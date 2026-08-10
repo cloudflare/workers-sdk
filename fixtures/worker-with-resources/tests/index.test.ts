@@ -80,7 +80,7 @@ describe("local explorer", () => {
 		const html = await indexResponse.text();
 
 		// Extract JS asset path from the HTML
-		// The HTML looks like: <script type="module" crossorigin src="/cdn-cgi/explorer/assets/index-xxx.js">
+		// The HTML looks like: <script type="module" crossorigin src="/cdn-cgi/local/explorer/assets/index-xxx.js">
 		const jsMatch = html.match(/assets\/index-[^"]+\.js/);
 		assert(jsMatch, "Expected JS asset path in HTML");
 		const jsPath = jsMatch[0];

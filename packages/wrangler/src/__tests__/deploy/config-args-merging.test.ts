@@ -154,6 +154,7 @@ function mockUploadVersion(has_preview = false) {
 
 /** Parse WorkerMetadata from a captured upload request */
 async function getMetadata(request: Request): Promise<WorkerMetadata> {
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 	const formBody = await request.clone().formData();
 	return JSON.parse(await toString(formBody.get("metadata"))) as WorkerMetadata;
 }

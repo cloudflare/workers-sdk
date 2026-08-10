@@ -11,13 +11,16 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/generate-auth-url.ts` — authorize URL builder
 - `src/generate-random-state.ts` — CSRF state generator
 - `src/env-vars.ts` — `WRANGLER_*` and `CLOUDFLARE_AUTH_*` env-var getters
+- `src/account-id.ts` — `validateAccountId(id, source)`, applied to every user-supplied account ID (`CLOUDFLARE_ACCOUNT_ID`, the consumer's `account_id` config field) before it reaches an API URL path
 - `src/access.ts` — Cloudflare Access detection + service-token / `cloudflared` headers
-- `src/config-file/auth.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only). The default plaintext-TOML implementation now lives alongside the credential-store layer at `src/credential-store/file-store.ts` (see "Credential storage" below). Wrangler's `src/user/auth-config-file.ts` exposes a generic `createTomlFileStorage<T>` helper for non-credential TOML stores (the temporary-preview-account storage) and re-exports `getAuthConfigFilePath` for back-compat.
+- `src/config-file/auth.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only). The default plaintext credential implementation lives alongside the credential-store layer at `src/credential-store/file-store.ts` (see "Credential storage" below). The core `src/core/auth-config-file.ts` (`createAuthConfigFileHelpers({getConfigPath, format})`) and `src/core/file-storage.ts` (`createFileStorage(format, getPath)`) build the per-profile path helpers and non-credential file stores; each CLI descriptor (`src/wrangler/auth-config-file.ts`, `src/cf/auth-config-file.ts`) binds them to its config dir + `FileFormat` and re-exports `createTomlFileStorage` / `createJsonFileStorage`, `getAuthConfigFilePath`, etc. from its entrypoint. See "CORE LAYER" below.
 - `src/config-file/temporary.ts` — `TemporaryAccountStorage` / `TemporaryPreviewAccount` storage contract for the temporary-preview-account flow
 - `src/config-file/index.ts` — generic `ConfigStorage<T>` interface shared by the auth and temporary-account contracts
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
 - `src/token-exchange.ts` — auth-code → token + refresh-token rotation + `fetchAuthToken`
 - `src/callback-server.ts` — local HTTP server for the OAuth callback (listens on the host/port from the consumer's `redirectUri`)
+- `src/device-flow.ts` — `getOauthTokenViaDeviceFlow(options, ctx)`: the OAuth 2.0 Device Authorization Grant (RFC 8628) used by `login({device: true})` when the browser cannot reach the local callback URL. No callback server; prints the verification URL + user code and polls `/oauth2/token`. Every user-facing string is parameterised by `ctx.displayName` / `ctx.deviceLoginCommand` so the module carries no per-CLI branding. Both endpoints' bodies are narrowed before use (`asDeviceAuthorizationResponse`, `pollDeviceToken`'s `DevicePollResult`) rather than cast — an intermediary's envelope or a 2xx without a grant must produce a reportable `unexpected`/unusable-response error, never `undefined` arithmetic. `slow_down` / 5xx / 429 / unparseable bodies keep the loop alive; the last such failure is reported in place of the generic timeout if the deadline passes
+- `src/generate-device-auth-url.ts` — `generateVerificationUrl` (fallback `verification_uri_complete` builder for servers that omit it, RFC 8628 §3.3.1) + `assertTrustedVerificationUrl`, which rejects any server-supplied verification URL that is not `https:` on exactly the resolved auth domain (with no embedded credentials) before it is printed or handed to `openInBrowser` — the device flow is the only place this package opens a URL it did not build itself (RFC 8628 §5.4, remote phishing)
 - `src/flow.ts` — `createOAuthFlow(ctx)` factory wiring everything together
 - `src/context.ts` — `OAuthFlowContext` interface (DI surface)
 - `src/credential-store/` — opt-in OS-keyring-backed credential persistence (see below)
@@ -61,6 +64,11 @@ files and its own encryption key.
 - `clientId` (required) — the consumer's registered OAuth app ID; `string` or
   `() => string` for lazy (e.g. env-driven prod/staging) resolution
 - `consent` (required) — the consumer's branded granted/denied consent pages
+- `displayName` (required) — the consumer's branded name (`"Wrangler"`, `"cf"`),
+  interpolated into the device flow's "To authorize \<name\>…" copy
+- `deviceLoginCommand` (required) — the command that restarts the device flow
+  (`"wrangler login --device"`), quoted when a device code is denied, expires,
+  or the flow times out
 - `redirectUri` (required) — the registered redirect URI / local callback URL.
   The callback server's listen host/port and route path are all derived from it
   (per-call bind overrides via `LoginProps.callbackHost`/`callbackPort`)
@@ -74,15 +82,68 @@ files and its own encryption key.
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-`clientId`, `consent`, `redirectUri`, and `storageFactory` are consumer-specific
-(Wrangler's live in `packages/wrangler/src/user/`), so they are required rather
-than defaulted here.
+`clientId`, `consent`, `displayName`, `deviceLoginCommand`, `redirectUri`, and
+`storageFactory` are consumer-specific, so they are required rather than
+defaulted here. Wrangler's values live in the in-package wrangler layer
+(`src/wrangler/`, see below) rather than in the `wrangler` package itself.
 
-Wrangler wires the credential-storage layer once in
-`packages/wrangler/src/user/user.ts` via `createCredentialStorageContext(...)`
-and exposes the resulting `getActiveStore` (called with the active profile) as
+The wrangler layer (`src/wrangler/index.ts`, `createWranglerAuth`) wires the
+credential-storage layer once via `createCredentialStorageContext(...)` and
+exposes the resulting `getActiveStore` (called with the active profile) as
 `getCredentialStore()` for `whoami`-style code that wants to surface the active
 storage location.
+
+## CORE LAYER (`src/core/`) + PER-CLI DESCRIPTORS (`src/wrangler/`, `src/cf/`)
+
+The whole CLI-facing auth layer (the machinery that used to live in
+`packages/wrangler/src/user/`) is **CLI-agnostic** and shared by every
+Cloudflare CLI built on this package. It lives in `src/core/`:
+
+- `factory.ts` — `createCloudflareAuth(descriptor, ctx)`: OAuth flow wiring,
+  credential storage, config cache (`@cloudflare/workers-utils`'
+  `createConfigCache`), account selection (`fetchInternalBase` with the token
+  the flow already holds), login / logout / refresh, and `requireAuth`. Imports
+  only `@cloudflare/workers-utils`.
+- `types.ts` — `AuthContext` (the injected primitives: `logger`, `userAgent`,
+  interactive `prompt` / `select`, `isNoDefaultValueProvidedError`) and
+  `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
+  `displayName` (branded name used in prose), auth command names
+  (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
+  `clientId`, `consent`, `redirectUri`, `getConfigPath`, `fileFormat`,
+  `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
+  `getDefaultScopeKeys`, …).
+- `file-storage.ts` (`createFileStorage(format, getPath)`), `auth-config-file.ts`
+  (`createAuthConfigFileHelpers({getConfigPath, format})`), `preferences.ts`
+  (`createPreferences(getConfigPath)`), `profile-store.ts`
+  (`createCloudflareProfileStore`), `keyring-preference.ts`
+  (`createKeyringPreference`), `scopes.ts` (shared Cloudflare scope catalog),
+  `file-format.ts`, `temporary-terms.ts`.
+
+**File format** is the `FileFormat` axis (`src/core/file-format.ts`): a simple
+`"toml" | "json"` union (the value doubles as the file extension) plus
+`parseFile` / `stringifyFile` helpers. It's threaded through `createFileStorage`
+and the credential store (`FileCredentialStore` / `EncryptedFileCredentialStore`
+/ `resolver.ts` all take an optional `format`, defaulting to `"toml"` so wrangler
+is unchanged; the encrypted `.enc` sibling is format-independent). Wrangler uses
+`"toml"`; cf uses `"json"`.
+
+Each CLI is a thin **descriptor + entrypoint**:
+
+- `src/wrangler/` → `@cloudflare/workers-auth/wrangler`: `WRANGLER_CLI`
+  (TOML, wrangler's global config dir, wrangler's OAuth app / `"wrangler"`
+  keyring service) + `createWranglerAuth(ctx) = createCloudflareAuth(WRANGLER_CLI, ctx)`.
+  Re-exports everything wrangler's `src/user/*` imports (`createTomlFileStorage`,
+  `readUserPreferences`, `createWranglerProfileStore`, `setKeyringPreference`,
+  scopes, `getClientIdFromEnv`, `OAUTH_CALLBACK_URL`, …) — no re-export shim
+  files remain in `wrangler/src/user/`.
+- `src/cf/` → `@cloudflare/workers-auth/cf`: `CF_CLI` (JSON files under
+  `~/.config/cloudflare`, the `"cloudflare"` keyring service, `CLOUDFLARE_CLIENT_ID`)
+  - `createCfAuth(ctx)`. OAuth-app values (client ID `cbca97e7-…`, callback port
+    8877, `cf-oauth-consent-*` pages, scoped-token-only auth) mirror the `cf`
+    CLI's registration. cf carries its own scope catalog (`src/cf/scopes.ts`) —
+    the full Cloudflare product surface as a flat list (no per-scope
+    descriptions), distinct from wrangler's smaller `src/core/scopes.ts`
+    key → description map — so it does not re-export `DefaultScopes`.
 
 ## CONVENTIONS
 
@@ -130,7 +191,7 @@ storage location.
   `getKeyringInstallDir`) and store constructors all take it explicitly.
 - The consumer's `createCredentialStorageContext` call captures `serviceName`,
   `getConfigPath`, `isKeyringEnabled`, `logger`, `isNonInteractiveOrCI`, and
-  `cliName` in a closure. The returned `storageFactory(profile)` re-resolves
+  `loginCommand` in a closure. The returned `storageFactory(profile)` re-resolves
   the active store on every call so the active profile, `--use-keyring` /
   `--no-use-keyring`, and the `CLOUDFLARE_AUTH_USE_KEYRING` env var all take
   effect without rebuilding the OAuth flow. Per-session memoization flags

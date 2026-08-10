@@ -1,19 +1,25 @@
-import { detectAgenticEnvironment } from "am-i-vibing";
 import { beforeEach, describe, it, vi } from "vitest";
 import { detectAgent } from "../../utils/detect-agent";
 
-vi.mock("am-i-vibing");
+// Undo the global no-op mock from vitest.setup.ts so we test the real implementation
+vi.unmock("../../utils/detect-agent");
+
+const mockDetectAgenticEnvironment = vi.hoisted(() => vi.fn());
+
+vi.mock("am-i-vibing", () => ({
+	detectAgenticEnvironment: mockDetectAgenticEnvironment,
+}));
 
 describe("detect-agent", () => {
 	beforeEach(() => {
-		vi.mocked(detectAgenticEnvironment).mockReset();
+		mockDetectAgenticEnvironment.mockReset();
 	});
 
 	describe("detectAgent()", () => {
 		it("reports an agent (with id) when detection type is 'agent'", ({
 			expect,
 		}) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
 				name: "Claude Code",
@@ -26,7 +32,7 @@ describe("detect-agent", () => {
 		it("is not an agent when type is 'hybrid', but still reports the id", ({
 			expect,
 		}) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "warp",
 				name: "Warp",
@@ -37,7 +43,7 @@ describe("detect-agent", () => {
 		});
 
 		it("is not an agent when type is 'interactive'", ({ expect }) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: false,
 				id: null,
 				name: null,
@@ -48,7 +54,7 @@ describe("detect-agent", () => {
 		});
 
 		it("resolves to a non-agent result when detection throws", ({ expect }) => {
-			vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
+			mockDetectAgenticEnvironment.mockImplementation(() => {
 				throw new Error("boom");
 			});
 
@@ -56,7 +62,7 @@ describe("detect-agent", () => {
 		});
 
 		it("detects in a single pass", ({ expect }) => {
-			vi.mocked(detectAgenticEnvironment).mockReturnValue({
+			mockDetectAgenticEnvironment.mockReturnValue({
 				isAgentic: true,
 				id: "claude-code",
 				name: "Claude Code",
@@ -65,7 +71,7 @@ describe("detect-agent", () => {
 
 			detectAgent();
 
-			expect(detectAgenticEnvironment).toHaveBeenCalledTimes(1);
+			expect(mockDetectAgenticEnvironment).toHaveBeenCalledTimes(1);
 		});
 	});
 });

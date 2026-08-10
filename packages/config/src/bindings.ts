@@ -150,7 +150,7 @@ export interface D1Binding extends D1BindingOptions {
 
 interface DispatchNamespaceBindingOptions {
 	/** The namespace to bind to. */
-	namespace: string;
+	namespace?: string;
 	/** Details about the outbound Worker which will handle outbound requests from your namespace. */
 	outbound?: {
 		/** Name of the Worker handling the outbound requests. */
@@ -206,7 +206,7 @@ export interface TypedDurableObjectBinding<
 
 interface FlagshipBindingOptions {
 	/** The Flagship app ID to bind to. */
-	id: string;
+	id?: string;
 	/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
 	remote?: boolean;
 }
@@ -344,7 +344,7 @@ export interface TypedPipelineBinding<
 
 interface QueueBindingOptions {
 	/** The name of this Queue. */
-	name: string;
+	name?: string;
 	/** The number of seconds to wait before delivering a message. */
 	deliveryDelay?: number;
 	/** Whether the Queue producer should be remote or not in local development. */
@@ -703,7 +703,7 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#dispatch-namespace-bindings-workers-for-platforms
 	 */
 	dispatchNamespace(
-		options: DispatchNamespaceBindingOptions
+		options?: DispatchNamespaceBindingOptions
 	): DispatchNamespaceBinding;
 	/**
 	 * Binding to a Durable Object class. `workerName` is the name of the Worker
@@ -713,7 +713,7 @@ export interface Bindings {
 	 */
 	durableObject(options: DurableObjectBindingOptions): DurableObjectBinding;
 	/** Binding to a Flagship feature-flag service. */
-	flagship(options: FlagshipBindingOptions): FlagshipBinding;
+	flagship(options?: FlagshipBindingOptions): FlagshipBinding;
 	/**
 	 * Binding to a Hyperdrive configuration.
 	 *
@@ -761,7 +761,7 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
 	 */
 	queue<TBody = unknown>(
-		options: QueueBindingOptions
+		options?: QueueBindingOptions
 	): TypedQueueBinding<TBody>;
 	/**
 	 * Binding to an R2 bucket.

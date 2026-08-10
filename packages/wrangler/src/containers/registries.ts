@@ -20,13 +20,13 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import {
 	fillOpenAPIConfiguration,
 	promiseSpinner,
 } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
 	createSecret,

@@ -8,7 +8,7 @@ export async function getAssetWithMetadataFromKV(
 	assetsKVNamespace: KVNamespace,
 	assetKey: string,
 	sentry?: Toucan,
-	retries = 1
+	retries = 3
 ) {
 	let attempts = 0;
 

@@ -1,5 +1,5 @@
 import { DevEnv } from "./DevEnv";
-import type { StartDevWorkerInput, Worker } from "./types";
+import type { Worker, WranglerStartDevWorkerInput } from "./types";
 
 export { convertConfigBindingsToStartWorkerBindings } from "./binding-utils";
 
@@ -8,7 +8,7 @@ export * from "./types";
 export * from "./events";
 
 export async function startWorker(
-	options: StartDevWorkerInput
+	options: WranglerStartDevWorkerInput
 ): Promise<Worker> {
 	const devEnv = new DevEnv();
 

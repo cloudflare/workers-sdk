@@ -1,10 +1,10 @@
 import path from "node:path";
 import { validateProfileName } from "@cloudflare/workers-auth";
+import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import { oauthArgs } from "./commands";
-import { createWranglerProfileStore } from "./profile-store";
 import { getAuthFromEnv, login, logout, validateScopeKeys } from "./user";
 
 function assertNoEnvCredentials() {
@@ -67,7 +67,7 @@ export const authCreateCommand = createCommand({
 	},
 	async handler(args, { config }) {
 		assertNoEnvCredentials();
-		const profiles = createWranglerProfileStore();
+		const profiles = createWranglerProfileStore({ logger });
 		validateProfileName(args.name);
 
 		if (args.scopes) {
@@ -122,7 +122,7 @@ export const authDeleteCommand = createCommand({
 	},
 	async handler(args) {
 		assertNoEnvCredentials();
-		const profiles = createWranglerProfileStore();
+		const profiles = createWranglerProfileStore({ logger });
 		validateProfileName(args.name);
 
 		if (!profiles.configs.exists(args.name)) {
@@ -195,7 +195,7 @@ export const authActivateCommand = createCommand({
 	},
 	async handler(args) {
 		assertNoEnvCredentials();
-		const profiles = createWranglerProfileStore();
+		const profiles = createWranglerProfileStore({ logger });
 		validateProfileName(args.name);
 
 		const targetDir = args.dir ?? process.cwd();
@@ -243,7 +243,7 @@ export const authDeactivateCommand = createCommand({
 	},
 	async handler(args) {
 		assertNoEnvCredentials();
-		const profiles = createWranglerProfileStore();
+		const profiles = createWranglerProfileStore({ logger });
 		const targetDir = args.dir ?? process.cwd();
 		const normalizedTargetDir = path.resolve(targetDir);
 		const { removedProfile, newResolution } =
@@ -289,7 +289,7 @@ export const authListCommand = createCommand({
 		}
 	},
 	async handler() {
-		const profiles = createWranglerProfileStore();
+		const profiles = createWranglerProfileStore({ logger });
 		const profileNames = profiles.configs.list();
 
 		if (profileNames.length === 0) {

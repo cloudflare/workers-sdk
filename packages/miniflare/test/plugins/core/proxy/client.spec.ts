@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import http from "node:http";
+import path from "node:path";
 import { text } from "node:stream/consumers";
 import { ReadableStream, WritableStream } from "node:stream/web";
 import util from "node:util";
@@ -13,7 +14,7 @@ import {
 	WebSocketPair,
 } from "miniflare";
 import { describe, onTestFinished, test } from "vitest";
-import { useDispose } from "../../../test-shared";
+import { EXPORTED_FIXTURES, useDispose } from "../../../test-shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type { MessageEvent, ReplaceWorkersTypes } from "miniflare";
 
@@ -81,38 +82,29 @@ describe("ProxyClient", () => {
 	test("supports serialising multiple ReadableStreams, Blobs and Files", async ({
 		expect,
 	}) => {
-		// For testing proxy client serialisation, add an API that just returns its
-		// arguments. Note without the `.pipeThrough(new TransformStream())` below,
-		// we'll see `TypeError: Inter-TransformStream ReadableStream.pipeTo() is
-		// not implemented.`. `IdentityTransformStream` doesn't work here.
+		// For testing proxy client serialisation, use a wrapped binding inside an
+		// unsafe binding. This is just an echo module that just returns its arguments
+		// (see the `echo-plugin` fixture).
+		const echoPlugin = path.resolve(EXPORTED_FIXTURES, "echo-plugin/index.js");
 		const mf = new Miniflare({
-			workers: [
+			name: "entry",
+			modules: true,
+			script: "",
+			unsafeBindings: [
 				{
-					name: "entry",
-					modules: true,
-					script: "",
-					wrappedBindings: { IDENTITY: "identity" },
-				},
-				{
-					name: "identity",
-					modules: true,
-					script: `
-				class Identity {
-					async asyncIdentity(...args) {
-						const i = args.findIndex((arg) => arg instanceof ReadableStream);
-						if (i !== -1) args[i] = args[i].pipeThrough(new TransformStream());
-						return args;
-					}
-				}
-				export default function() { return new Identity(); }
-				`,
+					name: "IDENTITY",
+					type: "wrapped",
+					plugin: { package: echoPlugin, name: "echo-plugin" },
+					options: {},
 				},
 			],
 		});
 		useDispose(mf);
 
 		const client = await mf._getProxyClient();
-		const IDENTITY = client.env["MINIFLARE_PROXY:core:entry:IDENTITY"] as {
+		const IDENTITY = client.env[
+			"MINIFLARE_PROXY:echo-plugin:entry:IDENTITY"
+		] as {
 			asyncIdentity<Args extends any[]>(...args: Args): Promise<Args>;
 		};
 
@@ -151,6 +143,7 @@ describe("ProxyClient", () => {
 		expect(allResult[2].lastModified).toBe(1000);
 		expect(await allResult[2].text()).toBe("text file");
 	});
+
 	test("poisons dependent proxies after setOptions()/dispose()", async ({
 		expect,
 	}) => {

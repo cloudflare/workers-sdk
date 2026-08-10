@@ -6,9 +6,7 @@ import path from "node:path";
 import rl from "node:readline";
 import { Readable, Transform } from "node:stream";
 import { $ as $colors, red } from "kleur/colors";
-import workerdPath, {
-	compatibilityDate as workerdCompatibilityDate,
-} from "workerd";
+import workerdPath from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
@@ -42,8 +40,9 @@ export interface RuntimeOptions {
 	inspectorAddress?: string;
 	debugPortAddress?: string;
 	verbose?: boolean;
-	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 	handleStructuredLogs?: StructuredLogsHandler;
+	// Called when workerd crashes after the initial ready signal
+	onWorkerdCrashRestart?: () => void;
 	// Extra environment variables to set on the spawned `workerd` subprocess.
 	// Merged on top of `process.env` and Miniflare's own defaults
 	// (e.g. `TZ=UTC`, `FORCE_COLOR`), so callers can override those defaults.
@@ -90,20 +89,27 @@ function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 	});
 }
 
-function pipeOutput(stdout: Readable, stderr: Readable) {
-	// TODO: may want to proxy these and prettify ✨
-	// We can't just pipe() to `process.stdout/stderr` here, as Ink (used by
-	// wrangler), only patches the `console.*` methods:
-	// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
-	// Writing directly to `process.stdout/stderr` would result in graphical
-	// glitches.
-	// eslint-disable-next-line no-console -- Intentional console.log to forward workerd stdout through Ink-patched console
-	rl.createInterface(stdout).on("line", (data) => console.log(data));
-	// eslint-disable-next-line no-console -- Intentional console.error to forward workerd stderr through Ink-patched console
-	rl.createInterface(stderr).on("line", (data) => console.error(red(data)));
-	// stdout.pipe(process.stdout);
-	// stderr.pipe(process.stderr);
-}
+// When no `handleStructuredLogs` handler is provided, workerd's structured logs
+// are forwarded to the console by default. `warn`/`error` logs go to stderr
+// (in red), everything else to stdout, matching how the raw workerd streams
+// used to be forwarded. We use `console.*` rather than writing to
+// `process.stdout/stderr` directly, as Ink (used by Wrangler) only patches the
+// `console.*` methods:
+// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
+// Writing directly to `process.stdout/stderr` would result in graphical
+// glitches.
+const defaultStructuredLogsHandler: StructuredLogsHandler = ({
+	level,
+	message,
+}) => {
+	if (level === "error" || level === "warn") {
+		// eslint-disable-next-line no-console -- forward workerd output through Ink-patched console
+		console.error(red(message));
+	} else {
+		// eslint-disable-next-line no-console -- forward workerd output through Ink-patched console
+		console.log(message);
+	}
+};
 
 function getRuntimeCommand() {
 	return process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
@@ -235,7 +241,6 @@ export class Runtime {
 	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
-		// TODO: what happens if runtime crashes?
 
 		// 2. Start new process
 		const command = getRuntimeCommand();
@@ -246,8 +251,13 @@ export class Runtime {
 		// Default `TZ` to `UTC` to match the production Cloudflare runtime.
 		// Callers can override via `options.runtimeEnv` (e.g. for tests of
 		// timezone-dependent behaviour).
+		// `windowsHide: true` prevents a console window from popping up when the
+		// parent has no console (e.g. a detached/backgrounded Node process).
+		// Without it, Windows allocates a new console for workerd.exe, and on
+		// Windows 11 that is hosted by a visible, focus-stealing Terminal window.
 		const runtimeProcess = childProcess.spawn(command, args, {
 			stdio: ["pipe", "pipe", "pipe", "pipe"],
+			windowsHide: true,
 			env: {
 				...process.env,
 				TZ: "UTC",
@@ -260,28 +270,17 @@ export class Runtime {
 		const processExitPromise = waitForExit(runtimeProcess);
 		this.#processExitPromise = processExitPromise;
 
-		const handleRuntimeStdio =
-			options.handleRuntimeStdio ??
-			(options.handleStructuredLogs
-				? // If `handleStructuredLogs` is provided then by default Miniflare should not pipe through the stream's output
-					() => {}
-				: pipeOutput);
-
-		handleRuntimeStdio(
-			runtimeProcess.stdout.pipe(startupLogBuffer.stdoutStream),
-			runtimeProcess.stderr.pipe(startupLogBuffer.stderrStream)
+		const stdoutStream = runtimeProcess.stdout.pipe(
+			startupLogBuffer.stdoutStream
+		);
+		const stderrStream = runtimeProcess.stderr.pipe(
+			startupLogBuffer.stderrStream
 		);
 
-		if (options.handleStructuredLogs) {
-			handleStructuredLogsFromStream(
-				startupLogBuffer.stdoutStream,
-				options.handleStructuredLogs
-			);
-			handleStructuredLogsFromStream(
-				startupLogBuffer.stderrStream,
-				options.handleStructuredLogs
-			);
-		}
+		const structuredLogsHandler =
+			options.handleStructuredLogs ?? defaultStructuredLogsHandler;
+		handleStructuredLogsFromStream(stdoutStream, structuredLogsHandler);
+		handleStructuredLogsFromStream(stderrStream, structuredLogsHandler);
 
 		const controlPipe = runtimeProcess.stdio[3];
 		assert(controlPipe instanceof Readable);
@@ -308,36 +307,35 @@ export class Runtime {
 			const bootloaderPath =
 				process.env.NODE_OPTIONS?.match(/--require "(.*?)"/)?.[1];
 
-			if (!bootloaderPath) {
-				return ports;
-			}
-			const watchdogPath = path.resolve(bootloaderPath, "../watchdog.js");
+			if (bootloaderPath) {
+				const watchdogPath = path.resolve(bootloaderPath, "../watchdog.js");
 
-			const info = getInspectorOptions();
+				const info = getInspectorOptions();
 
-			for (const name of workerNames) {
-				// This is copied from https://github.com/microsoft/vscode-js-debug/blob/0b5e0dade997b3c702a98e1f58989afcb30612d6/src/targets/node/bootloader.ts#L284
-				// It spawns a detached "watchdog" process for each corresponding (user) Worker in workerd which will maintain the VSCode debug connection
-				const p = spawn(process.execPath, [watchdogPath], {
-					env: {
-						NODE_INSPECTOR_INFO: JSON.stringify({
-							ipcAddress: info.inspectorIpc || "",
-							pid: String(this.#process.pid),
-							scriptName: name,
-							inspectorURL: `ws://127.0.0.1:${ports?.get(
-								kInspectorSocket
-							)}/core:user:${name}`,
-							waitForDebugger: true,
-							ownId: randomBytes(12).toString("hex"),
-							openerId: info.openerId,
-						}),
-						NODE_SKIP_PLATFORM_CHECK: process.env.NODE_SKIP_PLATFORM_CHECK,
-						ELECTRON_RUN_AS_NODE: "1",
-					},
-					stdio: "ignore",
-					detached: true,
-				});
-				p.unref();
+				for (const name of workerNames) {
+					// This is copied from https://github.com/microsoft/vscode-js-debug/blob/0b5e0dade997b3c702a98e1f58989afcb30612d6/src/targets/node/bootloader.ts#L284
+					// It spawns a detached "watchdog" process for each corresponding (user) Worker in workerd which will maintain the VSCode debug connection
+					const p = spawn(process.execPath, [watchdogPath], {
+						env: {
+							NODE_INSPECTOR_INFO: JSON.stringify({
+								ipcAddress: info.inspectorIpc || "",
+								pid: String(this.#process.pid),
+								scriptName: name,
+								inspectorURL: `ws://127.0.0.1:${ports?.get(
+									kInspectorSocket
+								)}/core:user:${name}`,
+								waitForDebugger: true,
+								ownId: randomBytes(12).toString("hex"),
+								openerId: info.openerId,
+							}),
+							NODE_SKIP_PLATFORM_CHECK: process.env.NODE_SKIP_PLATFORM_CHECK,
+							ELECTRON_RUN_AS_NODE: "1",
+						},
+						stdio: "ignore",
+						detached: true,
+					});
+					p.unref();
+				}
 			}
 		}
 
@@ -345,6 +343,23 @@ export class Runtime {
 
 		if (ports === undefined && !abortSignal.aborted) {
 			startupLogBuffer.handleStartupFailure();
+		} else {
+			// workerd is now listening. Watch for unexpected exits so we can
+			// restart.
+			const currentProcess = this.#process;
+			void processExitPromise.then(() => {
+				if (this.#process !== currentProcess) {
+					// We got here because dispose() set this.#process to
+					// undefined before sending SIGKILL
+					return;
+				}
+				if (abortSignal.aborted) {
+					return;
+				}
+				// Crash: clear stale #process and notify the caller.
+				this.#process = undefined;
+				options.onWorkerdCrashRestart?.();
+			});
 		}
 
 		return ports;
@@ -385,21 +400,3 @@ export class Runtime {
 }
 
 export * from "./config";
-
-/**
- * Gets a safe compatibility date from workerd. If the workerd compatibility
- * date is in the future, returns today's date instead. This handles the case
- * where workerd releases set their compatibility date up to 7 days in the future.
- */
-function getSafeCompatibilityDate(): string {
-	const today = new Date().toISOString().slice(0, 10);
-	if (workerdCompatibilityDate > today) {
-		return today;
-	}
-	return workerdCompatibilityDate;
-}
-
-/**
- * @deprecated Use today's date as the compatibility date instead: `new Date().toISOString().slice(0, 10)`
- */
-export const supportedCompatibilityDate = getSafeCompatibilityDate();

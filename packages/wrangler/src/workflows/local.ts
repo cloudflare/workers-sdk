@@ -6,7 +6,7 @@ import type {
 	WorkflowInstanceRestartFrom,
 } from "./types";
 
-const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer/api";
+const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/local/explorer/api";
 const DEFAULT_LOCAL_PORT = 8787;
 
 /**
@@ -143,9 +143,14 @@ export async function updateLocalInstanceStatus(
 	workflowName: string,
 	instanceId: string,
 	action: "pause" | "resume" | "restart" | "terminate",
-	from?: WorkflowInstanceRestartFrom
+	from?: WorkflowInstanceRestartFrom,
+	rollback?: boolean
 ): Promise<void> {
-	const body = from ? { action, from } : { action };
+	const body = {
+		action,
+		...(from ? { from } : {}),
+		...(action === "terminate" && rollback === true ? { rollback: true } : {}),
+	};
 
 	await fetchLocalResult<{ success: boolean }>(
 		port,

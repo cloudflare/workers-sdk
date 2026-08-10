@@ -20,9 +20,10 @@ import type {
 	CloudflareWorkersModule,
 	D1Database,
 	DurableObjectNamespace,
+	ExportedHandler,
 	KVNamespace,
 	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
+} from "@cloudflare/workers-types";
 
 const { createTestHarness } = await importWrangler();
 
@@ -365,6 +366,208 @@ describe("createTestHarness", () => {
 		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
 		const adminResponse = await adminStub.fetch("http://example.com/");
 		await expect(adminResponse.text()).resolves.toBe("2");
+	});
+
+	it("evicts Durable Objects by class name or binding name", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "do-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"exports": {
+						"Counter": {
+							"type": "durable-object",
+							"storage": "sqlite"
+						}
+					},
+					"durable_objects": {
+						"bindings": [
+							{ "name": "COUNTER", "class_name": "Counter" }
+						]
+					}
+				}
+			`,
+			"src/index.ts": dedent`
+				import { DurableObject } from "cloudflare:workers";
+
+				export class Counter extends DurableObject {
+					memoryCount = 0;
+
+					async fetch() {
+						this.memoryCount += 1;
+						const storageCount = ((await this.ctx.storage.get("count")) ?? 0) + 1;
+						await this.ctx.storage.put("count", storageCount);
+						return Response.json({
+							memoryCount: this.memoryCount,
+							storageCount,
+						});
+					}
+				}
+
+				export default {
+					fetch(_request, _env, ctx) {
+						const id = ctx.exports.Counter.idFromName("user-123");
+						return ctx.exports.Counter.get(id).fetch("http://counter");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
+		>("do-worker");
+
+		const response1 = await worker.fetch("/");
+		expect(await response1.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 1,
+		});
+
+		// Evict by class name
+		await worker.evictDurableObject("Counter", { name: "user-123" });
+
+		const response2 = await worker.fetch("/");
+		expect(await response2.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 2,
+		});
+
+		// Evict by binding name
+		await worker.evictDurableObject("COUNTER", { name: "user-123" });
+
+		const response3 = await worker.fetch("/");
+		expect(await response3.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 3,
+		});
+	});
+
+	it("exposes Durable Object storage", async ({ expect, onTestFailed }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "do-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"durable_objects": {
+						"bindings": [
+							{ "name": "OBJECT", "class_name": "TestObject" }
+						]
+					},
+					"migrations": [
+						{ "tag": "v1", "new_sqlite_classes": ["TestObject"] }
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				import { DurableObject } from "cloudflare:workers";
+
+				export class TestObject extends DurableObject {
+					constructor(ctx, env) {
+						super(ctx, env);
+						this.ctx.storage.sql.exec(
+							"CREATE TABLE IF NOT EXISTS entries (id TEXT PRIMARY KEY, value TEXT)"
+						);
+					}
+
+					fetch(request) {
+						const url = new URL(request.url);
+						const sql = this.ctx.storage.sql;
+
+						if (url.pathname === "/write") {
+							sql.exec(
+								"INSERT OR REPLACE INTO entries (id, value) VALUES ('key', ?)",
+								url.searchParams.get("value")
+							);
+							return new Response("ok");
+						}
+
+						const row = sql.exec("SELECT value FROM entries WHERE id = 'key'").one();
+						return new Response(row?.value ?? "missing");
+					}
+				}
+
+				export default {
+					fetch(request, env) {
+						const url = new URL(request.url);
+						const id = env.OBJECT.idFromName(url.searchParams.get("name") ?? "user-123");
+						return env.OBJECT.get(id).fetch(request);
+					}
+				}
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+		onTestFailed(server.debug);
+
+		await server.listen();
+
+		const worker = server.getWorker<
+			{ OBJECT: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ OBJECT: DurableObjectNamespace }>;
+				TestObject: new (
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+					...args: any[]
+				) => CloudflareWorkersModule.DurableObject;
+			}
+		>();
+
+		const storageByClassName = await worker.getDurableObjectStorage(
+			"TestObject",
+			{
+				name: "by-class",
+			}
+		);
+		await storageByClassName.exec(
+			"INSERT INTO entries (id, value) VALUES ('key', ?)",
+			"seeded-by-class"
+		);
+
+		const response3 = await worker.fetch("/read?name=by-class");
+		await expect(response3.text()).resolves.toBe("seeded-by-class");
+
+		const storageByBindingName = await worker.getDurableObjectStorage(
+			"OBJECT",
+			{
+				name: "user-123",
+			}
+		);
+		await storageByBindingName.exec(
+			"INSERT INTO entries (id, value) VALUES ('key', ?)",
+			"seeded"
+		);
+
+		const response1 = await worker.fetch("/read?name=user-123");
+		await expect(response1.text()).resolves.toBe("seeded");
+
+		const response2 = await worker.fetch("/write?name=user-123&value=app");
+		await expect(response2.text()).resolves.toBe("ok");
+
+		const rows = await storageByBindingName.exec<{ value: string }>(
+			"SELECT value FROM entries WHERE id = 'key'"
+		);
+		expect(rows).toEqual([{ value: "app" }]);
 	});
 
 	it("introspects Workflow instances by binding name", async ({ expect }) => {
@@ -1592,11 +1795,255 @@ describe("createTestHarness", () => {
 			<timestamp> [server] startup - completed
 			<timestamp> [server] fetch - GET / - started
 			<timestamp> [server] fetch - GET / - 200
-			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/handler/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - started
-			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/handler/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - 200
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/local/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - started
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/local/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - 200
 			<timestamp> [server] fetch - GET / - started
 			<timestamp> [server] fetch - GET / - 200"
 		`);
+	});
+
+	it("triggers email handlers", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "email-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20"
+				}
+			`,
+			"src/index.ts": dedent`
+				import { EmailMessage } from "cloudflare:email";
+
+				export default {
+					async email(message) {
+						const mode = message.to.split("@")[0];
+						if (mode === "rejected") {
+							message.setReject("blocked sender");
+							return;
+						}
+
+						await message.forward(
+							"archive@example.com",
+							new Headers({ "X-Test": mode })
+						);
+						await message.reply(new EmailMessage(
+							\`reply-\${mode}@example.com\`,
+							message.from,
+							\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+						));
+
+						if (mode === "exception") {
+							message.setReject("triggered exception");
+							throw new Error("sensitive handler error");
+						}
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+		await server.listen();
+		const worker = server.getWorker();
+
+		function createRawEmail(mode: string) {
+			return `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`;
+		}
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "ok@example.com",
+				raw: createRawEmail("ok"),
+			})
+		).resolves.toEqual({
+			outcome: "ok",
+			forwards: [
+				{
+					recipient: "archive@example.com",
+					headers: [["x-test", "ok"]],
+					messageId: expect.any(String),
+				},
+			],
+			replies: [
+				{
+					messageId: expect.any(String),
+					sender: "reply-ok@example.com",
+					raw: expect.stringContaining("Reply for ok"),
+				},
+			],
+			events: [
+				{
+					type: "forward",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{
+					type: "reply",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+			],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "rejected@example.com",
+				raw: createRawEmail("rejected"),
+			})
+		).resolves.toEqual({
+			outcome: "ok",
+			rejectReason: "blocked sender",
+			forwards: [],
+			replies: [],
+			events: [{ type: "reject", timestamp: expect.any(String) }],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "exception@example.com",
+				raw: createRawEmail("exception"),
+			})
+		).resolves.toEqual({
+			outcome: "exception",
+			rejectReason: "triggered exception",
+			forwards: [
+				{
+					recipient: "archive@example.com",
+					headers: [["x-test", "exception"]],
+					messageId: expect.any(String),
+				},
+			],
+			replies: [
+				{
+					messageId: expect.any(String),
+					sender: "reply-exception@example.com",
+					raw: expect.stringContaining("Reply for exception"),
+				},
+			],
+			events: [
+				{
+					type: "forward",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{
+					type: "reply",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{ type: "reject", timestamp: expect.any(String) },
+			],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "invalid@example.com",
+				raw: "From: sender@example.com\r\nTo: invalid@example.com\r\n\r\nInvalid",
+			})
+		).rejects.toThrow(
+			"Failed to dispatch email event: Email could not be parsed: invalid or no message id provided"
+		);
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "stream@example.com",
+				raw: new ReadableStream<Uint8Array>({
+					start(controller) {
+						const streamRaw = createRawEmail("stream");
+						controller.enqueue(new TextEncoder().encode(streamRaw));
+						controller.close();
+					},
+				}),
+			})
+		).resolves.toMatchObject({ outcome: "ok" });
+	});
+
+	it("lists Durable Object ids by class name or binding name", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "durable-object-list-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"durable_objects": {
+						"bindings": [
+							{ "name": "COUNTER", "class_name": "Counter" }
+						]
+					},
+					"migrations": [
+						{ "tag": "v1", "new_sqlite_classes": ["Counter"] }
+					]
+				}
+			`,
+			"src/index.ts": dedent`
+				export class Counter {
+					constructor(ctx) {
+						this.ctx = ctx;
+					}
+
+					async fetch() {
+						await this.ctx.storage.put("count", 1);
+						return new Response("stored");
+					}
+				}
+
+				export default {
+					fetch(request, env) {
+						const name = new URL(request.url).searchParams.get("name") ?? "default";
+						const id = env.COUNTER.idFromName(name);
+						return env.COUNTER.get(id).fetch("https://counter.example");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [{ configPath: "./wrangler.jsonc" }],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<
+			{ COUNTER: DurableObjectNamespace },
+			{
+				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
+			}
+		>();
+		const env = await worker.getEnv();
+		const firstId = env.COUNTER.idFromName("first").toString();
+		const secondId = env.COUNTER.idFromName("second").toString();
+
+		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
+
+		await expect(server.fetch("/?name=first")).resolves.toHaveProperty(
+			"status",
+			200
+		);
+		await expect(server.fetch("/?name=second")).resolves.toHaveProperty(
+			"status",
+			200
+		);
+
+		await expect(worker.listDurableObjectIds("Counter")).resolves.toEqual(
+			[firstId, secondId].sort()
+		);
+		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual(
+			[firstId, secondId].sort()
+		);
 	});
 
 	it("does not reload on source changes by default", async ({ expect }) => {

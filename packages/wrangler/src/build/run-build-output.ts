@@ -8,16 +8,17 @@ import {
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 
 /**
- * Run the standalone Build Output API path for `wrangler build`.
+ * Run the standalone Build Output Specification path for `wrangler build`.
  *
  * The output is a self-contained `.cloudflare/output/v0/` directory.
  */
 export async function runBuildOutput(buildArgs: {
 	env?: string;
 }): Promise<void> {
-	const { config, parsedWorkerConfig } = await readNewConfig({
-		env: buildArgs.env,
-	});
+	const { config, parsedWorkerConfig, parsedSettingsConfig } =
+		await readNewConfig({
+			env: buildArgs.env,
+		});
 	const { buildProps, assetsOptions } = await mergeBuildOutputProps(config);
 	const root = process.cwd();
 
@@ -30,6 +31,7 @@ export async function runBuildOutput(buildArgs: {
 		await writeBuildOutput({
 			root,
 			parsedWorkerConfig,
+			parsedSettingsConfig,
 			buildResult,
 			assetsOptions,
 		});

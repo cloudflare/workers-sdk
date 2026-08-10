@@ -1,5 +1,107 @@
 # @cloudflare/workers-auth
 
+## 0.6.1
+
+### Patch Changes
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- Updated dependencies [[`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25), [`6946da1`](https://github.com/cloudflare/workers-sdk/commit/6946da1123f3c8484af80ec4f5426c5fe0bbdb34)]:
+  - @cloudflare/workers-utils@0.31.2
+
+## 0.6.0
+
+### Minor Changes
+
+- [#14064](https://github.com/cloudflare/workers-sdk/pull/14064) [`a9e5abb`](https://github.com/cloudflare/workers-sdk/commit/a9e5abb8c0c2e7895b0bb09c6c8e8ffd3dbc3bc0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for OAuth 2.0 Device Authorization Grant to `wrangler login`
+
+  Run `wrangler login --device` to authenticate without a local callback server. Useful in containers, remote SSH sessions, Codespaces, and any other environment where `localhost:8976` is unreachable from your browser.
+
+  The new flow:
+
+  - prints the verification URL and user code to the terminal,
+  - attempts to open the verification URL in your default browser automatically (suppressed via `--browser=false`),
+  - and polls the token endpoint until you approve the request (with a 5-minute hard cap).
+
+  The verification URL is supplied by the authorization server, so it is rejected unless it is an `https` URL on the same auth domain the device code was requested from — it is never printed or opened otherwise.
+
+  `--callback-host` and `--callback-port` cannot be combined with `--device`, since this flow does not start a local callback server.
+
+### Patch Changes
+
+- Updated dependencies [[`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2)]:
+  - @cloudflare/workers-utils@0.31.1
+
+## 0.5.6
+
+### Patch Changes
+
+- [#13746](https://github.com/cloudflare/workers-sdk/pull/13746) [`cec9d88`](https://github.com/cloudflare/workers-sdk/commit/cec9d8875d3f103acc813724ded980867bd25ed7) Thanks [@edmundhung](https://github.com/edmundhung)! - Report a clear error for account IDs that can't be used in a Cloudflare API request
+
+  Account IDs are substituted straight into Cloudflare API URL paths, so a value containing non-ASCII characters previously failed deep inside the request layer with an opaque `Cannot convert argument to a ByteString` error that gave no hint about which setting was at fault. Account IDs read from `CLOUDFLARE_ACCOUNT_ID` and from the `account_id` configuration field are now validated up front, and an invalid value fails with a message naming both the offending value and where it came from.
+
+## 0.5.5
+
+### Patch Changes
+
+- Updated dependencies [[`5a56dda`](https://github.com/cloudflare/workers-sdk/commit/5a56ddaf8548fe79787482506b3d5e0233c329c6)]:
+  - @cloudflare/workers-utils@0.31.0
+
+## 0.5.4
+
+### Patch Changes
+
+- [#14838](https://github.com/cloudflare/workers-sdk/pull/14838) [`8049ca4`](https://github.com/cloudflare/workers-sdk/commit/8049ca451c9561e8b72f3eeeb7916a8712f06133) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Fix ctrl+c not being able to interrupt wrangler while waiting for Cloudflare Access authorization
+
+  When a domain is behind Cloudflare Access (for example during remote bindings startup), wrangler runs `cloudflared access login`, which only returns once the user completes the authorization flow in the browser. This was invoked synchronously, blocking Node's event loop, so wrangler could not react to ctrl+c (or anything else) until the authorization completed — abandoning the browser flow left a hung wrangler process that had to be killed externally. `cloudflared` is now spawned asynchronously, keeping wrangler responsive while it waits. The remote runtime passes its abort signal through to the spawn, so tearing down the session kills a still-pending `cloudflared` immediately, with process exit as a last-resort cleanup.
+
+- Updated dependencies [[`5e6556a`](https://github.com/cloudflare/workers-sdk/commit/5e6556a0c788679b6ac149ba3018a2cfd7cc73e9)]:
+  - @cloudflare/workers-utils@0.30.0
+
+## 0.5.3
+
+### Patch Changes
+
+- Updated dependencies [[`552bcfc`](https://github.com/cloudflare/workers-sdk/commit/552bcfc8d44f8625b09dfd5d821c132b626cb7bb)]:
+  - @cloudflare/workers-utils@0.29.0
+
+## 0.5.2
+
+### Patch Changes
+
+- [#14781](https://github.com/cloudflare/workers-sdk/pull/14781) [`fe3ae91`](https://github.com/cloudflare/workers-sdk/commit/fe3ae91e5c7da16da9e27a66bd11dc45291b3119) Thanks [@edmundhung](https://github.com/edmundhung)! - Make auth profile guidance CLI agnostic
+
+  Remove Wrangler-specific wording from shared profile errors and add `cf auth create` to cf's auth descriptor.
+
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [[`2b390d7`](https://github.com/cloudflare/workers-sdk/commit/2b390d7831ff27aa13cdf05aa8e11e4c0086f924), [`a6c214f`](https://github.com/cloudflare/workers-sdk/commit/a6c214fb311215b1ed09b273171b7995033fb7d7)]:
+  - @cloudflare/workers-utils@0.28.0
+
+## 0.5.0
+
+### Minor Changes
+
+- [#14630](https://github.com/cloudflare/workers-sdk/pull/14630) [`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd) Thanks [@penalosa](https://github.com/penalosa)! - Extract the Cloudflare CLI auth layer into a product-agnostic `@cloudflare/workers-auth` core
+
+  The OAuth login/logout/refresh, credential storage, config cache, and account-selection machinery is now shared behind an `AuthProduct` descriptor, with a thin per-CLI entrypoint on top. `@cloudflare/workers-auth/wrangler` (`createWranglerAuth`) preserves wrangler's existing behaviour, and a new `@cloudflare/workers-auth/cf` (`createCfAuth`) adds the `cf` CLI: its own OAuth app registration (client id, callback port, branded consent pages, scoped-token-only auth), a dedicated scope catalog, JSON config files under `~/.config/cloudflare`, and an isolated config-cache namespace so `cf` login/logout never purges wrangler's cache.
+
+  As part of the extraction, `@cloudflare/workers-utils` now exports the shared `createConfigCache` (with a `namespace` option), `openInBrowser`, and the `isInteractive` / `isNonInteractiveOrCI` / `isCI` TTY-and-CI detection helpers (each taking the caller's logger as a parameter rather than relying on a singleton). These read a bundled `ci-info`, so consumers that need to fake CI in their tests should mock this package's helpers rather than `ci-info` directly.
+
+### Patch Changes
+
+- Updated dependencies [[`42df9bb`](https://github.com/cloudflare/workers-sdk/commit/42df9bbf07e37032a3e61027e33d504d74a25ccd)]:
+  - @cloudflare/workers-utils@0.27.0
+
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`0283a1f`](https://github.com/cloudflare/workers-sdk/commit/0283a1fcdc635244f731010422e513e8b4ab0be3)]:
+  - @cloudflare/workers-utils@0.26.0
+
 ## 0.4.1
 
 ### Patch Changes

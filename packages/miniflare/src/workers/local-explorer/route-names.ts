@@ -28,6 +28,8 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/workflows\/[^/]+\/instances$/, "workflows.instances"],
 	[/^\/workflows\/[^/]+$/, "workflows.details"],
 	[/^\/workflows$/, "workflows.list"],
+	[/^\/local\/observability\/query$/, "observability.query"],
+	[/^\/local\/observability\/clear$/, "observability.clear"],
 	[/^\/local\/workers$/, "local.workers"],
 ];
 
@@ -36,8 +38,8 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
  * Strips IDs and converts to dot notation.
  */
 export function getRouteName(path: string): string {
-	// Remove /cdn-cgi/explorer/api prefix
-	const apiPath = path.replace(/^\/cdn-cgi\/explorer\/api/, "");
+	// Remove /cdn-cgi/local/explorer/api prefix
+	const apiPath = path.replace(/^\/cdn-cgi\/local\/explorer\/api/, "");
 
 	for (const [pattern, name] of ROUTE_PATTERNS) {
 		if (pattern.test(apiPath)) {

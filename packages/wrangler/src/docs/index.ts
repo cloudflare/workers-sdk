@@ -1,7 +1,7 @@
+import { openInBrowser } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import openInBrowser from "../open-in-browser";
 import { runSearch } from "./helpers";
 
 export const docs = createCommand({
@@ -48,7 +48,7 @@ export const docs = createCommand({
 		}
 
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
-		await openInBrowser(urlToOpen);
+		await openInBrowser(urlToOpen, logger);
 		metrics.sendMetricsEvent("view docs", {
 			sendMetrics: config.send_metrics,
 		});

@@ -1,12 +1,13 @@
 import { z } from "zod";
 import {
-	getUserBindingServiceName,
+	buildRemoteProxyProps,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const MEDIA_PLUGIN_NAME = "media";
+const MEDIA_REMOTE_SERVICE_NAME = `${MEDIA_PLUGIN_NAME}:remote`;
 
 const MediaSchema = z.object({
 	binding: z.string(),
@@ -31,10 +32,10 @@ export const MEDIA_PLUGIN: Plugin<typeof MediaOptionsSchema> = {
 			{
 				name: options.media.binding,
 				service: {
-					name: getUserBindingServiceName(
-						MEDIA_PLUGIN_NAME,
-						options.media.binding,
-						options.media.remoteProxyConnectionString
+					name: MEDIA_REMOTE_SERVICE_NAME,
+					props: buildRemoteProxyProps(
+						options.media.remoteProxyConnectionString,
+						options.media.binding
 					),
 				},
 			},
@@ -55,15 +56,8 @@ export const MEDIA_PLUGIN: Plugin<typeof MediaOptionsSchema> = {
 
 		return [
 			{
-				name: getUserBindingServiceName(
-					MEDIA_PLUGIN_NAME,
-					options.media.binding,
-					options.media.remoteProxyConnectionString
-				),
-				worker: remoteProxyClientWorker(
-					options.media.remoteProxyConnectionString,
-					options.media.binding
-				),
+				name: MEDIA_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
 			},
 		];
 	},

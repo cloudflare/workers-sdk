@@ -1,14 +1,20 @@
+import {
+	drawBox,
+	editWorkerPreviewDefaults,
+	getBindingValue,
+	getWorkerPreviewDefaults,
+	padToVisibleWidth,
+	resolveWorkerName,
+	visibleLength,
+} from "@cloudflare/deploy-helpers";
 import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import { parseBulkInputToObject } from "../secret";
 import { requireAuth } from "../user";
-import { drawBox, padToVisibleWidth, visibleLength } from "../utils/box";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import { editWorkerPreviewDefaults, getWorkerPreviewDefaults } from "./api";
-import { getBindingValue, resolveWorkerName } from "./shared";
-import type { Binding, EnvBindings } from "./api";
+import type { Binding, EnvBindings } from "@cloudflare/deploy-helpers";
 import type { Config } from "@cloudflare/workers-utils";
 
 type SecretSummary = {

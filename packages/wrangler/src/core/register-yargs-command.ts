@@ -1,13 +1,16 @@
 import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
+import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
 	defaultWranglerConfig,
 	FatalError,
 	getCloudflareEnv,
 	getWranglerHideBanner,
 	experimental_readRawConfig,
+	parseRetryAfterValue,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	runSkillsInstallFlow,
@@ -23,7 +26,6 @@ import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig, readNewConfig } from "../config";
 import { confirm, prompt, select } from "../dialogs";
 import { run } from "../experimental-flags";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import {
@@ -35,7 +37,6 @@ import {
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
 import { setProfile, setTemporaryAllowed } from "../user";
-import { createWranglerProfileStore } from "../user/profile-store";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
@@ -154,7 +155,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			const cwd = firstConfigPath
 				? path.dirname(path.resolve(firstConfigPath))
 				: process.cwd();
-			const profile = createWranglerProfileStore().resolve({
+			const profile = createWranglerProfileStore({ logger }).resolve({
 				profile: args.profile,
 				cwd,
 			});
@@ -322,7 +323,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						confirm,
 						prompt,
 						select,
-						isNonInteractiveOrCI,
 					});
 
 					const result = await def.handler(args, {
@@ -427,9 +427,34 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					version: 1,
 					code,
 					message: outputErr.message,
+					retry_after_ms: getRetryAfterMs(outputErr),
 				});
 			}
 			throw err;
 		}
 	};
+}
+
+/**
+ * Extract the number of milliseconds indicated by a `Retry-After` header (if
+ * any) associated with the given error, so it can be written to the Wrangler
+ * output file as structured JSON rather than requiring consumers to parse it
+ * out of the human-readable error message.
+ *
+ * Handles both:
+ * - `APIError`s raised internally by Wrangler's own fetch helpers, which
+ *   already have `retryAfterMs` parsed and attached directly.
+ * - Errors raised by the `cloudflare` SDK client, which expose the raw
+ *   response headers (with a lowercased `retry-after` key) instead.
+ */
+function getRetryAfterMs(err: Error): number | undefined {
+	if ("retryAfterMs" in err && typeof err.retryAfterMs === "number") {
+		return err.retryAfterMs;
+	}
+	if ("headers" in err && err.headers && typeof err.headers === "object") {
+		return parseRetryAfterValue(
+			(err.headers as Record<string, string | undefined>)["retry-after"]
+		);
+	}
+	return undefined;
 }

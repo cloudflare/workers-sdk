@@ -110,8 +110,17 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 		const secondary = [...this.#options.values()].filter((o) => !o.primary);
 
+		// `containerEngine` is a top-level (shared) Miniflare option, but the
+		// merged options only spread the primary worker's top-level options.
+		// `containerEngine` is only set if containers are present in a specific worker,
+		// so we need to check all workers for containers
+		const containerEngine = [...this.#options.values()]
+			.map((o) => o.options.containerEngine)
+			.find((engine) => engine !== undefined);
+
 		return {
 			...primary.options,
+			containerEngine,
 			workers: [
 				...primary.options.workers,
 				...secondary.flatMap((o) => o.options.workers),
@@ -225,6 +234,12 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					});
 				}
 			);
+
+			// `handleUncaughtError` is a shared Miniflare option, and the
+			// merged options spread the primary worker's shared options —
+			// install the hook on every worker's options rather than assuming
+			// which one is primary.
+			options.handleUncaughtError = this.dispatchRuntimeError;
 
 			this.#options.set(data.config.name, {
 				options,

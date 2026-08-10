@@ -58,6 +58,7 @@
 		"fixtures/interactive-dev-tests/src/startup-error.ts",
 		"packages/vite-plugin-cloudflare/playground/**/*.d.ts",
 		"fixtures/**/worker-configuration.d.ts",
+		"packages/**/worker-configuration.d.ts",
 		"packages/local-explorer-ui/src/routeTree.gen.ts",
 		"packages/local-explorer-ui/src/api/generated",
 	],

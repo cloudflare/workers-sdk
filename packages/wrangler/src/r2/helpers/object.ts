@@ -157,7 +157,7 @@ export async function usingLocalBucket<T>(
 	) => Promise<T>
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
-	const defaultPersistRoot = getDefaultPersistRoot(persist);
+	const resourcePersistencePath = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		modules: true,
 		// TODO(soon): import `reduceError()` from `miniflare:shared`
@@ -189,7 +189,7 @@ export async function usingLocalBucket<T>(
         }
       }
     }`,
-		defaultPersistRoot,
+		resourcePersistencePath,
 		r2Buckets: { BUCKET: bucketName },
 	});
 	const bucket = await mf.getR2Bucket("BUCKET");

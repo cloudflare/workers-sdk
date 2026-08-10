@@ -4,22 +4,22 @@ import {
 	experimental_patchConfig,
 	formatConfigSnippet,
 	getTodaysCompatDate,
+	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { confirm, fetchResult, logger } from "../../shared/context";
 import {
-	confirm,
-	fetchResult,
-	isNonInteractiveOrCI,
-	logger,
-} from "../../shared/context";
+	getSubdomainValues,
+	validateEventTriggerTargets,
+} from "../../triggers/deploy";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
+import { getWorkersDevSubdomain } from "../../triggers/subdomain";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import { getDeployConfirmFunction } from "./deploy-confirm";
 import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
-import { useServiceEnvironments } from "./use-service-environments";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type { DeployProps, VersionsUploadProps } from "../../shared/types";
@@ -99,32 +99,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (
-		config.observability?.metrics !== undefined &&
-		useServiceEnvironments(config)
-	) {
-		throw new UserError(
-			"Metrics export is not supported for service environments. Use legacy environments or remove observability.metrics from your configuration.",
-			{
-				telemetryMessage: "metrics export service environments unsupported",
-			}
-		);
-	}
-
-	if (
-		config.observability?.metrics !== undefined &&
-		props.command === "deploy" &&
-		props.dispatchNamespace !== undefined
-	) {
-		throw new UserError(
-			"Metrics export is not supported for dispatch namespace deployments. Remove observability.metrics from your configuration.",
-			{
-				telemetryMessage: "metrics export dispatch namespace unsupported",
-			}
-		);
-	}
-
 	if (props.command === "deploy") {
+		validateEventTriggerTargets(config, name);
 		validateRoutes(props.routes, props.assetsOptions);
 		assert(
 			!config.site || config.site.bucket,
@@ -309,8 +285,7 @@ export async function preUploadApiChecks(
 	const remoteSecretsCheck = await checkRemoteSecretsOverride(
 		config,
 		name,
-		accountId,
-		props.env
+		accountId
 	);
 
 	if (remoteSecretsCheck?.override) {
@@ -331,6 +306,38 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	await ensureQueuesExistByConfig(config, accountId);
+	await ensureQueuesExistByConfig(
+		config,
+		accountId,
+		!props.resourcesProvision,
+		name
+	);
+
+	// Resolve whether this deploy will actually publish to workers.dev, using
+	// the same logic as the triggers phase (`getSubdomainValues`): workers_dev
+	// defaults to true only when there are no routes.
+	const wantsWorkersDev =
+		props.command === "deploy" &&
+		getSubdomainValues(config.workers_dev, config.preview_urls, props.routes)
+			.workers_dev;
+
+	// A brand-new account has no workers.dev subdomain, and the worker upload
+	// API rejects the first script upload with error 10063 until one exists.
+	// Proactively fetch (and offer to register) the subdomain before uploading a
+	// new Worker that targets workers.dev, so the user gets a clear prompt
+	// instead of a cryptic API failure. We skip it for:
+	//   - existing Workers (their account already has a subdomain),
+	//   - dispatch namespace deploys (which skip the metadata fetch, so
+	//     `workerExists` stays true), and
+	//   - routes-only / `workers_dev: false` deploys, which don't publish to
+	//     workers.dev and previously never required a subdomain (workflows on
+	//     such deploys still get a correctly-worded prompt in the triggers phase).
+	if (!workerExists && wantsWorkersDev) {
+		await getWorkersDevSubdomain(config, accountId, {
+			autoRegisterSubdomain: props.autoRegisterWorkersDevSubdomain,
+			configPath: config.configPath,
+		});
+	}
+
 	return { workerTag, tags, workerExists, aborted: false };
 }

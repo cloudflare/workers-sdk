@@ -6,7 +6,6 @@ import {
 	afterAll,
 	assert,
 	beforeAll,
-	beforeEach,
 	describe,
 	expect,
 	test,
@@ -30,8 +29,6 @@ const execOptions = {
 const remoteWorkerName = `preserve-e2e-get-platform-proxy-remote`;
 const remoteStagingWorkerName = `preserve-e2e-get-platform-proxy-remote-staging`;
 const remoteKvName = `tmp-e2e-kv${Date.now()}-test-remote-bindings-${randomUUID().split("-")[0]}`;
-
-const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 if (auth) {
 	describe("getPlatformProxy - remote bindings", { timeout: 50_000 }, () => {
@@ -109,10 +106,6 @@ if (auth) {
 				});
 			} catch {}
 		}, 35_000);
-
-		beforeEach(() => {
-			errorSpy.mockReset();
-		});
 
 		describe("normal usage", () => {
 			beforeAll(async () => {
@@ -247,20 +240,8 @@ if (auth) {
 						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
 					})
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. Error reloading remote server: A request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.]`
+					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
 				);
-
-				expect(errorSpy).toHaveBeenCalledOnce();
-				expect(
-					`${errorSpy.mock.calls?.[0]?.[0]}`
-						// Windows gets a different marker for ✘, so let's normalize it here
-						// so that this test can be platform independent
-						.replaceAll("✘", "X")
-				).toMatchInlineSnapshot(`
-					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.[0m
-
-					"
-				`);
 			});
 
 			test("usage with a wrangler config file with a valid account id", async () => {

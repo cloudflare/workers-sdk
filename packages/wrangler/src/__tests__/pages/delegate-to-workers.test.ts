@@ -4,6 +4,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { sendMetricsEvent } from "../../metrics";
 import {
+	logPagesToWorkersForceOptOutNotice,
 	maybeDelegatePagesToWorkers,
 	recordPagesToWorkersDelegateFailure,
 } from "../../pages/delegate-to-workers";
@@ -47,7 +48,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 	});
 
 	for (const command of ["deploy", "create"] as const) {
-		it(`does not delegate when the account already has Pages projects (${command}), and records why`, async ({
+		it(`does not delegate (or emit telemetry) when the account already has Pages projects (${command})`, async ({
 			expect,
 		}) => {
 			const result = await maybeDelegatePagesToWorkers({
@@ -57,14 +58,9 @@ describe("maybeDelegatePagesToWorkers", () => {
 			});
 
 			expect(result).toEqual({ delegate: false });
-			expect(sendMetricsEvent).toHaveBeenCalledWith(
-				"delegate pages to workers",
-				expect.objectContaining({
-					result: "skipped",
-					reason: "account has pages projects",
-				}),
-				expect.anything()
-			);
+			// Skips are deterministic, expected non-cases, so they are not sent to
+			// telemetry.
+			expect(sendMetricsEvent).not.toHaveBeenCalled();
 		});
 	}
 
@@ -83,7 +79,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 	});
 
-	it("skips delegation (and records why) when the account Pages projects lookup fails", async ({
+	it("skips delegation (without emitting telemetry) when the account Pages projects lookup fails", async ({
 		expect,
 	}) => {
 		const result = await maybeDelegatePagesToWorkers({
@@ -95,14 +91,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"delegate pages to workers",
-			expect.objectContaining({
-				result: "skipped",
-				reason: "account pages projects lookup failed",
-			}),
-			expect.anything()
-		);
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
 	it("does not query account Pages projects when a cheaper, local check already skips", async ({
@@ -121,14 +110,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		// The functions/ directory is a local, no-cost skip reason, so the
 		// account-listing API call must never be made.
 		expect(accountHasPagesProjects).not.toHaveBeenCalled();
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"delegate pages to workers",
-			expect.objectContaining({
-				result: "skipped",
-				reason: "pages functions directory",
-			}),
-			expect.anything()
-		);
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
 	it("does not delegate when project has a functions directory", async ({
@@ -142,14 +124,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"delegate pages to workers",
-			expect.objectContaining({
-				result: "skipped",
-				reason: "pages functions directory",
-			}),
-			expect.anything()
-		);
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
 	const unsupportedFileMarkers: [marker: string, reason: string][] = [
@@ -157,10 +132,8 @@ describe("maybeDelegatePagesToWorkers", () => {
 		["_routes.json", "_routes.json file"],
 	];
 
-	for (const [marker, reason] of unsupportedFileMarkers) {
-		it(`does not delegate when project has a ${marker}, and records why`, async ({
-			expect,
-		}) => {
+	for (const [marker] of unsupportedFileMarkers) {
+		it(`does not delegate when project has a ${marker}`, async ({ expect }) => {
 			createFile(process.cwd(), marker);
 
 			const result = await maybeDelegatePagesToWorkers({
@@ -169,11 +142,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			});
 
 			expect(result).toEqual({ delegate: false });
-			expect(sendMetricsEvent).toHaveBeenCalledWith(
-				"delegate pages to workers",
-				expect.objectContaining({ result: "skipped", reason }),
-				expect.anything()
-			);
+			expect(sendMetricsEvent).not.toHaveBeenCalled();
 		});
 	}
 
@@ -191,14 +160,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"delegate pages to workers",
-			expect.objectContaining({
-				result: "skipped",
-				reason: "_routes.json file",
-			}),
-			expect.anything()
-		);
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
 	for (const marker of ["_redirects", "_headers"]) {
@@ -252,14 +214,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).toHaveBeenCalledWith(
-			"delegate pages to workers",
-			expect.objectContaining({
-				result: "skipped",
-				reason: "unsupported args: --branch",
-			}),
-			expect.anything()
-		);
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
 	it("delegates a brand-new static deploy to Workers", async ({ expect }) => {
@@ -354,7 +309,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 	});
 
-	it("does not delegate when --force is set, and records the opt-out", async ({
+	it("does not delegate when --force is set, records the opt-out, and flags forcedOptOut", async ({
 		expect,
 	}) => {
 		const result = await maybeDelegatePagesToWorkers({
@@ -363,12 +318,32 @@ describe("maybeDelegatePagesToWorkers", () => {
 			force: true,
 		});
 
-		expect(result).toEqual({ delegate: false });
+		expect(result).toEqual({ delegate: false, forcedOptOut: true });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"delegate pages to workers",
 			expect.objectContaining({ command: "deploy", result: "forced" }),
 			expect.anything()
 		);
+	});
+
+	it("emits a one-time, deploy-specific --force notice to stdout", ({
+		expect,
+	}) => {
+		logPagesToWorkersForceOptOutNotice("deploy");
+
+		expect(std.out).toContain("deployed directly on Cloudflare Pages");
+		expect(std.out).toContain("This is the only time you need --force");
+		expect(std.out).toContain("this project now exists");
+		expect(std.out).toContain("Do not pass --force on future commands");
+	});
+
+	it("emits a one-time, create-specific --force notice to stdout", ({
+		expect,
+	}) => {
+		logPagesToWorkersForceOptOutNotice("create");
+
+		expect(std.out).toContain("created directly on Cloudflare Pages");
+		expect(std.out).toContain("This is the only time you need --force");
 	});
 
 	it("records failure and gives explicit, loop-safe --force guidance", async ({

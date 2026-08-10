@@ -338,26 +338,7 @@ describe("deploy metrics export", () => {
 		await runWrangler("deploy");
 	});
 
-	it("rejects service environments before upload", async ({ expect }) => {
-		writeWranglerConfig({
-			main: "./index.js",
-			legacy_env: false,
-			env: {
-				staging: {
-					observability: {
-						metrics: { enabled: true, destinations: ["destination"] },
-					},
-				},
-			},
-		});
-		writeWorkerSource();
-
-		await expect(runWrangler("deploy --env staging")).rejects.toThrow(
-			"Metrics export is not supported for service environments."
-		);
-	});
-
-	it("rejects dispatch namespace deployments before upload", async ({
+	it("ignores metrics export for dispatch namespace deployments", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -367,12 +348,23 @@ describe("deploy metrics export", () => {
 			},
 		});
 		writeWorkerSource();
-
-		await expect(
-			runWrangler("deploy --dispatch-namespace customer-workers")
-		).rejects.toThrow(
-			"Metrics export is not supported for dispatch namespace deployments."
+		mockUploadWorkerRequest({
+			expectedDispatchNamespace: "customer-workers",
+			expectedObservability: undefined,
+		});
+		let reconciliationCalled = false;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					reconciliationCalled = true;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
 		);
+
+		await runWrangler("deploy --dispatch-namespace customer-workers");
+		expect(reconciliationCalled).toBe(false);
 	});
 
 	it("does not post a partial resource set when a binding is unresolved", async ({

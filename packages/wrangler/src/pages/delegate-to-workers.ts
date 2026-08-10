@@ -62,7 +62,15 @@ export interface PagesToWorkersDeployArgs {
 }
 
 export type PagesToWorkersDelegateResult =
-	| { delegate: false }
+	| {
+			delegate: false;
+			/**
+			 * True when the caller passed `--force` to opt this command out of
+			 * delegation. The caller uses it to emit the one-time `--force` notice
+			 * on the command's success path.
+			 */
+			forcedOptOut?: boolean;
+	  }
 	| {
 			delegate: true;
 			command: PagesDelegateCommand;
@@ -71,12 +79,7 @@ export type PagesToWorkersDelegateResult =
 	  };
 
 /** The outcome recorded against the `delegate pages to workers` metrics event. */
-type DelegateResult =
-	| "delegated"
-	| "success"
-	| "failure"
-	| "skipped"
-	| "forced";
+type DelegateResult = "delegated" | "success" | "failure" | "forced";
 
 /**
  * Status line emitted at the top of the deploy flow, before the Workers deploy
@@ -118,6 +121,37 @@ function buildWorkersDeployFailedMessage(
 }
 
 /**
+ * Agent-facing notice emitted at the end of a successful `--force` command.
+ *
+ * `--force` opts this one command out of delegation and runs it directly against
+ * Cloudflare Pages. Once it succeeds the project exists on the account, so every
+ * subsequent Pages command is no longer eligible for delegation and runs
+ * directly without `--force`. We say this explicitly so the agent stops
+ * appending `--force` to future commands.
+ */
+function buildForceOptOutNoticeMessage(command: PagesDelegateCommand): string {
+	const action = command === "deploy" ? "deployed" : "created";
+	return (
+		`Notice to agents: this project was ${action} directly on Cloudflare Pages because --force was set, bypassing delegation to Cloudflare Workers. ` +
+		"This is the only time you need --force: this project now exists, so subsequent commands will run directly against Cloudflare Pages and will not be delegated to Cloudflare Workers. " +
+		"Do not pass --force on future commands."
+	);
+}
+
+/**
+ * Emits the one-time `--force` opt-out notice to stdout so the agent sees it at
+ * the end of the command.
+ *
+ * Call this only from the command's success path: the "this project now exists"
+ * guidance is only true once the direct Pages command has actually succeeded.
+ */
+export function logPagesToWorkersForceOptOutNotice(
+	command: PagesDelegateCommand
+): void {
+	logger.log(buildForceOptOutNoticeMessage(command));
+}
+
+/**
  * Decides whether to delegate a Pages command to a Workers static-assets deploy
  * and, if so, returns the args for the caller to run as a Workers deploy.
  *
@@ -143,30 +177,28 @@ export async function maybeDelegatePagesToWorkers(
 
 	// The agent explicitly opted out with `--force`. The only callers who should
 	// reach for `--force` are agents we previously delegated, so this is a
-	// strong signal of dissatisfaction with the delegation — record it.
+	// strong signal of dissatisfaction with the delegation — record it. We flag
+	// `forcedOptOut` so the caller emits the one-time `--force` notice once the
+	// direct Pages command succeeds (see `logPagesToWorkersForceOptOutNotice`).
 	if (options.force) {
 		recordDelegate("forced", options, agent.id);
 		logger.debug("Pages-to-Workers delegation skipped: --force opt-out");
-		return { delegate: false };
+		return { delegate: false, forcedOptOut: true };
 	}
 
 	if (options.unsupportedArgs && options.unsupportedArgs.length > 0) {
-		skipDelegate(
-			`unsupported args: ${options.unsupportedArgs.join(", ")}`,
-			options,
-			agent.id
-		);
+		skipDelegate(`unsupported args: ${options.unsupportedArgs.join(", ")}`);
 		return { delegate: false };
 	}
 
-	// Bail (and record why) if the project uses any Pages feature we can't carry
+	// Bail (and log why) if the project uses any Pages feature we can't carry
 	// across to a Workers static-assets deploy.
 	const unsupportedFeature = findUnsupportedPagesFeature(
 		options.projectPath,
 		options.assetsDirectory
 	);
 	if (unsupportedFeature) {
-		skipDelegate(unsupportedFeature, options, agent.id);
+		skipDelegate(unsupportedFeature);
 		return { delegate: false };
 	}
 
@@ -185,11 +217,11 @@ export async function maybeDelegatePagesToWorkers(
 					e instanceof Error ? e.message : String(e)
 				})`
 			);
-			skipDelegate("account pages projects lookup failed", options, agent.id);
+			skipDelegate("account pages projects lookup failed");
 			return { delegate: false };
 		}
 		if (hasPagesProjects) {
-			skipDelegate("account has pages projects", options, agent.id);
+			skipDelegate("account has pages projects");
 			return { delegate: false };
 		}
 	}
@@ -264,16 +296,16 @@ function buildWorkersDeployArgs(
 }
 
 /**
- * Records a `skipped` delegation: logs the reason (so we can see why delegations
- * don't happen) and sends a metrics event carrying that reason.
+ * Logs (at debug level, for local visibility) why a delegation was skipped.
+ *
+ * Skips are deliberately not sent to telemetry: they are deterministic, expected
+ * non-cases (not an agent's brand-new static project — e.g. the account already
+ * has Pages projects, or the project uses an unsupported Pages feature), so the
+ * volume carries no signal. The number of skipped commands is derivable from the
+ * Pages command's own telemetry, so a dedicated event is not needed.
  */
-function skipDelegate(
-	reason: string,
-	options: MaybeDelegatePagesToWorkersOptions,
-	agentId: string | null
-): void {
+function skipDelegate(reason: string): void {
 	logger.debug(`Pages-to-Workers delegation skipped: ${reason}`);
-	recordDelegate("skipped", options, agentId, { reason });
 }
 
 /** Sends a `delegate pages to workers` metrics event for the given outcome. */

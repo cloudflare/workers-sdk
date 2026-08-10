@@ -84,7 +84,7 @@ describe("queues subscription", () => {
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
-				      --source         The event source type  [string] [required] [choices: "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				      --source         The event source type  [string] [required] [choices: "artifacts", "artifacts.repo", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 				      --events         Comma-separated list of event types to subscribe to  [string] [required]
 				      --name           Name for the subscription (auto-generated if not provided)  [string]
 				      --enabled        Whether the subscription should be active  [boolean] [default: true]
@@ -187,6 +187,76 @@ describe("queues subscription", () => {
 			`);
 		});
 
+		it("should create a subscription for an Artifacts account source", async ({
+			expect,
+		}) => {
+			const queueNameResolveRequest = mockGetQueueByNameRequest(
+				expectedQueueName,
+				{
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+					modified_on: "",
+				}
+			);
+
+			const createRequest = mockCreateSubscriptionRequest(
+				{
+					name: "testQueue artifacts",
+					enabled: true,
+					source: { type: EventSourceType.ARTIFACTS },
+					events: ["repo.created"],
+				},
+				expectedQueueId
+			);
+
+			await runWrangler(
+				"queues subscription create testQueue --source artifacts --events repo.created"
+			);
+
+			expect(queueNameResolveRequest.count).toEqual(1);
+			expect(createRequest.count).toEqual(1);
+		});
+
+		it("should create a subscription for an Artifacts repository source", async ({
+			expect,
+		}) => {
+			const queueNameResolveRequest = mockGetQueueByNameRequest(
+				expectedQueueName,
+				{
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					producers: [],
+					consumers: [],
+					producers_total_count: 0,
+					consumers_total_count: 0,
+					modified_on: "",
+				}
+			);
+
+			const createRequest = mockCreateSubscriptionRequest(
+				{
+					name: "testQueue artifacts.repo",
+					enabled: true,
+					source: { type: EventSourceType.ARTIFACTS_REPO },
+					events: ["pushed"],
+				},
+				expectedQueueId
+			);
+
+			await runWrangler(
+				"queues subscription create testQueue --source artifacts.repo --events pushed"
+			);
+
+			expect(queueNameResolveRequest.count).toEqual(1);
+			expect(createRequest.count).toEqual(1);
+		});
+
 		it("should create subscription with custom name and disabled state", async ({
 			expect,
 		}) => {
@@ -254,7 +324,7 @@ describe("queues subscription", () => {
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid values:
-				  Argument: source, Given: "invalid", Choices: "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				  Argument: source, Given: "invalid", Choices: "artifacts", "artifacts.repo", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 			`);
 		});
 

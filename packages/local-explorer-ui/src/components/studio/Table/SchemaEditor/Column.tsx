@@ -24,7 +24,7 @@ import type {
 	StudioTableSchemaChange,
 } from "../../../../types/studio";
 import type { Icon } from "@phosphor-icons/react";
-import type { Dispatch, PropsWithChildren, SetStateAction } from "react";
+import type { Dispatch, JSX, PropsWithChildren, SetStateAction } from "react";
 
 interface StudioColumnSchemaEditorProps {
 	columnIndex: number;
@@ -81,9 +81,15 @@ export function StudioColumnSchemaEditor({
 							);
 
 						if (pkConstraint.new.primaryColumns.length === 0) {
-							draft.constraints = draft.constraints.filter(
-								(c) => c.key !== pkConstraint?.key
-							);
+							if (pkConstraint.old) {
+								// Mark existing constraint as deleted so dirty-state detection picks it up
+								pkConstraint.new = null;
+							} else {
+								// Newly added constraint — remove it entirely since it was never persisted
+								draft.constraints = draft.constraints.filter(
+									(c) => c.key !== pkConstraint?.key
+								);
+							}
 						}
 					}
 					return;
@@ -162,7 +168,18 @@ export function StudioColumnSchemaEditor({
 	const handleRemoveColumn = useCallback((): void => {
 		onChange((prev) =>
 			produce(prev, (draft) => {
-				draft.columns = draft.columns.filter((c) => c.key !== column?.key);
+				const target = draft.columns.find((c) => c.key === column?.key);
+				if (!target) {
+					return;
+				}
+
+				if (target.old) {
+					// Mark existing column as deleted so dirty-state detection picks it up
+					target.new = null;
+				} else {
+					// Newly added column — remove it entirely since it was never persisted
+					draft.columns = draft.columns.filter((c) => c.key !== column?.key);
+				}
 			})
 		);
 	}, [onChange, column]);

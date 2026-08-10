@@ -12,6 +12,29 @@ import {
 import { handleException, setupSentry } from "./sentry";
 import type { Toucan } from "toucan-js";
 
+declare const ROOT: string;
+declare const PREVIEW: string;
+
+async function pushMetrics(env: Env, metrics: string) {
+	try {
+		const response = await env.WSHIM_SOCKET.fetch(
+			"https://workers-logging.cfdata.org/prometheus",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
+				},
+				body: metrics,
+			}
+		);
+		if (!response.ok) {
+			console.error(`Failed to push metrics: ${response.status}`);
+		}
+	} catch (error) {
+		console.error("Failed to push metrics", error);
+	}
+}
+
 function maybeParseUrl(url: string | undefined) {
 	if (!url) {
 		return undefined;
@@ -128,15 +151,7 @@ app.use("*", async (c, next) => {
 	try {
 		return await next();
 	} finally {
-		c.executionCtx.waitUntil(
-			fetch("https://workers-logging.cfdata.org/prometheus", {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${c.env.PROMETHEUS_TOKEN}`,
-				},
-				body: registry.metrics(),
-			})
-		);
+		c.executionCtx.waitUntil(pushMetrics(c.env, registry.metrics()));
 	}
 });
 

@@ -1,7 +1,7 @@
 import * as cli from "@cloudflare/cli-shared-helpers";
 import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import { inputPrompt, leftT } from "@cloudflare/cli-shared-helpers/interactive";
-import { isNonInteractiveOrCI } from "../../shared/context";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "./versions-api";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {

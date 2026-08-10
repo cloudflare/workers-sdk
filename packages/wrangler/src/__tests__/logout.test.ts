@@ -242,8 +242,9 @@ describe("logout", () => {
 		expect,
 	}) => {
 		const { getEncryptedAuthConfigFilePath } =
-			await import("../user/auth-config-file");
-		const { updateUserPreferences } = await import("../user/preferences");
+			await import("@cloudflare/workers-auth/wrangler");
+		const { updateUserPreferences } =
+			await import("@cloudflare/workers-auth/wrangler");
 
 		const keyringStore = new Map<string, Uint8Array>();
 		setKeyProviderFactoryForTesting((serviceName) => ({

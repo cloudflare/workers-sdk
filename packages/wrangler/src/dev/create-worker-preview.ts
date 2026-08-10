@@ -259,10 +259,7 @@ async function createPreviewToken(
 ): Promise<CfPreviewToken> {
 	const { value, host } = session;
 	const { accountId } = account;
-	const url =
-		ctx.env && ctx.useServiceEnvironments
-			? `/accounts/${accountId}/workers/services/${worker.name}/environments/${ctx.env}/edge-preview`
-			: `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
+	const url = `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
 
 	const mode: CfPreviewMode = ctx.zone
 		? {

@@ -1,4 +1,7 @@
-import { triggersDeploy } from "@cloudflare/deploy-helpers";
+import {
+	triggersDeploy,
+	validateEventTriggerTargets,
+} from "@cloudflare/deploy-helpers";
 import { createCommand, createNamespace } from "../core/create-command";
 import { resolveTriggersInput } from "../deployment-bundle/resolve-config-args";
 import { logger } from "../logger";
@@ -45,11 +48,6 @@ export const triggersDeployCommand = createCommand({
 			describe: "Don't actually deploy",
 			type: "boolean",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 		"experimental-deploy-helpers": {
 			describe: "Experimental: Gates refactored deploy/upload path",
 			type: "boolean",
@@ -60,6 +58,7 @@ export const triggersDeployCommand = createCommand({
 	},
 	behaviour: {
 		supportTemporary: true,
+		useConfigRedirectIfAvailable: true,
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
@@ -68,6 +67,7 @@ export const triggersDeployCommand = createCommand({
 			sendMetrics: config.send_metrics,
 		});
 		const props = resolveTriggersInput(args, config);
+		validateEventTriggerTargets(config, props.scriptName);
 
 		if (args.dryRun) {
 			logger.log(`--dry-run: exiting now.`);

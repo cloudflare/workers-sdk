@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getIsSchemaDirty } from "../../../utils/studio";
 import { useStudioContext } from "../Context";
 import { SkeletonBlock } from "../SkeletonBlock";
 import { StudioTableSchemaEditor } from "../Table/SchemaEditor";
@@ -7,6 +8,7 @@ import type {
 	StudioTableSchema,
 	StudioTableSchemaChange,
 } from "../../../types/studio";
+import type { JSX } from "react";
 
 interface StudioEditTableTabProps {
 	schemaName?: string;
@@ -20,7 +22,11 @@ export function StudioCreateUpdateTableTab({
 	tableName,
 }: StudioEditTableTabProps): JSX.Element {
 	const { driver, refreshSchema, replaceStudioTab } = useStudioContext();
-	const { identifier: tabIdentifier } = useStudioCurrentWindowTab();
+	const {
+		identifier: tabIdentifier,
+		setDirtyState,
+		setBeforeTabClosingHandler,
+	} = useStudioCurrentWindowTab();
 
 	const [loading, setLoading] = useState<boolean>(!!schemaName && !!tableName);
 	const [value, setValue] = useState<StudioTableSchemaChange>({
@@ -36,6 +42,29 @@ export function StudioCreateUpdateTableTab({
 
 	// Determines if the editor is in create mode (no previous table name)
 	const isCreateMode = !value.name.old;
+
+	const isSchemaDirty = useMemo(
+		(): boolean => getIsSchemaDirty(value),
+		[value]
+	);
+
+	// Mark the current tab as dirty if there are unsaved schema changes
+	useEffect((): void => {
+		setDirtyState(isSchemaDirty);
+	}, [setDirtyState, isSchemaDirty]);
+
+	// Prompt the user before closing the tab if there are unsaved changes
+	useEffect((): void => {
+		setBeforeTabClosingHandler((currentTab) => {
+			if (currentTab.isDirty) {
+				return confirm(
+					"You have unsaved changes. Do you want to close without saving?"
+				);
+			}
+
+			return true;
+		});
+	}, [setBeforeTabClosingHandler]);
 
 	useEffect((): void => {
 		async function updateValue(): Promise<void> {
