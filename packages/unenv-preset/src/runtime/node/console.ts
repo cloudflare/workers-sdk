@@ -6,7 +6,6 @@ import {
 	_stdoutErrorHandler,
 	_times,
 	Console,
-	createTask as unenvCreateTask,
 } from "unenv/node/console";
 import type nodeConsole from "node:console";
 
@@ -40,6 +39,8 @@ export const {
 	context,
 	count,
 	countReset,
+	// @ts-expect-error undocumented public API
+	createTask,
 	debug,
 	dir,
 	dirxml,
@@ -60,19 +61,9 @@ export const {
 	warn,
 } = workerdConsole;
 
-// Unlike the rest of the console API, `createTask()` is installed by the V8 *inspector*
-// (`installAsyncStackTaggingAPI()` in `v8/src/inspector/v8-console.cc`) rather than by V8 itself,
-// so it is only present on the runtime console when an inspector is attached to the isolate.
-// That is the case for `wrangler dev`, but not for deployed Workers, so fall back to the unenv
-// implementation to keep the shape of the API the same in every environment. This mirrors what
-// workerd's native `node:console` does when `enable_nodejs_console_module` is set.
-export const createTask =
-	(workerdConsole as { createTask?: unknown }).createTask ?? unenvCreateTask;
-
 // polyfill missing globalThis.console API in workerd, while preserving its identity
 Object.assign(workerdConsole, {
 	Console,
-	createTask,
 	_ignoreErrors,
 	_stderr,
 	_stderrErrorHandler,
