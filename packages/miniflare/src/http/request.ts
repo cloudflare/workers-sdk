@@ -23,8 +23,8 @@ export interface RequestInit<
 /**
  * Node's global `Request` (and other cross-realm Requests) fail undici's brand
  * check, so `new undici.Request(globalRequest)` stringifies to
- * `"[object Request]"` and URL parsing throws. Detect Request-like values that
- * are not undici's `Request`.
+ * `"[object Request]"` and URL parsing throws. Use `toStringTag` so plain
+ * objects with `url`/`method`/`headers` are not treated as Requests.
  *
  * See https://github.com/cloudflare/workers-sdk/issues/15086
  */
@@ -33,10 +33,7 @@ function isForeignRequest(value: unknown): value is globalThis.Request {
 		typeof value === "object" &&
 		value !== null &&
 		!(value instanceof BaseRequest) &&
-		typeof (value as globalThis.Request).url === "string" &&
-		typeof (value as globalThis.Request).method === "string" &&
-		typeof (value as globalThis.Request).headers === "object" &&
-		(value as globalThis.Request).headers !== null
+		Object.prototype.toString.call(value) === "[object Request]"
 	);
 }
 
@@ -61,6 +58,13 @@ export class Request<
 				redirect: input.redirect,
 				integrity: input.integrity,
 				signal: input.signal,
+				// Preserve standard Request fields when present on the foreign brand
+				mode: input.mode,
+				credentials: input.credentials,
+				cache: input.cache,
+				referrer: input.referrer,
+				referrerPolicy: input.referrerPolicy,
+				keepalive: input.keepalive,
 				...init,
 			});
 			this[kCf] = init?.cf;
