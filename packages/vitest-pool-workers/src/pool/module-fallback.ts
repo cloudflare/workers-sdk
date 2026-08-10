@@ -741,6 +741,18 @@ export async function handleModuleFallbackRequest(
 			filePath
 		);
 	} catch (e) {
+		const decoded = await retryWithDecodedPaths(
+			vite,
+			logBase,
+			method,
+			target,
+			rawTarget,
+			referrer
+		);
+		if (decoded !== undefined) {
+			return decoded;
+		}
+
 		debuglog(logBase, "error:", e);
 		if (e instanceof UnavailableBuiltinModuleError) {
 			// Bundling can't help here — the module is built into `workerd` and
@@ -760,4 +772,63 @@ export async function handleModuleFallbackRequest(
 	}
 
 	return new Response(null, { status: 404 });
+}
+
+// Detects percent-encoded sequences (e.g. `%20` for space). Used to decide
+// whether a failed resolution should be retried with `decodeURIComponent()`.
+const percentEncodedRegExp = /%[0-9A-Fa-f]{2}/;
+
+/**
+ * `workerd` percent-encodes spaces in module paths, so `target` and `referrer`
+ * may not match any file on disk. This function retries resolution with decoded
+ * paths. We only retry — rather than decoding upfront — to preserve existing
+ * behaviour for paths that literally contain `%20` on disk.
+ *
+ * @param vite - The Vite dev server instance used for module resolution.
+ * @param logBase - Log prefix for debug/error messages.
+ * @param method - Whether the module was requested via `import` or `require`.
+ * @param target - The (possibly percent-encoded) module target path.
+ * @param rawTarget - The original unmodified target string from `workerd`.
+ * @param referrer - The (possibly percent-encoded) referrer path.
+ * @returns The loaded module `Response`, or `undefined` if decoding didn't help.
+ */
+async function retryWithDecodedPaths(
+	vite: Vite.ViteDevServer,
+	logBase: string,
+	method: ResolveMethod,
+	target: string,
+	rawTarget: string,
+	referrer: string
+): Promise<Response | undefined> {
+	if (!percentEncodedRegExp.test(target)) {
+		return undefined;
+	}
+
+	try {
+		const decodedTarget = decodeURIComponent(target);
+		const decodedReferrer = decodeURIComponent(referrer);
+		const decodedReferrerDir = posixPath.dirname(decodedReferrer);
+		const decodedSpecifier = getApproximateSpecifier(
+			decodedTarget,
+			decodedReferrerDir
+		);
+		const filePath = await resolve(
+			vite,
+			method,
+			decodedTarget,
+			decodedSpecifier,
+			decodedReferrer
+		);
+		return await load(
+			vite,
+			logBase,
+			method,
+			decodedTarget,
+			rawTarget,
+			decodedSpecifier,
+			filePath
+		);
+	} catch {
+		return undefined;
+	}
 }

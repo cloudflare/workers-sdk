@@ -252,6 +252,49 @@ describe("handleModuleFallbackRequest non-ASCII paths", () => {
 		expect(body.commonJsModule).toContain("pct: true");
 	});
 
+	it("decodes percent-encoded spaces when the literal %20 path does not exist", async ({
+		expect,
+	}) => {
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/15048
+		// When a project lives under a directory with a space (e.g. "wsdk repro/"),
+		// workerd percent-encodes the space as %20 in specifier/referrer. For
+		// relative require() inside CJS deps, rawSpecifier is "./lib/impl.js" (not
+		// a file: URL), so the #14152 fix doesn't apply. The handler should retry
+		// with decoded paths when the encoded path doesn't exist on disk.
+		const dir = path.join(tmp, "wsdk repro", "deps", "pkg");
+		fs.mkdirSync(path.join(dir, "lib"), { recursive: true });
+		// `.cjs` keeps the module unambiguously CommonJS regardless of any ancestor
+		// `package.json` declaring `"type": "module"`.
+		fs.writeFileSync(
+			path.join(dir, "index.cjs"),
+			'module.exports = require("./lib/impl.cjs");'
+		);
+		fs.writeFileSync(
+			path.join(dir, "lib", "impl.cjs"),
+			"module.exports = { answer: 42 };"
+		);
+
+		// Simulate workerd sending specifier/referrer with %20 instead of spaces,
+		// and rawSpecifier as the relative path (not a file: URL).
+		const encodedDir = dir.replace(/ /g, "%20");
+		const res = await handleModuleFallbackRequest(
+			fakeVite(),
+			moduleFallbackRequest({
+				method: "require",
+				specifier: toWorkerdSpecifier(path.join(encodedDir, "lib", "impl.cjs")),
+				referrer: toWorkerdSpecifier(path.join(encodedDir, "index.cjs")),
+				rawSpecifier: "./lib/impl.cjs",
+			})
+		);
+
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as {
+			name: string;
+			commonJsModule?: string;
+		};
+		expect(body.commonJsModule).toContain("answer: 42");
+	});
+
 	it("falls through to a 404 for an unresolvable specifier", async ({
 		expect,
 	}) => {
