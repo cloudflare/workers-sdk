@@ -64,10 +64,10 @@ export class CloudflarePoolWorker implements PoolWorker {
 		let resolvedPoolOptions: WorkersPoolOptions;
 		if (typeof this.poolOptions === "function") {
 			// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/integrations/inject.ts
-			const inject = <K extends keyof ProvidedContext>(
-				key: K
-			): ProvidedContext[K] => {
-				return this.options.project.getProvidedContext()[key];
+			const inject: WorkerPoolOptionsContext["inject"] = (key) => {
+				return this.options.project.getProvidedContext()[
+					key as keyof ProvidedContext
+				];
 			};
 			resolvedPoolOptions = await this.poolOptions({ inject });
 		} else {
