@@ -28,9 +28,6 @@ export const IssueTriage: Agent = ({ id }) => {
 	useSandbox(sandbox, { cwd: "/workspace" });
 
 	const data = useInitialData<v.InferOutput<typeof InitialDataSchema>>();
-	if (!data) {
-		throw new Error("This agent is created by the GitHub channel dispatch.");
-	}
 
 	useTool(commentOnIssue(data));
 
