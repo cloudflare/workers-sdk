@@ -845,7 +845,7 @@ describe("metrics", () => {
 				expect(std.out).toContain("Status: Disabled");
 			});
 
-			it("shows wrangler.toml as the source with send_metrics is present", async ({
+			it("shows the wrangler config as the source when send_metrics is present", async ({
 				expect,
 			}) => {
 				writeMetricsConfig({
@@ -856,10 +856,10 @@ describe("metrics", () => {
 				});
 				writeWranglerConfig({ send_metrics: false });
 				await runWrangler(`${cmd} status`);
-				expect(std.out).toContain("Status: Disabled (set by wrangler.toml)");
+				expect(std.out).toContain("Status: Disabled (set by wrangler config)");
 			});
 
-			it("shows environment variable as the source if used", async ({
+			it("shows WRANGLER_SEND_METRICS as the source if used", async ({
 				expect,
 			}) => {
 				writeMetricsConfig({
@@ -871,7 +871,7 @@ describe("metrics", () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
 				await runWrangler(`${cmd} status`);
 				expect(std.out).toContain(
-					"Status: Disabled (set by environment variable)"
+					"Status: Disabled (set by WRANGLER_SEND_METRICS)"
 				);
 			});
 
@@ -896,7 +896,7 @@ describe("metrics", () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
 				await runWrangler(`${cmd} status`);
 				expect(std.out).toContain(
-					"Status: Disabled (set by environment variable)"
+					"Status: Disabled (set by WRANGLER_SEND_METRICS)"
 				);
 			});
 		});
@@ -965,6 +965,31 @@ Wrangler is no longer collecting telemetry about your usage.`);
 			expect(std.out).toContain(`Status: Enabled
 
 Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡`);
+			expect(readMetricsConfig()).toMatchObject({
+				permission: {
+					enabled: true,
+					date: new Date(2024, 11, 12),
+				},
+			});
+		});
+
+		it(`persists enabled but reports disabled when "wrangler ${cmd} enable" is run with DO_NOT_TRACK`, async ({
+			expect,
+		}) => {
+			vi.stubEnv("DO_NOT_TRACK", "1");
+			writeMetricsConfig({
+				permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+
+			await runWrangler(`${cmd} enable`);
+
+			expect(std.out).toContain(`Status: Disabled (set by DO_NOT_TRACK)
+
+Telemetry has been enabled in Wrangler's global configuration, but remains disabled because it is overridden by DO_NOT_TRACK.`);
+			expect(std.out).not.toContain("Wrangler is now collecting telemetry");
 			expect(readMetricsConfig()).toMatchObject({
 				permission: {
 					enabled: true,

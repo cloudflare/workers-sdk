@@ -686,6 +686,58 @@ describe("runTelemetryCommand", () => {
 		`);
 	});
 
+	test("run telemetry enable when DO_NOT_TRACK is enabled", ({ expect }) => {
+		vi.stubEnv("DO_NOT_TRACK", "1");
+		vi.mocked(readMetricsConfig).mockReturnValueOnce({
+			c3permission: {
+				enabled: false,
+				date: new Date(),
+			},
+		});
+
+		runTelemetryCommand("enable");
+
+		expect(writeMetricsConfig).toHaveBeenCalledWith({
+			c3permission: {
+				enabled: true,
+				date: new Date(),
+			},
+		});
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"Status: Disabled (set by DO_NOT_TRACK)
+
+			Telemetry has been enabled in Create-Cloudflare's global configuration, but remains disabled while DO_NOT_TRACK is set.
+			"
+		`);
+	});
+
+	test("run telemetry enable when CREATE_CLOUDFLARE_TELEMETRY_DISABLED is enabled", ({
+		expect,
+	}) => {
+		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DISABLED", "1");
+		vi.mocked(readMetricsConfig).mockReturnValueOnce({
+			c3permission: {
+				enabled: false,
+				date: new Date(),
+			},
+		});
+
+		runTelemetryCommand("enable");
+
+		expect(writeMetricsConfig).toHaveBeenCalledWith({
+			c3permission: {
+				enabled: true,
+				date: new Date(),
+			},
+		});
+		expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"Status: Disabled (set by CREATE_CLOUDFLARE_TELEMETRY_DISABLED)
+
+			Telemetry has been enabled in Create-Cloudflare's global configuration, but remains disabled while CREATE_CLOUDFLARE_TELEMETRY_DISABLED is set.
+			"
+		`);
+	});
+
 	test("run telemetry disable when c3permission is enabled", async ({
 		expect,
 	}) => {

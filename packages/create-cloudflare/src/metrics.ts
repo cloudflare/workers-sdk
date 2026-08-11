@@ -316,10 +316,19 @@ export const runTelemetryCommand = (
 	switch (action) {
 		case "enable": {
 			updateC3Permission(true);
-			logTelemetryStatus(true);
-			logRaw(
-				"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!"
-			);
+
+			const telemetry = resolveTelemetryStatus();
+			if (telemetry === undefined) {
+				logTelemetryStatus(true);
+				logRaw(
+					"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!"
+				);
+			} else {
+				logTelemetryStatus(telemetry.enabled, telemetry.source);
+				logRaw(
+					`Telemetry has been enabled in Create-Cloudflare's global configuration, but remains disabled while ${telemetry.source} is set.`
+				);
+			}
 			break;
 		}
 		case "disable": {
