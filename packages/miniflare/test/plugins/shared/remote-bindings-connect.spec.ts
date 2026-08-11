@@ -827,24 +827,31 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 		const edge = new Miniflare({
 			workers: [
 				{
-					name: "proxy-server",
-					compatibilityDate: COMPAT_DATE,
-					compatibilityFlags: ["experimental"],
-					modules: [
-						{
-							type: "ESModule",
-							path: "ProxyServerWorker.js",
-							contents: proxyServerBundle,
+					config: {
+						type: "worker",
+						name: "proxy-server",
+						compatibilityDate: COMPAT_DATE,
+						compatibilityFlags: ["experimental"],
+						manifest: {
+							mainModule: "ProxyServerWorker.js",
+							modules: {
+								"ProxyServerWorker.js": {
+									type: "esm",
+									contents: proxyServerBundle,
+								},
+							},
 						},
-					],
-					serviceBindings: { HYPERDRIVE: "hd-target" },
+						env: { HYPERDRIVE: { type: "worker", worker: "hd-target" } },
+					},
 				},
 				{
-					name: "hd-target",
-					compatibilityDate: COMPAT_DATE,
-					compatibilityFlags: ["experimental"],
-					modules: true,
-					script: VPC_TARGET_SCRIPT,
+					config: {
+						type: "worker",
+						name: "hd-target",
+						compatibilityDate: COMPAT_DATE,
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(VPC_TARGET_SCRIPT),
+					},
 				},
 			],
 		});
@@ -885,18 +892,35 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 describe("Hyperdrive remote binding: MF-HD-Seed endpoint", () => {
 	function makeSeedEdge(): Miniflare {
 		return new Miniflare({
-			compatibilityDate: COMPAT_DATE,
-			compatibilityFlags: ["experimental"],
-			modules: [
+			workers: [
 				{
-					type: "ESModule",
-					path: "ProxyServerWorker.js",
-					contents: proxyServerBundle,
+					config: {
+						type: "worker",
+						name: "proxy-server",
+						compatibilityDate: COMPAT_DATE,
+						compatibilityFlags: ["experimental"],
+						manifest: {
+							mainModule: "ProxyServerWorker.js",
+							modules: {
+								"ProxyServerWorker.js": {
+									type: "esm",
+									contents: proxyServerBundle,
+								},
+							},
+						},
+						env: {
+							HYPERDRIVE: {
+								type: "hyperdrive",
+								id: "hyperdrive-id",
+								dev: {
+									connectionString:
+										"mysql://hduser:hdpass@127.0.0.1:3306/testdb",
+								},
+							},
+						},
+					},
 				},
 			],
-			hyperdrives: {
-				HYPERDRIVE: "mysql://hduser:hdpass@127.0.0.1:3306/testdb",
-			},
 		});
 	}
 
