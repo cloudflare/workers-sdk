@@ -2,6 +2,7 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { ContainerImagePreparationStatus } from "@cloudflare/containers-shared";
 import {
 	ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE,
 	generatePreviewAlias,
@@ -21,6 +22,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
 import * as metrics from "../../metrics";
 import { dedent } from "../../utils/dedent";
+import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -2400,6 +2402,64 @@ describe("versions upload", () => {
 				Admin: { type: "worker", cache: { enabled: true } },
 			});
 			expect(metadata.migrations).toBeUndefined();
+		});
+
+		test("prepares named container images and includes them in the uploaded version", async ({
+			expect,
+		}) => {
+			const image =
+				"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+			mockGetScript();
+			mockContainersAccount();
+			const requests = mockUploadVersion(false, 0);
+			const preparationRequests: string[] = [];
+			msw.use(
+				http.post("*/image-preparations", async ({ request }) => {
+					const body = (await request.json()) as { image: string };
+					preparationRequests.push(body.image);
+					return HttpResponse.json(
+						createFetchResult({
+							image: body.image,
+							status: ContainerImagePreparationStatus.READY,
+						})
+					);
+				})
+			);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					exports: {
+						MyDurableObject: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: {
+								images: {
+									tools: { image },
+								},
+							},
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+			await runWrangler("versions upload --config ./wrangler.json");
+
+			expect(preparationRequests).toEqual([image]);
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.exports).toEqual({
+				MyDurableObject: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: {
+						images: { tools: image },
+					},
+				},
+			});
+			expect(metadata.containers).toBeUndefined();
 		});
 
 		test("surfaces a friendly error when EWC rejects a binding to a not-yet-provisioned `exports` class (code 100406)", async ({

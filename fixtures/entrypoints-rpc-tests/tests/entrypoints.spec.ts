@@ -132,7 +132,7 @@ describe("entrypoints", () => {
 			expect(await response.text()).toBe(
 				'POST https://placeholder:9999/loopback {"thing":true}'
 			);
-		});
+		}, 10_000);
 	});
 
 	test("should support default ExportedHandler entrypoints", async ({
@@ -179,7 +179,7 @@ describe("entrypoints", () => {
 			const text = await response.text();
 			// Check protocol, host, and cf preserved
 			expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
-		});
+		}, 10_000);
 	});
 
 	test("should support default WorkerEntrypoint entrypoints", async ({

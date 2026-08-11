@@ -1,6 +1,6 @@
 import type {
 	CacheOptions,
-	Exports,
+	ConfiguredExport,
 	LocalS3Credentials,
 	Observability,
 	Route,
@@ -452,7 +452,16 @@ export interface CfDurableObjectMigrations {
  *
  * Durable Objects can only be configured by `exports` or `migrations`, not both.
  */
-export type CfExports = Exports;
+type CfConfiguredExport<T = ConfiguredExport> = T extends {
+	type: "durable-object";
+	storage: unknown;
+}
+	? Omit<T, "container"> & {
+			container?: string | { images: Record<string, string> };
+		}
+	: T;
+
+export type CfExports = Record<string, CfConfiguredExport>;
 
 export type CfPlacement =
 	| { mode: "smart"; hint?: string }

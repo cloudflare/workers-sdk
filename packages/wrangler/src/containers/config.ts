@@ -62,13 +62,13 @@ export const getNormalizedContainerOptions = async (
 	}
 
 	const normalizedContainers: ContainerNormalizedConfig[] = [];
+	const allDOs = getDurableObjectClassNameToUseSQLiteMap(
+		config.migrations,
+		config.exports
+	);
 
 	for (const container of config.containers) {
 		assert(container.name, "container name should have been set by validation");
-		const allDOs = getDurableObjectClassNameToUseSQLiteMap(
-			config.migrations,
-			config.exports
-		);
 
 		// A container is linked to its Durable Object either by its own
 		// `class_name`, or by the Durable Object's `exports` entry naming it via
