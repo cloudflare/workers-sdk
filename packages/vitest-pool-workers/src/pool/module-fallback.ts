@@ -100,14 +100,19 @@ function getParentPaths(filePath: string): string[] {
 	}
 }
 
-const dirPathTypeModuleCache = new Map<string, boolean>();
+// Note the cached value must stay file-independent: it is keyed by directory
+// and reused for every file resolved out of that directory. Only `type` is a
+// property of the package; whether a file is the `module` entry point is not,
+// so that comparison happens per call against the cached path.
+type DirPathPackageInfo = { typeModule: boolean; modulePath: string };
+const dirPathPackageCache = new Map<string, DirPathPackageInfo>();
 function isWithinTypeModuleContext(filePath: string): boolean {
 	const parentPaths = getParentPaths(filePath);
 
 	for (const parentPath of parentPaths) {
-		const cache = dirPathTypeModuleCache.get(parentPath);
-		if (cache !== undefined) {
-			return cache;
+		const cached = dirPathPackageCache.get(parentPath);
+		if (cached !== undefined) {
+			return cached.typeModule || cached.modulePath === filePath;
 		}
 	}
 
@@ -116,12 +121,12 @@ function isWithinTypeModuleContext(filePath: string): boolean {
 			const pkgPath = posixPath.join(parentPath, "package.json");
 			const pkgJson = fs.readFileSync(pkgPath, "utf8");
 			const pkg = JSON.parse(pkgJson);
-			const maybeModulePath = pkg.module
-				? posixPath.join(parentPath, pkg.module)
-				: "";
-			const cache = pkg.type === "module" || maybeModulePath === filePath;
-			dirPathTypeModuleCache.set(parentPath, cache);
-			return cache;
+			const info: DirPathPackageInfo = {
+				typeModule: pkg.type === "module",
+				modulePath: pkg.module ? posixPath.join(parentPath, pkg.module) : "",
+			};
+			dirPathPackageCache.set(parentPath, info);
+			return info.typeModule || info.modulePath === filePath;
 		} catch (e: unknown) {
 			if (!isFileNotFoundError(e)) {
 				throw e;

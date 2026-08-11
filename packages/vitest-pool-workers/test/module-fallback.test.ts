@@ -256,3 +256,58 @@ describe("handleModuleFallbackRequest non-ASCII paths", () => {
 		}
 	});
 });
+
+describe("handleModuleFallbackRequest dual-format packages", () => {
+	let tmp: string;
+
+	beforeEach(() => {
+		tmp = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "mf-fallback-dual-"))
+		);
+	});
+
+	afterEach(() => {
+		removeDirSync(tmp);
+	});
+
+	it("keeps a package's CommonJS entry CommonJS after its ES module entry is loaded", async ({
+		expect,
+	}) => {
+		// A dual-format package with no `type` field: `module` points at the ESM
+		// build, `main` at the CommonJS one, both `.js` and in the same directory.
+		const pkgDir = path.join(tmp, "node_modules", "dual-pkg");
+		fs.mkdirSync(path.join(pkgDir, "dist"), { recursive: true });
+		fs.writeFileSync(
+			path.join(pkgDir, "package.json"),
+			JSON.stringify({
+				name: "dual-pkg",
+				main: "dist/index.cjs.js",
+				module: "dist/index.esm.js",
+			})
+		);
+		fs.writeFileSync(
+			path.join(pkgDir, "dist", "index.esm.js"),
+			"export const value = 1;"
+		);
+		fs.writeFileSync(
+			path.join(pkgDir, "dist", "index.cjs.js"),
+			"module.exports = { value: 1 };"
+		);
+
+		const referrer = toWorkerdSpecifier(path.join(tmp, "entry.js"));
+		const load = async (fileName: string) =>
+			await (
+				await handleModuleFallbackRequest(
+					fakeVite(),
+					moduleFallbackRequest({
+						method: "require",
+						specifier: toWorkerdSpecifier(path.join(pkgDir, "dist", fileName)),
+						referrer,
+					})
+				)
+			).json();
+
+		expect(await load("index.esm.js")).toHaveProperty("esModule");
+		expect(await load("index.cjs.js")).toHaveProperty("commonJsModule");
+	});
+});
