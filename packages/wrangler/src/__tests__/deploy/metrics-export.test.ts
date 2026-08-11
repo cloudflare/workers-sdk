@@ -25,7 +25,7 @@ describe("deploy metrics export", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 
 	beforeEach(() => {
 		vi.stubGlobal("setTimeout", (fn: () => void) => {
@@ -493,8 +493,9 @@ describe("deploy metrics export", () => {
 			)
 		);
 
-		await expect(runWrangler("deploy")).rejects.toThrow(
-			"Wrangler could not resolve the D1 resource used by binding DB."
+		await runWrangler("deploy");
+		expect(std.warn).toContain(
+			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration: Wrangler could not resolve the D1 resource used by binding DB."
 		);
 		expect(called).toBe(false);
 	});
@@ -609,7 +610,7 @@ describe("deploy metrics export", () => {
 		expect(attempts).toBe(3);
 	});
 
-	it("publishes triggers before reporting a metrics export reconciliation failure", async ({
+	it("warns after publishing triggers when metrics export reconciliation fails", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -646,8 +647,9 @@ describe("deploy metrics export", () => {
 			)
 		);
 
-		await expect(runWrangler("deploy")).rejects.toThrow(
-			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration."
+		await runWrangler("deploy");
+		expect(std.warn).toContain(
+			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration. Retry the deployment to reconcile the configuration."
 		);
 		expect(attempts).toBe(3);
 		expect(calls).toEqual(["triggers", "metrics", "metrics", "metrics"]);

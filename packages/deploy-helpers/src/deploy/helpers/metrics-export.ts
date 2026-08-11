@@ -72,14 +72,13 @@ export async function reconcileMetricsExportConfig({
 		await postMetricsExportRequester(config, accountId, scriptName, resources);
 	} catch (error) {
 		if (error instanceof UserError && !(error instanceof APIError)) {
-			throw error;
+			logger.warn(
+				`The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration: ${error.message}`
+			);
+			return;
 		}
-		throw new UserError(
-			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration. Retry the deployment to reconcile the configuration.",
-			{
-				cause: error,
-				telemetryMessage: "metrics export reconciliation partial failure",
-			}
+		logger.warn(
+			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration. Retry the deployment to reconcile the configuration."
 		);
 	}
 }
