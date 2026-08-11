@@ -1123,37 +1123,12 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "next",
-			// Default experimental Next.js path: vinext.
-			argv: ["--platform", "workers", "--variant", "vinext"],
+			argv: ["--platform", "workers"],
 			flags: ["--yes"],
 			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			quarantine: !CLOUDFLARE_API_TOKEN,
-			timeout: LONG_TIMEOUT,
-			verifyDeploy: {
-				route: "/",
-				expectedText: "vinext + Cloudflare Workers",
-			},
-			verifyPreview: {
-				previewArgs: ["--inspector-port=0"],
-				route: "/",
-				expectedText: "vinext + Cloudflare Workers",
-			},
-			nodeCompat: true,
-			// vinext does not ship a pre-baked cloudflare-env.d.ts the way the
-			// OpenNext template does.
-			verifyTypes: false,
-		},
-		{
-			name: "next:opennext",
-			// Opt-in OpenNext adapter path under --experimental.
-			argv: ["--platform", "workers", "--variant", "opennext"],
-			flags: ["--yes"],
-			testCommitMessage: true,
-			expectFrameworkCli: false,
 			unsupportedOSs: ["win32"],
 			unsupportedPms: ["npm", "yarn"],
-			// OpenNext template may create an R2 bucket; requires a CF API token.
+			// This test creates an R2 bucket, so it requires a Cloudflare API token.
 			quarantine: !CLOUDFLARE_API_TOKEN,
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
