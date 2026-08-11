@@ -52,7 +52,7 @@ describe("delete", () => {
 			onDelete: () => calls.push("delete"),
 		});
 		await runWrangler("delete --name my-script");
-		expect(calls).toEqual(["clear", "delete"]);
+		expect(calls).toEqual(["delete", "clear"]);
 
 		expect(std).toMatchInlineSnapshot(`
 			{
@@ -68,7 +68,7 @@ describe("delete", () => {
 		`);
 	});
 
-	it("warns and deletes the Worker when metrics export cleanup fails", async ({
+	it("warns after deleting the Worker when metrics export cleanup fails", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -99,8 +99,48 @@ describe("delete", () => {
 		await runWrangler("delete --name my-script");
 		expect(deleteCalled).toBe(true);
 		expect(std.warn).toContain(
-			"Wrangler could not clean up this Worker's metrics export configuration. Continuing to delete the Worker."
+			"The Worker was deleted, but Wrangler could not clean up its metrics export configuration."
 		);
+	});
+
+	it("does not clear metrics export when Worker deletion fails", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			observability: { metrics: { enabled: false } },
+		});
+		mockConfirm({
+			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+			result: true,
+		});
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		mockListKVNamespacesRequest(expect);
+		let cleanupCalled = false;
+		mockClearMetricsExportRequest(() => {
+			cleanupCalled = true;
+		});
+		msw.use(
+			http.delete(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				() =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 1000, message: "delete failed" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 500 }
+					),
+				{ once: true }
+			)
+		);
+
+		await expect(runWrangler("delete --name my-script")).rejects.toThrow(
+			"A request to the Cloudflare API (/accounts/some-account-id/workers/services/my-script) failed."
+		);
+		expect(cleanupCalled).toBe(false);
 	});
 
 	it("deletes without metrics cleanup when metrics are not configured", async ({

@@ -148,22 +148,22 @@ export const deleteCommand = createCommand({
 				return;
 			}
 
-			if (config.observability?.metrics !== undefined) {
-				try {
-					await clearMetricsExportRequester({ config, accountId, scriptName });
-				} catch {
-					logger.warn(
-						"Wrangler could not clean up this Worker's metrics export configuration. Continuing to delete the Worker."
-					);
-				}
-			}
-
 			await fetchResult(
 				config,
 				`/accounts/${accountId}/workers/services/${scriptName}`,
 				{ method: "DELETE" },
 				new URLSearchParams({ force: needsForceDelete.toString() })
 			);
+
+			if (config.observability?.metrics !== undefined) {
+				try {
+					await clearMetricsExportRequester({ config, accountId, scriptName });
+				} catch {
+					logger.warn(
+						"The Worker was deleted, but Wrangler could not clean up its metrics export configuration."
+					);
+				}
+			}
 
 			await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
 
