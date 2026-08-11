@@ -4642,5 +4642,91 @@ describe("wrangler preview", () => {
 			expect(errorMessage).toContain("The Preview was not deleted.");
 			expect(previewDeleted).toBe(false);
 		});
+
+		test("should not delete the preview when listing container applications fails", async ({
+			expect,
+		}) => {
+			mkdirSync("src", { recursive: true });
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let previewDeleted = false;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-list-failure",
+									name: "my-feature",
+									slug: "my-feature",
+									urls: ["https://my-feature.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 200 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json(
+						{ success: false, result: null, errors: [] },
+						{ status: 500 }
+					)
+				),
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						previewDeleted = true;
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+			let errorMessage = "";
+			try {
+				await runWrangler(
+					"preview delete --name my-feature -y --worker-name test-worker"
+				);
+			} catch (e) {
+				errorMessage = (e as Error).message;
+			}
+			expect(errorMessage).toContain(
+				'Could not list the container applications for Preview "my-feature"'
+			);
+			expect(errorMessage).toContain("The Preview was not deleted.");
+			expect(previewDeleted).toBe(false);
+		});
 	});
 });

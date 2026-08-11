@@ -132,9 +132,11 @@ async function applyPreviewContainers(
 /**
  * Delete the Cloudchamber applications for every class currently declared in
  * `previews.containers`, matched by exact name (see `previewContainerAppName`).
- * Failures on individual apps are logged but don't abort the others, so a
- * partial cleanup failure does not prevent the preview itself from being
- * deleted.
+ *
+ * Failing to list the applications throws, because the caller must then keep
+ * the preview alive to preserve the slug that names them. Failing to delete an
+ * application that was successfully listed only warns, since the warning
+ * carries the name and id needed to remove it by hand.
  *
  * Skipped entirely if `previews.containers` is empty, to avoid unnecessary
  * Cloudchamber API calls.
@@ -169,10 +171,13 @@ export async function deletePreviewContainers(
 			message: "Listing preview container applications",
 		});
 	} catch (error) {
-		logger.warn(
-			`Failed to list preview container applications for cleanup: ${error instanceof Error ? error.message : String(error)}`
+		throw new UserError(
+			`Could not list the container applications for Preview "${previewSlug}": ${error instanceof Error ? error.message : String(error)}\n` +
+				`The Preview was not deleted. Its slug is the only thing that names those applications, so deleting it now would leave them running and billable with no way to find them. Please retry.`,
+			{
+				telemetryMessage: "preview delete container application list failed",
+			}
 		);
-		return;
 	}
 
 	const matches = apps.filter((app) => expectedNames.has(app.name));

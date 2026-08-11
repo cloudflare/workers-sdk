@@ -788,6 +788,13 @@ export async function previewDelete(
 					previewResource.slug
 				);
 			} catch (error) {
+				// A UserError is the cleanup deliberately reporting that it could not
+				// account for the applications, which means the preview has to survive
+				// to keep its slug. Any other error is unexpected and should not stop
+				// the user from deleting their preview.
+				if (error instanceof UserError) {
+					throw error;
+				}
 				logger.warn(
 					`Failed to clean up preview container applications: ${error instanceof Error ? error.message : String(error)}`
 				);
