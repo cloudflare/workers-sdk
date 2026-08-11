@@ -2222,36 +2222,50 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export default class extends WorkerEntrypoint {
 					tail() {}
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 		await remote.ready;
 
 		const logs: string[] = [];
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			tails: ["remote-worker"],
-			compatibilityFlags: ["experimental"],
-			modules: true,
 			handleStructuredLogs: ({ message }) => void logs.push(message),
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					fetch() {
 						console.log("tail me");
 						return new Response("ok");
 					}
 				}
-			`,
+			`),
+						tailConsumers: [{ workerName: "remote-worker" }],
+					},
+				},
+			],
 		});
 		useDispose(local);
 		await local.ready;
