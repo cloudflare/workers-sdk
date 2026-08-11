@@ -1458,7 +1458,6 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected "observability.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.traces.enabled" to be of type boolean but got "INVALID".
-				  - Expected "observability.metrics.enabled" to be of type boolean but got undefined.
 				  - Expected "observability.head_sampling_rate" to be of type number but got "INVALID".
 				  - Expected "observability.logs.enabled" to be of type boolean but got "INVALID".
 				  - Expected "observability.logs.head_sampling_rate" to be of type number but got "INVALID".
@@ -10208,6 +10207,26 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.metrics.enabled" is required.
 					  - Expected "observability.head_sampling_rate" to be of type number but got true."
+				`);
+			});
+
+			it("should not report absent observability options as invalid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: "INVALID",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "observability.enabled" to be of type boolean but got "INVALID"."
 				`);
 			});
 
