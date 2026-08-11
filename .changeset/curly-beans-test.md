@@ -17,7 +17,7 @@ const server = createTestHarness({
 	workers: [
 		{
 			configPath: "./wrangler.jsonc",
-			outDir: "./worker-output",
+			prebuiltWorkerDir: "./worker-output",
 		},
 	],
 });

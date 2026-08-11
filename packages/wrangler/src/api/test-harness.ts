@@ -417,10 +417,10 @@ type WorkerInput =
 			 * wrangler deploy --dry-run --env test --outdir ./worker-output
 			 * ```
 			 * ```ts
-			 * { configPath: "./wrangler.jsonc", env: "test", outDir: "./worker-output" }
+			 * { configPath: "./wrangler.jsonc", env: "test", prebuiltWorkerDir: "./worker-output" }
 			 * ```
 			 */
-			outDir?: string | URL;
+			prebuiltWorkerDir?: string | URL;
 			/**
 			 * Test-only vars that override vars from the Wrangler config.
 			 */
@@ -545,18 +545,18 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		}
 
 		const configPath = resolvePath(root, input.configPath);
-		if (input.outDir === undefined) {
+		if (input.prebuiltWorkerDir === undefined) {
 			return configPath;
 		}
 
 		const config = readConfig({ config: configPath, env: input.env });
-		const outDir = resolvePath(root, input.outDir);
+		const prebuiltWorkerDir = resolvePath(root, input.prebuiltWorkerDir);
 		let main = config.main;
 		if (main !== undefined) {
 			const outputFileName = config.no_bundle
 				? path.basename(main)
 				: `${path.parse(main).name}.js`;
-			main = path.join(outDir, outputFileName);
+			main = path.join(prebuiltWorkerDir, outputFileName);
 			if (!fs.existsSync(main)) {
 				const envOption = input.env
 					? ` --env ${JSON.stringify(input.env)}`
@@ -566,9 +566,9 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						? input.configPath
 						: path.relative(root, configPath) || ".";
 				const commandOutDir =
-					typeof input.outDir === "string"
-						? input.outDir
-						: path.relative(root, outDir) || ".";
+					typeof input.prebuiltWorkerDir === "string"
+						? input.prebuiltWorkerDir
+						: path.relative(root, prebuiltWorkerDir) || ".";
 				const commandEntrypoint = path.join(commandOutDir, outputFileName);
 				throw new UserError(
 					`Could not find the prebuilt Worker entrypoint at "${commandEntrypoint}". From the test harness root, run \`wrangler deploy --dry-run --config ${JSON.stringify(commandConfigPath)}${envOption} --outdir ${JSON.stringify(commandOutDir)}\` before starting the test harness.`,
@@ -580,7 +580,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return {
 			...config,
 			main,
-			base_dir: outDir,
+			base_dir: prebuiltWorkerDir,
 			no_bundle: true,
 			find_additional_modules: true,
 			build: { ...config.build, command: undefined },

@@ -156,7 +156,9 @@ describe("createTestHarness", () => {
 				{
 					configPath: "./wrangler.jsonc",
 					env: "test",
-					outDir: pathToFileURL(path.join(helper.tmpPath, "worker-output")),
+					prebuiltWorkerDir: pathToFileURL(
+						path.join(helper.tmpPath, "worker-output")
+					),
 				},
 			],
 		});
@@ -203,7 +205,7 @@ describe("createTestHarness", () => {
 			workers: [
 				{
 					configPath: "./wrangler.jsonc",
-					outDir: "./missing-output",
+					prebuiltWorkerDir: "./missing-output",
 				},
 			],
 		});
