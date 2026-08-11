@@ -1,5 +1,13 @@
 # @cloudflare/config
 
+## 0.5.0
+
+### Minor Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Export binding and export schemas
+
+  `@cloudflare/config` now exports individual binding and export schemas, plus `validateSingletonBindings`, for callers that need to compose the Worker config schema.
+
 ## 0.4.0
 
 ### Minor Changes

@@ -1,5 +1,46 @@
 # @cloudflare/workers-utils
 
+## 0.31.2
+
+### Patch Changes
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- [#15011](https://github.com/cloudflare/workers-sdk/pull/15011) [`6946da1`](https://github.com/cloudflare/workers-sdk/commit/6946da1123f3c8484af80ec4f5426c5fe0bbdb34) Thanks [@LeSingh1](https://github.com/LeSingh1)! - Validate `observability.logs.head_sampling_rate` and `observability.traces.head_sampling_rate` are between 0 and 1
+
+  The 0–1 range check was only applied to the top level `observability.head_sampling_rate`. The two nested fields were type-checked as numbers but never bounds-checked, so a value such as `10` (a common mix-up with a percentage) was accepted locally and sent to the API.
+
+  ```jsonc
+  {
+    "observability": {
+      "logs": { "enabled": true, "head_sampling_rate": 10 }
+    }
+  }
+  ```
+
+  All three fields now report `must be a value between 0 and 1.` consistently.
+
+## 0.31.1
+
+### Patch Changes
+
+- [#15009](https://github.com/cloudflare/workers-sdk/pull/15009) [`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2) Thanks [@LeSingh1](https://github.com/LeSingh1)! - Use the inherited Worker name when generating container names in named environments
+
+  When `containers` is declared inside a named environment and the container has no explicit `name`, the default container name was built from the environment's own `name` field. `name` is inheritable, so an environment that doesn't redeclare it left that value `undefined`, producing the error `Must have either a top level "name" and "containers.class_name" field defined, or have field "containers.name" defined.` even though a top level `name` was set — and, if the error was ignored, a container named `undefined-<class_name>-<env>`.
+
+  ```jsonc
+  {
+    "name": "my-worker",
+    "env": {
+      "staging": {
+        "containers": [{ "class_name": "MyContainer", "image": "./Dockerfile" }]
+      }
+    }
+  }
+  ```
+
+  `wrangler deploy --env staging` on the configuration above now generates `my-worker-mycontainer-staging`, matching the documented `worker_name-class_name[-env_name]` default. A `name` declared on the environment still takes precedence over the top level one.
+
 ## 0.31.0
 
 ### Minor Changes

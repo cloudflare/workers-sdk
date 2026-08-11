@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { Miniflare, type WorkerOptions } from "miniflare";
 import { describe, test } from "vitest";
 import { OBSERVABILITY_COLLECTOR_SERVICE_NAME } from "../../../src/plugins/core/constants";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 
 // Local observability wiring.
 //
@@ -16,10 +16,12 @@ import { useDispose } from "../../test-shared";
 
 function plainWorker(script: string): WorkerOptions {
 	return {
-		name: "user",
-		modules: true,
-		compatibilityDate: "2026-06-01",
-		script,
+		config: {
+			type: "worker",
+			name: "user",
+			compatibilityDate: "2026-06-01",
+			manifest: singleModuleManifest(script),
+		},
 	};
 }
 
@@ -179,6 +181,19 @@ export default {
 			});
 			return new Response("closed");
 		}
+		if (url.pathname === "/repersist") {
+			const store = env.TRACE_STORE.get(env.TRACE_STORE.idFromName("singleton"));
+			// The same span re-sent as a later batch flush would send it: still
+			// running on the first call, closed on the second.
+			await store.persist([{
+				traceId: "trace-re", spanId: "root", parentId: null,
+				name: "agent run", kind: "http", startMs: 7000,
+				durationMs: url.searchParams.get("close") ? 2500 : null,
+				outcome: url.searchParams.get("close") ? "ok" : null,
+				error: null, attributes: { "faas.trigger": "http" },
+			}], []);
+			return new Response("repersisted");
+		}
 		if (url.pathname.startsWith("/wobs/")) {
 			return env.WOBS.fetch(
 				new Request("http://collector" + url.pathname.slice("/wobs".length) + url.search, request)
@@ -190,19 +205,25 @@ export default {
 
 function storeWorker(): WorkerOptions {
 	return {
-		name: "user",
-		modules: true,
-		compatibilityDate: "2026-06-01",
-		script: STORE_HARNESS,
-		// Bind the collector's internal TraceStore DO (cross-script) to seed it,
-		// and the collector service to read it back through the HTTP read API.
-		durableObjects: {
-			TRACE_STORE: {
-				className: "TraceStore",
-				scriptName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+		config: {
+			type: "worker",
+			name: "user",
+			compatibilityDate: "2026-06-01",
+			manifest: singleModuleManifest(STORE_HARNESS),
+			// Bind the collector's internal TraceStore DO (cross-script) to seed it,
+			// and the collector service to read it back through the HTTP read API.
+			env: {
+				TRACE_STORE: {
+					type: "durable-object",
+					workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+					exportName: "TraceStore",
+				},
+				WOBS: {
+					type: "worker",
+					workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+				},
 			},
 		},
-		serviceBindings: { WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME } },
 	};
 }
 
@@ -370,6 +391,54 @@ describe("unsafeObservability (write-through capture)", () => {
 		expect(rootClosed.duration_ms).toBe(1234);
 		expect(JSON.parse(rootClosed.attributes ?? "{}")["cpu_time_ms"]).toBe(2);
 	});
+
+	test("re-persisting a span updates it without re-stamping created_at", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			workers: [storeWorker()],
+		});
+		useDispose(mf);
+
+		async function readRe() {
+			const rows = await queryStore(
+				mf,
+				`SELECT duration_ms, outcome, created_at FROM spans
+					WHERE trace_id = ? AND span_id = 'root'`,
+				["trace-re"]
+			);
+			assert(rows[0], "expected the re-persisted span");
+			return rows[0] as {
+				duration_ms: number | null;
+				outcome: string | null;
+				created_at: string;
+			};
+		}
+
+		expect(
+			await (await mf.dispatchFetch("http://localhost/repersist")).text()
+		).toBe("repersisted");
+		const open = await readRe();
+		expect(open.duration_ms).toBe(null);
+
+		// `created_at` defaults to `datetime('now')`, which has whole-second
+		// granularity, so wait long enough that a re-stamp would be visible.
+		await new Promise((resolve) => setTimeout(resolve, 1100));
+
+		expect(
+			await (
+				await mf.dispatchFetch("http://localhost/repersist?close=1")
+			).text()
+		).toBe("repersisted");
+		const closed = await readRe();
+		// The update landed...
+		expect(closed.duration_ms).toBe(2500);
+		expect(closed.outcome).toBe("ok");
+		// ...but the row was upserted, not deleted and re-inserted, so the trace
+		// list still shows when the invocation started rather than when it ended.
+		expect(closed.created_at).toBe(open.created_at);
+	});
 });
 
 // A plain user worker (no manual seeding): it does some work, logs, and proxies
@@ -396,12 +465,19 @@ const CAPTURE_WORKER = `export default {
 
 function captureWorker(): WorkerOptions {
 	return {
-		name: "user",
-		modules: true,
-		compatibilityDate: "2026-06-01",
-		script: CAPTURE_WORKER,
-		kvNamespaces: { CACHE: "cache-namespace" },
-		serviceBindings: { WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME } },
+		config: {
+			type: "worker",
+			name: "user",
+			compatibilityDate: "2026-06-01",
+			manifest: singleModuleManifest(CAPTURE_WORKER),
+			env: {
+				CACHE: { type: "kv", id: "cache-namespace" },
+				WOBS: {
+					type: "worker",
+					workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+				},
+			},
+		},
 	};
 }
 
@@ -530,21 +606,30 @@ const UPSTREAM_WORKER = `export default {
 function multiWorkerSetup(): WorkerOptions[] {
 	return [
 		{
-			name: "upstream",
-			modules: true,
-			compatibilityDate: "2026-06-01",
-			script: UPSTREAM_WORKER,
-			serviceBindings: {
-				DOWNSTREAM: "downstream",
-				WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME },
+			config: {
+				type: "worker",
+				name: "upstream",
+				compatibilityDate: "2026-06-01",
+				manifest: singleModuleManifest(UPSTREAM_WORKER),
+				env: {
+					DOWNSTREAM: { type: "worker", workerName: "downstream" },
+					WOBS: {
+						type: "worker",
+						workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+					},
+				},
 			},
 		},
 		{
-			name: "downstream",
-			modules: true,
-			compatibilityDate: "2026-06-01",
-			script: DOWNSTREAM_WORKER,
-			kvNamespaces: { CACHE: "cache-namespace" },
+			config: {
+				type: "worker",
+				name: "downstream",
+				compatibilityDate: "2026-06-01",
+				manifest: singleModuleManifest(DOWNSTREAM_WORKER),
+				env: {
+					CACHE: { type: "kv", id: "cache-namespace" },
+				},
+			},
 		},
 	];
 }
@@ -592,17 +677,28 @@ describe("unsafeObservability (workflows)", () => {
 	}) => {
 		const mf = new Miniflare({
 			unsafeObservability: true,
-			name: "wf-user",
-			modules: true,
-			compatibilityDate: "2026-06-01",
-			script: WORKFLOW_CAPTURE_WORKER,
-			workflows: {
-				CAPTURE_WORKFLOW: {
-					className: "CaptureWorkflow",
-					name: "capture-workflow",
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "wf-user",
+						compatibilityDate: "2026-06-01",
+						manifest: singleModuleManifest(WORKFLOW_CAPTURE_WORKER),
+						env: {
+							CAPTURE_WORKFLOW: {
+								type: "workflow",
+								name: "capture-workflow",
+								workerName: "wf-user",
+								exportName: "CaptureWorkflow",
+							},
+							WOBS: {
+								type: "worker",
+								workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+							},
+						},
+					},
 				},
-			},
-			serviceBindings: { WOBS: { name: OBSERVABILITY_COLLECTOR_SERVICE_NAME } },
+			],
 		});
 		useDispose(mf);
 

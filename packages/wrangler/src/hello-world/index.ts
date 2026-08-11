@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { createCommand, createNamespace } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
@@ -24,16 +24,18 @@ export async function usingLocalHelloWorldBinding<T>(
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
 	const resourcePersistencePath = getDefaultPersistRoot(persist);
-	const mf = new Miniflare({
-		script:
-			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		resourcePersistencePath,
-		helloWorld: {
-			BINDING: {
-				enable_timer: false,
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			script:
+				'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+			resourcePersistencePath,
+			helloWorld: {
+				BINDING: {
+					enable_timer: false,
+				},
 			},
-		},
-	});
+		})
+	);
 	const binding = await mf.getHelloWorldBinding("BINDING");
 	try {
 		return await closure(binding);

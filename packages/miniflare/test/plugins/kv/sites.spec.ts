@@ -4,7 +4,7 @@ import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
 import { beforeAll, type ExpectStatic, test } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../fixtures/sites");
 const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
@@ -73,9 +73,21 @@ async function testGet(
 	}
 
 	const mf = new Miniflare({
-		...opts.options,
-		scriptPath: ctx.serviceWorkerPath,
-		sitePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: {
+					serviceWorkerScript: await fs.readFile(ctx.serviceWorkerPath, "utf8"),
+					sitePath: tmp,
+					siteInclude: opts.options.siteInclude,
+					siteExclude: opts.options.siteExclude,
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -122,9 +134,20 @@ async function testMatch(expect: ExpectStatic, include: string) {
 	await fs.mkdir(dir, { recursive: true });
 	await fs.writeFile(path.join(dir, "test.txt"), "test", "utf8");
 	const mf = new Miniflare({
-		siteInclude: [include],
-		scriptPath: ctx.serviceWorkerPath,
-		sitePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: {
+					serviceWorkerScript: await fs.readFile(ctx.serviceWorkerPath, "utf8"),
+					sitePath: tmp,
+					siteInclude: [include],
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost:8787/a/b/c/test.txt");
@@ -154,8 +177,19 @@ test("doesn't cache assets", async ({ expect }) => {
 	await fs.writeFile(testPath, "1", "utf8");
 
 	const mf = new Miniflare({
-		scriptPath: ctx.serviceWorkerPath,
-		sitePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: {
+					serviceWorkerScript: await fs.readFile(ctx.serviceWorkerPath, "utf8"),
+					sitePath: tmp,
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -174,11 +208,22 @@ test("gets assets with module worker", async ({ expect }) => {
 	const testPath = path.join(tmp, "test.txt");
 	await fs.writeFile(testPath, "test", "utf8");
 	const mf = new Miniflare({
-		// TODO(soon): use `scriptPath` and `modules: true` once
-		//  https://github.com/cloudflare/miniflare/pull/631 merged
-		modulesRoot: path.dirname(ctx.modulesPath),
-		modules: [{ type: "ESModule", path: ctx.modulesPath }],
-		sitePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						await fs.readFile(ctx.modulesPath, "utf8"),
+						{ mainModule: "modules.js" }
+					),
+				},
+				legacy: {
+					sitePath: tmp,
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost:8787/test.txt");
@@ -191,8 +236,19 @@ test("gets assets with percent-encoded paths", async ({ expect }) => {
 	const testPath = path.join(tmp, "ń.txt");
 	await fs.writeFile(testPath, "test", "utf8");
 	const mf = new Miniflare({
-		scriptPath: ctx.serviceWorkerPath,
-		sitePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: {
+					serviceWorkerScript: await fs.readFile(ctx.serviceWorkerPath, "utf8"),
+					sitePath: tmp,
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost:8787/ń.txt");
@@ -212,9 +268,23 @@ test.skipIf(process.platform === "win32")(
 		await fs.writeFile(path.join(tmp, "a", "b", "c", "6.txt"), "six");
 		await fs.writeFile(path.join(tmp, "a", "b", "c", "7.txt"), "seven");
 		const mf = new Miniflare({
-			scriptPath: ctx.serviceWorkerPath,
-			sitePath: tmp,
-			siteExclude: ["**/5.txt"],
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: {
+						serviceWorkerScript: await fs.readFile(
+							ctx.serviceWorkerPath,
+							"utf8"
+						),
+						sitePath: tmp,
+						siteExclude: ["**/5.txt"],
+					},
+				},
+			],
 		});
 		useDispose(mf);
 

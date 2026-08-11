@@ -5,7 +5,11 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
-import { disposeWithRetry, waitForWorkersInRegistry } from "../../test-shared";
+import {
+	disposeWithRetry,
+	singleModuleManifest,
+	waitForWorkersInRegistry,
+} from "../../test-shared";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
@@ -38,60 +42,76 @@ describe("Cross-process aggregation", () => {
 		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-"));
 
 		instanceA = new Miniflare({
-			name: "worker-a",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `
+			unsafeLocalExplorer: true,
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-a",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(`
 				export class MyDO {
 					constructor(state) { this.state = state; }
 					async fetch() { return new Response("DO A"); }
 				}
 				export default { fetch() { return new Response("Worker A"); } }
-			`,
-			unsafeLocalExplorer: true,
-			unsafeDevRegistryPath: registryPath,
-			kvNamespaces: {
-				KV_A_1: "kv-a-1",
-				KV_A_2: "kv-a-2",
-			},
-			d1Databases: {
-				DB_A: "db-a",
-			},
-			durableObjects: {
-				MY_DO: "MyDO",
-			},
-			r2Buckets: {
-				BUCKET_A: "bucket-a",
-			},
+			`),
+						env: {
+							KV_A_1: { type: "kv", id: "kv-a-1" },
+							KV_A_2: { type: "kv", id: "kv-a-2" },
+							DB_A: { type: "d1", id: "db-a" },
+							MY_DO: {
+								type: "durable-object",
+								workerName: "worker-a",
+								exportName: "MyDO",
+							},
+							BUCKET_A: { type: "r2", name: "bucket-a" },
+						},
+						exports: {
+							MyDO: { type: "durable-object", storage: "legacy-kv" },
+						},
+					},
+				},
+			],
 		});
 
 		instanceB = new Miniflare({
-			name: "worker-b",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `
+			unsafeLocalExplorer: true,
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-b",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(`
 				export class OtherDO {
 					constructor(state) { this.state = state; }
 					async fetch() { return new Response("DO B"); }
 				}
 				export default { fetch() { return new Response("Worker B"); } }
-			`,
-			unsafeLocalExplorer: true,
-			unsafeDevRegistryPath: registryPath,
-			kvNamespaces: {
-				KV_B_1: "kv-b-1",
-			},
-			d1Databases: {
-				DB_B: "db-b",
-			},
-			durableObjects: {
-				OTHER_DO: "OtherDO",
-			},
-			r2Buckets: {
-				BUCKET_B: "bucket-b",
-			},
+			`),
+						env: {
+							KV_B_1: { type: "kv", id: "kv-b-1" },
+							DB_B: { type: "d1", id: "db-b" },
+							OTHER_DO: {
+								type: "durable-object",
+								workerName: "worker-b",
+								exportName: "OtherDO",
+							},
+							BUCKET_B: { type: "r2", name: "bucket-b" },
+						},
+						exports: {
+							OtherDO: { type: "durable-object", storage: "legacy-kv" },
+						},
+					},
+				},
+			],
 		});
 		await instanceA.ready;
 		await instanceB.ready;
@@ -405,16 +425,25 @@ describe("Multi-worker peer deduplication", () => {
 		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-multiworker-"));
 
 		instanceA = new Miniflare({
-			name: "worker-a",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("Worker A"); } }`,
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
-			kvNamespaces: {
-				KV_A: "kv-a",
-			},
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-a",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker A"); } }`
+						),
+						env: {
+							KV_A: { type: "kv", id: "kv-a" },
+						},
+					},
+				},
+			],
 		});
 		await instanceA.ready;
 
@@ -422,24 +451,35 @@ describe("Multi-worker peer deduplication", () => {
 		// Both register in the dev registry with the same host:port
 		instanceB = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
-					name: "worker-b1",
-					modules: true,
-					script: `export default { fetch() { return new Response("Worker B1"); } }`,
-					kvNamespaces: {
-						KV_B1: "kv-b1",
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-b1",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker B1"); } }`
+						),
+						env: {
+							KV_B1: { type: "kv", id: "kv-b1" },
+						},
 					},
 				},
 				{
-					name: "worker-b2",
-					modules: true,
-					script: `export default { fetch() { return new Response("Worker B2"); } }`,
-					kvNamespaces: {
-						KV_B2: "kv-b2",
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-b2",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker B2"); } }`
+						),
+						env: {
+							KV_B2: { type: "kv", id: "kv-b2" },
+						},
 					},
 				},
 			],
@@ -509,46 +549,62 @@ describe("Same ID across multiple instances with different persistence directori
 		// Helpfully, DOs require you to specify a script name, which explicitly
 		// ties it to a specific instance.
 		instanceA = new Miniflare({
-			name: "worker-a",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("Worker A"); } }`,
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
-			kvNamespaces: {
-				MY_KV: "shared-kv-id",
-			},
-			d1Databases: {
-				MY_DB: "shared-db-id",
-			},
-			durableObjects: {
-				MY_DO: {
-					className: "MyDO",
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-a",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker A"); } }`
+						),
+						env: {
+							MY_KV: { type: "kv", id: "shared-kv-id" },
+							MY_DB: { type: "d1", id: "shared-db-id" },
+							MY_DO: {
+								type: "durable-object",
+								workerName: "worker-a",
+								exportName: "MyDO",
+							},
+						},
+						exports: {
+							MyDO: { type: "durable-object", storage: "legacy-kv" },
+						},
+					},
 				},
-			},
+			],
 		});
 
 		instanceB = new Miniflare({
-			name: "worker-b",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("Worker B"); } }`,
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
-			kvNamespaces: {
-				MY_KV: "shared-kv-id",
-			},
-			d1Databases: {
-				MY_DB: "shared-db-id",
-			},
-			durableObjects: {
-				MY_DO: {
-					className: "MyDO",
-					scriptName: "worker-a",
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-b",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker B"); } }`
+						),
+						env: {
+							MY_KV: { type: "kv", id: "shared-kv-id" },
+							MY_DB: { type: "d1", id: "shared-db-id" },
+							MY_DO: {
+								type: "durable-object",
+								workerName: "worker-a",
+								exportName: "MyDO",
+							},
+						},
+					},
 				},
-			},
+			],
 		});
 
 		await instanceA.ready;
@@ -626,17 +682,26 @@ describe("Same ID across multiple instances with same persistence directories", 
 		// Helpfully, DOs require you to specify a script name, which explicitly
 		// ties it to a specific instance.
 		instanceA = new Miniflare({
-			name: "worker-a",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("Worker A"); } }`,
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
 			resourcePersistencePath: persistencePath,
-			kvNamespaces: {
-				MY_KV: "shared-kv-id",
-			},
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-a",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker A"); } }`
+						),
+						env: {
+							MY_KV: { type: "kv", id: "shared-kv-id" },
+						},
+					},
+				},
+			],
 		});
 
 		// Wait for instanceA to be ready before starting instanceB to avoid
@@ -645,17 +710,26 @@ describe("Same ID across multiple instances with same persistence directories", 
 		await instanceA.ready;
 
 		instanceB = new Miniflare({
-			name: "worker-b",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("Worker B"); } }`,
 			unsafeLocalExplorer: true,
 			unsafeDevRegistryPath: registryPath,
 			resourcePersistencePath: persistencePath,
-			kvNamespaces: {
-				MY_KV: "shared-kv-id",
-			},
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-b",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker B"); } }`
+						),
+						env: {
+							MY_KV: { type: "kv", id: "shared-kv-id" },
+						},
+					},
+				},
+			],
 		});
 
 		await instanceB.ready;

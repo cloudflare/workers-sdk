@@ -1,5 +1,37 @@
 # @cloudflare/workers-auth
 
+## 0.6.1
+
+### Patch Changes
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- Updated dependencies [[`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25), [`6946da1`](https://github.com/cloudflare/workers-sdk/commit/6946da1123f3c8484af80ec4f5426c5fe0bbdb34)]:
+  - @cloudflare/workers-utils@0.31.2
+
+## 0.6.0
+
+### Minor Changes
+
+- [#14064](https://github.com/cloudflare/workers-sdk/pull/14064) [`a9e5abb`](https://github.com/cloudflare/workers-sdk/commit/a9e5abb8c0c2e7895b0bb09c6c8e8ffd3dbc3bc0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for OAuth 2.0 Device Authorization Grant to `wrangler login`
+
+  Run `wrangler login --device` to authenticate without a local callback server. Useful in containers, remote SSH sessions, Codespaces, and any other environment where `localhost:8976` is unreachable from your browser.
+
+  The new flow:
+
+  - prints the verification URL and user code to the terminal,
+  - attempts to open the verification URL in your default browser automatically (suppressed via `--browser=false`),
+  - and polls the token endpoint until you approve the request (with a 5-minute hard cap).
+
+  The verification URL is supplied by the authorization server, so it is rejected unless it is an `https` URL on the same auth domain the device code was requested from — it is never printed or opened otherwise.
+
+  `--callback-host` and `--callback-port` cannot be combined with `--device`, since this flow does not start a local callback server.
+
+### Patch Changes
+
+- Updated dependencies [[`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2)]:
+  - @cloudflare/workers-utils@0.31.1
+
 ## 0.5.6
 
 ### Patch Changes

@@ -7,6 +7,7 @@ import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
+	singleModuleManifest,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
@@ -418,9 +419,17 @@ test("operations persist cached data", async ({ expect }) => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
-		modules: true,
-		script: "",
 		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
 	};
 	let mf = new Miniflare(opts);
 	useDispose(mf);
@@ -455,7 +464,18 @@ test("operations persist cached data", async ({ expect }) => {
 });
 test("operations are no-ops when caching disabled", async ({ expect }) => {
 	// Set option, then reset after test
-	await ctx.setOptions({ cacheAPI: false });
+	await ctx.setOptions({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				dev: { cacheAPI: false },
+			},
+		],
+	});
 	onTestFinished(() => ctx.setOptions({}));
 	ctx.caches = await ctx.mf.getCaches();
 

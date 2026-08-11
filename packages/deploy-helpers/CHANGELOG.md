@@ -1,5 +1,32 @@
 # @cloudflare/deploy-helpers
 
+## 0.6.7
+
+### Patch Changes
+
+- Updated dependencies [[`6dbd192`](https://github.com/cloudflare/workers-sdk/commit/6dbd192f1f3e4899789cd327231ba838c90bb0d5), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3)]:
+  - miniflare@5.20260804.0-alpha
+
+## 0.6.6
+
+### Patch Changes
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- Updated dependencies [[`b4f0c97`](https://github.com/cloudflare/workers-sdk/commit/b4f0c9760bcab1e04cf1a9c8859feed8b4fc6487), [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25), [`a60ff4d`](https://github.com/cloudflare/workers-sdk/commit/a60ff4dea0bbae8775726d9cf885655b56460a30), [`6946da1`](https://github.com/cloudflare/workers-sdk/commit/6946da1123f3c8484af80ec4f5426c5fe0bbdb34), [`99eb50c`](https://github.com/cloudflare/workers-sdk/commit/99eb50ce1d3420a50ae0e95958bf49d65874706e)]:
+  - miniflare@5.20260801.1-alpha
+  - @cloudflare/workers-utils@0.31.2
+  - @cloudflare/cli-shared-helpers@0.1.21
+
+## 0.6.5
+
+### Patch Changes
+
+- Updated dependencies [[`b5c083b`](https://github.com/cloudflare/workers-sdk/commit/b5c083bf601d71bad82ccc044df55ba4584085e2), [`9c74538`](https://github.com/cloudflare/workers-sdk/commit/9c7453837e3293787c0cb1778520f630aea7e5ca), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c), [`daf65f2`](https://github.com/cloudflare/workers-sdk/commit/daf65f28cecf35e251dc6e476d5bbd82972d68de)]:
+  - @cloudflare/workers-utils@0.31.1
+  - miniflare@5.20260801.0-alpha
+  - @cloudflare/cli-shared-helpers@0.1.20
+
 ## 0.6.4
 
 ### Patch Changes

@@ -1,5 +1,133 @@
 # miniflare
 
+## 5.20260804.0-alpha
+
+### Major Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Replace Miniflare's options API with Cloudflare config-based worker options
+
+  `new Miniflare()` and `setOptions()` now require a `workers` array of worker entries. Binding, service, tail, remote, asset, workflow, unsafe binding, and other worker configuration now follows the schemas in `packages/miniflare/src/config/schema.ts`.
+
+  The previous flat options shape is no longer accepted directly. Existing v4-shaped options can be migrated with `convertV4MiniflareOptions()`.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Change the Miniflare plugin API
+
+  Plugins now receive parsed Miniflare worker and instance config instead of per-plugin option slices. Per-plugin option schema exports have been removed; unsafe plugin authors should read bindings, exports, and triggers from the parsed config passed to plugin hooks.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove automatic module graph discovery
+
+  Miniflare no longer discovers Worker modules from `modules: true` and `modulesRules`. Module workers must provide their module graph through the config manifest. Existing v4-shaped options can be migrated with `convertV4MiniflareOptions()`, but `modulesRules` cannot be converted without losing behavior.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove internal or redundant options from Miniflare's config
+
+  Miniflare no longer accepts service designator objects such as `{ network }`, `{ external }`, and `{ disk }` on `outboundService`, `tails`, or `streamingTails`.
+
+  Miniflare also no longer supports `unsafeExcludeFromObservability`, which has been dropped in favour of `unsafeRegisterWorker`.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove support for legacy alpha D1 (`__D1_BETA__`) bindings
+
+  Miniflare no longer supports deprecated beta D1 instances created before `wrangler@3.3.0`.
+
+### Minor Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `convertV4MiniflareOptions` for migrating Miniflare v4 options
+
+  You can now convert v4-shaped Miniflare options to the config-based `workers` shape before creating or updating a Miniflare instance. Some v4 options cannot be converted without losing behavior and will throw an error instead.
+
+### Patch Changes
+
+- [#15072](https://github.com/cloudflare/workers-sdk/pull/15072) [`6dbd192`](https://github.com/cloudflare/workers-sdk/commit/6dbd192f1f3e4899789cd327231ba838c90bb0d5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260801.1 | ^5.20260804.1 |
+  | workerd                   | 1.20260801.1  | 1.20260804.1  |
+
+## 5.20260801.1-alpha
+
+### Minor Changes
+
+- [#15040](https://github.com/cloudflare/workers-sdk/pull/15040) [`99eb50c`](https://github.com/cloudflare/workers-sdk/commit/99eb50ce1d3420a50ae0e95958bf49d65874706e) Thanks [@edmundhung](https://github.com/edmundhung)! - Add an option to disable dev registry registration
+
+  Set `unsafeRegisterWorker` to `false` to prevent a Miniflare worker from being advertised in the dev registry. Workers continue to be registered by default.
+
+### Patch Changes
+
+- [#15037](https://github.com/cloudflare/workers-sdk/pull/15037) [`b4f0c97`](https://github.com/cloudflare/workers-sdk/commit/b4f0c9760bcab1e04cf1a9c8859feed8b4fc6487) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Stop deleting and recreating every dev registry entry on each config update
+
+  Applying options rewrote this instance's dev registry entries by removing them and putting them straight back. Other dev sessions find Workers by watching that directory, so each update briefly looked to them like every Worker in the session had gone away — and a session that had already resolved one of those Workers could be left acting on that, up to and including tearing down a binding to a Worker that never actually stopped running.
+
+  Entries are now reconciled instead: Workers that are still present are updated in place, and only the ones that have genuinely gone are removed. Switching to a different registry path still clears the entries from the directory being left behind.
+
+- [#15013](https://github.com/cloudflare/workers-sdk/pull/15013) [`8cf78c8`](https://github.com/cloudflare/workers-sdk/commit/8cf78c83cb4c64be8b458d7bd618b47e7c6e7d25) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update undici from 7.28.0 to 7.29.0
+
+- [#15015](https://github.com/cloudflare/workers-sdk/pull/15015) [`a60ff4d`](https://github.com/cloudflare/workers-sdk/commit/a60ff4dea0bbae8775726d9cf885655b56460a30) Thanks [@nickpatt](https://github.com/nickpatt)! - Cut the per-request cost of local observability capture
+
+  Every tail event was written to the trace store as its own Durable Object call, so a request paid two or three round-trips per span. On a module-heavy app under the Vite plugin that dominated dev request latency. Rows are now buffered and written in batches, taking a request from roughly thirty calls to three.
+
+  Work in progress still shows up as it happens: the root span is written immediately, console logs and exceptions as they arrive, and a span's completion is written on the next event once 100ms has passed. An invocation that goes completely quiet writes nothing further until it ends, since the flush is driven by tail events rather than a timer.
+
+  The Vite plugin's own router, asset and proxy workers are also no longer captured. Their traces were noise the Observability views already hid, and skipping them cuts the spans recorded per request — a side benefit being that a trace's root is now your Worker rather than `__router-worker__`.
+
+## 5.20260801.0-alpha
+
+### Patch Changes
+
+- [#14984](https://github.com/cloudflare/workers-sdk/pull/14984) [`9c74538`](https://github.com/cloudflare/workers-sdk/commit/9c7453837e3293787c0cb1778520f630aea7e5ca) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260730.1 | ^5.20260731.1 |
+  | workerd                   | 1.20260730.1  | 1.20260731.1  |
+
+- [#15012](https://github.com/cloudflare/workers-sdk/pull/15012) [`0d33cb8`](https://github.com/cloudflare/workers-sdk/commit/0d33cb8dfb1d6289cb180f16e0e60cd7073a1b1b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260731.1 | ^5.20260801.1 |
+  | workerd                   | 1.20260731.1  | 1.20260801.1  |
+
+- [#14968](https://github.com/cloudflare/workers-sdk/pull/14968) [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix local rate limiting being disabled entirely when bindings share a `namespace_id` but use different periods
+
+  The emulated Ratelimit binding tracked one counter per key per namespace, ignoring the period. Two bindings pointing at the same `namespace_id` with different `simple.period` values therefore overwrote each other's counter on every call — each one seeing a window it did not recognise, and so resetting the count to zero — with the result that neither binding ever limited anything:
+
+  ```jsonc
+  {
+    "ratelimits": [
+      {
+        "name": "BURST",
+        "namespace_id": "1001",
+        "simple": { "limit": 20, "period": 10 }
+      },
+      {
+        "name": "SUSTAINED",
+        "namespace_id": "1001",
+        "simple": { "limit": 50, "period": 60 }
+      }
+    ]
+  }
+  ```
+
+  Counters are now tracked per period, matching production, where a counter is identified by a bucket index and bucket start timestamp that are both derived from the period. Bindings that share a `namespace_id` and a period still share a counter for a given key.
+
+- [#14968](https://github.com/cloudflare/workers-sdk/pull/14968) [`a88d169`](https://github.com/cloudflare/workers-sdk/commit/a88d1691d57bf44616ad15556a51b7f8ca17375c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix local rate limit counters silently resetting after ~10s of inactivity
+
+  The emulated Ratelimit binding kept its counters on the JS heap of an internal Durable Object. `workerd` evicts idle Durable Objects after around 10 seconds, taking the counters with them, so in `wrangler dev` you could hit your Worker, pause to look at something, and find your limit had silently reset part way through the window.
+
+  Counters now live in the Durable Object's storage, which survives eviction. They are still cleared by `deleteAllDurableObjects()`, so `reset()` from `@cloudflare/vitest-pool-workers` continues to reset rate limit state between tests, exactly as it does for KV, R2 and D1. Counters are now also written to the persistence directory, so they survive a `wrangler dev` restart within the same window.
+
+- [#14989](https://github.com/cloudflare/workers-sdk/pull/14989) [`daf65f2`](https://github.com/cloudflare/workers-sdk/commit/daf65f28cecf35e251dc6e476d5bbd82972d68de) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Surface the full runtime crash report when workerd crashes, and warn when it is restarted
+
+  When workerd crashed, the banner (e.g. `*** std::terminate() called with no exception`) was reported without its stack trace, because the stack trace was being filtered out along with the ordinary hex-stack noise workerd emits. The crash was therefore impossible to diagnose. The `stack:` line and the missing-`$LLVM_SYMBOLIZER` notice that follow a fatal crash banner are now kept, and the whole report is logged at `error` level.
+
+  Miniflare also recovers from workerd crashes by restarting the runtime, but did so silently, which made a crash look like an unexplained dev server restart. It now warns, including a count so that a repeatedly-crashing runtime is distinguishable from a one-off.
+
 ## 5.20260730.0-alpha
 
 ### Major Changes

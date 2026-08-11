@@ -7,7 +7,7 @@ import { log } from "@cloudflare/cli-shared-helpers";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import { getWranglerTmpDir, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { createCLIParser } from "..";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -19,7 +19,7 @@ import {
 import { logger } from "../logger";
 import type { Config } from "@cloudflare/workers-utils";
 import type Protocol from "devtools-protocol";
-import type { ModuleDefinition } from "miniflare";
+import type { V4ModuleDefinition } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
 
 const mimeTypeModuleType = flipObject(moduleTypeMimeType);
@@ -247,7 +247,7 @@ function getModuleType(entry: FormDataEntryValue) {
 
 async function convertWorkerBundleToModules(
 	workerBundle: FormData
-): Promise<ModuleDefinition[]> {
+): Promise<V4ModuleDefinition[]> {
 	return await Promise.all(
 		[...workerBundle.entries()]
 			// Sourcemaps aren't "real" modules in the application and won't be imported by user code, so lets not load them when analyzing the bundle
@@ -260,7 +260,7 @@ async function convertWorkerBundleToModules(
 						type: getModuleType(m[1]),
 						path: m[0],
 						contents: await getEntryValue(m[1]),
-					}) as ModuleDefinition
+					}) as V4ModuleDefinition
 			)
 	);
 }
@@ -301,17 +301,18 @@ async function analyseBundleProfile(
 			{ telemetryMessage: "check startup service worker format unsupported" }
 		);
 	}
-	const mf = new Miniflare({
-		name: "profiler",
-		compatibilityDate: metadata.compatibility_date,
-		compatibilityFlags: metadata.compatibility_flags,
-		modulesRoot: "/",
-		modules: [
-			{
-				type: "ESModule",
-				// Make sure the entrypoint path doesn't conflict with a user worker module
-				path: randomUUID(),
-				contents: /* javascript */ `
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			name: "profiler",
+			compatibilityDate: metadata.compatibility_date,
+			compatibilityFlags: metadata.compatibility_flags,
+			modulesRoot: "/",
+			modules: [
+				{
+					type: "ESModule",
+					// Make sure the entrypoint path doesn't conflict with a user worker module
+					path: randomUUID(),
+					contents: /* javascript */ `
 					async function startup() {
 						await import("${metadata.main_module}");
 					}
@@ -322,11 +323,12 @@ async function analyseBundleProfile(
 						}
 					}
 					`,
-			},
-			...(await convertWorkerBundleToModules(workerBundle)),
-		],
-		inspectorPort: 0,
-	});
+				},
+				...(await convertWorkerBundleToModules(workerBundle)),
+			],
+			inspectorPort: 0,
+		})
+	);
 	await mf.ready;
 	const inspectorUrl = await mf.getInspectorURL();
 	const ws = new WebSocket(new URL("/core:user:profiler", inspectorUrl.href));

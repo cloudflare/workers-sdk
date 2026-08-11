@@ -218,6 +218,11 @@ parameter in module format Workers.
   Unique name for this worker. Only required if multiple `workers` are
   specified.
 
+- `unsafeRegisterWorker?: boolean`
+
+  Whether to advertise this Worker in the dev registry configured by
+  `unsafeDevRegistryPath`. Defaults to `true`.
+
 - `rootPath?: string`
 
   Path against which all other path options for this Worker are resolved
@@ -597,7 +602,9 @@ Options shared between all Workers/"nanoservices".
 - `unsafeDevRegistryPath?: string`
 
   Path to the dev registry directory. This allows Miniflare to automatically
-  discover external services and Durable Objects running on another miniflare instance and connect them.
+  discover external services and Durable Objects running on another Miniflare
+  instance and connect them. Workers are advertised by default; set
+  `unsafeRegisterWorker` to `false` to opt out.
 
 - `unsafeDevRegistryDurableObjectProxy?: boolean`
 

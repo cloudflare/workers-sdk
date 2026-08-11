@@ -29,7 +29,9 @@
 				"E2E_PROJECT_PATH",
 				"E2E_TEST_RETRIES",
 				"E2E_RUN_DEPLOY_TESTS",
-				"pnpm_config_manage_package_manager_versions"
+				"pnpm_config_manage_package_manager_versions",
+				"pnpm_config_pm_on_fail",
+				"pnpm_config_verify_deps_before_run"
 			],
 			"dependsOn": ["build"],
 			"inputs": ["e2e/**", "vitest-e2e.config.ts", "!e2e/README.md"],

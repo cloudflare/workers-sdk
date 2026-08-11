@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
@@ -39,7 +40,7 @@ export async function runWorkerTest(
 		format: "esm",
 		external: ["node:assert", "node:buffer", "miniflare:shared"],
 		bundle: true,
-		sourcemap: true,
+		sourcemap: "inline",
 		outdir: tmp,
 	});
 	const entryFileName = fixturePath.at(-1);
@@ -47,11 +48,28 @@ export async function runWorkerTest(
 	const outputFileName =
 		entryFileName.substring(0, entryFileName.lastIndexOf(".")) + ".js";
 
+	// The new config format requires module contents to be provided inline via
+	// the worker `manifest`, rather than read from disk.
+	const contents = await fs.readFile(path.join(tmp, outputFileName), "utf8");
+
 	const mf = new Miniflare({
-		modulesRoot: tmp,
-		modules: [{ type: "ESModule", path: path.join(tmp, outputFileName) }],
-		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat", "experimental"],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					compatibilityFlags: ["nodejs_compat", "experimental"],
+					manifest: {
+						mainModule: outputFileName,
+						modulesRoot: tmp,
+						modules: {
+							[outputFileName]: { type: "esm", contents },
+						},
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

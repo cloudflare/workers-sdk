@@ -8,7 +8,7 @@ import {
 	zWorkersKvNamespaceListNamespacesResponse,
 	zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import { disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry, singleModuleManifest } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
@@ -19,15 +19,24 @@ describe("KV API", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			kvNamespaces: {
-				TEST_KV: "test-kv-id",
-				ANOTHER_KV: "another-kv-id",
-				ZEBRA_KV: "zebra-kv-id",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_KV: { type: "kv", id: "test-kv-id" },
+							ANOTHER_KV: { type: "kv", id: "another-kv-id" },
+							ZEBRA_KV: { type: "kv", id: "zebra-kv-id" },
+						},
+					},
+				},
+			],
 		});
 	});
 

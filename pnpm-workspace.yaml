@@ -39,6 +39,10 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
+  # TEMPORARY: vite-plugin-cloudflare + vitest-pool-workers are pinned to the
+  # published miniflare while the workspace miniflare is mid-migration. Revert
+  # with the repoint.
+  - "miniflare"
   - "workerd"
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"
@@ -66,6 +70,7 @@ allowBuilds:
   prisma: true
   # Explicitly silence warnings for packages whose postinstall scripts are not
   # required for correct operation.
+  "@google/genai": false # preinstall is a no-op
   protobufjs: false # version-scheme diagnostic warning only
   msw: false # copies mockServiceWorker.js to msw.workerDirectory — unused in this repo
   core-js: false # telemetry
@@ -113,18 +118,18 @@ catalog:
   "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
   typescript: "5.8.3"
-  undici: "7.28.0"
+  undici: "7.29.0"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
-  undici-types: "7.28.0"
+  undici-types: "7.29.0"
   vitest: "4.1.0"
   vite: "8.1.5"
   "ws": "8.21.0"
   esbuild: "0.28.1"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20260731.1"
-  workerd: "1.20260731.1"
+  "@cloudflare/workers-types": "^5.20260804.1"
+  workerd: "1.20260804.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: 2.12.4
