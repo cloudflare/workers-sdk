@@ -184,48 +184,6 @@ importers:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
-  packages/auto-triage-bot:
-    devDependencies:
-      '@cloudflare/sandbox':
-        specifier: ^0.12.4
-        version: 0.12.4
-      '@cloudflare/vite-plugin':
-        specifier: workspace:*
-        version: link:../vite-plugin-cloudflare
-      '@cloudflare/workers-types':
-        specifier: catalog:default
-        version: 5.20260804.1
-      '@flue/cli':
-        specifier: ^2.0.3
-        version: 2.0.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260804.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@types/node@22.15.17)(esbuild@0.28.1)(hono@4.12.32)(jiti@2.6.1)(react@19.2.4)(rolldown@1.2.3)(tsx@4.21.0)(typescript@5.9.3)(ws@8.21.0)(yaml@2.9.0)(zod@4.4.3)
-      '@flue/github':
-        specifier: ^2.0.3
-        version: 2.0.3(@flue/runtime@2.0.3(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(typescript@5.9.3)(ws@8.21.0)(zod@4.4.3))
-      '@flue/runtime':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(typescript@5.9.3)(ws@8.21.0)(zod@4.4.3)
-      '@flue/vite':
-        specifier: ^2.0.3
-        version: 2.0.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260804.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(hono@4.12.32)(react@19.2.4)(rolldown@1.2.3)(typescript@5.9.3)(vite@8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)
-      '@octokit/rest':
-        specifier: ^22.0.1
-        version: 22.0.1
-      agents:
-        specifier: ^0.20.1
-        version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260804.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(react@19.2.4)(rolldown@1.2.3)(vite@8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))(zod@4.4.3)
-      hono:
-        specifier: 4.12.32
-        version: 4.12.32
-      valibot:
-        specifier: ^1.4.2
-        version: 1.4.2(typescript@5.9.3)
-      vite:
-        specifier: catalog:default
-        version: 8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
-
   fixtures/additional-modules:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -1683,6 +1641,48 @@ importers:
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
+
+  packages/auto-triage-bot:
+    devDependencies:
+      '@cloudflare/sandbox':
+        specifier: ^0.12.4
+        version: 0.12.4
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin-cloudflare
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20260804.1
+      '@flue/cli':
+        specifier: ^2.0.3
+        version: 2.0.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260804.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(@types/node@22.15.17)(esbuild@0.28.1)(hono@4.12.32)(jiti@2.6.1)(react@19.2.4)(rolldown@1.2.3)(tsx@4.21.0)(typescript@5.9.3)(ws@8.21.0)(yaml@2.9.0)(zod@4.4.3)
+      '@flue/github':
+        specifier: ^2.0.3
+        version: 2.0.3(@flue/runtime@2.0.3(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(typescript@5.9.3)(ws@8.21.0)(zod@4.4.3))
+      '@flue/runtime':
+        specifier: ^2.0.3
+        version: 2.0.3(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(typescript@5.9.3)(ws@8.21.0)(zod@4.4.3)
+      '@flue/vite':
+        specifier: ^2.0.3
+        version: 2.0.3(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260804.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(hono@4.12.32)(react@19.2.4)(rolldown@1.2.3)(typescript@5.9.3)(vite@8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))(ws@8.21.0)(zod@4.4.3)
+      '@octokit/rest':
+        specifier: ^22.0.1
+        version: 22.0.1
+      agents:
+        specifier: ^0.20.1
+        version: 0.20.1(@babel/core@8.0.1)(@babel/runtime@7.29.7)(@cloudflare/workers-types@5.20260804.1)(@modelcontextprotocol/client@2.0.0)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(@modelcontextprotocol/server@2.0.0)(react@19.2.4)(rolldown@1.2.3)(vite@8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))(zod@4.4.3)
+      hono:
+        specifier: 4.12.32
+        version: 4.12.32
+      valibot:
+        specifier: ^1.4.2
+        version: 1.4.2(typescript@5.9.3)
+      vite:
+        specifier: catalog:default
+        version: 8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
 
   packages/autoconfig:
     dependencies:
