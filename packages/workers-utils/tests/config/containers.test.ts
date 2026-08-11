@@ -1,6 +1,7 @@
 import { describe, test } from "vitest";
 import {
 	getContainerDurableObjectClassNames,
+	getContainerInstanceGroupExports,
 	getContainerNameToClassNameMap,
 	resolveContainerClassName,
 } from "../../src/config/containers";
@@ -48,6 +49,61 @@ describe("getContainerNameToClassNameMap", () => {
 				["incoming-container", "Incoming"],
 			])
 		);
+	});
+});
+
+describe("getContainerInstanceGroupExports", () => {
+	test("returns live namespace-backed Container Instance Groups", ({
+		expect,
+	}) => {
+		const exports: Exports = {
+			Sandbox: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: {
+					images: [
+						{
+							binding: "SANDBOX_IMAGE",
+							image: "./Dockerfile",
+						},
+					],
+				},
+			},
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transfer_from: "other-worker",
+				container: {},
+			},
+			Application: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "application-container",
+			},
+			Deleted: {
+				type: "durable-object",
+				state: "deleted",
+			},
+		};
+
+		expect(getContainerInstanceGroupExports(exports)).toEqual([
+			{
+				className: "Sandbox",
+				config: {
+					images: [
+						{
+							binding: "SANDBOX_IMAGE",
+							image: "./Dockerfile",
+						},
+					],
+				},
+			},
+			{
+				className: "Incoming",
+				config: {},
+			},
+		]);
 	});
 });
 

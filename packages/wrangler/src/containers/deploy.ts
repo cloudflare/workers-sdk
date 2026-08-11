@@ -2,7 +2,6 @@
  * Note! Much of this is copied and modified from cloudchamber/apply.ts
  * However this code is only used for containers interactions, not cloudchamber ones!
  */
-import assert from "node:assert";
 import { setTimeout } from "node:timers/promises";
 import {
 	endSection,
@@ -73,6 +72,66 @@ type DeployContainersArgs = {
 	scriptName: string;
 };
 
+export function createDurableObjectNamespaceResolver(
+	config: Config,
+	{ versionId, accountId, scriptName }: DeployContainersArgs
+): (className: string) => Promise<string> {
+	const boundDOs = new Set(
+		config.durable_objects.bindings.map((binding) => binding.class_name)
+	);
+	let maybeVersionInfo: ApiVersion | undefined;
+	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
+
+	return async (className: string) => {
+		if (boundDOs.has(className)) {
+			maybeVersionInfo ??= await fetchUploadedVersion(
+				config,
+				accountId,
+				scriptName,
+				versionId
+			);
+			type DurableObjectBinding = Extract<
+				WorkerMetadataBinding,
+				{ type: "durable_object_namespace" }
+			>;
+			const targetDurableObject = maybeVersionInfo.resources.bindings.find(
+				(binding): binding is DurableObjectBinding =>
+					binding.type === "durable_object_namespace" &&
+					binding.class_name === className &&
+					(binding.script_name === undefined ||
+						binding.script_name === scriptName) &&
+					binding.namespace_id !== undefined
+			);
+			if (!targetDurableObject?.namespace_id) {
+				throw new UserError(
+					"Could not deploy container configuration as durable object was not found in list of bindings",
+					{
+						telemetryMessage:
+							"containers deploy durable object binding missing",
+					}
+				);
+			}
+			return targetDurableObject.namespace_id;
+		}
+
+		maybeAllDurableObjects ??= await listDurableObjects(config, accountId);
+		const targetDurableObject = maybeAllDurableObjects.find(
+			(durableObject) =>
+				durableObject.class === className && durableObject.script === scriptName
+		);
+		if (!targetDurableObject) {
+			throw new UserError(
+				"Could not deploy container configuration as durable object was not found in the account namespace list",
+				{
+					telemetryMessage:
+						"containers deploy durable object namespace missing",
+				}
+			);
+		}
+		return targetDurableObject.id;
+	};
+}
+
 export async function deployContainers(
 	config: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
@@ -81,13 +140,13 @@ export async function deployContainers(
 	await fillOpenAPIConfiguration(config, containersScope);
 
 	const pathToDocker = getDockerPath();
-	const boundDOs = new Set(
-		config.durable_objects.bindings.map((b) => b.class_name)
-	);
+	const resolveNamespaceId = createDurableObjectNamespaceResolver(config, {
+		versionId,
+		accountId,
+		scriptName,
+	});
 
 	let imageRef: ImageRef;
-	let maybeVersionInfo: ApiVersion | undefined;
-	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
 
 	for (const container of normalisedContainerConfig) {
 		if ("dockerfile" in container) {
@@ -103,68 +162,15 @@ export async function deployContainers(
 			imageRef = { newTag: container.image_uri };
 		}
 
-		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
-		if (boundDOs.has(container.class_name)) {
-			maybeVersionInfo ??= await fetchUploadedVersion(
-				config,
-				accountId,
-				scriptName,
-				versionId
-			);
-			type DurableObjectBinding = Extract<
-				WorkerMetadataBinding,
-				{ type: "durable_object_namespace" }
-			>;
-			const targetDurableObject = maybeVersionInfo.resources.bindings.find(
-				(binding): binding is DurableObjectBinding =>
-					binding.type === "durable_object_namespace" &&
-					binding.class_name === container.class_name &&
-					// DO cannot be defined in a different script to the container
-					(binding.script_name === undefined ||
-						binding.script_name === scriptName) &&
-					binding.namespace_id !== undefined
-			);
-			if (!targetDurableObject) {
-				throw new UserError(
-					"Could not deploy container application as durable object was not found in list of bindings",
-					{
-						telemetryMessage:
-							"containers deploy durable object binding missing",
-					}
-				);
-			}
-			assert(
-				targetDurableObject && targetDurableObject.namespace_id !== undefined
-			);
-
-			await apply(
-				{
-					imageRef,
-					durable_object_namespace_id: targetDurableObject.namespace_id,
-				},
-				container,
-				config
-			);
-		} else {
-			// The DO is unbound, so we need to list all DO namespaces to find the right one
-			// TODO: use the list API with filters when it exists
-			maybeAllDurableObjects ??= await listDurableObjects(config, accountId);
-			const targetDurableObject = maybeAllDurableObjects.find(
-				(durableObject) =>
-					durableObject.class === container.class_name &&
-					durableObject.script === scriptName
-			);
-
-			assert(targetDurableObject, "Durable Object not returned from list API");
-			await apply(
-				{
-					imageRef,
-					durable_object_namespace_id: targetDurableObject.id,
-				},
-				container,
-				config
-			);
-		}
+		const namespaceId = await resolveNamespaceId(container.class_name);
+		await apply(
+			{
+				imageRef,
+				durable_object_namespace_id: namespaceId,
+			},
+			container,
+			config
+		);
 	}
 }
 

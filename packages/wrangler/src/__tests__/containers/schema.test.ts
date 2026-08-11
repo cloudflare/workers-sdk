@@ -10,9 +10,31 @@ type WranglerSchema = {
 		};
 		DurableObjectExport: {
 			anyOf: {
-				properties: Record<string, unknown>;
+				properties: Record<string, unknown> & {
+					container?: {
+						anyOf?: {
+							type?: string;
+							$ref?: string;
+						}[];
+					};
+				};
 				required?: string[];
 			}[];
+		};
+		ContainerInstanceGroupConfig: {
+			properties: Record<string, unknown> & {
+				images: {
+					type: string;
+					items: {
+						$ref: string;
+					};
+				};
+			};
+			required?: string[];
+		};
+		ContainerInstanceGroupImage: {
+			properties: Record<string, unknown>;
+			required: string[];
 		};
 		RawConfig: {
 			properties: {
@@ -64,6 +86,40 @@ describe("config schema", () => {
 			["type", "storage"],
 			["type", "state", "storage", "transfer_from"],
 		]);
+	});
+
+	it("documents Container Instance Groups on Durable Object exports", ({
+		expect,
+	}) => {
+		const schema = readSchema();
+		const instanceGroup = schema.definitions.ContainerInstanceGroupConfig;
+
+		expect(instanceGroup.required).toBeUndefined();
+		expect(Object.keys(instanceGroup.properties)).toEqual(["images"]);
+		expect(instanceGroup.properties.images).toEqual(
+			expect.objectContaining({
+				type: "array",
+				items: {
+					$ref: "#/definitions/ContainerInstanceGroupImage",
+				},
+			})
+		);
+
+		const image = schema.definitions.ContainerInstanceGroupImage;
+		expect(image.required).toEqual(["binding", "image"]);
+		expect(Object.keys(image.properties)).toEqual(["binding", "image"]);
+
+		const containerSchema = schema.definitions.DurableObjectExport.anyOf.find(
+			(branch) => branch.properties.container !== undefined
+		)?.properties.container;
+		expect(containerSchema?.anyOf).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ type: "string" }),
+				expect.objectContaining({
+					$ref: "#/definitions/ContainerInstanceGroupConfig",
+				}),
+			])
+		);
 	});
 
 	it("emits markdownDescription for rich editor hovers", ({ expect }) => {

@@ -7,7 +7,11 @@ import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
-import { getContainerNameToClassNameMap } from "./containers";
+import {
+	getContainerInstanceGroupExports,
+	getContainerNameToClassNameMap,
+	isContainerInstanceGroupConfig,
+} from "./containers";
 import { Diagnostics } from "./diagnostics";
 import { getDurableObjectExports } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
@@ -3472,6 +3476,7 @@ function validateContainerApp(
 				containerAppOptional.name,
 				"string"
 			);
+
 			// try and add a default name
 			if (!containerAppOptional.name) {
 				// The default name is derived from the class name, so without one there
@@ -3496,6 +3501,7 @@ function validateContainerApp(
 					containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 				}
 			}
+
 			if (
 				!containerAppOptional.configuration?.image &&
 				!containerAppOptional.image
@@ -4745,6 +4751,21 @@ const validateBindingsHaveUniqueNames = (
 	// Add secrets to binding name validation (secrets is not a CfWorkerInit binding type,
 	// but we want to validate that secret names don't conflict with other bindings)
 	bindingsGroupedByType["Secret"] = config.secrets?.required ?? [];
+	bindingsGroupedByType["Container Image"] = getContainerInstanceGroupExports(
+		config.exports
+	)
+		.flatMap(({ config: group }) =>
+			Array.isArray(group.images) ? group.images : []
+		)
+		.map((image) =>
+			typeof image === "object" &&
+			image !== null &&
+			"binding" in image &&
+			typeof image.binding === "string"
+				? image.binding
+				: undefined
+		)
+		.filter((binding): binding is string => binding !== undefined);
 
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
@@ -6297,12 +6318,94 @@ function validateDurableObjectExportContainer(
 		return true;
 	}
 
-	if (
-		typeof durableObjectExport.container !== "string" ||
-		durableObjectExport.container === ""
+	if (typeof durableObjectExport.container === "string") {
+		if (durableObjectExport.container === "") {
+			diagnostics.errors.push(
+				`"exports.${className}.container" must be a non-empty string naming a container in the "containers" array.`
+			);
+			return false;
+		}
+	} else if (
+		typeof durableObjectExport.container === "object" &&
+		durableObjectExport.container !== null &&
+		!Array.isArray(durableObjectExport.container)
 	) {
+		const field = `exports.${className}.container`;
+		const container = durableObjectExport.container as Record<string, unknown>;
+		let valid = true;
+
+		if (container.images !== undefined) {
+			if (!Array.isArray(container.images) || container.images.length === 0) {
+				diagnostics.errors.push(
+					`"${field}.images" must be a non-empty array when present.`
+				);
+				valid = false;
+			} else {
+				for (const [index, imageValue] of container.images.entries()) {
+					const imageField = `${field}.images[${index}]`;
+					if (
+						typeof imageValue !== "object" ||
+						imageValue === null ||
+						Array.isArray(imageValue)
+					) {
+						diagnostics.errors.push(
+							`"${imageField}" must be an object with "binding" and "image" fields.`
+						);
+						valid = false;
+						continue;
+					}
+
+					const image = imageValue as Record<string, unknown>;
+					if (
+						typeof image.binding !== "string" ||
+						!/^[A-Za-z_][A-Za-z0-9_]*$/.test(image.binding)
+					) {
+						diagnostics.errors.push(
+							`"${imageField}.binding" must be a valid Worker binding name.`
+						);
+						valid = false;
+					}
+					if (typeof image.image !== "string" || image.image.length === 0) {
+						diagnostics.errors.push(
+							`"${imageField}.image" must be a non-empty string.`
+						);
+						valid = false;
+					}
+
+					const unsupportedImageFields = Object.keys(image).filter(
+						(property) => property !== "binding" && property !== "image"
+					);
+					if (unsupportedImageFields.length > 0) {
+						diagnostics.errors.push(
+							`Unexpected fields found in ${imageField} field: ${unsupportedImageFields
+								.map((property) => `"${property}"`)
+								.join(", ")}`
+						);
+						valid = false;
+					}
+				}
+			}
+		}
+
+		const allowedProperties = ["images"];
+		const unsupportedFields = Object.keys(container).filter(
+			(property) => !allowedProperties.includes(property)
+		);
+		if (unsupportedFields.length > 0) {
+			diagnostics.errors.push(
+				`Unexpected fields found in ${field} field: ${unsupportedFields
+					.map((property) => `"${property}"`)
+					.join(", ")}`
+			);
+			valid = false;
+		}
+
+		if (!valid) {
+			return false;
+		}
+	} else {
 		diagnostics.errors.push(
-			`"exports.${className}.container" must be a non-empty string naming a container in the "containers" array, but got ${JSON.stringify(durableObjectExport.container)}.`
+			`"exports.${className}.container" must be either a non-empty string naming a container in the "containers" array or a Container Instance Group configuration, but got ${JSON.stringify(durableObjectExport.container)}.`
 		);
 		return false;
 	}
@@ -7052,6 +7155,7 @@ function validateContainerExportLinks(
 	const durableObjectExports = getDurableObjectExports(exports);
 	const liveExportClassNames = new Set<string>();
 	const classNamesByContainerName = new Map<string, string[]>();
+	const instanceGroupClasses = new Set<string>();
 
 	for (const [className, entry] of Object.entries(durableObjectExports)) {
 		if (
@@ -7063,6 +7167,11 @@ function validateContainerExportLinks(
 			continue;
 		}
 		liveExportClassNames.add(className);
+
+		if (isContainerInstanceGroupConfig(entry.container)) {
+			instanceGroupClasses.add(className);
+			continue;
+		}
 
 		// A non-string container reference has already been reported by
 		// `validateDurableObjectExportContainer`.
@@ -7103,6 +7212,13 @@ function validateContainerExportLinks(
 					`The container "${container.name}" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.`
 				);
 			}
+			continue;
+		}
+
+		if (instanceGroupClasses.has(container.class_name)) {
+			diagnostics.errors.push(
+				`Durable Object class "${container.class_name}" cannot be configured as both an application-backed container and a Container Instance Group.`
+			);
 			continue;
 		}
 

@@ -2653,7 +2653,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "exports.MyDO.container" must be a non-empty string naming a container in the "containers" array, but got ""."
+					  - "exports.MyDO.container" must be a non-empty string naming a container in the "containers" array."
 				`);
 			});
 
@@ -4617,6 +4617,232 @@ describe("normalizeAndValidateConfig()", () => {
 						"test-worker-name-test-class"
 					);
 				}
+			});
+
+			it("should accept a namespace-backed container instance group", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						durable_objects: {
+							bindings: [
+								{
+									name: "SANDBOX",
+									class_name: "Sandbox",
+								},
+							],
+						},
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: {
+									images: [
+										{
+											binding: "SANDBOX_IMAGE",
+											image: "./Dockerfile",
+										},
+									],
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.exports).toEqual({
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: {
+							images: [
+								{
+									binding: "SANDBOX_IMAGE",
+									image: "./Dockerfile",
+								},
+							],
+						},
+					},
+				});
+			});
+
+			it("should reject the removed Container Instance Group type field", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: {
+									type: "instance",
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Unexpected fields found in exports.Sandbox.container field: "type"'
+				);
+			});
+
+			it("should reject unsupported fields on Container Instance Groups", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: {
+									ssh: {
+										enabled: true,
+									},
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				const errors = diagnostics.renderErrors();
+				expect(errors).toContain(
+					'Unexpected fields found in exports.Sandbox.container field: "ssh"'
+				);
+			});
+
+			it("should reject the removed Container Instance Group name field", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: {
+									name: "sandboxes",
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Unexpected fields found in exports.Sandbox.container field: "name"'
+				);
+			});
+
+			it("should reject classes configured as both applications and Instance Groups", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: {},
+							},
+						},
+						containers: [
+							{
+								class_name: "Sandbox",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'Durable Object class "Sandbox" cannot be configured as both an application-backed container and a Container Instance Group.'
+				);
+			});
+
+			it("should reject malformed Container Instance Group images", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: {
+									images: [
+										{
+											binding: "not a binding",
+											image: "",
+										},
+									],
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Sandbox.container.images[0].binding" must be a valid Worker binding name.'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'"exports.Sandbox.container.images[0].image" must be a non-empty string.'
+				);
+			});
+
+			it("should reject a generated image binding that conflicts with another binding", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vars: {
+							SANDBOX_IMAGE: "manual-image",
+						},
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: {
+									images: [
+										{
+											binding: "SANDBOX_IMAGE",
+											image: "./Dockerfile",
+										},
+									],
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					"SANDBOX_IMAGE assigned to Environment Variable and Container Image bindings."
+				);
 			});
 
 			it("should provide a name in a named environment that inherits the top level worker name", ({
