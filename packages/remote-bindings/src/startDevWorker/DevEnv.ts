@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
@@ -11,7 +12,6 @@ export class DevEnv extends EventEmitter {
 	runtime: RemoteRuntimeController;
 	proxy: ProxyController;
 	#bundle: Bundle;
-	#bundleVersion = 0;
 	#config: StartDevWorkerOptions;
 
 	start() {
@@ -29,7 +29,7 @@ export class DevEnv extends EventEmitter {
 			bundle: {
 				...this.#bundle,
 				// Ensure binding-only updates cannot reuse the previous edge-preview artifact.
-				entrypointSource: `${this.#bundle.entrypointSource}\n// remote-bindings-update:${++this.#bundleVersion}`,
+				entrypointSource: `${this.#bundle.entrypointSource}\n// remote-bindings-update:${randomUUID()}`,
 			},
 		});
 	}
