@@ -124,8 +124,6 @@ const generate = async (ctx: C3Context) => {
 		return;
 	}
 
-	// vinext generates its Wrangler config at build time, after C3 adds types.
-	ctx.template.workersTypes = "none";
 	await generateVinext(ctx);
 };
 
@@ -151,6 +149,7 @@ export default {
 				// Align with OpenNext so the shared previewScript: "preview" works
 				// for both variants (vinext only ships dev/build/start/deploy).
 				preview: `${npm} run build && ${npm} run start --`,
+				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
 			},
 		};
 	},
