@@ -759,8 +759,18 @@ export async function previewDelete(
 					`Preview "${previewName}" was not found; skipping container application cleanup.`
 				);
 			} else {
-				logger.warn(
-					`Failed to look up Preview "${previewName}" for container application cleanup: ${error instanceof Error ? error.message : String(error)}`
+				// The preview record holds the only copy of the slug, and the slug is
+				// needed to name this preview's container applications. Deleting the
+				// preview after a failed lookup would discard the last means of
+				// finding those applications, leaving them running and billable. This
+				// lookup and the delete below share a URL and differ only by method,
+				// so a failure here is unlikely to be specific to reading.
+				throw new UserError(
+					`Could not look up Preview "${previewName}" to clean up its container applications: ${error instanceof Error ? error.message : String(error)}\n` +
+						`The Preview was not deleted. Deleting it now would leave its container applications with no way to be found, and they would keep costing you money. Please retry.`,
+					{
+						telemetryMessage: "preview delete container cleanup lookup failed",
+					}
 				);
 			}
 		}

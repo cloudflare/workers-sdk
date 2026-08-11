@@ -4448,5 +4448,70 @@ describe("wrangler preview", () => {
 				'Preview "my-feature" was not found; skipping container application cleanup'
 			);
 		});
+
+		test("should not delete the preview when the container cleanup lookup fails", async ({
+			expect,
+		}) => {
+			mkdirSync("src", { recursive: true });
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let previewDeleted = false;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10001, message: "Internal server error" }],
+							},
+							{ status: 500 }
+						)
+				),
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						previewDeleted = true;
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+			let errorMessage = "";
+			try {
+				await runWrangler(
+					"preview delete --name my-feature -y --worker-name test-worker"
+				);
+			} catch (e) {
+				errorMessage = (e as Error).message;
+			}
+			expect(errorMessage).toContain(
+				'Could not look up Preview "my-feature" to clean up its container applications'
+			);
+			expect(errorMessage).toContain("The Preview was not deleted.");
+			expect(previewDeleted).toBe(false);
+		});
 	});
 });
