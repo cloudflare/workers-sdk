@@ -26,6 +26,7 @@ import { splitSqlQuery } from "../d1/splitter";
 import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
+import { runWithLogLevel } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
@@ -549,8 +550,37 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			return configPath;
 		}
 
-		const config = readConfig({ config: configPath, env: input.env });
+		const config = runWithLogLevel("none", () =>
+			readConfig({ config: configPath, env: input.env })
+		);
+		if (config.main === undefined) {
+			throw new UserError(
+				"The `prebuiltWorkerDir` option only loads a prebuilt Worker script. This Wrangler config is assets-only, so the test harness loads its assets from `assets.directory` instead. Remove `prebuiltWorkerDir` from the test harness configuration.",
+				{
+					telemetryMessage:
+						"test harness prebuilt assets only worker unsupported",
+				}
+			);
+		}
+
 		const prebuiltWorkerDir = resolvePath(root, input.prebuiltWorkerDir);
+		const envOption = input.env ? ` --env ${JSON.stringify(input.env)}` : "";
+		const commandConfigPath =
+			typeof input.configPath === "string"
+				? input.configPath
+				: path.relative(root, configPath) || ".";
+		const commandOutDir =
+			typeof input.prebuiltWorkerDir === "string"
+				? input.prebuiltWorkerDir
+				: path.relative(root, prebuiltWorkerDir) || ".";
+		const buildCommand = `wrangler deploy --dry-run --config ${JSON.stringify(commandConfigPath)}${envOption} --outdir ${JSON.stringify(commandOutDir)}`;
+		if (!fs.existsSync(prebuiltWorkerDir)) {
+			throw new UserError(
+				`The \`prebuiltWorkerDir\` directory "${commandOutDir}" does not exist. Build the Worker first by running \`${buildCommand}\`.`,
+				{ telemetryMessage: "test harness prebuilt directory missing" }
+			);
+		}
+
 		let main = config.main;
 		if (main !== undefined) {
 			const outputFileName = config.no_bundle
@@ -558,20 +588,9 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 				: `${path.parse(main).name}.js`;
 			main = path.join(prebuiltWorkerDir, outputFileName);
 			if (!fs.existsSync(main)) {
-				const envOption = input.env
-					? ` --env ${JSON.stringify(input.env)}`
-					: "";
-				const commandConfigPath =
-					typeof input.configPath === "string"
-						? input.configPath
-						: path.relative(root, configPath) || ".";
-				const commandOutDir =
-					typeof input.prebuiltWorkerDir === "string"
-						? input.prebuiltWorkerDir
-						: path.relative(root, prebuiltWorkerDir) || ".";
 				const commandEntrypoint = path.join(commandOutDir, outputFileName);
 				throw new UserError(
-					`Could not find the prebuilt Worker entrypoint at "${commandEntrypoint}". From the test harness root, run \`wrangler deploy --dry-run --config ${JSON.stringify(commandConfigPath)}${envOption} --outdir ${JSON.stringify(commandOutDir)}\` before starting the test harness.`,
+					`Could not find the prebuilt Worker entrypoint at "${commandEntrypoint}". Run \`${buildCommand}\` before starting the test harness.`,
 					{ telemetryMessage: "test harness prebuilt entrypoint missing" }
 				);
 			}

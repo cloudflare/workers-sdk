@@ -198,6 +198,7 @@ describe("createTestHarness", () => {
 					}
 				};
 			`,
+			"missing-output/README.md": "",
 		});
 
 		const server = createTestHarness({
@@ -213,6 +214,72 @@ describe("createTestHarness", () => {
 
 		await expect(server.listen()).rejects.toThrow(
 			'wrangler deploy --dry-run --config "./wrangler.jsonc" --outdir "./missing-output"'
+		);
+	});
+
+	it("fails when the prebuilt directory does not exist", async ({ expect }) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "unbuilt-worker",
+					"main": "src/index.ts",
+					"compatibility_date": "2026-05-20",
+					"account_id": ""
+				}
+			`,
+			"src/index.ts": dedent`
+				export default {
+					fetch() {
+						return new Response("source fallback");
+					}
+				};
+			`,
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.jsonc",
+					prebuiltWorkerDir: "./missing-output",
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await expect(server.listen()).rejects.toThrow(
+			'The `prebuiltWorkerDir` directory "./missing-output" does not exist. Build the Worker first by running `wrangler deploy --dry-run --config "./wrangler.jsonc" --outdir "./missing-output"`.'
+		);
+		expect(logs.warn).toBe("");
+	});
+
+	it("rejects prebuilt output for an assets-only Worker", async ({
+		expect,
+	}) => {
+		await helper.seed({
+			"wrangler.jsonc": dedent`
+				{
+					"name": "assets-only-worker",
+					"compatibility_date": "2026-05-20",
+					"assets": { "directory": "./public" }
+				}
+			`,
+			"public/index.html": "assets-only Worker",
+		});
+
+		const server = createTestHarness({
+			root: helper.tmpPath,
+			workers: [
+				{
+					configPath: "./wrangler.jsonc",
+					prebuiltWorkerDir: "./missing-output",
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await expect(server.listen()).rejects.toThrow(
+			"The `prebuiltWorkerDir` option only loads a prebuilt Worker script. This Wrangler config is assets-only, so the test harness loads its assets from `assets.directory` instead. Remove `prebuiltWorkerDir` from the test harness configuration."
 		);
 	});
 
