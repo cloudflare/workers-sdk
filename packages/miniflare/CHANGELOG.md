@@ -1,5 +1,13 @@
 # miniflare
 
+## 5.20260804.1-alpha
+
+### Patch Changes
+
+- [#14993](https://github.com/cloudflare/workers-sdk/pull/14993) [`c7aede7`](https://github.com/cloudflare/workers-sdk/commit/c7aede764b601d1b73aa208f6a6ff63f646f4136) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Report failures to forward tail events between local dev sessions
+
+  When a Worker's tail consumer runs in a separate local dev session and that session becomes unreachable, the failure to deliver tail events was discarded silently. It is now reported as a warning.
+
 ## 5.20260804.0-alpha
 
 ### Major Changes
