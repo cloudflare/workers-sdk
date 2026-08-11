@@ -289,7 +289,6 @@ describe("deploy metrics export", () => {
 		);
 		mockUploadWorkerRequest({
 			env: "staging",
-			useServiceEnvironments: false,
 			expectedObservability: undefined,
 		});
 
