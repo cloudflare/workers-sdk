@@ -26,6 +26,7 @@ import { fetch } from "undici";
 import { getCloudflaredPathFromEnv } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
 import { removeDirSync } from "./fs-helpers";
+import { writeFileAtomically } from "./fs/atomic-write";
 import { getGlobalConfigPath } from "./global-wrangler-config-path";
 import type { Logger } from "./logger";
 import type { ChildProcess } from "node:child_process";
@@ -418,26 +419,6 @@ async function warnIfOutdated(
 	}
 }
 
-function writeFileAtomic(filePath: string, contents: Buffer): void {
-	const dir = dirname(filePath);
-	const tmpPath = join(
-		dir,
-		`.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`
-	);
-	try {
-		writeFileSync(tmpPath, contents);
-		renameSync(tmpPath, filePath);
-	} finally {
-		try {
-			if (existsSync(tmpPath)) {
-				unlinkSync(tmpPath);
-			}
-		} catch {
-			// Ignore cleanup errors
-		}
-	}
-}
-
 /**
  * Download cloudflared binary using the version info from the update worker.
  */
@@ -595,7 +576,7 @@ async function downloadBinary(
 			);
 		}
 	}
-	writeFileAtomic(binPath, buffer);
+	writeFileAtomically(binPath, buffer);
 }
 
 /**

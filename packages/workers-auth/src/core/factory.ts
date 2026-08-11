@@ -25,6 +25,7 @@ import {
 	throwFetchError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { ProcessOwnerChecker } from "@cloudflare/workers-utils/file-system";
 import { formatDistanceToNowStrict } from "date-fns";
 import { dedent } from "ts-dedent";
 import { validateAccountId } from "../account-id";
@@ -251,16 +252,20 @@ export function createCloudflareAuth(
 	// encrypted-file-with-keyring-key) the user has chosen. Each resolved store
 	// re-resolves the active backend per call, so both profile switches and
 	// runtime preference flips take effect immediately.
-	const credentialStorage = createCredentialStorageContext({
-		serviceName: descriptor.keyringServiceName,
-		getConfigPath: descriptor.getConfigPath,
-		isKeyringEnabled: () =>
-			preferences.readUserPreferences().keyring_enabled === true,
-		logger,
-		isNonInteractiveOrCI,
-		loginCommand: descriptor.commands.login,
-		format: descriptor.fileFormat,
-	});
+	const owners = new ProcessOwnerChecker();
+	const credentialStorage = createCredentialStorageContext(
+		{
+			serviceName: descriptor.keyringServiceName,
+			getConfigPath: descriptor.getConfigPath,
+			isKeyringEnabled: () =>
+				preferences.readUserPreferences().keyring_enabled === true,
+			logger,
+			isNonInteractiveOrCI,
+			loginCommand: descriptor.commands.login,
+			format: descriptor.fileFormat,
+		},
+		owners
+	);
 
 	// The single CLI-wide OAuth flow instance. `generateAuthUrl` /
 	// `generateRandomState` are left to the flow's own defaults (from the shared
@@ -273,38 +278,41 @@ export function createCloudflareAuth(
 	// resolution ignores those creds.
 	const allowGlobalAuthKey = descriptor.allowGlobalAuthKey ?? true;
 
-	const oauthFlow = createOAuthFlow({
-		logger,
-		isNonInteractiveOrCI,
-		openInBrowser: (url) => openInBrowser(url, logger),
-		hasEnvCredentials: () =>
-			getAuthFromEnv({ allowGlobalAuthKey }) !== undefined,
-		purgeOnLoginOrLogout: purgeAccountCaches,
-		clientId: descriptor.clientId,
-		consent: descriptor.consent,
-		cliDisplayName: descriptor.displayName,
-		deviceLoginCommand: descriptor.commands.deviceLogin,
-		redirectUri: descriptor.redirectUri,
-		storageFactory: credentialStorage.storageFactory,
-		allowGlobalAuthKey,
-		temporary: {
-			// The temporary-preview-account cache is CLI-owned storage (a
-			// file under the global config dir, scoped to the Cloudflare API
-			// environment), so it's built here rather than injected.
-			storage: createFileStorage<TemporaryPreviewAccount>(
-				descriptor.fileFormat,
-				descriptor.getTemporaryAccountConfigPath
-			),
+	const oauthFlow = createOAuthFlow(
+		{
+			logger,
+			isNonInteractiveOrCI,
+			openInBrowser: (url) => openInBrowser(url, logger),
+			hasEnvCredentials: () =>
+				getAuthFromEnv({ allowGlobalAuthKey }) !== undefined,
+			purgeOnLoginOrLogout: purgeAccountCaches,
+			clientId: descriptor.clientId,
+			consent: descriptor.consent,
 			cliDisplayName: descriptor.displayName,
-			logoutCommand: descriptor.commands.logout,
-			temporaryAccountFlag,
-			prompt: createTemporaryTermsPrompt({
+			deviceLoginCommand: descriptor.commands.deviceLogin,
+			redirectUri: descriptor.redirectUri,
+			storageFactory: credentialStorage.storageFactory,
+			allowGlobalAuthKey,
+			temporary: {
+				// The temporary-preview-account cache is CLI-owned storage (a
+				// file under the global config dir, scoped to the Cloudflare API
+				// environment), so it's built here rather than injected.
+				storage: createFileStorage<TemporaryPreviewAccount>(
+					descriptor.fileFormat,
+					descriptor.getTemporaryAccountConfigPath
+				),
+				cliDisplayName: descriptor.displayName,
+				logoutCommand: descriptor.commands.logout,
+				temporaryAccountFlag,
+				prompt: createTemporaryTermsPrompt({
+					temporaryAccountLogger,
+					prompt: ctx.prompt,
+				}),
 				temporaryAccountLogger,
-				prompt: ctx.prompt,
-			}),
-			temporaryAccountLogger,
+			},
 		},
-	});
+		owners
+	);
 
 	function setProfile(profile: string): void {
 		oauthFlow.setProfile(profile);

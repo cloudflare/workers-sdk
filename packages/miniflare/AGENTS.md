@@ -15,8 +15,9 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
 - `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)
 - `src/shared/dev-registry.ts` — Filesystem-based worker registry (chokidar watch, heartbeat, stale cleanup)
-- `src/shared/persist-root-lock.ts` — Token-safe startup serialisation for shared persistent storage
+- `src/shared/persist-root-lock.ts` — Startup serialisation using workers-utils process-owned locks, with compatibility for legacy startup lock files
 - `src/shared/DEV_REGISTRY.md` — Full architecture doc for the dev registry
+- Registry files use workers-utils atomic replacements and persist a stable `created` timestamp for election order. Preserve it across same-owner updates; use file birthtime only for legacy entries. Heartbeat expiry is discovery policy, not transaction-lock ownership.
 - `src/runtime/config/generated/workerd.ts` — Generated workerd Cap'n Proto config types
 - `test/` — Tests (`.spec.ts` naming, NOT `.test.ts`)
 - `test/test-shared/` — Shared test utilities

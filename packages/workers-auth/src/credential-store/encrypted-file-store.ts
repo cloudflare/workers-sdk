@@ -1,13 +1,10 @@
-import {
-	chmodSync,
-	existsSync,
-	mkdirSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
+import { ProcessOwnerChecker } from "@cloudflare/workers-utils/file-system";
+import { clearFile, writeFileAtomically } from "../core/atomic-write";
 import { parseFile, stringifyFile } from "../core/file-format";
+import { getRefreshLockPath, tryWithRefreshLock } from "../refresh-lock";
 import {
 	decryptString,
 	encryptString,
@@ -96,14 +93,28 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 	 * default profile).
 	 * @param format on-disk format of the plaintext sibling file and the
 	 * encrypted payload (defaults to TOML for wrangler).
+	 * @param owners process-identity cache shared with the owning auth flow or resolver.
 	 */
 	constructor(
 		private readonly configPath: string,
 		private readonly keyProvider: KeyProvider,
 		private readonly onPlaintextMigration?: OnPlaintextMigration,
 		private readonly profile?: string,
-		private readonly format: FileFormat = "toml"
+		private readonly format: FileFormat = "toml",
+		private readonly owners = new ProcessOwnerChecker()
 	) {}
+
+	/** Bind migration and credential writes to the transaction's identity cache. */
+	getForTransaction(owners = this.owners): EncryptedFileCredentialStore {
+		return new EncryptedFileCredentialStore(
+			this.configPath,
+			this.keyProvider,
+			this.onPlaintextMigration,
+			this.profile,
+			this.format,
+			owners
+		);
+	}
 
 	private plaintextPath(): string {
 		return getAuthConfigFilePath(this.configPath, this.profile, this.format);
@@ -123,7 +134,18 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// `wrangler login --use-keyring` returns the migrated credentials.
 		const plaintextPath = this.plaintextPath();
 		if (existsSync(plaintextPath)) {
-			return this.migrateFromPlaintext(plaintextPath, encryptedPath);
+			const migration = tryWithRefreshLock(
+				getRefreshLockPath(encryptedPath),
+				() =>
+					existsSync(encryptedPath)
+						? this.readEncryptedFile(encryptedPath)
+						: this.readPlaintext(plaintextPath, encryptedPath, true),
+				undefined,
+				this.owners
+			);
+			return migration.acquired
+				? migration.value
+				: this.readPlaintext(plaintextPath, encryptedPath, false);
 		}
 		return undefined;
 	}
@@ -136,20 +158,17 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			this.configPath,
 			this.profile
 		);
-		mkdirSync(path.dirname(encryptedPath), { recursive: true });
-		writeFileSync(encryptedPath, JSON.stringify(envelope, null, "\t"), {
-			encoding: "utf-8",
-			mode: 0o600,
-		});
-		chmodSync(encryptedPath, 0o600);
+		writeFileAtomically(
+			encryptedPath,
+			JSON.stringify(envelope, null, "\t"),
+			this.owners
+		);
 		// Defensively scrub any plaintext file once we've written
 		// the encrypted version. Skipping this would leave plaintext
 		// credentials on disk indefinitely after the very first
 		// `--use-keyring` login.
 		const plaintextPath = this.plaintextPath();
-		if (existsSync(plaintextPath)) {
-			rmSync(plaintextPath);
-		}
+		clearFile(plaintextPath, this.owners);
 	}
 
 	clear(): boolean {
@@ -158,17 +177,10 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			this.profile
 		);
 		const plaintextPath = this.plaintextPath();
-		let existed = false;
-		if (existsSync(encryptedPath)) {
-			rmSync(encryptedPath);
-			existed = true;
-		}
+		const encryptedExisted = clearFile(encryptedPath, this.owners);
 		// Also scrub any plaintext file, in case the user toggled
 		// backends in a previous session and the plaintext file lingered.
-		if (existsSync(plaintextPath)) {
-			rmSync(plaintextPath);
-			existed = true;
-		}
+		const plaintextExisted = clearFile(plaintextPath, this.owners);
 		try {
 			this.keyProvider.deleteKey();
 		} catch {
@@ -179,7 +191,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			// above, so a lingering bare key is useless without it. `clear()`
 			// still reports whether the credential *files* existed.
 		}
-		return existed;
+		return encryptedExisted || plaintextExisted;
 	}
 
 	path(): string {
@@ -238,14 +250,20 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		}
 	}
 
-	private migrateFromPlaintext(
+	private readPlaintext(
 		plaintextPath: string,
-		encryptedPath: string
+		encryptedPath: string,
+		migrate: boolean
 	): UserAuthConfig | undefined {
 		// Genuine filesystem errors (`EACCES`, `EISDIR`, ...) propagate;
 		// `read()` already confirmed the file exists, so only
 		// real IO failures reach here. A successfully-read-but-corrupt
 		// TOML body still collapses to "not logged in" below.
+		if (!existsSync(plaintextPath)) {
+			return existsSync(encryptedPath)
+				? this.readEncryptedFile(encryptedPath)
+				: undefined;
+		}
 		const raw = readFileSync(plaintextPath);
 		let plaintext: UserAuthConfig;
 		try {
@@ -256,12 +274,14 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			// in" and the user will need to re-login.
 			return undefined;
 		}
-		this.write(plaintext);
-		this.onPlaintextMigration?.({
-			plaintextPath,
-			encryptedPath,
-			keyProviderDescription: this.keyProvider.describe(),
-		});
+		if (migrate) {
+			this.write(plaintext);
+			this.onPlaintextMigration?.({
+				plaintextPath,
+				encryptedPath,
+				keyProviderDescription: this.keyProvider.describe(),
+			});
+		}
 		return plaintext;
 	}
 

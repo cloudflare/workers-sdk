@@ -1,4 +1,5 @@
 import type { ConfigStorage } from ".";
+import type { ProcessOwnerChecker } from "@cloudflare/workers-utils/file-system";
 
 /**
  * The data that may be read from the on-disk user auth config file.
@@ -12,4 +13,7 @@ export interface UserAuthConfig {
 	api_token?: string;
 }
 
-export type AuthConfigStorage = ConfigStorage<UserAuthConfig>;
+export interface AuthConfigStorage extends ConfigStorage<UserAuthConfig> {
+	/** Pin a backend and reuse the flow's process-identity cache for its writes. */
+	getForTransaction?(owners?: ProcessOwnerChecker): AuthConfigStorage;
+}

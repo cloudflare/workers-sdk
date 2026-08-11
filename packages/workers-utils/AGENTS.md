@@ -26,6 +26,8 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 
 ### Shared runtime utilities
 
+- `/file-system` — process-owned cross-process locks (`withFileLock` / `tryWithFileLock`), atomic file replacement, symlink-preserving path resolution, and caller-owned `ProcessOwnerChecker` caches. Lock wait timeouts never expire a live owner. Keep consumer-specific paths, errors, and cleanup namespaces in consumer wrappers. The legacy regular-file expiry option exists only for migration from older lock formats, never for expiring process-owned locks.
+
 - `getNodeCompat()` / `NodeJSCompatMode` — shared compatibility mode and flag resolution through `/node-compat`, used by deployment tooling and the Vite/Vitest integrations.
 - `getFreshSourceMapSupport()` — isolated source-map-support instances through `/sourcemap`. Keep source-map-support external because the helper manipulates its CommonJS module cache.
 

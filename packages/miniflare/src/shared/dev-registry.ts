@@ -7,9 +7,12 @@ import {
 	statSync,
 	unlinkSync,
 	utimesSync,
-	writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import {
+	ProcessOwnerChecker,
+	writeFileAtomically,
+} from "@cloudflare/workers-utils/file-system";
 import { getGlobalConfigPath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 import { watch } from "chokidar";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
@@ -24,6 +27,21 @@ const STORAGE_CANDIDATE_STALE_MS = 10_000;
 const WORKER_HEARTBEAT_MS = 10_000;
 const WORKER_STALE_MS = 90_000;
 
+type RegisteredWorkerDefinition = WorkerDefinition & {
+	instanceId?: string;
+	created?: number;
+};
+
+function getDefinitionCreated(
+	definition: RegisteredWorkerDefinition | undefined,
+	fallback: number
+): number {
+	return typeof definition?.created === "number" &&
+		Number.isFinite(definition.created)
+		? definition.created
+		: fallback;
+}
+
 export function getStorageCandidateName(instanceId: string): string {
 	return `${STORAGE_CANDIDATE_PREFIX}${instanceId}`;
 }
@@ -33,6 +51,7 @@ export function isStorageCandidateName(name: string): boolean {
 }
 
 export class DevRegistry {
+	private readonly owners = new ProcessOwnerChecker();
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registrationRetries = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
@@ -307,11 +326,17 @@ export class DevRegistry {
 
 	private writeWorkerDefinition(
 		definitionPath: string,
-		definition: WorkerDefinition
+		definition: WorkerDefinition,
+		created: number
 	): void {
-		writeFileSync(
+		writeFileAtomically(
 			definitionPath,
-			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
+			JSON.stringify(
+				{ ...definition, instanceId: this.instanceId, created },
+				null,
+				2
+			),
+			{ owners: this.owners }
 		);
 	}
 
@@ -322,6 +347,10 @@ export class DevRegistry {
 		const stats = statSync(definitionPath, { throwIfNoEntry: false });
 
 		const oldDefinition = stats ? readDefinition(definitionPath) : undefined;
+		const created =
+			oldDefinition?.instanceId === this.instanceId
+				? getDefinitionCreated(oldDefinition, stats?.birthtimeMs ?? Date.now())
+				: Date.now();
 		const staleMs = isStorageCandidateName(name)
 			? STORAGE_CANDIDATE_STALE_MS
 			: WORKER_STALE_MS;
@@ -363,7 +392,7 @@ export class DevRegistry {
 			clearInterval(existingHeartbeat);
 		}
 
-		this.writeWorkerDefinition(definitionPath, definition);
+		this.writeWorkerDefinition(definitionPath, definition, created);
 		this.registeredWorkers.add(name);
 		this.heartbeats.set(
 			name,
@@ -373,7 +402,7 @@ export class DevRegistry {
 						// Stale cleanup may remove a live Worker's entry after system sleep.
 						// Recreate it so peers can discover this Worker again.
 						try {
-							this.writeWorkerDefinition(definitionPath, definition);
+							this.writeWorkerDefinition(definitionPath, definition, created);
 						} catch (e) {
 							this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
 						}
@@ -520,7 +549,7 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 
 			registry[workerName] = {
 				...definition,
-				created: stats.birthtimeMs,
+				created: getDefinitionCreated(definition, stats.birthtimeMs),
 			};
 		} catch {
 			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel process
@@ -532,13 +561,13 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 
 function readDefinition(
 	definitionPath: string
-): (WorkerDefinition & { instanceId?: string }) | undefined {
+): RegisteredWorkerDefinition | undefined {
 	try {
 		const value: unknown = JSON.parse(
 			readFileSync(definitionPath, { encoding: "utf8", flag: "r" })
 		);
 		if (typeof value === "object" && value !== null) {
-			return value as WorkerDefinition & { instanceId?: string };
+			return value as RegisteredWorkerDefinition;
 		}
 	} catch {}
 	return undefined;

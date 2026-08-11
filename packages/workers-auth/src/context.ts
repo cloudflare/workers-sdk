@@ -151,7 +151,9 @@ export interface OAuthFlowContext {
 	 * between the plaintext TOML file and the encrypted-file-with-keyring-key
 	 * implementation on every call, so runtime preference changes
 	 * (`--use-keyring` / `CLOUDFLARE_AUTH_USE_KEYRING`) take effect without
-	 * rebuilding the flow.
+	 * rebuilding the flow. For refresh, login commits, and logout, the flow uses
+	 * the adapter's `getForTransaction()` to pin the selected backend while
+	 * holding the shared profile-level lock.
 	 */
 	storageFactory: (profile?: string) => AuthConfigStorage;
 

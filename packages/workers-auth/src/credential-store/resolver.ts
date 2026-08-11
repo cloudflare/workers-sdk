@@ -1,5 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
+import { ProcessOwnerChecker } from "@cloudflare/workers-utils/file-system";
 import { getCloudflareAuthUseKeyringFromEnv } from "../env-vars";
 import {
 	EncryptedFileCredentialStore,
@@ -90,6 +91,8 @@ export interface CredentialStorageContext {
  * flip (e.g. `wrangler login --no-use-keyring`) is observable through both
  * on the very next call. The profile argument selects which profile's files
  * / keyring entry the resolved store reads and writes.
+ * `storageFactory(profile).getForTransaction()` captures one concrete store so
+ * asynchronous credential transactions cannot switch backend between methods.
  */
 export interface CredentialStorageBundle {
 	storageFactory: (profile?: string) => AuthConfigStorage;
@@ -114,14 +117,19 @@ export interface CredentialStorageBundle {
  * The env var and the `isKeyringEnabled` callback are re-read on every
  * call so runtime preference changes take effect without rebuilding the
  * storage layer.
+ *
+ * @param context Consumer-specific credential-storage dependencies.
+ * @param owners Instance-owned identity cache shared with the consumer's OAuth flow.
  */
 export function createCredentialStorageContext(
-	context: CredentialStorageContext
+	context: CredentialStorageContext,
+	owners = new ProcessOwnerChecker()
 ): CredentialStorageBundle {
 	const config = {
 		...context,
 		loginCommand: context.loginCommand ?? "your CLI login",
 		format: context.format ?? "toml",
+		owners,
 	};
 
 	function getActiveStore(profile?: string): CredentialStore {
@@ -137,13 +145,19 @@ export function createCredentialStorageContext(
 			write: (value) => getActiveStore(profile).write(value),
 			clear: () => getActiveStore(profile).clear(),
 			path: () => getActiveStore(profile).path(),
+			getForTransaction(transactionOwners) {
+				const store = getActiveStore(profile);
+				return store.getForTransaction?.(transactionOwners) ?? store;
+			},
 		};
 	}
 
 	return { storageFactory, getActiveStore };
 }
 
-type ResolvedConfig = Required<CredentialStorageContext>;
+type ResolvedConfig = Required<CredentialStorageContext> & {
+	owners: ProcessOwnerChecker;
+};
 
 function resolveActiveCredentialStore(
 	config: ResolvedConfig,
@@ -153,14 +167,24 @@ function resolveActiveCredentialStore(
 	const configPath = config.getConfigPath();
 
 	if (envOverride === false) {
-		return new FileCredentialStore(configPath, profile, config.format);
+		return new FileCredentialStore(
+			configPath,
+			profile,
+			config.format,
+			config.owners
+		);
 	}
 
 	const forcedByEnvVar = envOverride === true;
 	const wantsKeyring = envOverride ?? config.isKeyringEnabled() ?? false;
 
 	if (!wantsKeyring) {
-		return new FileCredentialStore(configPath, profile, config.format);
+		return new FileCredentialStore(
+			configPath,
+			profile,
+			config.format,
+			config.owners
+		);
 	}
 
 	const resolution = resolveKeyProvider(
@@ -176,7 +200,8 @@ function resolveActiveCredentialStore(
 				resolution.provider,
 				buildMigrationLogger(config),
 				profile,
-				config.format
+				config.format,
+				config.owners
 			);
 
 		case "needs-install":
@@ -261,7 +286,8 @@ function handleNeedsInstall(
 		resolution.afterInstall(),
 		buildMigrationLogger(config),
 		profile,
-		config.format
+		config.format,
+		config.owners
 	);
 }
 
@@ -310,7 +336,8 @@ function handleUnsupported(
 		return new FileCredentialStore(
 			config.getConfigPath(),
 			profile,
-			config.format
+			config.format,
+			config.owners
 		);
 	}
 
@@ -330,7 +357,8 @@ function fallbackToFileWithWarning(
 	return new FileCredentialStore(
 		config.getConfigPath(),
 		profile,
-		config.format
+		config.format,
+		config.owners
 	);
 }
 

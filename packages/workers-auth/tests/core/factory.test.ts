@@ -1,11 +1,12 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createConfigCache } from "@cloudflare/workers-utils";
+import { ProcessOwnerChecker } from "@cloudflare/workers-utils/file-system";
 import {
 	createDeferred,
 	runInTempDir,
 } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { CF_CLI } from "../../src/cf";
 import { createCloudflareAuth } from "../../src/core/factory";
 import { createOAuthFlow } from "../../src/flow";
@@ -76,6 +77,35 @@ function mockAccountResponses(accounts: { id: string; name: string }[]): void {
 			status: 200,
 		});
 }
+
+describe("process ownership dependencies", () => {
+	runInTempDir();
+
+	afterEach(() => vi.restoreAllMocks());
+
+	it("shares one checker with storage and the flow, but not another auth context", ({
+		expect,
+	}) => {
+		vi.clearAllMocks();
+		vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "false");
+		const createOwner = vi.spyOn(ProcessOwnerChecker.prototype, "createOwner");
+		const first = createCloudflareAuth(CF_CLI, createTestContext());
+		const firstOwners = vi.mocked(createOAuthFlow).mock.calls.at(-1)?.[1];
+		const second = createCloudflareAuth(CF_CLI, createTestContext());
+		const secondOwners = vi.mocked(createOAuthFlow).mock.calls.at(-1)?.[1];
+
+		expect(firstOwners).toBeInstanceOf(ProcessOwnerChecker);
+		expect(secondOwners).toBeInstanceOf(ProcessOwnerChecker);
+		expect(firstOwners).not.toBe(secondOwners);
+		expect(createOwner).not.toHaveBeenCalled();
+
+		first.getCredentialStore().write({ oauth_token: "first" });
+		second.getCredentialStore().write({ oauth_token: "second" });
+		expect(createOwner).toHaveBeenCalledTimes(2);
+		expect(createOwner.mock.contexts[0]).toBe(firstOwners);
+		expect(createOwner.mock.contexts[1]).toBe(secondOwners);
+	});
+});
 
 describe("per-CLI login defaults", () => {
 	runInTempDir();
@@ -200,7 +230,8 @@ describe("temporary account status messages", () => {
 		expect(createOAuthFlow).toHaveBeenCalledWith(
 			expect.objectContaining({
 				temporary: expect.objectContaining({ temporaryAccountLogger }),
-			})
+			}),
+			expect.any(ProcessOwnerChecker)
 		);
 	});
 

@@ -1,12 +1,7 @@
-import {
-	chmodSync,
-	existsSync,
-	mkdirSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
-import path from "node:path";
+import { existsSync } from "node:fs";
 import { readFileSync } from "@cloudflare/workers-utils";
+import { ProcessOwnerChecker } from "@cloudflare/workers-utils/file-system";
+import { clearFile, writeFileAtomically } from "./atomic-write";
 import { parseFile, stringifyFile } from "./file-format";
 import type { ConfigStorage } from "../config-file";
 import type { FileFormat } from "./file-format";
@@ -16,6 +11,7 @@ export function createFileStorage<T extends object>(
 	format: FileFormat,
 	getPath: () => string
 ): ConfigStorage<T> {
+	const owners = new ProcessOwnerChecker();
 	return {
 		read: () => {
 			const filePath = getPath();
@@ -37,20 +33,10 @@ export function createFileStorage<T extends object>(
 		},
 		write(config) {
 			const configPath = getPath();
-			mkdirSync(path.dirname(configPath), { recursive: true });
-			writeFileSync(configPath, stringifyFile(format, config), {
-				encoding: "utf-8",
-				mode: 0o600,
-			});
-			// `mode` only applies when the file is created, so re-`chmod` on
-			// every save to keep 0o600 on shared hosts.
-			chmodSync(configPath, 0o600);
+			writeFileAtomically(configPath, stringifyFile(format, config), owners);
 		},
 		clear() {
-			const configPath = getPath();
-			const existed = existsSync(configPath);
-			rmSync(configPath, { force: true });
-			return existed;
+			return clearFile(getPath(), owners);
 		},
 		path: getPath,
 	};

@@ -35,6 +35,10 @@
 			"import": "./dist/test-helpers/index.mjs",
 			"types": "./dist/test-helpers/index.d.mts"
 		},
+		"./file-system": {
+			"import": "./dist/file-system.mjs",
+			"types": "./dist/file-system.d.mts"
+		},
 		"./fs-helpers": {
 			"import": "./dist/fs-helpers.mjs",
 			"types": "./dist/fs-helpers.d.mts"

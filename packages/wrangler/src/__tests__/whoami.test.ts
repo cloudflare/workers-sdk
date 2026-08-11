@@ -14,6 +14,11 @@ import {
 } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 
+const OAUTH_CREDENTIALS = {
+	oauth_token: "some-oauth-token",
+	expiration_time: new Date(Date.now() + 100_000_000).toISOString(),
+};
+
 describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
@@ -197,7 +202,7 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 	it("should return the user's email and accounts if authenticated via config token", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 		expect(userInfo).toEqual({
@@ -248,7 +253,7 @@ describe("whoami", () => {
 	it("should display a warning when account_id in config does not match authenticated accounts", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		const { whoami } = await import("../user/whoami");
 		await whoami(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
@@ -264,7 +269,7 @@ describe("whoami", () => {
 	it("should not display a warning when account_id matches an authenticated account", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		const { whoami } = await import("../user/whoami");
 		await whoami(COMPLIANCE_REGION_CONFIG_UNKNOWN, "account-1", "account-1");
 		expect(std.out).not.toContain(
@@ -275,7 +280,7 @@ describe("whoami", () => {
 	it("should not display a warning when accountFilter and configAccountId don't match", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		const { whoami } = await import("../user/whoami");
 		await whoami(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
@@ -290,7 +295,7 @@ describe("whoami", () => {
 	it("should display membership roles if --account flag is given", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		// `whoami` makes two calls to `/memberships`: one inside `fetchAllAccounts`
 		// (to filter accounts by what the current login auth can use) and one
 		// inside `fetchMembershipRoles`. Use a non-once handler so both calls
@@ -373,7 +378,7 @@ describe("whoami", () => {
 
 	it("should not redact in non-interactive mode", async ({ expect }) => {
 		setIsTTY(false);
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		msw.use(
 			http.get("*/memberships", () =>
 				HttpResponse.json(
@@ -453,7 +458,7 @@ describe("whoami", () => {
 	it("should output JSON with user info when --json flag is used and authenticated", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		await runWrangler("whoami --json");
 		let output;
 		expect(() => (output = JSON.parse(std.out))).not.toThrow();
@@ -510,7 +515,7 @@ describe("whoami", () => {
 	it("should display membership error on authentication error 10000", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		// `fetchAllAccounts` falls back to `/accounts` when `/memberships`
 		// fails with 9106 (Account API Token) or 10000 (Authentication
 		// error), so the accounts table still renders. The separate
@@ -585,7 +590,7 @@ describe("whoami", () => {
 	it("should fail when /memberships fails with a non-tolerated error", async ({
 		expect,
 	}) => {
-		writeAuthCredentials({ oauth_token: "some-oauth-token" });
+		writeAuthCredentials(OAUTH_CREDENTIALS);
 		// `fetchAllAccounts` only tolerates 9106 (Account API Token) and
 		// 10000 (Authentication error) on
 		// `/memberships`. Any other failure is propagated and `whoami` fails.

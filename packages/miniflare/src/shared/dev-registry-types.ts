@@ -1,7 +1,7 @@
 export type WorkerRegistry = Record<
 	string,
 	WorkerDefinition & {
-		// stat.birthtime
+		/** Stable registration time; legacy entries fall back to file birthtime. */
 		created: number;
 		instanceId?: string;
 	}

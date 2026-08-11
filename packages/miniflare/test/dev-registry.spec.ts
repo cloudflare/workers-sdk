@@ -237,6 +237,7 @@ describe("DevRegistry", { concurrent: false }, () => {
 		vi.useFakeTimers();
 		try {
 			registry.register({ worker: definition });
+			const created = getWorkerRegistry(unsafeDevRegistryPath).worker.created;
 			expect(
 				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
 			).toBe(registry.instanceId);
@@ -256,6 +257,7 @@ describe("DevRegistry", { concurrent: false }, () => {
 			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
 				...definition,
 				instanceId: registry.instanceId,
+				created,
 			});
 			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual(
 				expect.objectContaining({

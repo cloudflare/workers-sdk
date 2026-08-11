@@ -301,7 +301,7 @@ describe("Profiles", () => {
 			expect(out).toContain('Profile "client-a" deleted.');
 		});
 
-		it("deletes a profile file when logout returns before clearing storage", async ({
+		it("deletes a deprecated profile file without a refresh token", async ({
 			expect,
 		}) => {
 			createDeprecatedProfileFile("client-a");
@@ -310,7 +310,7 @@ describe("Profiles", () => {
 
 			expect(profiles().configs.exists("client-a")).toBe(false);
 			const out = normalizeString(std.out);
-			expect(out).toContain("Not logged in, exiting...");
+			expect(out).toContain("Cleared stored credentials.");
 			expect(out).toContain('Profile "client-a" deleted.');
 		});
 

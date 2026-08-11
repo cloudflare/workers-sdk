@@ -1,3 +1,5 @@
+import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, it, vi } from "vitest";
@@ -83,6 +85,7 @@ describe("fetchAuthToken", () => {
 });
 
 describe("refreshing an expired token", () => {
+	runInTempDir();
 	it("treats a timeout while reading the response body as an unreachable server, not a rejected refresh token", async ({
 		expect,
 	}) => {
@@ -137,7 +140,7 @@ describe("refreshing an expired token", () => {
 					stored = undefined;
 					return true;
 				},
-				path: () => "<in-memory>",
+				path: () => path.join(process.cwd(), "auth.json"),
 			}),
 			allowGlobalAuthKey: true,
 			temporary: undefined,
