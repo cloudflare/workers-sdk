@@ -46,7 +46,14 @@ describe("versions upload", () => {
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
-	function mockGetScript(result?: unknown) {
+	/**
+	 * Mocks service metadata for a Worker.
+	 *
+	 * @param result - The service metadata result.
+	 * @param options - Controls whether the handler can respond more than once.
+	 * @returns Nothing.
+	 */
+	function mockGetScript(result?: unknown, options: { once?: boolean } = {}) {
 		msw.use(
 			http.get(
 				`*/accounts/:accountId/workers/services/:scriptName`,
@@ -65,7 +72,7 @@ describe("versions upload", () => {
 						)
 					);
 				},
-				{ once: true }
+				{ once: options.once ?? true }
 			)
 		);
 	}
@@ -1156,19 +1163,23 @@ describe("versions upload", () => {
 		});
 
 		test("should preserve containers config in metadata", async () => {
+			// Override the beforeEach mockGetScript() with a handler that also
+			// includes migration_tag, so both preUploadApiChecks and
+			// getMigrationsToUpload get valid responses from the same endpoint.
 			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/scripts",
-					() => {
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: [{ id: "test-name", migration_tag: "v1" }],
-						});
-					},
-					{ once: true }
-				)
+				http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult({
+							default_environment: {
+								script: {
+									id: "test-name",
+									last_deployed_from: "wrangler",
+									migration_tag: "v1",
+								},
+							},
+						})
+					);
+				})
 			);
 
 			const mockUploadVersionCapture = captureRequestsFrom(
@@ -2285,22 +2296,16 @@ describe("versions upload", () => {
 		});
 
 		test("should include migrations in upload metadata", async ({ expect }) => {
-			mockGetScript();
-
-			// Mock the scripts list for migration tag lookup
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/scripts",
-					() => {
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: [{ id: "test-name", migration_tag: "" }],
-						});
+			mockGetScript(
+				{
+					default_environment: {
+						script: {
+							last_deployed_from: "wrangler",
+							migration_tag: "",
+						},
 					},
-					{ once: true }
-				)
+				},
+				{ once: false }
 			);
 
 			const requests = mockUploadVersion(false, 0);

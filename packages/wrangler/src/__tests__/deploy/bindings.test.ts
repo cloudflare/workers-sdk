@@ -320,8 +320,8 @@ describe("deploy", () => {
 				],
 				useOldUploadApi: true,
 			});
-			mockSubDomainRequest();
-			mockLegacyScriptData({ scripts: [] });
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockLegacyScriptData({});
 
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1446,7 +1446,7 @@ describe("deploy", () => {
 				);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedBindings: [
@@ -1500,7 +1500,7 @@ describe("deploy", () => {
 				);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedBindings: [
@@ -1601,7 +1601,7 @@ describe("deploy", () => {
 				);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedType: "esm",
@@ -1659,7 +1659,7 @@ describe("deploy", () => {
 				fs.writeFileSync("index.js", scriptContent);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedType: "esm",
@@ -1720,7 +1720,7 @@ describe("deploy", () => {
 				fs.writeFileSync("index.js", scriptContent);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedType: "esm",

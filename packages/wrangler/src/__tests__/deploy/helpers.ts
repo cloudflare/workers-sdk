@@ -388,29 +388,8 @@ export function mockServiceScriptData(options: {
 			)
 		);
 	} else {
-		const baseName = options.scriptName || "test-name";
-		const expectedScriptName = options.env
-			? `${baseName}-${options.env}`
-			: baseName;
-		// The Durable Object migrations flow (`getMigrationsToUpload`) lists all
-		// scripts and finds the deployed Worker by its (legacy) name.
-		msw.use(
-			http.get(
-				"*/accounts/:accountId/workers/scripts",
-				({ params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					return HttpResponse.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: script ? [{ ...script, id: expectedScriptName }] : [],
-					});
-				},
-				{ once: true }
-			)
-		);
-		// The CI tag match flow (`verifyWorkerMatchesCITag`) fetches the Worker's
-		// service metadata.
+		// Service metadata may be fetched by both pre-upload checks and the
+		// Durable Object migrations flow during one deploy.
 		msw.use(
 			http.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
@@ -437,8 +416,7 @@ export function mockServiceScriptData(options: {
 							default_environment: { environment: "production", script },
 						},
 					});
-				},
-				{ once: true }
+				}
 			)
 		);
 	}
