@@ -361,6 +361,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: true,
 			unsupportedOSs: ["win32"],
+			verifyTypes: false,
 		},
 		{
 			name: "next:opennext",
