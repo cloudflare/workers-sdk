@@ -1,4 +1,4 @@
-import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils";
+import { resolveNodejsCompat } from "@cloudflare/workers-utils";
 
 /**
  * We can provide Node.js compatibility in a number of different modes:
@@ -11,22 +11,10 @@ import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils";
 export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
 
 /**
- * The compatibility date on which `nodejs_compat` started implying
- * `nodejs_compat_v2`.
- */
-const NODEJS_COMPAT_V2_SWITCH_OVER_DATE = "2024-09-23";
-
-/**
  * Computes the Node.js compatibility mode we are running.
  *
- * This mirrors how workerd itself resolves the `nodejs_compat` and
- * `nodejs_compat_v2` flags, which depends on both the compatibility date and
- * the compatibility flags:
- * - Both flags are enabled by default from `NODEJS_COMPAT_DEFAULT_ON_DATE`
- *   onwards, and each must be turned off separately from that date, with
- *   `no_nodejs_compat` and `no_nodejs_compat_v2` respectively.
- * - Before that date, `nodejs_compat` implies `nodejs_compat_v2` from
- *   `NODEJS_COMPAT_V2_SWITCH_OVER_DATE` onwards.
+ * The `nodejs_compat`/`nodejs_compat_v2` resolution itself is shared with the
+ * rest of the tooling, in `resolveNodejsCompat()`.
  *
  * @param compatibilityDate The compatibility date
  * @param compatibilityFlags The compatibility flags
@@ -45,22 +33,13 @@ export function getNodeCompat(
 		hasExperimentalNodejsCompatV2Flag,
 	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
-	const isDefaultOn = isNodejsCompatDefaultOn(compatibilityDate);
-
-	const nodejsCompatEnabled =
-		hasNodejsCompatFlag || (isDefaultOn && !hasNoNodejsCompatFlag);
-
-	const nodejsCompatV2Enabled =
-		hasNodejsCompatV2Flag ||
-		(!hasNoNodejsCompatV2Flag &&
-			(isDefaultOn ||
-				(nodejsCompatEnabled &&
-					compatibilityDate >= NODEJS_COMPAT_V2_SWITCH_OVER_DATE)));
+	const { isNodejsCompatEnabled, isNodejsCompatV2Enabled } =
+		resolveNodejsCompat(compatibilityDate, compatibilityFlags);
 
 	let mode: NodeJSCompatMode = null;
-	if (nodejsCompatV2Enabled) {
+	if (isNodejsCompatV2Enabled) {
 		mode = "v2";
-	} else if (nodejsCompatEnabled) {
+	} else if (isNodejsCompatEnabled) {
 		mode = "v1";
 	} else if (hasNodejsAlsFlag) {
 		mode = "als";
@@ -70,8 +49,8 @@ export function getNodeCompat(
 		mode,
 		// Whether workerd will enable the `nodejs_compat`/`nodejs_compat_v2`
 		// features, accounting for both the flags and the compatibility date.
-		isNodejsCompatEnabled: nodejsCompatEnabled,
-		isNodejsCompatV2Enabled: nodejsCompatV2Enabled,
+		isNodejsCompatEnabled,
+		isNodejsCompatV2Enabled,
 		// Whether each flag was explicitly specified.
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,

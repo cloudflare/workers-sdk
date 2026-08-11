@@ -66,3 +66,42 @@ export function isNodejsCompatDefaultOn(
 		compatibilityDate >= NODEJS_COMPAT_DEFAULT_ON_DATE
 	);
 }
+
+/**
+ * The compatibility date on which `nodejs_compat` started implying
+ * `nodejs_compat_v2`.
+ */
+export const NODEJS_COMPAT_V2_SWITCH_OVER_DATE = "2024-09-23";
+
+/**
+ * Resolves whether workerd will enable the `nodejs_compat` and
+ * `nodejs_compat_v2` features, mirroring how workerd itself resolves them from
+ * the compatibility date and flags:
+ * - Both are enabled by default from {@link NODEJS_COMPAT_DEFAULT_ON_DATE}
+ *   onwards, and each must be turned off separately from that date, with
+ *   `no_nodejs_compat` and `no_nodejs_compat_v2` respectively.
+ * - Before that date, `nodejs_compat` implies `nodejs_compat_v2` from
+ *   {@link NODEJS_COMPAT_V2_SWITCH_OVER_DATE} onwards.
+ *
+ * @param compatibilityDate The compatibility date
+ * @param compatibilityFlags The compatibility flags
+ */
+export function resolveNodejsCompat(
+	compatibilityDate: string,
+	compatibilityFlags: string[]
+): { isNodejsCompatEnabled: boolean; isNodejsCompatV2Enabled: boolean } {
+	const isDefaultOn = isNodejsCompatDefaultOn(compatibilityDate);
+
+	const isNodejsCompatEnabled =
+		compatibilityFlags.includes("nodejs_compat") ||
+		(isDefaultOn && !compatibilityFlags.includes("no_nodejs_compat"));
+
+	const isNodejsCompatV2Enabled =
+		compatibilityFlags.includes("nodejs_compat_v2") ||
+		(!compatibilityFlags.includes("no_nodejs_compat_v2") &&
+			(isDefaultOn ||
+				(isNodejsCompatEnabled &&
+					compatibilityDate >= NODEJS_COMPAT_V2_SWITCH_OVER_DATE)));
+
+	return { isNodejsCompatEnabled, isNodejsCompatV2Enabled };
+}

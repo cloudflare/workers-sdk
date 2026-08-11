@@ -118,6 +118,8 @@ export {
 	getTodaysCompatDate,
 	isNodejsCompatDefaultOn,
 	NODEJS_COMPAT_DEFAULT_ON_DATE,
+	NODEJS_COMPAT_V2_SWITCH_OVER_DATE,
+	resolveNodejsCompat,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
 
