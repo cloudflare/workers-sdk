@@ -5,8 +5,8 @@ import {
 	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 } from "../shared";
-import type { Worker_Binding } from "../../runtime";
 import type { ParsedDevConfig } from "../../config/schema";
+import type { Worker_Binding } from "../../runtime";
 import type { ParsedMiniflareWorkerConfig } from "../shared";
 import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
@@ -196,7 +196,6 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 				});
 				continue;
 			}
-
 
 			const scheme = url.protocol.replace(":", "");
 			const sslmode = parseSslMode(url, scheme);
