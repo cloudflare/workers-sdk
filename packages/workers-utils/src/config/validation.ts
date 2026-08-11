@@ -3398,6 +3398,32 @@ function validatePreviewsContainers(
 			);
 			return false;
 		}
+		// An application name is derived from the class name, so two entries
+		// sharing a class name would resolve to one application and the second
+		// would silently overwrite the first.
+		if (Array.isArray(value)) {
+			const seen = new Set<string>();
+			const duplicates = new Set<string>();
+			for (const entry of value) {
+				if (
+					entry &&
+					typeof entry === "object" &&
+					typeof entry.class_name === "string"
+				) {
+					if (seen.has(entry.class_name)) {
+						duplicates.add(entry.class_name);
+					}
+					seen.add(entry.class_name);
+				}
+			}
+			if (duplicates.size > 0) {
+				const classList = [...duplicates].map((c) => `"${c}"`).join(", ");
+				diagnostics.errors.push(
+					`"${field}" declares more than one container for the Durable Object class ${classList}; preview container application names are derived from the class name, so each class may appear at most once.`
+				);
+				return false;
+			}
+		}
 		return innerValidator(diagnostics, field, value, config);
 	};
 }

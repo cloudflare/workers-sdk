@@ -142,17 +142,34 @@ export async function deletePreviewContainers(
 	}
 
 	const matches = apps.filter((app) => expectedNames.has(app.name));
-	await Promise.allSettled(
-		matches.map(async (app) => {
-			try {
-				await promiseSpinner(ApplicationsService.deleteApplication(app.id), {
-					message: `Deleting container application "${app.name}"`,
-				});
-			} catch (error) {
-				logger.warn(
-					`Failed to delete preview container application "${app.name}": ${error instanceof Error ? error.message : String(error)}`
-				);
-			}
-		})
+	if (matches.length === 0) {
+		return;
+	}
+
+	// One spinner for the whole batch. The deletes run concurrently and
+	// `promiseSpinner` starts an independent spinner per call, so wrapping each
+	// delete individually would leave several spinners redrawing over each
+	// other. Failures are collected and warned about after the spinner clears,
+	// for the same reason.
+	const failures = await promiseSpinner(
+		Promise.all(
+			matches.map(async (app) => {
+				try {
+					await ApplicationsService.deleteApplication(app.id);
+					return undefined;
+				} catch (error) {
+					return `Failed to delete preview container application "${app.name}": ${error instanceof Error ? error.message : String(error)}`;
+				}
+			})
+		),
+		{
+			message: `Deleting ${matches.length} preview container application${matches.length === 1 ? "" : "s"}`,
+		}
 	);
+
+	for (const failure of failures) {
+		if (failure !== undefined) {
+			logger.warn(failure);
+		}
+	}
 }

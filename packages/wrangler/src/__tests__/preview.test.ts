@@ -46,6 +46,11 @@ describe("wrangler preview", () => {
 	mockAccountId();
 	afterEach(() => {
 		clearOutputFilePath();
+		// Several container tests stub `getScopes` to grant `containers:write`.
+		// `vitest.setup.ts` only clears mock calls, so without an explicit
+		// restore that stub would outlive its test and silently grant the scope
+		// to every later test in the file.
+		vi.restoreAllMocks();
 	});
 
 	describe("getBranchName", () => {
@@ -1997,6 +2002,139 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.containers).toEqual([
 				{ class_name: "MyContainer" },
 			]);
+			expect(createdApplication).toMatchObject({
+				name: "test-worker_feature-my-branch_MyContainer",
+				durable_objects: { namespace_id: "preview-do-ns-id" },
+			});
+		});
+
+		// A class may be bound both locally and cross-script. Container options are
+		// resolved by finding the first binding with a matching class name, so a
+		// cross-script binding listed first used to make the container fail as
+		// though another Worker owned it.
+		test("should resolve a container whose class is also bound cross-script earlier in the config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [
+								{
+									name: "FOREIGN_CONTAINER",
+									class_name: "MyContainer",
+									script_name: "owner-worker",
+								},
+								{ name: "MY_CONTAINER", class_name: "MyContainer" },
+							],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let createdApplication: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-containers",
+									name: "feature/my-branch",
+									slug: "feature-my-branch",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-containers",
+									preview_id: "preview-id-containers",
+									preview_name: "feature/my-branch",
+									urls: ["https://containers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										FOREIGN_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "other-worker-do-ns-id",
+											script_name: "owner-worker",
+										},
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) => {
+					createdApplication = (await request.json()) as Record<
+						string,
+						unknown
+					>;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...createdApplication },
+					});
+				})
+			);
+
+			await runWrangler("preview --name feature/my-branch");
+
 			expect(createdApplication).toMatchObject({
 				name: "test-worker_feature-my-branch_MyContainer",
 				durable_objects: { namespace_id: "preview-do-ns-id" },

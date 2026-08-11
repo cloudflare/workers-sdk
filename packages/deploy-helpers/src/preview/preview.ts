@@ -184,12 +184,23 @@ function buildPreviewContainerConfig(
 		return undefined;
 	}
 
+	// `getNormalizedContainerOptions` resolves a container's Durable Object with
+	// `find()` on `class_name`, and rejects the container outright if that first
+	// match carries `script_name`. A class bound both locally and cross-script
+	// would then fail as though another Worker owned it, purely because of
+	// binding order. Put the locally implemented bindings first so the lookup
+	// lands on the one this preview owns.
+	const localBindingsFirst = [
+		...previewDOBindings.filter((b) => b.script_name === undefined),
+		...previewDOBindings.filter((b) => b.script_name !== undefined),
+	];
+
 	const observability = previews?.observability ?? config.observability;
 	return {
 		...config,
 		containers: filteredContainers,
 		durable_objects: {
-			bindings: previews?.durable_objects?.bindings ?? [],
+			bindings: localBindingsFirst,
 		},
 		observability,
 	};

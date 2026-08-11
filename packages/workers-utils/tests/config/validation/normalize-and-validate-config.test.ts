@@ -11339,6 +11339,38 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
+			it("should reject two previews.containers entries sharing a class_name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/other:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.containers" declares more than one container for the Durable Object class "MyContainer"'
+				);
+			});
+
 			it("should reject previews.containers entries missing image", ({
 				expect,
 			}) => {
