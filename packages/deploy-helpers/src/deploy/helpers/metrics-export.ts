@@ -96,7 +96,7 @@ export async function clearMetricsExportRequester({
 		await postMetricsExportRequester(config, accountId, scriptName, []);
 	} catch (error) {
 		throw new UserError(
-			"Wrangler could not clean up this Worker's metrics export configuration, so the Worker was not deleted. Retry the delete command.",
+			"Wrangler could not clean up this Worker's metrics export configuration.",
 			{
 				cause: error,
 				telemetryMessage: "metrics export delete cleanup failure",
