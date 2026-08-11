@@ -1,3 +1,4 @@
+import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import { ApplicationsService } from "@cloudflare/containers-shared";
 import {
 	previewContainerAppName,
@@ -11,7 +12,7 @@ import {
 import { containersScope } from "../containers";
 import { buildContainer } from "../containers/build";
 import { apply } from "../containers/deploy";
-import { logger } from "../logger";
+import { logger, runWithLogLevel } from "../logger";
 import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
@@ -30,6 +31,39 @@ import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
  * `deployment.env` rather than re-fetching.
  */
 export async function deployPreviewContainers(
+	scopedConfig: Config,
+	normalisedContainerConfig: ContainerNormalizedConfig[],
+	deployment: DeploymentResource,
+	options: { quiet: boolean }
+): Promise<void> {
+	if (!options.quiet) {
+		return applyPreviewContainers(
+			scopedConfig,
+			normalisedContainerConfig,
+			deployment
+		);
+	}
+
+	// Two independent log levels gate stdout here. `logger` reads an
+	// AsyncLocalStorage override and `@cloudflare/cli`'s `logRaw` reads module
+	// level state, so lowering one leaves the other printing. Warnings and
+	// errors write to stderr and are unaffected.
+	const previousLogLevel = getLogLevel();
+	setLogLevel("error");
+	try {
+		return await runWithLogLevel("error", () =>
+			applyPreviewContainers(
+				scopedConfig,
+				normalisedContainerConfig,
+				deployment
+			)
+		);
+	} finally {
+		setLogLevel(previousLogLevel);
+	}
+}
+
+async function applyPreviewContainers(
 	scopedConfig: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource

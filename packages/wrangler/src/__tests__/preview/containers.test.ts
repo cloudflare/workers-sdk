@@ -70,7 +70,9 @@ describe("deployPreviewContainers", () => {
 			containers: [container],
 		} as unknown as Config;
 
-		await deployPreviewContainers(config, [container], deployment);
+		await deployPreviewContainers(config, [container], deployment, {
+			quiet: false,
+		});
 
 		expect(vi.mocked(buildContainer).mock.calls[0]?.[0]).toMatchObject({
 			name: "test-worker_my-feature_mycontainer",
@@ -91,7 +93,9 @@ describe("deployPreviewContainers", () => {
 			containers: [container],
 		} as unknown as Config;
 
-		await deployPreviewContainers(config, [container], deployment);
+		await deployPreviewContainers(config, [container], deployment, {
+			quiet: false,
+		});
 
 		expect(vi.mocked(buildContainer).mock.calls[0]?.[0]).toMatchObject({
 			name: "test-worker_feature-mybranch_mycontainer",
@@ -131,7 +135,8 @@ describe("deployPreviewContainers", () => {
 		await deployPreviewContainers(
 			config,
 			[container],
-			deploymentWithCrossScriptBinding
+			deploymentWithCrossScriptBinding,
+			{ quiet: false }
 		);
 
 		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
@@ -154,7 +159,9 @@ describe("deployPreviewContainers", () => {
 			containers: [container],
 		} as unknown as Config;
 
-		await deployPreviewContainers(config, [container], deployment);
+		await deployPreviewContainers(config, [container], deployment, {
+			quiet: false,
+		});
 
 		expect(buildContainer).not.toHaveBeenCalled();
 		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({

@@ -108,7 +108,11 @@ export type PreviewCallbacks = Pick<
 		| ((
 				scopedConfig: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
-				deployment: DeploymentResource
+				deployment: DeploymentResource,
+				// Building and applying containers prints progress to stdout, the
+				// same stream that carries the `--json` payload. Set this when
+				// stdout has to stay machine readable.
+				options: { quiet: boolean }
 		  ) => Promise<void>)
 		| undefined;
 };
@@ -676,7 +680,8 @@ export async function preview(
 		await callbacks.deployPreviewContainers(
 			scopedContainerConfig,
 			normalisedContainerConfig,
-			deployment
+			deployment,
+			{ quiet: args.json === true }
 		);
 	}
 

@@ -1,6 +1,7 @@
 import * as childProcess from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
+import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	extractConfigBindings,
 	getBranchName,
@@ -2006,6 +2007,134 @@ describe("wrangler preview", () => {
 				name: "test-worker_feature-my-branch_MyContainer",
 				durable_objects: { namespace_id: "preview-do-ns-id" },
 			});
+		});
+
+		test("should keep --json output parseable while deploying containers", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let createdApplication: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-json-containers",
+									name: "feature/my-branch",
+									slug: "feature-my-branch",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-json-containers",
+									preview_id: "preview-id-json-containers",
+									preview_name: "feature/my-branch",
+									urls: ["https://containers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) => {
+					createdApplication = (await request.json()) as Record<
+						string,
+						unknown
+					>;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...createdApplication },
+					});
+				})
+			);
+			// The container progress output reaches stdout through logRaw rather
+			// than console.log, so it has to be captured from the stream.
+			const stdoutWrite = vi
+				.spyOn(streams.stdout, "write")
+				.mockImplementation(() => true);
+			await runWrangler("preview --name feature/my-branch --json");
+
+			// The container application is still created, so the quiet path
+			// suppresses output without skipping work.
+			expect(createdApplication).toMatchObject({
+				name: "test-worker_feature-my-branch_MyContainer",
+			});
+			expect(stdoutWrite).not.toHaveBeenCalled();
+			const parsed = JSON.parse(std.out) as {
+				preview: { id: string };
+				deployment: { id: string };
+			};
+			expect(parsed.preview.id).toBe("preview-id-json-containers");
+			expect(parsed.deployment.id).toBe("deployment-id-json-containers");
 		});
 
 		// A class may be bound both locally and cross-script. Container options are
