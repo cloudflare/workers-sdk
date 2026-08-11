@@ -3664,6 +3664,55 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if containers.configuration is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								configuration: null,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.configuration" should be an object"
+				`);
+			});
+
+			it("should error if containers.configuration is null and instance_type is set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								configuration: null,
+								instance_type: "lite",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.configuration" should be an object"
+				`);
+			});
+
 			it("should error if no containers name and no worker name are provided", ({
 				expect,
 			}) => {
@@ -3956,29 +4005,6 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if containers.configuration is null", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "test-worker",
-						containers: [
-							{
-								class_name: "test-class",
-								image: "registry.cloudflare.com/test:latest",
-								configuration: null,
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - "containers.configuration" should be an object"
-				`);
-			});
-
 			it("should error if an authorized_keys entry has no public_key", ({
 				expect,
 			}) => {
@@ -4076,32 +4102,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - containers.trusted_user_ca_keys[0].public_key must be a string"
-				`);
-			});
-
-			it("should error if containers.configuration is null and instance_type is set", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "test-worker",
-						containers: [
-							{
-								class_name: "test-class",
-								image: "registry.cloudflare.com/test:latest",
-								configuration: null,
-								instance_type: "lite",
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - "containers.configuration" should be an object"
 				`);
 			});
 
