@@ -193,7 +193,6 @@ export interface CfWorkflow {
 	class_name: string;
 	binding: string;
 	script_name?: string;
-	remote?: boolean;
 	raw?: boolean;
 	limits?: {
 		steps?: number;

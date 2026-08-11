@@ -2895,15 +2895,6 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (!isOptionalProperty(value, "remote", "boolean")) {
-		diagnostics.errors.push(
-			`"${field}" bindings should, optionally, have a boolean "remote" field but got ${JSON.stringify(
-				value
-			)}.`
-		);
-		isValid = false;
-	}
-
 	if (hasProperty(value, "schedules") && value.schedules !== undefined) {
 		if (typeof value.schedules === "string") {
 			if (value.schedules.length === 0) {
@@ -2989,7 +2980,6 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"name",
 		"class_name",
 		"script_name",
-		"remote",
 		"limits",
 		"schedules",
 	]);

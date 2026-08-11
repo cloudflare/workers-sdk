@@ -67,7 +67,6 @@ export interface TypedWorkerDefinition<
 	// >(options: {
 	// 	workerName: TWorkerName;
 	// 	exportName: TExportName;
-	// 	remote?: boolean;
 	// }): TypedWorkflowBinding<TConfig, TExportName>;
 }
 

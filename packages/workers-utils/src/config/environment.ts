@@ -837,8 +837,6 @@ export type WorkflowBinding = {
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */
 	script_name?: string;
-	/** Whether the Workflow should be remote or not in local development */
-	remote?: boolean;
 	/** Optional limits for the Workflow */
 	limits?: {
 		/** Maximum number of steps a Workflow instance can execute */

@@ -610,8 +610,6 @@ interface WorkflowBindingOptions {
 	workerName: string;
 	/** The exported class name of the Workflow. */
 	exportName: string;
-	/** Whether the Workflow binding should be remote or not in local development. */
-	remote?: boolean;
 }
 
 /**

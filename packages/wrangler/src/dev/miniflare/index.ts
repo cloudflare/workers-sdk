@@ -344,39 +344,22 @@ function pipelineEntry(
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
-function workflowEntry(
-	{
-		binding,
-		name,
-		class_name: className,
-		script_name: scriptName,
-		remote,
-		limits,
-	}: CfWorkflow,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
-): [
+function workflowEntry({
+	binding,
+	name,
+	class_name: className,
+	script_name: scriptName,
+	limits,
+}: CfWorkflow): [
 	string,
 	{
 		name: string;
 		className: string;
 		scriptName?: string;
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		stepLimit?: number;
 	},
 ] {
 	const stepLimit = limits?.steps;
-
-	if (!remoteProxyConnectionString || !remote) {
-		return [
-			binding,
-			{
-				name,
-				className,
-				scriptName,
-				...(stepLimit !== undefined && { stepLimit }),
-			},
-		];
-	}
 
 	return [
 		binding,
@@ -384,7 +367,6 @@ function workflowEntry(
 			name,
 			className,
 			scriptName,
-			remoteProxyConnectionString,
 			...(stepLimit !== undefined && { stepLimit }),
 		},
 	];
@@ -910,7 +892,7 @@ export function buildMiniflareBindingOptions(
 						);
 					}
 				}
-				return workflowEntry(workflow, remoteProxyConnectionString);
+				return workflowEntry(workflow);
 			})
 		),
 		secretsStoreSecrets: Object.fromEntries(
