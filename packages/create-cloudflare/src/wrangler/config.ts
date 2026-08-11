@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { isCompatDate } from "@cloudflare/workers-utils";
+import {
+	isCompatDate,
+	isNodejsCompatDefaultOn,
+} from "@cloudflare/workers-utils";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -21,7 +24,8 @@ import type { C3Context } from "types";
  * - setting the `name` to the passed project name
  * - adding the latest compatibility date when no valid one is present
  * - enabling observability
- * - adding `nodejs_compat` to the compatibility flags (if not already present)
+ * - adding `nodejs_compat` to the compatibility flags (if not already present, and
+ *   if the compatibility date does not already enable it by default)
  * - adding comments with links to documentation for common configuration options
  * - substituting placeholders with actual values
  *   - `<WORKER_NAME>` with the project name
@@ -56,14 +60,16 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			"node_modules/wrangler/config-schema.json"
 		);
 
+		const compatibilityDate = await getCompatibilityDate(
+			wranglerJson.compatibility_date,
+			ctx.project.path
+		);
+
 		wranglerJson = appendJSONProperty(wranglerJson, "name", ctx.project.name);
 		wranglerJson = appendJSONProperty(
 			wranglerJson,
 			"compatibility_date",
-			await getCompatibilityDate(
-				wranglerJson.compatibility_date,
-				ctx.project.path
-			)
+			compatibilityDate
 		);
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
@@ -75,7 +81,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 				"upload_source_maps",
 				true
 			);
-			wranglerJson = addNodejsCompatFlag(wranglerJson);
+			wranglerJson = addNodejsCompatFlag(wranglerJson, compatibilityDate);
 		}
 
 		addHintsAsJsonComments(wranglerJson);
@@ -90,16 +96,17 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		}
 
 		const wranglerToml = TOML.parse(strToml);
-		wranglerToml.name = ctx.project.name;
-		wranglerToml.compatibility_date = await getCompatibilityDate(
+		const compatibilityDate = await getCompatibilityDate(
 			wranglerToml.compatibility_date,
 			ctx.project.path
 		);
+		wranglerToml.name = ctx.project.name;
+		wranglerToml.compatibility_date = compatibilityDate;
 		wranglerToml.observability ??= { enabled: true };
 		// Skip adding upload_source_maps and nodejs_compat for Python projects
 		if (ctx.args.lang !== "python") {
 			wranglerToml.upload_source_maps ??= true;
-			addNodejsCompatFlagToToml(wranglerToml);
+			addNodejsCompatFlagToToml(wranglerToml, compatibilityDate);
 		}
 
 		writeWranglerToml(
@@ -337,23 +344,42 @@ function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
 }
 
 /**
+ * Whether the `nodejs_compat` flag should be added to a config using the given
+ * compatibility date and flags.
+ *
+ * It is not needed when it, or one of its variants, is already present. It is
+ * also not needed when the compatibility date already enables it by default —
+ * specifying it in that case is a workerd validation error.
+ */
+function needsNodejsCompatFlag(
+	compatibilityDate: string,
+	existingFlags: string[]
+): boolean {
+	return (
+		!isNodejsCompatDefaultOn(compatibilityDate) &&
+		!existingFlags.includes("nodejs_compat") &&
+		!existingFlags.includes("nodejs_compat_v2") &&
+		!existingFlags.includes("no_nodejs_compat")
+	);
+}
+
+/**
  * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a JSON wrangler config.
- * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
- * or `no_nodejs_compat` is already present, no changes are made.
+ * If the array doesn't exist, it will be created. If the flag is not needed, no changes are made.
  *
  * @param wranglerConfig The wrangler JSON configuration object.
+ * @param compatibilityDate The compatibility date the config will use.
  * @returns The updated configuration object.
  */
-function addNodejsCompatFlag(wranglerConfig: CommentObject): CommentObject {
+function addNodejsCompatFlag(
+	wranglerConfig: CommentObject,
+	compatibilityDate: string
+): CommentObject {
 	const existingFlags = Array.isArray(wranglerConfig.compatibility_flags)
 		? (wranglerConfig.compatibility_flags as string[])
 		: [];
 
-	if (
-		existingFlags.includes("nodejs_compat") ||
-		existingFlags.includes("nodejs_compat_v2") ||
-		existingFlags.includes("no_nodejs_compat")
-	) {
+	if (!needsNodejsCompatFlag(compatibilityDate, existingFlags)) {
 		return wranglerConfig;
 	}
 
@@ -365,21 +391,20 @@ function addNodejsCompatFlag(wranglerConfig: CommentObject): CommentObject {
 
 /**
  * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a TOML wrangler config.
- * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
- * or `no_nodejs_compat` is already present, no changes are made.
+ * If the array doesn't exist, it will be created. If the flag is not needed, no changes are made.
  *
  * @param wranglerConfig The wrangler TOML configuration object.
+ * @param compatibilityDate The compatibility date the config will use.
  */
-function addNodejsCompatFlagToToml(wranglerConfig: TomlTable): void {
+function addNodejsCompatFlagToToml(
+	wranglerConfig: TomlTable,
+	compatibilityDate: string
+): void {
 	const existingFlags = Array.isArray(wranglerConfig.compatibility_flags)
 		? (wranglerConfig.compatibility_flags as string[])
 		: [];
 
-	if (
-		existingFlags.includes("nodejs_compat") ||
-		existingFlags.includes("nodejs_compat_v2") ||
-		existingFlags.includes("no_nodejs_compat")
-	) {
+	if (!needsNodejsCompatFlag(compatibilityDate, existingFlags)) {
 		return;
 	}
 

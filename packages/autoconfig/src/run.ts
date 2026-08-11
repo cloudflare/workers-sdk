@@ -10,6 +10,7 @@ import { installWrangler } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	FatalError,
 	getTodaysCompatDate,
+	isNodejsCompatDefaultOn,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
 import {
@@ -135,7 +136,7 @@ export async function runAutoConfig(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		dryRunConfigurationResults.wranglerConfig === null
 			? null
-			: ensureNodejsCompatIsInConfig({
+			: ensureNodejsCompatIsEnabled({
 					...wranglerConfig,
 					...dryRunConfigurationResults.wranglerConfig,
 				}),
@@ -220,7 +221,7 @@ export async function runAutoConfig(
 	if (configurationResults.wranglerConfig !== null) {
 		await saveWranglerJsonc(
 			autoConfigDetails.projectPath,
-			ensureNodejsCompatIsInConfig({
+			ensureNodejsCompatIsEnabled({
 				...wranglerConfig,
 				...configurationResults.wranglerConfig,
 			})
@@ -251,28 +252,33 @@ export async function runAutoConfig(
 }
 
 /**
- * Given a wrangler config object this function makes sure that the `nodejs_compat` flag is present
- * in its `compatibility_flags` setting.
+ * Given a wrangler config object this function makes sure that Node.js compatibility is enabled.
  *
- * Just to be sure the function also filters out any compatibility flag already present starting with `nodejs_` (e.g. `nodejs_als`)
+ * From `NODEJS_COMPAT_DEFAULT_ON_DATE` the config's compatibility date is enough to enable it, and
+ * specifying `nodejs_compat` as well is a workerd validation error, so the flag is only added for
+ * earlier dates.
+ *
+ * Either way the function filters out any compatibility flag already present starting with
+ * `nodejs_` (e.g. `nodejs_als`), so that a framework-provided flag cannot conflict with this.
  *
  * @param wranglerConfig The target wrangler config object
- * @returns A copy of the config object where the `compatibility_flags` settings is assured to contain `nodejs_compat`
+ * @returns A copy of the config object where Node.js compatibility is assured to be enabled
  */
-function ensureNodejsCompatIsInConfig(wranglerConfig: RawConfig): RawConfig {
-	if (wranglerConfig.compatibility_flags?.includes("nodejs_compat")) {
-		return wranglerConfig;
+function ensureNodejsCompatIsEnabled(wranglerConfig: RawConfig): RawConfig {
+	const flags = (wranglerConfig.compatibility_flags ?? []).filter(
+		(flag) => !flag.startsWith("nodejs_")
+	);
+
+	if (!isNodejsCompatDefaultOn(wranglerConfig.compatibility_date)) {
+		flags.push("nodejs_compat");
 	}
 
-	return {
-		...wranglerConfig,
-		compatibility_flags: [
-			...(wranglerConfig.compatibility_flags?.filter(
-				(flag) => !flag.startsWith("nodejs_")
-			) ?? []),
-			"nodejs_compat",
-		],
-	};
+	if (flags.length === 0) {
+		const { compatibility_flags: _removed, ...rest } = wranglerConfig;
+		return rest;
+	}
+
+	return { ...wranglerConfig, compatibility_flags: flags };
 }
 
 /**

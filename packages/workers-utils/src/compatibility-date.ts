@@ -37,3 +37,32 @@ function formatCompatibilityDate(date: Date): CompatDate {
 export function getTodaysCompatDate(): CompatDate {
 	return formatCompatibilityDate(new Date());
 }
+
+/**
+ * The compatibility date on which the `nodejs_compat` and `nodejs_compat_v2`
+ * compatibility flags became enabled by default in workerd.
+ *
+ * From this date onwards, specifying either flag explicitly is a validation
+ * error ("The compatibility flag nodejs_compat became the default as of
+ * 2026-08-04 so does not need to be specified anymore"), so tooling must not
+ * add them to configurations using such a compatibility date.
+ *
+ * @see https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp
+ */
+export const NODEJS_COMPAT_DEFAULT_ON_DATE = "2026-08-04";
+
+/**
+ * Whether workerd enables Node.js compatibility by default for the given
+ * compatibility date, i.e. without the `nodejs_compat` flag being specified.
+ *
+ * @param compatibilityDate The compatibility date to check
+ * @returns true if the date is on or after {@link NODEJS_COMPAT_DEFAULT_ON_DATE}
+ */
+export function isNodejsCompatDefaultOn(
+	compatibilityDate: string | undefined
+): boolean {
+	return (
+		compatibilityDate !== undefined &&
+		compatibilityDate >= NODEJS_COMPAT_DEFAULT_ON_DATE
+	);
+}
