@@ -1208,12 +1208,17 @@ export async function buildMiniflareOptions(
 	// Remote Hyperdrive bindings need the edge session's credentials before the
 	// (synchronous) binding builder runs. Doing it here covers every dev path
 	// that goes through this function.
-	const { seedRemoteHyperdriveBindings } =
-		await import("../../api/remoteBindings");
-	const seededHyperdriveConnectionStrings = await seedRemoteHyperdriveBindings(
-		config.bindings ?? undefined,
-		remoteProxyConnectionString
-	);
+	// Only reached when a remote proxy session exists — `seedRemoteHyperdriveBindings`
+	// is a no-op without one, and this module is loaded lazily to avoid a circular
+	// dependency, so skip the import entirely on the local-only path.
+	const seededHyperdriveConnectionStrings = remoteProxyConnectionString
+		? await import("../../api/remoteBindings").then((m) =>
+				m.seedRemoteHyperdriveBindings(
+					config.bindings ?? undefined,
+					remoteProxyConnectionString
+				)
+			)
+		: undefined;
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
 		remoteProxyConnectionString,
