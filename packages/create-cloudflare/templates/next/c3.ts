@@ -140,7 +140,7 @@ export default {
 			scripts: {
 				// Align with OpenNext so the shared previewScript: "preview" works
 				// for both variants (vinext only ships dev/build/start/deploy).
-				preview: `${npm} run build && ${npm} run start --`,
+				preview: `${npm} run build && ${npm} run start`,
 				"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${VINEXT_TYPES_PATH}`,
 			},
 		};
