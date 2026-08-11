@@ -486,7 +486,7 @@ function maybeGetForceTypeModuleContents(
 		case "PythonModule":
 			return { pythonModule: contents.toString() };
 		case "PythonRequirement":
-			return { pythonRequirement: contents.toString() };
+			return { obsoletePythonRequirement: contents.toString() };
 		default: {
 			// `type` should've been validated against `LegacyModuleRuleType`
 			const exhaustive: never = type;
