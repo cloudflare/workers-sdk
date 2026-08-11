@@ -30,3 +30,5 @@ This is expected: bumping a compatibility date is how you opt in to behaviour ch
 Note that if you do not set a `compatibility_date` at all, Wrangler, the Vite plugin and the Vitest pool infer today's date on your behalf, so you can hit this without having changed your own configuration. Either remove the flag as above, or set an explicit `compatibility_date` earlier than `2026-08-04`.
 
 To keep Node.js compatibility switched off on a newer compatibility date, specify both `no_nodejs_compat` and `no_nodejs_compat_v2`, since each flag has its own default.
+
+`wrangler types` also no longer attributes its `@types/node` suggestion to "the `nodejs_compat` flag", which it can now make for Workers that do not set the flag at all.
