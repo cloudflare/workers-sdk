@@ -612,7 +612,6 @@ export const DevConfigSchema = z.strictObject({
 	/** Whether this Worker is 'public' - whether should be advertised in the dev registry
 	 * and whether it should be included in local obs capture. Defaults to `true`. */
 	unsafeRegisterWorker: z.boolean().default(true),
-	hasAssetsAndIsVitest: z.boolean().optional(),
 	// TODO(soon): remove in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 	unsafeEphemeralDurableObjects: z.boolean().optional(),
 	// Strip the CF-Connecting-IP header from outbound fetches
