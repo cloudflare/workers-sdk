@@ -3017,7 +3017,7 @@ function setupCommonMocks() {
 	);
 	mockSubDomainRequest();
 	mockLegacyScriptData({
-		scripts: [{ id: "test-name", migration_tag: "v1" }],
+		script: { id: "test-name", migration_tag: "v1" },
 	});
 	mockContainersAccount();
 	mockUploadWorkerRequest({

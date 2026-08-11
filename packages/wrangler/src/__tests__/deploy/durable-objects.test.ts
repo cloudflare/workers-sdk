@@ -11,7 +11,6 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockLegacyScriptData } from "../helpers/mock-legacy-script";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
 import { mockGetSettings } from "../helpers/mock-worker-settings";
 import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
@@ -199,8 +198,8 @@ describe("deploy", () => {
 				"index.js",
 				`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
 			);
-			mockSubDomainRequest();
-			mockLegacyScriptData({ scripts: [] }); // no previously uploaded scripts at all
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockServiceScriptData({}); // no previously uploaded scripts at all
 			mockUploadWorkerRequest({
 				expectedMigrations: {
 					new_tag: "v2",
@@ -253,8 +252,8 @@ describe("deploy", () => {
 				`export class SomeClass{}; export class SomeOtherClass{}; export default {};`
 			);
 			mockSubDomainRequest();
-			mockLegacyScriptData({
-				scripts: [{ id: "test-name", migration_tag: "v1" }],
+			mockServiceScriptData({
+				script: { id: "test-name", migration_tag: "v1" },
 			});
 			mockUploadWorkerRequest({
 				expectedMigrations: {
@@ -315,8 +314,8 @@ describe("deploy", () => {
 				`export class SomeClass{}; export class SomeOtherClass{}; export class YetAnotherClass{}; export default {};`
 			);
 			mockSubDomainRequest();
-			mockLegacyScriptData({
-				scripts: [{ id: "test-name", migration_tag: "v3" }],
+			mockServiceScriptData({
+				script: { id: "test-name", migration_tag: "v3" },
 			});
 			mockUploadWorkerRequest({
 				expectedMigrations: undefined,
