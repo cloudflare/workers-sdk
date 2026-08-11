@@ -1,5 +1,6 @@
 ---
 "@cloudflare/deploy-helpers": patch
+"wrangler": patch
 ---
 
 Fetch script metadata directly instead of listing all scripts
