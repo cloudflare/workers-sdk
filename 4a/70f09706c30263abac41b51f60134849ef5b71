@@ -1,0 +1,19 @@
+packages/wrangler/src/api/test-harness.ts
+  s_6e1f600c752d6d::t_b112738a2683a0 57,108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4a70f09706c30263abac41b51f60134849ef5b71",
+  "prompts": {},
+  "sessions": {
+    "s_6e1f600c752d6d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028d8866affegKfok4TFMf473c",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

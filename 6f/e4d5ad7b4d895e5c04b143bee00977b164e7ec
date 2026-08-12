@@ -1,0 +1,29 @@
+packages/wrangler/src/__tests__/autoconfig/run.test.ts
+  s_1aa7cf05bea79e::t_1769f7796276b8 913
+pnpm-lock.yaml
+  s_1aa7cf05bea79e::t_d2f3d14db42670 1669-1671,1687-1689,16980,16989,17055,18767,19247,19260,24015,24405,24855,26083,26852,26879,27672
+packages/autoconfig/tests/run-upgrade.test.ts
+  s_1aa7cf05bea79e::t_e3b9d5be9f48b6 136,143
+  s_1aa7cf05bea79e::t_85933c8a2f1279 1-135,137-138,144
+  s_1aa7cf05bea79e::t_638ba08b1982e8 139
+  s_1aa7cf05bea79e::t_27e571e4a24558 140-142
+  s_1aa7cf05bea79e::t_c29e4d2ec1c643 145-147
+packages/autoconfig/src/types.ts
+  s_1aa7cf05bea79e::t_697965ff009003 75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6fe4d5ad7b4d895e5c04b143bee00977b164e7ec",
+  "prompts": {},
+  "sessions": {
+    "s_1aa7cf05bea79e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05d0220a5ffexc1W7v47GXDn7c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Angus <ahawkings@cloudflare.com>"
+    }
+  }
+}
