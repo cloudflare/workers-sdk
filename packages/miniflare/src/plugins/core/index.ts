@@ -13,7 +13,11 @@ import path from "node:path";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
+import {
+	getTodaysCompatDate,
+	removeDirSync,
+	stripRedundantNodejsCompatFlags,
+} from "@cloudflare/workers-utils";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
@@ -563,10 +567,22 @@ export const CORE_PLUGIN: Plugin = {
 					},
 				]
 			: (config.tailConsumers ?? []);
+		// workerd rejects a compatibility flag that the compatibility date already
+		// enables by default ("does not need to be specified anymore"), which
+		// would stop the worker starting up. Strip them per service rather than on
+		// the shared worker config: the Workflows plugin copies these flags into
+		// its engine worker, which pairs them with an older hardcoded compatibility
+		// date that still needs the flag.
+		const userFlags = config.compatibilityFlags
+			? stripRedundantNodejsCompatFlags(
+					compatibilityDate,
+					config.compatibilityFlags
+				)
+			: undefined;
 		// Only add the flags the worker doesn't already declare. A worker that sets
 		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it
 		// listed twice, which workerd rejects ("specified multiple times").
-		const existingFlags = config.compatibilityFlags ?? [];
+		const existingFlags = userFlags ?? [];
 		const compatibilityFlags = observabilityEnabled
 			? [
 					...existingFlags,
@@ -574,7 +590,7 @@ export const CORE_PLUGIN: Plugin = {
 						(flag) => !existingFlags.includes(flag)
 					),
 				]
-			: config.compatibilityFlags;
+			: userFlags;
 
 		services.push({
 			name: serviceName,
