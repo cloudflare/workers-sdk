@@ -942,7 +942,7 @@ async function cleanupOrWarnAboutBackup(
 	allRestored: boolean
 ): Promise<void> {
 	if (allRestored) {
-		await removeDir(tmpDir);
+		removeDir(tmpDir, { fireAndForget: true });
 	} else {
 		logger.warn(
 			`Some skill directories could not be restored automatically. A backup is available at: ${tmpDir}`
