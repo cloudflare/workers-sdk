@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_b702d30224ef81::t_7cdf63c46d605b 2-3,5-6,8-19,23-25,27-28,30-44,70-79,110-113,118,120-125,129,131-166,169-177,183-184,200-206,208-213,216-220,222,300-305,337-372,376-389,392-393,401-430,434-471,474-482,484,488-501,503-509,512-513
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c5c2259c137203968f98cb49a8aad72330fa0a4f",
+  "prompts": {},
+  "sessions": {
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
