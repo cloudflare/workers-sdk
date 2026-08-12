@@ -16,6 +16,7 @@ import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
 import type { Log } from "./log";
 import type { FSWatcher } from "chokidar";
+import { randomUUID } from "node:crypto";
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
@@ -30,11 +31,16 @@ export class DevRegistry {
 	> = new Map();
 	private watcher: FSWatcher | undefined;
 
+	// UUID to let us tell whether a dev registry entry was added by _this_ Miniflare process
+	public instanceId: string;
+
 	constructor(
 		private registryPath: string | undefined,
 		private onUpdate: ((registry: WorkerRegistry) => void) | undefined,
 		private log: Log
-	) {}
+	) {
+		this.instanceId = randomUUID();
+	}
 
 	/**
 	 * Watch files inside the registry directory for changes.
@@ -184,12 +190,40 @@ export class DevRegistry {
 
 		for (const [name, definition] of Object.entries(workers)) {
 			const definitionPath = path.join(this.registryPath, name);
+
+			const stats = statSync(definitionPath, { throwIfNoEntry: false });
+
+			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
+			if (stats && stats.mtime.getTime() < Date.now() - 300_000) {
+				try {
+					unlinkSync(definitionPath);
+				} catch {}
+				continue;
+			} else if (stats) {
+				const file = readFileSync(definitionPath, {
+					encoding: "utf8",
+					flag: "r",
+				});
+				const oldDefinition = JSON.parse(file);
+
+				// Skip registration if the instance ID is different
+				if (oldDefinition.instanceId !== this.instanceId) {
+					this.log.warn(
+						`Skipping registration of Worker ${name} as a Worker with this name is already registered in the dev registry by another process`
+					);
+					continue;
+				}
+			}
+
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {
 				clearInterval(existingHeartbeat);
 			}
 
-			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
+			writeFileSync(
+				definitionPath,
+				JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
+			);
 			this.registeredWorkers.add(name);
 			this.heartbeats.set(
 				name,
@@ -293,7 +327,10 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 				encoding: "utf8",
 				flag: "r",
 			});
-			registry[workerName] = JSON.parse(file);
+			registry[workerName] = {
+				...JSON.parse(file),
+				created: stats.birthtimeMs,
+			};
 		} catch {
 			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel process
 		}

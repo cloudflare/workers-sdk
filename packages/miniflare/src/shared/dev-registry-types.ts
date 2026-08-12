@@ -1,4 +1,10 @@
-export type WorkerRegistry = Record<string, WorkerDefinition>;
+export type WorkerRegistry = Record<
+	string,
+	WorkerDefinition & {
+		// stat.birthtime
+		created: number;
+	}
+>;
 
 export type WorkerDefinition = {
 	/**

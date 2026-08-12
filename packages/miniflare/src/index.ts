@@ -1386,15 +1386,23 @@ export class Miniflare {
 					const separator = dim("━".repeat(76));
 					this.#log.warn(
 						`\n${separator}\n` +
-							`${bold(yellow("Cloudflare Access blocked a remote bindings request"))}\n` +
+							`${bold(
+								yellow("Cloudflare Access blocked a remote bindings request")
+							)}\n` +
 							`${separator}\n` +
 							`\n` +
-							`Remote binding "${bold(bindingName)}": request to ${proxyUrl} was blocked.\n` +
+							`Remote binding "${bold(
+								bindingName
+							)}": request to ${proxyUrl} was blocked.\n` +
 							`\n` +
 							`If your Cloudflare account protects workers.dev with Access, set the\n` +
-							`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold("CLOUDFLARE_ACCESS_CLIENT_SECRET")}\n` +
+							`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold(
+								"CLOUDFLARE_ACCESS_CLIENT_SECRET"
+							)}\n` +
 							`environment variables (Service Token credentials), or run\n` +
-							`  ${bold("cloudflared access login <your-workers.dev-host>")}\n` +
+							`  ${bold(
+								"cloudflared access login <your-workers.dev-host>"
+							)}\n` +
 							`for interactive authentication.\n` +
 							`\n` +
 							`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/\n` +
@@ -1462,8 +1470,9 @@ export class Miniflare {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
 				if (request.method === "DELETE") {
-					response =
-						await this.#handleLoopbackWorkflowStorageDeleteRequest(url);
+					response = await this.#handleLoopbackWorkflowStorageDeleteRequest(
+						url
+					);
 				} else {
 					response = await this.#handleLoopbackWorkflowStorageRequest(url);
 				}
@@ -1733,7 +1742,6 @@ export class Miniflare {
 	async #assembleConfig(
 		loopbackHost: string,
 		loopbackPort: number,
-		devRegistryEnabled: boolean,
 		reusePorts: boolean
 	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
@@ -1745,9 +1753,7 @@ export class Miniflare {
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
-		const externalServices = devRegistryEnabled
-			? getExternalServiceEntrypoints(allWorkerOpts)
-			: null;
+		const externalServices = getExternalServiceEntrypoints(allWorkerOpts);
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const queueProducers = getQueueProducers(allWorkerOpts);
@@ -1825,7 +1831,11 @@ export class Miniflare {
 			const additionalModules: Worker_Module[] = [];
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
-				const pluginBindings = await plugin.getBindings(workerOpts, i);
+				const pluginBindings = await plugin.getBindings(
+					workerOpts,
+					sharedOpts,
+					i
+				);
 				if (pluginBindings !== undefined) {
 					for (const binding of pluginBindings) {
 						// If this is the Workers Sites manifest, we need to add it as a
@@ -1885,7 +1895,7 @@ export class Miniflare {
 
 			const pluginServicesOptionsBase: Omit<
 				PluginServicesOptions,
-				"options" | "sharedOptions"
+				"options" | "sharedOptions" | "devRegistryEnabled"
 			> = {
 				log: this.#log,
 				workerBindings,
@@ -1899,7 +1909,6 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
-				devRegistryEnabled,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -1958,11 +1967,11 @@ export class Miniflare {
 					workerOpts.config.assets && entrypoint === "default"
 						? {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.config.name}`,
-							}
+						  }
 						: {
 								name: getUserServiceName(serviceName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
-							};
+						  };
 
 				sockets.push({
 					name,
@@ -1979,8 +1988,8 @@ export class Miniflare {
 
 		if (
 			this.#devRegistry.isEnabled() &&
-			externalServices &&
-			(externalServices.size > 0 || hasQueues)
+			((externalServices && (externalServices.size > 0 || hasQueues)) ||
+				sharedOpts.unsafeEnableSharedStorage)
 		) {
 			await this.#devRegistry.watch(externalServices, hasQueues);
 
@@ -2040,6 +2049,10 @@ export class Miniflare {
 							name: CoreBindings.DEV_REGISTRY_DEBUG_PORT,
 							// workerdDebugPort bindings don't have any additional configuration
 							workerdDebugPort: kVoid,
+						},
+						{
+							name: CoreBindings.DEV_REGISTRY_INSTANCE_ID,
+							text: this.#devRegistry.instanceId,
 						},
 					],
 					durableObjectStorage: { inMemory: kVoid },
@@ -2120,8 +2133,9 @@ export class Miniflare {
 		// unexplained dev server restart. Always say something: any crash is a
 		// bug worth reporting, and the count distinguishes a one-off from a loop.
 		this.#log.warn(
-			`The Workers runtime crashed unexpectedly and is being restarted (crash #${this.#workerdCrashCount}). ` +
-				"Any additional runtime output above may indicate the cause."
+			`The Workers runtime crashed unexpectedly and is being restarted (crash #${
+				this.#workerdCrashCount
+			}). ` + "Any additional runtime output above may indicate the cause."
 		);
 		// A crash destroys the proxy server heap just like a config update.
 		this.#proxyClient?.poisonProxies();
@@ -2192,7 +2206,6 @@ export class Miniflare {
 		const config = await this.#assembleConfig(
 			loopbackHost,
 			loopbackPort,
-			this.#devRegistry.isEnabled(),
 			reusePorts
 		);
 		const configBuffer = serializeConfig(config);
@@ -2795,7 +2808,9 @@ export class Miniflare {
 		// corresponding route service binding.
 		assert(
 			fetcher !== undefined,
-			`Expected ${bindingName} service binding for worker ${JSON.stringify(workerName)}`
+			`Expected ${bindingName} service binding for worker ${JSON.stringify(
+				workerName
+			)}`
 		);
 		return fetcher as ReplaceWorkersTypes<Fetcher>;
 	}
@@ -2825,7 +2840,9 @@ export class Miniflare {
 				? `${bindingTypeDescription} binding`
 				: "binding";
 			throw new TypeError(
-				`No ${bindingType} named ${JSON.stringify(bindingName)} found in ${friendlyWorkerName}.`
+				`No ${bindingType} named ${JSON.stringify(
+					bindingName
+				)} found in ${friendlyWorkerName}.`
 			);
 		}
 		return proxy as T;
@@ -2942,7 +2959,9 @@ export class Miniflare {
 
 		if (!durableObjectExists) {
 			throw new TypeError(
-				`No Durable Object class named ${JSON.stringify(className)} found in ${JSON.stringify(scriptName)} worker.`
+				`No Durable Object class named ${JSON.stringify(
+					className
+				)} found in ${JSON.stringify(scriptName)} worker.`
 			);
 		}
 
@@ -2983,7 +3002,9 @@ export class Miniflare {
 				? `${JSON.stringify(resolvedWorkerName)} worker`
 				: "the worker";
 			throw new TypeError(
-				`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${friendlyWorkerName}.`
+				`No Durable Object class or namespace binding named ${JSON.stringify(
+					classNameOrBindingName
+				)} found in ${friendlyWorkerName}.`
 			);
 		}
 
@@ -3001,7 +3022,9 @@ export class Miniflare {
 
 		if (namespaceKey === undefined) {
 			throw new TypeError(
-				`Cannot list Durable Object ids for ${JSON.stringify(classNameOrBindingName)} because the namespace uses ephemeral local storage.`
+				`Cannot list Durable Object ids for ${JSON.stringify(
+					classNameOrBindingName
+				)} because the namespace uses ephemeral local storage.`
 			);
 		}
 

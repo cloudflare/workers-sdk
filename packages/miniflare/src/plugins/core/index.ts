@@ -322,7 +322,7 @@ function getGlobalOutbound(
 				CUSTOM_SERVICE_KNOWN_OUTBOUND,
 				dev.outboundService,
 				dev
-			);
+		  );
 }
 
 function getTailServiceDesignator(consumer: {
@@ -354,7 +354,7 @@ function getServiceBindings(
 }
 
 export const CORE_PLUGIN: Plugin = {
-	getBindings(options, workerIndex) {
+	getBindings(options, _sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
@@ -394,7 +394,7 @@ export const CORE_PLUGIN: Plugin = {
 						? fs.readFile(path.resolve(dev.rootPath, value)).then((data) => ({
 								name,
 								data,
-							}))
+						  }))
 						: { name, data: value }
 				)
 			);
@@ -561,8 +561,8 @@ export const CORE_PLUGIN: Plugin = {
 						streaming: true,
 						props: { worker: config.name },
 					},
-				]
-			: (config.tailConsumers ?? []);
+			  ]
+			: config.tailConsumers ?? [];
 		// Only add the flags the worker doesn't already declare. A worker that sets
 		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it
 		// listed twice, which workerd rejects ("specified multiple times").
@@ -573,7 +573,7 @@ export const CORE_PLUGIN: Plugin = {
 					...OBSERVABILITY_COMPAT_FLAGS.filter(
 						(flag) => !existingFlags.includes(flag)
 					),
-				]
+			  ]
 			: config.compatibilityFlags;
 
 		services.push({
@@ -607,22 +607,22 @@ export const CORE_PLUGIN: Plugin = {
 										ephemeralLocal: kVoid,
 										preventEviction,
 										container,
-									}
+								  }
 								: {
 										className,
 										enableSql,
 										uniqueKey,
 										preventEviction,
 										container,
-									};
+								  };
 						}
 					),
 				durableObjectStorage:
 					classNamesEntries.length === 0
 						? undefined
 						: dev?.unsafeEphemeralDurableObjects
-							? { inMemory: kVoid }
-							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+						? { inMemory: kVoid }
+						: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 				globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
 				cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 				moduleFallback:
@@ -794,14 +794,20 @@ export function getGlobalServices({
 			},
 		});
 	}
-	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	const r2PublicService = getR2PublicService(
+		allWorkerOpts ?? [],
+		sharedOptions.unsafeEnableSharedStorage
+	);
 	if (r2PublicService !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_PUBLIC,
 			service: { name: R2_PUBLIC_SERVICE_NAME },
 		});
 	}
-	const r2S3Service = getR2S3Service(allWorkerOpts ?? []);
+	const r2S3Service = getR2S3Service(
+		allWorkerOpts ?? [],
+		sharedOptions.unsafeEnableSharedStorage
+	);
 	if (r2S3Service !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_S3,

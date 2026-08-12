@@ -79,10 +79,8 @@ export function objectEntryWorker(
 // The resource id travels via props so a single entry service can route to any
 // number of resources; it is read back in `object-entry.worker.ts` via
 // `ctx.props` and used as the Durable Object name (`idFromName`).
-export function buildObjectEntryProps(id: string): { json: string } {
-	return {
-		json: JSON.stringify({ [SharedBindings.TEXT_NAMESPACE]: id }),
-	};
+export function buildObjectEntryProps(id: string): Record<string, unknown> {
+	return { [SharedBindings.TEXT_NAMESPACE]: id };
 }
 
 // Inverse of `buildObjectEntryProps`: reads the resource id back out of a

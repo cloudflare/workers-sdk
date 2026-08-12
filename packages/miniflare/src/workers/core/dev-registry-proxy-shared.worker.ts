@@ -34,16 +34,24 @@ export interface RegistryEntry {
 	userWorkerService: string;
 	/** Queue names consumed by this worker, if any. */
 	queueConsumers?: string[];
+	created: number;
+	instanceId: string;
 }
 
 let registry = new Map<string, RegistryEntry>();
 
+let sharedStorageOwner: RegistryEntry | undefined;
 /**
  * Replace the in-memory registry with the given entries.
  * Called whenever the Node.js side pushes an updated registry snapshot.
  */
 export function setRegistry(data: Record<string, RegistryEntry>): void {
-	registry = new Map(Object.entries(data));
+	const entries = Object.entries(data);
+	registry = new Map(entries);
+
+	sharedStorageOwner = entries.toSorted(
+		(a, b) => a[1].created - b[1].created
+	)[0]?.[1];
 }
 
 /**
@@ -55,6 +63,10 @@ export function resolveTarget(service: string): RegistryEntry | undefined {
 		return undefined;
 	}
 	return entry;
+}
+
+export function resolveSharedStorageOwner(): RegistryEntry | undefined {
+	return sharedStorageOwner;
 }
 
 /**

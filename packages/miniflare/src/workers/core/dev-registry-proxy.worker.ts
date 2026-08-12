@@ -3,6 +3,7 @@ import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
 import { CorePaths } from "./constants";
 import {
 	findQueueConsumer,
+	resolveSharedStorageOwner,
 	resolveTarget,
 	tailEventsReplacer,
 	tailEventsReviver,
@@ -30,6 +31,7 @@ const HANDLER_RESERVED_KEYS = new Set([
 
 interface Env {
 	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
+	DEV_REGISTRY_INSTANCE_ID: string;
 }
 
 interface Props {
@@ -39,18 +41,24 @@ interface Props {
 	// Forwarded to the remote entrypoint via the debug port so they are
 	// available as `ctx.props` on the callee.
 	userProps?: Record<string, unknown>;
+	// Is this trying to access a "storage" miniflare service?
+	// If it is, the proxy will try to forward to the shared storage owner
+	// (first active worker in the dev registry)
+	storage?: boolean;
 }
 
 function resolve(props: Props, env: Env): Fetcher | null {
-	const { service, entrypoint, userProps } = props;
-	const target = resolveTarget(service);
+	const { service, entrypoint, userProps, storage } = props;
+	const target = storage ? resolveSharedStorageOwner() : resolveTarget(service);
+
 	if (!target || !target.debugPortAddress) {
 		return null;
 	}
-	const serviceName =
-		entrypoint === null || entrypoint === "default"
-			? target.defaultEntrypointService
-			: target.userWorkerService;
+	const serviceName = storage
+		? service
+		: entrypoint === null || entrypoint === "default"
+		? target.defaultEntrypointService
+		: target.userWorkerService;
 	const client = env.DEV_REGISTRY_DEBUG_PORT.connect(target.debugPortAddress);
 	return client.getEntrypoint(serviceName, entrypoint ?? undefined, userProps);
 }

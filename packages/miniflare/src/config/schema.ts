@@ -709,6 +709,8 @@ export const InstanceOptionsSchema = z.strictObject({
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
 
+	unsafeEnableSharedStorage: z.boolean().optional(),
+
 	containerEngine: z
 		.union([
 			z.string(),

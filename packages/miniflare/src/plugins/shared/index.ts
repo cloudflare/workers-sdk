@@ -9,6 +9,7 @@ import type {
 import type {
 	Extension,
 	Service,
+	ServiceDesignator,
 	Worker_Binding,
 	Worker_Module,
 } from "../../runtime";
@@ -20,8 +21,9 @@ import type {
 } from "../../workers";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
-import type { UnsafeUniqueKey } from "./constants";
+import { SERVICE_DEV_REGISTRY_PROXY, type UnsafeUniqueKey } from "./constants";
 import type { z } from "zod";
+import { getUserServiceName } from "../core";
 
 // Maps workflow binding names to their workflow options
 export interface WorkflowOption {
@@ -70,11 +72,7 @@ export interface PluginServicesOptions {
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
-	// True when the dev registry is enabled, i.e. workers in other dev
-	// processes may be bound to. Plugins use this to set up service bindings to
-	// the dev-registry proxy worker, e.g. so the queue broker can deliver
-	// messages to a consumer in another `wrangler dev` process.
-	devRegistryEnabled: boolean;
+
 	hyperdriveProxyController: HyperdriveProxyController;
 }
 
@@ -92,6 +90,7 @@ export interface Plugin {
 	bindingTypeDescription?: string;
 	getBindings(
 		options: ParsedWorkerOptions,
+		sharedOptions: ParsedInstanceOptions,
 		workerIndex: number
 	): Awaitable<Worker_Binding[] | void>;
 	getNodeBindings(
@@ -148,7 +147,7 @@ export function namespaceEntries<
 	Entry extends {
 		id: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
-	} = { id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+	} = { id: string; remoteProxyConnectionString?: RemoteProxyConnectionString }
 >(
 	namespaces?: Record<string, string | Entry> | string[]
 ): [bindingName: string, entry: Entry][] {
@@ -268,3 +267,28 @@ export type {
 	ParsedMiniflareWorkerConfig,
 	ParsedWorkerOptions,
 } from "../../config/schema";
+
+export function getStorageService(
+	localServiceName: string,
+	props: Record<string, unknown>,
+	unsafeEnableSharedStorage: boolean | undefined
+): ServiceDesignator {
+	return unsafeEnableSharedStorage
+		? {
+				name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+				entrypoint: "ExternalServiceProxy",
+				props: {
+					json: JSON.stringify({
+						service: localServiceName,
+						userProps: props,
+						storage: true,
+					}),
+				},
+		  }
+		: {
+				name: localServiceName,
+				props: {
+					json: JSON.stringify(props),
+				},
+		  };
+}

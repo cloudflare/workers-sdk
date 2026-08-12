@@ -49,7 +49,6 @@ export const QUEUES_PLUGIN: Plugin = {
 		workerNames,
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
-		devRegistryEnabled,
 	}) {
 		const produced = producerEntries(options).map(([, id]) => id);
 		// Consumed queues get a broker service even without a local producer so
@@ -116,17 +115,13 @@ export const QUEUES_PLUGIN: Plugin = {
 					// live in another dev session: the broker delivers otherwise-dropped
 					// messages through the dev-registry proxy (see
 					// `QueueBrokerObject.#tryRemoteConsumer`).
-					...(devRegistryEnabled
-						? [
-								{
-									name: QueueBindings.MAYBE_SERVICE_QUEUE_PROXY,
-									service: {
-										name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
-										entrypoint: "ExternalQueueProxy",
-									},
-								},
-							]
-						: []),
+					{
+						name: QueueBindings.MAYBE_SERVICE_QUEUE_PROXY,
+						service: {
+							name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+							entrypoint: "ExternalQueueProxy",
+						},
+					},
 				],
 			},
 		};
