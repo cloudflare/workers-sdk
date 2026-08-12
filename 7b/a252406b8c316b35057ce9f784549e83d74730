@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_cfcda634814b92::t_dcc40ce4de0f24 298,314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7ba252406b8c316b35057ce9f784549e83d74730",
+  "prompts": {},
+  "sessions": {
+    "s_cfcda634814b92": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05662ba38ffeFAbzJynmgX0Ka6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
