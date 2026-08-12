@@ -7,9 +7,19 @@ import type { ProvidedContext } from "vitest";
 import type { Vite, VitestPluginContext } from "vitest/node";
 
 type ProvidedContextKeys = keyof ProvidedContext & string;
+declare const explicitInjectTypeArgumentRequired: unique symbol;
+type ExplicitInjectTypeArgumentRequired = {
+	readonly [explicitInjectTypeArgumentRequired]: never;
+};
 type WorkerPoolOptionsContextInject = [ProvidedContextKeys] extends [never]
 	? <T = unknown>(key: string) => T
-	: <K extends ProvidedContextKeys>(key: K) => ProvidedContext[K];
+	: {
+			<K extends ProvidedContextKeys>(key: K): ProvidedContext[K];
+			<T = ExplicitInjectTypeArgumentRequired>(
+				key: string &
+					(T extends ExplicitInjectTypeArgumentRequired ? never : unknown)
+			): T;
+		};
 
 const cloudflareTestPath = path.resolve(
 	import.meta.dirname,
@@ -23,9 +33,10 @@ export interface WorkerPoolOptionsContext {
 	 * hyperdrives, ...).
 	 *
 	 * Known `ProvidedContext` keys preserve Vitest's inference and key checking
-	 * when the consuming project's augmentation is visible. If pnpm resolves a
-	 * separate Vitest copy and those keys collapse to `never`, fall back to the
-	 * wider inject signature instead.
+	 * when the consuming project's augmentation is visible. Use an explicit type
+	 * argument for keys provided at runtime but not declared in `ProvidedContext`.
+	 * If pnpm resolves a separate Vitest copy and the keys collapse to `never`,
+	 * fall back to the wider inject signature instead.
 	 */
 	inject: WorkerPoolOptionsContextInject;
 }

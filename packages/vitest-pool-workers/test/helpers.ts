@@ -18,6 +18,9 @@ function checkCloudflareTestInjectTypes(
 	const tmpPoolInstallationPath: string = poolInject("tmpPoolInstallationPath");
 	void tmpPoolInstallationPath;
 
+	const runtimeProvidedValue: number = poolInject<number>("runtimeProvidedKey");
+	void runtimeProvidedValue;
+
 	// @ts-expect-error ProvidedContext keys should be checked.
 	poolInject("tmpPoolInstalltionPath");
 }
