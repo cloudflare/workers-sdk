@@ -219,13 +219,12 @@ export async function runAutoConfig(
 	}
 
 	if (configurationResults.wranglerConfig !== null) {
-		await saveWranglerJsonc(
-			autoConfigDetails.projectPath,
-			ensureNodejsCompatIsEnabled({
-				...wranglerConfig,
-				...configurationResults.wranglerConfig,
-			})
-		);
+		// `saveWranglerJsonc()` reconciles the Node.js compatibility flags itself,
+		// once it has merged this with any config already on disk.
+		await saveWranglerJsonc(autoConfigDetails.projectPath, {
+			...wranglerConfig,
+			...configurationResults.wranglerConfig,
+		});
 	}
 
 	maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
@@ -288,7 +287,7 @@ function ensureNodejsCompatIsEnabled(wranglerConfig: RawConfig): RawConfig {
  * @param projectPath The project's path
  * @param baseWranglerConfig The wrangler config to use
  */
-async function saveWranglerJsonc(
+export async function saveWranglerJsonc(
 	projectPath: string,
 	wranglerConfig: RawConfig
 ): Promise<void> {
@@ -303,16 +302,18 @@ async function saveWranglerJsonc(
 		) as RawConfig;
 	}
 
+	// Reconcile the flags against the config that actually gets written. The
+	// merge only overrides the keys we generate, so a `nodejs_compat` written by
+	// the framework's own scaffolder would otherwise survive next to the
+	// compatibility date we write over it — the combination workerd rejects.
+	const mergedWranglerConfig = ensureNodejsCompatIsEnabled({
+		...existingWranglerConfig,
+		...wranglerConfig,
+	});
+
 	await writeFile(
 		resolve(projectPath, "wrangler.jsonc"),
-		JSON.stringify(
-			{
-				...existingWranglerConfig,
-				...wranglerConfig,
-			},
-			null,
-			2
-		) + "\n"
+		JSON.stringify(mergedWranglerConfig, null, 2) + "\n"
 	);
 }
 
