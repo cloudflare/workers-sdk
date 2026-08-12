@@ -12,7 +12,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import md5File from "md5-file";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
@@ -329,12 +329,14 @@ async function executeLocally({
 		"🌀 To execute on your remote database, add a --remote flag to your wrangler command."
 	);
 
-	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		resourcePersistencePath,
-		d1Databases: { DATABASE: id },
-	});
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			modules: true,
+			script: "",
+			resourcePersistencePath,
+			d1Databases: { DATABASE: id },
+		})
+	);
 	const db = await mf.getD1Database("DATABASE");
 
 	const sql = input.file ? readFileSync(input.file) : input.command;

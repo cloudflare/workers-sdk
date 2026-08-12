@@ -1,5 +1,37 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.21.1
+
+### Patch Changes
+
+- [#14882](https://github.com/cloudflare/workers-sdk/pull/14882) [`ab9132d`](https://github.com/cloudflare/workers-sdk/commit/ab9132d3e41b3ba0c214c68e9afc9389ddc93395) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Report built-in modules that a Worker's compatibility settings don't provide as module errors, instead of crashing workerd
+
+  Previously, a Worker whose module graph statically reached a compatibility-gated built-in that wasn't enabled — for example `import "node:child_process"` without `nodejs_compat` — took down the runtime with `*** Received signal #11: Segmentation fault` before any test ran. Vitest reported only `Worker exited unexpectedly`, naming neither the module nor the file that imported it, which made the cause very hard to find. The import didn't even have to be called; being reachable from the entrypoint was enough.
+
+  The module fallback service answered these specifiers with a redirect to the modules root, but workerd already resolves `node:`/`cloudflare:`/`workerd:` specifiers there, so the redirect pointed back at the module workerd was in the middle of resolving and it recursed until the stack overflowed. Such a specifier only reaches the fallback service when workerd's own registry has already missed, so it's now reported as not found: workerd raises `No such module "node:child_process"`, matching what `wrangler dev` does for the same Worker. The accompanying pool error names the module and points at compatibility flags rather than suggesting you bundle it, which can't help for a module built into the runtime.
+
+- Updated dependencies [[`15cad03`](https://github.com/cloudflare/workers-sdk/commit/15cad038313b9dd0ecdc23888e595440a33e845b), [`026e058`](https://github.com/cloudflare/workers-sdk/commit/026e058ff694a77d3d214611bef7c3e41d1fe082), [`731b33a`](https://github.com/cloudflare/workers-sdk/commit/731b33a9059cbdc1e115ad3d6ed66fc1f38ce0e4), [`e1b5b4b`](https://github.com/cloudflare/workers-sdk/commit/e1b5b4bd5b72df396d6d9a27aa0f290dfa11a06c), [`5b1b930`](https://github.com/cloudflare/workers-sdk/commit/5b1b93025f7d71c1b4b99abd90d2dc579c149ae5), [`6e7d37d`](https://github.com/cloudflare/workers-sdk/commit/6e7d37dc3ed2a44aea83ecc6992cca858a7b957b), [`d669088`](https://github.com/cloudflare/workers-sdk/commit/d6690886c3b65d59b09b4c01c1505d2e51ac0e07), [`15cad03`](https://github.com/cloudflare/workers-sdk/commit/15cad038313b9dd0ecdc23888e595440a33e845b), [`c7aede7`](https://github.com/cloudflare/workers-sdk/commit/c7aede764b601d1b73aa208f6a6ff63f646f4136), [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357)]:
+  - wrangler@4.121.0
+  - miniflare@5.20260804.1-alpha
+
+## 0.21.0
+
+### Minor Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Update the Workers Vitest pool for Miniflare's config-based options
+
+  The Workers Vitest pool now converts the Miniflare options it creates for test sessions to Miniflare's config-based `workers` shape.
+
+  For the most part, users should not expect to notice any changes.
+
+  However, while `miniflare.modulesRules` is preserved for common text and WASM fixture imports, it is not a full replacement for Miniflare's old `modules: true` module graph collection and you may notice some differences in behaviour.
+
+### Patch Changes
+
+- Updated dependencies [[`6dbd192`](https://github.com/cloudflare/workers-sdk/commit/6dbd192f1f3e4899789cd327231ba838c90bb0d5), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3)]:
+  - miniflare@5.20260804.0-alpha
+  - wrangler@4.120.1
+
 ## 0.20.3
 
 ### Patch Changes

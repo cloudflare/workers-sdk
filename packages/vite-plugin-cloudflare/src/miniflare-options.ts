@@ -23,6 +23,7 @@ import {
 	LogLevel,
 	parseModuleFallbackRequest,
 	Response as MiniflareResponse,
+	convertV4MiniflareOptions,
 } from "miniflare";
 import { globSync } from "tinyglobby";
 import * as wrangler from "wrangler";
@@ -60,7 +61,9 @@ import type {
 } from "@cloudflare/remote-bindings";
 import type {
 	MiniflareOptions,
-	ModuleRuleType,
+	V4MiniflareOptions,
+	V4ModuleRuleType,
+	V4WorkerOptions,
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";
@@ -153,10 +156,9 @@ export async function getDevMiniflareOptions(
 		resolvedViteConfig
 	);
 
-	const assetWorkers: Array<WorkerOptions> = [
+	const assetWorkers: Array<V4WorkerOptions> = [
 		{
 			name: ROUTER_WORKER_NAME,
-			unsafeExcludeFromObservability: true,
 			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			compatibilityFlags: ["enable_ctx_exports"],
@@ -182,7 +184,6 @@ export async function getDevMiniflareOptions(
 		},
 		{
 			name: ASSET_WORKER_NAME,
-			unsafeExcludeFromObservability: true,
 			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
@@ -313,7 +314,6 @@ export async function getDevMiniflareOptions(
 		},
 		{
 			name: VITE_PROXY_WORKER_NAME,
-			unsafeExcludeFromObservability: true,
 			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			modulesRoot: miniflareModulesRoot,
@@ -417,7 +417,9 @@ export async function getDevMiniflareOptions(
 									}
 								);
 
-							const { externalWorkers, workerOptions } = miniflareWorkerOptions;
+							const { externalWorkers } = miniflareWorkerOptions;
+							const workerOptions =
+								miniflareWorkerOptions.workerOptions as V4WorkerOptions;
 
 							if (
 								workerOptions.browserRendering &&
@@ -532,7 +534,7 @@ export async function getDevMiniflareOptions(
 											unsafePreventEviction: true,
 										},
 									},
-								} satisfies Partial<WorkerOptions>,
+								} satisfies V4WorkerOptions,
 							};
 						}
 					)
@@ -555,98 +557,100 @@ export async function getDevMiniflareOptions(
 		secure: !!serverConfig.https,
 	});
 
-	return {
-		miniflareOptions: {
-			log: logger,
-			publicUrl,
-			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
-			logRequests: false,
-			inspectorPort:
-				inputInspectorPort === false ? undefined : inputInspectorPort,
-			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
-			unsafeTriggerHandlers: true,
-			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
-			// The switch for local observability capture: tells Miniflare core to
-			// attach the trace collector to each user worker. Opt-in via the
-			// `X_LOCAL_OBSERVABILITY` env var (defaults off); enabling it requires
-			// restarting the dev server.
-			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
-			telemetry: { enabled: false },
-			handleStructuredLogs: getStructuredLogsLogger(logger),
-			async unsafeHandleRuntimeRestart() {
-				// Miniflare has restarted `workerd` after a crash, but the
-				// module runners created over our separate bootstrap channel
-				// died with the previous process. Restarting the Vite dev
-				// server re-creates the environments, hot channels, and module
-				// runners so requests are served again instead of failing with
-				// an opaque `fetch failed`.
-				debuglog(
-					"workerd restarted after a crash; restarting the Vite dev server"
-				);
-				await viteDevServer.restart();
-			},
-			resourcePersistencePath: getPersistenceRoot(
-				resolvedViteConfig.root,
-				resolvedPluginConfig.persistState
-			),
-			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
-			containerEngine,
-			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
-			async unsafeModuleFallbackService(request) {
-				const parsed = await parseModuleFallbackRequest(request);
-
-				if (!parsed) {
-					return new MiniflareResponse("Invalid module fallback request", {
-						status: 400,
-					});
-				}
-
-				const rawSpecifier = parsed.rawSpecifier;
-				assert(
-					rawSpecifier,
-					`Unexpected error: no specifier in request to module fallback service.`
-				);
-				const match = additionalModuleRE.exec(rawSpecifier);
-				assert(
-					match,
-					`Unexpected error: no match for module: ${rawSpecifier}.`
-				);
-				const [full, moduleType, modulePath] = match;
-				assert(
-					moduleType,
-					`Unexpected error: module type not found in reference: ${full}.`
-				);
-				assert(
-					modulePath,
-					`Unexpected error: module path not found in reference: ${full}.`
-				);
-
-				let contents: Buffer;
-
-				try {
-					contents = await fsp.readFile(modulePath);
-				} catch {
-					throw new Error(
-						`Import "${modulePath}" not found. Does the file exist?`
-					);
-				}
-
-				switch (moduleType) {
-					case "CompiledWasm": {
-						return MiniflareResponse.json({ wasm: Array.from(contents) });
-					}
-					case "Data": {
-						return MiniflareResponse.json({ data: Array.from(contents) });
-					}
-					case "Text": {
-						return MiniflareResponse.json({ text: contents.toString() });
-					}
-					default: {
-						return MiniflareResponse.error();
-					}
-				}
-			},
+	const v4MiniflareOptions: V4MiniflareOptions = {
+		log: logger,
+		publicUrl,
+		unsafeProxySharedSecret: PROXY_SHARED_SECRET,
+		logRequests: false,
+		inspectorPort:
+			inputInspectorPort === false ? undefined : inputInspectorPort,
+		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+		unsafeTriggerHandlers: true,
+		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		// The switch for local observability capture: tells Miniflare core to
+		// attach the trace collector to each user worker. Opt-in via the
+		// `X_LOCAL_OBSERVABILITY` env var (defaults off); enabling it requires
+		// restarting the dev server.
+		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
+		telemetry: { enabled: false },
+		handleStructuredLogs: getStructuredLogsLogger(logger),
+		async unsafeHandleRuntimeRestart() {
+			// Miniflare has restarted `workerd` after a crash, but the
+			// module runners created over our separate bootstrap channel
+			// died with the previous process. Restarting the Vite dev
+			// server re-creates the environments, hot channels, and module
+			// runners so requests are served again instead of failing with
+			// an opaque `fetch failed`.
+			debuglog(
+				"workerd restarted after a crash; restarting the Vite dev server"
+			);
+			await viteDevServer.restart();
 		},
+		resourcePersistencePath: getPersistenceRoot(
+			resolvedViteConfig.root,
+			resolvedPluginConfig.persistState
+		),
+		resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+		containerEngine,
+		workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
+		async unsafeModuleFallbackService(request) {
+			const parsed = await parseModuleFallbackRequest(request);
+
+			if (!parsed) {
+				return new MiniflareResponse("Invalid module fallback request", {
+					status: 400,
+				});
+			}
+
+			const rawSpecifier = parsed.rawSpecifier;
+			assert(
+				rawSpecifier,
+				`Unexpected error: no specifier in request to module fallback service.`
+			);
+			const match = additionalModuleRE.exec(rawSpecifier);
+			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
+			const [full, moduleType, modulePath] = match;
+			assert(
+				moduleType,
+				`Unexpected error: module type not found in reference: ${full}.`
+			);
+			assert(
+				modulePath,
+				`Unexpected error: module path not found in reference: ${full}.`
+			);
+
+			let contents: Buffer;
+
+			try {
+				contents = await fsp.readFile(modulePath);
+			} catch {
+				throw new Error(
+					`Import "${modulePath}" not found. Does the file exist?`
+				);
+			}
+
+			switch (moduleType) {
+				case "CompiledWasm": {
+					return MiniflareResponse.json({ wasm: Array.from(contents) });
+				}
+				case "Data": {
+					return MiniflareResponse.json({ data: Array.from(contents) });
+				}
+				case "Text": {
+					return MiniflareResponse.json({ text: contents.toString() });
+				}
+				default: {
+					return MiniflareResponse.error();
+				}
+			}
+		},
+	};
+
+	return {
+		miniflareOptions: convertV4MiniflareOptions(v4MiniflareOptions) as Extract<
+			MiniflareOptions,
+			{ workers: WorkerOptions[] }
+		>,
 		containerTagToOptionsMap,
 	};
 }
@@ -675,13 +679,13 @@ function getPreviewModules(
 				)
 			),
 		],
-	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
+	} satisfies Pick<V4WorkerOptions, "rootPath" | "modules">;
 }
 
 /**
  * Translate a Build Output Specification module type to a Miniflare module type.
  */
-function toMiniflareModuleType(type: ModuleType): ModuleRuleType | null {
+function toMiniflareModuleType(type: ModuleType): V4ModuleRuleType | null {
 	switch (type) {
 		case "esm":
 			return "ESModule";
@@ -741,7 +745,7 @@ export function getModulesFromManifest(bundle: Bundle) {
 	return {
 		rootPath: bundle.rootPath,
 		modules,
-	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
+	} satisfies Pick<V4WorkerOptions, "rootPath" | "modules">;
 }
 
 export async function getPreviewMiniflareOptions(
@@ -759,7 +763,7 @@ export async function getPreviewMiniflareOptions(
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 	let containerEngine: string | undefined;
 
-	const workers: Array<WorkerOptions> = (
+	const workers: Array<V4WorkerOptions> = (
 		await Promise.all(
 			resolvedPluginConfig.workers.map(async (previewWorker) => {
 				const workerConfig = previewWorker.config;
@@ -828,8 +832,9 @@ export async function getPreviewMiniflareOptions(
 
 				const { externalWorkers } = miniflareWorkerOptions;
 
-				const { modulesRules, ...workerOptions } =
+				const { modulesRules, ...sourcelessWorkerOptions } =
 					miniflareWorkerOptions.workerOptions;
+				const workerOptions = sourcelessWorkerOptions as V4WorkerOptions;
 
 				// Build Output Specification workers carry an explicit modules manifest
 				// that drives Miniflare's module loader directly, bypassing the
@@ -839,7 +844,10 @@ export async function getPreviewMiniflareOptions(
 				return [
 					{
 						...workerOptions,
-						name: workerOptions.name ?? workerConfig.name,
+						name:
+							typeof workerOptions.name === "string"
+								? workerOptions.name
+								: workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
 						...(previewWorker.source === "build-output" && previewWorker.bundle
 							? getModulesFromManifest(previewWorker.bundle)
@@ -848,7 +856,7 @@ export async function getPreviewMiniflareOptions(
 								: { modules: true, script: "" }),
 					},
 					...externalWorkers,
-				] satisfies Array<WorkerOptions>;
+				] satisfies Array<V4WorkerOptions>;
 			})
 		)
 	).flat();
@@ -863,29 +871,34 @@ export async function getPreviewMiniflareOptions(
 		secure: !!serverConfig.https,
 	});
 
+	const v4MiniflareOptions: V4MiniflareOptions = {
+		log: logger,
+		publicUrl,
+		unsafeProxySharedSecret: PROXY_SHARED_SECRET,
+		inspectorPort:
+			inputInspectorPort === false ? undefined : inputInspectorPort,
+		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+		unsafeTriggerHandlers: true,
+		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		// The one switch for local observability: this env var tells Miniflare
+		// core to attach the trace collector to each user worker.
+		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
+		telemetry: { enabled: false },
+		handleStructuredLogs: getStructuredLogsLogger(logger),
+		resourcePersistencePath: getPersistenceRoot(
+			resolvedViteConfig.root,
+			resolvedPluginConfig.persistState
+		),
+		resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
+		containerEngine,
+		workers,
+	};
+
 	return {
-		miniflareOptions: {
-			log: logger,
-			publicUrl,
-			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
-			inspectorPort:
-				inputInspectorPort === false ? undefined : inputInspectorPort,
-			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
-			unsafeTriggerHandlers: true,
-			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
-			// The one switch for local observability: this env var tells Miniflare
-			// core to attach the trace collector to each user worker.
-			unsafeObservability: getLocalObservabilityEnabledFromEnv(),
-			telemetry: { enabled: false },
-			handleStructuredLogs: getStructuredLogsLogger(logger),
-			resourcePersistencePath: getPersistenceRoot(
-				resolvedViteConfig.root,
-				resolvedPluginConfig.persistState
-			),
-			resourceTmpPath: path.resolve(resolvedViteConfig.root, ".wrangler/tmp"),
-			containerEngine,
-			workers,
-		},
+		miniflareOptions: convertV4MiniflareOptions(v4MiniflareOptions) as Extract<
+			MiniflareOptions,
+			{ workers: WorkerOptions[] }
+		>,
 		containerTagToOptionsMap,
 	};
 }

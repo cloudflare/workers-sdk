@@ -7,7 +7,7 @@ import {
 } from "@cloudflare/cli-shared-helpers/interactive";
 import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
@@ -164,12 +164,14 @@ async function exportLocal(
 		"🌀 To export your remote database, add a --remote flag to your wrangler command."
 	);
 
-	const mf = new Miniflare({
-		modules: true,
-		script: "export default {}",
-		resourcePersistencePath,
-		d1Databases: { DATABASE: id },
-	});
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			modules: true,
+			script: "export default {}",
+			resourcePersistencePath,
+			d1Databases: { DATABASE: id },
+		})
+	);
 	const db = await mf.getD1Database("DATABASE");
 	logger.log(`🌀 Exporting SQL to ${output}...`);
 

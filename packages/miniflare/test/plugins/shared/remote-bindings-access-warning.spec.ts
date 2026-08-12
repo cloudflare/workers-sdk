@@ -1,6 +1,11 @@
 import { LogLevel, Miniflare } from "miniflare";
 import { describe, test } from "vitest";
-import { TestLog, useDispose, useServer } from "../../test-shared";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+	useServer,
+} from "../../test-shared";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 const CF_ACCESS_BLOCK_HTML = `<!DOCTYPE html>
@@ -46,17 +51,28 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 
 		const log = new TestLog();
 		const mf = new Miniflare({
-			modules: true,
-			compatibilityDate: "2025-01-01",
 			log,
-			script: SCRIPT,
-			serviceBindings: {
-				SERVICE: {
-					name: "some-remote-service",
-					remoteProxyConnectionString:
-						proxyUrl as unknown as RemoteProxyConnectionString,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(SCRIPT),
+						env: {
+							SERVICE: {
+								type: "worker",
+								workerName: "some-remote-service",
+								remote: true,
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString:
+							proxyUrl as unknown as RemoteProxyConnectionString,
+					},
 				},
-			},
+			],
 		});
 		useDispose(mf);
 
@@ -97,17 +113,28 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 		});
 
 		const mf = new Miniflare({
-			modules: true,
-			compatibilityDate: "2025-01-01",
 			log: new TestLog(),
-			script: SCRIPT,
-			serviceBindings: {
-				SERVICE: {
-					name: "some-remote-service",
-					remoteProxyConnectionString:
-						proxyUrl as unknown as RemoteProxyConnectionString,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(SCRIPT),
+						env: {
+							SERVICE: {
+								type: "worker",
+								workerName: "some-remote-service",
+								remote: true,
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString:
+							proxyUrl as unknown as RemoteProxyConnectionString,
+					},
 				},
-			},
+			],
 		});
 		useDispose(mf);
 
@@ -145,17 +172,28 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 
 		const log = new TestLog();
 		const mf = new Miniflare({
-			modules: true,
-			compatibilityDate: "2025-01-01",
 			log,
-			script: SCRIPT,
-			serviceBindings: {
-				SERVICE: {
-					name: "some-remote-service",
-					remoteProxyConnectionString:
-						proxyUrl as unknown as RemoteProxyConnectionString,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(SCRIPT),
+						env: {
+							SERVICE: {
+								type: "worker",
+								workerName: "some-remote-service",
+								remote: true,
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString:
+							proxyUrl as unknown as RemoteProxyConnectionString,
+					},
 				},
-			},
+			],
 		});
 		useDispose(mf);
 
@@ -184,17 +222,28 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 
 		const log = new TestLog();
 		const mf = new Miniflare({
-			modules: true,
-			compatibilityDate: "2025-01-01",
 			log,
-			script: SCRIPT,
-			serviceBindings: {
-				SERVICE: {
-					name: "some-remote-service",
-					remoteProxyConnectionString:
-						proxyUrl as unknown as RemoteProxyConnectionString,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(SCRIPT),
+						env: {
+							SERVICE: {
+								type: "worker",
+								workerName: "some-remote-service",
+								remote: true,
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString:
+							proxyUrl as unknown as RemoteProxyConnectionString,
+					},
 				},
-			},
+			],
 		});
 		useDispose(mf);
 

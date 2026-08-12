@@ -311,17 +311,23 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
+import { previewBaseConfigNamespace } from "./preview/base-config";
+import { previewBaseConfigSecretNamespace } from "./preview/base-config/secrets";
+import { previewBaseConfigSecretBulkCommand } from "./preview/base-config/secrets/bulk";
+import { previewBaseConfigSecretDeleteCommand } from "./preview/base-config/secrets/delete";
+import { previewBaseConfigSecretListCommand } from "./preview/base-config/secrets/list";
+import { previewBaseConfigSecretPutCommand } from "./preview/base-config/secrets/put";
+import { previewDeleteCommand } from "./preview/delete";
+import { previewCommand } from "./preview/preview";
+import { previewSecretNamespace } from "./preview/secrets";
+import { previewSecretBulkCommand } from "./preview/secrets/bulk";
+import { previewSecretDeleteCommand } from "./preview/secrets/delete";
+import { previewSecretListCommand } from "./preview/secrets/list";
+import { previewSecretPutCommand } from "./preview/secrets/put";
 import {
-	previewCommand,
-	previewDeleteCommand,
-	previewSecretBulkCommand,
-	previewSecretDeleteCommand,
-	previewSecretListCommand,
-	previewSecretNamespace,
-	previewSecretPutCommand,
 	previewSettingsCommand,
 	previewSettingsUpdateCommand,
-} from "./preview";
+} from "./preview/settings";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -930,6 +936,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler preview secret bulk",
 			definition: previewSecretBulkCommand,
+		},
+		{
+			command: "wrangler preview base-config",
+			definition: previewBaseConfigNamespace,
+		},
+		{
+			command: "wrangler preview base-config secret",
+			definition: previewBaseConfigSecretNamespace,
+		},
+		{
+			command: "wrangler preview base-config secret put",
+			definition: previewBaseConfigSecretPutCommand,
+		},
+		{
+			command: "wrangler preview base-config secret delete",
+			definition: previewBaseConfigSecretDeleteCommand,
+		},
+		{
+			command: "wrangler preview base-config secret list",
+			definition: previewBaseConfigSecretListCommand,
+		},
+		{
+			command: "wrangler preview base-config secret bulk",
+			definition: previewBaseConfigSecretBulkCommand,
 		},
 	]);
 	registry.registerNamespace("preview");

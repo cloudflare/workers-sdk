@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import SCRIPT_CACHE_OBJECT from "worker:cache/cache";
 import SCRIPT_CACHE_ENTRY from "worker:cache/cache-entry";
 import SCRIPT_CACHE_ENTRY_NOOP from "worker:cache/cache-entry-noop";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
@@ -15,10 +14,6 @@ import type {
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
 import type { Plugin } from "../shared";
-
-export const CacheOptionsSchema = z.object({
-	cacheAPI: z.boolean().optional(),
-});
 
 export const CACHE_PLUGIN_NAME = "cache";
 const CACHE_STORAGE_SERVICE_NAME = `${CACHE_PLUGIN_NAME}:storage`;
@@ -34,21 +29,15 @@ export function getCacheServiceName(workerIndex: number) {
 	return `${CACHE_PLUGIN_NAME}:${workerIndex}`;
 }
 
-export const CACHE_PLUGIN: Plugin<typeof CacheOptionsSchema> = {
-	options: CacheOptionsSchema,
+export const CACHE_PLUGIN: Plugin = {
 	getBindings() {
 		return [];
 	},
 	getNodeBindings() {
 		return {};
 	},
-	async getServices({
-		options,
-		workerIndex,
-		tmpPath,
-		resourcePersistencePath,
-	}) {
-		const cache = options.cacheAPI ?? true;
+	async getServices({ options, workerIndex, tmpPath, sharedOptions }) {
+		const cache = options.dev?.cacheAPI ?? true;
 
 		let entryWorker: Worker;
 		if (cache) {
@@ -87,7 +76,7 @@ export const CACHE_PLUGIN: Plugin<typeof CacheOptionsSchema> = {
 			const persistPath = getPersistPath(
 				CACHE_PLUGIN_NAME,
 				tmpPath,
-				resourcePersistencePath
+				sharedOptions.resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {

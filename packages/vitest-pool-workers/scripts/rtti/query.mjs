@@ -1,16 +1,17 @@
 import { Message } from "capnp-es";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { StructureGroups } from "./rtti.js";
 
 const compatibilityDate = new Date().toISOString().slice(0, 10);
 
 export async function getBuiltinModules() {
 	// Extract RTTI from `workerd`
-	const mf = new Miniflare({
-		compatibilityFlags: ["rtti_api"],
-		modules: true,
-		scriptPath: "query-worker.mjs",
-		script: `
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			compatibilityFlags: ["rtti_api"],
+			modules: true,
+			scriptPath: "query-worker.mjs",
+			script: `
 	import rtti from "workerd:rtti";
 	export default {
 		fetch() {
@@ -18,7 +19,8 @@ export async function getBuiltinModules() {
 		}
 	}
 	`,
-	});
+		})
+	);
 	const res = await mf.dispatchFetch("http://localhost");
 	if (!res.ok) throw new Error(await res.text());
 	const buffer = await res.arrayBuffer();

@@ -25,7 +25,10 @@ vi.mock("workerd", () => ({
 	version: "1.0.0-test",
 	default: "/fake/workerd",
 }));
-vi.mock("miniflare", () => ({ Miniflare: MiniflareMock }));
+vi.mock("miniflare", () => ({
+	Miniflare: MiniflareMock,
+	convertV4MiniflareOptions: vi.fn((options) => options),
+}));
 
 describe("generateRuntimeTypes", () => {
 	beforeEach(() => {

@@ -15,3 +15,9 @@ export class Counter extends DurableObject {
 		return value;
 	}
 }
+
+export default {
+	fetch() {
+		return new Response("ok");
+	},
+};

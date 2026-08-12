@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import SCRIPT_RATELIMIT_CLIENT from "worker:ratelimit/ratelimit";
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit-object";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
 	buildObjectEntryProps,
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	objectEntryWorker,
@@ -16,29 +16,12 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { Plugin } from "../shared";
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 
 export enum PeriodType {
 	TENSECONDS = 10,
 	MINUTE = 60,
 }
-
-export const RatelimitConfigSchema = z.object({
-	// The rate limiter's namespace identity. Counters are keyed by this, not by
-	// the binding name, so two bindings (in the same Worker or across Workers in
-	// a multiworker session) that reference the same namespace share a limit,
-	// while the same binding name pointing at different namespaces stays isolated.
-	namespace_id: z.string(),
-	simple: z.object({
-		limit: z.number().gt(0),
-
-		// may relax this to be any number in the future
-		period: z.enum(PeriodType).optional().default(PeriodType.MINUTE),
-	}),
-});
-export const RatelimitOptionsSchema = z.object({
-	ratelimits: z.record(z.string(), RatelimitConfigSchema).optional(),
-});
 
 export const RATELIMIT_PLUGIN_NAME = "ratelimit";
 const SERVICE_RATELIMIT_PREFIX = `${RATELIMIT_PLUGIN_NAME}`;
@@ -61,57 +44,47 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	}));
 }
 
-export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
-	options: RatelimitOptionsSchema,
+export const RATELIMIT_PLUGIN: Plugin = {
 	bindingTypeDescription: "Rate Limit",
-	getBindings(options: z.infer<typeof RatelimitOptionsSchema>) {
-		if (!options.ratelimits) {
-			return [];
-		}
-		const bindings = Object.entries(options.ratelimits).map<Worker_Binding>(
-			([name, config]) => ({
-				name,
-				wrapped: {
-					moduleName: SERVICE_RATELIMIT_MODULE,
-					innerBindings: [
-						{
-							name: "fetcher",
-							service: {
-								name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
-								props: buildObjectEntryProps(config.namespace_id),
-							},
+	getBindings(options) {
+		return getEnvBindingsOfType(
+			options.config,
+			"rate-limit"
+		).map<Worker_Binding>(([name, binding]) => ({
+			name,
+			wrapped: {
+				moduleName: SERVICE_RATELIMIT_MODULE,
+				innerBindings: [
+					{
+						name: "fetcher",
+						service: {
+							name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
+							props: buildObjectEntryProps(binding.namespace),
 						},
-						...buildJsonBindings({
-							limit: config.simple.limit,
-							period: config.simple.period,
-						}),
-					],
-				},
-			})
-		);
-		return bindings;
+					},
+					...buildJsonBindings({
+						limit: binding.simple.limit,
+						period: binding.simple.period,
+					}),
+				],
+			},
+		}));
 	},
-	getNodeBindings(options: z.infer<typeof RatelimitOptionsSchema>) {
-		if (!options.ratelimits) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.ratelimits).map((name) => [
+			getEnvBindingsOfType(options.config, "rate-limit").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		// Wrangler passes `ratelimits: {}` rather than omitting it when a Worker
-		// has no rate limit bindings, so bail on emptiness rather than presence.
-		// Otherwise every `wrangler dev` session would create an unused storage
-		// directory in the user's persistence directory.
-		if (Object.keys(options.ratelimits ?? {}).length === 0) {
+	async getServices({ options, tmpPath, sharedOptions }) {
+		const ratelimits = getEnvBindingsOfType(options.config, "rate-limit");
+		if (ratelimits.length === 0) {
 			return [];
 		}
 
-		// Each namespace_id is supplied per-binding via props, so one service serves
+		// Each namespace is supplied per-binding via props, so one service serves
 		// every rate limiter while shared namespaces still use the same DO name.
 		const services: Service[] = [
 			{
@@ -123,7 +96,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 		const persistPath = getPersistPath(
 			RATELIMIT_PLUGIN_NAME,
 			tmpPath,
-			resourcePersistencePath
+			sharedOptions.resourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 		services.push({
@@ -172,8 +145,12 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 
 		return services;
 	},
-	getExtensions({ options }) {
-		if (!options.some((o) => o.ratelimits)) {
+	getExtensions({ options }: { options: ParsedWorkerOptions[] }) {
+		if (
+			!options.some(
+				(o) => getEnvBindingsOfType(o.config, "rate-limit").length > 0
+			)
+		) {
 			return [];
 		}
 		return [

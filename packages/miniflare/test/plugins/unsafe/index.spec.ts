@@ -4,6 +4,7 @@ import { test } from "vitest";
 import {
 	EXPORTED_FIXTURES,
 	FIXTURES_PATH,
+	singleModuleManifest,
 	useDispose,
 } from "../../test-shared";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
@@ -22,20 +23,24 @@ const pluginEntrypoint = `${unsafePluginDirectory}/index.js`;
 const UNSAFE_BINDINGS: (
 	packageName: string,
 	pluginName: string
-) => WorkerOptions["unsafeBindings"] = (packageName, pluginName) => [
-	{
-		name: "UNSAFE_BINDING",
-		type: "service",
-		plugin: {
-			package: packageName,
-			name: pluginName,
-		},
-		options: {
-			foo: "bar",
-			service: "my-unsafe-service",
+) => NonNullable<WorkerOptions["config"]["env"]> = (
+	packageName,
+	pluginName
+) => ({
+	UNSAFE_BINDING: {
+		type: "unsafe:service",
+		dev: {
+			plugin: {
+				package: packageName,
+				name: pluginName,
+			},
+			options: {
+				foo: "bar",
+				service: "my-unsafe-service",
+			},
 		},
 	},
-];
+});
 const PLUGIN_SCRIPT = /* javascript */ `export default {
 	async fetch(req, env, ctx) {
 		const writeRes = await env.UNSAFE_BINDING.performUnsafeWrite("some-key", "some-value");
@@ -57,14 +62,31 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 		"unsafe-plugin",
 	];
 	const opts: MiniflareOptions = {
-		name: "unsafe-plugin-worker",
-		// Use a compatibility date that supports RPCs
-		compatibilityDate: "2025-08-04",
-		modules: true,
-		script: PLUGIN_SCRIPT,
-		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "unsafe-plugin-worker",
+					// Use a compatibility date that supports RPCs
+					compatibilityDate: "2025-08-04",
+					manifest: singleModuleManifest(PLUGIN_SCRIPT),
+					env: UNSAFE_BINDINGS(packageName, pluginName),
+				},
+			},
+		],
 	};
-	const mf = new Miniflare({ modules: true, script: "" });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
+	});
 	useDispose(mf);
 
 	let error: MiniflareCoreError | undefined = undefined;
@@ -88,14 +110,31 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 		"unsafe-plugin",
 	];
 	const opts: MiniflareOptions = {
-		name: "unsafe-plugin-worker",
-		// Use a compatibility date that supports RPCs
-		compatibilityDate: "2025-08-04",
-		modules: true,
-		script: PLUGIN_SCRIPT,
-		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "unsafe-plugin-worker",
+					// Use a compatibility date that supports RPCs
+					compatibilityDate: "2025-08-04",
+					manifest: singleModuleManifest(PLUGIN_SCRIPT),
+					env: UNSAFE_BINDINGS(packageName, pluginName),
+				},
+			},
+		],
 	};
-	const mf = new Miniflare({ modules: true, script: "" });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
+	});
 	useDispose(mf);
 
 	let error: MiniflareCoreError | undefined = undefined;
@@ -115,12 +154,18 @@ test("Supports specifying an unsafe plugin will be loaded into Miniflare and wil
 }) => {
 	const [packageName, pluginName] = [pluginEntrypoint, "unsafe-plugin"];
 	const opts: MiniflareOptions = {
-		name: "unsafe-plugin-worker",
-		// Use a compatibility date that supports RPCs
-		compatibilityDate: "2025-08-04",
-		modules: true,
-		script: PLUGIN_SCRIPT,
-		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "unsafe-plugin-worker",
+					// Use a compatibility date that supports RPCs
+					compatibilityDate: "2025-08-04",
+					manifest: singleModuleManifest(PLUGIN_SCRIPT),
+					env: UNSAFE_BINDINGS(packageName, pluginName),
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);

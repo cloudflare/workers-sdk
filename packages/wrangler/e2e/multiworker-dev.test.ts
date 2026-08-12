@@ -28,6 +28,10 @@ describe("multiworker", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
+
+					[[migrations]]
+					tag = "v1"
+					new_classes = ["MyDurableObject"]
 			`,
 			"src/index.ts": dedent /* javascript */ `
 				import { DurableObject } from "cloudflare:workers";
@@ -183,6 +187,10 @@ describe("multiworker", () => {
 						service = '${workerName2}'
 						entrypoint = 'CounterService'
 						props = { foo = 123, bar = { baz = "hello from props" } }
+
+						[[migrations]]
+						tag = "v1"
+						new_classes = ["MyDurableObject"]
 				`,
 			});
 		});
@@ -252,6 +260,10 @@ describe("multiworker", () => {
 						[[services]]
 						binding = "BEE"
 						service = '${service}'
+
+						[[migrations]]
+						tag = "v1"
+						new_classes = ["MyDurableObject"]
 				`,
 			});
 
@@ -520,6 +532,14 @@ describe("multiworker", () => {
 					return context.env.BEE.fetch("https://example.com");
 				}`,
 				"public/index.html": `<h1>hello pages assets</h1>`,
+			});
+
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+					name = "${workerName2}"
+					main = "src/index.ts"
+					compatibility_date = "2024-11-01"
+				`,
 			});
 		});
 

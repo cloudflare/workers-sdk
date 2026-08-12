@@ -4,7 +4,7 @@ import {
 	getRegistryPath,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -35,10 +35,10 @@ import type {
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
-	MiniflareOptions,
-	ModuleRule,
 	RemoteProxyConnectionString,
-	WorkerOptions,
+	V4MiniflareOptions,
+	V4ModuleRule,
+	V4WorkerOptions,
 } from "miniflare";
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
@@ -196,7 +196,7 @@ export async function getPlatformProxy<
 			remoteProxySession?.remoteProxyConnectionString,
 	});
 
-	const mf = new Miniflare(miniflareOptions);
+	const mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
 
 	const bindings: Env = await mf.getBindings();
 
@@ -229,7 +229,7 @@ async function getMiniflareOptionsFromConfig(args: {
 	config: Config;
 	options: GetPlatformProxyOptions;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
-}): Promise<MiniflareOptions> {
+}): Promise<V4MiniflareOptions> {
 	const { config, options, remoteProxyConnectionString } = args;
 
 	const bindings = getBindings(
@@ -325,7 +325,8 @@ async function getMiniflareOptionsFromConfig(args: {
 		: process.cwd();
 	const resourceTmpPath = getDefaultProjectTmpPath(projectRoot);
 
-	const miniflareOptions: MiniflareOptions = {
+	const miniflareOptions: V4MiniflareOptions = {
+		rootPath: projectRoot,
 		workers: [
 			{
 				script: "",
@@ -382,15 +383,15 @@ function deepFreeze<T extends Record<string | number | symbol, unknown>>(
 }
 
 export type SourcelessWorkerOptions = Omit<
-	WorkerOptions,
+	V4WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
-> & { modulesRules?: ModuleRule[] };
+> & { modulesRules?: V4ModuleRule[] };
 
 export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
-	externalWorkers: WorkerOptions[];
+	externalWorkers: V4WorkerOptions[];
 }
 
 export function unstable_getMiniflareWorkerOptions(
@@ -435,7 +436,7 @@ export function unstable_getMiniflareWorkerOptions(
 			? readConfig({ config: configOrConfigPath, env })
 			: configOrConfigPath;
 
-	const modulesRules: ModuleRule[] = config.rules
+	const modulesRules: V4ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
 		.map((rule) => ({
 			type: rule.type,
@@ -479,6 +480,9 @@ export function unstable_getMiniflareWorkerOptions(
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
+	const projectRoot = config.userConfigPath
+		? path.dirname(config.userConfigPath)
+		: process.cwd();
 	// Only resolve assets if a directory is available (from config or overrides).
 	// When assets are configured without a directory (e.g. when using
 	// @cloudflare/vite-plugin, which handles asset serving independently),
@@ -501,6 +505,7 @@ export function unstable_getMiniflareWorkerOptions(
 		: {};
 
 	const workerOptions: SourcelessWorkerOptions = {
+		rootPath: projectRoot,
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,

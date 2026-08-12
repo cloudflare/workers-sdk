@@ -11,7 +11,7 @@ import {
 	HyperdriveProxyController,
 	POSTGRES_SSL_REQUEST_PACKET,
 } from "../../../src/plugins/hyperdrive/hyperdrive-proxy";
-import { useDispose } from "../../test-shared";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 
 // -- Certificate generation helpers --
 
@@ -570,12 +570,24 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 		expect,
 	}) => {
 		const mf = new Miniflare({
-			modules: true,
-			script: workerScript,
-			hyperdrives: {
-				HYPERDRIVE:
-					"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_IDENTITY",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(workerScript),
+						env: {
+							HYPERDRIVE: {
+								type: "hyperdrive",
+								id: "hyperdrive",
+								localConnectionString:
+									"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_IDENTITY",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(mf);
 		const res = await mf.dispatchFetch("http://localhost/");
@@ -588,12 +600,24 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 		expect,
 	}) => {
 		const mf = new Miniflare({
-			modules: true,
-			script: workerScript,
-			hyperdrives: {
-				HYPERDRIVE:
-					"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_CA",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(workerScript),
+						env: {
+							HYPERDRIVE: {
+								type: "hyperdrive",
+								id: "hyperdrive",
+								localConnectionString:
+									"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_CA",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(mf);
 		const res = await mf.dispatchFetch("http://localhost/");
@@ -606,12 +630,24 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 		expect,
 	}) => {
 		const mf = new Miniflare({
-			modules: true,
-			script: workerScript,
-			hyperdrives: {
-				HYPERDRIVE:
-					"mysql://user:password@localhost:3306/database?ssl-mode=REQUIRED",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(workerScript),
+						env: {
+							HYPERDRIVE: {
+								type: "hyperdrive",
+								id: "hyperdrive",
+								localConnectionString:
+									"mysql://user:password@localhost:3306/database?ssl-mode=REQUIRED",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(mf);
 		const res = await mf.dispatchFetch("http://localhost/");

@@ -4,10 +4,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import {
+	getTodaysCompatDate,
+	isNodejsCompatDefaultOn,
+} from "@cloudflare/workers-utils";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
 import {
+	convertV4MiniflareOptions,
 	getNodeCompat,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
@@ -37,8 +41,8 @@ import type {
 } from "./config";
 import type {
 	MiniflareOptions,
-	SharedOptions,
-	WorkerOptions,
+	LegacyWorkerOptions,
+	V4MiniflareOptions,
 	WorkerdStructuredLog,
 } from "miniflare";
 import type { TestProject, Vitest } from "vitest/node";
@@ -276,8 +280,8 @@ function getWorkflowClasses(
 }
 
 type ProjectWorkers = [
-	runnerWorker: WorkerOptions,
-	...auxiliaryWorkers: WorkerOptions[],
+	runnerWorker: LegacyWorkerOptions,
+	...auxiliaryWorkers: LegacyWorkerOptions[],
 ];
 
 const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
@@ -285,7 +289,7 @@ const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
 function rewriteStreamingTailSelfReferences(
-	worker: WorkerOptions,
+	worker: LegacyWorkerOptions,
 	wranglerWorkerName: string,
 	runnerWorkerName: string
 ) {
@@ -402,7 +406,11 @@ async function buildProjectWorkerOptions(
 				1
 			);
 		}
-		runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
+		// Dropping the opt-out is enough once the compatibility date enables the
+		// flag on its own; adding it as well is a workerd validation error.
+		if (!isNodejsCompatDefaultOn(runnerWorker.compatibilityDate)) {
+			runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
+		}
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
@@ -576,7 +584,7 @@ async function buildProjectWorkerOptions(
 	];
 
 	// Build array of workers contributed by the workspace
-	const workers: ProjectWorkers = [runnerWorker as WorkerOptions];
+	const workers: ProjectWorkers = [runnerWorker as LegacyWorkerOptions];
 	if (runnerWorker.workers !== undefined) {
 		// Try to add workers defined by the user
 		for (let i = 0; i < runnerWorker.workers.length; i++) {
@@ -607,7 +615,7 @@ async function buildProjectWorkerOptions(
 			}
 
 			// Miniflare will validate these options
-			const workerOptions = worker as WorkerOptions;
+			const workerOptions = worker as LegacyWorkerOptions;
 			if (wranglerWorkerName) {
 				rewriteStreamingTailSelfReferences(
 					workerOptions,
@@ -623,10 +631,10 @@ async function buildProjectWorkerOptions(
 	return workers;
 }
 
-const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
+const SHARED_MINIFLARE_OPTIONS = {
 	log: mfLog,
 	handleStructuredLogs,
-} satisfies Partial<MiniflareOptions>;
+} satisfies Partial<V4MiniflareOptions>;
 
 const DEFAULT_INSPECTOR_PORT = 9229;
 
@@ -635,7 +643,7 @@ function getFirstAvailablePort(start: number): Promise<number> {
 }
 
 type ModuleFallbackService = NonNullable<
-	MiniflareOptions["unsafeModuleFallbackService"]
+	V4MiniflareOptions["unsafeModuleFallbackService"]
 >;
 // Reuse the same bound module fallback service when constructing Miniflare
 // options, so deep equality checks succeed
@@ -692,13 +700,15 @@ async function buildProjectMiniflareOptions(
 		}
 	}
 
-	return {
+	const options = {
 		...SHARED_MINIFLARE_OPTIONS,
 		verbose: customOptions.verbose ?? true,
 		inspectorPort,
 		unsafeModuleFallbackService: moduleFallbackService,
 		workers: [runnerWorker, ...auxiliaryWorkers],
-	};
+	} satisfies V4MiniflareOptions;
+
+	return convertV4MiniflareOptions(options);
 }
 export async function getProjectMiniflare(
 	ctx: Vitest,
