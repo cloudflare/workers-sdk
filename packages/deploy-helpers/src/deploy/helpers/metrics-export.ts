@@ -120,6 +120,7 @@ async function discoverMetricsExportResources({
 }): Promise<MetricExportResource[]> {
 	const d1Bindings = extractBindingsOfType("d1", bindings);
 	const r2Bindings = extractBindingsOfType("r2_bucket", bindings);
+	const serviceBindings = extractBindingsOfType("service", bindings);
 	const needsSettings =
 		d1Bindings.some(({ database_id }) => typeof database_id !== "string") ||
 		r2Bindings.some(({ bucket_name }) => typeof bucket_name !== "string");
@@ -128,6 +129,7 @@ async function discoverMetricsExportResources({
 		: [];
 	const d1Ids = new Set<string>();
 	const r2Names = new Set<string>();
+	const workerNames = new Set<string>();
 
 	for (const binding of d1Bindings) {
 		const resourceId =
@@ -151,8 +153,23 @@ async function discoverMetricsExportResources({
 		r2Names.add(resourceId);
 	}
 
+	for (const binding of serviceBindings) {
+		// The Portal resolves Worker names within the requester's account.
+		if (
+			binding.cross_account_grant === undefined &&
+			binding.service !== scriptName
+		) {
+			workerNames.add(binding.service);
+		}
+	}
+
 	return [
 		{ resourceType: "workers", resourceId: scriptName, destinations },
+		...[...workerNames].sort().map((resourceId) => ({
+			resourceType: "workers" as const,
+			resourceId,
+			destinations,
+		})),
 		...[...d1Ids].sort().map((resourceId) => ({
 			resourceType: "d1" as const,
 			resourceId,
