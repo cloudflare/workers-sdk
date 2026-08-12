@@ -183,6 +183,9 @@ export async function runSkillsInstallFlow(
 
 		const previousSkillNames = existingConfig?.installedSkillNames ?? [];
 		const cacheResult = await fetchSkillNamesFromGitHub();
+		// Fallback to previousSkillNames when the GitHub API is unreachable so
+		// we don't lose track of which skill directories are Cloudflare-managed
+		// (needed for backup/cleanup in future updates).
 		const currentSkillNames = cacheResult?.skillNames ?? previousSkillNames;
 
 		const { failedAgents } = await installSkillsCleanly(
