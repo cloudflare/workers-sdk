@@ -6099,9 +6099,33 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "connect[0]" should have an integer "port" field but got {"protocol":"tcp","port":3.14}.
-					  - "connect[1]" should have an integer "port" field but got {"protocol":"tcp","port":null}.
-					  - "connect[2]" should have an integer "port" field but got {"protocol":"tcp","port":null}."
+					  - "connect[0]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":3.14}.
+					  - "connect[1]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":null}.
+					  - "connect[2]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":null}."
+				`);
+			});
+
+			it("should error if a connect handler entry's port is out of range", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 0 },
+							{ protocol: "tcp", port: -1 },
+							{ protocol: "tcp", port: 65536 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":0}.
+					  - "connect[1]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":-1}.
+					  - "connect[2]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":65536}."
 				`);
 			});
 

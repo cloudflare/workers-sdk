@@ -5366,9 +5366,13 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 			)}.`
 		);
 		isValid = false;
-	} else if (!Number.isInteger((value as { port: number }).port)) {
+	} else if (
+		!Number.isInteger((value as { port: number }).port) ||
+		(value as { port: number }).port < 1 ||
+		(value as { port: number }).port > 65535
+	) {
 		diagnostics.errors.push(
-			`"${field}" should have an integer "port" field but got ${JSON.stringify(
+			`"${field}" should have an integer "port" field between 1 and 65535 but got ${JSON.stringify(
 				value
 			)}.`
 		);
