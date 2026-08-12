@@ -445,12 +445,20 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "r2": {
+				const experimentalS3Credentials =
+					binding.localDev?.experimentalS3Credentials;
 				r2Buckets.push(
 					omitUndefined({
 						binding: name,
 						bucket_name: binding.name,
 						jurisdiction: binding.jurisdiction,
 						remote: binding.remote,
+						local_dev:
+							experimentalS3Credentials === undefined
+								? undefined
+								: {
+										experimental_s3_credentials: experimentalS3Credentials,
+									},
 					})
 				);
 				break;

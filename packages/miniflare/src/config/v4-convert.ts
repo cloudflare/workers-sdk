@@ -380,7 +380,13 @@ function addR2Bindings(
 			env[bindingName] = {
 				type: "r2",
 				name: bucket.id,
-				s3Credentials: bucket.s3Credentials,
+				...(bucket.s3Credentials === undefined
+					? {}
+					: {
+							localDev: {
+								experimentalS3Credentials: bucket.s3Credentials,
+							},
+						}),
 				remote: isRemote(bucket.remoteProxyConnectionString),
 			};
 		}

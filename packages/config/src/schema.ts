@@ -56,6 +56,17 @@ export const R2BindingSchema = z.strictObject({
 	name: z.string().optional(),
 	jurisdiction: z.string().optional(),
 	remote: z.boolean().optional(),
+	localDev: z
+		.strictObject({
+			experimentalS3Credentials: z
+				// AWS SDK may add additional keys as internal metadata like `$source`.
+				.object({
+					accessKeyId: z.string(),
+					secretAccessKey: z.string(),
+				})
+				.optional(),
+		})
+		.optional(),
 });
 
 export const FlagshipBindingSchema = z.strictObject({

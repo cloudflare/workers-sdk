@@ -377,6 +377,14 @@ interface R2BindingOptions {
 	jurisdiction?: string;
 	/** Whether the R2 bucket should be remote or not in local development. */
 	remote?: boolean;
+	/** Settings that only apply to local development. */
+	localDev?: {
+		/** EXPERIMENTAL: credentials for the local S3-compatible endpoint. */
+		experimentalS3Credentials?: {
+			accessKeyId: string;
+			secretAccessKey: string;
+		};
+	};
 }
 
 /**
