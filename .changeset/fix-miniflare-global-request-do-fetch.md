@@ -2,6 +2,6 @@
 "miniflare": patch
 ---
 
-Fix Durable Object `stub.fetch` rejecting Node global `Request` objects
+Fix Durable Object `stub.fetch` rejecting Node's global `Request`
 
-Passing a Node.js global `Request` to `DurableObjectStub#fetch` (for example via `getPlatformProxy`) failed because undici's brand check did not recognise the global `Request`, stringified it to `[object Request]`, and then threw while parsing that as a URL. Miniflare's `Request` constructor now converts foreign/global Request-like values before calling undici.
+Passing a Node.js global `Request` object to a Durable Object stub's `fetch()` (for example when using `getPlatformProxy`) previously failed with a URL parsing error. Such requests are now accepted and forwarded as expected.
