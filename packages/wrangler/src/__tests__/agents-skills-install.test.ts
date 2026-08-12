@@ -481,7 +481,6 @@ describe("runSkillsInstallFlow with force-install prompt", () => {
 							name: "Claude Code",
 							rosie: {
 								id: "claude",
-								globalPath: "/fake/.claude/skills",
 							},
 						},
 					],
@@ -566,7 +565,6 @@ describe("runSkillsInstallFlow with force-install prompt", () => {
 							name: "Claude Code",
 							rosie: {
 								id: "claude",
-								globalPath: "/fake/.claude/skills",
 							},
 						},
 					],
