@@ -1,0 +1,51 @@
+packages/config/src/__tests__/convert.test.ts
+  s_7d5df5632364c9::t_e175e8b82e40d0 955,959-964,967-968,975,977,980-988,994-1000,1003-1005
+packages/config/src/__tests__/schema.test.ts
+  s_7d5df5632364c9::t_82ee52b074619a 398-400,408-426,432-434,445
+packages/config/src/convert.ts
+  s_7d5df5632364c9::t_4ce2de94a57a0d 788-790,830,832-834,851-852
+packages/config/src/schema.ts
+  s_7d5df5632364c9::t_21b63a54d2c9fd 410-412
+packages/config/src/triggers.ts
+  s_7d5df5632364c9::t_8f82c27eba48ed 101-106,111-112,120,153-154,173
+packages/config/src/types.ts
+  s_7d5df5632364c9::t_36d2daca4fe2b5 221
+packages/miniflare/src/plugins/core/index.ts
+  s_7d5df5632364c9::t_35207240b7a163 176,178-179,181
+packages/miniflare/src/plugins/shared/constants.ts
+  s_7d5df5632364c9::t_5768fa386d313d 16,22-27
+packages/workers-utils/src/config/config.ts
+  s_7d5df5632364c9::t_26f96f7f9bbf9c 371
+packages/workers-utils/src/config/environment.ts
+  s_7d5df5632364c9::t_61c5ad204de996 1062,1073-1076
+packages/workers-utils/src/config/validation.ts
+  s_7d5df5632364c9::t_00f2840eb8c55d 1782,1788-1789,5225,5246-5251,5257-5258,5264-5265,5267,5271-5276,5279,5283,5291,5302,5310-5329
+packages/workers-utils/src/types.ts
+  s_7d5df5632364c9::t_eacd274d3686dd 434-439
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_7d5df5632364c9::t_929797d3e1a86b 78,4926-4927,4929,4936,4941,4945,4950,4959,4963,4968-4988,4998-4999,5003,5008-5034,5044,5048,5053-5057,5066-5069,5073,5078-5081,5091
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_7d5df5632364c9::t_a9694514b0f4b5 556
+packages/wrangler/src/api/startDevWorker/ConfigController.ts
+  s_7d5df5632364c9::t_36d61f235f281c 332-335,338
+packages/wrangler/src/api/startDevWorker/LocalRuntimeController.ts
+  s_7d5df5632364c9::t_516da72a650eaf 117,126-128,204
+packages/wrangler/src/dev/miniflare/index.ts
+  s_7d5df5632364c9::t_5812ef30baa4d6 95,1215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ab7fa2c3d6bc939e153d9c2bfc958b8faa3438ab",
+  "prompts": {},
+  "sessions": {
+    "s_7d5df5632364c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0462d798effe7zAY4Lxc6YAJ8q",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Thomas Rubini <trubini@cloudflare.com>"
+    }
+  }
+}
