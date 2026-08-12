@@ -135,6 +135,39 @@ export default defineWorkersProject({
 		);
 	});
 
+	it("renames the package in multiple dependency groups", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vitest-pool-workers": "^0.13.0",
+				},
+				peerDependencies: {
+					"@cloudflare/vitest-pool-workers": "^0.18.0",
+				},
+			}),
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as {
+			devDependencies: Record<string, string>;
+			peerDependencies: Record<string, string>;
+		};
+		expect(packageJson.devDependencies).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.peerDependencies).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+	});
+
 	it("throws for an unknown codemod", async ({ expect }) => {
 		const cwd = await createProject({});
 		await expect(

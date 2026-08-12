@@ -26,16 +26,13 @@ function renamePackageDependency(source: string): string {
 		packageJson.peerDependencies,
 		packageJson.optionalDependencies,
 	];
-	const oldDeclarations = dependencyGroups.filter(
+	const hasOldDeclaration = dependencyGroups.some(
 		(dependencies) => dependencies && OLD_PACKAGE in dependencies
 	);
 	const hasNewDeclaration = dependencyGroups.some(
 		(dependencies) => dependencies && NEW_PACKAGE in dependencies
 	);
-	if (
-		oldDeclarations.length > 1 ||
-		(oldDeclarations.length === 1 && hasNewDeclaration)
-	) {
+	if (hasOldDeclaration && hasNewDeclaration) {
 		throw new Error(
 			`Cannot migrate a package.json with conflicting ${OLD_PACKAGE} and ${NEW_PACKAGE} dependency declarations`
 		);
