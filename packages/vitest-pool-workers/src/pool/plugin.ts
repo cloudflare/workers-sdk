@@ -3,7 +3,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { cloudflarePool } from "./pool";
 import type { WorkersPoolOptions } from "./config";
+import type { ProvidedContext } from "vitest";
 import type { Vite, VitestPluginContext } from "vitest/node";
+
+type ProvidedContextKeys = keyof ProvidedContext & string;
+type WorkerPoolOptionsContextInject = [ProvidedContextKeys] extends [never]
+	? <T = unknown>(key: string) => T
+	: <K extends ProvidedContextKeys>(key: K) => ProvidedContext[K];
 
 const cloudflareTestPath = path.resolve(
 	import.meta.dirname,
@@ -16,14 +22,12 @@ export interface WorkerPoolOptionsContext {
 	 * during setup) for use in Miniflare options (e.g. bindings, upstream,
 	 * hyperdrives, ...).
 	 *
-	 * The type is intentionally wider than vitest's `inject()` to avoid a
-	 * cross-copy `ProvidedContext` mismatch that occurs when pnpm resolves
-	 * separate virtual-store instances of `vitest` for this package and the
-	 * consuming project. Consumer-side module augmentation of `ProvidedContext`
-	 * only applies to the consumer's copy, so binding to `typeof inject` from
-	 * this package's copy causes `keyof ProvidedContext` to resolve to `never`.
+	 * Known `ProvidedContext` keys preserve Vitest's inference and key checking
+	 * when the consuming project's augmentation is visible. If pnpm resolves a
+	 * separate Vitest copy and those keys collapse to `never`, fall back to the
+	 * wider inject signature instead.
 	 */
-	inject: <T = unknown>(key: string) => T;
+	inject: WorkerPoolOptionsContextInject;
 }
 
 function ensureArrayIncludes<T>(array: T[], items: T[]) {
