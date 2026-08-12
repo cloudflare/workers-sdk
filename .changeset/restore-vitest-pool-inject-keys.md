@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vitest-pool-workers": minor
+"@cloudflare/vitest-pool-workers": patch
 ---
 
 Restore typed `inject()` keys in `cloudflareTest()` pool options

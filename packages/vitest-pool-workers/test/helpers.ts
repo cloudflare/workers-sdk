@@ -12,15 +12,15 @@ import type { WorkerPoolOptionsContext } from "../src/pool/plugin";
 
 const debuglog = util.debuglog("vitest-pool-workers:test");
 
-const checkCloudflareTestInjectTypes = (
+function checkCloudflareTestInjectTypes(
 	poolInject: WorkerPoolOptionsContext["inject"]
-) => {
+) {
 	const tmpPoolInstallationPath: string = poolInject("tmpPoolInstallationPath");
 	void tmpPoolInstallationPath;
 
 	// @ts-expect-error ProvidedContext keys should be checked.
 	poolInject("tmpPoolInstalltionPath");
-};
+}
 void checkCloudflareTestInjectTypes;
 
 export const vitestConfig = (
