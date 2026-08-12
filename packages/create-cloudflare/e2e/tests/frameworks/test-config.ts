@@ -345,8 +345,31 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "next",
+			// Default Next.js path: vinext via create-vinext-app.
+			argv: ["--variant", "vinext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
+			// preview script is `build && start` (wrangler dev on build output).
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			verifyDeploy: {
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			nodeCompat: true,
+			unsupportedOSs: ["win32"],
+		},
+		{
+			name: "next:opennext",
+			// Opt-in OpenNext adapter path (previous C3 default).
+			argv: ["--variant", "opennext"],
+			timeout: LONG_TIMEOUT,
+			testCommitMessage: true,
+			expectFrameworkCli: false,
+			typesPath: "./cloudflare-env.d.ts",
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
 				route: "/",
@@ -1122,8 +1145,7 @@ function getExperimentalFrameworkTestConfig(
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			unsupportedPms: ["npm", "yarn"],
-			// this test creates an R2 bucket, so it requires a Cloudflare API token
-			// and needs to be skipped on forks
+			// This test creates an R2 bucket, so it requires a Cloudflare API token.
 			quarantine: !CLOUDFLARE_API_TOKEN,
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
