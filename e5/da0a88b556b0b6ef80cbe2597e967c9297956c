@@ -1,0 +1,19 @@
+packages/miniflare/src/index.ts
+  s_ae91e42aa48337::t_d5035901f6706f 1102-1104,1106,1113-1123,1127,1129-1135,1140-1143,1147-1148,1150-1166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e5da0a88b556b0b6ef80cbe2597e967c9297956c",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
