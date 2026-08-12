@@ -36,11 +36,11 @@ export interface RegistryEntry {
 	queueConsumers?: string[];
 	created: number;
 	instanceId: string;
+	storageScope?: string;
 }
 
 let registry = new Map<string, RegistryEntry>();
 
-let sharedStorageOwner: RegistryEntry | undefined;
 /**
  * Replace the in-memory registry with the given entries.
  * Called whenever the Node.js side pushes an updated registry snapshot.
@@ -48,10 +48,6 @@ let sharedStorageOwner: RegistryEntry | undefined;
 export function setRegistry(data: Record<string, RegistryEntry>): void {
 	const entries = Object.entries(data);
 	registry = new Map(entries);
-
-	sharedStorageOwner = entries.toSorted(
-		(a, b) => a[1].created - b[1].created
-	)[0]?.[1];
 }
 
 /**
@@ -65,8 +61,15 @@ export function resolveTarget(service: string): RegistryEntry | undefined {
 	return entry;
 }
 
-export function resolveSharedStorageOwner(): RegistryEntry | undefined {
-	return sharedStorageOwner;
+export function resolveSharedStorageOwner(
+	storageScope: string
+): RegistryEntry | undefined {
+	return Array.from(registry.entries())
+		.filter(([, entry]) => entry.storageScope === storageScope)
+		.sort(
+			([previousName, previous], [nextName, next]) =>
+				previous.created - next.created || previousName.localeCompare(nextName)
+		)[0]?.[1];
 }
 
 /**

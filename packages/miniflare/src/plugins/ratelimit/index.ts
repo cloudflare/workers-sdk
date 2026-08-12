@@ -61,7 +61,7 @@ export const RATELIMIT_PLUGIN: Plugin = {
 						service: getStorageService(
 							RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
 							buildObjectEntryProps(binding.namespace),
-							sharedOptions.unsafeEnableSharedStorage
+							sharedOptions
 						),
 					},
 					...buildJsonBindings({

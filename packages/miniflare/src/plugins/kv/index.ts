@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { SharedBindings } from "../../workers";
+import { getUserServiceName } from "../core";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
@@ -28,7 +29,6 @@ import type {
 } from "../../runtime";
 import type { ParsedWorkerOptions, Plugin } from "../shared";
 import type { SitesOptions } from "./sites";
-import { getUserServiceName } from "../core";
 
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
 // A single entry service shared by every *local* namespace. Each namespace's id
@@ -77,7 +77,7 @@ export const KV_PLUGIN: Plugin = {
 				kvNamespace: getStorageService(
 					KV_LOCAL_ENTRY_SERVICE_NAME,
 					buildObjectEntryProps(id),
-					sharedOptions.unsafeEnableSharedStorage
+					sharedOptions
 				),
 			};
 		});

@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MiniflareCoreError } from "../../shared";
+import { getUserServiceName } from "../core";
+import { SERVICE_DEV_REGISTRY_PROXY, type UnsafeUniqueKey } from "./constants";
 import type {
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
@@ -21,9 +23,7 @@ import type {
 } from "../../workers";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
-import { SERVICE_DEV_REGISTRY_PROXY, type UnsafeUniqueKey } from "./constants";
 import type { z } from "zod";
-import { getUserServiceName } from "../core";
 
 // Maps workflow binding names to their workflow options
 export interface WorkflowOption {
@@ -147,7 +147,7 @@ export function namespaceEntries<
 	Entry extends {
 		id: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
-	} = { id: string; remoteProxyConnectionString?: RemoteProxyConnectionString }
+	} = { id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
 >(
 	namespaces?: Record<string, string | Entry> | string[]
 ): [bindingName: string, entry: Entry][] {
@@ -271,9 +271,13 @@ export type {
 export function getStorageService(
 	localServiceName: string,
 	props: Record<string, unknown>,
-	unsafeEnableSharedStorage: boolean | undefined
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>
 ): ServiceDesignator {
-	return unsafeEnableSharedStorage
+	const storageScope = getStorageScope(sharedOptions.resourcePersistencePath);
+	return sharedOptions.unsafeEnableSharedStorage && storageScope !== undefined
 		? {
 				name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
 				entrypoint: "ExternalServiceProxy",
@@ -282,13 +286,22 @@ export function getStorageService(
 						service: localServiceName,
 						userProps: props,
 						storage: true,
+						storageScope,
 					}),
 				},
-		  }
+			}
 		: {
 				name: localServiceName,
 				props: {
 					json: JSON.stringify(props),
 				},
-		  };
+			};
+}
+
+export function getStorageScope(
+	resourcePersistencePath: string | undefined
+): string | undefined {
+	return resourcePersistencePath === undefined
+		? undefined
+		: path.resolve(resourcePersistencePath);
 }

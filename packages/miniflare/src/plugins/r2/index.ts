@@ -23,7 +23,12 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { MiniflareBinding, ParsedWorkerOptions, Plugin } from "../shared";
+import type {
+	MiniflareBinding,
+	ParsedInstanceOptions,
+	ParsedWorkerOptions,
+	Plugin,
+} from "../shared";
 
 /** Local-dev S3 credentials, derived from the parsed R2 binding. */
 type R2S3Credentials = NonNullable<
@@ -48,7 +53,10 @@ const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 
 export function getR2PublicService(
 	allWorkerOpts: ParsedWorkerOptions[],
-	sharedStorage: boolean | undefined
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>
 ): Service | undefined {
 	const publicBucketIds = new Set<string>();
 	for (const worker of allWorkerOpts) {
@@ -67,7 +75,7 @@ export function getR2PublicService(
 		r2Bucket: getStorageService(
 			R2_LOCAL_ENTRY_SERVICE_NAME,
 			buildObjectEntryProps(id),
-			sharedStorage
+			sharedOptions
 		),
 	}));
 	return {
@@ -82,7 +90,10 @@ export function getR2PublicService(
 
 export function getR2S3Service(
 	allWorkerOpts: ParsedWorkerOptions[],
-	sharedStorage: boolean | undefined
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>
 ): Service | undefined {
 	const credentialsById: Record<string, R2S3Credentials> = {};
 	for (const worker of allWorkerOpts) {
@@ -121,7 +132,7 @@ export function getR2S3Service(
 		r2Bucket: getStorageService(
 			R2_LOCAL_ENTRY_SERVICE_NAME,
 			buildObjectEntryProps(id),
-			sharedStorage
+			sharedOptions
 		),
 	}));
 	bindings.push({
@@ -156,12 +167,12 @@ export const R2_PLUGIN: Plugin = {
 						? {
 								name: R2_REMOTE_SERVICE_NAME,
 								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-						  }
+							}
 						: getStorageService(
 								R2_LOCAL_ENTRY_SERVICE_NAME,
 								buildObjectEntryProps(id),
-								sharedOptions.unsafeEnableSharedStorage
-						  ),
+								sharedOptions
+							),
 				};
 			}
 		);

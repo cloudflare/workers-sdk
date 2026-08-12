@@ -1,23 +1,7 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { Miniflare } from "miniflare";
 import { describe, it, vi } from "vitest";
 import { singleModuleManifest, useTmp } from "./test-shared";
 import type { MiniflareOptions } from "miniflare";
-
-/** Recover the detached owner's pid from its log file (best-effort, tests only). */
-function readOwnerPidFromLog(persistRoot: string): number | undefined {
-	try {
-		const log = readFileSync(
-			path.join(persistRoot, ".miniflare-owner.log"),
-			"utf8"
-		);
-		const match = log.match(/storage owner (\d+)/);
-		return match ? Number(match[1]) : undefined;
-	} catch {
-		return undefined;
-	}
-}
 
 describe.sequential("owner presence integration", () => {
 	it("routes a client's KV through the owner so storage is shared", async ({
@@ -229,14 +213,14 @@ describe.sequential("owner presence integration", () => {
 		}
 	});
 
-	it.todo(
-		"routes a client's Stream through the owner over RPC so storage is shared",
-		async ({ expect }) => {
-			const persistRoot = await useTmp();
-			const registryPath = await useTmp();
-			// Exercises the JSRPC path of the owner boundary (native RPC over the debug
-			// port), including nested RpcTargets (`videos.list()`).
-			const WORKER = `export default {
+	it.todo("routes a client's Stream through the owner over RPC so storage is shared", async ({
+		expect,
+	}) => {
+		const persistRoot = await useTmp();
+		const registryPath = await useTmp();
+		// Exercises the JSRPC path of the owner boundary (native RPC over the debug
+		// port), including nested RpcTargets (`videos.list()`).
+		const WORKER = `export default {
 			async fetch(request, env) {
 				try {
 					if (request.method === "PUT") {
@@ -253,51 +237,50 @@ describe.sequential("owner presence integration", () => {
 				}
 			}
 		}`;
-			const common: MiniflareOptions = {
-				unsafeEnableSharedStorage: true,
-				resourcePersistencePath: persistRoot,
-				unsafeDevRegistryPath: registryPath,
-				workers: [
-					{
-						config: {
-							type: "worker",
-							name: "worker",
-							compatibilityDate: "2025-01-01",
-							compatibilityFlags: ["experimental"],
-							manifest: singleModuleManifest(WORKER),
-							env: { STREAM: { type: "stream" } },
-						},
+		const common: MiniflareOptions = {
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistRoot,
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "worker",
+						compatibilityDate: "2025-01-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(WORKER),
+						env: { STREAM: { type: "stream" } },
 					},
-				],
-			};
-			const owner = new Miniflare(common);
-			await owner.ready;
-			const client = new Miniflare(common);
+				},
+			],
+		};
+		const owner = new Miniflare(common);
+		await owner.ready;
+		const client = new Miniflare(common);
 
-			try {
-				await client.ready;
+		try {
+			await client.ready;
 
-				// Client uploads a video (RPC through the owner)...
-				const put = (await (
-					await client.dispatchFetch("http://x/", { method: "PUT" })
-				).json()) as { id: string };
-				expect(put.id).toBeTruthy();
+			// Client uploads a video (RPC through the owner)...
+			const put = (await (
+				await client.dispatchFetch("http://x/", { method: "PUT" })
+			).json()) as { id: string };
+			expect(put.id).toBeTruthy();
 
-				// ...and the owner sees it (shared store), proving the RPC round-trip
-				// and the shared backing storage.
-				expect(
-					(
-						(await (await owner.dispatchFetch("http://x/")).json()) as {
-							count: number;
-						}
-					).count
-				).toBe(1);
-			} finally {
-				await client.dispose();
-				await owner.dispose();
-			}
+			// ...and the owner sees it (shared store), proving the RPC round-trip
+			// and the shared backing storage.
+			expect(
+				(
+					(await (await owner.dispatchFetch("http://x/")).json()) as {
+						count: number;
+					}
+				).count
+			).toBe(1);
+		} finally {
+			await client.dispose();
+			await owner.dispose();
 		}
-	);
+	});
 
 	it("routes a client's Secrets Store secret through the owner over RPC", async ({
 		expect,
@@ -358,47 +341,46 @@ describe.sequential("owner presence integration", () => {
 		}
 	});
 
-	it.todo(
-		"routes a client's Images store to the owner without dangling services",
-		async ({ expect }) => {
-			const persistRoot = await useTmp();
-			const registryPath = await useTmp();
-			const common: MiniflareOptions = {
-				unsafeEnableSharedStorage: true,
-				resourcePersistencePath: persistRoot,
-				unsafeDevRegistryPath: registryPath,
-				workers: [
-					{
-						config: {
-							type: "worker",
-							name: "worker",
-							compatibilityDate: "2025-01-01",
-							compatibilityFlags: ["experimental"],
-							manifest: singleModuleManifest(
-								"export default { async fetch(_request, env) { return new Response(typeof env.IMAGES.info); } }"
-							),
-							env: { IMAGES: { type: "images" } },
-						},
+	it.todo("routes a client's Images store to the owner without dangling services", async ({
+		expect,
+	}) => {
+		const persistRoot = await useTmp();
+		const registryPath = await useTmp();
+		const common: MiniflareOptions = {
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistRoot,
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "worker",
+						compatibilityDate: "2025-01-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(
+							"export default { async fetch(_request, env) { return new Response(typeof env.IMAGES.info); } }"
+						),
+						env: { IMAGES: { type: "images" } },
 					},
-				],
-			};
-			const owner = new Miniflare(common);
-			const client = new Miniflare(common);
-			try {
-				// Both reaching `ready` proves the routed client doesn't reference a
-				// local images storage service it no longer stands up (the owner does),
-				// and the transform worker + its routed `IMAGES_STORE` binding resolve.
-				await owner.ready;
-				await client.ready;
-				expect(await (await client.dispatchFetch("http://x/")).text()).toBe(
-					"function"
-				);
-			} finally {
-				await client.dispose();
-				await owner.dispose();
-			}
+				},
+			],
+		};
+		const owner = new Miniflare(common);
+		const client = new Miniflare(common);
+		try {
+			// Both reaching `ready` proves the routed client doesn't reference a
+			// local images storage service it no longer stands up (the owner does),
+			// and the transform worker + its routed `IMAGES_STORE` binding resolve.
+			await owner.ready;
+			await client.ready;
+			expect(await (await client.dispatchFetch("http://x/")).text()).toBe(
+				"function"
+			);
+		} finally {
+			await client.dispose();
+			await owner.dispose();
 		}
-	);
+	});
 
 	it("hosts plugins and resources not used by the client that spawned it", async ({
 		expect,
@@ -563,6 +545,128 @@ describe.sequential("owner presence integration", () => {
 			expect(count).toBe(String(N * M));
 		} finally {
 			await Promise.all(clients.map((c) => c.dispose().catch(() => {})));
+		}
+	});
+
+	it("hands storage ownership to another live instance", async ({ expect }) => {
+		const persistRoot = await useTmp();
+		const registryPath = await useTmp();
+		const options: MiniflareOptions = {
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistRoot,
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "worker",
+						compatibilityDate: "2025-01-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`export default {
+				async fetch(request, env) {
+					await env.DB.prepare("CREATE TABLE IF NOT EXISTS t(v TEXT)").run();
+					if (request.method === "PUT") {
+						await env.DB.prepare("INSERT INTO t(v) VALUES (?)").bind(await request.text()).run();
+					}
+					const row = await env.DB.prepare("SELECT COUNT(*) AS c FROM t").first();
+					return new Response(String(row.c));
+				}
+			}`),
+						env: { DB: { type: "d1", id: "DB" } },
+					},
+				},
+			],
+		};
+		const first = new Miniflare(options);
+		let second: Miniflare | undefined;
+
+		try {
+			await first.ready;
+			second = new Miniflare(options);
+			await second.ready;
+
+			expect(
+				await (
+					await second.dispatchFetch("http://x/", {
+						method: "PUT",
+						body: "before",
+					})
+				).text()
+			).toBe("1");
+
+			await first.dispose();
+			await vi.waitFor(
+				async () => {
+					const response = await second?.dispatchFetch("http://x/");
+					const body = await response?.text();
+					expect([response?.status, body]).toEqual([200, "1"]);
+				},
+				{ timeout: 10_000, interval: 100 }
+			);
+			expect(
+				await (
+					await second.dispatchFetch("http://x/", {
+						method: "PUT",
+						body: "after",
+					})
+				).text()
+			).toBe("2");
+		} finally {
+			await second?.dispose().catch(() => {});
+			await first.dispose().catch(() => {});
+		}
+	});
+
+	it("elects independent owners for different persistence roots", async ({
+		expect,
+	}) => {
+		const registryPath = await useTmp();
+		const WORKER = `export default {
+			async fetch(request, env) {
+				await env.DB.prepare("CREATE TABLE IF NOT EXISTS t(v TEXT)").run();
+				if (request.method === "PUT") {
+					await env.DB.prepare("INSERT INTO t(v) VALUES (?)").bind(await request.text()).run();
+				}
+				const row = await env.DB.prepare("SELECT COUNT(*) AS c FROM t").first();
+				return new Response(String(row.c));
+			}
+		}`;
+		const make = async (name: string) =>
+			new Miniflare({
+				unsafeEnableSharedStorage: true,
+				resourcePersistencePath: await useTmp(),
+				unsafeDevRegistryPath: registryPath,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name,
+							compatibilityDate: "2025-01-01",
+							compatibilityFlags: ["experimental"],
+							manifest: singleModuleManifest(WORKER),
+							env: { DB: { type: "d1", id: "DB" } },
+						},
+					},
+				],
+			});
+		const first = await make("first");
+		const second = await make("second");
+
+		try {
+			await first.ready;
+			await second.ready;
+			for (const instance of [first, second]) {
+				expect(
+					await (
+						await instance.dispatchFetch("http://x/", {
+							method: "PUT",
+							body: "value",
+						})
+					).text()
+				).toBe("1");
+			}
+		} finally {
+			await Promise.all([first.dispose(), second.dispose()]);
 		}
 	});
 

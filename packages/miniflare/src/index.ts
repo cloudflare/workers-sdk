@@ -45,6 +45,7 @@ import {
 	getGlobalServices,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageScope,
 	getTriggersOfType,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
@@ -100,7 +101,11 @@ import {
 	stripAnsi,
 } from "./shared";
 import { createDurableObjectStorageHandle } from "./shared/dev-control";
-import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
+import {
+	DevRegistry,
+	getStorageCandidateName,
+	getWorkerRegistry,
+} from "./shared/dev-registry";
 import {
 	getOutboundDoProxyClassName,
 	normaliseServiceDesignator,
@@ -172,6 +177,71 @@ import type { Duplex, Transform, Writable } from "node:stream";
 import type { Dispatcher, Response as UndiciResponse } from "undici";
 
 const DEFAULT_HOST = "127.0.0.1";
+const PERSIST_ROOT_STARTUP_LOCK = ".miniflare-startup.lock";
+const PERSIST_ROOT_STARTUP_LOCK_STALE_MS = 30_000;
+const PERSIST_ROOT_STARTUP_LOCK_RETRY_MS = 50;
+
+async function withPersistRootStartupLock<T>(
+	persistRoot: string | undefined,
+	signal: AbortSignal,
+	callback: () => Promise<T>
+): Promise<T> {
+	if (persistRoot === undefined || signal.aborted) {
+		return callback();
+	}
+
+	await mkdir(persistRoot, { recursive: true });
+	const lockPath = path.join(persistRoot, PERSIST_ROOT_STARTUP_LOCK);
+	let lock: fs.promises.FileHandle | undefined;
+	let heartbeat: NodeJS.Timeout | undefined;
+
+	while (lock === undefined && !signal.aborted) {
+		try {
+			lock = await fs.promises.open(lockPath, "wx");
+			heartbeat = setInterval(() => {
+				fs.promises.utimes(lockPath, new Date(), new Date()).catch(() => {});
+			}, 1_000);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+				throw error;
+			}
+
+			try {
+				const stats = await fs.promises.stat(lockPath);
+				if (
+					stats.mtime.getTime() <
+					Date.now() - PERSIST_ROOT_STARTUP_LOCK_STALE_MS
+				) {
+					await fs.promises.rm(lockPath, { force: true });
+					continue;
+				}
+			} catch (statError) {
+				if ((statError as NodeJS.ErrnoException).code !== "ENOENT") {
+					throw statError;
+				}
+			}
+
+			await new Promise((resolve) =>
+				setTimeout(resolve, PERSIST_ROOT_STARTUP_LOCK_RETRY_MS)
+			);
+		}
+	}
+
+	if (lock === undefined) {
+		return callback();
+	}
+
+	try {
+		return await callback();
+	} finally {
+		if (heartbeat !== undefined) {
+			clearInterval(heartbeat);
+		}
+		await lock.close();
+		await fs.promises.rm(lockPath, { force: true });
+	}
+}
+
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
@@ -1470,9 +1540,8 @@ export class Miniflare {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
 				if (request.method === "DELETE") {
-					response = await this.#handleLoopbackWorkflowStorageDeleteRequest(
-						url
-					);
+					response =
+						await this.#handleLoopbackWorkflowStorageDeleteRequest(url);
 				} else {
 					response = await this.#handleLoopbackWorkflowStorageRequest(url);
 				}
@@ -1967,11 +2036,11 @@ export class Miniflare {
 					workerOpts.config.assets && entrypoint === "default"
 						? {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.config.name}`,
-						  }
+							}
 						: {
 								name: getUserServiceName(serviceName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
-						  };
+							};
 
 				sockets.push({
 					name,
@@ -1991,7 +2060,12 @@ export class Miniflare {
 			((externalServices && (externalServices.size > 0 || hasQueues)) ||
 				sharedOpts.unsafeEnableSharedStorage)
 		) {
-			await this.#devRegistry.watch(externalServices, hasQueues);
+			await this.#devRegistry.watch(
+				externalServices,
+				hasQueues,
+				sharedOpts.unsafeEnableSharedStorage === true &&
+					sharedOpts.resourcePersistencePath !== undefined
+			);
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
@@ -2193,6 +2267,7 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
+		const runtime = this.#runtime;
 		const configuredHost = this.#sharedOpts.host ?? DEFAULT_HOST;
 		// For internal loopback communication with workerd, always use 127.0.0.1
 		// when localhost is configured. This prevents IPv6/IPv4 mismatch issues
@@ -2275,11 +2350,18 @@ export class Miniflare {
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.unsafeRuntimeEnv,
 		};
-		const maybeSocketPorts = await this.#runtime.updateConfig(
-			configBuffer,
-			runtimeOpts,
-			this.#workerOpts.map((w) => w.config.name),
-			this.#disposeController.signal
+		const maybeSocketPorts = await withPersistRootStartupLock(
+			this.#sharedOpts.unsafeEnableSharedStorage
+				? this.#sharedOpts.resourcePersistencePath
+				: undefined,
+			this.#disposeController.signal,
+			() =>
+				runtime.updateConfig(
+					configBuffer,
+					runtimeOpts,
+					this.#workerOpts.map((w) => w.config.name),
+					this.#disposeController.signal
+				)
 		);
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {
@@ -2483,6 +2565,20 @@ export class Miniflare {
 		);
 
 		const entries: [string, WorkerDefinition][] = [];
+		const storageScope = this.#sharedOpts.unsafeEnableSharedStorage
+			? getStorageScope(this.#sharedOpts.resourcePersistencePath)
+			: undefined;
+		if (storageScope !== undefined) {
+			entries.push([
+				getStorageCandidateName(this.#devRegistry.instanceId),
+				{
+					debugPortAddress,
+					defaultEntrypointService: "",
+					userWorkerService: "",
+					storageScope,
+				},
+			]);
+		}
 		for (const workerOpts of this.#workerOpts) {
 			const workerName = workerOpts.config.name;
 			if (!workerName || !workerOpts.dev?.unsafeRegisterWorker) {

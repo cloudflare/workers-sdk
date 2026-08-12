@@ -14,14 +14,29 @@ import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
+import { randomUUID } from "node:crypto";
 import type { Log } from "./log";
 import type { FSWatcher } from "chokidar";
-import { randomUUID } from "node:crypto";
+
+export const STORAGE_CANDIDATE_PREFIX = "__miniflare_storage_candidate__-";
+const STORAGE_CANDIDATE_HEARTBEAT_MS = 2_000;
+const STORAGE_CANDIDATE_STALE_MS = 10_000;
+const WORKER_HEARTBEAT_MS = 30_000;
+const WORKER_STALE_MS = 300_000;
+
+export function getStorageCandidateName(instanceId: string): string {
+	return `${STORAGE_CANDIDATE_PREFIX}${instanceId}`;
+}
+
+export function isStorageCandidateName(name: string): boolean {
+	return name.startsWith(STORAGE_CANDIDATE_PREFIX);
+}
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
 	private watchQueueConsumers = false;
+	private watchStorageCandidates = false;
 	private externalServices: Map<
 		string,
 		{
@@ -53,14 +68,21 @@ export class DevRegistry {
 				entrypoints: Set<string | undefined>;
 			}
 		>,
-		watchQueueConsumers = false
+		watchQueueConsumers = false,
+		watchStorageCandidates = false
 	): void {
-		if ((services.size === 0 && !watchQueueConsumers) || !this.registryPath) {
+		if (
+			(services.size === 0 &&
+				!watchQueueConsumers &&
+				!watchStorageCandidates) ||
+			!this.registryPath
+		) {
 			return;
 		}
 
 		this.externalServices = new Map(services);
 		this.watchQueueConsumers = watchQueueConsumers;
+		this.watchStorageCandidates = watchStorageCandidates;
 
 		mkdirSync(this.registryPath, { recursive: true });
 
@@ -193,8 +215,10 @@ export class DevRegistry {
 
 			const stats = statSync(definitionPath, { throwIfNoEntry: false });
 
-			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
-			if (stats && stats.mtime.getTime() < Date.now() - 300_000) {
+			const staleMs = isStorageCandidateName(name)
+				? STORAGE_CANDIDATE_STALE_MS
+				: WORKER_STALE_MS;
+			if (stats && stats.mtime.getTime() < Date.now() - staleMs) {
 				try {
 					unlinkSync(definitionPath);
 				} catch {}
@@ -227,11 +251,16 @@ export class DevRegistry {
 			this.registeredWorkers.add(name);
 			this.heartbeats.set(
 				name,
-				setInterval(() => {
-					if (existsSync(definitionPath)) {
-						utimesSync(definitionPath, new Date(), new Date());
-					}
-				}, 30_000)
+				setInterval(
+					() => {
+						if (existsSync(definitionPath)) {
+							utimesSync(definitionPath, new Date(), new Date());
+						}
+					},
+					isStorageCandidateName(name)
+						? STORAGE_CANDIDATE_HEARTBEAT_MS
+						: WORKER_HEARTBEAT_MS
+				)
 			);
 		}
 		this.refresh();
@@ -262,6 +291,14 @@ export class DevRegistry {
 			this.onUpdate(registry);
 			return;
 		}
+		if (
+			this.watchStorageCandidates &&
+			getStorageCandidatesView(registry) !==
+				getStorageCandidatesView(previousRegistry)
+		) {
+			this.onUpdate(registry);
+			return;
+		}
 		for (const [service] of this.externalServices) {
 			if (
 				JSON.stringify(registry[service]) !==
@@ -272,6 +309,23 @@ export class DevRegistry {
 			}
 		}
 	}
+}
+
+function getStorageCandidatesView(registry: WorkerRegistry): string {
+	return JSON.stringify(
+		Object.entries(registry)
+			.filter(([name]) => isStorageCandidateName(name))
+			.map(([name, definition]) => [
+				name,
+				definition.instanceId,
+				definition.debugPortAddress,
+				definition.storageScope,
+				definition.created,
+			])
+			.sort(([previousName], [nextName]) =>
+				String(previousName).localeCompare(String(nextName))
+			)
+	);
 }
 
 /**
@@ -315,8 +369,10 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 			const definitionPath = path.join(registryPath, workerName);
 			const stats = statSync(definitionPath, { throwIfNoEntry: false });
 
-			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
-			if (stats === undefined || stats.mtime.getTime() < Date.now() - 300_000) {
+			const staleMs = isStorageCandidateName(workerName)
+				? STORAGE_CANDIDATE_STALE_MS
+				: WORKER_STALE_MS;
+			if (stats === undefined || stats.mtime.getTime() < Date.now() - staleMs) {
 				try {
 					unlinkSync(definitionPath);
 				} catch {}

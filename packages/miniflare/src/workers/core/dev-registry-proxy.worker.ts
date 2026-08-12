@@ -9,7 +9,10 @@ import {
 	tailEventsReviver,
 	workerNotFoundMessage,
 } from "./dev-registry-proxy-shared.worker";
-import type { WorkerdDebugPortConnector } from "./dev-registry-proxy-shared.worker";
+import type {
+	RegistryEntry,
+	WorkerdDebugPortConnector,
+} from "./dev-registry-proxy-shared.worker";
 
 export {
 	createProxyDurableObjectClass,
@@ -45,20 +48,26 @@ interface Props {
 	// If it is, the proxy will try to forward to the shared storage owner
 	// (first active worker in the dev registry)
 	storage?: boolean;
+	storageScope?: string;
 }
 
-function resolve(props: Props, env: Env): Fetcher | null {
-	const { service, entrypoint, userProps, storage } = props;
-	const target = storage ? resolveSharedStorageOwner() : resolveTarget(service);
-
-	if (!target || !target.debugPortAddress) {
-		return null;
+function getTarget(props: Props): RegistryEntry | undefined {
+	if (props.storage) {
+		return props.storageScope === undefined
+			? undefined
+			: resolveSharedStorageOwner(props.storageScope);
 	}
+	return resolveTarget(props.service);
+}
+
+function resolve(props: Props, env: Env, target: RegistryEntry): Fetcher {
+	const { service, entrypoint, userProps, storage } = props;
+
 	const serviceName = storage
 		? service
 		: entrypoint === null || entrypoint === "default"
-		? target.defaultEntrypointService
-		: target.userWorkerService;
+			? target.defaultEntrypointService
+			: target.userWorkerService;
 	const client = env.DEV_REGISTRY_DEBUG_PORT.connect(target.debugPortAddress);
 	return client.getEntrypoint(serviceName, entrypoint ?? undefined, userProps);
 }
@@ -99,12 +108,13 @@ export class ExternalQueueProxy extends WorkerEntrypoint<Env> {
 }
 
 export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
-	_fetcher: Fetcher | null = null;
+	_fetcher: Fetcher | undefined;
+	_targetAddress: string | undefined;
+	_targetInstanceId: string | undefined;
 	_entryFetcher: Fetcher | null = null;
 
 	constructor(ctx: ExecutionContext<Props>, env: Env) {
 		super(ctx, env);
-		this._fetcher = resolve(ctx.props, env);
 
 		// Separate connection for scheduled: the debug port's EventDispatcher
 		// doesn't support runScheduled/runAlarm/queue, so we forward via HTTP.
@@ -125,21 +135,45 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 					return undefined;
 				}
 
-				if (!target._fetcher) {
+				const fetcher = target._resolve();
+				if (!fetcher) {
 					throw new Error(workerNotFoundMessage(ctx.props.service));
 				}
-				return Reflect.get(target._fetcher, prop);
+				return Reflect.get(fetcher, prop);
 			},
 		});
 	}
 
+	_resolve(): Fetcher | null {
+		const target = getTarget(this.ctx.props);
+		if (target === undefined || !target.debugPortAddress) {
+			this._fetcher = undefined;
+			this._targetAddress = undefined;
+			this._targetInstanceId = undefined;
+			return null;
+		}
+		if (
+			this._fetcher !== undefined &&
+			this._targetAddress === target.debugPortAddress &&
+			this._targetInstanceId === target.instanceId
+		) {
+			return this._fetcher;
+		}
+
+		this._fetcher = resolve(this.ctx.props, this.env, target);
+		this._targetAddress = target.debugPortAddress;
+		this._targetInstanceId = target.instanceId;
+		return this._fetcher;
+	}
+
 	fetch(request: Request): Promise<Response> | Response {
-		if (!this._fetcher) {
+		const fetcher = this._resolve();
+		if (!fetcher) {
 			return new Response(workerNotFoundMessage(this.ctx.props.service), {
 				status: 503,
 			});
 		}
-		return this._fetcher.fetch(request);
+		return fetcher.fetch(request);
 	}
 
 	async scheduled(controller: ScheduledController) {

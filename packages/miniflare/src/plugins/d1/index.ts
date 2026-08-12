@@ -52,12 +52,12 @@ export const D1_PLUGIN: Plugin = {
 					? {
 							name: D1_REMOTE_SERVICE_NAME,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-					  }
+						}
 					: getStorageService(
 							D1_LOCAL_ENTRY_SERVICE_NAME,
 							buildObjectEntryProps(id),
-							sharedOptions.unsafeEnableSharedStorage
-					  );
+							sharedOptions
+						);
 
 				return {
 					name,
