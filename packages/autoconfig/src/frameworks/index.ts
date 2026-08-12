@@ -80,4 +80,9 @@ export type AutoConfigFrameworkPackageInfo = {
 	minimumVersion: string;
 	/** The latest major version of the package/framework that autoconfig supports  */
 	maximumKnownMajorVersion: string;
+	/**
+	 * Maps ranges of installed versions that autoconfig can upgrade in place to the version each
+	 * range should be upgraded to. Ranges are checked in order, and the first match wins.
+	 */
+	upgradeRequired?: Record<string, string>;
 };
