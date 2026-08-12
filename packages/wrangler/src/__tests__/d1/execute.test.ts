@@ -302,7 +302,7 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 			expect(std.out).toMatch("🚣 Executed 1 command in 123.46ms");
 		});
 
-		it("should normalize CRLF line endings in commands sent to the remote query API", async ({
+		it("should preserve quoted CRLF when normalizing commands sent to the remote query API", async ({
 			expect,
 		}) => {
 			setIsTTY(false);
@@ -348,11 +348,12 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 			);
 
 			await runWrangler(
-				"d1 execute db --remote --command 'CREATE TRIGGER trg BEFORE DELETE ON probe_z\r\nBEGIN\r\n  SELECT RAISE(ABORT, '\''no'\'');\r\nEND;'"
+				"d1 execute db --remote --command \"CREATE TRIGGER trg BEFORE DELETE ON probe_z\r\nBEGIN\r\n  SELECT RAISE(ABORT, 'no\r\nchange');\r\nEND;\""
 			);
 
-			expect(sentSql).toBeDefined();
-			expect(sentSql).not.toContain("\r");
+			expect(sentSql).toBe(
+				"CREATE TRIGGER trg BEFORE DELETE ON probe_z\nBEGIN\n  SELECT RAISE(ABORT, 'no\r\nchange');\nEND;"
+			);
 		});
 
 		it("should format batch execution duration with 2 decimal places", async ({
