@@ -1443,7 +1443,6 @@ export async function runSkillsUpdateFlow(
 			"skills_update_skipped",
 			{
 				reason: "Failed to update skills",
-				errorMessage: err instanceof Error ? err.message : String(err),
 				...(command ? { command } : {}),
 			},
 			{}
