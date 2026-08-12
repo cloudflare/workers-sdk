@@ -15,7 +15,6 @@ import {
 	_forceColour,
 	NODEJS_COMPAT_DEFAULT_ON_DATE,
 } from "@cloudflare/workers-utils";
-import { _forceColour } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
