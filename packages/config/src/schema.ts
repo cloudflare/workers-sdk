@@ -69,6 +69,11 @@ export const R2BindingSchema = z.strictObject({
 		.optional(),
 });
 
+export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
+	type: z.literal("analytics-engine-dataset"),
+	name: z.string().optional(),
+});
+
 export const FlagshipBindingSchema = z.strictObject({
 	type: z.literal("flagship"),
 	id: z.string().optional(),
@@ -98,10 +103,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		namespace: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("analytics-engine-dataset"),
-		name: z.string().optional(),
-	}),
+	AnalyticsEngineDatasetBindingSchema,
 	z.strictObject({
 		type: z.literal("artifacts"),
 		namespace: z.string(),

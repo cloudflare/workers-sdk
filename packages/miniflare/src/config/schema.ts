@@ -1,25 +1,26 @@
 import path from "node:path";
 import {
+	AnalyticsEngineDatasetBindingSchema,
 	AssetsSchema as RawAssetsConfigSchema,
 	BrowserBindingSchema,
+	D1BindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
 	DurableObjectExpectingTransferExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
+	FlagshipBindingSchema,
+	HyperdriveBindingSchema,
 	KnownBindingSchema,
+	KVBindingSchema,
 	ModuleTypeSchema,
 	OutputWorkerSchema,
+	QueueBindingSchema,
+	R2BindingSchema,
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
-	D1BindingSchema,
-	FlagshipBindingSchema,
-	KVBindingSchema,
-	QueueBindingSchema,
-	R2BindingSchema,
 	TailConsumerSchema,
-	HyperdriveBindingSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
 import { z } from "zod";
@@ -269,6 +270,13 @@ const ParsedMiniflareR2BindingSchema = R2BindingSchema.omit({
 	name: z.string(),
 });
 
+const ParsedMiniflareAnalyticsEngineDatasetBindingSchema =
+	AnalyticsEngineDatasetBindingSchema.omit({
+		name: true,
+	}).extend({
+		name: z.string(),
+	});
+
 const ParsedMiniflareQueueBindingSchema = QueueBindingSchema.omit({
 	name: true,
 }).extend({
@@ -280,6 +288,7 @@ const OVERRIDDEN_PARSED_BINDING_SCHEMAS = [
 	D1BindingSchema,
 	FlagshipBindingSchema,
 	R2BindingSchema,
+	AnalyticsEngineDatasetBindingSchema,
 	QueueBindingSchema,
 ] as const;
 
@@ -299,6 +308,7 @@ export const ParsedMiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	ParsedMiniflareD1BindingSchema,
 	ParsedMiniflareFlagshipBindingSchema,
 	ParsedMiniflareR2BindingSchema,
+	ParsedMiniflareAnalyticsEngineDatasetBindingSchema,
 	ParsedMiniflareQueueBindingSchema,
 	...ParsedPassthroughBindingSchemas,
 ]);
@@ -481,6 +491,7 @@ function defaultBindingIdentifiers(
 						{ ...binding, id: binding.id ?? defaultIdentifier },
 					];
 				case "r2":
+				case "analytics-engine-dataset":
 				case "queue":
 					return [
 						bindingName,
