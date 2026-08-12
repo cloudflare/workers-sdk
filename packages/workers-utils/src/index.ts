@@ -113,7 +113,14 @@ export {
 } from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
-export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
+export {
+	isCompatDate,
+	getTodaysCompatDate,
+	isNodejsCompatDefaultOn,
+	NODEJS_COMPAT_DEFAULT_ON_DATE,
+	NODEJS_COMPAT_V2_SWITCH_OVER_DATE,
+	resolveNodejsCompat,
+} from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
 
 export { isDockerfile } from "./config/validation";

@@ -303,41 +303,38 @@ describe("autoconfig (deploy)", () => {
 
 			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
 				.toMatchInlineSnapshot(`
-				"
-				Detected Project Settings:
-				 - Worker Name: my-worker
-				 - Framework: Static
-				 - Build Command: echo 'built' > build.txt
-				 - Output Directory: dist
+					"
+					Detected Project Settings:
+					 - Worker Name: my-worker
+					 - Framework: Static
+					 - Build Command: echo 'built' > build.txt
+					 - Output Directory: dist
 
 
-				📦 Install packages:
-				 - wrangler (devDependency)
+					📦 Install packages:
+					 - wrangler (devDependency)
 
-				📝 Update package.json scripts:
-				 - "deploy": "echo 'built' > build.txt && wrangler deploy"
-				 - "preview": "echo 'built' > build.txt && wrangler dev"
+					📝 Update package.json scripts:
+					 - "deploy": "echo 'built' > build.txt && wrangler deploy"
+					 - "preview": "echo 'built' > build.txt && wrangler dev"
 
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "my-worker",
-				    "compatibility_date": "<current-date>",
-				    "observability": {
-				      "enabled": true
-				    },
-				    "assets": {
-				      "directory": "dist"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
-				  }
+					📄 Create wrangler.jsonc:
+					  {
+					    "$schema": "node_modules/wrangler/config-schema.json",
+					    "name": "my-worker",
+					    "compatibility_date": "<current-date>",
+					    "observability": {
+					      "enabled": true
+					    },
+					    "assets": {
+					      "directory": "dist"
+					    }
+					  }
 
-				🛠️  Configuring project for Static
+					🛠️  Configuring project for Static
 
-				[build] Running: echo 'built' > build.txt"
-			`);
+					[build] Running: echo 'built' > build.txt"
+				`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
@@ -354,10 +351,7 @@ describe("autoconfig (deploy)", () => {
 				  },
 				  "assets": {
 				    "directory": "dist"
-				  },
-				  "compatibility_flags": [
-				    "nodejs_compat"
-				  ]
+				  }
 				}
 				"
 			`);
@@ -504,36 +498,33 @@ describe("autoconfig (deploy)", () => {
 
 			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
 				.toMatchInlineSnapshot(`
-				"
-				Detected Project Settings:
-				 - Worker Name: my-worker
-				 - Framework: Static
-				 - Output Directory: dist
+					"
+					Detected Project Settings:
+					 - Worker Name: my-worker
+					 - Framework: Static
+					 - Output Directory: dist
 
 
-				Updated Project Settings:
-				 - Worker Name: edited-worker-name
-				 - Framework: Static
-				 - Output Directory: dist
+					Updated Project Settings:
+					 - Worker Name: edited-worker-name
+					 - Framework: Static
+					 - Output Directory: dist
 
 
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "edited-worker-name",
-				    "compatibility_date": "<current-date>",
-				    "observability": {
-				      "enabled": true
-				    },
-				    "assets": {
-				      "directory": "dist"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
-				  }
-				"
-			`);
+					📄 Create wrangler.jsonc:
+					  {
+					    "$schema": "node_modules/wrangler/config-schema.json",
+					    "name": "edited-worker-name",
+					    "compatibility_date": "<current-date>",
+					    "observability": {
+					      "enabled": true
+					    },
+					    "assets": {
+					      "directory": "dist"
+					    }
+					  }
+					"
+				`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
@@ -550,10 +541,7 @@ describe("autoconfig (deploy)", () => {
 				  },
 				  "assets": {
 				    "directory": "dist"
-				  },
-				  "compatibility_flags": [
-				    "nodejs_compat"
-				  ]
+				  }
 				}
 				"
 			`);
@@ -720,8 +708,12 @@ describe("autoconfig (deploy)", () => {
 			);
 		});
 
+		// Autoconfig always writes today's compatibility date, which is on or after
+		// the date `nodejs_compat` became enabled by default in workerd. Specifying
+		// the flag as well would be a validation error, so it must not be added, and
+		// any framework-provided Node.js compatibility flag must be removed.
 		describe("nodejs_compat compatibility flag", () => {
-			it("should add nodejs_compat when framework specifies no compatibility flags", async ({
+			it("should not add nodejs_compat when framework specifies no compatibility flags", async ({
 				expect,
 			}) => {
 				mockConfirm({
@@ -759,12 +751,10 @@ describe("autoconfig (deploy)", () => {
 				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
-				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
+				expect(wranglerConfig.compatibility_flags).toBeUndefined();
 			});
 
-			it("should preserve other compatibility flags while adding nodejs_compat", async ({
-				expect,
-			}) => {
+			it("should preserve other compatibility flags", async ({ expect }) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -802,11 +792,10 @@ describe("autoconfig (deploy)", () => {
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
 				expect(wranglerConfig.compatibility_flags).toEqual([
 					"global_fetch_strictly_public",
-					"nodejs_compat",
 				]);
 			});
 
-			it("should not duplicate nodejs_compat if already present", async ({
+			it("should remove a redundant nodejs_compat provided by the framework", async ({
 				expect,
 			}) => {
 				mockConfirm({
@@ -844,10 +833,12 @@ describe("autoconfig (deploy)", () => {
 				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
-				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
+				expect(wranglerConfig.compatibility_flags).toBeUndefined();
 			});
 
-			it("should replace nodejs_als with nodejs_compat", async ({ expect }) => {
+			it("should remove nodejs_als while preserving other flags", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -880,12 +871,8 @@ describe("autoconfig (deploy)", () => {
 				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
-				// nodejs_als should be removed, nodejs_compat should be added, some_other_flag preserved
-				expect(wranglerConfig.compatibility_flags).toEqual([
-					"some_other_flag",
-					"nodejs_compat",
-				]);
-				expect(wranglerConfig.compatibility_flags).not.toContain("nodejs_als");
+				// nodejs_als should be removed and some_other_flag preserved
+				expect(wranglerConfig.compatibility_flags).toEqual(["some_other_flag"]);
 			});
 		});
 
