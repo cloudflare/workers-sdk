@@ -124,7 +124,7 @@ export type UpdatePreviewRequestParams = Omit<
 >;
 
 export type PreviewRequestOptions = {
-	ignoreDefaults?: boolean;
+	ignoreBaseConfig?: boolean;
 };
 
 export type PreviewDefaults = {
@@ -184,8 +184,8 @@ export async function createPreview(
 	request: CreatePreviewRequestParams,
 	options?: PreviewRequestOptions
 ): Promise<PreviewResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
+	const queryParams = options?.ignoreBaseConfig
+		? new URLSearchParams({ ignore_base_config: "true" })
 		: undefined;
 
 	return fetchResult<PreviewResource>(
@@ -205,13 +205,8 @@ export async function editPreview(
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	request: UpdatePreviewRequestParams,
-	options?: PreviewRequestOptions
+	request: UpdatePreviewRequestParams
 ): Promise<PreviewResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
-		: undefined;
-
 	return fetchResult<PreviewResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
@@ -221,8 +216,7 @@ export async function editPreview(
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(request),
-		},
-		queryParams
+		}
 	);
 }
 
@@ -263,13 +257,8 @@ export async function createPreviewDeployment(
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	request: Partial<CreatePreviewDeploymentRequestParams>,
-	options?: PreviewRequestOptions
+	request: Partial<CreatePreviewDeploymentRequestParams>
 ): Promise<DeploymentResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
-		: undefined;
-
 	return fetchResult<DeploymentResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
@@ -279,8 +268,7 @@ export async function createPreviewDeployment(
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(request),
-		},
-		queryParams
+		}
 	);
 }
 

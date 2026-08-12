@@ -49,7 +49,7 @@ export type PreviewArgs = {
 	tag?: string;
 	message?: string;
 	json?: boolean;
-	ignoreDefaults: boolean;
+	ignoreBaseConfig: boolean;
 	workerName?: string;
 	"worker-name"?: string;
 };
@@ -375,7 +375,7 @@ export async function preview(
 	}
 
 	const previewIdentifier = previewName;
-	const ignoreDefaults = args.ignoreDefaults;
+	const ignoreBaseConfig = args.ignoreBaseConfig;
 	const fallbackTag =
 		!args.tag && shouldUseCIMetadataFallback() ? getHeadCommitRef() : undefined;
 	const fallbackMessage =
@@ -405,7 +405,7 @@ export async function preview(
 			accountId,
 			workerName,
 			{ name: previewName, ...assemblePreviewScriptSettings(config) },
-			{ ignoreDefaults }
+			{ ignoreBaseConfig }
 		);
 	} else {
 		const previewRequest = assemblePreviewScriptSettings(config);
@@ -415,8 +415,7 @@ export async function preview(
 				accountId,
 				workerName,
 				previewIdentifier,
-				previewRequest,
-				{ ignoreDefaults }
+				previewRequest
 			);
 		} else {
 			previewResource = existingPreview as PreviewResource;
@@ -440,8 +439,7 @@ export async function preview(
 		accountId,
 		workerName,
 		previewResource.id,
-		deploymentRequest,
-		{ ignoreDefaults }
+		deploymentRequest
 	);
 
 	if (args.json) {
