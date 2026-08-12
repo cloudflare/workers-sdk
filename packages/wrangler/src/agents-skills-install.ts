@@ -6,7 +6,6 @@ import {
 	readFileSync,
 	readdirSync,
 	renameSync,
-	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { access, cp, mkdir, rename, stat, unlink } from "node:fs/promises";
@@ -17,6 +16,7 @@ import {
 	parseJSONC,
 	isInteractive,
 	removeDir,
+	removeDirSync,
 } from "@cloudflare/workers-utils";
 import ci from "ci-info";
 import { install as rosieInstall, agents as rosieAgents } from "rosie-skills";
@@ -983,7 +983,7 @@ async function installSkillsCleanly(
 		for (const { src, backup } of backedUp) {
 			try {
 				if (existsSync(src)) {
-					rmSync(src, { recursive: true, force: true });
+					removeDirSync(src);
 				}
 				try {
 					renameSync(backup, src);
