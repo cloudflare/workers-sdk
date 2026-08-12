@@ -293,3 +293,34 @@ describe("trimSqlQuery()", () => {
 	`);
 	});
 });
+
+describe("trimSqlQuery review follow-ups", () => {
+	it("removes only the last COMMIT when the data contains an earlier one", () => {
+		const sql = [
+			"BEGIN TRANSACTION;",
+			"INSERT INTO t VALUES('COMMIT;');",
+			"COMMIT;",
+		].join("\n");
+		const trimmed = trimSqlQuery(sql);
+		// The COMMIT inside the string literal must survive untouched.
+		expect(trimmed).toContain("INSERT INTO t VALUES('COMMIT;');");
+		expect(trimmed).not.toMatch(/^\s*COMMIT;/m);
+	});
+
+	it("throws when a COMMIT has no opening BEGIN TRANSACTION", () => {
+		expect(() => trimSqlQuery("SELECT 1;\nCOMMIT;")).toThrowError(
+			/unbalanced transaction/
+		);
+	});
+
+	it("throws when a BEGIN TRANSACTION is never committed", () => {
+		expect(() => trimSqlQuery("BEGIN TRANSACTION;\nSELECT 1;")).toThrowError(
+			/unbalanced transaction/
+		);
+	});
+
+	it("ignores a transaction keyword inside a bracketed identifier", () => {
+		const sql = "INSERT INTO [weird BEGIN TRANSACTION col] VALUES(1);";
+		expect(trimSqlQuery(sql)).toBe(sql);
+	});
+});
