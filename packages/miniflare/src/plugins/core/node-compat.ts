@@ -12,7 +12,11 @@ export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
  * Computes the Node.js compatibility mode we are running.
  *
  * NOTES:
- * - The v2 mode is configured via `nodejs_compat_v2` compat flag or via `nodejs_compat` plus a compatibility date of Sept 23rd. 2024 or later.
+ * - Node.js compatibility is enabled by default for a compatibility date of Aug 4th. 2026 or later,
+ *   unless the `no_nodejs_compat` compat flag is set. It can also be enabled explicitly via the
+ *   `nodejs_compat` or `nodejs_compat_v2` compat flags.
+ * - The v2 mode is configured via `nodejs_compat_v2` compat flag or via `nodejs_compat` (whether set
+ *   explicitly or implied by the compatibility date) plus a compatibility date of Sept 23rd. 2024 or later.
  * - See `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
  *
  * @param compatibilityDateStr The compatibility date
@@ -26,21 +30,30 @@ export function getNodeCompat(
 	const {
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
+		hasNoNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
 		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
 	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
 	const nodeCompatSwitchOverDate = "2024-09-23";
+	const nodeCompatDefaultOnDate = "2026-08-04";
+
+	// From `nodeCompatDefaultOnDate` onwards, `nodejs_compat` is enabled by default (matching
+	// workerd's `$compatEnableDate` for the flag) unless explicitly disabled via `no_nodejs_compat`.
+	const nodejsCompatEnabled =
+		hasNodejsCompatFlag ||
+		(compatibilityDate >= nodeCompatDefaultOnDate && !hasNoNodejsCompatFlag);
+
 	let mode: NodeJSCompatMode = null;
 	if (
 		hasNodejsCompatV2Flag ||
-		(hasNodejsCompatFlag &&
+		(nodejsCompatEnabled &&
 			compatibilityDate >= nodeCompatSwitchOverDate &&
 			!hasNoNodejsCompatV2Flag)
 	) {
 		mode = "v2";
-	} else if (hasNodejsCompatFlag) {
+	} else if (nodejsCompatEnabled) {
 		mode = "v1";
 	} else if (hasNodejsAlsFlag) {
 		mode = "als";
@@ -50,6 +63,7 @@ export function getNodeCompat(
 		mode,
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
+		hasNoNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
 		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
@@ -60,6 +74,7 @@ function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
 	return {
 		hasNodejsAlsFlag: compatibilityFlags.includes("nodejs_als"),
 		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
+		hasNoNodejsCompatFlag: compatibilityFlags.includes("no_nodejs_compat"),
 		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
 		hasNoNodejsCompatV2Flag: compatibilityFlags.includes("no_nodejs_compat_v2"),
 		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(
