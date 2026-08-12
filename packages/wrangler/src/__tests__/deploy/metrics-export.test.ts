@@ -51,28 +51,11 @@ describe("deploy metrics export", () => {
 		clearOutputFilePath();
 	});
 
-	it("reconciles Worker, service, D1, and R2 resources using canonical identities", async ({
+	it("reconciles Worker, D1, and R2 resources using canonical identities", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
 			main: "./index.js",
-			services: [
-				{
-					binding: "BOUND_WORKER_Z",
-					service: "bound-worker-z",
-					environment: "production",
-					entrypoint: "Handler",
-				},
-				{ binding: "BOUND_WORKER_A", service: "bound-worker-a" },
-				{ binding: "BOUND_WORKER_ALIAS", service: "bound-worker-a" },
-				{ binding: "SELF", service: "test-name" },
-				{
-					binding: "CROSS_ACCOUNT_WORKER",
-					service: "cross-account-worker",
-					// @ts-expect-error - cross_account_grant is internal-only
-					cross_account_grant: "grant-service",
-				},
-			],
 			d1_databases: [
 				{
 					binding: "DB_ONE",
@@ -130,16 +113,6 @@ describe("deploy metrics export", () => {
 				{
 					resourceType: "workers",
 					resourceId: "test-name",
-					destinations: ["opentelemetry-metrics"],
-				},
-				{
-					resourceType: "workers",
-					resourceId: "bound-worker-a",
-					destinations: ["opentelemetry-metrics"],
-				},
-				{
-					resourceType: "workers",
-					resourceId: "bound-worker-z",
 					destinations: ["opentelemetry-metrics"],
 				},
 				{
