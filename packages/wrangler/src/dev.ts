@@ -145,7 +145,7 @@ export const dev = createCommand({
 		"infer-origin-from-routes": {
 			type: "boolean",
 			describe:
-				"Use the first configured route to infer the origin (request.url and the Host header) seen by the Worker in local mode. Set to false to preserve the real local origin, e.g. localhost:8787",
+				"Use the first configured route to infer the origin (request.url and the Host header) seen by the Worker in local mode. Set to false to preserve the real local origin, e.g. localhost:8787. Has no effect in remote mode",
 		},
 		"enable-containers": {
 			type: "boolean",
