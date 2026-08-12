@@ -28,8 +28,8 @@ catalogs:
       specifier: 4.1.0
       version: 4.1.0
     capnp-es:
-      specifier: 0.0.14
-      version: 0.0.14
+      specifier: 0.0.15
+      version: 0.0.15
     capnweb:
       specifier: 0.5.0
       version: 0.5.0
@@ -2433,7 +2433,7 @@ importers:
         version: 8.3.5
       capnp-es:
         specifier: catalog:default
-        version: 0.0.14(typescript@5.8.3)
+        version: 0.0.15(typescript@5.8.3)
       capnweb:
         specifier: catalog:default
         version: 0.5.0
@@ -4123,7 +4123,7 @@ importers:
         version: 0.2.14
       capnp-es:
         specifier: catalog:default
-        version: 0.0.14(typescript@5.8.3)
+        version: 0.0.15(typescript@5.8.3)
       devalue:
         specifier: ^5.6.3
         version: 5.6.3
@@ -11153,8 +11153,8 @@ packages:
   caniuse-lite@1.0.30001769:
     resolution: {integrity: sha512-BCfFL1sHijQlBGWBMuJyhZUhzo7wer5sVj9hqekB/7xn0Ypy+pER/edCYQm4exbXj4WiySGp40P8UuTh6w1srg==}
 
-  capnp-es@0.0.14:
-    resolution: {integrity: sha512-8lWj4GJISiqRSlAJGkWpI4Azib7QY5UDIkqxeHcI7aAnXVk9SFuWxl1Fme+2HhzNANV0WTJqwUZvvXvloc3sBA==}
+  capnp-es@0.0.15:
+    resolution: {integrity: sha512-p3nLMXKmoMtO1pjdX3QrdtNep+gi9A3Q6k1GaVPyMsvdLLU6HH8wQxJJ7zs86ywti4BxSkaaksF7UZ3+NGI2JQ==}
     hasBin: true
     peerDependencies:
       typescript: ^5.7.3
@@ -23758,7 +23758,7 @@ snapshots:
 
   caniuse-lite@1.0.30001769: {}
 
-  capnp-es@0.0.14(typescript@5.8.3):
+  capnp-es@0.0.15(typescript@5.8.3):
     optionalDependencies:
       typescript: 5.8.3
 
