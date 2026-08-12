@@ -1,6 +1,6 @@
 ---
-"@cloudflare/deploy-helpers": patch
-"wrangler": patch
+"@cloudflare/deploy-helpers": minor
+"wrangler": minor
 ---
 
 [private beta]: Updates the `--ignore-defaults` flag to `--ignore-base-config` on `wrangler preview` commands.
