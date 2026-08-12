@@ -1,5 +1,58 @@
 # miniflare
 
+## 5.20260804.1-alpha
+
+### Patch Changes
+
+- [#14993](https://github.com/cloudflare/workers-sdk/pull/14993) [`c7aede7`](https://github.com/cloudflare/workers-sdk/commit/c7aede764b601d1b73aa208f6a6ff63f646f4136) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Report failures to forward tail events between local dev sessions
+
+  When a Worker's tail consumer runs in a separate local dev session and that session becomes unreachable, the failure to deliver tail events was discarded silently. It is now reported as a warning.
+
+## 5.20260804.0-alpha
+
+### Major Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Replace Miniflare's options API with Cloudflare config-based worker options
+
+  `new Miniflare()` and `setOptions()` now require a `workers` array of worker entries. Binding, service, tail, remote, asset, workflow, unsafe binding, and other worker configuration now follows the schemas in `packages/miniflare/src/config/schema.ts`.
+
+  The previous flat options shape is no longer accepted directly. Existing v4-shaped options can be migrated with `convertV4MiniflareOptions()`.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Change the Miniflare plugin API
+
+  Plugins now receive parsed Miniflare worker and instance config instead of per-plugin option slices. Per-plugin option schema exports have been removed; unsafe plugin authors should read bindings, exports, and triggers from the parsed config passed to plugin hooks.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove automatic module graph discovery
+
+  Miniflare no longer discovers Worker modules from `modules: true` and `modulesRules`. Module workers must provide their module graph through the config manifest. Existing v4-shaped options can be migrated with `convertV4MiniflareOptions()`, but `modulesRules` cannot be converted without losing behavior.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove internal or redundant options from Miniflare's config
+
+  Miniflare no longer accepts service designator objects such as `{ network }`, `{ external }`, and `{ disk }` on `outboundService`, `tails`, or `streamingTails`.
+
+  Miniflare also no longer supports `unsafeExcludeFromObservability`, which has been dropped in favour of `unsafeRegisterWorker`.
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove support for legacy alpha D1 (`__D1_BETA__`) bindings
+
+  Miniflare no longer supports deprecated beta D1 instances created before `wrangler@3.3.0`.
+
+### Minor Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `convertV4MiniflareOptions` for migrating Miniflare v4 options
+
+  You can now convert v4-shaped Miniflare options to the config-based `workers` shape before creating or updating a Miniflare instance. Some v4 options cannot be converted without losing behavior and will throw an error instead.
+
+### Patch Changes
+
+- [#15072](https://github.com/cloudflare/workers-sdk/pull/15072) [`6dbd192`](https://github.com/cloudflare/workers-sdk/commit/6dbd192f1f3e4899789cd327231ba838c90bb0d5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260801.1 | ^5.20260804.1 |
+  | workerd                   | 1.20260801.1  | 1.20260804.1  |
+
 ## 5.20260801.1-alpha
 
 ### Minor Changes

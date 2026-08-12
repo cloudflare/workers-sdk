@@ -42,6 +42,13 @@ export interface SitesOptions {
 	siteExclude?: string[];
 }
 
+function resolveSitePath(options: SitesOptions, rootPath: string | undefined) {
+	if (rootPath !== undefined && !path.isAbsolute(options.sitePath)) {
+		return path.resolve(rootPath, options.sitePath);
+	}
+	return options.sitePath;
+}
+
 // Cache glob RegExps between `getBindings` and `getServices` calls
 const sitesRegExpsCache = new WeakMap<SitesOptions, SiteMatcherRegExps>();
 
@@ -62,7 +69,8 @@ async function buildStaticContentManifest(
 }
 
 export async function getSitesBindings(
-	options: SitesOptions
+	options: SitesOptions,
+	rootPath: string | undefined
 ): Promise<Worker_Binding[]> {
 	// Convert include/exclude globs to RegExps
 	const siteRegExps: SiteMatcherRegExps = {
@@ -72,7 +80,7 @@ export async function getSitesBindings(
 	sitesRegExpsCache.set(options, siteRegExps);
 
 	const __STATIC_CONTENT_MANIFEST = await buildStaticContentManifest(
-		options.sitePath,
+		resolveSitePath(options, rootPath),
 		siteRegExps
 	);
 
@@ -88,12 +96,13 @@ export async function getSitesBindings(
 	];
 }
 export async function getSitesNodeBindings(
-	options: SitesOptions
+	options: SitesOptions,
+	rootPath: string | undefined
 ): Promise<Record<string, unknown>> {
 	const siteRegExps = sitesRegExpsCache.get(options);
 	assert(siteRegExps !== undefined);
 	const __STATIC_CONTENT_MANIFEST = await buildStaticContentManifest(
-		options.sitePath,
+		resolveSitePath(options, rootPath),
 		siteRegExps
 	);
 	return {
@@ -102,7 +111,10 @@ export async function getSitesNodeBindings(
 	};
 }
 
-export function getSitesServices(options: SitesOptions): Service[] {
+export function getSitesServices(
+	options: SitesOptions,
+	rootPath: string | undefined
+): Service[] {
 	// `siteRegExps` should've been set in `getSitesBindings()`, and `options`
 	// should be the same object reference as before.
 	const siteRegExps = sitesRegExpsCache.get(options);
@@ -112,7 +124,7 @@ export function getSitesServices(options: SitesOptions): Service[] {
 
 	// Use unsanitised file storage to ensure file names containing e.g. dots
 	// resolve correctly.
-	const persist = path.resolve(options.sitePath);
+	const persist = path.resolve(resolveSitePath(options, rootPath));
 
 	const storageServiceName = `${SERVICE_NAMESPACE_SITE}:storage`;
 	const storageService: Service = {

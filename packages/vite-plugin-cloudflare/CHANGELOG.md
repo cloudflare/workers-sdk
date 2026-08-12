@@ -1,5 +1,27 @@
 # @cloudflare/vite-plugin
 
+## 1.51.3
+
+### Patch Changes
+
+- Updated dependencies [[`15cad03`](https://github.com/cloudflare/workers-sdk/commit/15cad038313b9dd0ecdc23888e595440a33e845b), [`026e058`](https://github.com/cloudflare/workers-sdk/commit/026e058ff694a77d3d214611bef7c3e41d1fe082), [`731b33a`](https://github.com/cloudflare/workers-sdk/commit/731b33a9059cbdc1e115ad3d6ed66fc1f38ce0e4), [`e1b5b4b`](https://github.com/cloudflare/workers-sdk/commit/e1b5b4bd5b72df396d6d9a27aa0f290dfa11a06c), [`5b1b930`](https://github.com/cloudflare/workers-sdk/commit/5b1b93025f7d71c1b4b99abd90d2dc579c149ae5), [`6e7d37d`](https://github.com/cloudflare/workers-sdk/commit/6e7d37dc3ed2a44aea83ecc6992cca858a7b957b), [`d669088`](https://github.com/cloudflare/workers-sdk/commit/d6690886c3b65d59b09b4c01c1505d2e51ac0e07), [`15cad03`](https://github.com/cloudflare/workers-sdk/commit/15cad038313b9dd0ecdc23888e595440a33e845b), [`c7aede7`](https://github.com/cloudflare/workers-sdk/commit/c7aede764b601d1b73aa208f6a6ff63f646f4136), [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357)]:
+  - wrangler@4.121.0
+  - miniflare@5.20260804.1-alpha
+
+## 1.51.2
+
+### Patch Changes
+
+- [#14994](https://github.com/cloudflare/workers-sdk/pull/14994) [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3) Thanks [@emily-shen](https://github.com/emily-shen)! - Update dev and preview for Miniflare's config-based options
+
+  The Vite plugin now converts the Miniflare options it creates for dev and preview sessions to Miniflare's config-based `workers` shape.
+
+  Users should not expect to notice any changes.
+
+- Updated dependencies [[`6dbd192`](https://github.com/cloudflare/workers-sdk/commit/6dbd192f1f3e4899789cd327231ba838c90bb0d5), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3), [`2194f88`](https://github.com/cloudflare/workers-sdk/commit/2194f888e53a987ee12c75f1f58f5af287e3c8a3)]:
+  - miniflare@5.20260804.0-alpha
+  - wrangler@4.120.1
+
 ## 1.51.1
 
 ### Patch Changes

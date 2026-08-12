@@ -75,6 +75,14 @@ Alternatively, you may set an environment variable to disable telemetry.
 
 `WRANGLER_SEND_METRICS=false`
 
+Wrangler also honors the `DO_NOT_TRACK` environment variable. Set it to `1` to disable telemetry:
+
+```sh
+export DO_NOT_TRACK=1
+```
+
+`DO_NOT_TRACK=1` takes precedence over all other telemetry settings.
+
 If you would like to re-enable telemetry globally, you can run:
 
 ```sh

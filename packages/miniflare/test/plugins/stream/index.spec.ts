@@ -7,6 +7,7 @@ import {
 import { describe, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
+	singleModuleManifest,
 	useDispose,
 	useServer,
 	useTmp,
@@ -137,10 +138,17 @@ async function handleCommand(stream, op, args) {
 
 function createMiniflare(options: Partial<MiniflareOptions> = {}): Miniflare {
 	return new Miniflare({
-		compatibilityDate: STREAM_COMPAT_DATE,
-		stream: { binding: "STREAM" },
-		modules: true,
-		script: WORKER_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: STREAM_COMPAT_DATE,
+					env: { STREAM: { type: "stream" } },
+					manifest: singleModuleManifest(WORKER_SCRIPT),
+				},
+			},
+		],
 		...options,
 	} as MiniflareOptions);
 }
@@ -702,10 +710,17 @@ describe("Stream reloads", () => {
 			staticBytesListener(TEST_VIDEO_BYTES)
 		);
 		const opts = {
-			compatibilityDate: STREAM_COMPAT_DATE,
-			stream: { binding: "STREAM" },
-			modules: true,
-			script: WORKER_SCRIPT,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: STREAM_COMPAT_DATE,
+						env: { STREAM: { type: "stream" } },
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+					},
+				},
+			],
 		} satisfies MiniflareOptions;
 		const mf = new Miniflare(opts);
 		useDispose(mf);
@@ -715,8 +730,19 @@ describe("Stream reloads", () => {
 		})) as Video;
 
 		await mf.setOptions({
-			...opts,
-			script: `${WORKER_SCRIPT}\n// reload stream worker`,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: STREAM_COMPAT_DATE,
+						env: { STREAM: { type: "stream" } },
+						manifest: singleModuleManifest(
+							`${WORKER_SCRIPT}\n// reload stream worker`
+						),
+					},
+				},
+			],
 		});
 
 		const details = (await sendCmdToWorker(mf, "video.details", {
@@ -735,11 +761,18 @@ describe("Stream reloads", () => {
 			staticBytesListener(TEST_VIDEO_BYTES)
 		);
 		const opts = {
-			compatibilityDate: STREAM_COMPAT_DATE,
-			stream: { binding: "STREAM" },
 			resourcePersistencePath: tmp,
-			modules: true,
-			script: WORKER_SCRIPT,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: STREAM_COMPAT_DATE,
+						env: { STREAM: { type: "stream" } },
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+					},
+				},
+			],
 		} satisfies MiniflareOptions;
 		const mf = new Miniflare(opts);
 		useDispose(mf);
@@ -749,8 +782,20 @@ describe("Stream reloads", () => {
 		})) as Video;
 
 		await mf.setOptions({
-			...opts,
-			script: `${WORKER_SCRIPT}\n// reload persisted stream worker`,
+			resourcePersistencePath: tmp,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: STREAM_COMPAT_DATE,
+						env: { STREAM: { type: "stream" } },
+						manifest: singleModuleManifest(
+							`${WORKER_SCRIPT}\n// reload persisted stream worker`
+						),
+					},
+				},
+			],
 		});
 
 		const details = (await sendCmdToWorker(mf, "video.details", {

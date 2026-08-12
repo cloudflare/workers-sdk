@@ -2,7 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import type { MiniflareOptions } from "miniflare";
 
 // Minimal worker script. When assets are configured, all incoming `dispatchFetch`
 // requests are automatically routed through the assets router service, which
@@ -14,12 +15,20 @@ const WORKER_SCRIPT = `export default {
 	}
 }`;
 
-function makeOptions(directory: string) {
+function makeOptions(directory: string, rootPath?: string): MiniflareOptions {
 	return {
-		modules: true,
-		script: WORKER_SCRIPT,
-		compatibilityDate: "2026-04-29",
-		assets: { directory },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-04-29",
+					manifest: singleModuleManifest(WORKER_SCRIPT),
+					assets: { directory },
+				},
+				dev: rootPath === undefined ? undefined : { rootPath },
+			},
+		],
 	};
 }
 
@@ -58,6 +67,22 @@ test("serves files from assets directory", async ({ expect }) => {
 	await fs.writeFile(path.join(tmp, "test.txt"), "hello from asset");
 
 	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://example.com/test.txt");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("hello from asset");
+});
+
+test("serves files from assets directory relative to rootPath", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const assetsDir = path.join(tmp, "public");
+	await fs.mkdir(assetsDir);
+	await fs.writeFile(path.join(assetsDir, "test.txt"), "hello from asset");
+
+	const mf = new Miniflare(makeOptions("public", tmp));
 	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://example.com/test.txt");

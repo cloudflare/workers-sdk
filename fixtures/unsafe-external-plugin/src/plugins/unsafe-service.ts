@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
-	Plugin,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 	SharedBindings,
@@ -13,28 +12,60 @@ import {
 import BINDING_WORKER from "worker:binding.worker";
 import OBJECT_WORKER from "worker:object.worker";
 import { z } from "zod";
-import type { Service, Worker_Binding } from "miniflare";
+import type {
+	MiniflareWorkerConfig,
+	Plugin,
+	Service,
+	Worker_Binding,
+} from "miniflare";
 
 export const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
 
-export const UnsafeServiceBindingOptionSchema = z
-	.array(
-		z.object({
-			name: z.string(),
-			type: z.string(),
+export const UnsafeServiceBindingSchema = z
+	.object({
+		type: z.literal("unsafe:service"),
+		dev: z.object({
 			plugin: z.object({
 				package: z.string(),
-				name: z.string(),
+				name: z.literal(UNSAFE_PLUGIN_NAME),
 			}),
 			options: z.object({ emitLogs: z.boolean() }),
-		})
-	)
-	.or(z.undefined());
+		}),
+	})
+	.passthrough();
 
-export const UNSAFE_SERVICE_PLUGIN: Plugin<
-	typeof UnsafeServiceBindingOptionSchema
-> = {
-	options: UnsafeServiceBindingOptionSchema,
+type UnsafeServiceBinding = z.infer<typeof UnsafeServiceBindingSchema>;
+
+function isUnsafeServiceBinding(value: unknown): value is UnsafeServiceBinding {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"type" in value &&
+		value.type === "unsafe:service" &&
+		"dev" in value &&
+		typeof value.dev === "object" &&
+		value.dev !== null &&
+		"plugin" in value.dev &&
+		typeof value.dev.plugin === "object" &&
+		value.dev.plugin !== null &&
+		"name" in value.dev.plugin &&
+		value.dev.plugin.name === UNSAFE_PLUGIN_NAME
+	);
+}
+
+function getUnsafeServiceBindings(config: MiniflareWorkerConfig) {
+	return Object.entries(config.env ?? {})
+		.filter(([, binding]) => isUnsafeServiceBinding(binding))
+		.map(
+			([name, binding]) =>
+				[name, UnsafeServiceBindingSchema.parse(binding)] as [
+					string,
+					UnsafeServiceBinding,
+				]
+		);
+}
+
+export const UNSAFE_SERVICE_PLUGIN: Plugin = {
 	/**
 	 * getBindings will add bindings to the user's Workers. Specifically, we add a binding to a service
 	 * that will expose an `UnsafeBindingServiceEntrypoint`
@@ -42,30 +73,37 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 	 * @returns
 	 */
 	async getBindings(options) {
-		return options?.map<Worker_Binding>((binding) => {
-			return {
-				name: binding.name,
-				service: {
-					name: `${UNSAFE_PLUGIN_NAME}:${binding.name}`,
-					entrypoint: "UnsafeBindingServiceEntrypoint",
-				},
-			};
-		});
+		return getUnsafeServiceBindings(options.config).map<Worker_Binding>(
+			([name]) => {
+				return {
+					name,
+					service: {
+						name: `${UNSAFE_PLUGIN_NAME}:${name}`,
+						entrypoint: "UnsafeBindingServiceEntrypoint",
+					},
+				};
+			}
+		);
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(
-			options?.map((binding) => [binding.name, new ProxyNodeBinding()]) ?? []
+			getUnsafeServiceBindings(options.config).map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		if (!options || options.length === 0) {
+	async getServices({ options, tmpPath, sharedOptions }) {
+		const bindings = getUnsafeServiceBindings(options.config);
+
+		if (bindings.length === 0) {
 			return [];
 		}
 
 		const persistPath = getPersistPath(
 			UNSAFE_PLUGIN_NAME,
 			tmpPath,
-			resourcePersistencePath
+			sharedOptions.resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -109,10 +147,10 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 			},
 		} satisfies Service;
 
-		const bindingWorker = options.map<Service>(
-			(binding) =>
+		const bindingWorker = bindings.map<Service>(
+			([name, binding]) =>
 				({
-					name: `${UNSAFE_PLUGIN_NAME}:${binding.name}`,
+					name: `${UNSAFE_PLUGIN_NAME}:${name}`,
 					worker: {
 						compatibilityDate: "2025-01-01",
 						modules: [
@@ -124,7 +162,7 @@ export const UNSAFE_SERVICE_PLUGIN: Plugin<
 						bindings: [
 							{
 								name: "config",
-								json: JSON.stringify(binding.options),
+								json: JSON.stringify(binding.dev.options),
 							},
 							{
 								name: "store",

@@ -1,7 +1,7 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
-import { disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry, singleModuleManifest } from "../../test-shared";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
@@ -23,25 +23,31 @@ describe("Local Explorer remote binding skipping", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			kvNamespaces: {
-				LOCAL_KV: "kv-local",
-				REMOTE_KV_A: { id: "kv-a", remoteProxyConnectionString },
-				REMOTE_KV_B: { id: "kv-b", remoteProxyConnectionString },
-			},
-			r2Buckets: {
-				LOCAL_R2: "r2-local",
-				REMOTE_R2_A: { id: "r2-a", remoteProxyConnectionString },
-				REMOTE_R2_B: { id: "r2-b", remoteProxyConnectionString },
-			},
-			d1Databases: {
-				LOCAL_D1: "d1-local",
-				REMOTE_D1_A: { id: "d1-a", remoteProxyConnectionString },
-				REMOTE_D1_B: { id: "d1-b", remoteProxyConnectionString },
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							LOCAL_KV: { type: "kv", id: "kv-local" },
+							REMOTE_KV_A: { type: "kv", id: "kv-a", remote: true },
+							REMOTE_KV_B: { type: "kv", id: "kv-b", remote: true },
+							LOCAL_R2: { type: "r2", name: "r2-local" },
+							REMOTE_R2_A: { type: "r2", name: "r2-a", remote: true },
+							REMOTE_R2_B: { type: "r2", name: "r2-b", remote: true },
+							LOCAL_D1: { type: "d1", id: "d1-local" },
+							REMOTE_D1_A: { type: "d1", id: "d1-a", remote: true },
+							REMOTE_D1_B: { type: "d1", id: "d1-b", remote: true },
+						},
+					},
+					dev: { remoteProxyConnectionString },
+				},
+			],
 		});
 	});
 

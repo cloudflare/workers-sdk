@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.32.0
+
+### Minor Changes
+
+- [#14924](https://github.com/cloudflare/workers-sdk/pull/14924) [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357) Thanks [@ariesclark](https://github.com/ariesclark)! - Add shared support for the `DO_NOT_TRACK` environment variable
+
+  Add utilities for recognizing `DO_NOT_TRACK=1` and incorporating it when resolving Wrangler's telemetry preference.
+
 ## 0.31.2
 
 ### Patch Changes

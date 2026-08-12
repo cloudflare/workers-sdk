@@ -64,10 +64,12 @@ export class CloudflarePoolWorker implements PoolWorker {
 		let resolvedPoolOptions: WorkersPoolOptions;
 		if (typeof this.poolOptions === "function") {
 			// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/integrations/inject.ts
-			const inject = <K extends keyof ProvidedContext>(
-				key: K
-			): ProvidedContext[K] => {
-				return this.options.project.getProvidedContext()[key];
+			const inject: WorkerPoolOptionsContext["inject"] = <T = unknown>(
+				key: string
+			): T => {
+				return this.options.project.getProvidedContext()[
+					key as keyof ProvidedContext
+				] as T;
 			};
 			resolvedPoolOptions = await this.poolOptions({ inject });
 		} else {
@@ -207,8 +209,9 @@ export class CloudflarePoolWorker implements PoolWorker {
 			"Message received from Worker before initialisation"
 		);
 
-		const rules = this.parsedPoolOptions.miniflare?.modulesRules;
-		const compiledRules = compileModuleRules(rules ?? []);
+		const compiledRules = compileModuleRules(
+			this.parsedPoolOptions.moduleRules ?? []
+		);
 
 		if (event === "message") {
 			const messageWrapper = (m: { data: string | ArrayBuffer }) => {

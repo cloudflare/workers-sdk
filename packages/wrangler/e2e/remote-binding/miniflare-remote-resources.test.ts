@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { afterAll, assert, beforeAll, describe, it } from "vitest";
@@ -15,7 +16,6 @@ import type {
 	MiniflareOptions,
 	Miniflare as MiniflareType,
 	RemoteProxyConnectionString,
-	WorkerOptions,
 } from "miniflare";
 import type { ExpectStatic } from "vitest";
 
@@ -73,7 +73,29 @@ interface TestConfig {
 	 */
 	miniflareConfig(
 		connection: RemoteProxyConnectionString | undefined
-	): Partial<WorkerOptions>;
+	): MiniflareEnv;
+}
+
+type MiniflareWorkerConfig = MiniflareOptions["workers"][number]["config"];
+type MiniflareManifest = NonNullable<MiniflareWorkerConfig["manifest"]>;
+type MiniflareEnv = NonNullable<MiniflareWorkerConfig["env"]>;
+
+function remote(connection: RemoteProxyConnectionString | undefined) {
+	return connection !== undefined;
+}
+
+function createManifest(
+	rootPath: string,
+	modulePaths: string[]
+): MiniflareManifest {
+	const modules: MiniflareManifest["modules"] = {};
+	for (const modulePath of modulePaths) {
+		modules[modulePath] = {
+			type: "esm",
+			contents: readFileSync(path.resolve(rootPath, modulePath), "utf8"),
+		};
+	}
+	return { mainModule: modulePaths[0], modules };
 }
 
 const testCases: TestCase[] = [
@@ -89,10 +111,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				ai: {
-					binding: "AI",
-					remoteProxyConnectionString: connection,
-				},
+				AI: { type: "ai", remote: remote(connection) },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [
@@ -111,9 +130,9 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				browserRendering: {
-					binding: "BROWSER",
-					remoteProxyConnectionString: connection,
+				BROWSER: {
+					type: "browser",
+					remote: remote(connection),
 				},
 			}),
 		}),
@@ -164,16 +183,16 @@ const testCases: TestCase[] = [
 				},
 
 				miniflareConfig: (connection) => ({
-					serviceBindings: {
-						SERVICE: {
-							name: targetWorkerName,
-							remoteProxyConnectionString: connection,
-						},
-						SERVICE_WITH_ENTRYPOINT: {
-							name: targetWorkerName,
-							entrypoint: "CustomEntrypoint",
-							remoteProxyConnectionString: connection,
-						},
+					SERVICE: {
+						type: "worker",
+						workerName: targetWorkerName,
+						remote: remote(connection),
+					},
+					SERVICE_WITH_ENTRYPOINT: {
+						type: "worker",
+						workerName: targetWorkerName,
+						exportName: "CustomEntrypoint",
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -206,11 +225,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					kvNamespaces: {
-						KV_BINDING: {
-							id: ns,
-							remoteProxyConnectionString: connection,
-						},
+					KV_BINDING: {
+						type: "kv",
+						id: ns,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -243,11 +261,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					r2Buckets: {
-						R2_BINDING: {
-							id: name,
-							remoteProxyConnectionString: connection,
-						},
+					R2_BINDING: {
+						type: "r2",
+						name,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -280,11 +297,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					d1Databases: {
-						DB: {
-							id: id,
-							remoteProxyConnectionString: connection,
-						},
+					DB: {
+						type: "d1",
+						id,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -312,11 +328,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					vectorize: {
-						VECTORIZE_BINDING: {
-							index_name: name,
-							remoteProxyConnectionString: connection,
-						},
+					VECTORIZE_BINDING: {
+						type: "vectorize",
+						name,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -339,10 +354,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				images: {
-					binding: "IMAGES",
-					remoteProxyConnectionString: connection,
-				},
+				IMAGES: { type: "images", remote: remote(connection) },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [expect.stringContaining(`image/avif`)],
@@ -359,10 +371,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				media: {
-					binding: "MEDIA",
-					remoteProxyConnectionString: connection,
-				},
+				MEDIA: { type: "media", remote: remote(connection) },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [expect.stringContaining(`image/jpeg`)],
@@ -402,11 +411,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					dispatchNamespaces: {
-						DISPATCH: {
-							namespace: namespace,
-							remoteProxyConnectionString: connection,
-						},
+					DISPATCH: {
+						type: "dispatch-namespace",
+						namespace,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -439,13 +447,12 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					aiSearchNamespaces: {
-						AI_SEARCH_NS: {
-							namespace: "default",
-							remoteProxyConnectionString: connection,
-						},
+					AI_SEARCH_NS: {
+						type: "ai-search-namespace",
+						namespace: "default",
+						remote: remote(connection),
 					},
-					bindings: { R2_BUCKET_NAME: bucketName },
+					R2_BUCKET_NAME: { type: "text", value: bucketName },
 				}),
 			};
 		},
@@ -470,11 +477,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					aiSearchInstances: {
-						AI_SEARCH_INST: {
-							instance_name: instanceId,
-							remoteProxyConnectionString: connection,
-						},
+					AI_SEARCH_INST: {
+						type: "ai-search",
+						name: instanceId,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -498,11 +504,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					agentMemory: {
-						MEMORY: {
-							namespace,
-							remoteProxyConnectionString: connection,
-						},
+					MEMORY: {
+						type: "agent-memory",
+						namespace,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -522,11 +527,10 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				pipelines: {
-					PIPELINE: {
-						pipeline: "preserve-e2e-pipelines",
-						remoteProxyConnectionString: connection,
-					},
+				PIPELINE: {
+					type: "pipeline",
+					name: "preserve-e2e-pipelines",
+					remote: remote(connection),
 				},
 			}),
 		}),
@@ -547,11 +551,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				email: {
-					send_email: [
-						{ name: "EMAIL", remoteProxyConnectionString: connection },
-					],
-				},
+				EMAIL: { type: "send-email", remote: remote(connection) },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [
@@ -585,19 +585,18 @@ const testCases: TestCase[] = [
 						},
 					} as unknown as StartDevWorkerInput["bindings"],
 				},
-				miniflareConfig: (connection) =>
-					({
-						vpcNetworks: {
-							VPC_NETWORK_TUNNEL: {
-								tunnel_id: tunnelId,
-								remoteProxyConnectionString: connection,
-							},
-							VPC_NETWORK_MESH: {
-								network_id: "cf1:network",
-								remoteProxyConnectionString: connection,
-							},
-						},
-					}) as unknown as Partial<WorkerOptions>,
+				miniflareConfig: (connection) => ({
+					VPC_NETWORK_TUNNEL: {
+						type: "vpc-network",
+						tunnelId,
+						remote: remote(connection),
+					},
+					VPC_NETWORK_MESH: {
+						type: "vpc-network",
+						networkId: "cf1:network",
+						remote: remote(connection),
+					},
+				}),
 			};
 		},
 		getExpectFetchToMatch: (expect) => [
@@ -644,11 +643,10 @@ const testCases: TestCase[] = [
 					},
 				},
 				miniflareConfig: (connection) => ({
-					vpcServices: {
-						VPC_SERVICE: {
-							service_id: serviceId,
-							remoteProxyConnectionString: connection,
-						},
+					VPC_SERVICE: {
+						type: "vpc-service",
+						id: serviceId,
+						remote: remote(connection),
 					},
 				}),
 			};
@@ -690,31 +688,36 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				testConfigs[0].remoteProxySessionConfig.bindings
 			);
 
-			const testCaseModules = activeTestCases.map((testCase) => ({
-				type: "ESModule" as const,
-				path: path.resolve(helper.tmpPath, testCase.scriptPath),
-			}));
-
 			// The proxy connection string is stable across `updateBindings` calls,
 			// so we can build the Miniflare instance once with all bindings merged.
 			// Each test script only touches its own binding (selected via the
 			// `x-test-module` header), so unused entries are dormant.
-			const miniflareConfig: MiniflareOptions = Object.assign(
-				{
-					compatibilityDate: "2025-09-06",
-					modules: [
-						{
-							type: "ESModule",
-							path: path.resolve(helper.tmpPath, "index.js"),
-						},
-						...testCaseModules,
-					],
-					modulesRoot: helper.tmpPath,
-				} satisfies MiniflareOptions,
+			const env = Object.assign(
+				{},
 				...testConfigs.map((config) =>
 					config.miniflareConfig(remoteProxySession.remoteProxyConnectionString)
 				)
 			);
+			const miniflareConfig: MiniflareOptions = {
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: createManifest(helper.tmpPath, [
+								"index.js",
+								...activeTestCases.map((testCase) => testCase.scriptPath),
+							]),
+							env,
+						},
+						dev: {
+							remoteProxyConnectionString:
+								remoteProxySession.remoteProxyConnectionString,
+						},
+					},
+				],
+			};
 			mf = new Miniflare(miniflareConfig);
 		}, activeTestCases.length * 15_000);
 
@@ -788,21 +791,27 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			);
 
 			const mf = new Miniflare({
-				compatibilityDate: "2025-09-06",
-				modules: [
+				workers: [
 					{
-						type: "ESModule",
-						path: path.resolve(helper.tmpPath, "mtls.js"),
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: createManifest(helper.tmpPath, ["mtls.js"]),
+							env: {
+								MTLS: {
+									type: "mtls-certificate",
+									id: certificateId,
+									remote: true,
+								},
+							},
+						},
+						dev: {
+							remoteProxyConnectionString:
+								remoteProxySession.remoteProxyConnectionString,
+						},
 					},
 				],
-				modulesRoot: helper.tmpPath,
-				mtlsCertificates: {
-					MTLS: {
-						certificate_id: certificateId,
-						remoteProxyConnectionString:
-							remoteProxySession.remoteProxyConnectionString,
-					},
-				},
 			});
 			const resp = await mf.dispatchFetch("http://example.com/");
 			const respText = await resp.text();
@@ -834,25 +843,26 @@ describe("Remote bindings (remote proxy session disabled)", () => {
 			testConfigs.push(await testCase.setup(helper));
 		}
 
-		const testCaseModules = activeTestCases.map((testCase) => ({
-			type: "ESModule" as const,
-			path: path.resolve(helper.tmpPath, testCase.scriptPath),
-		}));
-
-		const miniflareConfig: MiniflareOptions = Object.assign(
-			{
-				compatibilityDate: "2025-09-06",
-				modules: [
-					{
-						type: "ESModule",
-						path: path.resolve(helper.tmpPath, "index.js"),
-					},
-					...testCaseModules,
-				],
-				modulesRoot: helper.tmpPath,
-			} satisfies MiniflareOptions,
+		const env = Object.assign(
+			{},
 			...testConfigs.map((config) => config.miniflareConfig(undefined))
 		);
+		const miniflareConfig: MiniflareOptions = {
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-09-06",
+						manifest: createManifest(helper.tmpPath, [
+							"index.js",
+							...activeTestCases.map((testCase) => testCase.scriptPath),
+						]),
+						env,
+					},
+				},
+			],
+		};
 		mf = new Miniflare(miniflareConfig);
 	}, activeTestCases.length * 15_000);
 

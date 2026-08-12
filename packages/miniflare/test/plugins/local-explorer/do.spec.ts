@@ -4,7 +4,11 @@ import { removeDir } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
-import { disposeWithRetry, useTmp } from "../../test-shared";
+import {
+	disposeWithRetry,
+	singleModuleManifest,
+	useTmp,
+} from "../../test-shared";
 
 interface DONamespace {
 	id: string;
@@ -48,11 +52,15 @@ describe("Durable Objects API", () => {
 
 	beforeAll(async () => {
 		mf = new Miniflare({
-			name: "my-worker",
 			inspectorPort: 0,
-			compatibilityDate: "2026-01-01",
-			modules: true,
-			script: `
+			unsafeLocalExplorer: true,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "my-worker",
+						compatibilityDate: "2026-01-01",
+						manifest: singleModuleManifest(`
 				export class TestDO {
 				}
 				export class AnotherDO {
@@ -62,16 +70,28 @@ describe("Durable Objects API", () => {
 						return new Response("user worker");
 					}
 				}
-			`,
-			unsafeLocalExplorer: true,
-			durableObjects: {
-				TEST_DO: "TestDO",
-				ANOTHER_DO: { className: "AnotherDO", useSQLite: true },
-			},
-			// check that we're not including internal DOs used to implement other bindings
-			kvNamespaces: {
-				TEST_KV: "test-kv-id",
-			},
+			`),
+						env: {
+							TEST_DO: {
+								type: "durable-object",
+								workerName: "my-worker",
+								exportName: "TestDO",
+							},
+							ANOTHER_DO: {
+								type: "durable-object",
+								workerName: "my-worker",
+								exportName: "AnotherDO",
+							},
+							// check that we're not including internal DOs used to implement other bindings
+							TEST_KV: { type: "kv", id: "test-kv-id" },
+						},
+						exports: {
+							AnotherDO: { type: "durable-object", storage: "sqlite" },
+							TestDO: { type: "durable-object", storage: "legacy-kv" },
+						},
+					},
+				},
+			],
 		});
 	});
 
@@ -141,12 +161,17 @@ describe("Durable Objects API", () => {
 			await mkdir(persistPath, { recursive: true });
 
 			mf = new Miniflare({
-				name: "worker-with-do",
 				inspectorPort: 0,
-				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
-				modules: true,
-				script: `
+				unsafeLocalExplorer: true,
+				resourcePersistencePath: persistPath,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "worker-with-do",
+							compatibilityDate: "2026-01-01",
+							compatibilityFlags: ["nodejs_compat"],
+							manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 
 				export class TestDO extends DurableObject {
@@ -186,12 +211,20 @@ describe("Durable Objects API", () => {
 						return new Response("not found", { status: 404 });
 					}
 				}
-			`,
-				unsafeLocalExplorer: true,
-				resourcePersistencePath: persistPath,
-				durableObjects: {
-					TEST_DO: { className: "TestDO", useSQLite: true },
-				},
+			`),
+							env: {
+								TEST_DO: {
+									type: "durable-object",
+									workerName: "worker-with-do",
+									exportName: "TestDO",
+								},
+							},
+							exports: {
+								TestDO: { type: "durable-object", storage: "sqlite" },
+							},
+						},
+					},
+				],
 			});
 
 			// Create DO objects by name (names should be persisted)
@@ -282,21 +315,38 @@ describe("Durable Objects API", () => {
 			// This test verifies they don't appear in the local explorer namespace list
 			const unsafeDevRegistryPath = await useTmp();
 			const mf = new Miniflare({
-				name: "my-worker",
 				inspectorPort: 0,
-				compatibilityDate: "2026-01-01",
-				modules: true,
-				script: `
-					export class LocalDO {}
-					export default { fetch() { return new Response("ok"); } }
-				`,
 				unsafeLocalExplorer: true,
 				unsafeDevRegistryPath,
-				durableObjects: {
-					LOCAL_DO: "LocalDO",
-					// This DO references a worker not in this miniflare instance
-					EXTERNAL_DO: { className: "ExternalDO", scriptName: "remote-worker" },
-				},
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "my-worker",
+							compatibilityDate: "2026-01-01",
+							manifest: singleModuleManifest(`
+					export class LocalDO {}
+					export default { fetch() { return new Response("ok"); } }
+				`),
+							env: {
+								LOCAL_DO: {
+									type: "durable-object",
+									workerName: "my-worker",
+									exportName: "LocalDO",
+								},
+								// This DO references a worker not in this miniflare instance
+								EXTERNAL_DO: {
+									type: "durable-object",
+									workerName: "remote-worker",
+									exportName: "ExternalDO",
+								},
+							},
+							exports: {
+								LocalDO: { type: "durable-object", storage: "legacy-kv" },
+							},
+						},
+					},
+				],
 			});
 
 			try {
@@ -334,27 +384,42 @@ describe("Durable Objects API", () => {
 				unsafeLocalExplorer: true,
 				workers: [
 					{
-						name: "worker-a",
-						compatibilityDate: "2026-01-01",
-						modules: true,
-						script: `
+						config: {
+							type: "worker",
+							name: "worker-a",
+							compatibilityDate: "2026-01-01",
+							manifest: singleModuleManifest(`
 							export class SharedDO {}
 							export default { fetch() { return new Response("worker-a"); } }
-						`,
-						durableObjects: {
-							MY_DO: "SharedDO",
+						`),
+							env: {
+								MY_DO: {
+									type: "durable-object",
+									workerName: "worker-a",
+									exportName: "SharedDO",
+								},
+							},
+							exports: {
+								SharedDO: { type: "durable-object", storage: "legacy-kv" },
+							},
 						},
 					},
 					{
-						name: "worker-b",
-						compatibilityDate: "2026-01-01",
-						modules: true,
-						script: `
+						config: {
+							type: "worker",
+							name: "worker-b",
+							compatibilityDate: "2026-01-01",
+							manifest: singleModuleManifest(`
 							export default { fetch() { return new Response("worker-b"); } }
-						`,
-						durableObjects: {
-							// References the DO in worker-a
-							MY_DO: { className: "SharedDO", scriptName: "worker-a" },
+						`),
+							env: {
+								// References the DO in worker-a
+								MY_DO: {
+									type: "durable-object",
+									workerName: "worker-a",
+									exportName: "SharedDO",
+								},
+							},
 						},
 					},
 				],
@@ -385,23 +450,39 @@ describe("Durable Objects API", () => {
 			expect,
 		}) => {
 			const mf = new Miniflare({
-				name: "my-worker",
 				inspectorPort: 0,
-				compatibilityDate: "2026-01-01",
-				modules: true,
-				script: `
+				unsafeLocalExplorer: true,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "my-worker",
+							compatibilityDate: "2026-01-01",
+							manifest: singleModuleManifest(`
 					export class BoundDO {}
 					export class UnboundDO {}
 					export class UnboundSQLiteDO {}
 					export default { fetch() { return new Response("ok"); } }
-				`,
-				unsafeLocalExplorer: true,
-				durableObjects: {
-					BOUND_DO: "BoundDO",
-				},
-				additionalUnboundDurableObjects: [
-					{ className: "UnboundDO" },
-					{ className: "UnboundSQLiteDO", useSQLite: true },
+				`),
+							env: {
+								BOUND_DO: {
+									type: "durable-object",
+									workerName: "my-worker",
+									exportName: "BoundDO",
+								},
+							},
+							// Unbound DOs are declared as exports without a corresponding
+							// env binding
+							exports: {
+								BoundDO: { type: "durable-object", storage: "legacy-kv" },
+								UnboundDO: { type: "durable-object", storage: "legacy-kv" },
+								UnboundSQLiteDO: {
+									type: "durable-object",
+									storage: "sqlite",
+								},
+							},
+						},
+					},
 				],
 			});
 
@@ -441,12 +522,16 @@ describe("Durable Objects API", () => {
 
 		beforeAll(async () => {
 			mf = new Miniflare({
-				name: "query-worker",
 				inspectorPort: 0,
-				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
-				modules: true,
-				script: `
+				unsafeLocalExplorer: true,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "query-worker",
+							compatibilityDate: "2026-01-01",
+							compatibilityFlags: ["nodejs_compat"],
+							manifest: singleModuleManifest(`
 					import { DurableObject } from "cloudflare:workers";
 
 					export class SqliteDO extends DurableObject {
@@ -503,12 +588,29 @@ describe("Durable Objects API", () => {
 							return stub.fetch(request);
 						}
 					}
-				`,
-				unsafeLocalExplorer: true,
-				durableObjects: {
-					SQLITE_DO: { className: "SqliteDO", useSQLite: true },
-					NON_SQLITE_DO: { className: "NonSqliteDO", useSQLite: false },
-				},
+				`),
+							env: {
+								SQLITE_DO: {
+									type: "durable-object",
+									workerName: "query-worker",
+									exportName: "SqliteDO",
+								},
+								NON_SQLITE_DO: {
+									type: "durable-object",
+									workerName: "query-worker",
+									exportName: "NonSqliteDO",
+								},
+							},
+							exports: {
+								SqliteDO: { type: "durable-object", storage: "sqlite" },
+								NonSqliteDO: {
+									type: "durable-object",
+									storage: "legacy-kv",
+								},
+							},
+						},
+					},
+				],
 			});
 
 			// Initialize a DO instance and set up test data

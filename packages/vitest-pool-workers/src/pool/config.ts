@@ -5,12 +5,10 @@ import {
 	getCloudflareComplianceRegion,
 } from "@cloudflare/workers-utils";
 import {
-	getRootPath,
 	Log,
 	LogLevel,
 	mergeWorkerOptions,
-	parseWithRootPath,
-	PLUGINS,
+	V4WorkerOptionsSchema,
 } from "miniflare";
 import { z } from "zod";
 import {
@@ -22,15 +20,13 @@ import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
-import type { ModuleRule, WorkerOptions } from "miniflare";
+import type { LegacyWorkerOptions, V4ModuleRule } from "miniflare";
 import type { TestProject } from "vitest/node";
 import type { ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
 }
-
-const PLUGIN_VALUES = Object.values(PLUGINS);
 
 const WorkersPoolOptionsSchema = z.object({
 	/**
@@ -83,9 +79,9 @@ const WorkersPoolOptionsSchema = z.object({
 		.optional(),
 });
 
-type CompatibleWorkerOptions = WorkerOptions & {
+type CompatibleWorkerOptions = LegacyWorkerOptions & {
 	/** @deprecated Use `cacheAPI` instead. */
-	cache?: WorkerOptions["cacheAPI"];
+	cache?: LegacyWorkerOptions["cacheAPI"];
 };
 
 export type SourcelessWorkerOptions = Omit<
@@ -94,7 +90,7 @@ export type SourcelessWorkerOptions = Omit<
 > & {
 	// `modulesRules` is not included in all members of the `SourceOptions` type
 	// from which `WorkerOptions` is derived. Therefore, we manually include it.
-	modulesRules?: ModuleRule[];
+	modulesRules?: V4ModuleRule[];
 };
 
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
@@ -105,15 +101,30 @@ export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 
 export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
+	moduleRules?: V4ModuleRule[];
 };
-
-type PathParseParams = { path?: (string | number)[] };
 
 function normalizeMiniflareWorkerOptions(value: Record<string, unknown>): void {
 	if (value.cacheAPI === undefined) {
 		value.cacheAPI = value.cache;
 	}
 	delete value.cache;
+}
+
+function getRootPath(value: Record<string, unknown>): string {
+	return typeof value.rootPath === "string" ? value.rootPath : "";
+}
+
+function prefixZodIssuePaths(
+	error: ZodError,
+	zodPath: (string | number)[]
+): void {
+	for (const issue of error.issues) {
+		(issue as { path: (string | number)[] }).path = [
+			...zodPath,
+			...(issue.path as (string | number)[]),
+		];
+	}
 }
 
 function isZodErrorLike(value: unknown): value is ZodError {
@@ -141,8 +152,8 @@ function parseWorkerOptions(
 	rootPath: string,
 	value: Record<string, unknown>,
 	withoutScript: boolean,
-	opts: PathParseParams
-): WorkerOptions {
+	zodPath: (string | number)[]
+): LegacyWorkerOptions {
 	normalizeMiniflareWorkerOptions(value);
 
 	// If this worker shouldn't have a configurable script, remove all script data
@@ -154,19 +165,17 @@ function parseWorkerOptions(
 		delete value["modulesRoot"];
 	}
 
-	const result = {} as WorkerOptions;
-	const errorRef: ZodErrorRef = {};
-	for (const plugin of PLUGIN_VALUES) {
-		try {
-			// This `parse()` may throw a different `ZodError` than what we `import`
-			const parsed = parseWithRootPath(rootPath, plugin.options, value, opts);
-			Object.assign(result, parsed);
-		} catch (e) {
-			coalesceZodErrors(errorRef, e);
+	let result: LegacyWorkerOptions;
+	try {
+		result = V4WorkerOptionsSchema.parse(value) as LegacyWorkerOptions;
+	} catch (e) {
+		if (isZodErrorLike(e)) {
+			prefixZodIssuePaths(e, zodPath);
 		}
+		throw e;
 	}
-	if (errorRef.value !== undefined) {
-		throw errorRef.value;
+	if (result.rootPath === undefined) {
+		result.rootPath = rootPath;
 	}
 
 	// Remove the placeholder script added if any
@@ -190,8 +199,14 @@ const remoteBindingsLogger: RemoteBindingsLogger = {
 	},
 };
 
+// function warnDeprecatedModuleRules(): void {
+// 	log.warn(
+// 		"`cloudflareTest({ miniflare: { modulesRules } })` is deprecated and will be removed in a future version. Prefer Vite import query suffixes such as `?raw` where possible."
+// 	);
+// }
+
 function filterTails(
-	tails: WorkerOptions["tails"],
+	tails: LegacyWorkerOptions["tails"],
 	userWorkers?: { name?: string }[]
 ) {
 	// Only connect the tail consumers that represent Workers that are defined in the Vitest config. Warn that a tail will be omitted otherwise
@@ -237,6 +252,7 @@ async function parseCustomPoolOptions(
 		value
 	) as WorkersPoolOptionsWithDefines;
 	options.miniflare ??= {};
+	const miniflareModuleRules = options.miniflare.modulesRules;
 
 	// Try to parse runner worker options, coalescing all errors
 	const errorRef: ZodErrorRef = {};
@@ -248,11 +264,12 @@ async function parseCustomPoolOptions(
 			rootPath,
 			options.miniflare,
 			/* withoutScript */ true, // (script provided by runner)
-			{ path: ["miniflare"] }
+			["miniflare"]
 		);
 	} catch (e) {
 		coalesceZodErrors(errorRef, e);
 	}
+	options.miniflare.rootPath = rootPath;
 
 	options.miniflare.workers = [];
 	// Try to parse auxiliary worker options
@@ -261,14 +278,14 @@ async function parseCustomPoolOptions(
 			try {
 				const workerRootPathOption = getRootPath(worker);
 				const workerRootPath = path.resolve(rootPath, workerRootPathOption);
-				return parseWorkerOptions(
+				const parsed = parseWorkerOptions(
 					workerRootPath,
 					worker,
 					/* withoutScript */ false,
-					{
-						path: ["miniflare", "workers", i],
-					}
+					["miniflare", "workers", i]
 				);
+				parsed.rootPath = workerRootPath;
+				return parsed;
 			} catch (e) {
 				coalesceZodErrors(errorRef, e);
 				return { script: "" }; // (ignored as we'll be throwing)
@@ -279,6 +296,8 @@ async function parseCustomPoolOptions(
 	if (errorRef.value !== undefined) {
 		throw errorRef.value;
 	}
+	options.moduleRules = miniflareModuleRules;
+	delete options.miniflare.modulesRules;
 
 	// Try to parse Wrangler config if any
 	if (options.wrangler?.configPath !== undefined) {
@@ -349,16 +368,36 @@ async function parseCustomPoolOptions(
 			...options.miniflare.workers,
 			...externalWorkers,
 		];
+		const {
+			modulesRules: wranglerModuleRules,
+			...workerOptionsWithoutModuleRules
+		} = workerOptions;
+		const mergedModuleRules = mergeWorkerOptions(
+			{
+				...(wranglerModuleRules === undefined
+					? {}
+					: { modulesRules: wranglerModuleRules }),
+			} as SourcelessWorkerOptions,
+			{
+				...(options.moduleRules === undefined
+					? {}
+					: { modulesRules: options.moduleRules }),
+			} as SourcelessWorkerOptions
+		) as SourcelessWorkerOptions;
+		options.moduleRules = mergedModuleRules.modulesRules;
 
 		// Merge generated Miniflare options from Wrangler with specified overrides
 		options.miniflare = mergeWorkerOptions(
-			workerOptions,
+			workerOptionsWithoutModuleRules,
 			options.miniflare as SourcelessWorkerOptions
 		);
 
 		options.miniflare = {
 			...options.miniflare,
-			tails: filterTails(workerOptions.tails, options.miniflare.workers),
+			tails: filterTails(
+				workerOptions.tails as LegacyWorkerOptions["tails"],
+				options.miniflare.workers
+			),
 		};
 
 		// Record any Wrangler `define`s

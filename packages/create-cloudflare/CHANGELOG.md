@@ -1,5 +1,55 @@
 # create-cloudflare
 
+## 2.71.0
+
+### Minor Changes
+
+- [#14924](https://github.com/cloudflare/workers-sdk/pull/14924) [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357) Thanks [@ariesclark](https://github.com/ariesclark)! - Honor `DO_NOT_TRACK=1` as a telemetry opt-out
+
+  Create Cloudflare now disables telemetry when `DO_NOT_TRACK=1` is set, regardless of other telemetry settings.
+
+### Patch Changes
+
+- [#15098](https://github.com/cloudflare/workers-sdk/pull/15098) [`4cb1547`](https://github.com/cloudflare/workers-sdk/commit/4cb1547aa6a316c297153e61c52bf74a1976662c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | create-next-app | 16.2.12 | 16.3.0 |
+
+- [#15099](https://github.com/cloudflare/workers-sdk/pull/15099) [`aa9b121`](https://github.com/cloudflare/workers-sdk/commit/aa9b121625446a3b7917d1daf67998f2dec8ce96) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.8.0 | 0.8.1 |
+
+- [#15100](https://github.com/cloudflare/workers-sdk/pull/15100) [`cf785d7`](https://github.com/cloudflare/workers-sdk/commit/cf785d70dde18a554552e29d707f4ccb89786069) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.2 | 22.1.3 |
+
+- [#15101](https://github.com/cloudflare/workers-sdk/pull/15101) [`35e4cff`](https://github.com/cloudflare/workers-sdk/commit/35e4cff079a63c658741d597de0e28b1a134ffbd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.70.1 | 0.70.2 |
+
+- [#15102](https://github.com/cloudflare/workers-sdk/pull/15102) [`72154fd`](https://github.com/cloudflare/workers-sdk/commit/72154fde812da6f5ca996b8657827137cb7746ee) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.671 | 0.0.673 |
+
 ## 2.70.18
 
 ### Patch Changes

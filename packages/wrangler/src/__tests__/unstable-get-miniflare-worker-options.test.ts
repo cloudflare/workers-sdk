@@ -5,6 +5,16 @@ import {
 import { describe, it } from "vitest";
 import { unstable_getMiniflareWorkerOptions } from "../api";
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+	return typeof value === "object" && value !== null && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: undefined;
+}
+
+function asArray(value: unknown): unknown[] {
+	return Array.isArray(value) ? value : [];
+}
+
 describe("unstable_getMiniflareWorkerOptions", () => {
 	runInTempDir();
 
@@ -176,7 +186,9 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
 
-			expect(workerOptions.serviceBindings?.ENTITLEMENTS).toBeUndefined();
+			expect(
+				asRecord(workerOptions.serviceBindings)?.ENTITLEMENTS
+			).toBeUndefined();
 			expect(workerOptions.unsafeBindings).toEqual(
 				expect.arrayContaining([
 					expect.objectContaining({
@@ -223,10 +235,10 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			);
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
-			expect(workerOptions.serviceBindings?.MY_SERVICE).toBeDefined();
+			expect(asRecord(workerOptions.serviceBindings)?.MY_SERVICE).toBeDefined();
 			expect(
-				(workerOptions.unsafeBindings ?? []).find(
-					(b) => "name" in b && b.name === "MY_SERVICE"
+				asArray(workerOptions.unsafeBindings).find(
+					(b) => asRecord(b)?.name === "MY_SERVICE"
 				)
 			).toBeUndefined();
 		});

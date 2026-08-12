@@ -6,10 +6,10 @@ import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
-import { ModuleRuleTypeSchema, Response } from "miniflare";
+import { Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
-import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
+import type { Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
@@ -54,17 +54,27 @@ function trimViteVersionHash(filePath: string) {
 	return filePath.replace(versionHashRegExp, "");
 }
 
-// RegExp for path suffix to force loading module as specific type.
+type LegacyModuleRuleType =
+	| "ESModule"
+	| "CommonJS"
+	| "Text"
+	| "Data"
+	| "CompiledWasm"
+	| "PythonModule"
+	| "PythonRequirement";
+const legacyModuleRuleTypes: LegacyModuleRuleType[] = [
+	"ESModule",
+	"CommonJS",
+	"Text",
+	"Data",
+	"CompiledWasm",
+	"PythonModule",
+	"PythonRequirement",
+];
+// RegExp for path suffix to force loading WebAssembly modules as workerd modules.
 // (e.g. `/path/to/module.wasm?mf_vitest_force=CompiledWasm`)
-// This suffix will be added by the pool when fetching a module that matches a
-// module rule. In this case, the module will be marked as external with this
-// suffix, causing the fallback service to return a module with the correct
-// type. Note we can't easily implement rules with a Vite plugin, as they:
-// - Depend on `miniflare`/`wrangler` configuration, and we can't modify the
-//   Vite config in the pool
-// - Would require use of an `UnsafeEval` binding to build `WebAssembly.Module`s
 const forceModuleTypeRegexp = new RegExp(
-	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
+	`\\?mf_vitest_force=(${legacyModuleRuleTypes.join("|")})$`
 );
 
 function isFile(filePath: string): boolean {
@@ -215,6 +225,11 @@ function maybeGetTargetFilePath(
 	}
 }
 
+// Specifiers `workerd` resolves at the modules root rather than relative to the
+// referrer, and strips the leading `/` from before asking the fallback service
+// about them.
+const prefixedSpecifierRegExp = /^(node|cloudflare|workerd):/;
+
 /**
  * `target` is the path to the "file" `workerd` is trying to load,
  * `referrer` is the path to the file that imported/required the `target`,
@@ -237,7 +252,7 @@ function maybeGetTargetFilePath(
  * ES module resolution, so must be handled by `maybeGetTargetFilePath()`.
  */
 function getApproximateSpecifier(target: string, referrerDir: string): string {
-	if (/^(node|cloudflare|workerd):/.test(target)) {
+	if (prefixedSpecifierRegExp.test(target)) {
 		return target;
 	}
 	return posixPath.relative(referrerDir, target);
@@ -332,6 +347,12 @@ async function resolve(
 	// *import*ing `node:*`/`cloudflare:*` modules, but not when *require()*ing
 	// them. For the sake of consistency (and a nice return type on this function)
 	// we return a redirect for `import`s too.
+	//
+	// Careful: `workerd` roots prefixed specifiers itself, so this "redirect to
+	// the root" is frequently a no-op that points straight back at the specifier
+	// `workerd` is already resolving. `load()` detects that case and reports the
+	// module as missing instead, because redirecting crashes `workerd`. See the
+	// comment on `UnavailableBuiltinModuleError`.
 	if (referrerDir !== "/" && workerdBuiltinModules.has(specifier)) {
 		return `/${specifier}`;
 	}
@@ -449,7 +470,7 @@ function maybeGetForceTypeModuleContents(
 	}
 
 	filePath = trimSuffix(match[0], filePath);
-	const type = match[1] as ModuleRuleType;
+	const type = match[1] as LegacyModuleRuleType;
 	const contents = fs.readFileSync(filePath);
 	switch (type) {
 		case "ESModule":
@@ -465,9 +486,9 @@ function maybeGetForceTypeModuleContents(
 		case "PythonModule":
 			return { pythonModule: contents.toString() };
 		case "PythonRequirement":
-			return { pythonRequirement: contents.toString() };
+			return { obsoletePythonRequirement: contents.toString() };
 		default: {
-			// `type` should've been validated against `ModuleRuleType`
+			// `type` should've been validated against `LegacyModuleRuleType`
 			const exhaustive: never = type;
 			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
 		}
@@ -491,6 +512,36 @@ function buildModuleResponse(name: string, contents: ModuleContents) {
 	return Response.json(result);
 }
 
+/**
+ * Thrown when a `node:*`/`cloudflare:*`/`workerd:*` builtin isn't provided by
+ * the `workerd` the Worker under test is running on, so there is nothing we can
+ * serve for it.
+ *
+ * `workerd` resolves prefixed specifiers at the modules root rather than
+ * relative to the referrer (`kj::Path::parse(spec)` in `jsg/modules.c++`), and
+ * strips the leading `/` before asking us about them. A redirect to
+ * `/${target}` therefore points straight back at the specifier `workerd` is
+ * already resolving. Its module registry caches that redirect and re-enters
+ * resolution with the identical path, with no self-redirect check and no
+ * recursion bound, so it recurses until the stack overflows — killing the
+ * runtime with `*** Received signal #11: Segmentation fault` and no indication
+ * of which module was at fault.
+ *
+ * Reporting the module as missing instead lets `workerd` raise its own
+ * `No such module "<specifier>"`, which is what `wrangler dev` does for the
+ * same Worker. This is safe because `workerd` only consults the fallback
+ * service *after* its own registry misses: any builtin that reaches us is, by
+ * definition, not available at this Worker's compatibility date and flags.
+ *
+ * See https://github.com/cloudflare/workers-sdk/issues/14590
+ */
+class UnavailableBuiltinModuleError extends Error {
+	constructor(specifier: string) {
+		super(`No such module "${specifier}"`);
+		this.name = "UnavailableBuiltinModuleError";
+	}
+}
+
 async function load(
 	vite: Vite.ViteDevServer,
 	logBase: string,
@@ -512,6 +563,14 @@ async function load(
 		const wrapper = `module.exports = { default: require(${JSON.stringify(ensureRootedPath(filePath))}) };`;
 		debuglog(logBase, "wasm-module-wrapper:", filePath);
 		return buildModuleResponse(rawTarget, { commonJsModule: wrapper });
+	}
+
+	// A redirect whose only difference from `target` is the leading slash that
+	// `workerd` strips from prefixed specifiers would send `workerd` back to the
+	// specifier it is already resolving, crashing it. Report the builtin as
+	// missing instead. See `UnavailableBuiltinModuleError`.
+	if (prefixedSpecifierRegExp.test(target) && filePath === `/${target}`) {
+		throw new UnavailableBuiltinModuleError(target);
 	}
 
 	if (target !== filePath) {
@@ -683,11 +742,21 @@ export async function handleModuleFallbackRequest(
 		);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
-		console.error(
-			`[vitest-pool-workers] Failed to ${method} ${JSON.stringify(target)} from ${JSON.stringify(referrer)}.`,
-			"To resolve this, try bundling the relevant dependency with Vite.",
-			"For more details, refer to https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
-		);
+		if (e instanceof UnavailableBuiltinModuleError) {
+			// Bundling can't help here — the module is built into `workerd` and
+			// simply isn't switched on for this Worker.
+			console.error(
+				`[vitest-pool-workers] ${JSON.stringify(target)}, ${method === "import" ? "imported" : "required"} from ${JSON.stringify(referrer)}, is not available at this Worker's compatibility date and flags.`,
+				"To resolve this, enable the compatibility flag that provides it (`nodejs_compat` for `node:*` modules), or remove the import.",
+				"For more details, refer to https://developers.cloudflare.com/workers/configuration/compatibility-flags/"
+			);
+		} else {
+			console.error(
+				`[vitest-pool-workers] Failed to ${method} ${JSON.stringify(target)} from ${JSON.stringify(referrer)}.`,
+				"To resolve this, try bundling the relevant dependency with Vite.",
+				"For more details, refer to https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
+			);
+		}
 	}
 
 	return new Response(null, { status: 404 });

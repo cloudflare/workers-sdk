@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { FatalError, UserError } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
@@ -35,17 +35,19 @@ export async function usingLocalSecretsStoreSecretAPI<T>(
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
 	const resourcePersistencePath = getDefaultPersistRoot(persist);
-	const mf = new Miniflare({
-		script:
-			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		resourcePersistencePath,
-		secretsStoreSecrets: {
-			SECRET: {
-				store_id: storeId,
-				secret_name: secretName,
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			script:
+				'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+			resourcePersistencePath,
+			secretsStoreSecrets: {
+				SECRET: {
+					store_id: storeId,
+					secret_name: secretName,
+				},
 			},
-		},
-	});
+		})
+	);
 	const namespace = await mf.getSecretsStoreSecretAPI("SECRET");
 	try {
 		return await closure(namespace());

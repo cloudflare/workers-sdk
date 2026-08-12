@@ -24,6 +24,21 @@ function fakeVite(): Vite.ViteDevServer {
 	} as unknown as Vite.ViteDevServer;
 }
 
+// As above, but Vite resolves every specifier to `id`. Used to drive the
+// handler to a specific `filePath` without touching the filesystem.
+//
+// Note the built-in module list is a build-time define, stubbed to `[]` for
+// these unit tests (see `vitest.config.mts`), so the `workerdBuiltinModules`
+// branch in `resolve()` can't be exercised here. Resolving through Vite to the
+// same rooted path that branch would have produced reaches the same place.
+function fakeViteResolvingTo(id: string): Vite.ViteDevServer {
+	return {
+		pluginContainer: {
+			resolveId: async () => ({ id }),
+		},
+	} as unknown as Vite.ViteDevServer;
+}
+
 function moduleFallbackRequest(options: {
 	method: "import" | "require";
 	specifier: string;
@@ -254,5 +269,114 @@ describe("handleModuleFallbackRequest non-ASCII paths", () => {
 		} finally {
 			errorSpy.mockRestore();
 		}
+	});
+});
+
+// `workerd` resolves `node:*`/`cloudflare:*`/`workerd:*` specifiers at the
+// modules root rather than relative to the referrer, and strips the leading `/`
+// before asking us about them. Answering with a redirect to `/${target}` names
+// the module `workerd` is already resolving, and its module registry follows
+// that self-redirect with no cycle check and no recursion bound — recursing
+// until the stack overflows and the runtime dies with
+// `*** Received signal #11: Segmentation fault`, naming no module.
+// See https://github.com/cloudflare/workers-sdk/issues/14590
+describe("built-ins unavailable at the Worker's compatibility settings", () => {
+	const referrer = "/repro/node_modules/vitest/dist/module-evaluator.js";
+
+	async function fallbackFor(options: {
+		method: "import" | "require";
+		specifier: string;
+		resolvesTo: string;
+	}) {
+		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		try {
+			const res = await handleModuleFallbackRequest(
+				fakeViteResolvingTo(options.resolvesTo),
+				moduleFallbackRequest({
+					method: options.method,
+					specifier: options.specifier,
+					referrer,
+				})
+			);
+			// Snapshot the calls before restoring, which clears them.
+			const logged = errorSpy.mock.calls.map((call) => call.join(" "));
+			return { res, logged };
+		} finally {
+			errorSpy.mockRestore();
+		}
+	}
+
+	it("404s instead of self-redirecting an imported `node:*` built-in", async ({
+		expect,
+	}) => {
+		const { res } = await fallbackFor({
+			method: "import",
+			specifier: "node:child_process",
+			resolvesTo: "/node:child_process",
+		});
+		// Previously a 301 to `/node:child_process` — the specifier `workerd` was
+		// already resolving.
+		expect(res.status).toBe(404);
+		expect(res.headers.get("Location")).toBe(null);
+	});
+
+	it("404s instead of self-redirecting a required `node:*` built-in", async ({
+		expect,
+	}) => {
+		// The redirect was previously emitted for `require()` too, so guarding
+		// only the `import` path would leave this crashing.
+		const { res } = await fallbackFor({
+			method: "require",
+			specifier: "node:child_process",
+			resolvesTo: "/node:child_process",
+		});
+		expect(res.status).toBe(404);
+		expect(res.headers.get("Location")).toBe(null);
+	});
+
+	it("404s instead of self-redirecting a `cloudflare:*` built-in", async ({
+		expect,
+	}) => {
+		// `cloudflare:*` modules are compatibility-gated too, so the guard must
+		// not be `node:`-only.
+		const { res } = await fallbackFor({
+			method: "import",
+			specifier: "cloudflare:sockets",
+			resolvesTo: "/cloudflare:sockets",
+		});
+		expect(res.status).toBe(404);
+		expect(res.headers.get("Location")).toBe(null);
+	});
+
+	it("advises on compatibility flags rather than bundling", async ({
+		expect,
+	}) => {
+		// Bundling can't provide a module that's built into `workerd` and simply
+		// switched off, so the generic module-resolution advice is wrong here.
+		const { logged } = await fallbackFor({
+			method: "import",
+			specifier: "node:child_process",
+			resolvesTo: "/node:child_process",
+		});
+		expect(logged).toHaveLength(1);
+		expect(logged[0]).toContain("node:child_process");
+		expect(logged[0]).toContain("nodejs_compat");
+		expect(logged[0]).not.toContain("bundling");
+	});
+
+	it("still redirects a prefixed specifier that resolves elsewhere", async ({
+		expect,
+	}) => {
+		// Pool-internal modules such as `cloudflare:test` resolve to a real file,
+		// so the redirect is genuine progress and must be preserved.
+		const { res } = await fallbackFor({
+			method: "import",
+			specifier: "cloudflare:test-internal",
+			resolvesTo: "/pool/dist/worker/lib/cloudflare/test-internal.mjs",
+		});
+		expect(res.status).toBe(301);
+		expect(res.headers.get("Location")).toBe(
+			"/pool/dist/worker/lib/cloudflare/test-internal.mjs"
+		);
 	});
 });

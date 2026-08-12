@@ -48,7 +48,16 @@ interface Context extends MiniflareTestContext {
 }
 
 const opts: Partial<MiniflareOptions> = {
-	kvNamespaces: { NAMESPACE: "namespace" },
+	workers: [
+		{
+			config: {
+				type: "worker",
+				name: "",
+				compatibilityDate: "2025-05-01",
+				env: { NAMESPACE: { type: "kv", id: "namespace" } },
+			},
+		},
+	],
 };
 const ctx = miniflareTest<unknown, Context>(opts, async (global) => {
 	return new global.Response(null, { status: 404 });
@@ -772,14 +781,32 @@ test("list: validates limit", async ({ expect }) => {
 
 test("persists in-memory between options reloads", async ({ expect }) => {
 	const opts = {
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modules: {
+							"index.mjs": {
+								type: "esm",
+								contents: `export default {
       async fetch(request, env) {
         return Response.json({ version: env.VERSION, key: await env.NAMESPACE.get("key") });
       }
     }`,
-		bindings: { VERSION: 1 },
-		kvNamespaces: { NAMESPACE: "namespace" },
+							},
+						},
+					},
+					env: {
+						VERSION: { type: "json", value: 1 },
+						NAMESPACE: { type: "kv", id: "namespace" },
+					},
+				},
+			},
+		],
 	} satisfies MiniflareOptions;
 	const mf1 = new Miniflare(opts);
 	useDispose(mf1);
@@ -789,13 +816,13 @@ test("persists in-memory between options reloads", async ({ expect }) => {
 	let res = await mf1.dispatchFetch("http://placeholder");
 	expect(await res.json()).toEqual({ version: 1, key: "value1" });
 
-	opts.bindings.VERSION = 2;
+	opts.workers[0].config.env.VERSION.value = 2;
 	await mf1.setOptions(opts);
 	res = await mf1.dispatchFetch("http://placeholder");
 	expect(await res.json()).toEqual({ version: 2, key: "value1" });
 
 	// Check a `new Miniflare()` instance has its own in-memory storage
-	opts.bindings.VERSION = 3;
+	opts.workers[0].config.env.VERSION.value = 3;
 	const mf2 = new Miniflare(opts);
 	useDispose(mf2);
 	const kv2 = await mf2.getKVNamespace("NAMESPACE");
@@ -809,10 +836,21 @@ test("persists in-memory between options reloads", async ({ expect }) => {
 test("persists on file-system", async ({ expect }) => {
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
-		modules: true,
-		script: "",
-		kvNamespaces: { NAMESPACE: "namespace" },
 		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: {
+						mainModule: "index.mjs",
+						modules: { "index.mjs": { type: "esm", contents: "" } },
+					},
+					env: { NAMESPACE: { type: "kv", id: "namespace" } },
+				},
+			},
+		],
 	};
 	let mf = new Miniflare(opts);
 	useDispose(mf);

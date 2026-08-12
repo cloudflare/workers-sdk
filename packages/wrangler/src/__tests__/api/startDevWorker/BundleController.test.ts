@@ -87,7 +87,13 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	afterEach(() => controller.teardown());
 
 	describe("happy path bundle + watch", () => {
-		test("single ts source file", async ({ expect }) => {
+		test.for([
+			{ name: "bundled", build: {} },
+			{
+				name: "unbundled with entrypoint processing",
+				build: { bundle: false, processEntrypoint: true },
+			},
+		])("single ts source file ($name)", async ({ build }, { expect }) => {
 			await seed({
 				"src/index.ts": dedent /* javascript */ `
 				export default {
@@ -101,11 +107,17 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			const config = configDefaults({
 				entrypoint: path.resolve("src/index.ts"),
 				projectRoot: path.resolve("src"),
+				build,
 			});
 			const ev = bus.waitFor("bundleComplete");
 			controller.onConfigUpdate({ type: "configUpdate", config });
-			expect(findSourceFile((await ev).bundle.entrypointSource, "index.ts"))
-				.toMatchInlineSnapshot(`
+			const initialSource = (await ev).bundle.entrypointSource;
+			expect(initialSource).not.toContain("wrangler:modules-watch");
+			if (build.bundle === false) {
+				return;
+			}
+			expect(initialSource).toContain("hello world");
+			expect(findSourceFile(initialSource, "index.ts")).toMatchInlineSnapshot(`
 					"// index.ts
 					var index_exports = {};
 					__export(index_exports, {
@@ -131,8 +143,10 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					} satisfies ExportedHandler
 				`,
 			});
-			expect(findSourceFile((await ev2).bundle.entrypointSource, "index.ts"))
-				.toMatchInlineSnapshot(`
+			const updatedSource = (await ev2).bundle.entrypointSource;
+			expect(updatedSource).not.toContain("wrangler:modules-watch");
+			expect(updatedSource).toContain("hello world 2");
+			expect(findSourceFile(updatedSource, "index.ts")).toMatchInlineSnapshot(`
 					"// index.ts
 					var index_exports = {};
 					__export(index_exports, {

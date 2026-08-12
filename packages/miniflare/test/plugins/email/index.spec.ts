@@ -9,7 +9,12 @@ import {
 } from "miniflare";
 import dedent from "ts-dedent";
 import { describe, type ExpectStatic, test, vi } from "vitest";
-import { TestLog, useDispose, useTmp } from "../../test-shared";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+	useTmp,
+} from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
@@ -58,13 +63,18 @@ test("Unbound send_email binding works", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
 		resourceTmpPath: projectTmpPath,
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -119,12 +129,17 @@ test("Unbound send_email binding works", async ({ expect }) => {
 
 test("Invalid email throws", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -156,15 +171,23 @@ test("Single allowed destination send_email binding works", async ({
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [
-				{ name: "SEND_EMAIL", destination_address: "someone-else@example.com" },
-			],
-		},
 		resourceTmpPath: projectTmpPath,
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							destinationAddress: "someone-else@example.com",
+						},
+					},
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -224,14 +247,22 @@ test("Single allowed destination send_email binding throws if destination is not
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [
-				{ name: "SEND_EMAIL", destination_address: "helly.r@example.com" },
-			],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							destinationAddress: "helly.r@example.com",
+						},
+					},
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -267,20 +298,25 @@ test("Multiple allowed destination send_email binding works", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_destination_addresses: [
-						"milchick@example.com",
-						"miss-huang@example.com",
-					],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedDestinationAddresses: [
+								"milchick@example.com",
+								"miss-huang@example.com",
+							],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -312,20 +348,25 @@ test("Multiple allowed senders send_email binding works", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_sender_addresses: [
-						"milchick@example.com",
-						"miss-huang@example.com",
-					],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedSenderAddresses: [
+								"milchick@example.com",
+								"miss-huang@example.com",
+							],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -357,20 +398,25 @@ test("Sending email from a sender not in the allowed list does not work", async 
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_sender_addresses: [
-						"milchick@example.com",
-						"miss-huang@example.com",
-					],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedSenderAddresses: [
+								"milchick@example.com",
+								"miss-huang@example.com",
+							],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -406,20 +452,25 @@ test("Multiple allowed send_email binding throws if destination is not equal", a
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_destination_addresses: [
-						"milchick@example.com",
-						"miss-huang@example.com",
-					],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedDestinationAddresses: [
+								"milchick@example.com",
+								"miss-huang@example.com",
+							],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -458,11 +509,17 @@ test("reply validation: x-auto-response-suppress", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -498,11 +555,17 @@ test("reply validation: Auto-Submitted", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -538,11 +601,17 @@ test("reply validation: only In-Reply-To", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -578,11 +647,17 @@ test("reply validation: only References", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -618,11 +693,17 @@ test("reply validation: >100 References", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -663,11 +744,17 @@ test("reply: mismatched From: header", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(),
 		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -703,11 +790,17 @@ test("reply: unparseable", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER('""'),
 		unsafeTriggerHandlers: true,
-
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(REPLY_EMAIL_WORKER('""')),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -743,19 +836,27 @@ test("reply: no message id", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(
-			JSON.stringify(dedent`
-				From: someone else <someone-else@example.com>
-				To: someone <someone@example.com>
-				MIME-Version: 1.0
-				Content-Type: text/plain
-
-				This is a random email body.`)
-		),
 		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								MIME-Version: 1.0
+								Content-Type: text/plain
 
-		compatibilityDate: "2025-03-17",
+								This is a random email body.`)
+						)
+					),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -791,21 +892,29 @@ test("reply: disallowed header", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(
-			JSON.stringify(dedent`
-				From: someone else <someone-else@example.com>
-				To: someone <someone@example.com>
-				MIME-Version: 1.0
-				Content-Type: text/plain
-				Message-ID: <im-a-random-message-id@example.com>
-				Received: something
-
-				This is a random email body.`)
-		),
 		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								MIME-Version: 1.0
+								Content-Type: text/plain
+								Message-ID: <im-a-random-message-id@example.com>
+								Received: something
 
-		compatibilityDate: "2025-03-17",
+								This is a random email body.`)
+						)
+					),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -841,20 +950,28 @@ test("reply: missing In-Reply-To", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(
-			JSON.stringify(dedent`
-				From: someone else <someone-else@example.com>
-				To: someone <someone@example.com>
-				MIME-Version: 1.0
-				Content-Type: text/plain
-				Message-ID: <im-a-random-message-id@example.com>
-
-				This is a random email body.`)
-		),
 		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								MIME-Version: 1.0
+								Content-Type: text/plain
+								Message-ID: <im-a-random-message-id@example.com>
 
-		compatibilityDate: "2025-03-17",
+								This is a random email body.`)
+						)
+					),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -892,21 +1009,29 @@ test("reply: wrong In-Reply-To", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(
-			JSON.stringify(dedent`
-				From: someone else <someone-else@example.com>
-				To: someone <someone@example.com>
-				MIME-Version: 1.0
-				Content-Type: text/plain
-				In-Reply-To: random
-				Message-ID: <im-a-random-message-id@example.com>
-
-				This is a random email body.`)
-		),
 		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								MIME-Version: 1.0
+								Content-Type: text/plain
+								In-Reply-To: random
+								Message-ID: <im-a-random-message-id@example.com>
 
-		compatibilityDate: "2025-03-17",
+								This is a random email body.`)
+						)
+					),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -946,22 +1071,30 @@ test("reply: invalid references", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(
-			JSON.stringify(dedent`
-				From: someone else <someone-else@example.com>
-				To: someone <someone@example.com>
-				MIME-Version: 1.0
-				Content-Type: text/plain
-				In-Reply-To: <im-a-random-parent-message-id@example.com>
-				Message-ID: <im-a-random-message-id@example.com>
-				References: <im-a-random-other-message-id@example.com>
-
-				This is a random email body.`)
-		),
 		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								MIME-Version: 1.0
+								Content-Type: text/plain
+								In-Reply-To: <im-a-random-parent-message-id@example.com>
+								Message-ID: <im-a-random-message-id@example.com>
+								References: <im-a-random-other-message-id@example.com>
 
-		compatibilityDate: "2025-03-17",
+								This is a random email body.`)
+						)
+					),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -996,21 +1129,29 @@ test("reply: references generated correctly", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: REPLY_EMAIL_WORKER(
-			JSON.stringify(dedent`
-				From: someone else <someone-else@example.com>
-				To: someone <someone@example.com>
-				MIME-Version: 1.0
-				Content-Type: text/plain
-				In-Reply-To: <im-a-random-parent-message-id@example.com>
-				Message-ID: <im-a-random-message-id@example.com>
-
-				This is a random email body.`)
-		),
 		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								MIME-Version: 1.0
+								Content-Type: text/plain
+								In-Reply-To: <im-a-random-parent-message-id@example.com>
+								Message-ID: <im-a-random-message-id@example.com>
 
-		compatibilityDate: "2025-03-17",
+								This is a random email body.`)
+						)
+					),
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1074,13 +1215,18 @@ test("MessageBuilder with text only", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
 		resourceTmpPath: projectTmpPath,
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1130,12 +1276,17 @@ test("MessageBuilder with text only", async ({ expect }) => {
 
 test("MessageBuilder with HTML only", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1156,12 +1307,17 @@ test("MessageBuilder with HTML only", async ({ expect }) => {
 
 test("MessageBuilder with both text and HTML", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1189,13 +1345,18 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
 		resourceTmpPath: projectTmpPath,
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1255,13 +1416,18 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
 		resourceTmpPath: projectTmpPath,
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1341,12 +1507,17 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 
 test("MessageBuilder with inline attachment", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1381,12 +1552,17 @@ test("MessageBuilder with EmailAddress objects", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1432,12 +1608,17 @@ test("MessageBuilder with named recipient arrays", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1496,12 +1677,17 @@ test("MessageBuilder with mixed recipients", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1560,12 +1746,17 @@ test("MessageBuilder with multiple recipients", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1610,12 +1801,17 @@ test("MessageBuilder with multiple recipients", async ({ expect }) => {
 
 test("MessageBuilder with custom headers", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1641,17 +1837,22 @@ test("MessageBuilder respects allowed_destination_addresses", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_destination_addresses: ["allowed@example.com"],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedDestinationAddresses: ["allowed@example.com"],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1673,17 +1874,22 @@ test("MessageBuilder respects allowed_destination_addresses", async ({
 
 test("MessageBuilder respects allowed_sender_addresses", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_sender_addresses: ["allowed@example.com"],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedSenderAddresses: ["allowed@example.com"],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1707,17 +1913,22 @@ test("MessageBuilder allowed_destination_addresses with named recipients", async
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_destination_addresses: ["allowed@example.com"],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedDestinationAddresses: ["allowed@example.com"],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1753,17 +1964,22 @@ test("MessageBuilder allowed_sender_addresses with named from", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_sender_addresses: ["allowed@example.com"],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedSenderAddresses: ["allowed@example.com"],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1802,12 +2018,17 @@ test("MessageBuilder with RFC5322 string addresses", async ({ expect }) => {
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1856,17 +2077,22 @@ test("MessageBuilder allowed_destination_addresses with RFC5322 string recipient
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [
-				{
-					name: "SEND_EMAIL",
-					allowed_destination_addresses: ["allowed@example.com"],
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedDestinationAddresses: ["allowed@example.com"],
+						},
+					},
 				},
-			],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1904,12 +2130,17 @@ test("MessageBuilder backward compatibility - old EmailMessage API still works",
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: SEND_EMAIL_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -1967,12 +2198,17 @@ test("send() on an EmailMessage returns a synthesized messageId", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: SEND_EMAIL_RETURNS_RESULT_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_RETURNS_RESULT_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -2005,20 +2241,25 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: dedent /* javascript */ `
-			export default {
-				async fetch(request, env) {
-					const builder = await request.json();
-					const result = await env.SEND_EMAIL.send(builder);
-					return Response.json(result);
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(dedent /* javascript */ `
+						export default {
+							async fetch(request, env) {
+								const builder = await request.json();
+								const result = await env.SEND_EMAIL.send(builder);
+								return Response.json(result);
+							},
+						};
+					`),
+					env: { SEND_EMAIL: { type: "send-email" } },
 				},
-			};
-		`,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -2041,12 +2282,17 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 
 test("send_email binding is available from getBindings", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(""),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -2078,13 +2324,18 @@ test("disposing does not remove a concurrent email session", async ({
 }) => {
 	const projectTmpPath = await useProjectTmpPath();
 	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
 		resourceTmpPath: projectTmpPath,
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(""),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	await mf.getBindings();
@@ -2119,11 +2370,10 @@ describe("EMAIL_PLUGIN.getServices", () => {
 
 		const result = await EMAIL_PLUGIN.getServices({
 			options: {
-				email: { send_email: [{ name: "SEND_EMAIL" }] },
+				config: { env: { SEND_EMAIL: { type: "send-email" } } },
 			},
-			sharedOptions: {},
+			sharedOptions: { resourceTmpPath: projectTmpPath },
 			tmpPath: tmp,
-			resourceTmpPath: projectTmpPath,
 			workerNames: ["default"],
 			workerIndex: 0,
 		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
@@ -2213,7 +2463,7 @@ describe("EMAIL_PLUGIN.getServices", () => {
 
 		const result = await EMAIL_PLUGIN.getServices({
 			options: {
-				email: { send_email: [{ name: "SEND_EMAIL" }] },
+				config: { env: { SEND_EMAIL: { type: "send-email" } } },
 			},
 			sharedOptions: {},
 			tmpPath: tmp,
@@ -2316,12 +2566,17 @@ test("MessageBuilder writes files to system temp when resourceTmpPath is unset",
 		handleStructuredLogs({ message }: { message: string }) {
 			log.info(message);
 		},
-		modules: true,
-		script: MESSAGE_BUILDER_WORKER,
-		email: {
-			send_email: [{ name: "SEND_EMAIL" }],
-		},
-		compatibilityDate: "2025-03-17",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
