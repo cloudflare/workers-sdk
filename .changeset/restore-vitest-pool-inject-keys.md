@@ -4,4 +4,4 @@
 
 Restore typed `inject()` keys in `cloudflareTest()` pool options
 
-When a project's Vitest `ProvidedContext` augmentation is visible to `@cloudflare/vitest-pool-workers`, `inject()` inside `cloudflareTest()` options now infers values from those keys and rejects misspelled keys again. If pnpm resolves a separate Vitest copy and the augmented keys collapse to `never`, the type falls back to the wider string-key signature to avoid reintroducing the cross-copy mismatch.
+`inject()` inside `cloudflareTest()` options again infers the value type from the keys you declare in your Vitest `ProvidedContext`, and reports misspelled keys. For keys that are only provided at runtime, pass an explicit type argument, e.g. `inject<number>("myPort")`.
