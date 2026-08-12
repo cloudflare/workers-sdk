@@ -31,9 +31,13 @@ export { print, types } from "recast";
 
 */
 
-// Parse an input string as javascript and return an ast.
-// Preserves the source verbatim (no trimming) so transforms can print back
-// unchanged files byte-for-byte.
+/**
+ * Parses JavaScript while preserving the source verbatim so transforms can
+ * print unchanged files byte-for-byte.
+ *
+ * @param src JavaScript source to parse.
+ * @returns The parsed AST.
+ */
 export function parseJs(src: string): recast.types.namedTypes.File {
 	try {
 		return recast.parse(src, { parser: esprimaParser });
@@ -42,9 +46,13 @@ export function parseJs(src: string): recast.types.namedTypes.File {
 	}
 }
 
-// Parse an input string as typescript and return an ast.
-// Preserves the source verbatim (no trimming) so transforms can print back
-// unchanged files byte-for-byte.
+/**
+ * Parses TypeScript while preserving the source verbatim so transforms can
+ * print unchanged files byte-for-byte.
+ *
+ * @param src TypeScript source to parse.
+ * @returns The parsed AST.
+ */
 export function parseTs(src: string): recast.types.namedTypes.File {
 	try {
 		return recast.parse(src, { parser: typescriptParser });

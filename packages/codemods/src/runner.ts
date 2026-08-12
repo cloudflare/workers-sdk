@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { vitestCodemods } from "./codemods/vitest";
 import type { Codemod, CodemodContext, CodemodResult } from "./types";
 
-export const codemods: Codemod[] = [...vitestCodemods];
+export const availableCodemods: Codemod[] = [...vitestCodemods];
 
 function normaliseName(value: string): string {
 	return value
@@ -12,7 +12,7 @@ function normaliseName(value: string): string {
 }
 
 export function getCodemod(name: string): Codemod | undefined {
-	return codemods.find((codemod) =>
+	return availableCodemods.find((codemod) =>
 		[codemod.name, ...(codemod.aliases ?? [])].some(
 			(candidate) => normaliseName(candidate) === normaliseName(name)
 		)

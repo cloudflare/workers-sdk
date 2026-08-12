@@ -2,7 +2,7 @@
 
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { codemods, runCodemod } from "./runner";
+import { availableCodemods, runCodemod } from "./runner";
 
 function printHelp(): void {
 	console.log(`Usage: cloudflare-codemods <codemod> [options]
@@ -16,8 +16,8 @@ Options:
   --dry-run        List changes without writing files
   --help           Show this help
 
-Codemods:
-${codemods.map((codemod) => `  ${codemod.name}\n      ${codemod.description}`).join("\n")}`);
+Available Codemods:
+${availableCodemods.map((codemod) => `  ${codemod.name}\n      ${codemod.description}`).join("\n")}`);
 }
 
 export async function main(args = process.argv.slice(2)): Promise<void> {

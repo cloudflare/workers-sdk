@@ -30,6 +30,19 @@ export default defineWorkersProject({
 		expect(output).not.toContain("poolOptions");
 	});
 
+	it("transforms a defineWorkersConfig config", ({ expect }) => {
+		const output = run(`
+import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+
+export default defineWorkersConfig({
+	test: { poolOptions: { workers: {} } },
+});`);
+
+		expect(output).toContain("export default defineConfig({");
+		expect(output).toContain("plugins: [cloudflareTest({})]");
+		expect(output).not.toContain("defineWorkersConfig");
+	});
+
 	it("returns source unchanged without a matching import", ({ expect }) => {
 		const input = `import { defineConfig } from "vitest/config";`;
 		expect(run(input)).toBe(input);
@@ -53,6 +66,17 @@ export default defineWorkersProject({
 
 		expect(output).toContain("cloudflareTest, readD1Migrations");
 		expect(output).toContain("}), somePlugin()]");
+	});
+
+	it("throws when plugins are not an inline array", ({ expect }) => {
+		const input = `
+import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+export default defineWorkersProject({
+	plugins: getPlugins(),
+	test: { poolOptions: { workers: {} } },
+});`;
+
+		expect(() => run(input)).toThrow("`plugins` is not an inline array");
 	});
 
 	it("supports an aliased defineWorkersProject import", ({ expect }) => {

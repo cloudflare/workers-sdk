@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "vitest";
 import { transformFiles } from "../src/files";
-import { codemods, runCodemod } from "../src/runner";
+import { availableCodemods, runCodemod } from "../src/runner";
 
 const temporaryDirectories: string[] = [];
 
@@ -203,8 +203,8 @@ export default defineWorkersProject({
 		expect,
 	}) => {
 		const cwd = await createProject({ "input.txt": "before" });
-		const initialLength = codemods.length;
-		codemods.push({
+		const initialLength = availableCodemods.length;
+		availableCodemods.push({
 			name: "transaction-test",
 			description: "stage a change, then reject it",
 			async run(context) {
@@ -223,7 +223,7 @@ export default defineWorkersProject({
 				"before"
 			);
 		} finally {
-			codemods.splice(initialLength);
+			availableCodemods.splice(initialLength);
 		}
 	});
 

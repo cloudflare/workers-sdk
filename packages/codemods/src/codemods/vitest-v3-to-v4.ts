@@ -2,8 +2,9 @@
  * Migrates @cloudflare/vitest-pool-workers configuration from Vitest v3 to v4.
  *
  * Transforms a `defineWorkersProject({ test: { poolOptions: { workers } } })`
- * config into `defineConfig({ plugins: [cloudflareTest(workers)], test })`,
- * rewriting the relevant imports.
+ * or `defineWorkersConfig(...)` config into
+ * `defineConfig({ plugins: [cloudflareTest(workers)], test })`, rewriting the
+ * relevant imports.
  */
 import { parseTs, print, types } from "@cloudflare/shared-ast-primitives";
 
@@ -17,6 +18,8 @@ type ObjectProperty = types.namedTypes.ObjectProperty;
 type Property = types.namedTypes.Property;
 type ImportDeclaration = types.namedTypes.ImportDeclaration;
 type NamedProp = ObjectProperty | Property;
+
+const CONFIG_HELPERS = ["defineWorkersConfig", "defineWorkersProject"];
 
 function isNamedProp(prop: Node, name: string): prop is NamedProp {
 	return (
@@ -56,38 +59,40 @@ export default function transform(source: string): string {
 			imp.source.value === "@cloudflare/vitest-pool-workers/config"
 	);
 
-	const matchingImports = configImports.flatMap((imp) => {
-		const specifier = importSpecifierNamed(imp, "defineWorkersProject");
-		if (!specifier || !n.ImportSpecifier.check(specifier)) {
-			return [];
-		}
-		const localName = n.Identifier.check(specifier.local)
-			? specifier.local.name
-			: "defineWorkersProject";
+	const matchingImports = configImports.flatMap((imp) =>
+		CONFIG_HELPERS.flatMap((helperName) => {
+			const specifier = importSpecifierNamed(imp, helperName);
+			if (!specifier || !n.ImportSpecifier.check(specifier)) {
+				return [];
+			}
+			const localName = n.Identifier.check(specifier.local)
+				? specifier.local.name
+				: helperName;
 
-		// Collect matching call expressions across the whole tree.
-		const calls: types.namedTypes.CallExpression[] = [];
-		visit(ast, {
-			visitCallExpression(path) {
-				const callee = path.node.callee;
-				if (n.Identifier.check(callee) && callee.name === localName) {
-					calls.push(path.node);
-				}
-				this.traverse(path);
-			},
-		});
+			// Collect matching call expressions across the whole tree.
+			const calls: types.namedTypes.CallExpression[] = [];
+			visit(ast, {
+				visitCallExpression(path) {
+					const callee = path.node.callee;
+					if (n.Identifier.check(callee) && callee.name === localName) {
+						calls.push(path.node);
+					}
+					this.traverse(path);
+				},
+			});
 
-		return calls.length === 0 ? [] : [{ imp, localName, calls }];
-	});
+			return calls.length === 0 ? [] : [{ imp, helperName, localName, calls }];
+		})
+	);
 
 	if (matchingImports.length === 0) {
 		return source;
 	}
 	if (matchingImports.length > 1) {
-		throw new Error("Multiple defineWorkersProject imports are not supported");
+		throw new Error("Multiple Workers config helpers are not supported");
 	}
 
-	const [{ imp: configImport, localName, calls }] = matchingImports;
+	const [{ imp: configImport, helperName, localName, calls }] = matchingImports;
 
 	// Resolve the local name for `cloudflareTest`, importing it if absent.
 	const rootPackageImports = importDeclarations.filter(
@@ -119,7 +124,7 @@ export default function transform(source: string): string {
 			!(
 				n.ImportSpecifier.check(specifier) &&
 				n.Identifier.check(specifier.imported) &&
-				specifier.imported.name === "defineWorkersProject"
+				specifier.imported.name === helperName
 			)
 	);
 
@@ -173,7 +178,7 @@ export default function transform(source: string): string {
 		const config = call.arguments[0];
 		if (!n.ObjectExpression.check(config)) {
 			throw new Error(
-				"defineWorkersProject() is called with a function and not an object, " +
+				`${helperName}() is called with a function and not an object, ` +
 					"and so is too complex to apply a codemod to. " +
 					"Please refer to the migration docs to perform the migration manually."
 			);
@@ -211,6 +216,11 @@ export default function transform(source: string): string {
 		const pluginsProp = findNamedProp(config.properties, "plugins");
 		if (pluginsProp && n.ArrayExpression.check(pluginsProp.value)) {
 			pluginsProp.value.elements.unshift(pluginCall);
+		} else if (pluginsProp) {
+			throw new Error(
+				"`plugins` is not an inline array and so is too complex to apply a codemod to. " +
+					"Please refer to the migration docs to perform the migration manually."
+			);
 		} else {
 			config.properties.unshift(
 				b.objectProperty(
