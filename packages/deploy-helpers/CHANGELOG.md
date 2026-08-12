@@ -1,5 +1,31 @@
 # @cloudflare/deploy-helpers
 
+## 0.6.9
+
+### Patch Changes
+
+- Updated dependencies [[`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`0b82b15`](https://github.com/cloudflare/workers-sdk/commit/0b82b1574b3327681a0091716ed274c8f0544a48), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`90dd5e5`](https://github.com/cloudflare/workers-sdk/commit/90dd5e597e3eeeb2ec17636386b75fea770cedc9), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e)]:
+  - miniflare@5.20260811.0-alpha
+  - @cloudflare/workers-utils@0.33.0
+  - @cloudflare/cli-shared-helpers@0.1.23
+
+## 0.6.8
+
+### Patch Changes
+
+- [#15081](https://github.com/cloudflare/workers-sdk/pull/15081) [`026e058`](https://github.com/cloudflare/workers-sdk/commit/026e058ff694a77d3d214611bef7c3e41d1fe082) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Compact `wrangler preview` deployment success output
+
+  `wrangler preview` now prints a concise success summary with the Preview name, Preview URL, deployment ID, and Deployment URL instead of the previous box-art settings summary.
+
+- [#15132](https://github.com/cloudflare/workers-sdk/pull/15132) [`5b1b930`](https://github.com/cloudflare/workers-sdk/commit/5b1b93025f7d71c1b4b99abd90d2dc579c149ae5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fetch script metadata directly instead of listing all scripts
+
+  When resolving Durable Object migrations, fetch the specific script's service metadata via `/workers/services/{name}` instead of listing all scripts in the account via `/workers/scripts`. This avoids downloading metadata for every Worker in the account just to find one script's migration tag.
+
+- Updated dependencies [[`c7aede7`](https://github.com/cloudflare/workers-sdk/commit/c7aede764b601d1b73aa208f6a6ff63f646f4136), [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357)]:
+  - miniflare@5.20260804.1-alpha
+  - @cloudflare/workers-utils@0.32.0
+  - @cloudflare/cli-shared-helpers@0.1.22
+
 ## 0.6.7
 
 ### Patch Changes

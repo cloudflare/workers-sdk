@@ -1,5 +1,51 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.21.2
+
+### Patch Changes
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Widen `WorkerPoolOptionsContext.inject` type to avoid `ProvidedContext` mismatch
+
+  Previously, calling `inject()` inside `cloudflareTest()` pool options could fail with a type error when your project's `ProvidedContext` augmentation wasn't visible to the pool plugin. The `inject` parameter now accepts any string key and is generic (`inject<T>(key)`), defaulting to `unknown` when no type argument is provided. This lets you opt in to concrete types (e.g. `inject<number>("port")`) while avoiding the cross-copy `ProvidedContext` mismatch that occurred when pnpm resolved separate virtual-store instances of vitest.
+
+- [#15148](https://github.com/cloudflare/workers-sdk/pull/15148) [`0b82b15`](https://github.com/cloudflare/workers-sdk/commit/0b82b1574b3327681a0091716ed274c8f0544a48) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ignore a `nodejs_compat` compatibility flag that the compatibility date already enables
+
+  workerd rejects a compatibility flag that its compatibility date enables by default, so a Worker configured with both a compatibility date of `2026-08-04` or later **and** `nodejs_compat` failed to start locally with "The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore".
+
+  The redundant `nodejs_compat` and `nodejs_compat_v2` flags are now dropped when starting the runtime, which has no effect on the resulting Worker because the compatibility date enables both anyway. `no_nodejs_compat` and `no_nodejs_compat_v2` still switch Node.js compatibility off, and a flag specified alongside its own opt-out is left alone so that workerd still reports those as contradictory.
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Detect Node.js compatibility from the compatibility date, now that `nodejs_compat` is enabled by default
+
+  As of compatibility date `2026-08-04`, workerd enables the `nodejs_compat` and `nodejs_compat_v2` compatibility flags by default. Previously these tools only treated Node.js compatibility as enabled when one of those flags was listed explicitly, so a Worker on a compatibility date of `2026-08-04` or later without the flag would get Node.js APIs from the runtime but no Node.js polyfills from the bundler, and `process.env` could be substituted with an empty object at build time. They now resolve these flags the same way workerd does, and honour `no_nodejs_compat` to opt out.
+
+  To keep Node.js compatibility switched off on a newer compatibility date, specify both `no_nodejs_compat` and `no_nodejs_compat_v2`, since each flag has its own default.
+
+  `@cloudflare/vitest-pool-workers` needs `nodejs_compat_v2` for its own test runner, so it continues to override a project that opts out of it. On a compatibility date that enables the flag anyway, it now drops the opt-out rather than adding the flag back, which workerd would reject — previously this stopped such a project from running any tests at all.
+
+  `wrangler types` also no longer attributes its `@types/node` suggestion to "the `nodejs_compat` flag", which it can now make for Workers that do not set the flag at all.
+
+- [#15131](https://github.com/cloudflare/workers-sdk/pull/15131) [`90dd5e5`](https://github.com/cloudflare/workers-sdk/commit/90dd5e597e3eeeb2ec17636386b75fea770cedc9) Thanks [@vicb](https://github.com/vicb)! - Bump `capnp-es` to 0.0.15.
+
+  Also re-generate the types for the latest `.capnp` files
+
+- Updated dependencies [[`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`0b82b15`](https://github.com/cloudflare/workers-sdk/commit/0b82b1574b3327681a0091716ed274c8f0544a48), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`90dd5e5`](https://github.com/cloudflare/workers-sdk/commit/90dd5e597e3eeeb2ec17636386b75fea770cedc9), [`3b02915`](https://github.com/cloudflare/workers-sdk/commit/3b029154fae5b69d6f32e61dea22171412b4269f)]:
+  - miniflare@5.20260811.0-alpha
+  - wrangler@4.122.0
+
+## 0.21.1
+
+### Patch Changes
+
+- [#14882](https://github.com/cloudflare/workers-sdk/pull/14882) [`ab9132d`](https://github.com/cloudflare/workers-sdk/commit/ab9132d3e41b3ba0c214c68e9afc9389ddc93395) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Report built-in modules that a Worker's compatibility settings don't provide as module errors, instead of crashing workerd
+
+  Previously, a Worker whose module graph statically reached a compatibility-gated built-in that wasn't enabled — for example `import "node:child_process"` without `nodejs_compat` — took down the runtime with `*** Received signal #11: Segmentation fault` before any test ran. Vitest reported only `Worker exited unexpectedly`, naming neither the module nor the file that imported it, which made the cause very hard to find. The import didn't even have to be called; being reachable from the entrypoint was enough.
+
+  The module fallback service answered these specifiers with a redirect to the modules root, but workerd already resolves `node:`/`cloudflare:`/`workerd:` specifiers there, so the redirect pointed back at the module workerd was in the middle of resolving and it recursed until the stack overflowed. Such a specifier only reaches the fallback service when workerd's own registry has already missed, so it's now reported as not found: workerd raises `No such module "node:child_process"`, matching what `wrangler dev` does for the same Worker. The accompanying pool error names the module and points at compatibility flags rather than suggesting you bundle it, which can't help for a module built into the runtime.
+
+- Updated dependencies [[`15cad03`](https://github.com/cloudflare/workers-sdk/commit/15cad038313b9dd0ecdc23888e595440a33e845b), [`026e058`](https://github.com/cloudflare/workers-sdk/commit/026e058ff694a77d3d214611bef7c3e41d1fe082), [`731b33a`](https://github.com/cloudflare/workers-sdk/commit/731b33a9059cbdc1e115ad3d6ed66fc1f38ce0e4), [`e1b5b4b`](https://github.com/cloudflare/workers-sdk/commit/e1b5b4bd5b72df396d6d9a27aa0f290dfa11a06c), [`5b1b930`](https://github.com/cloudflare/workers-sdk/commit/5b1b93025f7d71c1b4b99abd90d2dc579c149ae5), [`6e7d37d`](https://github.com/cloudflare/workers-sdk/commit/6e7d37dc3ed2a44aea83ecc6992cca858a7b957b), [`d669088`](https://github.com/cloudflare/workers-sdk/commit/d6690886c3b65d59b09b4c01c1505d2e51ac0e07), [`15cad03`](https://github.com/cloudflare/workers-sdk/commit/15cad038313b9dd0ecdc23888e595440a33e845b), [`c7aede7`](https://github.com/cloudflare/workers-sdk/commit/c7aede764b601d1b73aa208f6a6ff63f646f4136), [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357)]:
+  - wrangler@4.121.0
+  - miniflare@5.20260804.1-alpha
+
 ## 0.21.0
 
 ### Minor Changes

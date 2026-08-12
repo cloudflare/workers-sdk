@@ -1,5 +1,21 @@
 # @cloudflare/workers-utils
 
+## 0.33.0
+
+### Minor Changes
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Add `NODEJS_COMPAT_DEFAULT_ON_DATE`, `NODEJS_COMPAT_V2_SWITCH_OVER_DATE`, `isNodejsCompatDefaultOn()` and `resolveNodejsCompat()`
+
+  These expose the compatibility dates on which workerd started enabling `nodejs_compat` by default and on which `nodejs_compat` started implying `nodejs_compat_v2`, along with the resolution of both flags from a compatibility date and a set of compatibility flags, so that the tools which generate or interpret Wrangler configurations do not each reimplement it.
+
+## 0.32.0
+
+### Minor Changes
+
+- [#14924](https://github.com/cloudflare/workers-sdk/pull/14924) [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357) Thanks [@ariesclark](https://github.com/ariesclark)! - Add shared support for the `DO_NOT_TRACK` environment variable
+
+  Add utilities for recognizing `DO_NOT_TRACK=1` and incorporating it when resolving Wrangler's telemetry preference.
+
 ## 0.31.2
 
 ### Patch Changes

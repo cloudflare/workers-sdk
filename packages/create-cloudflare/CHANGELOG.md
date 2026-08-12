@@ -1,5 +1,67 @@
 # create-cloudflare
 
+## 2.71.1
+
+### Patch Changes
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Stop adding a redundant `nodejs_compat` flag to generated Wrangler configurations
+
+  `create-cloudflare` and `wrangler setup` write today's date as the `compatibility_date`, and from `2026-08-04` that already enables `nodejs_compat`. Adding the flag as well made the generated project fail to start with "The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore", so the flag is now only added for earlier compatibility dates.
+
+  `create-cloudflare` also removes the flag when a template, or a framework's own scaffolder, already wrote it into a configuration that ends up using such a compatibility date, and still installs `@types/node` for these projects even though there is no longer a flag to detect them by.
+
+  `wrangler setup` does the same for a `wrangler.json(c)` that is already in the project: it writes today's date over whatever date that configuration was written for, so a `nodejs_compat` it finds there is removed as part of writing the file.
+
+## 2.71.0
+
+### Minor Changes
+
+- [#14924](https://github.com/cloudflare/workers-sdk/pull/14924) [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357) Thanks [@ariesclark](https://github.com/ariesclark)! - Honor `DO_NOT_TRACK=1` as a telemetry opt-out
+
+  Create Cloudflare now disables telemetry when `DO_NOT_TRACK=1` is set, regardless of other telemetry settings.
+
+### Patch Changes
+
+- [#15098](https://github.com/cloudflare/workers-sdk/pull/15098) [`4cb1547`](https://github.com/cloudflare/workers-sdk/commit/4cb1547aa6a316c297153e61c52bf74a1976662c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | create-next-app | 16.2.12 | 16.3.0 |
+
+- [#15099](https://github.com/cloudflare/workers-sdk/pull/15099) [`aa9b121`](https://github.com/cloudflare/workers-sdk/commit/aa9b121625446a3b7917d1daf67998f2dec8ce96) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.8.0 | 0.8.1 |
+
+- [#15100](https://github.com/cloudflare/workers-sdk/pull/15100) [`cf785d7`](https://github.com/cloudflare/workers-sdk/commit/cf785d70dde18a554552e29d707f4ccb89786069) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.2 | 22.1.3 |
+
+- [#15101](https://github.com/cloudflare/workers-sdk/pull/15101) [`35e4cff`](https://github.com/cloudflare/workers-sdk/commit/35e4cff079a63c658741d597de0e28b1a134ffbd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.70.1 | 0.70.2 |
+
+- [#15102](https://github.com/cloudflare/workers-sdk/pull/15102) [`72154fd`](https://github.com/cloudflare/workers-sdk/commit/72154fde812da6f5ca996b8657827137cb7746ee) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.671 | 0.0.673 |
+
 ## 2.70.18
 
 ### Patch Changes

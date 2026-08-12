@@ -189,9 +189,6 @@ describe("wrangler setup", () => {
 			      "directory": "public",
 			    },
 			    "compatibility_date": "YYYY-MM-DD",
-			    "compatibility_flags": [
-			      "nodejs_compat",
-			    ],
 			    "name": "test-name",
 			    "observability": {
 			      "enabled": true,
@@ -261,10 +258,7 @@ describe("wrangler setup", () => {
 				    },
 				    "assets": {
 				      "directory": "<DIR>"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
+				    }
 				  }
 
 				✋  Autoconfig process run in dry-run mode, existing now.

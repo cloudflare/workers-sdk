@@ -123,7 +123,7 @@ export function convertManifestModule(
 		case "python":
 			return { name, pythonModule: contentsToString(contents) };
 		case "python-requirement":
-			return { name, pythonRequirement: contentsToString(contents) };
+			return { name, obsoletePythonRequirement: contentsToString(contents) };
 		case "sourcemap":
 			assert.fail("Unreachable: sourcemap modules are unsupported");
 			break;
