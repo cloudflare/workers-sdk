@@ -48,5 +48,7 @@
 	"volta": {
 		"extends": "../../package.json"
 	},
-	"workers-sdk": {}
+	"workers-sdk": {
+		"prerelease": true
+	}
 }
