@@ -105,3 +105,36 @@ export function resolveNodejsCompat(
 
 	return { isNodejsCompatEnabled, isNodejsCompatV2Enabled };
 }
+
+// TODO: remove when workerd no longer errors
+/**
+ * Removes the `nodejs_compat` and `nodejs_compat_v2` flags from a list of
+ * compatibility flags when the compatibility date already enables them.
+ *
+ * workerd rejects a compatibility flag that its compatibility date enables by
+ * default, so from {@link NODEJS_COMPAT_DEFAULT_ON_DATE} onwards specifying
+ * either flag stops a Worker from starting up. Removing them is a no-op for
+ * such a date, so tooling can accept the redundant flags rather than failing.
+ *
+ * A flag is kept when its matching opt-out is specified too, since workerd
+ * reports those as contradictory and the enable flag wins there - dropping it
+ * would silently switch Node.js compatibility off instead.
+ *
+ * @param compatibilityDate The compatibility date
+ * @param compatibilityFlags The compatibility flags
+ * @returns The flags, without the ones the date makes redundant
+ */
+export function stripRedundantNodejsCompatFlags(
+	compatibilityDate: string | undefined,
+	compatibilityFlags: string[]
+): string[] {
+	if (!isNodejsCompatDefaultOn(compatibilityDate)) {
+		return compatibilityFlags;
+	}
+
+	const redundantFlags = ["nodejs_compat", "nodejs_compat_v2"].filter(
+		(flag) => !compatibilityFlags.includes(`no_${flag}`)
+	);
+
+	return compatibilityFlags.filter((flag) => !redundantFlags.includes(flag));
+}
