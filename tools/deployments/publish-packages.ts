@@ -240,21 +240,75 @@ export async function fetchPackument(
 	return (await response.json()) as AbbreviatedPackument;
 }
 
+export type ReadRetryOptions = {
+	/** Total attempts, including the first. */
+	attempts: number;
+	/** Delay before the second attempt. Doubles on each subsequent retry. */
+	delaySeconds: number;
+	sleep: (ms: number) => Promise<void>;
+	log: (message: string) => void;
+};
+
+/**
+ * Reads a packument, retrying transient failures.
+ *
+ * A package that is simply absent is not a failure: `fetchPackument` resolves
+ * to `null` for a 404, which legitimately means "not published yet". Only
+ * thrown errors — 5xx from the registry CDN, malformed JSON, network failures —
+ * are retried.
+ */
+async function fetchPackumentWithRetry(
+	registry: string,
+	name: string,
+	fetchImpl: FetchLike,
+	retry: ReadRetryOptions
+): Promise<AbbreviatedPackument | null> {
+	let delay = retry.delaySeconds * 1000;
+
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await fetchPackument(registry, name, fetchImpl);
+		} catch (e) {
+			if (attempt >= retry.attempts) {
+				throw e;
+			}
+			retry.log(
+				`  ${name}: registry read failed (attempt ${attempt}/${
+					retry.attempts
+				}), retrying in ${Math.round(delay / 1000)}s (${String(e)})`
+			);
+			await retry.sleep(delay);
+			delay *= 2;
+		}
+	}
+}
+
 /**
  * Narrows a list of packages down to those whose exact version is not yet on
  * the registry.
  *
  * This mirrors how `changeset publish` decides what to publish, and is what
  * makes re-running a failed release safe.
+ *
+ * Reads are retried, because this runs once per tier *during* the release: a
+ * single transient failure while checking a later tier would otherwise abort a
+ * run that has already published earlier tiers, leaving those packages
+ * untagged and undeployed.
  */
 export async function filterUnpublished(
 	packages: WorkspacePackage[],
 	registry: string,
-	fetchImpl: FetchLike
+	fetchImpl: FetchLike,
+	retry: ReadRetryOptions
 ): Promise<WorkspacePackage[]> {
 	const unpublished: WorkspacePackage[] = [];
 	for (const pkg of packages) {
-		const packument = await fetchPackument(registry, pkg.name, fetchImpl);
+		const packument = await fetchPackumentWithRetry(
+			registry,
+			pkg.name,
+			fetchImpl,
+			retry
+		);
 		if (packument?.versions?.[pkg.version] === undefined) {
 			unpublished.push(pkg);
 		}
@@ -475,6 +529,7 @@ export type MainOptions = {
 		PropagationOptions,
 		"registry" | "fetchImpl" | "sleep" | "now" | "log"
 	> & { skip: boolean };
+	readRetry: Omit<ReadRetryOptions, "sleep" | "log">;
 	fetchImpl: FetchLike;
 	publish: PublishRunner;
 	runChangesetTag: () => Promise<number>;
@@ -511,7 +566,13 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 		const pending = await filterUnpublished(
 			tier,
 			options.registry,
-			options.fetchImpl
+			options.fetchImpl,
+			{
+				attempts: options.readRetry.attempts,
+				delaySeconds: options.readRetry.delaySeconds,
+				sleep: options.sleep,
+				log: options.log,
+			}
 		);
 
 		if (pending.length === 0) {
@@ -619,6 +680,10 @@ if (require.main === module) {
 			minSeconds: readIntEnv("PUBLISH_PROPAGATION_MIN_SECONDS", 60),
 			timeoutSeconds: readIntEnv("PUBLISH_PROPAGATION_TIMEOUT_SECONDS", 600),
 			pollSeconds: readIntEnv("PUBLISH_PROPAGATION_POLL_SECONDS", 5),
+		},
+		readRetry: {
+			attempts: Math.max(1, readIntEnv("PUBLISH_READ_RETRY_ATTEMPTS", 3)),
+			delaySeconds: readIntEnv("PUBLISH_READ_RETRY_DELAY_SECONDS", 2),
 		},
 		fetchImpl: fetch,
 		publish: createPublishRunner({ registry, distTag }),

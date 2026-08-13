@@ -21,6 +21,7 @@ import type {
 	FetchLike,
 	MainOptions,
 	PublishResult,
+	ReadRetryOptions,
 	WorkspacePackage,
 } from "../publish-packages";
 
@@ -322,6 +323,18 @@ describe("escapePackageName()", () => {
 });
 
 describe("filterUnpublished()", () => {
+	function retryOptions(
+		overrides: Partial<ReadRetryOptions> = {}
+	): ReadRetryOptions {
+		return {
+			attempts: 3,
+			delaySeconds: 2,
+			sleep: async () => {},
+			log: () => {},
+			...overrides,
+		};
+	}
+
 	it("should keep only versions that are not already on the registry", async ({
 		expect,
 	}) => {
@@ -337,7 +350,8 @@ describe("filterUnpublished()", () => {
 		const unpublished = await filterUnpublished(
 			packages,
 			REGISTRY,
-			registry.fetchImpl
+			registry.fetchImpl,
+			retryOptions()
 		);
 		expect(unpublished.map((p) => p.name)).toEqual(["b", "c"]);
 	});
@@ -347,9 +361,82 @@ describe("filterUnpublished()", () => {
 		const unpublished = await filterUnpublished(
 			[makePackage("brand-new")],
 			REGISTRY,
-			registry.fetchImpl
+			registry.fetchImpl,
+			retryOptions()
 		);
 		expect(unpublished.map((p) => p.name)).toEqual(["brand-new"]);
+	});
+
+	it("should retry a transient registry failure and still classify correctly", async ({
+		expect,
+	}) => {
+		const registry = createFakeRegistry({ published: { a: ["1.0.0"] } });
+		const clock = createFakeClock();
+		const logs: string[] = [];
+		let calls = 0;
+		const fetchImpl: FetchLike = async (url, init) => {
+			calls++;
+			// A 503 from the registry CDN on the first read of `a`.
+			if (calls === 1) {
+				return { ok: false, status: 503, json: async () => ({}) };
+			}
+			return registry.fetchImpl(url, init);
+		};
+
+		const unpublished = await filterUnpublished(
+			[makePackage("a", [], "1.0.0"), makePackage("b", [], "1.0.0")],
+			REGISTRY,
+			fetchImpl,
+			retryOptions({ sleep: clock.sleep, log: (m) => logs.push(m) })
+		);
+
+		// `a` is published, so only the retry told us that — a swallowed error
+		// would have wrongly re-published it.
+		expect(unpublished.map((p) => p.name)).toEqual(["b"]);
+		expect(logs.join("\n")).toContain("a: registry read failed (attempt 1/3)");
+		expect(clock.now()).toBe(2_000);
+	});
+
+	it("should back off exponentially and give up after the configured attempts", async ({
+		expect,
+	}) => {
+		const clock = createFakeClock();
+		let calls = 0;
+		const fetchImpl: FetchLike = async () => {
+			calls++;
+			throw new Error("ECONNRESET");
+		};
+
+		await expect(
+			filterUnpublished(
+				[makePackage("a")],
+				REGISTRY,
+				fetchImpl,
+				retryOptions({ sleep: clock.sleep })
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: ECONNRESET]`);
+
+		expect(calls).toBe(3);
+		// 2s then 4s, and no sleep after the final failure.
+		expect(clock.now()).toBe(6_000);
+	});
+
+	it("should not retry a 404, which legitimately means unpublished", async ({
+		expect,
+	}) => {
+		const registry = createFakeRegistry();
+		const clock = createFakeClock();
+
+		const unpublished = await filterUnpublished(
+			[makePackage("brand-new")],
+			REGISTRY,
+			registry.fetchImpl,
+			retryOptions({ sleep: clock.sleep })
+		);
+
+		expect(unpublished.map((p) => p.name)).toEqual(["brand-new"]);
+		expect(registry.requests).toHaveLength(1);
+		expect(clock.now()).toBe(0);
 	});
 });
 
@@ -577,6 +664,8 @@ describe("publishAllPackages()", () => {
 			published?: Record<string, string[]>;
 			options?: Partial<MainOptions>;
 			publish?: MainOptions["publish"];
+			/** Wraps the fake registry, so reads can be made to fail. */
+			fetchImpl?: (registryFetch: FetchLike) => FetchLike;
 			tagExitCode?: number;
 		} = {}
 	) {
@@ -604,7 +693,9 @@ describe("publishAllPackages()", () => {
 				timeoutSeconds: 600,
 				pollSeconds: 5,
 			},
-			fetchImpl: registry.fetchImpl,
+			readRetry: { attempts: 3, delaySeconds: 2 },
+			fetchImpl:
+				overrides.fetchImpl?.(registry.fetchImpl) ?? registry.fetchImpl,
 			publish: overrides.publish ?? defaultPublish,
 			runChangesetTag: async () => {
 				state.tagCalls++;
@@ -690,6 +781,36 @@ describe("publishAllPackages()", () => {
 		// when no public package needed publishing.
 		expect(harness.tagCalls).toBe(1);
 		expect(harness.logs.join("\n")).toContain("No unpublished packages found.");
+	});
+
+	it("should survive a transient registry failure while checking a later tier", async ({
+		expect,
+	}) => {
+		// Regression test: a single 503 while computing tier 1 used to abort the
+		// run after tier 0 had already been published, so those packages got no
+		// git tags, no GitHub releases and no downstream deployments.
+		let appReads = 0;
+		const harness = createHarness({
+			fetchImpl: (registryFetch) => async (url, init) => {
+				// `app` is the only package in tier 1, so its first packument read is
+				// that tier's "is this already published?" check.
+				if (url.endsWith("/app")) {
+					appReads++;
+					if (appReads === 1) {
+						return { ok: false, status: 503, json: async () => ({}) };
+					}
+				}
+				return registryFetch(url, init);
+			},
+		});
+
+		await harness.run();
+
+		expect(harness.publishOrder).toEqual(["core", "app"]);
+		expect(harness.tagCalls).toBe(1);
+		expect(harness.logs.join("\n")).toContain(
+			"app: registry read failed (attempt 1/3)"
+		);
 	});
 
 	it("should abort without tagging when a tier fails, leaving later tiers unpublished", async ({
