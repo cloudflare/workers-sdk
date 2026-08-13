@@ -1,0 +1,27 @@
+packages/miniflare/test/plugins/email/artifacts.spec.ts
+  s_bf0caaccc6ed8d::t_a330321957c644 1-127
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_bf0caaccc6ed8d::t_8bfa437eae1622 1-529
+packages/miniflare/test/plugins/local-explorer/index.spec.ts
+  s_bf0caaccc6ed8d::t_120ae5ffc9288c 715,732,749
+packages/wrangler/e2e/dev.test.ts
+  s_bf0caaccc6ed8d::t_2fab069e3fcb2f 29,2633-2775
+packages/wrangler/e2e/multiworker-dev.test.ts
+  s_bf0caaccc6ed8d::t_6ea47986a3e933 653-725
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "148e27926737fe835fc90b653f1b2adea46102cb",
+  "prompts": {},
+  "sessions": {
+    "s_bf0caaccc6ed8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028716508ffe960pk9fWrTNbup",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
