@@ -84,7 +84,9 @@ export class APIError extends ParseError {
 
 	isGatewayError() {
 		if (this.#status !== undefined) {
-			return [524].includes(this.#status);
+			// HTTP gateway failures plus Cloudflare's 524 timeout.
+			// Pages/Workers asset upload uses this to drop concurrency and back off longer.
+			return [502, 503, 504, 524].includes(this.#status);
 		}
 		return false;
 	}

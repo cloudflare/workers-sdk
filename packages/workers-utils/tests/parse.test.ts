@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import {
+	APIError,
 	indexLocation,
 	parseByteSize,
 	parseJSON,
@@ -402,5 +403,26 @@ describe("parseByteSize", () => {
 		expect(parseByteSize(".B")).toBeNaN();
 		expect(parseByteSize("3iB")).toBeNaN();
 		expect(parseByteSize("3ib")).toBeNaN();
+	});
+});
+
+describe("APIError.isGatewayError", () => {
+	it("treats HTTP gateway statuses and Cloudflare 524 as gateway errors", ({
+		expect,
+	}) => {
+		for (const status of [502, 503, 504, 524]) {
+			expect(new APIError({ text: "gateway", status }).isGatewayError()).toBe(
+				true
+			);
+		}
+	});
+
+	it("does not treat other statuses as gateway errors", ({ expect }) => {
+		expect(new APIError({ text: "no status" }).isGatewayError()).toBe(false);
+		for (const status of [200, 400, 401, 404, 429, 500]) {
+			expect(new APIError({ text: "other", status }).isGatewayError()).toBe(
+				false
+			);
+		}
 	});
 });
