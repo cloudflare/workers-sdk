@@ -82,7 +82,9 @@ export const RATELIMIT_PLUGIN: Plugin = {
 	},
 	async getServices({ options, tmpPath, sharedOptions }) {
 		const ratelimits = getEnvBindingsOfType(options.config, "rate-limit");
-
+		if (ratelimits.length === 0 && !sharedOptions.unsafeEnableSharedStorage) {
+			return [];
+		}
 		// Each namespace is supplied per-binding via props, so one service serves
 		// every rate limiter while shared namespaces still use the same DO name.
 		const services: Service[] = [

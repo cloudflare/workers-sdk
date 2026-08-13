@@ -167,12 +167,12 @@ export const R2_PLUGIN: Plugin = {
 						? {
 								name: R2_REMOTE_SERVICE_NAME,
 								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-							}
+						  }
 						: getStorageService(
 								R2_LOCAL_ENTRY_SERVICE_NAME,
 								buildObjectEntryProps(id),
 								sharedOptions
-							),
+						  ),
 				};
 			}
 		);
@@ -190,10 +190,17 @@ export const R2_PLUGIN: Plugin = {
 
 		const services: Service[] = [];
 
-		services.push({
-			name: R2_LOCAL_ENTRY_SERVICE_NAME,
-			worker: objectEntryWorker(R2_BUCKET_OBJECT),
-		});
+		// One shared entry service for all local buckets (id supplied via props).
+		const hasLocal =
+			buckets.some(
+				([, b]) => getRemoteProxyConnectionString(b, options.dev) === undefined
+			) || sharedOptions.unsafeEnableSharedStorage;
+		if (hasLocal) {
+			services.push({
+				name: R2_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(R2_BUCKET_OBJECT),
+			});
+		}
 
 		// One shared proxy service for all remote (mixed-mode) buckets.
 		const hasRemote = buckets.some(
@@ -206,52 +213,53 @@ export const R2_PLUGIN: Plugin = {
 			});
 		}
 
-		const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
-		const persistPath = getPersistPath(
-			R2_PLUGIN_NAME,
-			tmpPath,
-			sharedOptions.resourcePersistencePath
-		);
-		await fs.mkdir(persistPath, { recursive: true });
-		const storageService: Service = {
-			name: R2_STORAGE_SERVICE_NAME,
-			disk: { path: persistPath, writable: true },
-		};
-		const objectService: Service = {
-			name: R2_BUCKET_SERVICE_PREFIX,
-			worker: {
-				compatibilityDate: "2023-07-24",
-				compatibilityFlags: ["nodejs_compat", "experimental"],
-				modules: [
-					{
-						name: "bucket.worker.js",
-						esModule: SCRIPT_R2_BUCKET_OBJECT(),
-					},
-				],
-				durableObjectNamespaces: [
-					{
-						className: R2_BUCKET_OBJECT_CLASS_NAME,
-						uniqueKey,
-					},
-				],
-				// Store Durable Object SQL databases in persist path
-				durableObjectStorage: { localDisk: R2_STORAGE_SERVICE_NAME },
-				// Bind blob disk directory service to object
-				bindings: [
-					{
-						name: SharedBindings.MAYBE_SERVICE_BLOBS,
-						service: { name: R2_STORAGE_SERVICE_NAME },
-					},
-					{
-						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-						service: { name: SERVICE_LOOPBACK },
-					},
-					...getMiniflareObjectBindings(),
-				],
-			},
-		};
-		services.push(storageService, objectService);
-
+		if (hasLocal) {
+			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
+			const persistPath = getPersistPath(
+				R2_PLUGIN_NAME,
+				tmpPath,
+				sharedOptions.resourcePersistencePath
+			);
+			await fs.mkdir(persistPath, { recursive: true });
+			const storageService: Service = {
+				name: R2_STORAGE_SERVICE_NAME,
+				disk: { path: persistPath, writable: true },
+			};
+			const objectService: Service = {
+				name: R2_BUCKET_SERVICE_PREFIX,
+				worker: {
+					compatibilityDate: "2023-07-24",
+					compatibilityFlags: ["nodejs_compat", "experimental"],
+					modules: [
+						{
+							name: "bucket.worker.js",
+							esModule: SCRIPT_R2_BUCKET_OBJECT(),
+						},
+					],
+					durableObjectNamespaces: [
+						{
+							className: R2_BUCKET_OBJECT_CLASS_NAME,
+							uniqueKey,
+						},
+					],
+					// Store Durable Object SQL databases in persist path
+					durableObjectStorage: { localDisk: R2_STORAGE_SERVICE_NAME },
+					// Bind blob disk directory service to object
+					bindings: [
+						{
+							name: SharedBindings.MAYBE_SERVICE_BLOBS,
+							service: { name: R2_STORAGE_SERVICE_NAME },
+						},
+						{
+							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+							service: { name: SERVICE_LOOPBACK },
+						},
+						...getMiniflareObjectBindings(),
+					],
+				},
+			};
+			services.push(storageService, objectService);
+		}
 		return services;
 	},
 };

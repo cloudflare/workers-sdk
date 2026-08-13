@@ -52,12 +52,12 @@ export const D1_PLUGIN: Plugin = {
 					? {
 							name: D1_REMOTE_SERVICE_NAME,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-						}
+					  }
 					: getStorageService(
 							D1_LOCAL_ENTRY_SERVICE_NAME,
 							buildObjectEntryProps(id),
 							sharedOptions
-						);
+					  );
 
 				return {
 					name,
@@ -87,10 +87,18 @@ export const D1_PLUGIN: Plugin = {
 
 		const services: Service[] = [];
 
-		services.push({
-			name: D1_LOCAL_ENTRY_SERVICE_NAME,
-			worker: objectEntryWorker(D1_DATABASE_OBJECT),
-		});
+		// One shared entry service for all local databases (id supplied via props).
+		const hasLocal =
+			databases.some(
+				([, db]) =>
+					getRemoteProxyConnectionString(db, options.dev) === undefined
+			) || sharedOptions.unsafeEnableSharedStorage;
+		if (hasLocal) {
+			services.push({
+				name: D1_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(D1_DATABASE_OBJECT),
+			});
+		}
 
 		// One shared proxy service for all remote (mixed-mode) databases.
 		const hasRemote = databases.some(
@@ -103,53 +111,54 @@ export const D1_PLUGIN: Plugin = {
 			});
 		}
 
-		const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
-		const persistPath = getPersistPath(
-			D1_PLUGIN_NAME,
-			tmpPath,
-			sharedOptions.resourcePersistencePath
-		);
-		await fs.mkdir(persistPath, { recursive: true });
+		if (hasLocal) {
+			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
+			const persistPath = getPersistPath(
+				D1_PLUGIN_NAME,
+				tmpPath,
+				sharedOptions.resourcePersistencePath
+			);
+			await fs.mkdir(persistPath, { recursive: true });
 
-		const storageService: Service = {
-			name: D1_STORAGE_SERVICE_NAME,
-			disk: { path: persistPath, writable: true },
-		};
-		const objectService: Service = {
-			name: D1_DATABASE_SERVICE_PREFIX,
-			worker: {
-				compatibilityDate: "2023-07-24",
-				compatibilityFlags: ["nodejs_compat", "experimental"],
-				modules: [
-					{
-						name: "database.worker.js",
-						esModule: SCRIPT_D1_DATABASE_OBJECT(),
-					},
-				],
-				durableObjectNamespaces: [
-					{
-						className: D1_DATABASE_OBJECT_CLASS_NAME,
-						uniqueKey,
-					},
-				],
-				// Store Durable Object SQL databases in persist path
-				durableObjectStorage: { localDisk: D1_STORAGE_SERVICE_NAME },
-				// Bind blob disk directory service to object
-				bindings: [
-					{
-						name: SharedBindings.MAYBE_SERVICE_BLOBS,
-						service: { name: D1_STORAGE_SERVICE_NAME },
-					},
-					{
-						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-						service: { name: SERVICE_LOOPBACK },
-					},
-					...getMiniflareObjectBindings(),
-				],
-			},
-		};
-		services.push(storageService, objectService);
-
+			const storageService: Service = {
+				name: D1_STORAGE_SERVICE_NAME,
+				disk: { path: persistPath, writable: true },
+			};
+			const objectService: Service = {
+				name: D1_DATABASE_SERVICE_PREFIX,
+				worker: {
+					compatibilityDate: "2023-07-24",
+					compatibilityFlags: ["nodejs_compat", "experimental"],
+					modules: [
+						{
+							name: "database.worker.js",
+							esModule: SCRIPT_D1_DATABASE_OBJECT(),
+						},
+					],
+					durableObjectNamespaces: [
+						{
+							className: D1_DATABASE_OBJECT_CLASS_NAME,
+							uniqueKey,
+						},
+					],
+					// Store Durable Object SQL databases in persist path
+					durableObjectStorage: { localDisk: D1_STORAGE_SERVICE_NAME },
+					// Bind blob disk directory service to object
+					bindings: [
+						{
+							name: SharedBindings.MAYBE_SERVICE_BLOBS,
+							service: { name: D1_STORAGE_SERVICE_NAME },
+						},
+						{
+							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+							service: { name: SERVICE_LOOPBACK },
+						},
+						...getMiniflareObjectBindings(),
+					],
+				},
+			};
+			services.push(storageService, objectService);
+		}
 		return services;
 	},
 };

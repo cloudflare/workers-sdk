@@ -112,10 +112,17 @@ export const KV_PLUGIN: Plugin = {
 
 		const services: Service[] = [];
 
-		services.push({
-			name: KV_LOCAL_ENTRY_SERVICE_NAME,
-			worker: objectEntryWorker(KV_NAMESPACE_OBJECT),
-		});
+		// One shared entry service for all local namespaces (id supplied via props).
+		const hasLocalNamespace =
+			namespaces.some(
+				([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
+			) || sharedOptions.unsafeEnableSharedStorage;
+		if (hasLocalNamespace) {
+			services.push({
+				name: KV_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(KV_NAMESPACE_OBJECT),
+			});
+		}
 
 		// One shared proxy service for all remote (mixed-mode) namespaces.
 		const hasRemoteNamespace = namespaces.some(([, binding]) =>
@@ -128,49 +135,50 @@ export const KV_PLUGIN: Plugin = {
 			});
 		}
 
-		const uniqueKey = `miniflare-${KV_NAMESPACE_OBJECT_CLASS_NAME}`;
-		const persistPath = getPersistPath(
-			KV_PLUGIN_NAME,
-			tmpPath,
-			sharedOptions.resourcePersistencePath
-		);
-		await fs.mkdir(persistPath, { recursive: true });
-		const storageService: Service = {
-			name: KV_STORAGE_SERVICE_NAME,
-			disk: { path: persistPath, writable: true },
-		};
-		const objectService: Service = {
-			name: SERVICE_NAMESPACE_PREFIX,
-			worker: {
-				compatibilityDate: "2023-07-24",
-				compatibilityFlags: ["nodejs_compat", "experimental"],
-				modules: [
-					{
-						name: "namespace.worker.js",
-						esModule: SCRIPT_KV_NAMESPACE_OBJECT(),
-					},
-				],
-				durableObjectNamespaces: [
-					{ className: KV_NAMESPACE_OBJECT_CLASS_NAME, uniqueKey },
-				],
-				// Store Durable Object SQL databases in persist path
-				durableObjectStorage: { localDisk: KV_STORAGE_SERVICE_NAME },
-				// Bind blob disk directory service to object
-				bindings: [
-					{
-						name: SharedBindings.MAYBE_SERVICE_BLOBS,
-						service: { name: KV_STORAGE_SERVICE_NAME },
-					},
-					{
-						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-						service: { name: SERVICE_LOOPBACK },
-					},
-					...getMiniflareObjectBindings(),
-				],
-			},
-		};
-		services.push(storageService, objectService);
-
+		if (hasLocalNamespace) {
+			const uniqueKey = `miniflare-${KV_NAMESPACE_OBJECT_CLASS_NAME}`;
+			const persistPath = getPersistPath(
+				KV_PLUGIN_NAME,
+				tmpPath,
+				sharedOptions.resourcePersistencePath
+			);
+			await fs.mkdir(persistPath, { recursive: true });
+			const storageService: Service = {
+				name: KV_STORAGE_SERVICE_NAME,
+				disk: { path: persistPath, writable: true },
+			};
+			const objectService: Service = {
+				name: SERVICE_NAMESPACE_PREFIX,
+				worker: {
+					compatibilityDate: "2023-07-24",
+					compatibilityFlags: ["nodejs_compat", "experimental"],
+					modules: [
+						{
+							name: "namespace.worker.js",
+							esModule: SCRIPT_KV_NAMESPACE_OBJECT(),
+						},
+					],
+					durableObjectNamespaces: [
+						{ className: KV_NAMESPACE_OBJECT_CLASS_NAME, uniqueKey },
+					],
+					// Store Durable Object SQL databases in persist path
+					durableObjectStorage: { localDisk: KV_STORAGE_SERVICE_NAME },
+					// Bind blob disk directory service to object
+					bindings: [
+						{
+							name: SharedBindings.MAYBE_SERVICE_BLOBS,
+							service: { name: KV_STORAGE_SERVICE_NAME },
+						},
+						{
+							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+							service: { name: SERVICE_LOOPBACK },
+						},
+						...getMiniflareObjectBindings(),
+					],
+				},
+			};
+			services.push(storageService, objectService);
+		}
 		if (isWorkersSitesEnabled(options)) {
 			services.push(...getSitesServices(options.legacy, options.dev?.rootPath));
 		}

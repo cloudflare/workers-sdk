@@ -54,6 +54,10 @@ export const SECRET_STORE_PLUGIN: Plugin = {
 			"secrets-store-secret"
 		).map(([, binding]) => binding);
 
+		if (configs.length === 0 && !sharedOptions.unsafeEnableSharedStorage) {
+			return [];
+		}
+
 		const persistPath = getPersistPath(
 			SECRET_STORE_PLUGIN_NAME,
 			tmpPath,
