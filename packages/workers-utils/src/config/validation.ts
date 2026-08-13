@@ -39,6 +39,7 @@ import { configFileName, formatConfigSnippet } from ".";
 import type { Binding } from "../types";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
+	Access,
 	Assets,
 	CacheOptions,
 	ContainerApp,
@@ -2143,6 +2144,14 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"observability",
 			validateObservability,
+			undefined
+		),
+		access: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"access",
+			validateAccess,
 			undefined
 		),
 		cache: inheritable(
@@ -6553,6 +6562,61 @@ function validateHeadSamplingRate(
 		);
 	}
 }
+
+const validateAccess: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as Access;
+	let isValid = true;
+
+	isValid =
+		validateOptionalProperty(diagnostics, field, "dev", val.dev, "object") &&
+		isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"dev",
+		]) && isValid;
+
+	if (typeof val.dev === "object" && val.dev !== null) {
+		isValid =
+			validateRequiredProperty(
+				diagnostics,
+				`${field}.dev`,
+				"aud",
+				val.dev.aud,
+				"string"
+			) && isValid;
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				`${field}.dev`,
+				"identity",
+				val.dev.identity,
+				"object"
+			) && isValid;
+
+		isValid =
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.dev`,
+				Object.keys(val.dev),
+				["aud", "identity"]
+			) && isValid;
+	}
+
+	return isValid;
+};
 
 const validateCache: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {
