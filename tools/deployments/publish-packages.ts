@@ -226,7 +226,8 @@ export async function fetchPackument(
 	name: string,
 	fetchImpl: FetchLike
 ): Promise<AbbreviatedPackument | null> {
-	const response = await fetchImpl(`${registry}/${escapePackageName(name)}`, {
+	const base = registry.replace(/\/+$/, "");
+	const response = await fetchImpl(`${base}/${escapePackageName(name)}`, {
 		headers: { accept: ABBREVIATED_PACKUMENT_ACCEPT },
 	});
 	if (response.status === 404) {
