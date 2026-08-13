@@ -265,24 +265,42 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			uniqueIds.map(async (id) => {
 				const stubId = this.env.ENGINE.idFromName(id);
 				const stub = this.env.ENGINE.get(stubId);
+
+				try {
+					await stub.getStatus();
+				} catch {
+					return {
+						ok: false as const,
+						code: 10400,
+						message: "workflows.api.error.instance.not_found",
+					};
+				}
+
 				try {
 					await stub.unsafeAbort("User called delete");
 				} catch {
 					// unsafeAbort clears storage and aborts; swallow error
 				}
 
+				const freshStub = this.env.ENGINE.get(stubId);
 				try {
-					await stub.getStatus();
-					resultMap.set(id, { ok: true });
+					await freshStub.getStatus();
+					return {
+						ok: false as const,
+						code: 10001,
+						message: "workflows.api.error.internal_server",
+					};
 				} catch {
-					resultMap.set(id, { ok: true });
+					return { ok: true as const };
 				}
 			})
 		);
 
 		for (let i = 0; i < uniqueIds.length; i++) {
 			const result = settled[i];
-			if (result.status === "rejected") {
+			if (result.status === "fulfilled") {
+				resultMap.set(uniqueIds[i], result.value);
+			} else {
 				resultMap.set(uniqueIds[i], {
 					ok: false,
 					code: 10001,
@@ -301,7 +319,11 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			} else if (result && !result.ok) {
 				errors.push({ id, code: result.code, message: result.message });
 			} else {
-				deleted.push({ id });
+				errors.push({
+					id,
+					code: 10001,
+					message: "workflows.api.error.internal_server",
+				});
 			}
 		}
 
