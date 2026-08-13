@@ -77,9 +77,9 @@ jobs:
           publish: node -r esbuild-register tools/deployments/publish-packages.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          # Always let this long elapse after a tier, even once every version
-          # reads back OK — a successful read only proves this runner's CDN edge
-          # is up to date, not everyone else's.
+          # Once every version in a tier reads back OK, wait this long before
+          # starting the next tier. A successful read only proves this runner's
+          # CDN edge is up to date, not everyone else's.
           PUBLISH_PROPAGATION_MIN_SECONDS: "60"
           # Fail the release rather than publish a broken dependent if a version
           # never becomes resolvable.

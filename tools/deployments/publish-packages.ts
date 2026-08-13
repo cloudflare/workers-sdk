@@ -320,9 +320,16 @@ export type PropagationOptions = {
 	registry: string;
 	fetchImpl: FetchLike;
 	/**
-	 * Never proceed sooner than this after publishing. A single successful read
-	 * only proves this runner's CDN edge is up to date, so we always let a little
-	 * time pass for the others.
+	 * How long to wait after every version reads back OK, before allowing the
+	 * next tier to start.
+	 *
+	 * This is deliberately an unconditional wait rather than a floor on the total
+	 * gate duration. A successful read only proves *this* runner's CDN edge is up
+	 * to date; other edges can only start serving a version once it is retrievable
+	 * from the origin, and our first successful read is the best proxy we have for
+	 * when that happened. Measuring from the start of the gate instead would mean
+	 * that a version which took most of the budget to appear got almost no settle
+	 * time — exactly the case where other edges are most likely to still be stale.
 	 */
 	minSeconds: number;
 	/** Give up (and fail the release) after this long. */
@@ -396,15 +403,13 @@ export async function waitForPropagation(
 		}
 	}
 
-	const elapsed = options.now() - start;
-	const remaining = options.minSeconds * 1000 - elapsed;
-	if (remaining > 0) {
+	if (options.minSeconds > 0) {
+		const elapsed = options.now() - start;
 		options.log(
-			`All versions resolvable after ${Math.round(
-				elapsed / 1000
-			)}s; settling for a further ${Math.round(remaining / 1000)}s.`
+			`All versions resolvable after ${Math.round(elapsed / 1000)}s; settling ` +
+				`for a further ${options.minSeconds}s before the next tier.`
 		);
-		await options.sleep(remaining);
+		await options.sleep(options.minSeconds * 1000);
 	}
 }
 

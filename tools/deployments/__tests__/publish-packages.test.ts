@@ -546,6 +546,37 @@ describe("waitForPropagation()", () => {
 		expect(clock.now()).toBe(60_000);
 	});
 
+	it("should settle for the full minimum after slow polling, not just until it", async ({
+		expect,
+	}) => {
+		// `minSeconds` is an unconditional wait *after* everything resolves, not a
+		// floor on the total gate duration: a version that only became retrievable
+		// at 10s has given other CDN edges 10s, not 60s.
+		const registry = createFakeRegistry({ published: { a: ["1.0.0"] } });
+		const clock = createFakeClock();
+		let polls = 0;
+		const fetchImpl: FetchLike = async (url, init) => {
+			if (!url.includes("/-/tarball-")) {
+				polls++;
+				if (polls === 3) {
+					registry.publish("b", "1.0.0");
+				}
+			}
+			return registry.fetchImpl(url, init);
+		};
+
+		await waitForPropagation(
+			[
+				{ name: "a", version: "1.0.0" },
+				{ name: "b", version: "1.0.0" },
+			],
+			{ ...baseOptions, minSeconds: 60, fetchImpl, ...clock }
+		);
+
+		// 5s of polling, then the full 60s settle.
+		expect(clock.now()).toBe(65_000);
+	});
+
 	it("should retry when a registry read throws", async ({ expect }) => {
 		const registry = createFakeRegistry({ published: { a: ["1.0.0"] } });
 		const clock = createFakeClock();
@@ -752,8 +783,8 @@ describe("publishAllPackages()", () => {
 
 		expect(harness.publishOrder).toEqual(["core", "app"]);
 		expect(harness.tagCalls).toBe(1);
-		// The gate between the two tiers observed the settle floor, and there was
-		// no gate after the final tier.
+		// The gate between the two tiers observed the settle wait, and there was no
+		// gate after the final tier.
 		expect(harness.clock.now()).toBe(30_000);
 	});
 
