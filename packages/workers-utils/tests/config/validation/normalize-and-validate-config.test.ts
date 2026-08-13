@@ -3665,6 +3665,55 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if containers.configuration is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								configuration: null,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.configuration" should be an object"
+				`);
+			});
+
+			it("should error if containers.configuration is null and instance_type is set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								configuration: null,
+								instance_type: "lite",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "containers.configuration" should be an object"
+				`);
+			});
+
 			it("should error if no containers name and no worker name are provided", ({
 				expect,
 			}) => {
@@ -3955,6 +4004,163 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "containers.configuration" is deprecated. Use top level "containers" fields instead. "configuration.image" should be "image", limits should be set via "instance_type".
 					  - Unexpected fields found in containers.configuration field: "memory","invalid_field","another_invalid""
 				`);
+			});
+
+			it("should error if an authorized_keys entry has no public_key", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: [{ name: "laptop" }],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.authorized_keys[0].public_key must be a string"
+				`);
+			});
+
+			it("should error if an authorized_keys entry is not an object", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5"],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.authorized_keys[0] must be an object"
+				`);
+			});
+
+			it("should error if an authorized_keys public_key is not a string", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: [{ name: "laptop", public_key: 42 }],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.authorized_keys[0].public_key must be a string"
+				`);
+			});
+
+			it("should error if a trusted_user_ca_keys entry has no public_key", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								trusted_user_ca_keys: [{ name: "ca" }],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.trusted_user_ca_keys[0].public_key must be a string"
+				`);
+			});
+
+			it("should error if an authorized_keys public_key is not an ED25519 key", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: [
+									{ name: "laptop", public_key: "ssh-rsa AAAAB3NzaC1yc2E" },
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.authorized_keys[0].public_key is an unsupported key type. Please provide an ED25519 public key."
+				`);
+			});
+
+			it("should accept valid authorized_keys and trusted_user_ca_keys", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: [
+									{
+										name: "laptop",
+										public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1",
+									},
+								],
+								trusted_user_ca_keys: [
+									{ public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
 			it.for([{ value: 25 }, { value: [20, 50, 100] }])(
