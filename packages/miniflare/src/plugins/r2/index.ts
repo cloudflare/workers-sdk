@@ -167,12 +167,12 @@ export const R2_PLUGIN: Plugin = {
 						? {
 								name: R2_REMOTE_SERVICE_NAME,
 								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-						  }
+							}
 						: getStorageService(
 								R2_LOCAL_ENTRY_SERVICE_NAME,
 								buildObjectEntryProps(id),
 								sharedOptions
-						  ),
+							),
 				};
 			}
 		);

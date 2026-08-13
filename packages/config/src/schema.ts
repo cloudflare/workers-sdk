@@ -604,7 +604,7 @@ type _ComparableInput = Omit<
 type _ComparableWorkerConfig = Omit<WorkerConfig, "entrypoint" | "env">;
 type _AssertSchemaMatchesWorkerConfig = [
 	_ComparableInput extends _ComparableWorkerConfig ? true : false,
-	_ComparableWorkerConfig extends _ComparableInput ? true : false
+	_ComparableWorkerConfig extends _ComparableInput ? true : false,
 ];
 const _assertSchemaMatchesWorkerConfig: _AssertSchemaMatchesWorkerConfig = [
 	true,
@@ -630,8 +630,7 @@ type _AssertWorkerConfigEnvExtendsSchema = WorkerConfig["env"] extends z.input<
 >["env"]
 	? true
 	: false;
-const _assertWorkerConfigEnvExtendsSchema: _AssertWorkerConfigEnvExtendsSchema =
-	true;
+const _assertWorkerConfigEnvExtendsSchema: _AssertWorkerConfigEnvExtendsSchema = true;
 void _assertWorkerConfigEnvExtendsSchema;
 
 /**
@@ -640,7 +639,7 @@ void _assertWorkerConfigEnvExtendsSchema;
  */
 type _AssertSettingsSchemaMatchesConfig = [
 	z.input<typeof SettingsSchema> extends SettingsConfig ? true : false,
-	SettingsConfig extends z.input<typeof SettingsSchema> ? true : false
+	SettingsConfig extends z.input<typeof SettingsSchema> ? true : false,
 ];
 const _assertSettingsSchemaMatchesConfig: _AssertSettingsSchemaMatchesConfig = [
 	true,
