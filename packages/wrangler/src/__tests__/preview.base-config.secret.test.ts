@@ -2,7 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+import prompts from "prompts";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { shouldPatchExistingPreviews } from "../preview/base-config/secrets";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -180,6 +182,20 @@ describe("wrangler preview", () => {
 				expect(std.out).not.toContain("base-config-secret");
 			});
 
+			test("patches existing Previews when requested", async ({ expect }) => {
+				mockStdIn.send("base-config-secret");
+				let requestUrl: string | undefined;
+				mockPatchWorker(({ url }) => {
+					requestUrl = url;
+				});
+
+				await runWrangler(
+					"preview base-config secret put API_KEY --patch-existing-previews"
+				);
+
+				expect(requestUrl).toContain("?patch_existing_previews=true");
+			});
+
 			describe("(interactive)", () => {
 				const { setIsTTY } = useMockIsTTY();
 
@@ -189,6 +205,11 @@ describe("wrangler preview", () => {
 						text: "Enter a secret value:",
 						options: { isSecret: true },
 						result: "prompt-secret",
+					});
+					mockConfirm({
+						text: "Apply this update to existing Previews?",
+						options: { defaultValue: false },
+						result: false,
 					});
 					let requestBody: PreviewBaseConfigPatchBody | undefined;
 					mockPatchWorker(({ body }) => {
@@ -205,6 +226,36 @@ describe("wrangler preview", () => {
 						},
 					});
 					expect(std.out).not.toContain("prompt-secret");
+				});
+
+				test("prompts to patch existing Previews", async ({ expect }) => {
+					setIsTTY(true);
+					mockPrompt({
+						text: "Enter a secret value:",
+						options: { isSecret: true },
+						result: "prompt-secret",
+					});
+					mockConfirm({
+						text: "Apply this update to existing Previews?",
+						options: { defaultValue: false },
+						result: true,
+					});
+					let requestUrl: string | undefined;
+					mockPatchWorker(({ url }) => {
+						requestUrl = url;
+					});
+
+					await runWrangler("preview base-config secret put API_KEY");
+
+					expect(requestUrl).toContain("?patch_existing_previews=true");
+				});
+
+				test("does not patch existing Previews when prompting is suppressed", async ({
+					expect,
+				}) => {
+					setIsTTY({ stdin: true, stdout: false });
+
+					expect(await shouldPatchExistingPreviews(undefined)).toBe(false);
 				});
 			});
 
@@ -304,14 +355,45 @@ describe("wrangler preview", () => {
 				);
 			});
 
+			test("patches existing Previews when requested", async ({ expect }) => {
+				let requestUrl: string | undefined;
+				mockPatchWorker(({ url }) => {
+					requestUrl = url;
+				});
+
+				await runWrangler(
+					"preview base-config secret delete REMOVE_ME --skip-confirmation --patch-existing-previews"
+				);
+
+				expect(requestUrl).toContain("?patch_existing_previews=true");
+			});
+
+			test("does not prompt with --skip-confirmation", async ({ expect }) => {
+				setIsTTY(true);
+				mockPatchWorker();
+
+				await runWrangler(
+					"preview base-config secret delete REMOVE_ME --skip-confirmation"
+				);
+
+				expect(prompts).not.toHaveBeenCalled();
+			});
+
 			test("confirms before deleting a secret interactively", async ({
 				expect,
 			}) => {
 				setIsTTY(true);
-				mockConfirm({
-					text: "Are you sure you want to permanently delete the secret REMOVE_ME on the Preview base config for the Worker test-worker?",
-					result: true,
-				});
+				mockConfirm(
+					{
+						text: "Are you sure you want to permanently delete the secret REMOVE_ME on the Preview base config for the Worker test-worker?",
+						result: true,
+					},
+					{
+						text: "Apply this update to existing Previews?",
+						options: { defaultValue: false },
+						result: false,
+					}
+				);
 				let requestBody: PreviewBaseConfigPatchBody | undefined;
 				mockPatchWorker(({ body }) => {
 					requestBody = body;
@@ -542,6 +624,20 @@ describe("wrangler preview", () => {
 				);
 				expect(std.out).not.toContain("one");
 				expect(std.out).not.toContain("two");
+			});
+
+			test("patches existing Previews when requested", async ({ expect }) => {
+				writeFileSync("secrets.env", "API_KEY=one\n");
+				let requestUrl: string | undefined;
+				mockPatchWorker(({ url }) => {
+					requestUrl = url;
+				});
+
+				await runWrangler(
+					"preview base-config secret bulk secrets.env --patch-existing-previews"
+				);
+
+				expect(requestUrl).toContain("?patch_existing_previews=true");
 			});
 
 			test("creates secrets for empty dotenv values", async ({ expect }) => {
