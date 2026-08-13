@@ -6,7 +6,13 @@ import {
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { requireAuth } from "../user";
+import {
+	getActiveProfile,
+	getAuthFromEnv,
+	getScopes,
+	readAuthCredentials,
+	requireAuth,
+} from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { printWranglerBanner } from "../wrangler-banner";
 import { getWorkerForZone } from "../zones";
@@ -16,6 +22,12 @@ import {
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
 } from "./createTail";
+import { MAX_RECONNECT_ATTEMPTS, RECONNECT_BACKOFF_MS } from "./reconnect";
+import {
+	assertSupportedWobsTailOptions,
+	assertWobsTailAuthScopes,
+	runWobsTail,
+} from "./wobs";
 import type { TailCLIFilters } from "./createTail";
 import type WebSocket from "ws";
 
@@ -27,12 +39,6 @@ const NORMAL_CLOSURE = 1000;
 
 /** How long to wait between pings on the keepalive websocket (ms). */
 const PING_INTERVAL_MS = 10_000;
-
-/** Backoff delays between successive reconnect attempts (ms). */
-const RECONNECT_BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000];
-
-/** How many reconnect attempts we'll make before giving up. */
-const MAX_RECONNECT_ATTEMPTS = RECONNECT_BACKOFF_MS.length;
 
 /**
  * Promise-returning sleep using the global `setTimeout` (rather than the one
@@ -106,12 +112,19 @@ export const tailCommand = createCommand({
 			describe:
 				"If a log would have been filtered out, send it through anyway alongside the filter which would have blocked it.",
 		},
+		"experimental-wobs-tail": {
+			type: "boolean",
+			hidden: true,
+			default: false,
+			describe: "Use the experimental Workers Observability live-tail service.",
+			alias: "x-wobs-tail",
+		},
 	},
 	behaviour: {
 		supportTemporary: true,
 		printBanner: false,
 	},
-	async handler(args, { config }) {
+	async handler(args, { config, sdk }) {
 		args.format ??= process.stdout.isTTY ? "pretty" : "json";
 		if (args.format === "pretty") {
 			await printWranglerBanner();
@@ -124,6 +137,23 @@ export const tailCommand = createCommand({
 				{ telemetryMessage: "tail stream pages project" }
 			);
 		}
+
+		const cliFilters: TailCLIFilters = {
+			status: args.status as ("ok" | "error" | "canceled")[] | undefined,
+			header: args.header,
+			method: args.method,
+			samplingRate: args.samplingRate,
+			search: args.search,
+			clientIp: args.ip,
+			versionId: args.versionId,
+		};
+
+		// Reject unsupported options before `requireAuth`, which can open a
+		// browser login or provision a temporary account.
+		if (args.experimentalWobsTail) {
+			assertSupportedWobsTailOptions(cliFilters, args.debug);
+		}
+
 		metrics.sendMetricsEvent("begin log stream", {
 			sendMetrics: config.send_metrics,
 		});
@@ -131,6 +161,22 @@ export const tailCommand = createCommand({
 		let scriptName: string | undefined;
 
 		const accountId = await requireAuth(config);
+		if (args.experimentalWobsTail) {
+			// Env API tokens, `--temporary` accounts, and legacy stored API tokens
+			// carry their own permissions; only stored OAuth logins have scopes.
+			const usesTemporaryAccount =
+				"temporary" in args && args.temporary === true;
+			const usesStoredOAuthLogin =
+				!getAuthFromEnv() &&
+				!usesTemporaryAccount &&
+				readAuthCredentials()?.oauth_token !== undefined;
+
+			assertWobsTailAuthScopes({
+				isOAuth: usesStoredOAuthLogin,
+				scopes: getScopes(),
+				profile: getActiveProfile(),
+			});
+		}
 
 		// Worker names can't contain "." (and most routes should), so use that as a discriminator
 		if (args.worker?.includes(".")) {
@@ -158,15 +204,25 @@ export const tailCommand = createCommand({
 			);
 		}
 
-		const cliFilters: TailCLIFilters = {
-			status: args.status as ("ok" | "error" | "canceled")[] | undefined,
-			header: args.header,
-			method: args.method,
-			samplingRate: args.samplingRate,
-			search: args.search,
-			clientIp: args.ip,
-			versionId: args.versionId,
-		};
+		if (args.experimentalWobsTail) {
+			const format = args.format === "pretty" ? "pretty" : "json";
+
+			try {
+				await runWobsTail({
+					accountId,
+					scriptName,
+					filters: cliFilters,
+					format,
+					debug: args.debug,
+					telemetry: sdk.workers.observability.telemetry,
+				});
+			} finally {
+				metrics.sendMetricsEvent("end log stream", {
+					sendMetrics: config.send_metrics,
+				});
+			}
+			return;
+		}
 
 		const filters = translateCLICommandToFilterMessage(cliFilters);
 

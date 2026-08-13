@@ -10,7 +10,6 @@ import { requireApiToken, requireAuth } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
 import type Cloudflare from "cloudflare";
 import type { CloudflareTunnel } from "cloudflare/resources/shared";
-import type { CloudflaredCreateResponse } from "cloudflare/resources/zero-trust/tunnels/cloudflared";
 
 /**
  * Error message for tunnel permission issues when using OAuth login.
@@ -90,11 +89,11 @@ export async function createTunnel(
 	name: string
 ): Promise<CloudflareTunnel> {
 	return withTunnelErrorHandling(async () => {
-		const response = (await sdk.zeroTrust.tunnels.cloudflared.create({
+		const response = await sdk.zeroTrust.tunnels.cloudflared.create({
 			account_id: accountId,
 			name,
 			config_src: "cloudflare",
-		})) as CloudflaredCreateResponse;
+		});
 
 		// Handle both standard tunnel and WARP connector responses
 		return normalizeTunnelResponse(response);
