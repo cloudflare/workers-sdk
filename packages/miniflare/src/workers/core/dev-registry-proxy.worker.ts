@@ -4,10 +4,9 @@ import { CorePaths } from "./constants";
 import {
 	findQueueConsumer,
 	resolveTarget,
-	tailEventsReplacer,
-	tailEventsReviver,
 	workerNotFoundMessage,
 } from "./dev-registry-proxy-shared.worker";
+import { tailEventsReplacer, tailEventsReviver } from "./tail-events";
 import type { WorkerdDebugPortConnector } from "./dev-registry-proxy-shared.worker";
 
 export {
