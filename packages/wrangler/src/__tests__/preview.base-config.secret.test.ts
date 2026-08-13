@@ -143,7 +143,9 @@ describe("wrangler preview", () => {
 			}
 		);
 
-		test("does not inherit the preview script positional", async ({ expect }) => {
+		test("does not inherit the preview script positional", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("preview base-config secret put")
 			).rejects.toThrow(/Not enough non-option arguments/);
