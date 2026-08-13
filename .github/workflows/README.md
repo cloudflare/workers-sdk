@@ -122,6 +122,15 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - If there are no changesets, release any packages that have a bump to their version in this change.
     - Public packages are deployed to npm
     - Private packages will run their `deploy` script, if they have one.
+- Tiered publishing
+  - Instead of `changeset publish`, the `publish` step runs `tools/deployments/publish-packages.ts`.
+  - Packages pin their workspace siblings at an exact version (`workspace:*` is rewritten to the sibling's version at pack time). If a dependent lands on npm before its dependency has propagated, `npm install` of the dependent fails for the window in between — the release is published but broken.
+  - The orchestrator therefore groups packages into dependency tiers (currently three: `miniflare` and friends, then `wrangler`, then `@cloudflare/vite-plugin` / `@cloudflare/vitest-pool-workers`) and publishes tier by tier. Packages within a tier publish in parallel, bounded by `PUBLISH_CONCURRENCY`.
+  - Between tiers it polls the registry until every version just published is resolvable _and_ its tarball is fetchable, then waits a further `PUBLISH_PROPAGATION_MIN_SECONDS` — a successful read only proves the release runner's own CDN edge is up to date. That settle time is unconditional rather than a floor on the total gate duration: other edges can only serve a version once it is retrievable from the origin, and the first successful read is the best available proxy for when that happened. If a version never appears within `PUBLISH_PROPAGATION_TIMEOUT_SECONDS`, the release fails instead of publishing a broken dependent.
+  - Only `dependencies`/`peerDependencies`/`optionalDependencies` create ordering. `devDependencies` are excluded: consumers never install them, and including them would create cycles because packages like `wrangler` dev-depend on their own dependents.
+  - Packages whose exact version is already on npm are skipped, so re-running a partially failed release picks up only what is still missing. That "is it already published?" check runs once per tier _during_ the release, so its reads are retried (`PUBLISH_READ_RETRY_ATTEMPTS`, with exponential backoff) — otherwise one transient 5xx while checking a later tier would abort a run that had already published earlier tiers. A 404 is not retried, since it legitimately means "not published yet".
+  - If any package in a tier fails, later tiers are not attempted and **no git tags are created**, so a re-run retries cleanly. Tags are created at the very end by `changeset tag`, which also emits the `New tag:` lines that `changesets/action` parses into its `publishedPackages` output (consumed by the non-npm deployment step).
+  - Run `node -r esbuild-register tools/deployments/publish-packages.ts --dry-run` to print the computed tiers without publishing.
 
 ## C3 related actions
 
