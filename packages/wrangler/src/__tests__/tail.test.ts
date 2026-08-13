@@ -343,6 +343,22 @@ describe("tail", () => {
 	});
 
 	describe("filtering", () => {
+		it.for([
+			["--header", "--header X-TEST:value"],
+			["--sampling-rate", "--sampling-rate 0.5"],
+			["--ip", "--ip 192.0.2.1"],
+			["--debug", "--debug"],
+		])(
+			"rejects the unsupported %s option with the experimental WOBS tail",
+			async ([option, args], { expect }) => {
+				await expect(
+					runWrangler(`tail test-worker --experimental-wobs-tail ${args}`)
+				).rejects.toThrow(
+					`The experimental Workers Observability tail does not yet support ${option}. Remove this option or use the classic tail.`
+				);
+			}
+		);
+
 		it("sends sampling rate filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
 			const tooHigh = runWrangler("tail test-worker --sampling-rate 10");
