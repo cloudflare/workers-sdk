@@ -240,6 +240,74 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		);
 	}
 
+	public async deleteBatch(
+		instanceIds: string[]
+	): Promise<WorkflowBatchDeleteResult> {
+		if (instanceIds.length === 0) {
+			throw new Error(
+				"WorkflowError: deleteBatch should have at least 1 instance"
+			);
+		}
+
+		if (instanceIds.length > 100) {
+			throw new Error(
+				"WorkflowError: deleteBatch is limited to 100 instances at a time"
+			);
+		}
+
+		const uniqueIds = [...new Set(instanceIds)];
+		const resultMap = new Map<
+			string,
+			{ ok: true } | { ok: false; code: number; message: string }
+		>();
+
+		const settled = await Promise.allSettled(
+			uniqueIds.map(async (id) => {
+				const stubId = this.env.ENGINE.idFromName(id);
+				const stub = this.env.ENGINE.get(stubId);
+				try {
+					await stub.unsafeAbort("User called delete");
+				} catch {
+					// unsafeAbort clears storage and aborts; swallow error
+				}
+
+				try {
+					await stub.getStatus();
+					resultMap.set(id, { ok: true });
+				} catch {
+					resultMap.set(id, { ok: true });
+				}
+			})
+		);
+
+		for (let i = 0; i < uniqueIds.length; i++) {
+			const result = settled[i];
+			if (result.status === "rejected") {
+				resultMap.set(uniqueIds[i], {
+					ok: false,
+					code: 10001,
+					message: "workflows.api.error.internal_server",
+				});
+			}
+		}
+
+		const deleted: { id: string }[] = [];
+		const errors: { id: string; code: number; message: string }[] = [];
+
+		for (const id of instanceIds) {
+			const result = resultMap.get(id);
+			if (result && result.ok) {
+				deleted.push({ id });
+			} else if (result && !result.ok) {
+				errors.push({ id, code: result.code, message: result.message });
+			} else {
+				deleted.push({ id });
+			}
+		}
+
+		return { deleted, errors };
+	}
+
 	public async unsafeGetBindingName(): Promise<string> {
 		// async because of rpc
 		return this.env.BINDING_NAME;
@@ -449,6 +517,15 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 			output: workflowOutput,
 			error: workflowError,
 		};
+	}
+
+	public async delete(): Promise<void> {
+		try {
+			await this.stub.unsafeAbort("User called delete");
+		} catch {
+			// unsafeAbort clears storage and aborts the DO; swallow the
+			// resulting error so the caller sees a clean resolution.
+		}
 	}
 
 	public async sendEvent(args: {

@@ -1607,7 +1607,7 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment ID: deployment-id-compat");
 		});
 
-		test("should pass ignore_defaults query param when --ignore-defaults flag is used", async ({
+		test("should pass ignore_base_config query param when creating a Preview with --ignore-base-config", async ({
 			expect,
 		}) => {
 			let createPreviewUrl: string | undefined;
@@ -1667,9 +1667,9 @@ describe("wrangler preview", () => {
 					}
 				)
 			);
-			await runWrangler("preview --name test-preview --ignore-defaults");
-			expect(createPreviewUrl).toContain("?ignore_defaults=true");
-			expect(createDeploymentUrl).toContain("?ignore_defaults=true");
+			await runWrangler("preview --name test-preview --ignore-base-config");
+			expect(createPreviewUrl).toContain("?ignore_base_config=true");
+			expect(createDeploymentUrl).not.toContain("ignore_base_config");
 		});
 
 		test("should include assets payload for deployment when assets are configured", async ({

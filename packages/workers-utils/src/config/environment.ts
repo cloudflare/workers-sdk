@@ -747,6 +747,13 @@ interface EnvironmentInheritable {
 	observability: Observability | undefined;
 
 	/**
+	 * Specify the Cloudflare Access authentication behavior of the Worker.
+	 *
+	 * @inheritable
+	 */
+	access: Access | undefined;
+
+	/**
 	 * Specify the cache behavior of the Worker.
 	 *
 	 * @inheritable
@@ -1816,6 +1823,16 @@ export interface Observability {
 		 * @default []
 		 */
 		destinations?: string[];
+	};
+}
+
+export interface Access {
+	/** Local dev simulation of Cloudflare Access authentication */
+	dev?: {
+		/** The Access application audience tag (aud) */
+		aud: string;
+		/** Mock identity object returned by ctx.access.getIdentity() */
+		identity?: Record<string, unknown>;
 	};
 }
 

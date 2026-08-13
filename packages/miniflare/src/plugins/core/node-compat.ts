@@ -1,3 +1,5 @@
+import { resolveNodejsCompat } from "@cloudflare/workers-utils";
+
 /**
  * We can provide Node.js compatibility in a number of different modes:
  * - "als": this mode tells the workerd runtime to enable only the Async Local Storage builtin library (accessible via `node:async_hooks`).
@@ -11,11 +13,10 @@ export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
 /**
  * Computes the Node.js compatibility mode we are running.
  *
- * NOTES:
- * - The v2 mode is configured via `nodejs_compat_v2` compat flag or via `nodejs_compat` plus a compatibility date of Sept 23rd. 2024 or later.
- * - See `EnvironmentInheritable` for `nodeCompat` and `noBundle`.
+ * The `nodejs_compat`/`nodejs_compat_v2` resolution itself is shared with the
+ * rest of the tooling, in `resolveNodejsCompat()`.
  *
- * @param compatibilityDateStr The compatibility date
+ * @param compatibilityDate The compatibility date
  * @param compatibilityFlags The compatibility flags
  * @returns the mode and flags to indicate specific configuration for validating.
  */
@@ -26,21 +27,19 @@ export function getNodeCompat(
 	const {
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
+		hasNoNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
 		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
 	} = parseNodeCompatibilityFlags(compatibilityFlags);
 
-	const nodeCompatSwitchOverDate = "2024-09-23";
+	const { isNodejsCompatEnabled, isNodejsCompatV2Enabled } =
+		resolveNodejsCompat(compatibilityDate, compatibilityFlags);
+
 	let mode: NodeJSCompatMode = null;
-	if (
-		hasNodejsCompatV2Flag ||
-		(hasNodejsCompatFlag &&
-			compatibilityDate >= nodeCompatSwitchOverDate &&
-			!hasNoNodejsCompatV2Flag)
-	) {
+	if (isNodejsCompatV2Enabled) {
 		mode = "v2";
-	} else if (hasNodejsCompatFlag) {
+	} else if (isNodejsCompatEnabled) {
 		mode = "v1";
 	} else if (hasNodejsAlsFlag) {
 		mode = "als";
@@ -48,8 +47,14 @@ export function getNodeCompat(
 
 	return {
 		mode,
+		// Whether workerd will enable the `nodejs_compat`/`nodejs_compat_v2`
+		// features, accounting for both the flags and the compatibility date.
+		isNodejsCompatEnabled,
+		isNodejsCompatV2Enabled,
+		// Whether each flag was explicitly specified.
 		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
+		hasNoNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
 		hasNoNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
@@ -60,6 +65,7 @@ function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
 	return {
 		hasNodejsAlsFlag: compatibilityFlags.includes("nodejs_als"),
 		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
+		hasNoNodejsCompatFlag: compatibilityFlags.includes("no_nodejs_compat"),
 		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
 		hasNoNodejsCompatV2Flag: compatibilityFlags.includes("no_nodejs_compat_v2"),
 		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(

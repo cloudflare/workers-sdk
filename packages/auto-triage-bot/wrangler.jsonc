@@ -2,8 +2,9 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "workers-sdk-auto-triage",
 	"account_id": "f7f78ebb28c2a224a9a46a3007350b7a",
+	// `nodejs_compat` is enabled by default from 2026-08-04, so it must not be
+	// listed in `compatibility_flags`.
 	"compatibility_date": "2026-08-05",
-	"compatibility_flags": ["nodejs_compat"],
 	"ai": {
 		"binding": "AI",
 		"remote": true,

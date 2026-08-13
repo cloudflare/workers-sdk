@@ -83,7 +83,7 @@ export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 		nodeCompat: ALLOW,
 		enableContainers: ALLOW,
 		autoconfig: ALLOW,
-		ignoreDefaults: ALLOW,
+		ignoreBaseConfig: ALLOW,
 	},
 	tail: { status: ALLOW },
 	types: {

@@ -141,6 +141,7 @@ describe("normalizeAndValidateConfig()", () => {
 			media: undefined,
 			stream: undefined,
 			previews: undefined,
+			access: undefined,
 		} satisfies Config);
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -10901,6 +10902,202 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(config.cache).toEqual({ enabled: false });
+			});
+		});
+
+		describe("[access]", () => {
+			it("should error when access is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ access: "enabled" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "access" should be an object but got "enabled"."
+				`);
+			});
+
+			it("should error when access is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ access: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "access" should be an object but got null."
+				`);
+			});
+
+			it("should not error on valid access config", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						access: {
+							dev: {
+								aud: "my-aud-tag",
+								identity: { email: "test@example.com" },
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.access).toEqual({
+					dev: {
+						aud: "my-aud-tag",
+						identity: { email: "test@example.com" },
+					},
+				});
+			});
+
+			it("should not error on access config with only aud", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						access: { dev: { aud: "my-aud-tag" } },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.access).toEqual({ dev: { aud: "my-aud-tag" } });
+			});
+
+			it("should error when access.dev.aud is missing", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						access: { dev: {} },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "access.dev.aud" is a required field."
+				`);
+			});
+
+			it("should error when access.dev.aud is not a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						access: { dev: { aud: 123 } },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "access.dev.aud" to be of type string but got 123."
+				`);
+			});
+
+			it("should error when access.dev.identity is not an object", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						access: {
+							dev: { aud: "my-aud", identity: "not-an-object" },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "access.dev.identity" to be of type object but got "not-an-object"."
+				`);
+			});
+
+			it("should warn on unexpected fields in access config", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						access: {
+							dev: { aud: "my-aud" },
+							unknownField: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in access field: "unknownField""
+				`);
+			});
+
+			it("should warn on unexpected fields in access.dev config", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						access: {
+							dev: { aud: "my-aud", unknownField: true },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in access.dev field: "unknownField""
+				`);
+			});
+
+			it("should inherit access from top-level config to environment", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						access: {
+							dev: {
+								aud: "top-level-aud",
+								identity: { email: "top@test.com" },
+							},
+						},
+						env: { production: {} },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "production" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.access).toEqual({
+					dev: {
+						aud: "top-level-aud",
+						identity: { email: "top@test.com" },
+					},
+				});
 			});
 		});
 
