@@ -795,26 +795,23 @@ export function generateImportSpecifier(from: string, to: string) {
  * Returns true if `entrypointFile` sits inside a framework build output
  * directory, relative to the directory holding the Wrangler config.
  *
- * Any path segment beginning with `.` counts: frameworks consistently write
- * generated output to a hidden directory (`.svelte-kit`, `.next`, `.nuxt`,
- * `.output`). An entrypoint that is merely outside the config directory is not
- * build output, so a relative path starting with `..` is excluded.
+ * Any directory segment beginning with `.` counts: frameworks consistently
+ * write generated output to a hidden directory (`.svelte-kit`, `.next`,
+ * `.nuxt`, `.output`). Only directories are considered — a hidden file name
+ * such as `.worker.js` says nothing about how the file was produced.
+ * An entrypoint that is merely outside the config directory is not build
+ * output, so a relative path that walks up out of it is excluded.
  */
 function isEntrypointInBuildOutputDir(
 	configDir: string,
 	entrypointFile: string
 ): boolean {
-	const relativePath = relative(configDir, entrypointFile);
-	if (relativePath.startsWith("..")) {
+	const segments = relative(configDir, dirname(entrypointFile)).split(sep);
+	if (segments.includes("..")) {
 		return false;
 	}
 
-	return relativePath
-		.split(sep)
-		.some(
-			(segment) =>
-				segment.startsWith(".") && segment !== "." && segment !== ".."
-		);
+	return segments.some((segment) => segment.startsWith("."));
 }
 
 /**

@@ -3925,6 +3925,53 @@ export default { async fetch() { return new Response("ok"); } };`
 			expect(std.out).toContain('mainModule: typeof import("./build/worker");');
 		});
 
+		it("keeps `mainModule` for an entrypoint whose file name starts with a dot", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("./build", { recursive: true });
+			fs.writeFileSync(
+				"./.worker.js",
+				`export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./build/.worker.js",
+				`export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-dot-prefixed-entrypoint",
+					main: "./.worker.js",
+					vars: { myVar: "hello" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			// Only directories are treated as build output, so a hidden file name
+			// keeps its `mainModule` declaration.
+			expect(std.out).toContain('mainModule: typeof import("./.worker");');
+
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-dot-prefixed-entrypoint",
+					main: "./build/.worker.js",
+					vars: { myVar: "hello" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toContain(
+				'mainModule: typeof import("./build/.worker");'
+			);
+		});
+
 		it("keeps `mainModule` for an entrypoint outside the config directory", async ({
 			expect,
 		}) => {
