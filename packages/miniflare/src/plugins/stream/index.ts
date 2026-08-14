@@ -56,7 +56,7 @@ export const STREAM_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, sharedOptions }) {
+	async getServices({ options, tmpPath, isolatedResourcePersistencePath }) {
 		const services: Service[] = [];
 
 		for (const [, binding] of getEnvBindingsOfType(options.config, "stream")) {
@@ -76,7 +76,7 @@ export const STREAM_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				STREAM_PLUGIN_NAME,
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				isolatedResourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 
