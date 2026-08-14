@@ -25,8 +25,6 @@ export { displayAutoConfigDetails, confirmAutoConfigDetails } from "./details";
 
 export type {
 	AutoConfigDetails,
-	AutoConfigDetailsForConfiguredProject,
-	AutoConfigDetailsForNonConfiguredProject,
 	AutoConfigOptions,
 	AutoConfigSummary,
 } from "./types";

@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
@@ -6,11 +5,9 @@ import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	checkWorkerNameValidity,
 	getWorkerName,
-	NpmPackageManager,
 	parsePackageJSON,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import { AutoConfigDetectionError } from "../errors";
 import { getFrameworkClassInstance } from "../frameworks";
 import {
 	allFrameworksInfos,
@@ -18,26 +15,9 @@ import {
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
 import type { AutoConfigContext } from "../context";
-import type {
-	AutoConfigDetails,
-	AutoConfigDetailsForNonConfiguredProject,
-} from "../types";
+import type { AutoConfigDetails } from "../types";
 import type { PackageManager } from "@cloudflare/workers-utils";
-import type { Config, PackageJSON } from "@cloudflare/workers-utils";
-
-/**
- * Asserts that the current project being targeted for autoconfig is not already configured.
- *
- * @param details The details detected for the project.
- */
-export function assertNonConfigured(
-	details: AutoConfigDetails
-): asserts details is AutoConfigDetailsForNonConfiguredProject {
-	assert(
-		details.configured === false,
-		"Error: expected the current project not to be already configured"
-	);
-}
+import type { PackageJSON } from "@cloudflare/workers-utils";
 
 async function hasIndexHtml(dir: string): Promise<boolean> {
 	const children = await readdir(dir);
@@ -70,31 +50,22 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 	return undefined;
 }
 
-type DetectedFramework = {
-	framework: {
-		name: string;
-		id: string;
-	};
-	buildCommand?: string | undefined;
-	dist?: string;
-};
-
 /**
  * Detects project details needed for autoconfig: framework, package manager,
- * output directory, worker name, and whether the project is already configured.
+ * output directory, worker name, and build and development commands.
  *
- * @param options - Detection options including project path, wrangler config, and context.
+ * @param options - Detection options including project path, Pages build output directory, and context.
  * @returns The detected project details.
  */
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
-	wranglerConfig,
+	pagesBuildOutputDir,
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
 	projectPath?: string;
-	/** The parsed wrangler configuration for the project (if any). */
-	wranglerConfig?: Config;
+	/** The output directory from a legacy Pages project, when known. */
+	pagesBuildOutputDir?: string;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
@@ -102,23 +73,8 @@ export async function getDetailsForAutoConfig({
 
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
-	if (
-		// If a real Wrangler config has been found the project is already configured for Workers
-		wranglerConfig?.configPath &&
-		// Unless `pages_build_output_dir` is set, since that indicates that the project is a Pages one instead
-		!wranglerConfig.pages_build_output_dir
-	) {
-		return {
-			configured: true,
-			projectPath,
-			workerName: getWorkerName(wranglerConfig.name, projectPath),
-			// Fall back to npm when already configured since we don't need to run package manager commands
-			packageManager: NpmPackageManager,
-		};
-	}
-
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
-		await detectFramework(projectPath, context, wranglerConfig);
+		await detectFramework(projectPath, context, { pagesBuildOutputDir });
 
 	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -134,85 +90,53 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const configured = framework.isConfigured(projectPath) ?? false;
-
 	const outputDir =
 		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
 
-	const baseDetails = {
+	return {
 		projectPath,
 		framework,
 		packageJson,
 		packageManager,
-		...(detectedFramework
-			? {
-					buildCommand: getProjectBuildCommand(
-						detectedFramework,
-						packageManager
-					),
-				}
-			: {}),
 		workerName: getWorkerName(packageJson?.name, projectPath),
-	};
-
-	if (configured) {
-		return {
-			...baseDetails,
-			configured: true,
-			isWorkspaceRoot,
-		};
-	}
-
-	if (!outputDir) {
-		const errorMessage =
-			framework.id === "static" || framework.id === "cloudflare-pages"
-				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
-				: "Failed to detect an output directory for the project";
-
-		throw new AutoConfigDetectionError(errorMessage, {
-			telemetryMessage: "autoconfig details output directory missing",
-			frameworkId: framework.id,
-			configured,
-		});
-	}
-
-	return {
-		...baseDetails,
+		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
+		buildCommand: getProjectCommand(
+			detectedFramework.buildCommand,
+			packageManager
+		),
 		outputDir,
-		configured: false,
 		isWorkspaceRoot,
 	};
 }
 
 /**
- * Given a detected framework this function gets a `build` command for the target project that can be run in the terminal
- * (such as `npm run build` or `npx astro build`). If no build command is detected `undefined` is returned instead.
+ * Converts a detected project command into one that can be run in the terminal
+ * (such as `npm run build` or `npx astro dev`). If no command is detected
+ * `undefined` is returned instead.
  *
- * @param detectedFramework The detected framework (or settings) for the project
+ * @param command The detected project command
  * @param packageManager The package manager to use for command prefixes
- * @returns A runnable command for the build process if detected, undefined otherwise
+ * @returns A runnable project command if detected, undefined otherwise
  */
-function getProjectBuildCommand(
-	detectedFramework: DetectedFramework,
+function getProjectCommand(
+	command: string | undefined,
 	packageManager: PackageManager
 ): string | undefined {
-	if (!detectedFramework.buildCommand) {
+	if (!command) {
 		return undefined;
 	}
 
 	const { type, dlx, npx } = packageManager;
 
 	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
-		if (
-			detectedFramework.buildCommand.startsWith(packageManagerCommandPrefix)
-		) {
-			// The build command already is something like `npm run build` or similar
-			return detectedFramework.buildCommand;
+		if (command.startsWith(packageManagerCommandPrefix)) {
+			// The command already includes a package-manager prefix.
+			return command;
 		}
 	}
 
-	// The command is something like `astro build` so we need to prefix it with `npx` and equivalents
-	return `${npx} ${detectedFramework.buildCommand}`;
+	// Framework executables such as `astro build` need the appropriate package-manager prefix.
+	return `${npx} ${command}`;
 }
 
 /**

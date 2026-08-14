@@ -3,46 +3,26 @@ import type { Framework } from "./frameworks/framework-class";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
-/** Makes the specified keys of T optional. */
-type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
-type AutoConfigDetailsBase = {
+export type AutoConfigDetails = {
 	/** The name of the worker */
 	workerName: string;
 	/** The path to the project (defaults to cwd) */
 	projectPath: string;
 	/** The content of the project's package.json file (if any) */
 	packageJson?: PackageJSON;
-	/** Whether the project is already configured (no autoconfig required) */
-	configured: boolean;
 	/** Details about the detected framework. It can be a JS framework or 'Static' if no actual JS framework is used. */
 	framework: Framework;
+	/** The dev command used to run the project locally (if any) */
+	devCommand?: string;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
 	/** The output directory (if no framework is used, points to the raw asset files) */
-	outputDir: string;
+	outputDir?: string;
 	/** The detected package manager for the project */
 	packageManager: PackageManager;
 	/** Whether the current path is at the root of a workspace */
 	isWorkspaceRoot?: boolean;
 };
-
-export type AutoConfigDetailsForConfiguredProject = Optional<
-	AutoConfigDetailsBase,
-	// If AutoConfig detects that the project is already configured it's unnecessary to check
-	// what framework is being used nor the output directory, so in this case thee fields are optional
-	"framework" | "outputDir"
-> & {
-	configured: true;
-};
-
-export type AutoConfigDetailsForNonConfiguredProject = AutoConfigDetailsBase & {
-	configured: false;
-};
-
-export type AutoConfigDetails =
-	| AutoConfigDetailsForConfiguredProject
-	| AutoConfigDetailsForNonConfiguredProject;
 
 export type AutoConfigOptions = {
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */

@@ -9,7 +9,6 @@ import {
 import { afterEach, describe, it, vi } from "vitest";
 import * as details from "../../src/details";
 import { createMockContext } from "../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils";
 
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
@@ -18,17 +17,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
-	});
-
-	it("should set configured: true if a configPath exists", async ({
-		expect,
-	}) => {
-		await expect(
-			details.getDetailsForAutoConfig({
-				wranglerConfig: { configPath: "/tmp" } as Config,
-				context,
-			})
-		).resolves.toMatchObject({ configured: true });
 	});
 
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
@@ -58,8 +46,8 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			await expect(
 				details.getDetailsForAutoConfig({ context })
 			).resolves.toMatchObject({
+				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
-				configured: false,
 				outputDir: "dist",
 				packageJson: {
 					dependencies: {
@@ -188,16 +176,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("an error should be thrown if no output dir can be detected", async ({
-		expect,
-	}) => {
-		await expect(
-			details.getDetailsForAutoConfig({ context })
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
-		);
-	});
-
 	it("outputDir should be set to cwd if an index.html file exists", async ({
 		expect,
 	}) => {
@@ -313,7 +291,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	});
 
 	describe("Pages project detection", () => {
-		it("should detect Pages project when pages_build_output_dir is set in wrangler config", async ({
+		it("should detect a Pages project from its build output directory", async ({
 			expect,
 		}) => {
 			await seed({
@@ -321,14 +299,10 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 
 			const result = await details.getDetailsForAutoConfig({
-				wranglerConfig: {
-					configPath: "/tmp/wrangler.toml",
-					pages_build_output_dir: "./dist",
-				} as Config,
+				pagesBuildOutputDir: "./dist",
 				context,
 			});
 
-			expect(result.configured).toBe(false);
 			expect(result.framework?.id).toBe("cloudflare-pages");
 			expect(result.framework?.name).toBe("Cloudflare Pages");
 		});

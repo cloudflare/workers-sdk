@@ -616,7 +616,6 @@ describe("deploy", () => {
 		const getDetailsForAutoConfigSpy = vi
 			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
-				configured: false,
 				projectPath: process.cwd(),
 				workerName: "test-name",
 				framework: {
@@ -656,7 +655,6 @@ describe("deploy", () => {
 		const getDetailsForAutoConfigSpy = vi
 			.spyOn(await import("@cloudflare/autoconfig"), "getDetailsForAutoConfig")
 			.mockResolvedValueOnce({
-				configured: false,
 				projectPath: process.cwd(),
 				workerName: "test-name",
 				framework: {
@@ -1917,8 +1915,11 @@ describe("deploy", () => {
 			await import("@cloudflare/autoconfig"),
 			"getDetailsForAutoConfig"
 		).mockResolvedValueOnce({
-			configured: false,
-			framework: { id: "static", name: "Static" } as Framework,
+			framework: {
+				id: "static",
+				name: "Static",
+				isConfigured: () => false,
+			} as Framework,
 			workerName: "my-site",
 			projectPath: ".",
 			outputDir: "./public",

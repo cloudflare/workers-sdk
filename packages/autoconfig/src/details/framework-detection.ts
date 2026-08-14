@@ -17,7 +17,7 @@ import { isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
 import type { AutoConfigContext } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
-import type { Config, TelemetryMessage } from "@cloudflare/workers-utils";
+import type { TelemetryMessage } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
 
 /**
@@ -30,10 +30,12 @@ import type { Settings } from "@netlify/build-info";
  * returns early with a synthetic "Cloudflare Pages" framework entry.
  *
  * @param projectPath Path to the project root
- * @param wranglerConfig Optional parsed wrangler config for the project
+ * @param context The autoconfig context
+ * @param options Optional framework detection settings
+ * @param options.pagesBuildOutputDir Output directory from a legacy Pages project
  * @returns An object containing:
- *   - `detectedFramework`: The matched framework together with its build
- *     command and output directory.
+ *   - `detectedFramework`: The matched framework together with its build and
+ *     development commands and output directory.
  *   - `packageManager`: The package manager detected in the project.
  *   - `isWorkspaceRoot`: `true` when the project path is the root of a
  *     monorepo workspace (only present when relevant).
@@ -46,7 +48,9 @@ import type { Settings } from "@netlify/build-info";
 export async function detectFramework(
 	projectPath: string,
 	context: AutoConfigContext,
-	wranglerConfig?: Config
+	options?: {
+		pagesBuildOutputDir?: string;
+	}
 ): Promise<{
 	detectedFramework: DetectedFramework;
 	packageManager: PackageManager;
@@ -101,7 +105,7 @@ export async function detectFramework(
 		await isPagesProject(
 			projectPath,
 			context,
-			wranglerConfig,
+			options?.pagesBuildOutputDir,
 			maybeDetectedFramework
 		)
 	) {
@@ -111,7 +115,7 @@ export async function detectFramework(
 					name: "Cloudflare Pages",
 					id: "cloudflare-pages",
 				},
-				dist: wranglerConfig?.pages_build_output_dir,
+				dist: options?.pagesBuildOutputDir,
 			},
 			packageManager,
 		};
@@ -220,6 +224,7 @@ type DetectedFramework = {
 		name: string;
 		id: string;
 	};
+	devCommand?: string | undefined;
 	buildCommand?: string | undefined;
 	dist?: string;
 };
@@ -227,10 +232,10 @@ type DetectedFramework = {
 async function isPagesProject(
 	projectPath: string,
 	context: AutoConfigContext,
-	wranglerConfig: Config | undefined,
+	pagesBuildOutputDir: string | undefined,
 	detectedFramework?: DetectedFramework | undefined
 ): Promise<boolean> {
-	if (wranglerConfig?.pages_build_output_dir) {
+	if (pagesBuildOutputDir) {
 		// The `pages_build_output_dir` is set only for Pages projects
 		return true;
 	}

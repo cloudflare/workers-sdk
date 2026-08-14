@@ -61,9 +61,9 @@ export const setupCommand = createCommand({
 
 		const context = createWranglerAutoConfigContext();
 
-		let details;
+		let result;
 		try {
-			details = await runAutoConfigDetection({
+			result = await runAutoConfigDetection({
 				command: "wrangler setup",
 				wranglerConfig: config,
 				context,
@@ -84,11 +84,10 @@ export const setupCommand = createCommand({
 			}
 		}
 
-		// Only run auto config if the project is not already configured
-		if (!details.configured) {
+		if (!result.configured) {
 			let autoConfigSummary;
 			try {
-				autoConfigSummary = await runAutoConfigLogic(details, {
+				autoConfigSummary = await runAutoConfigLogic(result.details, {
 					context,
 					runBuild: args.build,
 					skipConfirmations: args.yes,
@@ -132,7 +131,7 @@ export const setupCommand = createCommand({
 			const { type } = await getPackageManager();
 			logCompletionMessage(
 				`You can now deploy with ${brandColor(
-					details.packageJson ? `${type} run deploy` : "wrangler deploy"
+					result.details?.packageJson ? `${type} run deploy` : "wrangler deploy"
 				)}`
 			);
 		}

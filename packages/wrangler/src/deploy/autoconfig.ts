@@ -107,13 +107,13 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 		const autoConfigContext = createWranglerAutoConfigContext();
 
 		try {
-			const details = await runAutoConfigDetection({
+			const result = await runAutoConfigDetection({
 				command: "wrangler deploy",
 				wranglerConfig: config,
 				context: autoConfigContext,
 			});
 
-			if (details.framework?.id === "cloudflare-pages") {
+			if (result.details?.framework?.id === "cloudflare-pages") {
 				// If the project is a Pages project then warn the user but allow them to proceed if they wish so
 				logger.warn(
 					"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead. Proceeding will likely produce unwanted results."
@@ -134,8 +134,8 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 					});
 					return { config, aborted: true };
 				}
-			} else if (!details.configured) {
-				const autoConfigSummary = await runAutoConfigLogic(details, {
+			} else if (!result.configured) {
+				const autoConfigSummary = await runAutoConfigLogic(result.details, {
 					context: autoConfigContext,
 					dryRun: !!args.dryRun,
 					skipConfirmations: options.skipConfirmations === true,
