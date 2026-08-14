@@ -10183,6 +10183,78 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[observability]", () => {
+			it("should warn when environment observability shadows top-level metrics", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: { enabled: true },
+						},
+						env: {
+							staging: {
+								observability: {
+									logs: { enabled: true },
+								},
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(config.observability).toEqual({ logs: { enabled: true } });
+				expect(diagnostics.renderWarnings()).toContain(
+					'The environment-level "observability" configuration replaces the top-level "observability" configuration but does not define "observability.metrics". Metrics export will not be reconciled.'
+				);
+			});
+
+			it("should inherit top-level metrics when environment observability is absent", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: { enabled: true },
+						},
+						env: { staging: {} },
+					},
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(config.observability?.metrics).toEqual({ enabled: true });
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should not warn when environment metrics is explicit", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: { enabled: true },
+						},
+						env: {
+							staging: {
+								observability: {
+									logs: { enabled: true },
+									metrics: { enabled: false },
+								},
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(config.observability?.metrics).toEqual({ enabled: false });
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
 			it("should error on invalid observability", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

@@ -51,6 +51,25 @@ describe("deploy metrics export", () => {
 		clearOutputFilePath();
 	});
 
+	function mockExistingWorker() {
+		msw.use(
+			http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
+				HttpResponse.json(
+					createFetchResult({
+						default_environment: {
+							environment: "production",
+							script: {
+								tag: "existing-tag",
+								tags: null,
+								last_deployed_from: "wrangler",
+							},
+						},
+					})
+				)
+			)
+		);
+	}
+
 	it("reconciles Worker, D1, and R2 resources using canonical identities", async ({
 		expect,
 	}) => {
@@ -257,7 +276,7 @@ describe("deploy metrics export", () => {
 		});
 	});
 
-	it("uses the deployed script name for a legacy environment", async ({
+	it("uses the deployed script name for a named environment", async ({
 		expect,
 	}) => {
 		writeWranglerConfig({
@@ -271,22 +290,7 @@ describe("deploy metrics export", () => {
 			},
 		});
 		writeWorkerSource();
-		msw.use(
-			http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
-				HttpResponse.json(
-					createFetchResult({
-						default_environment: {
-							environment: "production",
-							script: {
-								tag: "existing-tag",
-								tags: null,
-								last_deployed_from: "wrangler",
-							},
-						},
-					})
-				)
-			)
-		);
+		mockExistingWorker();
 		mockUploadWorkerRequest({
 			env: "staging",
 			expectedObservability: undefined,
@@ -312,6 +316,210 @@ describe("deploy metrics export", () => {
 			},
 			resources: [{ resourceType: "workers", resourceId: "test-name-staging" }],
 		});
+	});
+
+	it("inherits top-level metrics for a named environment", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+			env: { staging: {} },
+		});
+		writeWorkerSource();
+		mockExistingWorker();
+		mockUploadWorkerRequest({
+			env: "staging",
+			expectedObservability: undefined,
+		});
+
+		let requestBody: unknown;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy --env staging");
+
+		expect(requestBody).toEqual({
+			requester: {
+				requesterType: "workers",
+				requesterId: "test-name-staging",
+			},
+			resources: [
+				{
+					resourceType: "workers",
+					resourceId: "test-name-staging",
+					destinations: ["destination"],
+				},
+			],
+		});
+	});
+
+	it("uses environment metrics and bindings instead of top-level values", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			d1_databases: [{ binding: "DB", database_id: "top-level-database" }],
+			observability: {
+				metrics: { enabled: true, destinations: ["top-level-destination"] },
+			},
+			env: {
+				staging: {
+					d1_databases: [{ binding: "DB", database_id: "staging-database" }],
+					r2_buckets: [{ binding: "BUCKET", bucket_name: "staging-bucket" }],
+					observability: {
+						metrics: {
+							enabled: true,
+							destinations: ["staging-destination"],
+						},
+					},
+				},
+			},
+		});
+		writeWorkerSource();
+		mockExistingWorker();
+		mockUploadWorkerRequest({
+			env: "staging",
+			expectedObservability: undefined,
+		});
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/:bucketName", () =>
+				HttpResponse.json(
+					createFetchResult({
+						name: "staging-bucket",
+						creation_date: "2026-01-01T00:00:00Z",
+					})
+				)
+			)
+		);
+
+		let requestBody: unknown;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy --env staging");
+
+		expect(requestBody).toEqual({
+			requester: {
+				requesterType: "workers",
+				requesterId: "test-name-staging",
+			},
+			resources: [
+				{
+					resourceType: "workers",
+					resourceId: "test-name-staging",
+					destinations: ["staging-destination"],
+				},
+				{
+					resourceType: "d1",
+					resourceId: "staging-database",
+					destinations: ["staging-destination"],
+				},
+				{
+					resourceType: "r2",
+					resourceId: "staging-bucket",
+					destinations: ["staging-destination"],
+				},
+			],
+		});
+	});
+
+	it("clears only the selected environment requester when metrics is disabled", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+			env: {
+				staging: {
+					observability: { metrics: { enabled: false } },
+				},
+			},
+		});
+		writeWorkerSource();
+		mockExistingWorker();
+		mockUploadWorkerRequest({
+			env: "staging",
+			expectedObservability: undefined,
+		});
+
+		let requestBody: unknown;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy --env staging");
+
+		expect(requestBody).toEqual({
+			requester: {
+				requesterType: "workers",
+				requesterId: "test-name-staging",
+			},
+			resources: [],
+		});
+	});
+
+	it("warns and skips reconciliation when environment observability shadows metrics", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+			env: {
+				staging: {
+					observability: { logs: { enabled: true } },
+				},
+			},
+		});
+		writeWorkerSource();
+		mockExistingWorker();
+		mockUploadWorkerRequest({
+			env: "staging",
+			expectedObservability: { logs: { enabled: true } },
+		});
+
+		let reconciliationCalled = false;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					reconciliationCalled = true;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy --env staging");
+
+		expect(reconciliationCalled).toBe(false);
+		expect(std.warn).toContain('"env.staging" environment configuration');
+		expect(std.warn).toContain("Metrics export will not be reconciled.");
 	});
 
 	it("does not disable native observability for metrics-only config", async ({

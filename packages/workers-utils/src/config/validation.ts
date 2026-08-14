@@ -6346,7 +6346,12 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	return valid;
 };
 
-const validateObservability: ValidatorFn = (diagnostics, field, value) => {
+const validateObservability: ValidatorFn = (
+	diagnostics,
+	field,
+	value,
+	topLevelEnv
+) => {
 	if (value === undefined) {
 		return true;
 	}
@@ -6360,6 +6365,14 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 
 	const val = value as Observability;
 	let isValid = true;
+	if (
+		topLevelEnv?.observability?.metrics !== undefined &&
+		val.metrics === undefined
+	) {
+		diagnostics.warnings.push(
+			`The environment-level "${field}" configuration replaces the top-level "${field}" configuration but does not define "${field}.metrics". Metrics export will not be reconciled. Define "${field}.metrics.enabled" explicitly, or remove the environment-level "${field}" configuration to inherit all top-level observability settings.`
+		);
+	}
 
 	/**
 	 * One of observability.enabled, observability.logs.enabled,
