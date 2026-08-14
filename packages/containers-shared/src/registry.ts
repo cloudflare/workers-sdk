@@ -1,13 +1,20 @@
 import { getCloudflareContainerRegistry } from "./knobs";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
-// The Cloudflare managed registry is special in that the namesapces for repos should always
-// start with the Cloudflare Account tag
-// This is a helper to generate the image tag with correct namespace attached to the Cloudflare Registry host
+/**
+ * Adds the Cloudflare account namespace to an image tag in the managed registry.
+ *
+ * @param accountID - Cloudflare account ID that owns the image.
+ * @param tag - Image name and tag to namespace.
+ * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @returns The fully qualified managed-registry image reference.
+ */
 export const getCloudflareRegistryWithAccountNamespace = (
 	accountID: string,
-	tag: string
+	tag: string,
+	complianceConfig?: ComplianceConfig
 ): string => {
-	return `${getCloudflareContainerRegistry()}/${accountID}/${tag}`;
+	return `${getCloudflareContainerRegistry(complianceConfig)}/${accountID}/${tag}`;
 };
 
 export const MF_DEV_CONTAINER_PREFIX = "cloudflare-dev";

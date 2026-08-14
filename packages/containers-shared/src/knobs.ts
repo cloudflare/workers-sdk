@@ -1,16 +1,30 @@
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	getComplianceRegionSubdomain,
+} from "@cloudflare/workers-utils";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
-// Will return the default cloudflare managed registry for either a staging or production environment
-// based on the env var WRANGLER_API_ENVIRONMENT. The default registry can be overridden with the env
-// var CLOUDFLARE_CONTAINER_REGISTRY.
-export const getCloudflareContainerRegistry = () => {
+/**
+ * Returns the managed container registry for the configured API environment and compliance region.
+ *
+ * @param complianceConfig - Compliance configuration used to select the public or FedRAMP registry.
+ * @returns The managed registry hostname, respecting `CLOUDFLARE_CONTAINER_REGISTRY` and `WRANGLER_API_ENVIRONMENT`.
+ */
+export const getCloudflareContainerRegistry = (
+	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
+): string => {
 	// previously defaulted to registry.cloudchamber.cfdata.org
-	return (
-		process.env.CLOUDFLARE_CONTAINER_REGISTRY ??
-		(process.env.WRANGLER_API_ENVIRONMENT === "staging"
-			? "staging.registry.cloudflare.com"
-			: "registry.cloudflare.com")
-	);
+	if (process.env.CLOUDFLARE_CONTAINER_REGISTRY) {
+		return process.env.CLOUDFLARE_CONTAINER_REGISTRY;
+	}
+
+	const environmentPrefix =
+		process.env.WRANGLER_API_ENVIRONMENT === "staging" ? "staging." : "";
+	const complianceRegionSubdomain =
+		getComplianceRegionSubdomain(complianceConfig);
+
+	return `${environmentPrefix}registry${complianceRegionSubdomain}.cloudflare.com`;
 };
 
 /** Prefixes with the cloudflare-dev namespace. The name should be the container's DO classname, and the tag a build uuid. */
