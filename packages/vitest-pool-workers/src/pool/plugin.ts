@@ -3,8 +3,23 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { cloudflarePool } from "./pool";
 import type { WorkersPoolOptions } from "./config";
-import type { inject } from "vitest";
+import type { ProvidedContext } from "vitest";
 import type { Vite, VitestPluginContext } from "vitest/node";
+
+type ProvidedContextKeys = keyof ProvidedContext & string;
+declare const explicitInjectTypeArgumentRequired: unique symbol;
+type ExplicitInjectTypeArgumentRequired = {
+	readonly [explicitInjectTypeArgumentRequired]: never;
+};
+type WorkerPoolOptionsContextInject = [ProvidedContextKeys] extends [never]
+	? <T = unknown>(key: string) => T
+	: {
+			<K extends ProvidedContextKeys>(key: K): ProvidedContext[K];
+			<T = ExplicitInjectTypeArgumentRequired>(
+				key: string &
+					(T extends ExplicitInjectTypeArgumentRequired ? never : unknown)
+			): T;
+		};
 
 const cloudflareTestPath = path.resolve(
 	import.meta.dirname,
@@ -12,9 +27,18 @@ const cloudflareTestPath = path.resolve(
 );
 
 export interface WorkerPoolOptionsContext {
-	// For accessing values from `globalSetup()` (e.g. ports servers started on)
-	// in Miniflare options (e.g. bindings, upstream, hyperdrives, ...)
-	inject: typeof inject;
+	/**
+	 * Access values provided by `globalSetup()` (e.g. ports of servers started
+	 * during setup) for use in Miniflare options (e.g. bindings, upstream,
+	 * hyperdrives, ...).
+	 *
+	 * Known `ProvidedContext` keys preserve Vitest's inference and key checking
+	 * when the consuming project's augmentation is visible. Use an explicit type
+	 * argument for keys provided at runtime but not declared in `ProvidedContext`.
+	 * If pnpm resolves a separate Vitest copy and the keys collapse to `never`,
+	 * fall back to the wider inject signature instead.
+	 */
+	inject: WorkerPoolOptionsContextInject;
 }
 
 function ensureArrayIncludes<T>(array: T[], items: T[]) {
@@ -130,16 +154,6 @@ export function cloudflareTest(
 					contents += `import ${JSON.stringify(main)};`;
 				}
 				return contents;
-			}
-			if (id.endsWith("msw/lib/node/index.mjs")) {
-				// HACK: This is a temporary solution while MSW works on some changes to better support the Workers
-				// environment. In the meantime, this replaces the `msw/node` entrypoint with the `msw/native`
-				// entrypoint (which is designed for React Native and does work in Workers). Users can't use
-				// `msw/native` themselves directly as the export conditions are not compatible with the Vitest Pool
-				// export conditions.
-				//
-				// This is tracked by https://github.com/mswjs/msw/issues/2637
-				return `export * from "../native/index.mjs"`;
 			}
 		},
 	};

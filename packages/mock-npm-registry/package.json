@@ -6,11 +6,17 @@
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./dist/index.js"
+		".": "./dist/index.js",
+		"./config-env": {
+			"types": "./dist/config-env.d.ts",
+			"import": "./dist/config-env.js"
+		}
 	},
 	"scripts": {
 		"build": "tsc",
-		"check:types": "tsc"
+		"check:types": "tsc",
+		"test": "vitest",
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-utils": "workspace:*",
@@ -20,7 +26,8 @@
 		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
-		"verdaccio": "^6.0.5"
+		"verdaccio": "^6.0.5",
+		"vitest": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"

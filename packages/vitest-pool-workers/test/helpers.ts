@@ -8,8 +8,23 @@ import { stripAnsi } from "miniflare";
 import treeKill from "tree-kill";
 import dedent from "ts-dedent";
 import { test as baseTest, inject, vi } from "vitest";
+import type { WorkerPoolOptionsContext } from "../src/pool/plugin";
 
 const debuglog = util.debuglog("vitest-pool-workers:test");
+
+function checkCloudflareTestInjectTypes(
+	poolInject: WorkerPoolOptionsContext["inject"]
+) {
+	const tmpPoolInstallationPath: string = poolInject("tmpPoolInstallationPath");
+	void tmpPoolInstallationPath;
+
+	const runtimeProvidedValue: number = poolInject<number>("runtimeProvidedKey");
+	void runtimeProvidedValue;
+
+	// @ts-expect-error ProvidedContext keys should be checked.
+	poolInject("tmpPoolInstalltionPath");
+}
+void checkCloudflareTestInjectTypes;
 
 export const vitestConfig = (
 	cfOptions: Record<string, unknown> = {},

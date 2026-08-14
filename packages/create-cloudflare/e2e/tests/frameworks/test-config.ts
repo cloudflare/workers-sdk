@@ -345,8 +345,31 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "next",
+			// Default Next.js path: vinext via create-vinext-app.
+			argv: ["--variant", "vinext"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
+			// preview script is `build && start` (wrangler dev on build output).
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			verifyDeploy: {
+				route: "/",
+				expectedText: "vinext + Cloudflare Workers",
+			},
+			nodeCompat: true,
+			unsupportedOSs: ["win32"],
+		},
+		{
+			name: "next:opennext",
+			// Opt-in OpenNext adapter path (previous C3 default).
+			argv: ["--variant", "opennext"],
+			timeout: LONG_TIMEOUT,
+			testCommitMessage: true,
+			expectFrameworkCli: false,
+			typesPath: "./cloudflare-env.d.ts",
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
 				route: "/",
@@ -361,6 +384,11 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "nuxt:pages",
+			// Quarantined: Nitro's Cloudflare preset adds `nodejs_compat` to the
+			// wrangler config it generates, but that flag is enabled by default —
+			// and therefore rejected by workerd — for compatibility dates from
+			// 2026-08-04, so the dev server never starts. See #15146.
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,
@@ -401,6 +429,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			// Quarantined for the same reason as `nuxt:pages` above. See #15146.
+			quarantine: true,
 			// yarn: nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18.
 			// npm: nuxt project creation fails on npm with "Cannot read properties of null (reading 'edgesOut')".
 			unsupportedPms: ["yarn", "npm"],
@@ -421,6 +451,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "nuxt:pages:minimal",
+			// Quarantined for the same reason as `nuxt:pages` above. See #15146.
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Would you like to .* install .*modules\?/,
@@ -464,6 +496,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			// Quarantined for the same reason as `nuxt:pages` above. See #15146.
+			quarantine: true,
 			// See notes on nuxt:pages:minimal above.
 			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
@@ -885,6 +919,9 @@ function getExperimentalFrameworkTestConfig(
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			// Quarantined for the same reason as `nuxt:pages` in
+			// getFrameworkTestConfig. See #15146.
+			quarantine: true,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 			unsupportedOSs: ["win32"],
 			// See note on nuxt:pages above.
@@ -913,6 +950,9 @@ function getExperimentalFrameworkTestConfig(
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			// Quarantined for the same reason as `nuxt:pages` in
+			// getFrameworkTestConfig. See #15146.
+			quarantine: true,
 			// See notes on nuxt:pages:minimal in getFrameworkTestConfig.
 			unsupportedPms: ["yarn", "npm"],
 			unsupportedOSs: ["win32"],
@@ -1105,8 +1145,7 @@ function getExperimentalFrameworkTestConfig(
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			unsupportedPms: ["npm", "yarn"],
-			// this test creates an R2 bucket, so it requires a Cloudflare API token
-			// and needs to be skipped on forks
+			// This test creates an R2 bucket, so it requires a Cloudflare API token.
 			quarantine: !CLOUDFLARE_API_TOKEN,
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {

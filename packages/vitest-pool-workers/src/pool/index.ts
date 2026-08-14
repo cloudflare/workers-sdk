@@ -4,7 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import {
+	getTodaysCompatDate,
+	isNodejsCompatDefaultOn,
+} from "@cloudflare/workers-utils";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
 import {
@@ -403,7 +406,11 @@ async function buildProjectWorkerOptions(
 				1
 			);
 		}
-		runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
+		// Dropping the opt-out is enough once the compatibility date enables the
+		// flag on its own; adding it as well is a workerd validation error.
+		if (!isNodejsCompatDefaultOn(runnerWorker.compatibilityDate)) {
+			runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
+		}
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set

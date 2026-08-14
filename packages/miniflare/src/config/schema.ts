@@ -620,6 +620,13 @@ export const DevConfigSchema = z.strictObject({
 	// Zone to use for the CF-Worker header in outbound fetches. If not
 	// specified, defaults to `${worker-name}.example.com`
 	zone: z.string().optional(),
+	/** Cloudflare Access authentication metadata exposed as `ctx.access` */
+	access: z
+		.strictObject({
+			aud: z.string(),
+			identity: z.record(z.string(), z.unknown()).optional(),
+		})
+		.optional(),
 });
 
 export type DevConfig = z.input<typeof DevConfigSchema>;
