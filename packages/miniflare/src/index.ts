@@ -2321,7 +2321,6 @@ export class Miniflare {
 			this.#sharedOpts.unsafeEnableSharedStorage
 				? this.#sharedOpts.resourcePersistencePath
 				: undefined,
-			this.#disposeController.signal,
 			() =>
 				runtime.updateConfig(
 					configBuffer,
