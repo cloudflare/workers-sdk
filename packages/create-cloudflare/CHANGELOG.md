@@ -1,5 +1,43 @@
 # create-cloudflare
 
+## 2.72.0
+
+### Minor Changes
+
+- [#14896](https://github.com/cloudflare/workers-sdk/pull/14896) [`7d4565d`](https://github.com/cloudflare/workers-sdk/commit/7d4565ddf8400f596b2c14c12ba62d7b719f77a4) Thanks [@scottbuscemi](https://github.com/scottbuscemi)! - Make vinext the default Next.js scaffold, keep OpenNext as a variant
+
+  `create-cloudflare --framework=next` now prompts for a Next.js adapter:
+
+  - **vinext** (default / recommended) — scaffolds via `create-vinext-app` (`vinext dev` / `vinext build` / `vinext-cloudflare deploy`)
+  - **opennext** — keeps the previous OpenNext remote template for projects that need standard `next build` output or a capability vinext does not support yet
+
+  Non-interactive usage:
+
+  ```sh
+  npm create cloudflare@latest my-app -- --framework=next --variant=vinext
+  npm create cloudflare@latest my-app -- --framework=next --variant=opennext
+  ```
+
+  `-y` / `--accept-defaults` selects vinext. This aligns C3 with the recommended Next.js-on-Workers path in the Cloudflare docs while preserving an opt-in OpenNext path.
+
+### Patch Changes
+
+- [#15126](https://github.com/cloudflare/workers-sdk/pull/15126) [`24ac4fd`](https://github.com/cloudflare/workers-sdk/commit/24ac4fd2afb8a80cdc0f526171703e33187c1da9) Thanks [@edmundhung](https://github.com/edmundhung)! - Use Wrangler 4 when installing Hello World template dependencies
+
+  This avoids installing Wrangler 3 during initial scaffolding before Create Cloudflare upgrades the generated project to the latest Wrangler release.
+
+## 2.71.1
+
+### Patch Changes
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Stop adding a redundant `nodejs_compat` flag to generated Wrangler configurations
+
+  `create-cloudflare` and `wrangler setup` write today's date as the `compatibility_date`, and from `2026-08-04` that already enables `nodejs_compat`. Adding the flag as well made the generated project fail to start with "The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore", so the flag is now only added for earlier compatibility dates.
+
+  `create-cloudflare` also removes the flag when a template, or a framework's own scaffolder, already wrote it into a configuration that ends up using such a compatibility date, and still installs `@types/node` for these projects even though there is no longer a flag to detect them by.
+
+  `wrangler setup` does the same for a `wrangler.json(c)` that is already in the project: it writes today's date over whatever date that configuration was written for, so a `nodejs_compat` it finds there is removed as part of writing the file.
+
 ## 2.71.0
 
 ### Minor Changes

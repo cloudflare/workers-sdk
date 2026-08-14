@@ -9,6 +9,8 @@ import treeKill from "tree-kill";
 import { dedent } from "ts-dedent";
 import { ConfigBuilder } from "verdaccio";
 
+export { overrideConfigEnv } from "./config-env.js";
+
 const debugLog = util.debuglog("mock-npm-registry");
 const repoRoot = path.resolve(__dirname, "../../..");
 
@@ -59,17 +61,17 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	`
 	);
 
-	// pnpm reads array settings such as `minimumReleaseAgeExclude` only from a
-	// config *file* (never from an env var), and the file differs by pnpm major:
-	// pnpm 10 reads the global `<configDir>/rc` (npmrc/INI), while pnpm 11 reads
-	// the global `<configDir>/config.yaml`. `<configDir>` resolves to
-	// `$XDG_CONFIG_HOME/pnpm` on all platforms when XDG_CONFIG_HOME is set, so we
-	// write both files into an isolated config dir and point pnpm at it below.
 	// Freshly-published first-party packages carry a "now" timestamp, so the
-	// inherited `minimumReleaseAge` cooldown (leaked from the workspace via the
-	// `npm_config_minimum_release_age` env var) would otherwise reject them.
-	// Excluding them by name installs their local versions while the cooldown
-	// still applies to third-party deps pulled via the npm uplink.
+	// `minimumReleaseAge` cooldown that `pnpm run` exports from the workspace
+	// would reject them. Excluding them by name installs their local versions
+	// while the cooldown still applies to third-party deps pulled via the npm
+	// uplink. (To change the cooldown itself, use `overrideConfigEnv`.)
+	//
+	// The exclusion is an array, and pnpm only reads those from a config file,
+	// which differs by pnpm major: pnpm 10 reads the global `<configDir>/rc`
+	// (npmrc/INI), pnpm 11 the global `<configDir>/config.yaml`. `<configDir>`
+	// is `$XDG_CONFIG_HOME/pnpm` on all platforms when that is set, so we write
+	// both files into an isolated config dir and point pnpm at it.
 	const configHome = path.join(registryPath, "config");
 	const pnpmConfigDir = path.join(configHome, "pnpm");
 	await fs.mkdir(pnpmConfigDir, { recursive: true });
@@ -120,8 +122,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	// `minimumReleaseAgeExclude` list is honored. The scalar
 	// `npm_config_minimum_release_age` inherited from the parent `pnpm run`
 	// still applies to third-party deps; the two settings merge because they are
-	// different keys. (An array cannot be passed via a single env var, and pnpm
-	// only reads this setting from config files — hence the redirect.)
+	// different keys.
 	const revert_XDG_CONFIG_HOME = overrideProcessEnv(
 		"XDG_CONFIG_HOME",
 		configHome

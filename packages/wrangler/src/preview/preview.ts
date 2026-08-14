@@ -42,9 +42,9 @@ export const previewCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		"ignore-defaults": {
+		"ignore-base-config": {
 			describe:
-				"Only use settings from your config file, ignoring any Previews settings configured in the Cloudflare dashboard",
+				"Only use settings from your config file, ignoring the Preview base config configured in the Cloudflare dashboard",
 			type: "boolean",
 			default: false,
 		},

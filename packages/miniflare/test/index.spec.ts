@@ -11,7 +11,10 @@ import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
-import { _forceColour } from "@cloudflare/workers-utils";
+import {
+	_forceColour,
+	NODEJS_COMPAT_DEFAULT_ON_DATE,
+} from "@cloudflare/workers-utils";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
@@ -768,6 +771,36 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	expect(res.headers.get("Content-Type")).toBe("text/event-stream");
 	expect(res.headers.get("Content-Encoding")).toBe(null);
 	expect(await res.text()).toBe(testBody);
+});
+
+test("Miniflare: ignores nodejs_compat flags the compatibility date enables", async ({
+	expect,
+}) => {
+	// workerd rejects a compatibility flag that its compatibility date already
+	// enables, which `nodejs_compat` is as of `NODEJS_COMPAT_DEFAULT_ON_DATE`
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: NODEJS_COMPAT_DEFAULT_ON_DATE,
+					compatibilityFlags: ["nodejs_compat", "nodejs_compat_v2"],
+					manifest: singleModuleManifest(`
+					import path from "node:path";
+
+					export default {
+						fetch() { return new Response(path.join("a", "b")); },
+					};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	expect(await res.text()).toBe(path.posix.join("a", "b"));
 });
 
 test("Miniflare: custom service using Set-Cookie header", async ({

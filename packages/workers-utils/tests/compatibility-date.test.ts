@@ -5,6 +5,7 @@ import {
 	isNodejsCompatDefaultOn,
 	NODEJS_COMPAT_DEFAULT_ON_DATE,
 	resolveNodejsCompat,
+	stripRedundantNodejsCompatFlags,
 } from "../src/compatibility-date";
 
 describe("getTodaysCompatDate()", () => {
@@ -82,6 +83,63 @@ describe("resolveNodejsCompat", () => {
 				isNodejsCompatEnabled: nodejsCompat,
 				isNodejsCompatV2Enabled: nodejsCompatV2,
 			});
+		}
+	);
+});
+
+describe("stripRedundantNodejsCompatFlags", () => {
+	// [compatibilityDate, compatibilityFlags, expected]
+	const cases: [string | undefined, string[], string[]][] = [
+		// Before the default-on date the flags are the only way to enable this
+		["2026-08-03", ["nodejs_compat"], ["nodejs_compat"]],
+		["2024-09-22", ["nodejs_compat_v2"], ["nodejs_compat_v2"]],
+		[undefined, ["nodejs_compat"], ["nodejs_compat"]],
+		// From the default-on date the date enables them, so they're redundant
+		["2026-08-04", ["nodejs_compat"], []],
+		["2026-08-04", ["nodejs_compat_v2"], []],
+		["2026-08-04", ["nodejs_compat", "nodejs_compat_v2"], []],
+		["2030-01-01", ["nodejs_compat"], []],
+		// A flag that contradicts its opt-out is kept, since workerd reports that
+		// and treats the flag as the winner - dropping it would flip the behaviour
+		[
+			"2026-08-04",
+			["nodejs_compat", "no_nodejs_compat"],
+			["nodejs_compat", "no_nodejs_compat"],
+		],
+		[
+			"2026-08-04",
+			["nodejs_compat_v2", "no_nodejs_compat_v2"],
+			["nodejs_compat_v2", "no_nodejs_compat_v2"],
+		],
+		// Each flag is considered separately
+		[
+			"2026-08-04",
+			["nodejs_compat", "no_nodejs_compat_v2"],
+			["no_nodejs_compat_v2"],
+		],
+		// Opt-outs are never redundant, they matter for later dates
+		["2026-08-04", ["no_nodejs_compat"], ["no_nodejs_compat"]],
+		// Other flags are left alone, in their original order
+		[
+			"2026-08-04",
+			["nodejs_als", "nodejs_compat", "url_standard"],
+			["nodejs_als", "url_standard"],
+		],
+		["2026-08-04", [], []],
+		// Only exact matches are stripped
+		[
+			"2026-08-04",
+			["experimental:nodejs_compat_v2"],
+			["experimental:nodejs_compat_v2"],
+		],
+	];
+
+	test.for(cases)(
+		"%s with %j",
+		([compatibilityDate, flags, expected], { expect }) => {
+			expect(stripRedundantNodejsCompatFlags(compatibilityDate, flags)).toEqual(
+				expected
+			);
 		}
 	);
 });

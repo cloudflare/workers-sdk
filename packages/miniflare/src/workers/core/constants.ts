@@ -47,6 +47,7 @@ export const CoreHeaders = {
 	ERROR_STACK_PAYLOAD: "MF-Experimental-Error-Stack-Payload",
 	ROUTE_OVERRIDE: "MF-Route-Override",
 	CF_BLOB: "MF-CF-Blob",
+	ACCESS_BLOB: "MF-Access-Blob",
 	/** Used by the Vite plugin to pass through the original `sec-fetch-mode` header */
 	SEC_FETCH_MODE: "MF-Sec-Fetch-Mode",
 
@@ -96,6 +97,8 @@ export const CoreBindings = {
 	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
 	SERVICE_R2_S3: "MINIFLARE_R2_S3",
 	SERVICE_OBSERVABILITY_COLLECTOR: "MINIFLARE_OBSERVABILITY_COLLECTOR",
+	JSON_ACCESS_BLOB_PREFIX: "MINIFLARE_ACCESS_BLOB_",
+	TEXT_FALLBACK_WORKER_NAME: "MINIFLARE_FALLBACK_WORKER_NAME",
 } as const;
 
 export const ProxyOps = {

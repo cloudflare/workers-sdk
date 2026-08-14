@@ -3,14 +3,18 @@ import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [
-		ctx.project.name,
-		"--skip-install",
-	]);
+	if (ctx.args.variant) {
+		throw new Error(
+			"Next.js adapter variants are not supported with --experimental."
+		);
+	}
+
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--skip-install"]);
 };
 
 const envInterfaceName = "CloudflareEnv";
 const typesPath = "./cloudflare-env.d.ts";
+
 export default {
 	configVersion: 1,
 	id: "next",

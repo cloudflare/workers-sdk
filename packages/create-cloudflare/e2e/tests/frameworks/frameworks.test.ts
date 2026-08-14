@@ -51,10 +51,16 @@ describe
 				envInterfaceName: "Env",
 				...getFrameworkConfig(testConfig.name),
 			};
-			// A third `:`-segment in the test name (e.g. `nuxt:pages:minimal`)
-			// is a variant label that disambiguates tests sharing the same
-			// framework id + platform. getFrameworkConfig ignores it.
-			const variantLabel = testConfig.name.split(":")[2];
+			// Trailing `:`-segments disambiguate tests that share a framework
+			// id (and optional platform). Examples:
+			//   "nuxt:pages:minimal" → label "minimal"
+			//   "next:opennext"      → label "opennext"
+			// getFrameworkConfig ignores non-platform labels.
+			const nameParts = testConfig.name.split(":");
+			const variantLabel =
+				nameParts[1] === "pages" || nameParts[1] === "workers"
+					? nameParts[2]
+					: nameParts[1];
 			test.runIf(shouldRunTest(testConfig))(
 				`${frameworkConfig.id} (${frameworkConfig.platform ?? "pages"})${
 					variantLabel ? ` [${variantLabel}]` : ""
@@ -106,7 +112,8 @@ describe
 								expect,
 								project.name,
 								frameworkConfig.id,
-								project.path
+								project.path,
+								testConfig.expectFrameworkCli
 							);
 						}
 
