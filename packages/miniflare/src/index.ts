@@ -3167,8 +3167,6 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
-		if (independentCleanupFailed) throw independentCleanupError;
-		if (!runtimeCleanupOutcome.ok) throw runtimeCleanupOutcome.error;
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that
 		// in-flight connections are broken and close immediately. Without this,
@@ -3222,6 +3220,8 @@ export class Miniflare {
 		// existing behavior when an earlier cleanup operation fails.
 		maybeInstanceRegistry?.delete(this);
 
+		if (independentCleanupFailed) throw independentCleanupError;
+		if (!runtimeCleanupOutcome.ok) throw runtimeCleanupOutcome.error;
 		if (waitForReadyFailed) throw waitForReadyError;
 	}
 }
