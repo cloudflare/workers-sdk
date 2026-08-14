@@ -7,6 +7,7 @@ import {
 	generatePreviewAlias,
 } from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -2057,7 +2058,7 @@ describe("versions upload", () => {
 			await runWrangler("versions upload --latest");
 
 			expect(std.warn).toContain(
-				"Using the latest version of the Workers runtime"
+				`Using the latest compatibility date supported by this version of Wrangler (${DEFAULT_COMPAT_DATE})`
 			);
 			expect(std.out).toContain("Uploaded test-name");
 		});

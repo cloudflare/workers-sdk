@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import path from "node:path";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
@@ -1229,11 +1230,6 @@ describe("init", () => {
 				compatibility_date: null,
 			});
 
-			const mockDate = "2000-01-01";
-			vi.spyOn(Date.prototype, "toISOString").mockImplementation(
-				() => `${mockDate}T00:00:00.000Z`
-			);
-
 			await runWrangler(
 				"init  --from-dash isolinear-optical-chip --no-delegate-c3"
 			);
@@ -1245,7 +1241,7 @@ describe("init", () => {
 					},
 					"isolinear-optical-chip/wrangler.jsonc": wranglerToml({
 						...mockConfigExpected,
-						compatibility_date: mockDate,
+						compatibility_date: DEFAULT_COMPAT_DATE,
 						name: "isolinear-optical-chip",
 					}),
 				},

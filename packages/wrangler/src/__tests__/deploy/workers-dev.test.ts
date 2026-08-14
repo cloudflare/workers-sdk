@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getSubdomainValues } from "@cloudflare/deploy-helpers";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -799,20 +800,18 @@ describe("deploy", () => {
 			expect,
 		}) => {
 			setIsTTY(false);
-			vi.setSystemTime(new Date(2020, 11, 1));
 
 			writeWorkerSource();
 
 			await expect(
 				async () => await runWrangler("deploy ./index.js --name my-worker")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
-				    \`\`\`
-				    {"compatibility_date":"2020-12-01"}
-				    \`\`\`
-				    Or you could pass it in your terminal as \`--compatibility-date 2020-12-01\`
-				See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.]
-			`);
+			).rejects
+				.toThrow(`A compatibility_date is required when uploading a Worker. Add the following to your Wrangler configuration file:
+    \`\`\`
+    {"compatibility_date":"${DEFAULT_COMPAT_DATE}"}
+    \`\`\`
+    Or you could pass it in your terminal as \`--compatibility-date ${DEFAULT_COMPAT_DATE}\`
+See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 		});
 
 		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async ({

@@ -128,6 +128,7 @@ export {
 	stripRedundantNodejsCompatFlags,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+export { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 
 export { isDockerfile } from "./config/validation";
 

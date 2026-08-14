@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -31,19 +31,18 @@ describe.sequential("wrangler pages dev", () => {
 		);
 		const { url } = await worker.waitForReady();
 
-		const currentDate = getTodaysCompatDate();
 		const output = worker.currentOutput.replaceAll(
-			currentDate,
-			"<current-date>"
+			DEFAULT_COMPAT_DATE,
+			"<default-date>"
 		);
 		expect(output).toContain(
-			`No compatibility_date was specified. Using today's date: <current-date>.`
+			`No compatibility_date was specified. Using the default compatibility date: <default-date>.`
 		);
 		expect(output).toContain(
-			`❯❯ Add one to your Wrangler configuration file: compatibility_date = "<current-date>", or`
+			`❯❯ Add one to your Wrangler configuration file: compatibility_date = "<default-date>", or`
 		);
 		expect(output).toContain(
-			`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<current-date>`
+			`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<default-date>`
 		);
 
 		const text = await fetchText(url);
