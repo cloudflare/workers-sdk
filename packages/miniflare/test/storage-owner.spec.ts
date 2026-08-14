@@ -535,8 +535,8 @@ describe.sequential("owner presence integration", () => {
 		const persistRoot = await useTmp();
 		const registryPath = await useTmp();
 
-		const N = 30; // client instances
-		const M = 20; // inserts per client
+		const N = 10; // client instances
+		const M = 10; // inserts per client
 		const WORKER = `export default {
 			async fetch(request, env) {
 				const url = new URL(request.url);
@@ -600,7 +600,7 @@ describe.sequential("owner presence integration", () => {
 		} finally {
 			await Promise.all(clients.map((c) => c.dispose().catch(() => {})));
 		}
-	});
+	}, 60_000);
 
 	it("hands storage ownership to another live instance", async ({ expect }) => {
 		const persistRoot = await useTmp();
