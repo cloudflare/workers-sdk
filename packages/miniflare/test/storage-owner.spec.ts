@@ -3,7 +3,51 @@ import { describe, it, vi } from "vitest";
 import { singleModuleManifest, useTmp } from "./test-shared";
 import type { MiniflareOptions } from "miniflare";
 
+async function withIsolatedStorage(
+	options: MiniflareOptions
+): Promise<MiniflareOptions> {
+	return {
+		...options,
+		isolatedResourcePersistencePath: await useTmp(),
+	};
+}
+
 describe.sequential("owner presence integration", () => {
+	it("requires persistence and a dev registry", ({ expect }) => {
+		const worker = {
+			config: {
+				type: "worker" as const,
+				name: "worker",
+				compatibilityDate: "2025-01-01",
+			},
+		};
+		expect(
+			() =>
+				new Miniflare({
+					unsafeEnableSharedStorage: true,
+					unsafeDevRegistryPath: ".registry",
+					workers: [worker],
+				})
+		).toThrow("Shared storage requires a persistent resource path");
+		expect(
+			() =>
+				new Miniflare({
+					unsafeEnableSharedStorage: true,
+					resourcePersistencePath: ".state",
+					workers: [worker],
+				})
+		).toThrow("Shared storage requires an enabled dev registry");
+		expect(
+			() =>
+				new Miniflare({
+					unsafeEnableSharedStorage: true,
+					resourcePersistencePath: ".state",
+					unsafeDevRegistryPath: ".registry",
+					workers: [worker],
+				})
+		).toThrow("Shared storage requires an isolated resource path");
+	});
+
 	it("routes a client's KV through the owner so storage is shared", async ({
 		expect,
 	}) => {
@@ -39,9 +83,9 @@ describe.sequential("owner presence integration", () => {
 			],
 		};
 
-		const owner = new Miniflare(common);
+		const owner = new Miniflare(await withIsolatedStorage(common));
 		await owner.ready;
-		const client = new Miniflare(common);
+		const client = new Miniflare(await withIsolatedStorage(common));
 
 		try {
 			await client.ready;
@@ -71,46 +115,50 @@ describe.sequential("owner presence integration", () => {
 	}) => {
 		const persistRoot = await useTmp();
 		const registryPath = await useTmp();
-		const owner = new Miniflare({
-			unsafeEnableSharedStorage: true,
-			resourcePersistencePath: persistRoot,
-			unsafeDevRegistryPath: registryPath,
-			workers: [
-				{
-					config: {
-						type: "worker",
-						name: "owner",
-						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(
-							"export default { fetch() { return new Response('owner'); } }"
-						),
-						env: { NS: { type: "kv", id: "NS" } },
+		const owner = new Miniflare(
+			await withIsolatedStorage({
+				unsafeEnableSharedStorage: true,
+				resourcePersistencePath: persistRoot,
+				unsafeDevRegistryPath: registryPath,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "owner",
+							compatibilityDate: "2025-01-01",
+							manifest: singleModuleManifest(
+								"export default { fetch() { return new Response('owner'); } }"
+							),
+							env: { NS: { type: "kv", id: "NS" } },
+						},
 					},
-				},
-			],
-		});
+				],
+			})
+		);
 		await owner.ready;
-		const client = new Miniflare({
-			unsafeEnableSharedStorage: true,
-			resourcePersistencePath: persistRoot,
-			unsafeDevRegistryPath: registryPath,
-			workers: [
-				{
-					config: {
-						type: "worker",
-						name: "client",
-						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(`export default {
+		const client = new Miniflare(
+			await withIsolatedStorage({
+				unsafeEnableSharedStorage: true,
+				resourcePersistencePath: persistRoot,
+				unsafeDevRegistryPath: registryPath,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "client",
+							compatibilityDate: "2025-01-01",
+							manifest: singleModuleManifest(`export default {
 			async fetch(request, env) {
 				await env.DB.prepare("CREATE TABLE IF NOT EXISTS t(v TEXT)").run();
 				return new Response("ok");
 			}
 		}`),
-						env: { DB: { type: "d1", id: "DB" } },
+							env: { DB: { type: "d1", id: "DB" } },
+						},
 					},
-				},
-			],
-		});
+				],
+			})
+		);
 
 		try {
 			await client.ready;
@@ -168,9 +216,9 @@ describe.sequential("owner presence integration", () => {
 				},
 			],
 		};
-		const owner = new Miniflare(common);
+		const owner = new Miniflare(await withIsolatedStorage(common));
 		await owner.ready;
-		const client = new Miniflare(common);
+		const client = new Miniflare(await withIsolatedStorage(common));
 
 		try {
 			await client.ready;
@@ -254,9 +302,9 @@ describe.sequential("owner presence integration", () => {
 				},
 			],
 		};
-		const owner = new Miniflare(common);
+		const owner = new Miniflare(await withIsolatedStorage(common));
 		await owner.ready;
-		const client = new Miniflare(common);
+		const client = new Miniflare(await withIsolatedStorage(common));
 
 		try {
 			await client.ready;
@@ -319,9 +367,9 @@ describe.sequential("owner presence integration", () => {
 				},
 			],
 		};
-		const owner = new Miniflare(common);
+		const owner = new Miniflare(await withIsolatedStorage(common));
 		await owner.ready;
-		const client = new Miniflare(common);
+		const client = new Miniflare(await withIsolatedStorage(common));
 
 		try {
 			await client.ready;
@@ -365,8 +413,8 @@ describe.sequential("owner presence integration", () => {
 				},
 			],
 		};
-		const owner = new Miniflare(common);
-		const client = new Miniflare(common);
+		const owner = new Miniflare(await withIsolatedStorage(common));
+		const client = new Miniflare(await withIsolatedStorage(common));
 		try {
 			// Both reaching `ready` proves the routed client doesn't reference a
 			// local images storage service it no longer stands up (the owner does),
@@ -388,30 +436,8 @@ describe.sequential("owner presence integration", () => {
 		const persistRoot = await useTmp();
 		const registryPath = await useTmp();
 
-		const first = new Miniflare({
-			unsafeEnableSharedStorage: true,
-			resourcePersistencePath: persistRoot,
-			unsafeDevRegistryPath: registryPath,
-			workers: [
-				{
-					config: {
-						type: "worker",
-						name: "first",
-						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(
-							"export default { fetch() { return new Response('first'); } }"
-						),
-						env: { NS: { type: "kv", id: "NS" } },
-					},
-				},
-			],
-		});
-		let second: Miniflare | undefined;
-
-		try {
-			await first.ready;
-
-			second = new Miniflare({
+		const first = new Miniflare(
+			await withIsolatedStorage({
 				unsafeEnableSharedStorage: true,
 				resourcePersistencePath: persistRoot,
 				unsafeDevRegistryPath: registryPath,
@@ -419,10 +445,35 @@ describe.sequential("owner presence integration", () => {
 					{
 						config: {
 							type: "worker",
-							name: "second",
+							name: "first",
 							compatibilityDate: "2025-01-01",
-							compatibilityFlags: ["experimental"],
-							manifest: singleModuleManifest(`export default {
+							manifest: singleModuleManifest(
+								"export default { fetch() { return new Response('first'); } }"
+							),
+							env: { NS: { type: "kv", id: "NS" } },
+						},
+					},
+				],
+			})
+		);
+		let second: Miniflare | undefined;
+
+		try {
+			await first.ready;
+
+			second = new Miniflare(
+				await withIsolatedStorage({
+					unsafeEnableSharedStorage: true,
+					resourcePersistencePath: persistRoot,
+					unsafeDevRegistryPath: registryPath,
+					workers: [
+						{
+							config: {
+								type: "worker",
+								name: "second",
+								compatibilityDate: "2025-01-01",
+								compatibilityFlags: ["experimental"],
+								manifest: singleModuleManifest(`export default {
 				async fetch(request, env) {
 					if (new URL(request.url).pathname === "/secret") {
 						return new Response(await env.SECRET.get());
@@ -436,18 +487,19 @@ describe.sequential("owner presence integration", () => {
 					return new Response(row?.v ?? "<null>");
 				}
 			}`),
-							env: {
-								DB: { type: "d1", id: "later-db" },
-								SECRET: {
-									type: "secrets-store-secret",
-									storeId: "later-store",
-									secretName: "later-secret",
+								env: {
+									DB: { type: "d1", id: "later-db" },
+									SECRET: {
+										type: "secrets-store-secret",
+										storeId: "later-store",
+										secretName: "later-secret",
+									},
 								},
 							},
 						},
-					},
-				],
-			});
+					],
+				})
+			);
 			await second.ready;
 
 			expect(
@@ -500,26 +552,28 @@ describe.sequential("owner presence integration", () => {
 				return new Response(String(row.c));
 			}
 		}`;
-		const make = () =>
-			new Miniflare({
-				unsafeEnableSharedStorage: true,
-				resourcePersistencePath: persistRoot,
-				unsafeDevRegistryPath: registryPath,
-				workers: [
-					{
-						config: {
-							type: "worker",
-							name: "worker",
-							compatibilityDate: "2025-01-01",
-							compatibilityFlags: ["experimental"],
-							manifest: singleModuleManifest(WORKER),
-							env: { DB: { type: "d1", id: "DB" } },
+		const make = async () =>
+			new Miniflare(
+				await withIsolatedStorage({
+					unsafeEnableSharedStorage: true,
+					resourcePersistencePath: persistRoot,
+					unsafeDevRegistryPath: registryPath,
+					workers: [
+						{
+							config: {
+								type: "worker",
+								name: "worker",
+								compatibilityDate: "2025-01-01",
+								compatibilityFlags: ["experimental"],
+								manifest: singleModuleManifest(WORKER),
+								env: { DB: { type: "d1", id: "DB" } },
+							},
 						},
-					},
-				],
-			});
+					],
+				})
+			);
 
-		const clients = Array.from({ length: N }, make);
+		const clients = await Promise.all(Array.from({ length: N }, make));
 		try {
 			await Promise.all(clients.map((c) => c.ready));
 
@@ -577,12 +631,12 @@ describe.sequential("owner presence integration", () => {
 				},
 			],
 		};
-		const first = new Miniflare(options);
+		const first = new Miniflare(await withIsolatedStorage(options));
 		let second: Miniflare | undefined;
 
 		try {
 			await first.ready;
-			second = new Miniflare(options);
+			second = new Miniflare(await withIsolatedStorage(options));
 			await second.ready;
 
 			expect(
@@ -632,23 +686,25 @@ describe.sequential("owner presence integration", () => {
 			}
 		}`;
 		const make = async (name: string) =>
-			new Miniflare({
-				unsafeEnableSharedStorage: true,
-				resourcePersistencePath: await useTmp(),
-				unsafeDevRegistryPath: registryPath,
-				workers: [
-					{
-						config: {
-							type: "worker",
-							name,
-							compatibilityDate: "2025-01-01",
-							compatibilityFlags: ["experimental"],
-							manifest: singleModuleManifest(WORKER),
-							env: { DB: { type: "d1", id: "DB" } },
+			new Miniflare(
+				await withIsolatedStorage({
+					unsafeEnableSharedStorage: true,
+					resourcePersistencePath: await useTmp(),
+					unsafeDevRegistryPath: registryPath,
+					workers: [
+						{
+							config: {
+								type: "worker",
+								name,
+								compatibilityDate: "2025-01-01",
+								compatibilityFlags: ["experimental"],
+								manifest: singleModuleManifest(WORKER),
+								env: { DB: { type: "d1", id: "DB" } },
+							},
 						},
-					},
-				],
-			});
+					],
+				})
+			);
 		const first = await make("first");
 		const second = await make("second");
 
@@ -667,6 +723,67 @@ describe.sequential("owner presence integration", () => {
 			}
 		} finally {
 			await Promise.all([first.dispose(), second.dispose()]);
+		}
+	});
+
+	it("persists isolated resources across restarts", async ({ expect }) => {
+		const persistRoot = await useTmp();
+		const isolatedRoot = await useTmp();
+		const registryPath = await useTmp();
+		const options: MiniflareOptions = {
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistRoot,
+			isolatedResourcePersistencePath: isolatedRoot,
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "worker",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(`export default {
+			async fetch(request) {
+				const key = new Request("http://cache/key");
+				if (request.method === "PUT") {
+					await caches.default.put(
+						key,
+						new Response(await request.text(), {
+							headers: { "Cache-Control": "max-age=3600" },
+						})
+					);
+					return new Response("ok");
+				}
+				return (await caches.default.match(key)) ?? new Response("missing");
+			}
+		}`),
+					},
+				},
+			],
+		};
+
+		const first = new Miniflare(options);
+		await first.ready;
+		expect(
+			await (
+				await first.dispatchFetch("http://x/", {
+					method: "PUT",
+					body: "persisted",
+				})
+			).text()
+		).toBe("ok");
+		expect(await (await first.dispatchFetch("http://x/")).text()).toBe(
+			"persisted"
+		);
+		await first.dispose();
+
+		const restarted = new Miniflare(options);
+		try {
+			await restarted.ready;
+			expect(await (await restarted.dispatchFetch("http://x/")).text()).toBe(
+				"persisted"
+			);
+		} finally {
+			await restarted.dispose();
 		}
 	});
 

@@ -36,7 +36,12 @@ export const CACHE_PLUGIN: Plugin = {
 	getNodeBindings() {
 		return {};
 	},
-	async getServices({ options, workerIndex, tmpPath, sharedOptions }) {
+	async getServices({
+		options,
+		workerIndex,
+		tmpPath,
+		isolatedResourcePersistencePath,
+	}) {
 		const cache = options.dev?.cacheAPI ?? true;
 
 		let entryWorker: Worker;
@@ -76,7 +81,7 @@ export const CACHE_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				CACHE_PLUGIN_NAME,
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				isolatedResourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {

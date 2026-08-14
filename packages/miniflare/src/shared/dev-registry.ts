@@ -35,6 +35,7 @@ export function isStorageCandidateName(name: string): boolean {
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
+	private storageCandidateRefresh: NodeJS.Timeout | undefined;
 	private watchQueueConsumers = false;
 	private watchStorageCandidates = false;
 	private externalServices: Map<
@@ -83,6 +84,12 @@ export class DevRegistry {
 		this.externalServices = new Map(services);
 		this.watchQueueConsumers = watchQueueConsumers;
 		this.watchStorageCandidates = watchStorageCandidates;
+		if (watchStorageCandidates && this.storageCandidateRefresh === undefined) {
+			this.storageCandidateRefresh = setInterval(
+				() => this.refresh(),
+				STORAGE_CANDIDATE_HEARTBEAT_MS
+			);
+		}
 
 		mkdirSync(this.registryPath, { recursive: true });
 
@@ -110,6 +117,10 @@ export class DevRegistry {
 	 */
 	public dispose(): Promise<void> | undefined {
 		this.unregisterWorkers();
+		if (this.storageCandidateRefresh !== undefined) {
+			clearInterval(this.storageCandidateRefresh);
+			this.storageCandidateRefresh = undefined;
+		}
 
 		// Only this step is async and could be awaited
 		return this.watcher?.close().finally(() => {
@@ -142,7 +153,11 @@ export class DevRegistry {
 			}
 
 			if (this.registryPath) {
-				unlinkSync(path.join(this.registryPath, name));
+				const definitionPath = path.join(this.registryPath, name);
+				const definition = readDefinition(definitionPath);
+				if (definition?.instanceId === this.instanceId) {
+					unlinkSync(definitionPath);
+				}
 			}
 		} catch (e) {
 			this.log?.debug(`Failed to unregister worker "${name}": ${e}`);
@@ -182,6 +197,10 @@ export class DevRegistry {
 			// Close the existing watcher if it exists.
 			// It will watch the new path if there is any dependent services in a later step
 			await this.watcher?.close();
+			if (this.storageCandidateRefresh !== undefined) {
+				clearInterval(this.storageCandidateRefresh);
+				this.storageCandidateRefresh = undefined;
+			}
 
 			this.watcher = undefined;
 			this.registryPath = registryPath;
@@ -215,23 +234,22 @@ export class DevRegistry {
 
 			const stats = statSync(definitionPath, { throwIfNoEntry: false });
 
+			const oldDefinition = stats ? readDefinition(definitionPath) : undefined;
 			const staleMs = isStorageCandidateName(name)
 				? STORAGE_CANDIDATE_STALE_MS
 				: WORKER_STALE_MS;
-			if (stats && stats.mtime.getTime() < Date.now() - staleMs) {
+			if (
+				stats &&
+				stats.mtime.getTime() < Date.now() - staleMs &&
+				(!isStorageCandidateName(name) ||
+					!isCandidateProcessAlive(oldDefinition))
+			) {
 				try {
 					unlinkSync(definitionPath);
 				} catch {}
-				continue;
 			} else if (stats) {
-				const file = readFileSync(definitionPath, {
-					encoding: "utf8",
-					flag: "r",
-				});
-				const oldDefinition = JSON.parse(file);
-
 				// Skip registration if the instance ID is different
-				if (oldDefinition.instanceId !== this.instanceId) {
+				if (oldDefinition?.instanceId !== this.instanceId) {
 					this.log.warn(
 						`Skipping registration of Worker ${name} as a Worker with this name is already registered in the dev registry by another process`
 					);
@@ -253,8 +271,15 @@ export class DevRegistry {
 				name,
 				setInterval(
 					() => {
-						if (existsSync(definitionPath)) {
+						const definition = readDefinition(definitionPath);
+						if (definition?.instanceId === this.instanceId) {
 							utimesSync(definitionPath, new Date(), new Date());
+						} else {
+							const heartbeat = this.heartbeats.get(name);
+							if (heartbeat !== undefined) {
+								clearInterval(heartbeat);
+								this.heartbeats.delete(name);
+							}
 						}
 					},
 					isStorageCandidateName(name)
@@ -320,6 +345,7 @@ function getStorageCandidatesView(registry: WorkerRegistry): string {
 				definition.instanceId,
 				definition.debugPortAddress,
 				definition.storageScope,
+				definition.storageCandidatePid,
 				definition.created,
 			])
 			.sort(([previousName], [nextName]) =>
@@ -369,22 +395,29 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 			const definitionPath = path.join(registryPath, workerName);
 			const stats = statSync(definitionPath, { throwIfNoEntry: false });
 
+			if (stats === undefined) {
+				continue;
+			}
+			const definition = readDefinition(definitionPath);
+			if (definition === undefined) {
+				continue;
+			}
 			const staleMs = isStorageCandidateName(workerName)
 				? STORAGE_CANDIDATE_STALE_MS
 				: WORKER_STALE_MS;
-			if (stats === undefined || stats.mtime.getTime() < Date.now() - staleMs) {
+			if (
+				stats.mtime.getTime() < Date.now() - staleMs &&
+				(!isStorageCandidateName(workerName) ||
+					!isCandidateProcessAlive(definition))
+			) {
 				try {
 					unlinkSync(definitionPath);
 				} catch {}
 				continue;
 			}
 
-			const file = readFileSync(definitionPath, {
-				encoding: "utf8",
-				flag: "r",
-			});
 			registry[workerName] = {
-				...JSON.parse(file),
+				...definition,
 				created: stats.birthtimeMs,
 			};
 		} catch {
@@ -393,6 +426,44 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 	}
 
 	return registry;
+}
+
+function readDefinition(
+	definitionPath: string
+): (WorkerDefinition & { instanceId: string }) | undefined {
+	try {
+		const value: unknown = JSON.parse(
+			readFileSync(definitionPath, { encoding: "utf8", flag: "r" })
+		);
+		if (
+			typeof value === "object" &&
+			value !== null &&
+			"instanceId" in value &&
+			typeof value.instanceId === "string"
+		) {
+			return value as WorkerDefinition & { instanceId: string };
+		}
+	} catch {}
+	return undefined;
+}
+
+function isCandidateProcessAlive(
+	definition: (WorkerDefinition & { instanceId: string }) | undefined
+): boolean {
+	const pid = definition?.storageCandidatePid;
+	if (pid === undefined) {
+		return false;
+	}
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch (error) {
+		return (
+			error instanceof Error &&
+			"code" in error &&
+			(error as NodeJS.ErrnoException).code === "EPERM"
+		);
+	}
 }
 
 /**

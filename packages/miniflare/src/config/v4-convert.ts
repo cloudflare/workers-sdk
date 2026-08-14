@@ -70,6 +70,7 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		unsafeInspectDurableObjects: options.unsafeInspectDurableObjects,
 		logRequests: options.logRequests,
 		resourcePersistencePath: options.resourcePersistencePath,
+		isolatedResourcePersistencePath: options.isolatedResourcePersistencePath,
 		resourceTmpPath: options.resourceTmpPath,
 		stripDisablePrettyError: options.stripDisablePrettyError,
 		telemetry: options.telemetry,

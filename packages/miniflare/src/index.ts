@@ -47,6 +47,7 @@ import {
 	getRemoteProxyConnectionString,
 	getStorageScope,
 	getTriggersOfType,
+	getIsolatedResourcePersistencePath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
@@ -59,6 +60,7 @@ import {
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	R2_PLUGIN_NAME,
+	RATELIMIT_PLUGIN_NAME,
 	SECRET_STORE_PLUGIN_NAME,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
@@ -111,6 +113,10 @@ import {
 	normaliseServiceDesignator,
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
+import {
+	canonicalisePersistRoot,
+	withPersistRootStartupLock,
+} from "./shared/persist-root-lock";
 import {
 	CacheHeaders,
 	CoreBindings,
@@ -177,71 +183,6 @@ import type { Duplex, Transform, Writable } from "node:stream";
 import type { Dispatcher, Response as UndiciResponse } from "undici";
 
 const DEFAULT_HOST = "127.0.0.1";
-const PERSIST_ROOT_STARTUP_LOCK = ".miniflare-startup.lock";
-const PERSIST_ROOT_STARTUP_LOCK_STALE_MS = 30_000;
-const PERSIST_ROOT_STARTUP_LOCK_RETRY_MS = 50;
-
-async function withPersistRootStartupLock<T>(
-	persistRoot: string | undefined,
-	signal: AbortSignal,
-	callback: () => Promise<T>
-): Promise<T> {
-	if (persistRoot === undefined || signal.aborted) {
-		return callback();
-	}
-
-	await mkdir(persistRoot, { recursive: true });
-	const lockPath = path.join(persistRoot, PERSIST_ROOT_STARTUP_LOCK);
-	let lock: fs.promises.FileHandle | undefined;
-	let heartbeat: NodeJS.Timeout | undefined;
-
-	while (lock === undefined && !signal.aborted) {
-		try {
-			lock = await fs.promises.open(lockPath, "wx");
-			heartbeat = setInterval(() => {
-				fs.promises.utimes(lockPath, new Date(), new Date()).catch(() => {});
-			}, 1_000);
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-				throw error;
-			}
-
-			try {
-				const stats = await fs.promises.stat(lockPath);
-				if (
-					stats.mtime.getTime() <
-					Date.now() - PERSIST_ROOT_STARTUP_LOCK_STALE_MS
-				) {
-					await fs.promises.rm(lockPath, { force: true });
-					continue;
-				}
-			} catch (statError) {
-				if ((statError as NodeJS.ErrnoException).code !== "ENOENT") {
-					throw statError;
-				}
-			}
-
-			await new Promise((resolve) =>
-				setTimeout(resolve, PERSIST_ROOT_STARTUP_LOCK_RETRY_MS)
-			);
-		}
-	}
-
-	if (lock === undefined) {
-		return callback();
-	}
-
-	try {
-		return await callback();
-	} finally {
-		if (heartbeat !== undefined) {
-			clearInterval(heartbeat);
-		}
-		await lock.close();
-		await fs.promises.rm(lockPath, { force: true });
-	}
-}
-
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
@@ -950,7 +891,7 @@ export class Miniflare {
 		this.#devRegistry = new DevRegistry(
 			this.#sharedOpts.unsafeDevRegistryPath,
 			(registry) => {
-				void this.#pushRegistryUpdate();
+				void this.#queueRegistryUpdate();
 				this.#sharedOpts.unsafeHandleDevRegistryUpdate?.(registry);
 			},
 			this.#log
@@ -1006,7 +947,20 @@ export class Miniflare {
 		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
 		this.#initPromise = this.#runtimeMutex
-			.runWith(() => this.#assembleAndUpdateConfig())
+			.runWith(async () => {
+				if (
+					this.#sharedOpts.unsafeEnableSharedStorage &&
+					this.#sharedOpts.resourcePersistencePath !== undefined
+				) {
+					this.#sharedOpts = {
+						...this.#sharedOpts,
+						resourcePersistencePath: await canonicalisePersistRoot(
+							this.#sharedOpts.resourcePersistencePath
+						),
+					};
+				}
+				await this.#assembleAndUpdateConfig();
+			})
 			.catch((e) => {
 				// If initialisation failed, attempting to `dispose()` this instance
 				// will too. Therefore, remove from the instance registry now, so we
@@ -1039,6 +993,15 @@ export class Miniflare {
 	 */
 	#devRegistryDispatcher?: Dispatcher;
 	#devRegistryPort?: number;
+	#registryPushPromise: Promise<void> = Promise.resolve();
+
+	#queueRegistryUpdate(): Promise<void> {
+		this.#registryPushPromise = this.#registryPushPromise.then(
+			() => this.#pushRegistryUpdate(),
+			() => this.#pushRegistryUpdate()
+		);
+		return this.#registryPushPromise;
+	}
 
 	async #pushRegistryUpdate(retries = 3): Promise<void> {
 		if (this.#disposeController.signal.aborted) return;
@@ -1177,11 +1140,10 @@ export class Miniflare {
 		);
 		assert(namespaceId, "Namespace ID is required");
 
-		const coreSharedOpts = this.#sharedOpts;
 		const doPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.resourcePersistencePath
+			getIsolatedResourcePersistencePath(this.#sharedOpts)
 		);
 
 		const namespacePath = path.join(doPersistPath, namespaceId);
@@ -1224,11 +1186,10 @@ export class Miniflare {
 		);
 		assert(workflowName, "Workflow name is required");
 
-		const coreSharedOpts = this.#sharedOpts;
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.resourcePersistencePath
+			getIsolatedResourcePersistencePath(this.#sharedOpts)
 		);
 
 		// Engine DOs are stored under: <persistPath>/miniflare-workflows-<name>/<hexId>.sqlite
@@ -1303,11 +1264,10 @@ export class Miniflare {
 
 		assert(workflowName, "Workflow name is required");
 
-		const coreSharedOpts = this.#sharedOpts;
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			coreSharedOpts.resourcePersistencePath
+			getIsolatedResourcePersistencePath(this.#sharedOpts)
 		);
 
 		const uniqueKey = `miniflare-workflows-${workflowName}`;
@@ -1978,6 +1938,8 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				isolatedResourcePersistencePath:
+					getIsolatedResourcePersistencePath(sharedOpts),
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -1985,6 +1947,7 @@ export class Miniflare {
 					...pluginServicesOptionsBase,
 					options: workerOpts,
 					sharedOptions: sharedOpts,
+					devRegistryEnabled: this.#devRegistry.isEnabled(),
 				});
 				if (pluginServicesExtensions !== undefined) {
 					let pluginServices: Service[];
@@ -2213,6 +2176,10 @@ export class Miniflare {
 		);
 		// A crash destroys the proxy server heap just like a config update.
 		this.#proxyClient?.poisonProxies();
+		// The runtime behind this candidate is gone. Withdraw before restarting so
+		// peers can take ownership if recovery stalls; successful assembly registers
+		// this instance again with its new debug-port address.
+		this.#devRegistry.unregisterWorkers();
 		void this.#runtimeMutex
 			.runWith(async () => {
 				try {
@@ -2460,7 +2427,7 @@ export class Miniflare {
 
 		// Catch any registry updates that occurred while workerd was booting.
 		if (this.#devRegistry.isEnabled()) {
-			await this.#pushRegistryUpdate();
+			await this.#queueRegistryUpdate();
 		}
 
 		if (!this.#runtimeMutex.hasWaiting) {
@@ -2576,6 +2543,7 @@ export class Miniflare {
 					defaultEntrypointService: "",
 					userWorkerService: "",
 					storageScope,
+					storageCandidatePid: process.pid,
 				},
 			]);
 		}
@@ -2705,7 +2673,18 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 
 		// Split and validate options
-		const [sharedOpts, workerOpts] = validateOptions(opts);
+		let [sharedOpts, workerOpts] = validateOptions(opts);
+		if (
+			sharedOpts.unsafeEnableSharedStorage &&
+			sharedOpts.resourcePersistencePath !== undefined
+		) {
+			sharedOpts = {
+				...sharedOpts,
+				resourcePersistencePath: await canonicalisePersistRoot(
+					sharedOpts.resourcePersistencePath
+				),
+			};
+		}
 		this.#previousSharedOpts = this.#sharedOpts;
 		this.#previousWorkerOpts = this.#workerOpts;
 		this.#sharedOpts = sharedOpts;
@@ -2717,7 +2696,7 @@ export class Miniflare {
 		await this.#devRegistry.updateRegistryPath(
 			sharedOpts.unsafeDevRegistryPath,
 			(registry) => {
-				void this.#pushRegistryUpdate();
+				void this.#queueRegistryUpdate();
 				newExternalOnUpdate?.(registry);
 			}
 		);
@@ -3127,7 +3106,7 @@ export class Miniflare {
 		const durableObjectsPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			this.#sharedOpts.resourcePersistencePath
+			getIsolatedResourcePersistencePath(this.#sharedOpts)
 		);
 
 		try {
@@ -3223,11 +3202,25 @@ export class Miniflare {
 	}
 
 	/** @internal */
-	_getInternalDurableObjectNamespace(
+	async _getInternalDurableObjectNamespace(
 		pluginName: string,
 		serviceName: string,
 		className: string
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
+		if (
+			this.#sharedOpts.unsafeEnableSharedStorage &&
+			[
+				D1_PLUGIN_NAME,
+				KV_PLUGIN_NAME,
+				R2_PLUGIN_NAME,
+				RATELIMIT_PLUGIN_NAME,
+				SECRET_STORE_PLUGIN_NAME,
+			].includes(pluginName)
+		) {
+			throw new TypeError(
+				"Direct internal storage access is unavailable while shared storage is enabled"
+			);
+		}
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
 	}
 
@@ -3251,8 +3244,15 @@ export class Miniflare {
 			this.#removeExitHook?.();
 
 			// Cleanup as much as possible even if `#init()` threw
-			await this.#proxyClient?.dispose();
-			await this.#runtime?.dispose();
+			try {
+				await this.#proxyClient?.dispose();
+			} finally {
+				try {
+					await this.#runtime?.dispose();
+				} finally {
+					this.#devRegistry.unregisterWorkers();
+				}
+			}
 			// Close the undici Pool used for dispatching fetch requests to the
 			// runtime. This must happen after the runtime is disposed, so that
 			// in-flight connections are broken and close immediately. Without this,

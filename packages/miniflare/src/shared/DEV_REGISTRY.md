@@ -78,6 +78,16 @@ When the filesystem watcher detects a change to an external service, Miniflare p
 
 The push always reads the latest registry state (not a captured snapshot) and retries up to 3 times with 500ms delays.
 
+### Shared Storage Candidates
+
+When `unsafeEnableSharedStorage` is enabled, each Miniflare instance registers a storage candidate in addition to its user Workers. Candidates are scoped by the canonical physical persistence root, so one registry may safely coordinate unrelated projects. The oldest live candidate for a scope receives storage traffic; every candidate hosts the generic simulators required for handoff.
+
+Storage candidates heartbeat every 2 seconds. Registry watchers also refresh on a timer so a dead candidate expires without requiring another filesystem event. A stale candidate is removed only after its Node process is no longer alive, preventing a delayed event loop from creating two active owners. Graceful disposal stops the runtime before withdrawing its candidate, preventing overlap with the replacement owner.
+
+KV, D1, R2, Rate Limits, and Secrets Store route through the elected candidate. Cache, user Durable Objects, Workflows, observability, and Hello World storage remain instance-local while shared mode is active and use the configured `isolatedResourcePersistencePath`, allowing that state to persist across restarts without mounting the shared owner root concurrently.
+
+Shared mode requires `resourcePersistencePath`, `isolatedResourcePersistencePath`, and `unsafeDevRegistryPath`. The shared persistence root is created and resolved through the filesystem before it is used as an ownership scope.
+
 ## Request Flow
 
 ### Service Binding Fetch
@@ -113,7 +123,7 @@ sequenceDiagram
     B-->>S: result
     S-->>A: result
 
-    Note over S: Fetcher cached per instance.<br/>Invalidated when debugPortAddress changes.
+	Note over S: Fetcher cached per instance.<br/>Invalidated when address or instance ID changes.
 ```
 
 ### Scheduled Event

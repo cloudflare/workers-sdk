@@ -706,6 +706,8 @@ export const InstanceOptionsSchema = z.strictObject({
 	// Persistence
 	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
 	resourcePersistencePath: z.string().optional(),
+	/** Per-instance root for resources that cannot participate in shared storage. */
+	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
 
@@ -774,6 +776,31 @@ export type ParsedLegacyConfig = NonNullable<ParsedWorkerOptions["legacy"]>;
 
 export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 	workers: z.array(WorkerOptionsSchema),
+}).superRefine((options, ctx) => {
+	if (!options.unsafeEnableSharedStorage) {
+		return;
+	}
+	if (!options.resourcePersistencePath?.trim()) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["resourcePersistencePath"],
+			message: "Shared storage requires a persistent resource path",
+		});
+	}
+	if (!options.isolatedResourcePersistencePath?.trim()) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["isolatedResourcePersistencePath"],
+			message: "Shared storage requires an isolated resource path",
+		});
+	}
+	if (!options.unsafeDevRegistryPath?.trim()) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["unsafeDevRegistryPath"],
+			message: "Shared storage requires an enabled dev registry",
+		});
+	}
 });
 
 export type MiniflareOptions = z.input<typeof MiniflareOptionsSchema>;

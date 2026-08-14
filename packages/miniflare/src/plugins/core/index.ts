@@ -47,6 +47,7 @@ import {
 import {
 	getEnvBindingsOfType,
 	getExportsOfType,
+	getIsolatedResourcePersistencePath,
 	getRemoteProxyConnectionString,
 } from "../shared";
 import { STREAM_PLUGIN_NAME } from "../stream";
@@ -955,7 +956,7 @@ export function getGlobalServices({
 		services.push(
 			...getObservabilityServices(
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				getIsolatedResourcePersistencePath(sharedOptions)
 			)
 		);
 	}

@@ -72,6 +72,8 @@ export interface PluginServicesOptions {
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
+	devRegistryEnabled: boolean;
+	isolatedResourcePersistencePath: string | undefined;
 
 	hyperdriveProxyController: HyperdriveProxyController;
 }
@@ -197,6 +199,19 @@ export function getPersistPath(
 	// errors. Forward slashes work for both Node.js fs APIs and workerd on all
 	// platforms.
 	return result.replaceAll("\\", "/");
+}
+
+export function getIsolatedResourcePersistencePath(
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		| "isolatedResourcePersistencePath"
+		| "resourcePersistencePath"
+		| "unsafeEnableSharedStorage"
+	>
+): string | undefined {
+	return sharedOptions.unsafeEnableSharedStorage
+		? sharedOptions.isolatedResourcePersistencePath
+		: sharedOptions.resourcePersistencePath;
 }
 
 /**
