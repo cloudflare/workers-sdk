@@ -11,7 +11,7 @@ const config: Config = {
 	markdownDescription: true,
 };
 
-const applyFormattingRules = ({ $ref, ...schema }: Schema) => {
+function applyFormattingRules({ $ref, ...schema }: Schema) {
 	// `allowTrailingCommas` is a VS Code extension to JSON Schema. In draft-07 a
 	// `$ref` overrides its sibling keywords, so editors discard `allowTrailingCommas`
 	// when it sits next to the root `$ref`, and every trailing comma in a
@@ -22,7 +22,7 @@ const applyFormattingRules = ({ $ref, ...schema }: Schema) => {
 		allowTrailingCommas: true,
 		...($ref === undefined ? {} : { allOf: [{ $ref }] }),
 	};
-};
+}
 
 const schema = applyFormattingRules(
 	createGenerator(config).createSchema(config.type)
