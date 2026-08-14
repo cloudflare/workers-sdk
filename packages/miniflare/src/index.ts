@@ -1782,7 +1782,9 @@ export class Miniflare {
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
-		const externalServices = getExternalServiceEntrypoints(allWorkerOpts);
+		const externalServices = this.#devRegistry.isEnabled()
+			? getExternalServiceEntrypoints(allWorkerOpts)
+			: null;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const queueProducers = getQueueProducers(allWorkerOpts);
@@ -2020,7 +2022,9 @@ export class Miniflare {
 
 		if (
 			this.#devRegistry.isEnabled() &&
-			((externalServices && (externalServices.size > 0 || hasQueues)) ||
+			externalServices !== null &&
+			(externalServices.size > 0 ||
+				hasQueues ||
 				sharedOpts.unsafeEnableSharedStorage)
 		) {
 			await this.#devRegistry.watch(
@@ -2671,7 +2675,8 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 
 		// Split and validate options
-		let [sharedOpts, workerOpts] = validateOptions(opts);
+		const [initialSharedOpts, workerOpts] = validateOptions(opts);
+		let sharedOpts = initialSharedOpts;
 		if (
 			sharedOpts.unsafeEnableSharedStorage &&
 			sharedOpts.resourcePersistencePath !== undefined

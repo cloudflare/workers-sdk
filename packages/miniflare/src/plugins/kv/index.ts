@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { SharedBindings } from "../../workers";
-import { getUserServiceName } from "../core";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
@@ -13,7 +12,6 @@ import {
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_LOOPBACK,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
