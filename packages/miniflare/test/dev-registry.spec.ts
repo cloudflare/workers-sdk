@@ -34,7 +34,9 @@ describe.sequential("DevRegistry", () => {
 		const stale = new Date(Date.now() - 91_000);
 		await fs.utimes(definitionPath, stale, stale);
 		expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
-		await expect(fs.stat(definitionPath)).rejects.toMatchObject({ code: "ENOENT" });
+		await expect(fs.stat(definitionPath)).rejects.toMatchObject({
+			code: "ENOENT",
+		});
 	});
 
 	test("registers workers by default unless opted out", async ({ expect }) => {
