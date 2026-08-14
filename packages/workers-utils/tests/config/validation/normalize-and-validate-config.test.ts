@@ -4965,6 +4965,34 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if queues.consumers is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ queues: { consumers: null } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "queues.consumers" should be an array but got null."
+				`);
+			});
+
+			it("should error once if queues.consumers is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ queues: { consumers: "my-queue" } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "queues.consumers" should be an array but got "my-queue"."
+				`);
+			});
+
 			it("should error if queues producer bindings are not valid", ({
 				expect,
 			}) => {
