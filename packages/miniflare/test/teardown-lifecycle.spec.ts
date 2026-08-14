@@ -2,6 +2,7 @@ import childProcess from "node:child_process";
 import path from "node:path";
 import { Miniflare, ProxyClient } from "miniflare";
 import { afterEach, test, vi } from "vitest";
+import { WebSocketServer } from "ws";
 import { singleModuleManifest } from "./test-shared";
 
 async function createReadyMiniflare(): Promise<Miniflare> {
@@ -76,7 +77,7 @@ test("Miniflare: dispose requests workerd termination while proxy cleanup is pen
 	}
 });
 
-test("Miniflare: dispose waits for workerd exit before returning proxy cleanup failure", async ({
+test("Miniflare: dispose waits for workerd exit and continues cleanup before returning proxy cleanup failure", async ({
 	expect,
 }) => {
 	let markRuntimeExitObserved!: () => void;
@@ -114,6 +115,7 @@ test("Miniflare: dispose waits for workerd exit before returning proxy cleanup f
 	const proxyDispose = vi
 		.spyOn(ProxyClient.prototype, "dispose")
 		.mockRejectedValueOnce(new Error("injected proxy cleanup failure"));
+	const webSocketClose = vi.spyOn(WebSocketServer.prototype, "close");
 	const kill = vi.spyOn(childProcess.ChildProcess.prototype, "kill");
 
 	let runtimeExitReleased = false;
@@ -138,6 +140,7 @@ test("Miniflare: dispose waits for workerd exit before returning proxy cleanup f
 		releaseRuntimeExit();
 		runtimeExitReleased = true;
 		const firstDisposeError = await firstDisposeResult;
+		expect(webSocketClose).toHaveBeenCalled();
 		expect(firstDisposeError).toBeInstanceOf(Error);
 		expect((firstDisposeError as Error).message).toContain(
 			"injected proxy cleanup failure"
@@ -146,6 +149,7 @@ test("Miniflare: dispose waits for workerd exit before returning proxy cleanup f
 		if (!runtimeExitReleased) releaseRuntimeExit();
 		emit.mockRestore();
 		proxyDispose.mockRestore();
+		webSocketClose.mockRestore();
 		await firstDisposeResult;
 		await mf.dispose().catch(() => {});
 	}
