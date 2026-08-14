@@ -100,6 +100,35 @@ export const CoreBindings = {
 	TEXT_FALLBACK_WORKER_NAME: "MINIFLARE_FALLBACK_WORKER_NAME",
 } as const;
 
+// Shared storage owner (experimental `unsafeSharedStorageOwner`).
+//
+// The detached owner process registers itself in the dev registry under this
+// well-known worker name; clients look it up to find the owner's debug port and
+// reach its storage services over Cap'n Proto RPC (see `StorageOwnerProxy` in
+// `dev-registry-proxy.worker.ts`). Policy is one owner per dev registry.
+export const STORAGE_OWNER_WORKER_NAME = "__miniflare_shared_storage_owner__";
+// Each client routing storage to the owner registers a presence entry under this
+// prefix (+ its pid) so the owner can tell — from the registry alone — when no
+// clients remain and it can tear itself down.
+export const STORAGE_OWNER_CLIENT_PRESENCE_PREFIX =
+	"__miniflare_storage_owner_client__:";
+// Named entrypoint (on the dev-registry-proxy service) that routed storage
+// bindings target; forwards to the owner's storage service via the debug port.
+export const STORAGE_OWNER_CLIENT_ENTRYPOINT = "StorageOwnerProxy";
+
+/**
+ * Whether a dev registry entry name is one of the shared-storage-owner's
+ * internal reservations (the owner itself, or a client presence marker) rather
+ * than a real user worker. Consumers that enumerate the registry as "running
+ * workers" should skip these.
+ */
+export function isStorageOwnerRegistryName(name: string): boolean {
+	return (
+		name === STORAGE_OWNER_WORKER_NAME ||
+		name.startsWith(STORAGE_OWNER_CLIENT_PRESENCE_PREFIX)
+	);
+}
+
 export const ProxyOps = {
 	// Get the target or a property of the target
 	GET: "GET",
