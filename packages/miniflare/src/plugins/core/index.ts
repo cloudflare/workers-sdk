@@ -13,7 +13,12 @@ import path from "node:path";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
+import {
+	getTodaysCompatDate,
+	removeDirSync,
+	stripRedundantNodejsCompatFlags,
+} from "@cloudflare/workers-utils";
+import SCRIPT_ACCESS_IDENTITY from "worker:access/access-identity";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
@@ -304,6 +309,10 @@ function getDevControlBindings(
 	return Array.from(bindings.values());
 }
 
+function getAccessIdentityServiceName(workerIndex: number) {
+	return `access-identity:${workerIndex}`;
+}
+
 function getOutboundInterceptorName(workerIndex: number) {
 	return `outbound:${workerIndex}`;
 }
@@ -563,10 +572,22 @@ export const CORE_PLUGIN: Plugin = {
 					},
 				]
 			: (config.tailConsumers ?? []);
+		// workerd rejects a compatibility flag that the compatibility date already
+		// enables by default ("does not need to be specified anymore"), which
+		// would stop the worker starting up. Strip them per service rather than on
+		// the shared worker config: the Workflows plugin copies these flags into
+		// its engine worker, which pairs them with an older hardcoded compatibility
+		// date that still needs the flag.
+		const userFlags = config.compatibilityFlags
+			? stripRedundantNodejsCompatFlags(
+					compatibilityDate,
+					config.compatibilityFlags
+				)
+			: undefined;
 		// Only add the flags the worker doesn't already declare. A worker that sets
 		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it
 		// listed twice, which workerd rejects ("specified multiple times").
-		const existingFlags = config.compatibilityFlags ?? [];
+		const existingFlags = userFlags ?? [];
 		const compatibilityFlags = observabilityEnabled
 			? [
 					...existingFlags,
@@ -574,7 +595,7 @@ export const CORE_PLUGIN: Plugin = {
 						(flag) => !existingFlags.includes(flag)
 					),
 				]
-			: config.compatibilityFlags;
+			: userFlags;
 
 		services.push({
 			name: serviceName,
@@ -637,6 +658,14 @@ export const CORE_PLUGIN: Plugin = {
 					.filter((consumer) => consumer.streaming)
 					.map<ServiceDesignator>(getTailServiceDesignator),
 				containerEngine: getContainerEngine(sharedOptions.containerEngine),
+				...(dev?.access
+					? {
+							accessBlobHeader: CoreHeaders.ACCESS_BLOB,
+							accessBindingService: {
+								name: getAccessIdentityServiceName(workerIndex),
+							},
+						}
+					: {}),
 			},
 		});
 
@@ -690,6 +719,26 @@ export const CORE_PLUGIN: Plugin = {
 						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					globalOutbound: getGlobalOutbound(workerIndex, config, dev),
+				},
+			});
+		}
+
+		// Access identity binding worker for ctx.access.getIdentity()
+		if (dev?.access) {
+			services.push({
+				name: getAccessIdentityServiceName(workerIndex),
+				worker: {
+					modules: [
+						{
+							name: "index.js",
+							esModule: SCRIPT_ACCESS_IDENTITY(),
+						},
+					],
+					compatibilityDate: "2025-01-01",
+					compatibilityFlags: [
+						"experimental",
+						"service_binding_extra_handlers",
+					],
 				},
 			});
 		}
@@ -841,6 +890,31 @@ export function getGlobalServices({
 			data: encoder.encode(sharedOptions.unsafeProxySharedSecret),
 		});
 	}
+	// Inject per-worker Cloudflare Access blob bindings into the entry worker.
+	// Each worker with dev.access gets its own blob keyed by worker name so the
+	// entry worker can pick the correct one after routing.
+	for (const workerOpt of allWorkerOpts ?? []) {
+		const accessOpts = workerOpt.dev?.access;
+		if (accessOpts) {
+			const accessBlob: {
+				app_aud: string;
+				jwt_claims?: Record<string, unknown>;
+			} = { app_aud: accessOpts.aud };
+			if (accessOpts.identity) {
+				accessBlob.jwt_claims = accessOpts.identity;
+			}
+			serviceEntryBindings.push({
+				name: CoreBindings.JSON_ACCESS_BLOB_PREFIX + workerOpt.config.name,
+				json: JSON.stringify(accessBlob),
+			});
+		}
+	}
+	// Pass the first worker's raw name so the entry worker can look up its
+	// access blob when no route matches (the fallback is always the first worker).
+	serviceEntryBindings.push({
+		name: CoreBindings.TEXT_FALLBACK_WORKER_NAME,
+		text: workerNames[0] ?? "",
+	});
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,

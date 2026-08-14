@@ -106,6 +106,7 @@ export interface ConfigBundle {
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
+	access: Config["access"] | undefined;
 	sendMetrics: boolean | undefined;
 	// The stable, externally-reachable URL of the proxy server in front of
 	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
@@ -1204,6 +1205,7 @@ export async function buildMiniflareOptions(
 				routes: config.routes,
 				outboundService: config.outboundService,
 				zone: config.zone,
+				access: config.access?.dev,
 			},
 			...externalWorkers,
 		],

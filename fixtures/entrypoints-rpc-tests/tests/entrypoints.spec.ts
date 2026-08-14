@@ -688,7 +688,7 @@ describe("entrypoints", () => {
 		await waitFor(async () => {
 			const response = await fetch(url);
 			expect(await response.text()).toBe("pong");
-		});
+		}, 10_000);
 	});
 
 	test("should throw if binding to named entrypoint exported by incompatible version of wrangler", async ({

@@ -1,5 +1,91 @@
 # wrangler
 
+## 4.123.0
+
+### Minor Changes
+
+- [#15113](https://github.com/cloudflare/workers-sdk/pull/15113) [`b8fd112`](https://github.com/cloudflare/workers-sdk/commit/b8fd112136abf4ff17c3d456eaa7b22880bcaf6a) Thanks [@BSFishy](https://github.com/BSFishy)! - Add local dev simulation for Cloudflare Access `ctx.access.getIdentity()`
+
+  You can now configure a mock Cloudflare Access identity in `wrangler.json` so that `ctx.access.getIdentity()` returns it during local development.
+
+  ```jsonc
+  // wrangler.json
+  {
+    "access": {
+      "dev": {
+        "aud": "my-app-aud-tag",
+        "identity": {
+          "email": "user@example.com",
+          "name": "Test User"
+        }
+      }
+    }
+  }
+  ```
+
+- [#15152](https://github.com/cloudflare/workers-sdk/pull/15152) [`f0f2054`](https://github.com/cloudflare/workers-sdk/commit/f0f2054a48f5b7536268e8be432148943ba73557) Thanks [@GregBrimble](https://github.com/GregBrimble)! - [private beta]: Updates the `--ignore-defaults` flag to `--ignore-base-config` on `wrangler preview` commands.
+
+  `--ignore-base-config` now only takes effect on Preview creation, rather than on each deployment, since Preview base configuration is now copy-on-create rather than inherit-on-deploy.
+
+- [#14872](https://github.com/cloudflare/workers-sdk/pull/14872) [`339509d`](https://github.com/cloudflare/workers-sdk/commit/339509dbe142901a140866ace4fb81e3dab299ba) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add automatic update prompts for out-of-date Cloudflare agent skills
+
+  When Cloudflare skills were previously installed by Wrangler and the upstream `cloudflare/skills` repository has newer content, Wrangler now offers to update them after eligible commands complete.
+
+  To reduce prompt fatigue, the update check only runs once a month (30 days since the last install or update). Declining suppresses the prompt until the next upstream change.
+
+  When declining an update, Wrangler offers the option to permanently disable future update prompts. This preference is stored globally in `~/.wrangler/agents-skills-install.jsonc`. The `WRANGLER_NO_SKILLS_UPDATE_PROMPTS=true` environment variable can also be used to suppress prompts. The `--install-skills` flag remains available regardless of these settings.
+
+### Patch Changes
+
+- Updated dependencies [[`b8fd112`](https://github.com/cloudflare/workers-sdk/commit/b8fd112136abf4ff17c3d456eaa7b22880bcaf6a)]:
+  - miniflare@5.20260811.1-alpha
+
+## 4.122.0
+
+### Minor Changes
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Detect Node.js compatibility from the compatibility date, now that `nodejs_compat` is enabled by default
+
+  As of compatibility date `2026-08-04`, workerd enables the `nodejs_compat` and `nodejs_compat_v2` compatibility flags by default. Previously these tools only treated Node.js compatibility as enabled when one of those flags was listed explicitly, so a Worker on a compatibility date of `2026-08-04` or later without the flag would get Node.js APIs from the runtime but no Node.js polyfills from the bundler, and `process.env` could be substituted with an empty object at build time. They now resolve these flags the same way workerd does, and honour `no_nodejs_compat` to opt out.
+
+  To keep Node.js compatibility switched off on a newer compatibility date, specify both `no_nodejs_compat` and `no_nodejs_compat_v2`, since each flag has its own default.
+
+  `@cloudflare/vitest-pool-workers` needs `nodejs_compat_v2` for its own test runner, so it continues to override a project that opts out of it. On a compatibility date that enables the flag anyway, it now drops the opt-out rather than adding the flag back, which workerd would reject — previously this stopped such a project from running any tests at all.
+
+  `wrangler types` also no longer attributes its `@types/node` suggestion to "the `nodejs_compat` flag", which it can now make for Workers that do not set the flag at all.
+
+### Patch Changes
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260804.1 | ^5.20260811.1 |
+  | workerd                   | 1.20260804.1  | 1.20260811.1  |
+
+- [#15148](https://github.com/cloudflare/workers-sdk/pull/15148) [`0b82b15`](https://github.com/cloudflare/workers-sdk/commit/0b82b1574b3327681a0091716ed274c8f0544a48) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ignore a `nodejs_compat` compatibility flag that the compatibility date already enables
+
+  workerd rejects a compatibility flag that its compatibility date enables by default, so a Worker configured with both a compatibility date of `2026-08-04` or later **and** `nodejs_compat` failed to start locally with "The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore".
+
+  The redundant `nodejs_compat` and `nodejs_compat_v2` flags are now dropped when starting the runtime, which has no effect on the resulting Worker because the compatibility date enables both anyway. `no_nodejs_compat` and `no_nodejs_compat_v2` still switch Node.js compatibility off, and a flag specified alongside its own opt-out is left alone so that workerd still reports those as contradictory.
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Stop adding a redundant `nodejs_compat` flag to generated Wrangler configurations
+
+  `create-cloudflare` and `wrangler setup` write today's date as the `compatibility_date`, and from `2026-08-04` that already enables `nodejs_compat`. Adding the flag as well made the generated project fail to start with "The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore", so the flag is now only added for earlier compatibility dates.
+
+  `create-cloudflare` also removes the flag when a template, or a framework's own scaffolder, already wrote it into a configuration that ends up using such a compatibility date, and still installs `@types/node` for these projects even though there is no longer a flag to detect them by.
+
+  `wrangler setup` does the same for a `wrangler.json(c)` that is already in the project: it writes today's date over whatever date that configuration was written for, so a `nodejs_compat` it finds there is removed as part of writing the file.
+
+- [#15142](https://github.com/cloudflare/workers-sdk/pull/15142) [`3b02915`](https://github.com/cloudflare/workers-sdk/commit/3b029154fae5b69d6f32e61dea22171412b4269f) Thanks [@penalosa](https://github.com/penalosa)! - Fix remote binding sessions reusing stale binding configurations
+
+  Starting a new remote bindings session that reuses a Worker name no longer picks up the bindings from a previous session, which could cause `Binding "..." not found` errors.
+
+- Updated dependencies [[`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`0b82b15`](https://github.com/cloudflare/workers-sdk/commit/0b82b1574b3327681a0091716ed274c8f0544a48), [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e), [`90dd5e5`](https://github.com/cloudflare/workers-sdk/commit/90dd5e597e3eeeb2ec17636386b75fea770cedc9)]:
+  - miniflare@5.20260811.0-alpha
+
 ## 4.121.0
 
 ### Minor Changes

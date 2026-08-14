@@ -35,7 +35,9 @@ import type { ExpectStatic } from "vitest";
 
 export type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
+	expectFrameworkCli?: boolean;
 	nodeCompat: boolean;
+	typesPath?: string;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
 	/**
@@ -326,10 +328,14 @@ export async function verifyPreviewScript(
 
 export async function verifyTypes(
 	expect: ExpectStatic,
-	{ nodeCompat, verifyTypes: verify }: FrameworkTestConfig,
+	{
+		nodeCompat,
+		typesPath: configuredTypesPath,
+		verifyTypes: verify,
+	}: FrameworkTestConfig,
 	{
 		workersTypes,
-		typesPath = "./worker-configuration.d.ts",
+		typesPath: templateTypesPath = "./worker-configuration.d.ts",
 		envInterfaceName = "Env",
 	}: TemplateConfig,
 	projectPath: string
@@ -338,6 +344,7 @@ export async function verifyTypes(
 		return;
 	}
 
+	const typesPath = configuredTypesPath ?? templateTypesPath;
 	const outputFileContent = readFile(join(projectPath, typesPath)).split("\n");
 
 	const hasEnvInterface = outputFileContent.some(
@@ -456,7 +463,16 @@ export function getFrameworkConfig(frameworkKey: string) {
 	const frameworkMap = getFrameworkMap({
 		experimental: isExperimental,
 	});
-	const [frameworkId, platformVariant] = frameworkKey.split(":");
+	// Test keys may include optional labels after the framework id, e.g.
+	//   "next" | "next:vinext" | "nuxt:pages" | "nuxt:pages:minimal"
+	// Only "pages" / "workers" are treated as platform variants; any other
+	// trailing segment is a disambiguating label ignored here.
+	const [frameworkId, second, third] = frameworkKey.split(":");
+	const platformVariant =
+		second === "pages" || second === "workers" ? second : undefined;
+	const _label = platformVariant ? third : second; // reserved for callers
+	void _label;
+
 	if ("platformVariants" in frameworkMap[frameworkId]) {
 		assert(
 			platformVariant === "pages" || platformVariant === "workers",
@@ -483,7 +499,8 @@ export async function testGitCommitMessage(
 	expect: ExpectStatic,
 	projectName: string,
 	framework: string,
-	projectPath: string
+	projectPath: string,
+	expectFrameworkCli = true
 ) {
 	const commitMessage = await runCommand(["git", "log", "-1"], {
 		silent: true,
@@ -496,6 +513,11 @@ export async function testGitCommitMessage(
 	expect(commitMessage).toContain(`C3 = create-cloudflare@${version}`);
 	expect(commitMessage).toContain(`project name = ${projectName}`);
 	expect(commitMessage).toContain(`framework = ${framework}`);
+	if (expectFrameworkCli) {
+		expect(commitMessage).toContain("framework cli =");
+	} else {
+		expect(commitMessage).not.toContain("framework cli =");
+	}
 }
 
 /**
