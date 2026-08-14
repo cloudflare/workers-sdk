@@ -204,7 +204,8 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	// Events with rpcMethod==="tail" are filtered out to prevent infinite
 	// recursion (the remote tail() call would itself produce a tail event).
 	async tail(events: TraceItem[]) {
-		if (!this._fetcher) {
+		const fetcher = this._resolve();
+		if (fetcher === null) {
 			return;
 		}
 		const filtered = events.filter(
@@ -223,7 +224,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 			// outside this `try`, so it escapes as an unhandled rejection instead of
 			// being reported.
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
-			await this._fetcher.tail(serializedEvents);
+			await fetcher.tail(serializedEvents);
 		} catch (e) {
 			console.warn(
 				`[dev-registry] Failed to forward tail events to "${
