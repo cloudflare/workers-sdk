@@ -2542,7 +2542,6 @@ export class Miniflare {
 					defaultEntrypointService: "",
 					userWorkerService: "",
 					storageScope,
-					storageCandidatePid: process.pid,
 				},
 			]);
 		}

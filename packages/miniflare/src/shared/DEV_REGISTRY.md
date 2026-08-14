@@ -56,7 +56,7 @@ type WorkerDefinition = {
 
 - **Heartbeat**: Every 30s, the file's mtime is touched to signal that the Worker is still running.
 - **Registration**: Named workers are advertised by default. Workers with `unsafeRegisterWorker: false` are not advertised.
-- **Stale cleanup**: On every read, files older than 5 minutes are deleted (5 minutes is much longer than 30s just to provide a safe buffer)
+- **Stale cleanup**: Workers heartbeat every 10 seconds and entries older than 90 seconds are deleted.
 - **Change detection**: Chokidar watches the registry directory. When a file changes, `refresh()` compares the new state against the previous JSON snapshot and fires `onUpdate` only if a watched external service actually changed.
 
 ### Proxy Worker (`dev-registry-proxy.worker.ts`)
@@ -82,7 +82,7 @@ The push always reads the latest registry state (not a captured snapshot) and re
 
 When `unsafeEnableSharedStorage` is enabled, each Miniflare instance registers a storage candidate in addition to its user Workers. Candidates are scoped by the canonical physical persistence root, so one registry may safely coordinate unrelated projects. The oldest live candidate for a scope receives storage traffic; every candidate hosts the generic simulators required for handoff.
 
-Storage candidates heartbeat every 2 seconds. Registry watchers also refresh on a timer so a dead candidate expires without requiring another filesystem event. A stale candidate is removed only after its Node process is no longer alive, preventing a delayed event loop from creating two active owners. Graceful disposal stops the runtime before withdrawing its candidate, preventing overlap with the replacement owner.
+Storage candidates heartbeat every 2 seconds and expire after 10 seconds. Registry watchers also refresh on a timer so a dead candidate expires without requiring another filesystem event. Graceful disposal stops the runtime before withdrawing its candidate, preventing overlap with the replacement owner.
 
 KV, D1, R2, Rate Limits, and Secrets Store route through the elected candidate. Cache, user Durable Objects, Workflows, observability, and Hello World storage remain instance-local while shared mode is active and use the configured `isolatedResourcePersistencePath`, allowing that state to persist across restarts without mounting the shared owner root concurrently.
 

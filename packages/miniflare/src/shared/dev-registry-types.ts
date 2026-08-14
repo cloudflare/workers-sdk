@@ -3,7 +3,7 @@ export type WorkerRegistry = Record<
 	WorkerDefinition & {
 		// stat.birthtime
 		created: number;
-		instanceId: string;
+		instanceId?: string;
 	}
 >;
 
@@ -33,6 +33,4 @@ export type WorkerDefinition = {
 	queueConsumers?: string[];
 	/** Canonical persistence root when this instance can own shared storage. */
 	storageScope?: string;
-	/** Node process hosting this storage candidate. */
-	storageCandidatePid?: number;
 };

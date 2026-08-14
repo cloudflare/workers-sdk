@@ -21,8 +21,8 @@ import type { FSWatcher } from "chokidar";
 export const STORAGE_CANDIDATE_PREFIX = "__miniflare_storage_candidate__-";
 const STORAGE_CANDIDATE_HEARTBEAT_MS = 2_000;
 const STORAGE_CANDIDATE_STALE_MS = 10_000;
-const WORKER_HEARTBEAT_MS = 30_000;
-const WORKER_STALE_MS = 300_000;
+const WORKER_HEARTBEAT_MS = 10_000;
+const WORKER_STALE_MS = 90_000;
 
 export function getStorageCandidateName(instanceId: string): string {
 	return `${STORAGE_CANDIDATE_PREFIX}${instanceId}`;
@@ -238,12 +238,7 @@ export class DevRegistry {
 			const staleMs = isStorageCandidateName(name)
 				? STORAGE_CANDIDATE_STALE_MS
 				: WORKER_STALE_MS;
-			if (
-				stats &&
-				stats.mtime.getTime() < Date.now() - staleMs &&
-				(!isStorageCandidateName(name) ||
-					!isCandidateProcessAlive(oldDefinition))
-			) {
+			if (stats && stats.mtime.getTime() < Date.now() - staleMs) {
 				try {
 					unlinkSync(definitionPath);
 				} catch {}
@@ -345,7 +340,6 @@ function getStorageCandidatesView(registry: WorkerRegistry): string {
 				definition.instanceId,
 				definition.debugPortAddress,
 				definition.storageScope,
-				definition.storageCandidatePid,
 				definition.created,
 			])
 			.sort(([previousName], [nextName]) =>
@@ -380,7 +374,7 @@ function getQueueConsumersView(registry: WorkerRegistry): string {
 /**
  * Read the worker registry from the specified path.
  *
- * Skips stale workers that haven't sent a heartbeat in over 5 minutes,
+ * Skips stale workers that haven't sent a heartbeat within their stale window,
  * and removes their files from disk.
  */
 export function getWorkerRegistry(registryPath: string): WorkerRegistry {
@@ -405,11 +399,7 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 			const staleMs = isStorageCandidateName(workerName)
 				? STORAGE_CANDIDATE_STALE_MS
 				: WORKER_STALE_MS;
-			if (
-				stats.mtime.getTime() < Date.now() - staleMs &&
-				(!isStorageCandidateName(workerName) ||
-					!isCandidateProcessAlive(definition))
-			) {
+			if (stats.mtime.getTime() < Date.now() - staleMs) {
 				try {
 					unlinkSync(definitionPath);
 				} catch {}
@@ -430,40 +420,16 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 
 function readDefinition(
 	definitionPath: string
-): (WorkerDefinition & { instanceId: string }) | undefined {
+): (WorkerDefinition & { instanceId?: string }) | undefined {
 	try {
 		const value: unknown = JSON.parse(
 			readFileSync(definitionPath, { encoding: "utf8", flag: "r" })
 		);
-		if (
-			typeof value === "object" &&
-			value !== null &&
-			"instanceId" in value &&
-			typeof value.instanceId === "string"
-		) {
-			return value as WorkerDefinition & { instanceId: string };
+		if (typeof value === "object" && value !== null) {
+			return value as WorkerDefinition & { instanceId?: string };
 		}
 	} catch {}
 	return undefined;
-}
-
-function isCandidateProcessAlive(
-	definition: (WorkerDefinition & { instanceId: string }) | undefined
-): boolean {
-	const pid = definition?.storageCandidatePid;
-	if (pid === undefined) {
-		return false;
-	}
-	try {
-		process.kill(pid, 0);
-		return true;
-	} catch (error) {
-		return (
-			error instanceof Error &&
-			"code" in error &&
-			(error as NodeJS.ErrnoException).code === "EPERM"
-		);
-	}
 }
 
 /**

@@ -35,7 +35,7 @@ export interface RegistryEntry {
 	/** Queue names consumed by this worker, if any. */
 	queueConsumers?: string[];
 	created: number;
-	instanceId: string;
+	instanceId?: string;
 	storageScope?: string;
 }
 
