@@ -466,7 +466,7 @@ const UnsafeSchema = z.strictObject({
  */
 const BaseWorkerSchema = z.strictObject({
 	type: z.literal("worker"),
-	name: z.string().min(1, "Worker `name` is required"),
+	name: z.string(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	assets: AssetsSchema.optional(),
