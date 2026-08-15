@@ -73,13 +73,24 @@ export async function fetch(
 			});
 			responsePromise.resolve(couplePromise.then(() => response));
 		});
-		ws.once("unexpected-response", (_, req) => {
-			const headers = convertUndiciHeadersToStandard(req.headers);
-			const response = new Response(req, {
-				status: req.statusCode,
-				headers,
-			});
-			responsePromise.resolve(response);
+		ws.once("unexpected-response", (_, incoming) => {
+			const headers = convertUndiciHeadersToStandard(incoming.headers);
+			// Buffer the Node stream into bytes. Passing `IncomingMessage` to
+			// `Response` is not a valid `BodyInit`, and undici would decode it as
+			// text, destroying gzip ERROR_STACK bodies (#15198).
+			void bufferIncomingMessage(incoming).then(
+				(body) => {
+					responsePromise.resolve(
+						new Response(body, {
+							status: incoming.statusCode,
+							headers,
+						})
+					);
+				},
+				(error: unknown) => {
+					responsePromise.reject(error);
+				}
+			);
 		});
 		return responsePromise;
 	}
@@ -96,6 +107,19 @@ export type DispatchFetch = (
 ) => Promise<Response>;
 
 export type AnyHeaders = http.IncomingHttpHeaders | string[];
+
+function bufferIncomingMessage(
+	incoming: http.IncomingMessage
+): Promise<Buffer> {
+	return new Promise((resolve, reject) => {
+		const chunks: Buffer[] = [];
+		incoming.on("data", (chunk: Buffer | string) => {
+			chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+		});
+		incoming.on("end", () => resolve(Buffer.concat(chunks)));
+		incoming.on("error", reject);
+	});
+}
 
 function isIterable(
 	headers: UndiciHeaders
