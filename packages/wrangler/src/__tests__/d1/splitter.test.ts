@@ -1,5 +1,22 @@
 import { describe, it } from "vitest";
-import { mayContainMultipleStatements, splitSqlQuery } from "../../d1/splitter";
+import {
+	mayContainMultipleStatements,
+	normalizeSqlLineEndings,
+	splitSqlQuery,
+} from "../../d1/splitter";
+
+describe("normalizeSqlLineEndings()", () => {
+	it("should preserve CRLF inside quoted SQL values and identifiers", ({
+		expect,
+	}) => {
+		const sql =
+			"SELECT 'single''quote\r\nvalue', \"double\r\nquote\", `backtick\r\nquote`, [bracket\r\nquote]; -- don't stop scanning\r\n/* block\r\ncomment */\r\nSELECT 1;";
+
+		expect(normalizeSqlLineEndings(sql)).toBe(
+			"SELECT 'single''quote\r\nvalue', \"double\r\nquote\", `backtick\r\nquote`, [bracket\r\nquote]; -- don't stop scanning\n/* block\ncomment */\nSELECT 1;"
+		);
+	});
+});
 
 describe("mayContainMultipleStatements()", () => {
 	it("should return false if there is only a semi-colon at the end", ({
