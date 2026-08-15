@@ -4,7 +4,28 @@ import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 
 describe("ProxyController", () => {
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
+
+	test("request-scoped ProxyWorker errors are logged without stopping dev", ({
+		expect,
+	}) => {
+		const bus = new FakeBus();
+		const controller = new ProxyController(bus);
+
+		controller.onProxyWorkerMessage({
+			type: "error",
+			error: {
+				name: "Error",
+				message: "Network connection lost.",
+				stack: "Error: Network connection lost.",
+			},
+		});
+
+		expect(bus.events).toEqual([]);
+		expect(std.err).toContain(
+			"Error proxying request to the local Worker: Network connection lost."
+		);
+	});
 
 	test("Runtime.exceptionThrown dispatches a typed runtimeError event", async ({
 		expect,

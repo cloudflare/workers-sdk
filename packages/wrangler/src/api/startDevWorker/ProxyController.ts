@@ -475,7 +475,10 @@ export class ProxyController extends Controller {
 
 				break;
 			case "error":
-				this.emitErrorEvent("Error inside ProxyWorker", message.error);
+				logger.error(
+					"Error proxying request to the local Worker:",
+					message.error.message
+				);
 
 				break;
 			case "debug-log":
