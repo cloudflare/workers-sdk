@@ -98,6 +98,8 @@ export type SharedDeployVersionsProps = {
 	accountId: string | undefined;
 	/** Resolved from getMetricsUsageHeaders() / config.send_metrics. Controls whether usage metrics headers are sent with upload requests. */
 	sendMetrics: boolean;
+	/** Optional directory for caching intermediate results (e.g. package dependency collection). Callers set this to a project-local cache directory. */
+	cacheDir?: string;
 	/** Resolved from getFlag("RESOURCES_PROVISION"). Controls whether bindings are auto-provisioned before upload. */
 	resourcesProvision: boolean;
 	/** Controls whether provisioned resource IDs are written back to the config file. */
