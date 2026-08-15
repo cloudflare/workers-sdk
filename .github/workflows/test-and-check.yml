@@ -134,18 +134,24 @@ jobs:
       # Browser Run tests in `packages/miniflare/test/plugins/browser/index.spec.ts`
       # and the `fixtures/browser-run` fixture use `@puppeteer/browsers` to
       # download Chrome into the global Wrangler cache. Caching that binary
-      # across CI runs avoids ~150 MB of repeat downloads per run and reduces
-      # the surface area for the intermittent partial-extraction race that
-      # surfaces as `The browser folder (...) exists but the executable (...)
-      # is missing` (see #13971, #13980).
+      # across CI runs avoids ~150 MB of repeat downloads per run.
+      #
+      # Note this is `cache/restore` paired with an explicit `cache/save`
+      # below, not plain `cache`: `actions/cache` saves from a post step
+      # declaring `post-if: success()`, so a job that fails for *any* reason
+      # never saves. Combined with this workflow only running on
+      # `pull_request`/`merge_group` — so nothing is ever written to
+      # `refs/heads/main`, the one ref every PR can restore from — that left
+      # Windows re-downloading Chrome on every single run.
       #
       # The Browser Run fixture is skipped on Ubuntu (AppArmor), but the
       # miniflare browser spec runs everywhere, so the cache is needed on all
       # three OSes for `packages-and-tools` and on Windows + macOS for
       # `fixtures`.
       - name: Restore Chrome browser cache (Browser Run)
+        id: chrome-cache
         if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'packages-and-tools' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-latest'))
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           # The Chrome version lives in
           # `packages/miniflare/src/plugins/browser-rendering/browser-version.ts`.
@@ -193,6 +199,40 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
+
+      # Only cache an install that Miniflare marked as complete. Without this
+      # check a job interrupted mid-download would publish a half-extracted
+      # Chrome under the cache key, which — because `@puppeteer/browsers`
+      # considers an install present as soon as the executable exists — every
+      # later run would restore and fail to launch.
+      - name: Check for a complete Chrome install
+        id: chrome-complete
+        if: always() && steps.chrome-cache.outcome == 'success' && steps.chrome-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          for dir in "$HOME/.cache/.wrangler/chrome" \
+                     "$HOME/Library/Caches/.wrangler/chrome" \
+                     "$HOME/AppData/Local/xdg.cache/.wrangler/chrome"; do
+            if [ -d "$dir" ] && [ -n "$(find "$dir" -name .miniflare-install-complete -print -quit)" ]; then
+              echo "Found a complete Chrome install under $dir"
+              echo "complete=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "No complete Chrome install found; skipping cache save"
+          echo "complete=false" >> "$GITHUB_OUTPUT"
+
+      # Saved here rather than in a post step so that an unrelated test failure
+      # elsewhere in the job doesn't stop Chrome from being cached.
+      - name: Save Chrome browser cache (Browser Run)
+        if: always() && steps.chrome-complete.outputs.complete == 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          key: chrome-${{ runner.os }}-${{ hashFiles('packages/miniflare/src/plugins/browser-rendering/browser-version.ts') }}
+          path: |
+            ~/.cache/.wrangler/chrome
+            ~/Library/Caches/.wrangler/chrome
+            ~/AppData/Local/xdg.cache/.wrangler/chrome
 
       - name: Upload turbo logs
         if: always()
