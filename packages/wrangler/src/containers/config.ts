@@ -20,7 +20,56 @@ import type {
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
 import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
-import type { Config, ContainerApp } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	ContainerApp,
+	ContainerObservability,
+	Observability,
+} from "@cloudflare/workers-utils";
+
+function hasConflictingObservabilityEnabledValues(
+	observability: ContainerObservability | undefined
+): boolean {
+	return (
+		typeof observability?.enabled === "boolean" &&
+		typeof observability.logs?.enabled === "boolean" &&
+		observability.enabled !== observability.logs.enabled
+	);
+}
+
+function isContainerObservabilityEnabled(
+	observability: ContainerObservability | undefined
+): boolean {
+	return (
+		observability?.logs?.enabled === true || observability?.enabled === true
+	);
+}
+
+function isRootObservabilityLogsEnabled(
+	observability: Observability | undefined
+): boolean {
+	return (
+		observability?.logs?.enabled === true ||
+		(observability?.enabled === true && observability?.logs?.enabled !== false)
+	);
+}
+
+function assertNoConflictingObservabilityEnabledValues(
+	containerName: string,
+	observability: ContainerObservability | undefined
+) {
+	if (!hasConflictingObservabilityEnabledValues(observability)) {
+		return;
+	}
+
+	throw new UserError(
+		`"containers.observability.enabled" and "containers.observability.logs.enabled" cannot be set to different values for container "${containerName}".`,
+		{
+			telemetryMessage:
+				"containers config observability enabled values conflict",
+		}
+	);
+}
 
 /**
  * Perform type conversion of affinities so that they can be fed to the API.
@@ -125,6 +174,20 @@ export const getNormalizedContainerOptions = async (
 			tiers = [1, 2];
 		}
 
+		let selectedObservabilityLogsEnabled = isRootObservabilityLogsEnabled(
+			config.observability
+		);
+
+		if (container.observability !== undefined) {
+			assertNoConflictingObservabilityEnabledValues(
+				container.name,
+				container.observability
+			);
+			selectedObservabilityLogsEnabled = isContainerObservabilityEnabled(
+				container.observability
+			);
+		}
+
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: className,
@@ -153,9 +216,19 @@ export const getNormalizedContainerOptions = async (
 					: (container.rollout_kind ?? "full_auto"),
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
-				logs_enabled:
-					config.observability?.logs?.enabled ??
-					config.observability?.enabled === true,
+				logs_enabled: selectedObservabilityLogsEnabled,
+				...(container.observability?.target_instance_percentage !== undefined
+					? {
+							target_instance_percentage:
+								container.observability.target_instance_percentage,
+						}
+					: {}),
+				...(container.observability?.target_instance_count !== undefined
+					? {
+							target_instance_count:
+								container.observability.target_instance_count,
+						}
+					: {}),
 			},
 			// eslint-disable-next-line @typescript-eslint/no-deprecated -- kept for backward compatibility, falls back to deprecated `wrangler_ssh` when `ssh` is not set
 			wrangler_ssh: container.ssh ?? container.wrangler_ssh,

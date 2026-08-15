@@ -91,7 +91,11 @@ export type SharedContainerConfig = {
 		colocation?: ApplicationAffinityColocation;
 		hardware_generation?: ApplicationAffinityHardwareGeneration;
 	};
-	observability: { logs_enabled: boolean };
+	observability: {
+		logs_enabled: boolean;
+		target_instance_percentage?: number;
+		target_instance_count?: number;
+	};
 } & InstanceTypeOrLimits;
 
 /** build/pull agnostic container options */
