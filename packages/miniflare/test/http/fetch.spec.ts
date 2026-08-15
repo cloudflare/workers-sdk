@@ -250,3 +250,21 @@ test("fetch: preserves a large non-error body on a failed WebSocket upgrade", as
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe(body);
 });
+test("fetch: preserves an oversized plain ERROR_STACK body on a failed WebSocket upgrade", async ({
+	expect,
+}) => {
+	const huge = JSON.stringify({
+		message: "x".repeat(MAX_ERROR_STACK_BYTES),
+		name: "Error",
+	});
+	const server = await useServer((_req, res) => {
+		res.writeHead(500, {
+			"Content-Type": "application/json",
+			"MF-Experimental-Error-Stack": "true",
+		});
+		res.end(huge);
+	});
+	const res = await fetch(server.http, { headers: { upgrade: "websocket" } });
+	expect(res.status).toBe(500);
+	expect(await res.text()).toBe(huge);
+});

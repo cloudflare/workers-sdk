@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import * as undici from "undici";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
-import { MAX_ERROR_STACK_BYTES } from "./error-stack";
+import { isGzip, MAX_ERROR_STACK_BYTES } from "./error-stack";
 import { Request } from "./request";
 import { Response } from "./response";
 import { coupleWebSocket, WebSocketPair } from "./websocket";
@@ -80,8 +80,9 @@ export async function fetch(
 			const headers = convertUndiciHeadersToStandard(incoming.headers);
 			/**
 			 * Only ERROR_STACK 500s need a byte buffer: `IncomingMessage` is not a
-			 * valid `BodyInit`, and undici would decode gzip as text (#15198). Other
-			 * failed upgrades stream through so a large page is not capped or emptied.
+			 * valid `BodyInit`, and undici would decode gzip as text (#15198). The
+			 * size cap applies to gzip only, so a large plain JSON stack is kept.
+			 * Other failed upgrades stream through so a large page is not emptied.
 			 */
 			const isErrorStack =
 				incoming.statusCode === 500 &&
@@ -125,14 +126,20 @@ export type DispatchFetch = (
 
 export type AnyHeaders = http.IncomingHttpHeaders | string[];
 
+/**
+ * Buffers an ERROR_STACK `IncomingMessage` as bytes. Gzip is capped so a
+ * compression bomb cannot fill memory; plain JSON is not, matching the
+ * non-WebSocket path.
+ */
 function bufferIncomingMessage(
 	incoming: http.IncomingMessage,
-	maxBytes: number
+	maxGzipBytes: number
 ): Promise<Buffer> {
 	return new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
-		let total = 0;
+		let gzip: boolean | undefined;
 		let settled = false;
+		let total = 0;
 		const finish = (body: Buffer) => {
 			if (settled) {
 				return;
@@ -146,12 +153,14 @@ function bufferIncomingMessage(
 			}
 			const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
 			total += buf.length;
-			if (total > maxBytes) {
+			chunks.push(buf);
+			if (gzip === undefined && total >= 2) {
+				gzip = isGzip(Buffer.concat(chunks, 2));
+			}
+			if (gzip === true && total > maxGzipBytes) {
 				incoming.destroy();
 				finish(Buffer.alloc(0));
-				return;
 			}
-			chunks.push(buf);
 		});
 		incoming.on("end", () => finish(Buffer.concat(chunks)));
 		incoming.on("error", (error) => {

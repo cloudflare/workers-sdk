@@ -19,7 +19,7 @@ export const MAX_GZIP_ROUNDS = 4;
  * undici's `fetch` decompresses the body but leaves that header in place, so
  * trusting the header would gunzip already-plain JSON.
  */
-function isGzip(bytes: Uint8Array): boolean {
+export function isGzip(bytes: Uint8Array): boolean {
 	return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
 }
 
