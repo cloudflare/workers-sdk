@@ -101,7 +101,12 @@ export async function fetch(
 				return;
 			}
 			void bufferIncomingMessage(incoming).then(
-				(body) => {
+				({ body, truncated }) => {
+					if (truncated) {
+						headers.delete("Content-Encoding");
+						headers.delete("Content-Length");
+						headers.set("Content-Length", "0");
+					}
 					responsePromise.resolve(
 						new Response(body, {
 							headers,
@@ -138,18 +143,18 @@ export type AnyHeaders = http.IncomingHttpHeaders | string[];
  */
 function bufferIncomingMessage(
 	incoming: http.IncomingMessage
-): Promise<Buffer> {
+): Promise<{ body: Buffer; truncated: boolean }> {
 	return new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
 		let gzip: boolean | undefined;
 		let settled = false;
 		let total = 0;
-		const finish = (body: Buffer) => {
+		const finish = (body: Buffer, truncated = false) => {
 			if (settled) {
 				return;
 			}
 			settled = true;
-			resolve(body);
+			resolve({ body, truncated });
 		};
 		incoming.on("data", (chunk: Buffer | string) => {
 			if (settled) {
@@ -165,7 +170,7 @@ function bufferIncomingMessage(
 			const overPlain = gzip === false && total > MAX_ERROR_STACK_PLAIN_BYTES;
 			if (overGzip || overPlain) {
 				incoming.destroy();
-				finish(Buffer.alloc(0));
+				finish(Buffer.alloc(0), true);
 			}
 		});
 		incoming.on("end", () => finish(Buffer.concat(chunks)));

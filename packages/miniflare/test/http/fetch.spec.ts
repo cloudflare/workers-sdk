@@ -285,4 +285,6 @@ test("fetch: empties a plain ERROR_STACK body that exceeds the memory ceiling", 
 	const res = await fetch(server.http, { headers: { upgrade: "websocket" } });
 	expect(res.status).toBe(500);
 	expect((await res.arrayBuffer()).byteLength).toBe(0);
+	expect(res.headers.get("Content-Length")).toBe("0");
+	expect(res.headers.get("Content-Encoding")).toBeNull();
 });
