@@ -392,10 +392,10 @@ export type AssetReverseMap = {
  * symlinked content out. This mirrors `listAssetFiles` in `deploy-helpers` so
  * that `wrangler dev` serves the same set of assets `wrangler deploy` uploads.
  */
-const listAssetFiles = async (
+async function listAssetFiles(
 	dir: string,
 	base: string = dir
-): Promise<string[]> => {
+): Promise<string[]> {
 	const entries = await fs.readdir(dir);
 	const nested = await Promise.all(
 		entries.map(async (entry) => {
@@ -411,7 +411,7 @@ const listAssetFiles = async (
 		})
 	);
 	return nested.flat();
-};
+}
 
 /**
  * Traverses the asset directory to create an asset manifest and asset reverse map.
