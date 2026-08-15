@@ -288,6 +288,7 @@ describe("handleWebSocket", () => {
 		await listen();
 
 		const socket = await connect();
+		socket.on("error", () => {});
 
 		const chunks: Buffer[] = [];
 		socket.on("data", (chunk) => chunks.push(chunk));
