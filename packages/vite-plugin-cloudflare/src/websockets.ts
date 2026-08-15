@@ -1,4 +1,6 @@
-import { createHeaders } from "@remix-run/node-fetch-server";
+import * as http from "node:http";
+import * as net from "node:net";
+import { createHeaders, sendResponse } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
@@ -78,7 +80,11 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					socket.destroy();
+					const res = new http.ServerResponse(request);
+					if (socket instanceof net.Socket) {
+						res.assignSocket(socket);
+					}
+					await sendResponse(res, response as unknown as Response);
 					return;
 				}
 
