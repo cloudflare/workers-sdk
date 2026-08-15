@@ -2,8 +2,8 @@ import zlib from "node:zlib";
 import { decodeErrorPayload } from "../workers/core/constants";
 
 /**
- * Ceiling for an ERROR_STACK body, compressed or inflated. These payloads are
- * a serialised Worker exception, not an application response.
+ * Ceiling for gzip inflate of an ERROR_STACK body. Plain JSON is decoded as-is;
+ * this bound exists to stop a compression bomb, not to drop a large stack.
  */
 export const MAX_ERROR_STACK_BYTES = 1024 * 1024;
 
@@ -52,7 +52,16 @@ export async function readErrorStackBody(response: {
 	headers: { get(name: string): string | null };
 }): Promise<string | null> {
 	const bytes = new Uint8Array(await response.arrayBuffer());
-	if (bytes.byteLength === 0 || bytes.byteLength > MAX_ERROR_STACK_BYTES) {
+	if (bytes.byteLength === 0) {
+		return decodeErrorPayload(response);
+	}
+
+	if (!isGzip(bytes)) {
+		const serialised = Buffer.from(bytes).toString("utf8");
+		return serialised === "" ? decodeErrorPayload(response) : serialised;
+	}
+
+	if (bytes.byteLength > MAX_ERROR_STACK_BYTES) {
 		return decodeErrorPayload(response);
 	}
 

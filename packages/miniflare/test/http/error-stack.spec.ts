@@ -89,6 +89,20 @@ test("falls back to the payload header when inflated gzip exceeds the size cap",
 	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
 });
 
+test("decodes an oversized plain ERROR_STACK body instead of dropping it", async ({
+	expect,
+}) => {
+	const huge = JSON.stringify({
+		message: "x".repeat(MAX_ERROR_STACK_BYTES),
+		name: "Error",
+	});
+	const response = new Response(huge, {
+		headers: { "Content-Type": "application/json" },
+		status: 500,
+	});
+	await expect(readErrorStackBody(response)).resolves.toBe(huge);
+});
+
 test("falls back to the payload header when gzip nesting exceeds the round cap", async ({
 	expect,
 }) => {
