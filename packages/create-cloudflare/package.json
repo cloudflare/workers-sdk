@@ -84,6 +84,7 @@
 		"vite-tsconfig-paths": "^4.0.8",
 		"vitest": "catalog:default",
 		"which-pm-runs": "^1.1.0",
+		"workerd": "catalog:default",
 		"wrangler": "workspace:*",
 		"wrap-ansi": "^9.0.0",
 		"yargs": "^17.7.2"
