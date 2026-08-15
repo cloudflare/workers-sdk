@@ -418,4 +418,52 @@ describe("handleWebSocket", () => {
 
 		expect(unhandled).not.toHaveBeenCalled();
 	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15170
+	test("delivers non-101 HTTP response when Worker rejects WebSocket upgrade", async ({
+		expect,
+	}) => {
+		startMiniflare(`export default {
+			fetch() {
+				return new Response("Unauthorized: upgrade rejected", {
+					status: 401,
+					headers: {
+						"X-Custom-Auth": "denied",
+						"Content-Type": "text/plain",
+					},
+				});
+			}
+		}`);
+		await listen();
+
+		const socket = await connect();
+
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(
+			() => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				expect(raw).toContain("HTTP/1.1 401");
+				expect(raw).toContain("Unauthorized: upgrade rejected");
+			},
+			{ timeout: 10_000 }
+		);
+
+		const raw = Buffer.concat(chunks).toString("utf8");
+		expect(raw).toContain("HTTP/1.1 401");
+		expect(raw).toContain("x-custom-auth: denied");
+		expect(raw).toContain("Unauthorized: upgrade rejected");
+
+		socket.destroy();
+	});
 });
