@@ -80,11 +80,18 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					const res = new http.ServerResponse(request);
-					if (socket instanceof net.Socket) {
-						res.assignSocket(socket);
+					if (!socket.destroyed) {
+						const res = new http.ServerResponse(request);
+						if (socket instanceof net.Socket) {
+							res.assignSocket(socket);
+						}
+						try {
+							await sendResponse(res, response as unknown as Response);
+						} catch {
+							// Client disconnected or write failed
+						}
 					}
-					await sendResponse(res, response as unknown as Response);
+					socket.destroy();
 					return;
 				}
 
