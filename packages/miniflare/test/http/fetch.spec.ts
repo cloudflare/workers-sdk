@@ -4,6 +4,7 @@ import { URLSearchParams } from "node:url";
 import { DeferredPromise, fetch, FormData } from "miniflare";
 import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
+import { MAX_ERROR_STACK_BYTES } from "../../src/http/error-stack";
 import { useServer } from "../test-shared";
 import type { CloseEvent, MessageEvent } from "miniflare";
 import type { AddressInfo } from "node:net";
@@ -236,4 +237,16 @@ test("fetch: returns regular response if no WebSocket response returned", async 
 	expect(res.status).toBe(404);
 	expect(res.headers.get("Content-Type")).toBe("text/html");
 	expect(await res.text()).toBe("<p>Not Found</p>");
+});
+test("fetch: preserves a large non-error body on a failed WebSocket upgrade", async ({
+	expect,
+}) => {
+	const body = "x".repeat(MAX_ERROR_STACK_BYTES + 1);
+	const server = await useServer((_req, res) => {
+		res.writeHead(200, { "Content-Type": "text/plain" });
+		res.end(body);
+	});
+	const res = await fetch(server.http, { headers: { upgrade: "websocket" } });
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe(body);
 });

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { Readable } from "node:stream";
 import * as undici from "undici";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
@@ -9,6 +10,7 @@ import { coupleWebSocket, WebSocketPair } from "./websocket";
 import type { RequestInfo, RequestInit } from "./request";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type http from "node:http";
+import type { BodyInit } from "undici";
 import type { UndiciHeaders } from "undici/types/dispatcher";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
@@ -76,15 +78,29 @@ export async function fetch(
 		});
 		ws.once("unexpected-response", (_, incoming) => {
 			const headers = convertUndiciHeadersToStandard(incoming.headers);
-			// Buffer the Node stream into bytes. Passing `IncomingMessage` to
-			// `Response` is not a valid `BodyInit`, and undici would decode it as
-			// text, destroying gzip ERROR_STACK bodies (#15198).
+			/**
+			 * Only ERROR_STACK 500s need a byte buffer: `IncomingMessage` is not a
+			 * valid `BodyInit`, and undici would decode gzip as text (#15198). Other
+			 * failed upgrades stream through so a large page is not capped or emptied.
+			 */
+			const isErrorStack =
+				incoming.statusCode === 500 &&
+				headers.get(CoreHeaders.ERROR_STACK) !== null;
+			if (!isErrorStack) {
+				responsePromise.resolve(
+					new Response(Readable.toWeb(incoming) as BodyInit, {
+						headers,
+						status: incoming.statusCode,
+					})
+				);
+				return;
+			}
 			void bufferIncomingMessage(incoming, MAX_ERROR_STACK_BYTES).then(
 				(body) => {
 					responsePromise.resolve(
 						new Response(body, {
-							status: incoming.statusCode,
 							headers,
+							status: incoming.statusCode,
 						})
 					);
 				},
