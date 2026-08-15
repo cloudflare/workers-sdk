@@ -42,10 +42,31 @@ function gunzipNested(bytes: Uint8Array): Buffer {
 }
 
 /**
+ * Returns serialised JSON, or the payload header when the body is empty or is
+ * not JSON (oversized brotli that skipped inflate, leftover compressed bytes).
+ */
+function jsonOrPayload(
+	text: string,
+	response: { headers: { get(name: string): string | null } }
+): string | null {
+	if (text === "") {
+		return decodeErrorPayload(response);
+	}
+	try {
+		JSON.parse(text);
+		return text;
+	} catch {
+		return decodeErrorPayload(response);
+	}
+}
+
+/**
  * Brotli has no reliable magic number. Attempt inflate and treat a throw as
  * "this was not brotli", so leftover `Content-Encoding: br` on already-plain
  * JSON is left alone. An inflate that exceeds the size cap is a bomb, not a
- * miss.
+ * miss. Oversized input returns null rather than "bomb" so a large plain JSON
+ * stack still utf8-decodes; compressed bytes that are not JSON then fall
+ * through to `jsonOrPayload`.
  */
 function tryBrotli(bytes: Uint8Array): Buffer | "bomb" | null {
 	if (bytes.byteLength > MAX_ERROR_STACK_BYTES) {
@@ -101,7 +122,7 @@ export async function readErrorStackBody(response: {
 		}
 
 		const serialised = decoded.toString("utf8");
-		return serialised === "" ? decodeErrorPayload(response) : serialised;
+		return jsonOrPayload(serialised, response);
 	}
 
 	const brotli = tryBrotli(bytes);
@@ -111,10 +132,9 @@ export async function readErrorStackBody(response: {
 	if (brotli !== null) {
 		const serialised = brotli.toString("utf8");
 		if (serialised !== "") {
-			return serialised;
+			return jsonOrPayload(serialised, response);
 		}
 	}
 
-	const serialised = Buffer.from(bytes).toString("utf8");
-	return serialised === "" ? decodeErrorPayload(response) : serialised;
+	return jsonOrPayload(Buffer.from(bytes).toString("utf8"), response);
 }

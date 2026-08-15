@@ -145,6 +145,19 @@ test("falls back to the payload header when inflated brotli exceeds the size cap
 	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
 });
 
+test("falls back to the payload header when an oversized non-JSON body is not gzip", async ({
+	expect,
+}) => {
+	const response = new Response(Buffer.alloc(MAX_ERROR_STACK_BYTES + 1, 0xff), {
+		headers: {
+			"Content-Encoding": "br",
+			"MF-Experimental-Error-Stack-Payload": encodeURIComponent(ERROR_JSON),
+		},
+		status: 500,
+	});
+	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
+});
+
 test("falls back to the payload header when gzip nesting exceeds the round cap", async ({
 	expect,
 }) => {
