@@ -2,8 +2,9 @@ import zlib from "node:zlib";
 import { decodeErrorPayload } from "../workers/core/constants";
 
 /**
- * Ceiling for gzip inflate of an ERROR_STACK body. Plain JSON is decoded as-is;
- * this bound exists to stop a compression bomb, not to drop a large stack.
+ * Ceiling for gzip and brotli inflate of an ERROR_STACK body. Plain JSON is
+ * decoded as-is; this bound exists to stop a compression bomb, not to drop a
+ * large stack.
  */
 export const MAX_ERROR_STACK_BYTES = 1024 * 1024;
 
@@ -41,11 +42,38 @@ function gunzipNested(bytes: Uint8Array): Buffer {
 }
 
 /**
+ * Brotli has no reliable magic number. Attempt inflate and treat a throw as
+ * "this was not brotli", so leftover `Content-Encoding: br` on already-plain
+ * JSON is left alone. An inflate that exceeds the size cap is a bomb, not a
+ * miss.
+ */
+function tryBrotli(bytes: Uint8Array): Buffer | "bomb" | null {
+	if (bytes.byteLength > MAX_ERROR_STACK_BYTES) {
+		return null;
+	}
+	try {
+		return zlib.brotliDecompressSync(bytes, {
+			maxOutputLength: MAX_ERROR_STACK_BYTES,
+		});
+	} catch (error) {
+		if (
+			error instanceof RangeError ||
+			(error instanceof Error &&
+				"code" in error &&
+				error.code === "ERR_BUFFER_TOO_LARGE")
+		) {
+			return "bomb";
+		}
+		return null;
+	}
+}
+
+/**
  * Reads the serialised Worker error from an ERROR_STACK 500.
  *
  * `workerd` drops bodies on `HEAD` (empty → payload header). WebSocket
  * upgrades that fail go through `ws` `unexpected-response`, which does not
- * decompress, so a gzipped body must be inflated before `JSON.parse`.
+ * decompress, so a gzipped or brotli body must be inflated before `JSON.parse`.
  */
 export async function readErrorStackBody(response: {
 	arrayBuffer(): Promise<ArrayBuffer>;
@@ -56,26 +84,37 @@ export async function readErrorStackBody(response: {
 		return decodeErrorPayload(response);
 	}
 
-	if (!isGzip(bytes)) {
-		const serialised = Buffer.from(bytes).toString("utf8");
+	if (isGzip(bytes)) {
+		if (bytes.byteLength > MAX_ERROR_STACK_BYTES) {
+			return decodeErrorPayload(response);
+		}
+
+		let decoded: Buffer;
+		try {
+			decoded = gunzipNested(bytes);
+		} catch {
+			return decodeErrorPayload(response);
+		}
+
+		if (isGzip(decoded)) {
+			return decodeErrorPayload(response);
+		}
+
+		const serialised = decoded.toString("utf8");
 		return serialised === "" ? decodeErrorPayload(response) : serialised;
 	}
 
-	if (bytes.byteLength > MAX_ERROR_STACK_BYTES) {
+	const brotli = tryBrotli(bytes);
+	if (brotli === "bomb") {
 		return decodeErrorPayload(response);
 	}
-
-	let decoded: Buffer;
-	try {
-		decoded = gunzipNested(bytes);
-	} catch {
-		return decodeErrorPayload(response);
+	if (brotli !== null) {
+		const serialised = brotli.toString("utf8");
+		if (serialised !== "") {
+			return serialised;
+		}
 	}
 
-	if (isGzip(decoded)) {
-		return decodeErrorPayload(response);
-	}
-
-	const serialised = decoded.toString("utf8");
+	const serialised = Buffer.from(bytes).toString("utf8");
 	return serialised === "" ? decodeErrorPayload(response) : serialised;
 }

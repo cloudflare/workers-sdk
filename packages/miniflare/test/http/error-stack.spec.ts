@@ -103,6 +103,48 @@ test("decodes an oversized plain ERROR_STACK body instead of dropping it", async
 	await expect(readErrorStackBody(response)).resolves.toBe(huge);
 });
 
+test("inflates a brotli ERROR_STACK body that was left compressed", async ({
+	expect,
+}) => {
+	const response = new Response(zlib.brotliCompressSync(ERROR_JSON), {
+		headers: {
+			"Content-Encoding": "br",
+			"Content-Type": "application/json",
+		},
+		status: 500,
+	});
+	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
+});
+
+test("does not brotli-decompress a plain body that still carries Content-Encoding br", async ({
+	expect,
+}) => {
+	const response = new Response(ERROR_JSON, {
+		headers: {
+			"Content-Encoding": "br",
+			"Content-Type": "application/json",
+		},
+		status: 500,
+	});
+	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
+});
+
+test("falls back to the payload header when inflated brotli exceeds the size cap", async ({
+	expect,
+}) => {
+	const response = new Response(
+		zlib.brotliCompressSync("x".repeat(MAX_ERROR_STACK_BYTES + 1)),
+		{
+			headers: {
+				"Content-Encoding": "br",
+				"MF-Experimental-Error-Stack-Payload": encodeURIComponent(ERROR_JSON),
+			},
+			status: 500,
+		}
+	);
+	await expect(readErrorStackBody(response)).resolves.toBe(ERROR_JSON);
+});
+
 test("falls back to the payload header when gzip nesting exceeds the round cap", async ({
 	expect,
 }) => {
