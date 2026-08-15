@@ -343,6 +343,19 @@ function pipelineEntry(
 		throw new Error("Pipeline must have either a stream");
 	}
 }
+/**
+ * Whether any binding opts into a remote Hyperdrive configuration. Used to keep
+ * the (async) credential seeding off the reload path of configs that have no
+ * such binding — which is every config that does not use this feature.
+ */
+function hasRemoteHyperdriveBinding(
+	bindings: StartDevWorkerInput["bindings"]
+): boolean {
+	return Object.values(bindings ?? {}).some(
+		(binding) => binding.type === "hyperdrive" && binding.remote === true
+	);
+}
+
 function hyperdriveEntry(
 	hyperdrive: CfHyperdrive,
 	remoteProxyConnectionString?: RemoteProxyConnectionString,
@@ -1208,17 +1221,20 @@ export async function buildMiniflareOptions(
 	// Remote Hyperdrive bindings need the edge session's credentials before the
 	// (synchronous) binding builder runs. Doing it here covers every dev path
 	// that goes through this function.
-	// Only reached when a remote proxy session exists — `seedRemoteHyperdriveBindings`
-	// is a no-op without one, and this module is loaded lazily to avoid a circular
-	// dependency, so skip the import entirely on the local-only path.
-	const seededHyperdriveConnectionStrings = remoteProxyConnectionString
-		? await import("../../api/remoteBindings").then((m) =>
-				m.seedRemoteHyperdriveBindings(
-					config.bindings ?? undefined,
-					remoteProxyConnectionString
+	//
+	// This runs on every reload, so the guard is a cheap synchronous check that
+	// stays out of the way of configs this feature has nothing to do with: no
+	// remote Hyperdrive binding means no seeding, no lazy module load (the import
+	// is lazy to avoid a circular dependency), and no extra await here.
+	const seededHyperdriveConnectionStrings =
+		remoteProxyConnectionString && hasRemoteHyperdriveBinding(config.bindings)
+			? await import("../../api/remoteBindings").then((m) =>
+					m.seedRemoteHyperdriveBindings(
+						config.bindings ?? undefined,
+						remoteProxyConnectionString
+					)
 				)
-			)
-		: undefined;
+			: undefined;
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
 		remoteProxyConnectionString,
