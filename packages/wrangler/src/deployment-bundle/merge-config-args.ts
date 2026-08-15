@@ -1,8 +1,8 @@
 import { generatePreviewAlias } from "@cloudflare/deploy-helpers";
 import {
+	DEFAULT_COMPAT_DATE,
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
-	getTodaysCompatDate,
 	getWranglerTmpDir,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -57,7 +57,7 @@ async function mergeSharedConfigArgs(
 	}
 
 	const compatibilityDate = args.latest
-		? getTodaysCompatDate()
+		? DEFAULT_COMPAT_DATE
 		: (args.compatibilityDate ?? config.compatibility_date);
 
 	const compatibilityFlags =
