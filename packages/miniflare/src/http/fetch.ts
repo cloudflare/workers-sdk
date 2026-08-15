@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as undici from "undici";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
+import { MAX_ERROR_STACK_BYTES } from "./error-stack";
 import { Request } from "./request";
 import { Response } from "./response";
 import { coupleWebSocket, WebSocketPair } from "./websocket";
@@ -78,7 +79,7 @@ export async function fetch(
 			// Buffer the Node stream into bytes. Passing `IncomingMessage` to
 			// `Response` is not a valid `BodyInit`, and undici would decode it as
 			// text, destroying gzip ERROR_STACK bodies (#15198).
-			void bufferIncomingMessage(incoming).then(
+			void bufferIncomingMessage(incoming, MAX_ERROR_STACK_BYTES).then(
 				(body) => {
 					responsePromise.resolve(
 						new Response(body, {
@@ -109,15 +110,40 @@ export type DispatchFetch = (
 export type AnyHeaders = http.IncomingHttpHeaders | string[];
 
 function bufferIncomingMessage(
-	incoming: http.IncomingMessage
+	incoming: http.IncomingMessage,
+	maxBytes: number
 ): Promise<Buffer> {
 	return new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
+		let total = 0;
+		let settled = false;
+		const finish = (body: Buffer) => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			resolve(body);
+		};
 		incoming.on("data", (chunk: Buffer | string) => {
-			chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+			if (settled) {
+				return;
+			}
+			const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+			total += buf.length;
+			if (total > maxBytes) {
+				incoming.destroy();
+				finish(Buffer.alloc(0));
+				return;
+			}
+			chunks.push(buf);
 		});
-		incoming.on("end", () => resolve(Buffer.concat(chunks)));
-		incoming.on("error", reject);
+		incoming.on("end", () => finish(Buffer.concat(chunks)));
+		incoming.on("error", (error) => {
+			if (!settled) {
+				settled = true;
+				reject(error);
+			}
+		});
 	});
 }
 
