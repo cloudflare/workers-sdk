@@ -1,8 +1,9 @@
 ---
 "wrangler": patch
 "@cloudflare/deploy-helpers": patch
+"miniflare": patch
 ---
 
-Fix asset uploads to properly skip symbolic links
+Fix asset handling to properly skip symbolic links
 
-Previously, symbolic links in your assets directory were followed during upload: a symlinked file's target, or the contents of a symlinked directory, could be collected and uploaded as assets. Now both symbolic links and symlinked directories are skipped, so only real files inside your assets directory are uploaded.
+Previously, symbolic links in your assets directory were followed: a symlinked file's target, or the contents of a symlinked directory, could be collected and served or uploaded as assets. Both `wrangler deploy` and the local dev server now skip symbolic links and do not descend into symlinked directories, so only real files inside your assets directory are used, and the two agree on which files that is.
