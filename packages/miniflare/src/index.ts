@@ -3123,70 +3123,106 @@ export class Miniflare {
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
 		// we'd like them to be poisoned synchronously here.
 		this.#proxyClient?.poisonProxies();
+		// Preserve a readiness failure without allowing it to skip teardown.
+		let waitForReadyFailed = false;
+		let waitForReadyError: unknown;
 		try {
 			await this.#waitForReady(/* disposing */ true);
-		} finally {
+		} catch (error) {
+			waitForReadyFailed = true;
+			waitForReadyError = error;
+		}
+
+		// Runtime.dispose() requests workerd termination synchronously before
+		// returning its child-exit promise. Start it before awaiting independent
+		// cleanup so those hooks cannot delay or skip the termination request.
+		let runtimeDisposePromise: Promise<void>;
+		try {
+			runtimeDisposePromise = Promise.resolve(this.#runtime?.dispose());
+		} catch (error) {
+			runtimeDisposePromise = Promise.reject(error);
+		}
+		// Attach a rejection handler immediately so a fast runtime failure cannot
+		// become unhandled while independent cleanup is still pending.
+		const runtimeDisposeOutcome = runtimeDisposePromise.then(
+			() => ({ ok: true as const }),
+			(error: unknown) => ({ ok: false as const, error })
+		);
+
+		// Preserve the existing first cleanup error, while still waiting for the
+		// already-started runtime exit before the outer disposal settles.
+		let independentCleanupFailed = false;
+		let independentCleanupError: unknown;
+		try {
+			// Cleanup as much as possible even if `#init()` threw.
 			await this.#closeBrowserProcesses();
 
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
 			this.#removeExitHook?.();
 
-			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();
-			await this.#runtime?.dispose();
-			// Close the undici Pool used for dispatching fetch requests to the
-			// runtime. This must happen after the runtime is disposed, so that
-			// in-flight connections are broken and close immediately. Without this,
-			// lingering sockets in the Pool can keep the Node.js event loop alive.
-			// The Pool may already be destroyed (e.g., if workerd was SIGKILL'd and
-			// all connections broke), so ignore ClientDestroyedError.
-			try {
-				await this.#runtimeDispatcher?.close();
-			} catch {}
-			// Also close the dev-registry dispatcher (same issue as above).
-			try {
-				await this.#devRegistryDispatcher?.close();
-			} catch {}
-
-			await this.#stopLoopbackServer();
-			// Close the WebSocket server so any connected clients are disconnected
-			// and their sockets don't keep the event loop alive. It uses
-			// `noServer: true` so it doesn't own an HTTP server, but connected
-			// WebSocket clients still hold open sockets.
-			this.#webSocketServer.close();
-			// Best-effort cleanup: on Windows, workerd may not release file handles
-			// immediately after disposal, causing EBUSY errors. The temp directory
-			// lives in os.tmpdir() so the OS will clean it up eventually.
-			removeDir(this.#tmpPath, { fireAndForget: true });
-			// Clean up email session directories in the project temp path. When no
-			// project temp path is supplied, these live inside `#tmpPath` and are
-			// already removed above.
-			const emailPaths = getEmailPathsToClean(
-				this.#sharedOpts.resourceTmpPath,
-				this.#tmpPath
-			);
-			if (emailPaths) {
-				try {
-					await removeDir(emailPaths.sessionDir);
-				} catch (e) {
-					this.#log.debug(
-						`Unable to remove email session directory: ${String(e)}`
-					);
-				}
-			}
-
-			// Close the inspector proxy server if there is one
-			await this.#maybeInspectorProxyController?.dispose();
-			// Unregister workers from dev registry and stop the file watcher
-			await this.#devRegistry.dispose();
-
-			// shutdown hyperdrive proxies if any exist
-			await this.#hyperdriveProxyController.dispose();
-
-			// Remove from instance registry as last step in `finally`, to make sure
-			// all dispose steps complete
-			maybeInstanceRegistry?.delete(this);
+		} catch (error) {
+			independentCleanupFailed = true;
+			independentCleanupError = error;
 		}
+
+		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		// Close the undici Pool used for dispatching fetch requests to the
+		// runtime. This must happen after the runtime is disposed, so that
+		// in-flight connections are broken and close immediately. Without this,
+		// lingering sockets in the Pool can keep the Node.js event loop alive.
+		// The Pool may already be destroyed (e.g., if workerd was SIGKILL'd and
+		// all connections broke), so ignore ClientDestroyedError.
+		try {
+			await this.#runtimeDispatcher?.close();
+		} catch {}
+		// Also close the dev-registry dispatcher (same issue as above).
+		try {
+			await this.#devRegistryDispatcher?.close();
+		} catch {}
+
+		await this.#stopLoopbackServer();
+		// Close the WebSocket server so any connected clients are disconnected
+		// and their sockets don't keep the Node.js event loop alive. It uses
+		// `noServer: true` so it doesn't own an HTTP server, but connected
+		// WebSocket clients still hold open sockets.
+		this.#webSocketServer.close();
+		// Best-effort cleanup: on Windows, workerd may not release file handles
+		// immediately after disposal, causing EBUSY errors. The temp directory
+		// lives in os.tmpdir() so the OS will clean it up eventually.
+		removeDir(this.#tmpPath, { fireAndForget: true });
+		// Clean up email session directories in the project temp path. When no
+		// project temp path is supplied, these live inside `#tmpPath` and are
+		// already removed above.
+		const emailPaths = getEmailPathsToClean(
+			this.#sharedOpts.resourceTmpPath,
+			this.#tmpPath
+		);
+		if (emailPaths) {
+			try {
+				await removeDir(emailPaths.sessionDir);
+			} catch (e) {
+				this.#log.debug(
+					`Unable to remove email session directory: ${String(e)}`
+				);
+			}
+		}
+
+		// Close the inspector proxy server if there is one
+		await this.#maybeInspectorProxyController?.dispose();
+		// Unregister workers from dev registry and stop the file watcher
+		await this.#devRegistry.dispose();
+
+		// shutdown hyperdrive proxies if any exist
+		await this.#hyperdriveProxyController.dispose();
+
+		// Remove from instance registry as last step in disposal, preserving the
+		// existing behavior when an earlier cleanup operation fails.
+		maybeInstanceRegistry?.delete(this);
+
+		if (independentCleanupFailed) throw independentCleanupError;
+		if (!runtimeCleanupOutcome.ok) throw runtimeCleanupOutcome.error;
+		if (waitForReadyFailed) throw waitForReadyError;
 	}
 }
 
