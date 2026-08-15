@@ -4,7 +4,10 @@ import { URLSearchParams } from "node:url";
 import { DeferredPromise, fetch, FormData } from "miniflare";
 import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
-import { MAX_ERROR_STACK_BYTES } from "../../src/http/error-stack";
+import {
+	MAX_ERROR_STACK_BYTES,
+	MAX_ERROR_STACK_PLAIN_BYTES,
+} from "../../src/http/error-stack";
 import { useServer } from "../test-shared";
 import type { CloseEvent, MessageEvent } from "miniflare";
 import type { AddressInfo } from "node:net";
@@ -267,4 +270,19 @@ test("fetch: preserves an oversized plain ERROR_STACK body on a failed WebSocket
 	const res = await fetch(server.http, { headers: { upgrade: "websocket" } });
 	expect(res.status).toBe(500);
 	expect(await res.text()).toBe(huge);
+});
+test("fetch: empties a plain ERROR_STACK body that exceeds the memory ceiling", async ({
+	expect,
+}) => {
+	const huge = Buffer.alloc(MAX_ERROR_STACK_PLAIN_BYTES + 1, 0x20);
+	const server = await useServer((_req, res) => {
+		res.writeHead(500, {
+			"Content-Type": "application/json",
+			"MF-Experimental-Error-Stack": "true",
+		});
+		res.end(huge);
+	});
+	const res = await fetch(server.http, { headers: { upgrade: "websocket" } });
+	expect(res.status).toBe(500);
+	expect((await res.arrayBuffer()).byteLength).toBe(0);
 });

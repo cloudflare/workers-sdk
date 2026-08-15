@@ -3,7 +3,11 @@ import { Readable } from "node:stream";
 import * as undici from "undici";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
-import { isGzip, MAX_ERROR_STACK_BYTES } from "./error-stack";
+import {
+	isGzip,
+	MAX_ERROR_STACK_BYTES,
+	MAX_ERROR_STACK_PLAIN_BYTES,
+} from "./error-stack";
 import { Request } from "./request";
 import { Response } from "./response";
 import { coupleWebSocket, WebSocketPair } from "./websocket";
@@ -80,9 +84,9 @@ export async function fetch(
 			const headers = convertUndiciHeadersToStandard(incoming.headers);
 			/**
 			 * Only ERROR_STACK 500s need a byte buffer: `IncomingMessage` is not a
-			 * valid `BodyInit`, and undici would decode gzip as text (#15198). The
-			 * size cap applies to gzip only, so a large plain JSON stack is kept.
-			 * Other failed upgrades stream through so a large page is not emptied.
+			 * valid `BodyInit`, and undici would decode gzip as text (#15198). Gzip
+			 * is capped at the inflate ceiling; plain JSON at a larger finite
+			 * ceiling. Other failed upgrades stream through.
 			 */
 			const isErrorStack =
 				incoming.statusCode === 500 &&
@@ -96,7 +100,7 @@ export async function fetch(
 				);
 				return;
 			}
-			void bufferIncomingMessage(incoming, MAX_ERROR_STACK_BYTES).then(
+			void bufferIncomingMessage(incoming).then(
 				(body) => {
 					responsePromise.resolve(
 						new Response(body, {
@@ -127,13 +131,13 @@ export type DispatchFetch = (
 export type AnyHeaders = http.IncomingHttpHeaders | string[];
 
 /**
- * Buffers an ERROR_STACK `IncomingMessage` as bytes. Gzip is capped so a
- * compression bomb cannot fill memory; plain JSON is not, matching the
- * non-WebSocket path.
+ * Buffers an ERROR_STACK `IncomingMessage` as bytes. Gzip is capped at the
+ * inflate ceiling so a compression bomb cannot fill memory. Plain JSON uses a
+ * larger finite ceiling so a long stack survives and a plain 500 cannot grow
+ * without bound.
  */
 function bufferIncomingMessage(
-	incoming: http.IncomingMessage,
-	maxGzipBytes: number
+	incoming: http.IncomingMessage
 ): Promise<Buffer> {
 	return new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
@@ -157,7 +161,9 @@ function bufferIncomingMessage(
 			if (gzip === undefined && total >= 2) {
 				gzip = isGzip(Buffer.concat(chunks, 2));
 			}
-			if (gzip === true && total > maxGzipBytes) {
+			const overGzip = gzip === true && total > MAX_ERROR_STACK_BYTES;
+			const overPlain = gzip === false && total > MAX_ERROR_STACK_PLAIN_BYTES;
+			if (overGzip || overPlain) {
 				incoming.destroy();
 				finish(Buffer.alloc(0));
 			}

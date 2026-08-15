@@ -9,6 +9,13 @@ import { decodeErrorPayload } from "../workers/core/constants";
 export const MAX_ERROR_STACK_BYTES = 1024 * 1024;
 
 /**
+ * Hard ceiling for buffering a non-gzip ERROR_STACK body on a failed
+ * WebSocket upgrade. Larger than the inflate cap so a long stack still
+ * survives; finite so a plain 500 cannot grow memory without bound.
+ */
+export const MAX_ERROR_STACK_PLAIN_BYTES = 16 * 1024 * 1024;
+
+/**
  * workerd can wrap a body the Worker already gzipped, so a couple of inflates
  * are expected. Anything past this is treated as a bomb, not an error page.
  */
