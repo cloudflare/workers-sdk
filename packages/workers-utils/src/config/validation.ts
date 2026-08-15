@@ -6140,6 +6140,10 @@ function validateDurableObjectExportProperties(
  * itself is cross-checked against the `containers` array by
  * {@link validateContainerExportLinks}; here we only check the shape and the
  * storage backend, since containers require SQLite-backed Durable Objects.
+ *
+ * This only covers containers linked from the export side. A container that
+ * names its class via `containers[].class_name` is checked against the same
+ * storage requirement by {@link validateContainerExportLinks}.
  */
 function validateDurableObjectExportContainer(
 	diagnostics: Diagnostics,
@@ -6838,6 +6842,11 @@ function errorIfMigrationsAndExportsBothSet(
  * attaches a single container per Durable Object namespace, and in local dev
  * every container for a class builds into the same image tag, so a second
  * container for the same class cannot be honoured.
+ *
+ * Containers require SQLite-backed Durable Objects. That requirement is checked
+ * here for containers linked via `class_name`, and by
+ * {@link validateDurableObjectExportContainer} for the other direction, so the
+ * combination is rejected however the link is expressed.
  */
 function validateContainerExportLinks(
 	diagnostics: Diagnostics,
@@ -7008,6 +7017,22 @@ function validateContainerExportLinks(
 		) {
 			diagnostics.errors.push(
 				`The container "${container.name}" sets "class_name" to "${container.class_name}", but "exports" has no live "durable-object" entry for "${container.class_name}".`
+			);
+			continue;
+		}
+
+		// Only reachable when the class has a live export, whose storage is
+		// therefore known. When that export names this container itself,
+		// `validateDurableObjectExportContainer` has already reported the same
+		// problem against `exports.<Class>.container`.
+		if (
+			referencedContainerName === undefined &&
+			exportEntry !== undefined &&
+			"storage" in exportEntry &&
+			exportEntry.storage === "legacy-kv"
+		) {
+			diagnostics.errors.push(
+				`The container "${container.name}" sets "class_name" to "${container.class_name}", but "exports.${container.class_name}.storage" is "legacy-kv". Containers are not supported on Durable Objects using the "legacy-kv" storage backend.`
 			);
 		}
 	}

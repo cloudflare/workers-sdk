@@ -3065,6 +3065,127 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("errors when a class_name names a `legacy-kv` Durable Object export", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								name: "my-container",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						exports: {
+							MyDO: { type: "durable-object", storage: "legacy-kv" },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The container "my-container" sets "class_name" to "MyDO", but "exports.MyDO.storage" is "legacy-kv". Containers are not supported on Durable Objects using the "legacy-kv" storage backend."
+				`);
+			});
+
+			it("errors when a class_name names a `legacy-kv` `expecting-transfer` export", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								name: "my-container",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								state: "expecting-transfer",
+								storage: "legacy-kv",
+								transfer_from: "other-worker",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The container "my-container" sets "class_name" to "MyDO", but "exports.MyDO.storage" is "legacy-kv". Containers are not supported on Durable Objects using the "legacy-kv" storage backend."
+				`);
+			});
+
+			it("reports the storage requirement once when the export also names the container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								name: "my-container",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						exports: {
+							MyDO: {
+								type: "durable-object",
+								storage: "legacy-kv",
+								container: "my-container",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				// The link resolves in both directions, so only the export side reports
+				// the storage backend.
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.MyDO.container" requires "storage" to be "sqlite". Containers are not supported on Durable Objects using the "legacy-kv" storage backend."
+				`);
+			});
+
+			it("does not check storage against `exports` when using `migrations`", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						containers: [
+							{
+								name: "my-container",
+								image: "registry.cloudflare.com/something:hello",
+								class_name: "MyDO",
+							},
+						],
+						// `new_classes` provisions a `legacy-kv` namespace, but the legacy
+						// flow is left as it was found.
+						migrations: [{ tag: "v1", new_classes: ["MyDO"] }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
 			it("does not check class_name against `exports` when using `migrations`", ({
 				expect,
 			}) => {

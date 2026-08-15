@@ -34,6 +34,7 @@ The existing `containers[].class_name` direction keeps working and either direct
 - a container and a Durable Object export disagree about which one they are linked to
 - a container ends up linked to no Durable Object at all
 - two containers share a `name`
+- a container's `class_name` names a Durable Object whose `storage` is `legacy-kv`
 - two containers are attached to the same Durable Object
 
 That last case was previously accepted but could never work: workerd attaches a single container per Durable Object namespace, and in local development every container for a class builds into the same image tag, so one silently overwrote the other. If you have two containers on one `class_name`, give each its own Durable Object class.
