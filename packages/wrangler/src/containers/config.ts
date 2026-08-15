@@ -5,7 +5,11 @@ import {
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { isDockerfile, UserError } from "@cloudflare/workers-utils";
+import {
+	isDockerfile,
+	resolveContainerClassName,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getOrSelectAccountId } from "../user";
 import type {
@@ -66,23 +70,34 @@ export const getNormalizedContainerOptions = async (
 			config.exports
 		);
 
+		// A container is linked to its Durable Object either by its own
+		// `class_name`, or by the Durable Object's `exports` entry naming it via
+		// `container`.
+		const className = resolveContainerClassName(container, config.exports);
+		if (className === undefined) {
+			throw new UserError(
+				`The container "${container.name}" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.`,
+				{ telemetryMessage: "container not linked to a durable object" }
+			);
+		}
+
 		if (
-			!allDOs.has(container.class_name) &&
+			!allDOs.has(className) &&
 			config.durable_objects.bindings.find(
-				(doBinding) => doBinding.class_name === container.class_name
+				(doBinding) => doBinding.class_name === className
 			) === undefined
 		) {
 			throw new UserError(
-				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
+				`The container class_name ${className} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
 				{ telemetryMessage: "no DO defined that matches container class_name" }
 			);
 		}
 		const maybeBoundDO = config.durable_objects.bindings.find(
-			(durableObject) => durableObject.class_name === container.class_name
+			(durableObject) => durableObject.class_name === className
 		);
 		if (maybeBoundDO && maybeBoundDO.script_name !== undefined) {
 			throw new UserError(
-				`The container ${container.name} is referencing the durable object ${container.class_name}, which appears to be defined on the ${maybeBoundDO.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
+				`The container ${container.name} is referencing the durable object ${className}, which appears to be defined on the ${maybeBoundDO.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
 				{
 					telemetryMessage:
 						"contaienr class_name refers to an external durable object",
@@ -112,7 +127,7 @@ export const getNormalizedContainerOptions = async (
 
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
-			class_name: container.class_name,
+			class_name: className,
 			max_instances: container.max_instances ?? 20,
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
