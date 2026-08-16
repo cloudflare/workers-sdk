@@ -112,6 +112,37 @@ function getInstalledBindingPath(installDir: string): string {
 }
 
 /**
+ * Whether `candidate` is a binding this process can actually load.
+ *
+ * The presence of `index.js` is *not* sufficient evidence of a working
+ * install. `@napi-rs/keyring`'s `index.js` `require`s a platform-specific
+ * `.node` binary, which is a separate optional dependency: an `npm install`
+ * that is interrupted, runs out of disk, or fails to fetch the platform
+ * package can leave `index.js` on disk with no loadable binary beside it.
+ *
+ * Probing with a real `require` is the only honest test, because that is
+ * exactly what {@link resolveKeyringEntryFactory} does moments later. Without
+ * it, a half-installed binding is reported as "available" forever: the
+ * resolver never re-runs the install, and every credential read and write
+ * throws a raw module-resolution error instead.
+ *
+ * `require` caches on success, so the load is not repeated when the factory
+ * subsequently resolves the same path. This only runs on the Windows keyring
+ * opt-in path, so it never `dlopen`s a native binary for users who have not
+ * opted in.
+ */
+function canLoadKeyringBinding(candidate: string): boolean {
+	try {
+		createRequire(candidate)(candidate);
+		return true;
+	} catch {
+		// Missing or unloadable native binary: treat the install as absent so
+		// the caller reinstalls rather than failing on every credential access.
+		return false;
+	}
+}
+
+/**
  * Locate an installed `@napi-rs/keyring` binding usable from this process.
  *
  * Search order:
@@ -119,6 +150,11 @@ function getInstalledBindingPath(installDir: string): string {
  *   2. The user's global npm root, so a manual `npm install -g
  *      @napi-rs/keyring` works in CI environments where the lazy install
  *      path is unavailable.
+ *
+ * A candidate only counts when it actually loads (see
+ * {@link canLoadKeyringBinding}) — a half-installed binding is reported as
+ * absent so the caller reinstalls it, rather than being trusted forever on the
+ * strength of an `index.js` that cannot be required.
  *
  * Returns `null` when no binding is available; callers handle the missing
  * binding case explicitly so they can surface remediation instructions.
@@ -135,7 +171,7 @@ export function findKeyringBinding(installDir: string): string | null {
 		return cached;
 	}
 	const lazy = getInstalledBindingPath(installDir);
-	if (existsSync(path.join(lazy, "index.js"))) {
+	if (existsSync(path.join(lazy, "index.js")) && canLoadKeyringBinding(lazy)) {
 		cachedBindingPathByDir.set(installDir, lazy);
 		return lazy;
 	}
@@ -143,7 +179,10 @@ export function findKeyringBinding(installDir: string): string | null {
 		const r = npmRunner(["root", "-g"]);
 		if (r.status === 0) {
 			const global = path.join(r.stdout.trim(), "@napi-rs", "keyring");
-			if (existsSync(path.join(global, "index.js"))) {
+			if (
+				existsSync(path.join(global, "index.js")) &&
+				canLoadKeyringBinding(global)
+			) {
 				cachedBindingPathByDir.set(installDir, global);
 				return global;
 			}

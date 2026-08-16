@@ -98,6 +98,78 @@ describe("lazy keyring installer", () => {
 			expect(findKeyringBinding(installDir())).toBeNull();
 		});
 
+		it("treats a binding whose native binary is missing as absent", ({
+			expect,
+		}) => {
+			// Regression: an interrupted `npm install` can leave `index.js` on
+			// disk without the platform-specific `.node` binary it requires.
+			// Trusting `index.js` alone reported that wreck as "available"
+			// forever — the install was never retried and every credential
+			// read threw a raw module-resolution error instead.
+			const dir = path.join(
+				installDir(),
+				"node_modules",
+				"@napi-rs",
+				"keyring"
+			);
+			mkdirSync(dir, { recursive: true });
+			writeFileSync(
+				path.join(dir, "index.js"),
+				// Exactly what the real binding does, minus the binary.
+				'require("./keyring.win32-x64-msvc.node");'
+			);
+			setNpmRunner((args) => {
+				lastInvocation = args;
+				return mockResult({ stdout: "/nonexistent/global/root\n" });
+			});
+
+			expect(findKeyringBinding(installDir())).toBeNull();
+			// Having rejected the local wreck, it still probes the global root.
+			expect(lastInvocation).toEqual(["root", "-g"]);
+		});
+
+		it("ignores a global binding that cannot be loaded", ({ expect }) => {
+			const globalRoot = path.join(getGlobalConfigPath(), "global-npm-root");
+			const bindingDir = path.join(globalRoot, "@napi-rs", "keyring");
+			mkdirSync(bindingDir, { recursive: true });
+			writeFileSync(
+				path.join(bindingDir, "index.js"),
+				'require("./keyring.win32-x64-msvc.node");'
+			);
+			setNpmRunner(() => mockResult({ stdout: globalRoot + "\n" }));
+			expect(findKeyringBinding(installDir())).toBeNull();
+		});
+
+		it("recovers when a reinstall repairs a half-installed binding", ({
+			expect,
+		}) => {
+			// The end-to-end recovery this is all for: a broken install must be
+			// reported absent (so the resolver reinstalls), and the repaired
+			// install must then be picked up.
+			const dir = path.join(
+				installDir(),
+				"node_modules",
+				"@napi-rs",
+				"keyring"
+			);
+			mkdirSync(dir, { recursive: true });
+			writeFileSync(
+				path.join(dir, "index.js"),
+				'require("./keyring.win32-x64-msvc.node");'
+			);
+			setNpmRunner((args) => {
+				if (args[0] === "root") {
+					return mockResult({ stdout: "/nonexistent/global/root\n" });
+				}
+				writeFileSync(path.join(dir, "index.js"), "module.exports = {};");
+				return mockResult({});
+			});
+
+			expect(findKeyringBinding(installDir())).toBeNull();
+			installKeyringBindingSync(installDir());
+			expect(findKeyringBinding(installDir())).toBe(dir);
+		});
+
 		it("memoizes the result so repeated calls do not re-spawn npm", ({
 			expect,
 		}) => {
