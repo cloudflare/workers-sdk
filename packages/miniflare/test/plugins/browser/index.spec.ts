@@ -64,7 +64,9 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 
 const BROWSER_RENDERING_RETRY = {
 	retry: {
-		condition: /Chrome readiness probe .* timed out|Test timed out/i,
+		// "Failed to load Chrome DLL" covers Windows DLL locking between sequential tests
+		condition:
+			/Chrome readiness probe .* timed out|Test timed out|Failed to load Chrome DLL/i,
 		count: 3,
 		delay: 1_000,
 	},
