@@ -2,6 +2,6 @@
 "@cloudflare/edge-preview-authenticated-proxy": patch
 ---
 
-Release the Prometheus metrics migration to the internal `wshim` service binding
+Fix missing request and error metrics for the edge preview proxy
 
-Metrics were previously pushed with a plain `fetch()` to `workers-logging.cfdata.org`, which stopped working. The push was moved to the `WSHIM_SOCKET` binding in #14704, but that change was never released, so it never reached production and the Worker has been reporting no request/error counters since.
+The proxy stopped reporting its request and error counters, so dashboards and alerts based on them had no data. Metrics reporting now works again.
