@@ -1,10 +1,38 @@
 import path from "node:path";
-import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
 import {
+	configureOpenAPIForContainerPull,
+	getDevContainerImageName,
+} from "@cloudflare/containers-shared";
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	getCloudflareApiBaseUrl,
 	isDockerfile,
 	resolveContainerClassName,
 } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+
+/**
+ * Configures the Containers API client used to retrieve image pull credentials.
+ *
+ * @param accountId - Cloudflare account ID that owns the managed registry.
+ * @param apiToken - API token used to request registry credentials.
+ * @param complianceConfig - Compliance configuration used to select the API endpoint.
+ * @returns No value.
+ */
+export function configureContainerPull(
+	accountId: string,
+	apiToken: string,
+	complianceConfig?: ComplianceConfig
+): void {
+	configureOpenAPIForContainerPull(
+		accountId,
+		apiToken,
+		getCloudflareApiBaseUrl(
+			complianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN
+		)
+	);
+}
 
 /**
  * Returns the path to the Docker executable as defined by the

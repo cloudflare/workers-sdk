@@ -229,7 +229,8 @@ export const getNormalizedContainerOptions = async (
 					? container.image
 					: resolveImageName(
 							await getOrSelectAccountId(config),
-							container.image
+							container.image,
+							config
 						), // if it is not a dockerfile, it must be an image uri or have thrown an error
 			});
 		}

@@ -277,6 +277,40 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
+	it("should use the FedRAMP High registry from Wrangler config", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.jsonc",
+			topLevelName: "test-worker",
+			compliance_region: "fedramp_high",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: "test-image/test:latest",
+					name: "test-container",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0]).toMatchObject({
+			image_uri:
+				"registry.fed.cloudflare.com/some-account-id/test-image/test:latest",
+		});
+	});
+
 	it("should default max_instances and rollout_step_percentage accordingly", async ({
 		expect,
 	}) => {
