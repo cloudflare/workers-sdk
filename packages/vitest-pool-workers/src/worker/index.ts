@@ -14,6 +14,9 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
+import { markCreateRequireUrl } from "../shared/module-path";
+
+type CreateRequire = (url: string) => (specifier: string) => unknown;
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -274,8 +277,31 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			// Durable Object". See: https://github.com/cloudflare/workers-sdk/issues/12924
 			onModuleRunner(moduleRunner: unknown) {
 				const runner = moduleRunner as {
+					evaluator?: { createRequire?: CreateRequire };
 					transport?: { invoke?: (...args: unknown[]) => unknown };
 				};
+				if (runner.evaluator?.createRequire) {
+					const originalCreateRequire = runner.evaluator.createRequire.bind(
+						runner.evaluator
+					);
+
+					/**
+					 * Creates a CommonJS require function with a marked file URL.
+					 *
+					 * @param url - The module URL used as the require base.
+					 * @returns The CommonJS require function.
+					 */
+					function createRequire(url: string): ReturnType<CreateRequire> {
+						return originalCreateRequire(markCreateRequireUrl(url));
+					}
+
+					runner.evaluator.createRequire = createRequire;
+				} else {
+					__console.warn(
+						"[vitest-pool-workers] Could not patch module runner createRequire. " +
+							"Relative require() may fail when the project path contains encoded characters."
+					);
+				}
 				if (runner.transport?.invoke) {
 					const originalInvoke = runner.transport.invoke.bind(runner.transport);
 					runner.transport.invoke = (...args: unknown[]) => {

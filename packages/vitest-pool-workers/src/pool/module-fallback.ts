@@ -8,9 +8,12 @@ import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
+import { ENCODED_PATH_PREFIX } from "../shared/module-path";
 import { isFileNotFoundError } from "./helpers";
 import type { Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
+
+export { ENCODED_PATH_PREFIX };
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
@@ -379,49 +382,20 @@ function ensureRootedPath(filePath: string) {
 	return isWindows && filePath[0] !== "/" ? `/${filePath}` : filePath;
 }
 
-// Sentinel prepended to a redirect `Location` value whenever we had to
-// percent-encode it (see `encodeRedirectLocation()`). It lets us know
-// *deterministically* — rather than guessing — that a specifier/referrer
-// `workerd` later hands back to us is one of our own encoded values and must
-// be decoded again (see `decodeEncodedSpecifier()`).
-//
-// It is a *leading, rooted* segment on purpose. `workerd` derives the specifier
-// for a relative import by joining it onto the referring module's directory
-// (`kj::Path::eval`; see `ensureRootedPath()`), which drops the final path
-// segment but keeps the leading ones. A trailing marker would therefore be lost
-// for those derived imports, whereas a leading one propagates to every
-// descendant of an encoded module. The name is deliberately unlikely to collide
-// with a real path segment.
-// See https://github.com/cloudflare/workers-sdk/issues/14655
-export const ENCODED_PATH_PREFIX = "/__mf_vitest_encoded__";
-
-// Matches any character that needs percent-encoding before being placed in a
-// redirect `Location` header. The negated class `[^\x21-\x7E]` treats only
-// `!` (`\x21`) through `~` (`\x7E`) as safe — everything else triggers
-// encoding, including:
-//
-//  - Non-ASCII characters (can't survive an HTTP header round-trip).
-//  - Space (`\x20`, just below the safe range). `workerd` percent-encodes
-//    spaces to `%20` in module names; if we don't mark the path with our
-//    sentinel prefix, subsequent relative imports arrive with `%20` and
-//    `decodeEncodedSpecifier()` can't distinguish workerd-encoded `%20` from a
-//    literal `%20` in the original path (see issue #15048).
-//
-// The `u` flag makes the class match by code point, so astral characters
-// (e.g. emoji, CJK extension chars) are handled as a unit rather than as lone
-// surrogates.
-const nonHeaderSafeRegExp = /[^\x21-\x7E]/u;
+// Non-printable-ASCII detector. Anything outside the printable ASCII range
+// (`0x20`–`0x7E`) can't be represented in the Latin-1/ASCII byte range an HTTP
+// header value is restricted to, so it must be percent-encoded before being
+// used as a `Location`. The `u` flag makes the class match by code point, so
+// astral characters (e.g. emoji, CJK extension chars) are handled as a unit
+// rather than as lone surrogates.
+const nonHeaderSafeRegExp = /[^\x20-\x7E]/u;
 
 /**
  * Percent-encodes a redirect target so it's safe to use as a `Location` header
- * value, and so `workerd`'s internal percent-encoding of the module name can be
- * deterministically reversed. Encoding is applied when the path contains
- * characters outside the `\x21`–`\x7E` range — non-ASCII characters (which
- * can't survive an HTTP header round-trip) **and** spaces (which `workerd`
- * percent-encodes to `%20` in module names, breaking subsequent relative
- * imports; see issue #15048). Pure-ASCII, space-free paths — the overwhelmingly
- * common case, including paths containing a literal `%` — are returned unchanged
- * and never gain the sentinel prefix, so this is a no-op for them.
+ * value, but *only* when it actually contains bytes outside the printable ASCII
+ * range. Pure-ASCII paths — the overwhelmingly common case, including paths
+ * containing a literal `%` or spaces — are returned unchanged and never gain the
+ * sentinel prefix, so this is a no-op for them.
  *
  * When encoding is required, literal `%` is escaped first (to `%25`) so the
  * transform is losslessly reversible by `decodeURIComponent()` even for real
@@ -430,7 +404,6 @@ const nonHeaderSafeRegExp = /[^\x21-\x7E]/u;
  * round-trip. `encodeURI()`/`decodeURI()` can't be used here because they don't
  * escape a literal `%`, so a path mixing non-ASCII and `%` wouldn't round-trip.
  * See https://github.com/cloudflare/workers-sdk/issues/14655
- * See https://github.com/cloudflare/workers-sdk/issues/15048
  */
 export function encodeRedirectLocation(filePath: string): string {
 	if (!nonHeaderSafeRegExp.test(filePath)) {
@@ -438,7 +411,7 @@ export function encodeRedirectLocation(filePath: string): string {
 	}
 	const encoded = filePath
 		.replace(/%/g, "%25")
-		.replace(/[^\x21-\x7E]/gu, (char) => encodeURIComponent(char));
+		.replace(/[^\x20-\x7E]/gu, (char) => encodeURIComponent(char));
 	return `${ENCODED_PATH_PREFIX}${encoded}`;
 }
 

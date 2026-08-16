@@ -11,6 +11,7 @@ import {
 	encodeRedirectLocation,
 	handleModuleFallbackRequest,
 } from "../src/pool/module-fallback";
+import { markCreateRequireUrl } from "../src/shared/module-path";
 import type { Vite } from "vitest/node";
 
 // The fallback handler only reads `vite.pluginContainer.resolveId`, and only
@@ -119,28 +120,6 @@ describe("encodeRedirectLocation / decodeEncodedSpecifier", () => {
 		expect(decodeEncodedSpecifier(encoded)).toBe(p);
 	});
 
-	it("round-trips a path with spaces via the sentinel", ({ expect }) => {
-		// Regression test for https://github.com/cloudflare/workers-sdk/issues/15048
-		// `workerd` percent-encodes spaces in module names; without the sentinel
-		// prefix `decodeEncodedSpecifier()` can't tell whether a `%20` was ours or
-		// a literal `%20` in the original path.
-		const p = "/a/my project/node_modules/pkg/index.js";
-		const encoded = encodeRedirectLocation(p);
-		expect(encoded.startsWith(ENCODED_PATH_PREFIX)).toBe(true);
-		expect(encoded).toContain("my%20project");
-		expect(encoded).not.toContain("my project");
-		expect(decodeEncodedSpecifier(encoded)).toBe(p);
-	});
-
-	it("round-trips a path with spaces and a literal %", ({ expect }) => {
-		const p = "/a/my project/50%off/index.js";
-		const encoded = encodeRedirectLocation(p);
-		expect(encoded.startsWith(ENCODED_PATH_PREFIX)).toBe(true);
-		expect(encoded).toContain("my%20project");
-		expect(encoded).toContain("50%25off");
-		expect(decodeEncodedSpecifier(encoded)).toBe(p);
-	});
-
 	it("leaves bare module specifiers untouched", ({ expect }) => {
 		expect(decodeEncodedSpecifier("cloudflare:test-internal")).toBe(
 			"cloudflare:test-internal"
@@ -156,6 +135,28 @@ describe("encodeRedirectLocation / decodeEncodedSpecifier", () => {
 		const p = "/a/50%off/c.js";
 		expect(() => decodeEncodedSpecifier(p)).not.toThrow();
 		expect(decodeEncodedSpecifier(p)).toBe(p);
+	});
+});
+
+describe("markCreateRequireUrl", () => {
+	it("marks and decodes file URLs containing spaces", ({ expect }) => {
+		const url = "file:///a/my%20project/index.cjs";
+		const markedPath = new URL(markCreateRequireUrl(url)).pathname;
+		expect(markedPath.startsWith(ENCODED_PATH_PREFIX)).toBe(true);
+		expect(decodeEncodedSpecifier(markedPath)).toBe("/a/my project/index.cjs");
+	});
+
+	it("preserves literal percent sequences", ({ expect }) => {
+		const url = "file:///C:/my%20project/build%2520output/index.cjs";
+		const markedPath = new URL(markCreateRequireUrl(url)).pathname;
+		expect(decodeEncodedSpecifier(markedPath)).toBe(
+			"/C:/my project/build%20output/index.cjs"
+		);
+	});
+
+	it("leaves file URLs without encoded characters untouched", ({ expect }) => {
+		const url = "file:///a/project/index.cjs";
+		expect(markCreateRequireUrl(url)).toBe(url);
 	});
 });
 
@@ -242,82 +243,6 @@ describe("handleModuleFallbackRequest non-ASCII paths", () => {
 		// minus the leading slash (the response name is posix-relative to root).
 		expect(body.name).toBe(echoed.replace(/^\//, ""));
 		expect(body.commonJsModule).toContain("ok: 123");
-	});
-
-	it("percent-encodes a space in the redirect Location with the sentinel prefix", async ({
-		expect,
-	}) => {
-		// Regression test for https://github.com/cloudflare/workers-sdk/issues/15048
-		// A CJS dep under a directory with a space gets a redirect (directory →
-		// index.js); that redirect must carry the sentinel prefix so subsequent
-		// relative imports from inside the dep can be decoded.
-		const pkgDir = path.join(tmp, "wsdk repro", "node_modules", "pkg");
-		fs.mkdirSync(pkgDir, { recursive: true });
-		fs.writeFileSync(
-			path.join(pkgDir, "index.js"),
-			"module.exports = { ok: true };"
-		);
-
-		const specifier = toWorkerdSpecifier(pkgDir);
-		const res = await handleModuleFallbackRequest(
-			fakeVite(),
-			moduleFallbackRequest({
-				method: "require",
-				specifier,
-				referrer: toWorkerdSpecifier(path.join(tmp, "entry.js")),
-			})
-		);
-
-		expect(res.status).toBe(301);
-		const location = res.headers.get("Location");
-		assert(location !== null, "expected a Location header");
-		expect(location.startsWith(ENCODED_PATH_PREFIX)).toBe(true);
-		expect(decodeEncodedSpecifier(location)).toBe(
-			`${specifier}/index.js?mf_vitest_no_cjs_esm_shim`
-		);
-	});
-
-	it("decodes an echoed sentinel specifier with encoded spaces back to the real file", async ({
-		expect,
-	}) => {
-		// Regression test for https://github.com/cloudflare/workers-sdk/issues/15048
-		// After the initial redirect encodes spaces with the sentinel prefix,
-		// workerd echoes that encoded value back as the specifier for subsequent
-		// relative imports (e.g. `require("./lib/impl.js")` inside a CJS dep).
-		// The sentinel prefix propagates, so `decodeEncodedSpecifier()` recovers
-		// the real path with spaces.
-		const pkgDir = path.join(tmp, "wsdk repro", "node_modules", "pkg");
-		fs.mkdirSync(path.join(pkgDir, "lib"), { recursive: true });
-		fs.writeFileSync(
-			path.join(pkgDir, "lib", "impl.cjs"),
-			"module.exports = { answer: 42 };"
-		);
-
-		// Simulate workerd echoing a sentinel-encoded specifier and referrer
-		// (as would happen after our redirect for the parent module).
-		const encodedLib = encodeRedirectLocation(
-			toWorkerdSpecifier(path.join(pkgDir, "lib", "impl.cjs"))
-		);
-		const encodedReferrer = encodeRedirectLocation(
-			toWorkerdSpecifier(path.join(pkgDir, "index.cjs"))
-		);
-
-		const res = await handleModuleFallbackRequest(
-			fakeVite(),
-			moduleFallbackRequest({
-				method: "require",
-				specifier: encodedLib,
-				referrer: encodedReferrer,
-				rawSpecifier: "./lib/impl.cjs",
-			})
-		);
-
-		expect(res.status).toBe(200);
-		const body = (await res.json()) as {
-			name: string;
-			commonJsModule?: string;
-		};
-		expect(body.commonJsModule).toContain("answer: 42");
 	});
 
 	it("resolves an original path containing a literal % (never decoded)", async ({
