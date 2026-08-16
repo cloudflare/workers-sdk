@@ -9,7 +9,7 @@ export default defineConfig({
 		isolate: false,
 		include: [process.env.WRANGLER_E2E_TEST_FILE || "e2e/**/*.test.ts"],
 		outputFile: process.env.TEST_REPORT_PATH ?? ".e2e-test-report/index.html",
-		globalSetup: path.resolve(__dirname, "./validate-environment.ts"),
+		globalSetup: path.resolve(import.meta.dirname, "./validate-environment.ts"),
 		reporters: ["verbose", "html"],
 		bail: 1,
 		chaiConfig: {

@@ -2727,12 +2727,16 @@ describe("versions upload", () => {
 
 const mockExecSync = vi.fn();
 
+// At the top level because `vi.mock` is hoisted to module scope regardless of
+// where it is written, so nesting it in the `describe` misrepresented its
+// scope: it mocks `child_process` for the whole file, not just these tests.
+vi.mock("child_process", () => ({
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
+	execSync: (...args: any[]) => mockExecSync(...args),
+}));
+
 describe("generatePreviewAlias", () => {
 	mockConsoleMethods();
-	vi.mock("child_process", () => ({
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
-		execSync: (...args: any[]) => mockExecSync(...args),
-	}));
 
 	beforeEach(() => {
 		mockExecSync.mockReset();
