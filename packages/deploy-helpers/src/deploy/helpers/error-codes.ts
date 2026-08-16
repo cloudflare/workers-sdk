@@ -36,3 +36,6 @@ export const INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE = 100405;
  * `wrangler deploy` to provision and bind in one step.
  */
 export const ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE = 100406;
+
+/** Workflows API code for `workflow.cron_requires_paid_plan`. */
+export const WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE = 10208;

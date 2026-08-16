@@ -1,6 +1,13 @@
 import { Button, Tooltip } from "@cloudflare/kumo";
 import { SpinnerIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type JSX,
+} from "react";
 import { tokenizeSQL } from "../../utils/studio/sql";
 import { StudioWhereParser } from "../../utils/studio/where-parser";
 import { StudioSQLWhereEditor } from "./SQLWhereEditor";

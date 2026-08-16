@@ -23,9 +23,9 @@ test(
 			TypeError: Unexpected options in project ${path.join(tmpPathName, "vitest.config.mts")}:
 			{
 			  miniflare: [],
-			             ^ Expected object, received array
+			             ^ Invalid input: expected object, received array
 			  wrangler: './wrangler.toml',
-			            ^ Expected object, received string
+			            ^ Invalid input: expected object, received string
 			}
 		`;
 		expect(result.stderr).toMatch(expected);
@@ -46,11 +46,135 @@ test(
 			{
 			  miniflare: {
 			    compatibilityDate: { year: 2024, month: 1, day: 1 },
-			                       ^ Expected string, received object
+			                       ^ Invalid input: expected string, received object
 			  },
 			}
 		`;
 		expect(result.stderr).toMatch(expected);
+	}
+);
+
+test(
+	"normalizes the deprecated cache option",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					cache: false,
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.test.ts": dedent /* javascript */ `
+				import { it } from "vitest";
+
+				it("disables the cache", async ({ expect }) => {
+					const key = "https://example.com/cache";
+					await caches.default.put(
+						key,
+						new Response("cached", {
+							headers: { "Cache-Control": "max-age=3600" },
+						})
+					);
+					expect(await caches.default.match(key)).toBeUndefined();
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
+	}
+);
+
+test(
+	"gives cacheAPI precedence over the deprecated cache option",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				miniflare: {
+					cache: true,
+					cacheAPI: false,
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.test.ts": dedent /* javascript */ `
+				import { it } from "vitest";
+
+				it("disables the cache", async ({ expect }) => {
+					const key = "https://example.com/cache";
+					await caches.default.put(
+						key,
+						new Response("cached", {
+							headers: { "Cache-Control": "max-age=3600" },
+						})
+					);
+					expect(await caches.default.match(key)).toBeUndefined();
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
+	}
+);
+
+test(
+	"resolves relative runner and auxiliary worker rootPath before conversion",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				main: "./runner/src/index.ts",
+				miniflare: {
+					rootPath: "runner",
+					textBlobBindings: {
+						MESSAGE: "message.txt",
+					},
+					workers: [
+						{
+							name: "auxiliary-worker",
+							rootPath: "auxiliary",
+							modules: true,
+							scriptPath: "./src/index.ts",
+						},
+					],
+					serviceBindings: {
+						AUXILIARY: "auxiliary-worker",
+					},
+				},
+			}),
+			"runner/src/index.ts": dedent /* javascript */ `
+				export default {
+					async fetch(request, env) {
+						const response = await env.AUXILIARY.fetch(request);
+						return new Response(env.MESSAGE + ":" + await response.text());
+					},
+				};
+			`,
+			"runner/message.txt": "from runner",
+			"runner/auxiliary/src/index.ts": dedent /* javascript */ `
+				export default {
+					fetch() {
+						return new Response("from auxiliary");
+					},
+				};
+			`,
+			"index.test.ts": dedent /* javascript */ `
+				import { SELF } from "cloudflare:test";
+				import { it } from "vitest";
+
+				it("fetches through auxiliary worker", async ({ expect }) => {
+					const response = await SELF.fetch("https://example.com/");
+					expect(await response.text()).toBe("from runner:from auxiliary");
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr).toBe(0);
 	}
 );
 

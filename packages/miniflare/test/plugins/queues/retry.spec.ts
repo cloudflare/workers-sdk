@@ -1,7 +1,11 @@
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
 import { afterEach, beforeEach, describe, test } from "vitest";
 import { z } from "zod";
-import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
+import {
+	MiniflareDurableObjectControlStub,
+	singleModuleManifest,
+	TestLog,
+} from "../../test-shared";
 
 const StringArraySchema = z.string().array();
 
@@ -32,21 +36,35 @@ describe.sequential("Queues: retry", () => {
 		mf = new Miniflare({
 			log: new TestLog(),
 			verbose: true,
-			queueProducers: { QUEUE: { queueName: "QUEUE" } },
-			queueConsumers: {
-				QUEUE: { retryDelay: 5, maxRetries: 2, maxBatchTimeout: 0 },
-			},
-			serviceBindings: {
-				async REPORTER(request) {
-					const batch = StringArraySchema.parse(await request.json());
-					if (batch.length > 0) {
-						batches.push(batch);
-					}
-					return new Response();
-				},
-			},
-			modules: true,
-			script: `export default {
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: {
+							QUEUE: { type: "queue", name: "QUEUE" },
+							REPORTER: {
+								type: "fetcher",
+								handler: async (request) => {
+									const batch = StringArraySchema.parse(await request.json());
+									if (batch.length > 0) {
+										batches.push(batch);
+									}
+									return new Response();
+								},
+							},
+						},
+						triggers: [
+							{
+								type: "queue",
+								name: "QUEUE",
+								retryDelay: 5,
+								maxRetries: 2,
+								maxBatchTimeout: 0,
+							},
+						],
+						manifest: singleModuleManifest(`export default {
       async fetch(request, env, ctx) {
 				await env.QUEUE.send(await request.text());
         return new Response(null, { status: 204 });
@@ -59,7 +77,10 @@ describe.sequential("Queues: retry", () => {
         });
 				batch.retryAll()
       },
-    };`,
+    };`),
+					},
+				},
+			],
 		});
 
 		object = await getControlStub(mf, "QUEUE");

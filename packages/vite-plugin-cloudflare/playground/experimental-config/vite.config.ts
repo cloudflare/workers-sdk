@@ -6,7 +6,7 @@ export default defineConfig({
 		cloudflare({
 			inspectorPort: false,
 			persistState: false,
-			experimental: { newConfig: true },
+			experimental: { newConfig: { types: { includeRuntime: false } } },
 		}),
 	],
 });

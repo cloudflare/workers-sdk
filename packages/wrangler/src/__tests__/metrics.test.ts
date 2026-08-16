@@ -3,7 +3,6 @@ import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
-import { detectAgenticEnvironment } from "am-i-vibing";
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -26,13 +25,15 @@ import {
 	getMetricsDispatcher,
 } from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
+import { detectAgent } from "../utils/detect-agent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ExpectStatic } from "vitest";
 
-vi.mock("am-i-vibing");
+vi.mock("../utils/detect-agent");
+const mockDetectAgent = vi.mocked(detectAgent);
 vi.mock("../metrics/helpers");
 vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
@@ -90,11 +91,9 @@ describe("metrics", () => {
 		describe("sendAdhocEvent()", () => {
 			beforeEach(() => {
 				// Default: no agent detected
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: false,
+				mockDetectAgent.mockReturnValue({
+					isAgent: false,
 					id: null,
-					name: null,
-					type: null,
 				});
 			});
 
@@ -196,11 +195,9 @@ describe("metrics", () => {
 			});
 
 			it("should include agent ID when detected", async ({ expect }) => {
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: true,
+				mockDetectAgent.mockReturnValue({
+					isAgent: true,
 					id: "claude-code",
-					name: "Claude Code",
-					type: "agent",
 				});
 
 				const requests = mockMetricRequest();
@@ -214,9 +211,12 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"agent":"claude-code"');
 			});
 
-			it("should set agent to null if detection throws", async ({ expect }) => {
-				vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
-					throw new Error("Detection failed");
+			it("should set agent to null if detection returns null id", async ({
+				expect,
+			}) => {
+				mockDetectAgent.mockReturnValue({
+					isAgent: false,
+					id: null,
 				});
 
 				const requests = mockMetricRequest();
@@ -257,11 +257,9 @@ describe("metrics", () => {
 			};
 			beforeEach(() => {
 				// Default: no agent detected
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: false,
+				mockDetectAgent.mockReturnValue({
+					isAgent: false,
 					id: null,
-					name: null,
-					type: null,
 				});
 				globalThis.ALGOLIA_APP_ID = "FAKE-ID";
 				globalThis.ALGOLIA_PUBLIC_KEY = "FAKE-KEY";
@@ -530,11 +528,9 @@ describe("metrics", () => {
 			it("should include agent ID in command events when detected", async ({
 				expect,
 			}) => {
-				vi.mocked(detectAgenticEnvironment).mockReturnValue({
-					isAgentic: true,
+				mockDetectAgent.mockReturnValue({
+					isAgent: true,
 					id: "cursor-agent",
-					name: "Cursor Agent",
-					type: "agent",
 				});
 
 				writeWranglerConfig();
@@ -683,6 +679,34 @@ describe("metrics", () => {
 				});
 			});
 
+			it("should return enabled false if the DO_NOT_TRACK environment variable is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "1");
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
+					enabled: false,
+				});
+			});
+
+			it("should let DO_NOT_TRACK override the WRANGLER_SEND_METRICS environment variable", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "1");
+				vi.stubEnv("WRANGLER_SEND_METRICS", "true");
+				expect(await getMetricsConfig({})).toMatchObject({
+					enabled: false,
+				});
+			});
+
+			it("should ignore DO_NOT_TRACK if it is not set to an opt-out value", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "0");
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
+					enabled: true,
+				});
+			});
+
 			it("should return the sendMetrics argument for enabled if it is defined", async ({
 				expect,
 			}) => {
@@ -821,7 +845,7 @@ describe("metrics", () => {
 				expect(std.out).toContain("Status: Disabled");
 			});
 
-			it("shows wrangler.toml as the source with send_metrics is present", async ({
+			it("shows the wrangler config as the source when send_metrics is present", async ({
 				expect,
 			}) => {
 				writeMetricsConfig({
@@ -832,10 +856,10 @@ describe("metrics", () => {
 				});
 				writeWranglerConfig({ send_metrics: false });
 				await runWrangler(`${cmd} status`);
-				expect(std.out).toContain("Status: Disabled (set by wrangler.toml)");
+				expect(std.out).toContain("Status: Disabled (set by wrangler config)");
 			});
 
-			it("shows environment variable as the source if used", async ({
+			it("shows WRANGLER_SEND_METRICS as the source if used", async ({
 				expect,
 			}) => {
 				writeMetricsConfig({
@@ -847,7 +871,7 @@ describe("metrics", () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
 				await runWrangler(`${cmd} status`);
 				expect(std.out).toContain(
-					"Status: Disabled (set by environment variable)"
+					"Status: Disabled (set by WRANGLER_SEND_METRICS)"
 				);
 			});
 
@@ -872,7 +896,7 @@ describe("metrics", () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
 				await runWrangler(`${cmd} status`);
 				expect(std.out).toContain(
-					"Status: Disabled (set by environment variable)"
+					"Status: Disabled (set by WRANGLER_SEND_METRICS)"
 				);
 			});
 		});
@@ -941,6 +965,31 @@ Wrangler is no longer collecting telemetry about your usage.`);
 			expect(std.out).toContain(`Status: Enabled
 
 Wrangler is now collecting telemetry about your usage. Thank you for helping make Wrangler better 🧡`);
+			expect(readMetricsConfig()).toMatchObject({
+				permission: {
+					enabled: true,
+					date: new Date(2024, 11, 12),
+				},
+			});
+		});
+
+		it(`persists enabled but reports disabled when "wrangler ${cmd} enable" is run with DO_NOT_TRACK`, async ({
+			expect,
+		}) => {
+			vi.stubEnv("DO_NOT_TRACK", "1");
+			writeMetricsConfig({
+				permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+
+			await runWrangler(`${cmd} enable`);
+
+			expect(std.out).toContain(`Status: Disabled (set by DO_NOT_TRACK)
+
+Telemetry has been enabled in Wrangler's global configuration, but remains disabled because it is overridden by DO_NOT_TRACK.`);
+			expect(std.out).not.toContain("Wrangler is now collecting telemetry");
 			expect(readMetricsConfig()).toMatchObject({
 				permission: {
 					enabled: true,

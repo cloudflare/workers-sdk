@@ -1,4 +1,8 @@
 import { deploy } from "@cloudflare/deploy-helpers";
+import {
+	getWorkerNameFromProject,
+	isNonInteractiveOrCI,
+} from "@cloudflare/workers-utils";
 import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -14,12 +18,15 @@ import {
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
+import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -58,11 +65,6 @@ export const deployCommand = createCommand({
 				"Path to output build metadata from esbuild. If flag is used without a path, defaults to 'bundle-meta.json' inside the directory specified by --outdir.",
 			type: "string",
 			coerce: (v: string) => (!v ? true : v),
-		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
 		},
 		logpush: {
 			type: "boolean",
@@ -107,77 +109,125 @@ export const deployCommand = createCommand({
 		validateDeployVersionsArgs(args, "deploy");
 	},
 	async handler(args, { config }) {
-		// --- Step 0. Auto-config --- //
-		const autoConfigResult = await maybeRunAutoConfig(args, config);
-		if (autoConfigResult.aborted) {
-			return;
-		}
-		config = autoConfigResult.config;
-
-		// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
-		args = await promptForMissingDeployConfig(args, config);
-
-		// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
-		// As a precaution we're gating the feature under the autoconfig flag for the time being.
-		// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
-		if (
-			args.autoconfig &&
-			!args.config &&
-			!args.dryRun &&
-			(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
-		) {
-			return;
-		}
-
-		// Merge CLI args with config into props for building and deploying
-		const { props, buildProps } = await mergeDeployConfigArgs(args, config);
-
-		try {
-			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
-			const preMergeName = getScriptName(args, config);
-			const workerNameOverridden =
-				props.name !== undefined && props.name !== preMergeName;
-
-			const beforeUpload = Date.now();
-
-			const buildResult = await buildWorker(buildProps, config);
-
-			const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
-				await deploy(props, config, buildResult, {
-					syncWorkersSite,
-					getNormalizedContainerOptions,
-					buildContainer,
-					deployContainers,
-					analyseBundle,
-				});
-
-			writeOutput({
-				type: "deploy",
-				version: 1,
-				worker_name: props.name ?? null,
-				worker_tag: workerTag,
-				version_id: versionId,
-				targets,
-				wrangler_environment: args.env,
-				worker_name_overridden: workerNameOverridden,
-			});
-
-			metrics.sendMetricsEvent(
-				"deploy worker script",
-				{
-					usesTypeScript: /\.tsx?$/.test(props.entry.file),
-					durationMs: Date.now() - beforeUpload,
-					sourceMapSize,
-					...assetUploadStats,
-				},
-				{
-					sendMetrics: config.send_metrics,
-				}
-			);
-		} finally {
-			cleanupDestination(buildProps.destination);
-		}
+		await runDeployCommandHandler(args, { config });
 	},
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
+
+export async function runDeployCommandHandler(
+	args: DeployArgs,
+	{
+		config,
+		pagesToWorkersDelegation = false,
+	}: { config: Config; pagesToWorkersDelegation?: boolean }
+): Promise<void> {
+	const detectedAgent = detectAgent();
+	const shouldUseProjectName =
+		detectedAgent.isAgent && !args.name && !config.name;
+
+	// Capture whether this project can prove it owns the target Worker name,
+	// BEFORE autoconfig generates or rewrites the config. Ownership is proven by
+	// a config file that names the Worker; without one a same-named remote Worker
+	// could be a collision rather than a redeploy.
+	//
+	// We guard both agent-generated names and the Pages-to-Workers delegation.
+	// In either case an existing Worker with the same name may be a different
+	// resource that we must not clobber. Repeat deploys are unaffected because
+	// the first one writes a config file (so `configPath` is then set).
+	//
+	// Plain `wrangler deploy` is NOT guarded, even in CI with an autoconfigured
+	// name: autoconfigured projects are routinely redeployed in CI (e.g. when the
+	// auto-generated config PR has not been merged), and blocking that regressed
+	// those workflows. See `failIfWorkerNameTaken` in preUploadApiChecks.
+	const nameOwnershipUnverified =
+		!config.configPath &&
+		((isNonInteractiveOrCI() && pagesToWorkersDelegation) ||
+			shouldUseProjectName);
+
+	// --- Step 0. Auto-config --- //
+	const autoConfigResult = await maybeRunAutoConfig(args, config, {
+		skipConfirmations: pagesToWorkersDelegation || detectedAgent.isAgent,
+	});
+	if (autoConfigResult.aborted) {
+		return;
+	}
+	config = autoConfigResult.config;
+
+	// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
+	args = await promptForMissingDeployConfig(args, config, {
+		useProjectName: detectedAgent.isAgent,
+	});
+	if (shouldUseProjectName) {
+		const workerName = args.name ?? config.name;
+		logger.log(
+			`Using the project name "${workerName}" as the Worker name. To change it, set the \`name\` field in your Wrangler configuration file or pass \`--name <name>\` when deploying.`
+		);
+	}
+
+	// Needs to happen after auto-config logic to capture newly auto-configured open-next apps.
+	// As a precaution we're gating the feature under the autoconfig flag for the time being.
+	// If the user explicitly provided a --config path, they are targeting a specific Worker config and we should not delegate
+	if (
+		!pagesToWorkersDelegation &&
+		args.autoconfig &&
+		!args.config &&
+		!args.dryRun &&
+		(await maybeDelegateToOpenNextDeployCommand(process.cwd()))
+	) {
+		return;
+	}
+
+	// Merge CLI args with config into props for building and deploying
+	const { props, buildProps } = await mergeDeployConfigArgs(args, config);
+	props.failIfWorkerNameTaken = nameOwnershipUnverified;
+	props.autoRegisterWorkersDevSubdomain = detectedAgent.isAgent
+		? getWorkerNameFromProject(process.cwd())
+		: undefined;
+
+	try {
+		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
+		const preMergeName = getScriptName(args, config);
+		const workerNameOverridden =
+			props.name !== undefined && props.name !== preMergeName;
+
+		const beforeUpload = Date.now();
+
+		const buildResult = await buildWorker(buildProps, config);
+
+		const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
+			await deploy(props, config, buildResult, {
+				syncWorkersSite,
+				getNormalizedContainerOptions,
+				buildContainer,
+				deployContainers,
+				analyseBundle,
+			});
+
+		writeOutput({
+			type: "deploy",
+			version: 1,
+			worker_name: props.name ?? null,
+			worker_tag: workerTag,
+			version_id: versionId,
+			targets,
+			wrangler_environment: args.env,
+			worker_name_overridden: workerNameOverridden,
+		});
+
+		metrics.sendMetricsEvent(
+			"deploy worker script",
+			{
+				usesTypeScript: /\.tsx?$/.test(props.entry.file),
+				durationMs: Date.now() - beforeUpload,
+				sourceMapSize,
+				...assetUploadStats,
+			},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
+	} finally {
+		cleanupDestination(buildProps.destination);
+	}
+}

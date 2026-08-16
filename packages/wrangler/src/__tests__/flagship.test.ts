@@ -369,14 +369,12 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f --variation on=true --variation off=false --default-variation off --rule "serve=on; when="`
 				)
-			).rejects.toThrowError(/Condition expression is empty/);
+			).rejects.toThrow(/Condition expression is empty/);
 			await expect(
 				runWrangler(
 					`flagship flags create app-1 f --variation on=true --variation off=false --default-variation off --rule "serve=on; when=plan equals pro OR"`
 				)
-			).rejects.toThrowError(
-				/Logical operators must appear between conditions/
-			);
+			).rejects.toThrow(/Logical operators must appear between conditions/);
 		});
 
 		it("rejects malformed rule JSON", async ({ expect }) => {
@@ -384,7 +382,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f --variation on=true --variation off=false --default-variation off --rule-json '{"conditions":[]}'`
 				)
-			).rejects.toThrowError(/serve_variation/);
+			).rejects.toThrow(/serve_variation/);
 		});
 
 		it("defaults new flags to boolean on/off variations", async ({
@@ -639,13 +637,13 @@ describe("flagship", () => {
 		it("requires an app id and at least one flag key", async ({ expect }) => {
 			await expect(
 				runWrangler("flagship flags delete app-1 --force")
-			).rejects.toThrowError(/Not enough non-option arguments/);
+			).rejects.toThrow(/Not enough non-option arguments/);
 		});
 
 		it("requires --force to delete with --json", async ({ expect }) => {
 			await expect(
 				runWrangler("flagship flags delete app-1 new-ui --json")
-			).rejects.toThrowError(/Pass --force/);
+			).rejects.toThrow(/Pass --force/);
 			expect(JSON.parse(std.out)).toEqual({
 				error:
 					"Pass --force to skip the confirmation prompt when using --json.",
@@ -676,7 +674,7 @@ describe("flagship", () => {
 			);
 			await expect(
 				runWrangler("flagship flags delete app-1 alpha beta gamma --force")
-			).rejects.toThrowError(/Failed to process 1 of the requested items/);
+			).rejects.toThrow(/Failed to process 1 of the requested items/);
 			expect(deleted).toEqual(["alpha", "gamma"]);
 			expect(std.out).toContain("Deleted flag 'alpha'");
 			expect(std.out).toContain("Deleted flag 'gamma'");
@@ -706,7 +704,7 @@ describe("flagship", () => {
 				runWrangler(
 					"flagship flags delete app-1 alpha beta gamma --force --json"
 				)
-			).rejects.toThrowError(/Failed to process 1 of the requested items/);
+			).rejects.toThrow(/Failed to process 1 of the requested items/);
 			expect(JSON.parse(std.out)).toMatchObject({
 				results: [{ key: "alpha" }, { key: "gamma" }],
 				failures: [{ target: "beta" }],
@@ -831,7 +829,7 @@ describe("flagship", () => {
 			);
 			await expect(
 				runWrangler("flagship flags disable app-1 alpha missing")
-			).rejects.toThrowError(/Failed to process 1 of the requested items/);
+			).rejects.toThrow(/Failed to process 1 of the requested items/);
 			expect(std.out).toContain("Disabled flag");
 		});
 
@@ -948,7 +946,7 @@ describe("flagship", () => {
 				runWrangler(
 					"flagship flags rollout app-1 new-ui --to on --percentage NaN"
 				)
-			).rejects.toThrowError(/--percentage must be between 0 and 100/);
+			).rejects.toThrow(/--percentage must be between 0 and 100/);
 		});
 
 		it("removes the rollout without changing the default when percentage is 0", async ({
@@ -1057,7 +1055,7 @@ describe("flagship", () => {
 				runWrangler(
 					"flagship flags rollout app-1 new-ui --to on --percentage 25 --json"
 				)
-			).rejects.toThrowError(/Pass --force to confirm/);
+			).rejects.toThrow(/Pass --force to confirm/);
 		});
 
 		it("asks for confirmation before a split replaces targeting rules with conditions", async ({
@@ -1184,7 +1182,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "priority=1; serve=on; when=plan equals pro" --rule "priority=1; serve=off; when=plan equals free"`
 				)
-			).rejects.toThrowError(/Duplicate rule priority 1/);
+			).rejects.toThrow(/Duplicate rule priority 1/);
 		});
 
 		it("rejects a default variation that is not defined", async ({
@@ -1194,7 +1192,7 @@ describe("flagship", () => {
 				runWrangler(
 					"flagship flags create app-1 f -V on=true -V off=false --default nope"
 				)
-			).rejects.toThrowError(/Default variation "nope" is not one of/);
+			).rejects.toThrow(/Default variation "nope" is not one of/);
 		});
 
 		it("rejects a rule that serves an unknown variation", async ({
@@ -1204,7 +1202,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "serve=maybe; when=plan equals pro"`
 				)
-			).rejects.toThrowError(/serves unknown variation "maybe"/);
+			).rejects.toThrow(/serves unknown variation "maybe"/);
 		});
 
 		it("treats lowercase and/or inside a value literally", async ({
@@ -1302,7 +1300,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule 'serve=on; when=title equals "oops'`
 				)
-			).rejects.toThrowError(/Unterminated double quote/);
+			).rejects.toThrow(/Unterminated double quote/);
 		});
 
 		it("rejects a malformed bracketed list", async ({ expect }) => {
@@ -1310,7 +1308,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "serve=on; when=country in [US,CA"`
 				)
-			).rejects.toThrowError(/Unterminated "\["/);
+			).rejects.toThrow(/Unterminated "\["/);
 		});
 
 		it("rejects an empty list item", async ({ expect }) => {
@@ -1318,7 +1316,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "serve=on; when=country in [US,,CA]"`
 				)
-			).rejects.toThrowError(/List items must not be empty/);
+			).rejects.toThrow(/List items must not be empty/);
 		});
 
 		it("rejects a condition with no value", async ({ expect }) => {
@@ -1326,7 +1324,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "serve=on; when=plan equals"`
 				)
-			).rejects.toThrowError(/Could not find a valid operator|missing a value/);
+			).rejects.toThrow(/Could not find a valid operator|missing a value/);
 		});
 
 		it("rejects a rollout with multiple @ separators", async ({ expect }) => {
@@ -1334,7 +1332,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "serve=on; rollout=30%@user@id"`
 				)
-			).rejects.toThrowError(/single non-empty attribute/);
+			).rejects.toThrow(/single non-empty attribute/);
 		});
 
 		it("rejects a rollout with an empty percentage", async ({ expect }) => {
@@ -1342,7 +1340,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule "serve=on; rollout=@user_id"`
 				)
-			).rejects.toThrowError(/Expected a percentage between 0 and 100/);
+			).rejects.toThrow(/Expected a percentage between 0 and 100/);
 		});
 
 		it("rejects duplicate variation names", async ({ expect }) => {
@@ -1350,7 +1348,7 @@ describe("flagship", () => {
 				runWrangler(
 					"flagship flags create app-1 f -V on=true -V on=false --default on"
 				)
-			).rejects.toThrowError(/Duplicate variation "on"/);
+			).rejects.toThrow(/Duplicate variation "on"/);
 		});
 
 		it("rejects a non-finite number variation", async ({ expect }) => {
@@ -1358,7 +1356,7 @@ describe("flagship", () => {
 				runWrangler(
 					"flagship flags create app-1 f --type number -V big=Infinity --default big"
 				)
-			).rejects.toThrowError(/not a valid finite number/);
+			).rejects.toThrow(/not a valid finite number/);
 		});
 
 		it("rejects variations with inconsistent inferred types", async ({
@@ -1368,9 +1366,7 @@ describe("flagship", () => {
 				runWrangler(
 					"flagship flags create app-1 f -V a=true -V b=5 --default a"
 				)
-			).rejects.toThrowError(
-				/Variation "b" is number but variation "a" is boolean/
-			);
+			).rejects.toThrow(/Variation "b" is number but variation "a" is boolean/);
 		});
 
 		it("rejects --set-variation introducing an inconsistent type", async ({
@@ -1385,7 +1381,7 @@ describe("flagship", () => {
 			});
 			await expect(
 				runWrangler("flagship flags update app-1 f --set-variation extra=5")
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/Variation "extra" is number but variation "on" is boolean/
 			);
 		});
@@ -1395,7 +1391,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule-json '{"serve_variation":"on","conditions":[],"bogus":1}'`
 				)
-			).rejects.toThrowError(/Unexpected field "bogus"/);
+			).rejects.toThrow(/Unexpected field "bogus"/);
 		});
 
 		it("rejects a --rule-json condition mixing logical and base fields", async ({
@@ -1405,7 +1401,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags create app-1 f -V on=true -V off=false --default off --rule-json '{"serve_variation":"on","conditions":[{"logical_operator":"AND","clauses":[],"attribute":"x"}]}'`
 				)
-			).rejects.toThrowError(/Unexpected field "attribute"/);
+			).rejects.toThrow(/Unexpected field "attribute"/);
 		});
 	});
 
@@ -1420,7 +1416,7 @@ describe("flagship", () => {
 			});
 			await expect(
 				runWrangler("flagship flags split app-1 model -w a=10 -w a=90")
-			).rejects.toThrowError(/Duplicate weight for variation "a"/);
+			).rejects.toThrow(/Duplicate weight for variation "a"/);
 		});
 
 		it("rejects a non-finite split weight", async ({ expect }) => {
@@ -1433,7 +1429,7 @@ describe("flagship", () => {
 			});
 			await expect(
 				runWrangler("flagship flags split app-1 model -w a=Infinity -w b=10")
-			).rejects.toThrowError(/non-negative finite number/);
+			).rejects.toThrow(/non-negative finite number/);
 		});
 	});
 
@@ -1482,7 +1478,7 @@ describe("flagship", () => {
 				runWrangler(
 					`flagship flags update app-1 new-ui --rule "serve=on; when=plan equals pro" --add-rule "serve=off; when=plan equals free"`
 				)
-			).rejects.toThrowError(/Cannot replace rules .* and append rules/);
+			).rejects.toThrow(/Cannot replace rules .* and append rules/);
 		});
 
 		it("lists rules for a flag", async ({ expect }) => {
@@ -1630,7 +1626,7 @@ describe("flagship", () => {
 			});
 			await expect(
 				runWrangler("flagship flags rules reorder app-1 new-ui --order 1,wat,2")
-			).rejects.toThrowError(/Invalid --order/);
+			).rejects.toThrow(/Invalid --order/);
 		});
 
 		it("rejects duplicate and extra reorder priorities", async ({ expect }) => {
@@ -1647,12 +1643,12 @@ describe("flagship", () => {
 			mockGet("apps/app-1/flags/new-ui", flag);
 			await expect(
 				runWrangler("flagship flags rules reorder app-1 new-ui --order 1,2,1")
-			).rejects.toThrowError(/must contain each existing rule priority/);
+			).rejects.toThrow(/must contain each existing rule priority/);
 
 			mockGet("apps/app-1/flags/new-ui", flag);
 			await expect(
 				runWrangler("flagship flags rules reorder app-1 new-ui --order 1,2,3")
-			).rejects.toThrowError(/must contain each existing rule priority/);
+			).rejects.toThrow(/must contain each existing rule priority/);
 		});
 	});
 
@@ -1678,16 +1674,16 @@ describe("flagship", () => {
 		it("rejects --all with explicit pagination options", async ({ expect }) => {
 			await expect(
 				runWrangler("flagship flags changelog app-1 new-ui --all --limit 3")
-			).rejects.toThrowError(/Cannot use --all together with --limit/);
+			).rejects.toThrow(/Cannot use --all together with --limit/);
 		});
 
 		it("rejects invalid pagination limits", async ({ expect }) => {
 			await expect(
 				runWrangler("flagship flags list app-1 --limit 0")
-			).rejects.toThrowError(/Invalid --limit/);
+			).rejects.toThrow(/Invalid --limit/);
 			await expect(
 				runWrangler("flagship flags changelog app-1 new-ui --limit 201")
-			).rejects.toThrowError(/Invalid --limit/);
+			).rejects.toThrow(/Invalid --limit/);
 		});
 
 		it("follows the cursor with --all when listing flags", async ({
@@ -1747,13 +1743,13 @@ describe("flagship", () => {
 
 	describe("app id is required", () => {
 		it("requires an app id for flags list", async ({ expect }) => {
-			await expect(runWrangler("flagship flags list")).rejects.toThrowError(
+			await expect(runWrangler("flagship flags list")).rejects.toThrow(
 				"Not enough non-option arguments: got 0, need at least 1"
 			);
 		});
 
 		it("requires an app id for apps get", async ({ expect }) => {
-			await expect(runWrangler("flagship apps get")).rejects.toThrowError(
+			await expect(runWrangler("flagship apps get")).rejects.toThrow(
 				"Not enough non-option arguments: got 0, need at least 1"
 			);
 		});

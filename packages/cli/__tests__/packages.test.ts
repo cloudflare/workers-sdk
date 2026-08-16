@@ -127,4 +127,28 @@ describe("Package Helpers", () => {
 			expect.anything()
 		);
 	});
+
+	test("installWrangler updates existing workers-types", async ({ expect }) => {
+		const mockPkgJson = {
+			devDependencies: {
+				"@cloudflare/workers-types": "^4.20241011.0",
+				wrangler: "^3.60.3",
+			},
+		};
+		vi.mocked(readFileSync).mockReturnValue(JSON.stringify(mockPkgJson));
+		vi.mocked(parsePackageJSON).mockReturnValue(mockPkgJson);
+
+		await installWrangler("npm", false);
+
+		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+			[
+				"npm",
+				"install",
+				"--save-dev",
+				"wrangler@latest",
+				"@cloudflare/workers-types@latest",
+			],
+			expect.anything()
+		);
+	});
 });

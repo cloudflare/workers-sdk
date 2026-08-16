@@ -2,47 +2,21 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
-import { z } from "zod";
 import {
+	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
-	remoteProxyClientWorker,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-// Define the mutually exclusive schema
-const EmailBindingOptionsSchema = z
-	.object({
-		name: z.string(),
-		remoteProxyConnectionString: z
-			.custom<RemoteProxyConnectionString>()
-			.optional(),
-		allowed_sender_addresses: z.array(z.string()).optional(),
-	})
-	.and(
-		z.union([
-			z.object({
-				destination_address: z.string().optional(),
-				allowed_destination_addresses: z.never().optional(),
-			}),
-			z.object({
-				allowed_destination_addresses: z.array(z.string()).optional(),
-				destination_address: z.never().optional(),
-			}),
-		])
-	);
-
-export const EmailOptionsSchema = z.object({
-	email: z
-		.object({
-			send_email: z.array(EmailBindingOptionsSchema).optional(),
-		})
-		.optional(),
-});
+import type { Plugin } from "../shared";
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
+const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
+// Disk service name and binding name for writing temporary files to system temp directory
 const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
 const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
 
@@ -53,79 +27,188 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	}));
 }
 
-export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
-	options: EmailOptionsSchema,
+function getEmailProjectParentDirectory(
+	resourceTmpPath: string | undefined
+): string | undefined {
+	if (resourceTmpPath === undefined) {
+		return undefined;
+	}
+	return path.join(resourceTmpPath, EMAIL_PLUGIN_NAME);
+}
+
+/**
+ * Returns the session directory for email files.
+ * Path: `<resourceTmpPath>/email/<session-id>`
+ * Example: `/path/to/project/.wrangler/tmp/email/dev-abc123`
+ * When an email is logged, it is stored under this directory using a type indicator
+ * and a unique ID.
+ * Path: `<session-dir>/<email-type>/<message-id>.<ext>`
+ */
+function getEmailProjectSessionDirectory(
+	resourceTmpPath: string | undefined,
+	tmpPath: string
+): string | undefined {
+	const parentDir = getEmailProjectParentDirectory(resourceTmpPath);
+	if (parentDir === undefined) {
+		return undefined;
+	}
+	return path.join(parentDir, path.basename(tmpPath));
+}
+
+export function getEmailPathsToClean(
+	resourceTmpPath: string | undefined,
+	tmpPath: string
+): { sessionDir: string; parentDir: string } | undefined {
+	if (resourceTmpPath === undefined) {
+		return undefined;
+	}
+	const sessionDir = getEmailProjectSessionDirectory(resourceTmpPath, tmpPath);
+	const parentDir = getEmailProjectParentDirectory(resourceTmpPath);
+	if (sessionDir === undefined || parentDir === undefined) {
+		return undefined;
+	}
+	return { sessionDir, parentDir };
+}
+
+export const EMAIL_PLUGIN: Plugin = {
 	bindingTypeDescription: "Email",
 	getBindings(options): Worker_Binding[] {
-		if (!options.email?.send_email) {
-			return [];
-		}
-
-		const sendEmailBindings = options.email.send_email;
-
-		return sendEmailBindings.map(({ name, remoteProxyConnectionString }) => ({
-			name,
-			service: {
-				entrypoint: remoteProxyConnectionString
-					? undefined
-					: "SendEmailBinding",
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
-			},
-		}));
+		return getEnvBindingsOfType(options.config, "send-email").map(
+			([name, binding]) => {
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					binding,
+					options.dev
+				);
+				return {
+					name,
+					service: remoteProxyConnectionString
+						? {
+								name: EMAIL_REMOTE_SERVICE_NAME,
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+							}
+						: {
+								entrypoint: "SendEmailBinding",
+								name: getUserBindingServiceName(
+									SERVICE_SEND_EMAIL_WORKER_PREFIX,
+									name
+								),
+							},
+				};
+			}
+		);
 	},
 	getNodeBindings(options) {
-		if (!options.email?.send_email) {
-			return {};
-		}
-
 		return Object.fromEntries(
-			options.email.send_email.map(({ name }) => [name, new ProxyNodeBinding()])
+			getEnvBindingsOfType(options.config, "send-email").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
 		);
 	},
 	async getServices(args) {
-		if (!args.options.email?.send_email) {
+		const sendEmailBindings = getEnvBindingsOfType(
+			args.options.config,
+			"send-email"
+		);
+		if (sendEmailBindings.length === 0) {
 			return [];
 		}
 
-		const emailDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
-		await mkdir(emailDirectory, { recursive: true });
+		// Root directories for disk services - must exist before service creation
+		// Subdirectories (e.g., email-text/, email-html/) are created lazily on first write
+		const emailSystemDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
+		await mkdir(emailSystemDirectory, { recursive: true });
 
-		const services: Service[] = [
+		// Map binding disk services to names and paths, for concise access when storing emails as files.
+		// When resourceTmpPath is unset, only create system service to avoid duplicates
+		const diskServices: Array<{
+			location: "system" | "project";
+			bindingName: string;
+			serviceName: string;
+			path: string;
+		}> = [
 			{
-				name: EMAIL_DISK_SERVICE_NAME,
-				disk: {
-					path: emailDirectory,
-					writable: true,
-				},
+				location: "system",
+				bindingName: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
+				serviceName: `${EMAIL_DISK_SERVICE_NAME}:system`,
+				path: emailSystemDirectory,
 			},
 		];
 
-		for (const { name, remoteProxyConnectionString, ...config } of args.options
-			.email?.send_email ?? []) {
+		if (args.sharedOptions.resourceTmpPath) {
+			const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
+				args.sharedOptions.resourceTmpPath,
+				args.tmpPath
+			);
+			if (emailProjectSessionDirectory !== undefined) {
+				await mkdir(emailProjectSessionDirectory, { recursive: true });
+				diskServices.push({
+					location: "project",
+					bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
+					serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
+					path: emailProjectSessionDirectory,
+				});
+			}
+		}
+
+		const services: Service[] = diskServices.map(({ serviceName, path }) => ({
+			name: serviceName,
+			disk: {
+				path,
+				writable: true,
+			},
+		}));
+
+		let hasRemote = false;
+		for (const [name, binding] of sendEmailBindings) {
+			if (getRemoteProxyConnectionString(binding, args.options.dev)) {
+				hasRemote = true;
+				continue;
+			}
+
+			// The local send-email worker reads these config values from env
+			// directly, so pass through only the ones that are present.
+			const config: Record<string, unknown> = {};
+			if (binding.destinationAddress !== undefined) {
+				config.destinationAddress = binding.destinationAddress;
+			}
+			if (binding.allowedDestinationAddresses !== undefined) {
+				config.allowedDestinationAddresses =
+					binding.allowedDestinationAddresses;
+			}
+			if (binding.allowedSenderAddresses !== undefined) {
+				config.allowedSenderAddresses = binding.allowedSenderAddresses;
+			}
+
 			services.push({
 				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
-				worker: remoteProxyConnectionString
-					? remoteProxyClientWorker(remoteProxyConnectionString, name)
-					: {
-							compatibilityDate: "2025-03-17",
-							modules: [
-								{
-									name: "send_email.mjs",
-									esModule: SEND_EMAIL_BINDING(),
-								},
-							],
-							bindings: [
-								...buildJsonBindings(config),
-								{
-									name: EMAIL_DISK_BINDING_NAME,
-									service: { name: EMAIL_DISK_SERVICE_NAME },
-								},
-								{
-									name: "email_directory",
-									json: JSON.stringify(emailDirectory),
-								},
-							],
+				worker: {
+					compatibilityDate: "2025-03-17",
+					modules: [
+						{
+							name: "send_email.mjs",
+							esModule: SEND_EMAIL_BINDING(),
 						},
+					],
+					bindings: [
+						...buildJsonBindings(config),
+						...diskServices.map(({ bindingName, serviceName }) => ({
+							name: bindingName,
+							service: { name: serviceName },
+						})),
+						{
+							name: "email_disk_services",
+							json: JSON.stringify(diskServices),
+						},
+					],
+				},
+			});
+		}
+
+		if (hasRemote) {
+			services.push({
+				name: EMAIL_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
 			});
 		}
 

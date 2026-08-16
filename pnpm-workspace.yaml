@@ -39,6 +39,10 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
+  # TEMPORARY: vite-plugin-cloudflare + vitest-pool-workers are pinned to the
+  # published miniflare while the workspace miniflare is mid-migration. Revert
+  # with the repoint.
+  - "miniflare"
   - "workerd"
   # Platform-specific workerd binaries published in lock-step with workerd.
   - "@cloudflare/workerd-*"
@@ -47,6 +51,8 @@ minimumReleaseAgeExclude:
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
   - "rosie-skills"
+  # capnp-es@0.0.15 was released by us on Aug 11, 2026.
+  - "capnp-es@0.0.15"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
@@ -57,11 +63,16 @@ minimumReleaseAgeExclude:
 allowBuilds:
   esbuild: true
   workerd: true
+  # miniflare's direct `sharp` (0.35+) has no install script, but the
+  # catalog-pinned published @cloudflare/vitest-pool-workers still pulls in
+  # sharp@0.34.x transitively (via published miniflare), which does. Remove
+  # once that pin uses a published miniflare built on sharp 0.35+.
   sharp: true
   playwright-chromium: true
   prisma: true
   # Explicitly silence warnings for packages whose postinstall scripts are not
   # required for correct operation.
+  "@google/genai": false # preinstall is a no-op
   protobufjs: false # version-scheme diagnostic warning only
   msw: false # copies mockServiceWorker.js to msw.workerDirectory — unused in this repo
   core-js: false # telemetry
@@ -109,25 +120,26 @@ catalog:
   "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
   typescript: "5.8.3"
-  undici: "7.28.0"
+  undici: "7.29.0"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
-  undici-types: "7.28.0"
+  undici-types: "7.29.0"
   vitest: "4.1.0"
-  vite: "8.0.13"
+  vite: "8.1.5"
   "ws": "8.21.0"
   esbuild: "0.28.1"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^4.20260702.1"
-  workerd: "1.20260702.1"
+  "@cloudflare/workers-types": "^5.20260811.1"
+  workerd: "1.20260811.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
-  msw: 2.12.4
+  msw: "2.14.6"
   tinyglobby: "0.2.16"
   "tree-kill": "1.2.2"
-  "capnp-es": "0.0.14"
+  "capnp-es": "0.0.15"
   "capnweb": "0.5.0"
+  zod: "4.4.3"
   "ci-info": "4.4.0"
   "open": "11.0.0"
   "signal-exit": "4.1.0"

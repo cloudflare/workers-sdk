@@ -36,6 +36,7 @@ const DevSchema = z.strictObject({
 	types: z
 		.strictObject({
 			generate: z.boolean().optional(),
+			includeRuntime: z.boolean().optional(),
 		})
 		.optional(),
 	enableContainers: z.boolean().optional(),

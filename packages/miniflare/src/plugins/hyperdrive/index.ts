@@ -1,10 +1,21 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { ProxyNodeBinding } from "../shared";
+import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
 import type { Worker_Binding } from "../../runtime";
+import type { ParsedMiniflareWorkerConfig } from "../shared";
 import type { Plugin } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
+
+/** Resolves `hyperdrive` env bindings, parsing each connection string. */
+function getHyperdrives(
+	config: ParsedMiniflareWorkerConfig
+): [name: string, url: URL][] {
+	return getEnvBindingsOfType(config, "hyperdrive").map(([name, binding]) => [
+		name,
+		HyperdriveSchema.parse(binding.localConnectionString),
+	]);
+}
 
 function hasPostgresProtocol(url: URL) {
 	return url.protocol === "postgresql:" || url.protocol === "postgres:";
@@ -22,47 +33,48 @@ function getPort(url: URL) {
 	assert.fail(`Expected known protocol, got ${url.protocol}`);
 }
 
+// TODO: upstream this to cloudflare/config
 export const HyperdriveSchema = z
-	.union([z.string().url(), z.instanceof(URL)])
+	.union([z.url(), z.instanceof(URL)])
 	.transform((url, ctx) => {
 		if (typeof url === "string") url = new URL(url);
 		if (url.protocol === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must specify the database protocol - e.g. 'postgresql'/'mysql'.",
 			});
 		} else if (!hasPostgresProtocol(url) && !hasMysqlProtocol(url)) {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported.",
 			});
 		}
 		if (url.host === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a hostname or IP address in your connection string - e.g. 'user:password@database-hostname.example.com:5432/databasename",
 			});
 		}
 		if (url.pathname === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a database name as the path component - e.g. /postgres",
 			});
 		}
 		if (url.username === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a username - e.g. 'user:password@database.example.com:port/databasename'",
 			});
 		}
 		if (url.password === "") {
 			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
+				code: "custom",
 				message:
 					"You must provide a password - e.g. 'user:password@database.example.com:port/databasename' ",
 			});
@@ -71,36 +83,29 @@ export const HyperdriveSchema = z
 		return url;
 	});
 
-export const HyperdriveInputOptionsSchema = z.object({
-	hyperdrives: z.record(z.string(), HyperdriveSchema).optional(),
-});
-
-export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
-	options: HyperdriveInputOptionsSchema,
+export const HYPERDRIVE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hyperdrive",
 	getBindings(options) {
-		return Object.entries(options.hyperdrives ?? {}).map<Worker_Binding>(
-			([name, url]) => {
-				const database = url.pathname.replace("/", "");
-				const scheme = url.protocol.replace(":", "");
-				return {
-					name,
-					hyperdrive: {
-						designator: {
-							name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
-						},
-						database: decodeURIComponent(database),
-						user: decodeURIComponent(url.username),
-						password: decodeURIComponent(url.password),
-						scheme,
+		return getHyperdrives(options.config).map<Worker_Binding>(([name, url]) => {
+			const database = url.pathname.replace("/", "");
+			const scheme = url.protocol.replace(":", "");
+			return {
+				name,
+				hyperdrive: {
+					designator: {
+						name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
 					},
-				};
-			}
-		);
+					database: decodeURIComponent(database),
+					user: decodeURIComponent(url.username),
+					password: decodeURIComponent(url.password),
+					scheme,
+				},
+			};
+		});
 	},
 	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.entries(options.hyperdrives ?? {}).map(([name, url]) => {
+			getHyperdrives(options.config).map(([name, url]) => {
 				const connectionOverrides: Record<string | symbol, string | number> = {
 					connectionString: `${url}`,
 					port: Number.parseInt(url.port),
@@ -119,7 +124,7 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 	},
 	async getServices({ options, hyperdriveProxyController }) {
 		const services = [];
-		for (const [name, url] of Object.entries(options.hyperdrives ?? {})) {
+		for (const [name, url] of getHyperdrives(options.config)) {
 			const scheme = url.protocol.replace(":", "");
 			const sslmode = parseSslMode(url, scheme);
 			const targetPort = getPort(url);

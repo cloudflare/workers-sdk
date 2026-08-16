@@ -805,8 +805,8 @@ describe("wrangler deploy with containers", () => {
 			],
 			useOldUploadApi: true,
 			expectedContainers: [
-				{ class_name: "ExampleDurableObject" },
-				{ class_name: "DurableObjectClass2" },
+				{ name: "my-container", class_name: "ExampleDurableObject" },
+				{ name: "my-container-app-2", class_name: "DurableObjectClass2" },
 			],
 		});
 		writeWranglerConfig({
@@ -2365,7 +2365,9 @@ describe("wrangler deploy with containers", () => {
 			mockUploadWorkerRequest({
 				expectedBindings: [],
 				useOldUploadApi: true,
-				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				expectedContainers: [
+					{ name: "my-container", class_name: "ExampleDurableObject" },
+				],
 			});
 			mockCreateApplication(expect, {
 				name: "my-container",
@@ -2428,6 +2430,73 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
+		it("should be able to deploy a container referenced from a declarative durable object export", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				// The container carries no `class_name`; the Durable Object's `exports`
+				// entry references it by name instead.
+				containers: [
+					{
+						name: "my-container",
+						max_instances: 10,
+						image: "registry.cloudflare.com/hello:world",
+						rollout_active_grace_period: 600,
+					},
+				],
+				exports: {
+					ExampleDurableObject: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			});
+
+			mockGetApplications([]);
+			mockListDurableObjects([
+				{
+					id: "some-id",
+					name: "name",
+					script: "test-name",
+					class: "ExampleDurableObject",
+				},
+			]);
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				// Both sides of the link are sent as configured: the container has no
+				// `class_name`, and the `exports` entry names the container.
+				expectedContainers: [{ name: "my-container" }],
+				expectedExports: {
+					ExampleDurableObject: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+				expectedMigrations: undefined,
+			});
+			mockCreateApplication(expect, {
+				name: "my-container",
+				max_instances: 10,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 600,
+				durable_objects: {
+					namespace_id: "some-id",
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(cliStd.stdout).toContain("NEW my-container");
+			expect(cliStd.stdout).toContain(
+				"SUCCESS  Created application my-container"
+			);
+		});
+
 		it("should error if a container name has been used before but attached to a different DO", async ({
 			expect,
 		}) => {
@@ -2483,7 +2552,9 @@ describe("wrangler deploy with containers", () => {
 			mockUploadWorkerRequest({
 				expectedBindings: [],
 				useOldUploadApi: true,
-				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				expectedContainers: [
+					{ name: "my-container", class_name: "ExampleDurableObject" },
+				],
 			});
 
 			await expect(
@@ -2510,7 +2581,9 @@ describe("wrangler deploy with containers", () => {
 			mockUploadWorkerRequest({
 				expectedBindings: [],
 				useOldUploadApi: true,
-				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				expectedContainers: [
+					{ name: "my-container", class_name: "ExampleDurableObject" },
+				],
 			});
 			mockListDurableObjects([
 				{
@@ -2761,7 +2834,9 @@ describe("wrangler deploy with containers and dispatch namespace", () => {
 			],
 			useOldUploadApi: true,
 			expectedDispatchNamespace: "test-namespace",
-			expectedContainers: [{ class_name: "ExampleDurableObject" }],
+			expectedContainers: [
+				{ name: "my-container", class_name: "ExampleDurableObject" },
+			],
 		});
 		fs.writeFileSync(
 			"index.js",
@@ -3017,7 +3092,7 @@ function setupCommonMocks() {
 	);
 	mockSubDomainRequest();
 	mockLegacyScriptData({
-		scripts: [{ id: "test-name", migration_tag: "v1" }],
+		script: { id: "test-name", migration_tag: "v1" },
 	});
 	mockContainersAccount();
 	mockUploadWorkerRequest({
@@ -3029,7 +3104,9 @@ function setupCommonMocks() {
 			},
 		],
 		useOldUploadApi: true,
-		expectedContainers: [{ class_name: "ExampleDurableObject" }],
+		expectedContainers: [
+			{ name: "my-container", class_name: "ExampleDurableObject" },
+		],
 	});
 }
 

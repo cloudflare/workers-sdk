@@ -2,9 +2,9 @@ import { dim, green, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { onKeyPress } from "../utils/onKeyPress";
 import { containersScope } from "./index";
@@ -13,6 +13,7 @@ import type {
 	DashApplicationDurableObjectInstance,
 	DashApplicationInstance,
 	DashApplicationInstances,
+	ResultInfo,
 } from "@cloudflare/containers-shared";
 
 type InstanceState =
@@ -24,6 +25,8 @@ type InstanceState =
 	| "unhealthy"
 	| "inactive"
 	| "unknown";
+
+const DEFAULT_PER_PAGE = 25;
 
 function deriveInstanceState(instance: DashApplicationInstance): InstanceState {
 	const status = instance.current_placement?.status;
@@ -93,6 +96,21 @@ function buildInstanceRows(data: DashApplicationInstances): InstanceRow[] {
 	}));
 }
 
+function filterInstanceRows(
+	rows: InstanceRow[],
+	search?: string
+): InstanceRow[] {
+	if (search === undefined) {
+		return rows;
+	}
+
+	return rows.filter(
+		(row) =>
+			(row.durableObject?.id ?? row.instance?.id) === search ||
+			row.durableObject?.name === search
+	);
+}
+
 async function fetchPage(
 	applicationId: string,
 	perPage?: number,
@@ -100,6 +118,7 @@ async function fetchPage(
 ): Promise<{
 	data: DashApplicationInstances;
 	nextPageToken?: string;
+	resultInfo?: ResultInfo;
 }> {
 	try {
 		const page = await ApplicationsService.listDashApplicationInstances(
@@ -110,6 +129,7 @@ async function fetchPage(
 		return {
 			data: page.data,
 			nextPageToken: page.resultInfo?.next_page_token,
+			resultInfo: page.resultInfo,
 		};
 	} catch (err) {
 		if (!(err instanceof Error)) {
@@ -133,6 +153,28 @@ async function fetchPage(
 			`There has been an internal error fetching instances.\n${err.message}`
 		);
 	}
+}
+
+async function fetchAllRows(
+	applicationId: string,
+	perPage: number = DEFAULT_PER_PAGE
+): Promise<InstanceRow[]> {
+	// Searches span every page, so join only after all raw API data is present.
+	const instances: DashApplicationInstance[] = [];
+	const durableObjects: DashApplicationDurableObjectInstance[] = [];
+	let pageToken: string | undefined;
+
+	do {
+		const result = await fetchPage(applicationId, perPage, pageToken);
+		instances.push(...result.data.instances);
+		durableObjects.push(...(result.data.durable_objects ?? []));
+		pageToken = result.nextPageToken;
+	} while (pageToken);
+
+	return buildInstanceRows({
+		instances,
+		durable_objects: durableObjects,
+	});
 }
 
 function rowsToJsonOutput(rows: InstanceRow[]): Record<string, unknown>[] {
@@ -165,6 +207,22 @@ function rowsToJsonOutput(rows: InstanceRow[]): Record<string, unknown>[] {
 			created: row.instance?.created_at ?? null,
 		};
 	});
+}
+
+function instancesToJsonOutput(
+	rows: InstanceRow[],
+	perPage: number,
+	pageToken?: string,
+	nextPageToken?: string
+) {
+	return {
+		instances: rowsToJsonOutput(rows),
+		result_info: {
+			per_page: perPage,
+			page_token: pageToken ?? null,
+			next_page_token: nextPageToken ?? null,
+		},
+	};
 }
 
 function renderTable(rows: InstanceRow[]): void {
@@ -214,7 +272,6 @@ const instancesArgs = {
 	"per-page": {
 		describe: "Number of instances per page",
 		type: "number",
-		default: 25,
 		coerce: (val: number) => {
 			if (val < 1) {
 				throw new UserError("--per-page must be at least 1", {
@@ -223,6 +280,16 @@ const instancesArgs = {
 			}
 			return val;
 		},
+	},
+	search: {
+		describe: "Find instances matching an exact instance ID or name",
+		type: "string",
+		conflicts: "page-token",
+	},
+	"page-token": {
+		describe: "Continuation token for explicitly paginated JSON output",
+		type: "string",
+		conflicts: "search",
 	},
 	json: {
 		describe: "Return output as JSON",
@@ -243,12 +310,44 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		);
 	}
 
+	if (args.pageToken !== undefined && !args.json) {
+		throw new UserError("--page-token requires --json", {
+			telemetryMessage: "containers instances page-token without json",
+		});
+	}
+
+	const perPage = args.perPage ?? DEFAULT_PER_PAGE;
+
 	// --json: output JSON and exit
 	if (args.json) {
 		try {
-			const { data } = await fetchPage(args.ID);
-			const rows = buildInstanceRows(data);
-			logger.json(rowsToJsonOutput(rows));
+			if (args.search !== undefined) {
+				const rows = filterInstanceRows(
+					await fetchAllRows(args.ID, perPage),
+					args.search
+				);
+				logger.json(rowsToJsonOutput(rows));
+				return;
+			}
+
+			const isPaginated =
+				args.perPage !== undefined || args.pageToken !== undefined;
+			const result = await fetchPage(args.ID, args.perPage, args.pageToken);
+			const rows = buildInstanceRows(result.data);
+
+			if (!isPaginated) {
+				logger.json(rowsToJsonOutput(rows));
+				return;
+			}
+
+			logger.json(
+				instancesToJsonOutput(
+					rows,
+					result.resultInfo?.per_page ?? perPage,
+					result.resultInfo?.page_token ?? args.pageToken,
+					result.nextPageToken
+				)
+			);
 			return;
 		} catch (err) {
 			if (err instanceof UserError) {
@@ -259,6 +358,32 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 				telemetryMessage: "containers instances json output failed",
 			});
 		}
+	}
+
+	// Exact lookups must inspect every page before rendering matches.
+	if (args.search !== undefined) {
+		let rows: InstanceRow[];
+		if (isNonInteractiveOrCI()) {
+			rows = await fetchAllRows(args.ID, perPage);
+		} else {
+			const { start, stop } = spinner();
+			start("Finding instances");
+			try {
+				rows = await fetchAllRows(args.ID, perPage);
+			} finally {
+				stop();
+			}
+		}
+
+		const matches = filterInstanceRows(rows, args.search);
+		if (matches.length === 0) {
+			logger.log(
+				`No instances found matching "${args.search}" by exact ID or name.`
+			);
+			return;
+		}
+		renderTable(matches);
+		return;
 	}
 
 	// Non-interactive: fetch all results, render a single table, no pagination
@@ -286,7 +411,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		let data: DashApplicationInstances;
 		let nextPageToken: string | undefined;
 		try {
-			const result = await fetchPage(args.ID, args.perPage, pageToken);
+			const result = await fetchPage(args.ID, perPage, pageToken);
 			data = result.data;
 			nextPageToken = result.nextPageToken;
 		} finally {
@@ -311,7 +436,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		if (pageToken) {
 			logger.log(
 				dim(
-					`Showing ${totalShown} instances. Press Enter to load ${args.perPage} more, or q/Esc to stop.`
+					`Showing ${totalShown} instances. Press Enter to load ${perPage} more, or q/Esc to stop.`
 				)
 			);
 			await new Promise<void>((resolve) => {

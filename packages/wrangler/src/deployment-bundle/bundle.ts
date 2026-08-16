@@ -317,7 +317,7 @@ export async function bundleWorker(
 		inject.push(...(result.inject ?? []));
 	}
 
-	if (watch) {
+	if (watch && bundle) {
 		// `esbuild` doesn't support returning `watch*` options from `onStart()`
 		// plugin callbacks. Instead, we define an empty virtual module that is
 		// imported in this injected module. Importing that module registers watchers.

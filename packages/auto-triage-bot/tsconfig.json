@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "esnext",
+		"types": ["@cloudflare/workers-types/experimental"]
+	},
+	"exclude": ["dist"],
+	"include": ["src/**/*.ts", "vite.config.ts", "worker-configuration.d.ts"]
+}

@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { fetch } from "undici";
 import { assert, beforeAll, describe, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
@@ -40,20 +41,40 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			remoteProxyConnectionString: RemoteProxyConnectionString
 		): MiniflareOptions {
 			return {
-				modules: true,
-				script: `
-				export default {
-					async fetch(req, env) {
-						const myServiceMsg = !env.MY_SERVICE ? null : await (await env.MY_SERVICE.fetch(req)).text();
-						return new Response("worker response: " + (myServiceMsg ?? ""));
-					}
-				}`,
-				serviceBindings: {
-					MY_SERVICE: {
-						name: remoteWorkerName,
-						remoteProxyConnectionString,
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: {
+								mainModule: "index.js",
+								modules: {
+									"index.js": {
+										type: "esm",
+										contents: `
+											export default {
+												async fetch(req, env) {
+													const myServiceMsg = !env.MY_SERVICE ? null : await (await env.MY_SERVICE.fetch(req)).text();
+													return new Response("worker response: " + (myServiceMsg ?? ""));
+												}
+											}`,
+									},
+								},
+							},
+							env: {
+								MY_SERVICE: {
+									type: "worker",
+									workerName: remoteWorkerName,
+									remote: true,
+								},
+							},
+						},
+						dev: {
+							remoteProxyConnectionString,
+						},
 					},
-				},
+				],
 			};
 		}
 
@@ -82,6 +103,36 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await remoteProxySession.dispose();
 			});
 
+			test("handles different bindings across fresh sessions with the same Worker name", async ({
+				expect,
+			}) => {
+				for (let i = 0; i < 2; i++) {
+					const bindingName =
+						i % 2 === 0 ? "REMOTE_WORKER_A" : "REMOTE_WORKER_B";
+					const remoteProxySession = await startRemoteProxySession(
+						{
+							[bindingName]: {
+								type: "service",
+								service: remoteWorkerName,
+							},
+						},
+						{ workerName: "remote-bindings-fresh-session-stress-test" }
+					);
+
+					try {
+						const response = await fetch(
+							remoteProxySession.remoteProxyConnectionString,
+							{ headers: { "MF-Binding": bindingName } }
+						);
+						expect(await response.text(), `iteration ${i}`).toBe(
+							"Hello from a remote worker"
+						);
+					} finally {
+						await remoteProxySession.dispose();
+					}
+				}
+			});
+
 			test("user provided incorrect auth data", async ({ expect }) => {
 				let error: unknown;
 				try {
@@ -106,7 +157,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				}
 				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
 					`
-					"Error: Failed to establish remote session due to an authentication issue.
+					"Error: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
 					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
 					The token may be invalid or lack the required permissions for this operation.
 					To fix this, verify that your token is valid and has the correct permissions.
@@ -173,7 +224,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				}
 				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
 					`
-					"Error: Failed to establish remote session due to an authentication issue.
+					"Error: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
 					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
 					The token may be invalid or lack the required permissions for this operation.
 					To fix this, verify that your token is valid and has the correct permissions.

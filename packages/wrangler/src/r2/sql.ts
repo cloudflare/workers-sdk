@@ -1,4 +1,5 @@
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import { getCloudflareAPITokenFromEnv } from "@cloudflare/workers-auth";
 import {
 	APIError,
 	parseJSON,
@@ -9,10 +10,7 @@ import prettyBytes from "pretty-bytes";
 import { fetch } from "undici";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
-import {
-	getCloudflareAPITokenFromEnv,
-	getWranglerR2SqlAuthToken,
-} from "../user/auth-variables";
+import { getWranglerR2SqlAuthToken } from "../user/auth-variables";
 
 interface SqlQueryResponse {
 	result?: {

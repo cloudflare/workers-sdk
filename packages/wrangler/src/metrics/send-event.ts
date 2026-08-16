@@ -47,6 +47,7 @@ export type EventNames =
 	| "create pages project"
 	| "list pages projects"
 	| "create pages deployment"
+	| "delegate pages to workers"
 	| "list pages deployments"
 	| "delete pages deployment"
 	| "build pages functions"
@@ -84,7 +85,11 @@ type AutoConfigEvent =
 	| "autoconfig_configuration_completed";
 
 /** Event related to the agent skills install flow */
-type SkillsInstallEvent = "skills_install_skipped" | "skills_install_completed";
+type SkillsInstallEvent =
+	| "skills_install_skipped"
+	| "skills_install_completed"
+	| "skills_update_skipped"
+	| "skills_update_completed";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

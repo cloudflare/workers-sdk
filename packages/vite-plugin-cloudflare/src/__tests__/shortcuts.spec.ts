@@ -264,7 +264,9 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		await explorerShortcut?.action?.(mockServer);
 
 		expect(mockOpen).toHaveBeenCalledWith(
-			expect.stringMatching(/^http:\/\/localhost:\d+\/cdn-cgi\/explorer$/)
+			expect.stringMatching(
+				/^http:\/\/localhost:\d+\/cdn-cgi\/local\/explorer$/
+			)
 		);
 	});
 

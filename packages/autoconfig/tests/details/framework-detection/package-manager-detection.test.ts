@@ -1,6 +1,7 @@
 import {
 	BunPackageManager,
 	NpmPackageManager,
+	NubPackageManager,
 	PnpmPackageManager,
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
@@ -55,6 +56,17 @@ describe("detectFramework() / package manager detection", () => {
 		const result = await detectFramework(process.cwd(), context);
 
 		expect(result.packageManager).toStrictEqual(BunPackageManager);
+	});
+
+	it("detects nub when nub.lock is present", async ({ expect }) => {
+		await seed({
+			"package.json": JSON.stringify({ dependencies: { astro: "5" } }),
+			"nub.lock": "",
+		});
+
+		const result = await detectFramework(process.cwd(), context);
+
+		expect(result.packageManager).toStrictEqual(NubPackageManager);
 	});
 
 	it("falls back to npm when no package manager lock file is present", async ({

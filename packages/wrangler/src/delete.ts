@@ -92,11 +92,6 @@ export const deleteCommand = createCommand({
 				"Delete even if doing so will break other Workers that depend on this one",
 			type: "boolean",
 		},
-		"legacy-env": {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		},
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {

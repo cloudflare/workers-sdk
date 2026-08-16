@@ -4,9 +4,11 @@ on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] dependabot-only job requires write access to push generated changesets; checkout v6 persists credentials under RUNNER_TEMP
     paths:
       - "packages/miniflare/package.json"
+      - "pnpm-workspace.yaml"
 
 permissions:
-  # content:write permission needed to update add changesets to dependabot PRs
+  # content:write permission needed to update add changesets to dependabot PRs,
+  # and to refresh the default compatibility date on workerd bumps
   # (see tools/dependabot/generate-dependabot-pr-changesets.ts)
   contents: write
 
@@ -14,6 +16,7 @@ jobs:
   generate-changeset:
     runs-on: ubuntu-slim
     if: |
+      github.actor == 'dependabot[bot]' &&
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository
     steps:
@@ -34,6 +37,10 @@ jobs:
           git config --global user.name 'Wrangler automated PR updater'
 
       - name: Generate Miniflare changesets
+        # Also refreshes DEFAULT_COMPAT_DATE when this PR bumps workerd, since
+        # the default compatibility date is derived from the pinned workerd
+        # release and `pnpm check:compat-date` enforces that they match.
+        #
         # The paremeters to the script are:
         # - PR: The number of the current Dependabot PR
         # - Packages: Coma-separated names of the workers-sdk packages whose dependencies are being updated

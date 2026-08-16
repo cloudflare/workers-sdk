@@ -1,4 +1,3 @@
-import { useServiceEnvironments } from "./useServiceEnvironments";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**
@@ -9,7 +8,7 @@ export function getLegacyScriptName(
 	args: { name: string | undefined; env: string | undefined },
 	config: Config
 ) {
-	return args.name && args.env && !useServiceEnvironments(config)
+	return args.name && args.env
 		? `${args.name}-${args.env}`
 		: (args.name ?? config.name);
 }

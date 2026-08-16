@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { type D1Database } from "@cloudflare/workers-types/experimental";
-import { Miniflare } from "miniflare";
+import { D1_PLUGIN_NAME, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import { useDispose, useTmp, utf8Encode } from "../../test-shared";
 import { binding, ctx, getDatabase, opts } from "./test";
@@ -44,11 +45,9 @@ beforeEach(async () => {
 	const tablePalettes = `palettes_${ns}`;
 
 	const db = await getDatabase(ctx.mf);
-	const bindings = await ctx.mf.getBindings();
 
 	await db.exec(SCHEMA(tableColours, tableKitchenSink, tablePalettes));
 
-	ctx.bindings = bindings;
 	ctx.db = db;
 	ctx.tableColours = tableColours;
 	ctx.tableKitchenSink = tableKitchenSink;
@@ -483,23 +482,20 @@ test("D1PreparedStatement: raw", async ({ expect }) => {
 	expect(id).toBe(4);
 
 	// Check whether workerd raw test case passes here too
-	// Note that this test did not pass with the old binding
-	if (!ctx.bindings["__D1_BETA__DB"]) {
-		await db.prepare(`CREATE TABLE abc (a INT, b INT, c INT);`).run();
-		await db.prepare(`CREATE TABLE cde (c INT, d INT, e INT);`).run();
-		await db.prepare(`INSERT INTO abc VALUES (1,2,3),(4,5,6);`).run();
-		await db.prepare(`INSERT INTO cde VALUES (7,8,9),(1,2,3);`).run();
-		const rawPromise = await db
-			.prepare(`SELECT * FROM abc, cde;`)
-			.raw({ columnNames: true });
-		expect(rawPromise).toEqual([
-			["a", "b", "c", "c", "d", "e"],
-			[1, 2, 3, 7, 8, 9],
-			[1, 2, 3, 1, 2, 3],
-			[4, 5, 6, 7, 8, 9],
-			[4, 5, 6, 1, 2, 3],
-		]);
-	}
+	await db.prepare(`CREATE TABLE abc (a INT, b INT, c INT);`).run();
+	await db.prepare(`CREATE TABLE cde (c INT, d INT, e INT);`).run();
+	await db.prepare(`INSERT INTO abc VALUES (1,2,3),(4,5,6);`).run();
+	await db.prepare(`INSERT INTO cde VALUES (7,8,9),(1,2,3);`).run();
+	const rawPromise = await db
+		.prepare(`SELECT * FROM abc, cde;`)
+		.raw({ columnNames: true });
+	expect(rawPromise).toEqual([
+		["a", "b", "c", "c", "d", "e"],
+		[1, 2, 3, 7, 8, 9],
+		[1, 2, 3, 1, 2, 3],
+		[4, 5, 6, 7, 8, 9],
+		[4, 5, 6, 1, 2, 3],
+	]);
 });
 
 test("operations persist D1 data", async ({ expect }) => {
@@ -507,7 +503,10 @@ test("operations persist D1 data", async ({ expect }) => {
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp();
-	const persistOpts: MiniflareOptions = { ...opts, d1Persist: tmp };
+	const persistOpts: MiniflareOptions = {
+		...opts,
+		resourcePersistencePath: tmp,
+	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
 	let db = await getDatabase(mf);
@@ -524,8 +523,8 @@ test("operations persist D1 data", async ({ expect }) => {
 		.first();
 	expect(result).toEqual({ name: "purple" });
 
-	// Check directory created for database
-	const names = await fs.readdir(tmp);
+	// Check directory created for database under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, D1_PLUGIN_NAME));
 	expect(names.includes("miniflare-D1DatabaseObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data
@@ -544,7 +543,12 @@ test("operations permit strange database names", async ({ expect }) => {
 
 	// Set option, then reset after test
 	const id = "my/ Database";
-	await ctx.setOptions({ ...opts, d1Databases: { [binding]: id } });
+	const baseConfig = opts.workers[0].config;
+	await ctx.setOptions({
+		workers: [
+			{ config: { ...baseConfig, env: { [binding]: { type: "d1", id } } } },
+		],
+	});
 	onTestFinished(() => ctx.setOptions(opts));
 	const db = await getDatabase(ctx.mf);
 
@@ -575,14 +579,7 @@ test("it properly handles ROWS_AND_COLUMNS results format", async ({
 		)
 		.raw();
 
-	let expectedResults;
-	// Note that this test did not pass with the old binding
-	if (!ctx.bindings["__D1_BETA__DB"]) {
-		expectedResults = [["blue", "Night"]];
-	} else {
-		expectedResults = [["Night"]];
-	}
-	expect(results).toEqual(expectedResults);
+	expect(results).toEqual([["blue", "Night"]]);
 });
 
 /**
@@ -597,10 +594,12 @@ test("dumpSql exports and imports complete database structure and content correc
 }) => {
 	// Create a new Miniflare instance with D1 database
 	const tmp1 = await useTmp();
+	const baseConfig = opts.workers[0].config;
 	const originalMF = new Miniflare({
-		...opts,
-		d1Persist: tmp1,
-		d1Databases: { test: "test" },
+		resourcePersistencePath: tmp1,
+		workers: [
+			{ config: { ...baseConfig, env: { test: { type: "d1", id: "test" } } } },
+		],
 	});
 	useDispose(originalMF);
 	const originalDb = await originalMF.getD1Database("test");
@@ -619,9 +618,10 @@ test("dumpSql exports and imports complete database structure and content correc
 	// Create a new Miniflare instance and import the dump into a new database
 	const tmp2 = await useTmp();
 	const mirrorMF = new Miniflare({
-		...opts,
-		d1Persist: tmp2,
-		d1Databases: { test: "test" },
+		resourcePersistencePath: tmp2,
+		workers: [
+			{ config: { ...baseConfig, env: { test: { type: "d1", id: "test" } } } },
+		],
 	});
 	useDispose(mirrorMF);
 

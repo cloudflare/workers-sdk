@@ -155,6 +155,37 @@ export class CommandRegistry {
 	}
 
 	/**
+	 * Get the set of valid subcommand names at a given command path.
+	 *
+	 * Walks the definition tree along the given path segments, then returns
+	 * the keys of the subtree at that node. Returns `undefined` if the path
+	 * does not exist in the tree or has no subcommands.
+	 *
+	 * @param pathSegments - The command path segments to walk (e.g., `["kv"]`
+	 *   returns `namespace`, `key`, `bulk`; `["kv", "namespace"]` returns
+	 *   `create`, `list`, `delete`, etc.)
+	 * @returns A set of valid subcommand names, or `undefined` if the path is
+	 *   invalid or has no subcommands
+	 */
+	getSubcommands(pathSegments: string[]): Set<string> | undefined {
+		let currentTree = this.#tree;
+
+		for (const segment of pathSegments) {
+			const node = currentTree.get(segment);
+			if (!node) {
+				return undefined;
+			}
+			currentTree = node.subtree;
+		}
+
+		if (currentTree.size === 0) {
+			return undefined;
+		}
+
+		return new Set(currentTree.keys());
+	}
+
+	/**
 	 * Returns the map of categories to command segments, ordered according to
 	 * the category order. Commands within each category are sorted alphabetically.
 	 * Used for grouping commands in the help output.

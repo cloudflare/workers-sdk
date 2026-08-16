@@ -15,6 +15,9 @@ export interface EventDestination {
 }
 
 export enum EventSourceType {
+	ARTIFACTS = "artifacts",
+	ARTIFACTS_REPO = "artifacts.repo",
+	EMAIL_SENDING = "email.sending",
 	IMAGES = "images",
 	KV = "kv",
 	R2 = "r2",
@@ -28,6 +31,9 @@ export enum EventSourceType {
 export const EVENT_SOURCE_TYPES = Object.values(EventSourceType);
 
 export type EventSource =
+	| ArtifactsEventSource
+	| ArtifactsRepoEventSource
+	| EmailSendingEventSource
 	| ImagesEventSource
 	| KvEventSource
 	| R2EventSource
@@ -36,6 +42,20 @@ export type EventSource =
 	| WorkersAiModelEventSource
 	| WorkersBuildsWorkerEventSource
 	| WorkflowsWorkflowEventSource;
+
+export interface ArtifactsEventSource {
+	type: EventSourceType.ARTIFACTS;
+}
+
+export interface ArtifactsRepoEventSource {
+	type: EventSourceType.ARTIFACTS_REPO;
+}
+
+export interface EmailSendingEventSource {
+	type: EventSourceType.EMAIL_SENDING;
+	zone_id: string;
+	domain: string;
+}
 
 export interface ImagesEventSource {
 	type: EventSourceType.IMAGES;

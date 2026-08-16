@@ -88,8 +88,26 @@ describe("Workflow step config validation", () => {
 				"i-like-trains": "yes".repeat(100),
 			},
 		},
+		{
+			retries: { limit: 3, delay: "i like trains", backoff: "constant" },
+			timeout: "10 minutes",
+		},
+		{
+			retries: { limit: 3, delay: 10, backoff: "constant" },
+			timeout: 0,
+		},
+		{ timeout: "5 minutes", sensitive: "all" },
+		{ timeout: "5 minutes", sensitive: true },
 	])("should reject invalid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(false);
+	});
+
+	it("should accept a dynamic delay function", ({ expect }) => {
+		const config = {
+			retries: { limit: 3, delay: () => "10 seconds", backoff: "constant" },
+			timeout: "10 minutes",
+		};
+		expect(isValidStepConfig(config)).toBe(true);
 	});
 
 	it.for([
@@ -100,6 +118,11 @@ describe("Workflow step config validation", () => {
 		{
 			retries: { limit: 5, delay: 0, backoff: "constant" },
 			timeout: "2 minutes",
+		},
+		{
+			retries: { limit: 3, delay: 10, backoff: "constant" },
+			timeout: "2 minutes",
+			sensitive: "output",
 		},
 	])("should accept valid step configs", (value, { expect }) => {
 		expect(isValidStepConfig(value)).toBe(true);

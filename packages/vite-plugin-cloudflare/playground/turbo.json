@@ -11,9 +11,27 @@
 				"VITE_TEST_BUILD"
 			]
 		},
+		// `dependsOn: ["build"]` is load-bearing despite this package having no
+		// `build` script: turbo inserts a no-op `#build` node for the missing
+		// script which inherits `dependsOn: ["^build"]` from the root config,
+		// folding `@cloudflare/vite-plugin#build` and its entire dependency
+		// graph into these tasks' hashes. Do not remove it.
+		//
+		// That covers local runs. CI passes `--only`
+		// (`.github/workflows/vite-plugin-playgrounds.yml`), which strips
+		// dependency hashes from the cache key, so the workflow exports the
+		// hash turbo computed for `@cloudflare/vite-plugin#build` as
+		// `VITE_PLUGIN_BUILD_HASH` and it is declared here to restore the same
+		// invalidation. Without it these tests replay from cache whenever a PR
+		// only touches the plugin, wrangler, miniflare or workerd (#14967).
 		"test:ci:serve": {
 			"dependsOn": ["build"],
-			"env": ["NODE_DEBUG", "NODE_ENV", "VITE_VERSION"],
+			"env": [
+				"NODE_DEBUG",
+				"NODE_ENV",
+				"VITE_PLUGIN_BUILD_HASH",
+				"VITE_VERSION"
+			],
 			"passThroughEnv": [
 				"CLOUDFLARE_VITE_BUILD",
 				"VITE_DEBUG_SERVE",
@@ -24,7 +42,13 @@
 		},
 		"test:ci:build": {
 			"dependsOn": ["build"],
-			"env": ["NODE_DEBUG", "NODE_ENV", "VITE_TEST_BUILD", "VITE_VERSION"],
+			"env": [
+				"NODE_DEBUG",
+				"NODE_ENV",
+				"VITE_PLUGIN_BUILD_HASH",
+				"VITE_TEST_BUILD",
+				"VITE_VERSION"
+			],
 			"passThroughEnv": [
 				"CLOUDFLARE_VITE_BUILD",
 				"VITE_DEBUG_SERVE",

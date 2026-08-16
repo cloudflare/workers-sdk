@@ -23,9 +23,11 @@ describe("findPackageNames()", () => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/autoconfig",
+				"@cloudflare/build-output-utils",
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli-shared-helpers",
 				"@cloudflare/codemod",
+				"@cloudflare/config",
 				"@cloudflare/containers-shared",
 				"@cloudflare/deploy-helpers",
 				"@cloudflare/devprod-status-bot",
@@ -34,6 +36,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/format-errors",
 				"@cloudflare/kv-asset-handler",
 				"@cloudflare/local-explorer-ui",
+				"@cloudflare/pages-functions",
 				"@cloudflare/pages-shared",
 				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
@@ -44,6 +47,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workers-auth",
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
+				"@cloudflare/workers-sdk-auto-triage",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
@@ -192,19 +196,27 @@ describe("validateChangesets()", () => {
 		expect(errors).toMatchInlineSnapshot(`[]`);
 	});
 
-	it("should report errors for major bump changesets", ({ expect }) => {
+	it("should report errors for major bumps except Miniflare prereleases", ({
+		expect,
+	}) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
-				["package-a", { name: "package-a" }],
+				[
+					"miniflare",
+					{
+						name: "miniflare",
+						"workers-sdk": { npmPrereleaseIdentifier: "alpha" },
+					},
+				],
 				["package-b", { name: "package-b" }],
 				["package-c", { name: "package-c" }],
 			]),
 			[
 				{
-					file: "patch-one.md",
+					file: "major-one.md",
 					contents: dedent`
 						---
-						"package-a": patch
+						"miniflare": major
 						---
 	  				refactor: test`,
 				},

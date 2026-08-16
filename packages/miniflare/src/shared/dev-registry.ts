@@ -20,6 +20,7 @@ import type { FSWatcher } from "chokidar";
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
+	private watchQueueConsumers = false;
 	private externalServices: Map<
 		string,
 		{
@@ -45,13 +46,15 @@ export class DevRegistry {
 				classNames: Set<string>;
 				entrypoints: Set<string | undefined>;
 			}
-		>
+		>,
+		watchQueueConsumers = false
 	): void {
-		if (services.size === 0 || !this.registryPath) {
+		if ((services.size === 0 && !watchQueueConsumers) || !this.registryPath) {
 			return;
 		}
 
 		this.externalServices = new Map(services);
+		this.watchQueueConsumers = watchQueueConsumers;
 
 		mkdirSync(this.registryPath, { recursive: true });
 
@@ -86,7 +89,10 @@ export class DevRegistry {
 		});
 	}
 
-	private unregisterWorkers() {
+	/**
+	 * Withdraw every entry this instance has registered.
+	 */
+	public unregisterWorkers() {
 		for (const worker of this.registeredWorkers) {
 			this.unregister(worker);
 		}
@@ -134,11 +140,17 @@ export class DevRegistry {
 		registryPath: string | undefined,
 		onUpdate?: (registry: WorkerRegistry) => void
 	): Promise<void> {
-		// Unregister all registered workers
-		this.unregisterWorkers();
 		this.onUpdate = onUpdate;
 
 		if (registryPath !== this.registryPath) {
+			// Our entries live in the directory we are leaving, so they have to be
+			// removed from there before we switch. When the path is unchanged we
+			// deliberately keep them: `register()` reconciles the set instead, so a
+			// config update no longer deletes and recreates every entry. Other dev
+			// sessions watch this directory, and a deletion is visible to them even
+			// if we put the file straight back.
+			this.unregisterWorkers();
+
 			// Close the existing watcher if it exists.
 			// It will watch the new path if there is any dependent services in a later step
 			await this.watcher?.close();
@@ -155,6 +167,20 @@ export class DevRegistry {
 
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
+
+		// Drop the entries for Workers this instance no longer has. Workers that
+		// remain are overwritten in place below instead of being deleted and
+		// recreated, so a peer never observes one of its service binding or
+		// `tail_consumers` targets disappearing during a routine config update.
+		for (const name of [...this.registeredWorkers]) {
+			// `hasOwn` rather than `in`: a Worker may legitimately be named after an
+			// inherited property such as `constructor`, and `in` would report it as
+			// still present and leave its entry behind.
+			if (!Object.hasOwn(workers, name)) {
+				this.unregister(name);
+				this.registeredWorkers.delete(name);
+			}
+		}
 
 		for (const [name, definition] of Object.entries(workers)) {
 			const definitionPath = path.join(this.registryPath, name);
@@ -191,6 +217,17 @@ export class DevRegistry {
 		}
 		const previousRegistry = JSON.parse(this.previousJSON);
 		this.previousJSON = json;
+		// Queue consumers may be advertised by any worker in the registry (their
+		// names aren't known upfront), so compare the queue-consumer view of the
+		// whole registry rather than specific entries.
+		if (
+			this.watchQueueConsumers &&
+			getQueueConsumersView(registry) !==
+				getQueueConsumersView(previousRegistry)
+		) {
+			this.onUpdate(registry);
+			return;
+		}
 		for (const [service] of this.externalServices) {
 			if (
 				JSON.stringify(registry[service]) !==
@@ -201,6 +238,29 @@ export class DevRegistry {
 			}
 		}
 	}
+}
+
+/**
+ * Serialise the parts of the registry that matter for routing cross-process
+ * queue messages: which workers consume which queues, and the debug address
+ * each can be reached on (see `findQueueConsumer`).
+ */
+function getQueueConsumersView(registry: WorkerRegistry): string {
+	return JSON.stringify(
+		Object.entries(registry)
+			.filter(([, definition]) => definition.queueConsumers !== undefined)
+			.map(
+				([workerName, definition]) =>
+					[
+						workerName,
+						definition.debugPortAddress,
+						definition.queueConsumers,
+					] as const
+			)
+			.sort(([previousWorkerName], [nextWorkerName]) =>
+				previousWorkerName.localeCompare(nextWorkerName)
+			)
+	);
 }
 
 /**

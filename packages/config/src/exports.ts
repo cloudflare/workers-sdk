@@ -13,6 +13,30 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
+ * Storage backend for the Durable Object.
+ *
+ * Containers are only supported on the SQLite storage engine, so `container` is
+ * only offered alongside `storage: "sqlite"`.
+ */
+export type DurableObjectStorageOptions =
+	| {
+			/**
+			 * Selects the SQLite-backed storage engine (recommended for new
+			 * classes).
+			 */
+			storage: "sqlite";
+			/**
+			 * Attach a container to this Durable Object, by container name. The
+			 * name must match an entry in the top level `containers` array.
+			 */
+			container?: string;
+	  }
+	| {
+			/** Selects the legacy key-value storage engine. */
+			storage: "legacy-kv";
+	  };
+
+/**
  * Declares a provisioned Durable Object class exported from this Worker.
  *
  * For more information about Durable Objects, see the documentation at
@@ -20,17 +44,9 @@
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
-export interface DurableObjectCreatedExportOptions {
+export type DurableObjectCreatedExportOptions = {
 	state?: "created";
-	/**
-	 * Storage backend for the Durable Object.
-	 *
-	 * - `"sqlite"`: selects the SQLite-backed storage engine
-	 *   (recommended for new classes).
-	 * - `"legacy-kv"`: selects the legacy key-value storage engine.
-	 */
-	storage: "sqlite" | "legacy-kv";
-}
+} & DurableObjectStorageOptions;
 
 /**
  * Retire a provisioned Durable Object namespace whose class has
@@ -74,18 +90,19 @@ export interface DurableObjectTransferredExportOptions {
  * Prepare to receive cross-Worker Durable Object transfer.
  * Once the source Worker's `transferred` export is deployed, this entry becomes a normal live `durable-object` export.
  */
-export interface DurableObjectExpectingTransferExportOptions {
+export type DurableObjectExpectingTransferExportOptions = {
 	state: "expecting-transfer";
-	storage: "sqlite" | "legacy-kv";
 	/**
 	 * The source Worker for the two-phase cross-Worker transfer.
 	 */
 	transferFrom: string;
-}
+} & DurableObjectStorageOptions;
 
-export interface DurableObjectCreatedExport extends DurableObjectCreatedExportOptions {
+// A type intersection rather than an `interface ... extends`, because the
+// options are a union over `storage` and an interface cannot extend a union.
+export type DurableObjectCreatedExport = DurableObjectCreatedExportOptions & {
 	type: "durable-object";
-}
+};
 export interface DurableObjectDeletedExport extends DurableObjectDeletedExportOptions {
 	type: "durable-object";
 }
@@ -96,9 +113,10 @@ export interface DurableObjectTransferredExport extends DurableObjectTransferred
 	type: "durable-object";
 }
 
-export interface DurableObjectExpectingTransferExport extends DurableObjectExpectingTransferExportOptions {
-	type: "durable-object";
-}
+export type DurableObjectExpectingTransferExport =
+	DurableObjectExpectingTransferExportOptions & {
+		type: "durable-object";
+	};
 
 export type DurableObjectExportOptions =
 	| DurableObjectCreatedExportOptions
@@ -166,6 +184,16 @@ export interface Exports {
 	durableObject(
 		options: DurableObjectExpectingTransferExportOptions
 	): DurableObjectExpectingTransferExport;
+	// Fallback overload. TypeScript only reaches this when none of the precise
+	// overloads above match, and it reports the last overload's error. Typing the
+	// parameter as the full discriminated union means the reported error keys off
+	// `state` and flags the offending property directly (e.g. "'storage' does not
+	// exist in type 'DurableObjectRenamedExportOptions'"), rather than the
+	// confusing "'renamed' is not assignable to 'expecting-transfer'" you get when
+	// the last precise overload happens to be the storage-bearing one. Valid calls
+	// still resolve to a precise overload above, preserving the literal return
+	// types that downstream inference (e.g. `InferDurableNamespaces`) relies on.
+	durableObject(options: DurableObjectExportOptions): DurableObjectExports;
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
@@ -186,6 +214,11 @@ function durableObject(
 function durableObject(
 	options: DurableObjectExpectingTransferExportOptions
 ): DurableObjectExpectingTransferExport;
+// Fallback overload; see the matching comment in the `Exports` interface for why
+// this union-typed signature exists.
+function durableObject(
+	options: DurableObjectExportOptions
+): DurableObjectExports;
 function durableObject(
 	options: DurableObjectExportOptions
 ): DurableObjectExports {
@@ -208,6 +241,7 @@ function worker(
  * export default defineWorker({
  *   exports: {
  *     MyDurableObject: exports.durableObject({ storage: "sqlite" }),
+ *     MyContainerDO:   exports.durableObject({ storage: "sqlite", container: "my-container" }),
  *     OldClass:        exports.durableObject({ state: "deleted" }),
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),

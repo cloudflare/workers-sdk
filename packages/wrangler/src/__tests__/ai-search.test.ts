@@ -724,7 +724,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type builtin --source-jurisdiction eu"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/--source-jurisdiction is only supported with --type r2/
 			);
 		});
@@ -737,7 +737,7 @@ describe("ai-search commands", () => {
 				runWrangler(
 					"ai-search create my-instance --namespace default --type web-crawler --source https://example.com --source-jurisdiction eu"
 				)
-			).rejects.toThrowError(
+			).rejects.toThrow(
 				/--source-jurisdiction is only supported with --type r2/
 			);
 		});
@@ -1051,6 +1051,195 @@ describe("ai-search commands", () => {
 			expect(std.out).toContain(
 				'Successfully created AI Search instance "my-instance"'
 			);
+		});
+
+		it("should forward --parse-type discover for a web-crawler instance", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									...MOCK_INSTANCE,
+									type: "web-crawler",
+									source: "https://example.com",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type web-crawler --source https://example.com --parse-type discover"
+			);
+			expect(capturedBody).toMatchObject({
+				type: "web-crawler",
+				source: "https://example.com",
+				source_params: { web_crawler: { parse_type: "discover" } },
+			});
+		});
+
+		it("should forward --parse-type sitemap for a web-crawler instance", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									...MOCK_INSTANCE,
+									type: "web-crawler",
+									source: "https://example.com",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type web-crawler --source https://example.com --parse-type sitemap"
+			);
+			expect(capturedBody).toMatchObject({
+				source_params: { web_crawler: { parse_type: "sitemap" } },
+			});
+		});
+
+		it("should omit web_crawler source params when --parse-type is not passed in non-interactive mode", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									...MOCK_INSTANCE,
+									type: "web-crawler",
+									source: "https://example.com",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --namespace default --type web-crawler --source https://example.com"
+			);
+			expect(capturedBody).not.toHaveProperty("source_params");
+		});
+
+		it("should interactively select the discover parse type", async ({
+			expect,
+		}) => {
+			let capturedBody: Record<string, unknown> | undefined;
+			mockListTokens([MOCK_TOKEN]);
+			mockSelect({ text: "Select the source type:", result: "web-crawler" });
+			mockSelect({
+				text: "Select the web source type:",
+				result: "discover",
+			});
+			msw.use(
+				http.get(
+					"*/zones",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ id: "zone-1", name: "example.com" }])
+						),
+					{ once: true }
+				)
+			);
+			mockSelect({ text: "Select a zone:", result: "example.com" });
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					async ({ request }) => {
+						capturedBody = (await request.json()) as Record<string, unknown>;
+						return HttpResponse.json(
+							createFetchResult(
+								{
+									...MOCK_INSTANCE,
+									type: "web-crawler",
+									source: "https://example.com",
+								},
+								true
+							)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler("ai-search create my-instance --namespace default");
+			expect(capturedBody).toMatchObject({
+				source_params: { web_crawler: { parse_type: "discover" } },
+			});
+		});
+
+		it("should error when --parse-type is used with --type builtin", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type builtin --parse-type discover"
+				)
+			).rejects.toThrow(
+				/--parse-type is only supported with --type web-crawler/
+			);
+		});
+
+		it("should error when --parse-type is used with --type r2", async ({
+			expect,
+		}) => {
+			mockListTokens([MOCK_TOKEN]);
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type r2 --source my-bucket --parse-type discover"
+				)
+			).rejects.toThrow(
+				/--parse-type is only supported with --type web-crawler/
+			);
+		});
+
+		it("should reject an invalid --parse-type value", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					"ai-search create my-instance --namespace default --type web-crawler --source https://example.com --parse-type crawl"
+				)
+			).rejects.toThrow(/Invalid values/);
 		});
 
 		it("should error when name is missing", async ({ expect }) => {

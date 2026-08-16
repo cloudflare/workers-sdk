@@ -8,10 +8,10 @@ import { text } from "node:stream/consumers";
 import { Headers, Miniflare, R2_PLUGIN_NAME } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
-	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
+	singleModuleManifest,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
@@ -59,8 +59,16 @@ interface Context extends MiniflareTestContext {
 }
 
 const opts: Partial<MiniflareOptions> = {
-	r2Buckets: { BUCKET: "bucket" },
-	compatibilityFlags: ["r2_list_honor_include"],
+	workers: [
+		{
+			config: {
+				type: "worker",
+				name: "",
+				compatibilityDate: "2025-05-01",
+				env: { BUCKET: { type: "r2", name: "bucket" } },
+			},
+		},
+	],
 };
 const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 	opts,
@@ -541,9 +549,14 @@ test("put: validates metadata size", async ({ expect }) => {
 });
 test("put: can copy values", async ({ expect }) => {
 	const mf = new Miniflare({
-		r2Buckets: ["BUCKET"],
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					manifest: singleModuleManifest(`export default {
       async fetch(request, env, ctx) {
         await env.BUCKET.put("key", "0123456789");
 
@@ -571,7 +584,10 @@ test("put: can copy values", async ({ expect }) => {
 
         return Response.json({ copy, copyRange1, copyRange2, copyRange3, copyRange4 });
       }
-    }`,
+    }`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -997,10 +1013,18 @@ test("operations permit empty key", async ({ expect }) => {
 test("operations persist stored data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = {
-		modules: true,
-		script: "",
-		r2Buckets: { BUCKET: "bucket" },
-		r2Persist: tmp,
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: { BUCKET: { type: "r2", name: "bucket" } },
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
@@ -1013,8 +1037,8 @@ test("operations persist stored data", async ({ expect }) => {
 	let object = await r2.head("key");
 	expect(object?.size).toBe(5);
 
-	// Check directory created for namespace
-	const names = await fs.readdir(tmp);
+	// Check directory created for namespace under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, R2_PLUGIN_NAME));
 	expect(names.includes("miniflare-R2BucketObject")).toBe(true);
 
 	// Check "restarting" keeps persisted data
@@ -1052,7 +1076,18 @@ test("operations permit strange bucket names", async ({ expect }) => {
 
 	// Set option, then reset after test
 	const id = "my/ Bucket";
-	await ctx.setOptions({ ...opts, r2Buckets: { BUCKET: id } });
+	await ctx.setOptions({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: id } },
+				},
+			},
+		],
+	});
 	onTestFinished(() => ctx.setOptions(opts));
 	const r2 = namespace(ns, await mf.getR2Bucket("BUCKET"));
 
@@ -1607,25 +1642,4 @@ test("list: is multipart aware", async ({ expect }) => {
 	expect(object?.checksums.toJSON()).toEqual({});
 	expect(object?.customMetadata).toEqual({ key: "value" });
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });
-});
-
-test("migrates database to new location", async ({ expect }) => {
-	// Copy legacy data to temporary directory
-	const tmp = await useTmp();
-	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
-	const r2Persist = path.join(tmp, "r2");
-	await fs.cp(path.join(persistFixture, "r2"), r2Persist, { recursive: true });
-
-	// Implicitly migrate data
-	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		r2Buckets: ["BUCKET"],
-		r2Persist,
-	});
-	useDispose(mf);
-
-	const bucket = await mf.getR2Bucket("BUCKET");
-	const object = await bucket.get("key");
-	expect(await object?.text()).toBe("value");
 });

@@ -9,7 +9,12 @@ import {
 } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { buildPublicUrl, Miniflare, Mutex } from "miniflare";
+import {
+	buildPublicUrl,
+	convertV4MiniflareOptions,
+	Miniflare,
+	Mutex,
+} from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
@@ -160,6 +165,7 @@ export async function convertToConfigBundle(
 
 	return {
 		name: event.config.name,
+		projectRoot: event.config.projectRoot,
 		bundle: event.bundle,
 		format: event.bundle.entry.format,
 		compatibilityDate: event.config.compatibilityDate,
@@ -193,14 +199,11 @@ export async function convertToConfigBundle(
 					inspectorHost: event.config.dev.inspector?.hostname,
 				}),
 		localPersistencePath: event.config.dev.persist,
-		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
 		routes: event.config.dev.routeRequestsByRoutes ? routes : undefined,
 		queueConsumers,
 		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
-		httpsCertPath: event.config.dev?.server?.httpsCertPath,
-		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		testScheduled: !!event.config.dev.testScheduled,
@@ -213,6 +216,7 @@ export async function convertToConfigBundle(
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
 		zone: getZoneForCfWorkerHeader(event.config),
+		access: event.config.access,
 		sendMetrics: event.config.sendMetrics,
 		publicUrl: event.config.dev?.server?.port
 			? buildPublicUrl({
@@ -276,6 +280,23 @@ export class LocalRuntimeController extends RuntimeController {
 		process.off("exit", this.cleanupContainers);
 		process.on("exit", this.cleanupContainers);
 	}
+
+	/**
+	 * Surfaces uncaught Worker exceptions as typed `runtimeError` events
+	 * (workerd catches handler exceptions to build the 500 response, so they
+	 * never reach the inspector — Miniflare's pretty-error path is where the
+	 * revived, source-mapped Error exists). Installed as Miniflare's
+	 * `handleUncaughtError` by every code path that builds Miniflare options:
+	 * this controller's and `MultiworkerRuntimeController`'s.
+	 */
+	protected dispatchRuntimeError = (error: Error): void => {
+		this.bus.dispatch({
+			type: "runtimeError",
+			source: "LocalRuntimeController",
+			text: `${error.name ?? "Error"}: ${error.message}`,
+			stack: error.stack ?? "",
+		});
+	};
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
@@ -390,21 +411,22 @@ export class LocalRuntimeController extends RuntimeController {
 					});
 				}
 			);
-			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
+			options.handleUncaughtError = this.dispatchRuntimeError;
 
 			// Bail out if a newer bundle arrived while we were building
 			// miniflare options — avoid a redundant local server reload.
 			if (id !== this.#currentBundleId) {
 				return;
 			}
+			const miniflareOptions = convertV4MiniflareOptions(options);
 
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
-				this.#mf = new Miniflare(options);
+				this.#mf = new Miniflare(miniflareOptions);
 			} else {
 				logger.log(chalk.dim("⎔ Reloading local server..."));
 
-				await this.#mf.setOptions(options);
+				await this.#mf.setOptions(miniflareOptions);
 
 				logger.log(chalk.dim("⎔ Local server updated and ready"));
 			}

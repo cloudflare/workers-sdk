@@ -1,17 +1,13 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
-import { z } from "zod";
-import { PathSchema } from "../../shared";
 import { SharedBindings } from "../../workers";
 import {
+	buildRemoteProxyProps,
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	getUserBindingServiceName,
-	migrateDatabase,
-	namespaceEntries,
-	namespaceKeys,
+	getRemoteProxyConnectionString,
 	objectEntryWorker,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
@@ -27,37 +23,15 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
+import type { ParsedWorkerOptions, Plugin } from "../shared";
 import type { SitesOptions } from "./sites";
 
-export const KVOptionsSchema = z.object({
-	kvNamespaces: z
-		.union([
-			z.record(
-				z.union([
-					z.string(),
-					z.object({
-						id: z.string(),
-						remoteProxyConnectionString: z
-							.custom<RemoteProxyConnectionString>()
-							.optional(),
-					}),
-				])
-			),
-			z.string().array(),
-		])
-		.optional(),
-
-	// Workers Sites
-	sitePath: PathSchema.optional(),
-	siteInclude: z.string().array().optional(),
-	siteExclude: z.string().array().optional(),
-});
-export const KVSharedOptionsSchema = z.object({
-	kvPersist: PersistenceSchema,
-});
-
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
+// A single entry service shared by every *local* namespace. Each namespace's id
+// is supplied per-binding via `ctx.props`, so one service serves all of them.
+const KV_LOCAL_ENTRY_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:entry`;
+// One shared remote-proxy service for all remote namespaces (config via props).
+const KV_REMOTE_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:remote`;
 const KV_STORAGE_SERVICE_NAME = `${KV_PLUGIN_NAME}:storage`;
 export const KV_NAMESPACE_OBJECT_CLASS_NAME = "KVNamespaceObject";
 const KV_NAMESPACE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
@@ -66,81 +40,105 @@ const KV_NAMESPACE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 };
 
 function isWorkersSitesEnabled(
-	options: z.infer<typeof KVOptionsSchema>
-): options is SitesOptions {
-	return options.sitePath !== undefined;
+	options: ParsedWorkerOptions
+): options is ParsedWorkerOptions & { legacy: SitesOptions } {
+	return options.legacy?.sitePath !== undefined;
 }
 
-export const KV_PLUGIN: Plugin<
-	typeof KVOptionsSchema,
-	typeof KVSharedOptionsSchema
-> = {
-	options: KVOptionsSchema,
-	sharedOptions: KVSharedOptionsSchema,
+export const KV_PLUGIN: Plugin = {
 	bindingTypeDescription: "KV namespace",
 	async getBindings(options) {
-		const namespaces = namespaceEntries(options.kvNamespaces);
-		const bindings = namespaces.map<Worker_Binding>(([name, namespace]) => ({
-			name,
-			kvNamespace: {
-				name: getUserBindingServiceName(
-					SERVICE_NAMESPACE_PREFIX,
-					namespace.id,
-					namespace.remoteProxyConnectionString
-				),
-			},
-		}));
+		const namespaces = getEnvBindingsOfType(options.config, "kv");
+		const bindings = namespaces.map<Worker_Binding>(([name, binding]) => {
+			const id = binding.id;
+			const remoteProxyConnectionString = getRemoteProxyConnectionString(
+				binding,
+				options.dev
+			);
+			// Remote (mixed-mode) namespaces share one proxy service; per-binding
+			// config (connection string) travels via props.
+			if (remoteProxyConnectionString) {
+				return {
+					name,
+					kvNamespace: {
+						name: KV_REMOTE_SERVICE_NAME,
+						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+					},
+				};
+			}
+			// Local namespaces all share one entry service; the namespace id is
+			// passed at runtime via props (read in object-entry.worker.ts).
+			return {
+				name,
+				kvNamespace: {
+					name: KV_LOCAL_ENTRY_SERVICE_NAME,
+					props: {
+						json: JSON.stringify({
+							[SharedBindings.TEXT_NAMESPACE]: id,
+						}),
+					},
+				},
+			};
+		});
 
 		if (isWorkersSitesEnabled(options)) {
-			bindings.push(...(await getSitesBindings(options)));
+			bindings.push(
+				...(await getSitesBindings(options.legacy, options.dev?.rootPath))
+			);
 		}
 
 		return bindings;
 	},
 
 	async getNodeBindings(options) {
-		const namespaces = namespaceKeys(options.kvNamespaces);
+		const namespaces = getEnvBindingsOfType(options.config, "kv");
 		const bindings = Object.fromEntries(
-			namespaces.map((name) => [name, new ProxyNodeBinding()])
+			namespaces.map(([name]) => [name, new ProxyNodeBinding()])
 		);
 
 		if (isWorkersSitesEnabled(options)) {
-			Object.assign(bindings, await getSitesNodeBindings(options));
+			Object.assign(
+				bindings,
+				await getSitesNodeBindings(options.legacy, options.dev?.rootPath)
+			);
 		}
 
 		return bindings;
 	},
 
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		log,
-		unsafeStickyBlobs,
-	}) {
-		const persist = sharedOptions.kvPersist;
-		const namespaces = namespaceEntries(options.kvNamespaces);
-		const services = namespaces.map<Service>(
-			([name, { id, remoteProxyConnectionString }]) => ({
-				name: getUserBindingServiceName(
-					SERVICE_NAMESPACE_PREFIX,
-					id,
-					remoteProxyConnectionString
-				),
-				worker: remoteProxyConnectionString
-					? remoteProxyClientWorker(remoteProxyConnectionString, name)
-					: objectEntryWorker(KV_NAMESPACE_OBJECT, id),
-			})
-		);
+	async getServices({ options, tmpPath, sharedOptions }) {
+		const namespaces = getEnvBindingsOfType(options.config, "kv");
 
-		if (services.length > 0) {
+		const services: Service[] = [];
+
+		// One shared entry service for all local namespaces (id supplied via props).
+		const hasLocalNamespace = namespaces.some(
+			([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
+		);
+		if (hasLocalNamespace) {
+			services.push({
+				name: KV_LOCAL_ENTRY_SERVICE_NAME,
+				worker: objectEntryWorker(KV_NAMESPACE_OBJECT),
+			});
+		}
+
+		// One shared proxy service for all remote (mixed-mode) namespaces.
+		const hasRemoteNamespace = namespaces.some(([, binding]) =>
+			getRemoteProxyConnectionString(binding, options.dev)
+		);
+		if (hasRemoteNamespace) {
+			services.push({
+				name: KV_REMOTE_SERVICE_NAME,
+				worker: remoteProxyClientWorker(),
+			});
+		}
+
+		if (hasLocalNamespace) {
 			const uniqueKey = `miniflare-${KV_NAMESPACE_OBJECT_CLASS_NAME}`;
 			const persistPath = getPersistPath(
 				KV_PLUGIN_NAME,
 				tmpPath,
-				defaultPersistRoot,
-				persist
+				sharedOptions.resourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
@@ -173,31 +171,18 @@ export const KV_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
+						...getMiniflareObjectBindings(),
 					],
 				},
 			};
 			services.push(storageService, objectService);
-
-			// Before the switch to Durable Object simulators, Miniflare stored
-			// databases alongside blobs in a namespace specific directory. To avoid
-			// another breaking change to the persistence location, migrate SQLite
-			// databases from the old location to the new location. Blobs are still
-			// stored in the same location.
-			for (const namespace of namespaces) {
-				await migrateDatabase(log, uniqueKey, persistPath, namespace[1].id);
-			}
 		}
 
 		if (isWorkersSitesEnabled(options)) {
-			services.push(...getSitesServices(options));
+			services.push(...getSitesServices(options.legacy, options.dev?.rootPath));
 		}
 
 		return services;
-	},
-
-	getPersistPath({ kvPersist }, tmpPath) {
-		return getPersistPath(KV_PLUGIN_NAME, tmpPath, undefined, kvPersist);
 	},
 };
 

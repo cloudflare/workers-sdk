@@ -5,11 +5,17 @@ import { setTimeout } from "node:timers/promises";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
 	DeferredPromise,
+	DURABLE_OBJECTS_PLUGIN_NAME,
 	kUnsafeEphemeralUniqueKey,
 	Miniflare,
 } from "miniflare";
 import { describe, onTestFinished, test } from "vitest";
-import { disposeWithRetry, useDispose, useTmp } from "../../test-shared";
+import {
+	disposeWithRetry,
+	singleModuleManifest,
+	useDispose,
+	useTmp,
+} from "../../test-shared";
 import type { MessageEvent, MiniflareOptions, RequestInit } from "miniflare";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
@@ -55,52 +61,65 @@ const STATEFUL_SCRIPT = (responsePrefix = "") => `
 test("persists Durable Object data in-memory between options reloads", async ({
 	expect,
 }) => {
-	const opts: MiniflareOptions = {
-		modules: true,
-		script: COUNTER_SCRIPT("Options #1: "),
-		durableObjects: { COUNTER: "Counter" },
-	};
-	const mf = new Miniflare(opts);
+	const counterOpts = (
+		responsePrefix: string,
+		{ ephemeral = false }: { ephemeral?: boolean } = {}
+	): MiniflareOptions => ({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(COUNTER_SCRIPT(responsePrefix)),
+					env: {
+						COUNTER: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "Counter",
+						},
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+				...(ephemeral ? { dev: { unsafeEphemeralDurableObjects: true } } : {}),
+			},
+		],
+	});
+
+	const mf = new Miniflare(counterOpts("Options #1: "));
 	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #1: 1");
 
-	opts.script = COUNTER_SCRIPT("Options #2: ");
-	await mf.setOptions(opts);
+	await mf.setOptions(counterOpts("Options #2: "));
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #2: 2");
 
-	opts.durableObjectsPersist = false;
-	opts.script = COUNTER_SCRIPT("Options #3: ");
-	await mf.setOptions(opts);
+	await mf.setOptions(counterOpts("Options #3: "));
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #3: 3");
 
-	opts.durableObjectsPersist = "memory:";
-	opts.script = COUNTER_SCRIPT("Options #4: ");
-	await mf.setOptions(opts);
+	await mf.setOptions(counterOpts("Options #4: "));
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #4: 4");
 
 	// Check a `new Miniflare()` instance has its own in-memory storage
-	delete opts.durableObjectsPersist;
-	opts.script = COUNTER_SCRIPT("Options #5: ");
 	await mf.dispose();
-	const mf2 = new Miniflare(opts);
+	const mf2 = new Miniflare(counterOpts("Options #5: "));
 	useDispose(mf2);
 	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #5: 1");
 
 	// Check doesn't persist with `unsafeEphemeralDurableObjects` enabled
-	opts.script = COUNTER_SCRIPT("Options #6: ");
-	opts.unsafeEphemeralDurableObjects = true;
-	await mf2.setOptions(opts);
+	await mf2.setOptions(counterOpts("Options #6: ", { ephemeral: true }));
 	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #6: 1");
 	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #6: 2");
-	await mf2.setOptions(opts);
+	await mf2.setOptions(counterOpts("Options #6: ", { ephemeral: true }));
 	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #6: 1");
 });
@@ -108,11 +127,27 @@ test("persists Durable Object data in-memory between options reloads", async ({
 test("persists Durable Object data on file-system", async ({ expect }) => {
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
-		name: "worker",
-		modules: true,
-		script: COUNTER_SCRIPT(),
-		durableObjects: { COUNTER: "Counter" },
-		durableObjectsPersist: tmp,
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(COUNTER_SCRIPT()),
+					env: {
+						COUNTER: {
+							type: "durable-object",
+							workerName: "worker",
+							exportName: "Counter",
+						},
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -120,8 +155,9 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("1");
 
-	// Check directory created for "worker"'s Durable Object
-	const names = await fs.readdir(tmp);
+	// Check directory created for "worker"'s Durable Object under the plugin subdirectory
+	const doTmp = path.join(tmp, DURABLE_OBJECTS_PLUGIN_NAME);
+	const names = await fs.readdir(doTmp);
 	expect(names).toEqual(["worker-Counter"]);
 
 	// Check reloading keeps persisted data
@@ -133,7 +169,7 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	// reload here as `workerd` keeps a copy of the SQLite database in-memory,
 	// we also need to `dispose()` to avoid `EBUSY` error on Windows)
 	await mf.dispose();
-	await removeDir(path.join(tmp, names[0]));
+	await removeDir(path.join(doTmp, names[0]));
 
 	const mf2 = new Miniflare(opts);
 	useDispose(mf2);
@@ -149,15 +185,63 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	expect(await res.text()).toBe("2");
 });
 
+test("lists Durable Object ids with persisted storage", async ({ expect }) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(COUNTER_SCRIPT()),
+					env: {
+						COUNTER: {
+							type: "durable-object",
+							workerName: "worker",
+							exportName: "Counter",
+						},
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const namespace = await mf.getDurableObjectNamespace("COUNTER");
+	const firstId = namespace.idFromName("/first").toString();
+	const secondId = namespace.idFromName("/second").toString();
+
+	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
+
+	let res = await mf.dispatchFetch("http://localhost/first");
+	expect(await res.text()).toBe("1");
+	res = await mf.dispatchFetch("http://localhost/second");
+	expect(await res.text()).toBe("1");
+
+	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual(
+		[firstId, secondId].sort()
+	);
+	await expect(mf.listDurableObjectIds("Counter")).resolves.toEqual(
+		[firstId, secondId].sort()
+	);
+});
+
 test("multiple Workers access same Durable Object data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const mf = new Miniflare({
-		durableObjectsPersist: tmp,
+		resourcePersistencePath: tmp,
 		workers: [
 			{
-				name: "entry",
-				modules: true,
-				script: `export default {
+				config: {
+					type: "worker",
+					name: "entry",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
           async fetch(request, env, ctx) {
             request = new Request(request);
             const service = request.headers.get("MF-Test-Service");
@@ -166,25 +250,57 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
             const text = await response.text();
             return new Response(\`via \${service}: \${text}\`);
           }
-        }`,
-				serviceBindings: { A: "a", B: "b" },
-			},
-			{
-				name: "a",
-				modules: true,
-				script: COUNTER_SCRIPT("a: "),
-				durableObjects: {
-					COUNTER_A: "Counter",
-					COUNTER_B: { className: "Counter", scriptName: "b" },
+        }`),
+					env: {
+						A: { type: "worker", workerName: "a" },
+						B: { type: "worker", workerName: "b" },
+					},
 				},
 			},
 			{
-				name: "b",
-				modules: true,
-				script: COUNTER_SCRIPT("b: "),
-				durableObjects: {
-					COUNTER_A: { className: "Counter", scriptName: "a" },
-					COUNTER_B: "Counter",
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(COUNTER_SCRIPT("a: ")),
+					env: {
+						COUNTER_A: {
+							type: "durable-object",
+							workerName: "a",
+							exportName: "Counter",
+						},
+						COUNTER_B: {
+							type: "durable-object",
+							workerName: "b",
+							exportName: "Counter",
+						},
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+			{
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(COUNTER_SCRIPT("b: ")),
+					env: {
+						COUNTER_A: {
+							type: "durable-object",
+							workerName: "a",
+							exportName: "Counter",
+						},
+						COUNTER_B: {
+							type: "durable-object",
+							workerName: "b",
+							exportName: "Counter",
+						},
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+					},
 				},
 			},
 		],
@@ -204,8 +320,8 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 	});
 	expect(await res.text()).toBe("via A: b: 1");
 
-	// Check directory created for Durable Objects
-	const names = await fs.readdir(tmp);
+	// Check directory created for Durable Objects under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, DURABLE_OBJECTS_PLUGIN_NAME));
 	expect(names.sort()).toEqual(["a-Counter", "b-Counter"]);
 
 	// Check accessing via a different service accesses same persisted data
@@ -223,14 +339,14 @@ test("can use Durable Object ID from one object in another", async ({
 	expect,
 }) => {
 	const mf1 = new Miniflare({
-		name: "a",
-		routes: ["*/id"],
-		unsafeEphemeralDurableObjects: true,
-		durableObjects: {
-			OBJECT_B: { className: "b_B", unsafeUniqueKey: "b-B" },
-		},
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/id" }],
+					manifest: singleModuleManifest(`
     export class b_B {}
     export default {
       fetch(request, env) {
@@ -238,14 +354,35 @@ test("can use Durable Object ID from one object in another", async ({
         return new Response(id);
       }
     }
-    `,
+    `),
+					env: {
+						OBJECT_B: {
+							type: "durable-object",
+							workerName: "a",
+							exportName: "b_B",
+						},
+					},
+					exports: {
+						b_B: {
+							type: "durable-object",
+							storage: "sqlite",
+							unsafeUniqueKey: "b-B",
+						},
+					},
+				},
+				dev: { unsafeEphemeralDurableObjects: true },
+			},
+		],
 	});
 	const mf2 = new Miniflare({
-		name: "b",
-		routes: ["*/*"],
-		durableObjects: { OBJECT_B: "B" },
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/*" }],
+					manifest: singleModuleManifest(`
     export class B {
       constructor(state) {
         this.state = state;
@@ -262,7 +399,20 @@ test("can use Durable Object ID from one object in another", async ({
         return stub.fetch(request);
       }
     }
-    `,
+    `),
+					env: {
+						OBJECT_B: {
+							type: "durable-object",
+							workerName: "b",
+							exportName: "B",
+						},
+					},
+					exports: {
+						B: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
 	});
 	onTestFinished(async () => {
 		await Promise.all([mf1.dispose(), mf2.dispose()]);
@@ -276,9 +426,26 @@ test("can use Durable Object ID from one object in another", async ({
 
 test("proxies Durable Object methods", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: COUNTER_SCRIPT(""),
-		durableObjects: { COUNTER: "Counter" },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(COUNTER_SCRIPT("")),
+					env: {
+						COUNTER: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "Counter",
+						},
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -304,8 +471,13 @@ test("proxies Durable Object methods", async ({ expect }) => {
 
 	// Check with WebSocket
 	await mf.setOptions({
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
     export class WebSocketObject {
       fetch() {
         const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
@@ -319,8 +491,20 @@ test("proxies Durable Object methods", async ({ expect }) => {
     export default {
       fetch(request, env) { return new Response(null, { status: 404 }); }
     }
-    `,
-		durableObjects: { WEBSOCKET: "WebSocketObject" },
+    `),
+					env: {
+						WEBSOCKET: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "WebSocketObject",
+						},
+					},
+					exports: {
+						WebSocketObject: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
 	});
 	ns = await mf.getDurableObjectNamespace("WEBSOCKET");
 	id = ns.newUniqueId();
@@ -342,11 +526,26 @@ describe("evictions", { concurrent: true }, () => {
 		// this test requires testing over a 10 second timeout
 		// first set unsafePreventEviction to undefined
 		const mf = new Miniflare({
-			modules: true,
-			script: STATEFUL_SCRIPT(),
-			durableObjects: {
-				DURABLE_OBJECT: "DurableObject",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(STATEFUL_SCRIPT()),
+						env: {
+							DURABLE_OBJECT: {
+								type: "durable-object",
+								workerName: "",
+								exportName: "DurableObject",
+							},
+						},
+						exports: {
+							DurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		// Use onTestFinished from test context (not imported) for proper scoping
 		// with concurrent tests, combined with disposeWithRetry for Windows support
@@ -369,14 +568,30 @@ describe("evictions", { concurrent: true }, () => {
 		// this test requires testing over a 10 second timeout
 		// first set unsafePreventEviction to true
 		const mf = new Miniflare({
-			modules: true,
-			script: STATEFUL_SCRIPT(),
-			durableObjects: {
-				DURABLE_OBJECT: {
-					className: "DurableObject",
-					unsafePreventEviction: true,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(STATEFUL_SCRIPT()),
+						env: {
+							DURABLE_OBJECT: {
+								type: "durable-object",
+								workerName: "",
+								exportName: "DurableObject",
+							},
+						},
+						exports: {
+							DurableObject: {
+								type: "durable-object",
+								storage: "sqlite",
+								unsafePreventEviction: true,
+							},
+						},
+					},
 				},
-			},
+			],
 		});
 		// Use onTestFinished from test context (not imported) for proper scoping
 		// with concurrent tests, combined with disposeWithRetry for Windows support
@@ -395,8 +610,13 @@ describe("evictions", { concurrent: true }, () => {
 
 const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 	new Miniflare({
-		modules: true,
-		script: `export class SQLiteDurableObject {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export class SQLiteDurableObject {
 			constructor(ctx) { this.ctx = ctx; }
 			fetch() {
 				try {
@@ -415,13 +635,23 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 				const stub = env.SQLITE_DURABLE_OBJECT.get(id);
 				return stub.fetch(req);
 			}
-		}`,
-		durableObjects: {
-			SQLITE_DURABLE_OBJECT: {
-				className: "SQLiteDurableObject",
-				useSQLite,
+		}`),
+					env: {
+						SQLITE_DURABLE_OBJECT: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "SQLiteDurableObject",
+						},
+					},
+					exports: {
+						SQLiteDurableObject: {
+							type: "durable-object",
+							storage: useSQLite ? "sqlite" : "legacy-kv",
+						},
+					},
+				},
 			},
-		},
+		],
 	});
 
 test("SQLite is available in SQLite backed Durable Objects", async ({
@@ -438,6 +668,107 @@ test("SQLite is available in SQLite backed Durable Objects", async ({
 	const stub = ns.get(id);
 	res = await stub.fetch("http://localhost");
 	expect(await res.text()).toBe("4096");
+});
+
+test("gets SQLite storage for Durable Objects", async ({ expect }) => {
+	const mf = new Miniflare({
+		unsafeInspectDurableObjects: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			import { DurableObject } from "cloudflare:workers";
+
+			export class TestObject extends DurableObject {
+				constructor(ctx, env) {
+					super(ctx, env);
+					this.ctx.storage.sql.exec(
+						"CREATE TABLE IF NOT EXISTS entries (id TEXT PRIMARY KEY, value TEXT)"
+					);
+				}
+
+				fetch(request) {
+					const url = new URL(request.url);
+					const sql = this.ctx.storage.sql;
+
+					if (url.pathname === "/write") {
+						sql.exec(
+							"INSERT OR REPLACE INTO entries (id, value) VALUES ('key', ?)",
+							url.searchParams.get("value")
+						);
+						return new Response("ok");
+					}
+
+					const row = sql.exec("SELECT value FROM entries WHERE id = 'key'").one();
+					return new Response(row?.value ?? "missing");
+				}
+			}
+
+			export default {
+				fetch(request, env) {
+					const name = new URL(request.url).searchParams.get("name") ?? "by-name";
+					const id = env.OBJECT.idFromName(name);
+					return env.OBJECT.get(id).fetch(request);
+				}
+			}
+		`),
+					env: {
+						OBJECT: {
+							type: "durable-object",
+							workerName: "worker",
+							exportName: "TestObject",
+						},
+					},
+					exports: {
+						TestObject: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const storageByName = await mf.unsafeGetDurableObjectStorage(
+		"worker",
+		"TestObject",
+		{
+			name: "by-name",
+		}
+	);
+	await storageByName.exec(
+		"INSERT INTO entries (id, value) VALUES ('key', ?)",
+		"seeded"
+	);
+
+	const response1 = await mf.dispatchFetch("http://localhost/read");
+	expect(await response1.text()).toBe("seeded");
+
+	const response2 = await mf.dispatchFetch("http://localhost/write?value=app");
+	expect(await response2.text()).toBe("ok");
+
+	const rows = await storageByName.exec<{ value: string }>(
+		"SELECT value FROM entries WHERE id = 'key'"
+	);
+	expect(rows).toEqual([{ value: "app" }]);
+
+	const namespace = await mf.getDurableObjectNamespace("OBJECT");
+	const storageById = await mf.unsafeGetDurableObjectStorage(
+		"worker",
+		"TestObject",
+		{
+			id: namespace.idFromName("by-id").toString(),
+		}
+	);
+	await storageById.exec(
+		"INSERT INTO entries (id, value) VALUES ('key', ?)",
+		"seeded-by-id"
+	);
+
+	const response3 = await mf.dispatchFetch("http://localhost/read?name=by-id");
+	expect(await response3.text()).toBe("seeded-by-id");
 });
 
 test("SQLite is not available in default Durable Objects", async ({
@@ -466,8 +797,13 @@ test("SQLite is not available in default Durable Objects", async ({
 
 test("colo-local actors", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `export class TestObject {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export class TestObject {
 			constructor(state) { this.state = state; }
 			fetch() { return new Response("body:" + this.state.id); }
 		}
@@ -476,13 +812,24 @@ test("colo-local actors", async ({ expect }) => {
 				const stub = env.OBJECT.get("thing1");
 				return stub.fetch(request);
 			}
-		}`,
-		durableObjects: {
-			OBJECT: {
-				className: "TestObject",
-				unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+		}`),
+					env: {
+						OBJECT: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "TestObject",
+						},
+					},
+					exports: {
+						TestObject: {
+							type: "durable-object",
+							storage: "sqlite",
+							unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+						},
+					},
+				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 	let res = await mf.dispatchFetch("http://localhost");
@@ -493,72 +840,9 @@ test("colo-local actors", async ({ expect }) => {
 	const stub = ns.get("thing2");
 	res = await stub.fetch("http://localhost");
 	expect(await res.text()).toBe("body:thing2");
-});
 
-test("multiple workers with DO conflicting useSQLite booleans cause options error", async ({
-	expect,
-}) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				modules: true,
-				name: "worker-a",
-				script: "export default {}",
-			},
-		],
-	});
-
-	useDispose(mf);
-
-	await expect(async () => {
-		await mf.setOptions({
-			workers: [
-				{
-					modules: true,
-					name: "worker-c",
-					script: "export default {}",
-					durableObjects: {
-						MY_DO: {
-							className: "MyDo",
-							scriptName: "worker-a",
-							useSQLite: false,
-						},
-					},
-				},
-				{
-					modules: true,
-					name: "worker-a",
-					script: `
-							import { DurableObject } from "cloudflare:workers";
-
-							export class MyDo extends DurableObject {}
-
-							export default { }
-						`,
-					durableObjects: {
-						MY_DO: {
-							className: "MyDo",
-							scriptName: undefined,
-							useSQLite: true,
-						},
-					},
-				},
-				{
-					modules: true,
-					name: "worker-b",
-					script: "export default {}",
-					durableObjects: {
-						MY_DO: {
-							className: "MyDo",
-							scriptName: "worker-a",
-							useSQLite: false,
-						},
-					},
-				},
-			],
-		});
-	}).rejects.toThrow(
-		'Different storage backends defined for Durable Object "MyDo" in "core:user:worker-a": false and true'
+	await expect(mf.listDurableObjectIds("OBJECT")).rejects.toThrow(
+		`Cannot list Durable Object ids for "OBJECT" because the namespace uses ephemeral local storage.`
 	);
 });
 
@@ -568,9 +852,12 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 	const mf = new Miniflare({
 		workers: [
 			{
-				modules: true,
-				name: "worker-a",
-				script: "export default {}",
+				config: {
+					type: "worker",
+					name: "worker-a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest("export default {}"),
+				},
 			},
 		],
 	});
@@ -581,32 +868,41 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 		mf.setOptions({
 			workers: [
 				{
-					modules: true,
-					name: "worker-a",
-					script: `
+					config: {
+						type: "worker",
+						name: "worker-a",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
 							import { DurableObject } from "cloudflare:workers";
 
 							export class MyDo extends DurableObject {}
 
 							export default { }
-						`,
-					durableObjects: {
-						MY_DO: {
-							className: "MyDo",
-							scriptName: undefined,
-							useSQLite: true,
+						`),
+						env: {
+							MY_DO: {
+								type: "durable-object",
+								workerName: "worker-a",
+								exportName: "MyDo",
+							},
+						},
+						exports: {
+							MyDo: { type: "durable-object", storage: "sqlite" },
 						},
 					},
 				},
 				{
-					modules: true,
-					name: "worker-b",
-					script: "export default {}",
-					durableObjects: {
-						MY_DO: {
-							className: "MyDo",
-							scriptName: "worker-a",
-							useSQLite: undefined,
+					config: {
+						type: "worker",
+						name: "worker-b",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest("export default {}"),
+						env: {
+							MY_DO: {
+								type: "durable-object",
+								workerName: "worker-a",
+								exportName: "MyDo",
+							},
 						},
 					},
 				},
@@ -645,9 +941,26 @@ test("Durable Object RPC calls do not block Node.js event loop", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		durableObjects: { BLOCKING_DO: "BlockingDO" },
-		modules: true,
-		script: BLOCKING_DO_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(BLOCKING_DO_SCRIPT),
+					env: {
+						BLOCKING_DO: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "BlockingDO",
+						},
+					},
+					exports: {
+						BlockingDO: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
 	});
 
 	useDispose(mf);
@@ -672,9 +985,26 @@ test("Durable Object RPC calls do not block Node.js event loop", async ({
 
 test("Durable Object RPC calls complete when unblocked", async ({ expect }) => {
 	const mf = new Miniflare({
-		durableObjects: { BLOCKING_DO: "BlockingDO" },
-		modules: true,
-		script: BLOCKING_DO_SCRIPT,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(BLOCKING_DO_SCRIPT),
+					env: {
+						BLOCKING_DO: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "BlockingDO",
+						},
+					},
+					exports: {
+						BlockingDO: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
 	});
 
 	useDispose(mf);

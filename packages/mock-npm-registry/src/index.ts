@@ -9,6 +9,8 @@ import treeKill from "tree-kill";
 import { dedent } from "ts-dedent";
 import { ConfigBuilder } from "verdaccio";
 
+export { overrideConfigEnv } from "./config-env.js";
+
 const debugLog = util.debuglog("mock-npm-registry");
 const repoRoot = path.resolve(__dirname, "../../..");
 
@@ -59,6 +61,46 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	`
 	);
 
+	// Freshly-published first-party packages carry a "now" timestamp, so the
+	// `minimumReleaseAge` cooldown that `pnpm run` exports from the workspace
+	// would reject them. Excluding them by name installs their local versions
+	// while the cooldown still applies to third-party deps pulled via the npm
+	// uplink. (To change the cooldown itself, use `overrideConfigEnv`.)
+	//
+	// The exclusion is an array, and pnpm only reads those from a config file,
+	// which differs by pnpm major: pnpm 10 reads the global `<configDir>/rc`
+	// (npmrc/INI), pnpm 11 the global `<configDir>/config.yaml`. `<configDir>`
+	// is `$XDG_CONFIG_HOME/pnpm` on all platforms when that is set, so we write
+	// both files into an isolated config dir and point pnpm at it.
+	const configHome = path.join(registryPath, "config");
+	const pnpmConfigDir = path.join(configHome, "pnpm");
+	await fs.mkdir(pnpmConfigDir, { recursive: true });
+	const minimumReleaseAgeExclude = [
+		...pkgs.keys(),
+		// workerd and @cloudflare/workers-types are pulled in transitively (e.g.
+		// via miniflare) and may have been bumped same-day. Keep this list in sync
+		// with `minimumReleaseAgeExclude` in the root pnpm-workspace.yaml.
+		"workerd",
+		"@cloudflare/workerd-*",
+		"@cloudflare/workers-types",
+	];
+	// pnpm 10 reads this from the npmrc/INI-format global `rc` file.
+	await writeFile(
+		path.join(pnpmConfigDir, "rc"),
+		minimumReleaseAgeExclude
+			.map((name) => `minimum-release-age-exclude[]=${name}`)
+			.join("\n") + "\n"
+	);
+	// pnpm 11 reads this from the YAML global `config.yaml` file. Quote the
+	// scalars so leading `@` / `*` aren't misparsed by the YAML loader.
+	await writeFile(
+		path.join(pnpmConfigDir, "config.yaml"),
+		[
+			"minimumReleaseAgeExclude:",
+			...minimumReleaseAgeExclude.map((name) => `  - "${name}"`),
+		].join("\n") + "\n"
+	);
+
 	if (debugLog.enabled) {
 		debugLog("Original");
 		debugLog(execSync("pnpm config list", { encoding: "utf8" }));
@@ -76,23 +118,14 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		"npm_config_registry",
 		`http://localhost:${registryPort}`
 	);
-	// `pnpm run` exports `npm_config_minimum_release_age` from the workspace
-	// pnpm-workspace.yaml to subprocess env vars, but does NOT export the
-	// matching `minimumReleaseAgeExclude` array. Tests using this mock registry
-	// install freshly-published first-party packages, so the 24h cooldown would
-	// reject them. Set the exclude list as a comma-separated env var so the
-	// constraint still applies to other (third-party) deps pulled via uplinks.
-	const revert_npm_config_minimum_release_age_exclude = overrideProcessEnv(
-		"npm_config_minimum_release_age_exclude",
-		[
-			...pkgs.keys(),
-			// workerd and @cloudflare/workers-types are pulled in transitively
-			// (e.g. via miniflare) and may have been bumped same-day. Keep this
-			// list in sync with `minimumReleaseAgeExclude` in pnpm-workspace.yaml.
-			"workerd",
-			"@cloudflare/workerd-*",
-			"@cloudflare/workers-types",
-		].join(",")
+	// Point pnpm at the isolated config dir written above so its
+	// `minimumReleaseAgeExclude` list is honored. The scalar
+	// `npm_config_minimum_release_age` inherited from the parent `pnpm run`
+	// still applies to third-party deps; the two settings merge because they are
+	// different keys.
+	const revert_XDG_CONFIG_HOME = overrideProcessEnv(
+		"XDG_CONFIG_HOME",
+		configHome
 	);
 
 	if (debugLog.enabled) {
@@ -102,7 +135,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 
 	for (const [pkgName, pkgPath] of pkgs) {
 		debugLog("Publishing package " + pkgName);
-		execSync("pnpm publish", {
+		execSync("pnpm publish --tag latest", {
 			cwd: path.join(repoRoot, pkgPath),
 			stdio: debugLog.enabled ? "inherit" : "ignore",
 		});
@@ -123,7 +156,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		revert_NPM_CONFIG_USERCONFIG();
 		revert_npm_config_registry();
 		revert_npm_config_userconfig();
-		revert_npm_config_minimum_release_age_exclude();
+		revert_XDG_CONFIG_HOME();
 		if (debugLog.enabled) {
 			debugLog("After");
 			debugLog(execSync("pnpm config list", { encoding: "utf8" }));

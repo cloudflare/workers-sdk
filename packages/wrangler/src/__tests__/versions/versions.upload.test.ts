@@ -1,10 +1,13 @@
+/* eslint-disable @typescript-eslint/no-deprecated -- formData() is the standard Web API for parsing multipart bodies; only deprecated on undici's server-side types */
 import assert from "node:assert";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import {
 	ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE,
 	generatePreviewAlias,
 } from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -45,7 +48,14 @@ describe("versions upload", () => {
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
-	function mockGetScript(result?: unknown) {
+	/**
+	 * Mocks service metadata for a Worker.
+	 *
+	 * @param result - The service metadata result.
+	 * @param options - Controls whether the handler can respond more than once.
+	 * @returns Nothing.
+	 */
+	function mockGetScript(result?: unknown, options: { once?: boolean } = {}) {
 		msw.use(
 			http.get(
 				`*/accounts/:accountId/workers/services/:scriptName`,
@@ -64,7 +74,7 @@ describe("versions upload", () => {
 						)
 					);
 				},
-				{ once: true }
+				{ once: options.once ?? true }
 			)
 		);
 	}
@@ -893,7 +903,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 			});
 
 			// Setup
@@ -930,7 +939,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 				env: "test",
 			});
 
@@ -980,7 +988,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 				env: "test",
 			});
 
@@ -1009,7 +1016,6 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				useServiceEnvironments: false,
 			});
 
 			// Setup
@@ -1159,19 +1165,23 @@ describe("versions upload", () => {
 		});
 
 		test("should preserve containers config in metadata", async () => {
+			// Override the beforeEach mockGetScript() with a handler that also
+			// includes migration_tag, so both preUploadApiChecks and
+			// getMigrationsToUpload get valid responses from the same endpoint.
 			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/scripts",
-					() => {
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: [{ id: "test-name", migration_tag: "v1" }],
-						});
-					},
-					{ once: true }
-				)
+				http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult({
+							default_environment: {
+								script: {
+									id: "test-name",
+									last_deployed_from: "wrangler",
+									migration_tag: "v1",
+								},
+							},
+						})
+					);
+				})
 			);
 
 			const mockUploadVersionCapture = captureRequestsFrom(
@@ -1227,7 +1237,12 @@ describe("versions upload", () => {
 				await toString(formBody.get("metadata"))
 			) as WorkerMetadata;
 
-			expect(metadata.containers).toEqual([{ class_name: "MyDurableObject" }]);
+			// The container has no explicit `name`, so validation derives
+			// `<worker>-<class>`. Both directions of the container/Durable Object link
+			// are sent so that the API can resolve it from either side.
+			expect(metadata.containers).toEqual([
+				{ name: "test-name-mydurableobject", class_name: "MyDurableObject" },
+			]);
 
 			expect(std.warn).toContain(
 				"Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions"
@@ -1871,7 +1886,17 @@ describe("versions upload", () => {
 				}),
 				http.get("*/accounts/:accountId/r2/buckets/:bucketName", () => {
 					return HttpResponse.json(createFetchResult({ name: "my-bucket" }));
-				})
+				}),
+				http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+					HttpResponse.json(
+						createFetchResult([
+							{
+								namespace_id: "namespace-id",
+								namespace_name: "my-namespace",
+							},
+						])
+					)
+				)
 			);
 
 			writeWranglerConfig({
@@ -2051,7 +2076,7 @@ describe("versions upload", () => {
 			await runWrangler("versions upload --latest");
 
 			expect(std.warn).toContain(
-				"Using the latest version of the Workers runtime"
+				`Using the latest compatibility date supported by this version of Wrangler (${DEFAULT_COMPAT_DATE})`
 			);
 			expect(std.out).toContain("Uploaded test-name");
 		});
@@ -2295,22 +2320,16 @@ describe("versions upload", () => {
 		});
 
 		test("should include migrations in upload metadata", async ({ expect }) => {
-			mockGetScript();
-
-			// Mock the scripts list for migration tag lookup
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/scripts",
-					() => {
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: [{ id: "test-name", migration_tag: "" }],
-						});
+			mockGetScript(
+				{
+					default_environment: {
+						script: {
+							last_deployed_from: "wrangler",
+							migration_tag: "",
+						},
 					},
-					{ once: true }
-				)
+				},
+				{ once: false }
 			);
 
 			const requests = mockUploadVersion(false, 0);
@@ -2472,8 +2491,9 @@ describe("versions upload", () => {
 							createFetchResult(null, false, [
 								{ code: 10001, message: "some other API error" },
 							]),
-							// 4xx so the upload isn't retried (retryOnAPIFailure
-							// only retries 5xx), keeping this test fast.
+							// 400 so the upload isn't retried (retryOnAPIFailure
+							// retries 5xx and 429, not other 4xx), keeping this
+							// test fast.
 							{ status: 400 }
 						),
 					{ once: true }
@@ -2581,6 +2601,144 @@ describe("versions upload", () => {
 			await runWrangler("versions upload");
 
 			expect(std.out).toContain("Uploaded test-name");
+		});
+	});
+
+	describe("package_dependencies", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("should include package_dependencies in upload metadata", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create a resolvable public package in node_modules
+			const pkgPath = path.join(process.cwd(), "node_modules", "test-dep");
+			fs.mkdirSync(pkgPath, { recursive: true });
+			fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(pkgPath, "package.json"),
+				JSON.stringify({ name: "test-dep", version: "1.2.3" })
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+			});
+			// Write package.json with the dependency
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"test-dep": "^1.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toEqual([
+				{
+					name: "test-dep",
+					packageJsonVersion: "^1.0.0",
+					installedVersion: "1.2.3",
+				},
+			]);
+		});
+
+		test("should omit package_dependencies when dependencies_instrumentation.enabled is false", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create a resolvable public package in node_modules
+			const pkgPath = path.join(process.cwd(), "node_modules", "test-dep");
+			fs.mkdirSync(pkgPath, { recursive: true });
+			fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(pkgPath, "package.json"),
+				JSON.stringify({ name: "test-dep", version: "1.2.3" })
+			);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				dependencies_instrumentation: { enabled: false },
+			});
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"test-dep": "^1.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toBeUndefined();
+		});
+
+		test("should exclude packages matching exclude_packages patterns from upload metadata", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+
+			// Create two resolvable packages in node_modules
+			for (const [name, version] of [
+				["@internal/secret", "1.0.0"],
+				["public-lib", "2.0.0"],
+			] as const) {
+				const pkgPath = path.join(process.cwd(), "node_modules", name);
+				fs.mkdirSync(pkgPath, { recursive: true });
+				fs.writeFileSync(path.join(pkgPath, "index.js"), "module.exports = {}");
+				fs.writeFileSync(
+					path.join(pkgPath, "package.json"),
+					JSON.stringify({ name, version })
+				);
+			}
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				dependencies_instrumentation: {
+					enabled: true,
+					exclude_packages: ["@internal/*"],
+				},
+			});
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						"@internal/secret": "^1.0.0",
+						"public-lib": "^2.0.0",
+					},
+				})
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload");
+
+			const metadata = await getMetadata(requests[0]);
+			expect(metadata.package_dependencies).toEqual([
+				{
+					name: "public-lib",
+					packageJsonVersion: "^2.0.0",
+					installedVersion: "2.0.0",
+				},
+			]);
 		});
 	});
 });

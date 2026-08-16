@@ -210,7 +210,7 @@ export class PluginContext {
 	getWorkerNewConfig(
 		environmentName: string
 	): ParsedInputWorkerConfig | undefined {
-		return this.#getWorker(environmentName)?.parsedNewConfig;
+		return this.#getWorker(environmentName)?.parsedNewWorkerConfig;
 	}
 
 	get allWorkerConfigs(): Unstable_Config[] {

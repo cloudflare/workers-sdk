@@ -109,7 +109,6 @@ export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 		minify: ALLOW,
 		latest: ALLOW,
 		uploadSourceMaps: ALLOW,
-		legacyEnv: ALLOW,
 		liveReload: ALLOW,
 		keepVars: ALLOW,
 		logpush: ALLOW,
@@ -127,7 +126,7 @@ export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 		nodeCompat: ALLOW,
 		enableContainers: ALLOW,
 		autoconfig: ALLOW,
-		ignoreDefaults: ALLOW,
+		ignoreBaseConfig: ALLOW,
 	},
 	tail: { status: ALLOW },
 	types: {

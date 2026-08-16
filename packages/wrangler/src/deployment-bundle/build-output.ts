@@ -4,13 +4,15 @@ import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeOutputWorkerConfig,
-} from "@cloudflare/config";
+	writeRootConfig,
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
+	ParsedSettingsConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
@@ -18,17 +20,19 @@ import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 interface WriteBuildOutputArgs {
 	root: string;
 	parsedWorkerConfig: ParsedInputWorkerConfig;
+	parsedSettingsConfig: ParsedSettingsConfig | undefined;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
 
 /**
- * Write a Worker's `.cloudflare/output/v0/workers/<name>/` directory
+ * Write the Worker's `.cloudflare/output/v0/workers/default/` directory
  * tree from an in-memory `WorkerBuildResult` and `AssetsOptions`.
  */
 export async function writeBuildOutput({
 	root,
 	parsedWorkerConfig,
+	parsedSettingsConfig,
 	buildResult,
 	assetsOptions,
 }: WriteBuildOutputArgs): Promise<void> {
@@ -42,34 +46,26 @@ export async function writeBuildOutput({
 
 	const [manifest] = await Promise.all([
 		buildResult
-			? writeBundle({
-					root,
-					workerName: parsedWorkerConfig.name,
-					buildResult,
-				})
+			? writeBundle({ root, buildResult })
 			: Promise.resolve(undefined),
-		assetsOptions
-			? writeAssets({
-					root,
-					workerName: parsedWorkerConfig.name,
-					assetsOptions,
-				})
-			: Promise.resolve(),
+		assetsOptions ? writeAssets({ root, assetsOptions }) : Promise.resolve(),
 	]);
 
-	await writeOutputWorkerConfig(root, parsedWorkerConfig, manifest);
+	await writeWorkerConfig(root, parsedWorkerConfig, manifest);
+
+	if (parsedSettingsConfig !== undefined) {
+		await writeRootConfig(root, parsedSettingsConfig);
+	}
 }
 
 async function writeBundle({
 	root,
-	workerName,
 	buildResult,
 }: {
 	root: string;
-	workerName: string;
 	buildResult: WorkerBuildResult;
 }): Promise<ParsedOutputWorkerConfig["manifest"]> {
-	const bundleDir = getWorkerBundleDir(root, workerName);
+	const bundleDir = getWorkerBundleDir(root);
 	await fsp.mkdir(bundleDir, { recursive: true });
 
 	const modules: NonNullable<ParsedOutputWorkerConfig["manifest"]>["modules"] =
@@ -106,14 +102,12 @@ async function writeBundle({
 
 async function writeAssets({
 	root,
-	workerName,
 	assetsOptions,
 }: {
 	root: string;
-	workerName: string;
 	assetsOptions: AssetsOptions;
 }): Promise<void> {
-	const assetsDir = getWorkerAssetsDir(root, workerName);
+	const assetsDir = getWorkerAssetsDir(root);
 	await fsp.mkdir(assetsDir, { recursive: true });
 	await fsp.cp(assetsOptions.directory, assetsDir, {
 		recursive: true,
@@ -136,7 +130,7 @@ function stripLeadingDotSlash(name: string): string {
 
 /**
  * Map Wrangler's internal {@link CfModuleType} to the
- * Build Output API's {@link ModuleType}.
+ * Build Output Specification's {@link ModuleType}.
  */
 function toManifestType(cfType: CfModuleType): ModuleType {
 	switch (cfType) {

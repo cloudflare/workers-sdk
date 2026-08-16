@@ -14,6 +14,11 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	getContainerDurableObjectClassNames,
+	getContainerNameToClassNameMap,
+	resolveContainerClassName,
+} from "./config/containers";
+export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
 } from "./config/config";
@@ -89,6 +94,12 @@ export type { ResolveConfigPathOptions } from "./config/config-helpers";
 export * from "./errors";
 export { assertNever } from "./assert-never";
 
+export {
+	getPackagePath,
+	isPackageInstalled,
+	getInstalledPackageVersion,
+} from "./package-resolution";
+
 export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
@@ -107,12 +118,24 @@ export {
 } from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
-export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
+export {
+	isCompatDate,
+	getTodaysCompatDate,
+	isNodejsCompatDefaultOn,
+	NODEJS_COMPAT_DEFAULT_ON_DATE,
+	NODEJS_COMPAT_V2_SWITCH_OVER_DATE,
+	resolveNodejsCompat,
+	stripRedundantNodejsCompatFlags,
+} from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+export { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 
 export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export { createConfigCache } from "./config-cache";
+export type { ConfigCache, ConfigCacheOptions } from "./config-cache";
 
 export {
 	type EphemeralDirectory,
@@ -136,6 +159,9 @@ export type { NpmVersionCheckResult } from "./update-check";
 export { LOGGER_LEVELS } from "./logger";
 export type { Logger, LoggerLevel } from "./logger";
 
+export { isCI, isInteractive, isNonInteractiveOrCI } from "./is-interactive";
+export { openInBrowser } from "./open-in-browser";
+
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";
 export {
@@ -150,6 +176,7 @@ export {
 	PnpmPackageManager,
 	YarnPackageManager,
 	BunPackageManager,
+	NubPackageManager,
 } from "./package-manager";
 
 export {
@@ -158,3 +185,8 @@ export {
 	getWorkerName,
 	getWorkerNameFromProject,
 } from "./worker-name";
+
+export { _forceColour, formatZodError } from "./zod-format";
+
+export { toUrlPath } from "./url-path";
+export type { UrlPath } from "./url-path";

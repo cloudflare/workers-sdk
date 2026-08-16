@@ -6,10 +6,10 @@ import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
-import { ModuleRuleTypeSchema, Response } from "miniflare";
+import { Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
-import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
+import type { Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
@@ -54,17 +54,27 @@ function trimViteVersionHash(filePath: string) {
 	return filePath.replace(versionHashRegExp, "");
 }
 
-// RegExp for path suffix to force loading module as specific type.
+type LegacyModuleRuleType =
+	| "ESModule"
+	| "CommonJS"
+	| "Text"
+	| "Data"
+	| "CompiledWasm"
+	| "PythonModule"
+	| "PythonRequirement";
+const legacyModuleRuleTypes: LegacyModuleRuleType[] = [
+	"ESModule",
+	"CommonJS",
+	"Text",
+	"Data",
+	"CompiledWasm",
+	"PythonModule",
+	"PythonRequirement",
+];
+// RegExp for path suffix to force loading WebAssembly modules as workerd modules.
 // (e.g. `/path/to/module.wasm?mf_vitest_force=CompiledWasm`)
-// This suffix will be added by the pool when fetching a module that matches a
-// module rule. In this case, the module will be marked as external with this
-// suffix, causing the fallback service to return a module with the correct
-// type. Note we can't easily implement rules with a Vite plugin, as they:
-// - Depend on `miniflare`/`wrangler` configuration, and we can't modify the
-//   Vite config in the pool
-// - Would require use of an `UnsafeEval` binding to build `WebAssembly.Module`s
 const forceModuleTypeRegexp = new RegExp(
-	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
+	`\\?mf_vitest_force=(${legacyModuleRuleTypes.join("|")})$`
 );
 
 function isFile(filePath: string): boolean {
@@ -215,6 +225,11 @@ function maybeGetTargetFilePath(
 	}
 }
 
+// Specifiers `workerd` resolves at the modules root rather than relative to the
+// referrer, and strips the leading `/` from before asking the fallback service
+// about them.
+const prefixedSpecifierRegExp = /^(node|cloudflare|workerd):/;
+
 /**
  * `target` is the path to the "file" `workerd` is trying to load,
  * `referrer` is the path to the file that imported/required the `target`,
@@ -237,7 +252,7 @@ function maybeGetTargetFilePath(
  * ES module resolution, so must be handled by `maybeGetTargetFilePath()`.
  */
 function getApproximateSpecifier(target: string, referrerDir: string): string {
-	if (/^(node|cloudflare|workerd):/.test(target)) {
+	if (prefixedSpecifierRegExp.test(target)) {
 		return target;
 	}
 	return posixPath.relative(referrerDir, target);
@@ -332,6 +347,12 @@ async function resolve(
 	// *import*ing `node:*`/`cloudflare:*` modules, but not when *require()*ing
 	// them. For the sake of consistency (and a nice return type on this function)
 	// we return a redirect for `import`s too.
+	//
+	// Careful: `workerd` roots prefixed specifiers itself, so this "redirect to
+	// the root" is frequently a no-op that points straight back at the specifier
+	// `workerd` is already resolving. `load()` detects that case and reports the
+	// module as missing instead, because redirecting crashes `workerd`. See the
+	// comment on `UnavailableBuiltinModuleError`.
 	if (referrerDir !== "/" && workerdBuiltinModules.has(specifier)) {
 		return `/${specifier}`;
 	}
@@ -358,10 +379,77 @@ function ensureRootedPath(filePath: string) {
 	return isWindows && filePath[0] !== "/" ? `/${filePath}` : filePath;
 }
 
+// Sentinel prepended to a redirect `Location` value whenever we had to
+// percent-encode it (see `encodeRedirectLocation()`). It lets us know
+// *deterministically* — rather than guessing — that a specifier/referrer
+// `workerd` later hands back to us is one of our own encoded values and must
+// be decoded again (see `decodeEncodedSpecifier()`).
+//
+// It is a *leading, rooted* segment on purpose. `workerd` derives the specifier
+// for a relative import by joining it onto the referring module's directory
+// (`kj::Path::eval`; see `ensureRootedPath()`), which drops the final path
+// segment but keeps the leading ones. A trailing marker would therefore be lost
+// for those derived imports, whereas a leading one propagates to every
+// descendant of an encoded module. The name is deliberately unlikely to collide
+// with a real path segment.
+// See https://github.com/cloudflare/workers-sdk/issues/14655
+export const ENCODED_PATH_PREFIX = "/__mf_vitest_encoded__";
+
+// Non-printable-ASCII detector. Anything outside the printable ASCII range
+// (`0x20`–`0x7E`) can't be represented in the Latin-1/ASCII byte range an HTTP
+// header value is restricted to, so it must be percent-encoded before being
+// used as a `Location`. The `u` flag makes the class match by code point, so
+// astral characters (e.g. emoji, CJK extension chars) are handled as a unit
+// rather than as lone surrogates.
+const nonHeaderSafeRegExp = /[^\x20-\x7E]/u;
+
+/**
+ * Percent-encodes a redirect target so it's safe to use as a `Location` header
+ * value, but *only* when it actually contains bytes outside the printable ASCII
+ * range. Pure-ASCII paths — the overwhelmingly common case, including paths
+ * containing a literal `%` or spaces — are returned unchanged and never gain the
+ * sentinel prefix, so this is a no-op for them.
+ *
+ * When encoding is required, literal `%` is escaped first (to `%25`) so the
+ * transform is losslessly reversible by `decodeURIComponent()` even for real
+ * paths that already contain percent sequences (e.g. `…/開発/50%off/…`). `/` and
+ * `:` are left intact so Windows drive-letter paths like `/C:/a/b/c` still
+ * round-trip. `encodeURI()`/`decodeURI()` can't be used here because they don't
+ * escape a literal `%`, so a path mixing non-ASCII and `%` wouldn't round-trip.
+ * See https://github.com/cloudflare/workers-sdk/issues/14655
+ */
+export function encodeRedirectLocation(filePath: string): string {
+	if (!nonHeaderSafeRegExp.test(filePath)) {
+		return filePath;
+	}
+	const encoded = filePath
+		.replace(/%/g, "%25")
+		.replace(/[^\x20-\x7E]/gu, (char) => encodeURIComponent(char));
+	return `${ENCODED_PATH_PREFIX}${encoded}`;
+}
+
+/**
+ * Inverts `encodeRedirectLocation()`. `workerd` echoes a redirect's `Location`
+ * value back to us verbatim as the next request's `specifier`/`referrer`, so
+ * this recovers the real filesystem path — but only for values we actually
+ * encoded, identified unambiguously by the sentinel prefix. Everything else
+ * (bare `cloudflare:*`/`node:*` specifiers, original file paths, and paths
+ * containing a literal `%` we never touched such as `50%off`) is returned
+ * untouched. Because we only ever decode our own output, `decodeURIComponent()`
+ * can't throw here and can't silently corrupt a real `%` in a workspace path.
+ * See https://github.com/cloudflare/workers-sdk/issues/14655
+ */
+export function decodeEncodedSpecifier(value: string): string {
+	if (!value.startsWith(ENCODED_PATH_PREFIX)) {
+		return value;
+	}
+	return decodeURIComponent(value.slice(ENCODED_PATH_PREFIX.length));
+}
+
 function buildRedirectResponse(filePath: string) {
 	return new Response(null, {
 		status: 301,
-		headers: { Location: ensureRootedPath(filePath) },
+		headers: { Location: encodeRedirectLocation(ensureRootedPath(filePath)) },
 	});
 }
 
@@ -382,7 +470,7 @@ function maybeGetForceTypeModuleContents(
 	}
 
 	filePath = trimSuffix(match[0], filePath);
-	const type = match[1] as ModuleRuleType;
+	const type = match[1] as LegacyModuleRuleType;
 	const contents = fs.readFileSync(filePath);
 	switch (type) {
 		case "ESModule":
@@ -398,18 +486,21 @@ function maybeGetForceTypeModuleContents(
 		case "PythonModule":
 			return { pythonModule: contents.toString() };
 		case "PythonRequirement":
-			return { pythonRequirement: contents.toString() };
+			return { obsoletePythonRequirement: contents.toString() };
 		default: {
-			// `type` should've been validated against `ModuleRuleType`
+			// `type` should've been validated against `LegacyModuleRuleType`
 			const exhaustive: never = type;
 			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
 		}
 	}
 }
-function buildModuleResponse(target: string, contents: ModuleContents) {
-	let name = target;
+// `name` must exactly match the literal `specifier` string `workerd` sent for
+// this request (see the `rawTarget` comment in `handleModuleFallbackRequest()`
+// for why this can differ from the decoded `target` used for filesystem
+// resolution elsewhere in this file).
+function buildModuleResponse(name: string, contents: ModuleContents) {
 	if (!isWindows) {
-		name = posixPath.relative("/", target);
+		name = posixPath.relative("/", name);
 	}
 	assert(name[0] !== "/");
 	const result: Record<string, unknown> = { name };
@@ -421,11 +512,42 @@ function buildModuleResponse(target: string, contents: ModuleContents) {
 	return Response.json(result);
 }
 
+/**
+ * Thrown when a `node:*`/`cloudflare:*`/`workerd:*` builtin isn't provided by
+ * the `workerd` the Worker under test is running on, so there is nothing we can
+ * serve for it.
+ *
+ * `workerd` resolves prefixed specifiers at the modules root rather than
+ * relative to the referrer (`kj::Path::parse(spec)` in `jsg/modules.c++`), and
+ * strips the leading `/` before asking us about them. A redirect to
+ * `/${target}` therefore points straight back at the specifier `workerd` is
+ * already resolving. Its module registry caches that redirect and re-enters
+ * resolution with the identical path, with no self-redirect check and no
+ * recursion bound, so it recurses until the stack overflows — killing the
+ * runtime with `*** Received signal #11: Segmentation fault` and no indication
+ * of which module was at fault.
+ *
+ * Reporting the module as missing instead lets `workerd` raise its own
+ * `No such module "<specifier>"`, which is what `wrangler dev` does for the
+ * same Worker. This is safe because `workerd` only consults the fallback
+ * service *after* its own registry misses: any builtin that reaches us is, by
+ * definition, not available at this Worker's compatibility date and flags.
+ *
+ * See https://github.com/cloudflare/workers-sdk/issues/14590
+ */
+class UnavailableBuiltinModuleError extends Error {
+	constructor(specifier: string) {
+		super(`No such module "${specifier}"`);
+		this.name = "UnavailableBuiltinModuleError";
+	}
+}
+
 async function load(
 	vite: Vite.ViteDevServer,
 	logBase: string,
 	method: ResolveMethod,
 	target: string,
+	rawTarget: string,
 	specifier: string,
 	filePath: string
 ): Promise<Response> {
@@ -440,7 +562,15 @@ async function load(
 	) {
 		const wrapper = `module.exports = { default: require(${JSON.stringify(ensureRootedPath(filePath))}) };`;
 		debuglog(logBase, "wasm-module-wrapper:", filePath);
-		return buildModuleResponse(target, { commonJsModule: wrapper });
+		return buildModuleResponse(rawTarget, { commonJsModule: wrapper });
+	}
+
+	// A redirect whose only difference from `target` is the leading slash that
+	// `workerd` strips from prefixed specifiers would send `workerd` back to the
+	// specifier it is already resolving, crashing it. Report the builtin as
+	// missing instead. See `UnavailableBuiltinModuleError`.
+	if (prefixedSpecifierRegExp.test(target) && filePath === `/${target}`) {
+		throw new UnavailableBuiltinModuleError(target);
 	}
 
 	if (target !== filePath) {
@@ -468,7 +598,7 @@ async function load(
 	const maybeContents = maybeGetForceTypeModuleContents(filePath);
 	if (maybeContents !== undefined) {
 		debuglog(logBase, "forced:", filePath);
-		return buildModuleResponse(target, maybeContents);
+		return buildModuleResponse(rawTarget, maybeContents);
 	}
 
 	// If we're importing from a shim module, don't shim again
@@ -488,7 +618,7 @@ async function load(
 	if (filePath.endsWith(".json")) {
 		const json = fs.readFileSync(filePath, "utf8");
 		debuglog(logBase, "json:", filePath);
-		return buildModuleResponse(target, { json });
+		return buildModuleResponse(rawTarget, { json });
 	}
 
 	let contents = fs.readFileSync(filePath, "utf8");
@@ -499,7 +629,7 @@ async function load(
 		// Respond with ES module
 		contents = withImportMetaUrl(contents, targetUrl);
 		debuglog(logBase, "esm:", filePath);
-		return buildModuleResponse(target, { esModule: contents });
+		return buildModuleResponse(rawTarget, { esModule: contents });
 	}
 
 	// Respond with CommonJS module
@@ -517,13 +647,13 @@ async function load(
 			esModule += ` export const ${name} = mod.${name};`;
 		}
 		debuglog(logBase, "cjs-esm-shim:", filePath);
-		return buildModuleResponse(target, { esModule });
+		return buildModuleResponse(rawTarget, { esModule });
 	}
 
 	// Otherwise, if we're `require`ing a non-`node:*` module, just return a
 	// CommonJS
 	debuglog(logBase, "cjs:", filePath);
-	return buildModuleResponse(target, { commonJsModule: contents });
+	return buildModuleResponse(rawTarget, { commonJsModule: contents });
 }
 
 export async function handleModuleFallbackRequest(
@@ -533,10 +663,32 @@ export async function handleModuleFallbackRequest(
 	const method = request.headers.get("X-Resolve-Method");
 	assert(method === "import" || method === "require");
 	const url = new URL(request.url);
-	let target = url.searchParams.get("specifier");
+	const rawSpecifierParam = url.searchParams.get("specifier");
 	let referrer = url.searchParams.get("referrer");
-	assert(target !== null, "Expected specifier search param");
+	assert(rawSpecifierParam !== null, "Expected specifier search param");
 	assert(referrer !== null, "Expected referrer search param");
+	// `workerd` carries a previous redirect response's `Location` header value
+	// through verbatim as this request's `specifier`, rather than URI-decoding
+	// it. `buildRedirectResponse()` percent-encodes paths that aren't header-safe
+	// (required, since headers are restricted to the Latin-1/ASCII byte range) and
+	// tags them with a sentinel prefix, so `decodeEncodedSpecifier()` recovers the
+	// real filesystem path for exactly those values and leaves everything else
+	// (bare `cloudflare:*` specifiers, untouched original paths, paths with a
+	// literal `%`) alone.
+	// See https://github.com/cloudflare/workers-sdk/issues/14655
+	let target = decodeEncodedSpecifier(rawSpecifierParam);
+	// `workerd` also tracks this in-flight module request by the exact literal
+	// `specifier` string above (before decoding), and rejects our response if the
+	// JSON module's `name` field doesn't match that literal string exactly. So we
+	// keep this raw (still percent-encoded where applicable) value around
+	// separately, and use it only when building the response's `name` field,
+	// while `target` (decoded) is used for all actual filesystem resolution.
+	let rawTarget = rawSpecifierParam;
+	// Since a module's `name` (above) must stay raw/encoded, that encoded value
+	// becomes the referrer workerd sends for every import statement inside that
+	// module, propagating the encoding forward indefinitely. Decode it the same
+	// way as `target` so filesystem resolution keeps working for those imports.
+	referrer = decodeEncodedSpecifier(referrer);
 	const referrerDir = posixPath.dirname(referrer);
 	let specifier = getApproximateSpecifier(target, referrerDir);
 
@@ -565,6 +717,9 @@ export async function handleModuleFallbackRequest(
 		if (target[0] === "/") {
 			target = target.substring(1);
 		}
+		if (rawTarget[0] === "/") {
+			rawTarget = rawTarget.substring(1);
+		}
 		if (referrer[0] === "/") {
 			referrer = referrer.substring(1);
 		}
@@ -576,14 +731,32 @@ export async function handleModuleFallbackRequest(
 	try {
 		const filePath = await resolve(vite, method, target, specifier, referrer);
 
-		return await load(vite, logBase, method, target, specifier, filePath);
+		return await load(
+			vite,
+			logBase,
+			method,
+			target,
+			rawTarget,
+			specifier,
+			filePath
+		);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
-		console.error(
-			`[vitest-pool-workers] Failed to ${method} ${JSON.stringify(target)} from ${JSON.stringify(referrer)}.`,
-			"To resolve this, try bundling the relevant dependency with Vite.",
-			"For more details, refer to https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
-		);
+		if (e instanceof UnavailableBuiltinModuleError) {
+			// Bundling can't help here — the module is built into `workerd` and
+			// simply isn't switched on for this Worker.
+			console.error(
+				`[vitest-pool-workers] ${JSON.stringify(target)}, ${method === "import" ? "imported" : "required"} from ${JSON.stringify(referrer)}, is not available at this Worker's compatibility date and flags.`,
+				"To resolve this, enable the compatibility flag that provides it (`nodejs_compat` for `node:*` modules), or remove the import.",
+				"For more details, refer to https://developers.cloudflare.com/workers/configuration/compatibility-flags/"
+			);
+		} else {
+			console.error(
+				`[vitest-pool-workers] Failed to ${method} ${JSON.stringify(target)} from ${JSON.stringify(referrer)}.`,
+				"To resolve this, try bundling the relevant dependency with Vite.",
+				"For more details, refer to https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
+			);
+		}
 	}
 
 	return new Response(null, { status: 404 });

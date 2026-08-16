@@ -19,7 +19,7 @@ export const experimentalNewConfigArg = {
 export const experimentalCfBuildOutputArg = {
 	"experimental-cf-build-output": {
 		describe:
-			"[experimental] Emit a Build Output API directory under `.cloudflare/output/` (requires --experimental-new-config)",
+			"[experimental] Emit a Build Output Specification directory under `.cloudflare/output/` (requires --experimental-new-config)",
 		type: "boolean",
 		default: false,
 		hidden: true,

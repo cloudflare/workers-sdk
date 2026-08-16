@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
 import type {
@@ -46,7 +46,7 @@ async function updateViteConfig(projectPath: string) {
 		throw new Error("Could not find Vite config file to modify");
 	}
 
-	const compatDate = getTodaysCompatDate();
+	const compatDate = DEFAULT_COMPAT_DATE;
 
 	updateStatus(`Updating configuration in ${blue(viteConfigPath)}`);
 

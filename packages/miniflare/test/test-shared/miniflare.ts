@@ -160,13 +160,48 @@ export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 	});
 }
 
-export function miniflareTest<Env, Context extends MiniflareTestContext>(
-	userOpts: Partial<MiniflareOptions>,
-	handler?: TestMiniflareHandler<Env>
-): Context {
-	let scriptOpts: MiniflareOptions | undefined;
-	if (handler !== undefined) {
-		const script = `
+/**
+ * Default `compatibilityDate` injected into a worker config when a test
+ * doesn't specify one. Individual tests can override via their worker config.
+ */
+export const DEFAULT_TEST_COMPATIBILITY_DATE = "2025-05-01";
+
+type WorkerConfig = NonNullable<MiniflareOptions["workers"]>[number]["config"];
+type Manifest = NonNullable<WorkerConfig["manifest"]>;
+type ModuleType = Manifest["modules"][string]["type"];
+type ModuleContents = Manifest["modules"][string]["contents"];
+
+/**
+ * Builds a worker `manifest` from a single module's inline contents. Defaults
+ * to an ES module named `index.mjs` — the common case in tests migrated from
+ * the old `modules: true` + `script` options.
+ */
+export function singleModuleManifest(
+	contents: ModuleContents,
+	{
+		type = "esm",
+		mainModule = "index.mjs",
+		modulesRoot = process.cwd(),
+	}: { type?: ModuleType; mainModule?: string; modulesRoot?: string } = {}
+): Manifest {
+	return {
+		mainModule,
+		modulesRoot,
+		modules: { [mainModule]: { type, contents } },
+	};
+}
+
+/**
+ * Builds the manifest for a `miniflareTest` handler function. The handler is
+ * serialised into an ES module that wraps it with error reporting, matching
+ * the runtime behaviour tests rely on (500 + `MF-Experimental-Error-Stack`).
+ */
+function handlerManifest<Env>(
+	handler: TestMiniflareHandler<Env>
+): NonNullable<
+	NonNullable<MiniflareOptions["workers"]>[number]["config"]["manifest"]
+> {
+	const script = `
       const handler = (${handler.toString()});
       function reduceError(e) {
         return {
@@ -190,36 +225,57 @@ export function miniflareTest<Env, Context extends MiniflareTestContext>(
         }
       }
     `;
-		scriptOpts = {
-			modules: [{ type: "ESModule", path: "index.mjs", contents: script }],
-		};
-	}
+	return {
+		mainModule: "index.mjs",
+		modules: { "index.mjs": { type: "esm", contents: script } },
+	};
+}
 
+export function miniflareTest<Env, Context extends MiniflareTestContext>(
+	userOpts: Partial<MiniflareOptions>,
+	handler?: TestMiniflareHandler<Env>
+): Context {
 	const log = new TestLog();
 
-	const opts: Partial<MiniflareOptions> = {
-		...scriptOpts,
-		log,
-		verbose: true,
-	};
+	// Merge `userOpts` with the shared instance options (`log`, `verbose`) and,
+	// when a `handler` is provided, inject the generated script as the manifest
+	// of the first worker. Fills in the required `type`/`name`/`compatibilityDate`
+	// config fields so tests only need to specify the bits they care about.
+	function buildOptions(
+		overrides: Partial<MiniflareOptions>
+	): MiniflareOptions {
+		const { workers, ...instanceOpts } = overrides;
+		const [firstWorker, ...restWorkers] = workers ?? [];
+		const baseConfig = firstWorker?.config;
+		const config: WorkerConfig = {
+			...baseConfig,
+			type: "worker",
+			name: baseConfig?.name ?? "",
+			compatibilityDate:
+				baseConfig?.compatibilityDate ?? DEFAULT_TEST_COMPATIBILITY_DATE,
+		};
+		if (handler !== undefined && config.manifest === undefined) {
+			config.manifest = handlerManifest(handler);
+		}
+		return {
+			...instanceOpts,
+			log,
+			verbose: true,
+			workers: [{ ...firstWorker, config }, ...restWorkers],
+		};
+	}
 
 	const context = {
 		mf: null as unknown as Miniflare,
 		url: null as unknown as URL,
 		log,
 		setOptions: async (newUserOpts: Partial<MiniflareOptions>) => {
-			await context.mf.setOptions({
-				...newUserOpts,
-				...opts,
-			} as MiniflareOptions);
+			await context.mf.setOptions(buildOptions(newUserOpts));
 		},
 	} as Context;
 
 	beforeAll(async () => {
-		// `as MiniflareOptions` required as we're not enforcing that a script is
-		// provided between `userOpts` and `opts`. We assume if it's not in
-		// `userOpts`, a `handler` has been provided.
-		context.mf = new Miniflare({ ...userOpts, ...opts } as MiniflareOptions);
+		context.mf = new Miniflare(buildOptions(userOpts));
 		context.url = await context.mf.ready;
 	});
 

@@ -1,10 +1,17 @@
+import assert from "node:assert";
+import { setTimeout } from "node:timers/promises";
+import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import dedent from "ts-dedent";
-import { afterAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { waitForWorkersDev } from "./helpers/wait-for-workers-dev";
 
 const TIMEOUT = 60_000;
+// Deploys that build and push a container image are much slower than a plain
+// `wrangler deploy`.
+const CONTAINER_DEPLOY_TIMEOUT = 240_000;
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"durable-objects-exports",
@@ -529,5 +536,267 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				expect(output.stdout).toContain("SUCCESS");
 			});
 		});
+
+		describe("containers attached via `exports`", () => {
+			const workerName = generateResourceName();
+			const helper = new WranglerE2ETestHelper();
+
+			it("accepts a container that is referenced from a Durable Object export", async ({
+				expect,
+			}) => {
+				await helper.seed({
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2025-04-03",
+							"compatibility_flags": ["enable_ctx_exports"],
+							"containers": [
+								{
+									"name": "${workerName}-container",
+									"image": "registry.cloudflare.com/hello:world",
+									"max_instances": 1,
+								},
+							],
+							"exports": {
+								"MyContainerDO": {
+									"type": "durable-object",
+									"storage": "sqlite",
+									"container": "${workerName}-container",
+								},
+							},
+						}
+					`,
+					"src/index.ts": dedent`
+						import { DurableObject } from "cloudflare:workers";
+						export class MyContainerDO extends DurableObject {}
+						export default {
+							fetch() { return new Response("hello"); },
+						};
+					`,
+					"package.json": dedent`
+						{
+							"name": "${workerName}",
+							"version": "0.0.0",
+							"private": true
+						}
+					`,
+				});
+
+				const output = await helper.run(`wrangler deploy --dry-run`);
+
+				expect(output.stdout).toContain(
+					"The following containers are available:"
+				);
+				expect(output.stdout).toContain(`${workerName}-container`);
+				expect(output.stderr).toBe("");
+			});
+
+			it("rejects a container that is not linked to a Durable Object", async ({
+				expect,
+			}) => {
+				await helper.seed({
+					"wrangler.jsonc": dedent`
+						{
+							"name": "${workerName}",
+							"main": "src/index.ts",
+							"compatibility_date": "2025-04-03",
+							"containers": [
+								{
+									"name": "${workerName}-container",
+									"image": "registry.cloudflare.com/hello:world",
+									"max_instances": 1,
+								},
+							],
+							"exports": {
+								"MyContainerDO": { "type": "durable-object", "storage": "sqlite" },
+							},
+						}
+					`,
+				});
+
+				const output = await helper.run(`wrangler deploy --dry-run`);
+
+				expect(output.status).not.toBe(0);
+				expect(output.stderr).toContain(
+					`The container "${workerName}-container" is not linked to a Durable Object`
+				);
+			});
+		});
+
+		// Pushing the container image needs Docker. Unlike the local dev tests we
+		// never *run* the container, so this is not restricted to Linux.
+		describe.skipIf(process.env.LOCAL_TESTS_WITHOUT_DOCKER)(
+			"containers attached via `exports`: deploy",
+			{ timeout: CONTAINER_DEPLOY_TIMEOUT },
+			() => {
+				const workerName = generateResourceName();
+				const containerName = `${workerName}-container`;
+				// Push the image up front under a known tag so that it can be deleted
+				// again deterministically, and so that neither deploy has to build it.
+				const imageTag = `${workerName}:tmp-e2e`;
+				const imageUri = `${getCloudflareContainerRegistry()}/${CLOUDFLARE_ACCOUNT_ID}/${imageTag}`;
+				const helper = new WranglerE2ETestHelper();
+
+				beforeAll(async () => {
+					await helper.seed({
+						// A container-free config, so that `containers build` runs before
+						// the image it is about to push is referenced by anything.
+						"wrangler.jsonc": dedent`
+							{
+								"name": "${workerName}",
+								"main": "src/index.ts",
+								"compatibility_date": "2025-04-03",
+							}
+						`,
+						Dockerfile: dedent`
+							FROM alpine:latest
+							EXPOSE 8080
+							CMD ["sleep", "infinity"]
+						`,
+						"src/index.ts": dedent`
+							import { DurableObject } from "cloudflare:workers";
+
+							export class MyContainerDO extends DurableObject {
+								async fetch() {
+									// \`ctx.container\` is only present when the deployed Worker has a
+									// container attached to this class, so this asserts that the API
+									// resolved the link between the two.
+									return Response.json({ hasContainer: this.ctx.container !== undefined });
+								}
+							}
+
+							export default {
+								async fetch(request, env, ctx) {
+									const id = ctx.exports.MyContainerDO.idFromName("container");
+									return ctx.exports.MyContainerDO.get(id).fetch(request);
+								},
+							};
+						`,
+						"package.json": dedent`
+							{
+								"name": "${workerName}",
+								"version": "0.0.0",
+								"private": true
+							}
+						`,
+					});
+
+					await helper.run(`wrangler containers build . -t ${imageTag} -p`);
+					// Give the registry a moment to make the pushed image available.
+					await setTimeout(5_000);
+				}, CONTAINER_DEPLOY_TIMEOUT);
+
+				afterAll(async () => {
+					await helper.bestEffortRun(`wrangler delete`);
+					await helper.bestEffortRun(
+						`wrangler containers images delete ${imageTag}`
+					);
+				});
+
+				it("attaches the container to the Durable Object it is referenced from", async ({
+					expect,
+				}) => {
+					await helper.seed({
+						"wrangler.jsonc": dedent`
+							{
+								"name": "${workerName}",
+								"main": "src/index.ts",
+								"compatibility_date": "2025-04-03",
+								"compatibility_flags": ["enable_ctx_exports"],
+								"containers": [
+									{
+										"name": "${containerName}",
+										"image": "${imageUri}",
+										"max_instances": 1,
+									},
+								],
+								"exports": {
+									"MyContainerDO": {
+										"type": "durable-object",
+										"storage": "sqlite",
+										"container": "${containerName}",
+									},
+								},
+							}
+						`,
+					});
+
+					const output = await helper.run(`wrangler deploy`);
+
+					expect(output.stdout).toContain("Created: MyContainerDO");
+					expect(output.stdout).toContain(
+						"The following containers are available:"
+					);
+					expect(output.stdout).toContain(containerName);
+
+					// Wait only for the Durable Object to respond at all, then assert on
+					// the payload, so that a missing container fails immediately with a
+					// useful diff rather than timing out.
+					const response = await waitForWorkersDev(
+						getDeployedUrl(output),
+						(candidate) =>
+							candidate.headers
+								.get("content-type")
+								?.includes("application/json") === true
+					);
+
+					expect(await response.json()).toEqual({ hasContainer: true });
+				});
+
+				it("keeps the container attached when the link moves to `class_name`", async ({
+					expect,
+				}) => {
+					await helper.seed({
+						"wrangler.jsonc": dedent`
+							{
+								"name": "${workerName}",
+								"main": "src/index.ts",
+								"compatibility_date": "2025-04-03",
+								"compatibility_flags": ["enable_ctx_exports"],
+								"containers": [
+									{
+										"name": "${containerName}",
+										"class_name": "MyContainerDO",
+										"image": "${imageUri}",
+										"max_instances": 1,
+									},
+								],
+								"exports": {
+									"MyContainerDO": { "type": "durable-object", "storage": "sqlite" },
+								},
+							}
+						`,
+					});
+
+					const output = await helper.run(`wrangler deploy`);
+
+					expect(output.stdout).toContain(
+						"The following containers are available:"
+					);
+
+					// Wait only for the Durable Object to respond at all, then assert on
+					// the payload, so that a missing container fails immediately with a
+					// useful diff rather than timing out.
+					const response = await waitForWorkersDev(
+						getDeployedUrl(output),
+						(candidate) =>
+							candidate.headers
+								.get("content-type")
+								?.includes("application/json") === true
+					);
+
+					expect(await response.json()).toEqual({ hasContainer: true });
+				});
+			}
+		);
 	}
 );
+
+function getDeployedUrl(output: { stdout: string }) {
+	const match = output.stdout.match(
+		/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+	);
+	assert(match?.groups);
+	return match.groups.url;
+}

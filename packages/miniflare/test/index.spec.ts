@@ -10,19 +10,19 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
-import url from "node:url";
 import util from "node:util";
 import {
 	_forceColour,
+	NODEJS_COMPAT_DEFAULT_ON_DATE,
+} from "@cloudflare/workers-utils";
+import {
 	_transformsForContentEncodingAndContentType,
-	createFetchMock,
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
+	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
-	parseWithRootPath,
-	PLUGINS,
 	Response,
 	viewToBuffer,
 } from "miniflare";
@@ -31,6 +31,7 @@ import { WebSocketServer } from "ws";
 import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
 import {
 	FIXTURES_PATH,
+	singleModuleManifest,
 	TestLog,
 	useCwd,
 	useDispose,
@@ -51,7 +52,6 @@ import type {
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 	Worker_Module,
-	WorkerOptions,
 } from "miniflare";
 import type { AddressInfo } from "node:net";
 import type { Writable } from "node:stream";
@@ -80,7 +80,22 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(
 		() =>
 			new Miniflare({
-				workers: [{ script: "" }, { script: "" }],
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-05-01",
+						},
+					},
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-05-01",
+						},
+					},
+				],
 			})
 	).toThrow(
 		new MiniflareCoreError(
@@ -92,10 +107,34 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 		() =>
 			new Miniflare({
 				workers: [
-					{ script: "" },
-					{ script: "", name: "a" },
-					{ script: "", name: "b" },
-					{ script: "", name: "a" },
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-05-01",
+						},
+					},
+					{
+						config: {
+							type: "worker",
+							name: "a",
+							compatibilityDate: "2025-05-01",
+						},
+					},
+					{
+						config: {
+							type: "worker",
+							name: "b",
+							compatibilityDate: "2025-05-01",
+						},
+					},
+					{
+						config: {
+							type: "worker",
+							name: "a",
+							compatibilityDate: "2025-05-01",
+						},
+					},
 				],
 			})
 	).toThrow(
@@ -112,8 +151,18 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	// Check throws validation error with incorrect options
 	let error: MiniflareCoreError | undefined = undefined;
 	try {
-		// @ts-expect-error intentionally testing incorrect types
-		new Miniflare({ name: 42, script: "" });
+		new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						// @ts-expect-error intentionally testing incorrect types
+						name: 42,
+						compatibilityDate: "2025-05-01",
+					},
+				},
+			],
+		});
 	} catch (e) {
 		error = e as MiniflareCoreError;
 	}
@@ -122,9 +171,16 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
 {
-  name: 42,
-        ^ Expected string, received number
-  ...,
+  workers: [
+    /* [0] */ {
+      config: {
+        ...,
+        name: 42,
+              ^ Invalid input: expected string, received number
+        ...,
+      },
+    },
+  ],
 }`
 	);
 
@@ -141,62 +197,102 @@ test("Miniflare: validates options", async ({ expect, onTestFinished }) => {
 	expect(error?.message).toEqual(
 		`Unexpected options passed to \`new Miniflare()\` constructor:
 'addEventListener(...)'
-^ Expected object, received string`
+^ Invalid input: expected object, received string`
 	);
 });
 
 test("Miniflare: accepts mixed r2Buckets record", () => {
 	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		r2Buckets: {
-			LOCAL_BUCKET: "local-bucket",
-			REMOTE_BUCKET: { id: "remote-bucket" },
-		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: {
+						LOCAL_BUCKET: { type: "r2", name: "local-bucket" },
+						REMOTE_BUCKET: { type: "r2", name: "remote-bucket" },
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 });
 
 test("Miniflare: accepts mixed kvNamespaces record", () => {
 	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		kvNamespaces: {
-			LOCAL_NS: "local-ns",
-			REMOTE_NS: { id: "remote-ns" },
-		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: {
+						LOCAL_NS: { type: "kv", id: "local-ns" },
+						REMOTE_NS: { type: "kv", id: "remote-ns" },
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 });
 
 test("Miniflare: accepts mixed d1Databases record", () => {
 	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		d1Databases: {
-			LOCAL_DB: "local-db",
-			REMOTE_DB: { id: "remote-db" },
-		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: {
+						LOCAL_DB: { type: "d1", id: "local-db" },
+						REMOTE_DB: { type: "d1", id: "remote-db" },
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 });
 
 test("Miniflare: accepts mixed pipelines record", () => {
 	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		pipelines: {
-			LOCAL_PIPELINE: "local-pipeline",
-			REMOTE_PIPELINE: { pipeline: "remote-pipeline" },
-		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: {
+						LOCAL_PIPELINE: { type: "pipeline", name: "local-pipeline" },
+						REMOTE_PIPELINE: { type: "pipeline", name: "remote-pipeline" },
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 });
 test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 	const mf = new Miniflare({
 		port: 0,
-		modules: true,
-		script: "",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -208,18 +304,21 @@ test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 });
 
 test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
-	// Extract loopback port from injected live reload script
-	const loopbackPortRegexp = /\/\/ Miniflare Live Reload.+url\.port = (\d+)/s;
-
 	const opts: MiniflareOptions = {
 		port: 0,
 		inspectorPort: 0,
-		liveReload: true,
-		script: `addEventListener("fetch", (event) => {
+		workers: [
+			{
+				config: { type: "worker", name: "", compatibilityDate: "2025-05-01" },
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 			event.respondWith(new Response("<p>👋</p>", {
 				headers: { "Content-Type": "text/html;charset=utf-8" }
 			}));
 		})`,
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -227,9 +326,7 @@ test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
 	async function getState() {
 		const url = await mf.ready;
 		const inspectorUrl = await mf.getInspectorURL();
-		const res = await mf.dispatchFetch("http://localhost");
-		const loopbackPort = loopbackPortRegexp.exec(await res.text())?.[1];
-		return { url, inspectorUrl, loopbackPort };
+		return { url, inspectorUrl };
 	}
 
 	const state1 = await getState();
@@ -243,19 +340,12 @@ test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
 	expect(state1.inspectorUrl.port).not.toBe("0");
 	expect(state1.inspectorUrl.port).toBe(state2.inspectorUrl.port);
 
-	// Make sure updating the host restarted the loopback server
-	expect(state1.loopbackPort).toBeDefined();
-	expect(state2.loopbackPort).toBeDefined();
-	expect(state1.loopbackPort).not.toBe(state2.loopbackPort);
-
-	// Make sure setting port to `undefined` always gives a new port, but keeps
-	// existing loopback server
+	// Make sure setting port to `undefined` always gives a new port
 	opts.port = undefined;
 	await mf.setOptions(opts);
 	const state3 = await getState();
 	expect(state3.url.port).not.toBe("0");
 	expect(state1.url.port).not.toBe(state3.url.port);
-	expect(state2.loopbackPort).toBe(state3.loopbackPort);
 });
 
 const interfaces = os.networkInterfaces();
@@ -268,13 +358,26 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 		assert(localInterface !== undefined);
 		const mf = new Miniflare({
 			host: localInterface.address,
-			modules: true,
-			script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
-			serviceBindings: {
-				SERVICE() {
-					return new Response("body");
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							`export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`
+						),
+						env: {
+							SERVICE: {
+								type: "fetcher",
+								handler() {
+									return new Response("body");
+								},
+							},
+						},
+					},
 				},
-			},
+			],
 		});
 		useDispose(mf);
 
@@ -290,13 +393,26 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 test("Miniflare: can use localhost as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "localhost",
-		modules: true,
-		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
-		serviceBindings: {
-			SERVICE() {
-				return new Response("body");
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`
+					),
+					env: {
+						SERVICE: {
+							type: "fetcher",
+							handler() {
+								return new Response("body");
+							},
+						},
+					},
+				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 
@@ -314,13 +430,26 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 test("Miniflare: can use IPv6 loopback as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "::1",
-		modules: true,
-		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
-		serviceBindings: {
-			SERVICE() {
-				return new Response("body");
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`
+					),
+					env: {
+						SERVICE: {
+							type: "fetcher",
+							handler() {
+								return new Response("body");
+							},
+						},
+					},
+				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 
@@ -338,18 +467,30 @@ test("Miniflare: routes to multiple workers with fallback", async ({
 	const opts: MiniflareOptions = {
 		workers: [
 			{
-				name: "a",
-				routes: ["*/api"],
-				script: `addEventListener("fetch", (event) => {
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/api" }],
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 					event.respondWith(new Response("a"));
 				})`,
+				},
 			},
 			{
-				name: "b",
-				routes: ["*/api/*"], // Less specific than "a"'s
-				script: `addEventListener("fetch", (event) => {
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/api/*" }], // Less specific than "a"'s
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 					event.respondWith(new Response("b"));
 				})`,
+				},
 			},
 		],
 	};
@@ -393,15 +534,29 @@ test("Miniflare: custom service using Content-Encoding header", async ({
 		initialStream.end();
 	});
 	const mf = new Miniflare({
-		compatibilityFlags: ["brotli_content_encoding"],
-		script: `addEventListener("fetch", (event) => {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					// `brotli_content_encoding` became the default as of 2024-04-29
+					compatibilityDate: "2025-05-01",
+					env: {
+						CUSTOM: {
+							type: "fetcher",
+							handler(request) {
+								return fetch(http, request);
+							},
+						},
+					},
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 			event.respondWith(CUSTOM.fetch(event.request));
 		})`,
-		serviceBindings: {
-			CUSTOM(request) {
-				return fetch(http, request);
+				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 
@@ -434,10 +589,15 @@ test("Miniflare: custom service using Content-Encoding header", async ({
 test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	const testBody = "x".repeat(100);
 	const mf = new Miniflare({
-		bindings: { TEST_BODY: testBody },
-		compatibilityFlags: ["brotli_content_encoding"],
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					// `brotli_content_encoding` became the default as of 2024-04-29
+					compatibilityDate: "2025-05-01",
+					env: { TEST_BODY: { type: "text", value: testBody } },
+					manifest: singleModuleManifest(`
 		export default {
 			async fetch(request, env, ctx) {
 				const url = new URL(request.url);
@@ -500,7 +660,10 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 				}
 			},
 		};
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -610,6 +773,36 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	expect(await res.text()).toBe(testBody);
 });
 
+test("Miniflare: ignores nodejs_compat flags the compatibility date enables", async ({
+	expect,
+}) => {
+	// workerd rejects a compatibility flag that its compatibility date already
+	// enables, which `nodejs_compat` is as of `NODEJS_COMPAT_DEFAULT_ON_DATE`
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: NODEJS_COMPAT_DEFAULT_ON_DATE,
+					compatibilityFlags: ["nodejs_compat", "nodejs_compat_v2"],
+					manifest: singleModuleManifest(`
+					import path from "node:path";
+
+					export default {
+						fetch() { return new Response(path.join("a", "b")); },
+					};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	expect(await res.text()).toBe(path.posix.join("a", "b"));
+});
+
 test("Miniflare: custom service using Set-Cookie header", async ({
 	expect,
 }) => {
@@ -622,21 +815,31 @@ test("Miniflare: custom service using Set-Cookie header", async ({
 		res.end();
 	});
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					// Enable `Headers#getSetCookie()`:
+					// https://github.com/cloudflare/workerd/blob/14b54764609c263ea36ab862bb8bf512f9b1387b/src/workerd/io/compatibility-date.capnp#L273-L278
+					compatibilityDate: "2023-03-01",
+					manifest: singleModuleManifest(`export default {
             async fetch(request, env, ctx) {
 				const res = await env.CUSTOM.fetch(request);
 				return Response.json(res.headers.getSetCookie());
             }
-	    }`,
-		serviceBindings: {
-			CUSTOM(request) {
-				return fetch(http, request);
+	    }`),
+					env: {
+						CUSTOM: {
+							type: "fetcher",
+							handler(request) {
+								return fetch(http, request);
+							},
+						},
+					},
+				},
 			},
-		},
-		// Enable `Headers#getSetCookie()`:
-		// https://github.com/cloudflare/workerd/blob/14b54764609c263ea36ab862bb8bf512f9b1387b/src/workerd/io/compatibility-date.capnp#L273-L278
-		compatibilityDate: "2023-03-01",
+		],
 	});
 	useDispose(mf);
 
@@ -685,21 +888,35 @@ test("Miniflare: web socket kitchen sink", async ({
 	// Create Miniflare instance with WebSocket worker and custom service binding
 	// fetching from WebSocket origin server
 	const mf = new Miniflare({
-		script: `addEventListener("fetch", (event) => {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						CUSTOM: {
+							type: "fetcher",
+							// Testing loopback server WebSocket coupling
+							handler(request) {
+								// Testing dispatchFetch custom cf injection
+								expect(request.cf?.country).toBe("MF");
+								// Testing dispatchFetch injects default cf values
+								expect(request.cf?.regionCode).toBe("TX");
+								expect(request.headers.get("MF-Custom-Service")).toBe(null);
+								// Testing WebSocket-upgrading fetch
+								return fetch(`http://localhost:${port}`, request);
+							},
+						},
+					},
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 			event.respondWith(CUSTOM.fetch(event.request));
 		})`,
-		serviceBindings: {
-			// Testing loopback server WebSocket coupling
-			CUSTOM(request) {
-				// Testing dispatchFetch custom cf injection
-				expect(request.cf?.country).toBe("MF");
-				// Testing dispatchFetch injects default cf values
-				expect(request.cf?.regionCode).toBe("TX");
-				expect(request.headers.get("MF-Custom-Service")).toBe(null);
-				// Testing WebSocket-upgrading fetch
-				return fetch(`http://localhost:${port}`, request);
+				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 
@@ -736,33 +953,55 @@ test("Miniflare: custom service binding to another Miniflare instance", async ({
 	expect,
 }) => {
 	const mfOther = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request) {
 				const { method, url } = request;
 				const body = request.body && await request.text();
 				return Response.json({ method, url, body });
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mfOther);
 
 	const mf = new Miniflare({
-		script: `addEventListener("fetch", (event) => {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						CUSTOM: {
+							type: "fetcher",
+							async handler(request) {
+								// Check internal keys removed (e.g. `MF-Custom-Service`, `MF-Original-URL`)
+								// https://github.com/cloudflare/miniflare/issues/475
+								const keys = [...request.headers.keys()];
+								expect(
+									keys.filter((key) => key.toLowerCase().startsWith("mf-"))
+								).toEqual([]);
+
+								return await mfOther.dispatchFetch(request);
+							},
+						},
+					},
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 			event.respondWith(CUSTOM.fetch(event.request));
 		})`,
-		serviceBindings: {
-			async CUSTOM(request) {
-				// Check internal keys removed (e.g. `MF-Custom-Service`, `MF-Original-URL`)
-				// https://github.com/cloudflare/miniflare/issues/475
-				const keys = [...request.headers.keys()];
-				expect(
-					keys.filter((key) => key.toLowerCase().startsWith("mf-"))
-				).toEqual([]);
-
-				return await mfOther.dispatchFetch(request);
+				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 
@@ -795,9 +1034,14 @@ test("Miniflare: custom service binding to another Miniflare instance", async ({
 });
 test("Miniflare: service binding to current worker", async ({ expect }) => {
 	const mf = new Miniflare({
-		serviceBindings: { SELF: kCurrentWorker },
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { SELF: { type: "worker", workerName: kCurrentWorker } },
+					manifest: singleModuleManifest(`export default {
 			async fetch(request, env) {
 				const { pathname } = new URL(request.url);
 				if (pathname === "/callback") return new Response("callback");
@@ -805,7 +1049,10 @@ test("Miniflare: service binding to current worker", async ({ expect }) => {
 				const text = await response.text();
 				return new Response("body:" + text);
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -815,11 +1062,21 @@ test("Miniflare: service binding to current worker", async ({ expect }) => {
 test("Miniflare: service binding to network", async ({ expect }) => {
 	const { http } = await useServer((req, res) => res.end("network"));
 	const mf = new Miniflare({
-		serviceBindings: { NETWORK: { network: { allow: ["private"] } } },
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						NETWORK: { type: "network", allow: ["private"] },
+					},
+					manifest: singleModuleManifest(`export default {
 			fetch(request, env) { return env.NETWORK.fetch(request); }
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -829,13 +1086,21 @@ test("Miniflare: service binding to network", async ({ expect }) => {
 test("Miniflare: service binding to external server", async ({ expect }) => {
 	const { http } = await useServer((req, res) => res.end("external"));
 	const mf = new Miniflare({
-		serviceBindings: {
-			EXTERNAL: { external: { address: http.host, http: {} } },
-		},
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						EXTERNAL: { type: "external", address: http.host, http: {} },
+					},
+					manifest: singleModuleManifest(`export default {
 			fetch(request, env) { return env.EXTERNAL.fetch(request); }
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -847,13 +1112,21 @@ test("Miniflare: service binding to disk", async ({ expect }) => {
 	const testPath = path.join(tmp, "test.txt");
 	await fs.writeFile(testPath, "👋");
 	const mf = new Miniflare({
-		serviceBindings: {
-			DISK: { disk: { path: tmp, writable: true } },
-		},
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						DISK: { type: "disk", path: tmp, writable: true },
+					},
+					manifest: singleModuleManifest(`export default {
 			fetch(request, env) { return env.DISK.fetch(request); }
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -871,15 +1144,29 @@ test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
 			{
-				name: "a",
-				serviceBindings: {
-					A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
-					A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
-					B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
-				},
-				compatibilityFlags: ["rpc"],
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "a",
+					// `rpc` became the default as of 2024-04-03
+					compatibilityDate: "2025-05-01",
+					env: {
+						A_RPC_SERVICE: {
+							type: "worker",
+							workerName: kCurrentWorker,
+							exportName: "RpcEntrypoint",
+						},
+						A_NAMED_SERVICE: {
+							type: "worker",
+							workerName: "a",
+							exportName: "namedEntrypoint",
+						},
+						B_NAMED_SERVICE: {
+							type: "worker",
+							workerName: "b",
+							exportName: "anotherNamedEntrypoint",
+						},
+					},
+					manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export class RpcEntrypoint extends WorkerEntrypoint {
 					ping() { return "a:rpc:pong"; }
@@ -897,16 +1184,20 @@ test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 						return Response.json({ aRpc, aNamed, bNamed });
 					}
 				}
-				`,
+				`),
+				},
 			},
 			{
-				name: "b",
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 				export const anotherNamedEntrypoint = {
 					fetch(request, env, ctx) { return new Response("b:named:pong"); }
 				};
-				`,
+				`),
+				},
 			},
 		],
 	});
@@ -926,25 +1217,34 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 	const mf = new Miniflare({
 		workers: [
 			{
-				name: "a",
-				serviceBindings: {
-					RPC_SERVICE: { name: "b", entrypoint: "RpcEntrypoint" },
-				},
-				compatibilityFlags: ["rpc"],
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "a",
+					// `rpc` became the default as of 2024-04-03
+					compatibilityDate: "2025-05-01",
+					env: {
+						RPC_SERVICE: {
+							type: "worker",
+							workerName: "b",
+							exportName: "RpcEntrypoint",
+						},
+					},
+					manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						const obj = await env.RPC_SERVICE.getObject();
 						return Response.json({ obj });
 					}
 				}
-				`,
+				`),
+				},
 			},
 			{
-				name: "b",
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 					import { WorkerEntrypoint } from "cloudflare:workers";
 					export class RpcEntrypoint extends WorkerEntrypoint {
 						getObject() {
@@ -954,7 +1254,8 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 							}
 						}
 					}
-				`,
+				`),
+				},
 			},
 		],
 	});
@@ -972,25 +1273,34 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 	const mf = new Miniflare({
 		workers: [
 			{
-				name: "a",
-				serviceBindings: {
-					RPC_SERVICE: { name: "b", entrypoint: "RpcEntrypoint" },
-				},
-				compatibilityFlags: ["rpc"],
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "a",
+					// `rpc` became the default as of 2024-04-03
+					compatibilityDate: "2025-05-01",
+					env: {
+						RPC_SERVICE: {
+							type: "worker",
+							workerName: "b",
+							exportName: "RpcEntrypoint",
+						},
+					},
+					manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						const rpcTarget = await env.RPC_SERVICE.getRpcTarget();
 						return Response.json(rpcTarget.id);
 					}
 				}
-				`,
+				`),
+				},
 			},
 			{
-				name: "b",
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 					import { WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
 
 					export class RpcEntrypoint extends WorkerEntrypoint {
@@ -1011,7 +1321,8 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 							return this.#id
 						}
 					}
-				`,
+				`),
+				},
 			},
 		],
 	});
@@ -1024,14 +1335,18 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 
 test("Miniflare: tail consumer called", async ({ expect }) => {
 	const mf = new Miniflare({
-		handleRuntimeStdio: () => {},
+		handleStructuredLogs: () => {},
 		workers: [
 			{
-				name: "a",
-				tails: ["b"],
-				compatibilityDate: "2025-04-28",
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "a",
+					tailConsumers: [{ workerName: "b" }],
+					compatibilityDate: "2025-04-28",
+					env: {
+						B: { type: "worker", workerName: "b" },
+					},
+					manifest: singleModuleManifest(`
 
 				export default {
 					async fetch(request, env) {
@@ -1041,23 +1356,22 @@ test("Miniflare: tail consumer called", async ({ expect }) => {
 						return new Response("hello from a");
 					}
 				}
-				`,
-				serviceBindings: {
-					B: "b",
+				`),
 				},
 			},
 			{
-				name: "b",
-				modules: true,
-				compatibilityDate: "2025-04-28",
-
-				script: `
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-04-28",
+					manifest: singleModuleManifest(`
 				let event;
 				export default {
 					fetch() {return Response.json(event)},
 					tail(e) {event = e }
 				};
-				`,
+				`),
+				},
 			},
 		],
 	});
@@ -1078,21 +1392,28 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
 			{
-				name: "a",
-				modules: true,
-				script: `export default {
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 					async fetch() {
 						const res1 = await (await fetch("https://example.com/1")).text();
 						const res2 = await (await fetch("https://example.com/2")).text();
 						return Response.json({ res1, res2 });
 					}
-				}`,
-				outboundService: "b",
+				}`),
+				},
+				dev: {
+					outboundService: { type: "worker", workerName: "b" },
+				},
 			},
 			{
-				name: "b",
-				modules: true,
-				script: `export default {
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 					async fetch(request, env) {
 						if (request.url === "https://example.com/1") {
 							return new Response("one");
@@ -1100,9 +1421,15 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 							return fetch(request);
 						}
 					}
-				}`,
-				outboundService(request) {
-					return new Response(`fallback:${request.url}`);
+				}`),
+				},
+				dev: {
+					outboundService: {
+						type: "fetcher",
+						handler(request) {
+							return new Response(`fallback:${request.url}`);
+						},
+					},
 				},
 			},
 		],
@@ -1132,10 +1459,14 @@ test("Miniflare: custom outbound service passes through TCP sockets", async ({
 	assert(typeof address === "object" && address !== null);
 
 	const mf = new Miniflare({
-		modules: true,
-		compatibilityDate: "2026-05-20",
-		compatibilityFlags: ["nodejs_compat"],
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-05-20",
+					compatibilityFlags: ["nodejs_compat"],
+					manifest: singleModuleManifest(`
 			import { connect } from "cloudflare:sockets";
 
 			export default {
@@ -1157,10 +1488,18 @@ test("Miniflare: custom outbound service passes through TCP sockets", async ({
 					});
 				}
 			};
-		`,
-		outboundService(request) {
-			return new Response(`intercepted:${request.url}`);
-		},
+		`),
+				},
+				dev: {
+					outboundService: {
+						type: "fetcher",
+						handler(request) {
+							return new Response(`intercepted:${request.url}`);
+						},
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1184,9 +1523,14 @@ test("Miniflare: custom outbound service passes through TCP sockets", async ({
 test("Miniflare: can send GET request with body", async ({ expect }) => {
 	// https://github.com/cloudflare/workerd/issues/1122
 	const mf = new Miniflare({
-		compatibilityDate: "2023-08-01",
-		modules: true,
-		script: `export default {
+		cf: { key: "value" },
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2023-08-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request) {
 				return Response.json({
 					cf: request.cf,
@@ -1194,8 +1538,10 @@ test("Miniflare: can send GET request with body", async ({ expect }) => {
 					hasBody: request.body !== null,
 				});
 			}
-		}`,
-		cf: { key: "value" },
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1246,10 +1592,14 @@ test("Miniflare: handles redirect responses", async ({ expect }) => {
 	});
 
 	const mf = new Miniflare({
-		bindings: { EXTERNAL_URL: http.href },
-		compatibilityDate: "2024-01-01",
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2024-01-01",
+					env: { EXTERNAL_URL: { type: "text", value: http.href } },
+					manifest: singleModuleManifest(`export default {
 			async fetch(request, env) {
 				const url = new URL(request.url);
 						const externalUrl = new URL(env.EXTERNAL_URL);
@@ -1268,7 +1618,10 @@ test("Miniflare: handles redirect responses", async ({ expect }) => {
 					return new Response("end:" + url.href);
 				}
 			}
-	}`,
+	}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1326,51 +1679,6 @@ test("Miniflare: handles redirect responses", async ({ expect }) => {
 	expect(await res.text()).toBe("end:https://custom.mf/external-redirected");
 });
 
-test("Miniflare: fetch mocking", async ({ expect }) => {
-	const fetchMock = createFetchMock();
-	fetchMock.disableNetConnect();
-	const origin = fetchMock.get("https://example.com");
-	origin.intercept({ method: "GET", path: "/" }).reply(200, "Mocked response!");
-
-	const mfOptions: MiniflareOptions = {
-		modules: true,
-		script: `export default {
-			async fetch() {
-				return fetch("https://example.com/");
-			}
-		}`,
-		fetchMock,
-	};
-	const resultOptions = {} as MiniflareOptions;
-
-	// Verify that options with `fetchMock` can be parsed first before passing to Miniflare
-	// Regression test for https://github.com/cloudflare/workers-sdk/issues/5486
-	for (const plugin of Object.values(PLUGINS)) {
-		Object.assign(
-			resultOptions,
-			parseWithRootPath("", plugin.options, mfOptions)
-		);
-	}
-
-	const mf = new Miniflare(resultOptions);
-	useDispose(mf);
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe("Mocked response!");
-
-	// Check `outboundService`and `fetchMock` mutually exclusive
-	await expect(
-		mf.setOptions({
-			script: "",
-			fetchMock,
-			outboundService: "",
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_MULTIPLE_OUTBOUNDS",
-			"Only one of `outboundService` or `fetchMock` may be specified per worker"
-		)
-	);
-});
 test("Miniflare: custom upstream as origin (with colons)", async ({
 	expect,
 }) => {
@@ -1379,12 +1687,20 @@ test("Miniflare: custom upstream as origin (with colons)", async ({
 	});
 	const mf = new Miniflare({
 		upstream: new URL("/extra:extra/", upstream.http.toString()).toString(),
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch(request) {
 				return fetch(request);
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
@@ -1399,8 +1715,13 @@ test("Miniflare: custom upstream as origin", async ({ expect }) => {
 	});
 	const mf = new Miniflare({
 		upstream: new URL("/extra/", upstream.http.toString()).toString(),
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request) {
 				const resp = await (await fetch(request)).text();
 						return Response.json({
@@ -1408,7 +1729,10 @@ test("Miniflare: custom upstream as origin", async ({ expect }) => {
 							host: request.headers.get("Host")
 						});
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
@@ -1426,15 +1750,23 @@ test("Miniflare: custom upstream sets MF-Original-Hostname header", async ({
 	});
 	const mf = new Miniflare({
 		upstream: upstream.http.toString(),
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host"),
 					originalHostname: request.headers.get("MF-Original-Hostname")
 				});
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	// Check that original hostname is preserved when using upstream
@@ -1450,14 +1782,22 @@ test("Miniflare: MF-Original-Hostname header not set without upstream", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request) {
 				return Response.json({
 					originalHostname: request.headers.get("MF-Original-Hostname")
 				});
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	// Check that original hostname header is not set when not using upstream
@@ -1471,14 +1811,22 @@ test("Miniflare: set origin to original URL if proxy shared secret matches", asy
 }) => {
 	const mf = new Miniflare({
 		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1493,14 +1841,22 @@ test("Miniflare: keep origin as listening host if proxy shared secret not provid
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 	  		async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1513,14 +1869,22 @@ test("Miniflare: 400 error on proxy shared secret header when not configured", a
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 	  		async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1537,14 +1901,22 @@ test("Miniflare: 400 error on proxy shared secret header mismatch with configura
 }) => {
 	const mf = new Miniflare({
 		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 	  		async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
 	  		}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1561,10 +1933,14 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		compatibilityFlags: ["nodejs_compat", "rtti_api"],
-		scriptPath: "index.mjs",
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["nodejs_compat", "rtti_api"],
+					manifest: singleModuleManifest(`
 			import assert from "node:assert";
 			import { Buffer } from "node:buffer";
 			import { connect } from "cloudflare:sockets";
@@ -1576,7 +1952,10 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async ({
 					return new Response(Buffer.from("test").toString("base64"))
 				}
 			}
-		`,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -1585,21 +1964,30 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async ({
 
 test("Miniflare: modules in sub-directories", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: [
+		workers: [
 			{
-				type: "ESModule",
-				path: "index.js",
-				contents: `import { b } from "./sub1/index.js"; export default { fetch() { return new Response(String(b + 3)); } }`,
-			},
-			{
-				type: "ESModule",
-				path: "sub1/index.js",
-				contents: `import { c } from "./sub2/index.js"; export const b = c + 20;`,
-			},
-			{
-				type: "ESModule",
-				path: "sub1/sub2/index.js",
-				contents: `export const c = 100;`,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: {
+						mainModule: "index.js",
+						modules: {
+							"index.js": {
+								type: "esm",
+								contents: `import { b } from "./sub1/index.js"; export default { fetch() { return new Response(String(b + 3)); } }`,
+							},
+							"sub1/index.js": {
+								type: "esm",
+								contents: `import { c } from "./sub2/index.js"; export const b = c + 20;`,
+							},
+							"sub1/sub2/index.js": {
+								type: "esm",
+								contents: `export const c = 100;`,
+							},
+						},
+					},
+				},
 			},
 		],
 	});
@@ -1610,20 +1998,30 @@ test("Miniflare: modules in sub-directories", async ({ expect }) => {
 
 test("Miniflare: python modules", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: [
+		workers: [
 			{
-				type: "PythonModule",
-				path: "index.py",
-				contents:
-					"from test_module import add; from workers import Response, WorkerEntrypoint;\nclass Default(WorkerEntrypoint):\n  def fetch(self, request):\n    return Response(str(add(2,2)))",
-			},
-			{
-				type: "PythonModule",
-				path: "test_module.py",
-				contents: `def add(a, b):\n  return a + b`,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["python_workers", "python_no_global_handlers"],
+					manifest: {
+						mainModule: "index.py",
+						modules: {
+							"index.py": {
+								type: "python",
+								contents:
+									"from test_module import add; from workers import Response, WorkerEntrypoint;\nclass Default(WorkerEntrypoint):\n  def fetch(self, request):\n    return Response(str(add(2,2)))",
+							},
+							"test_module.py": {
+								type: "python",
+								contents: `def add(a, b):\n  return a + b`,
+							},
+						},
+					},
+				},
 			},
 		],
-		compatibilityFlags: ["python_workers", "python_no_global_handlers"],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -1639,12 +2037,20 @@ test("Miniflare: HTTPS fetches using browser CA certificates", async ({
 	// was effectively asserting on an unintended 404 path rather than HTTPS CA
 	// trust.
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch() {
 				return fetch("https://example.com/");
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -1657,13 +2063,21 @@ test("Miniflare: accepts https requests", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		https: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch() {
 				return new Response("Hello world");
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1682,15 +2096,23 @@ test("Miniflare: throws error messages that reflect the actual issue", async ({
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		https: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request, env, ctx) {
 				Object.defineProperty("not an object", "node", "");
 
 				return new Response('Hello World!');
 			},
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1705,8 +2127,14 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			let scheduledRun = false;
 			export default {
 				fetch() {
@@ -1716,19 +2144,21 @@ test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
 					scheduledRun = true;
 					controller.noRetry();
 				}
-			}`,
-		unsafeTriggerHandlers: true,
+			}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/local/scheduled");
 	expect(await res.text()).toBe("ok");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/scheduled?format=json"
+		"http://localhost/cdn-cgi/local/scheduled?format=json"
 	);
 	expect(await res.json()).toEqual({ outcome: "ok", noRetry: true });
 
@@ -1749,8 +2179,17 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 	await fs.writeFile(path.join(tmp, "foo.md"), "asset", "utf8");
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					// Unmatched requests (e.g. `/`) fall back to the user worker below,
+					// so the asset router must know a user worker is present.
+					assets: { directory: tmp, hasUserWorker: true },
+					manifest: singleModuleManifest(`
 				let scheduledRun = false;
 				let cron;
 				let scheduledTime;
@@ -1764,14 +2203,10 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 						scheduledTime = Number(controller.scheduledTime);
 						controller.noRetry();
 					}
-				}`,
-		assets: {
-			directory: tmp,
-			routerConfig: {
-				has_user_worker: true,
+				}`),
+				},
 			},
-		},
-		unsafeTriggerHandlers: true,
+		],
 	});
 	useDispose(mf);
 
@@ -1795,7 +2230,7 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 	expect(res.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
 	expect(await res.text()).toBe("asset");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/local/scheduled");
 	expect(await res.text()).toBe("ok");
 
 	res = await mf.dispatchFetch("http://localhost");
@@ -1805,7 +2240,7 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 	expect(json.scheduledTime).toBeDefined();
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/scheduled?format=json&cron=0+0+0+0+0&time=1234567890987"
+		"http://localhost/cdn-cgi/local/scheduled?format=json&cron=0+0+0+0+0&time=1234567890987"
 	);
 	expect(await res.json()).toEqual({
 		outcome: "ok",
@@ -1826,8 +2261,14 @@ test("Miniflare: manually triggered email handler - valid email", async ({
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			let receivedEmail = false;
 			export default {
 				fetch() {
@@ -1836,8 +2277,10 @@ test("Miniflare: manually triggered email handler - valid email", async ({
 				email(emailMessage) {
 					receivedEmail = true;
 				}
-			}`,
-		unsafeTriggerHandlers: true,
+			}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1845,7 +2288,7 @@ test("Miniflare: manually triggered email handler - valid email", async ({
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -1872,8 +2315,14 @@ test("Miniflare: manually triggered email handler - setReject does not throw", a
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			let receivedEmail = false;
 			export default {
 				fetch() {
@@ -1883,8 +2332,10 @@ test("Miniflare: manually triggered email handler - setReject does not throw", a
 					await emailMessage.setReject("I just don't like this email :(")
 					receivedEmail = true;
 				}
-			}`,
-		unsafeTriggerHandlers: true,
+			}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1892,7 +2343,7 @@ test("Miniflare: manually triggered email handler - setReject does not throw", a
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -1921,8 +2372,14 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			let receivedEmail = false;
 			export default {
 				fetch() {
@@ -1932,8 +2389,10 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 					await emailMessage.forward("mark.s@example.com")
 					receivedEmail = true;
 				}
-			}`,
-		unsafeTriggerHandlers: true,
+			}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1941,7 +2400,7 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -1968,8 +2427,14 @@ test("Miniflare: manually triggered email handler - invalid email, no message id
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			let receivedEmail = false;
 			export default {
 				fetch() {
@@ -1978,8 +2443,10 @@ test("Miniflare: manually triggered email handler - invalid email, no message id
 				email(emailMessage) {
 					receivedEmail = true;
 				}
-			}`,
-		unsafeTriggerHandlers: true,
+			}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -1987,7 +2454,7 @@ test("Miniflare: manually triggered email handler - invalid email, no message id
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -2015,8 +2482,14 @@ test("Miniflare: manually triggered email handler - reply handler works", async 
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			import {EmailMessage} from "cloudflare:email"
 			let receivedEmail = false;
 			export default {
@@ -2041,8 +2514,10 @@ This is a random email body.
 
 					receivedEmail = true;
 				}
-			}`,
-		unsafeTriggerHandlers: true,
+			}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -2050,7 +2525,7 @@ This is a random email body.
 	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
 		{
 			body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -2070,40 +2545,205 @@ This is a random email body.
 	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
+test("Miniflare: manually triggered email handler - structured result", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			import { EmailMessage } from "cloudflare:email";
+
+			export default {
+				async email(message) {
+					const mode = message.to.split("@")[0];
+					if (mode === "rejected") {
+						message.setReject("blocked sender");
+						return;
+					}
+
+					await message.forward(
+						"archive@example.com",
+						new Headers({ "X-Test": mode })
+					);
+					await message.reply(new EmailMessage(
+						\`reply-\${mode}@example.com\`,
+						message.from,
+						\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+					));
+
+					if (mode === "exception") {
+						message.setReject("triggered exception");
+						throw new Error("sensitive handler error");
+					}
+				}
+			}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	async function dispatchEmail(mode: string) {
+		const response = await mf.dispatchFetch(
+			`http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=${mode}@example.com`,
+			{
+				method: "POST",
+				body: `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`,
+			}
+		);
+		const result = await response.json();
+
+		expect(response.status).toBe(mode === "exception" ? 500 : 200);
+
+		return result as {
+			outcome: string;
+			rejectReason?: string;
+			forwards: {
+				recipient: string;
+				headers: [string, string][];
+				messageId: string;
+			}[];
+			replies: { messageId: string; sender: string; raw: string }[];
+			events: (
+				| {
+						type: "forward" | "reply";
+						timestamp: string;
+						messageId: string;
+				  }
+				| { type: "reject"; timestamp: string }
+			)[];
+		};
+	}
+
+	const okResult = await dispatchEmail("ok");
+	expect(okResult).toMatchObject({
+		outcome: "ok",
+		forwards: [
+			{
+				recipient: "archive@example.com",
+				headers: [["x-test", "ok"]],
+				messageId: expect.any(String),
+			},
+		],
+		replies: [
+			{
+				sender: "reply-ok@example.com",
+				messageId: expect.any(String),
+				raw: expect.stringContaining("Reply for ok"),
+			},
+		],
+	});
+	expect(okResult.events).toEqual([
+		{
+			type: "forward",
+			timestamp: expect.any(String),
+			messageId: okResult.forwards[0]?.messageId,
+		},
+		{
+			type: "reply",
+			timestamp: expect.any(String),
+			messageId: okResult.replies[0]?.messageId,
+		},
+	]);
+
+	const rejectedResult = await dispatchEmail("rejected");
+	expect(rejectedResult).toMatchObject({
+		outcome: "ok",
+		rejectReason: "blocked sender",
+		forwards: [],
+		replies: [],
+	});
+	expect(rejectedResult.events).toEqual([
+		{ type: "reject", timestamp: expect.any(String) },
+	]);
+
+	const exceptionResult = await dispatchEmail("exception");
+	expect(exceptionResult).toMatchObject({
+		outcome: "exception",
+		rejectReason: "triggered exception",
+		forwards: [
+			{
+				recipient: "archive@example.com",
+				headers: [["x-test", "exception"]],
+			},
+		],
+		replies: [
+			{
+				messageId: expect.any(String),
+				sender: "reply-exception@example.com",
+				raw: expect.stringContaining("Reply for exception"),
+			},
+		],
+	});
+	expect(exceptionResult.events).toEqual([
+		{
+			type: "forward",
+			timestamp: expect.any(String),
+			messageId: exceptionResult.forwards[0]?.messageId,
+		},
+		{
+			type: "reply",
+			timestamp: expect.any(String),
+			messageId: exceptionResult.replies[0]?.messageId,
+		},
+		{ type: "reject", timestamp: expect.any(String) },
+	]);
+});
+
+test("Miniflare: unrecognised /cdn-cgi/local/ routes fall through to user worker", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			export default {
 				fetch() {
 					return new Response("Hello world");
 				}
 			}
-		`,
-		unsafeTriggerHandlers: true,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
-	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/foo");
-	expect(await res.text()).toBe(
-		`"/cdn-cgi/handler/foo" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`
-	);
-	expect(res.status).toBe(404);
+	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/local/foo");
+	expect(await res.text()).toBe("Hello world");
+	expect(res.status).toBe(200);
 });
 
 test("Miniflare: other /cdn-cgi/ routes", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			export default {
 				fetch() {
 					return new Response("Hello world");
 				}
 			}
-		`,
-		unsafeTriggerHandlers: true,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -2116,15 +2756,23 @@ test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", 
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			export default {
 				fetch() {
 					return new Response("Hello world");
 				}
 			}
-		`,
-		unsafeTriggerHandlers: true,
+		`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -2150,7 +2798,7 @@ test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", 
 				setHost: false,
 				headers: {
 					Host: "example.trycloudflare.com",
-					"MF-Original-URL": "http://localhost/cdn-cgi/handler/scheduled",
+					"MF-Original-URL": "http://localhost/cdn-cgi/local/scheduled",
 				},
 			},
 			(res) => {
@@ -2169,13 +2817,21 @@ test("Miniflare: listens on ipv6", async ({ expect }) => {
 
 	const mf = new Miniflare({
 		log,
-		modules: true,
 		host: "*",
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch() {
 				return new Response("Hello world");
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -2194,7 +2850,18 @@ test("Miniflare: listens on ipv6", async ({ expect }) => {
 test("Miniflare: dispose() immediately after construction", async ({
 	expect,
 }) => {
-	const mf = new Miniflare({ script: "", modules: true });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
+	});
 	const readyPromise = mf.ready;
 	// Attach rejection handler BEFORE dispose() to prevent unhandled rejection
 	const readyAssertion = expect(readyPromise).rejects.toThrow(
@@ -2212,20 +2879,40 @@ test("Miniflare: getBindings() returns all bindings", async ({
 	const blobPath = path.join(tmp, "blob.txt");
 	await fs.writeFile(blobPath, "blob");
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 			export class DurableObject {}
 			export default { fetch() { return new Response(null, { status: 404 }); } }
-		`,
-		bindings: { STRING: "hello", OBJECT: { a: 1, b: { c: 2 } } },
-		textBlobBindings: { TEXT: blobPath },
-		dataBlobBindings: { DATA: blobPath },
-		serviceBindings: { SELF: "" },
-		d1Databases: ["DB"],
-		durableObjects: { DO: "DurableObject" },
-		kvNamespaces: ["KV"],
-		queueProducers: ["QUEUE"],
-		r2Buckets: ["BUCKET"],
+		`),
+					env: {
+						STRING: { type: "text", value: "hello" },
+						OBJECT: { type: "json", value: { a: 1, b: { c: 2 } } },
+						SELF: { type: "worker", workerName: "" },
+						DB: { type: "d1", id: "DB" },
+						DO: {
+							type: "durable-object",
+							workerName: "",
+							exportName: "DurableObject",
+						},
+						KV: { type: "kv", id: "KV" },
+						QUEUE: { type: "queue", name: "QUEUE" },
+						BUCKET: { type: "r2", name: "BUCKET" },
+					},
+					exports: {
+						DurableObject: { type: "durable-object", storage: "legacy-kv" },
+					},
+				},
+				legacy: {
+					textBlobBindings: { TEXT: blobPath },
+					dataBlobBindings: { DATA: blobPath },
+				},
+			},
+		],
 	});
 	let disposed = false;
 	onTestFinished(() => {
@@ -2267,9 +2954,16 @@ test("Miniflare: getBindings() returns all bindings", async ({
 	const addWasmPath = path.join(tmp, "add.wasm");
 	await fs.writeFile(addWasmPath, ADD_WASM_MODULE);
 	await mf.setOptions({
-		script:
-			'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
-		wasmBindings: { ADD: addWasmPath },
+		workers: [
+			{
+				config: { type: "worker", name: "", compatibilityDate: "2025-05-01" },
+				legacy: {
+					serviceWorkerScript:
+						'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
+					wasmBindings: { ADD: addWasmPath },
+				},
+			},
+		],
 	});
 	const { ADD } = await mf.getBindings<{ ADD: WebAssembly.Module }>();
 	const instance = new WebAssembly.Instance(ADD);
@@ -2287,203 +2981,19 @@ test("Miniflare: getBindings() returns all bindings", async ({
 		)
 	);
 });
-test("Miniflare: getBindings() returns wrapped bindings", async ({
-	expect,
-}) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				wrappedBindings: {
-					Greeter: {
-						scriptName: "greeter-implementation",
-					},
-				},
-				modules: true,
-				script: "",
-			},
-			{
-				modules: true,
-				name: "greeter-implementation",
-				script: `
-					class Greeter {
-						sayHello(name) {
-							return "Hello " + name;
-						}
-					}
-
-					export default function (env) {
-						return new Greeter();
-					}
-				`,
-			},
-		],
-	});
-	useDispose(mf);
-
-	interface Env {
-		Greeter: {
-			sayHello: (str: string) => string;
-		};
-	}
-	const { Greeter } = await mf.getBindings<Env>();
-
-	const helloWorld = Greeter.sayHello("World");
-
-	expect(helloWorld).toBe("Hello World");
-});
-test("Miniflare: getBindings() handles wrapped bindings returning objects containing functions", async ({
-	expect,
-}) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				wrappedBindings: {
-					Greeter: {
-						scriptName: "greeter-obj-implementation",
-					},
-				},
-				modules: true,
-				script: "",
-			},
-			{
-				modules: true,
-				name: "greeter-obj-implementation",
-				script: `
-					export default function (env) {
-						const objWithFunction = {
-							greeting: "Hello",
-							sayHello(name) {
-								return this.greeting + ' ' + name;
-							}
-						};
-						return objWithFunction;
-					}
-				`,
-			},
-		],
-	});
-	useDispose(mf);
-
-	interface Env {
-		Greeter: {
-			greeting: string;
-			sayHello: (str: string) => string;
-		};
-	}
-	const { Greeter } = await mf.getBindings<Env>();
-
-	const helloWorld = Greeter.sayHello("World");
-
-	expect(helloWorld).toBe("Hello World");
-	expect(Greeter.greeting).toBe("Hello");
-});
-test("Miniflare: getBindings() handles wrapped bindings returning objects containing nested functions", async ({
-	expect,
-}) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				wrappedBindings: {
-					Greeter: {
-						scriptName: "greeter-obj-implementation",
-					},
-				},
-				modules: true,
-				script: "",
-			},
-			{
-				modules: true,
-				name: "greeter-obj-implementation",
-				script: `
-					export default function (env) {
-						const objWithFunction = {
-							obj: {
-								obj1: {
-									obj2: {
-										sayHello: (name) => "Hello " + name + " from a nested function"
-									}
-								}
-							}
-						};
-						return objWithFunction;
-					}
-				`,
-			},
-		],
-	});
-	useDispose(mf);
-
-	interface Env {
-		Greeter: {
-			obj: {
-				obj1: {
-					obj2: {
-						sayHello: (str: string) => string;
-					};
-				};
-			};
-		};
-	}
-	const { Greeter } = await mf.getBindings<Env>();
-
-	const helloWorld = Greeter.obj.obj1.obj2.sayHello("World");
-
-	expect(helloWorld).toBe("Hello World from a nested function");
-});
-test("Miniflare: getBindings() handles wrapped bindings returning functions returning functions", async ({
-	expect,
-}) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				wrappedBindings: {
-					GreetFactory: {
-						scriptName: "greet-factory-obj-implementation",
-					},
-				},
-				modules: true,
-				script: "",
-			},
-			{
-				modules: true,
-				name: "greet-factory-obj-implementation",
-				script: `
-					export default function (env) {
-						const factory = {
-							getGreetFunction(name) {
-								return (name) => {
-									return this.greeting + ' ' + name;
-								}
-							},
-							greeting: "Salutations",
-						};
-						return factory;
-					}
-				`,
-			},
-		],
-	});
-	useDispose(mf);
-
-	interface Env {
-		GreetFactory: {
-			greeting: string;
-			getGreetFunction: () => (str: string) => string;
-		};
-	}
-	const { GreetFactory } = await mf.getBindings<Env>();
-
-	const greetFunction = GreetFactory.getGreetFunction();
-
-	expect(greetFunction("Esteemed World")).toBe("Salutations Esteemed World");
-	expect(GreetFactory.greeting).toBe("Salutations");
-});
 test("Miniflare: getWorker() allows dispatching events directly", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					// Pre-`queues_json_messages` (2024-03-18) so structured-clone
+					// message bodies (Uint8Array/Date) round-trip unchanged
+					compatibilityDate: "2000-01-01",
+					manifest: singleModuleManifest(`
 		let lastScheduledController;
 		let lastQueueBatch;
 		export default {
@@ -2521,7 +3031,10 @@ test("Miniflare: getWorker() allows dispatching events directly", async ({
 					if (message.id === "perfect") message.ack();
 				}
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const fetcher = await mf.getWorker();
@@ -2612,28 +3125,57 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	const mf = new Miniflare({
 		workers: [
 			{
-				name: "a",
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 					export class DurableObject {}
 					export default { fetch() { return new Response("a"); } }
-				`,
-				d1Databases: ["DB"],
-				durableObjects: { DO: "DurableObject" },
+				`),
+					env: {
+						DB: { type: "d1", id: "DB" },
+						DO: {
+							type: "durable-object",
+							workerName: "a",
+							exportName: "DurableObject",
+						},
+					},
+					exports: {
+						DurableObject: { type: "durable-object", storage: "legacy-kv" },
+					},
+				},
 			},
 			{
 				// 2nd worker unnamed, to validate that not specifying a name when
 				// getting bindings gives the entrypoint, not the unnamed worker
-				script:
-					'addEventListener("fetch", (event) => event.respondWith(new Response("unnamed")));',
-				kvNamespaces: ["KV"],
-				queueProducers: ["QUEUE"],
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: {
+						KV: { type: "kv", id: "KV" },
+						QUEUE: { type: "queue", name: "QUEUE" },
+					},
+				},
+				legacy: {
+					serviceWorkerScript:
+						'addEventListener("fetch", (event) => event.respondWith(new Response("unnamed")));',
+				},
 			},
 			{
-				name: "b",
-				script:
-					'addEventListener("fetch", (event) => event.respondWith(new Response("b")));',
-				r2Buckets: ["BUCKET"],
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					env: {
+						BUCKET: { type: "r2", name: "BUCKET" },
+					},
+				},
+				legacy: {
+					serviceWorkerScript:
+						'addEventListener("fetch", (event) => event.respondWith(new Response("b")));',
+				},
 			},
 		],
 	});
@@ -2706,28 +3248,121 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	);
 });
 
+test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves durable storage", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "do-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			export class Counter {
+				constructor(state) {
+					this.state = state;
+					this.memoryCount = 0;
+				}
+
+				async fetch() {
+					this.memoryCount += 1;
+					const storageCount = ((await this.state.storage.get("count")) ?? 0) + 1;
+					await this.state.storage.put("count", storageCount);
+					return Response.json({
+						memoryCount: this.memoryCount,
+						storageCount,
+					});
+				}
+			}
+
+			export default {
+				fetch(_request, env) {
+					const id = env.COUNTER.idFromName("user-123");
+					return env.COUNTER.get(id).fetch("http://counter");
+				}
+			};
+		`),
+					env: {
+						COUNTER: {
+							type: "durable-object",
+							workerName: "do-worker",
+							exportName: "Counter",
+						},
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "legacy-kv" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	let response = await mf.dispatchFetch("http://localhost");
+	expect(await response.json()).toEqual({
+		memoryCount: 1,
+		storageCount: 1,
+	});
+
+	await mf.unsafeEvictDurableObject("do-worker", "Counter", {
+		name: "user-123",
+	});
+
+	response = await mf.dispatchFetch("http://localhost");
+	expect(await response.json()).toEqual({
+		memoryCount: 1,
+		storageCount: 2,
+	});
+});
+
 test("Miniflare: allows direct access to workers", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
 			{
-				name: "a",
-				script: `addEventListener("fetch", (e) => e.respondWith(new Response("a")))`,
-				unsafeDirectSockets: [{ port: 0 }],
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (e) => e.respondWith(new Response("a")))`,
+				},
+				dev: {
+					unsafeDirectSockets: [{ port: 0 }],
+				},
 			},
 			{
-				routes: ["*/*"],
-				script: `addEventListener("fetch", (e) => e.respondWith(new Response("b")))`,
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/*" }],
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (e) => e.respondWith(new Response("b")))`,
+				},
 			},
 			{
-				name: "c",
-				script: `addEventListener("fetch", (e) => e.respondWith(new Response("c")))`,
-				unsafeDirectSockets: [{ host: "127.0.0.1" }],
+				config: {
+					type: "worker",
+					name: "c",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: {
+					serviceWorkerScript: `addEventListener("fetch", (e) => e.respondWith(new Response("c")))`,
+				},
+				dev: {
+					unsafeDirectSockets: [{ host: "127.0.0.1" }],
+				},
 			},
 			{
-				name: "d",
-				compatibilityFlags: ["experimental"],
-				modules: true,
-				script: `
+				config: {
+					type: "worker",
+					name: "d",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
 					import { WorkerEntrypoint } from "cloudflare:workers";
 					export class One extends WorkerEntrypoint {
 						fetch() { return new Response("d:1"); }
@@ -2738,8 +3373,11 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 					export const three = {
 						fetch() { return new Response("d:2"); }
 					};
-				`,
-				unsafeDirectSockets: [{ entrypoint: "One" }, { entrypoint: "two" }],
+				`),
+				},
+				dev: {
+					unsafeDirectSockets: [{ entrypoint: "One" }, { entrypoint: "two" }],
+				},
 			},
 		],
 	});
@@ -2779,34 +3417,56 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 });
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 	const mf1 = new Miniflare({
-		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export class TestEntrypoint extends WorkerEntrypoint {
 				ping() { return "pong"; }
 			}
-		`,
+		`),
+				},
+				dev: {
+					unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],
+				},
+			},
+		],
 	});
 	useDispose(mf1);
 
 	const testEntrypointUrl = await mf1.unsafeGetDirectURL("", "TestEntrypoint");
 
 	const mf2 = new Miniflare({
-		serviceBindings: {
-			SERVICE: { external: { address: testEntrypointUrl.host, http: {} } },
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
 			export default {
 				async fetch(request, env, ctx) {
 					const result = await env.SERVICE.ping();
 					return new Response(result);
 				}
 			}
-		`,
+		`),
+					env: {
+						SERVICE: {
+							type: "external",
+							address: testEntrypointUrl.host,
+							http: {},
+						},
+					},
+				},
+			},
+		],
 	});
 	useDispose(mf2);
 
@@ -2832,7 +3492,18 @@ unixSerialTest(
 			else process.env.MINIFLARE_WORKERD_PATH = original;
 		});
 
-		const mf = new Miniflare({ script: "" });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: "" },
+				},
+			],
+		});
 		useDispose(mf);
 
 		const res = await mf.dispatchFetch("http://localhost");
@@ -2860,7 +3531,18 @@ unixSerialTest(
 			}
 		});
 
-		const mf = new Miniflare({ script: "" });
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: "" },
+				},
+			],
+		});
 		onTestFinished(() => mf.dispose().catch(() => {}));
 
 		await expect(mf.ready).rejects.toThrow(MiniflareCoreError);
@@ -2886,7 +3568,18 @@ test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match produ
 	// `process.env.TZ = "UTC"`, which would propagate to workerd via the
 	// inherited `process.env`.
 	vi.stubEnv("TZ", "America/Chicago");
-	const mf = new Miniflare({ modules: true, script: TIMEZONE_WORKER });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(TIMEZONE_WORKER),
+				},
+			},
+		],
+	});
 	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost");
@@ -2906,9 +3599,17 @@ unixSerialTest(
 		vi.stubEnv("TZ", "UTC");
 
 		const mf = new Miniflare({
-			modules: true,
-			script: TIMEZONE_WORKER,
 			unsafeRuntimeEnv: { TZ: "America/Chicago" },
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(TIMEZONE_WORKER),
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -2916,6 +3617,189 @@ unixSerialTest(
 		expect(await res.json()).toEqual({ tz: "America/Chicago" });
 	}
 );
+
+test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			import { abortIsolate } from "cloudflare:workers";
+			abortIsolate("crash!");
+			export default {
+				fetch(request) {
+					return new Response("ok");
+				},
+			}
+		`),
+				},
+			},
+		],
+	});
+	// dispose() on a startup-failed instance propagates the same
+	// ERR_RUNTIME_FAILURE
+	onTestFinished(() => mf.dispose().catch(() => {}));
+
+	await expect(mf.ready).rejects.toMatchObject({
+		code: "ERR_RUNTIME_FAILURE",
+		message: expect.stringContaining("The Workers runtime failed to start."),
+	});
+});
+
+test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
+	const runtimeRestarted = new DeferredPromise<void>();
+	const mf = new Miniflare({
+		unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			import { abortIsolate } from "cloudflare:workers";
+			let counter = 1;
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response(\`ok \${counter++}\`);
+				},
+			}
+		`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const ready = await mf.ready;
+	const worker = await mf.getWorker();
+	const r1 = await mf.dispatchFetch("http://placeholder/");
+	expect(await r1.text()).toBe("ok 1");
+
+	const r2 = await mf.dispatchFetch("http://placeholder/");
+	expect(await r2.text()).toBe("ok 2");
+
+	// Trigger crash
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+
+	await runtimeRestarted;
+	expect(await mf.ready).toEqual(ready);
+	expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
+
+	// Starts over with counter = 1 again
+	const r3 = await fetch(ready);
+	expect(await r3.text()).toBe("ok 1");
+	const restartedWorker = await mf.getWorker();
+	const r4 = await restartedWorker.fetch("http://placeholder/");
+	expect(await r4.text()).toBe("ok 2");
+});
+
+test("Miniflare: warns when workerd is restarted after a crash", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const runtimeRestarted = new DeferredPromise<void>();
+	const mf = new Miniflare({
+		log,
+		unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			import { abortIsolate } from "cloudflare:workers";
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response("ok");
+				},
+			}
+		`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await mf.ready;
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+	await runtimeRestarted;
+
+	// Recovering silently makes a crash look like an unexplained restart, so the
+	// user must always be told, even though Miniflare goes on to recover.
+	expect(log.logsAtLevel(LogLevel.WARN)).toContain(
+		"The Workers runtime crashed unexpectedly and is being restarted (crash #1). " +
+			"Any additional runtime output above may indicate the cause."
+	);
+});
+
+test("Miniflare: logs post-restart callback failures", async ({ expect }) => {
+	const log = new TestLog();
+	const logError = vi.spyOn(log, "error").mockImplementation(() => {});
+	const callbackCalled = new DeferredPromise<void>();
+	const mf = new Miniflare({
+		log,
+		async unsafeHandleRuntimeRestart() {
+			callbackCalled.resolve();
+			throw new Error("callback failed");
+		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			import { abortIsolate } from "cloudflare:workers";
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response("ok");
+				},
+			}
+		`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await mf.ready;
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+	await callbackCalled;
+
+	await vi.waitFor(() => {
+		expect(logError).toHaveBeenCalledWith(
+			expect.objectContaining({
+				message:
+					"The Workers runtime restarted, but the runtime restart callback failed.",
+			})
+		);
+	});
+	const response = await mf.dispatchFetch("http://placeholder/");
+	expect(await response.text()).toBe("ok");
+});
 
 test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
@@ -2928,12 +3812,28 @@ test("Miniflare: exits cleanly", async ({ expect }) => {
 			const { Miniflare, Log, LogLevel } = require(${JSON.stringify(miniflarePath)});
 			const mf = new Miniflare({
 				verbose: true,
-				modules: true,
-				script: \`export default {
+				workers: [
+					{
+						config: {
+							type: "worker",
+							name: "",
+							compatibilityDate: "2025-05-01",
+							manifest: {
+								mainModule: "index.mjs",
+								modules: {
+									"index.mjs": {
+										type: "esm",
+										contents: \`export default {
 					fetch() {
 						return new Response("body");
 					}
-				}\`
+				}\`,
+									},
+								},
+							},
+						},
+					},
+				],
 			});
 			(async () => {
 				const res = await mf.dispatchFetch("http://placeholder/");
@@ -2965,8 +3865,13 @@ test("Miniflare: exits cleanly", async ({ expect }) => {
 
 test("Miniflare: supports unsafe eval bindings", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch(req, env, ctx) {
 				const three = env.UNSAFE_EVAL.eval("2 + 1");
 				const fn = env.UNSAFE_EVAL.newFunction(
@@ -2974,8 +3879,13 @@ test("Miniflare: supports unsafe eval bindings", async ({ expect }) => {
 				);
 				return new Response(fn(three));
 			}
-		}`,
-		unsafeEvalBinding: "UNSAFE_EVAL",
+		}`),
+				},
+				dev: {
+					unsafeEvalBinding: "UNSAFE_EVAL",
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -2984,461 +3894,19 @@ test("Miniflare: supports unsafe eval bindings", async ({ expect }) => {
 	expect(await response.text()).toBe("the computed value is 3");
 });
 
-test("Miniflare: supports wrapped bindings", async ({ expect }) => {
-	const store = new Map<string, string>();
-	const mf = new Miniflare({
-		workers: [
-			{
-				wrappedBindings: {
-					MINI_KV: {
-						scriptName: "mini-kv",
-						bindings: { NAMESPACE: "ns" },
-					},
-				},
-				modules: true,
-				script: `export default {
-					async fetch(request, env, ctx) {
-						await env.MINI_KV.set("key", "value");
-						const value = await env.MINI_KV.get("key");
-						await env.MINI_KV.delete("key");
-						const emptyValue = await env.MINI_KV.get("key");
-						await env.MINI_KV.set("key", "another value");
-						return Response.json({ value, emptyValue });
-					}
-				}`,
-			},
-			{
-				name: "mini-kv",
-				serviceBindings: {
-					async STORE(request) {
-						const { pathname } = new URL(request.url);
-						const key = pathname.substring(1);
-						if (request.method === "GET") {
-							const value = store.get(key);
-							const status = value === undefined ? 404 : 200;
-							return new Response(value ?? null, { status });
-						} else if (request.method === "PUT") {
-							const value = await request.text();
-							store.set(key, value);
-							return new Response(null, { status: 204 });
-						} else if (request.method === "DELETE") {
-							store.delete(key);
-							return new Response(null, { status: 204 });
-						} else {
-							return new Response(null, { status: 405 });
-						}
-					},
-				},
-				modules: true,
-				script: `
-					class MiniKV {
-						constructor(env) {
-							this.STORE = env.STORE;
-							this.baseURL = "http://x/" + (env.NAMESPACE ?? "") + ":";
-						}
-						async get(key) {
-							const res = await this.STORE.fetch(this.baseURL + key);
-							return res.status === 404 ? null : await res.text();
-						}
-						async set(key, body) {
-							await this.STORE.fetch(this.baseURL + key, { method: "PUT", body });
-						}
-						async delete(key) {
-							await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
-						}
-					}
-
-					export default function (env) {
-						return new MiniKV(env);
-					}
-				`,
-			},
-		],
-	});
-	useDispose(mf);
-
-	const res = await mf.dispatchFetch("http://localhost/");
-	expect(await res.json()).toEqual({ value: "value", emptyValue: null });
-	expect(store).toEqual(new Map([["ns:key", "another value"]]));
-});
-test("Miniflare: check overrides default bindings with bindings from wrapped binding designator", async ({
-	expect,
-}) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				wrappedBindings: {
-					WRAPPED: {
-						scriptName: "binding",
-						entrypoint: "wrapped",
-						bindings: { B: "overridden b" },
-					},
-				},
-				modules: true,
-				script: `export default {
-					fetch(request, env, ctx) {
-						return env.WRAPPED();
-					}
-				}`,
-			},
-			{
-				name: "binding",
-				modules: true,
-				bindings: { A: "default a", B: "default b" },
-				script: `export function wrapped(env) {
-					return () => Response.json(env);
-				}`,
-			},
-		],
-	});
-	useDispose(mf);
-
-	const res = await mf.dispatchFetch("http://localhost/");
-	expect(await res.json()).toEqual({ A: "default a", B: "overridden b" });
-});
-test("Miniflare: checks uses compatibility and outbound configuration of binder", async ({
-	expect,
-}) => {
-	const workers: WorkerOptions[] = [
-		{
-			compatibilityDate: "2022-03-21", // Default-on date for `global_navigator`
-			compatibilityFlags: ["nodejs_compat"],
-			wrappedBindings: { WRAPPED: "binding" },
-			modules: true,
-			script: `export default {
-				fetch(request, env, ctx) {
-					return env.WRAPPED();
-				}
-			}`,
-			outboundService(request) {
-				return new Response(`outbound:${request.url}`);
-			},
-		},
-		{
-			name: "binding",
-			modules: [
-				{
-					type: "ESModule",
-					path: "index.mjs",
-					contents: `export default function () {
-						return async () => {
-							const typeofNavigator = typeof navigator;
-							let importedNode = false;
-							try {
-								await import("node:util");
-								importedNode = true;
-							} catch {}
-							const outboundRes = await fetch("http://placeholder/");
-							const outboundText = await outboundRes.text();
-							return Response.json({ typeofNavigator, importedNode, outboundText });
-						}
-					}`,
-				},
-			],
-		},
-	];
-	const mf = new Miniflare({ workers });
-	useDispose(mf);
-
-	let res = await mf.dispatchFetch("http://localhost/");
-	expect(await res.json()).toEqual({
-		typeofNavigator: "object",
-		importedNode: true,
-		outboundText: "outbound:http://placeholder/",
-	});
-
-	const fetchMock = createFetchMock();
-	fetchMock.disableNetConnect();
-	fetchMock
-		.get("http://placeholder")
-		.intercept({ path: "/" })
-		.reply(200, "mocked");
-	workers[0].compatibilityDate = "2022-03-20";
-	workers[0].compatibilityFlags = [];
-	workers[0].outboundService = undefined;
-	workers[0].fetchMock = fetchMock;
-	await mf.setOptions({ workers });
-	res = await mf.dispatchFetch("http://localhost/");
-	expect(await res.json()).toEqual({
-		typeofNavigator: "undefined",
-		importedNode: false,
-		outboundText: "mocked",
-	});
-});
-test("Miniflare: cannot call getWorker() on wrapped binding worker", async ({
-	expect,
-}) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				wrappedBindings: { WRAPPED: "binding" },
-				modules: true,
-				script: `export default {
-					fetch(request, env, ctx) {
-						return env.WRAPPED;
-					}
-				}`,
-			},
-			{
-				name: "binding",
-				modules: true,
-				script: `export default function () {
-					return "🎁";
-				}`,
-			},
-		],
-	});
-	useDispose(mf);
-
-	await expect(mf.getWorker("binding")).rejects.toThrow(
-		new TypeError(
-			'"binding" is being used as a wrapped binding, and cannot be accessed as a worker'
-		)
-	);
-});
-test("Miniflare: prohibits invalid wrapped bindings", async ({ expect }) => {
-	const mf = new Miniflare({ modules: true, script: "" });
-	useDispose(mf);
-
-	// Check prohibits using entrypoint worker
-	await expect(
-		mf.setOptions({
-			name: "a",
-			modules: true,
-			script: "",
-			wrappedBindings: {
-				WRAPPED: { scriptName: "a", entrypoint: "wrapped" },
-			},
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
-				'Ensure "a" isn\'t the first entry in the `workers` array.'
-		)
-	);
-
-	// Check prohibits using service worker
-	await expect(
-		mf.setOptions({
-			workers: [
-				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
-				{ name: "binding", script: "" },
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
-				'Ensure "binding" sets `modules` to `true` or an array of modules'
-		)
-	);
-
-	// Check prohibits multiple modules
-	await expect(
-		mf.setOptions({
-			workers: [
-				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
-				{
-					name: "binding",
-					modules: [
-						{ type: "ESModule", path: "index.mjs", contents: "" },
-						{ type: "ESModule", path: "dep.mjs", contents: "" },
-					],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
-				'Ensure "binding" doesn\'t include unbundled `import`s.'
-		)
-	);
-
-	// Check prohibits non-ES-modules
-	await expect(
-		mf.setOptions({
-			workers: [
-				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
-				{
-					name: "binding",
-					modules: [{ type: "CommonJS", path: "index.cjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it isn\'t a single ES module'
-		)
-	);
-
-	// Check prohibits Durable Object bindings
-	await expect(
-		mf.setOptions({
-			workers: [
-				{
-					modules: true,
-					script: "",
-					wrappedBindings: { WRAPPED: "binding" },
-					durableObjects: {
-						OBJECT: { scriptName: "binding", className: "TestObject" },
-					},
-				},
-				{
-					name: "binding",
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
-				'Ensure other workers don\'t define Durable Object bindings to "binding".'
-		)
-	);
-
-	// Check prohibits service bindings
-	await expect(
-		mf.setOptions({
-			workers: [
-				{
-					modules: true,
-					script: "",
-					wrappedBindings: {
-						WRAPPED: { scriptName: "binding", entrypoint: "wrapped" },
-					},
-					serviceBindings: { SERVICE: "binding" },
-				},
-				{
-					name: "binding",
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
-				'Ensure other workers don\'t define service bindings to "binding".'
-		)
-	);
-
-	// Check prohibits compatibility date and flags
-	await expect(
-		mf.setOptions({
-			workers: [
-				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
-				{
-					name: "binding",
-					compatibilityDate: "2023-11-01",
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
-				"Wrapped bindings use the compatibility date of the worker with the binding."
-		)
-	);
-	await expect(
-		mf.setOptions({
-			workers: [
-				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
-				{
-					name: "binding",
-					compatibilityFlags: ["nodejs_compat"],
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
-				"Wrapped bindings use the compatibility flags of the worker with the binding."
-		)
-	);
-
-	// Check prohibits outbound service
-	await expect(
-		mf.setOptions({
-			workers: [
-				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
-				{
-					name: "binding",
-					outboundService() {
-						assert.fail();
-					},
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_INVALID_WRAPPED",
-			'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
-				"Wrapped bindings use the outbound service of the worker with the binding."
-		)
-	);
-
-	// Check prohibits cyclic wrapped bindings
-	await expect(
-		mf.setOptions({
-			workers: [
-				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
-				{
-					name: "binding",
-					wrappedBindings: { WRAPPED: "binding" }, // Simple cycle
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_CYCLIC",
-			"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
-		)
-	);
-	await expect(
-		mf.setOptions({
-			workers: [
-				{
-					modules: true,
-					script: "",
-					wrappedBindings: { WRAPPED1: "binding-1" },
-				},
-				{
-					name: "binding-1",
-					wrappedBindings: { WRAPPED2: "binding-2" },
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-				{
-					name: "binding-2",
-					wrappedBindings: { WRAPPED3: "binding-3" },
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-				{
-					name: "binding-3",
-					wrappedBindings: { WRAPPED1: "binding-1" }, // Multi-step cycle
-					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-				},
-			],
-		})
-	).rejects.toThrow(
-		new MiniflareCoreError(
-			"ERR_CYCLIC",
-			"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
-		)
-	);
-});
-
 test("Miniflare: getCf() returns a standard cf object", async ({ expect }) => {
-	const mf = new Miniflare({ script: "", modules: true });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
+	});
 	useDispose(mf);
 
 	const cf = await mf.getCf();
@@ -3453,11 +3921,19 @@ test("Miniflare: getCf() returns a user provided cf object", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		script: "",
-		modules: true,
 		cf: {
 			myFakeField: "test",
 		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -3467,12 +3943,21 @@ test("Miniflare: getCf() returns a user provided cf object", async ({
 
 test("Miniflare: dispatchFetch() can override cf", async ({ expect }) => {
 	const mf = new Miniflare({
-		script:
-			"export default { fetch(request) { return Response.json(request.cf) } }",
-		modules: true,
 		cf: {
 			myFakeField: "test",
 		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return Response.json(request.cf) } }"
+					),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -3485,12 +3970,21 @@ test("Miniflare: dispatchFetch() can override cf", async ({ expect }) => {
 
 test("Miniflare: CF-Connecting-IP is injected", async ({ expect }) => {
 	const mf = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
-		modules: true,
 		cf: {
 			myFakeField: "test",
 		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }"
+					),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -3505,13 +3999,22 @@ test("Miniflare: CF-Connecting-IP is injected", async ({ expect }) => {
 
 test("Miniflare: CF-Connecting-IP is injected (ipv6)", async ({ expect }) => {
 	const mf = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
-		modules: true,
 		cf: {
 			myFakeField: "test",
 		},
 		host: "::1",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }"
+					),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -3529,12 +4032,21 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
-		modules: true,
 		cf: {
 			myFakeField: "test",
 		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }"
+					),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -3552,15 +4064,34 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async ({
 // so its response will contain the header added by Miniflare. If the stripping is turned off then the response from the "server" service will contain the fake header.
 test("Miniflare: strips CF-Connecting-IP", async ({ expect }) => {
 	const server = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }"
+					),
+				},
+			},
+		],
 	});
 	const serverUrl = await server.ready;
 
 	const client = new Miniflare({
-		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`
+					),
+				},
+			},
+		],
 	});
 	useDispose(client);
 	useDispose(server);
@@ -3574,16 +4105,37 @@ test("Miniflare: does not strip CF-Connecting-IP when configured", async ({
 	expect,
 }) => {
 	const server = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }"
+					),
+				},
+			},
+		],
 	});
 	const serverUrl = await server.ready;
 
 	const client = new Miniflare({
-		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
-		modules: true,
-		stripCfConnectingIp: false,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`
+					),
+				},
+				dev: {
+					stripCfConnectingIp: false,
+				},
+			},
+		],
 	});
 	useDispose(client);
 	useDispose(server);
@@ -3598,17 +4150,37 @@ test("Miniflare: adds CF-Worker header to outbound requests with zone option", a
 	expect,
 }) => {
 	const server = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }"
+					),
+				},
+			},
+		],
 	});
 	const serverUrl = await server.ready;
 
 	const client = new Miniflare({
-		name: "my-worker",
-		zone: "my-zone.example.com",
-		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "my-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch(request) { return fetch('${serverUrl.href}') } }`
+					),
+				},
+				dev: {
+					zone: "my-zone.example.com",
+				},
+			},
+		],
 	});
 	useDispose(client);
 	useDispose(server);
@@ -3622,17 +4194,35 @@ test("Miniflare: CF-Worker header defaults to worker-name.example.com when zone 
 	expect,
 }) => {
 	const server = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }"
+					),
+				},
+			},
+		],
 	});
 	const serverUrl = await server.ready;
 
 	const client = new Miniflare({
-		name: "my-worker",
 		// No zone set, should default to `${worker-name}.example.com`
-		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "my-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch(request) { return fetch('${serverUrl.href}') } }`
+					),
+				},
+			},
+		],
 	});
 	useDispose(client);
 	useDispose(server);
@@ -3646,16 +4236,38 @@ test("Miniflare: CF-Worker header defaults to worker.example.com when neither zo
 	expect,
 }) => {
 	const server = new Miniflare({
-		script:
-			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
-		modules: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }"
+					),
+				},
+			},
+		],
 	});
 	const serverUrl = await server.ready;
 
 	const client = new Miniflare({
-		// No name or zone set, should default to "worker.example.com"
-		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
-		modules: true,
+		// No zone set, and no name. In the old flat format `name` could be
+		// undefined; the new schema requires it, so "unnamed" is represented as
+		// `name: ""`. `getGlobalOutbound` uses `config.name || "worker"` (falsy
+		// check) so an empty name still defaults to "worker.example.com".
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch(request) { return fetch('${serverUrl.href}') } }`
+					),
+				},
+			},
+		],
 	});
 	useDispose(client);
 	useDispose(server);
@@ -3700,15 +4312,23 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 		},
 		workers: [
 			{
-				name: "a",
-				routes: ["*/a"],
-				compatibilityFlags: ["export_commonjs_default"],
-				modulesRoot,
-				modules: [
-					{
-						type: "ESModule",
-						path: "/virtual/index.mjs",
-						contents: `
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					// `export_commonjs_default` became the default on 2022-10-31, so
+					// it's already active at this compat date and must not be set
+					// explicitly (workerd rejects already-default flags).
+					triggers: [{ type: "fetch", pattern: "*/a" }],
+					// Module name (record key) mirrors the old workerd name, which was
+					// `path` relative to `modulesRoot` ("/"), i.e. "virtual/index.mjs".
+					manifest: {
+						mainModule: "virtual/index.mjs",
+						modulesRoot: "/",
+						modules: {
+							"virtual/index.mjs": {
+								type: "esm",
+								contents: `
 							import a from "./a.mjs";
 							export default {
 								async fetch() {
@@ -3716,20 +4336,27 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 								}
 							}
 						`,
+							},
+						},
 					},
-				],
-				unsafeUseModuleFallbackService: true,
+				},
+				dev: {
+					useModuleFallbackService: true,
+				},
 			},
 			{
-				name: "b",
-				routes: ["*/b"],
-				compatibilityFlags: ["export_commonjs_default"],
-				modulesRoot,
-				modules: [
-					{
-						type: "ESModule",
-						path: "/virtual/index.mjs",
-						contents: `
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/b" }],
+					manifest: {
+						mainModule: "virtual/index.mjs",
+						modulesRoot: "/",
+						modules: {
+							"virtual/index.mjs": {
+								type: "esm",
+								contents: `
 							export default {
 								async fetch() {
 									try {
@@ -3741,8 +4368,10 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 								}
 							}
 						`,
+							},
+						},
 					},
-				],
+				},
 			},
 		],
 	});
@@ -3811,15 +4440,23 @@ test("Miniflare: can use module fallback service with V2 protocol", async ({
 		},
 		workers: [
 			{
-				name: "a",
-				routes: ["*/a"],
-				compatibilityFlags: ["export_commonjs_default", "new_module_registry"],
-				modulesRoot: "/",
-				modules: [
-					{
-						type: "ESModule",
-						path: "/virtual/index.mjs",
-						contents: `
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					// `export_commonjs_default` (default since 2022-10-31) dropped;
+					// `new_module_registry` is experimental so must stay.
+					compatibilityFlags: ["new_module_registry"],
+					triggers: [{ type: "fetch", pattern: "*/a" }],
+					// Module name (record key) mirrors the old workerd name, which was
+					// `path` relative to `modulesRoot` ("/"), i.e. "virtual/index.mjs".
+					manifest: {
+						mainModule: "virtual/index.mjs",
+						modulesRoot: "/bundle",
+						modules: {
+							"virtual/index.mjs": {
+								type: "esm",
+								contents: `
 							import a from "./a.mjs";
 							export default {
 								async fetch() {
@@ -3827,9 +4464,13 @@ test("Miniflare: can use module fallback service with V2 protocol", async ({
 								}
 							}
 						`,
+							},
+						},
 					},
-				],
-				unsafeUseModuleFallbackService: true,
+				},
+				dev: {
+					useModuleFallbackService: true,
+				},
 			},
 		],
 	});
@@ -3853,50 +4494,65 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 	await fs.writeFile(path.join(bPath, "2.txt"), "two text");
 	await fs.writeFile(path.join(tmp, "3.txt"), "three text");
 	const mf = new Miniflare({
-		rootPath: tmp,
-		kvPersist: "kv",
+		resourcePersistencePath: tmp,
 		workers: [
 			{
-				name: "a",
-				rootPath: "a",
-				routes: ["*/a"],
-				textBlobBindings: { TEXT: "1.txt" },
-				dataBlobBindings: { DATA: "1.bin" },
-				wasmBindings: { ADD: "add.wasm" },
-				// WASM bindings aren't supported by modules workers
-				script: `addEventListener("fetch", (event) => {
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/a" }],
+				},
+				dev: { rootPath: aPath },
+				legacy: {
+					textBlobBindings: { TEXT: "1.txt" },
+					dataBlobBindings: { DATA: "1.bin" },
+					wasmBindings: { ADD: "add.wasm" },
+					// WASM bindings aren't supported by modules workers
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 						event.respondWith(Response.json({
 							text: TEXT,
 							data: new TextDecoder().decode(DATA),
 							result: new WebAssembly.Instance(ADD).exports.add(1, 2)
 						}));
 					});`,
+				},
 			},
 			{
-				name: "b",
-				rootPath: "b",
-				routes: ["*/b"],
-				textBlobBindings: { TEXT: "2.txt" },
-				sitePath: ".",
-				script: `addEventListener("fetch", (event) => {
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/b" }],
+				},
+				dev: { rootPath: bPath },
+				legacy: {
+					textBlobBindings: { TEXT: "2.txt" },
+					sitePath: ".",
+					serviceWorkerScript: `addEventListener("fetch", (event) => {
 						event.respondWith(Response.json({
 							text: TEXT,
 							manifest: Object.keys(__STATIC_CONTENT_MANIFEST)
 						}));
 					});`,
+				},
 			},
 			{
-				name: "c",
-				routes: ["*/c"],
-				textBlobBindings: { TEXT: "3.txt" },
-				kvNamespaces: { NAMESPACE: "namespace" },
-				modules: true,
-				script: `export default {
+				config: {
+					type: "worker",
+					name: "c",
+					compatibilityDate: "2025-05-01",
+					triggers: [{ type: "fetch", pattern: "*/c" }],
+					manifest: singleModuleManifest(`export default {
 						async fetch(request, env, ctx) {
-						 	await env.NAMESPACE.put("key", "value");
+							await env.NAMESPACE.put("key", "value");
 							return Response.json({ text: env.TEXT });
 						}
-					}`,
+					}`),
+					env: { NAMESPACE: { type: "kv", id: "namespace" } },
+				},
+				dev: { rootPath: tmp },
+				legacy: { textBlobBindings: { TEXT: "3.txt" } },
 			},
 		],
 	});
@@ -3919,17 +4575,25 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 	});
 	expect(existsSync(path.join(tmp, "kv", "namespace"))).toBe(true);
 
-	// Check persistence URLs not resolved relative to root path
+	// Check persisted KV data survives an options reload
 	await mf.setOptions({
-		rootPath: tmp,
-		kvPersist: url.pathToFileURL(path.join(tmp, "kv")).href,
-		kvNamespaces: { NAMESPACE: "namespace" },
-		modules: true,
-		script: `export default {
-				async fetch(request, env, ctx) {
-					return new Response(await env.NAMESPACE.get("key"));
-				}
-			}`,
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+						async fetch(request, env, ctx) {
+							return new Response(await env.NAMESPACE.get("key"));
+						}
+					}`),
+					env: { NAMESPACE: { type: "kv", id: "namespace" } },
+				},
+				dev: { rootPath: tmp },
+			},
+		],
 	});
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("value");
@@ -3938,10 +4602,21 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 	// root path)
 	useCwd(tmp);
 	await mf.setOptions({
-		rootPath: "a",
-		textBlobBindings: { TEXT: "1.txt" },
-		script:
-			'addEventListener("fetch", (event) => event.respondWith(new Response(TEXT)));',
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				dev: { rootPath: path.join(tmp, "a") },
+				legacy: {
+					textBlobBindings: { TEXT: "1.txt" },
+					serviceWorkerScript:
+						'addEventListener("fetch", (event) => event.respondWith(new Response(TEXT)));',
+				},
+			},
+		],
 	});
 	res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("one text");
@@ -3949,8 +4624,13 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 
 test("Miniflare: custom Node service binding", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 		export default {
 			fetch(request, env) {
 				return env.CUSTOM.fetch(request, {
@@ -3959,16 +4639,20 @@ test("Miniflare: custom Node service binding", async ({ expect }) => {
 					}
 				});
 			}
-		}`,
-		serviceBindings: {
-			CUSTOM: {
-				node: (req, res) => {
-					res.end(
-						`Response from custom Node service binding. The value of "custom-header" is "${req.headers["custom-header"]}".`
-					);
+		}`),
+					env: {
+						CUSTOM: {
+							type: "node-handler",
+							handler: (req, res) => {
+								res.end(
+									`Response from custom Node service binding. The value of "custom-header" is "${req.headers["custom-header"]}".`
+								);
+							},
+						},
+					},
 				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 
@@ -3981,8 +4665,13 @@ test("Miniflare: custom Node service binding", async ({ expect }) => {
 
 test("Miniflare: custom Node outbound service", async ({ expect }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
 		export default {
 			fetch(request, env) {
 				return fetch(request, {
@@ -3991,14 +4680,20 @@ test("Miniflare: custom Node outbound service", async ({ expect }) => {
 					}
 				});
 			}
-		}`,
-		outboundService: {
-			node: (req, res) => {
-				res.end(
-					`Response from custom Node outbound service. The value of "custom-header" is "foo".`
-				);
+		}`),
+				},
+				dev: {
+					outboundService: {
+						type: "node-handler",
+						handler: (req, res) => {
+							res.end(
+								`Response from custom Node outbound service. The value of "custom-header" is "foo".`
+							);
+						},
+					},
+				},
 			},
-		},
+		],
 	});
 	useDispose(mf);
 
@@ -4021,12 +4716,20 @@ test("Miniflare: setOptions: can restart workerd multiple times in succession", 
 	// that the restart mechanism works correctly after the fix.
 	const mf = new Miniflare({
 		port: 0,
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch() {
 				return new Response("version 1");
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 
@@ -4039,12 +4742,20 @@ test("Miniflare: setOptions: can restart workerd multiple times in succession", 
 	for (let i = 2; i <= 5; i++) {
 		await mf.setOptions({
 			port: 0,
-			modules: true,
-			script: `export default {
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`export default {
 				fetch() {
 					return new Response("version ${i}");
 				}
-			}`,
+			}`),
+					},
+				},
+			],
 		});
 		res = await mf.dispatchFetch("http://localhost");
 		expect(await res.text()).toBe(`version ${i}`);
@@ -4077,12 +4788,20 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	// ensure the config file is not created without the flag
 	delete process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 	let mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch() {
 				return new Response("Hello World");
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	// Trigger workerd config serialization by dispatching a request
 	let response = await mf.dispatchFetch("http://localhost");
@@ -4095,12 +4814,20 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	// ensure the config file is created with the flag
 	process.env.MINIFLARE_WORKERD_CONFIG_DEBUG = configFilePath;
 	mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			fetch() {
 				return new Response("Hello World");
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	response = await mf.dispatchFetch("http://localhost");
 	await response.text();
@@ -4114,8 +4841,13 @@ test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
 			async fetch(request) {
 				const url = new URL(request.url);
 				const status = parseInt(url.searchParams.get("status") ?? "200");
@@ -4124,7 +4856,10 @@ test("Miniflare: dispatchFetch handles POST/PUT with non-2xx status", async ({
 					{ status }
 				);
 			}
-		}`,
+		}`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 

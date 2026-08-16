@@ -5,8 +5,8 @@ import path, { dirname, join, normalize, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import {
 	configFileName,
+	DEFAULT_COMPAT_DATE,
 	FatalError,
-	getTodaysCompatDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -1003,7 +1003,6 @@ export const pagesDevCommand = createCommand({
 					jsxFragment: undefined,
 					tsconfig: undefined,
 					minify: undefined,
-					legacyEnv: undefined,
 					tunnelName: undefined,
 					env: undefined,
 					envFile: undefined,
@@ -1232,14 +1231,13 @@ function resolvePagesDevServerSettings(
 	// resolve compatibility date
 	let compatibilityDate = args.compatibilityDate || config.compatibility_date;
 	if (!compatibilityDate) {
-		const currentDate = getTodaysCompatDate();
 		logger.warn(
-			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
-				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${currentDate}", or\n` +
-				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${currentDate}\n\n` +
+			`No compatibility_date was specified. Using the default compatibility date: ${DEFAULT_COMPAT_DATE}.\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${DEFAULT_COMPAT_DATE}", or\n` +
+				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${DEFAULT_COMPAT_DATE}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
-		compatibilityDate = currentDate;
+		compatibilityDate = DEFAULT_COMPAT_DATE;
 	}
 
 	return {
@@ -1401,6 +1399,7 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 			})
 			.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
 
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- intentionally checking deprecated `environment` field to warn users
 		if (services.find(({ environment }) => !!environment)) {
 			// We haven't yet properly defined how environments of service bindings should
 			// work, so if the user is using an environment for any of their service

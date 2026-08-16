@@ -1,5 +1,4 @@
 export * from "./shared/types";
-export * from "./config";
 export { initDeployHelpersContext } from "./shared/context";
 export { default as deploy } from "./deploy/deploy";
 export type { DeployCallbacks } from "./deploy/deploy";
@@ -12,7 +11,6 @@ export * from "./triggers/publish-routes";
 export * from "./triggers/queue-consumers";
 export * from "./deploy/helpers/placement";
 export * from "./deploy/helpers/worker-not-found-error";
-export * from "./deploy/helpers/use-service-environments";
 export * from "./deploy/helpers/error-codes";
 export * from "./deploy/helpers/secrets-validation";
 export * from "./deploy/helpers/diff-json";
@@ -24,7 +22,11 @@ export * from "./deploy/helpers/create-worker-upload-form";
 export * from "./deploy/helpers/workers-sites-bindings";
 export * from "./deploy/helpers/deploy-wfp";
 export * from "./deploy/helpers/deploy-confirm";
-export * from "./deploy/helpers/preview-alias";
+export {
+	sanitizeBranchName,
+	createTruncatedAlias,
+	generatePreviewAlias,
+} from "./deploy/helpers/preview-alias";
 export * from "./deploy/helpers/sourcemap";
 export * from "./deploy/helpers/bundle-reporter";
 export * from "./deploy/helpers/node-compat";
@@ -47,4 +49,12 @@ export * from "./deploy/helpers/print-bindings";
 export * from "./deploy/helpers/assets";
 export * from "./deploy/helpers/hash";
 export * from "./deploy/helpers/jwt";
+export * from "./deploy/helpers/package-dependencies";
 export * from "./deploy/helpers/provision-bindings";
+export * from "./preview/api";
+export * from "./preview/shared";
+export * from "./preview/preview";
+export * from "./preview/format";
+export * from "./preview/merge-deep";
+export * from "./preview/settings";
+export * from "./preview/box";

@@ -1,12 +1,11 @@
 import fs from "node:fs/promises";
 import BINDING_SCRIPT from "worker:hello-world/binding";
 import OBJECT_SCRIPT from "worker:hello-world/object";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import {
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
-	PersistenceSchema,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
@@ -15,74 +14,39 @@ import type { Plugin } from "../shared";
 
 export const HELLO_WORLD_PLUGIN_NAME = "hello-world";
 
-export const HelloWorldOptionsSchema = z.object({
-	helloWorld: z
-		.record(
-			z.object({
-				enable_timer: z.boolean().optional(),
-			})
-		)
-		.optional(),
-});
-
-export const HelloWorldSharedOptionsSchema = z.object({
-	helloWorldPersist: PersistenceSchema,
-});
-
-export const HELLO_WORLD_PLUGIN: Plugin<
-	typeof HelloWorldOptionsSchema,
-	typeof HelloWorldSharedOptionsSchema
-> = {
-	options: HelloWorldOptionsSchema,
-	sharedOptions: HelloWorldSharedOptionsSchema,
+export const HELLO_WORLD_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hello World",
 	async getBindings(options) {
-		if (!options.helloWorld) {
-			return [];
-		}
-
-		const bindings = Object.entries(options.helloWorld).map<Worker_Binding>(
-			([name, config]) => {
-				return {
-					name,
-					service: {
-						name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(config.enable_timer ?? false)}`,
-						entrypoint: "HelloWorldBinding",
-					},
-				};
-			}
-		);
-		return bindings;
+		return getEnvBindingsOfType(
+			options.config,
+			"hello-world"
+		).map<Worker_Binding>(([name, binding]) => ({
+			name,
+			service: {
+				name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(binding.enable_timer ?? false)}`,
+				entrypoint: "HelloWorldBinding",
+			},
+		}));
 	},
-	getNodeBindings(options: z.infer<typeof HelloWorldOptionsSchema>) {
-		if (!options.helloWorld) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.helloWorld).map((name) => [
+			getEnvBindingsOfType(options.config, "hello-world").map(([name]) => [
 				name,
 				new ProxyNodeBinding(),
 			])
 		);
 	},
-	async getServices({
-		options,
-		sharedOptions,
-		tmpPath,
-		defaultPersistRoot,
-		unsafeStickyBlobs,
-	}) {
-		const configs = options.helloWorld ? Object.values(options.helloWorld) : [];
+	async getServices({ options, tmpPath, sharedOptions }) {
+		const bindings = getEnvBindingsOfType(options.config, "hello-world");
 
-		if (configs.length === 0) {
+		if (bindings.length === 0) {
 			return [];
 		}
 
 		const persistPath = getPersistPath(
 			HELLO_WORLD_PLUGIN_NAME,
 			tmpPath,
-			defaultPersistRoot,
-			sharedOptions.helloWorldPersist
+			sharedOptions.resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -119,12 +83,12 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getMiniflareObjectBindings(unsafeStickyBlobs),
+					...getMiniflareObjectBindings(),
 				],
 			},
 		} satisfies Service;
-		const services = configs.map<Service>((config) => ({
-			name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(config.enable_timer ?? false)}`,
+		const services = bindings.map<Service>(([, binding]) => ({
+			name: `${HELLO_WORLD_PLUGIN_NAME}:${JSON.stringify(binding.enable_timer ?? false)}`,
 			worker: {
 				compatibilityDate: "2025-01-01",
 				modules: [
@@ -136,7 +100,7 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 				bindings: [
 					{
 						name: "config",
-						json: JSON.stringify(config),
+						json: JSON.stringify({ enable_timer: binding.enable_timer }),
 					},
 					{
 						name: "store",
@@ -150,13 +114,5 @@ export const HELLO_WORLD_PLUGIN: Plugin<
 		}));
 
 		return [...services, storageService, objectService];
-	},
-	getPersistPath(sharedOptions, tmpPath) {
-		return getPersistPath(
-			HELLO_WORLD_PLUGIN_NAME,
-			tmpPath,
-			undefined,
-			sharedOptions.helloWorldPersist
-		);
 	},
 };

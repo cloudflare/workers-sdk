@@ -311,17 +311,23 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
+import { previewBaseConfigNamespace } from "./preview/base-config";
+import { previewBaseConfigSecretNamespace } from "./preview/base-config/secrets";
+import { previewBaseConfigSecretBulkCommand } from "./preview/base-config/secrets/bulk";
+import { previewBaseConfigSecretDeleteCommand } from "./preview/base-config/secrets/delete";
+import { previewBaseConfigSecretListCommand } from "./preview/base-config/secrets/list";
+import { previewBaseConfigSecretPutCommand } from "./preview/base-config/secrets/put";
+import { previewDeleteCommand } from "./preview/delete";
+import { previewCommand } from "./preview/preview";
+import { previewSecretNamespace } from "./preview/secrets";
+import { previewSecretBulkCommand } from "./preview/secrets/bulk";
+import { previewSecretDeleteCommand } from "./preview/secrets/delete";
+import { previewSecretListCommand } from "./preview/secrets/list";
+import { previewSecretPutCommand } from "./preview/secrets/put";
 import {
-	previewCommand,
-	previewDeleteCommand,
-	previewSecretBulkCommand,
-	previewSecretDeleteCommand,
-	previewSecretListCommand,
-	previewSecretNamespace,
-	previewSecretPutCommand,
 	previewSettingsCommand,
 	previewSettingsUpdateCommand,
-} from "./preview";
+} from "./preview/settings";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -467,6 +473,15 @@ import { tunnelInfoCommand } from "./tunnel/info";
 import { tunnelListCommand } from "./tunnel/list";
 import { tunnelQuickStartCommand } from "./tunnel/quick-start";
 import { tunnelRunCommand } from "./tunnel/run";
+import { turnstileWidgetCreateCommand } from "./turnstile/create";
+import { turnstileWidgetDeleteCommand } from "./turnstile/delete";
+import { turnstileWidgetGetCommand } from "./turnstile/get";
+import {
+	turnstileNamespace,
+	turnstileWidgetNamespace,
+} from "./turnstile/index";
+import { turnstileWidgetListCommand } from "./turnstile/list";
+import { turnstileWidgetUpdateCommand } from "./turnstile/update";
 import { typesCommand } from "./type-generation";
 import {
 	authKeyringCommand,
@@ -484,6 +499,7 @@ import {
 	authListCommand,
 } from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
+import { logDidYouMean } from "./utils/did-you-mean";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -920,6 +936,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler preview secret bulk",
 			definition: previewSecretBulkCommand,
+		},
+		{
+			command: "wrangler preview base-config",
+			definition: previewBaseConfigNamespace,
+		},
+		{
+			command: "wrangler preview base-config secret",
+			definition: previewBaseConfigSecretNamespace,
+		},
+		{
+			command: "wrangler preview base-config secret put",
+			definition: previewBaseConfigSecretPutCommand,
+		},
+		{
+			command: "wrangler preview base-config secret delete",
+			definition: previewBaseConfigSecretDeleteCommand,
+		},
+		{
+			command: "wrangler preview base-config secret list",
+			definition: previewBaseConfigSecretListCommand,
+		},
+		{
+			command: "wrangler preview base-config secret bulk",
+			definition: previewBaseConfigSecretBulkCommand,
 		},
 	]);
 	registry.registerNamespace("preview");
@@ -1675,6 +1715,36 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("flagship");
+
+	// turnstile
+	registry.define([
+		{ command: "wrangler turnstile", definition: turnstileNamespace },
+		{
+			command: "wrangler turnstile widget",
+			definition: turnstileWidgetNamespace,
+		},
+		{
+			command: "wrangler turnstile widget create",
+			definition: turnstileWidgetCreateCommand,
+		},
+		{
+			command: "wrangler turnstile widget delete",
+			definition: turnstileWidgetDeleteCommand,
+		},
+		{
+			command: "wrangler turnstile widget get",
+			definition: turnstileWidgetGetCommand,
+		},
+		{
+			command: "wrangler turnstile widget list",
+			definition: turnstileWidgetListCommand,
+		},
+		{
+			command: "wrangler turnstile widget update",
+			definition: turnstileWidgetUpdateCommand,
+		},
+	]);
+	registry.registerNamespace("turnstile");
 
 	// tunnel
 	registry.define([
@@ -2590,13 +2660,16 @@ export async function main(argv: string[]): Promise<void> {
 		return;
 	}
 
-	// Check for unknown command with a `--help` flag
+	// Check for unknown command with a `--help` flag.
+	// This throw happens before the try-catch that calls handleError(), so
+	// we log the error and suggestion here (handleError is never reached).
 	const [subCommand] = nonFlagArgs;
 	if (hasHelpFlag && subCommand) {
 		const knownCommands = registry.topLevelCommands;
 		if (!knownCommands.has(subCommand)) {
 			logger.info("");
 			logger.error(`Unknown argument: ${subCommand}`);
+			logDidYouMean(subCommand, knownCommands, "wrangler");
 			await showHelpWithCategories();
 			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`, {
 				telemetryMessage: "cli help unknown argument",
@@ -2653,7 +2726,11 @@ export async function main(argv: string[]): Promise<void> {
 				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
 			try {
-				await handleError(e, configArgs, argv);
+				await handleError(e, configArgs, argv, (path) =>
+					path.length === 0
+						? registry.topLevelCommands
+						: registry.getSubcommands(path)
+				);
 			} catch (handleErrorErr) {
 				// handleError itself threw before it could log the error.
 				// Fall back to raw stderr so the user always sees something.

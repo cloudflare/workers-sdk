@@ -1,5 +1,3 @@
-import "../../fetch-mock";
-
 // Hide internals in separate `cloudflare:test-internal` module, so they're not
 // exposed to users using e.g. `import * as test from "cloudflare:test"`
 export * from "../../d1";

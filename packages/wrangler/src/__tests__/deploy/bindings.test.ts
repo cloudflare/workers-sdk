@@ -81,7 +81,17 @@ describe("deploy", () => {
 		msw.use(
 			http.get("*/accounts/:accountId/r2/buckets/:bucketName", async () => {
 				return HttpResponse.json(createFetchResult({}));
-			})
+			}),
+			http.get("*/accounts/:accountId/workers/dispatch/namespaces", () =>
+				HttpResponse.json(
+					createFetchResult(
+						["Foo", "Bar"].map((namespace_name) => ({
+							namespace_id: `${namespace_name}-id`,
+							namespace_name,
+						}))
+					)
+				)
+			)
 		);
 		// Pretend all Agent Memory namespaces exist for the same reason.
 		msw.use(
@@ -310,8 +320,8 @@ describe("deploy", () => {
 				],
 				useOldUploadApi: true,
 			});
-			mockSubDomainRequest();
-			mockLegacyScriptData({ scripts: [] });
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockLegacyScriptData({});
 
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1436,7 +1446,7 @@ describe("deploy", () => {
 				);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedBindings: [
@@ -1490,7 +1500,7 @@ describe("deploy", () => {
 				);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedBindings: [
@@ -1591,7 +1601,7 @@ describe("deploy", () => {
 				);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedType: "esm",
@@ -1649,7 +1659,7 @@ describe("deploy", () => {
 				fs.writeFileSync("index.js", scriptContent);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedType: "esm",
@@ -1710,7 +1720,7 @@ describe("deploy", () => {
 				fs.writeFileSync("index.js", scriptContent);
 				mockSubDomainRequest();
 				mockLegacyScriptData({
-					scripts: [{ id: "test-name", migration_tag: "v1" }],
+					script: { id: "test-name", migration_tag: "v1" },
 				});
 				mockUploadWorkerRequest({
 					expectedType: "esm",

@@ -7,7 +7,7 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import { useRef } from "react";
+import { useRef, type JSX } from "react";
 import { formatDate, formatSize } from "../utils/format";
 import type { R2Object } from "../api";
 

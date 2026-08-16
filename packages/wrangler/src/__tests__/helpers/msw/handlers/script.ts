@@ -34,23 +34,9 @@ function getScript(scriptName: string | readonly string[] | undefined): string {
 }
 export default [
 	http.get(
-		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/content",
-		({ params }) => {
-			return HttpResponse.text(getScript(params.scriptName));
-		}
-	),
-	http.get(
 		"*/accounts/:accountId/workers/scripts/:scriptName",
 		({ params }) => {
 			return HttpResponse.text(getScript(params.scriptName));
-		}
-	),
-	http.get(
-		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/bindings",
-		({ params }) => {
-			return HttpResponse.json(
-				createFetchResult(getBindings(params.scriptName))
-			);
 		}
 	),
 	http.get(

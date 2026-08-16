@@ -7,9 +7,8 @@ import { fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../core/handle-errors";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
-import { fetchAllAccounts } from "./fetch-accounts";
 import { fetchMembershipRoles } from "./membership";
-import { getCredentialStore } from "./user";
+import { fetchAllAccounts, getCredentialStore } from "./user";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { Scope } from ".";
 import type {

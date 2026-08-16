@@ -1,12 +1,14 @@
 import path from "node:path";
+import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	formatZodError,
-	getRootPath,
+	getCloudflareComplianceRegion,
+} from "@cloudflare/workers-utils";
+import {
 	Log,
 	LogLevel,
 	mergeWorkerOptions,
-	parseWithRootPath,
-	PLUGINS,
+	V4WorkerOptionsSchema,
 } from "miniflare";
 import { z } from "zod";
 import {
@@ -14,16 +16,17 @@ import {
 	getRelativeProjectConfigPath,
 	getRelativeProjectPath,
 } from "./helpers";
-import type { ModuleRule, WorkerOptions } from "miniflare";
+import type {
+	RemoteBindingsLogger,
+	RemoteProxySessionData,
+} from "@cloudflare/remote-bindings";
+import type { LegacyWorkerOptions, V4ModuleRule } from "miniflare";
 import type { TestProject } from "vitest/node";
-import type { Binding, RemoteProxySession } from "wrangler";
-import type { ParseParams, ZodError } from "zod";
+import type { ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
 }
-
-const PLUGIN_VALUES = Object.values(PLUGINS);
 
 const WorkersPoolOptionsSchema = z.object({
 	/**
@@ -35,12 +38,16 @@ const WorkersPoolOptionsSchema = z.object({
 	 * `module` instance as is used internally for the `SELF` and Durable Object
 	 * bindings.
 	 */
-	main: z.ostring(),
+	main: z.string().optional(),
 	/**
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
 	 */
 	remoteBindings: z.boolean().default(true),
+	/**
+	 * Enables verbose workerd logging. Defaults to `true`.
+	 */
+	verbose: z.boolean().optional(),
 	/**
 	 * Additional exports.
 	 * A map of module exports to be made available on the `ctx.exports`
@@ -60,36 +67,65 @@ const WorkersPoolOptionsSchema = z.object({
 		)
 		.default({}),
 	miniflare: z
-		.object({
-			workers: z.array(z.object({}).passthrough()).optional(),
+		.looseObject({
+			workers: z.array(z.looseObject({})).optional(),
 		})
-		.passthrough()
 		.optional(),
 	wrangler: z
-		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.object({
+			configPath: z.string().optional(),
+			environment: z.string().optional(),
+		})
 		.optional(),
 });
 
+type CompatibleWorkerOptions = LegacyWorkerOptions & {
+	/** @deprecated Use `cacheAPI` instead. */
+	cache?: LegacyWorkerOptions["cacheAPI"];
+};
+
 export type SourcelessWorkerOptions = Omit<
-	WorkerOptions,
+	CompatibleWorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & {
 	// `modulesRules` is not included in all members of the `SourceOptions` type
 	// from which `WorkerOptions` is derived. Therefore, we manually include it.
-	modulesRules?: ModuleRule[];
+	modulesRules?: V4ModuleRule[];
 };
 
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
-		workers?: WorkerOptions[];
+		workers?: CompatibleWorkerOptions[];
 	};
 };
 
 export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
+	moduleRules?: V4ModuleRule[];
 };
 
-type PathParseParams = Pick<ParseParams, "path">;
+function normalizeMiniflareWorkerOptions(value: Record<string, unknown>): void {
+	if (value.cacheAPI === undefined) {
+		value.cacheAPI = value.cache;
+	}
+	delete value.cache;
+}
+
+function getRootPath(value: Record<string, unknown>): string {
+	return typeof value.rootPath === "string" ? value.rootPath : "";
+}
+
+function prefixZodIssuePaths(
+	error: ZodError,
+	zodPath: (string | number)[]
+): void {
+	for (const issue of error.issues) {
+		(issue as { path: (string | number)[] }).path = [
+			...zodPath,
+			...(issue.path as (string | number)[]),
+		];
+	}
+}
 
 function isZodErrorLike(value: unknown): value is ZodError {
 	return (
@@ -116,8 +152,10 @@ function parseWorkerOptions(
 	rootPath: string,
 	value: Record<string, unknown>,
 	withoutScript: boolean,
-	opts: PathParseParams
-): WorkerOptions {
+	zodPath: (string | number)[]
+): LegacyWorkerOptions {
+	normalizeMiniflareWorkerOptions(value);
+
 	// If this worker shouldn't have a configurable script, remove all script data
 	// and replace it with an empty `script` that will pass validation
 	if (withoutScript) {
@@ -127,19 +165,17 @@ function parseWorkerOptions(
 		delete value["modulesRoot"];
 	}
 
-	const result = {} as WorkerOptions;
-	const errorRef: ZodErrorRef = {};
-	for (const plugin of PLUGIN_VALUES) {
-		try {
-			// This `parse()` may throw a different `ZodError` than what we `import`
-			const parsed = parseWithRootPath(rootPath, plugin.options, value, opts);
-			Object.assign(result, parsed);
-		} catch (e) {
-			coalesceZodErrors(errorRef, e);
+	let result: LegacyWorkerOptions;
+	try {
+		result = V4WorkerOptionsSchema.parse(value) as LegacyWorkerOptions;
+	} catch (e) {
+		if (isZodErrorLike(e)) {
+			prefixZodIssuePaths(e, zodPath);
 		}
+		throw e;
 	}
-	if (errorRef.value !== undefined) {
-		throw errorRef.value;
+	if (result.rootPath === undefined) {
+		result.rootPath = rootPath;
 	}
 
 	// Remove the placeholder script added if any
@@ -151,8 +187,26 @@ function parseWorkerOptions(
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 
+const remoteBindingsLogger: RemoteBindingsLogger = {
+	loggerLevel: "log",
+	debug: console.debug,
+	log: console.log,
+	info: console.info,
+	warn: console.warn,
+	error: console.error,
+	console(method, ...args) {
+		Reflect.apply(console[method], console, args);
+	},
+};
+
+// function warnDeprecatedModuleRules(): void {
+// 	log.warn(
+// 		"`cloudflareTest({ miniflare: { modulesRules } })` is deprecated and will be removed in a future version. Prefer Vite import query suffixes such as `?raw` where possible."
+// 	);
+// }
+
 function filterTails(
-	tails: WorkerOptions["tails"],
+	tails: LegacyWorkerOptions["tails"],
 	userWorkers?: { name?: string }[]
 ) {
 	// Only connect the tail consumers that represent Workers that are defined in the Vitest config. Warn that a tail will be omitted otherwise
@@ -186,10 +240,7 @@ function filterTails(
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 export const remoteProxySessionsDataMap = new Map<
 	string,
-	{
-		session: RemoteProxySession;
-		remoteBindings: Record<string, Binding>;
-	} | null
+	RemoteProxySessionData | null
 >();
 
 async function parseCustomPoolOptions(
@@ -201,6 +252,7 @@ async function parseCustomPoolOptions(
 		value
 	) as WorkersPoolOptionsWithDefines;
 	options.miniflare ??= {};
+	const miniflareModuleRules = options.miniflare.modulesRules;
 
 	// Try to parse runner worker options, coalescing all errors
 	const errorRef: ZodErrorRef = {};
@@ -212,11 +264,12 @@ async function parseCustomPoolOptions(
 			rootPath,
 			options.miniflare,
 			/* withoutScript */ true, // (script provided by runner)
-			{ path: ["miniflare"] }
+			["miniflare"]
 		);
 	} catch (e) {
 		coalesceZodErrors(errorRef, e);
 	}
+	options.miniflare.rootPath = rootPath;
 
 	options.miniflare.workers = [];
 	// Try to parse auxiliary worker options
@@ -225,14 +278,14 @@ async function parseCustomPoolOptions(
 			try {
 				const workerRootPathOption = getRootPath(worker);
 				const workerRootPath = path.resolve(rootPath, workerRootPathOption);
-				return parseWorkerOptions(
+				const parsed = parseWorkerOptions(
 					workerRootPath,
 					worker,
 					/* withoutScript */ false,
-					{
-						path: ["miniflare", "workers", i],
-					}
+					["miniflare", "workers", i]
 				);
+				parsed.rootPath = workerRootPath;
+				return parsed;
 			} catch (e) {
 				coalesceZodErrors(errorRef, e);
 				return { script: "" }; // (ignored as we'll be throwing)
@@ -243,6 +296,8 @@ async function parseCustomPoolOptions(
 	if (errorRef.value !== undefined) {
 		throw errorRef.value;
 	}
+	options.moduleRules = miniflareModuleRules;
+	delete options.miniflare.modulesRules;
 
 	// Try to parse Wrangler config if any
 	if (options.wrangler?.configPath !== undefined) {
@@ -267,12 +322,20 @@ async function parseCustomPoolOptions(
 			: undefined;
 
 		const remoteProxySessionData = options.remoteBindings
-			? await wrangler.maybeStartOrUpdateRemoteProxySession(
+			? await maybeStartOrUpdateRemoteProxySession(
 					{
-						path: options.wrangler.configPath,
-						environment: options.wrangler.environment,
+						name: wranglerConfig.name ?? "worker",
+						bindings:
+							wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
+								wranglerConfig
+							) ?? {},
+						complianceRegion: getCloudflareComplianceRegion(wranglerConfig),
+						account_id: wranglerConfig.account_id,
+						profileDir: path.dirname(configPath),
 					},
-					preExistingRemoteProxySessionData ?? null
+					preExistingRemoteProxySessionData ?? null,
+					undefined,
+					{ logger: remoteBindingsLogger }
 				)
 			: null;
 
@@ -305,16 +368,36 @@ async function parseCustomPoolOptions(
 			...options.miniflare.workers,
 			...externalWorkers,
 		];
+		const {
+			modulesRules: wranglerModuleRules,
+			...workerOptionsWithoutModuleRules
+		} = workerOptions;
+		const mergedModuleRules = mergeWorkerOptions(
+			{
+				...(wranglerModuleRules === undefined
+					? {}
+					: { modulesRules: wranglerModuleRules }),
+			} as SourcelessWorkerOptions,
+			{
+				...(options.moduleRules === undefined
+					? {}
+					: { modulesRules: options.moduleRules }),
+			} as SourcelessWorkerOptions
+		) as SourcelessWorkerOptions;
+		options.moduleRules = mergedModuleRules.modulesRules;
 
 		// Merge generated Miniflare options from Wrangler with specified overrides
 		options.miniflare = mergeWorkerOptions(
-			workerOptions,
+			workerOptionsWithoutModuleRules,
 			options.miniflare as SourcelessWorkerOptions
 		);
 
 		options.miniflare = {
 			...options.miniflare,
-			tails: filterTails(workerOptions.tails, options.miniflare.workers),
+			tails: filterTails(
+				workerOptions.tails as LegacyWorkerOptions["tails"],
+				options.miniflare.workers
+			),
 		};
 
 		// Record any Wrangler `define`s

@@ -3,6 +3,10 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { argv } from "node:process";
 import dedent from "ts-dedent";
+import {
+	DEFAULT_COMPAT_DATE_PATH,
+	updateDefaultCompatDate,
+} from "../deployments/update-default-compat-date";
 
 if (require.main === module) {
 	try {
@@ -64,8 +68,14 @@ function main({
 	packageJSONPath,
 	changesetPrefix,
 }: Args): void {
-	const diffLines = getPackageJsonDiff(resolve(packageJSONPath));
-	const changes = parseDiffForChanges(diffLines);
+	// Also diff the pnpm catalog. Catalog-pinned deps (e.g.
+	// "@cloudflare/workers-types", referenced as "catalog:default" in
+	// `package.json`) have their real versions in `pnpm-workspace.yaml`, so
+	// Dependabot bumps them there rather than in `package.json`.
+	const changes = getDependencyChanges([
+		packageJSONPath,
+		"pnpm-workspace.yaml",
+	]);
 	if (changes.size === 0) {
 		console.warn(dedent`
 			WARN: No dependency changes detected for "${packageNames}".
@@ -79,7 +89,23 @@ function main({
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
 	writeChangeSet(changesetPrefix, prNumber, changesetHeader, commitMessage);
-	commitAndPush(commitMessage);
+	commitAndPush(commitMessage, updatePathsForChanges(changes));
+}
+
+/**
+ * Extra paths to include in the commit, for files that are derived from the
+ * bumped dependencies.
+ *
+ * The default compatibility date is derived from the pinned `workerd` version,
+ * so it has to move with it or `pnpm check:compat-date` fails.
+ */
+export function updatePathsForChanges(changes: Map<string, Change>): string[] {
+	if (!changes.has("workerd")) {
+		return [];
+	}
+	console.log("INFO: Updating the default compatibility date for workerd");
+	updateDefaultCompatDate();
+	return [DEFAULT_COMPAT_DATE_PATH];
 }
 
 export function getPackageJsonDiff(packageJSONPath: string): string[] {
@@ -91,10 +117,24 @@ export type Change = {
 	to: string;
 };
 
+// Collects dependency changes across every provided file, merging them into a
+// single map. We diff both the target package.json and the pnpm catalog because
+// catalog-pinned deps are bumped in the catalog, not in the package.json.
+export function getDependencyChanges(diffPaths: string[]): Map<string, Change> {
+	const diffLines = diffPaths.flatMap((path) =>
+		getPackageJsonDiff(resolve(path))
+	);
+	return parseDiffForChanges(diffLines);
+}
+
 export function parseDiffForChanges(
 	diffLines: (string | undefined)[]
 ): Map<string, Change> {
-	const diffLineRegex = new RegExp(`^[+-]\\s*"(.*)":\\s"(.*)",?`);
+	// Matches a dependency line in either a package.json diff (JSON, so the key
+	// is always quoted, e.g. `"workerd": "1.2.3"`) or a pnpm-workspace.yaml
+	// catalog diff (YAML, where the key may be unquoted, e.g. `workerd: "1.2.3"`).
+	// The quotes around the key are therefore optional.
+	const diffLineRegex = new RegExp(`^[+-]\\s*"?([^":]+?)"?:\\s"(.*)",?`);
 	const changes = new Map<string, Change>();
 	for (const line of diffLines) {
 		const match = line?.match(diffLineRegex);
@@ -175,8 +215,11 @@ export function writeChangeSet(
 	);
 }
 
-export function commitAndPush(commitMessage: string): void {
-	executeCommand("git", ["add", ".changeset"]);
+export function commitAndPush(
+	commitMessage: string,
+	extraPaths: string[] = []
+): void {
+	executeCommand("git", ["add", ".changeset", ...extraPaths]);
 	executeCommand("git", ["commit", "-m", commitMessage]);
 	executeCommand("git", ["push"]);
 }

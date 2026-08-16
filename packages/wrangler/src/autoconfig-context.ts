@@ -1,6 +1,6 @@
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { getCacheFolder } from "./config-cache";
 import { confirm, prompt, select } from "./dialogs";
-import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 import type { AutoConfigContext } from "@cloudflare/autoconfig";
 

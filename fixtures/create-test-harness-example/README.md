@@ -2,7 +2,7 @@
 
 This fixture is the complete runnable example linked from the `createTestHarness()` docs. It shows how to test a realistic multi-Worker app's production build output from different test runners.
 
-For the testing patterns demonstrated here, refer to the [`createTestHarness()` examples guide](https://developers.cloudflare.com/workers/testing/test-harness/examples/).
+For the testing patterns demonstrated here, refer to the [`createTestHarness()` guide](https://developers.cloudflare.com/workers/testing/test-harness/).
 
 ## Example app
 
@@ -16,7 +16,7 @@ The app has three Workers:
 
 ## What this fixture covers
 
-- Setup [Vitest](https://vitest.dev/) against Workers developed with Wrangler.
+- Setup [Vitest](https://vitest.dev/) against prebuilt output from Wrangler projects.
 - Setup [Playwright](https://playwright.dev/) against Workers built by the Cloudflare Vite plugin.
 - Route dispatch across multiple Workers.
 - Direct Worker calls with `server.getWorker(name)`.
@@ -31,11 +31,13 @@ The app has three Workers:
 
 ## Run this example
 
-To build the packages, run:
+To build the Wrangler and Vite output, run:
 
 ```sh
 pnpm build --filter @fixture/create-test-harness-example
 ```
+
+This builds each Wrangler Worker once with `wrangler deploy --dry-run --outdir`, then the Vitest setup reuses that output with `prebuiltWorkerDir`. It also creates the Vite output used by Playwright.
 
 Then run the tests with:
 
@@ -48,8 +50,8 @@ pnpm --filter @fixture/create-test-harness-example test:playwright
 
 | File                                                                             | Purpose                                                              |
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [`tests/vitest.test.ts`](tests/vitest.test.ts)                                   | Example for testing with Vitest.                                     |
-| [`tests/playwright.test.ts`](tests/playwright.test.ts)                           | Example for testing with Playwright.                                 |
+| [`tests/vitest.test.ts`](tests/vitest.test.ts)                                   | Tests prebuilt Wrangler output with Vitest.                          |
+| [`tests/playwright.test.ts`](tests/playwright.test.ts)                           | Tests Vite build output with Playwright.                             |
 | [`vite.config.ts`](vite.config.ts)                                               | Builds Vite-generated Worker configs.                                |
 | [`workers/web/index.ts`](workers/web/index.ts)                                   | User-facing Worker with service and Browser Rendering binding logic. |
 | [`workers/web/wrangler.jsonc`](workers/web/wrangler.jsonc)                       | Web Worker config.                                                   |
@@ -62,5 +64,9 @@ pnpm --filter @fixture/create-test-harness-example test:playwright
 
 ## Related docs
 
-- [`createTestHarness()` guide](https://developers.cloudflare.com/workers/testing/test-harness/)
+- [Write a basic integration test with `createTestHarness()`](https://developers.cloudflare.com/workers/testing/test-harness/get-started/)
+- [Configure the test harness](https://developers.cloudflare.com/workers/testing/test-harness/configure/)
+- [Prepare test state](https://developers.cloudflare.com/workers/testing/test-harness/prepare-test-state/)
+- [Interact with Workers](https://developers.cloudflare.com/workers/testing/test-harness/interact-with-workers/)
+- [Integrations](https://developers.cloudflare.com/workers/testing/test-harness/integrations/)
 - [`createTestHarness()` API reference](https://developers.cloudflare.com/workers/wrangler/api/#createtestharness)

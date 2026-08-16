@@ -5,6 +5,7 @@ import {
 	readFileSync,
 	writeFileSync,
 } from "node:fs";
+import { FatalError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -29,6 +30,34 @@ describe("pages functions build", () => {
 		await expect(runWrangler("pages functions build")).rejects.toThrow();
 		expect(std.err).toContain("Could not find anything to build.");
 	});
+
+	for (const { filename, telemetryMessage } of [
+		{
+			filename: "[hyphen-not-allowed].ts",
+			telemetryMessage: "pages functions invalid route parameter",
+		},
+		{
+			filename: "[[hyphen-not-allowed]].ts",
+			telemetryMessage: "pages functions invalid catchall route parameter",
+		},
+	]) {
+		it(`converts an invalid route in ${filename} to FatalError`, async ({
+			expect,
+		}) => {
+			mkdirSync("functions");
+			writeFileSync(`functions/${filename}`, "export function onRequest() {}");
+
+			let error: unknown;
+			try {
+				await runWrangler("pages functions build");
+			} catch (caughtError) {
+				error = caughtError;
+			}
+
+			expect(error).toBeInstanceOf(FatalError);
+			expect(error).toMatchObject({ telemetryMessage });
+		});
+	}
 
 	it("should build functions", async ({ expect }) => {
 		/* ---------------------------- */

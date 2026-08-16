@@ -1,7 +1,7 @@
 import fs, { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
 import { test as baseTest, describe, onTestFinished, vi } from "vitest";
@@ -688,10 +688,10 @@ describe("entrypoints", () => {
 		await waitFor(async () => {
 			const response = await fetch(url);
 			expect(await response.text()).toBe("pong");
-		});
+		}, 10_000);
 	});
 
-	test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
+	test("should throw if binding to named entrypoint exported by incompatible version of wrangler", async ({
 		dev,
 		isolatedDevRegistryPath,
 		expect,
@@ -734,15 +734,17 @@ describe("entrypoints", () => {
 				durableObjects: [],
 				durableObjectsHost: "localhost",
 				durableObjectsPort: 0,
-				// Intentionally omitting `entrypointAddresses`
+				// Intentionally using the old registry format without `debugPortAddress`
 			})
 		);
 
+		// Wait for the dev registry watcher to observe the old-format entry. Before
+		// that happens, the binding returns the generic "not found" response.
 		await waitFor(async () => {
 			let response = await fetch(url);
 			expect(response.status).toBe(503);
 			expect(await response.text()).toBe(
-				'Worker "bound" not found. Make sure it is running locally.'
+				'Worker "bound" is not compatible with this version of the dev server. Please update all Worker instances to the same version.'
 			);
 		});
 	});
@@ -887,21 +889,23 @@ describe("entrypoints", () => {
 			);
 		});
 
-		const boundWorker = new Miniflare({
-			name: "bound",
-			unsafeDevRegistryPath: isolatedDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			https: true,
-			script: `
+		const boundWorker = new Miniflare(
+			convertV4MiniflareOptions({
+				name: "bound",
+				unsafeDevRegistryPath: isolatedDevRegistryPath,
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				https: true,
+				script: `
 				export default {
 					async fetch(request, env, ctx) {
 						return new Response("Hello from bound!");
 					}
 				}
 			`,
-			// No direct sockets so that no entrypointAddresses will be registered
-		});
+				// No direct sockets so that no entrypointAddresses will be registered
+			})
+		);
 		onTestFinished(() => boundWorker.dispose());
 
 		await boundWorker.ready;

@@ -8,6 +8,8 @@ import {
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalObservabilityEnabledFromEnv,
+	getWranglerHiddenDirPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
@@ -42,11 +44,11 @@ import type {
 import type {
 	DOContainerOptions,
 	Json,
-	MiniflareOptions,
 	RemoteProxyConnectionString,
-	SourceOptions,
+	V4MiniflareOptions,
+	V4SourceOptions,
+	V4WorkerOptions,
 	WorkerdStructuredLog,
-	WorkerOptions,
 	WorkerRegistry,
 } from "miniflare";
 import type { UUID } from "node:crypto";
@@ -64,10 +66,12 @@ type SpecificPort = Exclude<number, 0>;
 type RandomConsistentPort = 0; // random port, but consistent across reloads
 type RandomDifferentPort = undefined; // random port, but different across reloads
 type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
+type R2S3Credentials = { accessKeyId: string; secretAccessKey: string };
 
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
+	projectRoot: string;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string | undefined;
@@ -85,13 +89,10 @@ export interface ConfigBundle {
 	inspectorPort: number | undefined;
 	inspectorHost: string | undefined;
 	localPersistencePath: string | false;
-	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
-	httpsKeyPath: string | undefined;
-	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
@@ -105,6 +106,7 @@ export interface ConfigBundle {
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
+	access: Config["access"] | undefined;
 	sendMetrics: boolean | undefined;
 	// The stable, externally-reachable URL of the proxy server in front of
 	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
@@ -175,7 +177,7 @@ export function buildLog(): Log {
 
 async function buildSourceOptions(
 	config: Omit<ConfigBundle, "rules">
-): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
+): Promise<{ sourceOptions: V4SourceOptions; entrypointNames: string[] }> {
 	const scriptPath = config.bundle.path;
 	if (config.format === "modules") {
 		const isPython = config.bundle.type === "python";
@@ -194,7 +196,7 @@ async function buildSourceOptions(
 		const entrypointNames = isPython ? [] : config.bundle.entry.exports;
 
 		const modulesRoot = path.dirname(scriptPath);
-		const sourceOptions: SourceOptions = {
+		const sourceOptions: V4SourceOptions = {
 			modulesRoot,
 
 			modules: [
@@ -240,15 +242,22 @@ function kvNamespaceEntry(
 	return [binding, { id, remoteProxyConnectionString }];
 }
 function r2BucketEntry(
-	{ binding, bucket_name, remote }: CfR2Bucket,
+	{ binding, bucket_name, remote, local_dev }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
-	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+	{
+		id: string;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		s3Credentials?: R2S3Credentials;
+	},
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { id }];
+		return [
+			binding,
+			{ id, s3Credentials: local_dev?.experimental_s3_credentials },
+		];
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
@@ -281,11 +290,19 @@ function queueProducerEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
+	const concreteQueueName = getRemoteId(queueName) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { queueName, deliveryDelay }];
+		return [binding, { queueName: concreteQueueName, deliveryDelay }];
 	}
 
-	return [binding, { queueName, deliveryDelay, remoteProxyConnectionString }];
+	return [
+		binding,
+		{
+			queueName: concreteQueueName,
+			deliveryDelay,
+			remoteProxyConnectionString,
+		},
+	];
 }
 function pipelineEntry(
 	{ binding, stream, pipeline, remote }: CfPipeline,
@@ -337,8 +354,7 @@ function workflowEntry(
 		remote,
 		limits,
 	}: CfWorkflow,
-	remoteProxyConnectionString?: RemoteProxyConnectionString,
-	compatibilityFlags?: string[]
+	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
 	string,
 	{
@@ -347,7 +363,6 @@ function workflowEntry(
 		scriptName?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		stepLimit?: number;
-		compatibilityFlags?: string[];
 	},
 ] {
 	const stepLimit = limits?.steps;
@@ -360,7 +375,6 @@ function workflowEntry(
 				className,
 				scriptName,
 				...(stepLimit !== undefined && { stepLimit }),
-				compatibilityFlags,
 			},
 		];
 	}
@@ -373,7 +387,6 @@ function workflowEntry(
 			scriptName,
 			remoteProxyConnectionString,
 			...(stepLimit !== undefined && { stepLimit }),
-			compatibilityFlags,
 		},
 	];
 }
@@ -402,10 +415,14 @@ function dispatchNamespaceEntry(
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 	},
 ] {
+	const concreteNamespace = getRemoteId(namespace) ?? binding;
 	if (!remoteProxyConnectionString || !remote) {
-		return [binding, { namespace }];
+		return [binding, { namespace: concreteNamespace }];
 	}
-	return [binding, { namespace, remoteProxyConnectionString }];
+	return [
+		binding,
+		{ namespace: concreteNamespace, remoteProxyConnectionString },
+	];
 }
 function ratelimitEntry<T extends { name: string; namespace_id?: string }>(
 	ratelimit: T
@@ -431,7 +448,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 }
 
 type WorkerOptionsBindings = Pick<
-	WorkerOptions,
+	V4WorkerOptions,
 	| "bindings"
 	| "ai"
 	| "aiSearchNamespaces"
@@ -452,7 +469,6 @@ type WorkerOptionsBindings = Pick<
 	| "serviceBindings"
 	| "ratelimits"
 	| "workflows"
-	| "wrappedBindings"
 	| "secretsStoreSecrets"
 	| "images"
 	| "email"
@@ -501,7 +517,7 @@ export function buildMiniflareBindingOptions(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): {
 	bindingOptions: WorkerOptionsBindings;
-	externalWorkers: WorkerOptions[];
+	externalWorkers: V4WorkerOptions[];
 } {
 	const bindings = config.bindings;
 
@@ -618,7 +634,7 @@ export function buildMiniflareBindingOptions(
 	}
 
 	// Setup service bindings to external services
-	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> =
+	const serviceBindings: NonNullable<V4WorkerOptions["serviceBindings"]> =
 		Object.fromEntries(fetchers.map((f) => [f.binding, f.fetcher]));
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
@@ -665,12 +681,12 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	const tails: NonNullable<WorkerOptions["tails"]> = [];
+	const tails: NonNullable<V4WorkerOptions["tails"]> = [];
 	for (const tail of config.tails ?? []) {
 		tails.push({ name: tail.service });
 	}
 
-	const streamingTails: NonNullable<WorkerOptions["streamingTails"]> = [];
+	const streamingTails: NonNullable<V4WorkerOptions["streamingTails"]> = [];
 	for (const streamingTail of config.streamingTails ?? []) {
 		streamingTails.push({ name: streamingTail.service });
 	}
@@ -680,9 +696,7 @@ export function buildMiniflareBindingOptions(
 		config.exports
 	);
 
-	const externalWorkers: WorkerOptions[] = [];
-
-	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
+	const externalWorkers: V4WorkerOptions[] = [];
 
 	for (const ai of aiBindings) {
 		warnOrError("ai", ai.remote);
@@ -897,11 +911,7 @@ export function buildMiniflareBindingOptions(
 						);
 					}
 				}
-				return workflowEntry(
-					workflow,
-					remoteProxyConnectionString,
-					config.compatibilityFlags
-				);
+				return workflowEntry(workflow, remoteProxyConnectionString);
 			})
 		),
 		secretsStoreSecrets: Object.fromEntries(
@@ -914,7 +924,7 @@ export function buildMiniflareBindingOptions(
 			flagshipBindings.map((binding) => [
 				binding.binding,
 				{
-					app_id: binding.app_id,
+					app_id: getRemoteId(binding.app_id) ?? binding.binding,
 					remoteProxyConnectionString,
 				},
 			])
@@ -1071,7 +1081,6 @@ export function buildMiniflareBindingOptions(
 			})
 		),
 		serviceBindings,
-		wrappedBindings: wrappedBindings,
 		tails,
 		streamingTails,
 	};
@@ -1080,6 +1089,10 @@ export function buildMiniflareBindingOptions(
 		bindingOptions,
 		externalWorkers,
 	};
+}
+
+export function getDefaultProjectTmpPath(projectRoot: string): string {
+	return path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
 }
 
 export function getDefaultPersistRoot(
@@ -1097,6 +1110,7 @@ export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
 			assets: {
 				directory: config.assets.directory,
 				binding: config.assets.binding,
+				run_worker_first: config.assets.run_worker_first,
 				routerConfig: config.assets.routerConfig,
 				assetConfig: config.assets.assetConfig,
 			},
@@ -1118,7 +1132,7 @@ export function buildSitesOptions({
 	}
 }
 
-export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+export type Options = V4MiniflareOptions & { workers: V4WorkerOptions[] };
 
 export async function buildMiniflareOptions(
 	log: Log,
@@ -1141,22 +1155,29 @@ export async function buildMiniflareOptions(
 		bindingOptions.browserRendering.headful = true;
 	}
 	const sitesOptions = buildSitesOptions(config);
-	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
+	const resourcePersistencePath = getDefaultPersistRoot(
+		config.localPersistencePath
+	);
+	const resourceTmpPath = getDefaultProjectTmpPath(config.projectRoot);
 	const assetOptions = buildAssetOptions(config);
 
-	const options: MiniflareOptions = {
+	const options: Options = {
+		rootPath: config.projectRoot,
 		host: config.initialIp,
 		port: config.initialPort,
 		publicUrl: config.publicUrl,
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		inspectorHost: config.inspect ? config.inspectorHost : undefined,
-		liveReload: config.liveReload,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
+		// The one switch for local observability: this env var tells Miniflare core
+		// to attach the trace collector to each user worker.
+		unsafeObservability: getLocalObservabilityEnabledFromEnv(),
+		unsafeInspectDurableObjects: true,
 		telemetry: getMetricsConfig({ sendMetrics: config.sendMetrics }),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
@@ -1168,7 +1189,9 @@ export async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleStructuredLogs: config.structuredLogsHandler ?? handleStructuredLogs,
-		defaultPersistRoot,
+		resourcePersistencePath,
+		resourceTmpPath,
+		containerEngine: config.containerEngine,
 		workers: [
 			{
 				name: getName(config),
@@ -1181,8 +1204,8 @@ export async function buildMiniflareOptions(
 				...assetOptions,
 				routes: config.routes,
 				outboundService: config.outboundService,
-				containerEngine: config.containerEngine,
 				zone: config.zone,
+				access: config.access?.dev,
 			},
 			...externalWorkers,
 		],

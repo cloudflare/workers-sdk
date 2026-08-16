@@ -17,6 +17,10 @@ export class WorkflowFatalError extends Error {
 	}
 }
 
+export class NonRetryableDelayError extends WorkflowFatalError {
+	name = "NonRetryableDelayError";
+}
+
 export class PreservedNonRetryableError extends WorkflowFatalError {
 	name = "NonRetryableError";
 

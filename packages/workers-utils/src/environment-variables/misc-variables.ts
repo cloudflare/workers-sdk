@@ -37,12 +37,42 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => "create cloudflare",
 });
 
-/**
- * `WRANGLER_SEND_METRICS` can override whether we attempt to send metrics information to Sparrow.
- */
-export const getWranglerSendMetricsFromEnv =
+const getDoNotTrackFromEnv = getEnvironmentVariableFactory({
+	variableName: "DO_NOT_TRACK",
+});
+
+/** Whether `DO_NOT_TRACK` is set to a supported telemetry opt-out value. */
+export function isDoNotTrackEnabled(): boolean {
+	const value = getDoNotTrackFromEnv()?.toLowerCase();
+	return value === "1" || value === "true";
+}
+
+const getWranglerSendMetricsVariableFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "WRANGLER_SEND_METRICS",
+	});
+
+/**
+ * `WRANGLER_SEND_METRICS` controls whether we attempt to send metrics information to Sparrow.
+ * `DO_NOT_TRACK` takes precedence when it is set to an opt-out value.
+ */
+export function getWranglerSendMetricsFromEnv(): boolean | undefined {
+	if (isDoNotTrackEnabled()) {
+		return false;
+	}
+
+	return getWranglerSendMetricsVariableFromEnv();
+}
+
+/**
+ * `WRANGLER_NO_SKILLS_UPDATE_PROMPTS` suppresses the prompt that offers to
+ * update Cloudflare agent skills when they are out of date.
+ *
+ * Set to `"true"` to never be prompted for skills updates.
+ */
+export const getNoSkillsUpdatePromptsFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "WRANGLER_NO_SKILLS_UPDATE_PROMPTS",
 	});
 
 /**
@@ -345,11 +375,28 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
+ * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/local/explorer.
  */
 export const getLocalExplorerEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "X_LOCAL_EXPLORER",
+		defaultValue: true,
+	});
+
+/**
+ * `X_LOCAL_OBSERVABILITY` turns on local-dev observability capture. Both
+ * `wrangler dev` and the Vite plugin read it and pass it through as the one
+ * `unsafeObservability` Miniflare option, which makes core attach the trace
+ * collector to each user worker.
+ *
+ * Defaults to `true` so the Local Explorer's Observability tab captures traces
+ * and logs out of the box. Set `X_LOCAL_OBSERVABILITY=false` to opt out — for
+ * example if the extra per-worker services (collector + streaming tail) cause
+ * trouble in a multi-process dev-registry setup.
+ */
+export const getLocalObservabilityEnabledFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_LOCAL_OBSERVABILITY",
 		defaultValue: true,
 	});
 

@@ -13,8 +13,8 @@ import {
 	ImageRegistryNotAllowedError,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../../core/create-command";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { pollRegistriesUntilCondition } from "../cli";
 import {

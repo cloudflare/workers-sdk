@@ -26,6 +26,7 @@ export type { OAuthFlowContext, OAuthFlowLogger } from "./context";
 
 export {
 	getAuthUrlFromEnv,
+	getCloudflareAccountIdFromEnv,
 	getCloudflareAuthUseKeyringFromEnv,
 } from "./env-vars";
 
@@ -37,6 +38,8 @@ export type {
 } from "./flow";
 
 export { generateAuthUrl } from "./generate-auth-url";
+
+export { generateVerificationUrl } from "./generate-device-auth-url";
 
 export { generateRandomState } from "./generate-random-state";
 export { TEMPORARY_TERMS_NOTICE, TEMPORARY_TERMS_PROMPT } from "./temporary";

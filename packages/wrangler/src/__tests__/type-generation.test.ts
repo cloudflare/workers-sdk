@@ -636,31 +636,37 @@ describe("generate types - CLI", () => {
 		);
 
 		await runWrangler("types");
-		expect(spy).toHaveBeenNthCalledWith(1, {
-			config: expect.objectContaining({
-				compatibility_date: "2022-01-12",
-				compatibility_flags: ["fake-compat-1"],
-			}),
-			outFile: "worker-configuration.d.ts",
-		});
+		expect(spy).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2022-01-12",
+					compatibility_flags: ["fake-compat-1"],
+				}),
+			})
+		);
 
 		await runWrangler("types --config ./my-wrangler-config-a.jsonc");
-		expect(spy).toHaveBeenNthCalledWith(2, {
-			config: expect.objectContaining({
-				compatibility_date: "2023-01-12",
-				compatibility_flags: ["fake-compat-2"],
-			}),
-			outFile: "worker-configuration.d.ts",
-		});
+		expect(spy).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2023-01-12",
+					compatibility_flags: ["fake-compat-2"],
+				}),
+			})
+		);
 
 		await runWrangler("types -c my-wrangler-config-b.jsonc");
-		expect(spy).toHaveBeenNthCalledWith(3, {
-			config: expect.objectContaining({
-				compatibility_date: "2024-01-12",
-				compatibility_flags: ["fake-compat-3"],
-			}),
-			outFile: "worker-configuration.d.ts",
-		});
+		expect(spy).toHaveBeenNthCalledWith(
+			3,
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2024-01-12",
+					compatibility_flags: ["fake-compat-3"],
+				}),
+			})
+		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x

@@ -36,4 +36,4 @@ export {
 	AutoConfigFrameworkConfigurationError,
 } from "./errors";
 
-export { getInstalledPackageVersion } from "./frameworks/utils/packages";
+export { getInstalledPackageVersion } from "@cloudflare/workers-utils";

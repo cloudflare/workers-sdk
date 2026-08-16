@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
@@ -35,6 +36,7 @@ import type {
 
 export class CloudflarePoolWorker implements PoolWorker {
 	name = "cloudflare-pool";
+	private readonly debug = util.debuglog("vitest-pool-workers");
 	private mf: Miniflare | undefined;
 	private socket: WebSocket | undefined;
 	private parsedPoolOptions: WorkersPoolOptionsWithDefines | undefined;
@@ -62,10 +64,12 @@ export class CloudflarePoolWorker implements PoolWorker {
 		let resolvedPoolOptions: WorkersPoolOptions;
 		if (typeof this.poolOptions === "function") {
 			// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/integrations/inject.ts
-			const inject = <K extends keyof ProvidedContext>(
-				key: K
-			): ProvidedContext[K] => {
-				return this.options.project.getProvidedContext()[key];
+			const inject: WorkerPoolOptionsContext["inject"] = <T = unknown>(
+				key: string
+			): T => {
+				return this.options.project.getProvidedContext()[
+					key as keyof ProvidedContext
+				] as T;
 			};
 			resolvedPoolOptions = await this.poolOptions({ inject });
 		} else {
@@ -109,13 +113,20 @@ export class CloudflarePoolWorker implements PoolWorker {
 	async stop(): Promise<void> {
 		this.socket?.close();
 		this.socket = undefined;
-		await this.mf?.dispose();
+		// Disposal errors should not override the test result, but log them for
+		// diagnostics in case they indicate an underlying teardown issue.
+		await this.mf?.dispose().catch((err) => {
+			this.debug("miniflare dispose rejected: %O", err);
+		});
 		this.mf = undefined;
 
 		if (this.parsedPoolOptions?.wrangler?.configPath) {
-			await remoteProxySessionsDataMap
-				.get(this.parsedPoolOptions?.wrangler?.configPath)
-				?.session?.dispose?.();
+			const session = remoteProxySessionsDataMap.get(
+				this.parsedPoolOptions.wrangler.configPath
+			)?.session;
+			await session?.dispose?.()?.catch((err) => {
+				this.debug("remote proxy session dispose rejected: %O", err);
+			});
 		}
 
 		// Decrement the active worker count. When the last worker stops, this
@@ -198,8 +209,9 @@ export class CloudflarePoolWorker implements PoolWorker {
 			"Message received from Worker before initialisation"
 		);
 
-		const rules = this.parsedPoolOptions.miniflare?.modulesRules;
-		const compiledRules = compileModuleRules(rules ?? []);
+		const compiledRules = compileModuleRules(
+			this.parsedPoolOptions.moduleRules ?? []
+		);
 
 		if (event === "message") {
 			const messageWrapper = (m: { data: string | ArrayBuffer }) => {

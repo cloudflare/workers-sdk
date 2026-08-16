@@ -1,39 +1,91 @@
-import { Miniflare } from "miniflare";
+import path from "node:path";
+import { watch } from "chokidar";
+import { getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
-import { useDispose, useTmp } from "./test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "./test-shared";
 import type { MiniflareOptions, WorkerRegistry } from "miniflare";
 
 describe.sequential("DevRegistry", () => {
+	test("registers workers by default unless opted out", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const worker = {
+			config: {
+				type: "worker",
+				name: "worker",
+				compatibilityDate: "2025-05-01",
+				compatibilityFlags: ["experimental"],
+				manifest: singleModuleManifest(
+					`export default { fetch() { return new Response("ok"); } };`
+				),
+			},
+		} satisfies MiniflareOptions["workers"][number];
+		const workerOptions = {
+			unsafeDevRegistryPath,
+			workers: [worker],
+		} satisfies MiniflareOptions;
+		const mf = new Miniflare(workerOptions);
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(() => {
+			expect(getWorkerRegistry(unsafeDevRegistryPath)["worker"]).toBeDefined();
+		});
+
+		await mf.setOptions({
+			...workerOptions,
+			workers: [{ ...worker, dev: { unsafeRegisterWorker: false } }],
+		});
+		await vi.waitFor(() => {
+			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+		});
+	});
+
 	test("fetch to service worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			script: `addEventListener("fetch", (event) => {
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+					},
+					legacy: {
+						serviceWorkerScript: `addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello from service worker!"));
 			})`,
+					},
+				},
+			],
 		});
 
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						return await env.SERVICE.fetch(request);
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -60,16 +112,15 @@ describe.sequential("DevRegistry", () => {
 	test("fetch to module worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						const response = await env.SERVICE.fetch(request.url);
@@ -80,7 +131,13 @@ describe.sequential("DevRegistry", () => {
 						});
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -91,11 +148,16 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 	                    const url = new URL(request.url);
@@ -104,7 +166,10 @@ describe.sequential("DevRegistry", () => {
 						return new Response("Hello " + name);
 					}
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
@@ -123,16 +188,15 @@ describe.sequential("DevRegistry", () => {
 	test("WebSocket upgrade to module worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						const wsResponse = await env.SERVICE.fetch(request.url, {
@@ -163,16 +227,27 @@ describe.sequential("DevRegistry", () => {
 						});
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						// Handle WebSocket upgrade requests
@@ -194,7 +269,10 @@ describe.sequential("DevRegistry", () => {
 						return new Response("Not a WebSocket request", { status: 400 });
 					}
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
@@ -213,16 +291,15 @@ describe.sequential("DevRegistry", () => {
 	test("RPC to default entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						try {
@@ -233,7 +310,13 @@ describe.sequential("DevRegistry", () => {
 	                    }
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -244,16 +327,24 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(500);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export default class TestEntrypoint extends WorkerEntrypoint {
 					ping() { return "pong"; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 
 		await remote.ready;
@@ -283,17 +374,15 @@ describe.sequential("DevRegistry", () => {
 	test("RPC to custom entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-					entrypoint: "TestEntrypoint",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 	                    try {
@@ -304,7 +393,17 @@ describe.sequential("DevRegistry", () => {
 	                    }
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: {
+								type: "worker",
+								workerName: "remote-worker",
+								exportName: "TestEntrypoint",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -315,16 +414,24 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(500);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export class TestEntrypoint extends WorkerEntrypoint {
 					ping() { return "pong"; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 
 		await remote.ready;
@@ -355,39 +462,55 @@ describe.sequential("DevRegistry", () => {
 	}) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export class PropsEntrypoint extends WorkerEntrypoint {
 					getProps() { return this.ctx.props; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-					entrypoint: "PropsEntrypoint",
-					props: { foo: 123, bar: { baz: "hello from props" } },
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						return Response.json(await env.SERVICE.getProps());
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: {
+								type: "worker",
+								workerName: "remote-worker",
+								exportName: "PropsEntrypoint",
+								props: { foo: 123, bar: { baz: "hello from props" } },
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -408,22 +531,27 @@ describe.sequential("DevRegistry", () => {
 	test("fetch to module worker with node bindings", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						return new Response("Not implemented", { status: 501 });
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -443,11 +571,16 @@ describe.sequential("DevRegistry", () => {
 		);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 	                    const url = new URL(request.url);
@@ -456,7 +589,10 @@ describe.sequential("DevRegistry", () => {
 						return new Response("Hello " + name);
 					}
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 
 		await remote.ready;
@@ -490,22 +626,27 @@ describe.sequential("DevRegistry", () => {
 	test("RPC to default entrypoint with node bindings", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						return new Response("Not implemented", { status: 501 });
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -526,16 +667,24 @@ describe.sequential("DevRegistry", () => {
 		);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export default class TestEntrypoint extends WorkerEntrypoint {
 					ping() { return "pong"; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 
 		await remote.ready;
@@ -567,17 +716,16 @@ describe.sequential("DevRegistry", () => {
 	test("fetch to durable object with remote running", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-
-			compatibilityFlags: ["experimental"],
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-				},
-			},
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 				export class MyDurableObject extends DurableObject {
 					fetch() {
@@ -590,25 +738,35 @@ describe.sequential("DevRegistry", () => {
 	                    return new Response("Hello from the default Worker Entrypoint!");
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 		                const ns = env.DO;
@@ -617,7 +775,17 @@ describe.sequential("DevRegistry", () => {
 						return stub.fetch(request);
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -634,42 +802,51 @@ describe.sequential("DevRegistry", () => {
 	test("RPC to durable object with remote running", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-
-			compatibilityFlags: ["experimental"],
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-				},
-			},
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 				export class MyDurableObject extends DurableObject {
 					ping() {
 						return "pong";
 					}
 				};
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						try {
@@ -684,7 +861,17 @@ describe.sequential("DevRegistry", () => {
 						}
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -701,18 +888,15 @@ describe.sequential("DevRegistry", () => {
 	test("fetch to durable object", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 		                const ns = env.DO;
@@ -723,7 +907,17 @@ describe.sequential("DevRegistry", () => {
 						return response;
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -734,17 +928,16 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-
-			compatibilityFlags: ["experimental"],
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-				},
-			},
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 				export class MyDurableObject extends DurableObject {
 					fetch() {
@@ -757,7 +950,20 @@ describe.sequential("DevRegistry", () => {
 	                    return new Response("Hello from the default Worker Entrypoint!");
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
@@ -775,18 +981,15 @@ describe.sequential("DevRegistry", () => {
 	test("RPC to durable object", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						try {
@@ -801,7 +1004,17 @@ describe.sequential("DevRegistry", () => {
 						}
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -812,24 +1025,36 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(500);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-
-			compatibilityFlags: ["experimental"],
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-				},
-			},
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 				export class MyDurableObject extends DurableObject {
 					ping() {
 						return "pong";
 					}
 				};
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
@@ -848,42 +1073,45 @@ describe.sequential("DevRegistry", () => {
 	test("workflow with cross-worker scriptName", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-
-			workflows: {
-				MY_WORKFLOW: {
-					name: "MY_WORKFLOW",
-					className: "MyWorkflow",
-					scriptName: "remote-worker",
-				},
-			},
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2024-11-20",
+						env: {
+							MY_WORKFLOW: {
+								type: "workflow",
+								name: "MY_WORKFLOW",
+								workerName: "remote-worker",
+								exportName: "MyWorkflow",
+							},
+						},
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						const instance = await env.MY_WORKFLOW.create({ id: "cross-worker-instance" });
 						return Response.json({ id: instance.id });
 					}
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(local);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-
-			workflows: {
-				MY_WORKFLOW: {
-					name: "MY_WORKFLOW",
-					className: "MyWorkflow",
-				},
-			},
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2024-11-20",
+						manifest: singleModuleManifest(`
 				import { WorkflowEntrypoint } from "cloudflare:workers";
 				export class MyWorkflow extends WorkflowEntrypoint {
 					async run(event, step) {
@@ -893,7 +1121,10 @@ describe.sequential("DevRegistry", () => {
 				export default {
 					async fetch() { return new Response("ok"); }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
@@ -915,41 +1146,51 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 				export class MyDurableObject extends DurableObject {
 					ping() { return "v1"; }
 				}
 				export default { fetch() { return new Response("ok"); } }
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(remote);
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			// Use idFromName so the same DO instance is reused across requests —
-			// this ensures the cached _cachedFetcher is exercised on the second call.
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						// Use idFromName so the same DO instance is reused across requests —
+						// this ensures the cached _cachedFetcher is exercised on the second call.
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						try {
@@ -962,7 +1203,17 @@ describe.sequential("DevRegistry", () => {
 						}
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -978,23 +1229,35 @@ describe.sequential("DevRegistry", () => {
 
 		// Restart remote — gets a new debug port, registry file updates
 		await remote.setOptions({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 				export class MyDurableObject extends DurableObject {
 					ping() { return "v2"; }
 				}
 				export default { fetch() { return new Response("ok"); } }
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 
 		// Second request — same DO instance (idFromName("stable")),
@@ -1016,29 +1279,38 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export default class extends WorkerEntrypoint {
 					ping() { return "v1"; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: "remote-worker",
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						try {
@@ -1049,7 +1321,13 @@ describe.sequential("DevRegistry", () => {
 						}
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -1065,16 +1343,24 @@ describe.sequential("DevRegistry", () => {
 
 		// Restart remote — gets a new debug port, registry file updates
 		await remote.setOptions({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export default class extends WorkerEntrypoint {
 					ping() { return "v2"; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 
 		// Second request — ExternalServiceProxy is re-instantiated per request,
@@ -1092,12 +1378,17 @@ describe.sequential("DevRegistry", () => {
 	test("scheduled to default entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
 			unsafeTriggerHandlers: true,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				let resolve, reject;
 				const promise = new Promise((res, rej) => {
 					resolve = res;
@@ -1119,27 +1410,37 @@ describe.sequential("DevRegistry", () => {
 						resolve({ cron: e.cron, scheduledTime: e.scheduledTime });
 					}
 				};
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				REMOTE: "remote-worker",
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						await env.REMOTE.scheduled({ cron: "*/5 * * * *" });
 						return new Response("scheduled event dispatched");
 					}
 				}
-			`,
+			`),
+						env: {
+							REMOTE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -1154,11 +1455,16 @@ describe.sequential("DevRegistry", () => {
 	test("tail to default entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				let resolve, reject;
 				const promise = new Promise((res, rej) => {
 					resolve = res;
@@ -1180,23 +1486,26 @@ describe.sequential("DevRegistry", () => {
 						resolve(e);
 					}
 				};
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			tails: ["remote-worker"],
-			serviceBindings: {
-				remote: "remote-worker",
-			},
-			handleRuntimeStdio: () => {},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			handleStructuredLogs: () => {},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						if (request.url.includes("remote-worker")) {
@@ -1206,7 +1515,14 @@ describe.sequential("DevRegistry", () => {
 						return new Response("Hello from local-worker!");
 					}
 				}
-			`,
+			`),
+						tailConsumers: [{ workerName: "remote-worker" }],
+						env: {
+							remote: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -1223,16 +1539,16 @@ describe.sequential("DevRegistry", () => {
 	test("tail to unknown worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const mf = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			tails: ["remote-worker"],
-			serviceBindings: {
-				remote: "remote-worker",
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			handleRuntimeStdio: () => {},
-			script: `
+			handleStructuredLogs: () => {},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env) {
 						if (request.url.includes("remote-worker")) {
@@ -1242,7 +1558,14 @@ describe.sequential("DevRegistry", () => {
 						return new Response("Hello from local-worker!");
 					}
 				}
-			`,
+			`),
+						tailConsumers: [{ workerName: "remote-worker" }],
+						env: {
+							remote: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(mf);
 
@@ -1263,11 +1586,16 @@ describe.sequential("DevRegistry", () => {
 	}) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				let resolve;
 				const captured = new Promise((res) => { resolve = res; });
@@ -1291,32 +1619,42 @@ describe.sequential("DevRegistry", () => {
 						resolve({ props: this.ctx.props ?? null });
 					}
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(remote);
 		await remote.ready;
 
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			tails: [
+			handleStructuredLogs: () => {},
+			workers: [
 				{
-					name: "remote-worker",
-					entrypoint: "TailCollector",
-					props: { tailKey: "from-tail-binding" },
-				},
-			],
-			handleRuntimeStdio: () => {},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch() {
 						console.log("DevReg: trigger tail event");
 						return new Response("ok");
 					}
 				}
-			`,
+			`),
+						tailConsumers: [
+							{
+								workerName: "remote-worker",
+								entrypoint: "TailCollector",
+								props: { tailKey: "from-tail-binding" },
+							},
+						],
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -1343,15 +1681,14 @@ describe.sequential("DevRegistry", () => {
 		const unsafeDevRegistryPath = await useTmp();
 		const unsafeDevRegistryPath2 = await useTmp();
 		const localOptions: MiniflareOptions = {
-			name: "local-worker",
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						try {
@@ -1362,18 +1699,32 @@ describe.sequential("DevRegistry", () => {
 	                    }
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		};
 		const remoteOptions: MiniflareOptions = {
-			name: "remote-worker",
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export default class TestEntrypoint extends WorkerEntrypoint {
 					ping() { return "pong"; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		};
 
 		const local = new Miniflare({
@@ -1438,16 +1789,15 @@ describe.sequential("DevRegistry", () => {
 	test("fetch to module worker with https enabled", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						const response = await env.SERVICE.fetch(request.url);
@@ -1458,7 +1808,13 @@ describe.sequential("DevRegistry", () => {
 						});
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -1470,12 +1826,17 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
 			https: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 		                const url = new URL(request.url);
@@ -1484,8 +1845,11 @@ describe.sequential("DevRegistry", () => {
 						return new Response("Hello " + name);
 					}
 				}
-			`,
-			// No direct sockets so that local will connect to the entry worker instead
+			`),
+					},
+					// No direct sockets so that local will connect to the entry worker instead
+				},
+			],
 		});
 		useDispose(remote);
 
@@ -1504,18 +1868,15 @@ describe.sequential("DevRegistry", () => {
 	test("fetch to durable object with https enabled", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
-
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-					scriptName: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 		                const ns = env.DO;
@@ -1526,7 +1887,17 @@ describe.sequential("DevRegistry", () => {
 						return response;
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -1537,18 +1908,17 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-
 			https: true,
-			compatibilityFlags: ["experimental"],
-			durableObjects: {
-				DO: {
-					className: "MyDurableObject",
-				},
-			},
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { DurableObject } from "cloudflare:workers";
 				export class MyDurableObject extends DurableObject {
 					fetch() {
@@ -1561,7 +1931,20 @@ describe.sequential("DevRegistry", () => {
 	                    return new Response("Hello from the default Worker Entrypoint!");
 					}
 				}
-			`,
+			`),
+						env: {
+							DO: {
+								type: "durable-object",
+								workerName: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(remote);
 
@@ -1587,19 +1970,18 @@ describe.sequential("DevRegistry", () => {
 
 		// Create local Worker with service binding and callback
 		const local = new Miniflare({
-			name: "local-worker",
 			unsafeDevRegistryPath,
 			unsafeHandleDevRegistryUpdate(registry) {
 				firstCallbackInvocations.push({ registry });
 			},
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						try {
@@ -1610,7 +1992,13 @@ describe.sequential("DevRegistry", () => {
 						}
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 		useDispose(local);
 
@@ -1620,17 +2008,25 @@ describe.sequential("DevRegistry", () => {
 
 		// Create an unrelated Worker - callback should NOT be triggered
 		const unrelated = new Miniflare({
-			name: "unrelated-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "unrelated-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch() {
 						return new Response("Hello from unrelated-worker!");
 					}
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		useDispose(unrelated);
 
@@ -1642,16 +2038,24 @@ describe.sequential("DevRegistry", () => {
 
 		// Create remote worker (one we're actually bound to) - this should trigger the callback
 		const remote = new Miniflare({
-			name: "remote-worker",
 			unsafeDevRegistryPath,
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export default class TestEntrypoint extends WorkerEntrypoint {
 					ping() { return "pong"; }
 				}
-			`,
+			`),
+					},
+				},
+			],
 		});
 		onTestFinished(async () => {
 			try {
@@ -1686,21 +2090,20 @@ describe.sequential("DevRegistry", () => {
 
 		// Update unsafeHandleDevRegistryUpdate callback to push to a different array
 		await local.setOptions({
-			name: "local-worker",
 			unsafeDevRegistryPath,
 			unsafeHandleDevRegistryUpdate(registry) {
 				secondCallbackInvocations.push({
 					registry,
 				});
 			},
-			serviceBindings: {
-				SERVICE: {
-					name: "remote-worker",
-				},
-			},
-			compatibilityFlags: ["experimental"],
-			modules: true,
-			script: `
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
 				export default {
 					async fetch(request, env, ctx) {
 						try {
@@ -1711,7 +2114,13 @@ describe.sequential("DevRegistry", () => {
 						}
 					}
 				}
-			`,
+			`),
+						env: {
+							SERVICE: { type: "worker", workerName: "remote-worker" },
+						},
+					},
+				},
+			],
 		});
 
 		// Test disposal
@@ -1734,6 +2143,350 @@ describe.sequential("DevRegistry", () => {
 				const latestInvocation = secondCallbackInvocations.at(-1);
 				// Registry should not contain remote-worker
 				expect(latestInvocation?.registry["remote-worker"]).toBeUndefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("advertises consumed queues in the worker's registry entry", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "consumer-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(
+							`export default { async queue() {} }`
+						),
+						// Consumed queues are advertised on the worker's own registry entry
+						// so producers in other processes can resolve this process's broker.
+						triggers: [{ type: "queue", name: "my-queue" }],
+					},
+				},
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["consumer-worker"]?.queueConsumers).toEqual([
+					"my-queue",
+				]);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Remove the consumer on reload so its advertisement is withdrawn and
+		// doesn't misdirect producers.
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "consumer-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(
+							`export default { async fetch() { return new Response("ok"); } }`
+						),
+					},
+				},
+			],
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				// The worker's own entry is still advertised, without the queue.
+				expect(registry["consumer-worker"]).toBeDefined();
+				expect(registry["consumer-worker"].queueConsumers).toBeUndefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+	test("reports a failure to forward tail events to a departed peer", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export default class extends WorkerEntrypoint {
+					tail() {}
+				}
+			`),
+					},
+				},
+			],
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const logs: string[] = [];
+		const local = new Miniflare({
+			unsafeDevRegistryPath,
+			handleStructuredLogs: ({ message }) => void logs.push(message),
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
+				export default {
+					fetch() {
+						console.log("tail me");
+						return new Response("ok");
+					}
+				}
+			`),
+						tailConsumers: [{ workerName: "remote-worker" }],
+					},
+				},
+			],
+		});
+		useDispose(local);
+		await local.ready;
+
+		// Establish the tail forwarding path while the peer is alive.
+		await vi.waitFor(
+			async () => {
+				await (await local.dispatchFetch("http://placeholder")).text();
+				expect(logs.join("\n")).toContain("tail me");
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Drop the peer without letting it deregister, so `local` keeps a registry
+		// entry pointing at a debug port that is no longer accepting connections.
+		// The forwarding RPC now rejects; that rejection must be reported rather
+		// than escaping as an unhandled rejection.
+		await remote.dispose();
+		logs.length = 0;
+
+		await vi.waitFor(
+			async () => {
+				await (await local.dispatchFetch("http://placeholder")).text();
+				expect(logs.join("\n")).toContain(
+					`[dev-registry] Failed to forward tail events to "remote-worker"`
+				);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+});
+
+describe("registry churn across config updates", () => {
+	const script = (body: string) =>
+		`export default { async fetch() { return new Response("${body}"); } }`;
+	const worker = (name: string, body: string, compatibilityFlags?: string[]) =>
+		({
+			dev: { unsafeRegisterWorker: true },
+			config: {
+				type: "worker",
+				name,
+				compatibilityDate: "2025-05-01",
+				compatibilityFlags,
+				manifest: singleModuleManifest(script(body)),
+			},
+		}) satisfies MiniflareOptions["workers"][number];
+
+	test("does not withdraw a Worker's entry during an unrelated config update", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [worker("stable-worker", "before")],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				expect(
+					getWorkerRegistry(unsafeDevRegistryPath)["stable-worker"]
+				).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Other dev sessions learn about us by watching this directory, so watch it
+		// the same way and record what a peer would actually see.
+		const events: string[] = [];
+		const watcher = watch(unsafeDevRegistryPath, {
+			ignoreInitial: true,
+		});
+		onTestFinished(() => watcher.close());
+		await new Promise((resolve) => watcher.once("ready", resolve));
+		watcher.on("unlink", (file) =>
+			events.push(`unlink:${path.basename(file)}`)
+		);
+		watcher.on("add", (file) => events.push(`add:${path.basename(file)}`));
+		watcher.on("change", (file) =>
+			events.push(`change:${path.basename(file)}`)
+		);
+
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [worker("stable-worker", "after")],
+		});
+
+		// Wait until the update has definitely reached the directory, so that an
+		// empty event list can't be mistaken for a passing assertion.
+		await vi.waitFor(
+			() => {
+				expect(events.some((event) => event.endsWith(":stable-worker"))).toBe(
+					true
+				);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		expect(events).not.toContain("unlink:stable-worker");
+		expect(
+			getWorkerRegistry(unsafeDevRegistryPath)["stable-worker"]
+		).toBeDefined();
+	});
+
+	test("withdraws its entries when a config update fails to start a runtime", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [worker("doomed-worker", "before")],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				expect(
+					getWorkerRegistry(unsafeDevRegistryPath)["doomed-worker"]
+				).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// A flag `workerd` rejects. The previous runtime is stopped before the
+		// replacement is started, so this update leaves no runtime behind it.
+		await expect(
+			mf.setOptions({
+				unsafeDevRegistryPath,
+				workers: [
+					worker("doomed-worker", "after", [
+						"definitely_not_a_real_compatibility_flag",
+					]),
+				],
+			})
+		).rejects.toThrow(/runtime failed to start/i);
+
+		// Nothing serves the advertised debug port now, and the entry's heartbeat
+		// would keep it looking fresh, so it has to be withdrawn rather than left
+		// for the stale-entry sweep.
+		expect(
+			getWorkerRegistry(unsafeDevRegistryPath)["doomed-worker"]
+		).toBeUndefined();
+	});
+
+	test("withdraws a removed Worker named after an inherited property", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				worker("kept-worker", "kept"),
+				// A name that exists on `Object.prototype`, so a membership test that
+				// walks the prototype chain would report it as still configured.
+				worker("constructor", "dropped"),
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		// `hasOwn` throughout: a plain object resolves `registry["constructor"]`
+		// through its prototype, so a plain lookup would assert nothing here.
+		await vi.waitFor(
+			() => {
+				expect(
+					Object.hasOwn(getWorkerRegistry(unsafeDevRegistryPath), "constructor")
+				).toBe(true);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [worker("kept-worker", "kept")],
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(Object.hasOwn(registry, "constructor")).toBe(false);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("withdraws the entry for a Worker removed from the config", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const mf = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				worker("kept-worker", "kept"),
+				worker("dropped-worker", "dropped"),
+			],
+		});
+		useDispose(mf);
+		await mf.ready;
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(registry["dropped-worker"]).toBeDefined();
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await mf.setOptions({
+			unsafeDevRegistryPath,
+			workers: [worker("kept-worker", "kept")],
+		});
+
+		await vi.waitFor(
+			() => {
+				const registry = getWorkerRegistry(unsafeDevRegistryPath);
+				expect(registry["kept-worker"]).toBeDefined();
+				expect(registry["dropped-worker"]).toBeUndefined();
 			},
 			{ timeout: 10_000, interval: 100 }
 		);

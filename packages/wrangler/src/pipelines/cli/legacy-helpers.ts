@@ -38,6 +38,7 @@ export async function getLegacyPipeline(
 	name: string,
 	format: "pretty" | "json"
 ): Promise<void> {
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy pipelines use validateName (allows hyphens); validateEntityName uses different regex
 	validateName("pipeline name", name);
 
 	const pipeline = await getPipeline(config, accountId, name);

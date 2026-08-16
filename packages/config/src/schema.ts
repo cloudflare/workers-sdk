@@ -1,7 +1,7 @@
 import * as z from "zod";
-import type { UserConfig } from "./types";
+import type { SettingsConfig, WorkerConfig } from "./types";
 
-const AssetsSchema = z.strictObject({
+export const AssetsSchema = z.strictObject({
 	htmlHandling: z
 		.enum([
 			"auto-trailing-slash",
@@ -16,7 +16,61 @@ const AssetsSchema = z.strictObject({
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
-const KnownBindingSchema = z.discriminatedUnion("type", [
+export const BrowserBindingSchema = z.strictObject({
+	type: z.literal("browser"),
+	remote: z.boolean().optional(),
+});
+
+export const WorkerBindingSchema = z.strictObject({
+	type: z.literal("worker"),
+	workerName: z.string(),
+	exportName: z.string().optional(),
+	props: z.record(z.string(), z.unknown()).optional(),
+	remote: z.boolean().optional(),
+});
+
+export const D1BindingSchema = z.strictObject({
+	type: z.literal("d1"),
+	name: z.string().optional(),
+	id: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const KVBindingSchema = z.strictObject({
+	type: z.literal("kv"),
+	id: z.string().optional(),
+	// TODO: name support not yet implemented
+	// name: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const QueueBindingSchema = z.strictObject({
+	type: z.literal("queue"),
+	name: z.string().optional(),
+	deliveryDelay: z.number().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const R2BindingSchema = z.strictObject({
+	type: z.literal("r2"),
+	name: z.string().optional(),
+	jurisdiction: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const FlagshipBindingSchema = z.strictObject({
+	type: z.literal("flagship"),
+	id: z.string().optional(),
+	remote: z.boolean().optional(),
+});
+
+export const HyperdriveBindingSchema = z.strictObject({
+	type: z.literal("hyperdrive"),
+	id: z.string(),
+	localConnectionString: z.string().optional(),
+});
+
+export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),
@@ -43,19 +97,11 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("assets") }),
-	z.strictObject({
-		type: z.literal("browser"),
-		remote: z.boolean().optional(),
-	}),
-	z.strictObject({
-		type: z.literal("d1"),
-		name: z.string().optional(),
-		id: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	BrowserBindingSchema,
+	D1BindingSchema,
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
-		namespace: z.string(),
+		namespace: z.string().optional(),
 		outbound: z
 			.strictObject({
 				workerName: z.string(),
@@ -69,28 +115,14 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		workerName: z.string(),
 		exportName: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("flagship"),
-		id: z.string(),
-		remote: z.boolean().optional(),
-	}),
-	z.strictObject({
-		type: z.literal("hyperdrive"),
-		id: z.string(),
-		localConnectionString: z.string().optional(),
-	}),
+	FlagshipBindingSchema,
+	HyperdriveBindingSchema,
 	z.strictObject({
 		type: z.literal("images"),
 		remote: z.boolean().optional(),
 	}),
 	z.strictObject({ type: z.literal("json"), value: z.json() }),
-	z.strictObject({
-		type: z.literal("kv"),
-		id: z.string().optional(),
-		// TODO: name support not yet implemented
-		// name: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	KVBindingSchema,
 	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
 	z.strictObject({
 		type: z.literal("media"),
@@ -106,12 +138,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		name: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("queue"),
-		name: z.string(),
-		deliveryDelay: z.number().optional(),
-		remote: z.boolean().optional(),
-	}),
+	QueueBindingSchema,
 	z.strictObject({
 		type: z.literal("rate-limit"),
 		namespace: z.string(),
@@ -120,12 +147,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 			period: z.union([z.literal(10), z.literal(60)]),
 		}),
 	}),
-	z.strictObject({
-		type: z.literal("r2"),
-		name: z.string().optional(),
-		jurisdiction: z.string().optional(),
-		remote: z.boolean().optional(),
-	}),
+	R2BindingSchema,
 	z.strictObject({ type: z.literal("secret") }),
 	z.strictObject({
 		type: z.literal("secrets-store-secret"),
@@ -178,13 +200,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 		type: z.literal("web-search"),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("worker"),
-		workerName: z.string(),
-		exportName: z.string().optional(),
-		props: z.record(z.string(), z.unknown()).optional(),
-		remote: z.boolean().optional(),
-	}),
+	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
 	// TODO: support Workflows
 	// z.strictObject({
@@ -195,7 +211,7 @@ const KnownBindingSchema = z.discriminatedUnion("type", [
 	// }),
 ]);
 
-const UnsafeBindingSchema = z.looseObject({
+export const UnsafeBindingSchema = z.looseObject({
 	type: z.templateLiteral(["unsafe:", z.string().min(1)]),
 	dev: z
 		.strictObject({
@@ -215,7 +231,7 @@ type BindingOutput =
 	| z.output<typeof KnownBindingSchema>
 	| z.output<typeof UnsafeBindingSchema>;
 
-const BindingSchema = z.unknown().transform((value, ctx) => {
+export const BindingSchema = z.unknown().transform((value, ctx) => {
 	const isUnsafe =
 		typeof value === "object" &&
 		value !== null &&
@@ -261,66 +277,109 @@ const SINGLETON_BINDING_TYPES = new Set([
 
 const listFormatter = new Intl.ListFormat("en-US");
 
+export function validateSingletonBindings(
+	env: Record<string, { type: string }>,
+	ctx: z.RefinementCtx
+) {
+	const seen = new Set<string>();
+	const duplicates = new Set<string>();
+
+	for (const binding of Object.values(env)) {
+		const type = binding.type;
+
+		if (SINGLETON_BINDING_TYPES.has(type)) {
+			if (seen.has(type)) {
+				duplicates.add(type);
+			}
+
+			seen.add(type);
+		}
+	}
+
+	if (duplicates.size > 0) {
+		ctx.addIssue({
+			code: "custom",
+			message: `${listFormatter.format([...duplicates].sort())} bindings can only be defined once`,
+		});
+	}
+}
+
 const EnvSchema = z
 	.record(z.string(), BindingSchema)
-	.superRefine((env, ctx) => {
-		const seen = new Set<string>();
-		const duplicates = new Set<string>();
-
-		for (const binding of Object.values(env)) {
-			const type = binding.type;
-
-			if (SINGLETON_BINDING_TYPES.has(type)) {
-				if (seen.has(type)) {
-					duplicates.add(type);
-				}
-
-				seen.add(type);
-			}
-		}
-
-		if (duplicates.size > 0) {
-			ctx.addIssue({
-				code: "custom",
-				message: `${listFormatter.format([...duplicates].sort())} bindings can only be defined once`,
-			});
-		}
-	})
+	.superRefine(validateSingletonBindings)
 	.optional();
 
 // `state` defaults to `"created"` (live) when omitted. Tombstones use one of
 // `"deleted"`, `"renamed"`, `"transferred"`; `"expecting-transfer"` is a live
 // entry awaiting incoming data via the two-phase cross-script transfer flow.
-const ExportSchema = z.union([
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("created").optional(),
-		storage: z.enum(["sqlite", "legacy-kv"]),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("deleted"),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("renamed"),
-		renamedTo: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("transferred"),
-		transferredTo: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("durable-object"),
-		state: z.literal("expecting-transfer"),
-		storage: z.enum(["sqlite", "legacy-kv"]),
-		transferFrom: z.string(),
-	}),
-	z.strictObject({
-		type: z.literal("worker"),
-		cache: z.strictObject({ enabled: z.boolean() }).optional(),
-	}),
+export const DurableObjectCreatedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("created").optional(),
+	storage: z.enum(["sqlite", "legacy-kv"]),
+	container: z.string().optional(),
+});
+
+export const DurableObjectDeletedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("deleted"),
+});
+
+export const DurableObjectRenamedExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("renamed"),
+	renamedTo: z.string(),
+});
+
+export const DurableObjectTransferredExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("transferred"),
+	transferredTo: z.string(),
+});
+
+export const DurableObjectExpectingTransferExportSchema = z.strictObject({
+	type: z.literal("durable-object"),
+	state: z.literal("expecting-transfer"),
+	storage: z.enum(["sqlite", "legacy-kv"]),
+	transferFrom: z.string(),
+	container: z.string().optional(),
+});
+
+export const WorkerEntrypointExportSchema = z.strictObject({
+	type: z.literal("worker"),
+	cache: z.strictObject({ enabled: z.boolean() }).optional(),
+});
+
+// Containers are only supported on the SQLite storage engine, so each live
+// variant enters the union split by `storage`: `container` exists on the
+// `sqlite` branch and is absent from the `legacy-kv` one. Splitting rather than
+// validating the pair keeps the inferred type honest, so `container` on a
+// `legacy-kv` export is a type error and not just a parse failure. The branches
+// are derived from the exported variants above, which stay unsplit so that
+// consumers such as miniflare can keep extending them as single objects.
+const DurableObjectCreatedSqliteExportSchema =
+	DurableObjectCreatedExportSchema.extend({ storage: z.literal("sqlite") });
+const DurableObjectCreatedLegacyKvExportSchema =
+	DurableObjectCreatedExportSchema.omit({ container: true }).extend({
+		storage: z.literal("legacy-kv"),
+	});
+const DurableObjectExpectingTransferSqliteExportSchema =
+	DurableObjectExpectingTransferExportSchema.extend({
+		storage: z.literal("sqlite"),
+	});
+const DurableObjectExpectingTransferLegacyKvExportSchema =
+	DurableObjectExpectingTransferExportSchema.omit({ container: true }).extend({
+		storage: z.literal("legacy-kv"),
+	});
+
+export const ExportSchema = z.union([
+	DurableObjectCreatedSqliteExportSchema,
+	DurableObjectCreatedLegacyKvExportSchema,
+	DurableObjectDeletedExportSchema,
+	DurableObjectRenamedExportSchema,
+	DurableObjectTransferredExportSchema,
+	DurableObjectExpectingTransferSqliteExportSchema,
+	DurableObjectExpectingTransferLegacyKvExportSchema,
+	WorkerEntrypointExportSchema,
 	// TODO: support Workflows
 	// z.strictObject({
 	// 	type: z.literal("workflow"),
@@ -375,14 +434,16 @@ const PlacementSchema = z.union([
 	}),
 ]);
 
-const TailConsumerSchema = z.strictObject({
+export const TailConsumerSchema = z.strictObject({
 	workerName: z.string(),
 	streaming: z.boolean().optional(),
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
-	// TODO: email triggers not yet implemented
-	// z.strictObject({ type: z.literal("email") }),
+	z.strictObject({
+		type: z.literal("email"),
+		addresses: z.array(z.string()),
+	}),
 	z.strictObject({
 		type: z.literal("fetch"),
 		pattern: z.string(),
@@ -428,8 +489,8 @@ const UnsafeSchema = z.strictObject({
  * (user-authored) and output (on-disk) Worker configs.
  */
 const BaseWorkerSchema = z.strictObject({
+	type: z.literal("worker"),
 	name: z.string(),
-	accountId: z.string().optional(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	assets: AssetsSchema.optional(),
@@ -443,7 +504,6 @@ const BaseWorkerSchema = z.strictObject({
 	observability: ObservabilitySchema.optional(),
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
-	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
 	firstPartyWorker: z.boolean().optional(),
 	unsafe: UnsafeSchema.optional(),
 	// TODO: support previews
@@ -465,6 +525,61 @@ export const InputWorkerSchema = BaseWorkerSchema.extend({
 
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
 
+/**
+ * Settings schema — validates the named `settings` export of a
+ * `cloudflare.config.ts`. Holds account/deployment settings shared by the other exports.
+ */
+export const SettingsSchema = z.strictObject({
+	type: z.literal("settings"),
+	accountId: z.string().optional(),
+	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
+});
+
+export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
+
+/**
+ * Discriminated union of the config kinds a single export may resolve to.
+ */
+const ConfigExportSchema = z.discriminatedUnion("type", [
+	InputWorkerSchema,
+	SettingsSchema,
+]);
+
+const SETTINGS_EXPORT_NAME = "settings";
+
+/**
+ * Schema for the resolved config exports, keyed by export
+ * name. Each value is discriminated on its `type` field. Reserves the
+ * `settings` export name exclusively for settings configs: a `settings`
+ * config must live on the `settings` export, and the `settings` export
+ * may only hold a `settings` config.
+ */
+export const ConfigExportsSchema = z
+	.record(z.string(), ConfigExportSchema)
+	.check((ctx) => {
+		for (const [key, value] of Object.entries(ctx.value)) {
+			const isSettingsName = key === SETTINGS_EXPORT_NAME;
+			const isSettingsType = value.type === "settings";
+			if (isSettingsType && !isSettingsName) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: [key],
+					message: `A \`settings\` config is only allowed on the \`${SETTINGS_EXPORT_NAME}\` export; found one on the \`${key}\` export.`,
+				});
+			} else if (isSettingsName && !isSettingsType) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: [key],
+					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${value.type}\` config.`,
+				});
+			}
+		}
+	});
+
+export type ParsedConfigExports = z.output<typeof ConfigExportsSchema>;
+
 export const ModuleTypeSchema = z.enum([
 	"esm",
 	"cjs",
@@ -485,8 +600,8 @@ const ManifestSchema = z.strictObject({
 });
 
 /**
- * Output Worker schema — the shape of `worker.config.json` in the
- * Build Output API. Adds an optional `manifest` field to the
+ * Output Worker schema — the shape of the Worker's `config.json` in the
+ * Build Output Specification. Adds an optional `manifest` field to the
  * base schema.
  */
 export const OutputWorkerSchema = BaseWorkerSchema.extend({
@@ -497,7 +612,7 @@ export type ParsedOutputWorkerConfig = z.output<typeof OutputWorkerSchema>;
 
 /**
  * Bidirectional drift check between {@link InputWorkerSchema} and the
- * public {@link UserConfig} interface. Excludes `entrypoint` and `env`,
+ * public {@link WorkerConfig} interface. Excludes `entrypoint` and `env`,
  * which deliberately differ:
  *
  * - `entrypoint`: the public type accepts a `WorkerModule` namespace
@@ -510,16 +625,16 @@ type _ComparableInput = Omit<
 	z.input<typeof InputWorkerSchema>,
 	"entrypoint" | "env"
 >;
-type _ComparableUserConfig = Omit<UserConfig, "entrypoint" | "env">;
-type _AssertSchemaMatchesUserConfig = [
-	_ComparableInput extends _ComparableUserConfig ? true : false,
-	_ComparableUserConfig extends _ComparableInput ? true : false,
+type _ComparableWorkerConfig = Omit<WorkerConfig, "entrypoint" | "env">;
+type _AssertSchemaMatchesWorkerConfig = [
+	_ComparableInput extends _ComparableWorkerConfig ? true : false,
+	_ComparableWorkerConfig extends _ComparableInput ? true : false,
 ];
-const _assertSchemaMatchesUserConfig: _AssertSchemaMatchesUserConfig = [
+const _assertSchemaMatchesWorkerConfig: _AssertSchemaMatchesWorkerConfig = [
 	true,
 	true,
 ];
-void _assertSchemaMatchesUserConfig;
+void _assertSchemaMatchesWorkerConfig;
 
 /**
  * Unidirectional drift check for `env`. The public binding return types
@@ -527,17 +642,31 @@ void _assertSchemaMatchesUserConfig;
  * inference helpers that the schema does not (and cannot) validate at
  * runtime, so a bidirectional check would always fail in that direction.
  *
- * We therefore only assert that `UserConfig['env']` is assignable to
+ * We therefore only assert that `WorkerConfig['env']` is assignable to
  * `z.input<typeof InputWorkerSchema>['env']` — i.e. every binding shape
  * the public type accepts is something the schema is willing to parse.
  * This catches drift where the public type drops a field the schema
  * still requires, renames a field, changes a field's type to one the
  * schema rejects, or adds a binding the schema doesn't know about.
  */
-type _AssertUserConfigEnvExtendsSchema = UserConfig["env"] extends z.input<
+type _AssertWorkerConfigEnvExtendsSchema = WorkerConfig["env"] extends z.input<
 	typeof InputWorkerSchema
 >["env"]
 	? true
 	: false;
-const _assertUserConfigEnvExtendsSchema: _AssertUserConfigEnvExtendsSchema = true;
-void _assertUserConfigEnvExtendsSchema;
+const _assertWorkerConfigEnvExtendsSchema: _AssertWorkerConfigEnvExtendsSchema = true;
+void _assertWorkerConfigEnvExtendsSchema;
+
+/**
+ * Bidirectional drift check between {@link SettingsSchema} and the public
+ * {@link SettingsConfig} interface.
+ */
+type _AssertSettingsSchemaMatchesConfig = [
+	z.input<typeof SettingsSchema> extends SettingsConfig ? true : false,
+	SettingsConfig extends z.input<typeof SettingsSchema> ? true : false,
+];
+const _assertSettingsSchemaMatchesConfig: _AssertSettingsSchemaMatchesConfig = [
+	true,
+	true,
+];
+void _assertSettingsSchemaMatchesConfig;

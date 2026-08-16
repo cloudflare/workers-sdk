@@ -1,5 +1,8 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
+import { CorePaths } from "./constants";
 import {
+	findQueueConsumer,
 	resolveTarget,
 	tailEventsReplacer,
 	tailEventsReviver,
@@ -50,6 +53,41 @@ function resolve(props: Props, env: Env): Fetcher | null {
 			: target.userWorkerService;
 	const client = env.DEV_REGISTRY_DEBUG_PORT.connect(target.debugPortAddress);
 	return client.getEntrypoint(serviceName, entrypoint ?? undefined, userProps);
+}
+
+/**
+ * Relays a queue broker's `/message` or `/batch` request to the dev session
+ * consuming that queue. The queue name comes from a request header (rather
+ * than binding props) because the broker serves every queue in its process
+ * through a single binding. Responds with 503 when no running dev session
+ * advertises a consumer for the queue, in which case the sending broker drops
+ * the message, mirroring the local no-consumer behaviour.
+ */
+export class ExternalQueueProxy extends WorkerEntrypoint<Env> {
+	fetch(request: Request): Promise<Response> | Response {
+		const queueName = request.headers.get(HEADER_QUEUE_NAME);
+		if (queueName === null) {
+			return new Response(`Missing "${HEADER_QUEUE_NAME}" header`, {
+				status: 400,
+			});
+		}
+
+		const target = findQueueConsumer(queueName);
+		if (target === undefined) {
+			return new Response(
+				`No Worker consuming queue "${queueName}" found in the local dev registry. Make sure the consumer Worker is running locally.`,
+				{ status: 503 }
+			);
+		}
+
+		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
+			target.debugPortAddress
+		);
+		const broker = client.getEntrypoint(getQueueServiceName(queueName));
+		const headers = new Headers(request.headers);
+		headers.delete(HEADER_QUEUE_NAME);
+		return broker.fetch(new Request(request, { headers }));
+	}
 }
 
 export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
@@ -108,7 +146,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 			params.set("time", String(controller.scheduledTime));
 		}
 		const response = await this._entryFetcher.fetch(
-			new Request(`http://localhost/cdn-cgi/handler/scheduled?${params}`, {
+			new Request(`http://localhost${CorePaths.SCHEDULED}?${params}`, {
 				headers: { "MF-Route-Override": this.ctx.props.service },
 			})
 		);
@@ -123,7 +161,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	// Forward tail events to the remote worker via RPC.
 	// Events with rpcMethod==="tail" are filtered out to prevent infinite
 	// recursion (the remote tail() call would itself produce a tail event).
-	tail(events: TraceItem[]) {
+	async tail(events: TraceItem[]) {
 		if (!this._fetcher) {
 			return;
 		}
@@ -138,8 +176,12 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 				JSON.stringify(filtered, tailEventsReplacer),
 				tailEventsReviver
 			);
+			// `await` rather than `return`: the RPC rejects when the peer's debug
+			// port has gone away, and returning the promise leaves that rejection
+			// outside this `try`, so it escapes as an unhandled rejection instead of
+			// being reported.
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
-			return this._fetcher.tail(serializedEvents);
+			await this._fetcher.tail(serializedEvents);
 		} catch (e) {
 			console.warn(
 				`[dev-registry] Failed to forward tail events to "${

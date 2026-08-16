@@ -302,6 +302,60 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 			expect(std.out).toMatch("🚣 Executed 1 command in 123.46ms");
 		});
 
+		it("should preserve quoted CRLF when normalizing commands sent to the remote query API", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
+
+			msw.use(
+				...getMswSuccessMembershipHandlers([
+					{
+						id: "some-account-id",
+						name: "test-account",
+					},
+				])
+			);
+
+			let sentSql: string | undefined;
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", async () => {
+					return HttpResponse.json(
+						createFetchResult([
+							{ uuid: "xxxx", name: "db", created_at: "", version: "alpha" },
+						])
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async ({ request }) => {
+						sentSql = ((await request.json()) as { sql: string }).sql;
+						return HttpResponse.json(
+							createFetchResult([
+								{
+									results: [{ result: 1 }],
+									success: true,
+									meta: { duration: 100 },
+								},
+							])
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				"d1 execute db --remote --command \"CREATE TRIGGER trg BEFORE DELETE ON probe_z\r\nBEGIN\r\n  SELECT RAISE(ABORT, 'no\r\nchange');\r\nEND;\""
+			);
+
+			expect(sentSql).toBe(
+				"CREATE TRIGGER trg BEFORE DELETE ON probe_z\nBEGIN\n  SELECT RAISE(ABORT, 'no\r\nchange');\nEND;"
+			);
+		});
+
 		it("should format batch execution duration with 2 decimal places", async ({
 			expect,
 		}) => {

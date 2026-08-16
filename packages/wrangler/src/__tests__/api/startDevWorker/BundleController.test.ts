@@ -1,5 +1,6 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import {
 	normalizeString,
 	runInTempDir,
@@ -20,10 +21,20 @@ function findSourceFile(source: string, name: string): string {
 	return source.slice(startIndex, endIndex);
 }
 
+/**
+ * The temporary build directories created under the project root, each of which
+ * also registers a process exit listener to clean itself up.
+ */
+function wranglerTmpDirs(): string[] {
+	const tmpRoot = path.resolve(".wrangler/tmp");
+	return existsSync(tmpRoot) ? readdirSync(tmpRoot) : [];
+}
+
 function configDefaults(
 	config: Partial<
-		Omit<StartDevWorkerOptions, "build"> & {
+		Omit<StartDevWorkerOptions, "build" | "dev"> & {
 			build: Partial<StartDevWorkerOptions["build"]>;
+			dev: Partial<StartDevWorkerOptions["dev"]>;
 		}
 	>
 ): StartDevWorkerOptions {
@@ -34,8 +45,11 @@ function configDefaults(
 		entrypoint: path.resolve("src/index.ts"),
 		projectRoot: path.resolve("src"),
 		legacy: {},
-		dev: { persist },
 		...config,
+		dev: {
+			persist,
+			...config.dev,
+		},
 		build: {
 			additionalModules: [],
 			processEntrypoint: false,
@@ -73,7 +87,13 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	afterEach(() => controller.teardown());
 
 	describe("happy path bundle + watch", () => {
-		test("single ts source file", async ({ expect }) => {
+		test.for([
+			{ name: "bundled", build: {} },
+			{
+				name: "unbundled with entrypoint processing",
+				build: { bundle: false, processEntrypoint: true },
+			},
+		])("single ts source file ($name)", async ({ build }, { expect }) => {
 			await seed({
 				"src/index.ts": dedent /* javascript */ `
 				export default {
@@ -87,11 +107,17 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			const config = configDefaults({
 				entrypoint: path.resolve("src/index.ts"),
 				projectRoot: path.resolve("src"),
+				build,
 			});
 			const ev = bus.waitFor("bundleComplete");
 			controller.onConfigUpdate({ type: "configUpdate", config });
-			expect(findSourceFile((await ev).bundle.entrypointSource, "index.ts"))
-				.toMatchInlineSnapshot(`
+			const initialSource = (await ev).bundle.entrypointSource;
+			expect(initialSource).not.toContain("wrangler:modules-watch");
+			if (build.bundle === false) {
+				return;
+			}
+			expect(initialSource).toContain("hello world");
+			expect(findSourceFile(initialSource, "index.ts")).toMatchInlineSnapshot(`
 					"// index.ts
 					var index_exports = {};
 					__export(index_exports, {
@@ -117,8 +143,10 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					} satisfies ExportedHandler
 				`,
 			});
-			expect(findSourceFile((await ev2).bundle.entrypointSource, "index.ts"))
-				.toMatchInlineSnapshot(`
+			const updatedSource = (await ev2).bundle.entrypointSource;
+			expect(updatedSource).not.toContain("wrangler:modules-watch");
+			expect(updatedSource).toContain("hello world 2");
+			expect(findSourceFile(updatedSource, "index.ts")).toMatchInlineSnapshot(`
 					"// index.ts
 					var index_exports = {};
 					__export(index_exports, {
@@ -319,6 +347,112 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			);
 		});
 
+		test("a burst of watched file changes does not run custom builds concurrently", async ({
+			expect,
+		}) => {
+			await seed({
+				// Records an overlap in `overlap.txt` if another custom build process is
+				// still running when this one starts.
+				//
+				// A build that is superseded part way through is killed, leaving
+				// `build.lock` behind, so the recorded pid is checked for liveness
+				// rather than treating the presence of the lock as an overlap.
+				"build.js": dedent /* javascript */ `
+					const fs = require("node:fs");
+
+					if (fs.existsSync("build.lock")) {
+						const pid = Number(fs.readFileSync("build.lock", "utf8"));
+						let running = true;
+						try {
+							process.kill(pid, 0);
+						} catch {
+							running = false;
+						}
+						if (running) {
+							fs.writeFileSync("overlap.txt", String(pid));
+							process.exit(1);
+						}
+					}
+
+					fs.writeFileSync("build.lock", String(process.pid));
+					setTimeout(() => {
+						fs.cpSync("custom_build_dir/index.ts", "out.ts");
+						fs.rmSync("build.lock");
+					}, 300);
+				`,
+				"custom_build_dir/index.ts": dedent /* javascript */ `
+					export default {
+						fetch() {
+							return new Response("hello custom build")
+						}
+					} satisfies ExportedHandler
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				build: {
+					custom: {
+						command: "node build.js",
+						watch: "custom_build_dir",
+					},
+					moduleRoot: path.resolve("."),
+				},
+			});
+
+			const firstBuild = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			await firstBuild;
+
+			const bundleStartCount = () =>
+				bus.events.filter((event) => event.type === "bundleStart").length;
+			const buildsBeforeChanges = bundleStartCount();
+
+			// Simulate the burst of watcher events produced by something like a
+			// `git pull` touching several files at once.
+			await seed(
+				Object.fromEntries(
+					Array.from({ length: 5 }, (_, i) => [
+						`custom_build_dir/change-${i}.txt`,
+						String(i),
+					])
+				)
+			);
+
+			// Wait for the builds triggered by the burst to settle, which we treat as
+			// two consecutive polls seeing the same number of builds. We deliberately
+			// don't wait for `bundleComplete`: overlapping builds make the last build
+			// fail, and the assertions below report that far more usefully than the
+			// test timing out.
+			let previousCount = -1;
+			await vi.waitFor(
+				() => {
+					const count = bundleStartCount();
+					const settled =
+						count > buildsBeforeChanges && count === previousCount;
+					previousCount = count;
+					if (!settled) {
+						throw new Error(
+							`Custom builds have not settled yet (${count - buildsBeforeChanges} started since the file changes)`
+						);
+					}
+				},
+				{ timeout: 8_000, interval: 500 }
+			);
+
+			expect(existsSync("overlap.txt")).toBe(false);
+			expect(
+				bus.events.filter(
+					(event) =>
+						event.type === "error" &&
+						event.source === "BundlerController" &&
+						event.reason === "Custom build failed"
+				)
+			).toEqual([]);
+			// The burst is debounced, so it must not produce a build per changed file
+			expect(bundleStartCount() - buildsBeforeChanges).toBeLessThan(5);
+		});
+
 		test("teardown aborts an in-flight watched custom build", async ({
 			expect,
 		}) => {
@@ -382,6 +516,73 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				)
 			).toBe(false);
 		});
+
+		// `DevEnv` tears its controllers down concurrently, and `ConfigController` can
+		// dispatch a config-file change that was delivered while its own watcher was
+		// closing, so a config update can reach the bundler after it has torn down.
+		// Acting on one leaks watchers, an esbuild watch build and a temp directory
+		// that nothing will ever clean up, and can keep the process alive.
+		const postTeardownCases = [
+			{
+				name: "watched custom build",
+				build: {
+					custom: { command: "node build.js", watch: "custom_build_dir" },
+				},
+			},
+			{
+				name: "unwatched custom build",
+				dev: { watch: false },
+				build: {
+					custom: { command: "node build.js", watch: "custom_build_dir" },
+				},
+			},
+			{
+				name: "esbuild bundler",
+				entrypoint: path.resolve("custom_build_dir/index.ts"),
+			},
+		];
+
+		for (const testCase of postTeardownCases) {
+			test(`a config update after teardown is ignored (${testCase.name})`, async ({
+				expect,
+			}) => {
+				await seed({
+					"build.js": dedent /* javascript */ `
+						const fs = require("node:fs");
+						fs.writeFileSync("built.txt", "yes");
+						fs.cpSync("custom_build_dir/index.ts", "out.ts");
+					`,
+					"custom_build_dir/index.ts": dedent /* javascript */ `
+						export default {
+							fetch() {
+								return new Response("initial")
+							}
+						}
+					`,
+				});
+				const config = configDefaults({
+					entrypoint: path.resolve("out.ts"),
+					projectRoot: path.resolve("."),
+					...testCase,
+					build: { moduleRoot: path.resolve("."), ...testCase.build },
+				});
+
+				await controller.teardown();
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				await setTimeout(500);
+
+				// Nothing may run the user's build command or report to the torn-down bus
+				expect(existsSync("built.txt")).toBe(false);
+				expect(
+					bus.events.filter(
+						(event) =>
+							event.type === "bundleStart" || event.type === "bundleComplete"
+					)
+				).toEqual([]);
+				// ...nor create resources that nothing is left to clean up
+				expect(wranglerTmpDirs()).toEqual([]);
+			});
+		}
 	});
 
 	test("module aliasing", async ({ expect }) => {

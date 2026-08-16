@@ -90,6 +90,8 @@ type VariableNames =
 	| "WRANGLER_AUTH_URL"
 	/** Custom OAuth client ID (usually auto-configured). */
 	| "WRANGLER_CLIENT_ID"
+	/** Custom OAuth client ID for the `cf` CLI's OAuth app (usually auto-configured). */
+	| "CLOUDFLARE_CLIENT_ID"
 	/** Custom token URL (usually auto-configured). */
 	| "WRANGLER_TOKEN_URL"
 	/** Custom token revocation URL (usually auto-configured). */
@@ -112,8 +114,10 @@ type VariableNames =
 
 	// ## Experimental Feature Flags
 
-	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
+	/** Enable the local explorer UI at /cdn-cgi/local/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Enable local-dev observability capture (experimental, default: false). */
+	| "X_LOCAL_OBSERVABILITY"
 	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */
 	| "X_BROWSER_HEADFUL"
 
@@ -125,6 +129,8 @@ type VariableNames =
 	| "WRANGLER_SEND_METRICS"
 	/** Enable/disable error reporting to Sentry. */
 	| "WRANGLER_SEND_ERROR_REPORTS"
+	/** Suppress the prompt that offers to update Cloudflare agent skills. */
+	| "WRANGLER_NO_SKILLS_UPDATE_PROMPTS"
 	/** CI branch name (internal use). */
 	| "WORKERS_CI_BRANCH"
 	/** CI tag matching configuration (internal use). */
@@ -137,6 +143,9 @@ type VariableNames =
 	| "WRANGLER_CI_GENERATE_PREVIEW_ALIAS"
 	/** Disable config watching in ConfigController. */
 	| "WRANGLER_CI_DISABLE_CONFIG_WATCHING"
+
+	/** Disable telemetry when set to an opt-out value. */
+	| "DO_NOT_TRACK"
 
 	// ## Docker Configuration
 

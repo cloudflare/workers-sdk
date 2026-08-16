@@ -4,7 +4,7 @@ import {
 	isValidR2BucketName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
 import { fetchR2Objects } from "../../cfetch/internal";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
@@ -157,11 +157,12 @@ export async function usingLocalBucket<T>(
 	) => Promise<T>
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
-	const defaultPersistRoot = getDefaultPersistRoot(persist);
-	const mf = new Miniflare({
-		modules: true,
-		// TODO(soon): import `reduceError()` from `miniflare:shared`
-		script: `
+	const resourcePersistencePath = getDefaultPersistRoot(persist);
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			modules: true,
+			// TODO(soon): import `reduceError()` from `miniflare:shared`
+			script: `
     function reduceError(e) {
       return {
         name: e?.name,
@@ -189,9 +190,10 @@ export async function usingLocalBucket<T>(
         }
       }
     }`,
-		defaultPersistRoot,
-		r2Buckets: { BUCKET: bucketName },
-	});
+			resourcePersistencePath,
+			r2Buckets: { BUCKET: bucketName },
+		})
+	);
 	const bucket = await mf.getR2Bucket("BUCKET");
 	try {
 		return await closure(bucket, mf);

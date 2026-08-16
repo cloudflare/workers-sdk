@@ -706,4 +706,155 @@ describe("update wrangler config", () => {
 		expect(newConfig).not.toContain("nodejs_compat");
 		expect(newConfig).not.toContain("upload_source_maps");
 	});
+
+	// From this date onwards workerd enables `nodejs_compat` by default and
+	// rejects configurations that also specify the flag.
+	describe("when the compatibility date enables nodejs_compat by default", () => {
+		beforeEach(() => {
+			vi.mocked(getWorkerdCompatibilityDate).mockReturnValue("2026-08-04");
+		});
+
+		test("does not add nodejs_compat (toml)", async ({ expect }) => {
+			const toml = [`name = "my-worker"`, `main = "src/index.ts"`].join("\n");
+			vi.mocked(readFile).mockReturnValue(toml);
+
+			await updateWranglerConfig(ctx);
+
+			const newToml = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newToml).toContain('compatibility_date = "2026-08-04"');
+			expect(newToml).not.toContain("nodejs_compat");
+		});
+
+		test("does not add nodejs_compat (json)", async ({ expect }) => {
+			vi.mocked(existsSync).mockImplementationOnce((f) =>
+				(f as string).endsWith(".json")
+			);
+			const json = JSON.stringify({
+				name: "my-worker",
+				main: "src/index.ts",
+			});
+			vi.mocked(readFile).mockReturnValueOnce(json);
+
+			await updateWranglerConfig(ctx);
+
+			const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newConfig).toContain('"compatibility_date": "2026-08-04"');
+			expect(newConfig).not.toContain("nodejs_compat");
+		});
+
+		test("preserves other compatibility flags (json)", async ({ expect }) => {
+			vi.mocked(existsSync).mockImplementationOnce((f) =>
+				(f as string).endsWith(".json")
+			);
+			const json = JSON.stringify({
+				name: "my-worker",
+				main: "src/index.ts",
+				compatibility_flags: ["some_other_flag"],
+			});
+			vi.mocked(readFile).mockReturnValueOnce(json);
+
+			await updateWranglerConfig(ctx);
+
+			const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newConfig).toContain("some_other_flag");
+			expect(newConfig).not.toContain("nodejs_compat");
+		});
+
+		test("still respects a compatibility date pinned by the template (json)", async ({
+			expect,
+		}) => {
+			vi.mocked(existsSync).mockImplementationOnce((f) =>
+				(f as string).endsWith(".json")
+			);
+			const json = JSON.stringify({
+				name: "my-worker",
+				main: "src/index.ts",
+				compatibility_date: "2025-01-01",
+			});
+			vi.mocked(readFile).mockReturnValueOnce(json);
+
+			await updateWranglerConfig(ctx);
+
+			const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newConfig).toContain('"compatibility_date": "2025-01-01"');
+			expect(newConfig).toContain("nodejs_compat");
+		});
+
+		test("removes a nodejs_compat the config already had (json)", async ({
+			expect,
+		}) => {
+			vi.mocked(existsSync).mockImplementationOnce((f) =>
+				(f as string).endsWith(".json")
+			);
+			const json = JSON.stringify({
+				name: "my-worker",
+				main: "src/index.ts",
+				compatibility_flags: ["nodejs_compat"],
+			});
+			vi.mocked(readFile).mockReturnValueOnce(json);
+
+			await updateWranglerConfig(ctx);
+
+			const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newConfig).toContain('"compatibility_date": "2026-08-04"');
+			expect(newConfig).not.toContain("nodejs_compat");
+			expect(newConfig).not.toContain("compatibility_flags");
+		});
+
+		test("removes a nodejs_compat the config already had (toml)", async ({
+			expect,
+		}) => {
+			const toml = [
+				`name = "my-worker"`,
+				`compatibility_flags = [ "nodejs_compat" ]`,
+			].join("\n");
+			vi.mocked(readFile).mockReturnValue(toml);
+
+			await updateWranglerConfig(ctx);
+
+			const newToml = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newToml).toContain('compatibility_date = "2026-08-04"');
+			expect(newToml).not.toContain("nodejs_compat");
+			expect(newToml).not.toContain("compatibility_flags");
+		});
+
+		test("removes nodejs_compat_v2 but keeps unrelated flags (json)", async ({
+			expect,
+		}) => {
+			vi.mocked(existsSync).mockImplementationOnce((f) =>
+				(f as string).endsWith(".json")
+			);
+			const json = JSON.stringify({
+				name: "my-worker",
+				main: "src/index.ts",
+				compatibility_flags: ["nodejs_compat_v2", "some_other_flag"],
+			});
+			vi.mocked(readFile).mockReturnValueOnce(json);
+
+			await updateWranglerConfig(ctx);
+
+			const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newConfig).not.toContain("nodejs_compat_v2");
+			expect(newConfig).toContain("some_other_flag");
+		});
+
+		test("keeps an explicit no_nodejs_compat opt-out (json)", async ({
+			expect,
+		}) => {
+			vi.mocked(existsSync).mockImplementationOnce((f) =>
+				(f as string).endsWith(".json")
+			);
+			const json = JSON.stringify({
+				name: "my-worker",
+				main: "src/index.ts",
+				compatibility_flags: ["no_nodejs_compat"],
+			});
+			vi.mocked(readFile).mockReturnValueOnce(json);
+
+			await updateWranglerConfig(ctx);
+
+			const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+			expect(newConfig).toContain("no_nodejs_compat");
+		});
+	});
 });

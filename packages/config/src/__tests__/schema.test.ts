@@ -1,7 +1,18 @@
 import { describe, it } from "vitest";
-import { InputWorkerSchema, OutputWorkerSchema } from "../schema";
+import { exports as exportConfig } from "../exports";
+import {
+	ConfigExportsSchema,
+	InputWorkerSchema,
+	OutputWorkerSchema,
+	SettingsSchema,
+} from "../schema";
+import type { ParsedInputWorkerConfig } from "../schema";
 
-const baseConfig = { name: "worker", compatibilityDate: "2026-06-01" } as const;
+const baseConfig = {
+	type: "worker",
+	name: "my-worker",
+	compatibilityDate: "2026-06-01",
+} as const;
 
 describe("InputWorkerSchema", () => {
 	describe("env singleton bindings", () => {
@@ -587,5 +598,270 @@ describe("OutputWorkerSchema", () => {
 		});
 
 		expect(result.success).toBe(false);
+	});
+});
+
+describe("InputWorkerSchema type discriminant", () => {
+	it("requires type: 'worker'", ({ expect }) => {
+		const { type: _type, ...withoutType } = baseConfig;
+		const result = InputWorkerSchema.safeParse(withoutType);
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("SettingsSchema", () => {
+	it("accepts a minimal settings config", ({ expect }) => {
+		const result = SettingsSchema.safeParse({ type: "settings" });
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts accountId and complianceRegion", ({ expect }) => {
+		const result = SettingsSchema.safeParse({
+			type: "settings",
+			accountId: "acc-123",
+			complianceRegion: "fedramp-high",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects unknown fields", ({ expect }) => {
+		const result = SettingsSchema.safeParse({
+			type: "settings",
+			name: "my-worker",
+		});
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("ConfigExportsSchema", () => {
+	it("discriminates worker and settings exports by type", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			settings: { type: "settings", accountId: "acc-123" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.default?.type).toBe("worker");
+			expect(result.data.settings?.type).toBe("settings");
+		}
+	});
+
+	it("reports an invalid-discriminator issue keyed by export name", ({
+		expect,
+	}) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: { name: "my-worker", compatibilityDate: "2026-06-01" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual(["default", "type"]);
+		}
+	});
+
+	it("rejects a settings config on a non-`settings` export", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			settings: { type: "settings" },
+			extraSettings: { type: "settings" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find((i) =>
+				i.message.includes(
+					"A `settings` config is only allowed on the `settings` export"
+				)
+			);
+			expect(issue?.path).toEqual(["extraSettings"]);
+		}
+	});
+
+	it("rejects a settings config on the `default` export", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: { type: "settings" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find((i) =>
+				i.message.includes(
+					"A `settings` config is only allowed on the `settings` export"
+				)
+			);
+			expect(issue?.path).toEqual(["default"]);
+		}
+	});
+
+	it("rejects a worker config on the reserved `settings` export", ({
+		expect,
+	}) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			settings: { ...baseConfig, name: "settings" },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find((i) =>
+				i.message.includes(
+					"The `settings` export is reserved for a `settings` config"
+				)
+			);
+			expect(issue?.path).toEqual(["settings"]);
+		}
+	});
+
+	it("allows multiple worker exports", ({ expect }) => {
+		const result = ConfigExportsSchema.safeParse({
+			default: baseConfig,
+			api: { ...baseConfig, name: "api" },
+		});
+
+		expect(result.success).toBe(true);
+	});
+});
+
+describe("ExportSchema", () => {
+	function parseExports(exports: unknown) {
+		return InputWorkerSchema.safeParse({ ...baseConfig, exports });
+	}
+
+	it("accepts `container` on a live durable-object export", ({ expect }) => {
+		const result = parseExports({
+			MyDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts `container` on an expecting-transfer export", ({ expect }) => {
+		const result = parseExports({
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "source-worker",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects `container` on a tombstone", ({ expect }) => {
+		const result = parseExports({
+			OldDO: {
+				type: "durable-object",
+				state: "deleted",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a non-string `container`", ({ expect }) => {
+		const result = parseExports({
+			MyDO: { type: "durable-object", storage: "sqlite", container: 1 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `container` on a legacy-kv export", ({ expect }) => {
+		const result = parseExports({
+			MyDO: {
+				type: "durable-object",
+				storage: "legacy-kv",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `container` on a legacy-kv expecting-transfer export", ({
+		expect,
+	}) => {
+		const result = parseExports({
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("still accepts a legacy-kv export without a container", ({ expect }) => {
+		const result = parseExports({
+			MyDO: { type: "durable-object", storage: "legacy-kv" },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	// Containers require the SQLite storage engine. The check below is the type
+	// half of that rule: `tsc` checks this body (it is never called), so a missing
+	// error fails `check:type` via the unused `@ts-expect-error` directives.
+	it("forbids `container` on a legacy-kv export at the type level", ({
+		expect,
+	}) => {
+		function typeAssertions() {
+			exportConfig.durableObject({
+				storage: "legacy-kv",
+				// @ts-expect-error `container` requires `storage: "sqlite"`
+				container: "my-container",
+			});
+
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+				// @ts-expect-error `container` requires `storage: "sqlite"`
+				container: "my-container",
+			});
+
+			const _exports: NonNullable<ParsedInputWorkerConfig["exports"]> = {
+				MyDO: {
+					type: "durable-object",
+					storage: "legacy-kv",
+					// @ts-expect-error `container` requires `storage: "sqlite"`
+					container: "my-container",
+				},
+			};
+
+			// The permitted combinations must still compile.
+			exportConfig.durableObject({ storage: "sqlite", container: "my-do" });
+			exportConfig.durableObject({ storage: "legacy-kv" });
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "source-worker",
+				container: "my-do",
+			});
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+			});
+
+			return _exports;
+		}
+
+		expect(typeAssertions).toBeTypeOf("function");
 	});
 });

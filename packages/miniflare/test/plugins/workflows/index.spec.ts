@@ -1,8 +1,9 @@
 import * as fs from "node:fs/promises";
+import path from "node:path";
 import { scheduler } from "node:timers/promises";
-import { Miniflare } from "miniflare";
+import { Miniflare, WORKFLOWS_PLUGIN_NAME } from "miniflare";
 import { describe, test } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 const WORKFLOW_SCRIPT = () => `
@@ -27,22 +28,30 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 }) => {
 	const tmp = await useTmp();
 	const mf = new Miniflare({
-		name: "workflow-compatibility-flags-worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: WORKFLOW_SCRIPT(),
-		workflows: {
-			MY_WORKFLOW: {
-				className: "MyWorkflow",
-				name: "MY_WORKFLOW",
-				compatibilityFlags: [
-					"nodejs_compat",
-					"experimental",
-					"enhanced_error_serialization",
-				],
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "workflow-compatibility-flags-worker",
+					compatibilityDate: "2024-11-20",
+					compatibilityFlags: [
+						"nodejs_compat",
+						"experimental",
+						"enhanced_error_serialization",
+					],
+					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
+					env: {
+						MY_WORKFLOW: {
+							type: "workflow",
+							name: "MY_WORKFLOW",
+							workerName: "workflow-compatibility-flags-worker",
+							exportName: "MyWorkflow",
+						},
+					},
+				},
 			},
-		},
-		workflowsPersist: tmp,
+		],
 	});
 	useDispose(mf);
 
@@ -57,17 +66,25 @@ test("persists Workflow data on file-system between runs", async ({
 }) => {
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: WORKFLOW_SCRIPT(),
-		workflows: {
-			MY_WORKFLOW: {
-				className: "MyWorkflow",
-				name: "MY_WORKFLOW",
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "worker",
+					compatibilityDate: "2024-11-20",
+					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
+					env: {
+						MY_WORKFLOW: {
+							type: "workflow",
+							name: "MY_WORKFLOW",
+							workerName: "worker",
+							exportName: "MyWorkflow",
+						},
+					},
+				},
 			},
-		},
-		workflowsPersist: tmp,
+		],
 	};
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -97,8 +114,8 @@ test("persists Workflow data on file-system between runs", async ({
 		true
 	);
 
-	// check if files were committed
-	const names = await fs.readdir(tmp);
+	// check if files were committed under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME));
 	expect(names).toEqual(["miniflare-workflows-MY_WORKFLOW"]);
 
 	// restart miniflare
@@ -181,17 +198,25 @@ export default {
 
 function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 	return {
-		name: "lifecycle-worker",
-		compatibilityDate: "2026-03-09",
-		modules: true,
-		script: LIFECYCLE_WORKFLOW_SCRIPT(),
-		workflows: {
-			LIFECYCLE_WORKFLOW: {
-				className: "LifecycleWorkflow",
-				name: "LIFECYCLE_WORKFLOW",
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "lifecycle-worker",
+					compatibilityDate: "2026-03-09",
+					manifest: singleModuleManifest(LIFECYCLE_WORKFLOW_SCRIPT()),
+					env: {
+						LIFECYCLE_WORKFLOW: {
+							type: "workflow",
+							name: "LIFECYCLE_WORKFLOW",
+							workerName: "lifecycle-worker",
+							exportName: "LifecycleWorkflow",
+						},
+					},
+				},
 			},
-		},
-		workflowsPersist: tmp,
+		],
 	};
 }
 
