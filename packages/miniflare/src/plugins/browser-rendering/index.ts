@@ -295,10 +295,12 @@ export async function launchBrowser({
 		}
 		const discarded = await installed.discard();
 		if (discarded.outcome === "cleanup-failed") {
-			// Miniflare logs to a no-op by default, so anything worth knowing
-			// has to travel on the error itself.
+			// Miniflare logs to a no-op by default and the loopback sends only
+			// an error's `stack`, so both halves of the story have to be in the
+			// message: what stopped Chrome starting, and what stopped us
+			// clearing the install it failed from.
 			throw new Error(
-				`Chrome failed to launch from ${installed.installDir}, and the directory could not be removed to re-download it. Delete it manually and try again.`,
+				`Chrome failed to launch from ${installed.installDir}, and the directory could not be removed to re-download it (${discarded.cause}). Delete it manually and try again. Chrome failed with: ${e.message}`,
 				{ cause: discarded.cause }
 			);
 		}
