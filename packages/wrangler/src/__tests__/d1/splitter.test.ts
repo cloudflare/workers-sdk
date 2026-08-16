@@ -277,6 +277,57 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should end a compound statement when END follows a semicolon", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER audit_trigger AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);END;
+    INSERT INTO items (id) VALUES (1);
+    SELECT * FROM items;`)
+		).toEqual([
+			`CREATE TRIGGER audit_trigger AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);END`,
+			"INSERT INTO items (id) VALUES (1)",
+			"SELECT * FROM items",
+		]);
+	});
+
+	it("should start a compound statement when BEGIN follows a parenthesis", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER audit_trigger AFTER INSERT ON items FOR EACH ROW WHEN (1=1)BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);
+    END;
+    SELECT * FROM items;`)
+		).toEqual([
+			`CREATE TRIGGER audit_trigger AFTER INSERT ON items FOR EACH ROW WHEN (1=1)BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);
+    END`,
+			"SELECT * FROM items",
+		]);
+	});
+
+	it("should not treat an identifier ending in END as a compound statement end", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TABLE weekend (id INTEGER PRIMARY KEY);
+    INSERT INTO weekend (id) VALUES (1);
+    SELECT * FROM weekend;`)
+		).toEqual([
+			"CREATE TABLE weekend (id INTEGER PRIMARY KEY)",
+			"INSERT INTO weekend (id) VALUES (1)",
+			"SELECT * FROM weekend",
+		]);
+	});
+
 	it("should handle compound statements for BEGINs", ({ expect }) => {
 		expect(
 			splitSqlQuery(`

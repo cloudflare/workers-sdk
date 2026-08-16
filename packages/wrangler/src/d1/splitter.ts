@@ -248,15 +248,24 @@ function isDollarQuoteIdentifier(str: string) {
 }
 
 /**
+ * Compound statement markers only need to be delimited from surrounding
+ * identifiers, not padded with whitespace: SQLite accepts `WHEN (1=1)BEGIN` and
+ * `INSERT ...;END;`. The lookbehind keeps identifiers that merely end in the
+ * keyword, such as a `weekend` column, from matching.
+ */
+const COMPOUND_STATEMENT_START = /(?<![A-Za-z0-9_$])(BEGIN|CASE)\s$/i;
+const COMPOUND_STATEMENT_END = /(?<![A-Za-z0-9_$])END[;\s]$/i;
+
+/**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
  */
 function isCompoundStatementStart(str: string) {
-	return /\s(BEGIN|CASE)\s$/i.test(str);
+	return COMPOUND_STATEMENT_START.test(str);
 }
 
 /**
  * Returns true if the `str` ends with a compound statement `END` marker.
  */
 function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/i.test(str);
+	return COMPOUND_STATEMENT_END.test(str);
 }
