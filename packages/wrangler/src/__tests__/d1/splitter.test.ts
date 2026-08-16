@@ -313,6 +313,21 @@ describe("splitSqlQuery()", () => {
 		]);
 	});
 
+	it("should end a CASE expression closed by a parenthesis or comma", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    SELECT SUM(CASE WHEN a THEN 1 ELSE 0 END) FROM t;
+    SELECT CASE WHEN a THEN 1 ELSE 0 END, b FROM t;
+    SELECT * FROM t;`)
+		).toEqual([
+			"SELECT SUM(CASE WHEN a THEN 1 ELSE 0 END) FROM t",
+			"SELECT CASE WHEN a THEN 1 ELSE 0 END, b FROM t",
+			"SELECT * FROM t",
+		]);
+	});
+
 	it("should not treat an identifier ending in END as a compound statement end", ({
 		expect,
 	}) => {

@@ -254,7 +254,7 @@ function isDollarQuoteIdentifier(str: string) {
  * keyword, such as a `weekend` column, from matching.
  */
 const COMPOUND_STATEMENT_START = /(?<![A-Za-z0-9_$])(BEGIN|CASE)\s$/i;
-const COMPOUND_STATEMENT_END = /(?<![A-Za-z0-9_$])END[;\s]$/i;
+const COMPOUND_STATEMENT_END = /(?<![A-Za-z0-9_$])END[^A-Za-z0-9_$]$/i;
 
 /**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
