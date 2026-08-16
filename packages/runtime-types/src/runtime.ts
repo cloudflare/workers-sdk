@@ -68,7 +68,9 @@ export async function generateRuntimeTypes({
 		if (existingHeader === header && existingTypesStart !== -1) {
 			return {
 				runtimeHeader: header,
-				runtimeTypes: lines.slice(existingTypesStart + 1).join("\n"),
+				runtimeTypes: stripNodeJsCompatAnyDeclarations(
+					lines.slice(existingTypesStart + 1).join("\n")
+				),
 				isCached: true,
 			};
 		}
@@ -82,7 +84,18 @@ export async function generateRuntimeTypes({
 		),
 	});
 
-	return { runtimeHeader: header, runtimeTypes: types, isCached: false };
+	return {
+		runtimeHeader: header,
+		runtimeTypes: stripNodeJsCompatAnyDeclarations(types),
+		isCached: false,
+	};
+}
+
+function stripNodeJsCompatAnyDeclarations(runtimeTypes: string) {
+	return runtimeTypes
+		.split(/\r?\n/)
+		.filter((line) => !/^declare const (Buffer|process): any;$/.test(line))
+		.join("\n");
 }
 
 /**

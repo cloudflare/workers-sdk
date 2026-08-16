@@ -95,6 +95,49 @@ describe("generateRuntimeTypes", () => {
 		expect(MiniflareMock).not.toHaveBeenCalled();
 	});
 
+	it("removes node compat any globals from generated types", async ({
+		expect,
+	}) => {
+		dispatchFetchMock.mockResolvedValue({
+			ok: true,
+			text: async () =>
+				[
+					"declare const Buffer: any;",
+					"interface Env {}",
+					"declare const process: any;",
+					"declare const caches: CacheStorage;",
+				].join("\n"),
+		});
+
+		const result = await generateRuntimeTypes({
+			compatibilityDate: "2026-08-04",
+		});
+
+		expect(result.runtimeTypes).toBe(
+			["interface Env {}", "declare const caches: CacheStorage;"].join("\n")
+		);
+	});
+
+	it("removes node compat any globals from cached types", async ({
+		expect,
+	}) => {
+		const header = getRuntimeHeader(WORKERD_VERSION, "2026-08-04", []);
+
+		const result = await generateRuntimeTypes({
+			compatibilityDate: "2026-08-04",
+			existingContent: [
+				header,
+				RUNTIME_TYPES_MARKER,
+				"declare const Buffer: any;",
+				"interface Env {}",
+				"declare const process: any;",
+			].join("\n"),
+		});
+
+		expect(result.runtimeTypes).toBe("interface Env {}");
+		expect(MiniflareMock).not.toHaveBeenCalled();
+	});
+
 	it("regenerates when the cached header is stale", async ({ expect }) => {
 		const staleHeader = getRuntimeHeader(WORKERD_VERSION, "2020-01-01", []);
 
