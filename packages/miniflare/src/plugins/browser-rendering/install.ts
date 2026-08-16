@@ -10,19 +10,10 @@ import {
 	install,
 	resolveBuildId,
 } from "@puppeteer/browsers";
+import type { Log } from "../../shared";
 import type { InstalledBrowser, InstallOptions } from "@puppeteer/browsers";
 
-/**
- * The subset of Miniflare's `Log` used while installing Chrome.
- *
- * Kept structural rather than importing `Log` so that this module can be
- * loaded standalone (e.g. by `scripts/install-browser.ts` under
- * `esbuild-register`) without pulling in the rest of Miniflare.
- */
-export interface InstallLog {
-	warn(message: string): void;
-	debug(message: string): void;
-}
+type InstallLog = Pick<Log, "warn" | "debug">;
 
 /**
  * Marker written into a Chrome installation directory once Chrome has
@@ -67,16 +58,16 @@ const installs = {
 	inFlight: new Map<string, Promise<InstalledBrowser>>(),
 
 	/**
-	 * Installations Chrome has launched from during this process.
+	 * Installation directories Chrome has launched from during this process.
 	 *
-	 * Recorded synchronously on a successful launch, ahead of the on-disk
-	 * marker, which is written asynchronously and best-effort. Launches run
-	 * concurrently — one per session acquire — so without this there is a window
-	 * in which one session has a working Chrome running while another, having
-	 * just failed, still sees no marker and would delete the directory out from
-	 * under it.
+	 * A directory is added synchronously on a successful launch, ahead of the
+	 * on-disk marker, which is written asynchronously and best-effort. Launches
+	 * run concurrently — one per session acquire — so without this there is a
+	 * window in which one session has a working Chrome running while another,
+	 * having just failed, still sees no marker and would delete the directory
+	 * out from under it.
 	 */
-	verified: new Set<string>(),
+	verifiedDirs: new Set<string>(),
 
 	/**
 	 * Bumped whenever an installation is discarded, so that concurrent launches
@@ -105,26 +96,40 @@ function withInstallLock<T>(
 }
 
 /**
- * Token identifying the state of an installation at the point a launch began.
- *
- * Pass to {@link discardIncompleteInstall} so it can refuse to delete an
+ * Token identifying the state of an installation at the point a launch began,
+ * so that {@link discardIncompleteInstall} can refuse to delete an
  * installation that has already been replaced since.
  */
-export function getInstallGeneration(installDir: string): number {
+function getInstallGeneration(installDir: string): number {
 	return installs.generations.get(installDir) ?? 0;
 }
 
-export interface EnsureBrowserInstalledOptions {
-	browserVersion: string;
-	log: InstallLog;
-	/** Invoked as the archive downloads. Not called when already installed. */
-	onProgress?: (downloadedBytes: number, totalBytes: number) => void;
-}
-
-export interface EnsuredBrowser {
+/**
+ * A resolved Chrome installation, and the two things a caller can report back
+ * about it once it has tried to launch.
+ *
+ * Both are methods on the installation rather than free functions because
+ * they need the generation of the directory *this* caller was handed, which
+ * has to be captured before the launch it is reporting on. See
+ * {@link discardIncompleteInstall}.
+ */
+interface BrowserInstall {
 	executablePath: string;
 	/** Absolute path of the versioned installation directory. */
 	installDir: string;
+	/**
+	 * Record that Chrome launched successfully from this installation, so that
+	 * a later launch failure can be told apart from a broken download.
+	 *
+	 * Best-effort: losing the marker only costs a re-download in the unlikely
+	 * event that Chrome stops starting.
+	 */
+	markVerified(): Promise<void>;
+	/**
+	 * Clear this installation because Chrome failed to start from it, unless
+	 * there is positive evidence that it is fine.
+	 */
+	discard(): Promise<DiscardResult>;
 }
 
 /**
@@ -137,7 +142,12 @@ export async function ensureBrowserInstalled({
 	browserVersion,
 	log,
 	onProgress,
-}: EnsureBrowserInstalledOptions): Promise<EnsuredBrowser> {
+}: {
+	browserVersion: string;
+	log: InstallLog;
+	/** Invoked as the archive downloads. Not called when already installed. */
+	onProgress?: (downloadedBytes: number, totalBytes: number) => void;
+}): Promise<BrowserInstall> {
 	const platform = detectBrowserPlatform();
 	if (!platform) {
 		throw new Error("The current platform is not supported.");
@@ -160,8 +170,7 @@ export async function ensureBrowserInstalled({
 	const existing = installs.inFlight.get(installDir);
 	if (existing) {
 		log.debug(`Waiting for an in-progress Chrome install at ${installDir}`);
-		const installed = await existing;
-		return { executablePath: installed.executablePath, installDir };
+		return toBrowserInstall(await existing, installDir, log);
 	}
 
 	const pending = installWithCorruptedCacheRecovery(
@@ -172,8 +181,24 @@ export async function ensureBrowserInstalled({
 	});
 	installs.inFlight.set(installDir, pending);
 
-	const installed = await pending;
-	return { executablePath: installed.executablePath, installDir };
+	return toBrowserInstall(await pending, installDir, log);
+}
+
+function toBrowserInstall(
+	installed: InstalledBrowser,
+	installDir: string,
+	log: InstallLog
+): BrowserInstall {
+	// Captured here, before the caller has had a chance to launch, so that if a
+	// concurrent launch discards and replaces this installation while this
+	// caller is failing, `discard()` can tell.
+	const generation = getInstallGeneration(installDir);
+	return {
+		executablePath: installed.executablePath,
+		installDir,
+		markVerified: () => markInstallVerified(installDir, log),
+		discard: () => discardIncompleteInstall(installDir, generation, log),
+	};
 }
 
 /**
@@ -192,26 +217,20 @@ export function isInstallMarkedComplete(installDir: string): boolean {
  * Whether Chrome is known to have launched from this installation, either
  * earlier in this process or in a previous one.
  */
-export function isInstallVerified(installDir: string): boolean {
+function isInstallVerified(installDir: string): boolean {
 	return (
-		installs.verified.has(installDir) || isInstallMarkedComplete(installDir)
+		installs.verifiedDirs.has(installDir) || isInstallMarkedComplete(installDir)
 	);
 }
 
-/**
- * Record that Chrome launched successfully from this installation, so that a
- * later launch failure can be told apart from a broken download.
- *
- * Best-effort: losing the marker only costs a re-download in the unlikely
- * event that Chrome stops starting.
- */
-export async function markInstallVerified(
+/** Backs {@link BrowserInstall.markVerified}. */
+async function markInstallVerified(
 	installDir: string,
 	log: InstallLog
 ): Promise<void> {
 	// Before any `await`, so a concurrent launch that fails in the meantime
 	// cannot conclude this installation is unproven.
-	installs.verified.add(installDir);
+	installs.verifiedDirs.add(installDir);
 	if (isInstallMarkedComplete(installDir)) {
 		return;
 	}
@@ -235,22 +254,22 @@ export async function markInstallVerified(
 const DISCARD_TIMEOUT = 10_000;
 const DISCARD_RETRY_DELAY = 500;
 
-export type DiscardResult =
+type DiscardResult =
 	/** Cleared; the caller may re-install and retry. */
-	| { cleared: true }
-	/** Left alone because Chrome is known to have launched from it before. */
-	| { cleared: false; reason: "verified" }
+	| { outcome: "cleared" }
 	/**
 	 * Left alone because a concurrent launch already replaced it. The caller
 	 * should retry against the new installation rather than delete it.
 	 */
-	| { cleared: false; reason: "superseded" }
+	| { outcome: "superseded" }
+	/** Left alone because Chrome is known to have launched from it before. */
+	| { outcome: "verified" }
 	/** Could not be cleared. */
-	| { cleared: false; reason: "cleanup-failed"; cause: unknown };
+	| { outcome: "cleanup-failed"; cause: unknown };
 
 /**
- * Clear an installation that Chrome failed to start from, unless we have
- * positive evidence that it is fine.
+ * Backs {@link BrowserInstall.discard}: clear an installation that Chrome
+ * failed to start from, unless we have positive evidence that it is fine.
  *
  * Refuses in two cases, both of which would otherwise throw away a working
  * ~150 MB download:
@@ -264,7 +283,7 @@ export type DiscardResult =
  * @param generation from {@link getInstallGeneration}, taken *before* the
  * launch attempt that failed.
  */
-export async function discardIncompleteInstall(
+async function discardIncompleteInstall(
 	installDir: string,
 	generation: number,
 	log: InstallLog
@@ -280,10 +299,10 @@ export async function discardIncompleteInstall(
 			log.debug(
 				`Not clearing ${installDir}: a concurrent launch already replaced it.`
 			);
-			return { cleared: false, reason: "superseded" };
+			return { outcome: "superseded" };
 		}
 		if (isInstallVerified(installDir)) {
-			return { cleared: false, reason: "verified" };
+			return { outcome: "verified" };
 		}
 		log.warn(
 			`Chrome failed to start from ${installDir}, which it has never successfully started from; clearing it so it can be downloaded again.`
@@ -295,7 +314,7 @@ export async function discardIncompleteInstall(
 			try {
 				await removeDir(installDir);
 				installs.generations.set(installDir, generation + 1);
-				return { cleared: true };
+				return { outcome: "cleared" };
 			} catch (e) {
 				lastError = e;
 				log.debug(`Could not clear ${installDir} yet, retrying: ${e}`);
@@ -305,7 +324,7 @@ export async function discardIncompleteInstall(
 			}
 		} while (Date.now() < deadline);
 
-		return { cleared: false, reason: "cleanup-failed", cause: lastError };
+		return { outcome: "cleanup-failed", cause: lastError };
 	});
 }
 

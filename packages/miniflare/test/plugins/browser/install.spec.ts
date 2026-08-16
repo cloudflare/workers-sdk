@@ -4,11 +4,8 @@ import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import {
-	discardIncompleteInstall,
 	ensureBrowserInstalled,
-	getInstallGeneration,
 	isInstallMarkedComplete,
-	markInstallVerified,
 } from "../../../src/plugins/browser-rendering/install";
 
 const BUILD_ID = "126.0.6478.182";
@@ -42,6 +39,11 @@ function installDirFor(): string {
 	return path.join(cacheDir, "chrome", `${PLATFORM}-${BUILD_ID}`);
 }
 
+/** Take a handle on the install, as a session about to launch Chrome would. */
+function acquireInstall() {
+	return ensureBrowserInstalled({ browserVersion: BUILD_ID, log });
+}
+
 /** Make `install()` behave like a real extraction into the cache. */
 function stubSuccessfulInstall(): void {
 	install.mockImplementation(async () => {
@@ -67,10 +69,7 @@ describe("ensureBrowserInstalled", () => {
 	test("resolves the versioned install directory", async ({ expect }) => {
 		stubSuccessfulInstall();
 
-		const { installDir, executablePath } = await ensureBrowserInstalled({
-			browserVersion: BUILD_ID,
-			log,
-		});
+		const { installDir, executablePath } = await acquireInstall();
 
 		expect(installDir).toBe(installDirFor());
 		expect(executablePath).toBe(path.join(installDirFor(), "chrome"));
@@ -92,8 +91,8 @@ describe("ensureBrowserInstalled", () => {
 		});
 
 		const [first, second] = await Promise.all([
-			ensureBrowserInstalled({ browserVersion: BUILD_ID, log }),
-			ensureBrowserInstalled({ browserVersion: BUILD_ID, log }),
+			acquireInstall(),
+			acquireInstall(),
 		]);
 
 		expect(first.executablePath).toBe(second.executablePath);
@@ -105,8 +104,8 @@ describe("ensureBrowserInstalled", () => {
 	}) => {
 		stubSuccessfulInstall();
 
-		await ensureBrowserInstalled({ browserVersion: BUILD_ID, log });
-		await ensureBrowserInstalled({ browserVersion: BUILD_ID, log });
+		await acquireInstall();
+		await acquireInstall();
 
 		expect(install).toHaveBeenCalledTimes(2);
 	});
@@ -114,53 +113,51 @@ describe("ensureBrowserInstalled", () => {
 	test("does not mark the install as verified", async ({ expect }) => {
 		// `install()` resolving proves nothing: it short-circuits whenever the
 		// directory and executable exist, which a half-extracted archive
-		// satisfies. Marking here would suppress the recovery in
-		// `discardIncompleteInstall`.
+		// satisfies. Marking here would suppress the recovery in `discard()`.
 		stubSuccessfulInstall();
 
-		const { installDir } = await ensureBrowserInstalled({
-			browserVersion: BUILD_ID,
-			log,
-		});
+		const { installDir } = await acquireInstall();
 
 		expect(isInstallMarkedComplete(installDir)).toBe(false);
 	});
 });
 
-describe("markInstallVerified", () => {
+describe("markVerified", () => {
 	test("marks the install, idempotently", async ({ expect }) => {
-		const installDir = installDirFor();
-		fs.mkdirSync(installDir, { recursive: true });
+		stubSuccessfulInstall();
+		const installed = await acquireInstall();
 
-		expect(isInstallMarkedComplete(installDir)).toBe(false);
-		await markInstallVerified(installDir, log);
-		expect(isInstallMarkedComplete(installDir)).toBe(true);
-		await markInstallVerified(installDir, log);
-		expect(isInstallMarkedComplete(installDir)).toBe(true);
+		expect(isInstallMarkedComplete(installed.installDir)).toBe(false);
+		await installed.markVerified();
+		expect(isInstallMarkedComplete(installed.installDir)).toBe(true);
+		await installed.markVerified();
+		expect(isInstallMarkedComplete(installed.installDir)).toBe(true);
 	});
 
 	test("does not throw when the install directory is gone", async ({
 		expect,
 	}) => {
-		await markInstallVerified(installDirFor(), log);
+		// Resolve an install without creating anything on disk, as if the
+		// directory had been swept up between installing and launching.
+		install.mockResolvedValue({
+			executablePath: path.join(installDirFor(), "chrome"),
+		});
+		const installed = await acquireInstall();
 
-		expect(isInstallMarkedComplete(installDirFor())).toBe(false);
+		await installed.markVerified();
+
+		expect(isInstallMarkedComplete(installed.installDir)).toBe(false);
 		expect(log.debug).toHaveBeenCalled();
 	});
 });
 
-describe("discardIncompleteInstall", () => {
+describe("discard", () => {
 	test("clears an unverified install", async ({ expect }) => {
-		const installDir = installDirFor();
-		fs.mkdirSync(installDir, { recursive: true });
-		fs.writeFileSync(path.join(installDir, "chrome"), "");
+		stubSuccessfulInstall();
+		const installed = await acquireInstall();
 
-		const generation = getInstallGeneration(installDir);
-
-		expect(await discardIncompleteInstall(installDir, generation, log)).toEqual(
-			{ cleared: true }
-		);
-		expect(fs.existsSync(installDir)).toBe(false);
+		expect(await installed.discard()).toEqual({ outcome: "cleared" });
+		expect(fs.existsSync(installed.installDir)).toBe(false);
 		expect(log.warn).toHaveBeenCalled();
 	});
 
@@ -169,18 +166,12 @@ describe("discardIncompleteInstall", () => {
 	}) => {
 		// A launch failure here is a real bug, not a bad download, so deleting
 		// 150 MB and trying again would only hide it.
-		const installDir = installDirFor();
-		fs.mkdirSync(installDir, { recursive: true });
-		await markInstallVerified(installDir, log);
+		stubSuccessfulInstall();
+		const installed = await acquireInstall();
+		await installed.markVerified();
 
-		expect(
-			await discardIncompleteInstall(
-				installDir,
-				getInstallGeneration(installDir),
-				log
-			)
-		).toEqual({ cleared: false, reason: "verified" });
-		expect(fs.existsSync(installDir)).toBe(true);
+		expect(await installed.discard()).toEqual({ outcome: "verified" });
+		expect(fs.existsSync(installed.installDir)).toBe(true);
 		expect(log.warn).not.toHaveBeenCalled();
 	});
 
@@ -191,17 +182,15 @@ describe("discardIncompleteInstall", () => {
 		// while another is failing, the failing one must not delete the
 		// directory the working Chrome is running from — even though the on-disk
 		// marker has not been written yet.
-		const installDir = installDirFor();
-		fs.mkdirSync(installDir, { recursive: true });
-		const generation = getInstallGeneration(installDir);
+		stubSuccessfulInstall();
+		const succeeding = await acquireInstall();
+		const failing = await acquireInstall();
 
 		// Deliberately not awaited: the marker write is still in flight.
-		const marking = markInstallVerified(installDir, log);
+		const marking = succeeding.markVerified();
 
-		expect(await discardIncompleteInstall(installDir, generation, log)).toEqual(
-			{ cleared: false, reason: "verified" }
-		);
-		expect(fs.existsSync(installDir)).toBe(true);
+		expect(await failing.discard()).toEqual({ outcome: "verified" });
+		expect(fs.existsSync(failing.installDir)).toBe(true);
 
 		await marking;
 	});
@@ -212,22 +201,17 @@ describe("discardIncompleteInstall", () => {
 		// Two launches failing against the same bad install: the first clears
 		// and re-downloads it, and the second must retry against that fresh
 		// copy rather than delete it too.
-		const installDir = installDirFor();
-		fs.mkdirSync(installDir, { recursive: true });
-		const staleGeneration = getInstallGeneration(installDir);
+		stubSuccessfulInstall();
+		const first = await acquireInstall();
+		const second = await acquireInstall();
 
-		expect(
-			await discardIncompleteInstall(installDir, staleGeneration, log)
-		).toEqual({ cleared: true });
+		expect(await first.discard()).toEqual({ outcome: "cleared" });
 
 		// Stand in for the peer's re-download.
-		fs.mkdirSync(installDir, { recursive: true });
-		fs.writeFileSync(path.join(installDir, "chrome"), "");
+		await acquireInstall();
 
-		expect(
-			await discardIncompleteInstall(installDir, staleGeneration, log)
-		).toEqual({ cleared: false, reason: "superseded" });
-		expect(fs.existsSync(path.join(installDir, "chrome"))).toBe(true);
+		expect(await second.discard()).toEqual({ outcome: "superseded" });
+		expect(fs.existsSync(path.join(second.installDir, "chrome"))).toBe(true);
 	});
 
 	test("retries against a replacement the peer has already proven", async ({
@@ -237,37 +221,27 @@ describe("discardIncompleteInstall", () => {
 		// marked verified. The launch still holding the old generation must be
 		// told to retry, not that the install is fine — otherwise it fails while
 		// a working Chrome is available.
-		const installDir = installDirFor();
-		fs.mkdirSync(installDir, { recursive: true });
-		const staleGeneration = getInstallGeneration(installDir);
+		stubSuccessfulInstall();
+		const peer = await acquireInstall();
+		const stale = await acquireInstall();
 
-		await discardIncompleteInstall(installDir, staleGeneration, log);
-		fs.mkdirSync(installDir, { recursive: true });
-		await markInstallVerified(installDir, log);
+		await peer.discard();
+		await (await acquireInstall()).markVerified();
 
-		expect(
-			await discardIncompleteInstall(installDir, staleGeneration, log)
-		).toEqual({ cleared: false, reason: "superseded" });
+		expect(await stale.discard()).toEqual({ outcome: "superseded" });
 	});
 
 	test("reports why an install could not be cleared", async ({ expect }) => {
 		// Windows keeps handles on a just-crashed Chrome, so removal can fail.
 		// The caller turns this into an actionable error, which matters because
 		// Miniflare logs to a no-op by default.
-		const installDir = installDirFor();
-		fs.mkdirSync(installDir, { recursive: true });
+		stubSuccessfulInstall();
+		const installed = await acquireInstall();
 		const locked = new Error("EBUSY: resource busy or locked");
 		vi.spyOn(fs.promises, "rm").mockRejectedValue(locked);
 
-		const result = await discardIncompleteInstall(
-			installDir,
-			getInstallGeneration(installDir),
-			log
-		);
-
-		expect(result).toEqual({
-			cleared: false,
-			reason: "cleanup-failed",
+		expect(await installed.discard()).toEqual({
+			outcome: "cleanup-failed",
 			cause: locked,
 		});
 	}, 20_000);

@@ -15,12 +15,7 @@ import {
 	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
-import {
-	discardIncompleteInstall,
-	ensureBrowserInstalled,
-	getInstallGeneration,
-	markInstallVerified,
-} from "./install";
+import { ensureBrowserInstalled } from "./install";
 import { BrowserStartupError, waitForExit } from "./process";
 import type { Service } from "../../runtime";
 import type { Log } from "../../shared";
@@ -162,8 +157,10 @@ export async function launchBrowser({
 		}
 	};
 
-	let { executablePath, installDir } = await install();
-	log.debug(`Chrome ${browserVersion} available at ${executablePath}`);
+	let installed = await install();
+	log.debug(
+		`Chrome ${browserVersion} available at ${installed.executablePath}`
+	);
 
 	// https://github.com/puppeteer/puppeteer/blob/44516936ad4a878f9a89e835a9fa7b04360d6fb9/packages/puppeteer-core/src/node/ChromeLauncher.ts#L156
 	const disabledFeatures = [
@@ -230,7 +227,7 @@ export async function launchBrowser({
 
 		const launchArgs = [...args, `--user-data-dir=${tempUserData}`];
 		const browserProcess = launch({
-			executablePath,
+			executablePath: installed.executablePath,
 			args: process.env.CI ? [...launchArgs, "--no-sandbox"] : launchArgs,
 			handleSIGTERM: false,
 			dumpio: false,
@@ -278,10 +275,6 @@ export async function launchBrowser({
 		}
 	};
 
-	// Taken before launching, so that if a concurrent launch discards and
-	// replaces this installation while we are failing, we can tell.
-	const generation = getInstallGeneration(installDir);
-
 	let launched: Awaited<ReturnType<typeof launchOnce>>;
 	try {
 		launched = await launchOnce();
@@ -300,30 +293,28 @@ export async function launchBrowser({
 		if (!(e instanceof BrowserStartupError)) {
 			throw e;
 		}
-		const discarded = await discardIncompleteInstall(
-			installDir,
-			generation,
-			log
-		);
-		if (!discarded.cleared && discarded.reason !== "superseded") {
+		const discarded = await installed.discard();
+		if (discarded.outcome === "cleanup-failed") {
 			// Miniflare logs to a no-op by default, so anything worth knowing
 			// has to travel on the error itself.
-			if (discarded.reason === "cleanup-failed") {
-				throw new Error(
-					`Chrome failed to launch from ${installDir}, and the directory could not be removed to re-download it. Delete it manually and try again.`,
-					{ cause: discarded.cause }
-				);
-			}
+			throw new Error(
+				`Chrome failed to launch from ${installed.installDir}, and the directory could not be removed to re-download it. Delete it manually and try again.`,
+				{ cause: discarded.cause }
+			);
+		}
+		if (discarded.outcome === "verified") {
 			throw e;
 		}
+		// Either we cleared the install or a concurrent launch replaced it;
+		// either way there is a fresh one to try.
 		log.debug(`Retrying Chrome launch after re-installing: ${e}`);
-		({ executablePath, installDir } = await install());
+		installed = await install();
 		launched = await launchOnce();
 	}
 
 	// Chrome started, so this install is known-good. Recording that is what
 	// lets a *future* launch failure be attributed to a bad download.
-	await markInstallVerified(installDir, log);
+	await installed.markVerified();
 
 	const startTime = Date.now();
 	return {
