@@ -25,7 +25,7 @@ const configure = async (ctx: C3Context) => {
 	usesTypescript(ctx);
 	const filePath = `vite.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
-	const compatDate = getWorkerdCompatibilityDate(ctx.project.path);
+	const compatDate = getWorkerdCompatibilityDate();
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 
