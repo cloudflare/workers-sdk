@@ -677,6 +677,54 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("converts an attached container on a live durable-object export", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			});
+		});
+
+		it("converts an attached container on an expecting-transfer export", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Incoming: {
+						type: "durable-object",
+						state: "expecting-transfer",
+						storage: "sqlite",
+						transferFrom: "source-worker",
+						container: "my-container",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Incoming: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transfer_from: "source-worker",
+					container: "my-container",
+				},
+			});
+		});
+
 		it('treats an explicit `state: "created"` like the default and omits it on the wire', ({
 			expect,
 		}) => {

@@ -2,8 +2,8 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
+	DEFAULT_COMPAT_DATE,
 	getWorkerNameFromProject,
-	getTodaysCompatDate,
 	UserError,
 	type Config,
 } from "@cloudflare/workers-utils";
@@ -217,14 +217,12 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 
 	// Prompt for compatibility date when missing
 	if (!args.latest && !args.compatibilityDate && !config.compatibility_date) {
-		const compatibilityDateStr = getTodaysCompatDate();
-
 		if (
 			await confirm(
-				`No compatibility date is set. Would you like to use today's date (${compatibilityDateStr})?`
+				`No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`
 			)
 		) {
-			args.compatibilityDate = compatibilityDateStr;
+			args.compatibilityDate = DEFAULT_COMPAT_DATE;
 			promptedForMissing = true;
 			logger.log("");
 		} else {
@@ -242,8 +240,7 @@ export async function promptForMissingDeployConfig<Args extends AutoConfigArgs>(
 		// When --latest was used, the compat date prompt was skipped but we still
 		// need a concrete date in the config file for future deploys without --latest
 		const effectiveCompatDate =
-			args.compatibilityDate ??
-			(args.latest ? getTodaysCompatDate() : undefined);
+			args.compatibilityDate ?? (args.latest ? DEFAULT_COMPAT_DATE : undefined);
 
 		const configContent: Record<string, unknown> = {
 			name: args.name,

@@ -1,7 +1,7 @@
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { usesTypescript } from "../uses-typescript";
@@ -89,7 +89,7 @@ function updateViteConfigFile(projectPath: string): void {
 function updateAppConfigFile(projectPath: string): void {
 	const filePath = `app.config.${usesTypescript(projectPath) ? "ts" : "js"}`;
 
-	const compatDate = getTodaysCompatDate();
+	const compatDate = DEFAULT_COMPAT_DATE;
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 

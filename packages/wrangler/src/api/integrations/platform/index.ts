@@ -1,8 +1,9 @@
 import path from "node:path";
 import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
+	DEFAULT_COMPAT_DATE,
+	getContainerDurableObjectClassNames,
 	getRegistryPath,
-	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
@@ -46,10 +47,10 @@ export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
- * @deprecated Use today's date as the compatibility date instead.
+ * @deprecated Set a compatibility date explicitly instead.
  */
 export function unstable_getDevCompatibilityDate() {
-	return getTodaysCompatDate();
+	return DEFAULT_COMPAT_DATE;
 }
 
 /**
@@ -291,8 +292,9 @@ async function getMiniflareOptionsFromConfig(args: {
 			exports: config.exports,
 			tails: [],
 			streamingTails: [],
-			containerDOClassNames: new Set(
-				config.containers?.map((c) => c.class_name)
+			containerDOClassNames: getContainerDurableObjectClassNames(
+				config.containers,
+				config.exports
 			),
 			containerBuildId: undefined,
 			enableContainers: config.dev.enable_containers,
@@ -444,8 +446,9 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const containerDOClassNames = new Set(
-		config.containers?.map((c) => c.class_name)
+	const containerDOClassNames = getContainerDurableObjectClassNames(
+		config.containers,
+		config.exports
 	);
 	const bindings = getBindings(
 		config,
@@ -510,6 +513,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		zone: getZoneFromConfig(config),
+		access: config.access?.dev,
 
 		...bindingOptions,
 		...sitesOptions,

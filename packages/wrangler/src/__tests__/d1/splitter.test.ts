@@ -1,5 +1,22 @@
 import { describe, it } from "vitest";
-import { mayContainMultipleStatements, splitSqlQuery } from "../../d1/splitter";
+import {
+	mayContainMultipleStatements,
+	normalizeSqlLineEndings,
+	splitSqlQuery,
+} from "../../d1/splitter";
+
+describe("normalizeSqlLineEndings()", () => {
+	it("should preserve CRLF inside quoted SQL values and identifiers", ({
+		expect,
+	}) => {
+		const sql =
+			"SELECT 'single''quote\r\nvalue', \"double\r\nquote\", `backtick\r\nquote`, [bracket\r\nquote]; -- don't stop scanning\r\n/* block\r\ncomment */\r\nSELECT 1;";
+
+		expect(normalizeSqlLineEndings(sql)).toBe(
+			"SELECT 'single''quote\r\nvalue', \"double\r\nquote\", `backtick\r\nquote`, [bracket\r\nquote]; -- don't stop scanning\n/* block\ncomment */\nSELECT 1;"
+		);
+	});
+});
 
 describe("mayContainMultipleStatements()", () => {
 	it("should return false if there is only a semi-colon at the end", ({
@@ -324,6 +341,27 @@ describe("splitSqlQuery()", () => {
 							json_extract(new.properties, '$.name'),
 							json_extract(new.properties, '$.preferredUsername'));
 				END",
+			]
+		`);
+	});
+
+	it("should handle a lowercase end closing a compound statement", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+	CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+	begin
+		DELETE FROM updates WHERE item_id=old.id;
+	end;
+	CREATE TABLE after_the_trigger (id TEXT PRIMARY KEY);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+				begin
+					DELETE FROM updates WHERE item_id=old.id;
+				end",
+			  "CREATE TABLE after_the_trigger (id TEXT PRIMARY KEY)",
 			]
 		`);
 	});
