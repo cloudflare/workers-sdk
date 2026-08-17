@@ -1,8 +1,14 @@
 import { a } from "./a";
 
 export default {
-	async fetch(request) {
+	async fetch(request, _env, ctx) {
 		const url = new URL(request.url);
+		if (url.pathname === "/access") {
+			return Response.json({
+				aud: ctx.access?.aud,
+				identity: await ctx.access?.getIdentity(),
+			});
+		}
 
 		if (
 			url.pathname ===
