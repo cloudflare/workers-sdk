@@ -16,14 +16,7 @@ const CONTAINER_DEPLOY_TIMEOUT = 240_000;
 
 // The container deploy tests never *run* a container, but they do have to build
 // and push a `linux/amd64` image, which needs Docker. That rules out the hosted
-// non-Linux CI runners:
-//   - macOS runners ship no Docker CLI or daemon at all.
-//   - Windows runners ship the Docker CLI without the buildx plugin, so the
-//     classic builder rejects the `--load` flag that we always pass. Even with
-//     buildx installed the daemon serves Windows containers, so it could not
-//     build a Linux image anyway.
-// Gating on `ci.isCI` rather than the platform alone keeps these running locally
-// on macOS and Windows, where Docker Desktop is usually available.
+// non-Linux CI runners.
 const skipContainerDeployTests =
 	Boolean(process.env.LOCAL_TESTS_WITHOUT_DOCKER) ||
 	(ci.isCI && process.platform !== "linux");
