@@ -6,6 +6,11 @@ const OLD_PACKAGE = "@cloudflare/vitest-pool-workers";
 const NEW_PACKAGE = "@cloudflare/vitest-plugin";
 const V1_RANGE = "^1.0.0";
 const SOURCE_PATTERNS = ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,json,jsonc}"];
+const PRESERVED_PROTOCOLS = /^(?:workspace|catalog|link|file|npm):/;
+
+function getV1Specifier(specifier: string): string {
+	return PRESERVED_PROTOCOLS.test(specifier) ? specifier : V1_RANGE;
+}
 
 function renamePackageDependency(source: string): string {
 	let packageJson: {
@@ -45,7 +50,9 @@ function renamePackageDependency(source: string): string {
 		}
 
 		const entries = Object.entries(dependencies).map(([name, version]) =>
-			name === OLD_PACKAGE ? [NEW_PACKAGE, V1_RANGE] : [name, version]
+			name === OLD_PACKAGE
+				? [NEW_PACKAGE, getV1Specifier(version)]
+				: [name, version]
 		);
 		for (const key of Object.keys(dependencies)) {
 			delete dependencies[key];

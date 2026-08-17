@@ -101,6 +101,32 @@ export default defineWorkersProject({
 		expect(output.match(/import \{ defineConfig \}/g)).toHaveLength(1);
 	});
 
+	it("reuses defineConfig imported from Vite", ({ expect }) => {
+		const output = run(`
+import { defineConfig } from "vite";
+import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+export default defineWorkersProject({
+	test: { poolOptions: { workers: {} } },
+});`);
+
+		expect(output).toContain('import { defineConfig } from "vite";');
+		expect(output).not.toContain('from "vitest/config"');
+		expect(output).toContain("export default defineConfig({");
+	});
+
+	it("transforms configuration after the package rename", ({ expect }) => {
+		const output = run(`
+import { defineWorkersProject } from "@cloudflare/vitest-plugin/config";
+export default defineWorkersProject({
+	test: { poolOptions: { workers: {} } },
+});`);
+
+		expect(output).toContain(
+			'import { cloudflareTest } from "@cloudflare/vitest-plugin";'
+		);
+		expect(output).toContain("export default defineConfig({");
+	});
+
 	it("does not change helper-only imports", ({ expect }) => {
 		const input =
 			'import { readD1Migrations } from "@cloudflare/vitest-pool-workers/config";';

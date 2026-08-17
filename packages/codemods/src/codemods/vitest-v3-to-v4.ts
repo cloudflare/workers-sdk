@@ -20,6 +20,10 @@ type ImportDeclaration = types.namedTypes.ImportDeclaration;
 type NamedProp = ObjectProperty | Property;
 
 const CONFIG_HELPERS = ["defineWorkersConfig", "defineWorkersProject"];
+const CONFIG_PACKAGES = [
+	"@cloudflare/vitest-plugin",
+	"@cloudflare/vitest-pool-workers",
+];
 
 function isNamedProp(prop: Node, name: string): prop is NamedProp {
 	return (
@@ -53,13 +57,16 @@ export default function transform(source: string): string {
 		n.ImportDeclaration.check(node)
 	);
 
-	const configImports = importDeclarations.filter(
-		(imp) =>
+	const configImports = importDeclarations.flatMap((imp) =>
+		CONFIG_PACKAGES.flatMap((packageName) =>
 			n.StringLiteral.check(imp.source) &&
-			imp.source.value === "@cloudflare/vitest-pool-workers/config"
+			imp.source.value === `${packageName}/config`
+				? [{ imp, packageName }]
+				: []
+		)
 	);
 
-	const matchingImports = configImports.flatMap((imp) =>
+	const matchingImports = configImports.flatMap(({ imp, packageName }) =>
 		CONFIG_HELPERS.flatMap((helperName) => {
 			const specifier = importSpecifierNamed(imp, helperName);
 			if (!specifier || !n.ImportSpecifier.check(specifier)) {
@@ -81,7 +88,9 @@ export default function transform(source: string): string {
 				},
 			});
 
-			return calls.length === 0 ? [] : [{ imp, helperName, localName, calls }];
+			return calls.length === 0
+				? []
+				: [{ imp, packageName, helperName, localName, calls }];
 		})
 	);
 
@@ -92,13 +101,13 @@ export default function transform(source: string): string {
 		throw new Error("Multiple Workers config helpers are not supported");
 	}
 
-	const [{ imp: configImport, helperName, localName, calls }] = matchingImports;
+	const [{ imp: configImport, packageName, helperName, localName, calls }] =
+		matchingImports;
 
 	// Resolve the local name for `cloudflareTest`, importing it if absent.
 	const rootPackageImports = importDeclarations.filter(
 		(imp) =>
-			n.StringLiteral.check(imp.source) &&
-			imp.source.value === "@cloudflare/vitest-pool-workers"
+			n.StringLiteral.check(imp.source) && imp.source.value === packageName
 	);
 	let cloudflareTestName: string | undefined;
 	for (const imp of rootPackageImports) {
@@ -118,7 +127,7 @@ export default function transform(source: string): string {
 			...(configImport.specifiers ?? []),
 		];
 	}
-	configImport.source = b.stringLiteral("@cloudflare/vitest-pool-workers");
+	configImport.source = b.stringLiteral(packageName);
 	configImport.specifiers = (configImport.specifiers ?? []).filter(
 		(specifier) =>
 			!(
@@ -128,14 +137,15 @@ export default function transform(source: string): string {
 			)
 	);
 
-	// Resolve `defineConfig`, importing from "vitest/config" if absent.
-	const vitestConfigImports = importDeclarations.filter(
+	// Resolve `defineConfig`, reusing the helper from Vite or Vitest if present.
+	const defineConfigImports = importDeclarations.filter(
 		(imp) =>
-			n.StringLiteral.check(imp.source) && imp.source.value === "vitest/config"
+			n.StringLiteral.check(imp.source) &&
+			(imp.source.value === "vitest/config" || imp.source.value === "vite")
 	);
 	let defineConfigName = "defineConfig";
 	let hasDefineConfigImport = false;
-	for (const imp of vitestConfigImports) {
+	for (const imp of defineConfigImports) {
 		const specifier = importSpecifierNamed(imp, "defineConfig");
 		if (specifier && n.ImportSpecifier.check(specifier)) {
 			defineConfigName = n.Identifier.check(specifier.local)
@@ -147,7 +157,11 @@ export default function transform(source: string): string {
 	}
 
 	if (!hasDefineConfigImport) {
-		const target = vitestConfigImports[0];
+		const target = defineConfigImports.find(
+			(imp) =>
+				n.StringLiteral.check(imp.source) &&
+				imp.source.value === "vitest/config"
+		);
 		if (target) {
 			target.specifiers = [
 				...(target.specifiers ?? []),

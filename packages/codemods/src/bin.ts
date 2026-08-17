@@ -53,11 +53,16 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
 
 	if (result.changedFiles.length > 0) {
 		console.log(`${name}: ${result.changedFiles.length} file(s)`);
+		for (const changedFile of result.changedFiles) {
+			console.log(`  ${changedFile}`);
+		}
 	}
 	console.log(
 		result.changedFiles.length === 0
 			? "Project is already up to date."
-			: `${values["dry-run"] ? "Would update" : "Updated"} ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`
+			: values["dry-run"]
+				? `Would update ${result.changedFiles.length} file(s).`
+				: `Updated ${result.changedFiles.length} file(s). Run your package manager's install command to refresh its lockfile.`
 	);
 }
 

@@ -168,6 +168,46 @@ export default defineWorkersProject({
 		});
 	});
 
+	it("preserves protocol-based dependency specifiers", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				dependencies: {
+					"@cloudflare/vitest-pool-workers": "workspace:*",
+				},
+				devDependencies: {
+					"@cloudflare/vitest-pool-workers": "catalog:default",
+				},
+				peerDependencies: {
+					"@cloudflare/vitest-pool-workers": "link:../vitest-plugin",
+				},
+				optionalDependencies: {
+					"@cloudflare/vitest-pool-workers": "file:../vitest-plugin",
+				},
+			}),
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as Record<string, Record<string, string>>;
+		expect(packageJson.dependencies?.["@cloudflare/vitest-plugin"]).toBe(
+			"workspace:*"
+		);
+		expect(packageJson.devDependencies?.["@cloudflare/vitest-plugin"]).toBe(
+			"catalog:default"
+		);
+		expect(packageJson.peerDependencies?.["@cloudflare/vitest-plugin"]).toBe(
+			"link:../vitest-plugin"
+		);
+		expect(
+			packageJson.optionalDependencies?.["@cloudflare/vitest-plugin"]
+		).toBe("file:../vitest-plugin");
+	});
+
 	it("throws for an unknown codemod", async ({ expect }) => {
 		const cwd = await createProject({});
 		await expect(
