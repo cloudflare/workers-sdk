@@ -21,6 +21,7 @@ export const normalizeConfiguration = (
 			rules: {},
 		},
 		has_static_routing: configuration?.has_static_routing ?? false,
+		retention: configuration?.retention ?? { enabled: false },
 		account_id: configuration?.account_id ?? -1,
 		script_id: configuration?.script_id ?? -1,
 		debug: configuration?.debug ?? false,

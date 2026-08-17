@@ -205,6 +205,16 @@ export interface WorkerConfig {
 		 * Can also be `true`, indicating that every request should be routed to the User Worker.
 		 */
 		runWorkerFirst?: string[] | boolean;
+
+		/**
+		 * Configure asset retention for this Worker. When enabled, assets from
+		 * recently deployed versions remain reachable, preventing "version skew"
+		 * breakage for SPAs and static sites.
+		 *
+		 * Enabling is immediately retroactive over the last 24 hours of
+		 * deployments, including paths deleted in that period.
+		 */
+		retention?: { enabled: boolean };
 	};
 
 	/**
