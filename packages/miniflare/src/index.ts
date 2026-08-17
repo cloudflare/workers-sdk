@@ -1811,9 +1811,13 @@ export class Miniflare {
 			}
 		}
 
-		for (let i = 0; i < allWorkerOpts.length; i++) {
-			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
-			const workerOpts = allWorkerOpts[i];
+		for (
+			let workerIndex = 0;
+			workerIndex < allWorkerOpts.length;
+			workerIndex++
+		) {
+			const previousWorkerOpts = allPreviousWorkerOpts?.[workerIndex];
+			const workerOpts = allWorkerOpts[workerIndex];
 			const workerName = workerOpts.config.name;
 			// Service-worker format workers provide a raw script; everything else is
 			// a modules worker.
@@ -1825,7 +1829,10 @@ export class Miniflare {
 			const additionalModules: Worker_Module[] = [];
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
-				const pluginBindings = await plugin.getBindings(workerOpts, i);
+				const pluginBindings = await plugin.getBindings(
+					workerOpts,
+					workerIndex
+				);
 				if (pluginBindings !== undefined) {
 					for (const binding of pluginBindings) {
 						// If this is the Workers Sites manifest, we need to add it as a
@@ -1889,7 +1896,7 @@ export class Miniflare {
 			> = {
 				log: this.#log,
 				workerBindings,
-				workerIndex: i,
+				workerIndex,
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				workerNames,
@@ -1939,12 +1946,12 @@ export class Miniflare {
 			const previousDirectSockets =
 				previousWorkerOpts?.dev?.unsafeDirectSockets ?? [];
 			const directSockets = workerOpts.dev?.unsafeDirectSockets ?? [];
-			for (let j = 0; j < directSockets.length; j++) {
-				const previousDirectSocket = previousDirectSockets[j];
-				const directSocket = directSockets[j];
+			for (let i = 0; i < directSockets.length; i++) {
+				const previousDirectSocket = previousDirectSockets[i];
+				const directSocket = directSockets[i];
 				const serviceName = directSocket.serviceName ?? workerName;
 				const entrypoint = directSocket.entrypoint ?? "default";
-				const name = getDirectSocketName(i, entrypoint);
+				const name = getDirectSocketName(workerIndex, entrypoint);
 				const address = this.#getSocketAddress(
 					name,
 					previousDirectSocket?.port,

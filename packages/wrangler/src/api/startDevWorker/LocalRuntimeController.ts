@@ -381,6 +381,9 @@ export class LocalRuntimeController extends RuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
+					complianceConfig: {
+						compliance_region: data.config.complianceRegion,
+					},
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
