@@ -455,4 +455,83 @@ describe("splitSqlQuery()", () => {
 			]
 		`);
 	});
+
+	it("should keep CASE expressions inside trigger bodies", ({ expect }) => {
+		for (const assignment of [
+			"value = CASE WHEN NEW.active THEN 1 ELSE 0 END, other = 2",
+			"value = (CASE WHEN NEW.active THEN 1 ELSE 0 END), other = 2",
+			"value = CASE WHEN NEW.active THEN 1 ELSE 0 END/* note */, other = 2",
+			"value = CASE WHEN NEW.active THEN(1)END, other = 2",
+		]) {
+			const statements = splitSqlQuery(`
+				CREATE TRIGGER update_projection AFTER INSERT ON source BEGIN
+					UPDATE projections SET ${assignment};
+					UPDATE audit SET seen = 1;
+				END;
+				CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);
+			`);
+
+			expect(statements, assignment).toHaveLength(2);
+			expect(statements[0]).toContain("UPDATE audit SET seen = 1;");
+			expect(statements[1]).toBe(
+				"CREATE TABLE after_trigger (id INTEGER PRIMARY KEY)"
+			);
+		}
+	});
+
+	it("should not treat keyword-shaped identifiers as trigger boundaries", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+				CREATE TABLE source (begin TEXT, start INTEGER, end INTEGER);
+				CREATE TABLE ranges (start INTEGER, end INTEGER);
+				CREATE TRIGGER copy_range AFTER INSERT ON source BEGIN
+					INSERT INTO ranges (start, end) VALUES (NEW.start, NEW.end);
+				END;
+				CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);
+			`)
+		).toEqual([
+			"CREATE TABLE source (begin TEXT, start INTEGER, end INTEGER)",
+			"CREATE TABLE ranges (start INTEGER, end INTEGER)",
+			`CREATE TRIGGER copy_range AFTER INSERT ON source BEGIN
+					INSERT INTO ranges (start, end) VALUES (NEW.start, NEW.end);
+				END`,
+			"CREATE TABLE after_trigger (id INTEGER PRIMARY KEY)",
+		]);
+	});
+
+	it("should recognize trigger boundaries separated by comments", ({
+		expect,
+	}) => {
+		const statements = splitSqlQuery(`
+			CREATE/* before trigger */TRIGGER audit_source AFTER INSERT ON source
+			BEGIN/* body */
+				INSERT INTO audit VALUES (NEW.id);
+			/* before end */END/* after end */;
+			CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);
+		`);
+
+		expect(statements).toHaveLength(2);
+		expect(statements[0]).toContain("INSERT INTO audit VALUES (NEW.id);");
+		expect(statements[1]).toBe(
+			"CREATE TABLE after_trigger (id INTEGER PRIMARY KEY)"
+		);
+	});
+
+	it("should handle temporary triggers", ({ expect }) => {
+		for (const modifier of ["TEMP", "TEMPORARY"]) {
+			const statements = splitSqlQuery(`
+				CREATE ${modifier} TRIGGER audit_source AFTER INSERT ON source BEGIN
+					INSERT INTO audit VALUES (NEW.id);
+				END;
+				CREATE TABLE after_trigger (id INTEGER PRIMARY KEY);
+			`);
+
+			expect(statements, modifier).toHaveLength(2);
+			expect(statements[1]).toBe(
+				"CREATE TABLE after_trigger (id INTEGER PRIMARY KEY)"
+			);
+		}
+	});
 });
