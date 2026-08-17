@@ -66,6 +66,7 @@ const BULK_UPLOAD_CONCURRENCY = 3;
 const EDGE_KV_UPLOAD_CONCURRENCY = 50;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
+const ASSET_UPLOAD_REQUEST_TIMEOUT_MS = 2 * 60 * 1000;
 
 const MAX_DIFF_LINES = 100;
 
@@ -195,6 +196,9 @@ export const syncAssets = async (
 
 			try {
 				let res: UploadResponse;
+				const abortSignal = AbortSignal.timeout(
+					ASSET_UPLOAD_REQUEST_TIMEOUT_MS
+				);
 				if (useSingleAssetUpload) {
 					const manifestEntry = bucket[0];
 					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
@@ -210,7 +214,9 @@ export const syncAssets = async (
 							},
 							body: createReadStream(absFilePath),
 							duplex: "half",
-						}
+						},
+						undefined,
+						abortSignal
 					);
 				} else {
 					// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
@@ -243,7 +249,9 @@ export const syncAssets = async (
 								Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
 							},
 							body: payload,
-						}
+						},
+						undefined,
+						abortSignal
 					);
 				}
 				uploadedAssetsCount += bucket.length;
@@ -292,6 +300,14 @@ export const syncAssets = async (
 							}. Please try again.\n` +
 							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
 						{ telemetryMessage: "Asset upload took too long" }
+					);
+				} else if (e instanceof DOMException && e.name === "TimeoutError") {
+					throw new FatalError(
+						`Asset upload timed out on bucket ${bucketIndex + 1}/${
+							uploadBuckets.length
+						} after ${MAX_UPLOAD_ATTEMPTS} retries.\n` +
+							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
+						{ telemetryMessage: "asset upload request timed out" }
 					);
 				} else {
 					throw e;

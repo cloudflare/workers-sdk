@@ -1107,6 +1107,7 @@ describe("deploy", () => {
 		it("should upload each asset individually with raw bytes when wrangler_single_asset_uploads is true", async ({
 			expect,
 		}) => {
+			const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
 			const sendMetricsEventSpy = vi
 				.spyOn(metrics, "sendMetricsEvent")
 				.mockImplementation(() => {});
@@ -1163,6 +1164,8 @@ describe("deploy", () => {
 			await runWrangler("deploy");
 
 			expect(uploadedRequests).toHaveLength(2);
+			expect(timeoutSpy).toHaveBeenCalledTimes(2);
+			expect(timeoutSpy).toHaveBeenCalledWith(2 * 60 * 1000);
 
 			// Verify per-hash URLs with no query string
 			const paths = uploadedRequests.map((r) => new URL(r.url).pathname).sort();
