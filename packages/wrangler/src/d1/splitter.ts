@@ -249,9 +249,20 @@ function isDollarQuoteIdentifier(str: string) {
 
 /**
  * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
+ *
+ * The character immediately before `BEGIN`/`CASE` must not be a word
+ * character, but is otherwise unconstrained, mirroring the same broadening
+ * applied to `isCompoundStatementEnd()`: a `(CASE ... END)` used as a
+ * parenthesised value expression is preceded directly by `(`, not
+ * whitespace. Requiring whitespace specifically meant such a `CASE`'s start
+ * was never detected, while its `END` -- once that detection was broadened
+ * to accept a trailing `)` -- now was. That asymmetry let an unrelated,
+ * already-open compound statement's own end marker (e.g. an enclosing
+ * trigger's `BEGIN ... END`) get closed prematurely by the inner CASE's
+ * `END)`, which the stack had never actually been pushed for.
  */
 function isCompoundStatementStart(str: string) {
-	return /\s(BEGIN|CASE)\s$/i.test(str);
+	return /[^A-Za-z0-9_](BEGIN|CASE)\s$/i.test(str);
 }
 
 /**

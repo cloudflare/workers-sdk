@@ -485,4 +485,28 @@ describe("splitSqlQuery()", () => {
 			]
 		`);
 	});
+
+	it("should not split inside a trigger body just because it contains a parenthesised CASE", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER my_trigger AFTER INSERT ON items
+				BEGIN
+					UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE 0 END);
+					UPDATE totals SET y = y + 1;
+				END;
+
+				CREATE INDEX items_idx ON items (id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER my_trigger AFTER INSERT ON items
+							BEGIN
+								UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE 0 END);
+								UPDATE totals SET y = y + 1;
+							END",
+			  "CREATE INDEX items_idx ON items (id)",
+			]
+		`);
+	});
 });
