@@ -149,6 +149,10 @@ function splitSqlIntoStatements(sql: string): string[] {
 			case "`":
 				str += char + consumeUntilMarker(iterator, char);
 				break;
+			case `[`:
+				// SQLite bracket-quoted identifiers end at the first `]`; there is no escape sequence.
+				str += char + consumeUntilMarker(iterator, `]`);
+				break;
 			case `$`: {
 				const dollarQuote =
 					"$" + consumeWhile(iterator, isDollarQuoteIdentifier);

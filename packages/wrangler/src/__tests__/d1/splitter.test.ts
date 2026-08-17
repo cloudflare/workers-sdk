@@ -128,6 +128,17 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should handle bracket-quoted identifiers", ({ expect }) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TABLE metrics ([value;unit] TEXT);
+    SELECT [value;unit] FROM metrics;`)
+		).toEqual([
+			"CREATE TABLE metrics ([value;unit] TEXT)",
+			"SELECT [value;unit] FROM metrics",
+		]);
+	});
+
 	it("should handle inline comments", ({ expect }) => {
 		expect(
 			splitSqlQuery(
@@ -340,6 +351,27 @@ describe("splitSqlQuery()", () => {
 			"CREATE TABLE weekend (id INTEGER PRIMARY KEY)",
 			"INSERT INTO weekend (id) VALUES (1)",
 			"SELECT * FROM weekend",
+		]);
+	});
+
+	it("should not treat a bracket-quoted identifier as a compound statement marker", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        UPDATE x SET [end] = 1;
+        UPDATE y SET z = 2;
+    END;
+    SELECT 1;`)
+		).toEqual([
+			`CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        UPDATE x SET [end] = 1;
+        UPDATE y SET z = 2;
+    END`,
+			"SELECT 1",
 		]);
 	});
 
