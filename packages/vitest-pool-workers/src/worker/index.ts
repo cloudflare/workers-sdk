@@ -285,12 +285,8 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 						runner.evaluator
 					);
 
-					/**
-					 * Creates a CommonJS require function with a marked file URL.
-					 *
-					 * @param url - The module URL used as the require base.
-					 * @returns The CommonJS require function.
-					 */
+					// workerd echoes percent-encoded module names back to the fallback
+					// service, so the require base URL must carry the sentinel marker.
 					function createRequire(url: string): ReturnType<CreateRequire> {
 						return originalCreateRequire(markCreateRequireUrl(url));
 					}
