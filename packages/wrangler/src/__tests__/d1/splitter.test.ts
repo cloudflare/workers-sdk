@@ -354,6 +354,27 @@ describe("splitSqlQuery()", () => {
 		]);
 	});
 
+	it("should not treat an accented identifier ending in END as a compound statement end", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER t AFTER INSERT ON x
+    BEGIN
+        UPDATE y SET a = 1 WHERE b = néend;
+        UPDATE z SET c = 2;
+    END;
+    SELECT 1;`)
+		).toEqual([
+			`CREATE TRIGGER t AFTER INSERT ON x
+    BEGIN
+        UPDATE y SET a = 1 WHERE b = néend;
+        UPDATE z SET c = 2;
+    END`,
+			"SELECT 1",
+		]);
+	});
+
 	it("should not treat a bracket-quoted identifier as a compound statement marker", ({
 		expect,
 	}) => {
