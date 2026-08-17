@@ -145,7 +145,7 @@ function createRequestForIncomingMessage(
 	const protocol =
 		options?.protocol ??
 		("encrypted" in req.socket && req.socket.encrypted ? "https:" : "http:");
-	const host = options?.host ?? headers.get("Host") ?? "localhost";
+	const host = options?.host ?? getRequestAuthority(req) ?? "localhost";
 	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
 	const init: RequestInit & { duplex?: "half" } = {
 		method,
@@ -213,7 +213,10 @@ function createCancellableRequestBody(
 }
 
 function toMiniflareRequest(request: Request): MiniflareRequest {
-	const host = request.headers.get("Host");
+	// Falls back to the URL, which carries the authority resolved in
+	// `createRequestForIncomingMessage`: over HTTP/2 there is no `Host` header
+	// to read, and without this the forwarded host would be dropped entirely.
+	const host = request.headers.get("Host") ?? new URL(request.url).host;
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
 	if (host && !xForwardedHost) {
@@ -242,6 +245,26 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 }
 
 export const isRolldown = "rolldownVersion" in vite;
+
+/**
+ * Returns the authority — host and, when present, port — of an incoming
+ * Node.js request.
+ *
+ * HTTP/2 clients carry the authority in the `:authority` pseudo-header rather
+ * than `Host`, and pseudo-headers are dropped when the Fetch `Headers` are
+ * built, so `:authority` has to be read from the Node request directly.
+ * Without it a request over HTTP/2 falls back to a bare `localhost` and loses
+ * its port. Returns `undefined` if neither is present or the value is empty.
+ */
+export function getRequestAuthority(req: {
+	headers: http.IncomingHttpHeaders;
+}): string | undefined {
+	// `Host` is checked first so HTTP/1.1 behaviour is unchanged.
+	const raw = req.headers["host"] ?? req.headers[":authority"];
+	const value = Array.isArray(raw) ? raw[0] : raw;
+	const authority = value?.trim();
+	return authority ? authority : undefined;
+}
 
 /**
  * Parses the `X-Forwarded-Proto` header from an incoming Node.js request.
