@@ -8,7 +8,7 @@ import configShared from "../../../vitest.shared";
 
 export default defineConfig(async () => {
 	// Read all migrations in the `migrations` directory
-	const migrationsPath = path.join(__dirname, "migrations");
+	const migrationsPath = path.join(import.meta.dirname, "migrations");
 	const migrations = await readD1Migrations(migrationsPath);
 
 	return mergeConfig(
