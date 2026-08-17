@@ -4,9 +4,9 @@ import * as autoconfig from "@cloudflare/autoconfig";
 import { Framework, getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
+	DEFAULT_COMPAT_DATE,
 	FatalError,
 	readFileSync,
-	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import { NpmPackageManager } from "@cloudflare/workers-utils";
 import {
@@ -301,7 +301,7 @@ describe("autoconfig (deploy)", () => {
 				{ context, enableWranglerInstallation: false }
 			);
 
-			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
+			expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 				.toMatchInlineSnapshot(`
 					"
 					Detected Project Settings:
@@ -322,7 +322,7 @@ describe("autoconfig (deploy)", () => {
 					  {
 					    "$schema": "node_modules/wrangler/config-schema.json",
 					    "name": "my-worker",
-					    "compatibility_date": "<current-date>",
+					    "compatibility_date": "<default-date>",
 					    "observability": {
 					      "enabled": true
 					    },
@@ -338,14 +338,14 @@ describe("autoconfig (deploy)", () => {
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
-					getTodaysCompatDate(),
-					"<current-date>"
+					DEFAULT_COMPAT_DATE,
+					"<default-date>"
 				)
 			).toMatchInlineSnapshot(`
 				"{
 				  "$schema": "node_modules/wrangler/config-schema.json",
 				  "name": "my-worker",
-				  "compatibility_date": "<current-date>",
+				  "compatibility_date": "<default-date>",
 				  "observability": {
 				    "enabled": true
 				  },
@@ -496,7 +496,7 @@ describe("autoconfig (deploy)", () => {
 				{ context }
 			);
 
-			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
+			expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 				.toMatchInlineSnapshot(`
 					"
 					Detected Project Settings:
@@ -515,7 +515,7 @@ describe("autoconfig (deploy)", () => {
 					  {
 					    "$schema": "node_modules/wrangler/config-schema.json",
 					    "name": "edited-worker-name",
-					    "compatibility_date": "<current-date>",
+					    "compatibility_date": "<default-date>",
 					    "observability": {
 					      "enabled": true
 					    },
@@ -528,14 +528,14 @@ describe("autoconfig (deploy)", () => {
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
-					getTodaysCompatDate(),
-					"<current-date>"
+					DEFAULT_COMPAT_DATE,
+					"<default-date>"
 				)
 			).toMatchInlineSnapshot(`
 				"{
 				  "$schema": "node_modules/wrangler/config-schema.json",
 				  "name": "edited-worker-name",
-				  "compatibility_date": "<current-date>",
+				  "compatibility_date": "<default-date>",
 				  "observability": {
 				    "enabled": true
 				  },

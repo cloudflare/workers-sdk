@@ -22,14 +22,15 @@ import type { C3Context } from "types";
  * Update the `wrangler.(toml|json|jsonc)` file for this project by:
  *
  * - setting the `name` to the passed project name
- * - adding the latest compatibility date when no valid one is present
+ * - adding the default compatibility date when no valid one is present
  * - enabling observability
  * - adding `nodejs_compat` to the compatibility flags when the compatibility
  *   date does not already enable it by default, and removing it when it does
  * - adding comments with links to documentation for common configuration options
  * - substituting placeholders with actual values
  *   - `<WORKER_NAME>` with the project name
- *   - `<COMPATIBILITY_DATE>` with the max compatibility date of the installed worked
+ *   - `<COMPATIBILITY_DATE>` with the release date of the `workerd` version that
+ *     this release of C3 supports
  *
  * If both `wrangler.toml` and `wrangler.json`/`wrangler.jsonc` are present, only
  * the `wrangler.json`/`wrangler.jsonc` file will be updated.
@@ -38,7 +39,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	// Placeholders to replace in the wrangler config files
 	const substitutions: Record<string, string> = {
 		"<WORKER_NAME>": ctx.project.name,
-		"<COMPATIBILITY_DATE>": getWorkerdCompatibilityDate(ctx.project.path),
+		"<COMPATIBILITY_DATE>": getWorkerdCompatibilityDate(),
 	};
 
 	if (wranglerJsonOrJsoncExists(ctx)) {
@@ -61,8 +62,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		);
 
 		const compatibilityDate = await getCompatibilityDate(
-			wranglerJson.compatibility_date,
-			ctx.project.path
+			wranglerJson.compatibility_date
 		);
 
 		wranglerJson = appendJSONProperty(wranglerJson, "name", ctx.project.name);
@@ -97,8 +97,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 
 		const wranglerToml = TOML.parse(strToml);
 		const compatibilityDate = await getCompatibilityDate(
-			wranglerToml.compatibility_date,
-			ctx.project.path
+			wranglerToml.compatibility_date
 		);
 		wranglerToml.name = ctx.project.name;
 		wranglerToml.compatibility_date = compatibilityDate;
@@ -214,23 +213,19 @@ export const addVscodeConfig = (ctx: C3Context) => {
 /**
  * Gets the compatibility date to use.
  *
- * If the tentative date is valid, it is returned. Otherwise the latest workerd date is used.
+ * If the tentative date is valid, it is returned. Otherwise the workerd date is used.
  *
  * @param tentativeDate A tentative compatibility date, usually from wrangler config.
- * @param projectPath The path to the target project.
  * @returns The compatibility date to use in the form "YYYY-MM-DD".
  */
-async function getCompatibilityDate(
-	tentativeDate: unknown,
-	projectPath: string
-): Promise<string> {
+async function getCompatibilityDate(tentativeDate: unknown): Promise<string> {
 	if (typeof tentativeDate === "string" && isCompatDate(tentativeDate)) {
 		// Use the tentative date when it is valid.
 		// It may be there for a specific compat reason
 		return tentativeDate;
 	}
-	// Fallback to the latest workerd date
-	return getWorkerdCompatibilityDate(projectPath);
+	// Fallback to the workerd date
+	return getWorkerdCompatibilityDate();
 }
 
 /**

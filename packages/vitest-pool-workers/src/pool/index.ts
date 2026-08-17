@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
 import {
-	getTodaysCompatDate,
+	DEFAULT_COMPAT_DATE,
 	isNodejsCompatDefaultOn,
 } from "@cloudflare/workers-utils";
 import * as devalue from "devalue";
@@ -360,10 +360,10 @@ async function buildProjectWorkerOptions(
 	);
 
 	if (runnerWorker.compatibilityDate === undefined) {
-		// No compatibility date was provided, so use today's date
-		runnerWorker.compatibilityDate = getTodaysCompatDate();
+		// No compatibility date was provided, so use the default
+		runnerWorker.compatibilityDate = DEFAULT_COMPAT_DATE;
 		debug(
-			"No compatibility date was provided for project %s, defaulting to today's date %s.",
+			"No compatibility date was provided for project %s, defaulting to %s.",
 			getRelativeProjectPath(project),
 			runnerWorker.compatibilityDate
 		);

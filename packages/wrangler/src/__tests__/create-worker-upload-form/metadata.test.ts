@@ -228,6 +228,42 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			},
 		},
 		{
+			label: "durable object exports with an attached container",
+			overrides: {
+				exports: {
+					Counter: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			},
+			key: "exports",
+			expected: {
+				Counter: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			},
+		},
+		{
+			label: "containers linked by class_name",
+			overrides: {
+				containers: [{ name: "my-container", class_name: "Counter" }],
+			},
+			key: "containers",
+			expected: [{ name: "my-container", class_name: "Counter" }],
+		},
+		{
+			label: "containers linked from the exports side",
+			overrides: {
+				containers: [{ name: "my-container" }],
+			},
+			key: "containers",
+			expected: [{ name: "my-container" }],
+		},
+		{
 			label: "annotations",
 			overrides: {
 				annotations: {

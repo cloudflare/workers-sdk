@@ -1,5 +1,5 @@
 import { statSync } from "node:fs";
-import { UserError } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE, UserError } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import type { NamedArgDefinitions } from "../core/types";
 
@@ -70,7 +70,8 @@ export const sharedDeployVersionsArgs = {
 		array: true,
 	},
 	latest: {
-		describe: "Use the latest version of the Workers runtime",
+		describe:
+			"Use the latest compatibility date supported by this version of Wrangler",
 		type: "boolean",
 		default: false,
 	},
@@ -267,7 +268,7 @@ export function validateDeployVersionsArgs(
 
 	if (args.latest) {
 		logger.warn(
-			`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your configuration file.`
+			`Using the latest compatibility date supported by this version of Wrangler (${DEFAULT_COMPAT_DATE}). To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your configuration file.`
 		);
 	}
 }

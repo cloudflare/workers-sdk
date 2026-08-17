@@ -20,7 +20,9 @@ it("can use context exports (parameterized with props) on the main worker", asyn
 it("will warn on missing context exports on the main worker", async ({
 	expect,
 }) => {
-	const warnSpy = vi.spyOn(console, "warn");
+	// `mockImplementation` so the warning this test asserts on doesn't also get
+	// printed to the real console and pollute the test output.
+	const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 	const response = await exports.default.fetch(
 		"http://example.com/invalid-export"
 	);
@@ -37,7 +39,9 @@ it("will warn on implicit re-exports that will exist in production but cannot no
 }) => {
 	// In this test, we are trying to access an entry-point that is wildcard (*) re-exported from a virtual module.
 	// This virtual module is understood by Vitest and TypeScript but not the lightweight esbuild that we use to guess exports.
-	const warnSpy = vi.spyOn(console, "warn");
+	// `mockImplementation` so the warning this test asserts on doesn't also get
+	// printed to the real console and pollute the test output.
+	const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 	const response = await exports.default.fetch(
 		"http://example.com/virtual-implicit"
 	);

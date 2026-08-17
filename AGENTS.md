@@ -98,6 +98,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - Prefix unused variables with `_`
 - No `.only()` in tests (`no-only-tests/no-only-tests`)
 - Prefer `function` declarations over `const` arrow function assignments for named/exported functions
+- Add a well formatted JSDoc comment to every function, ideally including tags such as `@param` and `@returns`
 - ESLint disable comments must use double-dash separator: `// eslint-disable-next-line rule-name -- reason here`
 - Never modify generated files directly — modify the generator or config, then regenerate
 - Format with oxfmt - run `pnpm prettify` in the workspace root before committing

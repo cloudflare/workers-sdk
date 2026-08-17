@@ -21,7 +21,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { splitSqlQuery } from "./splitter";
+import { normalizeSqlLineEndings, splitSqlQuery } from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,
@@ -505,14 +505,17 @@ async function executeRemotely({
 			},
 		];
 	} else {
+		// The D1 query API splits multi-statement SQL on `;` server-side, and
+		// mishandles CRLF line endings inside compound statements such as a
+		// `CREATE TRIGGER ... BEGIN ... END;` body (issue #14991). Normalize
+		// structural line endings while preserving quoted SQL values.
+		const sql = input.command && normalizeSqlLineEndings(input.command);
 		const result = await d1ApiPost<QueryResult[]>(
 			config,
 			accountId,
 			db,
 			"query",
-			{
-				sql: input.command,
-			}
+			{ sql }
 		);
 		logResult(result);
 		return result;

@@ -81,6 +81,71 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
+	it("should resolve class_name from a durable object export that references the container by name", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					image: "registry.cloudflare.com/hello:world",
+					name: "my-container",
+				},
+			],
+			exports: {
+				MyContainerDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			},
+			durable_objects: {
+				bindings: [],
+			},
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {
+			dryRun: true,
+		});
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "my-container",
+			class_name: "MyContainerDO",
+		});
+	});
+
+	it("should throw error when a container is not linked to any durable object", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			userConfigPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					image: "registry.cloudflare.com/hello:world",
+					name: "my-container",
+				},
+			],
+			exports: {
+				MyContainerDO: { type: "durable-object", storage: "sqlite" },
+			},
+			durable_objects: {
+				bindings: [],
+			},
+		} as Partial<Config> as Config;
+
+		await expect(
+			getNormalizedContainerOptions(config, { dryRun: true })
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The container "my-container" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.]`
+		);
+	});
+
 	it("should throw error when durable object has script_name defined", async ({
 		expect,
 	}) => {
@@ -209,6 +274,40 @@ describe("getNormalizedContainerOptions", () => {
 			observability: {
 				logs_enabled: false,
 			},
+		});
+	});
+
+	it("should use the FedRAMP High registry from Wrangler config", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.jsonc",
+			topLevelName: "test-worker",
+			compliance_region: "fedramp_high",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: "test-image/test:latest",
+					name: "test-container",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result[0]).toMatchObject({
+			image_uri:
+				"registry.fed.cloudflare.com/some-account-id/test-image/test:latest",
 		});
 	});
 

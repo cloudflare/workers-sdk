@@ -14,6 +14,11 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	getContainerDurableObjectClassNames,
+	getContainerNameToClassNameMap,
+	resolveContainerClassName,
+} from "./config/containers";
+export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
 } from "./config/config";
@@ -123,6 +128,7 @@ export {
 	stripRedundantNodejsCompatFlags,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+export { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 
 export { isDockerfile } from "./config/validation";
 

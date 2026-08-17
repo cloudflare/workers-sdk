@@ -1,10 +1,12 @@
 import { describe, it } from "vitest";
+import { exports as exportConfig } from "../exports";
 import {
 	ConfigExportsSchema,
 	InputWorkerSchema,
 	OutputWorkerSchema,
 	SettingsSchema,
 } from "../schema";
+import type { ParsedInputWorkerConfig } from "../schema";
 
 const baseConfig = {
 	type: "worker",
@@ -722,5 +724,144 @@ describe("ConfigExportsSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+});
+
+describe("ExportSchema", () => {
+	function parseExports(exports: unknown) {
+		return InputWorkerSchema.safeParse({ ...baseConfig, exports });
+	}
+
+	it("accepts `container` on a live durable-object export", ({ expect }) => {
+		const result = parseExports({
+			MyDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts `container` on an expecting-transfer export", ({ expect }) => {
+		const result = parseExports({
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "source-worker",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects `container` on a tombstone", ({ expect }) => {
+		const result = parseExports({
+			OldDO: {
+				type: "durable-object",
+				state: "deleted",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a non-string `container`", ({ expect }) => {
+		const result = parseExports({
+			MyDO: { type: "durable-object", storage: "sqlite", container: 1 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `container` on a legacy-kv export", ({ expect }) => {
+		const result = parseExports({
+			MyDO: {
+				type: "durable-object",
+				storage: "legacy-kv",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `container` on a legacy-kv expecting-transfer export", ({
+		expect,
+	}) => {
+		const result = parseExports({
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("still accepts a legacy-kv export without a container", ({ expect }) => {
+		const result = parseExports({
+			MyDO: { type: "durable-object", storage: "legacy-kv" },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	// Containers require the SQLite storage engine. The check below is the type
+	// half of that rule: `tsc` checks this body (it is never called), so a missing
+	// error fails `check:type` via the unused `@ts-expect-error` directives.
+	it("forbids `container` on a legacy-kv export at the type level", ({
+		expect,
+	}) => {
+		function typeAssertions() {
+			exportConfig.durableObject({
+				storage: "legacy-kv",
+				// @ts-expect-error `container` requires `storage: "sqlite"`
+				container: "my-container",
+			});
+
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+				// @ts-expect-error `container` requires `storage: "sqlite"`
+				container: "my-container",
+			});
+
+			const _exports: NonNullable<ParsedInputWorkerConfig["exports"]> = {
+				MyDO: {
+					type: "durable-object",
+					storage: "legacy-kv",
+					// @ts-expect-error `container` requires `storage: "sqlite"`
+					container: "my-container",
+				},
+			};
+
+			// The permitted combinations must still compile.
+			exportConfig.durableObject({ storage: "sqlite", container: "my-do" });
+			exportConfig.durableObject({ storage: "legacy-kv" });
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "source-worker",
+				container: "my-do",
+			});
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+			});
+
+			return _exports;
+		}
+
+		expect(typeAssertions).toBeTypeOf("function");
 	});
 });

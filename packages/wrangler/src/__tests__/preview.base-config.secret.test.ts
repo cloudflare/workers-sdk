@@ -143,6 +143,20 @@ describe("wrangler preview", () => {
 			}
 		);
 
+		test("does not inherit the preview script positional", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("preview base-config secret put")
+			).rejects.toThrow(/Not enough non-option arguments/);
+			expect(std.out).toContain(
+				"wrangler preview base-config secret put <key>"
+			);
+			expect(std.out).not.toContain(
+				"script  The path to an entry point for your Worker"
+			);
+		});
+
 		describe("put", () => {
 			const mockStdIn = useMockStdin({ isTTY: false });
 
