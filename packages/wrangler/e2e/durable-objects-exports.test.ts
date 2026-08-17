@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { setTimeout } from "node:timers/promises";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
+import ci from "ci-info";
 import dedent from "ts-dedent";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -12,6 +13,20 @@ const TIMEOUT = 60_000;
 // Deploys that build and push a container image are much slower than a plain
 // `wrangler deploy`.
 const CONTAINER_DEPLOY_TIMEOUT = 240_000;
+
+// The container deploy tests never *run* a container, but they do have to build
+// and push a `linux/amd64` image, which needs Docker. That rules out the hosted
+// non-Linux CI runners:
+//   - macOS runners ship no Docker CLI or daemon at all.
+//   - Windows runners ship the Docker CLI without the buildx plugin, so the
+//     classic builder rejects the `--load` flag that we always pass. Even with
+//     buildx installed the daemon serves Windows containers, so it could not
+//     build a Linux image anyway.
+// Gating on `ci.isCI` rather than the platform alone keeps these running locally
+// on macOS and Windows, where Docker Desktop is usually available.
+const skipContainerDeployTests =
+	Boolean(process.env.LOCAL_TESTS_WITHOUT_DOCKER) ||
+	(ci.isCI && process.platform !== "linux");
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"durable-objects-exports",
@@ -624,9 +639,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			});
 		});
 
-		// Pushing the container image needs Docker. Unlike the local dev tests we
-		// never *run* the container, so this is not restricted to Linux.
-		describe.skipIf(process.env.LOCAL_TESTS_WITHOUT_DOCKER)(
+		describe.skipIf(skipContainerDeployTests)(
 			"containers attached via `exports`: deploy",
 			{ timeout: CONTAINER_DEPLOY_TIMEOUT },
 			() => {
@@ -682,7 +695,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						`,
 					});
 
-					await helper.run(`wrangler containers build . -t ${imageTag} -p`);
+					const build = await helper.run(
+						`wrangler containers build . -t ${imageTag} -p`
+					);
+					// Assert here rather than letting the tests below fail on a missing
+					// image, so that a broken or missing Docker installation is reported
+					// as such instead of as an unrelated assertion in `getDeployedUrl()`.
+					assert(
+						build.status === 0,
+						`Failed to build and push ${imageTag} (exit code ${build.status}):\n${build.stderr}`
+					);
 					// Give the registry a moment to make the pushed image available.
 					await setTimeout(5_000);
 				}, CONTAINER_DEPLOY_TIMEOUT);
