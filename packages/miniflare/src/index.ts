@@ -1509,7 +1509,12 @@ export class Miniflare {
 				// Used by the local explorer to aggregate resources across instances
 				const registryPath = this.#devRegistry.getRegistryPath();
 				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
-				response = Response.json(registry);
+				response = Response.json(registry, {
+					headers: {
+						"X-Miniflare-Dev-Registry-Instance-Id":
+							this.#devRegistry.instanceId,
+					},
+				});
 			} else if (url.pathname === "/core/public-url") {
 				// Returns the public URL for this Miniflare instance. If a publicUrl
 				// has been set (e.g. the Vite dev server URL), use that; otherwise

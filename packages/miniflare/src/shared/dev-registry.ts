@@ -34,6 +34,7 @@ export function isStorageCandidateName(name: string): boolean {
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
+	private registrationRetries = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
 	private storageCandidateRefresh: NodeJS.Timeout | undefined;
 	private watchQueueConsumers = false;
@@ -132,6 +133,11 @@ export class DevRegistry {
 	 * Withdraw every entry this instance has registered.
 	 */
 	public unregisterWorkers() {
+		for (const retry of this.registrationRetries.values()) {
+			clearTimeout(retry);
+		}
+		this.registrationRetries.clear();
+
 		for (const worker of this.registeredWorkers) {
 			this.unregister(worker);
 		}
@@ -214,6 +220,10 @@ export class DevRegistry {
 
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
+		for (const retry of this.registrationRetries.values()) {
+			clearTimeout(retry);
+		}
+		this.registrationRetries.clear();
 
 		// Drop the entries for Workers this instance no longer has. Workers that
 		// remain are overwritten in place below instead of being deleted and
@@ -230,60 +240,80 @@ export class DevRegistry {
 		}
 
 		for (const [name, definition] of Object.entries(workers)) {
-			const definitionPath = path.join(this.registryPath, name);
-
-			const stats = statSync(definitionPath, { throwIfNoEntry: false });
-
-			const oldDefinition = stats ? readDefinition(definitionPath) : undefined;
-			const staleMs = isStorageCandidateName(name)
-				? STORAGE_CANDIDATE_STALE_MS
-				: WORKER_STALE_MS;
-			if (stats && stats.mtime.getTime() < Date.now() - staleMs) {
-				try {
-					unlinkSync(definitionPath);
-				} catch {}
-			} else if (stats) {
-				// Skip registration if the instance ID is different
-				if (oldDefinition?.instanceId !== this.instanceId) {
-					this.log.warn(
-						`Skipping registration of Worker ${name} as a Worker with this name is already registered in the dev registry by another process`
-					);
-					continue;
-				}
-			}
-
-			const existingHeartbeat = this.heartbeats.get(name);
-			if (existingHeartbeat) {
-				clearInterval(existingHeartbeat);
-			}
-
-			writeFileSync(
-				definitionPath,
-				JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
-			);
-			this.registeredWorkers.add(name);
-			this.heartbeats.set(
-				name,
-				setInterval(
-					() => {
-						const definition = readDefinition(definitionPath);
-						if (definition?.instanceId === this.instanceId) {
-							utimesSync(definitionPath, new Date(), new Date());
-						} else {
-							const heartbeat = this.heartbeats.get(name);
-							if (heartbeat !== undefined) {
-								clearInterval(heartbeat);
-								this.heartbeats.delete(name);
-							}
-						}
-					},
-					isStorageCandidateName(name)
-						? STORAGE_CANDIDATE_HEARTBEAT_MS
-						: WORKER_HEARTBEAT_MS
-				)
-			);
+			this.registerWorker(name, definition);
 		}
 		this.refresh();
+	}
+
+	private registerWorker(name: string, definition: WorkerDefinition): void {
+		assert(this.registryPath);
+		const definitionPath = path.join(this.registryPath, name);
+
+		const stats = statSync(definitionPath, { throwIfNoEntry: false });
+
+		const oldDefinition = stats ? readDefinition(definitionPath) : undefined;
+		const staleMs = isStorageCandidateName(name)
+			? STORAGE_CANDIDATE_STALE_MS
+			: WORKER_STALE_MS;
+		if (stats && stats.mtime.getTime() < Date.now() - staleMs) {
+			try {
+				unlinkSync(definitionPath);
+			} catch {}
+		} else if (stats && oldDefinition?.instanceId !== this.instanceId) {
+			this.log.warn(
+				`Skipping registration of Worker ${name} as a Worker with this name is already registered in the dev registry by another process`
+			);
+			const retryDelay = Math.max(
+				1,
+				stats.mtime.getTime() + staleMs - Date.now()
+			);
+			this.registrationRetries.set(
+				name,
+				setTimeout(() => {
+					this.registrationRetries.delete(name);
+					this.registerWorker(name, definition);
+					this.refresh();
+				}, retryDelay)
+			);
+			return;
+		}
+
+		const retry = this.registrationRetries.get(name);
+		if (retry !== undefined) {
+			clearTimeout(retry);
+			this.registrationRetries.delete(name);
+		}
+
+		const existingHeartbeat = this.heartbeats.get(name);
+		if (existingHeartbeat) {
+			clearInterval(existingHeartbeat);
+		}
+
+		writeFileSync(
+			definitionPath,
+			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
+		);
+		this.registeredWorkers.add(name);
+		this.heartbeats.set(
+			name,
+			setInterval(
+				() => {
+					const currentDefinition = readDefinition(definitionPath);
+					if (currentDefinition?.instanceId === this.instanceId) {
+						utimesSync(definitionPath, new Date(), new Date());
+					} else {
+						const heartbeat = this.heartbeats.get(name);
+						if (heartbeat !== undefined) {
+							clearInterval(heartbeat);
+							this.heartbeats.delete(name);
+						}
+					}
+				},
+				isStorageCandidateName(name)
+					? STORAGE_CANDIDATE_HEARTBEAT_MS
+					: WORKER_HEARTBEAT_MS
+			)
+		);
 	}
 
 	private previousJSON = "{}";

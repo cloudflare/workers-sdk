@@ -94,7 +94,12 @@ export function extractObjectEntryId(
 	}
 	try {
 		const parsed = JSON.parse(propsJson) as Record<string, unknown>;
-		const id = parsed[SharedBindings.TEXT_NAMESPACE];
+		const userProps = parsed.userProps;
+		const props =
+			typeof userProps === "object" && userProps !== null
+				? (userProps as Record<string, unknown>)
+				: parsed;
+		const id = props[SharedBindings.TEXT_NAMESPACE];
 		return typeof id === "string" ? id : undefined;
 	} catch {
 		return undefined;
