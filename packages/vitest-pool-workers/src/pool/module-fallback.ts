@@ -8,6 +8,7 @@ import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
+import { ENCODED_PATH_PREFIX } from "../shared/module-path";
 import { isFileNotFoundError } from "./helpers";
 import type { Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
@@ -378,22 +379,6 @@ async function resolve(
 function ensureRootedPath(filePath: string) {
 	return isWindows && filePath[0] !== "/" ? `/${filePath}` : filePath;
 }
-
-// Sentinel prepended to a redirect `Location` value whenever we had to
-// percent-encode it (see `encodeRedirectLocation()`). It lets us know
-// *deterministically* — rather than guessing — that a specifier/referrer
-// `workerd` later hands back to us is one of our own encoded values and must
-// be decoded again (see `decodeEncodedSpecifier()`).
-//
-// It is a *leading, rooted* segment on purpose. `workerd` derives the specifier
-// for a relative import by joining it onto the referring module's directory
-// (`kj::Path::eval`; see `ensureRootedPath()`), which drops the final path
-// segment but keeps the leading ones. A trailing marker would therefore be lost
-// for those derived imports, whereas a leading one propagates to every
-// descendant of an encoded module. The name is deliberately unlikely to collide
-// with a real path segment.
-// See https://github.com/cloudflare/workers-sdk/issues/14655
-export const ENCODED_PATH_PREFIX = "/__mf_vitest_encoded__";
 
 // Non-printable-ASCII detector. Anything outside the printable ASCII range
 // (`0x20`–`0x7E`) can't be represented in the Latin-1/ASCII byte range an HTTP
