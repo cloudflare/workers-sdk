@@ -13,8 +13,6 @@ import { isFileNotFoundError } from "./helpers";
 import type { Request, Worker_Module } from "miniflare";
 import type { Vite } from "vitest/node";
 
-export { ENCODED_PATH_PREFIX };
-
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
 	(log) => (debuglog = log)

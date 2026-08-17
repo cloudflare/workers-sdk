@@ -7,11 +7,13 @@ import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	decodeEncodedSpecifier,
-	ENCODED_PATH_PREFIX,
 	encodeRedirectLocation,
 	handleModuleFallbackRequest,
 } from "../src/pool/module-fallback";
-import { markCreateRequireUrl } from "../src/shared/module-path";
+import {
+	ENCODED_PATH_PREFIX,
+	markCreateRequireUrl,
+} from "../src/shared/module-path";
 import type { Vite } from "vitest/node";
 
 // The fallback handler only reads `vite.pluginContainer.resolveId`, and only
