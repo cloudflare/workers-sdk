@@ -26,6 +26,11 @@
 			"entrypoint": "NamedEntrypoint",
 		},
 	],
+	// Tail relationships across these configs form a one-directional chain:
+	// worker-entrypoint -> exported-handler-with-assets -> exported-handler.
+	// Keep it acyclic and confined to the tail tests. A dev session that
+	// outlives a tail consumer it has already connected to aborts workerd on
+	// Windows, and a cycle makes a safe shutdown order impossible to pick.
 	"tail_consumers": [
 		{
 			"service": "exported-handler-with-assets",
