@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { version } from "workerd";
 import {
+	getRuntimeCompatibilityFlags,
 	getRuntimeHeader,
 	RUNTIME_HEADER_COMMENT_PREFIX,
 	RUNTIME_TYPES_MARKER,
@@ -74,12 +75,17 @@ export async function generateRuntimeTypes({
 		}
 	}
 
+	const runtimeCompatibilityFlags = getRuntimeCompatibilityFlags(
+		compatibilityDate,
+		compatibilityFlags
+	);
+
 	const types = await generate({
 		compatibilityDate,
-		// Ignore nodejs compat flags as there is currently no mechanism to generate these dynamically.
-		compatibilityFlags: compatibilityFlags.filter(
-			(flag) => !flag.includes("nodejs_compat")
-		),
+		// Ignore Node.js compatibility as there is currently no mechanism to
+		// generate these types dynamically. Explicit opt-outs are needed once the
+		// compatibility date enables Node.js compatibility by default.
+		compatibilityFlags: runtimeCompatibilityFlags,
 	});
 
 	return { runtimeHeader: header, runtimeTypes: types, isCached: false };
