@@ -455,4 +455,34 @@ describe("splitSqlQuery()", () => {
 			]
 		`);
 	});
+
+	it("should handle a CASE used as a value expression, whose END is followed directly by a comma rather than whitespace", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER update_projection AFTER INSERT ON items
+				BEGIN
+					UPDATE totals
+					SET
+						count = CASE WHEN NEW.active THEN count + 1 ELSE count END,
+						updated_at = NEW.created_at
+					WHERE id = NEW.parent_id;
+				END;
+
+				CREATE INDEX items_parent_id_idx ON items (parent_id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER update_projection AFTER INSERT ON items
+							BEGIN
+								UPDATE totals
+								SET
+									count = CASE WHEN NEW.active THEN count + 1 ELSE count END,
+									updated_at = NEW.created_at
+								WHERE id = NEW.parent_id;
+							END",
+			  "CREATE INDEX items_parent_id_idx ON items (parent_id)",
+			]
+		`);
+	});
 });

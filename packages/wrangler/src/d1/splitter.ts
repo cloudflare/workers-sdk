@@ -256,7 +256,14 @@ function isCompoundStatementStart(str: string) {
 
 /**
  * Returns true if the `str` ends with a compound statement `END` marker.
+ *
+ * The character immediately after `END` must not be a word character, but is
+ * otherwise unconstrained: a `CASE ... END` used as a value expression (e.g.
+ * `SET x = CASE ... END, y = 1`) is legitimately followed by a comma or a
+ * closing paren, not only `;` or whitespace. Requiring the narrower set
+ * caused those `END`s to go undetected, leaving the compound-statement
+ * tracking stack permanently one level too deep for the rest of the file.
  */
 function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/i.test(str);
+	return /\sEND[^A-Za-z0-9_]$/i.test(str);
 }
