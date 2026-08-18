@@ -1,5 +1,37 @@
 # miniflare
 
+## 5.20260815.0-alpha
+
+### Patch Changes
+
+- [#15206](https://github.com/cloudflare/workers-sdk/pull/15206) [`1277a72`](https://github.com/cloudflare/workers-sdk/commit/1277a72e0d01325c37a05c0e8f5111a45100af77) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover automatically from a partially downloaded Chrome install for the Browser Run binding
+
+  If the Chrome download for a `browser` binding was interrupted — a cancelled dev session, a killed test run, a machine going to sleep — the next launch could fail indefinitely with `Failed to launch the browser process!`, usually alongside a message about being unable to load `resources.pak`. `@puppeteer/browsers` treats an install as present as soon as the executable exists, and the Chrome archives extract alphabetically, so the executable is written long before the resources it needs. Every subsequent launch then reused the half-written directory, and the only way out was deleting the Chrome cache by hand.
+
+  Miniflare now detects this: an install that Chrome has never successfully started from is cleared and re-downloaded on a failed launch, rather than reused forever. Overlapping launches also share a single download instead of racing to populate the same directory.
+
+- [#15231](https://github.com/cloudflare/workers-sdk/pull/15231) [`4f922dc`](https://github.com/cloudflare/workers-sdk/commit/4f922dc19941db31394357f7e146af320ae1f3d9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260811.1 | ^5.20260814.1 |
+  | workerd                   | 1.20260811.1  | 1.20260814.1  |
+
+- [#15248](https://github.com/cloudflare/workers-sdk/pull/15248) [`4d74b8d`](https://github.com/cloudflare/workers-sdk/commit/4d74b8d8fd5c034c012fa13973ee20bedbc844c7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260814.1 | ^5.20260815.1 |
+  | workerd                   | 1.20260814.1  | 1.20260815.1  |
+
+- [#15143](https://github.com/cloudflare/workers-sdk/pull/15143) [`2e0c962`](https://github.com/cloudflare/workers-sdk/commit/2e0c962da0c57bdc79b5edcaa64c7b725c1524f0) Thanks [@teamleaderleo](https://github.com/teamleaderleo)! - Prevent `workerd` from remaining running during Miniflare shutdown when browser or proxy cleanup is slow or fails.
+
+- [#15232](https://github.com/cloudflare/workers-sdk/pull/15232) [`8777180`](https://github.com/cloudflare/workers-sdk/commit/8777180b8239d9df435acee465d02682477e93ea) Thanks [@vicb](https://github.com/vicb)! - Bump `capnp-es` to 0.0.16.
+
 ## 5.20260811.1-alpha
 
 ### Minor Changes
