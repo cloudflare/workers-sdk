@@ -619,6 +619,55 @@ describe("collectPackageDependencies", () => {
 		});
 	});
 
+	it("should collect ESM-only package dependencies", async ({ expect }) => {
+		const nodeModulesPath = path.join(process.cwd(), "node_modules");
+		const pkgPath = path.join(nodeModulesPath, "@cloudflare", "think");
+		fs.mkdirSync(pkgPath, { recursive: true });
+		fs.writeFileSync(path.join(pkgPath, "index.mjs"), "export default {}");
+		fs.writeFileSync(
+			path.join(pkgPath, "package.json"),
+			JSON.stringify(
+				{
+					name: "@cloudflare/think",
+					version: "0.0.8",
+					type: "module",
+					exports: {
+						".": {
+							types: "./dist/think.d.ts",
+							import: "./dist/think.js",
+						},
+					},
+				},
+				null,
+				2
+			)
+		);
+
+		fs.writeFileSync(
+			"package.json",
+			JSON.stringify(
+				{
+					name: "test-project",
+					dependencies: {
+						"@cloudflare/think": "^0.0.8",
+					},
+				},
+				null,
+				2
+			)
+		);
+
+		const result = await collectPackageDependencies(process.cwd());
+
+		expect(result).toEqual([
+			{
+				name: "@cloudflare/think",
+				packageJsonVersion: "^0.0.8",
+				installedVersion: "0.0.8",
+			},
+		]);
+	});
+
 	it("should use devDependencies version when duplicate exists in dependencies", async ({
 		expect,
 	}) => {

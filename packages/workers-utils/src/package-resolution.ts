@@ -5,11 +5,14 @@ import { parsePackageJSON, readFileSync } from "./parse";
 /**
  * Resolves the filesystem path for an installed npm package.
  *
- * Tries two strategies:
- * 1. `require.resolve("<pkg>/package.json")` -- works when the package exports its package.json
- * 2. `require.resolve("<pkg>")` -- fallback for packages that don't export package.json
+ * Tries three strategies in order:
+ * 1. `require.resolve("<pkg>/package.json")` — works when the package exports its `package.json`
+ * 2. `require.resolve("<pkg>")` — fallback for packages that don't export `package.json`
+ * 3. Direct `node_modules` filesystem lookup — fallback for ESM-only packages whose exports
+ *    map has no `"require"` or `"default"` condition (and no `"./package.json"` export),
+ *    which makes them invisible to `require.resolve`
  *
- * @param packageName - The npm package name to resolve
+ * @param packageName - The npm package name to resolve (supports scoped packages like `@scope/pkg`)
  * @param projectPath - The project directory to resolve from
  * @returns The resolved directory path, or `undefined` if the package is not installed
  */
@@ -33,6 +36,21 @@ export function getPackagePath(
 				paths: [projectPath],
 			})
 		);
+	} catch {}
+
+	try {
+		// Fallback: direct node_modules lookup for ESM-only packages that aren't
+		// resolvable via require.resolve (e.g. packages whose exports map only has
+		// an "import" condition with no "require" or "default").
+		const candidate = path.join(
+			projectPath,
+			"node_modules",
+			packageName,
+			"package.json"
+		);
+		if (statSync(candidate).isFile()) {
+			return path.dirname(candidate);
+		}
 	} catch {}
 
 	return undefined;
