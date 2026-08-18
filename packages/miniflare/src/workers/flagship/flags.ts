@@ -2,7 +2,6 @@ import type { Condition, EvalFlag, FlagValue, Rollout } from "./evaluate";
 
 export type FlagType = "boolean" | "string" | "number" | "json";
 
-/** Management-shaped rule. `priority` is stripped when converting for evaluation. */
 export interface Rule {
 	priority: number;
 	conditions: Condition[];
@@ -26,12 +25,6 @@ export interface Flag extends FlagInput {
 
 const FLAG_KEY_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
 
-/**
- * Derive the public flag type from its variation values.
- *
- * @param variations The flag's variation map.
- * @returns The scalar type shared by all variations, or `json` otherwise.
- */
 export function getFlagType(variations: Record<string, unknown>): FlagType {
 	const [first] = Object.values(variations);
 	switch (typeof first) {
@@ -46,13 +39,6 @@ export function getFlagType(variations: Record<string, unknown>): FlagType {
 	}
 }
 
-/**
- * Convert a stored flag into the evaluation-only shape, ordering rules by
- * ascending priority so iteration order is evaluation order.
- *
- * @param flag The stored management-shaped flag.
- * @returns The equivalent {@link EvalFlag}.
- */
 export function toEvalFlag(flag: Flag): EvalFlag {
 	return {
 		key: flag.key,
@@ -69,14 +55,6 @@ export function toEvalFlag(flag: Flag): EvalFlag {
 	};
 }
 
-/**
- * Validate the invariants the Flagship control plane enforces at write time.
- * Evaluation assumes these hold, so local writes must reject the same inputs
- * the remote API would.
- *
- * @param input The candidate flag definition.
- * @throws {Error} When the definition would be rejected by the remote API.
- */
 export function validateFlagInput(input: FlagInput): void {
 	if (!FLAG_KEY_REGEX.test(input.key)) {
 		throw new Error(
@@ -151,12 +129,6 @@ export function validateFlagInput(input: FlagInput): void {
 	}
 }
 
-/**
- * Build a stored flag from user input, stamping derived fields.
- *
- * @param input The validated flag definition.
- * @returns The flag as persisted and returned by the admin API.
- */
 export function toStoredFlag(input: FlagInput): Flag {
 	return {
 		key: input.key,
@@ -164,7 +136,8 @@ export function toStoredFlag(input: FlagInput): Flag {
 		enabled: input.enabled,
 		default_variation: input.default_variation,
 		variations: input.variations,
-		rules: input.rules,
+		// The evaluator walks this array in order, so `priority` must decide it.
+		rules: [...input.rules].sort((a, b) => a.priority - b.priority),
 		type: getFlagType(input.variations),
 		updated_at: new Date().toISOString(),
 	};

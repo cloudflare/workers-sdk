@@ -3,20 +3,20 @@ import { aggregateListResults } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import type { FlagshipAdmin } from "../../flagship/admin";
 import type { ADMIN_API } from "../../flagship/constants";
+import type { Flag } from "../../flagship/flags";
+import type { Rule } from "../../flagship/flags";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
-import type { FlagshipApp, FlagshipCreateFlagData } from "../generated";
+import type {
+	FlagshipApp,
+	FlagshipCreateFlagData,
+	FlagshipRule,
+	FlagshipUpdateFlagData,
+} from "../generated";
 
 const FLAGSHIP_ERROR_NOT_FOUND = 10801;
 const FLAGSHIP_ERROR_INVALID_FLAG = 10802;
 
-/**
- * Resolve the admin API for a locally simulated Flagship app.
- *
- * @param env The explorer worker's environment.
- * @param appId The Flagship app id.
- * @returns The admin API, or `null` when the app is not bound locally.
- */
 function getAdmin(env: Env, appId: string): FlagshipAdmin | null {
 	const info = env.LOCAL_EXPLORER_BINDING_MAP.flagship[appId];
 	if (!info) {
@@ -39,12 +39,39 @@ function notFound(appId: string): Response {
 	);
 }
 
-/**
- * List the Flagship apps simulated locally across all connected instances.
- *
- * @param c The request context.
- * @returns The apps, deduplicated by id.
- */
+function matchesIfNoneMatch(header: string | undefined, etag: string): boolean {
+	if (header === undefined) {
+		return false;
+	}
+	const value = header.trim();
+	if (value === "*") {
+		return true;
+	}
+	const candidates = value.match(/(?:W\/)?"[^"]*"/g) ?? [];
+	return candidates.some((candidate) => candidate.replace(/^W\//, "") === etag);
+}
+
+function toDefinition(flag: Flag) {
+	return {
+		key: flag.key,
+		enabled: flag.enabled,
+		default_variation: flag.default_variation,
+		variations: flag.variations,
+		rules: flag.rules,
+	};
+}
+
+async function contentEtag(payload: string): Promise<string> {
+	const digest = await crypto.subtle.digest(
+		"SHA-256",
+		new TextEncoder().encode(payload)
+	);
+	const hash = Array.from(new Uint8Array(digest), (byte) =>
+		byte.toString(16).padStart(2, "0")
+	).join("");
+	return `"${hash}"`;
+}
+
 export async function listFlagshipApps(c: AppContext): Promise<Response> {
 	const local: FlagshipApp[] = Object.values(
 		c.env.LOCAL_EXPLORER_BINDING_MAP.flagship
@@ -67,13 +94,6 @@ export async function listFlagshipApps(c: AppContext): Promise<Response> {
 	});
 }
 
-/**
- * List the flags stored for a locally simulated Flagship app.
- *
- * @param c The request context.
- * @param appId The Flagship app id.
- * @returns The app's flags.
- */
 export async function listFlagshipFlags(
 	c: AppContext,
 	appId: string
@@ -89,14 +109,31 @@ export async function listFlagshipFlags(
 	});
 }
 
-/**
- * Get a single flag from a locally simulated Flagship app.
- *
- * @param c The request context.
- * @param appId The Flagship app id.
- * @param flagKey The flag key.
- * @returns The flag.
- */
+export async function getFlagshipDefinitions(
+	c: AppContext,
+	appId: string
+): Promise<Response> {
+	const admin = getAdmin(c.env, appId);
+	if (!admin) {
+		return notFound(appId);
+	}
+	const flags = (await admin.listFlags()).sort((a, b) =>
+		a.key.localeCompare(b.key)
+	);
+	const payload = JSON.stringify({
+		flags: Object.fromEntries(
+			flags.map((flag) => [flag.key, toDefinition(flag)])
+		),
+	});
+	const etag = await contentEtag(payload);
+	if (matchesIfNoneMatch(c.req.header("If-None-Match"), etag)) {
+		return new Response(null, { status: 304, headers: { ETag: etag } });
+	}
+	return new Response(payload, {
+		headers: { "Content-Type": "application/json", ETag: etag },
+	});
+}
+
 export async function getFlagshipFlag(
 	c: AppContext,
 	appId: string,
@@ -113,18 +150,6 @@ export async function getFlagshipFlag(
 	}
 }
 
-/**
- * Create a flag in a locally simulated Flagship app.
- *
- * Rules are not accepted here, for the same reason they cannot be edited: the
- * explorer exposes the parts of a flag that are safe to change while a Worker
- * is running, and leaves targeting to the CLI.
- *
- * @param c The request context.
- * @param appId The Flagship app id.
- * @param body The flag definition.
- * @returns The created flag.
- */
 export async function createFlagshipFlag(
 	c: AppContext,
 	appId: string,
@@ -141,7 +166,7 @@ export async function createFlagshipFlag(
 			enabled: body.enabled ?? false,
 			default_variation: body.default_variation,
 			variations: body.variations,
-			rules: [],
+			rules: toRules(body.rules ?? []),
 		});
 		return c.json(wrapResponse(created));
 	} catch (error) {
@@ -154,62 +179,82 @@ export async function createFlagshipFlag(
 }
 
 /**
- * Update whether a flag is enabled and which variation it serves by default.
+ * Converts rules from the request body into stored rules.
  *
- * Rules and variations are left untouched: editing those is the CLI's job, and
- * the explorer only exposes the switches that are safe to flip while a Worker
- * is running.
+ * Every field is optional on the wire, so missing values are filled in with
+ * ones that `validateFlagInput` will reject rather than silently accept.
  *
- * @param c The request context.
- * @param appId The Flagship app id.
- * @param flagKey The flag key.
- * @param body The requested changes.
- * @returns The updated flag.
+ * @param rules - Rules supplied by the client, in priority order
+ *
+ * @returns The rules in their stored shape
  */
+function toRules(rules: FlagshipRule[]): Rule[] {
+	return rules.map((rule, index) => ({
+		priority: rule.priority ?? index + 1,
+		// Narrowed from the schema's free-form objects; validation rejects bad shapes.
+		conditions: (rule.conditions ?? []) as unknown as Rule["conditions"],
+		serve_variation: rule.serve_variation ?? "",
+		...(rule.rollout === undefined
+			? {}
+			: {
+					rollout: {
+						percentage: rule.rollout.percentage ?? 100,
+						...(rule.rollout.attribute === undefined
+							? {}
+							: { attribute: rule.rollout.attribute }),
+					},
+				}),
+	}));
+}
+
 export async function updateFlagshipFlag(
 	c: AppContext,
 	appId: string,
 	flagKey: string,
-	body: { enabled?: boolean; default_variation?: string }
+	body: FlagshipUpdateFlagData["body"]
 ): Promise<Response> {
 	const admin = getAdmin(c.env, appId);
 	if (!admin) {
 		return notFound(appId);
 	}
+
+	let current: Flag;
 	try {
-		const current = await admin.getFlag(flagKey);
-		if (
-			body.default_variation !== undefined &&
-			!(body.default_variation in current.variations)
-		) {
-			return errorResponse(
-				400,
-				FLAGSHIP_ERROR_INVALID_FLAG,
-				`Flag '${flagKey}' has no variation '${body.default_variation}'.`
-			);
-		}
-		const updated = await admin.updateFlag(flagKey, {
-			key: current.key,
-			description: current.description,
-			enabled: body.enabled ?? current.enabled,
-			default_variation: body.default_variation ?? current.default_variation,
-			variations: current.variations,
-			rules: current.rules,
-		});
-		return c.json(wrapResponse(updated));
+		current = await admin.getFlag(flagKey);
 	} catch (error) {
 		return flagError(error, flagKey);
 	}
+
+	const variations = body.variations ?? current.variations;
+	const defaultVariation = body.default_variation ?? current.default_variation;
+	if (!Object.hasOwn(variations, defaultVariation)) {
+		return errorResponse(
+			400,
+			FLAGSHIP_ERROR_INVALID_FLAG,
+			`Flag '${flagKey}' has no variation '${defaultVariation}'.`
+		);
+	}
+
+	try {
+		const updated = await admin.updateFlag(flagKey, {
+			key: current.key,
+			description:
+				body.description !== undefined ? body.description : current.description,
+			enabled: body.enabled ?? current.enabled,
+			default_variation: defaultVariation,
+			variations,
+			rules: body.rules === undefined ? current.rules : toRules(body.rules),
+		});
+		return c.json(wrapResponse(updated));
+	} catch (error) {
+		return errorResponse(
+			400,
+			FLAGSHIP_ERROR_INVALID_FLAG,
+			error instanceof Error ? error.message : String(error)
+		);
+	}
 }
 
-/**
- * Delete a flag from a locally simulated Flagship app.
- *
- * @param c The request context.
- * @param appId The Flagship app id.
- * @param flagKey The flag key.
- * @returns A success envelope.
- */
 export async function deleteFlagshipFlag(
 	c: AppContext,
 	appId: string,
@@ -227,15 +272,6 @@ export async function deleteFlagshipFlag(
 	}
 }
 
-/**
- * Evaluate a flag against a context, exactly as a Worker binding would.
- *
- * @param c The request context.
- * @param appId The Flagship app id.
- * @param flagKey The flag key.
- * @param context Attributes used for rule matching and rollout bucketing.
- * @returns The evaluation details.
- */
 export async function evaluateFlagshipFlag(
 	c: AppContext,
 	appId: string,
@@ -253,13 +289,6 @@ export async function evaluateFlagshipFlag(
 	}
 }
 
-/**
- * Map an admin API failure to an API error response.
- *
- * @param error The thrown error.
- * @param flagKey The flag the request targeted.
- * @returns A 404 for a missing flag, otherwise a 500.
- */
 function flagError(error: unknown, flagKey: string): Response {
 	const message = error instanceof Error ? error.message : String(error);
 	if (message.includes("not found")) {

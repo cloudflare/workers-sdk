@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Dialog,
 	Empty,
@@ -28,10 +27,10 @@ import {
 } from "../../api";
 import FlagshipIcon from "../../assets/icons/flagship.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
-import { CopyButton } from "../../components/CopyButton";
-import { CreateFlagDialog } from "../../components/CreateFlagDialog";
 import { flagshipErrorMessage } from "../../components/flagship/flag-helpers";
+import { FlagDialog } from "../../components/flagship/FlagDialog";
 import { FlagTable } from "../../components/flagship/FlagTable";
+import { TextInput } from "../../components/flagship/FormFields";
 import { TestFlagDialog } from "../../components/flagship/TestFlagDialog";
 import { NotFound } from "../../components/NotFound";
 import { ResourceError } from "../../components/ResourceError";
@@ -65,6 +64,9 @@ export const Route = createFileRoute("/flagship/$appId")({
 	}),
 });
 
+/**
+ * Renders the flag list for a locally simulated Flagship application.
+ */
 function FlagshipAppView(): JSX.Element {
 	const { appId } = Route.useParams();
 	const { flags } = Route.useLoaderData();
@@ -83,6 +85,7 @@ function FlagshipAppView(): JSX.Element {
 	}, [appId, rootData.workers, routerState.location.searchStr]);
 
 	const [creating, setCreating] = useState(false);
+	const [editTarget, setEditTarget] = useState<FlagshipFlag | null>(null);
 	const [testing, setTesting] = useState(false);
 	const [initialTestKey, setInitialTestKey] = useState<string | null>(null);
 	const [deleteTarget, setDeleteTarget] = useState<FlagshipFlag | null>(null);
@@ -102,12 +105,10 @@ function FlagshipAppView(): JSX.Element {
 			return key.includes(needle) || description.includes(needle);
 		});
 	}, [flags, query]);
-	const enabledCount = flags.filter((flag) => flag.enabled === true).length;
-	const ruleCount = flags.reduce(
-		(total, flag) => total + (flag.rules?.length ?? 0),
-		0
-	);
 
+	/**
+	 * Opens the evaluation dialog, optionally preselecting a flag.
+	 */
 	function openTest(flag?: FlagshipFlag): void {
 		setInitialTestKey(flag?.key ?? null);
 		setTesting(true);
@@ -169,8 +170,10 @@ function FlagshipAppView(): JSX.Element {
 		}
 	}, [appId, deleteTarget, router, toast]);
 
+	const searching = query.trim() !== "";
+
 	return (
-		<>
+		<div className="flex h-full flex-col">
 			<Breadcrumbs
 				icon={FlagshipIcon}
 				items={[
@@ -186,146 +189,142 @@ function FlagshipAppView(): JSX.Element {
 					</span>,
 				]}
 				title="Flagship"
-			/>
+			>
+				{flags.length === 0 ? null : (
+					<Button
+						className="ml-auto"
+						icon={FlaskIcon}
+						onClick={() => openTest()}
+						variant="secondary"
+					>
+						Test
+					</Button>
+				)}
+				<Button
+					className={flags.length === 0 ? "ml-auto" : undefined}
+					icon={PlusIcon}
+					onClick={() => setCreating(true)}
+					variant="primary"
+				>
+					Create flag
+				</Button>
+			</Breadcrumbs>
 
-			<div className="mx-auto w-full max-w-325 px-6 py-8">
-				<header className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-					<div className="flex min-w-0 items-start gap-4">
-						<div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-kumo-warning-tint/70 text-kumo-warning">
-							<FlagBannerIcon size={24} weight="duotone" />
-						</div>
-						<div className="min-w-0">
-							<div className="flex flex-wrap items-center gap-2">
-								<h1 className="truncate text-xl font-semibold text-kumo-default">
-									{bindingName ?? appId}
-								</h1>
-								<Badge variant="beta">Local</Badge>
-							</div>
-							<div className="group/cell mt-1 flex items-center gap-1.5">
-								<span className="text-sm text-kumo-subtle">App ID</span>
-								<code className="font-mono text-xs text-kumo-default">
-									{appId}
-								</code>
-								<CopyButton text={appId} />
-							</div>
-							<div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-kumo-subtle">
-								<span>
-									<strong className="font-medium text-kumo-default">
-										{flags.length}
-									</strong>{" "}
-									{flags.length === 1 ? "flag" : "flags"}
-								</span>
-								<span>
-									<strong className="font-medium text-kumo-default">
-										{enabledCount}
-									</strong>{" "}
-									enabled
-								</span>
-								<span>
-									<strong className="font-medium text-kumo-default">
-										{ruleCount}
-									</strong>{" "}
-									{ruleCount === 1 ? "rule" : "rules"}
-								</span>
-							</div>
-						</div>
-					</div>
-					<div className="flex shrink-0 items-center gap-2">
-						<Button
-							disabled={flags.length === 0}
-							icon={FlaskIcon}
-							onClick={() => openTest()}
-							variant="secondary"
-						>
-							Test flag
-						</Button>
-						<Button icon={PlusIcon} onClick={() => setCreating(true)}>
-							Create flag
-						</Button>
-					</div>
-				</header>
-
+			<div className="flex-1 overflow-y-auto bg-kumo-elevated">
 				{flags.length === 0 ? (
-					<div className="overflow-hidden rounded-xl border border-kumo-fill bg-kumo-base">
+					<div className="mx-auto flex min-h-full max-w-[1300px] items-center justify-center p-6 md:p-8">
 						<Empty
+							className="max-w-2xl"
+							commandLine={`wrangler flagship flags pull ${appId}`}
 							contents={
-								<div className="flex items-center gap-2">
-									<Button icon={PlusIcon} onClick={() => setCreating(true)}>
-										Create flag
-									</Button>
-									<Button onClick={() => void refresh()} variant="secondary">
-										Refresh
-									</Button>
-								</div>
+								<Button
+									icon={PlusIcon}
+									onClick={() => setCreating(true)}
+									variant="primary"
+								>
+									Create flag
+								</Button>
 							}
-							description="Create a local flag, or pull the flags from your remote app with Wrangler."
-							icon={<FlagBannerIcon size={36} />}
-							title="No feature flags yet"
+							description="Flags you create here live in the local store, so the Worker running in dev reads them straight away. You can also pull an existing application's flags from Cloudflare."
+							icon={
+								<FlagBannerIcon
+									className="text-kumo-subtle"
+									size={40}
+									weight="duotone"
+								/>
+							}
+							title="No feature flags found"
 						/>
-						<div className="border-t border-kumo-fill bg-kumo-elevated px-5 py-3 text-center text-xs text-kumo-subtle">
-							<code className="font-mono text-kumo-default">
-								wrangler flagship flags pull {appId}
-							</code>
-						</div>
 					</div>
 				) : (
-					<section>
-						<div className="mb-3 flex items-center gap-2">
-							<InputGroup className="max-w-105 flex-1" size="sm">
-								<div className="flex items-center pl-2 text-kumo-subtle">
-									<MagnifyingGlassIcon size={14} />
-								</div>
-								<input
-									aria-label="Search flags"
-									className="w-full bg-transparent px-2 text-xs text-kumo-default outline-none placeholder:text-kumo-subtle"
-									onChange={(event) => setQuery(event.target.value)}
-									placeholder="Search by key or description"
-									value={query}
-								/>
-								{query ? (
-									<InputGroup.Button
-										aria-label="Clear search"
-										onClick={() => setQuery("")}
-										shape="square"
-										variant="ghost"
+					<div className="mx-auto flex w-full max-w-[1300px] flex-col gap-4 p-6 md:p-8">
+						<div className="flex items-center gap-3">
+							<div className="max-w-md min-w-0 flex-1">
+								<InputGroup>
+									<label
+										className="flex cursor-text items-center pl-2.5 text-kumo-subtle"
+										htmlFor="flag-search"
 									>
-										<XIcon size={12} />
-									</InputGroup.Button>
-								) : null}
-							</InputGroup>
+										<MagnifyingGlassIcon size={14} />
+									</label>
+									<TextInput
+										ariaLabel="Search flags"
+										className="h-full rounded-none px-2 ring-0 focus:ring-0"
+										id="flag-search"
+										onValueChange={setQuery}
+										placeholder="Search flags by key or description"
+										value={query}
+									/>
+									{searching ? (
+										<InputGroup.Button
+											aria-label="Clear search"
+											onClick={() => setQuery("")}
+											shape="square"
+											variant="ghost"
+										>
+											<XIcon size={12} />
+										</InputGroup.Button>
+									) : null}
+								</InputGroup>
+							</div>
+							<span className="ml-auto text-sm whitespace-nowrap text-kumo-subtle">
+								{searching
+									? `${filteredFlags.length} of ${flags.length}`
+									: `${flags.length} ${flags.length === 1 ? "flag" : "flags"}`}
+							</span>
 							<RefreshButton
-								aria-label="Refresh flags"
 								loading={refreshing}
 								onClick={() => void refresh()}
-								size="sm"
 							/>
 						</div>
 
 						{filteredFlags.length === 0 ? (
-							<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
-								No flags found
-							</div>
+							<Empty
+								description={`No flags match "${query.trim()}".`}
+								icon={
+									<MagnifyingGlassIcon
+										className="text-kumo-subtle"
+										size={28}
+										weight="duotone"
+									/>
+								}
+								size="sm"
+								title="No matching flags"
+							/>
 						) : (
 							<FlagTable
 								flags={filteredFlags}
 								onDelete={setDeleteTarget}
+								onEdit={setEditTarget}
 								onTest={openTest}
 								onToggle={(flag) => void toggleFlag(flag)}
 								pendingKey={pendingKey}
 							/>
 						)}
-					</section>
+					</div>
 				)}
 			</div>
 
-			<CreateFlagDialog
+			<FlagDialog
 				appId={appId}
-				existingKeys={flags.flatMap((flag) =>
-					flag.key === undefined ? [] : [flag.key]
-				)}
-				onCreated={refresh}
+				flag={null}
+				flags={flags}
 				onOpenChange={setCreating}
+				onSaved={refresh}
 				open={creating}
+			/>
+
+			<FlagDialog
+				appId={appId}
+				flag={editTarget}
+				flags={flags}
+				onOpenChange={(open) => {
+					if (!open) {
+						setEditTarget(null);
+					}
+				}}
+				onSaved={refresh}
+				open={editTarget !== null}
 			/>
 
 			<TestFlagDialog
@@ -342,7 +341,7 @@ function FlagshipAppView(): JSX.Element {
 
 			<Dialog.Root
 				onOpenChange={(open: boolean) => {
-					if (!open) {
+					if (!open && !deleting) {
 						setDeleteTarget(null);
 					}
 				}}
@@ -350,16 +349,16 @@ function FlagshipAppView(): JSX.Element {
 			>
 				<Dialog className="p-6">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-					<Dialog.Title className="mb-4 text-lg font-semibold">
-						Delete flag
+					<Dialog.Title className="text-lg font-semibold text-kumo-default">
+						Delete flag?
 					</Dialog.Title>
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-					<Dialog.Description className="mb-2 text-kumo-subtle">
-						This will permanently delete{" "}
+					<Dialog.Description className="mt-2 text-sm text-kumo-subtle">
 						<span className="font-mono text-kumo-default">
 							{deleteTarget?.key}
 						</span>{" "}
-						and all its targeting rules. This cannot be undone.
+						will be removed from the local store. Workers reading it will fall
+						back to the default value passed in code.
 					</Dialog.Description>
 					<div className="mt-6 flex justify-end gap-2">
 						<Button
@@ -380,6 +379,6 @@ function FlagshipAppView(): JSX.Element {
 					</div>
 				</Dialog>
 			</Dialog.Root>
-		</>
+		</div>
 	);
 }

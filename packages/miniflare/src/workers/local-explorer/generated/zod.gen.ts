@@ -382,6 +382,21 @@ export const zFlagshipFlag = z.object({
 	updated_at: z.string().optional(),
 });
 
+export const zFlagshipDefinitions = z.object({
+	flags: z
+		.record(
+			z.string(),
+			z.object({
+				key: z.string().optional(),
+				enabled: z.boolean().optional(),
+				default_variation: z.string().optional(),
+				variations: z.record(z.string(), z.unknown()).optional(),
+				rules: z.array(zFlagshipRule).optional(),
+			})
+		)
+		.optional(),
+});
+
 export const zFlagshipEvaluation = z.object({
 	flagKey: z.string().optional(),
 	value: z.unknown().optional(),
@@ -1253,6 +1268,7 @@ export const zFlagshipCreateFlagData = z.object({
 		enabled: z.boolean().optional(),
 		default_variation: z.string(),
 		variations: z.record(z.string(), z.unknown()),
+		rules: z.array(zFlagshipRule).optional(),
 	}),
 	path: z.object({
 		app_id: z.string(),
@@ -1268,6 +1284,24 @@ export const zFlagshipCreateFlagResponse = zWorkersApiResponseCommon.and(
 		result: zFlagshipFlag.optional(),
 	})
 );
+
+export const zFlagshipGetDefinitionsData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		app_id: z.string(),
+	}),
+	query: z.never().optional(),
+	headers: z
+		.object({
+			"If-None-Match": z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Flagship definitions response.
+ */
+export const zFlagshipGetDefinitionsResponse = zFlagshipDefinitions;
 
 export const zFlagshipDeleteFlagData = z.object({
 	body: z.never().optional(),
@@ -1311,8 +1345,11 @@ export const zFlagshipGetFlagResponse = zWorkersApiResponseCommon.and(
 
 export const zFlagshipUpdateFlagData = z.object({
 	body: z.object({
+		description: z.string().nullish(),
 		enabled: z.boolean().optional(),
 		default_variation: z.string().optional(),
+		variations: z.record(z.string(), z.unknown()).optional(),
+		rules: z.array(zFlagshipRule).optional(),
 	}),
 	path: z.object({
 		app_id: z.string(),

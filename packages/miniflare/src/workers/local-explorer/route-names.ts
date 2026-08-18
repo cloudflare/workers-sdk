@@ -32,6 +32,7 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 		/^\/flagship\/apps\/[^/]+\/flags\/[^/]+\/evaluate$/,
 		"flagship.flag.evaluate",
 	],
+	[/^\/flagship\/apps\/[^/]+\/definitions$/, "flagship.definitions"],
 	[/^\/flagship\/apps\/[^/]+\/flags\/[^/]+$/, "flagship.flag"],
 	[/^\/flagship\/apps\/[^/]+\/flags$/, "flagship.flags"],
 	[/^\/flagship\/apps$/, "flagship.apps"],

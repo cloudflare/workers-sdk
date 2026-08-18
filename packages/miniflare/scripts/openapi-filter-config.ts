@@ -1560,6 +1560,13 @@ const config = {
 											description: "Named values the flag can serve.",
 											type: "object",
 										},
+										rules: {
+											description: "Targeting rules, in priority order.",
+											items: {
+												$ref: "#/components/schemas/flagship_rule",
+											},
+											type: "array",
+										},
 									},
 									type: "object",
 								},
@@ -1602,6 +1609,60 @@ const config = {
 						},
 					},
 					summary: "Create Flagship Flag",
+					tags: ["Flagship"],
+				},
+			},
+			"/flagship/apps/{app_id}/definitions": {
+				get: {
+					description:
+						"Returns evaluation-only definitions for a local Flagship app.",
+					operationId: "flagship-get-definitions",
+					parameters: [
+						{
+							in: "path",
+							name: "app_id",
+							required: true,
+							schema: { type: "string" },
+						},
+						{
+							in: "header",
+							name: "If-None-Match",
+							required: false,
+							schema: { type: "string" },
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/flagship_definitions",
+									},
+								},
+							},
+							description: "Flagship definitions response.",
+							headers: {
+								ETag: { schema: { type: "string" } },
+							},
+						},
+						"304": {
+							description: "Definitions have not changed.",
+							headers: {
+								ETag: { schema: { type: "string" } },
+							},
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Flagship definitions response failure.",
+						},
+					},
+					summary: "Get Flagship Definitions",
 					tags: ["Flagship"],
 				},
 			},
@@ -1662,7 +1723,7 @@ const config = {
 				},
 				patch: {
 					description:
-						"Updates whether a flag is enabled and which variation it serves by default.",
+						"Updates a flag. Omitted fields keep their current values, and targeting rules are always preserved.",
 					operationId: "flagship-update-flag",
 					parameters: [
 						{
@@ -1683,6 +1744,11 @@ const config = {
 							"application/json": {
 								schema: {
 									properties: {
+										description: {
+											description: "Human readable description.",
+											nullable: true,
+											type: "string",
+										},
 										enabled: {
 											description: "Whether the flag is enabled.",
 											type: "boolean",
@@ -1691,6 +1757,19 @@ const config = {
 											description:
 												"The variation served when no targeting rule matches.",
 											type: "string",
+										},
+										variations: {
+											additionalProperties: true,
+											description: "Named values the flag can serve.",
+											type: "object",
+										},
+										rules: {
+											description:
+												"Targeting rules, in priority order. Replaces the existing rules.",
+											items: {
+												$ref: "#/components/schemas/flagship_rule",
+											},
+											type: "array",
 										},
 									},
 									type: "object",
@@ -1947,6 +2026,32 @@ const config = {
 					updated_at: {
 						type: "string",
 						description: "When the flag was last written locally",
+					},
+				},
+			},
+			flagship_definitions: {
+				type: "object",
+				properties: {
+					flags: {
+						type: "object",
+						additionalProperties: {
+							type: "object",
+							properties: {
+								key: { type: "string" },
+								enabled: { type: "boolean" },
+								default_variation: { type: "string" },
+								variations: {
+									type: "object",
+									additionalProperties: true,
+								},
+								rules: {
+									type: "array",
+									items: {
+										$ref: "#/components/schemas/flagship_rule",
+									},
+								},
+							},
+						},
 					},
 				},
 			},

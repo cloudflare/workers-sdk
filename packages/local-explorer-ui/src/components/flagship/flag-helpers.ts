@@ -30,25 +30,6 @@ const DEFAULT_VARIATIONS: Record<
 	],
 };
 
-/**
- * Render a variation value compactly for table cells.
- *
- * @param value The variation's value.
- * @returns A short display string.
- */
-export function formatFlagValue(value: unknown): string {
-	if (typeof value === "string") {
-		return value;
-	}
-	return JSON.stringify(value);
-}
-
-/**
- * Build the two default variations for a flag type, matching dash.
- *
- * @param type The variation value type.
- * @returns Draft rows ready for the create form.
- */
 export function defaultVariationsForType(
 	type: FlagType
 ): [VariationDraft, VariationDraft] {
@@ -60,12 +41,77 @@ export function defaultVariationsForType(
 }
 
 /**
- * Validate a flag key against the same rules as dash and the local store.
+ * Determines a flag's type from the values it serves.
  *
- * @param key The candidate key.
- * @param existingKeys Keys already in the app, lowercased.
- * @returns An error message, or `null` if the key is valid.
+ * Used as a fallback for flags whose stored `type` is missing.
+ *
+ * @returns The inferred flag type, defaulting to JSON for objects and arrays
  */
+export function inferFlagType(
+	variations: Record<string, unknown> | undefined
+): FlagType {
+	const [first] = Object.values(variations ?? {});
+	if (typeof first === "boolean") {
+		return "boolean";
+	}
+	if (typeof first === "number") {
+		return "number";
+	}
+	if (typeof first === "string") {
+		return "string";
+	}
+	return "json";
+}
+
+/**
+ * Renders a stored variation value as editable text.
+ *
+ * This is the inverse of {@link parseVariationValue}, so a value that is loaded
+ * into the form and saved again round-trips unchanged.
+ */
+export function serializeVariationValue(
+	type: FlagType,
+	value: unknown
+): string {
+	if (type === "boolean") {
+		return value === true ? "true" : "false";
+	}
+	if (type === "string") {
+		return typeof value === "string" ? value : String(value);
+	}
+	if (type === "number") {
+		return typeof value === "number" ? String(value) : String(value ?? "");
+	}
+	return JSON.stringify(value) ?? "";
+}
+
+/**
+ * Converts stored variations into editable form rows.
+ *
+ * @returns One draft row per variation, falling back to the type's examples when empty
+ */
+export function variationDraftsFrom(
+	type: FlagType,
+	variations: Record<string, unknown> | undefined
+): [VariationDraft, ...VariationDraft[]] {
+	/**
+	 * Builds a single editable row from a stored variation.
+	 */
+	function toDraft([name, value]: [string, unknown]): VariationDraft {
+		return {
+			id: crypto.randomUUID(),
+			name,
+			value: serializeVariationValue(type, value),
+		};
+	}
+
+	const [first, ...rest] = Object.entries(variations ?? {});
+	if (first === undefined) {
+		return defaultVariationsForType(type);
+	}
+	return [toDraft(first), ...rest.map(toDraft)];
+}
+
 export function validateFlagKey(
 	key: string,
 	existingKeys: Set<string>
@@ -86,13 +132,6 @@ export function validateFlagKey(
 	return null;
 }
 
-/**
- * Parse a typed variation value from the create form.
- *
- * @param type The variation value type.
- * @param raw The form string.
- * @returns The parsed value, or an error.
- */
 export function parseVariationValue(
 	type: FlagType,
 	raw: string
@@ -122,13 +161,6 @@ export function parseVariationValue(
 	return { ok: true, value: raw };
 }
 
-/**
- * Read the first error message out of a rejected API call.
- *
- * @param error The thrown value.
- * @param fallback Used when the envelope has no message.
- * @returns A user-facing error string.
- */
 export function flagshipErrorMessage(error: unknown, fallback: string): string {
 	if (
 		typeof error === "object" &&

@@ -493,6 +493,20 @@ export type FlagshipFlag = {
 	updated_at?: string;
 };
 
+export type FlagshipDefinitions = {
+	flags?: {
+		[key: string]: {
+			key?: string;
+			enabled?: boolean;
+			default_variation?: string;
+			variations?: {
+				[key: string]: unknown;
+			};
+			rules?: Array<FlagshipRule>;
+		};
+	};
+};
+
 export type FlagshipEvaluation = {
 	flagKey?: string;
 	/**
@@ -2072,6 +2086,10 @@ export type FlagshipCreateFlagData = {
 		variations: {
 			[key: string]: unknown;
 		};
+		/**
+		 * Targeting rules, in priority order.
+		 */
+		rules?: Array<FlagshipRule>;
 	};
 	path: {
 		app_id: string;
@@ -2101,6 +2119,38 @@ export type FlagshipCreateFlagResponses = {
 
 export type FlagshipCreateFlagResponse =
 	FlagshipCreateFlagResponses[keyof FlagshipCreateFlagResponses];
+
+export type FlagshipGetDefinitionsData = {
+	body?: never;
+	headers?: {
+		"If-None-Match"?: string;
+	};
+	path: {
+		app_id: string;
+	};
+	query?: never;
+	url: "/flagship/apps/{app_id}/definitions";
+};
+
+export type FlagshipGetDefinitionsErrors = {
+	/**
+	 * Flagship definitions response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type FlagshipGetDefinitionsError =
+	FlagshipGetDefinitionsErrors[keyof FlagshipGetDefinitionsErrors];
+
+export type FlagshipGetDefinitionsResponses = {
+	/**
+	 * Flagship definitions response.
+	 */
+	200: FlagshipDefinitions;
+};
+
+export type FlagshipGetDefinitionsResponse =
+	FlagshipGetDefinitionsResponses[keyof FlagshipGetDefinitionsResponses];
 
 export type FlagshipDeleteFlagData = {
 	body?: never;
@@ -2171,6 +2221,10 @@ export type FlagshipGetFlagResponse =
 export type FlagshipUpdateFlagData = {
 	body: {
 		/**
+		 * Human readable description.
+		 */
+		description?: string | null;
+		/**
 		 * Whether the flag is enabled.
 		 */
 		enabled?: boolean;
@@ -2178,6 +2232,16 @@ export type FlagshipUpdateFlagData = {
 		 * The variation served when no targeting rule matches.
 		 */
 		default_variation?: string;
+		/**
+		 * Named values the flag can serve.
+		 */
+		variations?: {
+			[key: string]: unknown;
+		};
+		/**
+		 * Targeting rules, in priority order. Replaces the existing rules.
+		 */
+		rules?: Array<FlagshipRule>;
 	};
 	path: {
 		app_id: string;

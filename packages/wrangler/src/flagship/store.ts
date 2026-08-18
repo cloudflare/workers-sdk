@@ -13,10 +13,6 @@ import type { EvaluationResult, Flag, FlagInput, Page } from "./client";
 import type { Config } from "@cloudflare/workers-utils";
 import type { FlagshipAdmin } from "miniflare";
 
-/**
- * The flag operations shared by the remote Flagship API and the local flag
- * store, bound to a single app so commands do not repeat `config` and `appId`.
- */
 export interface FlagStore {
 	listFlags(limit?: number, cursor?: string): Promise<Page<Flag>>;
 	listAllFlags(): Promise<Flag[]>;
@@ -30,14 +26,12 @@ export interface FlagStore {
 	): Promise<EvaluationResult>;
 }
 
-/** Arguments every Flagship flag command accepts to choose a flag store. */
 export interface FlagStoreArgs {
 	local?: boolean;
 	remote?: boolean;
 	persistTo?: string;
 }
 
-/** The `--local` / `--remote` / `--persist-to` arguments, for command definitions. */
 export const flagStoreArgDefinitions = {
 	local: {
 		type: "boolean",
@@ -54,13 +48,6 @@ export const flagStoreArgDefinitions = {
 	},
 } as const;
 
-/**
- * Whether a command should act on the local flag store. Flag commands default
- * to remote, matching the rest of `wrangler flagship`.
- *
- * @param args The command's parsed arguments.
- * @returns `true` when the local store should be used.
- */
 export function useLocalStore(args: FlagStoreArgs): boolean {
 	return args.local === true || args.remote === false;
 }
@@ -80,8 +67,6 @@ function remoteStore(config: Config, appId: string): FlagStore {
 
 function localStore(admin: FlagshipAdmin): FlagStore {
 	return {
-		// The local store holds every flag in one place, so it has nothing to
-		// paginate over and always reports an exhausted cursor.
 		listFlags: async (limit, cursor) => {
 			if (cursor !== undefined) {
 				throw new UserError(
@@ -107,19 +92,6 @@ function localStore(admin: FlagshipAdmin): FlagStore {
 	};
 }
 
-/**
- * Run a closure against the flag store the user asked for, opening and
- * disposing the local store when `--local` is set.
- *
- * The closure must fully resolve anything it returns: the local store is
- * reached over RPC, and its stubs are poisoned once the instance is disposed.
- *
- * @param args The command's parsed arguments.
- * @param config The resolved Wrangler configuration.
- * @param appId The Flagship app to act on.
- * @param closure Receives the selected flag store.
- * @returns Whatever the closure returns.
- */
 export async function withFlagStore<T>(
 	args: FlagStoreArgs,
 	config: Config,

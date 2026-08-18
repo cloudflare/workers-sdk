@@ -70,7 +70,6 @@ export interface Rollout {
 	attribute?: string;
 }
 
-/** Evaluation-only rule. Priority is stripped after sorting at write time. */
 export interface EvalRule {
 	conditions: Condition[];
 	serve_variation: string;
@@ -85,7 +84,6 @@ export interface EvalFlag {
 	rules: EvalRule[];
 }
 
-/** Thrown when a flag value cannot be cast to the requested type. */
 export class TypeCastError extends Error {
 	constructor(flagKey: string, expectedType: string, actualValue: unknown) {
 		super(
@@ -95,7 +93,6 @@ export class TypeCastError extends Error {
 	}
 }
 
-/** Thrown when persisted flag config is internally inconsistent. */
 export class FlagConfigError extends Error {
 	constructor(flagKey: string, message: string) {
 		super(`Flag '${flagKey}' ${message}`);
@@ -110,7 +107,6 @@ const encoder = new TextEncoder();
 const randomBuf = new Uint32Array(1);
 let hashBuf = new Uint8Array(512);
 
-/** MurmurHash3 (32-bit) over UTF-8 bytes. Seed allows per-flag bucket independence. */
 function murmurhash3(str: string, seed: number): number {
 	if (hashBuf.byteLength < str.length * 3) {
 		hashBuf = new Uint8Array(str.length * 3);
@@ -232,14 +228,6 @@ function evaluateCondition(
 	}
 }
 
-/**
- * Evaluate a single flag definition against the provided context.
- *
- * @param flagDef Evaluation-shaped flag, with rules pre-sorted by priority.
- * @param context Attributes used for rule matching and rollout bucketing.
- * @param accountId Account tag, mixed into the rollout hash seed.
- * @returns The resolved value with the variation name and evaluation reason.
- */
 export function evaluateFlag(
 	flagDef: EvalFlag,
 	context: EvaluationContext,
@@ -304,14 +292,6 @@ export function evaluateFlag(
 	return serve(flagDef.default_variation, "DEFAULT");
 }
 
-/**
- * Check whether a resolved flag value matches the type requested by a typed
- * getter.
- *
- * @param value The value produced by evaluation.
- * @param expectedType The type implied by the caller's getter.
- * @returns `true` when the value can be returned as `expectedType`.
- */
 export function matchesType(value: FlagValue, expectedType: FlagType): boolean {
 	switch (expectedType) {
 		case "boolean":

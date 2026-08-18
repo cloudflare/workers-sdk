@@ -42,8 +42,6 @@ export const flagshipFlagsPullCommand = createCommand({
 			config,
 			appId,
 			async (admin) => {
-				// Seeds rollout bucketing so local percentage rollouts assign
-				// targeting keys to the same buckets as the remote app.
 				await admin.setAccountTag(accountId);
 
 				const pulledKeys = new Set(flags.map((flag) => flag.key));

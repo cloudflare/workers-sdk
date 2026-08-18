@@ -32,6 +32,7 @@ import {
 	deleteFlagshipFlag,
 	evaluateFlagshipFlag,
 	getFlagshipFlag,
+	getFlagshipDefinitions,
 	listFlagshipApps,
 	listFlagshipFlags,
 	updateFlagshipFlag,
@@ -371,6 +372,10 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 // ============================================================================
 
 app.get("/api/flagship/apps", (c) => listFlagshipApps(c));
+
+app.get("/api/flagship/apps/:app_id/definitions", (c) =>
+	getFlagshipDefinitions(c, c.req.param("app_id"))
+);
 
 app.get("/api/flagship/apps/:app_id/flags", (c) =>
 	listFlagshipFlags(c, c.req.param("app_id"))

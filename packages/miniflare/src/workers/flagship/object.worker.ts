@@ -24,13 +24,6 @@ export class FlagshipObject extends DurableObject {
 		await this.ctx.storage.put(ACCOUNT_TAG_KEY, accountTag);
 	}
 
-	/**
-	 * Fetch a flag together with the account tag seeding rollout bucketing, so
-	 * evaluation needs a single round trip to the store.
-	 *
-	 * @param key The flag key to evaluate.
-	 * @returns The flag (or `null`) and the stored account tag (or `null`).
-	 */
 	async getForEvaluation(
 		key: string
 	): Promise<{ flag: Flag | null; accountTag: string | null }> {

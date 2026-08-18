@@ -35,25 +35,12 @@ class FlagNotFoundError extends Error {
 // per evaluation.
 let warnedAboutUnseededRollout = false;
 
-/**
- * Whether any of a flag's rules bucket on a partial rollout, and so depend on
- * the account tag seeding the hash.
- *
- * @param flag The stored flag definition.
- * @returns `true` when bucketing affects this flag's outcome.
- */
 function hasPartialRollout(flag: Flag): boolean {
 	return flag.rules.some(
 		(rule) => rule.rollout !== undefined && rule.rollout.percentage < 100
 	);
 }
 
-/**
- * Warn once when a partial rollout is evaluated against a store that has no
- * account tag, since its buckets cannot match the remote app's.
- *
- * @param flag The flag being evaluated.
- */
 function warnIfBucketingUnseeded(flag: Flag): void {
 	if (warnedAboutUnseededRollout || !hasPartialRollout(flag)) {
 		return;
@@ -64,12 +51,6 @@ function warnIfBucketingUnseeded(flag: Flag): void {
 	);
 }
 
-/**
- * Map a known evaluation failure to its OpenFeature-style error code.
- *
- * @param error The error thrown during evaluation.
- * @returns The matching error code, or `undefined` if the error is a bug.
- */
 function errorCodeFor(error: unknown): ErrorCode | undefined {
 	if (error instanceof FlagNotFoundError) {
 		return "FLAG_NOT_FOUND";

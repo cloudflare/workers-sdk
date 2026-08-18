@@ -28,6 +28,23 @@ describe("Flagship API", () => {
 	let mf: Miniflare;
 	let admin: FlagshipAdmin;
 
+	/**
+	 * Sends a PATCH to a local flag and drains the response body, which
+	 * `dispatchFetch` requires callers to consume immediately.
+	 */
+	async function patchFlag(flagKey: string, body: unknown): Promise<number> {
+		const response = await mf.dispatchFetch(
+			`${BASE_URL}/flagship/apps/app-1/flags/${flagKey}`,
+			{
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			}
+		);
+		await response.body?.cancel();
+		return response.status;
+	}
+
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
@@ -114,6 +131,50 @@ describe("Flagship API", () => {
 
 			expect(response.status).toBe(404);
 			await response.body?.cancel();
+		});
+	});
+
+	describe("GET /flagship/apps/:app_id/definitions", () => {
+		test("returns evaluation-only definitions with an ETag", async ({
+			expect,
+		}) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/definitions`
+			);
+			const body = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(response.headers.get("content-type")).toContain(
+				"application/json"
+			);
+			expect(response.headers.get("etag")).toMatch(/^"[a-f0-9]{64}"$/);
+			expect(body).toEqual({
+				flags: {
+					"new-ui": {
+						key: "new-ui",
+						enabled: true,
+						default_variation: "off",
+						variations: { on: true, off: false },
+						rules: [],
+					},
+				},
+			});
+		});
+
+		test("returns 304 when If-None-Match matches", async ({ expect }) => {
+			const url = `${BASE_URL}/flagship/apps/app-1/definitions`;
+			const first = await mf.dispatchFetch(url);
+			const etag = first.headers.get("etag");
+			await first.body?.cancel();
+
+			expect(etag).not.toBeNull();
+			const response = await mf.dispatchFetch(url, {
+				headers: { "If-None-Match": etag ?? "" },
+			});
+
+			expect(response.status).toBe(304);
+			expect(response.headers.get("etag")).toBe(etag);
+			expect(await response.text()).toBe("");
 		});
 	});
 
@@ -295,6 +356,47 @@ describe("Flagship API", () => {
 		});
 	});
 
+	describe("POST /flagship/apps/:app_id/flags with rules", () => {
+		test("creates a flag with targeting rules", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						key: "with-rules",
+						enabled: true,
+						default_variation: "off",
+						variations: { on: true, off: false },
+						rules: [
+							{
+								priority: 1,
+								conditions: [
+									{ attribute: "country", operator: "in", value: ["NZ"] },
+								],
+								serve_variation: "on",
+							},
+						],
+					}),
+				}
+			);
+			const data = await expectValidResponse(
+				response,
+				zFlagshipCreateFlagResponse,
+				expect
+			);
+
+			expect(data.result?.rules).toMatchObject([
+				{ priority: 1, serve_variation: "on" },
+			]);
+			expect(
+				await admin.evaluateFlag("with-rules", { country: "NZ" })
+			).toMatchObject({ variant: "on" });
+
+			await admin.deleteFlag("with-rules");
+		});
+	});
+
 	describe("PATCH /flagship/apps/:app_id/flags/:flag_key", () => {
 		test("toggles a flag and the change is visible to the binding", async ({
 			expect,
@@ -352,6 +454,332 @@ describe("Flagship API", () => {
 
 			expect(response.status).toBe(400);
 			await response.body?.cancel();
+		});
+
+		test("updates the description and variations together", async ({
+			expect,
+		}) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						description: "Controls the redesign",
+						variations: { on: true, off: false, holdout: false },
+					}),
+				}
+			);
+			const data = await expectValidResponse(
+				response,
+				zFlagshipUpdateFlagResponse,
+				expect
+			);
+
+			expect(data.result).toMatchObject({
+				description: "Controls the redesign",
+				variations: { on: true, off: false, holdout: false },
+				default_variation: "off",
+			});
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("clears the description when passed null", async ({ expect }) => {
+			await admin.updateFlag("new-ui", {
+				...BOOLEAN_FLAG,
+				description: "Temporary",
+			});
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ description: null }),
+				}
+			);
+			const data = await expectValidResponse(
+				response,
+				zFlagshipUpdateFlagResponse,
+				expect
+			);
+
+			expect(data.result?.description ?? null).toBeNull();
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("preserves targeting rules it does not manage", async ({ expect }) => {
+			await admin.updateFlag("new-ui", {
+				...BOOLEAN_FLAG,
+				rules: [
+					{
+						priority: 1,
+						conditions: [
+							{ attribute: "country", operator: "in", value: ["NZ"] },
+						],
+						serve_variation: "on",
+					},
+				],
+			});
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ description: "Still rolling out" }),
+				}
+			);
+			await expectValidResponse(response, zFlagshipUpdateFlagResponse, expect);
+
+			expect(await admin.getFlag("new-ui")).toMatchObject({
+				description: "Still rolling out",
+				rules: [{ priority: 1, serve_variation: "on" }],
+			});
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("rejects variations that mix types", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ variations: { on: true, off: "no" } }),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			await response.body?.cancel();
+			expect(await admin.getFlag("new-ui")).toMatchObject(BOOLEAN_FLAG);
+		});
+
+		test("replaces the targeting rules", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						rules: [
+							{
+								priority: 1,
+								conditions: [
+									{ attribute: "plan", operator: "equals", value: "pro" },
+								],
+								serve_variation: "on",
+							},
+						],
+					}),
+				}
+			);
+			await expectValidResponse(response, zFlagshipUpdateFlagResponse, expect);
+
+			expect(await admin.getFlag("new-ui")).toMatchObject({
+				rules: [{ priority: 1, serve_variation: "on" }],
+			});
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("rules written through the API change what the binding serves", async ({
+			expect,
+		}) => {
+			expect(
+				await patchFlag("new-ui", {
+					rules: [
+						{
+							priority: 1,
+							conditions: [
+								{ attribute: "plan", operator: "in", value: ["pro", "biz"] },
+							],
+							serve_variation: "on",
+						},
+					],
+				})
+			).toBe(200);
+
+			expect(await admin.evaluateFlag("new-ui", { plan: "pro" })).toMatchObject(
+				{
+					value: true,
+					variant: "on",
+					reason: "TARGETING_MATCH",
+				}
+			);
+			expect(
+				await admin.evaluateFlag("new-ui", { plan: "free" })
+			).toMatchObject({ value: false, variant: "off", reason: "DEFAULT" });
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("stores rules in priority order so the evaluator honours priority", async ({
+			expect,
+		}) => {
+			expect(
+				await patchFlag("new-ui", {
+					rules: [
+						{
+							priority: 2,
+							conditions: [
+								{ attribute: "plan", operator: "equals", value: "pro" },
+							],
+							serve_variation: "off",
+						},
+						{
+							priority: 1,
+							conditions: [
+								{ attribute: "plan", operator: "equals", value: "pro" },
+							],
+							serve_variation: "on",
+						},
+					],
+				})
+			).toBe(200);
+
+			const stored = await admin.getFlag("new-ui");
+			expect(stored.rules.map((rule) => rule.priority)).toEqual([1, 2]);
+			// Priority 1 serves "on", so it must win despite arriving second.
+			expect(await admin.evaluateFlag("new-ui", { plan: "pro" })).toMatchObject(
+				{
+					variant: "on",
+				}
+			);
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("rejects a rule with a duplicate priority", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						rules: [
+							{ priority: 1, conditions: [], serve_variation: "on" },
+							{ priority: 1, conditions: [], serve_variation: "off" },
+						],
+					}),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			await response.body?.cancel();
+		});
+
+		test("rejects targeting rules ordered after a catch-all", async ({
+			expect,
+		}) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						rules: [
+							{ priority: 1, conditions: [], serve_variation: "on" },
+							{
+								priority: 2,
+								conditions: [
+									{ attribute: "plan", operator: "equals", value: "pro" },
+								],
+								serve_variation: "off",
+							},
+						],
+					}),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			await response.body?.cancel();
+		});
+
+		test("clears the rules when passed an empty array", async ({ expect }) => {
+			await admin.updateFlag("new-ui", {
+				...BOOLEAN_FLAG,
+				rules: [
+					{
+						priority: 1,
+						conditions: [
+							{ attribute: "plan", operator: "equals", value: "pro" },
+						],
+						serve_variation: "on",
+					},
+				],
+			});
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ rules: [] }),
+				}
+			);
+			await expectValidResponse(response, zFlagshipUpdateFlagResponse, expect);
+
+			expect((await admin.getFlag("new-ui")).rules).toEqual([]);
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("applies a percentage rollout consistently for the same key", async ({
+			expect,
+		}) => {
+			expect(
+				await patchFlag("new-ui", {
+					rules: [
+						{
+							priority: 1,
+							conditions: [],
+							serve_variation: "on",
+							rollout: { percentage: 50, attribute: "userId" },
+						},
+					],
+				})
+			).toBe(200);
+
+			const first = await admin.evaluateFlag("new-ui", { userId: "user-1" });
+			const again = await admin.evaluateFlag("new-ui", { userId: "user-1" });
+			expect(again.variant).toBe(first.variant);
+			expect(["on", "off"]).toContain(first.variant);
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("rejects removing a variation a rule still serves", async ({
+			expect,
+		}) => {
+			await admin.updateFlag("new-ui", {
+				...BOOLEAN_FLAG,
+				rules: [
+					{
+						priority: 1,
+						conditions: [
+							{ attribute: "country", operator: "in", value: ["NZ"] },
+						],
+						serve_variation: "on",
+					},
+				],
+			});
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ variations: { off: false } }),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			await response.body?.cancel();
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
 		});
 	});
 
