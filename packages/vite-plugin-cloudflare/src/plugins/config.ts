@@ -154,7 +154,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			viteDevServer.watcher.on("change", configChangedHandler);
 		},
-		// This hook is not supported in Vite 6
 		buildApp: {
 			order: "post",
 			async handler(builder) {
