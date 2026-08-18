@@ -1,5 +1,39 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.22.0
+
+### Minor Changes
+
+- [#13830](https://github.com/cloudflare/workers-sdk/pull/13830) [`49d4e00`](https://github.com/cloudflare/workers-sdk/commit/49d4e0096802fb4d5ff2fe7277c893065dfa8c86) Thanks [@penalosa](https://github.com/penalosa)! - Mocking requests with MSW in Worker tests now requires MSW >= 2.14
+
+  `@cloudflare/vitest-pool-workers` previously shipped internal shims to make MSW work inside the workerd runtime. MSW 2.14 added that support natively, so those shims have been removed.
+
+  If you mock requests with MSW in your Worker tests, make sure you're on MSW `>= 2.14`; older versions will no longer intercept requests. You can keep using `setupServer()` from `msw/node`, or adopt the official [`@msw/cloudflare`](https://github.com/mswjs/cloudflare) integration via `setupNetwork()`. See the updated [`request-mocking` example fixture](https://github.com/cloudflare/workers-sdk/tree/main/fixtures/vitest-pool-workers-examples/request-mocking) for the recommended pattern.
+
+### Patch Changes
+
+- [#15211](https://github.com/cloudflare/workers-sdk/pull/15211) [`bc5726b`](https://github.com/cloudflare/workers-sdk/commit/bc5726bd0b88856f6781c62b4cb3c9c47b84eb07) Thanks [@nithin42](https://github.com/nithin42)! - Honor `access.dev` when running Workers with `@cloudflare/vitest-pool-workers`, so `ctx.access.getIdentity()` returns the configured identity just as it does with `wrangler dev`.
+
+- [#15156](https://github.com/cloudflare/workers-sdk/pull/15156) [`3ddd3ce`](https://github.com/cloudflare/workers-sdk/commit/3ddd3ce5b871d40b20e58156eadbe6ea68a2f573) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix module resolution for relative `require()` inside CJS deps when the project path contains spaces
+
+  When a project lives under a directory with a space in its name, externalized CommonJS dependencies that use relative `require()` calls (e.g. `require("./lib/impl.js")`) would fail with "No such module" because `workerd` preserves URL encoding in the module name. Encoded module paths are now handled deterministically before CommonJS resolution without altering literal percent sequences.
+
+- [#15150](https://github.com/cloudflare/workers-sdk/pull/15150) [`2cf3143`](https://github.com/cloudflare/workers-sdk/commit/2cf314322c046a0e11ddedda0230cd44adda29a9) Thanks [@kkkhs](https://github.com/kkkhs)! - Restore typed `inject()` keys in `cloudflareTest()` pool options
+
+  `inject()` inside `cloudflareTest()` options again infers the value type from the keys you declare in your Vitest `ProvidedContext`, and reports misspelled keys. For keys that are only provided at runtime, pass an explicit type argument, e.g. `inject<number>("myPort")`.
+
+- [#15232](https://github.com/cloudflare/workers-sdk/pull/15232) [`8777180`](https://github.com/cloudflare/workers-sdk/commit/8777180b8239d9df435acee465d02682477e93ea) Thanks [@vicb](https://github.com/vicb)! - Bump `capnp-es` to 0.0.16.
+
+- [#15185](https://github.com/cloudflare/workers-sdk/pull/15185) [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use a fixed default compatibility date rather than the current date
+
+  When no compatibility date was set, Wrangler, C3 and the Vitest pool all defaulted to the current date. `workerd` only accepts a compatibility date up to 7 days beyond its own release, so whenever a `workerd` release was delayed the default could get ahead of the runtime that had been installed, and local development would fail to start.
+
+  The default is now fixed at the release date of the `workerd` version that ships with each release, which leaves a week of headroom and updates as `workerd` is upgraded. `@cloudflare/vite-plugin` previously inlined the date at which it was built. It now shares the same default.
+
+- Updated dependencies [[`bc5726b`](https://github.com/cloudflare/workers-sdk/commit/bc5726bd0b88856f6781c62b4cb3c9c47b84eb07), [`1277a72`](https://github.com/cloudflare/workers-sdk/commit/1277a72e0d01325c37a05c0e8f5111a45100af77), [`ba54f0d`](https://github.com/cloudflare/workers-sdk/commit/ba54f0d39d1ba7eb5545d8bf9ba43624cfa211f9), [`6529f0c`](https://github.com/cloudflare/workers-sdk/commit/6529f0ca5ecda93f67efbaa72a7f9a9f8fd814bf), [`b7422b0`](https://github.com/cloudflare/workers-sdk/commit/b7422b0a8a2e74bba068a1924992dcfeff0bd126), [`186339c`](https://github.com/cloudflare/workers-sdk/commit/186339cf854cf3522614fb686ec66e6682c569b8), [`4f922dc`](https://github.com/cloudflare/workers-sdk/commit/4f922dc19941db31394357f7e146af320ae1f3d9), [`4d74b8d`](https://github.com/cloudflare/workers-sdk/commit/4d74b8d8fd5c034c012fa13973ee20bedbc844c7), [`2e0c962`](https://github.com/cloudflare/workers-sdk/commit/2e0c962da0c57bdc79b5edcaa64c7b725c1524f0), [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41), [`49f73de`](https://github.com/cloudflare/workers-sdk/commit/49f73de207124171b3f8e9ffb182facb48727388), [`7cee278`](https://github.com/cloudflare/workers-sdk/commit/7cee2784a937c86db6a88455c6efe8e8660ae69c), [`8777180`](https://github.com/cloudflare/workers-sdk/commit/8777180b8239d9df435acee465d02682477e93ea), [`265256a`](https://github.com/cloudflare/workers-sdk/commit/265256a5619fbf82e12473f7bb7c7944bdd368b4), [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41), [`f431166`](https://github.com/cloudflare/workers-sdk/commit/f43116682a2a08d47383be1125fd6f0b4ae3a0cc), [`8fb2b87`](https://github.com/cloudflare/workers-sdk/commit/8fb2b8760b9ba23d1584156d25c02ca2db8d2d80), [`75cf407`](https://github.com/cloudflare/workers-sdk/commit/75cf407fc0d7fa6f4d4d9848a9221e7b16930497)]:
+  - wrangler@4.124.0
+  - miniflare@5.20260815.0-alpha
+
 ## 0.21.3
 
 ### Patch Changes
