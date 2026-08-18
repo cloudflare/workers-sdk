@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
 	APIError,
 	formatTime,
@@ -35,12 +36,13 @@ export async function triggersDeploy(
 		validateEventTriggerTargets(config, scriptName);
 	}
 
-	if (props.dryRun || !props.accountId) {
+	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return;
 	}
 
 	const { accountId } = props;
+	assert(accountId);
 
 	if (props.validated !== true) {
 		await ensureQueuesExistByConfig(config, accountId, true, scriptName);
