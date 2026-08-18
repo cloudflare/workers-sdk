@@ -3,11 +3,10 @@ import {
 	getTextResponse,
 	isBuild,
 	page,
-	satisfiesMinimumViteVersion,
 	viteTestUrl,
 } from "../../__test-utils__";
 
-describe.runIf(satisfiesMinimumViteVersion("7.0.0"))("pre-rendering", () => {
+describe("pre-rendering", () => {
 	test.runIf(!isBuild)(
 		"returns the server rendered response at /hello in dev",
 		async ({ expect }) => {
