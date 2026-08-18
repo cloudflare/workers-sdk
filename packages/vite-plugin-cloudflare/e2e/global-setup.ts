@@ -23,7 +23,7 @@ export default async function ({ provide }: TestProject) {
 
 	// Create temporary directory to host projects used for testing.
 	// On Windows GitHub Actions runners, `os.tmpdir()` returns a path containing
-	// the 8.3 short name "RUNNER~1". Vite 8.0.16 (and the backports to v6/v7)
+	// the 8.3 short name "RUNNER~1". Vite 8.0.16 (and the backport to Vite 7)
 	// rejects paths containing "~" or ":" as a security fix
 	// (https://github.com/vitejs/vite/pull/22572, GHSA-fx2h-pf6j-xcff), so we
 	// resolve the temp dir to its real long-form path first.

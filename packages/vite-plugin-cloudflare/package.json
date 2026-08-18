@@ -93,7 +93,7 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
+		"vite": "^7.0.0 || ^8.0.0",
 		"wrangler": "workspace:^"
 	},
 	"workers-sdk": {

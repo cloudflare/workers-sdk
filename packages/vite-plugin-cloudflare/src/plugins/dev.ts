@@ -23,12 +23,7 @@ import {
 } from "../export-types";
 import { getDevMiniflareOptions } from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
-import {
-	createPlugin,
-	createRequestHandler,
-	debuglog,
-	satisfiesMinimumViteVersion,
-} from "../utils";
+import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 
@@ -312,46 +307,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			}
 
 			return () => {
-				// In Vite 6, pre-middleware is placed before the host check middleware,
-				// leaving the server vulnerable to DNS rebinding attacks. We move it to
-				// after the host check middleware by re-inserting it before
-				// viteCachedTransformMiddleware. In Vite 7+, it's already in the
-				// correct position so no action is needed.
-				if (!satisfiesMinimumViteVersion("7.0.0")) {
-					const middlewareStack = viteDevServer.middlewares.stack;
-					const preMiddlewareIndex = middlewareStack.findIndex(
-						(middleware) =>
-							"name" in middleware.handle &&
-							middleware.handle.name === "cloudflarePreMiddleware"
-					);
-
-					if (preMiddlewareIndex !== -1) {
-						const [preMiddleware] = middlewareStack.splice(
-							preMiddlewareIndex,
-							1
-						);
-						assert(
-							preMiddleware,
-							"Failed to remove cloudflarePreMiddleware from stack"
-						);
-
-						const cachedTransformMiddlewareIndex = middlewareStack.findIndex(
-							(middleware) =>
-								"name" in middleware.handle &&
-								middleware.handle.name === "viteCachedTransformMiddleware"
-						);
-						assert(
-							cachedTransformMiddlewareIndex !== -1,
-							"Failed to find viteCachedTransformMiddleware"
-						);
-						middlewareStack.splice(
-							cachedTransformMiddlewareIndex,
-							0,
-							preMiddleware
-						);
-					}
-				}
-
 				// post middleware
 				viteDevServer.middlewares.use(
 					createRequestHandler(async (request, req) => {
