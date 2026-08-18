@@ -17,7 +17,17 @@ export class MyWorkflow extends WorkflowEntrypoint {
   }
   export default {
 	async fetch(request, env, ctx) {
-		const workflow = await env.MY_WORKFLOW.create({id: "an-id"})
+		// Deterministic ids are unique: create() throws once the instance
+		// exists, so later requests read the existing instance instead.
+		let workflow;
+		try {
+			workflow = await env.MY_WORKFLOW.create({id: "an-id"})
+		} catch (e) {
+			if (!String(e).includes("instance.already_exists")) {
+				throw e;
+			}
+			workflow = await env.MY_WORKFLOW.get("an-id")
+		}
 
 		return new Response(JSON.stringify(await workflow.status()))
 	},
