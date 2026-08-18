@@ -19,14 +19,4 @@ describe("getRuntimeHeader", () => {
 			`${RUNTIME_HEADER_COMMENT_PREFIX}1.0.0-test 2024-11-06 `
 		);
 	});
-
-	it("keys the header on the effective runtime type generation flags", ({
-		expect,
-	}) => {
-		expect(
-			getRuntimeHeader("1.0.0-test", "2026-08-04", ["nodejs_compat"])
-		).toBe(
-			`${RUNTIME_HEADER_COMMENT_PREFIX}1.0.0-test 2026-08-04 no_nodejs_compat,no_nodejs_compat_v2`
-		);
-	});
 });

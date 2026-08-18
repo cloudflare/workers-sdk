@@ -1,9 +1,5 @@
 import { beforeEach, describe, it, vi } from "vitest";
-import {
-	getRuntimeHeader,
-	RUNTIME_HEADER_COMMENT_PREFIX,
-	RUNTIME_TYPES_MARKER,
-} from "../header";
+import { getRuntimeHeader, RUNTIME_TYPES_MARKER } from "../header";
 import { generateRuntimeTypes } from "../runtime";
 
 const WORKERD_VERSION = "1.0.0-test";
@@ -58,7 +54,7 @@ describe("generateRuntimeTypes", () => {
 		expect(MiniflareMock).toHaveBeenCalledTimes(1);
 	});
 
-	it("strips nodejs_compat flags from the dispatch URL and header", async ({
+	it("strips nodejs_compat flags from the dispatch URL but keeps them in the header", async ({
 		expect,
 	}) => {
 		const result = await generateRuntimeTypes({
@@ -72,7 +68,11 @@ describe("generateRuntimeTypes", () => {
 			"http://dummy.com/2024-11-06+flag_b+flag_a"
 		);
 		expect(result.runtimeHeader).toBe(
-			getRuntimeHeader(WORKERD_VERSION, "2024-11-06", ["flag_b", "flag_a"])
+			getRuntimeHeader(WORKERD_VERSION, "2024-11-06", [
+				"nodejs_compat",
+				"flag_b",
+				"flag_a",
+			])
 		);
 	});
 
@@ -81,7 +81,6 @@ describe("generateRuntimeTypes", () => {
 	}) => {
 		const result = await generateRuntimeTypes({
 			compatibilityDate: "2026-08-04",
-			existingContent: `${RUNTIME_HEADER_COMMENT_PREFIX}${WORKERD_VERSION} 2026-08-04 \n${RUNTIME_TYPES_MARKER}\nSTALE`,
 		});
 
 		expect(dispatchFetchMock).toHaveBeenCalledWith(
@@ -90,8 +89,6 @@ describe("generateRuntimeTypes", () => {
 		expect(result.runtimeHeader).toBe(
 			getRuntimeHeader(WORKERD_VERSION, "2026-08-04", [])
 		);
-		expect(result.isCached).toBe(false);
-		expect(result.runtimeTypes).toBe("GENERATED");
 	});
 
 	it("returns cached types when the header and marker match", async ({

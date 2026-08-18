@@ -1,9 +1,9 @@
 import * as fsp from "node:fs/promises";
 import { createRequire } from "node:module";
+import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { version } from "workerd";
 import {
-	getRuntimeCompatibilityFlags,
 	getRuntimeHeader,
 	RUNTIME_HEADER_COMMENT_PREFIX,
 	RUNTIME_TYPES_MARKER,
@@ -75,10 +75,12 @@ export async function generateRuntimeTypes({
 		}
 	}
 
-	const runtimeCompatibilityFlags = getRuntimeCompatibilityFlags(
-		compatibilityDate,
-		compatibilityFlags
+	const runtimeCompatibilityFlags = compatibilityFlags.filter(
+		(flag) => !flag.includes("nodejs_compat")
 	);
+	if (isNodejsCompatDefaultOn(compatibilityDate)) {
+		runtimeCompatibilityFlags.push("no_nodejs_compat", "no_nodejs_compat_v2");
+	}
 
 	const types = await generate({
 		compatibilityDate,
