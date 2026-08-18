@@ -140,6 +140,11 @@ function convertWorkerOptions(
 		config.triggers.push({ type: "fetch", pattern: route });
 	}
 
+	for (const connectHandler of worker.connectHandlers ?? []) {
+		config.triggers ??= [];
+		config.triggers.push({ type: "connect", ...connectHandler });
+	}
+
 	addVariableBindings(env, worker.bindings);
 	addNamespaceBindings(env, "kv", worker.kvNamespaces, isRemote);
 	addNamespaceBindings(env, "d1", worker.d1Databases, isRemote);

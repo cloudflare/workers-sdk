@@ -1093,6 +1093,29 @@ export interface EnvironmentNonInheritable {
 	};
 
 	/**
+	 * Specifies raw sockets that this Worker should listen on.
+	 * Each entry opens a listening socket on the
+	 * given port that delivers incoming connections directly to the Worker's
+	 * `connect(socket, env, ctx)` handler.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	connect: {
+		/** The transport protocol to listen for. */
+		protocol: "tcp";
+
+		/** The port to listen on. */
+		port: number;
+
+		/** The address to bind to. Defaults to `127.0.0.1`. */
+		address?: string;
+	}[];
+
+	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

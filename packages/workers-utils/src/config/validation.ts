@@ -1782,6 +1782,16 @@ function normalizeAndValidateEnvironment(
 			validateQueues(envName),
 			{ producers: [], consumers: [] }
 		),
+		connect: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"connect",
+			validateConnectHandlers(envName),
+			[]
+		),
 		r2_buckets: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -5233,6 +5243,146 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 			);
 			isValid = false;
 		}
+	}
+
+	return isValid;
+};
+
+/**
+ * Validate that the field is an array of `connect` handler definitions, each with a
+ * unique protocol/port combination.
+ */
+function validateConnectHandlers(envName: string): ValidatorFn {
+	return (diagnostics, field, value, config) => {
+		if (value === undefined) {
+			return true;
+		}
+
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (!Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an array but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		for (let i = 0; i < value.length; i++) {
+			if (
+				!validateConnectHandler(
+					diagnostics,
+					`${fieldPath}[${i}]`,
+					value[i],
+					config
+				)
+			) {
+				isValid = false;
+			}
+		}
+
+		// Reject duplicate protocol+port combinations within the same worker.
+		const firstIndexByKey = new Map<string, number>();
+		for (let i = 0; i < value.length; i++) {
+			const handler = value[i];
+			if (
+				typeof handler !== "object" ||
+				handler === null ||
+				typeof (handler as { port?: unknown }).port !== "number" ||
+				typeof (handler as { protocol?: unknown }).protocol !== "string"
+			) {
+				// Already reported by `validateConnectHandler` above.
+				continue;
+			}
+
+			const { protocol, port } = handler as {
+				protocol: string;
+				port: number;
+			};
+			const key = `${protocol}:${port}`;
+			const firstIndex = firstIndexByKey.get(key);
+			if (firstIndex !== undefined) {
+				diagnostics.errors.push(
+					`"${fieldPath}[${i}]" has the same "protocol" (${protocol}) and "port" (${port}) as "${fieldPath}[${firstIndex}]". Each entry in "connect" must use a unique protocol/port combination.`
+				);
+				isValid = false;
+			} else {
+				firstIndexByKey.set(key, i);
+			}
+		}
+
+		return isValid;
+	};
+}
+
+/**
+ * Check that the given field is a valid "connect" handler object.
+ */
+const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	if (
+		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"protocol",
+			"port",
+			"address",
+		])
+	) {
+		isValid = false;
+	}
+
+	if ("protocol" in value && value.protocol !== "tcp") {
+		diagnostics.errors.push(
+			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+				value.protocol
+			)}.`
+		);
+		isValid = false;
+	} else if (!("protocol" in value)) {
+		diagnostics.errors.push(
+			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "port", "number")) {
+		diagnostics.errors.push(
+			`"${field}" should have a number "port" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (
+		!Number.isInteger((value as { port: number }).port) ||
+		(value as { port: number }).port < 1 ||
+		(value as { port: number }).port > 65535
+	) {
+		diagnostics.errors.push(
+			`"${field}" should have an integer "port" field between 1 and 65535 but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "address", "string")) {
+		diagnostics.errors.push(
+			`"${field}" should, optionally, have a string "address" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
 	}
 
 	return isValid;

@@ -53,6 +53,7 @@ export type {
 export { bindings } from "./bindings";
 export type {
 	Triggers,
+	ConnectTrigger,
 	EmailTrigger,
 	FetchTrigger,
 	QueueConsumerTrigger,
