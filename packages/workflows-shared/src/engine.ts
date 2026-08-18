@@ -797,7 +797,7 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	// Called by the dispose function when introspecting the instance in tests
-	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-pool-workers
+	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-plugin
 	async unsafeAbort(reason?: string) {
 		await this.ctx.storage.sync();
 		await this.ctx.storage.deleteAll();
