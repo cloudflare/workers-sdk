@@ -20,14 +20,38 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("should set configured: true if a configPath exists", async ({
+	it("should set configured: true if a configPath exists during legacy Wrangler detection", async ({
 		expect,
 	}) => {
 		await expect(
 			details.getDetailsForAutoConfig({
 				wranglerConfig: { configPath: "/tmp" } as Config,
+				target: "wrangler",
 				context,
 			})
+		).resolves.toMatchObject({ configured: true });
+	});
+
+	it("should migrate an existing Wrangler project by default", async ({
+		expect,
+	}) => {
+		await writeFile("index.html", "<h1>Hello World</h1>");
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				wranglerConfig: { configPath: "/tmp" } as Config,
+				context,
+			})
+		).resolves.toMatchObject({ configured: false });
+	});
+
+	it("should default to cloudflare.config.ts configuration detection", async ({
+		expect,
+	}) => {
+		await writeFile("cloudflare.config.ts", "export default {};");
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({ configured: true });
 	});
 
@@ -59,6 +83,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				details.getDetailsForAutoConfig({ context })
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
+				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
 				configured: false,
 				outputDir: "dist",
 				packageJson: {

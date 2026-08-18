@@ -30,6 +30,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*"
 	},
 	"devDependencies": {
