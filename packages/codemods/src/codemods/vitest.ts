@@ -6,18 +6,78 @@ const OLD_PACKAGE = "@cloudflare/vitest-pool-workers";
 const NEW_PACKAGE = "@cloudflare/vitest-plugin";
 const V1_RANGE = "^1.0.0";
 const SOURCE_PATTERNS = ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,json,jsonc}"];
-const PRESERVED_PROTOCOLS = /^(?:workspace|catalog|link|file|npm):/;
+const PRESERVED_PROTOCOLS = /^(?:(?:workspace|catalog|link|file|npm):|\$)/;
 
+/** Returns the v1 range while preserving package-manager protocol references. */
 function getV1Specifier(specifier: string): string {
 	return PRESERVED_PROTOCOLS.test(specifier) ? specifier : V1_RANGE;
 }
 
+/** Renames a package selector and updates any plain version range it contains. */
+function renamePackageSelector(selector: string): string {
+	const packageIndex = selector.indexOf(OLD_PACKAGE);
+	if (packageIndex === -1) {
+		return selector;
+	}
+	const versionIndex = packageIndex + OLD_PACKAGE.length;
+	return selector[versionIndex] === "@"
+		? `${selector.slice(0, packageIndex)}${NEW_PACKAGE}@${getV1Specifier(selector.slice(versionIndex + 1))}`
+		: selector.replaceAll(OLD_PACKAGE, NEW_PACKAGE);
+}
+
+/**
+ * Recursively migrates package selectors and ranges in an override-style map.
+ *
+ * @returns Whether the map was changed.
+ */
+function renameVersionMap(value: unknown): boolean {
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		return false;
+	}
+
+	const entries = Object.entries(value);
+	let changed = false;
+	for (const [key, entryValue] of entries) {
+		const renamedKey = renamePackageSelector(key);
+		if (
+			renamedKey !== key &&
+			entryValue &&
+			typeof entryValue === "object" &&
+			!Array.isArray(entryValue) &&
+			typeof (entryValue as Record<string, unknown>)["."] === "string"
+		) {
+			(entryValue as Record<string, string>)["."] = getV1Specifier(
+				(entryValue as Record<string, string>)["."]
+			);
+			changed = true;
+		}
+		const renamedValue =
+			renamedKey !== key && typeof entryValue === "string"
+				? getV1Specifier(entryValue)
+				: entryValue;
+		changed = renameVersionMap(renamedValue) || changed;
+		if (renamedKey !== key || renamedValue !== entryValue) {
+			delete (value as Record<string, unknown>)[key];
+			(value as Record<string, unknown>)[renamedKey] = renamedValue;
+			changed = true;
+		}
+	}
+	return changed;
+}
+
+/** Renames the Vitest package and updates version-bearing package.json fields. */
 function renamePackageDependency(source: string): string {
 	let packageJson: {
 		dependencies?: Record<string, string>;
 		devDependencies?: Record<string, string>;
 		peerDependencies?: Record<string, string>;
 		optionalDependencies?: Record<string, string>;
+		overrides?: Record<string, unknown>;
+		resolutions?: Record<string, unknown>;
+		pnpm?: {
+			overrides?: Record<string, unknown>;
+			packageExtensions?: Record<string, unknown>;
+		};
 	};
 	try {
 		packageJson = JSON.parse(source) as typeof packageJson;
@@ -59,6 +119,14 @@ function renamePackageDependency(source: string): string {
 		}
 		Object.assign(dependencies, Object.fromEntries(entries));
 		changed = true;
+	}
+	for (const versionMap of [
+		packageJson.overrides,
+		packageJson.resolutions,
+		packageJson.pnpm?.overrides,
+		packageJson.pnpm?.packageExtensions,
+	]) {
+		changed = renameVersionMap(versionMap) || changed;
 	}
 
 	if (!changed) {

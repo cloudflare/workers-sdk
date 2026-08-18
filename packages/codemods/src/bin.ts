@@ -4,6 +4,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { availableCodemods, runCodemod } from "./runner";
 
+/** Prints command usage and the available codemods. */
 function printHelp(): void {
 	console.log(`Usage: cloudflare-codemods <codemod> [options]
 
@@ -20,6 +21,11 @@ Available Codemods:
 ${availableCodemods.map((codemod) => `  ${codemod.name}\n      ${codemod.description}`).join("\n")}`);
 }
 
+/**
+ * Runs the codemod CLI.
+ *
+ * @param args Command-line arguments excluding the executable and script paths.
+ */
 export async function main(args = process.argv.slice(2)): Promise<void> {
 	const { values, positionals } = parseArgs({
 		args,

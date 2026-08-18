@@ -130,9 +130,69 @@ export default defineWorkersProject({
 			"@cloudflare/vitest-plugin": "^1.0.0",
 		});
 		expect(packageJson.scripts.test).toContain("@cloudflare/vitest-plugin");
-		expect(packageJson.pnpm.overrides).toHaveProperty(
-			"@cloudflare/vitest-plugin"
-		);
+		expect(packageJson.pnpm.overrides).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+	});
+
+	it("updates package versions in override maps", async ({ expect }) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				overrides: {
+					"@cloudflare/vitest-pool-workers": { ".": "^0.13.0" },
+				},
+				resolutions: {
+					"**/@cloudflare/vitest-pool-workers": "~0.18.0",
+				},
+				pnpm: {
+					overrides: {
+						"@cloudflare/vitest-pool-workers": "^0.20.0",
+					},
+					packageExtensions: {
+						"@cloudflare/vitest-pool-workers@^0.18.0": {
+							dependencies: {
+								"@cloudflare/vitest-pool-workers": "^0.18.0",
+							},
+						},
+					},
+				},
+			}),
+		});
+
+		await runCodemod("vitest:pool-workers-to-vitest-plugin", {
+			cwd,
+			dryRun: false,
+		});
+
+		const packageJson = JSON.parse(
+			await readFile(path.join(cwd, "package.json"), "utf8")
+		) as {
+			overrides: Record<string, { ".": string }>;
+			resolutions: Record<string, string>;
+			pnpm: {
+				overrides: Record<string, string>;
+				packageExtensions: Record<
+					string,
+					{ dependencies: Record<string, string> }
+				>;
+			};
+		};
+		expect(packageJson.overrides).toEqual({
+			"@cloudflare/vitest-plugin": { ".": "^1.0.0" },
+		});
+		expect(packageJson.resolutions).toEqual({
+			"**/@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.pnpm.overrides).toEqual({
+			"@cloudflare/vitest-plugin": "^1.0.0",
+		});
+		expect(packageJson.pnpm.packageExtensions).toEqual({
+			"@cloudflare/vitest-plugin@^1.0.0": {
+				dependencies: {
+					"@cloudflare/vitest-plugin": "^1.0.0",
+				},
+			},
+		});
 	});
 
 	it("renames the package in multiple dependency groups", async ({

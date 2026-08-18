@@ -25,6 +25,7 @@ const CONFIG_PACKAGES = [
 	"@cloudflare/vitest-pool-workers",
 ];
 
+/** Returns whether an AST property has the requested identifier key. */
 function isNamedProp(prop: Node, name: string): prop is NamedProp {
 	return (
 		(n.ObjectProperty.check(prop) || n.Property.check(prop)) &&
@@ -33,6 +34,7 @@ function isNamedProp(prop: Node, name: string): prop is NamedProp {
 	);
 }
 
+/** Finds an AST property by identifier key. */
 function findNamedProp(
 	properties: Node[],
 	name: string
@@ -40,6 +42,7 @@ function findNamedProp(
 	return properties.find((prop): prop is NamedProp => isNamedProp(prop, name));
 }
 
+/** Finds a named import specifier on an import declaration. */
 function importSpecifierNamed(imp: ImportDeclaration, imported: string) {
 	return (imp.specifiers ?? []).find(
 		(candidate) =>
@@ -49,6 +52,7 @@ function importSpecifierNamed(imp: ImportDeclaration, imported: string) {
 	);
 }
 
+/** Migrates a Workers Vitest v3 configuration source to the v4 plugin API. */
 export default function transform(source: string): string {
 	const ast = parseTs(source);
 	const body = ast.program.body;

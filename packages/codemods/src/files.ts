@@ -13,6 +13,14 @@ const DEFAULT_IGNORES = [
 	"**/npm-shrinkwrap.json",
 ];
 
+/**
+ * Applies a transform to matching files and stages changed outputs in memory.
+ *
+ * @param context Shared state and file restrictions for the codemod run.
+ * @param patterns Glob patterns defining the codemod's file scope.
+ * @param transform Function that transforms one file's source.
+ * @returns Paths changed by the transform, relative to the working directory.
+ */
 export async function transformFiles(
 	context: RunContext,
 	patterns: string[],
