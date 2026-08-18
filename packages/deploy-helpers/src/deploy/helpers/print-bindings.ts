@@ -198,7 +198,7 @@ export function printBindings(
 
 	if (workflows.length > 0) {
 		output.push(
-			...workflows.map(({ class_name, script_name, binding, remote }) => {
+			...workflows.map(({ class_name, script_name, binding }) => {
 				let value = class_name;
 				if (script_name) {
 					value += ` (defined in ${script_name})`;
@@ -209,8 +209,7 @@ export function printBindings(
 					type: getBindingTypeFriendlyName("workflow"),
 					value: value,
 					mode: getMode({
-						isSimulatedLocally:
-							script_name && !context.remoteBindingsDisabled ? !remote : true,
+						isSimulatedLocally: true,
 					}),
 				};
 			})

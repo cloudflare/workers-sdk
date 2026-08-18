@@ -7592,7 +7592,6 @@ describe("normalizeAndValidateConfig()", () => {
 								name: "my-workflow",
 								class_name: "MyWorkflow",
 								script_name: "my-script",
-								remote: true,
 								limits: { steps: 100 },
 							},
 						],
@@ -7715,7 +7714,6 @@ describe("normalizeAndValidateConfig()", () => {
 								name: "my-workflow",
 								class_name: "MyWorkflow",
 								script_name: 123,
-								remote: "yes",
 							},
 						],
 					} as unknown as RawConfig,
@@ -7727,8 +7725,32 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "workflows[0]" bindings should, optionally, have a string "script_name" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}.
-					  - "workflows[0]" bindings should, optionally, have a boolean "remote" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}."
+					  - "workflows[0]" bindings should, optionally, have a string "script_name" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123}."
+				`);
+			});
+
+			it("should warn if remote is configured", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								remote: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in workflows[0] field: "remote""
 				`);
 			});
 

@@ -247,15 +247,37 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps r2 with name and jurisdiction", ({ expect }) => {
+		it("maps r2 with name, jurisdiction, and local S3 credentials", ({
+			expect,
+		}) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					MY_R2: { type: "r2", name: "my-bucket", jurisdiction: "eu" },
+					MY_R2: {
+						type: "r2",
+						name: "my-bucket",
+						jurisdiction: "eu",
+						localDev: {
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
 				},
 			});
 			expect(result.r2_buckets).toEqual([
-				{ binding: "MY_R2", bucket_name: "my-bucket", jurisdiction: "eu" },
+				{
+					binding: "MY_R2",
+					bucket_name: "my-bucket",
+					jurisdiction: "eu",
+					local_dev: {
+						experimental_s3_credentials: {
+							accessKeyId: "access-key",
+							secretAccessKey: "secret-key",
+						},
+					},
+				},
 			]);
 		});
 

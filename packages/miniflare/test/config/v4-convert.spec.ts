@@ -129,9 +129,11 @@ describe("convertV4MiniflareOptions", () => {
 				R2: {
 					type: "r2",
 					name: "bucket",
-					s3Credentials: {
-						accessKeyId: "access-key",
-						secretAccessKey: "secret-key",
+					localDev: {
+						experimentalS3Credentials: {
+							accessKeyId: "access-key",
+							secretAccessKey: "secret-key",
+						},
 					},
 				},
 				QUEUE: { type: "queue", name: "queue" },
