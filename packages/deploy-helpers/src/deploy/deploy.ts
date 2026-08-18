@@ -751,7 +751,6 @@ export default async function deploy(
 		accountId,
 		scriptName,
 		workerTag,
-		env: props.env,
 		crons: props.triggers,
 		firstDeploy: !workerExists,
 		routes: props.routes,

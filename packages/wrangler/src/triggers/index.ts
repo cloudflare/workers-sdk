@@ -68,7 +68,6 @@ export const triggersDeployCommand = createCommand({
 		await triggersDeploy({
 			config,
 			accountId,
-			env: args.env,
 			firstDeploy: false,
 			dryRun: args.dryRun,
 			validated: false,
