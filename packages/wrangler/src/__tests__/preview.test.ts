@@ -957,6 +957,42 @@ describe("wrangler preview", () => {
 			expect(std.out).not.toContain("value-b");
 		});
 
+		test("should fail on a bad --secrets-file before creating the preview or uploading assets", async ({
+			expect,
+		}) => {
+			let previewApiCalled = false;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						previewApiCalled = true;
+						return HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() => {
+						previewApiCalled = true;
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
+			);
+
+			await expect(
+				runWrangler(
+					"preview --name test-preview --secrets-file does-not-exist.json"
+				)
+			).rejects.toThrow();
+			expect(previewApiCalled).toBe(false);
+		});
+
 		test("should upload --var values as plain_text bindings, overriding config vars but not secrets", async ({
 			expect,
 		}) => {

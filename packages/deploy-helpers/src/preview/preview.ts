@@ -197,7 +197,7 @@ async function assemblePreviewDeploymentSettings(
 		message?: string;
 		tag?: string;
 		assetsOptions?: PreviewAssetsOptions;
-		secretsFile?: string;
+		secrets?: Record<string, string>;
 		cliVars?: Record<string, string>;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
@@ -293,15 +293,10 @@ async function assemblePreviewDeploymentSettings(
 		env[varName] = { type: "plain_text", text: varValue };
 	}
 
-	if (options.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(options.secretsFile);
-		if (secretsResult) {
-			for (const [secretName, secretValue] of Object.entries(
-				secretsResult.content
-			)) {
-				env[secretName] = { type: "secret_text", text: secretValue };
-			}
-		}
+	for (const [secretName, secretValue] of Object.entries(
+		options.secrets ?? {}
+	)) {
+		env[secretName] = { type: "secret_text", text: secretValue };
 	}
 
 	if (Object.keys(env).length > 0) {
@@ -435,6 +430,13 @@ export async function preview(
 ): Promise<PreviewResult> {
 	const workerName = resolveWorkerName(args, config);
 
+	// Parse the secrets file up front so a bad path or malformed contents
+	// fails before the preview is created and assets are uploaded.
+	let secrets: Record<string, string> | undefined;
+	if (args.secretsFile) {
+		secrets = (await parseBulkInputToObject(args.secretsFile))?.content;
+	}
+
 	let previewName = args.name;
 	if (!previewName) {
 		previewName = getBranchName();
@@ -512,7 +514,7 @@ export async function preview(
 			message: args.message ?? fallbackMessage,
 			tag: args.tag ?? fallbackTag,
 			assetsOptions,
-			secretsFile: args.secretsFile,
+			secrets,
 			cliVars: args.cliVars,
 		}
 	);
