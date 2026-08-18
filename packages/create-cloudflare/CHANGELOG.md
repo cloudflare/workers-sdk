@@ -1,5 +1,65 @@
 # create-cloudflare
 
+## 2.72.1
+
+### Patch Changes
+
+- [#15217](https://github.com/cloudflare/workers-sdk/pull/15217) [`1447950`](https://github.com/cloudflare/workers-sdk/commit/1447950241d4d3a1a28c9fe2ed85bea42023b202) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.1.3 | 22.1.4 |
+
+- [#15218](https://github.com/cloudflare/workers-sdk/pull/15218) [`6d71eeb`](https://github.com/cloudflare/workers-sdk/commit/6d71eebfd07bc67dba4259b041bac73a13e8ccfe) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To     |
+  | ------------ | ----- | ------ |
+  | create-solid | 0.8.1 | 0.10.0 |
+
+- [#15219](https://github.com/cloudflare/workers-sdk/pull/15219) [`ee15a07`](https://github.com/cloudflare/workers-sdk/commit/ee15a078c227951952ecbd2e70a1abfa7221c7f9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.3.0 | 16.3.1 |
+
+- [#15220](https://github.com/cloudflare/workers-sdk/pull/15220) [`1282749`](https://github.com/cloudflare/workers-sdk/commit/128274970c3c542b941b512980a2b2fc3af4136a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From         | To           |
+  | ----------------- | ------------ | ------------ |
+  | create-vinext-app | 1.0.0-beta.1 | 1.0.0-beta.2 |
+
+- [#15221](https://github.com/cloudflare/workers-sdk/pull/15221) [`7af190a`](https://github.com/cloudflare/workers-sdk/commit/7af190a5d90113235978ef30e7da064a9aa13996) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.6.4 | 2.7.0 |
+
+- [#15222](https://github.com/cloudflare/workers-sdk/pull/15222) [`afe5788`](https://github.com/cloudflare/workers-sdk/commit/afe57886c67cff8163d6b5ffdba6e40e73754b5a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.673 | 0.0.675 |
+
+- [#14953](https://github.com/cloudflare/workers-sdk/pull/14953) [`05959fb`](https://github.com/cloudflare/workers-sdk/commit/05959fb980f24ef8bea9d40fbef49ebc2631bf2a) Thanks [@edmundhung](https://github.com/edmundhung)! - Update the Hello World templates to use the latest version of `@cloudflare/vitest-pool-workers`.
+
+- [#15185](https://github.com/cloudflare/workers-sdk/pull/15185) [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use a fixed default compatibility date rather than the current date
+
+  When no compatibility date was set, Wrangler, C3 and the Vitest pool all defaulted to the current date. `workerd` only accepts a compatibility date up to 7 days beyond its own release, so whenever a `workerd` release was delayed the default could get ahead of the runtime that had been installed, and local development would fail to start.
+
+  The default is now fixed at the release date of the `workerd` version that ships with each release, which leaves a week of headroom and updates as `workerd` is upgraded. `@cloudflare/vite-plugin` previously inlined the date at which it was built. It now shares the same default.
+
 ## 2.72.0
 
 ### Minor Changes
