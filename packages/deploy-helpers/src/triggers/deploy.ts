@@ -16,7 +16,10 @@ import {
 	publishRoutes,
 	renderRoute,
 } from "./publish-routes";
-import { updateQueueConsumers } from "./queue-consumers";
+import {
+	ensureQueuesExistByConfig,
+	updateQueueConsumers,
+} from "./queue-consumers";
 import { getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
@@ -26,8 +29,22 @@ import type { Config, Route } from "@cloudflare/workers-utils";
 export async function triggersDeploy(
 	props: TriggerProps
 ): Promise<string[] | void> {
-	const { config, accountId, scriptName, routes, crons } = props;
-	validateEventTriggerTargets(config, scriptName);
+	const { config, scriptName, routes, crons } = props;
+
+	if (props.validated !== true) {
+		validateEventTriggerTargets(config, scriptName);
+	}
+
+	if (props.dryRun || !props.accountId) {
+		logger.log(`--dry-run: exiting now.`);
+		return;
+	}
+
+	const { accountId } = props;
+
+	if (props.validated !== true) {
+		await ensureQueuesExistByConfig(config, accountId, true, scriptName);
+	}
 
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
