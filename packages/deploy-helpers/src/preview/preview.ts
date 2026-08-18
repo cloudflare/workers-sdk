@@ -10,6 +10,7 @@ import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
 import { getBindings } from "../deploy/helpers/binding-utils";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
+import { parseBulkInputToObject } from "../deploy/helpers/parse-bulk-input";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
 import { confirm, logger } from "../shared/context";
@@ -69,6 +70,9 @@ export type PreviewArgs = {
 	ignoreBaseConfig: boolean;
 	workerName?: string;
 	"worker-name"?: string;
+	secretsFile?: string;
+	/** Parsed `--var` args. CLI-only vars; config vars flow separately via `extractConfigBindings(config)`. */
+	cliVars?: Record<string, string>;
 };
 
 export type PreviewAssetsOptions = {
@@ -415,6 +419,8 @@ async function assemblePreviewDeploymentSettings(
 		pullRequest?: PullRequestMetadata;
 		commitSha?: string;
 		assetsOptions?: PreviewAssetsOptions;
+		secretsFile?: string;
+		cliVars?: Record<string, string>;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -549,6 +555,23 @@ async function assemblePreviewDeploymentSettings(
 	}
 
 	const env = extractConfigBindings(config);
+
+	// Vars from the CLI (--var) override same-named vars from the previews config
+	for (const [varName, varValue] of Object.entries(options.cliVars ?? {})) {
+		env[varName] = { type: "plain_text", text: varValue };
+	}
+
+	if (options.secretsFile) {
+		const secretsResult = await parseBulkInputToObject(options.secretsFile);
+		if (secretsResult) {
+			for (const [secretName, secretValue] of Object.entries(
+				secretsResult.content
+			)) {
+				env[secretName] = { type: "secret_text", text: secretValue };
+			}
+		}
+	}
+
 	if (Object.keys(env).length > 0) {
 		request.env = env;
 	}
@@ -789,6 +812,8 @@ export async function preview(
 			pullRequest,
 			commitSha,
 			assetsOptions,
+			secretsFile: args.secretsFile,
+			cliVars: args.cliVars,
 		}
 	);
 	const deployment = await createPreviewDeployment(
