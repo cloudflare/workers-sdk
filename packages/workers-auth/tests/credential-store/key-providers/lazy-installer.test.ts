@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { getGlobalConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath, UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import {
@@ -8,6 +8,7 @@ import {
 	getKeyringInstallDir,
 	installKeyringBindingSync,
 	PINNED_KEYRING_VERSION,
+	resolveKeyringEntryFactory,
 	setNpmRunner,
 } from "../../../src/credential-store/key-providers/lazy-installer";
 import type { SpawnSyncReturns } from "node:child_process";
@@ -193,8 +194,21 @@ describe("lazy keyring installer", () => {
 		it("creates a private host package.json before invoking npm install", ({
 			expect,
 		}) => {
+			const bindingDir = path.join(
+				installDir(),
+				"node_modules",
+				"@napi-rs",
+				"keyring"
+			);
 			setNpmRunner((args) => {
 				lastInvocation = args;
+				// The install verifies its own work, so the runner has to
+				// actually land a loadable binding to count as a success.
+				mkdirSync(bindingDir, { recursive: true });
+				writeFileSync(
+					path.join(bindingDir, "index.js"),
+					"module.exports = {};"
+				);
 				return mockResult({});
 			});
 			installKeyringBindingSync(installDir());
@@ -233,13 +247,56 @@ describe("lazy keyring installer", () => {
 			);
 		});
 
+		it("throws a UserError when npm exits 0 without leaving a loadable binding", ({
+			expect,
+		}) => {
+			// npm exits 0 when an optional dependency cannot be fetched, and
+			// the platform-specific `.node` binary is exactly that. Reporting
+			// success here would leave the resolver on its `needs-install`
+			// branch — which only latches its session failure flag when the
+			// install throws — so the whole install would be respawned on
+			// every single credential read and write.
+			const bindingDir = path.join(
+				installDir(),
+				"node_modules",
+				"@napi-rs",
+				"keyring"
+			);
+			setNpmRunner((args) => {
+				if (args[0] === "root") {
+					return mockResult({ stdout: "/nonexistent/global/root\n" });
+				}
+				mkdirSync(bindingDir, { recursive: true });
+				writeFileSync(
+					path.join(bindingDir, "index.js"),
+					'require("./keyring.win32-x64-msvc.node");'
+				);
+				return mockResult({});
+			});
+
+			// A `UserError` specifically: the resolver reports it verbatim when
+			// keyring storage was forced via `CLOUDFLARE_AUTH_USE_KEYRING`.
+			expect(() => installKeyringBindingSync(installDir())).toThrow(UserError);
+			expect(() => installKeyringBindingSync(installDir())).toThrow(
+				/`npm` reported success but the `@napi-rs\/keyring` native binding still cannot be loaded[\s\S]*npm install -g @napi-rs\/keyring@\d+\.\d+\.\d+/
+			);
+		});
+
 		it("does not overwrite an existing host package.json", ({ expect }) => {
 			const dir = installDir();
 			mkdirSync(dir, { recursive: true });
 			const hostPkgJson = path.join(dir, "package.json");
 			writeFileSync(hostPkgJson, '{"customMarker":true}');
 
-			setNpmRunner(() => mockResult({}));
+			const bindingDir = path.join(dir, "node_modules", "@napi-rs", "keyring");
+			setNpmRunner(() => {
+				mkdirSync(bindingDir, { recursive: true });
+				writeFileSync(
+					path.join(bindingDir, "index.js"),
+					"module.exports = {};"
+				);
+				return mockResult({});
+			});
 			installKeyringBindingSync(installDir());
 			expect(readFileSync(hostPkgJson, "utf-8")).toContain("customMarker");
 		});
@@ -283,6 +340,22 @@ describe("lazy keyring installer", () => {
 			// Next lookup must re-check the filesystem and return the new
 			// binding path (not the cached `null`).
 			expect(findKeyringBinding(installDir())).toBe(bindingDir);
+		});
+	});
+
+	describe("resolveKeyringEntryFactory", () => {
+		it("throws a UserError with remediation when no binding is available", ({
+			expect,
+		}) => {
+			// Callers resolve availability before getting here, so this is
+			// close to an internal invariant violation — but it is still the
+			// user's machine that needs fixing, so it must not surface as a
+			// bare module-resolution stack trace.
+			setNpmRunner(() => mockResult({ stdout: "/nonexistent/global/root\n" }));
+			expect(() => resolveKeyringEntryFactory(installDir())).toThrow(UserError);
+			expect(() => resolveKeyringEntryFactory(installDir())).toThrow(
+				/native binding is not available[\s\S]*npm install -g @napi-rs\/keyring@\d+\.\d+\.\d+/
+			);
 		});
 	});
 });

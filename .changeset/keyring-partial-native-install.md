@@ -2,10 +2,8 @@
 "@cloudflare/workers-auth": patch
 ---
 
-fix: recover from a partially installed `@napi-rs/keyring` native binding
+Recover from a partially installed keyring backend on Windows
 
-On Windows, opting into keyring-backed credential storage lazily installs `@napi-rs/keyring`. The check for whether that binding was already present only tested that its `index.js` existed.
+Choosing to keep your credentials in the OS keyring on Windows installs a native backend the first time you opt in. An install interrupted part-way through — by a dropped connection, a full disk, or an npm told to skip optional packages — could leave a broken backend behind that was nonetheless treated as working. Every login, token refresh, and credential read from then on failed with an internal error, and because the broken state was never re-examined, no amount of retrying would clear it.
 
-That is not evidence of a working install. `index.js` `require`s a platform-specific `.node` binary which arrives as a separate package, so an `npm install` that is interrupted, runs out of disk, or fails to fetch the platform package leaves `index.js` on disk with nothing loadable beside it. The result was a permanently broken keyring: the binding was reported as available, so the install was never retried, and every credential read and write instead failed with a raw module-resolution error. The verdict was also memoised per process, so it could not be shaken off.
-
-A candidate binding is now only accepted once it has actually been loaded, which is the same thing the credential path does with it moments later. A half-installed binding is reported as absent, so it gets reinstalled and then works, rather than failing indefinitely.
+A broken backend is now spotted and reinstalled automatically. If the reinstall still cannot produce a working one, you get a single explanation of how to install it by hand and fall back to the plaintext credentials file for the rest of the session, rather than sitting through a fresh install attempt on every credential access.

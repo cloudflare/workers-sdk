@@ -199,9 +199,10 @@ export function findKeyringBinding(installDir: string): string | null {
  * Install `@napi-rs/keyring` into the private install dir using the user's
  * `npm`.
  *
- * Throws a {@link UserError} when `npm` cannot be spawned or returns a
- * non-zero exit code, so callers can surface actionable remediation hints
- * rather than a raw stack trace.
+ * Throws a {@link UserError} when `npm` cannot be spawned, returns a non-zero
+ * exit code, or exits cleanly without leaving a loadable binding behind, so
+ * callers can surface actionable remediation hints rather than a raw stack
+ * trace.
  */
 export function installKeyringBindingSync(installDir: string): void {
 	const dir = installDir;
@@ -252,10 +253,32 @@ export function installKeyringBindingSync(installDir: string): void {
 			{ telemetryMessage: "workers-auth keyring npm install failed" }
 		);
 	}
-	// Fresh install landed on disk — invalidate the cached "not found"
-	// result for this install dir so the next `findKeyringBinding()` call
-	// picks the new path up immediately instead of returning the stale `null`.
+	// Something landed on disk — invalidate the cached "not found" result for
+	// this install dir so the verification below, and every later
+	// `findKeyringBinding()` call, re-probes instead of returning the stale
+	// `null`.
 	cachedBindingPathByDir.delete(installDir);
+
+	// A zero exit code is not evidence of a usable binding. The
+	// platform-specific `.node` binary ships as an *optional* dependency of
+	// `@napi-rs/keyring`, and npm exits 0 when an optional dependency cannot
+	// be fetched — as it also does when configured to skip optional
+	// dependencies entirely. Reporting success here would leave the resolver
+	// on the `needs-install` branch, which only latches its session failure
+	// flag when the install *throws*: it would therefore respawn this whole
+	// install on every credential read and write, and still fail at the end
+	// of each one. Failing loudly instead bounds the retries to one per
+	// session and routes the user through the normal remediation/fallback
+	// path.
+	if (findKeyringBinding(installDir) === null) {
+		throw new UserError(
+			`\`npm\` reported success but the \`@napi-rs/keyring\` native binding still cannot be loaded.\n\n` +
+				`Its platform-specific binary ships as a separate optional package, so a download that was skipped or interrupted leaves the binding unusable.\n\n` +
+				`Retry once the underlying issue is fixed, or install the binding globally:\n` +
+				`  npm install -g @napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
+			{ telemetryMessage: "workers-auth keyring install incomplete" }
+		);
+	}
 }
 
 /**
@@ -300,6 +323,13 @@ interface KeyringModule {
 /**
  * Resolve the active keyring entry factory, loading the lazy-installed
  * binding from `installDir` when no test override is registered.
+ *
+ * Callers are expected to have resolved the binding's availability first, so a
+ * missing binding here means it went away between resolution and use (an
+ * uninstall, or a directory cleaned up mid-session). That is rare enough to be
+ * close to an internal invariant violation, but it is still the user's machine
+ * that has to be fixed, so it carries the same remediation hint as the
+ * installer rather than a bare stack trace.
  */
 export function resolveKeyringEntryFactory(
 	installDir: string
@@ -309,8 +339,11 @@ export function resolveKeyringEntryFactory(
 	}
 	const bindingPath = findKeyringBinding(installDir);
 	if (bindingPath === null) {
-		throw new Error(
-			"`@napi-rs/keyring` binding not found. Call `installKeyringBindingSync()` first."
+		throw new UserError(
+			`The \`@napi-rs/keyring\` native binding is not available.\n\n` +
+				`Retry the command, or install the binding globally:\n` +
+				`  npm install -g @napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
+			{ telemetryMessage: "workers-auth keyring binding not loadable" }
 		);
 	}
 	const mod = createRequire(bindingPath)(bindingPath) as KeyringModule;
