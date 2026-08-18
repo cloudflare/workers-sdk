@@ -8,7 +8,10 @@ import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";

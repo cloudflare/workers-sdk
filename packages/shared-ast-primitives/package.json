@@ -1,8 +1,8 @@
 {
-	"name": "@cloudflare/codemod",
+	"name": "@cloudflare/shared-ast-primitives",
 	"version": "1.1.0",
 	"private": true,
-	"description": "Internal codemod utilities",
+	"description": "Internal AST-manipulation primitives shared across Cloudflare Workers SDK codemods",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
@@ -12,7 +12,7 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
-		"directory": "packages/codemod"
+		"directory": "packages/shared-ast-primitives"
 	},
 	"files": [
 		"dist"

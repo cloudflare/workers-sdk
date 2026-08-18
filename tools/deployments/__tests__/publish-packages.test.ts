@@ -266,6 +266,7 @@ describe("the real workspace", () => {
 		expect(tierNames(tiers)).toMatchInlineSnapshot(`
 			[
 			  [
+			    "@cloudflare/codemods",
 			    "@cloudflare/config",
 			    "@cloudflare/kv-asset-handler",
 			    "@cloudflare/pages-functions",

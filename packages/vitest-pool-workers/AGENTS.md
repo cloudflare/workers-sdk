@@ -27,11 +27,10 @@
 
 ## BUILD
 
-`tsdown.config.ts` defines 3 separate builds (all ESM):
+`tsdown.config.ts` defines 2 separate builds (all ESM):
 
 1. pool — `src/pool/index.ts` → `dist/pool` (emits type declarations)
 2. worker + libs — `src/worker/index.ts` plus `src/worker/lib` and `src/worker/node` → `dist/worker`
-3. codemods — `src/codemods/vitest-v3-to-v4.ts` → `dist/codemods`
 
 Types entry `types/cloudflare-test.d.ts` is hand-written (NOT generated from source).
 

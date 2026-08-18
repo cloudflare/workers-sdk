@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { transformFile } from "@cloudflare/codemod";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
