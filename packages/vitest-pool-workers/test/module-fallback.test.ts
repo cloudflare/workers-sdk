@@ -7,10 +7,13 @@ import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	decodeEncodedSpecifier,
-	ENCODED_PATH_PREFIX,
 	encodeRedirectLocation,
 	handleModuleFallbackRequest,
 } from "../src/pool/module-fallback";
+import {
+	ENCODED_PATH_PREFIX,
+	markCreateRequireUrl,
+} from "../src/shared/module-path";
 import type { Vite } from "vitest/node";
 
 // The fallback handler only reads `vite.pluginContainer.resolveId`, and only
@@ -134,6 +137,28 @@ describe("encodeRedirectLocation / decodeEncodedSpecifier", () => {
 		const p = "/a/50%off/c.js";
 		expect(() => decodeEncodedSpecifier(p)).not.toThrow();
 		expect(decodeEncodedSpecifier(p)).toBe(p);
+	});
+});
+
+describe("markCreateRequireUrl", () => {
+	it("marks and decodes file URLs containing spaces", ({ expect }) => {
+		const url = "file:///a/my%20project/index.cjs";
+		const markedPath = new URL(markCreateRequireUrl(url)).pathname;
+		expect(markedPath.startsWith(ENCODED_PATH_PREFIX)).toBe(true);
+		expect(decodeEncodedSpecifier(markedPath)).toBe("/a/my project/index.cjs");
+	});
+
+	it("preserves literal percent sequences", ({ expect }) => {
+		const url = "file:///C:/my%20project/build%2520output/index.cjs";
+		const markedPath = new URL(markCreateRequireUrl(url)).pathname;
+		expect(decodeEncodedSpecifier(markedPath)).toBe(
+			"/C:/my project/build%20output/index.cjs"
+		);
+	});
+
+	it("leaves file URLs without encoded characters untouched", ({ expect }) => {
+		const url = "file:///a/project/index.cjs";
+		expect(markCreateRequireUrl(url)).toBe(url);
 	});
 });
 

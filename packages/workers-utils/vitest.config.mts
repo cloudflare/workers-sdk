@@ -6,7 +6,7 @@ export default defineConfig({
 		testTimeout: 15_000,
 		pool: "forks",
 		include: ["**/tests/**/*.test.ts"],
-		globalSetup: path.resolve(__dirname, "tests/vitest.global.ts"),
+		globalSetup: path.resolve(import.meta.dirname, "tests/vitest.global.ts"),
 		reporters: ["default"],
 		unstubEnvs: true,
 		mockReset: true,

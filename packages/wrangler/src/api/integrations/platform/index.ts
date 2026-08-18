@@ -513,6 +513,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		zone: getZoneFromConfig(config),
+		access: config.access?.dev,
 
 		...bindingOptions,
 		...sitesOptions,
