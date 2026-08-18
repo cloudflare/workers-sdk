@@ -34,7 +34,15 @@ export function tailEventsReviver(_: string, value: any) {
 		if (SERIALIZED_DATE in value) {
 			return new Date(value[SERIALIZED_DATE]);
 		} else if (SERIALIZED_BIGINT in value) {
-			return BigInt(value[SERIALIZED_BIGINT]);
+			try {
+				return BigInt(value[SERIALIZED_BIGINT]);
+			} catch {
+				// `BigInt()` throws on a string that isn't an integer, unlike
+				// `new Date()`. A payload that merely happens to carry the tag would
+				// otherwise fail the parse it is meant to survive, so leave it as the
+				// plain object it already is.
+				return value;
+			}
 		}
 	}
 	return value;

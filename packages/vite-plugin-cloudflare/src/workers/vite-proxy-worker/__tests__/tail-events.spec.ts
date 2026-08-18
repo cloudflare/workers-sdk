@@ -45,6 +45,27 @@ describe("tail event serialization", () => {
 		expect(result.value.getTime()).toBe(date.getTime());
 	});
 
+	test("restores a bigint", ({ expect }) => {
+		const result = roundTrip<{ value: bigint }>({
+			value: 9007199254740993n,
+		});
+
+		expect(result.value).toBe(9007199254740993n);
+	});
+
+	test("restores a bigint published on a diagnostics channel", ({ expect }) => {
+		// `TraceDiagnosticChannelEvent.message` is typed `any`, so anything a
+		// worker publishes lands here — including a bigint, which
+		// `JSON.stringify()` throws on rather than dropping.
+		const result = roundTrip<{
+			diagnosticsChannelEvents: { channel: string; message: bigint }[];
+		}>({
+			diagnosticsChannelEvents: [{ channel: "test", message: 5n }],
+		});
+
+		expect(result.diagnosticsChannelEvents[0].message).toBe(5n);
+	});
+
 	test("leaves a date-like string alone", ({ expect }) => {
 		const result = roundTrip<{ message: string }>({
 			message: "2025-05-01T12:34:56.000Z",
@@ -70,5 +91,26 @@ describe("tail event serialization", () => {
 		});
 
 		expect(result.logged).toBeInstanceOf(Date);
+	});
+
+	test("revives a payload that already contains the bigint tag", ({
+		expect,
+	}) => {
+		// Same known trade-off as the date tag above.
+		const result = roundTrip<{ logged: bigint }>({
+			logged: { ___serialized_bigint___: "5" },
+		});
+
+		expect(result.logged).toBe(5n);
+	});
+
+	test("leaves a malformed bigint tag alone", ({ expect }) => {
+		// `BigInt("not a number")` throws, so the tag has to be tolerated rather
+		// than trusted — otherwise reviving is itself a way to fail the parse.
+		const result = roundTrip<{ logged: Record<string, string> }>({
+			logged: { ___serialized_bigint___: "not a number" },
+		});
+
+		expect(result.logged).toEqual({ ___serialized_bigint___: "not a number" });
 	});
 });
