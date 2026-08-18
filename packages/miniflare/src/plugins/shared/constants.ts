@@ -19,6 +19,14 @@ export function getDirectSocketName(workerIndex: number, entrypoint: string) {
 	return `${SOCKET_DIRECT_PREFIX}:${workerIndex}:${entrypoint}`;
 }
 
+/**
+ * Utility to get the name for a raw socket listener implementing a worker's `connect` handler.
+ *
+ * @param workerIndex Index of the worker the listener belongs to
+ * @param protocol Protocol the listener accepts connections for
+ * @param port Port the listener accepts connections for
+ * @returns the name for the socket
+ */
 export function getConnectSocketName(
 	workerIndex: number,
 	protocol: "tcp" | "udp",

@@ -5258,6 +5258,10 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	return isValid;
 };
 
+/**
+ * Validate that the field is an array of `connect` handler definitions, each with a
+ * unique protocol/port combination.
+ */
 function validateConnectHandlers(envName: string): ValidatorFn {
 	return (diagnostics, field, value, config) => {
 		if (value === undefined) {
@@ -5324,6 +5328,9 @@ function validateConnectHandlers(envName: string): ValidatorFn {
 	};
 }
 
+/**
+ * Check that the given field is a valid "connect" handler object.
+ */
 const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
