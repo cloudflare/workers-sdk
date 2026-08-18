@@ -1,11 +1,7 @@
 import { describe, test } from "vitest";
-import {
-	getJsonResponse,
-	isBuild,
-	satisfiesMinimumViteVersion,
-} from "../../../__test-utils__";
+import { getJsonResponse, isBuild } from "../../../__test-utils__";
 
-describe.runIf(isBuild && satisfiesMinimumViteVersion("7.0.0"))(
+describe.runIf(isBuild)(
 	"builds additional Worker environments not built in `builder.buildApp` config",
 	() => {
 		test("returns a response from another Worker", async ({ expect }) => {
