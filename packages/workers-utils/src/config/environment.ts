@@ -1667,7 +1667,7 @@ export interface EnvironmentNonInheritable {
 		/** The Flagship app ID to bind to. */
 		app_id?: string;
 
-		/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
+		/** Set to `true` to evaluate flags against the remote Flagship app during local dev, instead of the local simulator. */
 		remote?: boolean;
 	}[];
 

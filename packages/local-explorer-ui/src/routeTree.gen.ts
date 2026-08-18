@@ -15,6 +15,7 @@ import { Route as WorkflowsWorkflowNameRouteImport } from './routes/workflows/$w
 import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
 import { Route as ObservabilityEventsRouteImport } from './routes/observability/events'
 import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
+import { Route as FlagshipAppIdRouteImport } from './routes/flagship/$appId'
 import { Route as DoClassNameRouteImport } from './routes/do/$className'
 import { Route as D1DatabaseIdRouteImport } from './routes/d1/$databaseId'
 import { Route as WorkflowsWorkflowNameIndexRouteImport } from './routes/workflows/$workflowName/index'
@@ -52,6 +53,11 @@ const ObservabilityEventsRoute = ObservabilityEventsRouteImport.update({
 const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
   id: '/kv/$namespaceId',
   path: '/kv/$namespaceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FlagshipAppIdRoute = FlagshipAppIdRouteImport.update({
+  id: '/flagship/$appId',
+  path: '/flagship/$appId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DoClassNameRoute = DoClassNameRouteImport.update({
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
+  '/flagship/$appId': typeof FlagshipAppIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
@@ -116,6 +123,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
+  '/flagship/$appId': typeof FlagshipAppIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
   '/observability': typeof ObservabilityIndexRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
+  '/flagship/$appId': typeof FlagshipAppIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/'
     | '/d1/$databaseId'
     | '/do/$className'
+    | '/flagship/$appId'
     | '/kv/$namespaceId'
     | '/observability/events'
     | '/r2/$bucketName'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/d1/$databaseId'
+    | '/flagship/$appId'
     | '/kv/$namespaceId'
     | '/observability/events'
     | '/observability'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/'
     | '/d1/$databaseId'
     | '/do/$className'
+    | '/flagship/$appId'
     | '/kv/$namespaceId'
     | '/observability/events'
     | '/r2/$bucketName'
@@ -195,6 +207,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   D1DatabaseIdRoute: typeof D1DatabaseIdRoute
   DoClassNameRoute: typeof DoClassNameRouteWithChildren
+  FlagshipAppIdRoute: typeof FlagshipAppIdRoute
   KvNamespaceIdRoute: typeof KvNamespaceIdRoute
   ObservabilityEventsRoute: typeof ObservabilityEventsRoute
   R2BucketNameRoute: typeof R2BucketNameRouteWithChildren
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/kv/$namespaceId'
       fullPath: '/kv/$namespaceId'
       preLoaderRoute: typeof KvNamespaceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/flagship/$appId': {
+      id: '/flagship/$appId'
+      path: '/flagship/$appId'
+      fullPath: '/flagship/$appId'
+      preLoaderRoute: typeof FlagshipAppIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/do/$className': {
@@ -352,6 +372,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   D1DatabaseIdRoute: D1DatabaseIdRoute,
   DoClassNameRoute: DoClassNameRouteWithChildren,
+  FlagshipAppIdRoute: FlagshipAppIdRoute,
   KvNamespaceIdRoute: KvNamespaceIdRoute,
   ObservabilityEventsRoute: ObservabilityEventsRoute,
   R2BucketNameRoute: R2BucketNameRouteWithChildren,

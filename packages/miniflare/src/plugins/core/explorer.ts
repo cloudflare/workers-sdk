@@ -8,9 +8,11 @@ import {
 	type Worker_Module,
 } from "../../runtime";
 import { CoreBindings } from "../../workers";
+import { FLAGSHIP_PLUGIN_NAME } from "../flagship";
 import {
 	extractObjectEntryId,
 	getEnvBindingsOfType,
+	getUserBindingServiceName,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
@@ -28,6 +30,7 @@ import type {
 import type {
 	BindingIdMap,
 	ExplorerWorkerOpts,
+	FlagshipBindingInfo,
 	WorkerResourceBindings,
 	WorkflowBindingInfo,
 } from "./types";
@@ -141,6 +144,21 @@ export function getExplorerServices(
 		});
 	}
 
+	// Bind each locally simulated Flagship app's binding worker, so the
+	// explorer can read and write its flag store through the admin API.
+	for (const flagshipInfo of Object.values(bindingIdMap.flagship)) {
+		explorerBindings.push({
+			name: flagshipInfo.binding,
+			service: {
+				name: getUserBindingServiceName(
+					FLAGSHIP_PLUGIN_NAME,
+					flagshipInfo.appId
+				),
+				entrypoint: "FlagshipBinding",
+			},
+		});
+	}
+
 	return [
 		// Disk service for serving explorer UI assets
 		{
@@ -171,7 +189,8 @@ export function getExplorerServices(
 export function constructExplorerBindingMap(
 	proxyBindings: Worker_Binding[],
 	durableObjectClassNames: DurableObjectClassNames,
-	workflowOptions?: Map<string, WorkflowOption>
+	workflowOptions?: Map<string, WorkflowOption>,
+	flagshipApps?: Map<string, string[]>
 ): BindingIdMap {
 	const IDToBindingName: BindingIdMap = {
 		d1: {},
@@ -179,7 +198,18 @@ export function constructExplorerBindingMap(
 		do: {},
 		r2: {},
 		workflows: {},
+		flagship: {},
 	};
+
+	// Flagship apps are addressed by app id rather than through a proxy
+	// binding, so they are passed in directly rather than parsed out.
+	for (const [appId, bindings] of flagshipApps ?? []) {
+		IDToBindingName.flagship[appId] = {
+			appId,
+			binding: `EXPLORER_FLAGSHIP_${appId}`,
+			bindings,
+		} satisfies FlagshipBindingInfo;
+	}
 
 	for (const binding of proxyBindings) {
 		// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING".
@@ -339,6 +369,7 @@ export function constructExplorerWorkerOpts(
 			r2: [],
 			do: [],
 			workflows: [],
+			flagship: [],
 		};
 
 		for (const [bindingName, binding] of getEnvBindingsOfType(
@@ -394,6 +425,13 @@ export function constructExplorerWorkerOpts(
 				className: workflow.exportName,
 				scriptName: workflow.workerName ?? workerName,
 			});
+		}
+
+		for (const [bindingName, binding] of getEnvBindingsOfType(
+			workerOpts.config,
+			"flagship"
+		)) {
+			bindings.flagship.push({ id: binding.id, bindingName });
 		}
 
 		result[workerName] = bindings;

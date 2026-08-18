@@ -80,6 +80,58 @@ export async function seedWorkflow(workflowName: string): Promise<{
 }
 
 /**
+ * Create a flag in the local Flagship store via the explorer API.
+ *
+ * @param appId The Flagship app id.
+ * @param flag The flag definition.
+ */
+export async function seedFlag(
+	appId: string,
+	flag: {
+		key: string;
+		enabled?: boolean;
+		default_variation: string;
+		variations: Record<string, unknown>;
+	}
+): Promise<void> {
+	const response = await fetch(
+		`${workerUrl}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${appId}/flags`,
+		{
+			body: JSON.stringify(flag),
+			headers: { "Content-Type": "application/json" },
+			method: "POST",
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			`Failed to seed flag '${flag.key}': ${await response.text()}`
+		);
+	}
+}
+
+/**
+ * Remove every flag from an app's local Flagship store.
+ *
+ * @param appId The Flagship app id.
+ */
+export async function cleanupFlags(appId: string): Promise<void> {
+	const response = await fetch(
+		`${workerUrl}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${appId}/flags`
+	);
+	const body = (await response.json()) as {
+		result?: Array<{ key?: string }>;
+	};
+	for (const flag of body.result ?? []) {
+		if (flag.key !== undefined) {
+			await fetch(
+				`${workerUrl}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${appId}/flags/${flag.key}`,
+				{ method: "DELETE" }
+			);
+		}
+	}
+}
+
+/**
  * Delete all instances of a workflow via the explorer API.
  */
 export async function cleanupWorkflow(workflowName: string): Promise<void> {
@@ -221,6 +273,16 @@ export async function navigateToDOObjectByName(
 	}
 
 	return objectId;
+}
+
+/**
+ * Navigate to a Flagship app's flag list.
+ *
+ * @param appId The Flagship app id.
+ */
+export async function navigateToFlagshipApp(appId: string): Promise<void> {
+	await navigateTo(`${LOCAL_EXPLORER_BASE_PATH}/flagship/${appId}`);
+	await waitForPageLoad();
 }
 
 /**
