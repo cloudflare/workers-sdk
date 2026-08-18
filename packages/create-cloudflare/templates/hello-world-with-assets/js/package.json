@@ -9,8 +9,8 @@
 		"test": "vitest"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.12.4",
-		"wrangler": "^3.101.0",
-		"vitest": "~3.2.0"
+		"@cloudflare/vitest-pool-workers": "^0.21.0",
+		"wrangler": "^4",
+		"vitest": "~4.1.0"
 	}
 }

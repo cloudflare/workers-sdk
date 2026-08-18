@@ -65,6 +65,17 @@ export function getWranglerSendMetricsFromEnv(): boolean | undefined {
 }
 
 /**
+ * `WRANGLER_NO_SKILLS_UPDATE_PROMPTS` suppresses the prompt that offers to
+ * update Cloudflare agent skills when they are out of date.
+ *
+ * Set to `"true"` to never be prompted for skills updates.
+ */
+export const getNoSkillsUpdatePromptsFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "WRANGLER_NO_SKILLS_UPDATE_PROMPTS",
+	});
+
+/**
  * `WRANGLER_SEND_ERROR_REPORTS` controls whether we attempt to send error reports to Sentry.
  *
  * Defaults to `false` to avoid noisy false-positive reports. Users can opt in

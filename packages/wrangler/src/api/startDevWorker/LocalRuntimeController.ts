@@ -216,6 +216,7 @@ export async function convertToConfigBundle(
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
 		zone: getZoneForCfWorkerHeader(event.config),
+		access: event.config.access,
 		sendMetrics: event.config.sendMetrics,
 		publicUrl: event.config.dev?.server?.port
 			? buildPublicUrl({
@@ -380,6 +381,9 @@ export class LocalRuntimeController extends RuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
+					complianceConfig: {
+						compliance_region: data.config.complianceRegion,
+					},
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;

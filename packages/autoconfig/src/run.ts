@@ -8,8 +8,8 @@ import {
 } from "@cloudflare/cli-shared-helpers/gitignore";
 import { installWrangler } from "@cloudflare/cli-shared-helpers/packages";
 import {
+	DEFAULT_COMPAT_DATE,
 	FatalError,
-	getTodaysCompatDate,
 	isNodejsCompatDefaultOn,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
@@ -93,7 +93,7 @@ export async function runAutoConfig(
 		"The Output Directory is unexpectedly missing"
 	);
 
-	const compatibilityDate = getTodaysCompatDate();
+	const compatibilityDate = DEFAULT_COMPAT_DATE;
 
 	const wranglerConfig: RawConfig = {
 		$schema: "node_modules/wrangler/config-schema.json",

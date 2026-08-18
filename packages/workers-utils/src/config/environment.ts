@@ -104,8 +104,14 @@ export type ContainerApp = {
 	// TODO: fill out the entire type
 
 	/**
-	 * Name of the application
-	 * @optional Defaults to `worker_name-class_name` if not specified.
+	 * Name of the application.
+	 *
+	 * This is also the identifier used to reference the container from a Durable
+	 * Object's `exports` entry via its `container` field.
+	 *
+	 * @optional Defaults to `worker_name-class_name` if not specified. A name is
+	 * required when `class_name` is not set, since there is no class name to
+	 * derive the default from.
 	 */
 	name?: string;
 
@@ -143,8 +149,12 @@ export type ContainerApp = {
 
 	/**
 	 * The class name of the Durable Object the container is connected to.
+	 *
+	 * @optional Instead of naming the Durable Object here, you can reference this
+	 * container from the Durable Object's `exports` entry via its `container`
+	 * field. Exactly one of the two directions must be configured.
 	 */
-	class_name: string;
+	class_name?: string;
 
 	/**
 	 * The scheduling policy of the application
@@ -382,12 +392,23 @@ export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
  *    script via `transfer_from`.
  *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
  *    `storage` and `transfer_from` are both required.
+ *
+ * The live states may additionally attach a container via `container`, which
+ * names an entry in the top-level `containers` array. Tombstones cannot.
  */
 export type DurableObjectExport =
 	| {
 			type: "durable-object";
 			state?: "created";
 			storage: DurableObjectExportStorage;
+			/**
+			 * Attach a container to this Durable Object. Must match the `name` of an
+			 * entry in the top-level `containers` array, and requires
+			 * `storage: "sqlite"`.
+			 *
+			 * @optional
+			 */
+			container?: string;
 	  }
 	| { type: "durable-object"; state: "deleted" }
 	| { type: "durable-object"; state: "renamed"; renamed_to: string }
@@ -401,6 +422,14 @@ export type DurableObjectExport =
 			state: "expecting-transfer";
 			storage: DurableObjectExportStorage;
 			transfer_from: string;
+			/**
+			 * Attach a container to this Durable Object. Must match the `name` of an
+			 * entry in the top-level `containers` array, and requires
+			 * `storage: "sqlite"`.
+			 *
+			 * @optional
+			 */
+			container?: string;
 	  };
 
 export interface WorkerEntrypointExport {
@@ -745,6 +774,13 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	observability: Observability | undefined;
+
+	/**
+	 * Specify the Cloudflare Access authentication behavior of the Worker.
+	 *
+	 * @inheritable
+	 */
+	access: Access | undefined;
 
 	/**
 	 * Specify the cache behavior of the Worker.
@@ -1816,6 +1852,16 @@ export interface Observability {
 		 * @default []
 		 */
 		destinations?: string[];
+	};
+}
+
+export interface Access {
+	/** Local dev simulation of Cloudflare Access authentication */
+	dev?: {
+		/** The Access application audience tag (aud) */
+		aud: string;
+		/** Mock identity object returned by ctx.access.getIdentity() */
+		identity?: Record<string, unknown>;
 	};
 }
 

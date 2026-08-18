@@ -3,6 +3,10 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { argv } from "node:process";
 import dedent from "ts-dedent";
+import {
+	DEFAULT_COMPAT_DATE_PATH,
+	updateDefaultCompatDate,
+} from "../deployments/update-default-compat-date";
 
 if (require.main === module) {
 	try {
@@ -85,7 +89,23 @@ function main({
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
 	writeChangeSet(changesetPrefix, prNumber, changesetHeader, commitMessage);
-	commitAndPush(commitMessage);
+	commitAndPush(commitMessage, updatePathsForChanges(changes));
+}
+
+/**
+ * Extra paths to include in the commit, for files that are derived from the
+ * bumped dependencies.
+ *
+ * The default compatibility date is derived from the pinned `workerd` version,
+ * so it has to move with it or `pnpm check:compat-date` fails.
+ */
+export function updatePathsForChanges(changes: Map<string, Change>): string[] {
+	if (!changes.has("workerd")) {
+		return [];
+	}
+	console.log("INFO: Updating the default compatibility date for workerd");
+	updateDefaultCompatDate();
+	return [DEFAULT_COMPAT_DATE_PATH];
 }
 
 export function getPackageJsonDiff(packageJSONPath: string): string[] {
@@ -195,8 +215,11 @@ export function writeChangeSet(
 	);
 }
 
-export function commitAndPush(commitMessage: string): void {
-	executeCommand("git", ["add", ".changeset"]);
+export function commitAndPush(
+	commitMessage: string,
+	extraPaths: string[] = []
+): void {
+	executeCommand("git", ["add", ".changeset", ...extraPaths]);
 	executeCommand("git", ["commit", "-m", commitMessage]);
 	executeCommand("git", ["push"]);
 }

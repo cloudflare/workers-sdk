@@ -6,7 +6,7 @@ import {
 import { defineProject, mergeConfig } from "vitest/config";
 import configShared from "../../../vitest.shared";
 
-const assetsPath = path.join(__dirname, "public");
+const assetsPath = path.join(import.meta.dirname, "public");
 
 export default mergeConfig(
 	configShared,

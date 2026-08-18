@@ -292,7 +292,9 @@ type WorkerMetadataPut = {
 		config?: AssetConfigMetadata;
 	};
 	observability?: Observability | undefined;
-	containers?: { class_name: string }[];
+	// `class_name` is omitted when the container is instead referenced from the
+	// Durable Object's `exports` entry via its `container` field.
+	containers?: { name?: string; class_name?: string }[];
 	package_dependencies?: Array<{
 		name: string;
 		packageJsonVersion: string;
@@ -564,6 +566,9 @@ export interface StartDevWorkerInput {
 
 	tailConsumers?: CfTailConsumer[];
 	streamingTailConsumers?: CfTailConsumer[];
+
+	/** Cloudflare Access authentication configuration */
+	access?: Config["access"];
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.

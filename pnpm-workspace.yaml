@@ -51,8 +51,6 @@ minimumReleaseAgeExclude:
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
   - "rosie-skills"
-  # capnp-es@0.0.15 was released by us on Aug 11, 2026.
-  - "capnp-es@0.0.15"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Build scripts
@@ -130,14 +128,14 @@ catalog:
   esbuild: "0.28.1"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20260811.1"
-  workerd: "1.20260811.1"
+  "@cloudflare/workers-types": "^5.20260814.1"
+  workerd: "1.20260814.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
-  msw: 2.12.4
+  msw: "2.14.6"
   tinyglobby: "0.2.16"
   "tree-kill": "1.2.2"
-  "capnp-es": "0.0.15"
+  "capnp-es": "0.0.16"
   "capnweb": "0.5.0"
   zod: "4.4.3"
   "ci-info": "4.4.0"
