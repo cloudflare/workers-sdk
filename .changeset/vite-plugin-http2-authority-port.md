@@ -2,10 +2,14 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Preserve the port when a request arrives over HTTP/2
+Preserve the port when the dev server is accessed over HTTPS
 
-Serving the dev server over HTTPS meant `request.url` and `X-Forwarded-Host` could lose the port, so a Worker saw `https://localhost` where the browser had asked for `https://localhost:5173`. Auth libraries that rebuild redirect URLs from the request — Clerk's handshake, for example — then redirected to the wrong origin and could loop. Plain HTTP was unaffected.
+A Worker served through `vite dev` over HTTPS could see `https://localhost`
+where the browser had asked for `https://localhost:5173`. The port was dropped
+from both `request.url` and the `X-Forwarded-Host` header, so auth libraries
+that rebuild redirect URLs from the incoming request — Clerk's handshake, for
+example — sent users to that portless origin and could loop. Serving over plain
+HTTP was unaffected.
 
-Browsers usually negotiate HTTP/2 over HTTPS, and HTTP/2 carries the authority in the `:authority` pseudo-header rather than in `Host`. Pseudo-headers are dropped when the incoming request is converted to a Fetch `Request`, so no `Host` was found and the host fell back to a bare `localhost`. `X-Forwarded-Host` was skipped entirely for the same reason.
-
-The authority is now read from `:authority` when `Host` is absent, and `X-Forwarded-Host` falls back to the resolved request URL. HTTP/1.1 requests are unchanged, since `Host` is still preferred whenever it is present.
+The port is now preserved in both, so those redirects come back to the dev
+server.
