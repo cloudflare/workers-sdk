@@ -84,7 +84,7 @@ contract so the parent can drive either impl interchangeably.
 
 - Unit tests: `.spec.ts` in `__tests__/`
 - E2E tests: `.test.ts` in `e2e/`, own vitest config
-- Playground tests: Playwright-based, tested across Vite 6/7/8 in CI
+- Playground tests: Playwright-based, tested across Vite 7/8 in CI
 - Playground request helpers (`playground/__test-utils__/responses.ts`):
   - `getTextResponse()` / `getJsonResponse()` issue a request with browser
     navigation headers (`Sec-Fetch-Mode: navigate` et al), which the asset and
