@@ -1064,9 +1064,8 @@ export const kvBulkPutCommand = createCommand({
 					for (const value of content) {
 						let data = value.value;
 						if (value.base64) {
-							// Decoding to a string here would re-read the bytes as UTF-8,
-							// so anything that is not valid UTF-8 (images, compressed
-							// blobs) would reach the store as U+FFFD.
+							// Put the raw bytes in, not a string. The value has to stay
+							// binary here so nothing decodes it on the way to the store.
 							data = Buffer.from(data, "base64");
 						}
 						await namespace.put(value.key, data, {

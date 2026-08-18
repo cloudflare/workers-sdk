@@ -238,7 +238,6 @@ describe("kv", () => {
 			await runWrangler(
 				`kv bulk put binary-keys.json --namespace-id binary-namespace-id`
 			);
-			std.getAndClearOut();
 
 			await runWrangler(`kv key get binary --namespace-id binary-namespace-id`);
 			expect(proc.write).toEqual(binary);
