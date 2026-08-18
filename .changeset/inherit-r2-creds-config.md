@@ -1,5 +1,5 @@
 ---
-"@cloudflare/config": patch
+"@cloudflare/config": minor
 ---
 
 Add R2 local S3 credentials to the shared config binding shape
