@@ -223,7 +223,6 @@ import { hyperdriveGetCommand } from "./hyperdrive/get";
 import { hyperdriveNamespace } from "./hyperdrive/index";
 import { hyperdriveListCommand } from "./hyperdrive/list";
 import {
-	hyperdrivePlanetscaleCreateCommand,
 	hyperdrivePlanetscaleNamespace,
 	hyperdrivePlanetscaleSignatureCommand,
 } from "./hyperdrive/planetscale";
@@ -1597,10 +1596,6 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler hyperdrive planetscale",
 			definition: hyperdrivePlanetscaleNamespace,
-		},
-		{
-			command: "wrangler hyperdrive planetscale create",
-			definition: hyperdrivePlanetscaleCreateCommand,
 		},
 		{
 			command: "wrangler hyperdrive planetscale signature",

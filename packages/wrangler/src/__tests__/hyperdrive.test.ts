@@ -16,64 +16,6 @@ import type {
 	HyperdriveConfig,
 	PatchHyperdriveBody,
 } from "../hyperdrive/client";
-import type * as childProcess from "node:child_process";
-import type * as nodeEvents from "node:events";
-
-const pscale = vi.hoisted(() => ({
-	calls: [] as { command: string; args: string[]; stdin: string }[],
-	/** The binary the mock stands in for, so `WRANGLER_PSCALE_BIN` is testable. */
-	bin: "pscale",
-	/** Exit code per subcommand, or "error" to simulate a missing binary. */
-	version: 0 as number | "error",
-	create: 0 as number | "error",
-}));
-
-vi.mock("node:child_process", async () => {
-	const actual =
-		await vi.importActual<typeof childProcess>("node:child_process");
-	const { EventEmitter } =
-		await vi.importActual<typeof nodeEvents>("node:events");
-	const { Writable } =
-		await vi.importActual<typeof import("node:stream")>("node:stream");
-
-	return {
-		...actual,
-		spawn: vi.fn((...args: Parameters<typeof actual.spawn>) => {
-			const [command, commandArgs] = args;
-			if (command !== pscale.bin) {
-				return actual.spawn(...args);
-			}
-
-			const pscaleArgs = Array.isArray(commandArgs)
-				? commandArgs.map((arg) => arg.toString())
-				: [];
-			const call = { command, args: pscaleArgs, stdin: "" };
-			pscale.calls.push(call);
-
-			const child = new EventEmitter() as ReturnType<typeof actual.spawn>;
-			Object.defineProperty(child, "stdin", {
-				value: new Writable({
-					write(chunk, _encoding, callback) {
-						call.stdin += chunk.toString();
-						callback();
-					},
-				}),
-			});
-			const result =
-				pscaleArgs[0] === "version" ? pscale.version : pscale.create;
-
-			setImmediate(() => {
-				if (result === "error") {
-					child.emit("error", new Error("spawn pscale ENOENT"));
-				} else {
-					child.emit("close", result, null);
-				}
-			});
-
-			return child;
-		}),
-	};
-});
 
 describe("hyperdrive help", () => {
 	const std = mockConsoleMethods();
@@ -157,16 +99,6 @@ describe("hyperdrive planetscale", () => {
 
 	const std = mockConsoleMethods();
 
-	let signatureRequests = 0;
-
-	beforeEach(() => {
-		signatureRequests = 0;
-		pscale.calls = [];
-		pscale.bin = "pscale";
-		pscale.version = 0;
-		pscale.create = 0;
-	});
-
 	function mockCreateDatabaseSignature(): Promise<{
 		accountId: string;
 		integration: string;
@@ -177,7 +109,6 @@ describe("hyperdrive planetscale", () => {
 				http.post(
 					"*/accounts/:accountId/hyperdrive/integrationsOperations/:integration/createDatabaseSignature",
 					async ({ params, request }) => {
-						signatureRequests++;
 						resolve({
 							accountId: String(params.accountId),
 							integration: String(params.integration),
@@ -207,8 +138,7 @@ describe("hyperdrive planetscale", () => {
 			Provision Cloudflare-billed PlanetScale databases [experimental]
 
 			COMMANDS
-			  wrangler hyperdrive planetscale create <name>  Create a Cloudflare-billed PlanetScale database via the PlanetScale CLI. Arguments after \`--\` are forwarded to \`pscale database create\` [experimental]
-			  wrangler hyperdrive planetscale signature      Generate a signed authorization for creating a Cloudflare-billed PlanetScale database [experimental]
+			  wrangler hyperdrive planetscale signature  Generate a signed authorization for creating a Cloudflare-billed PlanetScale database [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config          Path to Wrangler configuration file  [string]
@@ -269,209 +199,6 @@ describe("hyperdrive planetscale", () => {
 			timestamp: "1700000000",
 			signature: "deadbeef",
 		});
-	});
-
-	it("should show the create command help", async ({ expect }) => {
-		await runWrangler("hyperdrive planetscale create --help");
-		await endEventLoop();
-
-		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler hyperdrive planetscale create <name>
-
-			Create a Cloudflare-billed PlanetScale database via the PlanetScale CLI. Arguments after \`--\` are forwarded to \`pscale database create\` [experimental]
-
-			POSITIONALS
-			  name  The name of the PlanetScale database to create  [string] [required]
-
-			GLOBAL FLAGS
-			  -c, --config          Path to Wrangler configuration file  [string]
-			      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help            Show help  [boolean]
-			      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
-			      --profile         Use a specific auth profile  [string]
-			  -v, --version         Show version number  [boolean]
-
-			OPTIONS
-			      --org  The PlanetScale organization to create the database in  [string]"
-		`);
-	});
-
-	it("should pass the signature to the PlanetScale CLI", async ({ expect }) => {
-		void mockCreateDatabaseSignature();
-		await runWrangler("hyperdrive planetscale create my-db --org my-org");
-
-		expect(pscale.calls).toEqual([
-			{ command: "pscale", args: ["version"], stdin: "" },
-			{
-				command: "pscale",
-				args: [
-					"database",
-					"create",
-					"my-db",
-					"--cloudflare-billing",
-					"@-",
-					"--org",
-					"my-org",
-				],
-				stdin:
-					'{"account_id":"some-account-id","timestamp":"1700000000","signature":"deadbeef"}',
-			},
-		]);
-	});
-
-	it("should forward arguments after -- to the PlanetScale CLI", async ({
-		expect,
-	}) => {
-		void mockCreateDatabaseSignature();
-		await runWrangler(
-			"hyperdrive planetscale create my-db --org my-org -- --region us-east --cluster-size PS-10 --wait"
-		);
-
-		expect(pscale.calls[1].args).toEqual([
-			"database",
-			"create",
-			"my-db",
-			"--cloudflare-billing",
-			"@-",
-			"--org",
-			"my-org",
-			"--region",
-			"us-east",
-			"--cluster-size",
-			"PS-10",
-			"--wait",
-		]);
-	});
-
-	it("should not forward the wrangler command path", async ({ expect }) => {
-		void mockCreateDatabaseSignature();
-		await runWrangler("hyperdrive planetscale create my-db");
-
-		for (const segment of ["hyperdrive", "planetscale", "create"]) {
-			expect(pscale.calls[1].args.filter((a) => a === segment)).toHaveLength(
-				segment === "create" ? 1 : 0
-			);
-		}
-	});
-
-	it("should reject a passed-through --cloudflare-billing", async ({
-		expect,
-	}) => {
-		void mockCreateDatabaseSignature();
-
-		await expect(
-			runWrangler(
-				"hyperdrive planetscale create my-db -- --cloudflare-billing @-"
-			)
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: \`--cloudflare-billing\` is set by Wrangler and cannot be passed through.]`
-		);
-	});
-
-	it("should keep the signature out of the process arguments", async ({
-		expect,
-	}) => {
-		void mockCreateDatabaseSignature();
-		await runWrangler("hyperdrive planetscale create my-db");
-
-		expect(pscale.calls.flatMap(({ args }) => args).join(" ")).not.toContain(
-			"deadbeef"
-		);
-	});
-
-	it("should send only the fields the PlanetScale CLI accepts", async ({
-		expect,
-	}) => {
-		void mockCreateDatabaseSignature();
-		await runWrangler("hyperdrive planetscale create my-db");
-
-		// The CLI parses with DisallowUnknownFields, so extra keys are fatal.
-		expect(Object.keys(JSON.parse(pscale.calls[1].stdin))).toEqual([
-			"account_id",
-			"timestamp",
-			"signature",
-		]);
-	});
-
-	it("should omit --org when not provided", async ({ expect }) => {
-		void mockCreateDatabaseSignature();
-		await runWrangler("hyperdrive planetscale create my-db");
-
-		expect(pscale.calls[1].args).not.toContain("--org");
-	});
-
-	it("should respect WRANGLER_PSCALE_BIN", async ({ expect }) => {
-		pscale.bin = "/custom/pscale";
-		vi.stubEnv("WRANGLER_PSCALE_BIN", pscale.bin);
-		void mockCreateDatabaseSignature();
-
-		await runWrangler("hyperdrive planetscale create my-db");
-
-		expect(pscale.calls.map(({ command }) => command)).toEqual([
-			"/custom/pscale",
-			"/custom/pscale",
-		]);
-	});
-
-	it("should error without requesting a signature when pscale exits non-zero on version", async ({
-		expect,
-	}) => {
-		pscale.version = 1;
-		void mockCreateDatabaseSignature();
-
-		await expect(runWrangler("hyperdrive planetscale create my-db")).rejects
-			.toThrowErrorMatchingInlineSnapshot(`
-			[Error: The PlanetScale CLI is required to create a PlanetScale database, but \`pscale\` could not be run.
-			Install it from https://planetscale.com/docs/reference/planetscale-cli, or set WRANGLER_PSCALE_BIN to its path.
-			Alternatively, run \`wrangler hyperdrive planetscale signature\` and pass the values to \`pscale database create\` yourself.]
-		`);
-
-		expect(signatureRequests).toBe(0);
-	});
-
-	it("should error when the PlanetScale CLI cannot be spawned for create", async ({
-		expect,
-	}) => {
-		pscale.create = "error";
-		void mockCreateDatabaseSignature();
-
-		await expect(
-			runWrangler("hyperdrive planetscale create my-db")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Failed to run the PlanetScale CLI: spawn pscale ENOENT]`
-		);
-	});
-
-	it("should error without requesting a signature when pscale is missing", async ({
-		expect,
-	}) => {
-		pscale.version = "error";
-		void mockCreateDatabaseSignature();
-
-		await expect(runWrangler("hyperdrive planetscale create my-db")).rejects
-			.toThrowErrorMatchingInlineSnapshot(`
-			[Error: The PlanetScale CLI is required to create a PlanetScale database, but \`pscale\` could not be run.
-			Install it from https://planetscale.com/docs/reference/planetscale-cli, or set WRANGLER_PSCALE_BIN to its path.
-			Alternatively, run \`wrangler hyperdrive planetscale signature\` and pass the values to \`pscale database create\` yourself.]
-		`);
-
-		expect(signatureRequests).toBe(0);
-	});
-
-	it("should error when the PlanetScale CLI exits non-zero", async ({
-		expect,
-	}) => {
-		pscale.create = 1;
-		void mockCreateDatabaseSignature();
-
-		await expect(
-			runWrangler("hyperdrive planetscale create my-db")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: The PlanetScale CLI exited with code: 1. Your database was not created.]`
-		);
 	});
 });
 
