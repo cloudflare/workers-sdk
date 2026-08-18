@@ -61,7 +61,7 @@ describe("tail event serialization", () => {
 		// worker publishes lands here — including a bigint, which
 		// `JSON.stringify()` throws on rather than dropping.
 		const result = roundTrip<{
-			diagnosticsChannelEvents: { channel: string; message: bigint }[];
+			diagnosticsChannelEvents: [{ channel: string; message: bigint }];
 		}>({
 			diagnosticsChannelEvents: [{ channel: "test", message: 5n }],
 		});
