@@ -17,7 +17,7 @@ export default defineWorker({
 	name: "my-worker",
 	env: {
 		API_TOKEN: bindings.secret(), // string
-		CF_ANALYTICS_API_TOKEN: bindings.secret({ optional: true }), // string | undefined
+		SENTRY_TOKEN: bindings.secret({ optional: true }), // string | undefined
 	},
 });
 ```
