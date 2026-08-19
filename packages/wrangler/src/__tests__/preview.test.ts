@@ -1074,6 +1074,79 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should redact secret values from --json output even if the API echoes them back", async ({
+			expect,
+		}) => {
+			writeFileSync("secrets.json", JSON.stringify({ SECRET_A: "value-a" }));
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-json-redact",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							env?: Record<string, unknown>;
+						};
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-json-redact",
+								preview_id: "preview-id-json-redact",
+								preview_name: "test-preview",
+								urls: ["https://jsonredact.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: body.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json --json"
+			);
+
+			expect(std.out).not.toContain("value-a");
+			const output = JSON.parse(std.out) as {
+				deployment: {
+					env: Record<string, { type: string; text?: string }>;
+				};
+			};
+			expect(output.deployment.env.SECRET_A).toEqual({ type: "secret_text" });
+			// Non-secret bindings are unaffected
+			expect(output.deployment.env.ENVIRONMENT).toEqual({
+				type: "plain_text",
+				text: "preview",
+			});
+		});
+
 		test("should upload secrets from a .env format --secrets-file as secret_text bindings", async ({
 			expect,
 		}) => {
