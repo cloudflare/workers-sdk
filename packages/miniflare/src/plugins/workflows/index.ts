@@ -70,13 +70,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		];
 	},
 
-	async getServices({
-		options,
-		tmpPath,
-		sharedOptions,
-		workerNames,
-		isolatedResourcePersistencePath,
-	}) {
+	async getServices({ options, tmpPath, sharedOptions, workerNames }) {
 		const workflows = getEnvBindingsOfType(options.config, "workflow");
 		if (workflows.length === 0) {
 			return [];
@@ -85,7 +79,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
-			isolatedResourcePersistencePath
+			sharedOptions.isolatedResourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 		// each workflow should get its own storage service

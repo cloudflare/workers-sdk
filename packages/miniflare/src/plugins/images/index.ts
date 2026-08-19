@@ -64,7 +64,7 @@ export const IMAGES_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, isolatedResourcePersistencePath }) {
+	async getServices({ options, tmpPath, sharedOptions }) {
 		const services: Service[] = [];
 
 		const imagesBindings = getEnvBindingsOfType(options.config, "images");
@@ -88,7 +88,7 @@ export const IMAGES_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				IMAGES_PLUGIN_NAME,
 				tmpPath,
-				isolatedResourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath
 			);
 
 			await fs.mkdir(persistPath, { recursive: true });

@@ -709,9 +709,13 @@ export const InstanceOptionsSchema = z.strictObject({
 	 */
 	resourcePersistencePath: z.string().optional(),
 	/**
-	 * Per-instance root for resources that cannot participate in shared storage.
-	 * Belongs at the project level -- each project keeps its own copy of this
-	 * state rather than partitioning it under the shared resource root.
+	 * Root for resources that cannot participate in shared storage. Belongs at
+	 * the project level -- each project keeps its own copy of this state rather
+	 * than partitioning it under the shared resource root.
+	 *
+	 * Required when `unsafeEnableSharedStorage` is set. Parsing resolves this to
+	 * the effective isolated root, falling back to `resourcePersistencePath`
+	 * when shared storage is off, so readers never need to decide themselves.
 	 */
 	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
@@ -782,35 +786,47 @@ export type ParsedLegacyConfig = NonNullable<ParsedWorkerOptions["legacy"]>;
 
 export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 	workers: z.array(WorkerOptionsSchema),
-}).superRefine((options, ctx) => {
-	if (!options.unsafeEnableSharedStorage) {
-		return;
-	}
-	if (!options.resourcePersistencePath?.trim()) {
-		ctx.addIssue({
-			code: "custom",
-			path: ["resourcePersistencePath"],
-			message:
-				"Shared storage requires `resourcePersistencePath` to be set to the directory instances should share.",
-		});
-	}
-	if (!options.isolatedResourcePersistencePath?.trim()) {
-		ctx.addIssue({
-			code: "custom",
-			path: ["isolatedResourcePersistencePath"],
-			message:
-				"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared.",
-		});
-	}
-	if (!options.unsafeDevRegistryPath?.trim()) {
-		ctx.addIssue({
-			code: "custom",
-			path: ["unsafeDevRegistryPath"],
-			message:
-				"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry.",
-		});
-	}
-});
+})
+	.superRefine((options, ctx) => {
+		if (!options.unsafeEnableSharedStorage) {
+			return;
+		}
+		if (!options.resourcePersistencePath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["resourcePersistencePath"],
+				message:
+					"Shared storage requires `resourcePersistencePath` to be set to the directory instances should share.",
+			});
+		}
+		if (!options.isolatedResourcePersistencePath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["isolatedResourcePersistencePath"],
+				message:
+					"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared.",
+			});
+		}
+		if (!options.unsafeDevRegistryPath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["unsafeDevRegistryPath"],
+				message:
+					"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry.",
+			});
+		}
+	})
+	.transform((options) => ({
+		...options,
+		// Resolve the effective isolated root once, here, so that everything
+		// downstream reads a single field that is always the path to persist to.
+		// Without shared storage nothing is shared, so every resource is isolated
+		// and the configured resource root is the isolated root. Validation above
+		// has already required an explicit isolated root when sharing is enabled.
+		isolatedResourcePersistencePath: options.unsafeEnableSharedStorage
+			? options.isolatedResourcePersistencePath
+			: options.resourcePersistencePath,
+	}));
 
 export type MiniflareOptions = z.input<typeof MiniflareOptionsSchema>;
 

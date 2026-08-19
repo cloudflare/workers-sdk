@@ -36,7 +36,7 @@ export const HELLO_WORLD_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, tmpPath, isolatedResourcePersistencePath }) {
+	async getServices({ options, tmpPath, sharedOptions }) {
 		const bindings = getEnvBindingsOfType(options.config, "hello-world");
 
 		if (bindings.length === 0) {
@@ -46,7 +46,7 @@ export const HELLO_WORLD_PLUGIN: Plugin = {
 		const persistPath = getPersistPath(
 			HELLO_WORLD_PLUGIN_NAME,
 			tmpPath,
-			isolatedResourcePersistencePath
+			sharedOptions.isolatedResourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });

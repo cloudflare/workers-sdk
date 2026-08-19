@@ -77,7 +77,6 @@ export interface PluginServicesOptions {
 	// the dev-registry proxy worker, e.g. so the queue broker can deliver
 	// messages to a consumer in another `wrangler dev` process.
 	devRegistryEnabled: boolean;
-	isolatedResourcePersistencePath: string | undefined;
 
 	hyperdriveProxyController: HyperdriveProxyController;
 }
@@ -203,19 +202,6 @@ export function getPersistPath(
 	// errors. Forward slashes work for both Node.js fs APIs and workerd on all
 	// platforms.
 	return result.replaceAll("\\", "/");
-}
-
-export function getIsolatedResourcePersistencePath(
-	sharedOptions: Pick<
-		ParsedInstanceOptions,
-		| "isolatedResourcePersistencePath"
-		| "resourcePersistencePath"
-		| "unsafeEnableSharedStorage"
-	>
-): string | undefined {
-	return sharedOptions.unsafeEnableSharedStorage
-		? sharedOptions.isolatedResourcePersistencePath
-		: sharedOptions.resourcePersistencePath;
 }
 
 /**

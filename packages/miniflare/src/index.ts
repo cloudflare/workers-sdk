@@ -49,7 +49,6 @@ import {
 	getRemoteProxyConnectionString,
 	getStorageScope,
 	getTriggersOfType,
-	getIsolatedResourcePersistencePath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
@@ -1163,7 +1162,7 @@ export class Miniflare {
 		const doPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			getIsolatedResourcePersistencePath(this.#sharedOpts)
+			this.#sharedOpts.isolatedResourcePersistencePath
 		);
 
 		const namespacePath = path.join(doPersistPath, namespaceId);
@@ -1209,7 +1208,7 @@ export class Miniflare {
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			getIsolatedResourcePersistencePath(this.#sharedOpts)
+			this.#sharedOpts.isolatedResourcePersistencePath
 		);
 
 		// Engine DOs are stored under: <persistPath>/miniflare-workflows-<name>/<hexId>.sqlite
@@ -1419,7 +1418,7 @@ export class Miniflare {
 		const workflowsPersistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			this.#tmpPath,
-			getIsolatedResourcePersistencePath(this.#sharedOpts)
+			this.#sharedOpts.isolatedResourcePersistencePath
 		);
 
 		const uniqueKey = `miniflare-workflows-${workflowName}`;
@@ -2108,8 +2107,6 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
-				isolatedResourcePersistencePath:
-					getIsolatedResourcePersistencePath(sharedOpts),
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -3308,7 +3305,7 @@ export class Miniflare {
 		const durableObjectsPersistPath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			this.#tmpPath,
-			getIsolatedResourcePersistencePath(this.#sharedOpts)
+			this.#sharedOpts.isolatedResourcePersistencePath
 		);
 
 		try {
