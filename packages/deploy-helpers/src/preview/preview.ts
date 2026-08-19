@@ -551,10 +551,13 @@ export async function preview(
 				accountId,
 				workerName
 			);
+			// Compare against the env that was actually uploaded (config bindings
+			// plus --var and --secrets-file values), not just the config, so
+			// CLI-supplied bindings aren't reported as missing.
 			logMissingPreviewsBindingsWarning(
 				topLevelBindings,
 				previewDefaults.env,
-				extractConfigBindings(config)
+				deploymentRequest.env ?? {}
 			);
 		}
 	}
