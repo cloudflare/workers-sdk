@@ -252,6 +252,43 @@ describe("resolvePluginConfig - experimental.newConfig", () => {
 		expect(worker?.config.main).toBe(path.join(tempDir, "src/index.ts"));
 	});
 
+	test("ignores extra exports and never invokes exported helpers", async ({
+		expect,
+	}) => {
+		seedWorkerSource();
+		const marker = path.join(tempDir, "helper-was-called.txt");
+		writeWorkerConfig(
+			[
+				"import { writeFileSync } from 'node:fs';",
+				"import { defineWorker } from '@cloudflare/config';",
+				"export const WORKER_NAMES = { primary: 'experimental-config-worker' };",
+				"export function buildName() {",
+				`  writeFileSync(${JSON.stringify(marker)}, 'called');`,
+				"  return 'from-helper';",
+				"}",
+				"export default defineWorker({",
+				"  name: WORKER_NAMES.primary,",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"});",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{ experimental: { newConfig: true } },
+			{ root: tempDir },
+			viteEnv
+		)) as WorkersResolvedConfig;
+
+		// Resolving an export calls it when it is a function, so an exported
+		// helper must never reach the resolver.
+		expect(fs.existsSync(marker)).toBe(false);
+		const worker = result.environmentNameToWorkerMap.get(
+			"experimental_config_worker"
+		);
+		expect(worker?.config.name).toBe("experimental-config-worker");
+	});
+
 	test("evaluates a function config and passes the Vite mode", async ({
 		expect,
 	}) => {

@@ -30,16 +30,32 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 		)) as Record<string, unknown>;
 	}
 
-	async function loadConfig(configPath: string) {
-		const exports = await importSeeded(configPath);
+	async function loadConfig(
+		configPath: string,
+		options?: { include?: string[] }
+	) {
+		const loaded = await importSeeded(configPath);
+		const exports: Record<string, unknown> = {};
+		for (const [name, value] of Object.entries(loaded)) {
+			if (options?.include && !options.include.includes(name)) {
+				continue;
+			}
+			exports[name] = value;
+		}
 		return {
 			exports,
 			dependencies: new Set<string>([path.resolve(configPath)]),
 		};
 	}
 
-	async function loadAndValidateConfig(configPath: string, ctx: unknown) {
-		const { exports } = await loadConfig(configPath);
+	async function loadAndValidateConfig(
+		configPath: string,
+		ctx: unknown,
+		options?: { include?: string[] }
+	) {
+		const { exports } = await loadConfig(configPath, {
+			include: options?.include ?? actual.CONFIG_EXPORT_NAMES,
+		});
 		const resolved: Record<string, unknown> = {};
 		for (const [name, value] of Object.entries(exports)) {
 			resolved[name] = await actual.resolveExportDefinition(value, ctx);

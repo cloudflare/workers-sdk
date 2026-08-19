@@ -31,7 +31,7 @@ export {
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
-export { loadAndValidateConfig } from "./config-loader";
+export { CONFIG_EXPORT_NAMES, loadAndValidateConfig } from "./config-loader";
 export { resolveExportDefinition } from "./definition";
 export type { LoadConfigResult } from "./load";
 export type { LoadAndValidateConfigResult } from "./config-loader";
