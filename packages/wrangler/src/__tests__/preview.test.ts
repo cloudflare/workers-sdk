@@ -872,6 +872,423 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("FLAGS");
 		});
 
+		test("should upload secrets from a JSON --secrets-file as secret_text bindings", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secrets.json",
+				JSON.stringify({ SECRET_A: "value-a", SECRET_B: "value-b" })
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; text?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-secrets",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-secrets",
+								preview_id: "preview-id-secrets",
+								preview_name: "test-preview",
+								urls: ["https://secrets123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json"
+			);
+
+			expect(deploymentRequestBody?.env?.SECRET_A).toEqual({
+				type: "secret_text",
+				text: "value-a",
+			});
+			expect(deploymentRequestBody?.env?.SECRET_B).toEqual({
+				type: "secret_text",
+				text: "value-b",
+			});
+			// Bindings from the previews config are still included alongside secrets
+			expect(deploymentRequestBody?.env?.ENVIRONMENT).toEqual({
+				type: "plain_text",
+				text: "preview",
+			});
+			// Secret values must never be logged
+			expect(std.out).not.toContain("value-a");
+			expect(std.out).not.toContain("value-b");
+		});
+
+		test("should fail on a bad --secrets-file before creating the preview or uploading assets", async ({
+			expect,
+		}) => {
+			let previewApiCalled = false;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						previewApiCalled = true;
+						return HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() => {
+						previewApiCalled = true;
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
+			);
+
+			await expect(
+				runWrangler(
+					"preview --name test-preview --secrets-file does-not-exist.json"
+				)
+			).rejects.toThrow();
+			expect(previewApiCalled).toBe(false);
+		});
+
+		test("should upload --var values as plain_text bindings, overriding config vars but not secrets", async ({
+			expect,
+		}) => {
+			writeFileSync("secrets.json", JSON.stringify({ SHARED: "from-secrets" }));
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; text?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-vars",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-vars",
+								preview_id: "preview-id-vars",
+								preview_name: "test-preview",
+								urls: ["https://vars123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json " +
+					"--var API_URL:https://api.example.com --var ENVIRONMENT:overridden --var SHARED:from-var"
+			);
+
+			expect(deploymentRequestBody?.env?.API_URL).toEqual({
+				type: "plain_text",
+				text: "https://api.example.com",
+			});
+			// CLI vars override same-named vars from the previews config
+			expect(deploymentRequestBody?.env?.ENVIRONMENT).toEqual({
+				type: "plain_text",
+				text: "overridden",
+			});
+			// Secrets take precedence over CLI vars with the same name
+			expect(deploymentRequestBody?.env?.SHARED).toEqual({
+				type: "secret_text",
+				text: "from-secrets",
+			});
+		});
+
+		test("should not warn about top-level bindings that were supplied via --var or --secrets-file", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					vars: { API_URL: "https://prod.example.com", API_TOKEN: "token" },
+				})
+			);
+			writeFileSync("secrets.json", JSON.stringify({ API_TOKEN: "cli-token" }));
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-cli-bindings",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-cli-bindings",
+								preview_id: "preview-id-cli-bindings",
+								preview_name: "test-preview",
+								urls: ["https://clibindings.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						})
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --var API_URL:https://preview.example.com --secrets-file secrets.json"
+			);
+
+			expect(std.warn).not.toContain("API_URL");
+			expect(std.warn).not.toContain("API_TOKEN");
+		});
+
+		test("should redact secret values from --json output even if the API echoes them back", async ({
+			expect,
+		}) => {
+			writeFileSync("secrets.json", JSON.stringify({ SECRET_A: "value-a" }));
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-json-redact",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							env?: Record<string, unknown>;
+						};
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-json-redact",
+								preview_id: "preview-id-json-redact",
+								preview_name: "test-preview",
+								urls: ["https://jsonredact.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: body.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file secrets.json --json"
+			);
+
+			expect(std.out).not.toContain("value-a");
+			const output = JSON.parse(std.out) as {
+				deployment: {
+					env: Record<string, { type: string; text?: string }>;
+				};
+			};
+			expect(output.deployment.env.SECRET_A).toEqual({ type: "secret_text" });
+			// Non-secret bindings are unaffected
+			expect(output.deployment.env.ENVIRONMENT).toEqual({
+				type: "plain_text",
+				text: "preview",
+			});
+		});
+
+		test("should upload secrets from a .env format --secrets-file as secret_text bindings", async ({
+			expect,
+		}) => {
+			writeFileSync(".env.preview", "SECRET_A=value-a\nSECRET_B=value-b\n");
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; text?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-dotenv-secrets",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-dotenv-secrets",
+								preview_id: "preview-id-dotenv-secrets",
+								preview_name: "test-preview",
+								urls: ["https://dotenv123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --secrets-file .env.preview"
+			);
+
+			expect(deploymentRequestBody?.env?.SECRET_A).toEqual({
+				type: "secret_text",
+				text: "value-a",
+			});
+			expect(deploymentRequestBody?.env?.SECRET_B).toEqual({
+				type: "secret_text",
+				text: "value-b",
+			});
+		});
+
 		test("should not warn about inheritable top-level bindings missing from previews", async ({
 			expect,
 		}) => {
