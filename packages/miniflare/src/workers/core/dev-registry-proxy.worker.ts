@@ -1,4 +1,4 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
 import { CorePaths } from "./constants";
 import {
@@ -50,6 +50,52 @@ interface Props {
 	// (first active worker in the dev registry)
 	storage?: boolean;
 	storageScope?: string;
+}
+
+interface StreamFetcher extends Fetcher {
+	listStreamVideos(params?: StreamVideosListParams): Promise<StreamVideo[]>;
+	generateStreamWatermark(
+		streamOrUrl: ReadableStream | string,
+		params: StreamWatermarkCreateParams
+	): Promise<StreamWatermark>;
+	listStreamWatermarks(): Promise<StreamWatermark[]>;
+	getStreamWatermark(watermarkId: string): Promise<StreamWatermark>;
+	deleteStreamWatermark(watermarkId: string): Promise<void>;
+}
+
+class ExternalStreamVideos extends RpcTarget implements StreamVideos {
+	constructor(private resolve: () => StreamFetcher) {
+		super();
+	}
+
+	list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
+		return this.resolve().listStreamVideos(params);
+	}
+}
+
+class ExternalStreamWatermarks extends RpcTarget implements StreamWatermarks {
+	constructor(private resolve: () => StreamFetcher) {
+		super();
+	}
+
+	generate(
+		streamOrUrl: ReadableStream | string,
+		params: StreamWatermarkCreateParams
+	): Promise<StreamWatermark> {
+		return this.resolve().generateStreamWatermark(streamOrUrl, params);
+	}
+
+	list(): Promise<StreamWatermark[]> {
+		return this.resolve().listStreamWatermarks();
+	}
+
+	get(watermarkId: string): Promise<StreamWatermark> {
+		return this.resolve().getStreamWatermark(watermarkId);
+	}
+
+	delete(watermarkId: string): Promise<void> {
+		return this.resolve().deleteStreamWatermark(watermarkId);
+	}
 }
 
 function getTarget(props: Props): RegistryEntry | undefined {
@@ -119,6 +165,8 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	_targetAddress: string | undefined;
 	_targetInstanceId: string | undefined;
 	_entryFetcher: Fetcher | null = null;
+	_streamVideos = new ExternalStreamVideos(() => this._resolveStream());
+	_streamWatermarks = new ExternalStreamWatermarks(() => this._resolveStream());
 
 	constructor(ctx: ExecutionContext<Props>, env: Env) {
 		super(ctx, env);
@@ -137,6 +185,14 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 
 		return new Proxy(this, {
 			get(target, prop) {
+				const streamStorageProxy =
+					ctx.props.storage && ctx.props.service === "stream:service";
+				if (streamStorageProxy && prop === "videos") {
+					return target._streamVideos;
+				}
+				if (streamStorageProxy && prop === "watermarks") {
+					return target._streamWatermarks;
+				}
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
@@ -173,6 +229,14 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		this._targetAddress = target.debugPortAddress;
 		this._targetInstanceId = target.instanceId;
 		return this._fetcher;
+	}
+
+	_resolveStream(): StreamFetcher {
+		const fetcher = this._resolve() as StreamFetcher | null;
+		if (!fetcher) {
+			throw new Error(workerNotFoundMessage(this.ctx.props.service));
+		}
+		return fetcher;
 	}
 
 	fetch(request: Request): Promise<Response> | Response {
