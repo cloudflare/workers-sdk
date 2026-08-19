@@ -40,6 +40,8 @@ Each `workerd` process exposes a debug port (`--debug-port`) that provides nativ
 - **Durable Object access**: Full DO lifecycle including RPC methods
 - **Tail event forwarding**: Trace events forwarded via RPC
 
+The binding exposes two ways to reach a debug port. `connect(address)` dials another process over TCP, while `current()` hands back the same interface for the calling process without touching the network. `openDebugPortClient()` chooses between them by comparing the registry entry's `instanceId` against the proxy worker's `DEV_REGISTRY_INSTANCE_ID` binding, so a target that turns out to be ourselves is reached in-process.
+
 ## Components
 
 ### Filesystem Registry (`dev-registry.ts`)
@@ -85,6 +87,8 @@ When `unsafeEnableSharedStorage` is enabled, each Miniflare instance registers a
 Storage candidates heartbeat every 2 seconds and expire after 10 seconds. Registry watchers also refresh on a timer so a dead candidate expires without requiring another filesystem event. Graceful disposal stops the runtime before withdrawing its candidate, preventing overlap with the replacement owner.
 
 KV, D1, R2, Rate Limits, and Secrets Store route through the elected candidate. Cache, user Durable Objects, Workflows, observability, and Hello World storage remain instance-local while shared mode is active and use the configured `isolatedResourcePersistencePath`, allowing that state to persist across restarts without mounting the shared owner root concurrently.
+
+Every instance -- including the elected owner -- routes these bindings through the proxy worker, so the owner would otherwise connect back to its own debug port over TCP. Because the registry entry carries the owner's `instanceId`, the proxy recognises that case and uses the in-process debug port instead.
 
 Shared mode requires `resourcePersistencePath`, `isolatedResourcePersistencePath`, and `unsafeDevRegistryPath`. The shared persistence root is created and resolved through the filesystem before it is used as an ownership scope.
 

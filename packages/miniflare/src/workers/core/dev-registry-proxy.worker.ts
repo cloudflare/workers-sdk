@@ -3,6 +3,7 @@ import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
 import { CorePaths } from "./constants";
 import {
 	findQueueConsumer,
+	openDebugPortClient,
 	resolveSharedStorageOwner,
 	resolveTarget,
 	tailEventsReplacer,
@@ -68,7 +69,11 @@ function resolve(props: Props, env: Env, target: RegistryEntry): Fetcher {
 		: entrypoint === null || entrypoint === "default"
 			? target.defaultEntrypointService
 			: target.userWorkerService;
-	const client = env.DEV_REGISTRY_DEBUG_PORT.connect(target.debugPortAddress);
+	const client = openDebugPortClient(
+		env.DEV_REGISTRY_DEBUG_PORT,
+		target,
+		env.DEV_REGISTRY_INSTANCE_ID
+	);
 	return client.getEntrypoint(serviceName, entrypoint ?? undefined, userProps);
 }
 
@@ -97,8 +102,10 @@ export class ExternalQueueProxy extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
-			target.debugPortAddress
+		const client = openDebugPortClient(
+			this.env.DEV_REGISTRY_DEBUG_PORT,
+			target,
+			this.env.DEV_REGISTRY_INSTANCE_ID
 		);
 		const broker = client.getEntrypoint(getQueueServiceName(queueName));
 		const headers = new Headers(request.headers);
@@ -120,8 +127,10 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		// doesn't support runScheduled/runAlarm/queue, so we forward via HTTP.
 		const target = resolveTarget(ctx.props.service);
 		if (target && target.debugPortAddress) {
-			const client = env.DEV_REGISTRY_DEBUG_PORT.connect(
-				target.debugPortAddress
+			const client = openDebugPortClient(
+				env.DEV_REGISTRY_DEBUG_PORT,
+				target,
+				env.DEV_REGISTRY_INSTANCE_ID
 			);
 			this._entryFetcher = client.getEntrypoint("core:entry");
 		}

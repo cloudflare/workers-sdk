@@ -9,6 +9,17 @@ import { DurableObject } from "cloudflare:workers";
  */
 export interface WorkerdDebugPortConnector {
 	connect(address: string): WorkerdDebugPortClient;
+	/**
+	 * Access this workerd process's own debug port directly, without opening a
+	 * TCP connection back to ourselves.
+	 *
+	 * Optional because it was added by
+	 * https://github.com/cloudflare/workerd/pull/7005, which postdates the
+	 * workerd version currently pinned in the catalog. Once the pinned workerd
+	 * includes it, this can become a required method and the `typeof` guard in
+	 * {@link openDebugPortClient} can go away.
+	 */
+	current?(): WorkerdDebugPortClient;
 }
 
 /**
@@ -111,21 +122,56 @@ export function workerNotFoundMessage(service: string): string {
 }
 
 /**
- * Connect to a Durable Object actor on a remote workerd instance via the
- * debug port, returning a {@link Fetcher} that proxies requests to it.
+ * Open a debug port client for a registry entry.
+ *
+ * When the entry describes the current instance -- most commonly because this
+ * instance won the shared storage election -- take workerd's in-process fast
+ * path instead of dialling our own debug port over TCP.
+ *
+ * @param debugPort - The `workerdDebugPort` binding.
+ * @param target - Registry entry describing the worker to reach.
+ * @param selfInstanceId - This instance's dev registry ID, when the caller knows it.
+ * @returns A debug port client for the target process.
+ */
+export function openDebugPortClient(
+	debugPort: WorkerdDebugPortConnector,
+	target: RegistryEntry,
+	selfInstanceId?: string
+): WorkerdDebugPortClient {
+	if (
+		selfInstanceId !== undefined &&
+		target.instanceId !== undefined &&
+		target.instanceId === selfInstanceId &&
+		typeof debugPort.current === "function"
+	) {
+		return debugPort.current();
+	}
+	return debugPort.connect(target.debugPortAddress);
+}
+
+/**
+ * Connect to a Durable Object actor on a workerd instance via the debug port,
+ * returning a {@link Fetcher} that proxies requests to it.
  */
 export function connectToActor(
 	debugPort: WorkerdDebugPortConnector,
 	scriptName: string,
 	className: string,
-	actorId: string
+	actorId: string,
+	selfInstanceId?: string
 ): Fetcher | null {
 	const target = resolveTarget(scriptName);
 	if (!target || !target.debugPortAddress) {
 		return null;
 	}
-	const client = debugPort.connect(target.debugPortAddress);
+	const client = openDebugPortClient(debugPort, target, selfInstanceId);
 	return client.getActor(target.userWorkerService, className, actorId);
+}
+
+interface ProxyDurableObjectEnv {
+	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
+	/** Absent for callers that don't bind it, e.g. the local explorer worker. */
+	DEV_REGISTRY_INSTANCE_ID?: string;
 }
 
 /**
@@ -141,41 +187,43 @@ export function createProxyDurableObjectClass({
 	scriptName: string;
 	className: string;
 }): typeof DurableObject {
-	return class extends DurableObject<{
-		DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
-	}> {
+	return class extends DurableObject<ProxyDurableObjectEnv> {
 		_cachedFetcher: Fetcher | undefined;
 		_cachedDebugPortAddress: string | undefined;
+		_cachedInstanceId: string | undefined;
 
-		// Lazily resolve and cache. Invalidates when debugPortAddress changes.
+		// Lazily resolve and cache. Invalidates when the target's debugPortAddress
+		// or instanceId changes -- the latter matters because it decides whether we
+		// reach the target in-process or over TCP.
 		_resolve(): Fetcher | null {
 			const target = resolveTarget(scriptName);
 			if (
 				this._cachedFetcher &&
-				target?.debugPortAddress === this._cachedDebugPortAddress
+				target?.debugPortAddress === this._cachedDebugPortAddress &&
+				target?.instanceId === this._cachedInstanceId
 			) {
 				return this._cachedFetcher;
 			}
 			this._cachedFetcher = undefined;
 			this._cachedDebugPortAddress = undefined;
+			this._cachedInstanceId = undefined;
 
 			const fetcher = connectToActor(
 				this.env.DEV_REGISTRY_DEBUG_PORT,
 				scriptName,
 				className,
-				this.ctx.id.toString()
+				this.ctx.id.toString(),
+				this.env.DEV_REGISTRY_INSTANCE_ID
 			);
 			if (fetcher && target) {
 				this._cachedFetcher = fetcher;
 				this._cachedDebugPortAddress = target.debugPortAddress;
+				this._cachedInstanceId = target.instanceId;
 			}
 			return fetcher;
 		}
 
-		constructor(
-			ctx: DurableObjectState,
-			env: { DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector }
-		) {
+		constructor(ctx: DurableObjectState, env: ProxyDurableObjectEnv) {
 			super(ctx, env);
 
 			return new Proxy(this, {
