@@ -406,8 +406,6 @@ async function parseCustomPoolOptions(
 
 	// Some assets plumbing that should be hidden from the end user
 	if (options.miniflare?.assets) {
-		// (Used to set the SELF binding to point to the router worker instead)
-		options.miniflare.hasAssetsAndIsVitest = true;
 		options.miniflare.assets.routerConfig ??= {};
 		options.miniflare.assets.routerConfig.has_user_worker = Boolean(
 			options.main

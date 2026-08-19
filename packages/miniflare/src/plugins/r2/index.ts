@@ -32,7 +32,9 @@ import type {
 
 /** Local-dev S3 credentials, derived from the parsed R2 binding. */
 type R2S3Credentials = NonNullable<
-	Extract<MiniflareBinding, { type: "r2" }>["s3Credentials"]
+	NonNullable<
+		Extract<MiniflareBinding, { type: "r2" }>["localDev"]
+	>["experimentalS3Credentials"]
 >;
 
 export const R2_PLUGIN_NAME = "r2";
@@ -98,9 +100,10 @@ export function getR2S3Service(
 	const credentialsById: Record<string, R2S3Credentials> = {};
 	for (const worker of allWorkerOpts) {
 		for (const [, bucket] of getEnvBindingsOfType(worker.config, "r2")) {
+			const s3Credentials = bucket.localDev?.experimentalS3Credentials;
 			if (
 				getRemoteProxyConnectionString(bucket, worker.dev) !== undefined ||
-				bucket.s3Credentials === undefined
+				s3Credentials === undefined
 			) {
 				continue;
 			}
@@ -109,8 +112,8 @@ export function getR2S3Service(
 			const existing = credentialsById[id];
 			if (
 				existing !== undefined &&
-				(existing.accessKeyId !== bucket.s3Credentials.accessKeyId ||
-					existing.secretAccessKey !== bucket.s3Credentials.secretAccessKey)
+				(existing.accessKeyId !== s3Credentials.accessKeyId ||
+					existing.secretAccessKey !== s3Credentials.secretAccessKey)
 			) {
 				throw new MiniflareCoreError(
 					"ERR_DIFFERENT_S3_CREDENTIALS",
@@ -118,7 +121,7 @@ export function getR2S3Service(
 				);
 			}
 
-			credentialsById[id] = bucket.s3Credentials;
+			credentialsById[id] = s3Credentials;
 		}
 	}
 

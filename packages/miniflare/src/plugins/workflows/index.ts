@@ -13,6 +13,7 @@ import {
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	SERVICE_DEV_REGISTRY_PROXY,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
 import type { Plugin } from "../shared";
@@ -195,6 +196,8 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							name: "WORKFLOW_NAME",
 							json: JSON.stringify(binding.name),
 						},
+						// Workflow deletion needs the Node.js host to remove its SQLite files.
+						WORKER_BINDING_SERVICE_LOOPBACK,
 						...(stepLimit !== undefined
 							? [
 									{

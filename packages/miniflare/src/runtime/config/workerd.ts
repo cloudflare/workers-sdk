@@ -28,10 +28,14 @@ export type Socket = {
 	name?: string;
 	address?: string;
 	service?: ServiceDesignator;
-} & ({ http?: HttpOptions } | { https?: Socket_Https });
+} & ({ http?: HttpOptions } | { https?: Socket_Https } | { tcp?: Socket_Tcp });
 
 export interface Socket_Https {
 	options?: HttpOptions;
+	tlsOptions?: TlsOptions;
+}
+
+export interface Socket_Tcp {
 	tlsOptions?: TlsOptions;
 }
 

@@ -9,10 +9,13 @@ import { syncAssets } from "../deploy/helpers/assets";
 import { getBindings } from "../deploy/helpers/binding-utils";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
+import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
 import { confirm, logger } from "../shared/context";
+import { getSubdomainValues } from "../triggers/deploy";
 import {
 	createPreview,
 	createPreviewDeployment,
+	createPreviewParentWorker,
 	deletePreview,
 	editPreview,
 	getPreview,
@@ -350,6 +353,53 @@ Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your W
 }
 
 /**
+ * Creates the parent Worker required for a Preview, prompting when interactive.
+ *
+ * @param config The resolved Wrangler config.
+ * @param accountId The Cloudflare account ID.
+ * @param workerName The parent Worker name.
+ * @param json Whether to suppress human-readable output.
+ * @returns A promise that resolves when the parent Worker has been created.
+ */
+async function provisionParentWorker(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	json: boolean
+): Promise<void> {
+	const confirmed =
+		json ||
+		(await confirm(
+			`Worker "${workerName}" does not exist yet. Would you like to create it for this Preview?`,
+			// Default to true so CI and Workers Builds can create Previews unattended.
+			{ defaultValue: true, fallbackValue: true }
+		));
+	if (!confirmed) {
+		throw new UserError(
+			`Cannot create a Preview because the Worker "${workerName}" does not exist.`,
+			{ telemetryMessage: "preview command parent worker not created" }
+		);
+	}
+
+	if (!json) {
+		logger.log(`🌀 Creating new Worker "${workerName}"...`);
+	}
+	const routes = config.routes ?? (config.route ? [config.route] : []);
+	const { workers_dev, preview_urls } = getSubdomainValues(
+		config.workers_dev,
+		config.preview_urls,
+		routes
+	);
+	await createPreviewParentWorker(
+		config,
+		accountId,
+		workerName,
+		workers_dev,
+		preview_urls ?? workers_dev
+	);
+}
+
+/**
  * Full preview create/update + deployment orchestration.
  * The wrangler handler calls this after auth + build.
  */
@@ -392,7 +442,14 @@ export async function preview(
 			previewIdentifier
 		);
 	} catch (e) {
-		if (!(e instanceof Error && "code" in e && e.code === 10025)) {
+		if (isWorkerNotFoundError(e)) {
+			await provisionParentWorker(
+				config,
+				accountId,
+				workerName,
+				args.json ?? false
+			);
+		} else if (!(e instanceof Error && "code" in e && e.code === 10025)) {
 			throw e;
 		}
 	}

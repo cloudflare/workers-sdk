@@ -56,6 +56,7 @@ import type {
 } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
+	ConnectTrigger,
 	EmailTrigger,
 	FetchTrigger,
 	QueueConsumerTrigger,
@@ -109,6 +110,7 @@ type Binding =
  * Union of all trigger definitions accepted in `triggers`.
  */
 type Trigger =
+	| ConnectTrigger
 	| EmailTrigger
 	| FetchTrigger
 	| QueueConsumerTrigger
@@ -215,10 +217,11 @@ export interface WorkerConfig {
 	domains?: string[];
 
 	/**
-	 * Event triggers — fetch routes, queue consumers, cron schedules, and Email
-	 * Routing addresses
-	 * — that invoke this Worker. Construct entries with `triggers.fetch(...)`,
-	 * `triggers.queue(...)`, `triggers.scheduled(...)`, or `triggers.email(...)`.
+	 * Event triggers — fetch routes, queue consumers, cron schedules, Email
+	 * Routing addresses, and raw sockets — that invoke this Worker.
+	 * Construct entries with `triggers.fetch(...)`, `triggers.queue(...)`,
+	 * `triggers.scheduled(...)`, `triggers.email(...)`, or
+	 * `triggers.connect(...)`.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 */

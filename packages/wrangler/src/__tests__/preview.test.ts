@@ -12,6 +12,8 @@ import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import {
@@ -418,6 +420,208 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain(
 				"Deployment URL: https://abc12345.test-worker.cloudflare.app"
 			);
+		});
+
+		describe("when the parent Worker does not exist", () => {
+			const { setIsTTY } = useMockIsTTY();
+
+			function mockParentWorkerNotFound() {
+				const createWorkerRequests: unknown[] = [];
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [
+										{
+											code: 10007,
+											message: "This Worker does not exist on your account.",
+										},
+									],
+								},
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers`,
+						async ({ request }) => {
+							createWorkerRequests.push(await request.json());
+							return HttpResponse.json({
+								success: true,
+								result: { id: "worker-id-123", name: "test-worker" },
+							});
+						}
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json({
+								success: true,
+								result: {
+									id: "preview-id-provisioned",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview-test-worker.workers.dev"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							})
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						() =>
+							HttpResponse.json({
+								success: true,
+								result: {
+									id: "deployment-id-provisioned",
+									preview_id: "preview-id-provisioned",
+									preview_name: "test-preview",
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							})
+					)
+				);
+				return createWorkerRequests;
+			}
+
+			test("creates the parent Worker with Preview URLs enabled, then creates the Preview", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						workers_dev: true,
+					},
+					"wrangler.json"
+				);
+				setIsTTY(false);
+				const createWorkerRequests = mockParentWorkerNotFound();
+
+				await runWrangler("preview --name test-preview");
+
+				expect(createWorkerRequests).toEqual([
+					{
+						name: "test-worker",
+						subdomain: {
+							enabled: true,
+							previews_enabled: true,
+						},
+					},
+				]);
+				expect(std.out).toContain(
+					`Worker "test-worker" does not exist yet. Would you like to create it for this Preview?`
+				);
+				expect(std.out).toContain(`Creating new Worker "test-worker"...`);
+				expect(std.out).toContain("Preview: test-preview (new)");
+			});
+
+			describe.each([
+				{
+					name: "defaults Preview URLs to workers.dev",
+					previewUrls: undefined,
+					workersDev: undefined,
+					expectedWorkersDev: false,
+					expectedPreviewUrls: false,
+				},
+				{
+					name: "defaults Preview URLs to explicit workers.dev",
+					previewUrls: undefined,
+					workersDev: true,
+					expectedWorkersDev: true,
+					expectedPreviewUrls: true,
+				},
+				{
+					name: "respects enabled Preview URLs",
+					previewUrls: true,
+					workersDev: undefined,
+					expectedWorkersDev: false,
+					expectedPreviewUrls: true,
+				},
+				{
+					name: "respects disabled Preview URLs",
+					previewUrls: false,
+					workersDev: undefined,
+					expectedWorkersDev: false,
+					expectedPreviewUrls: false,
+				},
+			])(
+				"$name",
+				({
+					previewUrls,
+					workersDev,
+					expectedWorkersDev,
+					expectedPreviewUrls,
+				}) => {
+					test("resolves subdomain settings without applying production triggers", async ({
+						expect,
+					}) => {
+						writeWranglerConfig(
+							{
+								name: "test-worker",
+								main: "src/index.ts",
+								preview_urls: previewUrls,
+								workers_dev: workersDev,
+								route: "example.com/*",
+								triggers: { crons: ["0 * * * *"] },
+							},
+							"wrangler.json"
+						);
+						setIsTTY(false);
+						const createWorkerRequests = mockParentWorkerNotFound();
+
+						await runWrangler("preview --name test-preview");
+
+						expect(createWorkerRequests).toEqual([
+							{
+								name: "test-worker",
+								subdomain: {
+									enabled: expectedWorkersDev,
+									previews_enabled: expectedPreviewUrls,
+								},
+							},
+						]);
+					});
+				}
+			);
+
+			test("keeps JSON output parseable when creating the parent Worker", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				mockParentWorkerNotFound();
+
+				await runWrangler("preview --name test-preview --json");
+
+				expect(JSON.parse(std.out)).toMatchObject({
+					preview: { id: "preview-id-provisioned" },
+					deployment: { id: "deployment-id-provisioned" },
+				});
+			});
+
+			test("aborts without creating the parent Worker when the user declines", async ({
+				expect,
+			}) => {
+				setIsTTY(true);
+				const createWorkerRequests = mockParentWorkerNotFound();
+				mockConfirm({
+					text: `Worker "test-worker" does not exist yet. Would you like to create it for this Preview?`,
+					result: false,
+				});
+
+				await expect(
+					runWrangler("preview --name test-preview")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Cannot create a Preview because the Worker "test-worker" does not exist.]`
+				);
+
+				expect(createWorkerRequests).toEqual([]);
+			});
 		});
 
 		test("should warn about top-level bindings missing from preview settings", async ({
