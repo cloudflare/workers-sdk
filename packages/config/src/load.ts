@@ -40,13 +40,22 @@ export async function loadConfig(
 	configPath: string,
 	options?: { include?: string[] }
 ): Promise<LoadConfigResult> {
-	registerConfigHooks();
+	const release = registerConfigHooks();
 	const url = pathToFileURL(configPath).href;
 	const dependencies = new Set<string>();
-	const mod = await depsStore.run(
-		dependencies,
-		() => import(url, { with: { [CF_ATTR]: CF_NO_CACHE_VALUE } })
-	);
+	let mod: unknown;
+	try {
+		// The hooks are only needed while the config's module graph is being
+		// resolved and loaded. Releasing them afterwards keeps them out of
+		// Node's global hook chain, where they would otherwise interfere with
+		// unrelated module loads for the rest of the process's lifetime.
+		mod = await depsStore.run(
+			dependencies,
+			() => import(url, { with: { [CF_ATTR]: CF_NO_CACHE_VALUE } })
+		);
+	} finally {
+		release();
+	}
 
 	const exports: Record<string, unknown> = {};
 	for (const [name, value] of Object.entries(mod as Record<string, unknown>)) {
@@ -74,11 +83,22 @@ export interface LoadConfigResult {
 	dependencies: Set<string>;
 }
 
-let deregister: (() => void) | undefined;
+let activeHooks: { deregister: () => void } | undefined;
+let registrationCount = 0;
 
 /**
- * Register Node module hooks for loading Worker configs. Idempotent —
- * repeated calls return the same deregister function.
+ * Register Node module hooks for loading Worker configs.
+ *
+ * Registrations are reference counted — each call increments the count and
+ * returns a release function that decrements it. The hooks are installed on
+ * the first registration and deregistered once the count drops back to zero,
+ * so nested or concurrent registrations cannot tear the hooks down while
+ * another load is still in flight. Each returned release function is
+ * idempotent; calling it more than once has no further effect.
+ *
+ * The hooks are global to the process while installed, so callers must
+ * release them as soon as the module graph they care about has finished
+ * loading.
  *
  *  - Handles `with { type: "cf-worker" }` import attributes by synthesising an
  *    ES module whose default export is the entrypoint specifier. Relative
@@ -93,11 +113,10 @@ let deregister: (() => void) | undefined;
  *    propagated to all transitive imports via the parent URL, ensuring the
  *    entire subgraph is re-evaluated. Imports inside `node_modules` are
  *    skipped (treated as immutable for config purposes).
+ *
+ * @returns A function that releases this registration.
  */
 export function registerConfigHooks(): () => void {
-	if (deregister) {
-		return deregister;
-	}
 	if (typeof process !== "undefined" && process.versions.bun) {
 		throw new Error(
 			"cloudflare.config.ts loading is not supported on Bun. " +
@@ -113,7 +132,11 @@ export function registerConfigHooks(): () => void {
 		);
 	}
 
-	const hooks = registerHooks({
+	if (activeHooks) {
+		return acquireRegistration();
+	}
+
+	activeHooks = registerHooks({
 		resolve(specifier, context, nextResolve) {
 			// `importAttributes` may be absent for some resolution paths (e.g.
 			// CJS `require()` going through the hook chain after the hook has
@@ -197,12 +220,31 @@ export function registerConfigHooks(): () => void {
 		},
 	});
 
-	deregister = () => {
-		hooks.deregister();
-		deregister = undefined;
-	};
+	return acquireRegistration();
+}
 
-	return deregister;
+/**
+ * Take out a reference on the currently installed hooks.
+ *
+ * @returns An idempotent function that drops this reference, deregistering the
+ *   hooks once the last reference is released.
+ */
+function acquireRegistration(): () => void {
+	registrationCount++;
+
+	let released = false;
+
+	return () => {
+		if (released) {
+			return;
+		}
+		released = true;
+		registrationCount--;
+		if (registrationCount === 0) {
+			activeHooks?.deregister();
+			activeHooks = undefined;
+		}
+	};
 }
 
 function getParentUUID(parentURL: string | undefined): string | undefined {
