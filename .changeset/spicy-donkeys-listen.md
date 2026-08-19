@@ -2,6 +2,6 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Dispose remote proxy sessions when the dev or preview server closes
+Fix `vite build` hanging when `remoteBindings` is enabled
 
-With `remoteBindings` enabled, `vite build` wrote all of its output and then hung forever, because each remote proxy session runs a listening server that keeps the event loop alive. Sessions were only ever disposed to replace one whose auth had changed, so nothing tore them down when the prerender pass finished and the preview server closed. They are now disposed when the dev or preview server closes, letting the build exit normally.
+With `remoteBindings` enabled, `vite build` produced all of its output but then never exited, so builds had to be killed manually and could not complete in CI. Builds using remote bindings now finish and exit as expected.
