@@ -464,7 +464,12 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "secret": {
-				secretsRequired.push(name);
+				// Optional secrets are deliberately omitted from `secrets.required`
+				// — that list drives deploy-time enforcement and local dev warnings,
+				// neither of which should fire for a secret that may be unset.
+				if (!binding.optional) {
+					secretsRequired.push(name);
+				}
 				break;
 			}
 			case "secrets-store-secret": {
