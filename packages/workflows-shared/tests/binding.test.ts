@@ -182,6 +182,102 @@ describe("WorkflowBinding", () => {
 			);
 		});
 	});
+
+	describe("deleteBatch()", () => {
+		it("reports deleted and missing instances while preserving input positions", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			const firstId = uniqueId("delete-batch");
+			const secondId = uniqueId("delete-batch");
+			const missingId = uniqueId("missing-delete-batch");
+			setTestWorkflowCallback(async () => "done");
+
+			await binding.createBatch([{ id: firstId }, { id: secondId }]);
+			for (const id of [firstId, secondId]) {
+				await waitUntilLogEvent(
+					env.ENGINE.get(env.ENGINE.idFromName(id)),
+					InstanceEvent.WORKFLOW_SUCCESS
+				);
+			}
+
+			const result = await binding.deleteBatch([
+				firstId,
+				missingId,
+				firstId,
+				secondId,
+			]);
+
+			expect(result).toEqual({
+				deleted: [{ id: firstId }, { id: firstId }, { id: secondId }],
+				errors: [
+					{
+						id: missingId,
+						code: 10400,
+						message: "workflows.api.error.instance.not_found",
+					},
+				],
+			});
+			await expect(binding.get(firstId)).rejects.toThrow("instance.not_found");
+			await expect(binding.get(secondId)).rejects.toThrow("instance.not_found");
+		});
+
+		it("reports a failed deletion as an internal error", async ({ expect }) => {
+			const id = uniqueId("failed-delete-batch");
+			const stubId = env.ENGINE.idFromName(id);
+			const staleStub = {
+				getStatus: vi.fn(async () => InstanceStatus.Complete),
+				unsafeAbort: vi.fn(async () => {
+					throw new Error("delete failed");
+				}),
+			} as unknown as DurableObjectStub<Engine>;
+			const freshStub = {
+				getStatus: vi.fn(async () => InstanceStatus.Complete),
+			} as unknown as DurableObjectStub<Engine>;
+			const engine = {
+				idFromName: vi.fn(() => stubId),
+				get: vi
+					.fn(() => staleStub)
+					.mockReturnValueOnce(staleStub)
+					.mockReturnValueOnce(freshStub),
+			} as unknown as DurableObjectNamespace<Engine>;
+			const binding = new WorkflowBinding(createExecutionContext(), {
+				ENGINE: engine,
+				BINDING_NAME: "TEST_WORKFLOW",
+				WORKFLOW_NAME: "test-workflow",
+			});
+
+			await expect(binding.deleteBatch([id])).resolves.toEqual({
+				deleted: [],
+				errors: [
+					{
+						id,
+						code: 10001,
+						message: "workflows.api.error.internal_server",
+					},
+				],
+			});
+			expect(engine.get).toHaveBeenCalledTimes(2);
+			expect(staleStub.getStatus).toHaveBeenCalledOnce();
+			expect(staleStub.unsafeAbort).toHaveBeenCalledOnce();
+			expect(freshStub.getStatus).toHaveBeenCalledOnce();
+		});
+
+		it("rejects invalid batch sizes", async ({ expect }) => {
+			const binding = createBinding();
+
+			await expect(binding.deleteBatch([])).rejects.toThrow(
+				"WorkflowError: deleteBatch should have at least 1 instance"
+			);
+			await expect(
+				binding.deleteBatch(
+					Array.from({ length: 101 }, (_, index) => `instance-${index}`)
+				)
+			).rejects.toThrow(
+				"WorkflowError: deleteBatch is limited to 100 instances at a time"
+			);
+		});
+	});
 });
 
 describe("WorkflowBinding", () => {
