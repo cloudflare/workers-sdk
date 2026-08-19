@@ -3,7 +3,10 @@ import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import { prepareContainerImagesForVite } from "../containers";
 import { assertIsPreview } from "../context";
-import { getPreviewMiniflareOptions } from "../miniflare-options";
+import {
+	disposeRemoteProxySessions,
+	getPreviewMiniflareOptions,
+} from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
 
@@ -15,11 +18,16 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 		async configurePreviewServer(vitePreviewServer) {
 			assertIsPreview(ctx);
 
-			// Ensure Miniflare is disposed when the preview server is closed during prerendering
+			// Ensure Miniflare and any remote proxy sessions are disposed when the
+			// preview server is closed during prerendering
 			const closePreviewServer =
 				vitePreviewServer.close.bind(vitePreviewServer);
 			vitePreviewServer.close = async () => {
-				await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
+				await Promise.all([
+					ctx.disposeMiniflare(),
+					disposeRemoteProxySessions(),
+					closePreviewServer(),
+				]);
 			};
 
 			const { miniflareOptions, containerOptions } =
