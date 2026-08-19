@@ -192,6 +192,8 @@ describe("wrangler preview", () => {
 	});
 
 	describe("previewContainerAppName", () => {
+		const DIGEST_SUFFIX = /_[0-9a-z]{7}$/;
+
 		test("should join worker name, preview slug, and class name with underscores", ({
 			expect,
 		}) => {
@@ -206,34 +208,72 @@ describe("wrangler preview", () => {
 				reason: "a worker name that starts with a digit",
 				workerName: "9-my-worker",
 				className: "MyContainer",
-				expected: "w9-my-worker_feature-branch_MyContainer",
+				body: "w9-my-worker_feature-branch_MyContainer",
 			},
 			{
 				reason: "consecutive dashes in a worker name",
 				workerName: "my--worker",
 				className: "MyContainer",
-				expected: "my-_worker_feature-branch_MyContainer",
-			},
-			{
-				reason: "an ordinary dash without colliding with a dash run",
-				workerName: "my-worker",
-				className: "MyContainer",
-				expected: "my-worker_feature-branch_MyContainer",
+				body: "my-worker_feature-branch_MyContainer",
 			},
 			{
 				reason: "a character that no application name may contain",
 				workerName: "test-worker",
 				className: "My$Class",
-				expected: "test-worker_feature-branch_My-Class",
+				body: "test-worker_feature-branch_My-Class",
 			},
 		])(
-			"should normalise $reason",
-			({ workerName, className, expected }, { expect }) => {
-				expect(
-					previewContainerAppName(workerName, "feature-branch", className)
-				).toBe(expected);
+			"should normalise $reason and mark it with a digest",
+			({ workerName, className, body }, { expect }) => {
+				const name = previewContainerAppName(
+					workerName,
+					"feature-branch",
+					className
+				);
+
+				expect(name).toMatch(DIGEST_SUFFIX);
+				expect(name.replace(DIGEST_SUFFIX, "")).toBe(body);
 			}
 		);
+
+		test("should keep apart worker names that normalise onto one another", ({
+			expect,
+		}) => {
+			expect(
+				previewContainerAppName("my--worker", "feature-branch", "MyContainer")
+			).not.toBe(
+				previewContainerAppName("my-worker", "feature-branch", "MyContainer")
+			);
+		});
+
+		test("should cap the name at the length the API allows", ({ expect }) => {
+			const name = previewContainerAppName(
+				"w".repeat(300),
+				"feature-branch",
+				"MyContainer"
+			);
+
+			expect(name).toHaveLength(253);
+			expect(name).toMatch(DIGEST_SUFFIX);
+		});
+
+		test("should keep apart worker names that differ only past that length", ({
+			expect,
+		}) => {
+			expect(
+				previewContainerAppName(
+					`${"w".repeat(300)}a`,
+					"feature-branch",
+					"MyContainer"
+				)
+			).not.toBe(
+				previewContainerAppName(
+					`${"w".repeat(300)}b`,
+					"feature-branch",
+					"MyContainer"
+				)
+			);
+		});
 	});
 
 	describe("extractConfigBindings", () => {

@@ -6,8 +6,11 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
+import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, PreviewDefaults } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+
+const MAX_CONTAINER_APP_NAME_LENGTH = 253;
 
 export function getBranchName(): string | undefined {
 	const workersCIBranch = getWorkersCIBranchName();
@@ -415,26 +418,42 @@ export function getPreviewOwnedContainerClassNames(
  * Compose the auto-generated container application name for a preview-scoped
  * container, in the form `{parentWorkerName}_{previewSlug}_{className}`.
  *
- * A container application name may not start or end with a dash, contain
- * consecutive dashes, or start with a digit, and the API rejects one that does.
- * A worker name is allowed all three, so the composed name is normalised here
- * rather than passed through.
+ * A container application name is capped at 253 characters and may not start
+ * or end with a dash, contain consecutive dashes, or start with a digit. A
+ * worker name is allowed all four, and the preview slug is derived from a
+ * branch name, so the composed name is normalised here rather than passed
+ * through.
  *
- * Wrangler uses the application name to choose between create and modify, so
- * dash runs retain their length rather than being collapsed. A run becomes one
- * dash followed by underscores, which an application name allows.
+ * Wrangler looks an application up by name to choose between create and
+ * modify, so a name must identify one preview container. Both normalising and
+ * truncating can map two inputs onto one output, so either one earns a digest
+ * of the composed name.
  */
 export function previewContainerAppName(
 	parentWorkerName: string,
 	previewSlug: string,
 	className: string
 ): string {
-	const normalised = `${parentWorkerName}_${previewSlug}_${className}`
+	const composed = `${parentWorkerName}_${previewSlug}_${className}`;
+	const normalised = composed
 		.replace(/[^A-Za-z0-9_-]/g, "-")
-		.replace(/-{2,}/g, (run) => `-${"_".repeat(run.length - 1)}`)
-		.replace(/^-+|-+$/g, "");
-	// Prefix a letter rather than reject a worker name the Workers API accepted.
-	return /^[0-9]/.test(normalised) ? `w${normalised}` : normalised;
+		.replace(/-+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		// Prefix a letter rather than reject a name the Workers API accepted.
+		.replace(/^(?=[0-9])/, "w");
+
+	if (
+		normalised === composed &&
+		normalised.length <= MAX_CONTAINER_APP_NAME_LENGTH
+	) {
+		return normalised;
+	}
+
+	return truncateWithSuffix(
+		normalised,
+		`_${shortHash(composed)}`,
+		MAX_CONTAINER_APP_NAME_LENGTH
+	);
 }
 
 export function assemblePreviewScriptSettings(config: Config) {
