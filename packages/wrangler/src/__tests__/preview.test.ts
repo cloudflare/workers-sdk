@@ -1579,6 +1579,74 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should not warn about top-level bindings that were supplied via --var or --secrets-file", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					vars: { API_URL: "https://prod.example.com", API_TOKEN: "token" },
+				})
+			);
+			writeFileSync("secrets.json", JSON.stringify({ API_TOKEN: "cli-token" }));
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-cli-bindings",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-cli-bindings",
+								preview_id: "preview-id-cli-bindings",
+								preview_name: "test-preview",
+								urls: ["https://clibindings.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						})
+				)
+			);
+
+			await runWrangler(
+				"preview --name test-preview --var API_URL:https://preview.example.com --secrets-file secrets.json"
+			);
+
+			expect(std.warn).not.toContain("API_URL");
+			expect(std.warn).not.toContain("API_TOKEN");
+		});
+
 		test("should redact secret values from --json output even if the API echoes them back", async ({
 			expect,
 		}) => {
