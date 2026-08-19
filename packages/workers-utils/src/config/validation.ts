@@ -2195,7 +2195,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"previews",
-			validatePreviewsConfig(envName),
+			validatePreviewsConfig(envName, configPath),
 			undefined
 		),
 	};
@@ -3440,11 +3440,73 @@ function validateSshPublicKeys(
 	}
 }
 
+/**
+ * Validate `previews.containers`. Mirrors `validateContainerApp`, but rejects
+ * the application name outright. Every preview container is named at deploy
+ * time from the resolved worker name, preview slug, and class name, so that
+ * two previews of the same Worker cannot claim one name.
+ *
+ * Default-name generation is therefore switched off here. The resolved worker
+ * name is not known until deploy time, so requiring a name during validation
+ * would reject a config that omits the top-level `name` and supplies it with
+ * `--worker-name` instead.
+ */
+function validatePreviewsContainers(
+	envName: string,
+	configPath: string | undefined
+): ValidatorFn {
+	const innerValidator = validateContainerApp(envName, undefined, configPath, {
+		generateDefaultName: false,
+	});
+	return (diagnostics, field, value, config) => {
+		if (Array.isArray(value)) {
+			const nameFields = [...value.entries()]
+				.filter(
+					([, entry]) => entry && typeof entry === "object" && "name" in entry
+				)
+				.map(([index]) => `"${field}[${index}].name"`);
+			if (nameFields.length > 0) {
+				diagnostics.errors.push(
+					`${nameFields.join(", ")} cannot be set. A preview container's application name is generated from the worker name, preview slug, and Durable Object class name, so that separate previews of the same Worker do not collide. Remove it and identify the container with "class_name".`
+				);
+				return false;
+			}
+			// A Durable Object class is backed by at most one container
+			// application, so two entries for the same class are ambiguous.
+			const seenClasses = new Set<string>();
+			const duplicateClasses = new Set<string>();
+			for (const entry of value) {
+				if (!entry || typeof entry !== "object") {
+					continue;
+				}
+				if (typeof entry.class_name === "string") {
+					if (seenClasses.has(entry.class_name)) {
+						duplicateClasses.add(entry.class_name);
+					}
+					seenClasses.add(entry.class_name);
+				}
+			}
+			if (duplicateClasses.size > 0) {
+				const classList = [...duplicateClasses]
+					.map((className) => `"${className}"`)
+					.join(", ");
+				diagnostics.errors.push(
+					`"${field}" declares more than one container for the Durable Object class ${classList}; each Durable Object class may appear at most once.`
+				);
+				return false;
+			}
+		}
+		return innerValidator(diagnostics, field, value, config);
+	};
+}
+
 function validateContainerApp(
 	envName: string,
 	topLevelName: string | undefined,
-	configPath: string | undefined
+	configPath: string | undefined,
+	options: { generateDefaultName?: boolean } = {}
 ): ValidatorFn {
+	const { generateDefaultName = true } = options;
 	return (diagnostics, field, value, config) => {
 		if (!value) {
 			return true;
@@ -3473,7 +3535,7 @@ function validateContainerApp(
 				"string"
 			);
 			// try and add a default name
-			if (!containerAppOptional.name) {
+			if (generateDefaultName && !containerAppOptional.name) {
 				// The default name is derived from the class name, so without one there
 				// is nothing to derive it from. Such a container must be linked to a
 				// Durable Object from the `exports` side, which references it by name.
@@ -5753,7 +5815,7 @@ function normalizeAndValidateLimits(
 }
 
 const validatePreviewsConfig =
-	(envName: string): ValidatorFn =>
+	(envName: string, configPath: string | undefined): ValidatorFn =>
 	(diagnostics, field, value) => {
 		if (value === undefined) {
 			return true;
@@ -5805,6 +5867,7 @@ const validatePreviewsConfig =
 				"ratelimits",
 				"vpc_services",
 				"version_metadata",
+				"containers",
 				"logpush",
 				"observability",
 				"limits",
@@ -6080,6 +6143,16 @@ const validatePreviewsConfig =
 					diagnostics,
 					`${field}.version_metadata`,
 					previews.version_metadata,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.containers !== undefined) {
+			isValid =
+				validatePreviewsContainers(envName, configPath)(
+					diagnostics,
+					`${field}.containers`,
+					previews.containers,
 					undefined
 				) && isValid;
 		}
