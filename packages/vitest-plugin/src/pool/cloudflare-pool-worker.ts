@@ -120,9 +120,9 @@ export class CloudflarePoolWorker implements PoolWorker {
 		});
 		this.mf = undefined;
 
-		if (this.parsedPoolOptions?.wrangler?.configPath) {
+		if (this.parsedPoolOptions?.resolvedConfig) {
 			const session = remoteProxySessionsDataMap.get(
-				this.parsedPoolOptions.wrangler.configPath
+				this.parsedPoolOptions.resolvedConfig.path
 			)?.session;
 			await session?.dispose?.()?.catch((err) => {
 				this.debug("remote proxy session dispose rejected: %O", err);

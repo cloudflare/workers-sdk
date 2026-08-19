@@ -57,6 +57,7 @@
 		"zod": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
