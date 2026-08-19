@@ -40,6 +40,7 @@ import {
 	createReplayReadableStream,
 	getInvalidStoredStreamOutputError,
 	getStoredStreamOutputPreview,
+	MAX_OUTPUT_SHOWN_IN_LOGS,
 	StreamOutputState,
 } from "./lib/streams";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
@@ -111,6 +112,47 @@ export type Log = {
 export type EngineLogs = {
 	logs: Log[];
 };
+
+export type StepOutputResult = {
+	status: string;
+	error: { name: string; message: string } | null;
+	output: unknown;
+};
+
+// Cap explorer/CLI step output to prod's MAX_OUTPUT_SHOWN_IN_LOGS; oversized values
+// become a "[truncated output]"-suffixed string the UI/CLI refetch in full via getStepOutput.
+function truncateStepOutput(value: unknown): unknown {
+	if (value === undefined) {
+		return undefined;
+	}
+	let stringified: string;
+	if (typeof value === "string") {
+		stringified = value;
+	} else {
+		try {
+			stringified = JSON.stringify(value);
+		} catch {
+			stringified = "[not JSON parsable]";
+		}
+	}
+	if (stringified.length > MAX_OUTPUT_SHOWN_IN_LOGS) {
+		return (
+			stringified.slice(0, MAX_OUTPUT_SHOWN_IN_LOGS) + "[truncated output]"
+		);
+	}
+	return value;
+}
+
+function toStepError(raw: unknown): { name: string; message: string } | null {
+	if (raw !== null && typeof raw === "object") {
+		const e = raw as { name?: unknown; message?: unknown };
+		return {
+			name: typeof e.name === "string" ? e.name : "Error",
+			message: typeof e.message === "string" ? e.message : "",
+		};
+	}
+	return null;
+}
 
 const ENGINE_STATUS_KEY = "ENGINE_STATUS";
 
@@ -416,39 +458,7 @@ export class Engine extends DurableObject<Env> {
 
 		return rows.map((row) => {
 			const metadata = JSON.parse(row.metadata) as Record<string, unknown>;
-
-			if (!isStepSuccessEvent(row.event) || !metadata.streamOutput) {
-				return {
-					id: row.id,
-					timestamp: String(row.timestamp).replace(" ", "T") + "Z",
-					event: row.event,
-					group: row.groupKey,
-					target: row.target,
-					metadata,
-				};
-			}
-
-			const { cacheKey, meta } = metadata.streamOutput as {
-				cacheKey: string;
-				meta: StreamOutputMeta;
-			};
-			try {
-				const preview = getStoredStreamOutputPreview({
-					storage: this.ctx.storage,
-					cacheKey,
-					meta,
-					maxChars: 1024,
-				});
-				metadata.result =
-					preview.type === "text"
-						? preview.output
-						: `[ReadableStream (binary): ${meta.totalBytes} bytes]`;
-			} catch {
-				metadata.result = `[ReadableStream: ${meta.totalBytes} bytes]`;
-			}
-			delete metadata.streamOutput;
-
-			return {
+			const detailed = {
 				id: row.id,
 				timestamp: String(row.timestamp).replace(" ", "T") + "Z",
 				event: row.event,
@@ -456,6 +466,36 @@ export class Engine extends DurableObject<Env> {
 				target: row.target,
 				metadata,
 			};
+
+			if (isStepSuccessEvent(row.event)) {
+				if (metadata.streamOutput) {
+					const { cacheKey, meta } = metadata.streamOutput as {
+						cacheKey: string;
+						meta: StreamOutputMeta;
+					};
+					try {
+						const preview = getStoredStreamOutputPreview({
+							storage: this.ctx.storage,
+							cacheKey,
+							meta,
+							maxChars: MAX_OUTPUT_SHOWN_IN_LOGS,
+						});
+						metadata.result =
+							preview.type === "text"
+								? preview.output
+								: `[ReadableStream (binary): ${meta.totalBytes} bytes]`;
+					} catch {
+						metadata.result = `[ReadableStream: ${meta.totalBytes} bytes]`;
+					}
+					delete metadata.streamOutput;
+				} else {
+					metadata.result = truncateStepOutput(metadata.result);
+				}
+			} else if (row.event === InstanceEvent.WAIT_COMPLETE) {
+				metadata.payload = truncateStepOutput(metadata.payload);
+			}
+
+			return detailed;
 		});
 	}
 
@@ -548,6 +588,132 @@ export class Engine extends DurableObject<Env> {
 			status,
 			createdOn,
 		};
+	}
+
+	async getStepOutput(options: {
+		name: string;
+		type: "step" | "waitForEvent";
+		attempt?: number;
+	}): Promise<StepOutputResult> {
+		const { name, type, attempt } = options;
+		const startEvent =
+			type === "step" ? InstanceEvent.STEP_START : InstanceEvent.WAIT_START;
+
+		const matchingStep = this.ctx.storage.sql
+			.exec<{ groupKey: string | null }>(
+				"SELECT groupKey FROM states WHERE target = ? AND event = ? LIMIT 1",
+				name,
+				startEvent
+			)
+			.toArray()[0];
+		if (matchingStep === undefined || matchingStep.groupKey === null) {
+			throw createWorkflowError("Step not found", "instance.step_not_found");
+		}
+		const groupKey = matchingStep.groupKey;
+
+		const rows = [
+			...this.ctx.storage.sql.exec<{ event: InstanceEvent; metadata: string }>(
+				"SELECT event, metadata FROM states WHERE groupKey = ? ORDER BY id ASC",
+				groupKey
+			),
+		].map((row) => ({
+			event: row.event,
+			metadata: JSON.parse(row.metadata) as Record<string, unknown>,
+		}));
+
+		const errored = instanceStatusName(InstanceStatus.Errored);
+		const complete = instanceStatusName(InstanceStatus.Complete);
+		const running = instanceStatusName(InstanceStatus.Running);
+
+		if (attempt !== undefined) {
+			const terminal = rows.find(
+				(r) =>
+					(r.event === InstanceEvent.ATTEMPT_SUCCESS ||
+						r.event === InstanceEvent.ATTEMPT_FAILURE) &&
+					r.metadata.attempt === attempt
+			);
+			if (terminal === undefined) {
+				const started = rows.some(
+					(r) =>
+						r.event === InstanceEvent.ATTEMPT_START &&
+						r.metadata.attempt === attempt
+				);
+				if (!started) {
+					throw createWorkflowError(
+						"Step not found",
+						"instance.step_not_found"
+					);
+				}
+				return { status: running, error: null, output: null };
+			}
+			if (terminal.event === InstanceEvent.ATTEMPT_FAILURE) {
+				return {
+					status: errored,
+					error: toStepError(terminal.metadata.error),
+					output: null,
+				};
+			}
+			// Successful attempt: the single stored value is shared across attempts.
+		}
+
+		if (type === "waitForEvent") {
+			const waitComplete = rows.find(
+				(r) => r.event === InstanceEvent.WAIT_COMPLETE
+			);
+			if (waitComplete) {
+				const meta = waitComplete.metadata as { payload?: unknown };
+				return { status: complete, error: null, output: meta.payload ?? null };
+			}
+			const timedOut = rows.find(
+				(r) => r.event === InstanceEvent.WAIT_TIMED_OUT
+			);
+			if (timedOut) {
+				return {
+					status: errored,
+					error: toStepError(timedOut.metadata),
+					output: null,
+				};
+			}
+			return {
+				status: instanceStatusName(InstanceStatus.Waiting),
+				error: null,
+				output: null,
+			};
+		}
+
+		const stepSuccess = rows.find(
+			(r) => r.event === InstanceEvent.STEP_SUCCESS
+		);
+		if (stepSuccess) {
+			const streamOutput = stepSuccess.metadata.streamOutput as
+				| { cacheKey: string; meta: StreamOutputMeta }
+				| undefined;
+			if (streamOutput) {
+				const stream = this.replayStreamFromMeta(streamOutput);
+				if (stream !== undefined) {
+					return { status: complete, error: null, output: stream };
+				}
+			}
+			return {
+				status: complete,
+				error: null,
+				output: stepSuccess.metadata.result ?? null,
+			};
+		}
+
+		const stepFailed = rows.some((r) => r.event === InstanceEvent.STEP_FAILURE);
+		if (stepFailed) {
+			const lastAttemptFailure = [...rows]
+				.reverse()
+				.find((r) => r.event === InstanceEvent.ATTEMPT_FAILURE);
+			return {
+				status: errored,
+				error: toStepError(lastAttemptFailure?.metadata.error),
+				output: null,
+			};
+		}
+
+		return { status: running, error: null, output: null };
 	}
 
 	async setStatus(

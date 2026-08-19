@@ -548,6 +548,7 @@ import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/p
 import { workflowsInstancesRestartCommand } from "./workflows/commands/instances/restart";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
 import { workflowsInstancesSendEventCommand } from "./workflows/commands/instances/send-event";
+import { workflowsInstancesStepCommand } from "./workflows/commands/instances/step";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
 import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
 import { workflowsListCommand } from "./workflows/commands/list";
@@ -2298,6 +2299,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances resume",
 			definition: workflowsInstancesResumeCommand,
+		},
+		{
+			command: "wrangler workflows instances step",
+			definition: workflowsInstancesStepCommand,
 		},
 	]);
 	registry.registerNamespace("workflows");

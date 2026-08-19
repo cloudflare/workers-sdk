@@ -1,8 +1,13 @@
 import { Loader, Tooltip } from "@cloudflare/kumo";
 import { ArrowClockwiseIcon, CheckIcon, PlusIcon } from "@phosphor-icons/react";
-import { memo, type JSX } from "react";
+import { memo, useEffect, useState, type JSX } from "react";
+import { workflowsGetStepOutput } from "../../api";
 import { CopyButton } from "./CopyButton";
-import { formatDuration, formatJson } from "./helpers";
+import {
+	formatDuration,
+	formatJson,
+	isTruncatedStreamPreview,
+} from "./helpers";
 import { ScrollableCodeBlock } from "./ScrollableCodeBlock";
 import { Timestamp } from "./Timestamp";
 import type { StepData } from "./types";
@@ -73,11 +78,15 @@ export const StepRow = memo(function StepRow({
 	isExpanded,
 	onToggleExpanded,
 	onRestartFromStep,
+	workflowName,
+	instanceId,
 }: {
 	step: StepData;
 	isExpanded: boolean;
 	onToggleExpanded: () => void;
 	onRestartFromStep?: (step: StepData) => void;
+	workflowName?: string;
+	instanceId?: string;
 }): JSX.Element {
 	const hasDetails =
 		step.type === "step" ||
@@ -151,9 +160,19 @@ export const StepRow = memo(function StepRow({
 				<div className="-mx-1 -mb-1">
 					<div className="mt-1 h-2 rounded-t-lg border-t border-kumo-fill" />
 					<div className="px-4 pt-3 pb-4">
-						{step.type === "step" && <StepDoDetails step={step} />}
+						{step.type === "step" && (
+							<StepDoDetails
+								step={step}
+								workflowName={workflowName}
+								instanceId={instanceId}
+							/>
+						)}
 						{step.type === "waitForEvent" && (
-							<WaitForEventDetails step={step} />
+							<WaitForEventDetails
+								step={step}
+								workflowName={workflowName}
+								instanceId={instanceId}
+							/>
 						)}
 					</div>
 				</div>
@@ -165,24 +184,219 @@ export const StepRow = memo(function StepRow({
 function StepCodeCard({
 	label,
 	content,
+	loading = false,
+	note,
 }: {
 	label: string;
 	content: string;
+	loading?: boolean;
+	note?: string;
 }): JSX.Element {
 	return (
 		<div>
 			<h5 className="mb-2 text-sm font-medium text-kumo-default">{label}</h5>
 			<div className="relative overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
-				<ScrollableCodeBlock content={content} />
+				{loading ? (
+					<div className="flex items-center gap-2 p-3 text-sm text-kumo-subtle">
+						<Loader size={14} />
+						Loading full output…
+					</div>
+				) : (
+					<ScrollableCodeBlock content={content} />
+				)}
 				<div className="absolute top-1.5 right-1.5">
-					<CopyButton text={content} label={`Copy ${label.toLowerCase()}`} />
+					<CopyButton
+						text={content}
+						label={`Copy ${label.toLowerCase()}`}
+						disabled={loading}
+					/>
 				</div>
 			</div>
+			{note && <p className="mt-1 text-xs text-kumo-subtle">{note}</p>}
 		</div>
 	);
 }
 
-function StepDoDetails({ step }: { step: StepData }): JSX.Element {
+type FullOutputState =
+	| { status: "idle" }
+	| { status: "loading" }
+	| { status: "loaded"; text: string; note?: string }
+	| { status: "error" };
+
+// Cap how much of a step output we pull into the tab. Streamed outputs can be
+// up to ~1 GiB; we read only this much and cancel the transfer, pointing users
+// to `wrangler workflows instances step --output <file>` for the full value.
+const DISPLAY_CAP_BYTES = 2 * 1024 * 1024;
+const DOWNLOAD_HINT =
+	"download the full output with `wrangler workflows instances step … --output <file>`";
+
+/**
+ * Read up to `cap` bytes from a stream, then cancel it (so the rest is never
+ * transferred). `truncated` is true when there was more beyond the cap.
+ */
+async function readCapped(
+	stream: ReadableStream<Uint8Array>,
+	cap: number
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+	const reader = stream.getReader();
+	const chunks: Uint8Array[] = [];
+	let received = 0;
+	let truncated = false;
+	try {
+		while (received < cap) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			chunks.push(value);
+			received += value.byteLength;
+		}
+		if (received >= cap) {
+			truncated = !(await reader.read()).done;
+		}
+	} finally {
+		await reader.cancel().catch(() => {});
+	}
+	const bytes = new Uint8Array(received);
+	let offset = 0;
+	for (const chunk of chunks) {
+		bytes.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return { bytes, truncated };
+}
+
+// Lazily fetch the full output when the inline value is only a truncated stream
+// preview. Streamed outputs come back as octet-stream bytes, else flat JSON.
+function useFullStepOutput(
+	step: StepData,
+	workflowName?: string,
+	instanceId?: string
+): FullOutputState {
+	const needsFetch = !step.error && isTruncatedStreamPreview(step.output);
+	const apiType = step.type === "waitForEvent" ? "waitForEvent" : "step";
+	const [state, setState] = useState<FullOutputState>({ status: "idle" });
+
+	useEffect(() => {
+		if (!needsFetch || !workflowName || !instanceId || !step.name) {
+			return;
+		}
+		let active = true;
+		setState({ status: "loading" });
+		void workflowsGetStepOutput({
+			path: { workflow_name: workflowName, instance_id: instanceId },
+			query: { name: step.name, type: apiType },
+			parseAs: "stream",
+			throwOnError: false,
+		})
+			.then(async (res) => {
+				const body = res.data as unknown as
+					| ReadableStream<Uint8Array>
+					| undefined;
+				if (!res.response.ok || !body) {
+					if (active) {
+						setState({ status: "error" });
+					}
+					return;
+				}
+				const contentType = res.response.headers.get("content-type") ?? "";
+				const { bytes, truncated } = await readCapped(body, DISPLAY_CAP_BYTES);
+				if (!active) {
+					return;
+				}
+				if (contentType.includes("application/octet-stream")) {
+					try {
+						const text = new TextDecoder("utf-8", { fatal: true }).decode(
+							bytes
+						);
+						setState({
+							status: "loaded",
+							text,
+							note: truncated
+								? `Showing the first 2 MB — ${DOWNLOAD_HINT}.`
+								: undefined,
+						});
+					} catch {
+						// Non-UTF-8 stream: show a note rather than dumping bytes into a card.
+						setState({
+							status: "loaded",
+							text: `[binary output]`,
+							note: `Binary output — ${DOWNLOAD_HINT}.`,
+						});
+					}
+					return;
+				}
+				// Non-stream outputs are JSON (capped at 1 MiB), so fully read here.
+				const parsed = JSON.parse(new TextDecoder().decode(bytes)) as {
+					result?: { output?: unknown };
+				};
+				setState({
+					status: "loaded",
+					text: formatJson(parsed.result?.output),
+				});
+			})
+			.catch(() => {
+				if (active) {
+					setState({ status: "error" });
+				}
+			});
+		return () => {
+			active = false;
+		};
+		// step.output (the inline preview) and step.end change when the step
+		// re-runs (e.g. restart-from-step), so a stale full output is refetched.
+	}, [
+		needsFetch,
+		apiType,
+		workflowName,
+		instanceId,
+		step.name,
+		step.output,
+		step.end,
+	]);
+
+	return needsFetch ? state : { status: "idle" };
+}
+
+/**
+ * Resolve what to show for a step's output card: the full fetched value when the
+ * inline output is a truncated preview (loading/error handled), else the inline
+ * value. `show` gates it to steps that actually have an output.
+ */
+function resolveDisplayedOutput(
+	step: StepData,
+	full: FullOutputState,
+	show: boolean
+): { text: string | null; loading: boolean; note?: string } {
+	if (!show) {
+		return { text: null, loading: false };
+	}
+	if (!isTruncatedStreamPreview(step.output)) {
+		return {
+			text: step.output !== undefined ? formatJson(step.output) : null,
+			loading: false,
+		};
+	}
+	if (full.status === "loaded") {
+		return { text: full.text, loading: false, note: full.note };
+	}
+	if (full.status === "error") {
+		return { text: formatJson(step.output), loading: false };
+	}
+	return { text: "", loading: true };
+}
+
+function StepDoDetails({
+	step,
+	workflowName,
+	instanceId,
+}: {
+	step: StepData;
+	workflowName?: string;
+	instanceId?: string;
+}): JSX.Element {
+	const fullOutput = useFullStepOutput(step, workflowName, instanceId);
+
 	// Get error text from last failed attempt
 	const failedAttempt =
 		step.success === false && step.attempts
@@ -191,14 +405,16 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 	const errorText = failedAttempt?.error
 		? `${failedAttempt.error.name}: ${failedAttempt.error.message}`
 		: null;
-	const outputText =
-		step.success === true && step.output !== undefined
-			? formatJson(step.output)
-			: null;
+
+	const output = resolveDisplayedOutput(
+		step,
+		fullOutput,
+		step.success === true
+	);
 
 	// Left side: output or error. Right side: config.
 	const leftLabel = errorText ? "Error" : "Output";
-	const leftContent = errorText ?? outputText ?? "N/A";
+	const leftContent = errorText ?? output.text ?? "N/A";
 	const configContent = step.config ? formatJson(step.config) : null;
 
 	return (
@@ -207,7 +423,12 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 			<div
 				className={configContent ? "grid grid-cols-1 gap-4 md:grid-cols-2" : ""}
 			>
-				<StepCodeCard label={leftLabel} content={leftContent} />
+				<StepCodeCard
+					label={leftLabel}
+					content={leftContent}
+					loading={!errorText && output.loading}
+					note={errorText ? undefined : output.note}
+				/>
 				{configContent && (
 					<StepCodeCard label="Config" content={configContent} />
 				)}
@@ -289,9 +510,19 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 	);
 }
 
-function WaitForEventDetails({ step }: { step: StepData }): JSX.Element {
-	const hasPayload = step.finished && !step.error;
+function WaitForEventDetails({
+	step,
+	workflowName,
+	instanceId,
+}: {
+	step: StepData;
+	workflowName?: string;
+	instanceId?: string;
+}): JSX.Element {
+	const fullOutput = useFullStepOutput(step, workflowName, instanceId);
+	const hasPayload = !!step.finished && !step.error;
 	const hasError = !!step.error;
+	const payload = resolveDisplayedOutput(step, fullOutput, hasPayload);
 
 	return (
 		<div
@@ -302,7 +533,12 @@ function WaitForEventDetails({ step }: { step: StepData }): JSX.Element {
 			}
 		>
 			{hasPayload && (
-				<StepCodeCard label="Event Payload" content={formatJson(step.output)} />
+				<StepCodeCard
+					label="Event Payload"
+					content={payload.text ?? "N/A"}
+					loading={payload.loading}
+					note={payload.note}
+				/>
 			)}
 			{hasError && (
 				<StepCodeCard

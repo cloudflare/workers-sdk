@@ -778,6 +778,27 @@ export type ObservabilityQueryResult = {
 	rows: Array<Array<unknown>>;
 };
 
+/**
+ * Flat status-shaped output of a single step. `status` is the source of truth; `error` and `output` are populated when relevant. When the step returned a ReadableStream the response is served as application/octet-stream instead of this JSON body.
+ */
+export type WorkflowsStepOutput = {
+	/**
+	 * The step status. 'running' with a non-null error means the step is retrying after a failed attempt.
+	 */
+	status: "running" | "waiting" | "complete" | "errored";
+	/**
+	 * Error details when the step errored, otherwise null.
+	 */
+	error: {
+		name?: string;
+		message?: string;
+	} | null;
+	/**
+	 * The step output value, or null while running/waiting or when errored.
+	 */
+	output: unknown;
+};
+
 export type R2ResultInfoWritable = {
 	[key: string]: unknown;
 };
@@ -1791,6 +1812,51 @@ export type WorkflowsChangeInstanceStatusResponses = {
 
 export type WorkflowsChangeInstanceStatusResponse =
 	WorkflowsChangeInstanceStatusResponses[keyof WorkflowsChangeInstanceStatusResponses];
+
+export type WorkflowsGetStepOutputData = {
+	body?: never;
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+		instance_id: WorkflowsInstanceId;
+	};
+	query: {
+		/**
+		 * Exact step name from the instance logs response, including the generated counter suffix.
+		 */
+		name: string;
+		/**
+		 * Step type to disambiguate step.do and waitForEvent entries that share the same name.
+		 */
+		type: "step" | "waitForEvent";
+		/**
+		 * Specific attempt number to retrieve output or error for.
+		 */
+		attempt?: number;
+	};
+	url: "/workflows/{workflow_name}/instances/{instance_id}/step";
+};
+
+export type WorkflowsGetStepOutputErrors = {
+	/**
+	 * Get Workflow Step Output response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsGetStepOutputError =
+	WorkflowsGetStepOutputErrors[keyof WorkflowsGetStepOutputErrors];
+
+export type WorkflowsGetStepOutputResponses = {
+	/**
+	 * Get Workflow Step Output response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: WorkflowsStepOutput;
+	};
+};
+
+export type WorkflowsGetStepOutputResponse =
+	WorkflowsGetStepOutputResponses[keyof WorkflowsGetStepOutputResponses];
 
 export type WorkflowsSendInstanceEventData = {
 	/**

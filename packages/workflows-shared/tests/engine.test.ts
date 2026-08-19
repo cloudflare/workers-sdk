@@ -6,11 +6,18 @@ import workerdUnsafe from "workerd:unsafe";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
 import { ABORT_REASONS, isAbortError } from "../src/lib/errors";
 import { setTestWorkflowCallback } from "./test-entry";
-import { runWorkflow, runWorkflowAndAwait } from "./utils";
+import {
+	decodeUtf8,
+	encodeUtf8,
+	readStreamBytes,
+	runWorkflow,
+	runWorkflowAndAwait,
+} from "./utils";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
+	Engine,
 	EngineLogs,
 } from "../src/engine";
 import type {
@@ -2303,5 +2310,336 @@ describe("Rollback", () => {
 			l.logs.some((r) => r.event === InstanceEvent.WORKFLOW_SUCCESS)
 		);
 		expect(countOf(logs, InstanceEvent.ROLLBACK_START)).toBe(0);
+	});
+});
+
+describe("Engine - getStepOutput", () => {
+	it("returns the full text stream output (not truncated)", async ({
+		expect,
+	}) => {
+		// Exceeds the 1024-char preview used by readDetailedLogs
+		const payload = "abcde".repeat(1000);
+		const payloadBytes = encodeUtf8(payload);
+
+		const engineStub = await runWorkflow(
+			"STREAM-GET-STEP-OUTPUT-TEXT",
+			async (_event, step) => {
+				const stream = await step.do("stream step", async () => {
+					return new ReadableStream<Uint8Array>({
+						start(controller) {
+							controller.enqueue(payloadBytes);
+							controller.close();
+						},
+					});
+				});
+				return decodeUtf8(
+					await readStreamBytes(stream as ReadableStream<Uint8Array>)
+				);
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const result = await (engine as Engine).getStepOutput({
+				name: "stream step-1",
+				type: "step",
+			});
+			expect(result.status).toBe("complete");
+			expect(result.error).toBeNull();
+			expect(result.output).toBeInstanceOf(ReadableStream);
+			const bytes = await readStreamBytes(
+				result.output as ReadableStream<Uint8Array>
+			);
+			expect(decodeUtf8(bytes)).toBe(payload);
+		});
+	});
+
+	it("streams full binary output as raw bytes", async ({ expect }) => {
+		const payloadBytes = new Uint8Array([0xff, 0xfe, 0x00, 0x01, 0x80, 0xc0]);
+
+		const engineStub = await runWorkflow(
+			"STREAM-GET-STEP-OUTPUT-BINARY",
+			async (_event, step) => {
+				const stream = await step.do("stream step", async () => {
+					return new ReadableStream<Uint8Array>({
+						start(controller) {
+							controller.enqueue(payloadBytes);
+							controller.close();
+						},
+					});
+				});
+				await readStreamBytes(stream as ReadableStream<Uint8Array>);
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const result = await (engine as Engine).getStepOutput({
+				name: "stream step-1",
+				type: "step",
+			});
+			expect(result.status).toBe("complete");
+			expect(result.output).toBeInstanceOf(ReadableStream);
+			const bytes = await readStreamBytes(
+				result.output as ReadableStream<Uint8Array>
+			);
+			expect(Array.from(bytes)).toEqual(Array.from(payloadBytes));
+		});
+	});
+
+	it("throws step_not_found for an unknown step", async ({ expect }) => {
+		const engineStub = await runWorkflow(
+			"STREAM-GET-STEP-OUTPUT-MISSING",
+			async (_event, step) => {
+				await step.do("stream step", async () => "ok");
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			await expect(
+				(engine as Engine).getStepOutput({
+					name: "does not exist-1",
+					type: "step",
+				})
+			).rejects.toThrow(/instance\.step_not_found/);
+		});
+	});
+
+	it("returns the waitForEvent payload as output", async ({ expect }) => {
+		const engineStub = await runWorkflow(
+			"GET-STEP-OUTPUT-WAIT",
+			async (_event, step) => {
+				return await step.waitForEvent("awaited event", {
+					type: "my-event",
+					timeout: "10 seconds",
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some((val) => val.event === InstanceEvent.WAIT_START);
+			},
+			{ timeout: 5000 }
+		);
+
+		await engineStub.receiveEvent({
+			type: "my-event",
+			timestamp: new Date(),
+			payload: { hello: "world" },
+		});
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const result = await (engine as Engine).getStepOutput({
+				name: "awaited event-1",
+				type: "waitForEvent",
+			});
+			expect(result.status).toBe("complete");
+			expect(result.error).toBeNull();
+			expect(result.output).toEqual({ hello: "world" });
+		});
+	});
+
+	it("returns the attempt error for a failed attempt", async ({ expect }) => {
+		const engineStub = await runWorkflow(
+			"GET-STEP-OUTPUT-ATTEMPT-FAILURE",
+			async (_event, step) => {
+				await step.do(
+					"failing step",
+					{ retries: { limit: 0, delay: 0 } },
+					async () => {
+						throw new Error("boom");
+					}
+				);
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const result = await (engine as Engine).getStepOutput({
+				name: "failing step-1",
+				type: "step",
+				attempt: 1,
+			});
+			expect(result.status).toBe("errored");
+			expect(result.output).toBeNull();
+			expect(result.error?.message).toContain("boom");
+		});
+	});
+});
+
+describe("Engine - readDetailedLogs output truncation", () => {
+	it("truncates a large non-stream step output while getStepOutput stays full", async ({
+		expect,
+	}) => {
+		const bigOutput = "x".repeat(2000);
+		const engineStub = await runWorkflow(
+			"DETAILED-LOGS-TRUNCATE",
+			async (_event, step) => {
+				await step.do("big step", async () => bigOutput);
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const detailed = await engineStub.readDetailedLogs();
+		const success = detailed.find(
+			(l) => l.target === "big step-1" && l.event === InstanceEvent.STEP_SUCCESS
+		);
+		const result = success?.metadata.result as string;
+		expect(typeof result).toBe("string");
+		expect(result.endsWith("[truncated output]")).toBe(true);
+		expect(result.length).toBe(1024 + "[truncated output]".length);
+
+		// The full value is still retrievable via getStepOutput.
+		await runInDurableObject(engineStub, async (engine) => {
+			const output = (await (engine as Engine).getStepOutput({
+				name: "big step-1",
+				type: "step",
+			})) as { output: unknown };
+			expect(output.output).toBe(bigOutput);
+		});
+	});
+
+	it("keeps a small non-stream step output intact", async ({ expect }) => {
+		const engineStub = await runWorkflow(
+			"DETAILED-LOGS-SMALL",
+			async (_event, step) => {
+				await step.do("small step", async () => ({ hello: "world" }));
+				return "done";
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const detailed = await engineStub.readDetailedLogs();
+		const success = detailed.find(
+			(l) =>
+				l.target === "small step-1" && l.event === InstanceEvent.STEP_SUCCESS
+		);
+		expect(success?.metadata.result).toEqual({ hello: "world" });
+	});
+
+	it("truncates a large waitForEvent payload while getStepOutput stays full", async ({
+		expect,
+	}) => {
+		const bigPayload = { data: "y".repeat(2000) };
+		const engineStub = await runWorkflow(
+			"DETAILED-LOGS-WAIT-TRUNCATE",
+			async (_event, step) => {
+				return await step.waitForEvent("await big", {
+					type: "big-event",
+					timeout: "10 seconds",
+				});
+			}
+		);
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some((val) => val.event === InstanceEvent.WAIT_START);
+			},
+			{ timeout: 5000 }
+		);
+
+		await engineStub.receiveEvent({
+			type: "big-event",
+			timestamp: new Date(),
+			payload: bigPayload,
+		});
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 5000 }
+		);
+
+		const detailed = await engineStub.readDetailedLogs();
+		const complete = detailed.find(
+			(l) =>
+				l.target === "await big-1" && l.event === InstanceEvent.WAIT_COMPLETE
+		);
+		const payload = complete?.metadata.payload as string;
+		expect(typeof payload).toBe("string");
+		expect(payload.endsWith("[truncated output]")).toBe(true);
+
+		await runInDurableObject(engineStub, async (engine) => {
+			const output = (await (engine as Engine).getStepOutput({
+				name: "await big-1",
+				type: "waitForEvent",
+			})) as { output: unknown };
+			expect(output.output).toEqual(bigPayload);
+		});
 	});
 });
