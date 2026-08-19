@@ -701,9 +701,18 @@ export const InstanceOptionsSchema = z.strictObject({
 	stripDisablePrettyError: z.boolean().default(true),
 
 	// Persistence
-	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
+	/**
+	 * Root directory for persisted local resource state; relative to cwd if not
+	 * absolute. When `unsafeEnableSharedStorage` is set this is canonicalised to
+	 * an absolute real path before use, so every instance sharing the directory
+	 * derives the same ownership scope.
+	 */
 	resourcePersistencePath: z.string().optional(),
-	/** Per-instance root for resources that cannot participate in shared storage. */
+	/**
+	 * Per-instance root for resources that cannot participate in shared storage.
+	 * Belongs at the project level -- each project keeps its own copy of this
+	 * state rather than partitioning it under the shared resource root.
+	 */
 	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
@@ -781,21 +790,24 @@ export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 		ctx.addIssue({
 			code: "custom",
 			path: ["resourcePersistencePath"],
-			message: "Shared storage requires a persistent resource path",
+			message:
+				"Shared storage requires `resourcePersistencePath` to be set to the directory instances should share.",
 		});
 	}
 	if (!options.isolatedResourcePersistencePath?.trim()) {
 		ctx.addIssue({
 			code: "custom",
 			path: ["isolatedResourcePersistencePath"],
-			message: "Shared storage requires an isolated resource path",
+			message:
+				"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared.",
 		});
 	}
 	if (!options.unsafeDevRegistryPath?.trim()) {
 		ctx.addIssue({
 			code: "custom",
 			path: ["unsafeDevRegistryPath"],
-			message: "Shared storage requires an enabled dev registry",
+			message:
+				"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry.",
 		});
 	}
 });

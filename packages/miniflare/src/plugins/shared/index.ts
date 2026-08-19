@@ -72,6 +72,10 @@ export interface PluginServicesOptions {
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
+	// True when the dev registry is enabled, i.e. workers in other dev
+	// processes may be bound to. Plugins use this to set up service bindings to
+	// the dev-registry proxy worker, e.g. so the queue broker can deliver
+	// messages to a consumer in another `wrangler dev` process.
 	devRegistryEnabled: boolean;
 	isolatedResourcePersistencePath: string | undefined;
 

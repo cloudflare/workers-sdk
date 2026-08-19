@@ -28,7 +28,9 @@ describe.sequential("owner presence integration", () => {
 					unsafeDevRegistryPath: ".registry",
 					workers: [worker],
 				})
-		).toThrow("Shared storage requires a persistent resource path");
+		).toThrow(
+			"Shared storage requires `resourcePersistencePath` to be set to the directory instances should share."
+		);
 		expect(
 			() =>
 				new Miniflare({
@@ -36,7 +38,9 @@ describe.sequential("owner presence integration", () => {
 					resourcePersistencePath: ".state",
 					workers: [worker],
 				})
-		).toThrow("Shared storage requires an enabled dev registry");
+		).toThrow(
+			"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry."
+		);
 		expect(
 			() =>
 				new Miniflare({
@@ -45,7 +49,9 @@ describe.sequential("owner presence integration", () => {
 					unsafeDevRegistryPath: ".registry",
 					workers: [worker],
 				})
-		).toThrow("Shared storage requires an isolated resource path");
+		).toThrow(
+			"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared."
+		);
 	});
 
 	it("routes a client's KV through the owner so storage is shared", async ({
@@ -600,7 +606,7 @@ describe.sequential("owner presence integration", () => {
 		} finally {
 			await Promise.all(clients.map((c) => c.dispose().catch(() => {})));
 		}
-	}, 60_000);
+	}, 30_000);
 
 	it("hands storage ownership to another live instance", async ({ expect }) => {
 		const persistRoot = await useTmp();

@@ -312,9 +312,7 @@ export function validateSingletonBindings(
 	if (duplicates.size > 0) {
 		ctx.addIssue({
 			code: "custom",
-			message: `${listFormatter.format(
-				[...duplicates].sort()
-			)} bindings can only be defined once`,
+			message: `${listFormatter.format([...duplicates].sort())} bindings can only be defined once`,
 		});
 	}
 }

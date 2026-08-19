@@ -72,6 +72,14 @@ export function resolveTarget(service: string): RegistryEntry | undefined {
 	return entry;
 }
 
+/**
+ * Find the instance that owns shared storage for a persistence root. The
+ * oldest live candidate wins, with the entry name breaking ties so every
+ * process independently elects the same owner.
+ *
+ * @param storageScope - Canonical persistence root to find the owner for.
+ * @returns The owning instance's registry entry, or `undefined` if none is live.
+ */
 export function resolveSharedStorageOwner(
 	storageScope: string
 ): RegistryEntry | undefined {
