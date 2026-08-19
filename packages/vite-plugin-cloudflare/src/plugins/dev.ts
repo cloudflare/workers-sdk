@@ -21,7 +21,10 @@ import {
 	compareWorkerNameToExportTypesMaps,
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
-import { getDevMiniflareOptions } from "../miniflare-options";
+import {
+	disposeRemoteProxySessions,
+	getDevMiniflareOptions,
+} from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import {
 	createPlugin,
@@ -84,6 +87,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						} catch (error) {
 							debuglog("Failed to dispose Miniflare instance:", error);
 						}
+						await disposeRemoteProxySessions();
 					}
 				}
 			};
