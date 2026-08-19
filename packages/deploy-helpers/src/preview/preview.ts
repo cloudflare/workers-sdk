@@ -38,7 +38,6 @@ import {
 	shouldUseCIMetadataFallback,
 } from "./shared";
 import type { DeployCallbacks } from "../deploy/deploy";
-import type { PullRequestMetadata } from "./shared";
 import type { WorkerBuildResult } from "../shared/types";
 import type {
 	Binding,
@@ -46,6 +45,7 @@ import type {
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
+import type { PullRequestMetadata } from "./shared";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	Config,

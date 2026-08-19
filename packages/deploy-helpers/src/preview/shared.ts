@@ -158,16 +158,14 @@ function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
 		}
 	}
 
-	const refPullRequestNumber = process.env.GITHUB_REF?.match(
-		/^refs\/pull\/(\d+)\//
-	)?.[1];
+	const refPullRequestNumber =
+		process.env.GITHUB_REF?.match(/^refs\/pull\/(\d+)\//)?.[1];
 	const number = normalizePullRequestNumber(refPullRequestNumber);
 	if (!number || !process.env.GITHUB_REPOSITORY) {
 		return undefined;
 	}
 
-	const githubServerUrl =
-		process.env.GITHUB_SERVER_URL || "https://github.com";
+	const githubServerUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
 	return {
 		number,
 		url: normalizeRepositoryUrl(
@@ -184,7 +182,9 @@ function getGitLabPullRequestMetadata(): PullRequestMetadata | undefined {
 		return undefined;
 	}
 
-	const normalizedProjectUrl = projectUrl.replace(/\.git$/, "").replace(/\/$/, "");
+	const normalizedProjectUrl = projectUrl
+		.replace(/\.git$/, "")
+		.replace(/\/$/, "");
 	return {
 		number,
 		url: normalizeRepositoryUrl(

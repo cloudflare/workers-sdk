@@ -180,7 +180,7 @@ describe("wrangler preview", () => {
 		vi.restoreAllMocks();
 	});
 
-		describe("getBranchName", () => {
+	describe("getBranchName", () => {
 		beforeEach(() => {
 			vi.unstubAllEnvs();
 			vi.stubEnv("WORKERS_CI_BRANCH", undefined);
@@ -4699,7 +4699,8 @@ describe("wrangler preview", () => {
 				"workers/pull_request_number": "13",
 				"workers/pull_request_url":
 					"https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
-				"workers/repository_url": "https://gitlab.example.com/acme/worker-project",
+				"workers/repository_url":
+					"https://gitlab.example.com/acme/worker-project",
 				"workers/tag": "v1.2.3",
 			});
 			expect(std.out).toContain("Pull Request:");
