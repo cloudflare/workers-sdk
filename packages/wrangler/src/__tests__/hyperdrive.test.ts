@@ -38,7 +38,7 @@ describe("hyperdrive help", () => {
 			  wrangler hyperdrive delete <id>    Delete a Hyperdrive config
 			  wrangler hyperdrive get <id>       Get a Hyperdrive config
 			  wrangler hyperdrive list           List Hyperdrive configs
-			  wrangler hyperdrive planetscale    Provision Cloudflare-billed PlanetScale databases [experimental]
+			  wrangler hyperdrive planetscale    Authorize Cloudflare-billed PlanetScale databases [experimental]
 			  wrangler hyperdrive update <id>    Update a Hyperdrive config
 
 			GLOBAL FLAGS
@@ -76,7 +76,7 @@ describe("hyperdrive help", () => {
 			  wrangler hyperdrive delete <id>    Delete a Hyperdrive config
 			  wrangler hyperdrive get <id>       Get a Hyperdrive config
 			  wrangler hyperdrive list           List Hyperdrive configs
-			  wrangler hyperdrive planetscale    Provision Cloudflare-billed PlanetScale databases [experimental]
+			  wrangler hyperdrive planetscale    Authorize Cloudflare-billed PlanetScale databases [experimental]
 			  wrangler hyperdrive update <id>    Update a Hyperdrive config
 
 			GLOBAL FLAGS
@@ -135,7 +135,7 @@ describe("hyperdrive planetscale", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler hyperdrive planetscale
 
-			Provision Cloudflare-billed PlanetScale databases [experimental]
+			Authorize Cloudflare-billed PlanetScale databases [experimental]
 
 			COMMANDS
 			  wrangler hyperdrive planetscale signature  Generate a signed authorization for creating a Cloudflare-billed PlanetScale database [experimental]
@@ -199,6 +199,33 @@ describe("hyperdrive planetscale", () => {
 			timestamp: "1700000000",
 			signature: "deadbeef",
 		});
+	});
+
+	it("should send only the fields the PlanetScale CLI accepts", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/hyperdrive/integrationsOperations/:integration/createDatabaseSignature",
+				async () =>
+					HttpResponse.json(
+						createFetchResult({
+							account_id: "some-account-id",
+							timestamp: "1700000000",
+							signature: "deadbeef",
+							some_new_field: "should not be printed",
+						})
+					)
+			)
+		);
+
+		await runWrangler("hyperdrive planetscale signature");
+
+		expect(Object.keys(JSON.parse(std.out))).toEqual([
+			"account_id",
+			"timestamp",
+			"signature",
+		]);
 	});
 });
 

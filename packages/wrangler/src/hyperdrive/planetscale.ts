@@ -4,7 +4,7 @@ import { createDatabaseSignature } from "./client";
 
 export const hyperdrivePlanetscaleNamespace = createNamespace({
 	metadata: {
-		description: "Provision Cloudflare-billed PlanetScale databases",
+		description: "Authorize Cloudflare-billed PlanetScale databases",
 		status: "experimental",
 		owner: "Product: Hyperdrive",
 	},
@@ -22,6 +22,17 @@ export const hyperdrivePlanetscaleSignatureCommand = createCommand({
 	args: {},
 	async handler(_args, { config }) {
 		const signature = await createDatabaseSignature(config, "planetScale");
-		logger.log(JSON.stringify(signature, null, 2));
+
+		logger.log(
+			JSON.stringify(
+				{
+					account_id: signature.account_id,
+					timestamp: signature.timestamp,
+					signature: signature.signature,
+				},
+				null,
+				2
+			)
+		);
 	},
 });
