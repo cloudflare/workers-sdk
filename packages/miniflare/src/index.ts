@@ -2272,12 +2272,14 @@ export class Miniflare {
 			 * - if Vitest with assets, the fallback Worker should point to the Vitest
 			 *   runner Worker, while the SELF binding on the test runner will point to
 			 *   the (assets) RPC Proxy Worker
+			 *
+			 * The prefix below must stay in sync with `WORKER_NAME_PREFIX` in
+			 * `@cloudflare/vitest-plugin` (`src/pool/helpers.ts`), which names runner
+			 * Workers `${WORKER_NAME_PREFIX}runner-<project>`.
 			 */
 			fallbackWorkerName:
 				this.#workerOpts[0].config.assets &&
-				!this.#workerOpts[0].config.name.startsWith(
-					"vitest-pool-workers-runner-"
-				)
+				!this.#workerOpts[0].config.name.startsWith("vitest-plugin-runner-")
 					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].config.name}`
 					: getUserServiceName(this.#workerOpts[0].config.name),
 			tmpPath: this.#tmpPath,

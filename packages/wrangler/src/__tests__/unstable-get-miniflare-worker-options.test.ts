@@ -170,7 +170,7 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
 			// Without this, `ctx.access` resolves to `undefined` under
-			// @cloudflare/vitest-pool-workers even though `wrangler dev` honours it.
+			// @cloudflare/vitest-plugin even though `wrangler dev` honours it.
 			expect(workerOptions.access).toEqual({
 				aud: "my-app-aud-tag",
 				identity: {
