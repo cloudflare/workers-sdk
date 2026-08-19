@@ -152,7 +152,8 @@ function toRow(condition: BaseCondition, join: LogicalOperator): UICondition {
  * The editor can represent an AND of OR-groups, which covers everything it can
  * produce plus the shapes the Flagship API returns. Anything more deeply nested
  * is reported as unrepresentable so the caller can refuse to edit it rather than
- * silently rewriting the author's logic.
+ * silently rewriting the author's logic. An empty OR group never matches, which
+ * the flat editor cannot express either, so it is treated the same way.
  *
  * @returns Editor rows, or null when the shape cannot be edited safely
  */
@@ -175,7 +176,7 @@ export function flattenConditions(
 			rows.push(toRow(group, "AND"));
 			continue;
 		}
-		if (group.logical_operator !== "OR") {
+		if (group.logical_operator !== "OR" || group.clauses.length === 0) {
 			return null;
 		}
 		for (const [index, clause] of group.clauses.entries()) {
@@ -404,8 +405,8 @@ export function validateRules(
 
 		if (rule.rollout !== null) {
 			const { percentage } = rule.rollout;
-			if (!Number.isInteger(percentage) || percentage < 0 || percentage > 100) {
-				fail("Rollout must be a whole number between 0 and 100.");
+			if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
+				fail("Rollout must be a number between 0 and 100.");
 			}
 		}
 

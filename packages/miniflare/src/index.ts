@@ -3296,7 +3296,13 @@ export type {
 	Operator,
 	Rollout,
 } from "./workers/flagship/evaluate";
-export type { Flag, FlagInput, FlagType, Rule } from "./workers/flagship/flags";
+export type {
+	Flag,
+	FlagChanges,
+	FlagInput,
+	FlagType,
+	Rule,
+} from "./workers/flagship/flags";
 
 export interface SecretsStoreSecretAdmin {
 	create(value: string): Promise<string>;

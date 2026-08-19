@@ -42,13 +42,9 @@ export const flagshipFlagsPullCommand = createCommand({
 			config,
 			appId,
 			async (admin) => {
-				await admin.setAccountTag(accountId);
-
 				const pulledKeys = new Set(flags.map((flag) => flag.key));
 				const existing = await admin.listFlags();
-				for (const flag of flags) {
-					await admin.putFlag(toFlagInput(flag));
-				}
+				await admin.putFlags(flags.map(toFlagInput), accountId);
 				return existing
 					.map((flag) => flag.key)
 					.filter((key) => !pulledKeys.has(key));
@@ -71,6 +67,11 @@ export const flagshipFlagsPullCommand = createCommand({
 			logger.log(
 				dim(
 					`\nLeft ${localOnly.length} local-only flag${localOnly.length === 1 ? "" : "s"} untouched: ${localOnly.join(", ")}`
+				)
+			);
+			logger.log(
+				dim(
+					"These do not exist in the remote app, either because they were created locally or because they were deleted remotely."
 				)
 			);
 		}

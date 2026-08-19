@@ -49,6 +49,12 @@ export const flagStoreArgDefinitions = {
 } as const;
 
 export function useLocalStore(args: FlagStoreArgs): boolean {
+	if (args.local === true && args.remote === true) {
+		throw new UserError(
+			"Cannot use --local and --remote together. Choose the local flag store or the remote app.",
+			{ telemetryMessage: "flagship local and remote conflict" }
+		);
+	}
 	return args.local === true || args.remote === false;
 }
 

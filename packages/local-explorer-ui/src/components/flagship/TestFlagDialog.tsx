@@ -17,7 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flagshipEvaluateFlag } from "../../api";
 import { LOCAL_EXPLORER_API_PATH } from "../../constants";
-import { flagshipErrorMessage } from "./flag-helpers";
+import { flagshipErrorMessage, shellQuote } from "./flag-helpers";
 import { TextInput } from "./FormFields";
 import type { FlagshipEvaluation, FlagshipFlag } from "../../api";
 import type { BadgeVariant } from "@cloudflare/kumo";
@@ -73,7 +73,11 @@ function localEvaluateCurl(
 ): string {
 	const origin = window.location.origin;
 	const url = `${origin}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${encodeURIComponent(appId)}/flags/${encodeURIComponent(flagKey)}/evaluate`;
-	return `curl -X POST ${JSON.stringify(url)} \\\n  -H "Content-Type: application/json" \\\n  -d ${JSON.stringify(JSON.stringify({ context }))}`;
+	return [
+		`curl -X POST ${shellQuote(url)} \\`,
+		`  -H 'Content-Type: application/json' \\`,
+		`  -d ${shellQuote(JSON.stringify({ context }))}`,
+	].join("\n");
 }
 
 /**
@@ -141,6 +145,7 @@ export function TestFlagDialog({
 	const [evaluating, setEvaluating] = useState(false);
 	const [copied, setCopied] = useState<"result" | "curl" | null>(null);
 	const wasOpen = useRef(false);
+	const latestRequest = useRef(0);
 	const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
@@ -163,6 +168,7 @@ export function TestFlagDialog({
 	 * Clears the transient state so the next open starts from a clean form.
 	 */
 	function reset(): void {
+		latestRequest.current += 1;
 		setRows([]);
 		setResult(null);
 		setError(null);
@@ -184,9 +190,10 @@ export function TestFlagDialog({
 	 * Evaluates the selected flag with the context entered in the form.
 	 */
 	async function evaluate(): Promise<void> {
-		if (selectedFlagKey === "") {
+		if (selectedFlagKey === "" || evaluating) {
 			return;
 		}
+		const request = ++latestRequest.current;
 		setEvaluating(true);
 		setError(null);
 		setResult(null);
@@ -195,6 +202,9 @@ export function TestFlagDialog({
 				body: { context: contextFromRows(rows) },
 				path: { app_id: appId, flag_key: selectedFlagKey },
 			});
+			if (request !== latestRequest.current) {
+				return;
+			}
 			const next = response.data?.result;
 			if (next === undefined) {
 				setError("The flag evaluated but no result was returned.");
@@ -202,9 +212,13 @@ export function TestFlagDialog({
 			}
 			setResult(next);
 		} catch (caught) {
-			setError(flagshipErrorMessage(caught, "Failed to evaluate flag"));
+			if (request === latestRequest.current) {
+				setError(flagshipErrorMessage(caught, "Failed to evaluate flag"));
+			}
 		} finally {
-			setEvaluating(false);
+			if (request === latestRequest.current) {
+				setEvaluating(false);
+			}
 		}
 	}
 
@@ -261,9 +275,11 @@ export function TestFlagDialog({
 							items={flagKeys.map((key) => ({ label: key, value: key }))}
 							label="Flag key"
 							onValueChange={(value: string | null) => {
+								latestRequest.current += 1;
 								setSelectedFlagKey(value ?? "");
 								setResult(null);
 								setError(null);
+								setEvaluating(false);
 							}}
 							placeholder="Select a flag"
 							value={selectedFlagKey}

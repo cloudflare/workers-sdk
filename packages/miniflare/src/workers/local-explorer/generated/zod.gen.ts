@@ -365,7 +365,7 @@ export const zFlagshipRule = z.object({
 	serve_variation: z.string().optional(),
 	rollout: z
 		.object({
-			percentage: z.int().optional(),
+			percentage: z.number().gte(0).lte(100),
 			attribute: z.string().optional(),
 		})
 		.optional(),

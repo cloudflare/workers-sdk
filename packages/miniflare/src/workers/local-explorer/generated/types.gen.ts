@@ -451,7 +451,7 @@ export type FlagshipRule = {
 	 * Percentage rollout applied to matching contexts
 	 */
 	rollout?: {
-		percentage?: number;
+		percentage: number;
 		attribute?: string;
 	};
 };

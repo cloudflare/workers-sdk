@@ -3,7 +3,7 @@ import type {
 	EvaluationDetails,
 	FlagValue,
 } from "./evaluate";
-import type { Flag, FlagInput } from "./flags";
+import type { Flag, FlagChanges, FlagInput } from "./flags";
 
 export interface FlagshipAdmin {
 	listFlags(): Promise<Flag[]>;
@@ -12,7 +12,9 @@ export interface FlagshipAdmin {
 	setAccountTag(accountTag: string): Promise<void>;
 	createFlag(input: FlagInput): Promise<Flag>;
 	updateFlag(flagKey: string, input: FlagInput): Promise<Flag>;
+	patchFlag(flagKey: string, changes: FlagChanges): Promise<Flag>;
 	putFlag(input: FlagInput): Promise<Flag>;
+	putFlags(inputs: FlagInput[], accountTag: string): Promise<void>;
 	deleteFlag(flagKey: string): Promise<void>;
 	evaluateFlag(
 		flagKey: string,

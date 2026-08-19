@@ -12,6 +12,7 @@ import { FLAGSHIP_PLUGIN_NAME } from "../flagship";
 import {
 	extractObjectEntryId,
 	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
@@ -431,6 +432,11 @@ export function constructExplorerWorkerOpts(
 			workerOpts.config,
 			"flagship"
 		)) {
+			if (
+				getRemoteProxyConnectionString(binding, workerOpts.dev) !== undefined
+			) {
+				continue;
+			}
 			bindings.flagship.push({ id: binding.id, bindingName });
 		}
 

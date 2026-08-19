@@ -111,6 +111,7 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 						{
 							className: FLAGSHIP_OBJECT_CLASS_NAME,
 							uniqueKey: `miniflare-flagship-${FLAGSHIP_OBJECT_CLASS_NAME}`,
+							enableSql: true,
 						},
 					],
 					durableObjectStorage: { localDisk: FLAGSHIP_STORAGE_SERVICE_NAME },

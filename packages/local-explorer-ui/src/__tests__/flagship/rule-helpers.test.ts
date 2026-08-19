@@ -161,6 +161,14 @@ describe("flattenConditions", () => {
 
 		expect(flattened).toBeNull();
 	});
+
+	test("refuses an OR group with no clauses", ({ expect }) => {
+		const flattened = flattenConditions([
+			{ clauses: [], logical_operator: "OR" },
+		]);
+
+		expect(flattened).toBeNull();
+	});
 });
 
 describe("uiRulesFrom", () => {
@@ -346,8 +354,42 @@ describe("validateRules", () => {
 		);
 
 		expect(errors[0]?.message).toBe(
-			"Rollout must be a whole number between 0 and 100."
+			"Rollout must be a number between 0 and 100."
 		);
+	});
+
+	test("rejects a rollout that is not a finite number", ({ expect }) => {
+		const errors = validateRules(
+			[
+				{
+					conditions: [row("country")],
+					id: "a",
+					rollout: { attribute: "", percentage: Number.NaN },
+					serveVariation: "on",
+				},
+			],
+			["on"]
+		);
+
+		expect(errors[0]?.message).toBe(
+			"Rollout must be a number between 0 and 100."
+		);
+	});
+
+	test("accepts a fractional rollout", ({ expect }) => {
+		const errors = validateRules(
+			[
+				{
+					conditions: [row("country")],
+					id: "a",
+					rollout: { attribute: "", percentage: 33.5 },
+					serveVariation: "on",
+				},
+			],
+			["on"]
+		);
+
+		expect(errors).toEqual([]);
 	});
 
 	test("reports rules made unreachable by an earlier catch-all", ({

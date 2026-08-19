@@ -6,7 +6,7 @@ export interface VariationDraft {
 	value: string;
 }
 
-const FLAG_KEY_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_]*$/;
+const FLAG_KEY_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
 const DEFAULT_VARIATIONS: Record<
 	FlagType,
@@ -120,13 +120,12 @@ export function validateFlagKey(
 	if (trimmed.length === 0) {
 		return "Enter a flag key.";
 	}
-	if (trimmed.length > 64) {
-		return "Flag key must be 64 characters or fewer.";
-	}
 	if (!FLAG_KEY_PATTERN.test(trimmed)) {
-		return "Use only letters, numbers, hyphens, and underscores.";
+		return trimmed.length > 64
+			? "Flag key must be 64 characters or fewer."
+			: "Use only letters, numbers, hyphens, and underscores.";
 	}
-	if (existingKeys.has(trimmed.toLowerCase())) {
+	if (existingKeys.has(trimmed)) {
 		return "A flag with this key already exists in this application.";
 	}
 	return null;
@@ -146,7 +145,7 @@ export function parseVariationValue(
 		return { ok: false, error: "Boolean values must be true or false." };
 	}
 	if (type === "number") {
-		if (raw.trim() === "" || Number.isNaN(Number(raw))) {
+		if (raw.trim() === "" || !Number.isFinite(Number(raw))) {
 			return { ok: false, error: "Number values must be numeric." };
 		}
 		return { ok: true, value: Number(raw) };
@@ -177,4 +176,19 @@ export function flagshipErrorMessage(error: unknown, fallback: string): string {
 		return error.message;
 	}
 	return fallback;
+}
+
+/**
+ * Quotes a value for use as a single argument in a POSIX shell.
+ *
+ * Single quotes stop the shell expanding anything inside, so a value
+ * containing `$(...)`, backticks or quotes stays inert when a copied command
+ * is pasted into a terminal.
+ *
+ * @param value - Value to quote
+ *
+ * @returns The value as a single quoted shell argument
+ */
+export function shellQuote(value: string): string {
+	return `'${value.replaceAll("'", `'\\''`)}'`;
 }

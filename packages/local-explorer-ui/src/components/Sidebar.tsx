@@ -215,7 +215,7 @@ export function AppSidebar({
 			groupId: "flagship" as const,
 			icon: FlagshipIcon,
 			items: flagshipApps.map((app) => ({
-				id: app.id,
+				id: `${app.id}:${app.bindingName}`,
 				isActive: currentPath === `/flagship/${app.id}`,
 				label: app.bindingName,
 				link: {

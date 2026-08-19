@@ -328,6 +328,73 @@ describe("Flagship API", () => {
 		});
 	});
 
+	describe("POST /flagship/apps/:app_id/flags with malformed conditions", () => {
+		/**
+		 * Creates a flag whose single rule carries the given conditions.
+		 *
+		 * @returns The API response body's first error message
+		 */
+		async function create(conditions: unknown): Promise<string | undefined> {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						key: "malformed",
+						default_variation: "off",
+						variations: { on: true, off: false },
+						rules: [{ priority: 1, serve_variation: "on", conditions }],
+					}),
+				}
+			);
+			const body = (await response.json()) as {
+				errors?: Array<{ message?: string }>;
+			};
+			return body.errors?.[0]?.message;
+		}
+
+		test("rejects a logical condition without clauses", async ({ expect }) => {
+			expect(await create([{ logical_operator: "AND" }])).toBe(
+				"Flag 'malformed' has a 'AND' condition without a list of clauses"
+			);
+		});
+
+		test("rejects an unknown logical operator", async ({ expect }) => {
+			expect(await create([{ logical_operator: "XOR", clauses: [] }])).toBe(
+				"Flag 'malformed' has a condition with an unknown logical operator 'XOR'"
+			);
+		});
+
+		test("rejects an unknown comparison operator", async ({ expect }) => {
+			expect(
+				await create([{ attribute: "plan", operator: "??", value: "pro" }])
+			).toBe("Flag 'malformed' has a condition with an unknown operator '??'");
+		});
+
+		test("rejects a condition without an attribute", async ({ expect }) => {
+			expect(await create([{ operator: "equals", value: "pro" }])).toBe(
+				"Flag 'malformed' has a condition without an attribute to match on"
+			);
+		});
+
+		test("rejects a list operator whose value is not a list", async ({
+			expect,
+		}) => {
+			expect(
+				await create([{ attribute: "plan", operator: "in", value: "pro" }])
+			).toBe("Flag 'malformed' has a 'in' condition whose value is not a list");
+		});
+
+		test("leaves the store unchanged", async ({ expect }) => {
+			await create([{ logical_operator: "AND" }]);
+
+			expect((await admin.listFlags()).map((flag) => flag.key)).not.toContain(
+				"malformed"
+			);
+		});
+	});
+
 	describe("GET /flagship/apps/:app_id/flags/:flag_key", () => {
 		test("returns a single flag", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
@@ -418,6 +485,55 @@ describe("Flagship API", () => {
 			expect(data.result).toMatchObject({ enabled: false });
 			// The explorer writes to the same store the Worker reads from.
 			expect(await admin.getFlag("new-ui")).toMatchObject({ enabled: false });
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("leaves fields the request omits untouched", async ({ expect }) => {
+			await admin.patchFlag("new-ui", { description: "set by another writer" });
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ enabled: false }),
+				}
+			);
+			await response.text();
+
+			expect(await admin.getFlag("new-ui")).toMatchObject({
+				description: "set by another writer",
+				enabled: false,
+			});
+
+			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
+		});
+
+		test("accepts a fractional rollout percentage", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-1/flags/new-ui`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						rules: [
+							{
+								priority: 1,
+								serve_variation: "on",
+								conditions: [],
+								rollout: { percentage: 33.333333 },
+							},
+						],
+					}),
+				}
+			);
+			await response.text();
+
+			expect(response.status).toBe(200);
+			expect(
+				(await admin.getFlag("new-ui")).rules[0]?.rollout?.percentage
+			).toBe(33.333333);
 
 			await admin.updateFlag("new-ui", BOOLEAN_FLAG);
 		});

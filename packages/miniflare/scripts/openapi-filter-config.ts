@@ -1983,8 +1983,9 @@ const config = {
 					},
 					rollout: {
 						type: "object",
+						required: ["percentage"],
 						properties: {
-							percentage: { type: "integer" },
+							percentage: { type: "number", minimum: 0, maximum: 100 },
 							attribute: { type: "string" },
 						},
 						description: "Percentage rollout applied to matching contexts",

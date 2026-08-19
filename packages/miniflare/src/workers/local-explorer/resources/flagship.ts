@@ -1,10 +1,14 @@
 import { ADMIN_API as ADMIN_API_KEY } from "../../flagship/constants";
-import { aggregateListResults } from "../aggregation";
+import { flagNotFoundMessage } from "../../flagship/flags";
+import {
+	aggregateListResults,
+	fetchFromPeer,
+	getPeerUrlsIfAggregating,
+} from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import type { FlagshipAdmin } from "../../flagship/admin";
 import type { ADMIN_API } from "../../flagship/constants";
-import type { Flag } from "../../flagship/flags";
-import type { Rule } from "../../flagship/flags";
+import type { Flag, FlagChanges, Rule } from "../../flagship/flags";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
@@ -16,6 +20,8 @@ import type {
 
 const FLAGSHIP_ERROR_NOT_FOUND = 10801;
 const FLAGSHIP_ERROR_INVALID_FLAG = 10802;
+
+const APPS_PATH = "/flagship/apps";
 
 function getAdmin(env: Env, appId: string): FlagshipAdmin | null {
 	const info = env.LOCAL_EXPLORER_BINDING_MAP.flagship[appId];
@@ -37,6 +43,85 @@ function notFound(appId: string): Response {
 		FLAGSHIP_ERROR_NOT_FOUND,
 		`Flagship app '${appId}' is not simulated locally.`
 	);
+}
+
+function appPath(appId: string, suffix = ""): string {
+	return `${APPS_PATH}/${encodeURIComponent(appId)}${suffix}`;
+}
+
+function flagPath(appId: string, flagKey: string, suffix = ""): string {
+	return appPath(appId, `/flags/${encodeURIComponent(flagKey)}${suffix}`);
+}
+
+async function findAppOwner(
+	c: AppContext,
+	appId: string
+): Promise<string | null> {
+	const peerUrls = await getPeerUrlsIfAggregating(c);
+	if (peerUrls.length === 0) {
+		return null;
+	}
+	const owners = await Promise.all(
+		peerUrls.map(async (url) => {
+			const response = await fetchFromPeer(url, APPS_PATH);
+			if (!response?.ok) {
+				return null;
+			}
+			try {
+				const data = (await response.json()) as { result?: FlagshipApp[] };
+				return data.result?.some((app) => app.id === appId) === true
+					? url
+					: null;
+			} catch {
+				return null;
+			}
+		})
+	);
+	return owners.find((url) => url !== null) ?? null;
+}
+
+/**
+ * Runs an app-scoped operation against whichever instance owns the app.
+ *
+ * Apps bound in this instance are served directly. Apps discovered from a peer
+ * during aggregation are proxied to their owner, so an app that appears in the
+ * list is always usable.
+ *
+ * @param c - Hono app context
+ * @param appId - The Flagship app the request targets
+ * @param peerPath - Path to replay against the owning peer
+ * @param handler - Runs when this instance owns the app
+ * @param init - Request init to replay against the owning peer
+ *
+ * @returns The owner's response, or a 404 when no instance owns the app
+ */
+async function withApp(
+	c: AppContext,
+	appId: string,
+	peerPath: string,
+	handler: (admin: FlagshipAdmin) => Promise<Response>,
+	init?: RequestInit
+): Promise<Response> {
+	const admin = getAdmin(c.env, appId);
+	if (admin !== null) {
+		return handler(admin);
+	}
+	const owner = await findAppOwner(c, appId);
+	if (owner !== null) {
+		const response = await fetchFromPeer(owner, peerPath, init);
+		if (response !== null) {
+			return response;
+		}
+	}
+	return notFound(appId);
+}
+
+function jsonInit(method: string, body: unknown): RequestInit {
+	return {
+		method,
+		body: JSON.stringify(body),
+		headers: { "Content-Type": "application/json" },
+	};
 }
 
 function matchesIfNoneMatch(header: string | undefined, etag: string): boolean {
@@ -77,7 +162,7 @@ export async function listFlagshipApps(c: AppContext): Promise<Response> {
 		c.env.LOCAL_EXPLORER_BINDING_MAP.flagship
 	).map((info) => ({ id: info.appId, bindings: info.bindings }));
 
-	const aggregated = await aggregateListResults(c, local, "/flagship/apps");
+	const aggregated = await aggregateListResults(c, local, APPS_PATH);
 
 	const seen = new Set<string>();
 	const apps = aggregated.filter((app) => {
@@ -98,14 +183,12 @@ export async function listFlagshipFlags(
 	c: AppContext,
 	appId: string
 ): Promise<Response> {
-	const admin = getAdmin(c.env, appId);
-	if (!admin) {
-		return notFound(appId);
-	}
-	const flags = await admin.listFlags();
-	return c.json({
-		...wrapResponse(flags),
-		result_info: { count: flags.length },
+	return withApp(c, appId, appPath(appId, "/flags"), async (admin) => {
+		const flags = await admin.listFlags();
+		return c.json({
+			...wrapResponse(flags),
+			result_info: { count: flags.length },
+		});
 	});
 }
 
@@ -113,25 +196,32 @@ export async function getFlagshipDefinitions(
 	c: AppContext,
 	appId: string
 ): Promise<Response> {
-	const admin = getAdmin(c.env, appId);
-	if (!admin) {
-		return notFound(appId);
-	}
-	const flags = (await admin.listFlags()).sort((a, b) =>
-		a.key.localeCompare(b.key)
+	const ifNoneMatch = c.req.header("If-None-Match");
+	return withApp(
+		c,
+		appId,
+		appPath(appId, "/definitions"),
+		async (admin) => {
+			const flags = (await admin.listFlags()).sort((a, b) =>
+				a.key.localeCompare(b.key)
+			);
+			const payload = JSON.stringify({
+				flags: Object.fromEntries(
+					flags.map((flag) => [flag.key, toDefinition(flag)])
+				),
+			});
+			const etag = await contentEtag(payload);
+			if (matchesIfNoneMatch(ifNoneMatch, etag)) {
+				return new Response(null, { status: 304, headers: { ETag: etag } });
+			}
+			return new Response(payload, {
+				headers: { "Content-Type": "application/json", ETag: etag },
+			});
+		},
+		ifNoneMatch === undefined
+			? undefined
+			: { headers: { "If-None-Match": ifNoneMatch } }
 	);
-	const payload = JSON.stringify({
-		flags: Object.fromEntries(
-			flags.map((flag) => [flag.key, toDefinition(flag)])
-		),
-	});
-	const etag = await contentEtag(payload);
-	if (matchesIfNoneMatch(c.req.header("If-None-Match"), etag)) {
-		return new Response(null, { status: 304, headers: { ETag: etag } });
-	}
-	return new Response(payload, {
-		headers: { "Content-Type": "application/json", ETag: etag },
-	});
 }
 
 export async function getFlagshipFlag(
@@ -139,15 +229,13 @@ export async function getFlagshipFlag(
 	appId: string,
 	flagKey: string
 ): Promise<Response> {
-	const admin = getAdmin(c.env, appId);
-	if (!admin) {
-		return notFound(appId);
-	}
-	try {
-		return c.json(wrapResponse(await admin.getFlag(flagKey)));
-	} catch (error) {
-		return flagError(error, flagKey);
-	}
+	return withApp(c, appId, flagPath(appId, flagKey), async (admin) => {
+		try {
+			return c.json(wrapResponse(await admin.getFlag(flagKey)));
+		} catch (error) {
+			return flagError(error, flagKey, 500);
+		}
+	});
 }
 
 export async function createFlagshipFlag(
@@ -155,34 +243,35 @@ export async function createFlagshipFlag(
 	appId: string,
 	body: FlagshipCreateFlagData["body"]
 ): Promise<Response> {
-	const admin = getAdmin(c.env, appId);
-	if (!admin) {
-		return notFound(appId);
-	}
-	try {
-		const created = await admin.createFlag({
-			key: body.key,
-			description: body.description ?? undefined,
-			enabled: body.enabled ?? false,
-			default_variation: body.default_variation,
-			variations: body.variations,
-			rules: toRules(body.rules ?? []),
-		});
-		return c.json(wrapResponse(created));
-	} catch (error) {
-		return errorResponse(
-			400,
-			FLAGSHIP_ERROR_INVALID_FLAG,
-			error instanceof Error ? error.message : String(error)
-		);
-	}
+	return withApp(
+		c,
+		appId,
+		appPath(appId, "/flags"),
+		async (admin) => {
+			try {
+				const created = await admin.createFlag({
+					key: body.key,
+					description: body.description ?? undefined,
+					enabled: body.enabled ?? false,
+					default_variation: body.default_variation,
+					variations: body.variations,
+					rules: toRules(body.rules ?? []),
+				});
+				return c.json(wrapResponse(created));
+			} catch (error) {
+				return flagError(error, body.key, 400);
+			}
+		},
+		jsonInit("POST", body)
+	);
 }
 
 /**
  * Converts rules from the request body into stored rules.
  *
- * Every field is optional on the wire, so missing values are filled in with
- * ones that `validateFlagInput` will reject rather than silently accept.
+ * Every field is optional on the wire, so missing values are passed through
+ * unchanged for `validateFlagInput` to reject rather than being defaulted to
+ * something that silently changes the author's intent.
  *
  * @param rules - Rules supplied by the client, in priority order
  *
@@ -191,19 +280,9 @@ export async function createFlagshipFlag(
 function toRules(rules: FlagshipRule[]): Rule[] {
 	return rules.map((rule, index) => ({
 		priority: rule.priority ?? index + 1,
-		// Narrowed from the schema's free-form objects; validation rejects bad shapes.
 		conditions: (rule.conditions ?? []) as unknown as Rule["conditions"],
 		serve_variation: rule.serve_variation ?? "",
-		...(rule.rollout === undefined
-			? {}
-			: {
-					rollout: {
-						percentage: rule.rollout.percentage ?? 100,
-						...(rule.rollout.attribute === undefined
-							? {}
-							: { attribute: rule.rollout.attribute }),
-					},
-				}),
+		...(rule.rollout === undefined ? {} : { rollout: rule.rollout }),
 	}));
 }
 
@@ -213,46 +292,32 @@ export async function updateFlagshipFlag(
 	flagKey: string,
 	body: FlagshipUpdateFlagData["body"]
 ): Promise<Response> {
-	const admin = getAdmin(c.env, appId);
-	if (!admin) {
-		return notFound(appId);
-	}
-
-	let current: Flag;
-	try {
-		current = await admin.getFlag(flagKey);
-	} catch (error) {
-		return flagError(error, flagKey);
-	}
-
-	const variations = body.variations ?? current.variations;
-	const defaultVariation = body.default_variation ?? current.default_variation;
-	if (!Object.hasOwn(variations, defaultVariation)) {
-		return errorResponse(
-			400,
-			FLAGSHIP_ERROR_INVALID_FLAG,
-			`Flag '${flagKey}' has no variation '${defaultVariation}'.`
-		);
-	}
-
-	try {
-		const updated = await admin.updateFlag(flagKey, {
-			key: current.key,
-			description:
-				body.description !== undefined ? body.description : current.description,
-			enabled: body.enabled ?? current.enabled,
-			default_variation: defaultVariation,
-			variations,
-			rules: body.rules === undefined ? current.rules : toRules(body.rules),
-		});
-		return c.json(wrapResponse(updated));
-	} catch (error) {
-		return errorResponse(
-			400,
-			FLAGSHIP_ERROR_INVALID_FLAG,
-			error instanceof Error ? error.message : String(error)
-		);
-	}
+	return withApp(
+		c,
+		appId,
+		flagPath(appId, flagKey),
+		async (admin) => {
+			const changes: FlagChanges = {
+				...(body.description === undefined
+					? {}
+					: { description: body.description }),
+				...(body.enabled === undefined ? {} : { enabled: body.enabled }),
+				...(body.default_variation === undefined
+					? {}
+					: { default_variation: body.default_variation }),
+				...(body.variations === undefined
+					? {}
+					: { variations: body.variations }),
+				...(body.rules === undefined ? {} : { rules: toRules(body.rules) }),
+			};
+			try {
+				return c.json(wrapResponse(await admin.patchFlag(flagKey, changes)));
+			} catch (error) {
+				return flagError(error, flagKey, 400);
+			}
+		},
+		jsonInit("PATCH", body)
+	);
 }
 
 export async function deleteFlagshipFlag(
@@ -260,16 +325,20 @@ export async function deleteFlagshipFlag(
 	appId: string,
 	flagKey: string
 ): Promise<Response> {
-	const admin = getAdmin(c.env, appId);
-	if (!admin) {
-		return notFound(appId);
-	}
-	try {
-		await admin.deleteFlag(flagKey);
-		return c.json(wrapResponse({ success: true }));
-	} catch (error) {
-		return flagError(error, flagKey);
-	}
+	return withApp(
+		c,
+		appId,
+		flagPath(appId, flagKey),
+		async (admin) => {
+			try {
+				await admin.deleteFlag(flagKey);
+				return c.json(wrapResponse({ success: true }));
+			} catch (error) {
+				return flagError(error, flagKey, 400);
+			}
+		},
+		{ method: "DELETE" }
+	);
 }
 
 export async function evaluateFlagshipFlag(
@@ -278,25 +347,37 @@ export async function evaluateFlagshipFlag(
 	flagKey: string,
 	context: Record<string, unknown>
 ): Promise<Response> {
-	const admin = getAdmin(c.env, appId);
-	if (!admin) {
-		return notFound(appId);
-	}
-	try {
-		return c.json(wrapResponse(await admin.evaluateFlag(flagKey, context)));
-	} catch (error) {
-		return flagError(error, flagKey);
-	}
+	return withApp(
+		c,
+		appId,
+		flagPath(appId, flagKey, "/evaluate"),
+		async (admin) => {
+			try {
+				return c.json(wrapResponse(await admin.evaluateFlag(flagKey, context)));
+			} catch (error) {
+				return flagError(error, flagKey, 500);
+			}
+		},
+		jsonInit("POST", { context })
+	);
 }
 
-function flagError(error: unknown, flagKey: string): Response {
+function flagError(
+	error: unknown,
+	flagKey: string,
+	fallbackStatus: 400 | 500
+): Response {
 	const message = error instanceof Error ? error.message : String(error);
-	if (message.includes("not found")) {
+	if (message === flagNotFoundMessage(flagKey)) {
 		return errorResponse(
 			404,
 			FLAGSHIP_ERROR_NOT_FOUND,
 			`Flag '${flagKey}' not found.`
 		);
 	}
-	return errorResponse(500, 10001, message);
+	return errorResponse(
+		fallbackStatus,
+		fallbackStatus === 400 ? FLAGSHIP_ERROR_INVALID_FLAG : 10001,
+		message
+	);
 }

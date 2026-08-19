@@ -21,7 +21,7 @@ import {
 	type UIRule,
 } from "./rule-helpers";
 import { RuleEditor } from "./RuleEditor";
-import type { FlagshipFlag } from "../../api";
+import type { FlagshipFlag, FlagshipUpdateFlagData } from "../../api";
 import type { JSX } from "react";
 
 const TYPE_TABS: Array<{ className: string; label: string; value: FlagType }> =
@@ -95,6 +95,51 @@ function emptyForm(): FormState {
 	};
 }
 
+type UpdateBody = NonNullable<FlagshipUpdateFlagData["body"]>;
+
+interface SavedValues {
+	default_variation: string;
+	description: string | null;
+	enabled: boolean;
+	rules: UpdateBody["rules"] | null;
+	variations: Record<string, unknown>;
+}
+
+/**
+ * Narrows an update to the fields that actually changed.
+ *
+ * Sending only what was edited means a concurrent change to another field, made
+ * from the CLI or a second window, survives this save instead of being reverted
+ * to the state the dialog was opened with. Rules are omitted entirely when they
+ * could not be represented in the editor.
+ *
+ * @returns The request body for a partial update
+ */
+function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
+	const body: UpdateBody = {};
+	if (next.default_variation !== flag.default_variation) {
+		body.default_variation = next.default_variation;
+	}
+	if (next.description !== (flag.description ?? null)) {
+		body.description = next.description;
+	}
+	if (next.enabled !== flag.enabled) {
+		body.enabled = next.enabled;
+	}
+	if (
+		JSON.stringify(next.variations) !== JSON.stringify(flag.variations ?? {})
+	) {
+		body.variations = next.variations;
+	}
+	if (
+		next.rules !== null &&
+		JSON.stringify(next.rules) !== JSON.stringify(flag.rules ?? [])
+	) {
+		body.rules = next.rules;
+	}
+	return body;
+}
+
 /**
  * Builds form state from an existing flag.
  */
@@ -155,9 +200,7 @@ export function FlagDialog({
 		() =>
 			new Set(
 				flags.flatMap((entry) =>
-					entry.key === undefined || entry.key === flag?.key
-						? []
-						: [entry.key.toLowerCase()]
+					entry.key === undefined || entry.key === flag?.key ? [] : [entry.key]
 				)
 			),
 		[flag?.key, flags]
@@ -332,35 +375,36 @@ export function FlagDialog({
 			return;
 		}
 
+		const defaultVariation = defaultRow.name.trim();
+		const description = form.description.trim() || null;
+		const rules = form.rules === null ? null : rulesFrom(form.rules);
+
 		setSaving(true);
 		try {
 			if (editing && flag.key !== undefined) {
 				await flagshipUpdateFlag({
-					body: {
-						default_variation: defaultRow.name.trim(),
-						description: form.description.trim() || null,
+					body: changedFields(flag, {
+						default_variation: defaultVariation,
+						description,
 						enabled: form.enabled,
-						// Omitted rules are left as stored, for the unrepresentable case.
-						...(form.rules === null ? {} : { rules: rulesFrom(form.rules) }),
+						rules,
 						variations,
-					},
+					}),
 					path: { app_id: appId, flag_key: flag.key },
 				});
 			} else {
 				await flagshipCreateFlag({
 					body: {
-						default_variation: defaultRow.name.trim(),
-						description: form.description.trim() || undefined,
+						default_variation: defaultVariation,
+						description: description ?? undefined,
 						enabled: form.enabled,
 						key: form.key.trim(),
-						...(form.rules === null ? {} : { rules: rulesFrom(form.rules) }),
+						...(rules === null ? {} : { rules }),
 						variations,
 					},
 					path: { app_id: appId },
 				});
 			}
-			await onSaved();
-			onOpenChange(false);
 		} catch (caught) {
 			setError({
 				field: "form",
@@ -369,9 +413,12 @@ export function FlagDialog({
 					editing ? "Failed to update flag" : "Failed to create flag"
 				),
 			});
-		} finally {
 			setSaving(false);
+			return;
 		}
+		setSaving(false);
+		onOpenChange(false);
+		await onSaved();
 	}
 
 	return (

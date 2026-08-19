@@ -1,4 +1,10 @@
-import type { Condition, EvalFlag, FlagValue, Rollout } from "./evaluate";
+import type {
+	Condition,
+	EvalFlag,
+	FlagValue,
+	Operator,
+	Rollout,
+} from "./evaluate";
 
 export type FlagType = "boolean" | "string" | "number" | "json";
 
@@ -23,7 +29,37 @@ export interface Flag extends FlagInput {
 	updated_at: string;
 }
 
+export interface FlagChanges {
+	description?: string | null;
+	enabled?: boolean;
+	default_variation?: string;
+	variations?: Record<string, unknown>;
+	rules?: Rule[];
+}
+
 const FLAG_KEY_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
+
+export function flagNotFoundMessage(flagKey: string): string {
+	return `Flag '${flagKey}' not found`;
+}
+
+const OPERATORS = new Set<Operator>([
+	"equals",
+	"not_equals",
+	"greater_than",
+	"less_than",
+	"greater_than_or_equals",
+	"less_than_or_equals",
+	"contains",
+	"starts_with",
+	"ends_with",
+	"in",
+	"not_in",
+]);
+
+const LIST_OPERATORS = new Set<Operator>(["in", "not_in"]);
+
+const MAX_CONDITION_DEPTH = 5;
 
 export function getFlagType(variations: Record<string, unknown>): FlagType {
 	const [first] = Object.values(variations);
@@ -53,6 +89,68 @@ export function toEvalFlag(flag: Flag): EvalFlag {
 				rollout,
 			})),
 	};
+}
+
+function validateCondition(
+	key: string,
+	condition: unknown,
+	depth: number
+): void {
+	if (
+		typeof condition !== "object" ||
+		condition === null ||
+		Array.isArray(condition)
+	) {
+		throw new Error(`Flag '${key}' has a condition that is not an object`);
+	}
+
+	if ("logical_operator" in condition) {
+		const { logical_operator: operator, clauses } = condition as {
+			logical_operator: unknown;
+			clauses?: unknown;
+		};
+		if (operator !== "AND" && operator !== "OR") {
+			throw new Error(
+				`Flag '${key}' has a condition with an unknown logical operator '${String(operator)}'`
+			);
+		}
+		if (!Array.isArray(clauses)) {
+			throw new Error(
+				`Flag '${key}' has a '${operator}' condition without a list of clauses`
+			);
+		}
+		if (depth === 0) {
+			throw new Error(`Flag '${key}' has conditions nested too deeply`);
+		}
+		for (const clause of clauses) {
+			validateCondition(key, clause, depth - 1);
+		}
+		return;
+	}
+
+	const { attribute, operator, value } = condition as {
+		attribute?: unknown;
+		operator?: unknown;
+		value?: unknown;
+	};
+	if (typeof attribute !== "string" || attribute === "") {
+		throw new Error(
+			`Flag '${key}' has a condition without an attribute to match on`
+		);
+	}
+	if (typeof operator !== "string" || !OPERATORS.has(operator as Operator)) {
+		throw new Error(
+			`Flag '${key}' has a condition with an unknown operator '${String(operator)}'`
+		);
+	}
+	if (LIST_OPERATORS.has(operator as Operator) && !Array.isArray(value)) {
+		throw new Error(
+			`Flag '${key}' has a '${operator}' condition whose value is not a list`
+		);
+	}
+	if (value === undefined) {
+		throw new Error(`Flag '${key}' has a condition without a value`);
+	}
 }
 
 export function validateFlagInput(input: FlagInput): void {
@@ -88,8 +186,18 @@ export function validateFlagInput(input: FlagInput): void {
 		);
 	}
 
+	if (!Array.isArray(input.rules)) {
+		throw new Error(`Flag '${input.key}' rules must be a list`);
+	}
+
 	const priorities = new Set<number>();
 	for (const rule of input.rules) {
+		if (!Array.isArray(rule.conditions)) {
+			throw new Error(`Flag '${input.key}' rule conditions must be a list`);
+		}
+		for (const condition of rule.conditions) {
+			validateCondition(input.key, condition, MAX_CONDITION_DEPTH);
+		}
 		if (!variationNames.includes(rule.serve_variation)) {
 			throw new Error(
 				`Flag '${input.key}' rule serves undefined variation '${rule.serve_variation}'`
@@ -108,10 +216,15 @@ export function validateFlagInput(input: FlagInput): void {
 		priorities.add(rule.priority);
 
 		if (rule.rollout !== undefined) {
-			const { percentage } = rule.rollout;
-			if (!Number.isInteger(percentage) || percentage < 0 || percentage > 100) {
+			const { percentage, attribute } = rule.rollout;
+			if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
 				throw new Error(
-					`Flag '${input.key}' rollout percentage must be an integer between 0 and 100`
+					`Flag '${input.key}' rollout percentage must be a number between 0 and 100`
+				);
+			}
+			if (attribute !== undefined && typeof attribute !== "string") {
+				throw new Error(
+					`Flag '${input.key}' rollout attribute must be a string`
 				);
 			}
 		}

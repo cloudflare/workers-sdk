@@ -118,10 +118,16 @@ function FlagshipAppView(): JSX.Element {
 		setRefreshing(true);
 		try {
 			await router.invalidate();
+		} catch (error) {
+			toast.add({
+				description: flagshipErrorMessage(error, "Failed to refresh flags"),
+				title: "Refresh failed",
+				variant: "error",
+			});
 		} finally {
 			setRefreshing(false);
 		}
-	}, [router]);
+	}, [router, toast]);
 
 	const toggleFlag = useCallback(
 		async (flag: FlagshipFlag) => {
@@ -134,18 +140,19 @@ function FlagshipAppView(): JSX.Element {
 					body: { enabled: !flag.enabled },
 					path: { app_id: appId, flag_key: flag.key },
 				});
-				await router.invalidate();
 			} catch (error) {
 				toast.add({
 					description: flagshipErrorMessage(error, "Failed to update flag"),
 					title: "Update failed",
 					variant: "error",
 				});
+				return;
 			} finally {
 				setPendingKey(null);
 			}
+			await refresh();
 		},
-		[appId, router, toast]
+		[appId, refresh, toast]
 	);
 
 	const confirmDelete = useCallback(async () => {
@@ -157,18 +164,19 @@ function FlagshipAppView(): JSX.Element {
 			await flagshipDeleteFlag({
 				path: { app_id: appId, flag_key: deleteTarget.key },
 			});
-			setDeleteTarget(null);
-			await router.invalidate();
 		} catch (error) {
 			toast.add({
 				description: flagshipErrorMessage(error, "Failed to delete flag"),
 				title: "Delete failed",
 				variant: "error",
 			});
+			return;
 		} finally {
 			setDeleting(false);
 		}
-	}, [appId, deleteTarget, router, toast]);
+		setDeleteTarget(null);
+		await refresh();
+	}, [appId, deleteTarget, refresh, toast]);
 
 	const searching = query.trim() !== "";
 

@@ -6,7 +6,7 @@ import {
 	matchesType,
 	TypeCastError,
 } from "./evaluate";
-import { toEvalFlag, toStoredFlag, validateFlagInput } from "./flags";
+import { flagNotFoundMessage, toEvalFlag } from "./flags";
 import type { FlagshipAdmin } from "./admin";
 import type {
 	ErrorCode,
@@ -15,8 +15,8 @@ import type {
 	FlagType,
 	FlagValue,
 } from "./evaluate";
-import type { Flag, FlagInput } from "./flags";
-import type { FlagshipObject } from "./object.worker";
+import type { Flag, FlagChanges, FlagInput } from "./flags";
+import type { FlagshipObject, WriteResult } from "./object.worker";
 
 interface Env {
 	config: { appId: string; accountTag: string };
@@ -27,7 +27,13 @@ interface Env {
 // unrecognised error names onto the message, which leaks into CLI output.
 class FlagNotFoundError extends Error {
 	constructor(flagKey: string) {
-		super(`Flag '${flagKey}' not found`);
+		super(flagNotFoundMessage(flagKey));
+	}
+}
+
+class FlagConflictError extends Error {
+	constructor(flagKey: string) {
+		super(`Flag '${flagKey}' already exists`);
 	}
 }
 
@@ -218,17 +224,28 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 
 	[ADMIN_API](): FlagshipAdmin {
 		const stub = this.#stub;
-		const requireFlag = async (flagKey: string): Promise<Flag> => {
-			const flag = await stub.get(flagKey);
-			if (flag === null) {
-				throw new FlagNotFoundError(flagKey);
+		const unwrap = (result: WriteResult, flagKey: string): Flag => {
+			switch (result.status) {
+				case "written":
+					return result.flag;
+				case "missing":
+					throw new FlagNotFoundError(flagKey);
+				case "exists":
+					throw new FlagConflictError(flagKey);
+				case "invalid":
+					throw new Error(result.message);
 			}
-			return flag;
 		};
 
 		return {
 			listFlags: (): Promise<Flag[]> => stub.list(),
-			getFlag: (flagKey: string): Promise<Flag> => requireFlag(flagKey),
+			getFlag: async (flagKey: string): Promise<Flag> => {
+				const flag = await stub.get(flagKey);
+				if (flag === null) {
+					throw new FlagNotFoundError(flagKey);
+				}
+				return flag;
+			},
 			getAccountTag: (): Promise<string | null> => stub.getAccountTag(),
 			setAccountTag: (accountTag: string): Promise<void> => {
 				if (typeof accountTag !== "string" || accountTag === "") {
@@ -236,31 +253,27 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 				}
 				return stub.setAccountTag(accountTag);
 			},
-			createFlag: async (input: FlagInput): Promise<Flag> => {
-				validateFlagInput(input);
-				if ((await stub.get(input.key)) !== null) {
-					throw new Error(`Flag '${input.key}' already exists`);
+			createFlag: async (input: FlagInput): Promise<Flag> =>
+				unwrap(await stub.create(input), input.key),
+			updateFlag: async (flagKey: string, input: FlagInput): Promise<Flag> =>
+				unwrap(await stub.update(flagKey, input), flagKey),
+			patchFlag: async (flagKey: string, changes: FlagChanges): Promise<Flag> =>
+				unwrap(await stub.patch(flagKey, changes), flagKey),
+			putFlag: async (input: FlagInput): Promise<Flag> =>
+				unwrap(await stub.put(input), input.key),
+			putFlags: async (
+				inputs: FlagInput[],
+				accountTag: string
+			): Promise<void> => {
+				const result = await stub.putAll(inputs, accountTag);
+				if (result.status === "invalid") {
+					throw new Error(result.message);
 				}
-				const flag = toStoredFlag(input);
-				await stub.put(flag);
-				return flag;
-			},
-			updateFlag: async (flagKey: string, input: FlagInput): Promise<Flag> => {
-				await requireFlag(flagKey);
-				validateFlagInput({ ...input, key: flagKey });
-				const flag = toStoredFlag({ ...input, key: flagKey });
-				await stub.put(flag);
-				return flag;
-			},
-			putFlag: async (input: FlagInput): Promise<Flag> => {
-				validateFlagInput(input);
-				const flag = toStoredFlag(input);
-				await stub.put(flag);
-				return flag;
 			},
 			deleteFlag: async (flagKey: string): Promise<void> => {
-				await requireFlag(flagKey);
-				await stub.delete(flagKey);
+				if (!(await stub.delete(flagKey))) {
+					throw new FlagNotFoundError(flagKey);
+				}
 			},
 			evaluateFlag: (
 				flagKey: string,

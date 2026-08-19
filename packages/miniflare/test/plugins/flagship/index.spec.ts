@@ -59,6 +59,8 @@ const UPSTREAM_BUCKETS: Record<string, number> = {
 	false: 33,
 };
 
+const ROLLOUT_PERCENTAGE = 50;
+
 const ROLLOUT_FLAG: FlagInput = {
 	key: "rollout_test",
 	enabled: true,
@@ -69,7 +71,7 @@ const ROLLOUT_FLAG: FlagInput = {
 			priority: 1,
 			conditions: [],
 			serve_variation: "on",
-			rollout: { percentage: 50 },
+			rollout: { percentage: ROLLOUT_PERCENTAGE },
 		},
 	],
 };
@@ -309,7 +311,47 @@ describe("flagship plugin", () => {
 					rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 101 } }],
 				})
 			).toBe(
-				"Flag 'new_checkout' rollout percentage must be an integer between 0 and 100"
+				"Flag 'new_checkout' rollout percentage must be a number between 0 and 100"
+			);
+			expect(
+				await put({
+					rules: [
+						{
+							...BOOL_FLAG.rules[0],
+							conditions: [{ logical_operator: "AND" } as never],
+						},
+					],
+				})
+			).toBe(
+				"Flag 'new_checkout' has a 'AND' condition without a list of clauses"
+			);
+			expect(
+				await put({
+					rules: [
+						{
+							...BOOL_FLAG.rules[0],
+							conditions: [
+								{ attribute: "plan", operator: "sorta_equals", value: "pro" },
+							] as never,
+						},
+					],
+				})
+			).toBe(
+				"Flag 'new_checkout' has a condition with an unknown operator 'sorta_equals'"
+			);
+			expect(
+				await put({
+					rules: [
+						{
+							...BOOL_FLAG.rules[0],
+							conditions: [
+								{ attribute: "plan", operator: "in", value: "pro" },
+							] as never,
+						},
+					],
+				})
+			).toBe(
+				"Flag 'new_checkout' has a 'in' condition whose value is not a list"
 			);
 		});
 
@@ -341,7 +383,7 @@ describe("flagship plugin", () => {
 			// rollout includes a targeting key when its bucket is below the
 			// percentage. Evaluating through the binding must agree.
 			for (const [targetingKey, bucket] of Object.entries(UPSTREAM_BUCKETS)) {
-				const included = bucket < ROLLOUT_FLAG.rules[0].rollout!.percentage;
+				const included = bucket < ROLLOUT_PERCENTAGE;
 				expect({
 					targetingKey,
 					value: await call(mf, "getBooleanValue", "rollout_test", false, {
@@ -514,6 +556,84 @@ describe("flagship plugin", () => {
 			});
 
 			expect(warnings).toEqual([]);
+		});
+	});
+	describe("persistence", () => {
+		test("sees writes made by another instance sharing the store", async ({
+			expect,
+		}) => {
+			const tmp = await useTmp();
+			const first = new Miniflare({
+				...options(),
+				resourcePersistencePath: tmp,
+			});
+			useDispose(first);
+			const firstAdmin = (await first.getFlagshipBindingAPI("FLAGS"))();
+			expect(await firstAdmin.listFlags()).toEqual([]);
+
+			const second = new Miniflare({
+				...options(),
+				resourcePersistencePath: tmp,
+			});
+			const secondAdmin = (await second.getFlagshipBindingAPI("FLAGS"))();
+			await secondAdmin.createFlag(BOOL_FLAG);
+			await second.dispose();
+
+			expect(
+				(await firstAdmin.listFlags()).map((flag) => flag.key)
+			).toStrictEqual(["new_checkout"]);
+		});
+
+		test("accepts a fractional rollout percentage", async ({ expect }) => {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const admin = (await mf.getFlagshipBindingAPI("FLAGS"))();
+
+			const flag = await admin.putFlag({
+				...BOOL_FLAG,
+				rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.333333 } }],
+			});
+
+			expect(flag.rules[0].rollout).toEqual({ percentage: 33.333333 });
+		});
+
+		test("patchFlag only changes the fields it is given", async ({
+			expect,
+		}) => {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const admin = (await mf.getFlagshipBindingAPI("FLAGS"))();
+			await admin.createFlag(BOOL_FLAG);
+
+			await admin.patchFlag("new_checkout", { description: "now described" });
+
+			expect(await admin.getFlag("new_checkout")).toEqual(
+				expect.objectContaining({
+					description: "now described",
+					enabled: true,
+					rules: BOOL_FLAG.rules,
+				})
+			);
+		});
+
+		test("putFlags rejects the whole batch when one flag is invalid", async ({
+			expect,
+		}) => {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const admin = (await mf.getFlagshipBindingAPI("FLAGS"))();
+
+			expect(
+				await rejection(() =>
+					admin.putFlags(
+						[BOOL_FLAG, { ...BOOL_FLAG, key: "second", variations: {} }],
+						"tag"
+					)
+				)
+			).toBe("Flag 'second' must define at least one variation");
+
+			expect(await admin.listFlags()).toEqual([]);
+			expect(await admin.getAccountTag()).toBeNull();
 		});
 	});
 });
