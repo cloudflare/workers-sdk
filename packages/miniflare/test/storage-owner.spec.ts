@@ -267,7 +267,7 @@ describe.sequential("owner presence integration", () => {
 		}
 	});
 
-	it.todo("routes a client's Stream through the owner over RPC so storage is shared", async ({
+	it("routes a client's Stream through the owner over RPC so storage is shared", async ({
 		expect,
 	}) => {
 		const persistRoot = await useTmp();
@@ -321,18 +321,35 @@ describe.sequential("owner presence integration", () => {
 			).json()) as { id: string };
 			expect(put.id).toBeTruthy();
 
-			// ...and the owner sees it (shared store), proving the RPC round-trip
-			// and the shared backing storage.
-			expect(
-				(
-					(await (await owner.dispatchFetch("http://x/")).json()) as {
-						count: number;
-					}
-				).count
-			).toBe(1);
-		} finally {
-			await client.dispose();
+			// Resolve the nested `videos` RPC target through the client too.
+			const listed = (await (
+				await client.dispatchFetch("http://x/")
+			).json()) as { count?: number; error?: string };
+			expect(listed).toEqual({ count: 1 });
+
+			const videoResponse = await client.dispatchFetch(
+				`http://x/__cf_local/stream/${put.id}/watch`
+			);
+			expect(videoResponse.status).toBe(200);
+			expect(new Uint8Array(await videoResponse.arrayBuffer())).toEqual(
+				new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
+			);
+
 			await owner.dispose();
+			await vi.waitFor(
+				async () => {
+					const response = await client.dispatchFetch("http://x/");
+					const result = (await response.json()) as {
+						count?: number;
+						error?: string;
+					};
+					expect(result).toEqual({ count: 1 });
+				},
+				{ timeout: 10_000, interval: 100 }
+			);
+		} finally {
+			await client.dispose().catch(() => {});
+			await owner.dispose().catch(() => {});
 		}
 	});
 

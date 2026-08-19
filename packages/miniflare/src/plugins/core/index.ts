@@ -41,7 +41,6 @@ import {
 } from "../r2";
 import {
 	buildRemoteProxyProps,
-	getUserBindingServiceName,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -53,7 +52,7 @@ import {
 	getExportsOfType,
 	getRemoteProxyConnectionString,
 } from "../shared";
-import { STREAM_PLUGIN_NAME } from "../stream";
+import { getStreamService } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -820,10 +819,7 @@ export function getGlobalServices({
 	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
-			service: {
-				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
-				entrypoint: "StreamBinding",
-			},
+			service: getStreamService(sharedOptions),
 		});
 	}
 	const r2PublicService = getR2PublicService(

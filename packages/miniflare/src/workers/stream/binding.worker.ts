@@ -92,9 +92,33 @@ export class StreamBinding extends WorkerEntrypoint<Env> {
 	get videos(): StreamVideos {
 		return new StreamVideosImpl(this.env);
 	}
+	getVideos(): StreamVideos {
+		return new StreamVideosImpl(this.env);
+	}
+	listStreamVideos(params?: StreamVideosListParams): Promise<StreamVideo[]> {
+		return new StreamVideosImpl(this.env).list(params);
+	}
 
 	get watermarks(): StreamWatermarks {
 		return new StreamWatermarksImpl(this.env);
+	}
+	getWatermarks(): StreamWatermarks {
+		return new StreamWatermarksImpl(this.env);
+	}
+	generateStreamWatermark(
+		streamOrUrl: ReadableStream | string,
+		params: StreamWatermarkCreateParams
+	): Promise<StreamWatermark> {
+		return new StreamWatermarksImpl(this.env).generate(streamOrUrl, params);
+	}
+	listStreamWatermarks(): Promise<StreamWatermark[]> {
+		return new StreamWatermarksImpl(this.env).list();
+	}
+	getStreamWatermark(watermarkId: string): Promise<StreamWatermark> {
+		return new StreamWatermarksImpl(this.env).get(watermarkId);
+	}
+	deleteStreamWatermark(watermarkId: string): Promise<void> {
+		return new StreamWatermarksImpl(this.env).delete(watermarkId);
 	}
 }
 
