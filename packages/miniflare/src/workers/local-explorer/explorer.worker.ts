@@ -18,6 +18,7 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 	zObservabilityQueryData,
+	zWorkflowsBatchDeleteInstancesData,
 	zWorkflowsChangeInstanceStatusData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
@@ -45,6 +46,7 @@ import {
 	createWorkflowInstance,
 	deleteWorkflow,
 	deleteWorkflowInstance,
+	deleteWorkflowInstances,
 	getWorkflowDetails,
 	getWorkflowInstanceDetails,
 	listWorkflowInstances,
@@ -313,6 +315,17 @@ app.get(
 
 app.post("/api/workflows/:workflow_name/instances", (c) =>
 	createWorkflowInstance(c, c.req.param("workflow_name"))
+);
+
+app.post(
+	"/api/workflows/:workflow_name/instances/batch/delete",
+	validateRequestBody(zWorkflowsBatchDeleteInstancesData.shape.body),
+	(c) =>
+		deleteWorkflowInstances(
+			c,
+			c.req.param("workflow_name"),
+			c.req.valid("json")
+		)
 );
 
 app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
