@@ -4,7 +4,7 @@
 
 Rename `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` for the v1 release
 
-The package has been renamed from `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` to better reflect that it is a Vite/Vitest plugin rather than a custom Vitest pool.
+The package has been renamed from `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` to be clearer about it's usage.
 
 To migrate, run the codemod from the root of your project:
 
