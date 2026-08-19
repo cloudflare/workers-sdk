@@ -825,6 +825,15 @@ export async function preview(
 		previewResource.id,
 		deploymentRequest
 	);
+	// The API may echo the uploaded env back on the deployment. Redact secret
+	// values as soon as it is received, before anything can log or return them
+	// (e.g. --json output) - matching `preview secret list`, which only ever
+	// outputs secret names and types.
+	for (const binding of Object.values(deployment.env ?? {})) {
+		if (binding.type === "secret_text") {
+			delete binding.text;
+		}
+	}
 
 	if (
 		normalisedContainerConfig.length > 0 &&
