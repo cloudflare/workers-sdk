@@ -1864,6 +1864,7 @@ describe("generate types - CLI", () => {
 					varStr: "A from wrangler toml",
 					varArrNum: [1, 2, 3],
 					varArrMix: [1, "two", 3, true],
+					varArrEmpty: [],
 					varObj: { test: true },
 				},
 			}),
@@ -1882,6 +1883,7 @@ describe("generate types - CLI", () => {
 				varStr: string;
 				varArrNum: number[];
 				varArrMix: (boolean|number|string)[];
+				varArrEmpty: unknown[];
 				varObj: object;
 			}
 			declare namespace Cloudflare {
