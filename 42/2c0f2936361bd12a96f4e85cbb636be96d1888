@@ -1,0 +1,29 @@
+packages/miniflare/test/plugins/core/observability.spec.ts
+  s_1356a911e53448::t_e4f98c5ac936c8 564-636
+  s_1356a911e53448::t_bf4f8cab7f3a74 5
+.changeset/tail-workflow-invocations-observability.md
+  s_1356a911e53448::t_cf889d6de00589 1-7
+packages/miniflare/src/plugins/workflows/index.ts
+  s_1356a911e53448::t_eb86ae6a3d52fa 5-9
+  s_1356a911e53448::t_030063c3eb7604 142-145,149-150
+  s_1356a911e53448::t_83f992c224596c 124-130,138-141,146-148,151-160
+  s_1356a911e53448::t_680fdaaa7465ad 45-48
+  s_1356a911e53448::t_f8500202c75517 170-171
+  s_1356a911e53448::t_0f92d775012b5d 161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "422c0f2936361bd12a96f4e85cbb636be96d1888",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+packages/wrangler/src/index.ts
+  22baa37600d6ebd1 1080,1083,1096,1099,1112,1115,1523,1526-1527,1530-1531,1534-1535,1538-1539,1542-1543,1546
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "aac7ca02803567adad2d5372124ace1f4ed9c315",
+  "prompts": {}
+}
