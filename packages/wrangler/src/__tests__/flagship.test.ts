@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	readWranglerConfig,
 	runInTempDir,
@@ -1940,6 +1941,19 @@ describe("flagship", () => {
 			await expect(
 				runWrangler("flagship flags get app-1 absent --local")
 			).rejects.toThrow("Flag 'absent' not found");
+		});
+
+		it("reports local store failures as user errors", async ({ expect }) => {
+			await expect(
+				runWrangler("flagship flags get app-1 absent --local")
+			).rejects.toThrow(UserError);
+
+			await runWrangler(
+				"flagship flags create app-1 new-ui --type boolean --local"
+			);
+			await expect(
+				runWrangler("flagship flags create app-1 new-ui --type boolean --local")
+			).rejects.toThrow(UserError);
 		});
 
 		it("rejects --cursor, which the local store cannot honour", async ({

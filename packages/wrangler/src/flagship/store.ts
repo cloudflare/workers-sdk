@@ -71,6 +71,20 @@ function remoteStore(config: Config, appId: string): FlagStore {
 	};
 }
 
+async function asUserError<T>(
+	telemetryMessage: string,
+	operation: () => Promise<T>
+): Promise<T> {
+	try {
+		return await operation();
+	} catch (error) {
+		throw new UserError(
+			error instanceof Error ? error.message : String(error),
+			{ telemetryMessage }
+		);
+	}
+}
+
 function localStore(admin: FlagshipAdmin): FlagStore {
 	return {
 		listFlags: async (limit, cursor) => {
@@ -80,21 +94,38 @@ function localStore(admin: FlagshipAdmin): FlagStore {
 					{ telemetryMessage: "flagship local store cursor unsupported" }
 				);
 			}
-			const items = await admin.listFlags();
+			const items = await asUserError("flagship local store list failed", () =>
+				admin.listFlags()
+			);
 			return {
 				items: limit === undefined ? items : items.slice(0, limit),
 				cursor: null,
 			};
 		},
-		listAllFlags: () => admin.listFlags(),
-		getFlag: (flagKey) => admin.getFlag(flagKey),
-		createFlag: (flag) => admin.createFlag(flag),
-		updateFlag: (flagKey, flag) => admin.updateFlag(flagKey, flag),
+		listAllFlags: () =>
+			asUserError("flagship local store list failed", () => admin.listFlags()),
+		getFlag: (flagKey) =>
+			asUserError("flagship local store get failed", () =>
+				admin.getFlag(flagKey)
+			),
+		createFlag: (flag) =>
+			asUserError("flagship local store create failed", () =>
+				admin.createFlag(flag)
+			),
+		updateFlag: (flagKey, flag) =>
+			asUserError("flagship local store update failed", () =>
+				admin.updateFlag(flagKey, flag)
+			),
 		deleteFlag: async (flagKey) => {
-			await admin.deleteFlag(flagKey);
+			await asUserError("flagship local store delete failed", () =>
+				admin.deleteFlag(flagKey)
+			);
 			return { key: flagKey };
 		},
-		evaluateFlag: (flagKey, context) => admin.evaluateFlag(flagKey, context),
+		evaluateFlag: (flagKey, context) =>
+			asUserError("flagship local store evaluate failed", () =>
+				admin.evaluateFlag(flagKey, context)
+			),
 	};
 }
 
