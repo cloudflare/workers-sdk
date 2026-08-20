@@ -30,6 +30,7 @@ interface CacheMetadata {
 	headers: string[][];
 	status: number;
 	size: number;
+	stored?: number;
 }
 
 type CacheRouteHandler = RouteHandler<
@@ -302,6 +303,12 @@ export class CacheObject extends MiniflareDurableObject {
 		// time we don't do this is when the entry isn't found, or expired, in which
 		// case, we just threw a `CacheMiss`)
 		assert(resHeaders !== undefined);
+		const now = this.timers.now();
+		const age = parseInt(resHeaders.get("age") || "0", 10);
+		const cachedDuration = Math.round(
+			(now - (cached.metadata.stored || now)) / 1000
+		);
+		resHeaders.set("Age", String(age + cachedDuration));
 		resHeaders.set("CF-Cache-Status", "HIT");
 		resRanges ??= [];
 
@@ -356,6 +363,7 @@ export class CacheObject extends MiniflareDurableObject {
 			headers: Object.entries(headers),
 			status: res.status,
 			size,
+			stored: this.timers.now(),
 		}));
 
 		await this.storage.put({
