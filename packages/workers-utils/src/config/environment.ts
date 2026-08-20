@@ -931,6 +931,18 @@ export interface EnvironmentNonInheritable {
 		 * - Enables local dev validation with warnings for missing secrets
 		 */
 		required?: string[];
+
+		/**
+		 * List of secret names that your Worker uses but that may legitimately be
+		 * unset — for example on a freshly created Worker whose secrets have not
+		 * been populated yet, or on a Worker that was rolled back.
+		 *
+		 * Optional secrets are loaded from .dev.vars/.env/process.env in local dev
+		 * and are included in type generation as `string | undefined`, but no
+		 * warning is emitted when they are missing and deploying without them
+		 * does not fail.
+		 */
+		optional?: string[];
 	};
 
 	/**

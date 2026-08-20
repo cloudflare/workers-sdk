@@ -2,6 +2,7 @@
 
 import type {
 	JsonBinding,
+	OptionalSecretBinding,
 	TextBinding,
 	TypedAiBinding,
 	TypedDurableObjectBinding,
@@ -62,11 +63,11 @@ type ExtractInstance<T, TInstance> =
  * Mapping from binding type literals to Cloudflare runtime types.
  *
  * Entries fall into two groups:
- * - Parameterized bindings (ai, json, kv, pipeline, queue, text) refine their
- *   runtime type from the binding instance via nominal matches against the
- *   `Typed*Binding` / `JsonBinding` / `TextBinding` interfaces from
- *   `./bindings`. When `TBinding` does not match, the entry falls back to the
- *   unparameterized runtime type.
+ * - Parameterized bindings (ai, json, kv, pipeline, queue, secret, text) refine
+ *   their runtime type from the binding instance via nominal matches against
+ *   the `Typed*Binding` / `JsonBinding` / `TextBinding` /
+ *   `OptionalSecretBinding` interfaces from `./bindings`. When `TBinding` does
+ *   not match, the entry falls back to the unparameterized runtime type.
  * - Non-parameterized bindings map their type literal directly to a runtime
  *   type and ignore `TBinding`.
  *
@@ -76,9 +77,10 @@ type ExtractInstance<T, TInstance> =
  * binding interfaces in `./bindings.ts` (`ImagesBinding`, `MediaBinding`,
  * `StreamBinding`) share names with ambient globals — importing those local
  * types into this file silently shadows the globals and breaks `InferEnv`.
- * Only import the `Typed*Binding`, `JsonBinding`, and `TextBinding` interfaces
- * from `./bindings` (their names do not collide with ambient globals); never
- * widen the import to a wildcard or to the plain `*Binding` interfaces.
+ * Only import the `Typed*Binding`, `JsonBinding`, `TextBinding`, and
+ * `OptionalSecretBinding` interfaces from `./bindings` (their names do not
+ * collide with ambient globals); never widen the import to a wildcard or to the
+ * plain `*Binding` interfaces.
  */
 interface BindingTypeMap<TBinding> {
 	// Parameterized bindings - refine via nominal match on the binding instance
@@ -89,6 +91,7 @@ interface BindingTypeMap<TBinding> {
 		? Pipeline<T>
 		: Pipeline;
 	queue: TBinding extends TypedQueueBinding<infer T> ? Queue<T> : Queue;
+	secret: TBinding extends OptionalSecretBinding ? string | undefined : string;
 	text: TBinding extends TextBinding<infer T> ? T : never;
 
 	// Non-parameterized bindings
@@ -110,7 +113,6 @@ interface BindingTypeMap<TBinding> {
 	"mtls-certificate": Fetcher;
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
-	secret: string;
 	"secrets-store-secret": SecretsStoreSecret;
 	"send-email": SendEmail;
 	stream: StreamBinding;

@@ -24,6 +24,7 @@ export type {
 	LogfwdrBinding,
 	MediaBinding,
 	MtlsCertificateBinding,
+	OptionalSecretBinding,
 	PipelineBinding,
 	QueueBinding,
 	RateLimitBinding,
