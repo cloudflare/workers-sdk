@@ -42,10 +42,11 @@ export type VarBinding = Extract<
  *
  * When `secrets` is defined in the config, `.dev.vars` values will still
  * override existing config `vars` (so that local development overrides always
- * take effect). Additionally, any `required` secret keys that are not already
- * in the config vars will also be loaded from `.dev.vars`. Keys in `.dev.vars`
- * that are neither existing config vars nor declared required secrets are
- * excluded. A warning is emitted for any required secrets that are missing.
+ * take effect). Additionally, any `required` or `optional` secret keys that are
+ * not already in the config vars will also be loaded from `.dev.vars`. Keys in
+ * `.dev.vars` that are neither existing config vars nor declared secrets are
+ * excluded. A warning is emitted for any *required* secrets that are missing;
+ * missing optional secrets are expected and stay silent.
  *
  * @param configPath - The path to the Wrangler configuration file, if defined.
  * @param envFiles - An array of paths to .env files to load; if `undefined` the default .env files will be used (see `getDefaultEnvFiles()`).
@@ -53,7 +54,7 @@ export type VarBinding = Extract<
  * @param vars - The existing `vars` bindings from the Wrangler configuration.
  * @param env - The specific environment name (e.g., "staging") or `undefined` if no specific environment is set.
  * @param silent - If true, will not log any messages about the loaded .dev.vars files or .env files.
- * @param secrets - If defined, only the declared secret keys are loaded from `.dev.vars` or `.env`/`process.env`.
+ * @param secrets - If defined, only the declared secret keys (`required` and `optional`) are loaded from `.dev.vars` or `.env`/`process.env`.
  * @returns The merged `vars` as typed bindings. Config vars are `plain_text`/`json`, while `.dev.vars`/`.env` vars are `secret_text`.
  */
 export function getVarsForDev(
@@ -107,18 +108,21 @@ export function getVarsForDev(
 		// in .dev.vars (these remain as secret_text since they come from dev vars).
 		// Then, additionally load declared secret keys from .dev.vars.
 		// Keys in .dev.vars that are neither in the config vars nor declared as
-		// required secrets are excluded.
+		// required or optional secrets are excluded.
 		const requiredSecrets = secrets.required ?? [];
+		const optionalSecrets = secrets.optional ?? [];
+		const declaredSecrets = [...requiredSecrets, ...optionalSecrets];
 		if (loadedSecrets !== undefined) {
 			for (const [key, value] of Object.entries(loadedSecrets)) {
 				// Always override if the key was already a config var (plain_text/json),
-				// or if it is a declared required secret.
-				if (key in result || requiredSecrets.includes(key)) {
+				// or if it is a declared secret.
+				if (key in result || declaredSecrets.includes(key)) {
 					result[key] = { type: "secret_text", value };
 				}
 			}
 		}
-		// Warn about missing required secrets
+		// Warn about missing required secrets. Optional secrets are expected to
+		// be absent, so they are deliberately excluded from this check.
 		if (!silent) {
 			const missing = requiredSecrets.filter(
 				(key) => loadedSecrets === undefined || !(key in loadedSecrets)

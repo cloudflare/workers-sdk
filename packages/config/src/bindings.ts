@@ -448,9 +448,11 @@ export interface SecretBinding extends SecretBindingOptions {
  * `env` under the binding name as `string | undefined`.
  *
  * Produced by `bindings.secret({ optional: true })`. Unlike a required secret,
- * an optional secret is not added to `secrets.required` in the generated
- * Wrangler configuration, so deploying a Worker that does not have it set will
- * not fail.
+ * an optional secret is emitted as `secrets.optional` rather than
+ * `secrets.required` in the generated Wrangler configuration: it is still
+ * loaded from `.dev.vars`/`.env` in local dev, but no warning is emitted when
+ * it is missing and deploying a Worker that does not have it set will not
+ * fail.
  */
 export interface OptionalSecretBinding extends SecretBinding {
 	optional: true;
@@ -810,8 +812,9 @@ export interface Bindings {
 	 * Declares a secret that may legitimately be absent at runtime, exposed on
 	 * `env` under the binding name as `string | undefined`.
 	 *
-	 * Optional secrets are not added to `secrets.required`, so deploying a
-	 * Worker that does not have the secret set will not fail.
+	 * Optional secrets are emitted as `secrets.optional` rather than
+	 * `secrets.required`, so they are still loaded in local dev but do not warn
+	 * when missing and do not fail a deploy when unset.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
 	 */
