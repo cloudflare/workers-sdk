@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { chdir } from "node:process";
 import {
@@ -125,8 +125,10 @@ export const setupProjectDirectory = (ctx: C3Context) => {
 
 	const directory = dirname(path);
 
-	// If the target is a nested directory, create the parent
-	mkdirSync(directory, { recursive: true });
+	// Creating a Windows drive root (`E:\`) throws EPERM. Skip if it already exists.
+	if (!existsSync(directory)) {
+		mkdirSync(directory, { recursive: true });
+	}
 
 	// Change to the parent directory
 	chdir(directory);
