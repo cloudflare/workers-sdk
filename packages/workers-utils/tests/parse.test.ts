@@ -411,18 +411,31 @@ describe("APIError.isGatewayError", () => {
 		expect,
 	}) => {
 		for (const status of [502, 503, 504, 524]) {
-			expect(new APIError({ text: "gateway", status }).isGatewayError()).toBe(
-				true
-			);
+			expect(
+				new APIError({
+					text: "gateway",
+					status,
+					telemetryMessage: false,
+				}).isGatewayError()
+			).toBe(true);
 		}
 	});
 
 	it("does not treat other statuses as gateway errors", ({ expect }) => {
-		expect(new APIError({ text: "no status" }).isGatewayError()).toBe(false);
+		expect(
+			new APIError({
+				text: "no status",
+				telemetryMessage: false,
+			}).isGatewayError()
+		).toBe(false);
 		for (const status of [200, 400, 401, 404, 429, 500]) {
-			expect(new APIError({ text: "other", status }).isGatewayError()).toBe(
-				false
-			);
+			expect(
+				new APIError({
+					text: "other",
+					status,
+					telemetryMessage: false,
+				}).isGatewayError()
+			).toBe(false);
 		}
 	});
 });
