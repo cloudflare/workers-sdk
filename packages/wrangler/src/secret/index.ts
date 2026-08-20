@@ -49,7 +49,7 @@ function throwIfLatestVersionNotDeployed(
 			"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.\n" +
 				"This limitation exists to prevent accidental deployment when using Worker versions and secrets together.\n" +
 				"To resolve this, you have two options:\n" +
-				`(1) use \`${versionsCommand}\` instead, which allows you to update secrets without deploying; or\n` +
+				`(1) use the \`${versionsCommand}\` instead, which allows you to update secrets without deploying; or\n` +
 				"(2) deploy the latest version first, then modify secrets.\n" +
 				"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.",
 			{ telemetryMessage }
