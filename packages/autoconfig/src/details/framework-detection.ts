@@ -32,8 +32,8 @@ import type { Settings } from "@netlify/build-info";
  * @param projectPath Path to the project root
  * @param wranglerConfig Optional parsed wrangler config for the project
  * @returns An object containing:
- *   - `detectedFramework`: The matched framework together with its build
- *     command and output directory.
+ *   - `detectedFramework`: The matched framework, its build and development
+ *     commands, and its output directory.
  *   - `packageManager`: The package manager detected in the project.
  *   - `isWorkspaceRoot`: `true` when the project path is the root of a
  *     monorepo workspace (only present when relevant).
@@ -220,6 +220,7 @@ type DetectedFramework = {
 		name: string;
 		id: string;
 	};
+	devCommand?: string | undefined;
 	buildCommand?: string | undefined;
 	dist?: string;
 };
