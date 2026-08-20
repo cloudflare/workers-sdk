@@ -66,7 +66,7 @@ describe("runAutoConfig()", () => {
 				context: createMockContext(),
 				skipConfirmations: true,
 				runBuild: false,
-				enableCliInstallation: false,
+				enableTargetCliInstallation: false,
 			}
 		);
 

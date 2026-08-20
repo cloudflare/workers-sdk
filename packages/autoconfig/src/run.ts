@@ -64,7 +64,8 @@ export async function runAutoConfig(
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
-	const enableCliInstallation = autoConfigOptions.enableCliInstallation ?? true;
+	const enableTargetCliInstallation =
+		autoConfigOptions.enableTargetCliInstallation ?? true;
 
 	assertNonConfigured(autoConfigDetails);
 
@@ -170,7 +171,7 @@ export async function runAutoConfig(
 				dryRunConfigurationResults.versionCommandOverride ??
 				`${npx} ${target} versions upload`,
 		},
-		enableCliInstallation,
+		enableTargetCliInstallation,
 		target,
 		context,
 		dryRunConfigurationResults.packageJsonScriptsOverrides
@@ -200,7 +201,7 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigDetails.packageJson && enableCliInstallation) {
+	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
 		if (target === "cf") {
 			await installPackages(packageManager.type, ["cf@latest"], {
 				dev: true,
@@ -499,7 +500,7 @@ function indentFileContent(content: string): string {
  * @param workerConfig - The resolved Worker configuration.
  * @param configurationResults - The framework configuration results.
  * @param projectCommands - The build, deploy, and version commands for the project.
- * @param enableCliInstallation - Whether to install the selected CLI packages.
+ * @param enableTargetCliInstallation - Whether to install the selected target CLI package.
  * @param target - The configuration target.
  * @param context - The autoconfig context providing logger and other dependencies.
  * @param packageJsonScriptsOverrides - Optional overrides for package.json script entries.
@@ -516,7 +517,7 @@ export async function buildOperationsSummary(
 		deploy: string;
 		version?: string;
 	},
-	enableCliInstallation: boolean,
+	enableTargetCliInstallation: boolean,
 	target: AutoConfigTarget,
 	context: AutoConfigContext,
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
@@ -545,7 +546,7 @@ export async function buildOperationsSummary(
 
 	const packagesToInstall = new Set<string>();
 	if (autoConfigDetails.packageJson) {
-		if (enableCliInstallation) {
+		if (enableTargetCliInstallation) {
 			packagesToInstall.add(target);
 		}
 		if (configurationResults.buildTool === "vite") {

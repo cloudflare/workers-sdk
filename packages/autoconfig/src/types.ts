@@ -70,7 +70,7 @@ export type AutoConfigOptions = {
 	/**
 	 * Whether to install the selected target CLI during autoconfig.
 	 */
-	enableCliInstallation?: boolean;
+	enableTargetCliInstallation?: boolean;
 };
 
 export type AutoConfigSummary = {

@@ -299,7 +299,7 @@ describe("autoconfig (deploy)", () => {
 				{
 					target: "wrangler",
 					context,
-					enableCliInstallation: false,
+					enableTargetCliInstallation: false,
 				}
 			);
 
