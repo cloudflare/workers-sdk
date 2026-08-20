@@ -29,7 +29,7 @@ The equivalent field is also available directly in `wrangler.json`:
 {
 	"secrets": {
 		"required": ["API_TOKEN"],
-		"optional": ["CF_ANALYTICS_API_TOKEN"]
+		"optional": ["SENTRY_TOKEN"]
 	}
 }
 ```
