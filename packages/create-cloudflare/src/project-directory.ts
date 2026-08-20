@@ -1,0 +1,22 @@
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { chdir } from "node:process";
+import { validateProjectDirectory } from "./validators";
+import type { C3Context } from "types";
+
+export const setupProjectDirectory = (ctx: C3Context) => {
+	const path = ctx.project.path;
+	const err = validateProjectDirectory(path, ctx.args);
+	if (err) {
+		throw new Error(err);
+	}
+
+	const directory = dirname(path);
+
+	// Creating a Windows drive root (`E:\`) throws EPERM. Skip if it already exists.
+	if (!existsSync(directory)) {
+		mkdirSync(directory, { recursive: true });
+	}
+
+	chdir(directory);
+};

@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { chdir } from "node:process";
 import {
 	cancel,
@@ -40,7 +38,7 @@ import {
 	updatePackageScripts,
 	writeAgentsMd,
 } from "./templates";
-import { validateProjectDirectory } from "./validators";
+import { setupProjectDirectory } from "./project-directory";
 import { addTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
@@ -113,25 +111,6 @@ export const runCli = async (args: Partial<C3Args>) => {
 
 	printSummary(ctx);
 	logRaw("");
-};
-
-export const setupProjectDirectory = (ctx: C3Context) => {
-	// Crash if the directory already exists
-	const path = ctx.project.path;
-	const err = validateProjectDirectory(path, ctx.args);
-	if (err) {
-		throw new Error(err);
-	}
-
-	const directory = dirname(path);
-
-	// Creating a Windows drive root (`E:\`) throws EPERM. Skip if it already exists.
-	if (!existsSync(directory)) {
-		mkdirSync(directory, { recursive: true });
-	}
-
-	// Change to the parent directory
-	chdir(directory);
 };
 
 const create = async (ctx: C3Context) => {
