@@ -1284,6 +1284,15 @@ export function generateImportSpecifier(from: string, to: string) {
 	}
 }
 
+/** The TypeScript type emitted for a required secret. */
+const SECRET_TYPE = "string";
+
+/**
+ * The TypeScript type emitted for a secret declared in `secrets.optional`,
+ * which may legitimately be unset at runtime.
+ */
+const OPTIONAL_SECRET_TYPE = "string | undefined";
+
 /**
  * Checks whether any config level (top-level or any named environment) declares
  * `secrets`. Used to determine if the project has opted into config-based
@@ -1346,7 +1355,10 @@ export async function generateEnvTypes(
 		// Top-level secrets
 		const topLevelKeys: Record<string, string> = {};
 		for (const key of rawConfig.secrets?.required ?? []) {
-			topLevelKeys[key] = "";
+			topLevelKeys[key] = SECRET_TYPE;
+		}
+		for (const key of rawConfig.secrets?.optional ?? []) {
+			topLevelKeys[key] = OPTIONAL_SECRET_TYPE;
 		}
 		perEnvSecrets.set(TOP_LEVEL_ENV_NAME, topLevelKeys);
 
@@ -1354,7 +1366,10 @@ export async function generateEnvTypes(
 		for (const [envName, envConfig] of Object.entries(rawConfig.env ?? {})) {
 			const envKeys: Record<string, string> = {};
 			for (const key of envConfig.secrets?.required ?? []) {
-				envKeys[key] = "";
+				envKeys[key] = SECRET_TYPE;
+			}
+			for (const key of envConfig.secrets?.optional ?? []) {
+				envKeys[key] = OPTIONAL_SECRET_TYPE;
 			}
 			perEnvSecrets.set(envName, envKeys);
 		}
@@ -1373,9 +1388,9 @@ export async function generateEnvTypes(
 			true
 		);
 		// Extract just the keys as a Record<string, string> for compatibility
-		// (type generation only needs the names, not the values)
+		// (type generation only needs the names and the type to emit, not the values)
 		for (const key of Object.keys(secretBindings)) {
-			secrets[key] = "";
+			secrets[key] = SECRET_TYPE;
 		}
 	}
 
@@ -1441,7 +1456,7 @@ export async function generateEnvTypes(
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
- * @param secrets - Record of secret variable names to their values
+ * @param secrets - Record of secret variable names to the TypeScript type to emit for them (`string`, or `string | undefined` for optional secrets)
  * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
  *
@@ -1522,7 +1537,7 @@ async function generateSimpleEnvTypes(
 	for (const secretName in secrets) {
 		envTypeStructure.push({
 			key: constructTypeKey(secretName),
-			type: "string",
+			type: secrets[secretName] || SECRET_TYPE,
 		});
 		stringKeys.push(secretName);
 	}
@@ -1751,7 +1766,7 @@ async function generateSimpleEnvTypes(
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
- * @param secrets - Record of secret variable names (fallback for all envs when perEnvSecrets is not provided)
+ * @param secrets - Record of secret variable names to the TypeScript type to emit for them (fallback for all envs when perEnvSecrets is not provided)
  * @param perEnvSecrets - Optional per-environment secrets map. When provided, each env uses its own secrets instead of the shared fallback.
  * @param command - Optional command string used in the generated env header.
  * @param log - Whether to log output to the console (default: true)
@@ -1937,8 +1952,12 @@ async function generatePerEnvironmentTypes(
 		}
 
 		for (const secretName in envSecrets) {
-			envBindings.push({ key: constructTypeKey(secretName), value: "string" });
-			trackBinding(secretName, "string", envName);
+			const secretType = envSecrets[secretName] || SECRET_TYPE;
+			envBindings.push({
+				key: constructTypeKey(secretName),
+				value: secretType,
+			});
+			trackBinding(secretName, secretType, envName);
 			if (!stringKeys.includes(secretName)) {
 				stringKeys.push(secretName);
 			}
@@ -2038,7 +2057,11 @@ async function generatePerEnvironmentTypes(
 	}
 
 	for (const secretName in topLevelSecrets) {
-		trackBinding(secretName, "string", TOP_LEVEL_ENV_NAME);
+		trackBinding(
+			secretName,
+			topLevelSecrets[secretName] || SECRET_TYPE,
+			TOP_LEVEL_ENV_NAME
+		);
 		if (!stringKeys.includes(secretName)) {
 			stringKeys.push(secretName);
 		}

@@ -42,9 +42,9 @@ export type VarBinding = Extract<
  *
  * When `secrets` is defined in the config, `.dev.vars` values will still
  * override existing config `vars` (so that local development overrides always
- * take effect). Additionally, any `required` secret keys that are not already
+ * take effect). Additionally, any `required` or `optional` secret keys that are not already
  * in the config vars will also be loaded from `.dev.vars`. Keys in `.dev.vars`
- * that are neither existing config vars nor declared required secrets are
+ * that are neither existing config vars nor declared required or optional secrets are
  * excluded. A warning is emitted for any required secrets that are missing.
  *
  * @param configPath - The path to the Wrangler configuration file, if defined.
@@ -112,18 +112,21 @@ export function getVarsForDev(
 		// in .dev.vars (these remain as secret_text since they come from dev vars).
 		// Then, additionally load declared secret keys from .dev.vars.
 		// Keys in .dev.vars that are neither in the config vars nor declared as
-		// required secrets are excluded.
+		// required or optional secrets are excluded.
 		const requiredSecrets = secrets.required ?? [];
+		const optionalSecrets = secrets.optional ?? [];
+		const declaredSecrets = [...requiredSecrets, ...optionalSecrets];
 		if (loadedSecrets !== undefined) {
 			for (const [key, value] of Object.entries(loadedSecrets)) {
 				// Always override if the key was already a config var (plain_text/json),
-				// or if it is a declared required secret.
-				if (key in result || requiredSecrets.includes(key)) {
+				// or if it is a declared secret.
+				if (key in result || declaredSecrets.includes(key)) {
 					result[key] = { type: "secret_text", value };
 				}
 			}
 		}
-		// Warn about missing required secrets
+		// Warn about missing required secrets. Optional secrets are expected to
+		// be absent, so they are deliberately excluded from this check.
 		if (!silent) {
 			const missing = requiredSecrets.filter(
 				(key) => loadedSecrets === undefined || !(key in loadedSecrets)
