@@ -1612,60 +1612,6 @@ const config = {
 					tags: ["Flagship"],
 				},
 			},
-			"/flagship/apps/{app_id}/definitions": {
-				get: {
-					description:
-						"Returns evaluation-only definitions for a local Flagship app.",
-					operationId: "flagship-get-definitions",
-					parameters: [
-						{
-							in: "path",
-							name: "app_id",
-							required: true,
-							schema: { type: "string" },
-						},
-						{
-							in: "header",
-							name: "If-None-Match",
-							required: false,
-							schema: { type: "string" },
-						},
-					],
-					responses: {
-						"200": {
-							content: {
-								"application/json": {
-									schema: {
-										$ref: "#/components/schemas/flagship_definitions",
-									},
-								},
-							},
-							description: "Flagship definitions response.",
-							headers: {
-								ETag: { schema: { type: "string" } },
-							},
-						},
-						"304": {
-							description: "Definitions have not changed.",
-							headers: {
-								ETag: { schema: { type: "string" } },
-							},
-						},
-						"4XX": {
-							content: {
-								"application/json": {
-									schema: {
-										$ref: "#/components/schemas/workers_api-response-common-failure",
-									},
-								},
-							},
-							description: "Flagship definitions response failure.",
-						},
-					},
-					summary: "Get Flagship Definitions",
-					tags: ["Flagship"],
-				},
-			},
 			"/flagship/apps/{app_id}/flags/{flag_key}": {
 				get: {
 					description: "Returns a single flag from a local Flagship app.",
@@ -1723,7 +1669,7 @@ const config = {
 				},
 				patch: {
 					description:
-						"Updates a flag. Omitted fields keep their current values, and targeting rules are always preserved.",
+						"Updates a flag. Omitted fields, including targeting rules, keep their current values.",
 					operationId: "flagship-update-flag",
 					parameters: [
 						{
@@ -1953,6 +1899,7 @@ const config = {
 			// Flagship schemas — the local flag store's management shapes
 			flagship_app: {
 				type: "object",
+				required: ["id", "bindings"],
 				properties: {
 					id: {
 						type: "string",
@@ -1967,6 +1914,7 @@ const config = {
 			},
 			flagship_rule: {
 				type: "object",
+				required: ["priority", "conditions", "serve_variation"],
 				properties: {
 					priority: {
 						type: "integer",
@@ -1994,6 +1942,15 @@ const config = {
 			},
 			flagship_flag: {
 				type: "object",
+				required: [
+					"key",
+					"type",
+					"enabled",
+					"default_variation",
+					"variations",
+					"rules",
+					"updated_at",
+				],
 				properties: {
 					key: { type: "string", description: "Flag key" },
 					type: {
@@ -2030,34 +1987,9 @@ const config = {
 					},
 				},
 			},
-			flagship_definitions: {
-				type: "object",
-				properties: {
-					flags: {
-						type: "object",
-						additionalProperties: {
-							type: "object",
-							properties: {
-								key: { type: "string" },
-								enabled: { type: "boolean" },
-								default_variation: { type: "string" },
-								variations: {
-									type: "object",
-									additionalProperties: true,
-								},
-								rules: {
-									type: "array",
-									items: {
-										$ref: "#/components/schemas/flagship_rule",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
 			flagship_evaluation: {
 				type: "object",
+				required: ["flagKey", "value", "variant", "reason"],
 				properties: {
 					flagKey: { type: "string" },
 					value: { description: "The resolved flag value" },

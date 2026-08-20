@@ -16,6 +16,7 @@ import {
 import {
 	createFileRoute,
 	getRouteApi,
+	notFound,
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
@@ -49,9 +50,7 @@ export const Route = createFileRoute("/flagship/$appId")({
 			throwOnError: false,
 		});
 		if (response.response?.status === 404) {
-			throw new Error(
-				`Flagship app "${params.appId}" is not simulated locally.`
-			);
+			throw notFound();
 		}
 		if (response.error) {
 			throw new Error(`Failed to list flags for app "${params.appId}"`);

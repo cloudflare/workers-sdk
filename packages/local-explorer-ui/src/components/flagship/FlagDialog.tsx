@@ -117,6 +117,9 @@ interface SavedValues {
  */
 function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
 	const body: UpdateBody = {};
+	const currentUiRules = uiRulesFrom(flag.rules);
+	const currentRules =
+		currentUiRules === null ? null : rulesFrom(currentUiRules);
 	if (next.default_variation !== flag.default_variation) {
 		body.default_variation = next.default_variation;
 	}
@@ -133,7 +136,7 @@ function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
 	}
 	if (
 		next.rules !== null &&
-		JSON.stringify(next.rules) !== JSON.stringify(flag.rules ?? [])
+		JSON.stringify(next.rules) !== JSON.stringify(currentRules)
 	) {
 		body.rules = next.rules;
 	}
@@ -653,7 +656,7 @@ export function FlagDialog({
 									cannot show. They are left untouched when you save. Edit them
 									with{" "}
 									<code className="font-mono text-kumo-default">
-										wrangler flagship rules
+										wrangler flagship flags rules
 									</code>{" "}
 									instead.
 								</p>

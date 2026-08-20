@@ -415,7 +415,10 @@ export function validateRules(
 			fail(
 				`This rule can never match because rule ${catchAllIndex + 1} applies to everyone.`
 			);
-		} else if (rule.conditions.length === 0) {
+		} else if (
+			rule.conditions.length === 0 &&
+			(rule.rollout === null || rule.rollout.percentage === 100)
+		) {
 			catchAllIndex = index;
 		}
 	}

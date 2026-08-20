@@ -62,6 +62,26 @@ describe("parseVariationValue", () => {
 			value: 33.5,
 		});
 	});
+
+	test("accepts JSON objects and arrays", ({ expect }) => {
+		expect(parseVariationValue("json", '{"enabled":true}')).toEqual({
+			ok: true,
+			value: { enabled: true },
+		});
+		expect(parseVariationValue("json", "[1,2]")).toEqual({
+			ok: true,
+			value: [1, 2],
+		});
+	});
+
+	test("rejects JSON null and primitives", ({ expect }) => {
+		for (const value of ["null", "true", "1", '"value"']) {
+			expect(parseVariationValue("json", value)).toEqual({
+				error: "JSON values must be objects or arrays.",
+				ok: false,
+			});
+		}
+	});
 });
 
 describe("shellQuote", () => {

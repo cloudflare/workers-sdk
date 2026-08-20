@@ -234,7 +234,9 @@ function RuleCard({
 	variationNames,
 }: RuleCardProps): JSX.Element {
 	const groups = groupRows(rule.conditions);
-	const isCatchAll = rule.conditions.length === 0;
+	const isCatchAll =
+		rule.conditions.length === 0 &&
+		(rule.rollout === null || rule.rollout.percentage === 100);
 
 	/**
 	 * Replaces one condition, keyed by its position in the flat list.
@@ -439,7 +441,7 @@ function RuleCard({
 									disabled={disabled}
 									numeric
 									onValueChange={(next) => {
-										const parsed = Number.parseInt(next, 10);
+										const parsed = Number(next);
 										onChange({
 											...rule,
 											rollout: {

@@ -134,50 +134,6 @@ describe("Flagship API", () => {
 		});
 	});
 
-	describe("GET /flagship/apps/:app_id/definitions", () => {
-		test("returns evaluation-only definitions with an ETag", async ({
-			expect,
-		}) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/flagship/apps/app-1/definitions`
-			);
-			const body = await response.json();
-
-			expect(response.status).toBe(200);
-			expect(response.headers.get("content-type")).toContain(
-				"application/json"
-			);
-			expect(response.headers.get("etag")).toMatch(/^"[a-f0-9]{64}"$/);
-			expect(body).toEqual({
-				flags: {
-					"new-ui": {
-						key: "new-ui",
-						enabled: true,
-						default_variation: "off",
-						variations: { on: true, off: false },
-						rules: [],
-					},
-				},
-			});
-		});
-
-		test("returns 304 when If-None-Match matches", async ({ expect }) => {
-			const url = `${BASE_URL}/flagship/apps/app-1/definitions`;
-			const first = await mf.dispatchFetch(url);
-			const etag = first.headers.get("etag");
-			await first.body?.cancel();
-
-			expect(etag).not.toBeNull();
-			const response = await mf.dispatchFetch(url, {
-				headers: { "If-None-Match": etag ?? "" },
-			});
-
-			expect(response.status).toBe(304);
-			expect(response.headers.get("etag")).toBe(etag);
-			expect(await response.text()).toBe("");
-		});
-	});
-
 	describe("POST /flagship/apps/:app_id/flags", () => {
 		test("creates a flag the binding can immediately evaluate", async ({
 			expect,

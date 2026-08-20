@@ -355,14 +355,14 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 );
 
 export const zFlagshipApp = z.object({
-	id: z.string().optional(),
-	bindings: z.array(z.string()).optional(),
+	id: z.string(),
+	bindings: z.array(z.string()),
 });
 
 export const zFlagshipRule = z.object({
-	priority: z.int().optional(),
-	conditions: z.array(z.record(z.string(), z.unknown())).optional(),
-	serve_variation: z.string().optional(),
+	priority: z.int(),
+	conditions: z.array(z.record(z.string(), z.unknown())),
+	serve_variation: z.string(),
 	rollout: z
 		.object({
 			percentage: z.number().gte(0).lte(100),
@@ -372,38 +372,21 @@ export const zFlagshipRule = z.object({
 });
 
 export const zFlagshipFlag = z.object({
-	key: z.string().optional(),
-	type: z.enum(["boolean", "string", "number", "json"]).optional(),
+	key: z.string(),
+	type: z.enum(["boolean", "string", "number", "json"]),
 	description: z.string().nullish(),
-	enabled: z.boolean().optional(),
-	default_variation: z.string().optional(),
-	variations: z.record(z.string(), z.unknown()).optional(),
-	rules: z.array(zFlagshipRule).optional(),
-	updated_at: z.string().optional(),
-});
-
-export const zFlagshipDefinitions = z.object({
-	flags: z
-		.record(
-			z.string(),
-			z.object({
-				key: z.string().optional(),
-				enabled: z.boolean().optional(),
-				default_variation: z.string().optional(),
-				variations: z.record(z.string(), z.unknown()).optional(),
-				rules: z.array(zFlagshipRule).optional(),
-			})
-		)
-		.optional(),
+	enabled: z.boolean(),
+	default_variation: z.string(),
+	variations: z.record(z.string(), z.unknown()),
+	rules: z.array(zFlagshipRule),
+	updated_at: z.string(),
 });
 
 export const zFlagshipEvaluation = z.object({
-	flagKey: z.string().optional(),
-	value: z.unknown().optional(),
-	variant: z.string().optional(),
-	reason: z
-		.enum(["TARGETING_MATCH", "DEFAULT", "DISABLED", "SPLIT", "ERROR"])
-		.optional(),
+	flagKey: z.string(),
+	value: z.unknown(),
+	variant: z.string(),
+	reason: z.enum(["TARGETING_MATCH", "DEFAULT", "DISABLED", "SPLIT", "ERROR"]),
 	errorCode: z.string().optional(),
 	errorMessage: z.string().optional(),
 });
@@ -1284,24 +1267,6 @@ export const zFlagshipCreateFlagResponse = zWorkersApiResponseCommon.and(
 		result: zFlagshipFlag.optional(),
 	})
 );
-
-export const zFlagshipGetDefinitionsData = z.object({
-	body: z.never().optional(),
-	path: z.object({
-		app_id: z.string(),
-	}),
-	query: z.never().optional(),
-	headers: z
-		.object({
-			"If-None-Match": z.string().optional(),
-		})
-		.optional(),
-});
-
-/**
- * Flagship definitions response.
- */
-export const zFlagshipGetDefinitionsResponse = zFlagshipDefinitions;
 
 export const zFlagshipDeleteFlagData = z.object({
 	body: z.never().optional(),

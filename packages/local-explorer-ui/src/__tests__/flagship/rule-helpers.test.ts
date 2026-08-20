@@ -246,6 +246,35 @@ describe("rulesFrom", () => {
 	});
 });
 
+describe("rulesFrom", () => {
+	test("uses canonical property order after an editor round trip", ({
+		expect,
+	}) => {
+		const stored = [
+			{
+				priority: 1,
+				conditions: [],
+				serve_variation: "on",
+				rollout: { percentage: 50 },
+			},
+		];
+		const editor = [
+			{
+				conditions: [],
+				priority: 1,
+				serve_variation: "on",
+				rollout: { percentage: 50 },
+			},
+		];
+
+		const uiRules = uiRulesFrom(stored);
+		expect(uiRules).not.toBeNull();
+		expect(JSON.stringify(rulesFrom(uiRules ?? []))).toBe(
+			JSON.stringify(editor)
+		);
+	});
+});
+
 describe("validateRules", () => {
 	test("accepts a well formed rule", ({ expect }) => {
 		const errors = validateRules(
@@ -387,6 +416,28 @@ describe("validateRules", () => {
 				},
 			],
 			["on"]
+		);
+
+		expect(errors).toEqual([]);
+	});
+
+	test("allows rules after a partial conditionless rollout", ({ expect }) => {
+		const errors = validateRules(
+			[
+				{
+					conditions: [],
+					id: "a",
+					rollout: { attribute: "", percentage: 50 },
+					serveVariation: "on",
+				},
+				{
+					conditions: [row("country")],
+					id: "b",
+					rollout: null,
+					serveVariation: "off",
+				},
+			],
+			["on", "off"]
 		);
 
 		expect(errors).toEqual([]);

@@ -476,11 +476,11 @@ describe("Flagship", () => {
 			await page
 				.getByRole("button", { name: "Add percentage rollout" })
 				.click();
-			await page.getByLabel("Rollout percentage for rule 1").fill("25");
+			await page.getByLabel("Rollout percentage for rule 1").fill("33.5");
 			await saveFlagDialog();
 
 			const stored = await fetchFlag(APP_ID, STRING_FLAG.key);
-			expect(stored.rules[0]?.rollout).toMatchObject({ percentage: 25 });
+			expect(stored.rules[0]?.rollout).toMatchObject({ percentage: 33.5 });
 		});
 
 		test("refuses to save a rule with an empty attribute", async ({

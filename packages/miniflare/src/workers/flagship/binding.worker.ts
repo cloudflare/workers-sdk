@@ -41,6 +41,12 @@ class FlagConflictError extends Error {
 // per evaluation.
 let warnedAboutUnseededRollout = false;
 
+function validateAccountTag(accountTag: string): void {
+	if (typeof accountTag !== "string" || accountTag === "") {
+		throw new Error("accountTag must be a non-empty string");
+	}
+}
+
 function hasPartialRollout(flag: Flag): boolean {
 	return flag.rules.some(
 		(rule) => rule.rollout !== undefined && rule.rollout.percentage < 100
@@ -248,9 +254,7 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 			},
 			getAccountTag: (): Promise<string | null> => stub.getAccountTag(),
 			setAccountTag: (accountTag: string): Promise<void> => {
-				if (typeof accountTag !== "string" || accountTag === "") {
-					throw new Error("accountTag must be a non-empty string");
-				}
+				validateAccountTag(accountTag);
 				return stub.setAccountTag(accountTag);
 			},
 			createFlag: async (input: FlagInput): Promise<Flag> =>
@@ -265,6 +269,7 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 				inputs: FlagInput[],
 				accountTag: string
 			): Promise<void> => {
+				validateAccountTag(accountTag);
 				const result = await stub.putAll(inputs, accountTag);
 				if (result.status === "invalid") {
 					throw new Error(result.message);

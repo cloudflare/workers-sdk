@@ -26,8 +26,8 @@ export async function usingLocalFlagshipAPI<T>(
 			flagship: { [LOCAL_BINDING_NAME]: { app_id: appId } },
 		})
 	);
-	const admin = await mf.getFlagshipBindingAPI(LOCAL_BINDING_NAME);
 	try {
+		const admin = await mf.getFlagshipBindingAPI(LOCAL_BINDING_NAME);
 		return materialise(await closure(admin()));
 	} finally {
 		await mf.dispose();

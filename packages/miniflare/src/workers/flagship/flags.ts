@@ -179,6 +179,9 @@ export function validateFlagInput(input: FlagInput): void {
 			`Flag '${input.key}' variations must all share the same type`
 		);
 	}
+	if (Object.values(input.variations).some((value) => value === null)) {
+		throw new Error(`Flag '${input.key}' variations cannot be null`);
+	}
 
 	if (!variationNames.includes(input.default_variation)) {
 		throw new Error(
@@ -232,7 +235,10 @@ export function validateFlagInput(input: FlagInput): void {
 
 	let seenCatchAll = false;
 	for (const rule of [...input.rules].sort((a, b) => a.priority - b.priority)) {
-		if (rule.conditions.length === 0) {
+		if (
+			rule.conditions.length === 0 &&
+			(rule.rollout === undefined || rule.rollout.percentage === 100)
+		) {
 			seenCatchAll = true;
 		} else if (seenCatchAll) {
 			throw new Error(

@@ -152,7 +152,11 @@ export function parseVariationValue(
 	}
 	if (type === "json") {
 		try {
-			return { ok: true, value: JSON.parse(raw) as unknown };
+			const value = JSON.parse(raw) as unknown;
+			if (typeof value !== "object" || value === null) {
+				return { ok: false, error: "JSON values must be objects or arrays." };
+			}
+			return { ok: true, value };
 		} catch {
 			return { ok: false, error: "JSON values must be valid JSON." };
 		}

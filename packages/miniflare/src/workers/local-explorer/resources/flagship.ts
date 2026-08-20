@@ -8,7 +8,7 @@ import {
 import { errorResponse, wrapResponse } from "../common";
 import type { FlagshipAdmin } from "../../flagship/admin";
 import type { ADMIN_API } from "../../flagship/constants";
-import type { Flag, FlagChanges, Rule } from "../../flagship/flags";
+import type { FlagChanges, Rule } from "../../flagship/flags";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
@@ -124,39 +124,6 @@ function jsonInit(method: string, body: unknown): RequestInit {
 	};
 }
 
-function matchesIfNoneMatch(header: string | undefined, etag: string): boolean {
-	if (header === undefined) {
-		return false;
-	}
-	const value = header.trim();
-	if (value === "*") {
-		return true;
-	}
-	const candidates = value.match(/(?:W\/)?"[^"]*"/g) ?? [];
-	return candidates.some((candidate) => candidate.replace(/^W\//, "") === etag);
-}
-
-function toDefinition(flag: Flag) {
-	return {
-		key: flag.key,
-		enabled: flag.enabled,
-		default_variation: flag.default_variation,
-		variations: flag.variations,
-		rules: flag.rules,
-	};
-}
-
-async function contentEtag(payload: string): Promise<string> {
-	const digest = await crypto.subtle.digest(
-		"SHA-256",
-		new TextEncoder().encode(payload)
-	);
-	const hash = Array.from(new Uint8Array(digest), (byte) =>
-		byte.toString(16).padStart(2, "0")
-	).join("");
-	return `"${hash}"`;
-}
-
 export async function listFlagshipApps(c: AppContext): Promise<Response> {
 	const local: FlagshipApp[] = Object.values(
 		c.env.LOCAL_EXPLORER_BINDING_MAP.flagship
@@ -190,38 +157,6 @@ export async function listFlagshipFlags(
 			result_info: { count: flags.length },
 		});
 	});
-}
-
-export async function getFlagshipDefinitions(
-	c: AppContext,
-	appId: string
-): Promise<Response> {
-	const ifNoneMatch = c.req.header("If-None-Match");
-	return withApp(
-		c,
-		appId,
-		appPath(appId, "/definitions"),
-		async (admin) => {
-			const flags = (await admin.listFlags()).sort((a, b) =>
-				a.key.localeCompare(b.key)
-			);
-			const payload = JSON.stringify({
-				flags: Object.fromEntries(
-					flags.map((flag) => [flag.key, toDefinition(flag)])
-				),
-			});
-			const etag = await contentEtag(payload);
-			if (matchesIfNoneMatch(ifNoneMatch, etag)) {
-				return new Response(null, { status: 304, headers: { ETag: etag } });
-			}
-			return new Response(payload, {
-				headers: { "Content-Type": "application/json", ETag: etag },
-			});
-		},
-		ifNoneMatch === undefined
-			? undefined
-			: { headers: { "If-None-Match": ifNoneMatch } }
-	);
 }
 
 export async function getFlagshipFlag(

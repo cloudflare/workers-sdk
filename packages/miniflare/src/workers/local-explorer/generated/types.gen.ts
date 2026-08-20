@@ -425,28 +425,28 @@ export type FlagshipApp = {
 	/**
 	 * The Flagship app id the bindings point at
 	 */
-	id?: string;
+	id: string;
 	/**
 	 * Binding names in this instance using the app
 	 */
-	bindings?: Array<string>;
+	bindings: Array<string>;
 };
 
 export type FlagshipRule = {
 	/**
 	 * Evaluation order, lowest first
 	 */
-	priority?: number;
+	priority: number;
 	/**
 	 * Conditions that must match for the rule to apply
 	 */
-	conditions?: Array<{
+	conditions: Array<{
 		[key: string]: unknown;
 	}>;
 	/**
 	 * Variation served when the rule matches
 	 */
-	serve_variation?: string;
+	serve_variation: string;
 	/**
 	 * Percentage rollout applied to matching contexts
 	 */
@@ -460,11 +460,11 @@ export type FlagshipFlag = {
 	/**
 	 * Flag key
 	 */
-	key?: string;
+	key: string;
 	/**
 	 * Type shared by the flag's variations
 	 */
-	type?: "boolean" | "string" | "number" | "json";
+	type: "boolean" | "string" | "number" | "json";
 	/**
 	 * Human readable description
 	 */
@@ -472,55 +472,41 @@ export type FlagshipFlag = {
 	/**
 	 * Whether targeting rules are evaluated
 	 */
-	enabled?: boolean;
+	enabled: boolean;
 	/**
 	 * Variation served when no rule matches
 	 */
-	default_variation?: string;
+	default_variation: string;
 	/**
 	 * Named values the flag can serve
 	 */
-	variations?: {
+	variations: {
 		[key: string]: unknown;
 	};
 	/**
 	 * Targeting rules, in priority order
 	 */
-	rules?: Array<FlagshipRule>;
+	rules: Array<FlagshipRule>;
 	/**
 	 * When the flag was last written locally
 	 */
-	updated_at?: string;
-};
-
-export type FlagshipDefinitions = {
-	flags?: {
-		[key: string]: {
-			key?: string;
-			enabled?: boolean;
-			default_variation?: string;
-			variations?: {
-				[key: string]: unknown;
-			};
-			rules?: Array<FlagshipRule>;
-		};
-	};
+	updated_at: string;
 };
 
 export type FlagshipEvaluation = {
-	flagKey?: string;
+	flagKey: string;
 	/**
 	 * The resolved flag value
 	 */
-	value?: unknown;
+	value: unknown;
 	/**
 	 * Name of the variation served
 	 */
-	variant?: string;
+	variant: string;
 	/**
 	 * Why this value was served
 	 */
-	reason?: "TARGETING_MATCH" | "DEFAULT" | "DISABLED" | "SPLIT" | "ERROR";
+	reason: "TARGETING_MATCH" | "DEFAULT" | "DISABLED" | "SPLIT" | "ERROR";
 	errorCode?: string;
 	errorMessage?: string;
 };
@@ -2119,38 +2105,6 @@ export type FlagshipCreateFlagResponses = {
 
 export type FlagshipCreateFlagResponse =
 	FlagshipCreateFlagResponses[keyof FlagshipCreateFlagResponses];
-
-export type FlagshipGetDefinitionsData = {
-	body?: never;
-	headers?: {
-		"If-None-Match"?: string;
-	};
-	path: {
-		app_id: string;
-	};
-	query?: never;
-	url: "/flagship/apps/{app_id}/definitions";
-};
-
-export type FlagshipGetDefinitionsErrors = {
-	/**
-	 * Flagship definitions response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type FlagshipGetDefinitionsError =
-	FlagshipGetDefinitionsErrors[keyof FlagshipGetDefinitionsErrors];
-
-export type FlagshipGetDefinitionsResponses = {
-	/**
-	 * Flagship definitions response.
-	 */
-	200: FlagshipDefinitions;
-};
-
-export type FlagshipGetDefinitionsResponse =
-	FlagshipGetDefinitionsResponses[keyof FlagshipGetDefinitionsResponses];
 
 export type FlagshipDeleteFlagData = {
 	body?: never;

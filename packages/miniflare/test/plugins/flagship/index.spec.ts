@@ -280,6 +280,9 @@ describe("flagship plugin", () => {
 			expect(await put({ variations: { on: true, off: "no" } })).toBe(
 				"Flag 'new_checkout' variations must all share the same type"
 			);
+			expect(await put({ variations: { on: null, off: null } })).toBe(
+				"Flag 'new_checkout' variations cannot be null"
+			);
 			expect(await put({ default_variation: "nope" })).toBe(
 				"Flag 'new_checkout' default variation 'nope' is not defined"
 			);
@@ -306,6 +309,19 @@ describe("flagship plugin", () => {
 			).toBe(
 				"Flag 'new_checkout' has targeting rules after a rule with no conditions"
 			);
+			const partialRollout = await admin.putFlag({
+				...BOOL_FLAG,
+				rules: [
+					{
+						priority: 1,
+						conditions: [],
+						serve_variation: "on",
+						rollout: { percentage: 50 },
+					},
+					{ ...BOOL_FLAG.rules[0], priority: 2 },
+				],
+			});
+			expect(partialRollout.rules).toHaveLength(2);
 			expect(
 				await put({
 					rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 101 } }],
@@ -632,6 +648,18 @@ describe("flagship plugin", () => {
 				)
 			).toBe("Flag 'second' must define at least one variation");
 
+			expect(await admin.listFlags()).toEqual([]);
+			expect(await admin.getAccountTag()).toBeNull();
+		});
+
+		test("putFlags rejects an empty account tag", async ({ expect }) => {
+			const mf = new Miniflare(options());
+			useDispose(mf);
+			const admin = (await mf.getFlagshipBindingAPI("FLAGS"))();
+
+			expect(await rejection(() => admin.putFlags([BOOL_FLAG], ""))).toBe(
+				"accountTag must be a non-empty string"
+			);
 			expect(await admin.listFlags()).toEqual([]);
 			expect(await admin.getAccountTag()).toBeNull();
 		});
