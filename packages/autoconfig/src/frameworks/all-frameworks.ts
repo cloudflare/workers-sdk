@@ -75,9 +75,8 @@ export const allKnownFrameworks = [
 		class: NextJs,
 		frameworkPackageInfo: {
 			name: "next",
-			// 14.2.35 is the earliest version of Next.js officially supported by open-next
-			// see: https://github.com/cloudflare/workers-sdk/pull/11704#discussion_r2634519440
-			minimumVersion: "14.2.35",
+			// vinext targets the latest major version of Next.js.
+			minimumVersion: "16.0.0",
 			maximumKnownMajorVersion: "16",
 		},
 		supported: true,
