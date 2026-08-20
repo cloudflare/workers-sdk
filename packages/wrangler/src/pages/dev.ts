@@ -995,6 +995,7 @@ export const pagesDevCommand = createCommand({
 					routes: undefined,
 					host: undefined,
 					localUpstream: undefined,
+					inferOriginFromRoutes: undefined,
 					upstreamProtocol: undefined,
 					var: cliVars,
 					define: undefined,
