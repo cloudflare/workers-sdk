@@ -8,6 +8,7 @@ import {
 	ParseError,
 	retryOnAPIFailure,
 	UserError,
+	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
@@ -52,18 +53,50 @@ import type { FormData } from "undici";
 
 export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
-export default async function versionsUpload(
-	props: VersionsUploadProps,
-	config: Config,
-	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks
-): Promise<{
+type VersionsUploadResult = {
 	versionId: string | null;
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
-}> {
+};
+
+export default async function versionsUpload(
+	props: VersionsUploadProps,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	callbacks: VersionsUploadCallbacks
+): Promise<VersionsUploadResult> {
+	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
+
+	const result = await uploadWorkerVersion(
+		props,
+		config,
+		buildResult,
+		callbacks
+	);
+
+	writeOutput({
+		type: "version-upload",
+		version: 1,
+		worker_name: props.name ?? null,
+		worker_tag: result.workerTag,
+		version_id: result.versionId,
+		preview_url: result.versionPreviewUrl,
+		preview_alias_url: result.versionPreviewAliasUrl,
+		wrangler_environment: props.env,
+		worker_name_overridden: props.workerNameOverridden ?? false,
+	});
+
+	return result;
+}
+
+async function uploadWorkerVersion(
+	props: VersionsUploadProps,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	callbacks: VersionsUploadCallbacks
+): Promise<VersionsUploadResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
 
