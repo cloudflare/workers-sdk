@@ -53,14 +53,8 @@ interface Props {
 }
 
 interface StreamFetcher extends Fetcher {
-	listStreamVideos(params?: StreamVideosListParams): Promise<StreamVideo[]>;
-	generateStreamWatermark(
-		streamOrUrl: ReadableStream | string,
-		params: StreamWatermarkCreateParams
-	): Promise<StreamWatermark>;
-	listStreamWatermarks(): Promise<StreamWatermark[]>;
-	getStreamWatermark(watermarkId: string): Promise<StreamWatermark>;
-	deleteStreamWatermark(watermarkId: string): Promise<void>;
+	videos: StreamVideos;
+	watermarks: StreamWatermarks;
 }
 
 class ExternalStreamVideos extends RpcTarget implements StreamVideos {
@@ -69,7 +63,7 @@ class ExternalStreamVideos extends RpcTarget implements StreamVideos {
 	}
 
 	list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
-		return this.resolve().listStreamVideos(params);
+		return this.resolve().videos.list(params);
 	}
 }
 
@@ -82,19 +76,22 @@ class ExternalStreamWatermarks extends RpcTarget implements StreamWatermarks {
 		streamOrUrl: ReadableStream | string,
 		params: StreamWatermarkCreateParams
 	): Promise<StreamWatermark> {
-		return this.resolve().generateStreamWatermark(streamOrUrl, params);
+		const watermarks = this.resolve().watermarks;
+		return typeof streamOrUrl === "string"
+			? watermarks.generate(streamOrUrl, params)
+			: watermarks.generate(streamOrUrl, params);
 	}
 
 	list(): Promise<StreamWatermark[]> {
-		return this.resolve().listStreamWatermarks();
+		return this.resolve().watermarks.list();
 	}
 
 	get(watermarkId: string): Promise<StreamWatermark> {
-		return this.resolve().getStreamWatermark(watermarkId);
+		return this.resolve().watermarks.get(watermarkId);
 	}
 
 	delete(watermarkId: string): Promise<void> {
-		return this.resolve().deleteStreamWatermark(watermarkId);
+		return this.resolve().watermarks.delete(watermarkId);
 	}
 }
 

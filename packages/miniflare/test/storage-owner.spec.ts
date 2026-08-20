@@ -277,6 +277,21 @@ describe.sequential("owner presence integration", () => {
 		const WORKER = `export default {
 			async fetch(request, env) {
 				try {
+					const url = new URL(request.url);
+					if (url.pathname === "/watermark") {
+						const id = url.searchParams.get("id");
+						if (request.method === "POST") {
+							const body = new Response(new Uint8Array([0, 1, 2, 3])).body;
+							return Response.json(await env.STREAM.watermarks.generate(body, { name: "shared" }));
+						}
+						if (request.method === "DELETE" && id !== null) {
+							await env.STREAM.watermarks.delete(id);
+							return Response.json({ count: (await env.STREAM.watermarks.list()).length });
+						}
+						return Response.json(id === null
+							? { count: (await env.STREAM.watermarks.list()).length }
+							: await env.STREAM.watermarks.get(id));
+					}
 					if (request.method === "PUT") {
 						const body = new Response(
 							new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
@@ -326,6 +341,26 @@ describe.sequential("owner presence integration", () => {
 				await client.dispatchFetch("http://x/")
 			).json()) as { count?: number; error?: string };
 			expect(listed).toEqual({ count: 1 });
+
+			const watermark = (await (
+				await client.dispatchFetch("http://x/watermark", { method: "POST" })
+			).json()) as { id: string; name: string };
+			expect(watermark.name).toBe("shared");
+			expect(
+				await (
+					await client.dispatchFetch(`http://x/watermark?id=${watermark.id}`)
+				).json()
+			).toMatchObject(watermark);
+			expect(
+				await (await client.dispatchFetch("http://x/watermark")).json()
+			).toEqual({ count: 1 });
+			expect(
+				await (
+					await client.dispatchFetch(`http://x/watermark?id=${watermark.id}`, {
+						method: "DELETE",
+					})
+				).json()
+			).toEqual({ count: 0 });
 
 			const videoResponse = await client.dispatchFetch(
 				`http://x/__cf_local/stream/${put.id}/watch`
