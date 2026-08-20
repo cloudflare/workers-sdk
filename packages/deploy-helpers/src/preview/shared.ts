@@ -114,6 +114,14 @@ export function getRepositoryUrl(): string | undefined {
 		);
 	}
 
+	// Only fall back to the local git remote when running in CI. Unlike the
+	// env var checks above (which only match known CI-published values),
+	// this shells out to the developer's local git config, so we don't want
+	// to do that for local, non-CI `wrangler preview` runs.
+	if (!shouldUseCIMetadataFallback()) {
+		return undefined;
+	}
+
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
 		return normalizeRepositoryUrl(

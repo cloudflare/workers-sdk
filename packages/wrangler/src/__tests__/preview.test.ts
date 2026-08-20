@@ -342,7 +342,10 @@ describe("wrangler preview", () => {
 			);
 		});
 
-		test("should use and normalize git remote origin URL", ({ expect }) => {
+		test("should use and normalize git remote origin URL when in CI", ({
+			expect,
+		}) => {
+			vi.stubEnv("CI", "true");
 			vi.mocked(childProcess.execSync)
 				.mockImplementationOnce(() => Buffer.from("true"))
 				.mockImplementationOnce(() =>
@@ -352,6 +355,15 @@ describe("wrangler preview", () => {
 			expect(getRepositoryUrl()).toBe(
 				"https://git.example.com/acme/worker-project"
 			);
+		});
+
+		test("should not shell out to the local git remote outside CI", ({
+			expect,
+		}) => {
+			vi.stubEnv("CI", undefined);
+
+			expect(getRepositoryUrl()).toBeUndefined();
+			expect(childProcess.execSync).not.toHaveBeenCalled();
 		});
 	});
 
