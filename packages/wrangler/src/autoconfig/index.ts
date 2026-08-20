@@ -21,6 +21,16 @@ export {
 	sendAutoConfigProcessStartedMetricsEvent,
 } from "./telemetry-utils";
 
+type WranglerAutoConfigAnalysis =
+	| {
+			configured: true;
+			details?: AutoConfigDetails;
+	  }
+	| {
+			configured: false;
+			details: AutoConfigDetails;
+	  };
+
 /**
  * Detects project details for autoconfig, wrapped with telemetry instrumentation.
  *
@@ -31,7 +41,7 @@ export {
  * @param options.command - The Wrangler command that initiated autoconfig
  * @param options.wranglerConfig - The parsed wrangler configuration (if any)
  * @param options.context - The autoconfig context providing logger, dialogs, etc.
- * @returns The detected project details from {@link getDetailsForAutoConfig}
+ * @returns The detected project details and whether autoconfiguration is needed
  * @throws Re-throws any error from {@link getDetailsForAutoConfig} after recording telemetry
  */
 export async function runAutoConfigDetection({
@@ -42,7 +52,7 @@ export async function runAutoConfigDetection({
 	command: NonNullable<AutoConfigWranglerTriggerCommand>;
 	wranglerConfig: Config;
 	context: AutoConfigContext;
-}): Promise<AutoConfigDetails> {
+}): Promise<WranglerAutoConfigAnalysis> {
 	sendMetricsEvent(
 		"autoconfig_detection_started",
 		{ autoConfigId: getAutoConfigId(), command },
@@ -50,23 +60,63 @@ export async function runAutoConfigDetection({
 	);
 
 	try {
-		const details = await getDetailsForAutoConfig({
-			wranglerConfig,
-			context,
-		});
+		const projectPath = process.cwd();
+		let result: WranglerAutoConfigAnalysis;
+
+		if (
+			// If a real Wrangler config has been found the project is already configured for Workers
+			wranglerConfig.configPath &&
+			// Unless `pages_build_output_dir` is set, since that indicates that the project is a Pages one instead
+			!wranglerConfig.pages_build_output_dir
+		) {
+			context.logger.debug(`Running autoconfig detection in ${projectPath}...`);
+			result = {
+				configured: true,
+			};
+		} else {
+			const details = await getDetailsForAutoConfig({
+				projectPath,
+				pagesBuildOutputDir: wranglerConfig.pages_build_output_dir,
+				context,
+			});
+
+			if (details.framework?.isConfigured(projectPath)) {
+				result = {
+					configured: true,
+					details,
+				};
+			} else if (!details.outputDir) {
+				const errorMessage =
+					details.framework?.id === "static" ||
+					details.framework?.id === "cloudflare-pages"
+						? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
+						: "Failed to detect an output directory for the project";
+
+				throw new AutoConfigDetectionError(errorMessage, {
+					telemetryMessage: "autoconfig details output directory missing",
+					frameworkId: details.framework?.id,
+					configured: false,
+				});
+			} else {
+				result = {
+					configured: false,
+					details,
+				};
+			}
+		}
 
 		sendMetricsEvent(
 			"autoconfig_detection_completed",
 			{
 				autoConfigId: getAutoConfigId(),
-				framework: details.framework?.id,
-				configured: details.configured,
+				framework: result.details?.framework?.id,
+				configured: result.configured,
 				success: true,
 			},
 			{}
 		);
 
-		return details;
+		return result;
 	} catch (error) {
 		sendMetricsEvent(
 			"autoconfig_detection_completed",

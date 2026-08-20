@@ -3,13 +3,12 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { detectFramework } from "../../../src/details/framework-detection";
 import { createMockContext } from "../../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils";
 
 describe("detectFramework() / Pages project detection", () => {
 	runInTempDir();
 	const context = createMockContext();
 
-	it("returns Cloudflare Pages framework when pages_build_output_dir is set in wrangler config", async ({
+	it("returns Cloudflare Pages framework when a Pages build output directory is provided", async ({
 		expect,
 	}) => {
 		await seed({
@@ -18,8 +17,8 @@ describe("detectFramework() / Pages project detection", () => {
 		});
 
 		const result = await detectFramework(process.cwd(), context, {
-			pages_build_output_dir: "./dist",
-		} as Config);
+			pagesBuildOutputDir: "./dist",
+		});
 
 		expect(result.detectedFramework?.framework.id).toBe("cloudflare-pages");
 		expect(result.detectedFramework?.framework.name).toBe("Cloudflare Pages");

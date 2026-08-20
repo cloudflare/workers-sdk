@@ -46,4 +46,17 @@ describe("detectFramework() / basic framework detection", () => {
 		expect(result.detectedFramework?.buildCommand).toBeDefined();
 		expect(result.detectedFramework?.buildCommand).toContain("astro build");
 	});
+
+	it("includes devCommand in detectedFramework when available", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({ dependencies: { astro: "5" } }),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		const result = await detectFramework(process.cwd(), context);
+
+		expect(result.detectedFramework.devCommand).toBe("astro dev");
+	});
 });

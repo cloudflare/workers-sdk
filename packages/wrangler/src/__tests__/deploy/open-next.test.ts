@@ -1,8 +1,10 @@
 import * as fs from "node:fs";
 import {
+	Framework,
 	getDetailsForAutoConfig,
 	getInstalledPackageVersion,
 } from "@cloudflare/autoconfig";
+import { NpmPackageManager } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -37,6 +39,10 @@ import {
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
 } from "./helpers";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "@cloudflare/autoconfig";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
@@ -69,6 +75,22 @@ vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
 }));
 vi.mock("@cloudflare/cli-shared-helpers/command");
 
+class MockStaticFramework extends Framework {
+	constructor() {
+		super({ id: "static", name: "Static" });
+	}
+	isConfigured(): boolean {
+		return true;
+	}
+	configure({ outputDir }: ConfigurationOptions): ConfigurationResults {
+		return {
+			wranglerConfig: {
+				assets: { directory: outputDir },
+			},
+		};
+	}
+}
+
 describe("deploy", () => {
 	mockAccountId();
 	mockApiToken();
@@ -100,10 +122,10 @@ describe("deploy", () => {
 		);
 		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
-			configured: true,
+			framework: new MockStaticFramework(),
 			workerName: "test-name",
 			projectPath: process.cwd(),
-			packageManager: { type: "npm" as const, npx: "npx" },
+			packageManager: NpmPackageManager,
 		} as Awaited<ReturnType<typeof getDetailsForAutoConfig>>);
 	});
 

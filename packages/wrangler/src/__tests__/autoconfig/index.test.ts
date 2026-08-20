@@ -33,15 +33,19 @@ vi.mock("../../metrics/send-event", async (importOriginal) => {
 });
 
 /** Minimal mock satisfying {@link AutoConfigContext} for pass-through testing. */
-const mockContext = {} as AutoConfigContext;
+const mockContext = {
+	logger: { debug: vi.fn() },
+} as unknown as AutoConfigContext;
 
 /** Minimal mock satisfying {@link Config} for pass-through testing. */
-const mockConfig = {} as Config;
+const mockConfig = {
+	configPath: undefined,
+} as Config;
 
 /** Minimal mock satisfying {@link AutoConfigDetails} with a detected framework. */
 const mockDetails = {
-	configured: false,
-	framework: { id: "static" },
+	framework: { id: "static", isConfigured: () => false },
+	outputDir: "dist",
 } as unknown as AutoConfigDetails;
 
 /** Minimal mock satisfying {@link AutoConfigSummary}. */
@@ -70,7 +74,23 @@ describe("autoconfig wrappers", () => {
 	});
 
 	describe("runAutoConfigDetection", () => {
-		it("calls getDetailsForAutoConfig with the provided config and context, and returns the result", async ({
+		it("does not analyze a project with a Wrangler config", async ({
+			expect,
+		}) => {
+			const result = await runAutoConfigDetection({
+				command: "wrangler deploy",
+				wranglerConfig: {
+					...mockConfig,
+					configPath: "wrangler.json",
+				},
+				context: mockContext,
+			});
+
+			expect(getDetailsForAutoConfig).not.toHaveBeenCalled();
+			expect(result).toEqual({ configured: true });
+		});
+
+		it("gets project details and returns the validated result", async ({
 			expect,
 		}) => {
 			vi.mocked(getDetailsForAutoConfig).mockResolvedValue(mockDetails);
@@ -83,10 +103,31 @@ describe("autoconfig wrappers", () => {
 
 			expect(getDetailsForAutoConfig).toHaveBeenCalledOnce();
 			expect(getDetailsForAutoConfig).toHaveBeenCalledWith({
-				wranglerConfig: mockConfig,
+				projectPath: process.cwd(),
+				pagesBuildOutputDir: mockConfig.pages_build_output_dir,
 				context: mockContext,
 			});
-			expect(result).toBe(mockDetails);
+			expect(result).toEqual({
+				configured: false,
+				details: mockDetails,
+			});
+		});
+
+		it("requires an output directory for an unconfigured project", async ({
+			expect,
+		}) => {
+			vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+				...mockDetails,
+				outputDir: undefined,
+			});
+
+			await expect(
+				runAutoConfigDetection({
+					command: "wrangler deploy",
+					wranglerConfig: mockConfig,
+					context: mockContext,
+				})
+			).rejects.toThrow("Could not detect a directory containing static files");
 		});
 
 		it("sends detection_started then detection_completed on success", async ({

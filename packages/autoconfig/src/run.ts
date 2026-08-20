@@ -13,11 +13,7 @@ import {
 	isNodejsCompatDefaultOn,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
-import {
-	assertNonConfigured,
-	confirmAutoConfigDetails,
-	displayAutoConfigDetails,
-} from "./details";
+import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import {
 	isFrameworkSupported,
 	isKnownFramework,
@@ -29,7 +25,6 @@ import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext } from "./context";
 import type {
 	AutoConfigDetails,
-	AutoConfigDetailsForNonConfiguredProject,
 	AutoConfigOptions,
 	AutoConfigSummary,
 } from "./types";
@@ -57,8 +52,6 @@ export async function runAutoConfig(
 	const enableWranglerInstallation =
 		autoConfigOptions.enableWranglerInstallation ?? true;
 
-	assertNonConfigured(autoConfigDetails);
-
 	displayAutoConfigDetails(autoConfigDetails, context);
 
 	const updatedAutoConfigDetails = skipConfirmations
@@ -72,7 +65,6 @@ export async function runAutoConfig(
 	}
 
 	autoConfigDetails = updatedAutoConfigDetails;
-	assertNonConfigured(autoConfigDetails);
 
 	if (isKnownFramework(autoConfigDetails.framework.id)) {
 		const frameworkIsSupported = isFrameworkSupported(
@@ -330,9 +322,7 @@ export async function saveWranglerJsonc(
  * @returns A summary object describing all planned operations.
  */
 export async function buildOperationsSummary(
-	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
-		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
-	},
+	autoConfigDetails: AutoConfigDetails,
 	wranglerConfigToWrite: RawConfig | null,
 	projectCommands: {
 		build?: string;
@@ -342,6 +332,11 @@ export async function buildOperationsSummary(
 	context: AutoConfigContext,
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
+	assert(
+		autoConfigDetails.outputDir,
+		"The Output Directory is unexpectedly missing"
+	);
+
 	const { logger } = context;
 	logger.log("");
 

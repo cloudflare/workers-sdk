@@ -166,7 +166,6 @@ describe("autoconfig (deploy)", () => {
 			.spyOn(autoconfig, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
 				Promise.resolve({
-					configured: false,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
@@ -185,13 +184,19 @@ describe("autoconfig (deploy)", () => {
 	it("should not run autoconfig if project is already configured", async ({
 		expect,
 	}) => {
+		const framework = new MockStaticFramework({
+			id: "static",
+			name: "Static",
+		});
+		vi.spyOn(framework, "isConfigured").mockReturnValue(true);
 		const getDetailsSpy = vi
 			.spyOn(autoconfig, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
 				Promise.resolve({
-					configured: true,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
+					framework,
+					outputDir: "./public",
 					packageManager: NpmPackageManager,
 				})
 			);
@@ -208,7 +213,6 @@ describe("autoconfig (deploy)", () => {
 	}) => {
 		vi.spyOn(autoconfig, "getDetailsForAutoConfig").mockImplementationOnce(() =>
 			Promise.resolve({
-				configured: false,
 				projectPath: process.cwd(),
 				workerName: "my-worker",
 				framework: {
@@ -279,7 +283,6 @@ describe("autoconfig (deploy)", () => {
 				{
 					projectPath: process.cwd(),
 					buildCommand: "echo 'built' > build.txt",
-					configured: false,
 					workerName: "my-worker",
 					framework: {
 						// "static" is used here because this test exercises the overall runAutoConfig
@@ -402,7 +405,6 @@ describe("autoconfig (deploy)", () => {
 				{
 					projectPath: process.cwd(),
 					workerName: "my-worker",
-					configured: false,
 					outputDir: "dist",
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
@@ -439,7 +441,6 @@ describe("autoconfig (deploy)", () => {
 				{
 					projectPath: process.cwd(),
 					workerName: "my-worker",
-					configured: false,
 					outputDir: "dist",
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
@@ -487,7 +488,6 @@ describe("autoconfig (deploy)", () => {
 			await autoconfig.runAutoConfig(
 				{
 					projectPath: process.cwd(),
-					configured: false,
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					workerName: "my-worker",
 					outputDir: "dist",
@@ -563,7 +563,6 @@ describe("autoconfig (deploy)", () => {
 				{
 					projectPath: process.cwd(),
 					workerName: "my-worker",
-					configured: false,
 					outputDir: process.cwd(),
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
@@ -599,7 +598,6 @@ describe("autoconfig (deploy)", () => {
 				{
 					projectPath: process.cwd(),
 					workerName: "my-worker",
-					configured: false,
 					outputDir: process.cwd(),
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
@@ -632,7 +630,6 @@ describe("autoconfig (deploy)", () => {
 				autoconfig.runAutoConfig(
 					{
 						projectPath: process.cwd(),
-						configured: false,
 						framework: new MockStaticFramework({
 							id: "static",
 							name: "Static",
@@ -660,7 +657,6 @@ describe("autoconfig (deploy)", () => {
 				autoconfig.runAutoConfig(
 					{
 						projectPath: process.cwd(),
-						configured: false,
 						framework: {
 							id: "cloudflare-pages",
 							name: "Cloudflare Pages",
@@ -690,7 +686,6 @@ describe("autoconfig (deploy)", () => {
 				autoconfig.runAutoConfig(
 					{
 						projectPath: process.cwd(),
-						configured: false,
 						framework: {
 							id: "hono",
 							name: "Hono",
@@ -729,7 +724,6 @@ describe("autoconfig (deploy)", () => {
 					{
 						projectPath: process.cwd(),
 						workerName: "my-worker",
-						configured: false,
 						outputDir: "dist",
 						framework: {
 							// "static" is used here because this test only exercises compatibility flag
@@ -768,7 +762,6 @@ describe("autoconfig (deploy)", () => {
 					{
 						projectPath: process.cwd(),
 						workerName: "my-worker",
-						configured: false,
 						outputDir: "dist",
 						framework: {
 							// "static" is used here because this test only exercises compatibility flag
@@ -811,7 +804,6 @@ describe("autoconfig (deploy)", () => {
 					{
 						projectPath: process.cwd(),
 						workerName: "my-worker",
-						configured: false,
 						outputDir: "dist",
 						framework: {
 							// "static" is used here because this test only exercises compatibility flag
@@ -852,7 +844,6 @@ describe("autoconfig (deploy)", () => {
 					{
 						projectPath: process.cwd(),
 						workerName: "my-worker",
-						configured: false,
 						outputDir: "dist",
 						framework: {
 							id: "static",
@@ -907,7 +898,6 @@ describe("autoconfig (deploy)", () => {
 				{
 					projectPath: process.cwd(),
 					workerName: "my-worker",
-					configured: false,
 					outputDir: "dist",
 					framework,
 					packageManager: NpmPackageManager,
