@@ -2015,6 +2015,70 @@ describe.sequential("wrangler dev", () => {
 				"
 			`);
 		});
+
+		it("should prefer `.dev.vars.<environment>` if `CLOUDFLARE_ENV` is set", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", "DEFAULT_VAR=default");
+			fs.writeFileSync(".dev.vars.custom", "CUSTOM_VAR=custom");
+
+			writeWranglerConfig({ main: "index.js", env: { custom: {} } });
+			const config = await runWranglerUntilConfig("dev", {
+				CLOUDFLARE_ENV: "custom",
+			});
+			const varBindings: Record<string, unknown> = Object.fromEntries(
+				Object.entries(config.bindings ?? {})
+					.filter(
+						(
+							binding
+						): binding is [
+							string,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+						] =>
+							binding[1].type === "plain_text" ||
+							binding[1].type === "secret_text"
+					)
+					.map(([b, v]) => [b, v.value])
+			);
+
+			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
+			expect(std.out).toContain("Using secrets defined in .dev.vars.custom");
+		});
+
+		it("should prefer `--env` over `CLOUDFLARE_ENV` when selecting `.dev.vars.<environment>`", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", "DEFAULT_VAR=default");
+			fs.writeFileSync(".dev.vars.custom", "CUSTOM_VAR=custom");
+			fs.writeFileSync(".dev.vars.other", "OTHER_VAR=other");
+
+			writeWranglerConfig({
+				main: "index.js",
+				env: { custom: {}, other: {} },
+			});
+			const config = await runWranglerUntilConfig("dev --env custom", {
+				CLOUDFLARE_ENV: "other",
+			});
+			const varBindings: Record<string, unknown> = Object.fromEntries(
+				Object.entries(config.bindings ?? {})
+					.filter(
+						(
+							binding
+						): binding is [
+							string,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+						] =>
+							binding[1].type === "plain_text" ||
+							binding[1].type === "secret_text"
+					)
+					.map(([b, v]) => [b, v.value])
+			);
+
+			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
+			expect(std.out).toContain("Using secrets defined in .dev.vars.custom");
+		});
 	});
 
 	describe("secrets config", () => {
@@ -2307,6 +2371,44 @@ describe.sequential("wrangler dev", () => {
 				env.__DOT_ENV_LOCAL_DEV_VAR_2 ("(hidden)")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 ("(hidden)")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ("(hidden)")      Environment Variable      local"
+			`);
+		});
+
+		it("should populate `process.env` from `.env.<environment>` files when CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				env: { custom: {} },
+			});
+			await runWranglerUntilConfig("dev", { CLOUDFLARE_ENV: "custom" });
+			const dotEnvVars = Object.fromEntries(
+				Object.entries(process.env).filter(([key]) =>
+					key.startsWith("__DOT_ENV_LOCAL_DEV_VAR_")
+				)
+			);
+			expect(dotEnvVars).toEqual({
+				__DOT_ENV_LOCAL_DEV_VAR_1: "custom-local-1",
+				__DOT_ENV_LOCAL_DEV_VAR_2: "custom-2",
+				__DOT_ENV_LOCAL_DEV_VAR_3: "custom-local-3",
+				__DOT_ENV_LOCAL_DEV_VAR_LOCAL: "custom-local",
+			});
+		});
+
+		it("should get local dev `vars` from `.env.<environment>` files when CLOUDFLARE_ENV is set", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				env: { custom: {} },
+			});
+			await runWranglerUntilConfig("dev", { CLOUDFLARE_ENV: "custom" });
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
+				"Using secrets defined in .env
+				Using secrets defined in .env.custom
+				Using secrets defined in .env.custom.local
+				Using secrets defined in .env.local"
 			`);
 		});
 

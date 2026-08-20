@@ -7,6 +7,7 @@ import {
 	configFileName,
 	experimental_readRawConfig,
 	FatalError,
+	getCloudflareEnv,
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -239,7 +240,7 @@ export const typesCommand = createCommand({
 				outputPath,
 				effectiveSecondaryEntries,
 				args.envFile,
-				args.env
+				args.env ?? getCloudflareEnv()
 			);
 			if (outOfDate) {
 				throw new FatalError(
@@ -859,7 +860,9 @@ export async function generateEnvTypes(
 		}
 
 		// For the simple path: use the specific env's secrets (or top-level)
-		secrets = perEnvSecrets.get(args.env ?? TOP_LEVEL_ENV_NAME) ?? {};
+		secrets =
+			perEnvSecrets.get(args.env ?? getCloudflareEnv() ?? TOP_LEVEL_ENV_NAME) ??
+			{};
 	} else {
 		// Fall back to .dev.vars/.env inference.
 		// We pass an empty vars object because we only want the secret keys,
@@ -868,7 +871,7 @@ export async function generateEnvTypes(
 			config.userConfigPath,
 			args.envFile,
 			{},
-			args.env,
+			args.env ?? getCloudflareEnv(),
 			true
 		);
 		// Extract just the keys as a Record<string, string> for compatibility
