@@ -55,6 +55,67 @@ async function base64DecodeStream(
 	return base64DecodeArrayBuffer(buffer);
 }
 
+function resolveMetaPath(obj: unknown, path: string): unknown {
+	return path
+		.split(".")
+		.reduce<unknown>(
+			(acc, key) =>
+				acc && typeof acc === "object"
+					? (acc as Record<string, unknown>)[key]
+					: undefined,
+			obj
+		);
+}
+
+function matchesCondition(
+	actual: unknown,
+	condition: ImageMetadataFilterValue
+): boolean {
+	if (
+		condition === null ||
+		typeof condition !== "object" ||
+		Array.isArray(condition)
+	) {
+		return actual === condition;
+	}
+
+	return Object.entries(condition).every(([op, expected]) => {
+		switch (op) {
+			case "eq":
+				return actual === expected;
+			case "in":
+				return (
+					Array.isArray(expected) &&
+					expected.some((candidate) => candidate === actual)
+				);
+			case "gt":
+				return typeof actual === "number" && actual > (expected as number);
+			case "gte":
+				return typeof actual === "number" && actual >= (expected as number);
+			case "lt":
+				return typeof actual === "number" && actual < (expected as number);
+			case "lte":
+				return typeof actual === "number" && actual <= (expected as number);
+			default:
+				return false;
+		}
+	});
+}
+
+// AND logic across fields, matching images-core/images-edge-api behaviour.
+function matchesMetadataFilters(
+	image: ImageMetadata,
+	filters: Record<string, ImageMetadataFilterValue> | undefined
+): boolean {
+	if (!filters) {
+		return true;
+	}
+
+	return Object.entries(filters).every(([field, condition]) =>
+		matchesCondition(resolveMetaPath(image.meta ?? {}, field), condition)
+	);
+}
+
 class ImageHandleImpl extends RpcTarget {
 	readonly #imageId: string;
 	readonly #env: Env;
@@ -183,6 +244,15 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 				0,
 				allImages.length,
 				...allImages.filter((i) => i.creator === options.creator)
+			);
+		}
+
+		if (options?.filter?.metadata) {
+			const metadataFilter = options.filter.metadata;
+			allImages.splice(
+				0,
+				allImages.length,
+				...allImages.filter((i) => matchesMetadataFilters(i, metadataFilter))
 			);
 		}
 

@@ -269,6 +269,123 @@ describe("Images hosted CRUD", () => {
 		expect(list.images[0].id).toBe("img2");
 	});
 
+	test("list images filtered by metadata", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "meta-1",
+			metadata: { status: "active", priority: 1, config: { region: "eu" } },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "meta-2",
+			metadata: { status: "archived", priority: 5, config: { region: "us" } },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: { filter: { metadata: { status: "active" } } },
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("meta-1");
+	});
+
+	test("list images filtered by metadata with range operators", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "range-1",
+			metadata: { priority: 1 },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "range-2",
+			metadata: { priority: 5 },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "range-3",
+			metadata: { priority: 9 },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: { filter: { metadata: { priority: { gte: 2, lte: 8 } } } },
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("range-2");
+	});
+
+	test("list images filtered by metadata with in operator", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "in-1",
+			metadata: { region: "us-east" },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "in-2",
+			metadata: { region: "eu-west" },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "in-3",
+			metadata: { region: "ap-south" },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: {
+				filter: { metadata: { region: { in: ["us-east", "eu-west"] } } },
+			},
+		});
+		expect(list.images.map((i) => i.id).sort()).toEqual(["in-1", "in-2"]);
+	});
+
+	test("list images filtered by nested metadata field", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "nested-1",
+			metadata: { config: { region: "eu-west" } },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "nested-2",
+			metadata: { config: { region: "us-east" } },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: { filter: { metadata: { "config.region": "eu-west" } } },
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("nested-1");
+	});
+
+	test("list images filtered by multiple metadata fields (AND logic)", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "and-1",
+			metadata: { status: "active", priority: 5 },
+		});
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "and-2",
+			metadata: { status: "active", priority: 1 },
+		});
+
+		const list = await sendCmd<ImageList>(mf, "list", {
+			options: {
+				filter: { metadata: { status: "active", priority: { gte: 3 } } },
+			},
+		});
+		expect(list.images).toHaveLength(1);
+		expect(list.images[0].id).toBe("and-1");
+	});
+
 	test("list images with cursor pagination", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
