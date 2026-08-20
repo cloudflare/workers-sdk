@@ -21,6 +21,7 @@ import type {
 	QueueConsumerSchema,
 	QueueProducerSchema,
 } from "../../workers";
+import type { ContainerPrivilegesCache } from "../core/container";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
 import type { z } from "zod";
@@ -77,7 +78,7 @@ export interface PluginServicesOptions {
 	// the dev-registry proxy worker, e.g. so the queue broker can deliver
 	// messages to a consumer in another `wrangler dev` process.
 	devRegistryEnabled: boolean;
-
+	containerPrivilegesCache: ContainerPrivilegesCache;
 	hyperdriveProxyController: HyperdriveProxyController;
 }
 

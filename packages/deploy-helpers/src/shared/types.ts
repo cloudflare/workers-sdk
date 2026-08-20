@@ -104,6 +104,8 @@ export type SharedDeployVersionsProps = {
 	skipProvisioningConfigWriteback: boolean;
 	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
 	strict: boolean;
+	/** Whether the resolved Worker name differs from the pre-merge config/args name. */
+	workerNameOverridden?: boolean;
 };
 
 export type DeployProps = SharedDeployVersionsProps & {

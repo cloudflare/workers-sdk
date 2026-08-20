@@ -1,5 +1,82 @@
 # miniflare
 
+## 5.20260820.0-alpha
+
+### Major Changes
+
+- [#15130](https://github.com/cloudflare/workers-sdk/pull/15130) [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove the deprecated `hasAssetsAndIsVitest` option
+
+  This internal assets testing option is no longer supported.
+
+- [#15130](https://github.com/cloudflare/workers-sdk/pull/15130) [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864) Thanks [@emily-shen](https://github.com/emily-shen)! - Change R2 local S3 credentials configuration
+
+  R2 bindings now use `localDev.experimentalS3Credentials` instead of `s3Credentials` for local S3 endpoint credentials.
+
+### Minor Changes
+
+- [#14995](https://github.com/cloudflare/workers-sdk/pull/14995) [`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Add `connect` trigger for raw sockets
+
+  You can now configure a Worker to receive raw socket connections during `wrangler dev`, delivered directly to the Worker's `connect(socket, env, ctx)` handler:
+
+  ```jsonc
+  {
+    "connect": [{ "protocol": "tcp", "port": 5432 }]
+  }
+  ```
+
+  Each entry opens a listening socket on `127.0.0.1` (or the given `address`) that forwards incoming connections straight to the Worker, bypassing the local dev HTTP entry point. This requires the `experimental` compatibility flag. Only `"tcp"` is supported at the moment.
+
+  `@cloudflare/config` also supports declaring this trigger via `triggers.connect(...)`, which lowers to the `connect` field above:
+
+  ```ts
+  import { defineWorker, triggers } from "@cloudflare/config";
+
+  export default defineWorker({
+    triggers: [
+      triggers.connect({ protocol: "tcp", port: 5432, address: "127.0.0.1" }),
+    ],
+  });
+  ```
+
+- [#14735](https://github.com/cloudflare/workers-sdk/pull/14735) [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add individual and batch Workflow instance deletion to the runtime and SDK.
+
+  - `WorkflowInstance.delete()` deletes one instance. Self-deletion stops the current execution.
+  - `env.MY_WORKFLOW.deleteBatch(instanceIds)` deletes up to 100 instances and returns `{ deleted, errors }` per input position.
+  - `wrangler workflows instances delete <name> [id..]` deletes instances remotely or with `--local`; IDs can also come from a JSON array passed with `--filename`, with a combined limit of 100.
+
+### Patch Changes
+
+- [#15130](https://github.com/cloudflare/workers-sdk/pull/15130) [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864) Thanks [@emily-shen](https://github.com/emily-shen)! - Default local Analytics Engine dataset names in Miniflare
+
+  Analytics Engine dataset bindings without an explicit `name` now fallback to the worker and binding name as a default.
+
+- [#15260](https://github.com/cloudflare/workers-sdk/pull/15260) [`5ae9d5b`](https://github.com/cloudflare/workers-sdk/commit/5ae9d5b205fea31516559f7ad89a21eda671af2f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260815.1 | ^5.20260816.1 |
+  | workerd                   | 1.20260815.1  | 1.20260816.1  |
+
+- [#15264](https://github.com/cloudflare/workers-sdk/pull/15264) [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260816.1 | ^5.20260819.1 |
+  | workerd                   | 1.20260816.1  | 1.20260819.1  |
+
+- [#15277](https://github.com/cloudflare/workers-sdk/pull/15277) [`ce9b151`](https://github.com/cloudflare/workers-sdk/commit/ce9b1510abf5c1152aedc94456f4d7ffe9402248) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260819.1 | ^5.20260820.1 |
+  | workerd                   | 1.20260819.1  | 1.20260820.1  |
+
 ## 5.20260815.0-alpha
 
 ### Patch Changes

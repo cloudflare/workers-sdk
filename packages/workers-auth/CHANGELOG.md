@@ -1,5 +1,24 @@
 # @cloudflare/workers-auth
 
+## 0.6.5
+
+### Patch Changes
+
+- [#15223](https://github.com/cloudflare/workers-sdk/pull/15223) [`8a04946`](https://github.com/cloudflare/workers-sdk/commit/8a04946b4b1ac41d1fbde7badc2615130b9c1544) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover from a partially installed keyring backend on Windows
+
+  Choosing to keep your credentials in the OS keyring on Windows installs a native backend the first time you opt in. An install interrupted part-way through — by a dropped connection, a full disk, or an npm told to skip optional packages — could leave a broken backend behind that was nonetheless treated as working. Every login, token refresh, and credential read from then on failed with an internal error, and because the broken state was never re-examined, no amount of retrying would clear it.
+
+  A broken backend is now spotted and reinstalled automatically. If the reinstall still cannot produce a working one, you get a single explanation of how to install it by hand and fall back to the plaintext credentials file for the rest of the session, rather than sitting through a fresh install attempt on every credential access.
+
+- [#15278](https://github.com/cloudflare/workers-sdk/pull/15278) [`f2437e6`](https://github.com/cloudflare/workers-sdk/commit/f2437e606fc69891009285831d94b49bf44f6aff) Thanks [@Sosokker](https://github.com/Sosokker)! - Fix the `--temporary` error on commands that authenticate more than one time
+
+  `wrangler d1 migrations apply --remote --temporary` failed with this error: `You're already authenticated with Cloudflare, so --temporary can't be used`. The failure occurred with no login and with no `CLOUDFLARE_API_TOKEN`. This command authenticates one time for each statement that it runs. The first authentication makes a temporary preview account. The second authentication read the token of this new account as an earlier login.
+
+  Wrangler now uses again the temporary account from the same command run. Commands that authenticate more than one time now work as `wrangler deploy --temporary` works. If real credentials are available, `--temporary` is still an error.
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a), [`5c10e39`](https://github.com/cloudflare/workers-sdk/commit/5c10e398979c0a054f58dcf2751012cc99e977d2), [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b)]:
+  - @cloudflare/workers-utils@0.34.0
+
 ## 0.6.4
 
 ### Patch Changes

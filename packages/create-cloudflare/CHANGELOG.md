@@ -1,5 +1,27 @@
 # create-cloudflare
 
+## 2.72.2
+
+### Patch Changes
+
+- [#15263](https://github.com/cloudflare/workers-sdk/pull/15263) [`29b8138`](https://github.com/cloudflare/workers-sdk/commit/29b813819ec66d06c6a4c734667eba85ccea6050) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.675 | 0.0.677 |
+
+- [#15265](https://github.com/cloudflare/workers-sdk/pull/15265) [`0854f04`](https://github.com/cloudflare/workers-sdk/commit/0854f04d7f746a2294b37288a7db49a450a9756f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.10.0 | 0.11.0 |
+
+- [#15264](https://github.com/cloudflare/workers-sdk/pull/15264) [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update Hello World templates to use `@cloudflare/vitest-pool-workers` 0.22
+
 ## 2.72.1
 
 ### Patch Changes
