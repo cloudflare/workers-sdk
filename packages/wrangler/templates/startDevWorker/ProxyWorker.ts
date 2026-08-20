@@ -261,8 +261,9 @@ export class ProxyWorker implements DurableObject {
 								this.proxyData?.userWorkerUrl
 							)
 						) {
-							const attemptsNote =
-								attempt > 0 ? ` (failed after ${attempt + 1} attempts)` : "";
+							const attemptsNote = ` (failed after ${attempt + 1} ${
+								attempt === 0 ? "attempt" : "attempts"
+							})`;
 							void sendMessageToProxyController(this.env, {
 								type: "error",
 								error: {
