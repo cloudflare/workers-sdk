@@ -862,6 +862,7 @@ export async function generateEnvTypes(
 		// For the simple path: use the specific env's secrets (or top-level)
 		secrets =
 			perEnvSecrets.get(args.env ?? getCloudflareEnv() ?? TOP_LEVEL_ENV_NAME) ??
+			perEnvSecrets.get(TOP_LEVEL_ENV_NAME) ??
 			{};
 	} else {
 		// Fall back to .dev.vars/.env inference.
