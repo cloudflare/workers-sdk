@@ -445,12 +445,20 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "r2": {
+				const experimentalS3Credentials =
+					binding.localDev?.experimentalS3Credentials;
 				r2Buckets.push(
 					omitUndefined({
 						binding: name,
 						bucket_name: binding.name,
 						jurisdiction: binding.jurisdiction,
 						remote: binding.remote,
+						local_dev:
+							experimentalS3Credentials === undefined
+								? undefined
+								: {
+										experimental_s3_credentials: experimentalS3Credentials,
+									},
 					})
 				);
 				break;
@@ -770,7 +778,7 @@ function convertExports(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIGGERS (scheduled + fetch + queue consumer + email)
+// TRIGGERS (scheduled + fetch + queue consumer + email + connect)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertTriggers(
@@ -789,6 +797,9 @@ function convertTriggers(
 	const queueConsumers: NonNullable<
 		NonNullable<RawConfig["queues"]>["consumers"]
 	> = result.queues?.consumers ? [...result.queues.consumers] : [];
+	const connectHandlers: NonNullable<RawConfig["connect"]> = result.connect
+		? [...result.connect]
+		: [];
 	let addresses: string[] | undefined;
 
 	for (const trigger of triggers) {
@@ -827,6 +838,16 @@ function convertTriggers(
 				);
 				break;
 			}
+			case "connect": {
+				connectHandlers.push(
+					omitUndefined({
+						protocol: trigger.protocol,
+						port: trigger.port,
+						address: trigger.address,
+					})
+				);
+				break;
+			}
 		}
 	}
 
@@ -838,6 +859,9 @@ function convertTriggers(
 	}
 	if (queueConsumers.length) {
 		result.queues = { ...(result.queues ?? {}), consumers: queueConsumers };
+	}
+	if (connectHandlers.length) {
+		result.connect = connectHandlers;
 	}
 	// An empty array removes managed addresses; undefined means no email trigger.
 	if (addresses !== undefined) {

@@ -1,12 +1,17 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
+	isUserTriggeredDelete,
 	isUserTriggeredPause,
 	isUserTriggeredRestart,
+	createWorkflowError,
 	isUserTriggeredTerminate,
 	WorkflowError,
 } from "./lib/errors";
-import { isValidWorkflowInstanceId } from "./lib/validators";
+import {
+	isValidAddressableWorkflowInstanceId,
+	isValidWorkflowInstanceId,
+} from "./lib/validators";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -25,7 +30,51 @@ type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
 	BINDING_NAME: string;
 	WORKFLOW_NAME: string;
+	MINIFLARE_LOOPBACK?: Fetcher;
 };
+
+/** Waits for Miniflare to finish deleting an instance's persistence files. */
+async function waitForPersistedInstanceDelete(
+	env: Env,
+	id: string | undefined
+): Promise<void> {
+	if (id === undefined || env.MINIFLARE_LOOPBACK === undefined) {
+		return;
+	}
+
+	const hexId = env.ENGINE.idFromName(id).toString();
+	const response = await env.MINIFLARE_LOOPBACK.fetch(
+		`http://localhost/core/workflow-storage/${encodeURIComponent(env.WORKFLOW_NAME)}/${hexId}?waitForPendingDelete=1`
+	);
+	if (!response.ok) {
+		throw new Error(
+			`Failed to wait for persisted workflow instance '${id}' deletion`
+		);
+	}
+}
+
+/** Aborts an Engine object before removing its persistence files. */
+async function deletePersistedInstance(env: Env, id: string): Promise<void> {
+	if (env.MINIFLARE_LOOPBACK === undefined) {
+		return;
+	}
+
+	const stub = env.ENGINE.get(env.ENGINE.idFromName(id));
+	try {
+		await stub.unsafeAbort();
+	} catch {
+		// Aborting the Durable Object rejects its RPC.
+	}
+
+	const response = await env.MINIFLARE_LOOPBACK.fetch(
+		`http://localhost/core/workflow-storage/${encodeURIComponent(env.WORKFLOW_NAME)}/${stub.id.toString()}?defer=1`,
+		{ method: "DELETE" }
+	);
+	if (!response.ok) {
+		throw new Error(`Failed to delete persisted workflow instance '${id}'`);
+	}
+	await waitForPersistedInstanceDelete(env, id);
+}
 
 type WorkflowIntrospectionSession = {
 	id: string;
@@ -151,6 +200,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			throw new WorkflowError("Workflow instance has invalid id");
 		}
 
+		await waitForPersistedInstanceDelete(this.env, id);
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 		const introspectionSession = workflowIntrospectionSessions.get(
@@ -240,72 +290,117 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		);
 	}
 
-	public async deleteBatch(
-		instanceIds: string[]
-	): Promise<WorkflowBatchDeleteResult> {
-		if (instanceIds.length === 0) {
-			throw new Error(
-				"WorkflowError: deleteBatch should have at least 1 instance"
+	/**
+	 * Deletes an instance. Named `deleteInstance` because `Fetcher.delete()` shadows
+	 * a same-named JSRPC method.
+	 */
+	public async deleteInstance(id: string): Promise<void> {
+		if (!isValidAddressableWorkflowInstanceId(id)) {
+			throw createWorkflowError(
+				"Instance ID is invalid",
+				"instance.invalid_id"
 			);
 		}
 
+		const stub = this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
+		try {
+			await stub.deleteInstance();
+		} catch (error) {
+			// delete aborts the instance
+			if (!isUserTriggeredDelete(error)) {
+				throw error;
+			}
+		}
+		await waitForPersistedInstanceDelete(this.env, id);
+	}
+
+	/** Deletes each unique instance once while preserving duplicate results. */
+	public async deleteBatch(options: {
+		instances: string[];
+	}): Promise<WorkflowBatchDeleteResult> {
+		const instanceIds = options?.instances;
+		if (!Array.isArray(instanceIds)) {
+			throw createWorkflowError("Provided argument is invalid", "body");
+		}
 		if (instanceIds.length > 100) {
-			throw new Error(
-				"WorkflowError: deleteBatch is limited to 100 instances at a time"
+			throw createWorkflowError(
+				"batchDeleteInstances only supports 100 instances at a time",
+				"body"
+			);
+		}
+		if (instanceIds.length === 0) {
+			throw createWorkflowError(
+				"batchDeleteInstances should have at least 1 instance",
+				"body"
+			);
+		}
+		if (!instanceIds.every(isValidAddressableWorkflowInstanceId)) {
+			throw createWorkflowError(
+				"Instance ID is invalid",
+				"instance.invalid_id"
 			);
 		}
 
 		const uniqueIds = [...new Set(instanceIds)];
-		const resultMap = new Map<
-			string,
-			{ ok: true } | { ok: false; code: number; message: string }
-		>();
-
 		const settled = await Promise.allSettled(
-			uniqueIds.map(async (id) => {
-				const stubId = this.env.ENGINE.idFromName(id);
-				const stub = this.env.ENGINE.get(stubId);
-				try {
-					await stub.unsafeAbort("User called delete");
-				} catch {
-					// unsafeAbort clears storage and aborts; swallow error
-				}
-
-				try {
-					await stub.getStatus();
-					resultMap.set(id, { ok: true });
-				} catch {
-					resultMap.set(id, { ok: true });
-				}
-			})
+			uniqueIds.map((id) => this.deleteInstance(id))
 		);
-
-		for (let i = 0; i < uniqueIds.length; i++) {
-			const result = settled[i];
-			if (result.status === "rejected") {
-				resultMap.set(uniqueIds[i], {
-					ok: false,
-					code: 10001,
-					message: "workflows.api.error.internal_server",
-				});
-			}
-		}
-
-		const deleted: { id: string }[] = [];
-		const errors: { id: string; code: number; message: string }[] = [];
-
+		const resultsById = new Map(
+			uniqueIds.map((id, index) => [id, settled[index]])
+		);
+		const result: WorkflowBatchDeleteResult = { deleted: [], errors: [] };
 		for (const id of instanceIds) {
-			const result = resultMap.get(id);
-			if (result && result.ok) {
-				deleted.push({ id });
-			} else if (result && !result.ok) {
-				errors.push({ id, code: result.code, message: result.message });
-			} else {
-				deleted.push({ id });
+			const deletion = resultsById.get(id);
+			if (deletion === undefined) {
+				throw new Error("Missing batch deletion result");
 			}
+			if (
+				deletion.status === "fulfilled" ||
+				isUserTriggeredDelete(deletion.reason)
+			) {
+				result.deleted.push({ id });
+				continue;
+			}
+
+			const isNotFound =
+				deletion.reason instanceof Error &&
+				deletion.reason.message.includes("(instance.not_found)");
+			result.errors.push({
+				id,
+				code: isNotFound ? 10400 : 10001,
+				message: isNotFound
+					? "workflows.api.error.instance.not_found"
+					: "workflows.api.error.internal_server",
+			});
 		}
 
-		return { deleted, errors };
+		const missingIds = new Set(
+			result.errors.filter(({ code }) => code === 10400).map(({ id }) => id)
+		);
+		const cleanupIds = [...missingIds];
+		const cleanups = await Promise.allSettled(
+			cleanupIds.map((id) => deletePersistedInstance(this.env, id))
+		);
+		const failedCleanupIds = new Set(
+			cleanupIds.filter((_, index) => cleanups[index]?.status === "rejected")
+		);
+		if (failedCleanupIds.size === 0) {
+			return result;
+		}
+
+		const errorsById = new Map(result.errors.map((error) => [error.id, error]));
+		return {
+			deleted: result.deleted.filter(({ id }) => !failedCleanupIds.has(id)),
+			errors: instanceIds.flatMap((id) => {
+				if (failedCleanupIds.has(id)) {
+					return [
+						{ id, code: 10001, message: "workflows.api.error.internal_server" },
+					];
+				}
+				const error = errorsById.get(id);
+				return error === undefined ? [] : [error];
+			}),
+		};
 	}
 
 	public async unsafeGetBindingName(): Promise<string> {
@@ -445,6 +540,17 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		}
 	}
 
+	public async delete(): Promise<void> {
+		try {
+			await this.stub.deleteInstance();
+		} catch (e) {
+			// delete aborts the instance
+			if (!isUserTriggeredDelete(e)) {
+				throw e;
+			}
+		}
+	}
+
 	public async restart(
 		options?: WorkflowInstanceRestartOptions
 	): Promise<void> {
@@ -517,15 +623,6 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 			output: workflowOutput,
 			error: workflowError,
 		};
-	}
-
-	public async delete(): Promise<void> {
-		try {
-			await this.stub.unsafeAbort("User called delete");
-		} catch {
-			// unsafeAbort clears storage and aborts the DO; swallow the
-			// resulting error so the caller sees a clean resolution.
-		}
 	}
 
 	public async sendEvent(args: {

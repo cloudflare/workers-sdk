@@ -1,5 +1,14 @@
 # @cloudflare/workers-auth
 
+## 0.6.4
+
+### Patch Changes
+
+- [#15080](https://github.com/cloudflare/workers-sdk/pull/15080) [`b6d00ed`](https://github.com/cloudflare/workers-sdk/commit/b6d00edc459a7ca2dda817d8263a33b326f083b8) Thanks [@teamleaderleo](https://github.com/teamleaderleo)! - Use the current Cloudflare Access service-token credentials after environment variables change. Interactive Access cookie caching is unchanged.
+
+- Updated dependencies [[`fb6b51b`](https://github.com/cloudflare/workers-sdk/commit/fb6b51b87bf73edca9866bdf2d0810d7bf491108), [`1b73c87`](https://github.com/cloudflare/workers-sdk/commit/1b73c879c168dcc78b0f2657d04bc784b8af7da3)]:
+  - @cloudflare/workers-utils@0.33.1
+
 ## 0.6.3
 
 ### Patch Changes

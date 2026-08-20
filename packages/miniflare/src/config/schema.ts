@@ -1,25 +1,26 @@
 import path from "node:path";
 import {
+	AnalyticsEngineDatasetBindingSchema,
 	AssetsSchema as RawAssetsConfigSchema,
 	BrowserBindingSchema,
+	D1BindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
 	DurableObjectExpectingTransferExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
+	FlagshipBindingSchema,
+	HyperdriveBindingSchema,
 	KnownBindingSchema,
+	KVBindingSchema,
 	ModuleTypeSchema,
 	OutputWorkerSchema,
+	QueueBindingSchema,
+	R2BindingSchema,
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
-	D1BindingSchema,
-	FlagshipBindingSchema,
-	KVBindingSchema,
-	QueueBindingSchema,
-	R2BindingSchema,
 	TailConsumerSchema,
-	HyperdriveBindingSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
 import { z } from "zod";
@@ -40,7 +41,6 @@ import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
-import type { S3Credentials } from "../workers/r2/constants";
 import type * as http from "node:http";
 
 const AbsolutePathSchema = z
@@ -179,23 +179,6 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
-/**
- * `s3Credentials` is a local-dev-only field (used to expose the bucket via the
- * S3-compatible endpoint), so it lives here rather than in the shared config
- * schema. The credentials shape is inlined (rather than a named schema) to keep
- * it out of the bundled public API surface; consumers derive the type from the
- * R2 binding via `Extract<MiniflareBinding, { type: "r2" }>`.
- */
-const MiniflareR2BindingSchema = R2BindingSchema.extend({
-	s3Credentials: z
-		// Allow internal source metadata used when checking duplicate credentials.
-		.object({
-			accessKeyId: z.string(),
-			secretAccessKey: z.string(),
-		})
-		.optional() satisfies z.ZodType<S3Credentials | undefined>,
-});
-
 const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.omit({
 	localConnectionString: true,
 }).extend({ localConnectionString: z.string() });
@@ -235,7 +218,6 @@ const MiniflareWorkflowBindingSchema = z.strictObject({
 const OVERRIDDEN_BASE_BINDING_SCHEMAS = [
 	BrowserBindingSchema,
 	WorkerBindingSchema,
-	R2BindingSchema,
 	HyperdriveBindingSchema,
 ] as const;
 
@@ -252,7 +234,6 @@ const PassthroughBindingSchemas = KnownBindingSchema.options.filter(
 
 const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareBrowserBindingSchema,
-	MiniflareR2BindingSchema,
 	MiniflareHyperdriveBindingSchema,
 	MiniflareWorkerBindingSchema,
 	FetcherBindingSchema,
@@ -283,11 +264,18 @@ const ParsedMiniflareFlagshipBindingSchema = FlagshipBindingSchema.omit({
 	id: z.string(),
 });
 
-const ParsedMiniflareR2BindingSchema = MiniflareR2BindingSchema.omit({
+const ParsedMiniflareR2BindingSchema = R2BindingSchema.omit({
 	name: true,
 }).extend({
 	name: z.string(),
 });
+
+const ParsedMiniflareAnalyticsEngineDatasetBindingSchema =
+	AnalyticsEngineDatasetBindingSchema.omit({
+		name: true,
+	}).extend({
+		name: z.string(),
+	});
 
 const ParsedMiniflareQueueBindingSchema = QueueBindingSchema.omit({
 	name: true,
@@ -299,7 +287,8 @@ const OVERRIDDEN_PARSED_BINDING_SCHEMAS = [
 	KVBindingSchema,
 	D1BindingSchema,
 	FlagshipBindingSchema,
-	MiniflareR2BindingSchema,
+	R2BindingSchema,
+	AnalyticsEngineDatasetBindingSchema,
 	QueueBindingSchema,
 ] as const;
 
@@ -319,6 +308,7 @@ export const ParsedMiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	ParsedMiniflareD1BindingSchema,
 	ParsedMiniflareFlagshipBindingSchema,
 	ParsedMiniflareR2BindingSchema,
+	ParsedMiniflareAnalyticsEngineDatasetBindingSchema,
 	ParsedMiniflareQueueBindingSchema,
 	...ParsedPassthroughBindingSchemas,
 ]);
@@ -501,6 +491,7 @@ function defaultBindingIdentifiers(
 						{ ...binding, id: binding.id ?? defaultIdentifier },
 					];
 				case "r2":
+				case "analytics-engine-dataset":
 				case "queue":
 					return [
 						bindingName,
@@ -612,7 +603,6 @@ export const DevConfigSchema = z.strictObject({
 	/** Whether this Worker is 'public' - whether should be advertised in the dev registry
 	 * and whether it should be included in local obs capture. Defaults to `true`. */
 	unsafeRegisterWorker: z.boolean().default(true),
-	hasAssetsAndIsVitest: z.boolean().optional(),
 	// TODO(soon): remove in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 	unsafeEphemeralDurableObjects: z.boolean().optional(),
 	// Strip the CF-Connecting-IP header from outbound fetches

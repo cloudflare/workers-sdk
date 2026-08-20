@@ -19,4 +19,4 @@ import type { CompatDate } from "./compatibility-date";
  * @see https://github.com/cloudflare/workerd/blob/main/src/workerd/io/BUILD.bazel
  * @see https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.c%2B%2B
  */
-export const DEFAULT_COMPAT_DATE: CompatDate = "2026-08-14";
+export const DEFAULT_COMPAT_DATE: CompatDate = "2026-08-19";

@@ -247,15 +247,37 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps r2 with name and jurisdiction", ({ expect }) => {
+		it("maps r2 with name, jurisdiction, and local S3 credentials", ({
+			expect,
+		}) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					MY_R2: { type: "r2", name: "my-bucket", jurisdiction: "eu" },
+					MY_R2: {
+						type: "r2",
+						name: "my-bucket",
+						jurisdiction: "eu",
+						localDev: {
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
 				},
 			});
 			expect(result.r2_buckets).toEqual([
-				{ binding: "MY_R2", bucket_name: "my-bucket", jurisdiction: "eu" },
+				{
+					binding: "MY_R2",
+					bucket_name: "my-bucket",
+					jurisdiction: "eu",
+					local_dev: {
+						experimental_s3_credentials: {
+							accessKeyId: "access-key",
+							secretAccessKey: "secret-key",
+						},
+					},
+				},
 			]);
 		});
 
@@ -998,6 +1020,52 @@ describe("convertToWranglerConfig", () => {
 				producers: [{ binding: "Q", queue: "p-queue" }],
 				consumers: [{ queue: "c-queue" }],
 			});
+		});
+
+		it("maps connect trigger to connect", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						address: "127.0.0.1",
+					},
+				],
+			});
+			expect(result.connect).toEqual([
+				{ protocol: "tcp", port: 5432, address: "127.0.0.1" },
+			]);
+		});
+
+		it("maps connect trigger without an address", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "tcp", port: 5432 }],
+			});
+			expect(result.connect).toEqual([{ protocol: "tcp", port: 5432 }]);
+		});
+
+		it("collects multiple connect triggers into a single connect array", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{ type: "connect", protocol: "tcp", port: 5432 },
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 6379,
+						address: "0.0.0.0",
+					},
+				],
+			});
+			expect(result.connect).toEqual([
+				{ protocol: "tcp", port: 5432 },
+				{ protocol: "tcp", port: 6379, address: "0.0.0.0" },
+			]);
 		});
 	});
 

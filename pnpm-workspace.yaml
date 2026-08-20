@@ -39,7 +39,7 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
-  # TEMPORARY: vite-plugin-cloudflare + vitest-pool-workers are pinned to the
+  # TEMPORARY: vite-plugin-cloudflare + vitest-plugin are pinned to the
   # published miniflare while the workspace miniflare is mid-migration. Revert
   # with the repoint.
   - "miniflare"
@@ -62,9 +62,9 @@ allowBuilds:
   esbuild: true
   workerd: true
   # miniflare's direct `sharp` (0.35+) has no install script, but the
-  # catalog-pinned published @cloudflare/vitest-pool-workers still pulls in
-  # sharp@0.34.x transitively (via published miniflare), which does. Remove
-  # once that pin uses a published miniflare built on sharp 0.35+.
+  # catalog-pinned published @cloudflare/vitest-pool-workers (the pre-rename name)
+  # still pulls in sharp@0.34.x transitively (via published miniflare), which does.
+  # Remove once that pin uses a published miniflare built on sharp 0.35+.
   sharp: true
   playwright-chromium: true
   prisma: true
@@ -128,8 +128,8 @@ catalog:
   esbuild: "0.28.1"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20260814.1"
-  workerd: "1.20260814.1"
+  "@cloudflare/workers-types": "^5.20260819.1"
+  workerd: "1.20260819.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.5.2"
   msw: "2.14.6"
@@ -141,7 +141,11 @@ catalog:
   "ci-info": "4.4.0"
   "open": "11.0.0"
   "signal-exit": "4.1.0"
-  # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
-  # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
-  # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
+  # CAUTION: This is the PRE-RENAME published package name. The workspace package is now
+  # @cloudflare/vitest-plugin, and most usage in this monorepo should use workspace:* against
+  # that instead of this catalog version.
+  # However, some packages (pages-shared, workers-shared, etc...) need to be tested using the
+  # plugin but are themselves ultimately included in it (through Wrangler), causing a circular
+  # dependency. They therefore depend on this older published 0.x release under the old name.
+  # TODO: Repoint these to "@cloudflare/vitest-plugin" once v1.0.0 is published to npm.
   "@cloudflare/vitest-pool-workers": "0.13.3"

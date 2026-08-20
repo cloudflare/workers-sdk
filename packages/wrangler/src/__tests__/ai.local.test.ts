@@ -4,13 +4,15 @@ import { Headers, Response } from "undici";
 import { afterEach, describe, it, vi } from "vitest";
 import { getAIFetcher } from "../ai/fetcher";
 import * as internal from "../cfetch/internal";
-import { logger } from "../logger";
 import * as user from "../user";
+import { mockConsoleMethods } from "./helpers/mock-console";
 
 const AIFetcher = getAIFetcher(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 describe("ai", () => {
 	describe("fetcher", () => {
+		const std = mockConsoleMethods();
+
 		afterEach(() => {
 			vi.restoreAllMocks();
 		});
@@ -89,15 +91,18 @@ describe("ai", () => {
 						{ status: 403 }
 					);
 				});
-				const errorSpy = vi.spyOn(logger, "error");
 
 				const resp = await AIFetcher(
 					new Request("http://internal.ai/ai/test/path", { method: "POST" })
 				);
 
 				expect(resp.status).toBe(403);
-				expect(errorSpy).toHaveBeenCalledWith(
-					"Authentication error (code 1031): Your API token may have expired or lacks the required permissions. Please refresh your token by running `wrangler login`."
+				expect(std.err).toMatchInlineSnapshot(
+					`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAuthentication error (code 1031): Your API token may have expired or lacks the required permissions. Please refresh your token by running \`wrangler login\`.[0m
+
+					"
+				`
 				);
 			});
 
@@ -115,14 +120,13 @@ describe("ai", () => {
 						{ status: 403 }
 					);
 				});
-				const errorSpy = vi.spyOn(logger, "error");
 
 				const resp = await AIFetcher(
 					new Request("http://internal.ai/ai/test/path", { method: "POST" })
 				);
 
 				expect(resp.status).toBe(403);
-				expect(errorSpy).not.toHaveBeenCalled();
+				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should not throw on 403 with unparseable body", async ({
@@ -134,14 +138,13 @@ describe("ai", () => {
 				vi.spyOn(internal, "performApiFetch").mockImplementation(async () => {
 					return new Response("not json", { status: 403 });
 				});
-				const errorSpy = vi.spyOn(logger, "error");
 
 				const resp = await AIFetcher(
 					new Request("http://internal.ai/ai/test/path", { method: "POST" })
 				);
 
 				expect(resp.status).toBe(403);
-				expect(errorSpy).not.toHaveBeenCalled();
+				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 		});
 	});

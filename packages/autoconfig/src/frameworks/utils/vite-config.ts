@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { transformFile } from "@cloudflare/codemod";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
 import { UserError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import dedent from "ts-dedent";
