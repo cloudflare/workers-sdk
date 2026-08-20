@@ -108,10 +108,10 @@ describe("DevEnv", () => {
 				type: "error",
 				reason: "Error inside ProxyWorker",
 				cause: new Error(
-					"GET http://127.0.0.1:8787/ (attempt 3): Network connection lost."
+					"GET http://127.0.0.1:8787/ (failed after 3 attempts): Network connection lost."
 				),
 				source: "ProxyController",
-				data: undefined,
+				data: {},
 			});
 
 			expect(std.err).toContain("Error inside ProxyWorker");

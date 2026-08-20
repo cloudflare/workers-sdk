@@ -2,8 +2,8 @@
 "wrangler": patch
 ---
 
-`wrangler dev` no longer exits when a proxied request to the UserWorker fails transiently
+`wrangler dev` no longer exits when a request to your Worker fails transiently
 
-When a request proxied to the UserWorker failed while the UserWorker's origin was unchanged — most commonly a reused keep-alive connection that the UserWorker's HTTP server closed at the same moment the request was written to it — the ProxyWorker reported a fatal error and the whole dev server exited with an empty `✘ [ERROR]`, leaving the port unbound. In CI test suites one such transient failure killed every remaining test.
+Previously, a transient network failure on a single request — most commonly a request arriving just as an idle internal connection was closed, after roughly five seconds without traffic — could take down the whole dev server with an empty `✘ [ERROR]`, leaving the port unbound until restarted. In CI test suites, one such failure caused every remaining test to fail with connection errors.
 
-The ProxyWorker now retries bodyless (GET/HEAD) requests before reporting, which absorbs the transient failure on a fresh connection, and an exhausted or non-retriable failure is logged — including the request method, URL and underlying exception — while the dev server keeps serving. Only the affected request fails.
+`wrangler dev` now automatically retries the affected request if it is safe to repeat (GET and HEAD requests). If a request still fails, it fails individually — the error is logged with the request method and URL — and the dev server keeps serving.

@@ -163,36 +163,90 @@ export class ProxyWorker implements DurableObject {
 				}
 			}
 
-			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
-			const attemptUserWorkerFetch = (attempt: number) =>
+			/**
+			 * Sends the request to the UserWorker and settles `deferredResponse`
+			 * with the outcome — or requeues the request if the UserWorker is
+			 * mid-reload. The promise chain is deliberately not awaited (`void`):
+			 * we are in a loop and want to process the whole queue quickly +
+			 * synchronously.
+			 *
+			 * A connection-level failure (the `fetch` itself rejects, so no
+			 * response was received) on a same-origin GET/HEAD request is retried
+			 * before being reported — see the rejection handler.
+			 *
+			 * Kept as a `const` arrow function: the handlers re-read
+			 * `this.proxyData` across async boundaries to detect UserWorker
+			 * reloads, so they need the ProxyWorker's lexical `this`.
+			 *
+			 * @param attempt the number of attempts that have already failed
+			 * (`0` on the first try)
+			 */
+			const attemptUserWorkerFetch = (attempt = 0) =>
 				void fetch(userWorkerUrl, new Request(request, { headers }))
-					.then(async (res) => {
-						if (attempt > 1) {
-							console.warn(
-								`ProxyWorker: ${request.method} ${request.url} recovered on attempt ${attempt} after a dropped connection to the UserWorker`
-							);
+					.then(
+						async (res) => {
+							if (attempt > 0) {
+								console.warn(
+									`ProxyWorker: ${request.method} ${request.url} recovered on attempt ${attempt + 1} after a dropped connection to the UserWorker`
+								);
+							}
+
+							res = new Response(res.body, res);
+							rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
+
+							await checkForPreviewTokenError(res, this.env, proxyData);
+
+							if (isHtmlResponse(res)) {
+								res = insertLiveReloadScript(request, res, this.env, proxyData);
+							}
+
+							if (isSseResponse(res)) {
+								void sendMessageToProxyController(this.env, {
+									type: "sseResponseDetected",
+								});
+							}
+
+							deferredResponse.resolve(res);
+						},
+						(error: Error) => {
+							// the fetch itself rejected: a connection-level failure, and no
+							// response was received. Errors thrown while post-processing a
+							// received response skip this handler and land in the .catch
+							// below, so they are reported rather than retried and can never
+							// re-run the UserWorker's handler.
+							//
+							// When the UserWorker origin is unchanged (i.e. this is not a
+							// reload — see the same check in the .catch below), the failure
+							// is most commonly the UserWorker's HTTP server closing a reused
+							// keep-alive connection at the same moment this request was
+							// written to it (kj's client pool idleTimeout and server
+							// pipelineTimeout both default to 5s, so a connection idling ~5s
+							// races the close). Retrying bodyless requests draws a fresh
+							// connection and absorbs the race, mirroring the requeue in the
+							// .catch for reloads: retry immediately, then once more after
+							// 250ms (3 attempts in total).
+							if (
+								isSameUserWorkerOrigin(
+									userWorkerUrl,
+									this.proxyData?.userWorkerUrl
+								) &&
+								(request.method === "GET" || request.method === "HEAD") &&
+								attempt < 2
+							) {
+								setTimeout(
+									() => attemptUserWorkerFetch(attempt + 1),
+									attempt === 0 ? 0 : 250
+								);
+								return;
+							}
+
+							throw error;
 						}
-
-						res = new Response(res.body, res);
-						rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
-
-						await checkForPreviewTokenError(res, this.env, proxyData);
-
-						if (isHtmlResponse(res)) {
-							res = insertLiveReloadScript(request, res, this.env, proxyData);
-						}
-
-						if (isSseResponse(res)) {
-							void sendMessageToProxyController(this.env, {
-								type: "sseResponseDetected",
-							});
-						}
-
-						deferredResponse.resolve(res);
-					})
+					)
 					.catch((error: Error) => {
-						// errors here are network errors or from response post-processing
-						// to catch only network errors, use the 2nd param of the fetch.then()
+						// errors here are from response post-processing, or connection-
+						// level failures rethrown by the rejection handler above (a
+						// non-retriable method, or the retry budget was exhausted)
 
 						// we have crossed an async boundary, so proxyData may have changed
 						// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
@@ -207,30 +261,13 @@ export class ProxyWorker implements DurableObject {
 								this.proxyData?.userWorkerUrl
 							)
 						) {
-							// the UserWorker origin is unchanged, so this is a transient
-							// network failure rather than a reload — most commonly the
-							// UserWorker's HTTP server closing a reused keep-alive
-							// connection at the same moment this request was written to it
-							// (kj's client pool idleTimeout and server pipelineTimeout both
-							// default to 5s, so a connection idling ~5s races the close).
-							// Retrying bodyless requests draws a fresh connection and
-							// absorbs the race, mirroring the requeue below for reloads.
-							if (
-								(request.method === "GET" || request.method === "HEAD") &&
-								attempt < 3
-							) {
-								setTimeout(
-									() => attemptUserWorkerFetch(attempt + 1),
-									attempt === 1 ? 0 : 250
-								);
-								return;
-							}
-
+							const attemptsNote =
+								attempt > 0 ? ` (failed after ${attempt + 1} attempts)` : "";
 							void sendMessageToProxyController(this.env, {
 								type: "error",
 								error: {
 									name: error.name,
-									message: `${request.method} ${request.url} (attempt ${attempt}): ${error.message}`,
+									message: `${request.method} ${request.url}${attemptsNote}: ${error.message}`,
 									stack: error.stack,
 									cause: error.cause,
 								},
@@ -268,7 +305,7 @@ export class ProxyWorker implements DurableObject {
 						}
 					});
 
-			attemptUserWorkerFetch(1);
+			attemptUserWorkerFetch();
 		}
 	}
 }

@@ -193,7 +193,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		// request into it. The affected request has already failed (and the
 		// ProxyWorker retries GET/HEAD before reporting), but the dev session
 		// itself is healthy: tearing it down would turn one failed request into
-		// a dead dev server (see #14926). Log it and keep serving.
+		// a dead dev server (see https://github.com/cloudflare/workers-sdk/issues/14926). Log it and keep serving.
 		else if (
 			event.source === "ProxyController" &&
 			event.reason.startsWith("Error inside ProxyWorker")
