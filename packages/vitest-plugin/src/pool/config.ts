@@ -243,6 +243,13 @@ export const remoteProxySessionsDataMap = new Map<
 	RemoteProxySessionData | null
 >();
 
+/** Disposes every remote proxy session and clears the map. */
+export async function disposeAllRemoteProxySessions(): Promise<void> {
+	const sessions = [...remoteProxySessionsDataMap.values()];
+	remoteProxySessionsDataMap.clear();
+	await Promise.all(sessions.map((data) => data?.session.dispose()));
+}
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown
