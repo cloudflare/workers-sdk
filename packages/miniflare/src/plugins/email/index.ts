@@ -147,7 +147,7 @@ export const EMAIL_PLUGIN: Plugin = {
 					bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
 					serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
 					path: emailProjectSessionDirectory,
-				});
+			});
 			}
 		}
 
