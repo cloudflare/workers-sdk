@@ -13,13 +13,9 @@ export interface WorkerdDebugPortConnector {
 	 * Access this workerd process's own debug port directly, without opening a
 	 * TCP connection back to ourselves.
 	 *
-	 * Optional because it was added by
-	 * https://github.com/cloudflare/workerd/pull/7005, which postdates the
-	 * workerd version currently pinned in the catalog. Once the pinned workerd
-	 * includes it, this can become a required method and the `typeof` guard in
-	 * {@link openDebugPortClient} can go away.
+	 * @see https://github.com/cloudflare/workerd/pull/7005
 	 */
-	current?(): WorkerdDebugPortClient;
+	current(): WorkerdDebugPortClient;
 }
 
 /**
@@ -149,8 +145,7 @@ export function openDebugPortClient(
 	if (
 		selfInstanceId !== undefined &&
 		target.instanceId !== undefined &&
-		target.instanceId === selfInstanceId &&
-		typeof debugPort.current === "function"
+		target.instanceId === selfInstanceId
 	) {
 		return debugPort.current();
 	}
