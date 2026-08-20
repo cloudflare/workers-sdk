@@ -1271,13 +1271,12 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await expect(
-				runWrangler("secret bulk ./secret.json --name script-name")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`
+			await expect(runWrangler("secret bulk ./secret.json --name script-name"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.
 				This limitation exists to prevent accidental deployment when using Worker versions and secrets together.
 				To resolve this, you have two options:
-				(1) use \`wrangler versions secret bulk\` instead, which allows you to update secrets without deploying; or
+				(1) use the \`wrangler versions secret bulk\` instead, which allows you to update secrets without deploying; or
 				(2) deploy the latest version first, then modify secrets.
 				Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.]
 			`);
@@ -1303,7 +1302,7 @@ describe("wrangler secret", () => {
 								{
 									code: VERSION_SETTINGS_NOT_DEPLOYED_ERR_CODE,
 									message:
-										'Script edit failed. You attempted to deploy the latest version with modified settings, but the latest version isn\'t currently deployed. Either upload a new version to edit the version settings, or use the script-level settings API to modify the "logpush" and "tail_consumers" settings.',
+										"Script edit failed. You attempted to deploy the latest version with modified settings, but the latest version isn't currently deployed.",
 								},
 							])
 						);
