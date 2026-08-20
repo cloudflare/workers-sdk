@@ -1,12 +1,16 @@
 import { execSync } from "node:child_process";
 import {
 	configFileName,
+	getDurableObjectExports,
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
+import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, PreviewDefaults } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+
+const MAX_CONTAINER_APP_NAME_LENGTH = 253;
 
 export function getBranchName(): string | undefined {
 	const workersCIBranch = getWorkersCIBranchName();
@@ -342,6 +346,114 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	return env;
+}
+
+/**
+ * Returns the DO `class_name`s this script declares, through `migrations` or
+ * through `exports`, resolving them in the same order as wrangler's own
+ * `getDurableObjectClassNameToUseSQLiteMap`. Only the resulting names are
+ * needed here; that helper stays the authority on whether the migration
+ * sequence is valid, and it runs on this config immediately afterwards.
+ */
+function getDeclaredDOClassNames(config: Config): Set<string> {
+	const declared = new Set<string>();
+
+	for (const migration of config.migrations ?? []) {
+		for (const className of migration.deleted_classes ?? []) {
+			declared.delete(className);
+		}
+		for (const { from, to } of migration.renamed_classes ?? []) {
+			declared.delete(from);
+			declared.add(to);
+		}
+		for (const className of migration.new_classes ?? []) {
+			declared.add(className);
+		}
+		for (const className of migration.new_sqlite_classes ?? []) {
+			declared.add(className);
+		}
+	}
+
+	// A `deleted`, `renamed`, or `transferred` export no longer names a class
+	// this script implements.
+	for (const [className, entry] of Object.entries(
+		getDurableObjectExports(config.exports)
+	)) {
+		if (
+			entry.state === undefined ||
+			entry.state === "created" ||
+			entry.state === "expecting-transfer"
+		) {
+			declared.add(className);
+		}
+	}
+
+	return declared;
+}
+
+/**
+ * Returns the DO `class_name`s whose containers this preview owns: the classes
+ * the script declares through `migrations` or `exports`, plus the classes bound
+ * in the preview without a `script_name`.
+ *
+ * A binding is not required. A Durable Object reached only through
+ * `ctx.exports` is still implemented by this script, so its container belongs
+ * to this preview. A class reachable only through a `script_name` binding is
+ * implemented by another Worker, which owns its own container application.
+ */
+export function getPreviewOwnedContainerClassNames(
+	config: Config,
+	previews: PreviewsConfig | undefined
+): Set<string> {
+	const owned = getDeclaredDOClassNames(config);
+	for (const binding of previews?.durable_objects?.bindings ?? []) {
+		if (binding.script_name === undefined) {
+			owned.add(binding.class_name);
+		}
+	}
+	return owned;
+}
+
+/**
+ * Compose the auto-generated container application name for a preview-scoped
+ * container, in the form `{parentWorkerName}_{previewSlug}_{className}`.
+ *
+ * A container application name is capped at 253 characters and may not start
+ * or end with a dash, contain consecutive dashes, or start with a digit. A
+ * worker name is allowed all four, and the preview slug is derived from a
+ * branch name, so the composed name is normalised here rather than passed
+ * through.
+ *
+ * Wrangler looks an application up by name to choose between create and
+ * modify, so a name must identify one preview container. Both normalising and
+ * truncating can map two inputs onto one output, so either one earns a digest
+ * of the composed name.
+ */
+export function previewContainerAppName(
+	parentWorkerName: string,
+	previewSlug: string,
+	className: string
+): string {
+	const composed = `${parentWorkerName}_${previewSlug}_${className}`;
+	const normalised = composed
+		.replace(/[^A-Za-z0-9_-]/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		// Prefix a letter rather than reject a name the Workers API accepted.
+		.replace(/^(?=[0-9])/, "w");
+
+	if (
+		normalised === composed &&
+		normalised.length <= MAX_CONTAINER_APP_NAME_LENGTH
+	) {
+		return normalised;
+	}
+
+	return truncateWithSuffix(
+		normalised,
+		`_${shortHash(composed)}`,
+		MAX_CONTAINER_APP_NAME_LENGTH
+	);
 }
 
 export function assemblePreviewScriptSettings(config: Config) {

@@ -34,6 +34,9 @@ export function validateChangesets(
 				if (
 					release.type === "major" &&
 					targetPackage?.private !== true &&
+					// `@cloudflare/vitest-plugin` v1 is the rename of
+					// `@cloudflare/vitest-pool-workers`, which needs a one-off major bump.
+					release.name !== "@cloudflare/vitest-plugin" &&
 					(release.name !== "miniflare" ||
 						targetPackage?.["workers-sdk"]?.npmPrereleaseIdentifier ===
 							undefined)

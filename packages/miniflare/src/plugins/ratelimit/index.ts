@@ -130,7 +130,7 @@ export const RATELIMIT_PLUGIN: Plugin = {
 				// which is backed by a per-actor `ActorCache` and is just as lossy).
 				//
 				// The namespace deliberately stays evictable: `deleteAllDurableObjects()`
-				// (what vitest-pool-workers' `reset()` calls) skips namespaces with
+				// (what vitest-plugin's `reset()` calls) skips namespaces with
 				// `preventEviction` set, and it is what resets these counters between
 				// tests, via `ActorNamespace::deleteAll()` -> `SqliteDatabase::reset()`.
 				durableObjectStorage: { localDisk: RATELIMIT_STORAGE_SERVICE_NAME },

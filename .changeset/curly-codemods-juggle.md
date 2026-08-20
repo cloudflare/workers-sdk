@@ -1,6 +1,6 @@
 ---
 "@cloudflare/codemods": minor
-"@cloudflare/vitest-pool-workers": minor
+"@cloudflare/vitest-plugin": minor
 ---
 
 Add a central CLI for Cloudflare codemods
