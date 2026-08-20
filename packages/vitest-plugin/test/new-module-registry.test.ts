@@ -50,8 +50,7 @@ test("uses the new module registry fallback protocol", async ({
 	});
 
 	const result = await vitestRun();
-	// Include the nested Vitest output if this assertion fails.
-	expect(await result.exitCode, result.stderr || result.stdout).toBe(0);
+	expect(await result.exitCode).toBe(0);
 });
 
 test("keeps using the legacy fallback protocol when explicitly requested", async ({
