@@ -412,12 +412,12 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.framework?.name).toBe("Static");
 		});
 
-		it("should not detect Pages project when functions directory exists but a framework is detected", async ({
+		it("should detect Pages project when functions directory exists with a framework and the user confirms", async ({
 			expect,
 		}) => {
 			await seed({
 				"functions/hello.js":
-					"export const myFun = () => { console.log('Hello!'); };",
+					"export function onRequest() { return new Response('Hello!'); }",
 				"package.json": JSON.stringify({
 					dependencies: {
 						astro: "5",
@@ -425,10 +425,20 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				}),
 			});
 
-			const result = await details.getDetailsForAutoConfig({ context });
+			const confirmContext = createMockContext({
+				dialogs: {
+					confirm: vi.fn().mockResolvedValue(true),
+					prompt: vi.fn().mockResolvedValue(""),
+					select: vi.fn().mockResolvedValue(""),
+				},
+			});
+			const result = await details.getDetailsForAutoConfig({
+				context: confirmContext,
+			});
 
-			// Should detect Astro, not Pages
-			expect(result.framework?.id).toBe("astro");
+			expect(result.framework?.id).toBe("cloudflare-pages");
+			expect(result.buildCommand).toBe("npx astro build");
+			expect(result.outputDir).toBe("dist");
 		});
 	});
 

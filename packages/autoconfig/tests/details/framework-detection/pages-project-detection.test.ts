@@ -93,7 +93,32 @@ describe("detectFramework() / Pages project detection", () => {
 		expect(result.detectedFramework?.framework.id).not.toBe("cloudflare-pages");
 	});
 
-	it("does not return Cloudflare Pages when a functions/ directory exists alongside a detected framework", async ({
+	it("does not return Cloudflare Pages when the functions/ directory has no Pages Functions handlers", async ({
+		expect,
+	}) => {
+		const confirm = vi.fn().mockResolvedValue(true);
+
+		await seed({
+			"package.json": JSON.stringify({}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			"functions/utils.js": `export function helper() { return 42; }`,
+		});
+
+		const confirmContext = createMockContext({
+			dialogs: {
+				confirm,
+				prompt: vi.fn().mockResolvedValue(""),
+				select: vi.fn().mockResolvedValue(""),
+			},
+		});
+
+		const result = await detectFramework(process.cwd(), confirmContext);
+
+		expect(result.detectedFramework?.framework.id).not.toBe("cloudflare-pages");
+		expect(confirm).not.toHaveBeenCalled();
+	});
+
+	it("returns Cloudflare Pages when a functions/ directory exists alongside a detected framework and the user confirms", async ({
 		expect,
 	}) => {
 		await seed({
@@ -101,10 +126,17 @@ describe("detectFramework() / Pages project detection", () => {
 			"functions/hello.js": `export function onRequest() { return new Response("hi"); }`,
 		});
 
-		const result = await detectFramework(process.cwd(), context);
+		const confirmContext = createMockContext({
+			dialogs: {
+				confirm: vi.fn().mockResolvedValue(true),
+				prompt: vi.fn().mockResolvedValue(""),
+				select: vi.fn().mockResolvedValue(""),
+			},
+		});
+		const result = await detectFramework(process.cwd(), confirmContext);
 
-		// Astro is detected, so Pages detection via functions/ is skipped
-		expect(result.detectedFramework?.framework.id).not.toBe("cloudflare-pages");
-		expect(result.detectedFramework?.framework.id).toBe("astro");
+		expect(result.detectedFramework?.framework.id).toBe("cloudflare-pages");
+		expect(result.detectedFramework?.buildCommand).toBe("astro build");
+		expect(result.detectedFramework?.dist).toBe("dist");
 	});
 });

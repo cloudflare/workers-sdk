@@ -11,6 +11,18 @@ export abstract class Framework {
 	readonly id: FrameworkInfo["id"];
 	readonly name: FrameworkInfo["name"];
 
+	/**
+	 * Whether a `package.json` must exist (or be created) before autoconfig can
+	 * proceed. Subclasses override this when the migration needs to install dev
+	 * dependencies or add npm scripts.
+	 *
+	 * @returns `false` by default; `true` in framework subclasses that depend on
+	 *   a `package.json` being present.
+	 */
+	get requiresPackageJson(): boolean {
+		return false;
+	}
+
 	#frameworkVersion: string | undefined;
 	get frameworkVersion(): string {
 		assert(
@@ -96,6 +108,7 @@ export type ConfigurationOptions = {
 	dryRun: boolean;
 	packageManager: PackageManager;
 	isWorkspaceRoot: boolean;
+	existingWranglerConfig?: RawConfig;
 	context: AutoConfigContext;
 };
 

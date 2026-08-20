@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { CloudflarePages } from "./cloudflare-pages";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
@@ -210,8 +211,8 @@ export const allKnownFrameworks = [
 	{
 		id: "cloudflare-pages",
 		name: "Cloudflare Pages",
-		// Autoconfiguring a Pages project into a Workers one is not yet supported
-		supported: false,
+		class: CloudflarePages,
+		supported: true,
 	},
 	{
 		id: "hydrogen",
@@ -247,10 +248,12 @@ export const allFrameworksInfos = [
  * Gets the package information for a given framework, erroring if the framework
  * could not be determined or is not supported.
  *
- * Returns `undefined` for the "static" framework, which has no associated package.
+ * Returns `undefined` for frameworks that have no associated package (e.g.
+ * `"static"` and `"cloudflare-pages"`).
  *
- * @param frameworkId The id of the target framework
- * @returns The framework's target package info, or undefined if the framework is "static"
+ * @param frameworkId The id of the target framework.
+ * @returns The framework's target package info, or `undefined` when the
+ *   framework does not declare a `frameworkPackageInfo` entry.
  */
 export function getFrameworkPackageInfo(
 	frameworkId: FrameworkInfo["id"]
@@ -272,5 +275,7 @@ export function getFrameworkPackageInfo(
 		targetedFramework.supported,
 		`Framework unexpectedly not supported ${JSON.stringify(frameworkId)}`
 	);
-	return targetedFramework.frameworkPackageInfo;
+	return "frameworkPackageInfo" in targetedFramework
+		? targetedFramework.frameworkPackageInfo
+		: undefined;
 }

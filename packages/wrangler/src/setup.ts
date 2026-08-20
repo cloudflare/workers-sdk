@@ -84,6 +84,8 @@ export const setupCommand = createCommand({
 			}
 		}
 
+		let packageJsonCreated = false;
+
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
 			let autoConfigSummary;
@@ -104,6 +106,7 @@ export const setupCommand = createCommand({
 				});
 				throw error;
 			}
+			packageJsonCreated = autoConfigSummary.packageJsonCreated === true;
 
 			writeOutput({
 				type: "autoconfig",
@@ -132,7 +135,9 @@ export const setupCommand = createCommand({
 			const { type } = await getPackageManager();
 			logCompletionMessage(
 				`You can now deploy with ${brandColor(
-					details.packageJson ? `${type} run deploy` : "wrangler deploy"
+					details.packageJson || packageJsonCreated
+						? `${type} run deploy`
+						: "wrangler deploy"
 				)}`
 			);
 		}

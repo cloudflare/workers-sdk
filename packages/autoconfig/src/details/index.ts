@@ -1,13 +1,15 @@
 import assert from "node:assert";
-import { statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	checkWorkerNameValidity,
 	getWorkerName,
 	NpmPackageManager,
+	parseJSONC,
 	parsePackageJSON,
+	parseTOML,
 	readFileSync,
 } from "@cloudflare/workers-utils";
 import { AutoConfigDetectionError } from "../errors";
@@ -136,8 +138,12 @@ export async function getDetailsForAutoConfig({
 
 	const configured = framework.isConfigured(projectPath) ?? false;
 
-	const outputDir =
-		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+	const detectedOutputDir = detectedFramework?.dist;
+	const outputDir = detectedOutputDir
+		? isAbsolute(detectedOutputDir)
+			? relative(projectPath, detectedOutputDir) || "."
+			: detectedOutputDir
+		: await findAssetsDir(projectPath);
 
 	const baseDetails = {
 		projectPath,
@@ -152,7 +158,20 @@ export async function getDetailsForAutoConfig({
 					),
 				}
 			: {}),
-		workerName: getWorkerName(packageJson?.name, projectPath),
+		workerName: getWorkerName(
+			wranglerConfig?.pages_build_output_dir
+				? (wranglerConfig.name ?? packageJson?.name)
+				: (packageJson?.name ?? wranglerConfig?.name),
+			projectPath
+		),
+		...(wranglerConfig?.configPath && existsSync(wranglerConfig.configPath)
+			? {
+					existingWranglerConfig: readRawWranglerConfig(
+						wranglerConfig.configPath
+					),
+					existingWranglerConfigPath: wranglerConfig.configPath,
+				}
+			: {}),
 	};
 
 	if (configured) {
@@ -182,6 +201,22 @@ export async function getDetailsForAutoConfig({
 		configured: false,
 		isWorkspaceRoot,
 	};
+}
+
+/**
+ * Reads an existing Wrangler configuration without applying defaults so it can
+ * be preserved when a Pages project is migrated to Workers.
+ *
+ * @param configPath Path to the Wrangler configuration file.
+ * @returns The parsed raw Wrangler configuration.
+ */
+function readRawWranglerConfig(configPath: string): Config {
+	const content = readFileSync(configPath);
+	return (
+		configPath.endsWith(".toml")
+			? parseTOML(content, configPath)
+			: parseJSONC(content, configPath)
+	) as Config;
 }
 
 /**

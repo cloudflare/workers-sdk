@@ -4,6 +4,7 @@ import { isFrameworkSupported } from "../../src/frameworks";
 describe("isFrameworkSupported()", () => {
 	it("should return true for a supported framework id", ({ expect }) => {
 		expect(isFrameworkSupported("astro")).toBe(true);
+		expect(isFrameworkSupported("cloudflare-pages")).toBe(true);
 	});
 
 	it("should return false for a known but unsupported framework id", ({
