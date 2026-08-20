@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
@@ -206,7 +207,7 @@ describe("loadNewConfig", () => {
 	});
 
 	describe("default worker selection", () => {
-		it("consumes the default export and validates-then-ignores other workers", async ({
+		it("consumes the default export and ignores other exports", async ({
 			expect,
 		}) => {
 			await seed({
@@ -222,17 +223,40 @@ describe("loadNewConfig", () => {
 			expect(result.parsedWorkerConfig.name).toBe("primary");
 		});
 
-		it("still validates non-default worker exports", async ({ expect }) => {
+		it("does not validate exports other than `default` and `settings`", async ({
+			expect,
+		}) => {
 			await seed({
 				"cloudflare.config.ts": `
 					export default { type: "worker", name: "primary", compatibilityDate: "2026-05-18" };
-					export const other = { type: "worker", name: 42, compatibilityDate: "2026-05-18" };
+					export const WORKER_NAMES = { other: "other" };
 				`,
 			});
 
-			await expect(
-				loadNewConfig({ cwd: process.cwd(), args: {} })
-			).rejects.toThrow(/other\.name/);
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(result.rawConfig.name).toBe("primary");
+		});
+
+		it("does not invoke exported helper functions", async ({ expect }) => {
+			const marker = path.resolve("helper-was-called.txt");
+			await seed({
+				"cloudflare.config.ts": `
+					import { writeFileSync } from "node:fs";
+
+					export function buildName() {
+						writeFileSync(${JSON.stringify(marker)}, "called");
+						return "from-helper";
+					}
+
+					export default { type: "worker", name: "primary", compatibilityDate: "2026-05-18" };
+				`,
+			});
+
+			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
+
+			expect(fs.existsSync(marker)).toBe(false);
+			expect(result.rawConfig.name).toBe("primary");
 		});
 
 		it("throws when there is no default worker export", async ({ expect }) => {
