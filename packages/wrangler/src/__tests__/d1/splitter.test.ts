@@ -513,7 +513,11 @@ describe("splitSqlQuery()", () => {
 		`);
 
 		expect(statements).toHaveLength(2);
-		expect(statements[0]).toContain("INSERT INTO audit VALUES (NEW.id);");
+		expect(statements[0])
+			.toBe(`CREATE TRIGGER audit_source AFTER INSERT ON source
+			BEGIN
+				INSERT INTO audit VALUES (NEW.id);
+			END`);
 		expect(statements[1]).toBe(
 			"CREATE TABLE after_trigger (id INTEGER PRIMARY KEY)"
 		);

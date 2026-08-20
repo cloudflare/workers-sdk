@@ -137,6 +137,7 @@ function splitSqlIntoStatements(sql: string): string[] {
 	let statementPrefix: string[] = [];
 	let isTriggerStatement = false;
 	let inTriggerBody = false;
+	let blockCommentNeedsWhitespace = false;
 
 	/**
 	 * Processes the identifier token that has just ended and updates trigger state.
@@ -185,6 +186,12 @@ function splitSqlIntoStatements(sql: string): string[] {
 	let next = iterator.next();
 	while (!next.done) {
 		const char = next.value;
+		if (blockCommentNeedsWhitespace) {
+			if (!/\s/.test(char)) {
+				str += " ";
+			}
+			blockCommentNeedsWhitespace = false;
+		}
 
 		if (isIdentifierCharacter(char)) {
 			str += char;
@@ -230,6 +237,7 @@ function splitSqlIntoStatements(sql: string): string[] {
 				if (!next.done && next.value === "*") {
 					// Skip to the end of the comment
 					consumeUntilMarker(iterator, "*/");
+					blockCommentNeedsWhitespace = str.length > 0 && !/\s$/.test(str);
 					break;
 				} else {
 					str += char;
