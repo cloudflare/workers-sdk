@@ -22,10 +22,14 @@ export type Replacements = Record<string, string>;
 export type Removals = string[];
 
 export const replacer = (str: string, replacements: Replacements) => {
-	for (const [replacement, value] of Object.entries(replacements)) {
-		str = str.replaceAll(`:${replacement}`, value);
-	}
-	return str;
+	// Substituting one placeholder name at a time would let a shorter name eat a
+	// longer one that shares its prefix (`:id` matching inside `:id_2`), so match
+	// whole placeholders in a single pass instead. Placeholders with no
+	// replacement are left alone.
+	return str.replace(PLACEHOLDER_REGEX, (match, name: string) => {
+		const value = replacements[name];
+		return value !== undefined ? value : match;
+	});
 };
 
 export const generateGlobOnlyRuleRegExp = (rule: string) => {
@@ -49,15 +53,19 @@ export const generateRuleRegExp = (rule: string) => {
 	// e.g. https://:subdomain.domain/ -> https://(here).domain/
 	// e.g. /static/:file -> /static/(image.jpg)
 	// e.g. /blog/:post -> /blog/(an-exciting-post)
-	const host_matches = rule.matchAll(HOST_PLACEHOLDER_REGEX);
-	for (const host_match of host_matches) {
-		rule = rule.split(host_match[0]).join(`(?<${host_match[1]}>[^/.]+)`);
-	}
+	// Each placeholder is substituted as a whole match rather than by splitting on
+	// its raw `:name` text, which would also split inside a longer placeholder
+	// sharing the same prefix and emit the same capture group twice
+	// (e.g. `/p/:id/:id_2` -> a regex with two `(?<id>…)` groups, which throws).
+	rule = rule.replace(
+		HOST_PLACEHOLDER_REGEX,
+		(_match, name: string) => `(?<${name}>[^/.]+)`
+	);
 
-	const path_matches = rule.matchAll(PLACEHOLDER_REGEX);
-	for (const path_match of path_matches) {
-		rule = rule.split(path_match[0]).join(`(?<${path_match[1]}>[^/]+)`);
-	}
+	rule = rule.replace(
+		PLACEHOLDER_REGEX,
+		(_match, name: string) => `(?<${name}>[^/]+)`
+	);
 
 	// Wrap in line terminators to be safe.
 	rule = "^" + rule + "$";
