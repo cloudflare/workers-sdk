@@ -148,7 +148,6 @@ export default async function deploy(
 	buildResult: WorkerBuildResult,
 	callbacks: DeployCallbacks
 ): Promise<DeployResult> {
-
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
 	const result = await deployWorker(props, config, buildResult, callbacks);

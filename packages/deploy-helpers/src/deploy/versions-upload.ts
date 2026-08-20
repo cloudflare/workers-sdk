@@ -67,7 +67,6 @@ export default async function versionsUpload(
 	buildResult: WorkerBuildResult,
 	callbacks: VersionsUploadCallbacks
 ): Promise<VersionsUploadResult> {
-
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
 	const result = await uploadWorkerVersion(
