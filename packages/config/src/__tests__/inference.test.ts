@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
 import { bindings } from "../bindings";
-import { defineWorker } from "../worker-definition";
+import { defineWorker } from "../definition";
 import type { InferEnv, UnwrapConfig } from "../inference";
 
 const config = defineWorker({

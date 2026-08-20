@@ -42,9 +42,9 @@ export type VarBinding = Extract<
  *
  * When `secrets` is defined in the config, `.dev.vars` values will still
  * override existing config `vars` (so that local development overrides always
- * take effect). Additionally, any `required` or `optional` secret keys that are not already
- * in the config vars will also be loaded from `.dev.vars`. Keys in `.dev.vars`
- * that are neither existing config vars nor declared required or optional secrets are
+ * take effect). Additionally, any `required` or `optional` secret keys that are
+ * not already in the config vars will also be loaded from `.dev.vars`. Keys in
+ * `.dev.vars` that are neither existing config vars nor declared secrets are
  * excluded. A warning is emitted for any required secrets that are missing.
  *
  * @param configPath - The path to the Wrangler configuration file, if defined.

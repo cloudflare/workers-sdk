@@ -1,4 +1,5 @@
 import { describe, it } from "vitest";
+import { bindings } from "../bindings";
 import { convertToWranglerConfig } from "../convert";
 import type { ParsedCloudflareConfig } from "../schema";
 
@@ -911,12 +912,15 @@ describe("convertToWranglerConfig", () => {
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
-				...baseConfig,
-				env: {
-					A: bindings.secret(),
-					B: bindings.secret({ optional: true }),
-					C: bindings.secret({ optional: false }),
+				worker: {
+					...baseWorker,
+					env: {
+						A: bindings.secret(),
+						B: bindings.secret({ optional: true }),
+						C: bindings.secret({ optional: false }),
+					},
 				},
+				containers: [],
 			});
 			expect(result.secrets).toEqual({
 				required: ["A", "C"],
@@ -926,20 +930,26 @@ describe("convertToWranglerConfig", () => {
 
 		it("omits `required` when every secret is optional", ({ expect }) => {
 			const result = convertToWranglerConfig({
-				...baseConfig,
-				env: {
-					A: bindings.secret({ optional: true }),
+				worker: {
+					...baseWorker,
+					env: {
+						A: bindings.secret({ optional: true }),
+					},
 				},
+				containers: [],
 			});
 			expect(result.secrets).toEqual({ optional: ["A"] });
 		});
 
 		it("omits `optional` when every secret is required", ({ expect }) => {
 			const result = convertToWranglerConfig({
-				...baseConfig,
-				env: {
-					A: bindings.secret(),
+				worker: {
+					...baseWorker,
+					env: {
+						A: bindings.secret(),
+					},
 				},
+				containers: [],
 			});
 			expect(result.secrets).toEqual({ required: ["A"] });
 		});
