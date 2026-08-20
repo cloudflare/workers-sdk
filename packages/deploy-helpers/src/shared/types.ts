@@ -163,11 +163,12 @@ export interface TriggerDeployment {
 
 export type TriggerProps = {
 	config: Config;
-	accountId: string;
+	accountId: string | undefined;
 	scriptName: string;
 	workerTag?: string | null;
-	env: string | undefined;
 	crons: string[] | undefined;
 	routes: Route[];
 	firstDeploy: boolean;
+	dryRun: boolean;
+	validated: boolean;
 };

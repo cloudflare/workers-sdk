@@ -2,7 +2,8 @@ import * as fs from "node:fs/promises";
 import path from "node:path";
 import { scheduler } from "node:timers/promises";
 import { Miniflare, WORKFLOWS_PLUGIN_NAME } from "miniflare";
-import { describe, test } from "vitest";
+import { describe, test, vi } from "vitest";
+import { CorePaths } from "../../../src/workers/core/constants";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
@@ -134,6 +135,13 @@ const LIFECYCLE_WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";
 export class LifecycleWorkflow extends WorkflowEntrypoint {
 	async run(event, step) {
+		if (event.payload?.selfDelete) {
+			await step.waitForEvent("self-delete", { type: "self-delete" });
+			const instance = await this.env.LIFECYCLE_WORKFLOW.get(event.instanceId);
+			await instance.delete();
+			throw new Error("continued after self-delete");
+		}
+
 		const first = await step.do("first step", async () => "step-1-done");
 
 		await step.do("long step", async () => {
@@ -151,8 +159,11 @@ export default {
 		const url = new URL(request.url);
 		const id = url.searchParams.get("id") || "lifecycle-test";
 
-		if (url.pathname === "/create") {
-			const instance = await env.LIFECYCLE_WORKFLOW.create({ id });
+		if (url.pathname === "/create" || url.pathname === "/selfDelete") {
+			const instance = await env.LIFECYCLE_WORKFLOW.create({
+				id,
+				params: { selfDelete: url.pathname === "/selfDelete" },
+			});
 			const status = await instance.status();
 			return Response.json({ id: instance.id, status });
 		}
@@ -186,9 +197,24 @@ export default {
 		return Response.json(await instance.status());
 	}
 
+	if (url.pathname === "/delete") {
+		const instance = await env.LIFECYCLE_WORKFLOW.get(id);
+		await instance.delete();
+		return Response.json({ ok: true });
+	}
+
+	if (url.pathname === "/deleteBatch") {
+		return Response.json(
+			await env.LIFECYCLE_WORKFLOW.deleteBatch(url.searchParams.getAll("id"))
+		);
+	}
+
 		if (url.pathname === "/sendEvent") {
 			const instance = await env.LIFECYCLE_WORKFLOW.get(id);
-			await instance.sendEvent({ type: "continue", payload: { sent: true } });
+			await instance.sendEvent({
+				type: url.searchParams.get("type") || "continue",
+				payload: { sent: true },
+			});
 			return Response.json({ ok: true });
 		}
 
@@ -218,6 +244,31 @@ function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 			},
 		],
 	};
+}
+
+async function getPersistedInstanceFiles(tmp: string): Promise<string[]> {
+	try {
+		const files = await fs.readdir(
+			path.join(
+				tmp,
+				WORKFLOWS_PLUGIN_NAME,
+				"miniflare-workflows-LIFECYCLE_WORKFLOW"
+			)
+		);
+		return files.filter(
+			(file) => file.endsWith(".sqlite") && file !== "metadata.sqlite"
+		);
+	} catch (error) {
+		if (
+			typeof error === "object" &&
+			error !== null &&
+			"code" in error &&
+			error.code === "ENOENT"
+		) {
+			return [];
+		}
+		throw error;
+	}
 }
 
 async function waitForStatus(
@@ -328,6 +379,208 @@ describe("workflow instance lifecycle methods", () => {
 		expect(terminateData).toHaveProperty("status");
 
 		await waitForStatus(mf, "terminate-test", "terminated");
+	});
+
+	test("delete a workflow", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));
+		useDispose(mf);
+
+		const createResponse = await mf.dispatchFetch(
+			"http://localhost/create?id=delete-one"
+		);
+		await createResponse.text();
+
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(1);
+		const deleteResponse = await mf.dispatchFetch(
+			"http://localhost/delete?id=delete-one"
+		);
+		expect(await deleteResponse.json()).toEqual({ ok: true });
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(0);
+
+		const statusResponse = await mf.dispatchFetch(
+			"http://localhost/status?id=delete-one"
+		);
+		expect(statusResponse.status).toBe(500);
+		expect(await statusResponse.text()).toContain("instance.not_found");
+
+		const cronId = "*/30 * * * *-1786001400000";
+		const cronDeleteResponse = await mf.dispatchFetch(
+			`http://localhost/delete?id=${encodeURIComponent(cronId)}`
+		);
+		expect(cronDeleteResponse.status).toBe(500);
+		expect(await cronDeleteResponse.text()).toContain("instance.not_found");
+	});
+
+	test("reports overlapping storage deletion as successful", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const createResponse = await mf.dispatchFetch(
+			"http://localhost/create?id=overlapping-delete"
+		);
+		await createResponse.text();
+
+		const bindingDelete = mf
+			.dispatchFetch("http://localhost/delete?id=overlapping-delete")
+			.then((response) => response.json());
+		await scheduler.wait(25);
+		const explorerDelete = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances/overlapping-delete`,
+			{ method: "DELETE" }
+		);
+		expect(explorerDelete.status).toBe(200);
+		await explorerDelete.text();
+		expect(await bindingDelete).toEqual({ ok: true });
+	});
+
+	test("continues deleting storage files after an unlink error", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const hexId = "a".repeat(64);
+		const instancePath = path.join(
+			tmp,
+			WORKFLOWS_PLUGIN_NAME,
+			"miniflare-workflows-LIFECYCLE_WORKFLOW",
+			hexId
+		);
+		await fs.mkdir(path.dirname(instancePath), { recursive: true });
+		await fs.writeFile(`${instancePath}.sqlite`, "");
+		await fs.mkdir(`${instancePath}.sqlite-shm`);
+		await fs.writeFile(`${instancePath}.sqlite-wal`, "");
+
+		const response = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances/${hexId}`,
+			{ method: "DELETE" }
+		);
+		const body = await response.text();
+		expect(response.status, body).toBe(500);
+		await expect(fs.stat(`${instancePath}.sqlite`)).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+		await expect(fs.stat(`${instancePath}.sqlite-wal`)).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+		expect((await fs.stat(`${instancePath}.sqlite-shm`)).isDirectory()).toBe(
+			true
+		);
+	});
+
+	test("recreates a workflow immediately after deletion", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));
+		useDispose(mf);
+
+		let response = await mf.dispatchFetch(
+			"http://localhost/create?id=delete-recreate"
+		);
+		await response.text();
+		await waitForStatus(mf, "delete-recreate", "complete");
+		response = await mf.dispatchFetch(
+			"http://localhost/delete?id=delete-recreate"
+		);
+		await response.text();
+		response = await mf.dispatchFetch(
+			"http://localhost/create?id=delete-recreate"
+		);
+		await response.text();
+
+		await waitForStatus(mf, "delete-recreate", "complete");
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(1);
+	});
+
+	test("delete a workflow from its own execution", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));
+		useDispose(mf);
+
+		const createResponse = await mf.dispatchFetch(
+			"http://localhost/selfDelete?id=self-delete"
+		);
+		await createResponse.text();
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(1);
+
+		const eventResponse = await mf.dispatchFetch(
+			"http://localhost/sendEvent?id=self-delete&type=self-delete"
+		);
+		await eventResponse.text();
+		await vi.waitUntil(
+			async () => (await getPersistedInstanceFiles(tmp)).length === 0,
+			{ timeout: 5000 }
+		);
+
+		const statusResponse = await mf.dispatchFetch(
+			"http://localhost/status?id=self-delete"
+		);
+		expect(statusResponse.status).toBe(500);
+		expect(await statusResponse.text()).toContain("instance.not_found");
+	});
+
+	test("delete multiple workflows", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+		const cronId = "*/30 * * * *-1786001400000";
+
+		for (const id of ["delete-1", "delete-2"]) {
+			const response = await mf.dispatchFetch(
+				`http://localhost/create?id=${id}`
+			);
+			await response.text();
+		}
+
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(2);
+		const response = await mf.dispatchFetch(
+			`http://localhost/deleteBatch?id=delete-1&id=${encodeURIComponent(cronId)}&id=delete-2&id=delete-1`
+		);
+		expect(await response.json()).toEqual({
+			deleted: [{ id: "delete-1" }, { id: "delete-2" }, { id: "delete-1" }],
+			errors: [
+				{
+					id: cronId,
+					code: 10400,
+					message: "workflows.api.error.instance.not_found",
+				},
+			],
+		});
+
+		const explorerResponse = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances/batch/delete`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ instances: [cronId] }),
+			}
+		);
+		expect(explorerResponse.status).toBe(200);
+		await explorerResponse.text();
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(0);
+
+		for (const id of ["delete-1", "delete-2"]) {
+			const statusResponse = await mf.dispatchFetch(
+				`http://localhost/status?id=${id}`
+			);
+			expect(statusResponse.status).toBe(500);
+			await statusResponse.text();
+		}
 	});
 
 	test("restart a running workflow", async ({ expect }) => {

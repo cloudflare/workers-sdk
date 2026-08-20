@@ -91,6 +91,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 				DB: { type: "d1" },
 				FLAGS: { type: "flagship" },
 				BUCKET: { type: "r2" },
+				AE: { type: "analytics-engine-dataset" },
 				QUEUE: { type: "queue" },
 			},
 		});
@@ -100,6 +101,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 			DB: { type: "d1", id: "DB-api" },
 			FLAGS: { type: "flagship", id: "FLAGS-api" },
 			BUCKET: { type: "r2", name: "BUCKET-api" },
+			AE: { type: "analytics-engine-dataset", name: "AE-api" },
 			QUEUE: { type: "queue", name: "QUEUE-api" },
 		});
 	});
@@ -170,6 +172,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 				DB: { type: "d1", id: "custom-db" },
 				FLAGS: { type: "flagship", id: "custom-flags" },
 				BUCKET: { type: "r2", name: "custom-bucket" },
+				AE: { type: "analytics-engine-dataset", name: "custom-dataset" },
 				QUEUE: { type: "queue", name: "custom-queue" },
 			},
 		});
@@ -179,6 +182,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 			DB: { type: "d1", id: "custom-db" },
 			FLAGS: { type: "flagship", id: "custom-flags" },
 			BUCKET: { type: "r2", name: "custom-bucket" },
+			AE: { type: "analytics-engine-dataset", name: "custom-dataset" },
 			QUEUE: { type: "queue", name: "custom-queue" },
 		});
 	});

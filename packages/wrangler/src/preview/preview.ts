@@ -1,12 +1,14 @@
 import { preview } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
+import { getNormalizedContainerOptions } from "../containers/config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import { cleanupDestination } from "../deployment-bundle/merge-config-args";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
+import { deployPreviewContainers, verifyContainersScope } from "./containers";
 
 export const previewCommand = createCommand({
 	metadata: {
@@ -98,7 +100,12 @@ export const previewCommand = createCommand({
 			args,
 			config,
 			buildResult,
-			assetsOptions
+			assetsOptions,
+			{
+				getNormalizedContainerOptions,
+				deployPreviewContainers,
+				verifyContainersScope,
+			}
 		);
 		cleanupDestination(destination);
 

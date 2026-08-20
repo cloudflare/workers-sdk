@@ -17,6 +17,10 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/r2\/buckets\/[^/]+$/, "r2.bucket"],
 	[/^\/r2\/buckets$/, "r2.buckets"],
 	[
+		/^\/workflows\/[^/]+\/instances\/batch\/delete$/,
+		"workflows.instances.batch_delete",
+	],
+	[
 		/^\/workflows\/[^/]+\/instances\/[^/]+\/events\/[^/]+$/,
 		"workflows.instance.event",
 	],

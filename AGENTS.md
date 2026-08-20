@@ -42,7 +42,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 **Development & Testing:**
 
-- `packages/vitest-pool-workers/` - Vitest integration for testing Workers in actual runtime
+- `packages/vitest-plugin/` - Vitest integration for testing Workers in actual runtime
 - `packages/chrome-devtools-patches/` - Modified Chrome DevTools for Workers debugging
 
 **Shared Libraries:**
@@ -125,7 +125,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - Unit tests with Vitest for all packages
 - Fixture tests in `/fixtures` directory for filesystem/Worker scenarios
 - E2E tests require real Cloudflare account credentials
-- Use `vitest-pool-workers` for testing actual Workers runtime behavior
+- Use `vitest-plugin` for testing actual Workers runtime behavior
 - Shared vitest config (`vitest.shared.ts`): 50s timeouts, `retry: 1`, `restoreMocks: true`
 - Vitest 4 pool config: use `maxWorkers: 1` instead of the removed `poolOptions.forks.singleFork: true` when tests must run sequentially
 - **`expect` must come from test context** — never `import { expect } from "vitest"`:
@@ -135,7 +135,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
   - When test context is unavailable (e.g. setup files), use `node:assert` instead
   - E2E vitest configs do NOT set `globals: true` — this rule is critical there; forgetting `{ expect }` in the callback causes `ReferenceError` at runtime
 - When changing user-facing strings or output messages, update corresponding test snapshots
-- New test fixtures in `vitest-pool-workers-examples/` must include a `tsconfig.json`
+- New test fixtures in `vitest-plugin-examples/` must include a `tsconfig.json`
 - Test fixtures serve as user-facing recipes — use clean patterns, avoid type casting where possible
 - Use the `runInTmpDir()` utility instead of mocking filesystem operations. Real filesystem operations are preferred over mocking. The utility creates isolated temporary directories, handles cleanup automatically in `afterEach` hooks, and allows tests to write actual files and assert against them
 - Use the `mockConsoleMethods()` helper to capture stdout/stderr. Use the pattern `const std = mockConsoleMethods()` in test setup, then access captured output via `std.out`, `std.err`, `std.warn` properties. Assert against captured output using `expect(std.out).toMatchInlineSnapshot()`
@@ -180,7 +180,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 **Package-specific tests:** Most packages have their own test suites
 **Integration tests:** Use fixtures to test real-world scenarios
 **E2E tests:** Test against actual Cloudflare services (requires auth)
-**Workers runtime tests:** Use vitest-pool-workers for workerd-specific behavior
+**Workers runtime tests:** Use vitest-plugin for workerd-specific behavior
 
 Run `pnpm check` before submitting changes to ensure all quality gates pass.
 
@@ -228,7 +228,7 @@ Packages with their own AGENTS.md for deeper context:
 - `packages/miniflare/AGENTS.md` - Worker simulation, embedded workers, build system
 - `packages/vite-plugin-cloudflare/AGENTS.md` - Plugin architecture, playground setup
 - `packages/create-cloudflare/AGENTS.md` - Scaffolding, template system
-- `packages/vitest-pool-workers/AGENTS.md` - 3-context architecture, cloudflare:test module
+- `packages/vitest-plugin/AGENTS.md` - 3-context architecture, cloudflare:test module
 - `packages/workers-utils/AGENTS.md` - Shared config validation, test helpers
 
 When making architectural changes to a package (renaming files, adding entry points, changing build output), update the relevant AGENTS.md to reflect the new structure.

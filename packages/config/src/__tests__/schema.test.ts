@@ -391,6 +391,57 @@ describe("InputWorkerSchema", () => {
 			}
 		});
 
+		it("accepts a connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						address: "127.0.0.1",
+					},
+				],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "ftp", port: 5432 }],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects unknown keys inside a connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						hostname: "127.0.0.1",
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				const issue = result.error.issues.find(
+					(i) => i.code === "unrecognized_keys"
+				);
+				expect(issue).toBeDefined();
+				expect(issue?.path).toEqual(["triggers", 0]);
+				expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+					"hostname"
+				);
+			}
+		});
+
 		it("still accepts unknown keys on `unsafe:*` bindings (looseObject escape hatch)", ({
 			expect,
 		}) => {
