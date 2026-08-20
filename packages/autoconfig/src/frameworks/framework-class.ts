@@ -108,8 +108,8 @@ export type ConfigurationOptions = {
 };
 
 export type PackageJsonScriptsOverrides = {
-	preview?: string; // legacy Wrangler default is `npm run build && wrangler dev`
-	deploy?: string; // legacy Wrangler default is `npm run build && wrangler deploy`
+	preview?: string; // legacy Wrangler preview command, default is `npm run build && wrangler dev`
+	deploy?: string; // legacy Wrangler deploy command, default is `npm run build && wrangler deploy`
 	typegen?: string; // default is `wrangler types`
 };
 
