@@ -80,6 +80,7 @@ export interface DeploymentResource {
 	placement?: CfPlacement;
 	cache?: CacheOptions;
 	annotations?: {
+		"workers/commit_sha"?: string;
 		"workers/message"?: string;
 		"workers/pull_request_number"?: string;
 		"workers/pull_request_url"?: string;
@@ -108,6 +109,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	compatibility_date?: string;
 	compatibility_flags?: string[];
 	annotations?: {
+		"workers/commit_sha"?: string;
 		"workers/message"?: string;
 		"workers/pull_request_number"?: string;
 		"workers/pull_request_url"?: string;

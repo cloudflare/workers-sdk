@@ -60,6 +60,16 @@ export function getHeadCommitMessage(): string | undefined {
 	}
 }
 
+export function getCommitSha(): string | undefined {
+	return (
+		process.env.GITHUB_SHA ||
+		process.env.CI_COMMIT_SHA ||
+		process.env.CIRCLE_SHA1 ||
+		process.env.COMMIT_SHA ||
+		undefined
+	);
+}
+
 function normalizeRepositoryUrl(repositoryUrl: string): string | undefined {
 	const trimmed = repositoryUrl.trim();
 	if (!trimmed) {

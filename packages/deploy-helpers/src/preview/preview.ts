@@ -28,6 +28,7 @@ import {
 	assemblePreviewScriptSettings,
 	extractConfigBindings,
 	getBranchName,
+	getCommitSha,
 	getHeadCommitMessage,
 	getHeadCommitRef,
 	getPreviewOwnedContainerClassNames,
@@ -409,6 +410,7 @@ async function assemblePreviewDeploymentSettings(
 		tag?: string;
 		repositoryUrl?: string;
 		pullRequest?: PullRequestMetadata;
+		commitSha?: string;
 		assetsOptions?: PreviewAssetsOptions;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
@@ -447,8 +449,16 @@ async function assemblePreviewDeploymentSettings(
 	}
 	const repositoryUrl = options.repositoryUrl;
 	const pullRequest = options.pullRequest;
-	if (options.message || options.tag || repositoryUrl || pullRequest) {
+	const commitSha = options.commitSha;
+	if (
+		options.message ||
+		options.tag ||
+		repositoryUrl ||
+		pullRequest ||
+		commitSha
+	) {
 		request.annotations = {
+			...(commitSha && { "workers/commit_sha": commitSha }),
 			...(options.message && { "workers/message": options.message }),
 			...(pullRequest?.number && {
 				"workers/pull_request_number": pullRequest.number,
@@ -703,6 +713,7 @@ export async function preview(
 			: undefined;
 	const repositoryUrl = getRepositoryUrl();
 	const pullRequest = getPullRequestMetadata();
+	const commitSha = getCommitSha();
 
 	let existingPreview: PreviewResource | null = null;
 	try {
@@ -769,6 +780,7 @@ export async function preview(
 			tag: args.tag ?? fallbackTag,
 			repositoryUrl,
 			pullRequest,
+			commitSha,
 			assetsOptions,
 		}
 	);

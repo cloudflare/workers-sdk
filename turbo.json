@@ -50,7 +50,11 @@
 		"CIRCLE_PULL_REQUEST",
 		"PULL_REQUEST_NUMBER",
 		"PR_NUMBER",
-		"CHANGE_ID"
+		"CHANGE_ID",
+		"GITHUB_SHA",
+		"CI_COMMIT_SHA",
+		"CIRCLE_SHA1",
+		"COMMIT_SHA"
 	],
 	"tasks": {
 		"dev": {

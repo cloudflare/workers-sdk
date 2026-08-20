@@ -5,6 +5,7 @@ import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	extractConfigBindings,
 	getBranchName,
+	getCommitSha,
 	getPullRequestMetadata,
 	getRepositoryUrl,
 	previewContainerAppName,
@@ -164,6 +165,10 @@ function clearPreviewMetadataEnvs() {
 	vi.stubEnv("PR_NUMBER", "");
 	vi.stubEnv("CHANGE_URL", "");
 	vi.stubEnv("CHANGE_ID", "");
+	vi.stubEnv("GITHUB_SHA", "");
+	vi.stubEnv("CI_COMMIT_SHA", "");
+	vi.stubEnv("CIRCLE_SHA1", "");
+	vi.stubEnv("COMMIT_SHA", "");
 }
 
 describe("wrangler preview", () => {
@@ -419,6 +424,56 @@ describe("wrangler preview", () => {
 				number: "13",
 				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
 			});
+		});
+	});
+
+	describe("getCommitSha", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use the GitHub Actions commit SHA", ({ expect }) => {
+			vi.stubEnv("GITHUB_SHA", "abc123def456");
+
+			expect(getCommitSha()).toBe("abc123def456");
+		});
+
+		test("should use the GitLab CI commit SHA", ({ expect }) => {
+			vi.stubEnv("CI_COMMIT_SHA", "def456abc123");
+
+			expect(getCommitSha()).toBe("def456abc123");
+		});
+
+		test("should use the CircleCI commit SHA", ({ expect }) => {
+			vi.stubEnv("CIRCLE_SHA1", "123abc456def");
+
+			expect(getCommitSha()).toBe("123abc456def");
+		});
+
+		test("should use the generic COMMIT_SHA fallback", ({ expect }) => {
+			vi.stubEnv("COMMIT_SHA", "789fed321cba");
+
+			expect(getCommitSha()).toBe("789fed321cba");
+		});
+
+		test("should prefer GitHub Actions over other providers", ({ expect }) => {
+			vi.stubEnv("GITHUB_SHA", "github-sha");
+			vi.stubEnv("CI_COMMIT_SHA", "gitlab-sha");
+			vi.stubEnv("CIRCLE_SHA1", "circleci-sha");
+			vi.stubEnv("COMMIT_SHA", "generic-sha");
+
+			expect(getCommitSha()).toBe("github-sha");
+		});
+
+		test("should return undefined when no commit SHA env var is set", ({
+			expect,
+		}) => {
+			expect(getCommitSha()).toBeUndefined();
 		});
 	});
 
@@ -4634,10 +4689,12 @@ describe("wrangler preview", () => {
 				"https://gitlab.example.com/acme/worker-project.git"
 			);
 			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_COMMIT_SHA", "abc123def456");
 
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
 						annotations?: {
+							"workers/commit_sha"?: string;
 							"workers/message"?: string;
 							"workers/pull_request_number"?: string;
 							"workers/pull_request_url"?: string;
@@ -4707,6 +4764,7 @@ describe("wrangler preview", () => {
 			);
 
 			expect(deploymentRequestBody?.annotations).toEqual({
+				"workers/commit_sha": "abc123def456",
 				"workers/message": "preview note",
 				"workers/pull_request_number": "13",
 				"workers/pull_request_url":
