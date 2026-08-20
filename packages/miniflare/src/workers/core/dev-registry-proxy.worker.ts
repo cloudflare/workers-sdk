@@ -57,6 +57,9 @@ interface StreamFetcher extends Fetcher {
 	watermarks: StreamWatermarks;
 }
 
+// The debug-port Fetcher cannot pipeline through an RPC property directly:
+// `fetcher.videos.list()` is interpreted as a call to a `videos()` method. These
+// local targets preserve Stream's nested API, then pipeline their methods to the owner.
 class ExternalStreamVideos extends RpcTarget implements StreamVideos {
 	constructor(private resolve: () => StreamFetcher) {
 		super();
