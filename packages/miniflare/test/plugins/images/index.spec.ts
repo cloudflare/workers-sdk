@@ -42,6 +42,8 @@ async function handleCommand(images, op, args) {
 			return hosted.image(args.id).update(args.options);
 		case "delete":
 			return hosted.image(args.id).delete();
+		case "signedUrl":
+			return hosted.image(args.id).signedUrl(args.options);
 		case "list":
 			return hosted.list(args.options);
 		default:
@@ -420,5 +422,192 @@ describe("Images hosted CRUD", () => {
 			...page3.images.map((i) => i.id),
 		];
 		expect(new Set(allIds).size).toBe(5);
+	});
+});
+
+describe("Images signed URLs", () => {
+	test("signed URL includes a signature and requested variant", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-1",
+			requireSignedURLs: true,
+		});
+
+		const signedUrl = await sendCmd<string>(mf, "signedUrl", {
+			id: "signed-1",
+			options: { variant: "public" },
+		});
+
+		const url = new URL(signedUrl);
+		expect(url.pathname).toBe("/__cf_local/imagedelivery/signed-1/public");
+		expect(url.searchParams.get("sig")).toMatch(/^[0-9a-f]{64}$/);
+		expect(url.searchParams.get("exp")).toBeNull();
+	});
+
+	test("signed URL includes an exp param when expiresIn is provided", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-2",
+			requireSignedURLs: true,
+		});
+
+		const before = Math.floor(Date.now() / 1000);
+		const signedUrl = await sendCmd<string>(mf, "signedUrl", {
+			id: "signed-2",
+			options: { variant: "public", expiresIn: 60 },
+		});
+		const url = new URL(signedUrl);
+		const exp = Number(url.searchParams.get("exp"));
+		expect(exp).toBeGreaterThanOrEqual(before + 60);
+		expect(exp).toBeLessThanOrEqual(before + 61);
+	});
+
+	test("rejects a variant containing invalid URL path characters", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-3",
+			requireSignedURLs: true,
+		});
+
+		await expect(
+			sendCmd(mf, "signedUrl", {
+				id: "signed-3",
+				options: { variant: "public?evil=1" },
+			})
+		).rejects.toThrow();
+	});
+
+	test("rejects a non-positive-integer expiresIn", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-4",
+			requireSignedURLs: true,
+		});
+
+		await expect(
+			sendCmd(mf, "signedUrl", {
+				id: "signed-4",
+				options: { variant: "public", expiresIn: 0 },
+			})
+		).rejects.toThrow();
+	});
+
+	test("a signed URL can be used to fetch a private image", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-fetch-1",
+			requireSignedURLs: true,
+		});
+
+		const signedUrl = await sendCmd<string>(mf, "signedUrl", {
+			id: "signed-fetch-1",
+			options: { variant: "public" },
+		});
+
+		const response = await mf.dispatchFetch(signedUrl);
+		expect(response.status).toBe(200);
+		const data = new Uint8Array(await response.arrayBuffer());
+		expect(data).toEqual(TEST_IMAGE_BYTES);
+	});
+
+	test("fetching a private image without a signature is rejected", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const url = await mf.ready;
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-fetch-2",
+			requireSignedURLs: true,
+		});
+
+		const response = await mf.dispatchFetch(
+			`${url.origin}/__cf_local/imagedelivery/signed-fetch-2/public`
+		);
+		expect(response.status).toBe(401);
+		await response.arrayBuffer();
+	});
+
+	test("fetching a private image with a tampered signature is rejected", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-fetch-3",
+			requireSignedURLs: true,
+		});
+
+		const signedUrl = await sendCmd<string>(mf, "signedUrl", {
+			id: "signed-fetch-3",
+			options: { variant: "public" },
+		});
+		const url = new URL(signedUrl);
+		url.searchParams.set("sig", "0".repeat(64));
+
+		const response = await mf.dispatchFetch(url.toString());
+		expect(response.status).toBe(401);
+		await response.arrayBuffer();
+	});
+
+	test("fetching a private image with an expired signature is rejected", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await upload(mf, TEST_IMAGE_BYTES, {
+			id: "signed-fetch-4",
+			requireSignedURLs: true,
+		});
+
+		const signedUrl = await sendCmd<string>(mf, "signedUrl", {
+			id: "signed-fetch-4",
+			options: { variant: "public", expiresIn: 60 },
+		});
+		// Manually forge an expired timestamp; the sig will no longer match
+		// but the expiry check should reject the request before that anyway.
+		const url = new URL(signedUrl);
+		url.searchParams.set("exp", String(Math.floor(Date.now() / 1000) - 60));
+
+		const response = await mf.dispatchFetch(url.toString());
+		expect(response.status).toBe(401);
+		await response.arrayBuffer();
+	});
+
+	test("fetching a public image never requires a signature", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const url = await mf.ready;
+
+		await upload(mf, TEST_IMAGE_BYTES, { id: "public-fetch-1" });
+
+		const response = await mf.dispatchFetch(
+			`${url.origin}/__cf_local/imagedelivery/public-fetch-1/public`
+		);
+		expect(response.status).toBe(200);
+		await response.arrayBuffer();
 	});
 });

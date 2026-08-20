@@ -116,6 +116,76 @@ function matchesMetadataFilters(
 	);
 }
 
+// No real account signing key store exists in local dev, so this single
+// secret stands in for every account and `keyName`; it has no security value.
+const LOCAL_SIGNING_SECRET = "miniflare-local-dev-images-signing-key";
+
+async function hmacSha256Hex(secret: string, value: string): Promise<string> {
+	const encoder = new TextEncoder();
+	const key = await crypto.subtle.importKey(
+		"raw",
+		encoder.encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"]
+	);
+	const signature = await crypto.subtle.sign(
+		"HMAC",
+		key,
+		encoder.encode(value)
+	);
+	return Array.from(new Uint8Array(signature))
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("");
+}
+
+function assertVariantName(variant: string): void {
+	if (variant === "") {
+		throw new Error("variant is required");
+	}
+	if (/[/?#%]/.test(variant)) {
+		throw new Error("variant contains invalid URL path characters");
+	}
+}
+
+function resolveExpiresAt(expiresIn: number | undefined): number | undefined {
+	if (expiresIn === undefined) {
+		return undefined;
+	}
+	if (!Number.isInteger(expiresIn) || expiresIn <= 0) {
+		throw new Error("expiresIn must be a positive integer");
+	}
+	return Math.floor(Date.now() / 1000) + expiresIn;
+}
+
+// Returns `null` when valid, or an error message otherwise.
+async function verifySignedRequest(url: URL): Promise<string | null> {
+	const sig = url.searchParams.get("sig");
+	if (!sig) {
+		return "Missing signature";
+	}
+
+	const exp = url.searchParams.get("exp");
+	if (exp !== null) {
+		const expiresAt = Number.parseInt(exp, 10);
+		if (Number.isNaN(expiresAt) || expiresAt < Date.now() / 1000) {
+			return "Signature expired";
+		}
+	}
+
+	const unsignedUrl = new URL(url);
+	unsignedUrl.searchParams.delete("sig");
+	const expectedSig = await hmacSha256Hex(
+		LOCAL_SIGNING_SECRET,
+		`${unsignedUrl.pathname}${unsignedUrl.search}`
+	);
+	if (sig !== expectedSig) {
+		return "Invalid signature";
+	}
+
+	return null;
+}
+
 class ImageHandleImpl extends RpcTarget {
 	readonly #imageId: string;
 	readonly #env: Env;
@@ -143,6 +213,28 @@ class ImageHandleImpl extends RpcTarget {
 			return null;
 		}
 		return new Blob([data]).stream();
+	}
+
+	async signedUrl(options: ImageSignedUrlOptions): Promise<string> {
+		assertVariantName(options.variant);
+
+		const publicUrl = await getPublicUrl(
+			this.#env[CoreBindings.SERVICE_LOOPBACK]
+		);
+		const expiresAt = resolveExpiresAt(options.expiresIn);
+		const url = new URL(
+			buildVariantUrl(publicUrl, this.#imageId, options.variant)
+		);
+		if (expiresAt !== undefined) {
+			url.searchParams.set("exp", String(expiresAt));
+		}
+
+		const signature = await hmacSha256Hex(
+			LOCAL_SIGNING_SECRET,
+			`${url.pathname}${url.search}`
+		);
+		url.searchParams.set("sig", signature);
+		return url.toString();
 	}
 
 	async update(options: ImageUpdateOptions): Promise<ImageMetadata> {
@@ -331,9 +423,20 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 				return new Response("Missing image ID", { status: 400 });
 			}
 
-			const data = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
-			if (data === null) {
+			const { value: data, metadata } =
+				await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+					imageId,
+					"arrayBuffer"
+				);
+			if (data === null || metadata === null) {
 				return new Response("Image not found", { status: 404 });
+			}
+
+			if (metadata.requireSignedURLs) {
+				const verifyError = await verifySignedRequest(url);
+				if (verifyError !== null) {
+					return new Response(verifyError, { status: 401 });
+				}
 			}
 
 			const contentType = await this.#detectContentType(data);
