@@ -1,5 +1,41 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.0.0
+
+### Major Changes
+
+- [#15074](https://github.com/cloudflare/workers-sdk/pull/15074) [`bfcc442`](https://github.com/cloudflare/workers-sdk/commit/bfcc4423fa5d2dc007ebdc41293bd68f863777f6) Thanks [@penalosa](https://github.com/penalosa)! - Rename `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` for the v1 release
+
+  The package has been renamed from `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` to be clearer about it's usage.
+
+  To migrate, run the codemod from the root of your project:
+
+  ```sh
+  npx @cloudflare/codemods vitest:pool-workers-to-vitest-plugin
+  ```
+
+  This handles the whole rename for you:
+
+  - Replaces the dependency in your `package.json`, moving plain version ranges to `^1.0.0` while preserving `workspace:`/`catalog:`/`link:`/`file:` protocol references, along with any `overrides`, `resolutions` and `pnpm.overrides` entries.
+  - Rewrites imports such as `import { cloudflareTest } from "@cloudflare/vitest-pool-workers"` to `import { cloudflareTest } from "@cloudflare/vitest-plugin"`, preserving any subpaths.
+  - Updates the `types` entry in your test `tsconfig.json` from `@cloudflare/vitest-pool-workers/types` to `@cloudflare/vitest-plugin/types`.
+
+  Pass `--dry-run` to preview the changes first, or `--files <glob>` to restrict which files are considered.
+
+  If you would rather migrate by hand, the only changes needed are the dependency name in `package.json`, the package specifier in any `import`/`require` of the plugin, and the `types` entry in your test `tsconfig.json`.
+
+### Minor Changes
+
+- [#14690](https://github.com/cloudflare/workers-sdk/pull/14690) [`d81fae7`](https://github.com/cloudflare/workers-sdk/commit/d81fae7487abee539d985c348dddf39bca3196f7) Thanks [@penalosa](https://github.com/penalosa)! - Add a central CLI for Cloudflare codemods
+
+  Run a codemod by name, e.g. `npx @cloudflare/codemods vitest:v3-to-v4`. The initial migrations cover Vitest v3 to v4 configuration (`vitest:v3-to-v4`) and the `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` v1 rename (`vitest:pool-workers-to-vitest-plugin`). The existing Vitest transform now lives in this dedicated package.
+
+### Patch Changes
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`5ae9d5b`](https://github.com/cloudflare/workers-sdk/commit/5ae9d5b205fea31516559f7ad89a21eda671af2f), [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a), [`ce9b151`](https://github.com/cloudflare/workers-sdk/commit/ce9b1510abf5c1152aedc94456f4d7ffe9402248), [`ef73a28`](https://github.com/cloudflare/workers-sdk/commit/ef73a28c1e7a208d730c6de64566bc96f683ca7b), [`649f667`](https://github.com/cloudflare/workers-sdk/commit/649f667bd871061da945881ce953ef8f81caea1a), [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`f2437e6`](https://github.com/cloudflare/workers-sdk/commit/f2437e606fc69891009285831d94b49bf44f6aff), [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17)]:
+  - wrangler@4.125.0
+  - miniflare@5.20260820.0-alpha
+
 ## 0.22.0
 
 ### Minor Changes
