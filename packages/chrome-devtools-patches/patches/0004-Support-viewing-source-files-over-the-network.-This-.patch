@@ -1,4 +1,4 @@
-From b1f97bf51177076f6abb501cf8fe57a77640792e Mon Sep 17 00:00:00 2001
+From cd50ad3a1a9c3412390b10b65270935996f9282e Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:26:38 +0100
 Subject: [PATCH 4/8] Support viewing source files over the network. This
@@ -8,25 +8,24 @@ Subject: [PATCH 4/8] Support viewing source files over the network. This
 
 * Supporting a `?domain=` query param to customise the network name. Without this, the protocol is used (i.e. `file://`), which isn't super friendly (see NavigatorView.ts)
 
-* Enable JUST_MY_CODE to hide Wrangler's injected middleware (see MainImpl.ts)
+* Default the `navigator-just-my-code` setting to on, to hide Wrangler's injected middleware. Upstream graduated this from the JUST_MY_CODE experiment to a user setting, so we now flip its default rather than enabling an experiment (see sources-meta.ts)
 
-* Enable AUTHORED_DEPLOYED_GROUPING for a better grouping between source-mapped and compiled code (see MainImpl.ts)
+* Default the `navigator-group-by-authored` setting to on, for a better grouping between source-mapped and compiled code. Upstream graduated this from the AUTHORED_DEPLOYED_GROUPING experiment to a user setting, so we now flip its default rather than enabling an experiment (see sources-meta.ts)
 
 * Support the mechanism by which Wrangler provides sourcemaps, the wrangler-file:// protocol (see PageResourceLoader.ts & ParsedURL.ts)
 ---
  front_end/core/common/ParsedURL.ts        |  2 +-
- front_end/core/sdk/PageResourceLoader.ts  |  4 +++-
- front_end/entrypoints/js_app/js_app.ts    | 16 ++++++--------
- front_end/entrypoints/main/MainImpl.ts    |  2 ++
- front_end/panels/sources/NavigatorView.ts |  5 +++--
- front_end/panels/sources/sources-meta.ts  | 26 -----------------------
- 6 files changed, 15 insertions(+), 40 deletions(-)
+ front_end/core/sdk/PageResourceLoader.ts  |  4 ++-
+ front_end/entrypoints/js_app/js_app.ts    | 16 +++++-------
+ front_end/panels/sources/NavigatorView.ts |  5 ++--
+ front_end/panels/sources/sources-meta.ts  | 32 ++---------------------
+ 5 files changed, 15 insertions(+), 44 deletions(-)
 
 diff --git a/front_end/core/common/ParsedURL.ts b/front_end/core/common/ParsedURL.ts
-index d01ab1856d..e29c0eab46 100644
+index 6e4bc44156..a74d66678a 100644
 --- a/front_end/core/common/ParsedURL.ts
 +++ b/front_end/core/common/ParsedURL.ts
-@@ -365,7 +365,7 @@ export class ParsedURL {
+@@ -332,7 +332,7 @@ export class ParsedURL {
    static completeURL(baseURL: Platform.DevToolsPath.UrlString, href: string): Platform.DevToolsPath.UrlString|null {
      // Return special URLs as-is.
      if (href.startsWith('data:') || href.startsWith('blob:') || href.startsWith('javascript:') ||
@@ -36,40 +35,40 @@ index d01ab1856d..e29c0eab46 100644
      }
  
 diff --git a/front_end/core/sdk/PageResourceLoader.ts b/front_end/core/sdk/PageResourceLoader.ts
-index 722bf5f80a..cede6fbc20 100644
+index 6439842e7a..077a56184b 100644
 --- a/front_end/core/sdk/PageResourceLoader.ts
 +++ b/front_end/core/sdk/PageResourceLoader.ts
-@@ -381,7 +381,9 @@ export class PageResourceLoader extends Common.ObjectWrapper.ObjectWrapper<Event
-     const disableCache = Common.Settings.Settings.instance().moduleSetting('cache-disabled').get();
-     const resource = await networkManager.loadNetworkResource(frameId, url, {disableCache, includeCredentials: true});
+@@ -436,7 +436,9 @@ export class PageResourceLoader extends Common.ObjectWrapper.ObjectWrapper<Event
      try {
--      const content = resource.stream ? await ioModel.readToString(resource.stream) : '';
-+      // @ts-expect-error Property 'text' does not exist on type 'LoadNetworkResourcePageResult'.
-+      // Cloudflare custom extension to load network data without streams
-+      const content = resource.stream ? await ioModel.readToString(resource.stream) : (resource.text ?? '');
+       const content = resource.stream ?
+           (isBinary ? await ioModel.readToBuffer(resource.stream) : await ioModel.readToString(resource.stream)) :
+-          '';
++          // @ts-expect-error Property 'text' does not exist on type 'LoadNetworkResourcePageResult'.
++          // Cloudflare custom extension to load network data without streams
++          (resource.text ?? '');
        return {
          success: resource.success,
          content,
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index 814bc1fc70..893ac3533f 100644
+index 3c0179b3ed..35819cb93e 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
 @@ -18,17 +18,13 @@ import * as Main from '../main/main.js';
  
  const UIStrings = {
    /**
--   *@description Text that refers to the main target.
+-   * @description Text that refers to the main target.
 -   */
 -  main: 'Main',
 -  /**
--   *@description Title of the 'Scripts' tool in the Network Navigator View, which is part of the Sources tool
-+   *@description Title of the 'Cloudflare' tool in the Cloudflare Navigator View, which is part of the Sources tool
+-   * @description Title of the 'Scripts' tool in the Network Navigator View, which is part of the Sources tool
++   * @description Title of the 'Cloudflare' tool in the Cloudflare Navigator View, which is part of the Sources tool
     */
 -  networkTitle: 'Scripts',
 +  cloudflare: 'Cloudflare',
    /**
--   *@description Command for showing the 'Scripts' tool in the Network Navigator View, which is part of the Sources tool
-+   *@description Text that refers to the main target.
+-   * @description Command for showing the 'Scripts' tool in the Network Navigator View, which is part of the Sources tool
++   * @description Text that refers to the main target.
     */
 -  showNode: 'Show Scripts',
 +  main: 'Main',
@@ -87,24 +86,11 @@ index 814bc1fc70..893ac3533f 100644
    order: 2,
    persistence: UI.ViewManager.ViewPersistence.PERMANENT,
    async loadView() {
-diff --git a/front_end/entrypoints/main/MainImpl.ts b/front_end/entrypoints/main/MainImpl.ts
-index e4ac33c985..04eac3540a 100644
---- a/front_end/entrypoints/main/MainImpl.ts
-+++ b/front_end/entrypoints/main/MainImpl.ts
-@@ -359,6 +359,8 @@ export class MainImpl {
-     Root.Runtime.experiments.enableExperimentsByDefault([
-       Root.Runtime.ExperimentName.FULL_ACCESSIBILITY_TREE,
-       Root.Runtime.ExperimentName.HIGHLIGHT_ERRORS_ELEMENTS_PANEL,
-+      Root.Runtime.ExperimentName.AUTHORED_DEPLOYED_GROUPING,
-+      Root.Runtime.ExperimentName.JUST_MY_CODE,
-       ...(Root.Runtime.Runtime.queryParam('isChromeForTesting') ? ['protocol-monitor'] : []),
-     ]);
- 
 diff --git a/front_end/panels/sources/NavigatorView.ts b/front_end/panels/sources/NavigatorView.ts
-index c4f0cf6319..3c468c11a2 100644
+index af7d0ce53d..6cdd2eea0c 100644
 --- a/front_end/panels/sources/NavigatorView.ts
 +++ b/front_end/panels/sources/NavigatorView.ts
-@@ -823,8 +823,9 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
+@@ -802,8 +802,9 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
        return matchingContextName;
      }
  
@@ -117,10 +103,10 @@ index c4f0cf6319..3c468c11a2 100644
  
      const parsedURL = new Common.ParsedURL.ParsedURL(projectOrigin);
 diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
-index 966e223d5a..20ce18502a 100644
+index 9f012b5877..0d1e6cef1b 100644
 --- a/front_end/panels/sources/sources-meta.ts
 +++ b/front_end/panels/sources/sources-meta.ts
-@@ -517,32 +517,6 @@ UI.ViewManager.registerViewExtension({
+@@ -494,34 +494,6 @@ UI.ViewManager.registerViewExtension({
    },
  });
  
@@ -131,6 +117,7 @@ index 966e223d5a..20ce18502a 100644
 -  title: i18nLazyString(UIStrings.workspace),
 -  order: 3,
 -  persistence: UI.ViewManager.ViewPersistence.PERMANENT,
+-  condition: () => !Root.Runtime.Runtime.isTraceApp(),
 -  async loadView() {
 -    const Sources = await loadSourcesModule();
 -    return new Sources.SourcesNavigator.FilesNavigatorView();
@@ -144,6 +131,7 @@ index 966e223d5a..20ce18502a 100644
 -  title: i18nLazyString(UIStrings.snippets),
 -  order: 6,
 -  persistence: UI.ViewManager.ViewPersistence.PERMANENT,
+-  condition: () => !Root.Runtime.Runtime.isTraceApp(),
 -  async loadView() {
 -    const Sources = await loadSourcesModule();
 -    return new Sources.SourcesNavigator.SnippetsNavigatorView();
@@ -153,6 +141,22 @@ index 966e223d5a..20ce18502a 100644
  UI.ViewManager.registerViewExtension({
    location: UI.ViewManager.ViewLocationValues.DRAWER_VIEW,
    id: 'sources.search-sources-tab',
+@@ -1503,13 +1475,13 @@ Common.Settings.registerSettingExtension({
+ Common.Settings.registerSettingExtension({
+   settingName: 'navigator-group-by-authored',
+   settingType: Common.Settings.SettingType.BOOLEAN,
+-  defaultValue: false,
++  defaultValue: true,
+ });
+ 
+ Common.Settings.registerSettingExtension({
+   settingName: 'navigator-just-my-code',
+   settingType: Common.Settings.SettingType.BOOLEAN,
+-  defaultValue: false,
++  defaultValue: true,
+ });
+ 
+ Common.Settings.registerSettingExtension({
 -- 
-2.39.5 (Apple Git-154)
+2.50.1 (Apple Git-155)
 
