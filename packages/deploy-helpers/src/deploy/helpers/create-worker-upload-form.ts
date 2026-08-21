@@ -99,6 +99,9 @@ export function createWorkerUploadForm(
 				assets: {
 					jwt: assets.jwt,
 					config: assetConfig,
+					...(assets.retention !== undefined && {
+						retention: assets.retention,
+					}),
 				},
 				...(annotations && { annotations }),
 				...(compatibility_date && { compatibility_date }),
@@ -902,6 +905,9 @@ export function createWorkerUploadForm(
 			assets: {
 				jwt: assets.jwt,
 				config: assetConfig,
+				...(assets.retention !== undefined && {
+					retention: assets.retention,
+				}),
 			},
 		}),
 		...(observability && { observability }),

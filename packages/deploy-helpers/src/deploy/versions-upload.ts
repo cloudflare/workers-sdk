@@ -218,6 +218,7 @@ async function uploadWorkerVersion(
 						_redirects: assetsOptions._redirects,
 						_headers: assetsOptions._headers,
 						run_worker_first: assetsOptions.run_worker_first,
+						retention: config.assets?.retention,
 					}
 				: undefined,
 		logpush: undefined, // logpush and observability are non-versioned settings
@@ -423,6 +424,13 @@ async function uploadWorkerVersion(
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 	logger.log("Worker Version ID:", versionId);
+
+	if (config.assets?.retention?.enabled) {
+		logger.log(
+			"Asset retention is enabled. Previously deployed assets from the last 24 hours" +
+				" (including deleted paths) are immediately reachable."
+		);
+	}
 
 	let versionPreviewUrl: string | undefined = undefined;
 	let versionPreviewAliasUrl: string | undefined = undefined;

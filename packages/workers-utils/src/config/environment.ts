@@ -1831,6 +1831,31 @@ export type Assets = {
 	 * Can also be `true`, indicating that every request should be routed to the User Worker.
 	 */
 	run_worker_first?: string[] | boolean;
+	/**
+	 * Configure asset retention for this Worker. When enabled, assets from
+	 * recently deployed versions (up to the last 24 hours) remain reachable,
+	 * preventing "version skew" breakage for SPAs and static sites.
+	 *
+	 * Enabling is immediately retroactive: previously deployed assets —
+	 * including paths deleted in that period — become reachable again from the
+	 * moment retention is switched on, not from the next deploy.
+	 *
+	 * The value is an object (rather than a bare boolean) so that future keys
+	 * such as window, cap or per-asset exclusion can be added without a
+	 * breaking change.
+	 *
+	 * @example
+	 * ```jsonc
+	 * // wrangler.json
+	 * {
+	 *   "assets": {
+	 *     "directory": "./public",
+	 *     "retention": { "enabled": true }
+	 *   }
+	 * }
+	 * ```
+	 */
+	retention?: { enabled: boolean };
 };
 
 export interface Observability {

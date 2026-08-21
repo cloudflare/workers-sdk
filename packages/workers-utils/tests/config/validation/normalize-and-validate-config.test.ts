@@ -3476,6 +3476,137 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.hasErrors()).toBeFalsy();
 			});
+
+			it("should accept valid `retention` with enabled: true", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					assets: {
+						directory: "./public",
+						retention: { enabled: true },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept valid `retention` with enabled: false", ({
+				expect,
+			}) => {
+				const expectedConfig: RawConfig = {
+					assets: {
+						directory: "./public",
+						retention: { enabled: false },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on bare boolean `retention`", ({ expect }) => {
+				const expectedConfig = {
+					assets: {
+						directory: "./public",
+						retention: true,
+					},
+				};
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "assets.retention" to be an object but got true."
+				`);
+			});
+
+			it("should error on invalid `retention.enabled` type", ({ expect }) => {
+				const expectedConfig = {
+					assets: {
+						directory: "./public",
+						retention: { enabled: "yes" },
+					},
+				};
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "assets.retention.enabled" to be of type boolean but got "yes"."
+				`);
+			});
+
+			it("should error on missing `retention.enabled`", ({ expect }) => {
+				const expectedConfig = {
+					assets: {
+						directory: "./public",
+						retention: {},
+					},
+				};
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "assets.retention.enabled" is a required field."
+				`);
+			});
+
+			it("should warn on unexpected fields in `retention`", ({ expect }) => {
+				const expectedConfig = {
+					assets: {
+						directory: "./public",
+						retention: { enabled: true, unknown_field: "bad" },
+					},
+				};
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in assets.retention field: "unknown_field""
+				`);
+			});
 		});
 
 		describe("[browser]", () => {

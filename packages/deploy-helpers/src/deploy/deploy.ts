@@ -349,6 +349,7 @@ async function deployWorker(
 						_redirects: assetsOptions._redirects,
 						_headers: assetsOptions._headers,
 						run_worker_first: assetsOptions.run_worker_first,
+						retention: config.assets?.retention,
 					}
 				: undefined,
 		observability: config.observability,
@@ -786,6 +787,13 @@ async function deployWorker(
 	});
 
 	logger.log("Current Version ID:", versionId);
+
+	if (config.assets?.retention?.enabled) {
+		logger.log(
+			"Asset retention is enabled. Previously deployed assets from the last 24 hours" +
+				" (including deleted paths) are immediately reachable."
+		);
+	}
 
 	return {
 		sourceMapSize,
