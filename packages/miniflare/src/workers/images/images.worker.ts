@@ -22,6 +22,14 @@ function buildVariantUrl(
 	).toString();
 }
 
+function buildUploadUrl(publicUrl: URL, imageId: string): string {
+	return new URL(`${CorePaths.IMAGE_UPLOAD}/${imageId}`, publicUrl).toString();
+}
+
+function draftExpiryKey(imageId: string): string {
+	return `${imageId}:direct-upload-expiry`;
+}
+
 // Rewrites stored variant names (e.g. `["public"]`) to absolute URLs.
 async function withResolvedVariants(
 	metadata: ImageMetadata,
@@ -186,6 +194,29 @@ async function verifySignedRequest(url: URL): Promise<string | null> {
 	return null;
 }
 
+const UUID_PATTERN =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MIN_DIRECT_UPLOAD_EXPIRES_IN = 120;
+const MAX_DIRECT_UPLOAD_EXPIRES_IN = 21600;
+const DEFAULT_DIRECT_UPLOAD_EXPIRES_IN = 1800;
+
+function assertCustomIdNotUuid(id: string): void {
+	if (UUID_PATTERN.test(id)) {
+		throw new Error("CustomID must not be UUID");
+	}
+}
+
+function resolveDirectUploadExpiresAt(expiresIn: number | undefined): number {
+	const duration = expiresIn ?? DEFAULT_DIRECT_UPLOAD_EXPIRES_IN;
+	if (
+		duration <= MIN_DIRECT_UPLOAD_EXPIRES_IN ||
+		duration >= MAX_DIRECT_UPLOAD_EXPIRES_IN
+	) {
+		throw new Error("expiry is out of accepted bound.");
+	}
+	return Math.floor(Date.now() / 1000) + duration;
+}
+
 class ImageHandleImpl extends RpcTarget {
 	readonly #imageId: string;
 	readonly #env: Env;
@@ -313,6 +344,38 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		return withResolvedVariants(metadata, this.env);
 	}
 
+	async createDirectUpload(
+		options?: ImageDirectUploadOptions
+	): Promise<ImageDirectUploadResult> {
+		if (options?.id !== undefined) {
+			assertCustomIdNotUuid(options.id);
+			if (options.requireSignedURLs) {
+				throw new Error("Private custom ID is not supported");
+			}
+		}
+
+		const expiresAt = resolveDirectUploadExpiresAt(options?.expiresIn);
+		const id = options?.id ?? crypto.randomUUID();
+
+		const metadata: ImageMetadata = {
+			id,
+			uploaded: new Date().toISOString(),
+			requireSignedURLs: options?.requireSignedURLs ?? false,
+			meta: options?.metadata ?? {},
+			variants: ["public"],
+			draft: true,
+			creator: options?.creator,
+		};
+
+		await this.env.IMAGES_STORE.put(id, new ArrayBuffer(0), { metadata });
+		await this.env.IMAGES_STORE.put(draftExpiryKey(id), String(expiresAt));
+
+		const publicUrl = await getPublicUrl(
+			this.env[CoreBindings.SERVICE_LOOPBACK]
+		);
+		return { id, uploadURL: buildUploadUrl(publicUrl, id) };
+	}
+
 	async list(options?: ImageListOptions): Promise<ImageList> {
 		const limit = options?.limit ?? 50;
 
@@ -409,6 +472,53 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		return "application/octet-stream";
 	}
 
+	async #completeDirectUpload(request: Request, url: URL): Promise<Response> {
+		if (request.method !== "POST") {
+			return new Response("Method not allowed", { status: 405 });
+		}
+
+		const imageId = url.pathname.slice(CorePaths.IMAGE_UPLOAD.length + 1);
+		if (!imageId) {
+			return new Response("Missing image ID", { status: 400 });
+		}
+
+		const existing = await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+			imageId,
+			"arrayBuffer"
+		);
+		if (existing.metadata === null) {
+			return new Response("Upload link not found", { status: 404 });
+		}
+		if (!existing.metadata.draft) {
+			return new Response("Upload link already used", { status: 409 });
+		}
+
+		const expiresAt = await this.env.IMAGES_STORE.get(draftExpiryKey(imageId));
+		if (expiresAt === null || Number(expiresAt) < Date.now() / 1000) {
+			return new Response("Upload link expired", { status: 410 });
+		}
+
+		const formData = await request.formData();
+		const file = formData.get("file");
+		if (!(file instanceof Blob)) {
+			return new Response("Missing file", { status: 400 });
+		}
+		const buffer = await file.arrayBuffer();
+
+		const completedMetadata: ImageMetadata = {
+			...existing.metadata,
+			filename: file instanceof File ? file.name : existing.metadata.filename,
+			draft: false,
+		};
+
+		await this.env.IMAGES_STORE.put(imageId, buffer, {
+			metadata: completedMetadata,
+		});
+		await this.env.IMAGES_STORE.delete(draftExpiryKey(imageId));
+
+		return Response.json({ id: imageId, success: true });
+	}
+
 	// Handle HTTP requests for image delivery and transform operations
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
@@ -443,6 +553,10 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 			return new Response(data, {
 				headers: { "Content-Type": contentType },
 			});
+		}
+
+		if (url.pathname.startsWith(`${CorePaths.IMAGE_UPLOAD}/`)) {
+			return this.#completeDirectUpload(request, url);
 		}
 
 		// Forward transform/info operations to Node.js via loopback where Sharp runs
