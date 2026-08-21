@@ -39,7 +39,11 @@ export function getStreamService(
 	const service = getStorageService(
 		STREAM_BINDING_SERVICE_NAME,
 		{},
-		sharedOptions
+		sharedOptions,
+		{
+			entrypoint: STREAM_BINDING_ENTRYPOINT,
+			rpcProperties: ["videos", "watermarks"],
+		}
 	);
 	return service.name === STREAM_BINDING_SERVICE_NAME
 		? {
@@ -154,10 +158,6 @@ export const STREAM_PLUGIN: Plugin = {
 				compatibilityDate: STREAM_COMPAT_DATE,
 				compatibilityFlags: ["nodejs_compat", "experimental"],
 				modules: [
-					{
-						name: "entry.worker.js",
-						esModule: `export { ${STREAM_BINDING_ENTRYPOINT} as default, ${STREAM_BINDING_ENTRYPOINT} } from "./binding.worker.js";`,
-					},
 					{
 						name: "binding.worker.js",
 						esModule: BINDING_SCRIPT(),

@@ -343,8 +343,7 @@ describe.sequential("owner presence integration", () => {
 				await client.dispatchFetch("http://x/", { method: "PUT" })
 			).json()) as { id: string; preview: string };
 			expect(put.id).toBeTruthy();
-			expect(new URL(put.preview).origin).toBe(clientUrl.origin);
-			expect(new URL(put.preview).origin).not.toBe(ownerUrl.origin);
+			expect(new URL(put.preview).origin).toBe(ownerUrl.origin);
 
 			// Resolve the nested `videos` RPC target through the client too.
 			const listed = (await (
@@ -392,19 +391,26 @@ describe.sequential("owner presence integration", () => {
 			);
 
 			await owner.dispose();
+			let failedOverPreview = "";
 			await vi.waitFor(
 				async () => {
 					const response = await client.dispatchFetch("http://x/");
 					const result = (await response.json()) as {
 						count?: number;
+						preview?: string;
 						error?: string;
 					};
-					expect(result).toEqual({ count: 1, preview: put.preview });
+					expect(result.count).toBe(1);
+					expect(result.preview).toBeTruthy();
+					if (result.preview !== undefined) {
+						failedOverPreview = result.preview;
+						expect(new URL(result.preview).origin).toBe(clientUrl.origin);
+					}
 				},
 				{ timeout: 10_000, interval: 100 }
 			);
 
-			const failedOverVideoResponse = await fetch(put.preview);
+			const failedOverVideoResponse = await fetch(failedOverPreview);
 			expect(failedOverVideoResponse.status).toBe(200);
 			expect(
 				new Uint8Array(await failedOverVideoResponse.arrayBuffer())
