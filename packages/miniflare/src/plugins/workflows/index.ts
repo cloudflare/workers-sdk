@@ -79,7 +79,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
-			sharedOptions.resourcePersistencePath
+			sharedOptions.isolatedResourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 		// each workflow should get its own storage service
