@@ -20,6 +20,7 @@ function fakeSessionData(dispose: () => Promise<void>): RemoteProxySessionData {
 			) as RemoteProxyConnectionString,
 		},
 		remoteBindings: {},
+		hyperdriveConnectionStrings: new Map(),
 	};
 }
 
