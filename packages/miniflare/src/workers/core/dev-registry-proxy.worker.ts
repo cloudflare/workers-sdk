@@ -72,9 +72,23 @@ function rewriteStreamVideo(video: StreamVideo, publicUrl: URL): StreamVideo {
 	};
 }
 
-// The debug-port Fetcher cannot pipeline through an RPC property directly:
-// `fetcher.videos.list()` is interpreted as a call to a `videos()` method. These
-// local targets preserve Stream's nested API, then pipeline their methods to the owner.
+// An RPC property promise cannot be forwarded transparently through this second
+// RPC boundary. Terminate the caller-facing hop with a local RpcTarget, then
+// forward its method calls to the target resolved through the debug port.
+class ExternalRpcTarget extends RpcTarget {
+	constructor(resolve: () => object) {
+		super();
+		return new Proxy(this, {
+			get(target, prop) {
+				if (Reflect.has(target, prop)) {
+					return Reflect.get(target, prop);
+				}
+				return Reflect.get(resolve(), prop);
+			},
+		});
+	}
+}
+
 class ExternalStreamVideos extends RpcTarget implements StreamVideos {
 	constructor(
 		private resolve: () => StreamFetcher,
@@ -93,51 +107,22 @@ class ExternalStreamVideos extends RpcTarget implements StreamVideos {
 }
 
 class ExternalStreamScopedCaptions
-	extends RpcTarget
+	extends ExternalRpcTarget
 	implements StreamScopedCaptions
 {
-	constructor(private resolve: () => StreamScopedCaptions) {
-		super();
-	}
-
-	upload(language: string, input: ReadableStream): Promise<StreamCaption> {
-		return this.resolve().upload(language, input);
-	}
-
-	generate(language: string): Promise<StreamCaption> {
-		return this.resolve().generate(language);
-	}
-
-	list(language?: string): Promise<StreamCaption[]> {
-		return this.resolve().list(language);
-	}
-
-	delete(language: string): Promise<void> {
-		return this.resolve().delete(language);
-	}
+	declare upload: StreamScopedCaptions["upload"];
+	declare generate: StreamScopedCaptions["generate"];
+	declare list: StreamScopedCaptions["list"];
+	declare delete: StreamScopedCaptions["delete"];
 }
 
 class ExternalStreamScopedDownloads
-	extends RpcTarget
+	extends ExternalRpcTarget
 	implements StreamScopedDownloads
 {
-	constructor(private resolve: () => StreamScopedDownloads) {
-		super();
-	}
-
-	generate(
-		downloadType: StreamDownloadType = "default"
-	): Promise<StreamDownloadGetResponse> {
-		return this.resolve().generate(downloadType);
-	}
-
-	get(): Promise<StreamDownloadGetResponse> {
-		return this.resolve().get();
-	}
-
-	delete(downloadType: StreamDownloadType = "default"): Promise<void> {
-		return this.resolve().delete(downloadType);
-	}
+	declare generate: StreamScopedDownloads["generate"];
+	declare get: StreamScopedDownloads["get"];
+	declare delete: StreamScopedDownloads["delete"];
 }
 
 class ExternalStreamVideoHandle extends RpcTarget implements StreamVideoHandle {
@@ -185,32 +170,14 @@ class ExternalStreamVideoHandle extends RpcTarget implements StreamVideoHandle {
 	}
 }
 
-class ExternalStreamWatermarks extends RpcTarget implements StreamWatermarks {
-	constructor(private resolve: () => StreamFetcher) {
-		super();
-	}
-
-	generate(
-		streamOrUrl: ReadableStream | string,
-		params: StreamWatermarkCreateParams
-	): Promise<StreamWatermark> {
-		const watermarks = this.resolve().watermarks;
-		return typeof streamOrUrl === "string"
-			? watermarks.generate(streamOrUrl, params)
-			: watermarks.generate(streamOrUrl, params);
-	}
-
-	list(): Promise<StreamWatermark[]> {
-		return this.resolve().watermarks.list();
-	}
-
-	get(watermarkId: string): Promise<StreamWatermark> {
-		return this.resolve().watermarks.get(watermarkId);
-	}
-
-	delete(watermarkId: string): Promise<void> {
-		return this.resolve().watermarks.delete(watermarkId);
-	}
+class ExternalStreamWatermarks
+	extends ExternalRpcTarget
+	implements StreamWatermarks
+{
+	declare generate: StreamWatermarks["generate"];
+	declare list: StreamWatermarks["list"];
+	declare get: StreamWatermarks["get"];
+	declare delete: StreamWatermarks["delete"];
 }
 
 function getTarget(props: Props): RegistryEntry | undefined {
@@ -284,7 +251,9 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		() => this._resolveStream(),
 		() => this._resolveStreamPublicUrl()
 	);
-	_streamWatermarks = new ExternalStreamWatermarks(() => this._resolveStream());
+	_streamWatermarks = new ExternalStreamWatermarks(
+		() => this._resolveStream().watermarks
+	);
 	_streamUpload = async (
 		urlOrBody: string | ReadableStream<Uint8Array>,
 		params?: StreamUrlUploadParams
