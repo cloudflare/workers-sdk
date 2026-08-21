@@ -1,9 +1,11 @@
-import { afterEach, test } from "vitest";
+import { afterEach, test, vi } from "vitest";
 import { exitHook } from "../src/exit-hook";
 
-// The handlers call `process.exit()`, so these tests assert on listener
-// registration rather than invoking the handlers directly.
-const SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+const SIGNALS = [
+	["SIGINT", 128 + 2],
+	["SIGTERM", 128 + 15],
+	["SIGHUP", 128 + 1],
+] as const;
 
 const unregisters: (() => void)[] = [];
 
@@ -19,24 +21,43 @@ afterEach(() => {
 	}
 });
 
-test("exitHook: listens for SIGHUP so the runtime is disposed on hangup", ({
-	expect,
-}) => {
-	const before = process.listenerCount("SIGHUP");
-	register();
-	expect(process.listenerCount("SIGHUP")).toBe(before + 1);
-});
+test.for(SIGNALS)(
+	"exitHook: runs callbacks and exits on %s",
+	([signal, exitCode], { expect }) => {
+		const listenersBefore = new Set(process.listeners(signal));
+		const callback = vi.fn();
+		register(callback);
+
+		const signalHandler = process
+			.listeners(signal)
+			.find((listener) => !listenersBefore.has(listener));
+		if (signalHandler === undefined) {
+			throw new Error(`Expected exitHook() to register a ${signal} listener`);
+		}
+
+		const exit = vi.spyOn(process, "exit").mockImplementation((code) => {
+			throw new Error(`process.exit(${String(code)})`);
+		});
+		try {
+			expect(() => signalHandler(signal)).toThrow(`process.exit(${exitCode})`);
+			expect(callback).toHaveBeenCalledOnce();
+			expect(exit).toHaveBeenCalledWith(exitCode);
+		} finally {
+			exit.mockRestore();
+		}
+	}
+);
 
 test("exitHook: registers a listener for every termination signal", ({
 	expect,
 }) => {
 	const before = Object.fromEntries(
-		SIGNALS.map((signal) => [signal, process.listenerCount(signal)])
+		SIGNALS.map(([signal]) => [signal, process.listenerCount(signal)])
 	);
 
 	register();
 
-	for (const signal of SIGNALS) {
+	for (const [signal] of SIGNALS) {
 		expect(process.listenerCount(signal)).toBe(before[signal] + 1);
 	}
 });
@@ -45,7 +66,7 @@ test("exitHook: removes every signal listener once the last callback unregisters
 	expect,
 }) => {
 	const before = Object.fromEntries(
-		SIGNALS.map((signal) => [signal, process.listenerCount(signal)])
+		SIGNALS.map(([signal]) => [signal, process.listenerCount(signal)])
 	);
 
 	const unregisterFirst = register();
@@ -53,12 +74,12 @@ test("exitHook: removes every signal listener once the last callback unregisters
 
 	unregisterFirst();
 	// Listeners stay while another callback is still registered.
-	for (const signal of SIGNALS) {
+	for (const [signal] of SIGNALS) {
 		expect(process.listenerCount(signal)).toBe(before[signal] + 1);
 	}
 
 	unregisterSecond();
-	for (const signal of SIGNALS) {
+	for (const [signal] of SIGNALS) {
 		expect(process.listenerCount(signal)).toBe(before[signal]);
 	}
 });
