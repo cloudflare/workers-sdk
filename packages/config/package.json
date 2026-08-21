@@ -32,7 +32,8 @@
 		"check:type": "tsc",
 		"dev": "tsdown --watch",
 		"test:ci": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./type-tests/tsconfig.json"
 	},
 	"dependencies": {
 		"zod": "catalog:default"
