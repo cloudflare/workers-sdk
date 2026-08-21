@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
-import { chdir } from "node:process";
 import { resolve } from "node:path";
+import { chdir } from "node:process";
 import { beforeEach, describe, test, vi } from "vitest";
 import { setupProjectDirectory } from "../project-directory";
 import type { C3Context } from "types";
