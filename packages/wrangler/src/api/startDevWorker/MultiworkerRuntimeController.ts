@@ -235,7 +235,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 						type: "devRegistryUpdate",
 						registry,
 					});
-				}
+				},
+				this.#remoteProxySessionsData.get(data.config.name)
+					?.hyperdriveConnectionStrings
 			);
 
 			// `handleUncaughtError` is a shared Miniflare option, and the
