@@ -141,7 +141,22 @@ function handleConnect(request: Request, env: Env): Response {
 	// the WebSocket with code 1011 (see pipeSocketOverWebSocket).
 	pipeSocketOverWebSocket(socket, server).catch(() => {});
 
-	return new Response(null, { status: 101, webSocket: client });
+	const headers = new Headers();
+	// Hyperdrive mints per-session credentials and checks them on the socket it
+	// just opened, so the caller has to present *this* request's values. Handing
+	// them back on the upgrade response keeps them tied to the connection they
+	// belong to — fetching them separately can land on a different instance and
+	// hand out credentials the socket will reject.
+	const connectionString = (
+		env[request.headers.get("MF-Binding") as string] as
+			| { connectionString?: unknown }
+			| undefined
+	)?.connectionString;
+	if (typeof connectionString === "string") {
+		headers.set("MF-HD-Connection-String", connectionString);
+	}
+
+	return new Response(null, { status: 101, webSocket: client, headers });
 }
 
 /**
