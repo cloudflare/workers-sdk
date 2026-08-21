@@ -360,7 +360,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						(typeof shouldSuggestSkills === "function" &&
 							shouldSuggestSkills(args) === true);
 					// We are currently not sure whether the automatic skills installation is beneficial
-					// so we are skipping it for the time being (we might potentially re-enable it later on) 
+					// so we are skipping it for the time being (we might potentially re-enable it later on)
 					const shouldInstall = false;
 
 					if (suggestSkillsEnabled) {
