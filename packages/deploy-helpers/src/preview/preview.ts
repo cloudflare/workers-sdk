@@ -28,9 +28,12 @@ import {
 	assemblePreviewScriptSettings,
 	extractConfigBindings,
 	getBranchName,
+	getCommitSha,
 	getHeadCommitMessage,
 	getHeadCommitRef,
 	getPreviewOwnedContainerClassNames,
+	getPullRequestMetadata,
+	getRepositoryUrl,
 	previewContainerAppName,
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
@@ -43,6 +46,7 @@ import type {
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
+import type { PullRequestMetadata } from "./shared";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	Config,
@@ -404,6 +408,9 @@ async function assemblePreviewDeploymentSettings(
 	options: {
 		message?: string;
 		tag?: string;
+		repositoryUrl?: string;
+		pullRequest?: PullRequestMetadata;
+		commitSha?: string;
 		assetsOptions?: PreviewAssetsOptions;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
@@ -440,9 +447,24 @@ async function assemblePreviewDeploymentSettings(
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
 	}
-	if (options.message || options.tag) {
+	const repositoryUrl = options.repositoryUrl;
+	const pullRequest = options.pullRequest;
+	const commitSha = options.commitSha;
+	if (
+		options.message ||
+		options.tag ||
+		repositoryUrl ||
+		pullRequest ||
+		commitSha
+	) {
 		request.annotations = {
+			...(commitSha && { "workers/commit_sha": commitSha }),
 			...(options.message && { "workers/message": options.message }),
+			...(pullRequest?.number && {
+				"workers/pull_request_number": pullRequest.number,
+			}),
+			...(pullRequest?.url && { "workers/pull_request_url": pullRequest.url }),
+			...(repositoryUrl && { "workers/repository_url": repositoryUrl }),
 			...(options.tag && { "workers/tag": options.tag }),
 		};
 	}
@@ -550,9 +572,15 @@ function formatUrlLines(label: string, urls: string[] | undefined): string[] {
 function formatPreviewDeploymentSummary(
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
-	isNew: boolean
+	isNew: boolean,
+	pullRequest?: PullRequestMetadata
 ): string {
 	const statusLabel = isNew ? chalk.green("(new)") : chalk.dim("(updated)");
+	const pullRequestUrl =
+		deployment.annotations?.["workers/pull_request_url"] ?? pullRequest?.url;
+	const pullRequestNumber =
+		deployment.annotations?.["workers/pull_request_number"] ??
+		pullRequest?.number;
 
 	return [
 		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
@@ -560,6 +588,13 @@ function formatPreviewDeploymentSummary(
 		"",
 		`${chalk.bold("Deployment ID:")} ${deployment.id}`,
 		...formatUrlLines("Deployment", deployment.urls),
+		...(pullRequestUrl || pullRequestNumber
+			? [
+					`${chalk.bold("Pull Request:")} ${
+						pullRequestUrl ?? `#${pullRequestNumber}`
+					}`,
+				]
+			: []),
 	].join("\n");
 }
 
@@ -676,6 +711,9 @@ export async function preview(
 		!args.message && shouldUseCIMetadataFallback()
 			? getHeadCommitMessage()
 			: undefined;
+	const repositoryUrl = getRepositoryUrl();
+	const pullRequest = getPullRequestMetadata();
+	const commitSha = getCommitSha();
 
 	let existingPreview: PreviewResource | null = null;
 	try {
@@ -740,6 +778,9 @@ export async function preview(
 		{
 			message: args.message ?? fallbackMessage,
 			tag: args.tag ?? fallbackTag,
+			repositoryUrl,
+			pullRequest,
+			commitSha,
 			assetsOptions,
 		}
 	);
@@ -781,7 +822,12 @@ export async function preview(
 		);
 	} else {
 		logger.log(
-			formatPreviewDeploymentSummary(previewResource, deployment, isNewPreview)
+			formatPreviewDeploymentSummary(
+				previewResource,
+				deployment,
+				isNewPreview,
+				pullRequest
+			)
 		);
 
 		const topLevelBindings = getBindings(config);
