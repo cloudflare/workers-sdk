@@ -31,6 +31,7 @@ import { gitCommit, offerGit } from "./git";
 import { showHelp } from "./help";
 import { reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
+import { setupProjectDirectory } from "./project-directory";
 import {
 	copyTemplateFiles,
 	createContext,
@@ -38,7 +39,6 @@ import {
 	updatePackageScripts,
 	writeAgentsMd,
 } from "./templates";
-import { setupProjectDirectory } from "./project-directory";
 import { addTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
