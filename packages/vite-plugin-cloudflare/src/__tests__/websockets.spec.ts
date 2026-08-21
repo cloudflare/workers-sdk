@@ -1,5 +1,6 @@
 import http from "node:http";
 import net from "node:net";
+import { PassThrough } from "node:stream";
 import { DeferredPromise, Miniflare, Response } from "miniflare";
 import {
 	afterEach,
@@ -11,7 +12,7 @@ import {
 	test,
 	vi,
 } from "vitest";
-import { handleWebSocket } from "../websockets";
+import { handleWebSocket, waitForSocketDrain } from "../websockets";
 import type { AddressInfo } from "node:net";
 
 describe("handleWebSocket", () => {
@@ -464,5 +465,124 @@ describe("handleWebSocket", () => {
 		expect(raw).toContain("HTTP/1.1 401");
 		expect(raw).toContain("x-custom-auth: denied");
 		expect(raw).toContain(expectedBody);
+	});
+
+	test("terminates response writer and cleans up resources when client disconnects during backpressure", async ({
+		expect,
+	}) => {
+		const mf = await listen();
+
+		// Create a large stream that triggers backpressure on write
+		const largeChunk = new Uint8Array(128 * 1024).fill(65);
+		const stream = new ReadableStream<Uint8Array>({
+			async pull(controller) {
+				controller.enqueue(largeChunk);
+			},
+		});
+
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
+			new Response(stream, {
+				status: 403,
+				headers: {
+					"Content-Type": "application/octet-stream",
+				},
+			})
+		);
+
+		const socket = await connect();
+		// Pause socket so client does not consume incoming bytes, triggering backpressure
+		socket.pause();
+
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Wait briefly for server to write initial chunk and block on drain wait
+		await new Promise((resolve) => setTimeout(resolve, 100));
+
+		// Client abruptly disconnects while server is waiting for drain
+		socket.destroy();
+
+		// Verify server-side response stream reader is released and response writer terminates
+		await vi.waitFor(() => {
+			expect(stream.locked).toBe(false);
+		});
+
+		// Verify server remains responsive and did not hang
+		const response = await fetch(`http://127.0.0.1:${port}`);
+		expect(response.ok).toBe(true);
+	});
+});
+
+describe("waitForSocketDrain", () => {
+	test("resolves when drain event is emitted and removes all listeners", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		const promise = waitForSocketDrain(socket);
+
+		expect(socket.listenerCount("drain")).toBe(1);
+		expect(socket.listenerCount("close")).toBe(1);
+		expect(socket.listenerCount("error")).toBe(1);
+
+		socket.emit("drain");
+		await promise;
+
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
+	});
+
+	test("resolves when close event is emitted and removes all listeners", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		const promise = waitForSocketDrain(socket);
+
+		expect(socket.listenerCount("drain")).toBe(1);
+		expect(socket.listenerCount("close")).toBe(1);
+		expect(socket.listenerCount("error")).toBe(1);
+
+		socket.emit("close");
+		await promise;
+
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
+	});
+
+	test("resolves when error event is emitted and removes all listeners", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		const promise = waitForSocketDrain(socket);
+
+		expect(socket.listenerCount("drain")).toBe(1);
+		expect(socket.listenerCount("close")).toBe(1);
+		expect(socket.listenerCount("error")).toBe(1);
+
+		socket.emit("error", new Error("connection reset"));
+		await promise;
+
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
+	});
+
+	test("resolves immediately if socket is already destroyed", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		socket.destroy();
+
+		await waitForSocketDrain(socket);
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
 	});
 });

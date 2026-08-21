@@ -188,6 +188,39 @@ function hasSandboxOrigin(origin: string) {
 }
 
 /**
+ * Waits for a socket to drain when `write()` returns false.
+ * Resolves on 'drain', 'close', or 'error' to prevent hanging indefinitely
+ * if the remote peer disconnects while backpressure is being relieved.
+ */
+export function waitForSocketDrain(socket: Duplex): Promise<void> {
+	if (socket.destroyed || socket.closed) {
+		return Promise.resolve();
+	}
+	return new Promise<void>((resolve) => {
+		const cleanup = () => {
+			socket.off("drain", onDrain);
+			socket.off("close", onClose);
+			socket.off("error", onError);
+		};
+		const onDrain = () => {
+			cleanup();
+			resolve();
+		};
+		const onClose = () => {
+			cleanup();
+			resolve();
+		};
+		const onError = () => {
+			cleanup();
+			resolve();
+		};
+		socket.once("drain", onDrain);
+		socket.once("close", onClose);
+		socket.once("error", onError);
+	});
+}
+
+/**
  * Writes an HTTP response directly to a raw socket with backpressure support and orderly EOF.
  * Used when a Worker returns a non-101 rejection response to a WebSocket upgrade request.
  */
@@ -235,7 +268,7 @@ async function writeHttpResponse(
 	}
 
 	if (socket.write(headerString) === false) {
-		await new Promise<void>((resolve) => socket.once("drain", resolve));
+		await waitForSocketDrain(socket);
 	}
 
 	if (response.body != null && requestMethod !== "HEAD") {
@@ -250,7 +283,7 @@ async function writeHttpResponse(
 					break;
 				}
 				if (socket.write(value) === false) {
-					await new Promise<void>((resolve) => socket.once("drain", resolve));
+					await waitForSocketDrain(socket);
 				}
 			}
 		} finally {
