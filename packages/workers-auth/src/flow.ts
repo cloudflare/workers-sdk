@@ -8,8 +8,10 @@ import { getOauthToken } from "./callback-server";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getOauthTokenViaDeviceFlow } from "./device-flow";
 import { getRevokeUrlFromEnv } from "./env-vars";
+import { ErrorInvalidGrant } from "./errors";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+import { withRefreshLock } from "./refresh-lock";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
 import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
@@ -218,6 +220,16 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 	let activeProfile = "default";
 
+	/**
+	 * In-flight refresh promises keyed by storage path, used to deduplicate
+	 * concurrent `refreshToken` calls within the same process. Without this,
+	 * two parallel API requests that both see an expired token would each try
+	 * to acquire the file lock — and because the lock is held by the same PID,
+	 * the second caller would wait out the full retry budget (~30 s) before
+	 * proceeding.
+	 */
+	const inflightRefreshes = new Map<string, Promise<boolean>>();
+
 	function getStorage(profile?: string): AuthConfigStorage {
 		return ctx.storageFactory(profile ?? activeProfile);
 	}
@@ -322,40 +334,207 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	}
 
 	async function refreshToken(profile?: string): Promise<boolean> {
-		// `exchangeRefreshTokenForAccessToken` reads the refresh token fresh from
-		// disk on every call, so we always pick up the latest rotation written by a
-		// sibling Wrangler process. Refresh tokens are single-use, so a long-lived
-		// process such as `wrangler dev` would otherwise send a stale value and get
-		// a 401 from the token endpoint.
 		const storage = getStorage(profile);
+		const storagePath = storage.path();
 
-		try {
-			const {
-				token: { value: oauth_token, expiry: expiration_time } = {
-					value: "",
-					expiry: "",
-				},
-				refreshToken: { value: refresh_token } = {},
-				scopes,
-			} = await exchangeRefreshTokenForAccessToken(
-				ctx.logger,
-				ctx.isNonInteractiveOrCI,
-				getClientId(),
-				storage
-			);
-			storage.write({
-				oauth_token,
-				expiration_time,
-				refresh_token,
-				scopes,
-			});
-			return true;
-		} catch (e) {
-			ctx.logger.debug(
-				`Token refresh failed: ${e instanceof Error ? e.message : String(e)}`
-			);
-			return false;
+		const existing = inflightRefreshes.get(storagePath);
+		if (existing) {
+			return existing;
 		}
+
+		const promise = doRefreshToken(storage);
+		inflightRefreshes.set(storagePath, promise);
+		try {
+			return await promise;
+		} finally {
+			inflightRefreshes.delete(storagePath);
+		}
+	}
+
+	/**
+	 * Perform the actual token refresh, serialized behind an advisory file lock.
+	 *
+	 * Callers should go through {@link refreshToken} which deduplicates
+	 * concurrent in-process calls.
+	 *
+	 * @param storage - The auth config storage to refresh against.
+	 * @returns `true` if the refresh succeeded, `false` otherwise.
+	 */
+	async function doRefreshToken(storage: AuthConfigStorage): Promise<boolean> {
+		const lockDir = storage.path() + ".refresh-lock";
+
+		return withRefreshLock(lockDir, async () => {
+			// After acquiring the lock, re-read the auth state — a sibling
+			// process may have already completed the refresh while we waited.
+			const postLockState = readStoredAuthState({
+				warningLogger: ctx.logger,
+				storage,
+			});
+			if (
+				postLockState.accessToken &&
+				new Date() < new Date(postLockState.accessToken.expiry)
+			) {
+				return true;
+			}
+
+			// Use the refresh token we just read so the same value is both sent
+			// to the server and compared in the retry logic — avoids a TOCTOU
+			// race where a sibling rotates the on-disk value between this read
+			// and the exchange function's independent read.
+			const sentRefreshToken = postLockState.refreshToken?.value;
+
+			try {
+				return await doExchange(storage, sentRefreshToken);
+			} catch (e) {
+				if (isInvalidGrantError(e)) {
+					return handleInvalidGrant(storage, sentRefreshToken, e);
+				}
+				ctx.logger.warn(`Token refresh failed: ${describeError(e)}`);
+				return false;
+			}
+		});
+	}
+
+	/**
+	 * Execute the refresh-token exchange and persist the result.
+	 *
+	 * @param storage - The auth config storage to write to.
+	 * @param refreshTokenValue - The refresh token value to send. Passing it
+	 *   explicitly avoids a second disk read inside
+	 *   `exchangeRefreshTokenForAccessToken` that could race with a sibling
+	 *   process rotating the on-disk value.
+	 * @returns `true` on success.
+	 */
+	async function doExchange(
+		storage: AuthConfigStorage,
+		refreshTokenValue?: string
+	): Promise<boolean> {
+		const {
+			token: { value: oauth_token, expiry: expiration_time } = {
+				value: "",
+				expiry: "",
+			},
+			refreshToken: { value: refresh_token } = {},
+			scopes,
+		} = await exchangeRefreshTokenForAccessToken(
+			ctx.logger,
+			ctx.isNonInteractiveOrCI,
+			getClientId(),
+			storage,
+			refreshTokenValue
+		);
+		storage.write({
+			oauth_token,
+			expiration_time,
+			refresh_token,
+			scopes,
+		});
+		return true;
+	}
+
+	/**
+	 * Handle an `invalid_grant` error from the token endpoint by checking
+	 * whether a sibling process has already rotated the refresh token on
+	 * disk. If so, either the sibling's refresh already produced a fresh
+	 * access token (skip) or the on-disk refresh token differs and we can
+	 * retry the exchange once with the new value.
+	 *
+	 * @param storage - The auth config storage.
+	 * @param sentRefreshToken - The refresh token value that was sent in the
+	 *   failed exchange, so we can detect on-disk rotation.
+	 * @param originalError - The original error for logging.
+	 * @returns `true` if the refresh ultimately succeeded, `false` otherwise.
+	 */
+	async function handleInvalidGrant(
+		storage: AuthConfigStorage,
+		sentRefreshToken: string | undefined,
+		originalError: unknown
+	): Promise<boolean> {
+		const freshState = readStoredAuthState({
+			warningLogger: ctx.logger,
+			storage,
+		});
+
+		if (
+			freshState.accessToken &&
+			new Date() < new Date(freshState.accessToken.expiry)
+		) {
+			return true;
+		}
+
+		if (
+			freshState.refreshToken?.value &&
+			freshState.refreshToken.value !== sentRefreshToken
+		) {
+			try {
+				return await doExchange(storage, freshState.refreshToken.value);
+			} catch (retryErr) {
+				ctx.logger.warn(
+					`Token refresh retry failed: ${describeError(retryErr)}`
+				);
+				return false;
+			}
+		}
+
+		ctx.logger.warn(`Token refresh failed: ${describeError(originalError)}`);
+		return false;
+	}
+
+	/**
+	 * Extract a human-readable message from an unknown thrown value.
+	 *
+	 * `exchangeRefreshTokenForAccessToken` can throw plain objects (the raw
+	 * parsed JSON body for >= 400 responses, e.g. `{ error: "invalid_grant",
+	 * error_description: "..." }`), `Error` instances, or strings. Using
+	 * `String()` on a plain object produces the unhelpful `"[object Object]"`,
+	 * so this helper prefers the OAuth `error` / `error_description` fields
+	 * when available.
+	 *
+	 * @param e - The caught error value.
+	 * @returns A readable string suitable for a user-facing warning.
+	 */
+	function describeError(e: unknown): string {
+		if (e instanceof Error) {
+			return e.message;
+		}
+		if (typeof e === "string") {
+			return e;
+		}
+		if (typeof e === "object" && e !== null) {
+			const obj = e as Record<string, unknown>;
+			if (typeof obj.error === "string") {
+				return obj.error_description
+					? `${obj.error}: ${obj.error_description}`
+					: obj.error;
+			}
+			return JSON.stringify(e);
+		}
+		return String(e);
+	}
+
+	/**
+	 * Detect an `invalid_grant` error regardless of its shape.
+	 *
+	 * `exchangeRefreshTokenForAccessToken` can throw either:
+	 * - An `ErrorInvalidGrant` instance (structured error from `toErrorClass`)
+	 * - A plain object `{ error: "invalid_grant" }` (raw JSON from a >= 400 response)
+	 *
+	 * @param e - The caught error value.
+	 * @returns `true` if the error represents an `invalid_grant` OAuth error.
+	 */
+	function isInvalidGrantError(e: unknown): boolean {
+		if (e instanceof ErrorInvalidGrant) {
+			return true;
+		}
+		if (
+			typeof e === "object" &&
+			e !== null &&
+			"error" in e &&
+			(e as { error: unknown }).error === "invalid_grant"
+		) {
+			return true;
+		}
+		return false;
 	}
 
 	async function loginOrRefreshIfRequired(
