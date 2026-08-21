@@ -225,12 +225,12 @@ export type CommandDefinition<
 		sendMetrics?: boolean;
 
 		/**
-		 * After the command handler completes successfully, suggest installing
-		 * Cloudflare skills for detected AI coding agents that don't have them.
+		 * After the command handler completes successfully, check whether
+		 * Wrangler-installed Cloudflare skills have an available update.
 		 *
-		 * When set to `true`, the suggestion always runs after the handler.
+		 * When set to `true`, the check always runs after the handler.
 		 * When set to a function, it receives the parsed args and should return
-		 * `true` to enable the suggestion — use this to skip the prompt in modes
+		 * `true` to enable the check — use this to skip the prompt in modes
 		 * where interactive output is inappropriate (e.g. `--json`).
 		 *
 		 * @default false
