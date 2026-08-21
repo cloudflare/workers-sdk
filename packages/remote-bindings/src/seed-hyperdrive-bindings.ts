@@ -1,3 +1,4 @@
+import WebSocket from "ws";
 import type { Binding } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
 
@@ -10,9 +11,11 @@ import type { RemoteProxyConnectionString } from "miniflare";
  * authenticate through the proxy — the user's local placeholder credentials
  * only get as far as the server greeting.
  *
- * This fetches the edge binding's `connectionString` from the remote-proxy
- * worker's `MF-HD-Seed` endpoint so the local Hyperdrive binding can be
- * configured with credentials that match the live session.
+ * The credentials belong to the connection the edge opens, not to the binding
+ * in the abstract, so they have to be read from a real one: this opens a
+ * throwaway relay connection and takes the values the edge reports on the
+ * upgrade response. Asking for them through a separate request can land on a
+ * different instance and hand back credentials that connection will reject.
  *
  * The returned value is a live credential: callers MUST treat it as a secret
  * and MUST NOT log it.
@@ -21,26 +24,43 @@ async function fetchEdgeConnectionString(
 	remoteProxyConnectionString: RemoteProxyConnectionString,
 	bindingName: string
 ): Promise<string> {
-	const response = await fetch(String(remoteProxyConnectionString), {
-		headers: {
-			"MF-HD-Seed": "true",
-			"MF-Binding": bindingName,
-		},
+	const wsUrl = new URL(String(remoteProxyConnectionString));
+	wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
+
+	return new Promise<string>((resolve, reject) => {
+		const ws = new WebSocket(wsUrl.href, {
+			headers: {
+				"MF-Binding": bindingName,
+				// The edge ignores this for Hyperdrive, but the relay path requires
+				// the header to be present.
+				"MF-Connect-Address": "hyperdrive.local:0",
+			},
+		});
+		const fail = (reason: string) =>
+			reject(
+				new Error(
+					`Failed to seed remote Hyperdrive binding "${bindingName}": ${reason}`
+				)
+			);
+		const timer = setTimeout(() => {
+			ws.close();
+			fail("the remote proxy did not respond in time.");
+		}, 10_000);
+		ws.on("upgrade", (response) => {
+			clearTimeout(timer);
+			const connectionString = response.headers["mf-hd-connection-string"];
+			ws.close();
+			if (typeof connectionString === "string") {
+				resolve(connectionString);
+			} else {
+				fail("the remote proxy did not return a connection string.");
+			}
+		});
+		ws.on("error", (error) => {
+			clearTimeout(timer);
+			fail(error.message);
+		});
 	});
-	if (!response.ok) {
-		throw new Error(
-			`Failed to seed remote Hyperdrive binding "${bindingName}": ` +
-				`the remote proxy responded with status ${response.status}.`
-		);
-	}
-	const body = (await response.json()) as { connectionString?: unknown };
-	if (typeof body.connectionString !== "string") {
-		throw new Error(
-			`Failed to seed remote Hyperdrive binding "${bindingName}": ` +
-				`the remote proxy did not return a connection string.`
-		);
-	}
-	return body.connectionString;
 }
 
 /**
