@@ -260,7 +260,11 @@ export class DevRegistry {
 				unlinkSync(definitionPath);
 			} catch {}
 		} else if (stats && oldDefinition?.instanceId !== this.instanceId) {
-			this.log.warn(
+			// Debug rather than warn: a non-graceful exit leaves an entry behind, so
+			// this fires routinely on restart. Registration is rescheduled for when
+			// that entry expires, and keeps retrying while another process holds the
+			// name.
+			this.log.debug(
 				`Skipping registration of Worker ${name} as a Worker with this name is already registered in the dev registry by another process`
 			);
 			const retryDelay = Math.max(
