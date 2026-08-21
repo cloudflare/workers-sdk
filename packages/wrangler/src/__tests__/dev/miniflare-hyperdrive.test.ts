@@ -73,13 +73,13 @@ describe("hyperdrive bindings in local dev", () => {
 		expect(std.warn).toBe("");
 	});
 
-	it("warns when a remote binding's edge credentials could not be seeded", ({
+	it("warns when a remote binding is given no edge credentials", ({
 		expect,
 	}) => {
-		// Reached from dev entry points that cannot seed (the binding builder is
-		// synchronous), e.g. `unstable_getMiniflareWorkerOptions`. Without the
-		// warning the binding would silently fall back to placeholder credentials
-		// and fail to authenticate at the edge.
+		// Credentials come from the remote proxy session; reaching this means the
+		// caller did not pass them on. Without the warning the binding would
+		// silently fall back to placeholder credentials and fail to authenticate
+		// at the edge.
 		expect(
 			buildHyperdriveOptions(
 				{
@@ -96,7 +96,7 @@ describe("hyperdrive bindings in local dev", () => {
 			},
 		});
 		expect(std.warn).toContain(
-			`The Hyperdrive binding "HYPERDRIVE" is configured with "remote": true, but its edge credentials could not be seeded in this context`
+			`The Hyperdrive binding "HYPERDRIVE" is configured with "remote": true, but no edge credentials were provided for it`
 		);
 	});
 
