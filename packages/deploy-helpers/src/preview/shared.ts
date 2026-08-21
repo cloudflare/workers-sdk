@@ -60,6 +60,11 @@ export function getHeadCommitMessage(): string | undefined {
 	}
 }
 
+/**
+ * Detects the current commit's full SHA from well-known CI provider
+ * environment variables (GitHub Actions, GitLab CI, CircleCI), falling back
+ * to a generic `COMMIT_SHA` env var for providers without dedicated support.
+ */
 export function getCommitSha(): string | undefined {
 	return (
 		process.env.GITHUB_SHA ||
@@ -70,6 +75,20 @@ export function getCommitSha(): string | undefined {
 	);
 }
 
+/**
+ * Normalizes a repository URL into a canonical `https://` form suitable for
+ * display and for sending to the API as the `workers/repository_url`
+ * annotation.
+ *
+ * Repository URLs collected from CI env vars or `git config` can arrive in
+ * several different shapes depending on the provider and remote protocol,
+ * e.g. `git@github.com:org/repo.git` (SCP-like SSH), `ssh://git@host/org/repo`,
+ * or `https://user:token@host/org/repo.git` (HTTPS with embedded credentials
+ * or a `.git` suffix). This strips embedded credentials, query strings, and
+ * hash fragments, drops the `.git` suffix, and converts SSH remotes to their
+ * `https://` equivalent, so the same repository always normalizes to the
+ * same, safe-to-share URL regardless of how it was originally configured.
+ */
 function normalizeRepositoryUrl(repositoryUrl: string): string | undefined {
 	const trimmed = repositoryUrl.trim();
 	if (!trimmed) {
@@ -103,6 +122,18 @@ function normalizeRepositoryUrl(repositoryUrl: string): string | undefined {
 	}
 }
 
+/**
+ * Detects the current repository's URL from well-known CI provider
+ * environment variables (GitLab CI, CircleCI, Buildkite, Bitbucket, GitHub
+ * Actions, and a generic `REPOSITORY_URL` fallback), or from the local git
+ * remote when running in CI and no env var matched.
+ *
+ * The local git remote fallback is intentionally gated behind
+ * {@link shouldUseCIMetadataFallback}: unlike the env var checks, it shells
+ * out to read the developer's `git config`, so it's only attempted in CI to
+ * avoid uploading a local machine's repository details on every
+ * `wrangler preview` run outside CI.
+ */
 export function getRepositoryUrl(): string | undefined {
 	const repositoryUrl =
 		process.env.CI_PROJECT_URL ||
@@ -142,11 +173,21 @@ export function getRepositoryUrl(): string | undefined {
 	}
 }
 
+/**
+ * The pull/merge request number and URL detected from the current CI
+ * environment. Either field may be missing depending on what the detected
+ * CI provider exposes.
+ */
 export type PullRequestMetadata = {
 	number?: string;
 	url?: string;
 };
 
+/**
+ * Normalizes a pull/merge request number into a trimmed string, so callers
+ * don't need to handle the mix of numeric (e.g. a parsed JSON field) and
+ * string (e.g. an env var) representations that the various CI providers use.
+ */
 function normalizePullRequestNumber(number: string | number | undefined) {
 	if (number === undefined) {
 		return undefined;
@@ -156,6 +197,16 @@ function normalizePullRequestNumber(number: string | number | undefined) {
 	return normalizedNumber ? normalizedNumber : undefined;
 }
 
+/**
+ * Detects pull request metadata from a GitHub Actions environment.
+ *
+ * Prefers the `pull_request` event payload at `GITHUB_EVENT_PATH` (available
+ * for `pull_request`/`pull_request_target`-triggered workflows), which
+ * directly provides the PR number and URL. Falls back to parsing the PR
+ * number out of `GITHUB_REF` (formatted `refs/pull/<number>/merge`) and
+ * building the URL from `GITHUB_REPOSITORY`/`GITHUB_SERVER_URL`, which covers
+ * other trigger types where a `pull_request` payload isn't available.
+ */
 function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
 	if (process.env.GITHUB_EVENT_PATH) {
 		try {
@@ -192,6 +243,12 @@ function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
 	};
 }
 
+/**
+ * Detects merge request metadata from a GitLab CI merge request pipeline,
+ * using `CI_MERGE_REQUEST_IID` for the number and
+ * `CI_MERGE_REQUEST_PROJECT_URL` (or `CI_PROJECT_URL` as a fallback) to build
+ * the merge request URL.
+ */
 function getGitLabPullRequestMetadata(): PullRequestMetadata | undefined {
 	const number = normalizePullRequestNumber(process.env.CI_MERGE_REQUEST_IID);
 	const projectUrl =
@@ -211,6 +268,14 @@ function getGitLabPullRequestMetadata(): PullRequestMetadata | undefined {
 	};
 }
 
+/**
+ * Detects pull request metadata from generic, provider-agnostic env vars
+ * (`PULL_REQUEST_URL`/`PR_URL`/`CHANGE_URL`/`CIRCLE_PULL_REQUEST` for the URL,
+ * `PULL_REQUEST_NUMBER`/`PR_NUMBER`/`CHANGE_ID` for the number). These are
+ * conventions used by some CI providers and custom pipelines, but aren't
+ * officially documented, so this is a lower-confidence, best-effort fallback
+ * checked before the provider-specific detectors.
+ */
 function getDirectPullRequestMetadata(): PullRequestMetadata | undefined {
 	const directUrl =
 		process.env.PULL_REQUEST_URL ||
@@ -231,6 +296,13 @@ function getDirectPullRequestMetadata(): PullRequestMetadata | undefined {
 	return undefined;
 }
 
+/**
+ * Detects the pull/merge request associated with the current CI run, trying
+ * each supported source in order: direct/generic env vars, GitHub Actions,
+ * then GitLab CI. This is best effort — if none of the sources match (e.g.
+ * an unsupported CI provider, or running locally), the deployment proceeds
+ * without pull request metadata.
+ */
 export function getPullRequestMetadata(): PullRequestMetadata | undefined {
 	return (
 		getDirectPullRequestMetadata() ??
