@@ -8,14 +8,16 @@ export class CompatibilityFlagAssertions {
 	#compatibilityFlags: string[];
 	#optionsPath: string;
 	#relativeProjectPath: string;
-	#relativeWranglerConfigPath?: string;
+	#relativeConfigPath?: string;
+	#camelCaseConfigFields: boolean;
 
 	constructor(options: CommonOptions) {
 		this.#compatibilityDate = options.compatibilityDate;
 		this.#compatibilityFlags = options.compatibilityFlags;
 		this.#optionsPath = options.optionsPath;
 		this.#relativeProjectPath = options.relativeProjectPath;
-		this.#relativeWranglerConfigPath = options.relativeWranglerConfigPath;
+		this.#relativeConfigPath = options.relativeConfigPath;
+		this.#camelCaseConfigFields = options.camelCaseConfigFields ?? false;
 	}
 
 	/**
@@ -36,8 +38,8 @@ export class CompatibilityFlagAssertions {
 	 */
 	#buildErrorMessageBase(): string {
 		let message = `In project ${this.#relativeProjectPath}`;
-		if (this.#relativeWranglerConfigPath) {
-			message += `'s configuration file ${this.#relativeWranglerConfigPath}`;
+		if (this.#relativeConfigPath) {
+			message += `'s configuration file ${this.#relativeConfigPath}`;
 		}
 		return message;
 	}
@@ -46,13 +48,15 @@ export class CompatibilityFlagAssertions {
 	 * Constructs the configuration path part of the error message.
 	 */
 	#buildConfigPath(setting: string): string {
-		if (this.#relativeWranglerConfigPath) {
-			return `\`${setting}\``;
-		}
-
 		const camelCaseSetting = setting.replace(/_(\w)/g, (_, letter) =>
 			letter.toUpperCase()
 		);
+
+		if (this.#relativeConfigPath) {
+			// `cloudflare.config.ts` names its fields in camelCase, Wrangler
+			// configuration files use snake_case
+			return `\`${this.#camelCaseConfigFields ? camelCaseSetting : setting}\``;
+		}
 
 		return `\`${this.#optionsPath}.${camelCaseSetting}\``;
 	}
@@ -140,7 +144,12 @@ interface CommonOptions {
 	compatibilityFlags: string[];
 	optionsPath: string;
 	relativeProjectPath: string;
-	relativeWranglerConfigPath?: string;
+	relativeConfigPath?: string;
+	/**
+	 * Whether the configuration file names its fields in camelCase, as
+	 * `cloudflare.config.ts` does. Defaults to `false` (Wrangler's snake_case).
+	 */
+	camelCaseConfigFields?: boolean;
 }
 
 /**
