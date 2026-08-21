@@ -1,0 +1,23 @@
+packages/local-explorer-ui/src/components/workflows/StepRow.tsx
+  s_ddeb22e940afd2::t_484b2f91a34d79 171-175,226-258,260-266,276-277,288-289,292-299,302-304,312-318,320,323-324,329,346-356,361-388,409-413,417,429-430,513-523,525,536-541
+packages/workflows-shared/src/engine.ts
+  s_ddeb22e940afd2::t_7439ee51543692 43,122-145,461,469-498,626,647,716
+packages/wrangler/src/index.ts
+  s_ddeb22e940afd2::t_8aadf85ddb5276 545,2273-2276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5d7291521d56c9eba388a19efc0c12aed5d745a5",
+  "prompts": {},
+  "sessions": {
+    "s_ddeb22e940afd2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09088c208ffeTZ5b1KQeXuPzl4",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Olga Silva <osilva@cloudflare.com>"
+    }
+  }
+}
