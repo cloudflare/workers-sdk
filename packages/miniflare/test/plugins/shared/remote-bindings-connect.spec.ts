@@ -861,7 +861,8 @@ describe("Hyperdrive remote binding: local TCP bridge", () => {
 		const controller = new HyperdriveProxyController();
 		try {
 			const bridgePort = await controller.createRemoteTcpBridge({
-				name: "HYPERDRIVE",
+				name: "hyperdrive:0:HYPERDRIVE",
+				bindingName: "HYPERDRIVE",
 				remoteProxyConnectionString: edgeUrl,
 			});
 

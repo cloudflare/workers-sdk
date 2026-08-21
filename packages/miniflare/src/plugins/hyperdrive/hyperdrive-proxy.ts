@@ -241,20 +241,23 @@ export class HyperdriveProxyController {
 	 * @returns the local bridge port the designator should target.
 	 */
 	async createRemoteTcpBridge(config: {
-		// Hyperdrive binding name (used for the server key and the `MF-Binding`
-		// header the edge relay dispatches on).
+		// Unique per-worker key for this bridge (see `getHyperdriveServiceName`),
+		// used to track the listener across reloads.
 		name: string;
+		// The binding name as the Worker declares it. This is what the edge relay
+		// dispatches on, so it must stay unqualified.
+		bindingName: string;
 		// The remote proxy connection string (a local URL that upgrades to a
 		// WebSocket relaying to the edge Hyperdrive binding).
 		remoteProxyConnectionString: URL;
 	}): Promise<number> {
-		const { name, remoteProxyConnectionString } = config;
+		const { name, bindingName, remoteProxyConnectionString } = config;
 		const wsUrl = new URL(remoteProxyConnectionString.href);
 		wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
 		const wsHref = wsUrl.href;
 
 		const server = net.createServer((clientSocket) => {
-			this.#handleRemoteBridgeConnection(clientSocket, wsHref, name);
+			this.#handleRemoteBridgeConnection(clientSocket, wsHref, bindingName);
 		});
 		server.on("error", (err) => {
 			this.log?.error(

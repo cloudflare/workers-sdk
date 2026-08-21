@@ -133,7 +133,7 @@ export const HyperdriveSchema = z
 
 export const HYPERDRIVE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hyperdrive",
-	getBindings(options, workerIndex) {
+	getBindings(options, _sharedOptions, workerIndex) {
 		return getHyperdrives(options.config, options.dev).map<Worker_Binding>(
 			([name, url]) => {
 				const database = url.pathname.replace("/", "");
@@ -191,6 +191,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 				const bridgePort =
 					await hyperdriveProxyController.createRemoteTcpBridge({
 						name: getHyperdriveServiceName(workerIndex, name),
+						bindingName: name,
 						remoteProxyConnectionString,
 					});
 				services.push({
