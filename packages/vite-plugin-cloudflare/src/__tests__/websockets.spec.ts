@@ -470,13 +470,26 @@ describe("handleWebSocket", () => {
 	test("terminates response writer and cleans up resources when client disconnects during backpressure", async ({
 		expect,
 	}) => {
+		const unhandled = vi.fn();
+		process.on("unhandledRejection", unhandled);
+		onTestFinished(() => {
+			process.off("unhandledRejection", unhandled);
+		});
+		const backpressureEntered = new DeferredPromise<void>();
+		httpServer.prependOnceListener("upgrade", (_request, serverSocket) => {
+			vi.spyOn(serverSocket, "write")
+				.mockImplementationOnce(() => true)
+				.mockImplementationOnce(() => {
+					backpressureEntered.resolve();
+					return false;
+				});
+		});
 		const mf = await listen();
 
-		// Create a large stream that triggers backpressure on write
-		const largeChunk = new Uint8Array(128 * 1024).fill(65);
+		const chunk = new Uint8Array(1024).fill(65);
 		const stream = new ReadableStream<Uint8Array>({
-			async pull(controller) {
-				controller.enqueue(largeChunk);
+			pull(controller) {
+				controller.enqueue(chunk);
 			},
 		});
 
@@ -490,9 +503,6 @@ describe("handleWebSocket", () => {
 		);
 
 		const socket = await connect();
-		// Pause socket so client does not consume incoming bytes, triggering backpressure
-		socket.pause();
-
 		socket.write(
 			"GET / HTTP/1.1\r\n" +
 				`Host: 127.0.0.1:${port}\r\n` +
@@ -502,11 +512,9 @@ describe("handleWebSocket", () => {
 				"Sec-WebSocket-Version: 13\r\n\r\n"
 		);
 
-		// Wait briefly for server to write initial chunk and block on drain wait
-		await new Promise((resolve) => setTimeout(resolve, 100));
-
-		// Client abruptly disconnects while server is waiting for drain
-		socket.destroy();
+		await backpressureEntered;
+		expect(stream.locked).toBe(true);
+		socket.resetAndDestroy();
 
 		// Verify server-side response stream reader is released and response writer terminates
 		await vi.waitFor(() => {
@@ -516,6 +524,7 @@ describe("handleWebSocket", () => {
 		// Verify server remains responsive and did not hang
 		const response = await fetch(`http://127.0.0.1:${port}`);
 		expect(response.ok).toBe(true);
+		expect(unhandled).not.toHaveBeenCalled();
 	});
 });
 
