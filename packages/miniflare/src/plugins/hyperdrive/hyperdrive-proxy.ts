@@ -114,6 +114,11 @@ function buildTlsConnectionOptions(
 export class HyperdriveProxyController {
 	// Map hyperdrive binding name to proxy server
 	#servers = new Map<string, net.Server>();
+	// Port of the local TCP bridge standing in for each remote binding, so that
+	// Node-side bindings can expose an address Node can actually dial (the
+	// `*.hyperdrive.local` host in the connection string only resolves inside
+	// workerd).
+	#remoteBridgePorts = new Map<string, number>();
 	log?: Log;
 
 	/**
@@ -156,6 +161,11 @@ export class HyperdriveProxyController {
 		});
 		this.#servers.set(name, server);
 		return port;
+	}
+
+	/** Port of the local TCP bridge for a remote binding, if one is running. */
+	getRemoteBridgePort(name: string): number | undefined {
+		return this.#remoteBridgePorts.get(name);
 	}
 
 	/**
@@ -283,6 +293,7 @@ export class HyperdriveProxyController {
 		// the old listener and its live edge relays leak for the session's lifetime.
 		this.#servers.get(`remote:${name}`)?.close();
 		this.#servers.set(`remote:${name}`, server);
+		this.#remoteBridgePorts.set(name, port);
 		return port;
 	}
 
