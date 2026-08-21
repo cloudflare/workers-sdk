@@ -415,6 +415,12 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		/**
+		 * Edge credentials for remote Hyperdrive bindings, prepared once when the
+		 * remote proxy session started (see `maybeStartOrUpdateRemoteProxySession`).
+		 * Without them a remote Hyperdrive binding cannot authenticate at the edge.
+		 */
+		hyperdriveConnectionStrings?: ReadonlyMap<string, string>;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -427,6 +433,12 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		/**
+		 * Edge credentials for remote Hyperdrive bindings, prepared once when the
+		 * remote proxy session started (see `maybeStartOrUpdateRemoteProxySession`).
+		 * Without them a remote Hyperdrive binding cannot authenticate at the edge.
+		 */
+		hyperdriveConnectionStrings?: ReadonlyMap<string, string>;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -440,6 +452,12 @@ export function unstable_getMiniflareWorkerOptions(
 	options?: {
 		envFiles?: string[];
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		/**
+		 * Edge credentials for remote Hyperdrive bindings, prepared once when the
+		 * remote proxy session started (see `maybeStartOrUpdateRemoteProxySession`).
+		 * Without them a remote Hyperdrive binding cannot authenticate at the edge.
+		 */
+		hyperdriveConnectionStrings?: ReadonlyMap<string, string>;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 			enableContainers?: boolean;
@@ -492,7 +510,8 @@ export function unstable_getMiniflareWorkerOptions(
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
 		},
-		options?.remoteProxyConnectionString
+		options?.remoteProxyConnectionString,
+		options?.hyperdriveConnectionStrings
 	);
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
