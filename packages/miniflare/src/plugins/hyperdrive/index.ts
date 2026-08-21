@@ -184,11 +184,18 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 						nodeUrl.hostname = "127.0.0.1";
 						nodeUrl.port = String(bridgePort);
 					}
+					// Every credential field has to come from the same source as the
+					// address. workerd's binding carries the values for its own
+					// connection, so leaving any of them un-overridden mixes two sets
+					// of credentials and Hyperdrive rejects the login.
 					const connectionOverrides: Record<string | symbol, string | number> =
 						{
 							connectionString: `${nodeUrl}`,
 							port: Number.parseInt(nodeUrl.port),
 							host: nodeUrl.hostname,
+							user: decodeURIComponent(nodeUrl.username),
+							password: decodeURIComponent(nodeUrl.password),
+							database: decodeURIComponent(nodeUrl.pathname.replace("/", "")),
 						};
 					const proxyNodeBinding = new ProxyNodeBinding({
 						get(target, prop) {
