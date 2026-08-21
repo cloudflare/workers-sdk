@@ -67,6 +67,7 @@ describe("handleWebSocket", () => {
 	 */
 	async function connect() {
 		const socket = net.connect(port, "127.0.0.1");
+		socket.on("error", () => {});
 		openSockets.add(socket);
 		socket.on("close", () => openSockets.delete(socket));
 		await new Promise<void>((r) => socket.on("connect", r));
@@ -424,22 +425,28 @@ describe("handleWebSocket", () => {
 	test("delivers non-101 HTTP response when Worker rejects WebSocket upgrade", async ({
 		expect,
 	}) => {
-		startMiniflare(`export default {
-			fetch() {
-				return new Response("Unauthorized: upgrade rejected", {
-					status: 401,
-					headers: {
-						"X-Custom-Auth": "denied",
-						"Content-Type": "text/plain",
-					},
-				});
-			}
-		}`);
-		await listen();
+		const largePayload = "X".repeat(64 * 1024);
+		const expectedBody = "Unauthorized: upgrade rejected\n" + largePayload;
+		const mf = await listen();
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
+			new Response(expectedBody, {
+				status: 401,
+				headers: {
+					"X-Custom-Auth": "denied",
+					"Content-Type": "text/plain",
+				},
+			})
+		);
 
 		const socket = await connect();
 
 		const chunks: Buffer[] = [];
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+		socket.on("end", () => {
+			socket.end();
+		});
 		socket.on("data", (chunk) => chunks.push(chunk));
 
 		socket.write(
@@ -451,20 +458,11 @@ describe("handleWebSocket", () => {
 				"Sec-WebSocket-Version: 13\r\n\r\n"
 		);
 
-		await vi.waitFor(
-			() => {
-				const raw = Buffer.concat(chunks).toString("utf8");
-				expect(raw).toContain("HTTP/1.1 401");
-				expect(raw).toContain("Unauthorized: upgrade rejected");
-			},
-			{ timeout: 10_000 }
-		);
+		await closed;
 
 		const raw = Buffer.concat(chunks).toString("utf8");
 		expect(raw).toContain("HTTP/1.1 401");
 		expect(raw).toContain("x-custom-auth: denied");
-		expect(raw).toContain("Unauthorized: upgrade rejected");
-
-		socket.destroy();
+		expect(raw).toContain(expectedBody);
 	});
 });
