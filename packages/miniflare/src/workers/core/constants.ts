@@ -18,6 +18,8 @@ export const CorePaths = {
 	STREAM_VIDEO: "/__cf_local/stream",
 	/** Local image delivery endpoint (outside /cdn-cgi/ for tunnel access) */
 	IMAGE_DELIVERY: "/__cf_local/imagedelivery",
+	/** Local Direct Creator Upload completion endpoint (outside /cdn-cgi/ for tunnel access) */
+	IMAGE_UPLOAD: "/__cf_local/imageupload",
 	/** Public R2 bucket object serving endpoint */
 	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 	/** S3-compatible API endpoint for local R2 buckets */

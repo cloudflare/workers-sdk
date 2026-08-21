@@ -44,6 +44,8 @@ async function handleCommand(images, op, args) {
 			return hosted.image(args.id).delete();
 		case "signedUrl":
 			return hosted.image(args.id).signedUrl(args.options);
+		case "createDirectUpload":
+			return hosted.createDirectUpload(args.options);
 		case "list":
 			return hosted.list(args.options);
 		default:
@@ -609,5 +611,148 @@ describe("Images signed URLs", () => {
 		);
 		expect(response.status).toBe(200);
 		await response.arrayBuffer();
+	});
+});
+
+// `dispatchFetch()` doesn't preserve the auto-generated multipart boundary
+// when given a `FormData` body directly, so the body is built manually here
+// with an explicit `Content-Type` header instead.
+function completeDirectUpload(
+	mf: Miniflare,
+	uploadURL: string,
+	bytes: Uint8Array,
+	filename = "upload.jpg"
+): Promise<Response> {
+	const boundary = "----MiniflareDirectUploadTestBoundary";
+	const encoder = new TextEncoder();
+	const head = encoder.encode(
+		`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`
+	);
+	const tail = encoder.encode(`\r\n--${boundary}--\r\n`);
+	const body = new Uint8Array(head.length + bytes.length + tail.length);
+	body.set(head, 0);
+	body.set(bytes, head.length);
+	body.set(tail, head.length + bytes.length);
+
+	return mf.dispatchFetch(uploadURL, {
+		method: "POST",
+		headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
+		body,
+	});
+}
+
+describe("Images direct upload", () => {
+	test("createDirectUpload returns an id and upload URL", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const url = await mf.ready;
+
+		const result = await sendCmd<{ id: string; uploadURL: string }>(
+			mf,
+			"createDirectUpload"
+		);
+		expect(result.id).toBeTruthy();
+		expect(result.uploadURL).toBe(
+			`${url.origin}/__cf_local/imageupload/${result.id}`
+		);
+	});
+
+	test("createDirectUpload rejects a custom id that is a UUID", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmd(mf, "createDirectUpload", {
+				options: { id: "3ce3b103-2ac0-4836-954f-937a2f04ccbe" },
+			})
+		).rejects.toThrow();
+	});
+
+	test("createDirectUpload rejects an expiresIn outside the accepted bounds", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmd(mf, "createDirectUpload", { options: { expiresIn: 60 } })
+		).rejects.toThrow();
+		await expect(
+			sendCmd(mf, "createDirectUpload", { options: { expiresIn: 21601 } })
+		).rejects.toThrow();
+	});
+
+	test("a completed direct upload is retrievable and no longer a draft", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		const { id, uploadURL } = await sendCmd<{
+			id: string;
+			uploadURL: string;
+		}>(mf, "createDirectUpload", {
+			options: { metadata: { source: "direct-upload" } },
+		});
+
+		const beforeUpload = await sendCmd<ImageMetadata | null>(mf, "details", {
+			id,
+		});
+		expect(beforeUpload?.draft).toBe(true);
+
+		const response = await completeDirectUpload(
+			mf,
+			uploadURL,
+			TEST_IMAGE_BYTES
+		);
+		expect(response.status).toBe(200);
+		await response.arrayBuffer();
+
+		const afterUpload = await sendCmd<ImageMetadata | null>(mf, "details", {
+			id,
+		});
+		expect(afterUpload?.draft).toBe(false);
+		expect(afterUpload?.meta).toEqual({ source: "direct-upload" });
+
+		const data = await sendCmd<number[]>(mf, "bytes", { id });
+		expect(new Uint8Array(data)).toEqual(TEST_IMAGE_BYTES);
+	});
+
+	test("completing an unknown upload link returns 404", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const url = await mf.ready;
+
+		const response = await completeDirectUpload(
+			mf,
+			`${url.origin}/__cf_local/imageupload/does-not-exist`,
+			TEST_IMAGE_BYTES
+		);
+		expect(response.status).toBe(404);
+		await response.arrayBuffer();
+	});
+
+	test("completing an already-used upload link returns 409", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		const { uploadURL } = await sendCmd<{ id: string; uploadURL: string }>(
+			mf,
+			"createDirectUpload"
+		);
+
+		const first = await completeDirectUpload(mf, uploadURL, TEST_IMAGE_BYTES);
+		expect(first.status).toBe(200);
+		await first.arrayBuffer();
+
+		const second = await completeDirectUpload(mf, uploadURL, TEST_IMAGE_BYTES);
+		expect(second.status).toBe(409);
+		await second.arrayBuffer();
 	});
 });
