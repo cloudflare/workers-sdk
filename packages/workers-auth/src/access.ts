@@ -13,6 +13,14 @@ const headersCache: Record<string, Record<string, string>> = {};
 
 const usesAccessCache = new Map<string, boolean>();
 
+function buildProbeUrl(domain: string, previewToken?: string): string {
+	const url = new URL(`https://${domain}`);
+	if (previewToken) {
+		url.searchParams.set("cf_workers_preview_token", previewToken);
+	}
+	return url.toString();
+}
+
 /**
  * Clear internal caches. Exported for use in tests only.
  */
@@ -29,20 +37,29 @@ export function clearAccessCaches(): void {
  * A 302 to `cloudflareaccess.com` is the canonical signal. Service-auth-only
  * Access applications return a hard 403 instead and are therefore not detected
  * here — see {@link getAccessHeaders} for how this is handled.
+ *
+ * When `previewToken` is supplied it is added as the `cf_workers_preview_token`
+ * query parameter so the probe activates an unpublished worker's edge-preview
+ * route (otherwise the anonymous probe 404s and Access is never triggered). The
+ * cache is keyed on whether a token was supplied so token-authenticated and
+ * anonymous probes of the same host don't poison each other.
  */
 export async function domainUsesAccess(
+	logger: OAuthFlowLogger,
 	domain: string,
-	logger: OAuthFlowLogger
+	previewToken?: string
 ): Promise<boolean> {
 	logger.debug("Checking if domain has Access enabled:", domain);
 
-	if (usesAccessCache.has(domain)) {
+	const cacheKey = JSON.stringify([domain, Boolean(previewToken)]);
+
+	if (usesAccessCache.has(cacheKey)) {
 		logger.debug(
 			"Using cached Access switch for:",
 			domain,
-			usesAccessCache.get(domain)
+			usesAccessCache.get(cacheKey)
 		);
-		return usesAccessCache.get(domain) ?? false;
+		return usesAccessCache.get(cacheKey) ?? false;
 	}
 	logger.debug("Access switch not cached for:", domain);
 	try {
@@ -51,7 +68,7 @@ export async function domainUsesAccess(
 			controller.abort();
 		}, 1000);
 
-		const output = await fetch(`https://${domain}`, {
+		const output = await fetch(buildProbeUrl(domain, previewToken), {
 			redirect: "manual",
 			signal: controller.signal,
 		});
@@ -62,10 +79,11 @@ export async function domainUsesAccess(
 		);
 		logger.debug("Caching access switch for:", domain);
 
-		usesAccessCache.set(domain, usesAccess);
+		usesAccessCache.set(cacheKey, usesAccess);
 		return usesAccess;
 	} catch {
-		usesAccessCache.set(domain, false);
+		// Don't cache errors, or else transient failures will continue to fail forever
+		logger.debug("Access probe failed for:", domain);
 		return false;
 	}
 }
@@ -75,7 +93,10 @@ export async function domainUsesAccess(
  *
  * @param domain The hostname of the Access-protected domain (e.g. `"example.com"`).
  * @param options logger + an `isNonInteractiveOrCI` predicate used to
- *   produce an actionable error in CI; both default to no-op / `false`.
+ *   produce an actionable error in CI (both default to no-op / `false`), plus an
+ *   optional `previewToken` that is added as the `cf_workers_preview_token`
+ *   query parameter when probing for Access and when invoking `cloudflared
+ *   access login`, so detection works on unpublished `<name>.workers.dev` hosts.
  * @returns
  * - Service token headers (`CF-Access-Client-Id` + `CF-Access-Client-Secret`) if env vars are set
  * - A `Cookie: CF_Authorization=...` header if obtained via `cloudflared` (interactive only)
@@ -92,6 +113,12 @@ export async function getAccessHeaders(
 		isNonInteractiveOrCI?: () => boolean;
 		/** Aborts a pending `cloudflared` authorization and kills its process. */
 		signal?: AbortSignal;
+		/**
+		 * Workers preview token forwarded to the Access probe and to
+		 * `cloudflared access login` so detection works on unpublished
+		 * `<name>.workers.dev` hosts.
+		 */
+		previewToken?: string;
 	}
 ): Promise<Record<string, string>> {
 	const logger = options.logger;
@@ -128,7 +155,7 @@ export async function getAccessHeaders(
 		);
 	}
 
-	if (!(await domainUsesAccess(domain, logger))) {
+	if (!(await domainUsesAccess(logger, domain, options.previewToken))) {
 		return {};
 	}
 	logger.debug("Getting Access headers for domain:", domain);
@@ -153,7 +180,22 @@ export async function getAccessHeaders(
 
 	// 3. Interactive: fall back to cloudflared
 	logger.debug("Spawning cloudflared to get Access token for domain:");
-	const output = await spawnCloudflaredAccessLogin(domain, options.signal);
+
+	// Knowledge of the preview token allows you to route to the unpublished
+	// worker (which may have production bindings and production cache) so in some
+	// sense it's a secret.
+	//
+	// During the Access login flow, the preview token may be visible to other
+	// processes on the machine. It will also appear in browser history and may be
+	// sent to third parties like the identity provider. Are these leaks safe?
+	//
+	// I argue yes! The preview worker is protected by Access, or we wouldn't be
+	// trying to log into it. So the preview token is necessary but not sufficient
+	// to reach it.
+	const output = await spawnCloudflaredAccessLogin(
+		buildProbeUrl(domain, options.previewToken),
+		options.signal
+	);
 	if (output.error) {
 		throw new UserError(
 			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation",
@@ -186,11 +228,13 @@ export async function getAccessHeaders(
  * surface an installation hint.
  */
 function spawnCloudflaredAccessLogin(
-	domain: string,
+	loginTarget: string,
 	signal?: AbortSignal
 ): Promise<{ error?: Error; stdout: string }> {
 	return new Promise((resolve, reject) => {
-		const child = spawn("cloudflared", ["access", "login", domain], { signal });
+		const child = spawn("cloudflared", ["access", "login", loginTarget], {
+			signal,
+		});
 		const stdoutChunks: Buffer[] = [];
 		child.stdout.on("data", (chunk: Buffer) => stdoutChunks.push(chunk));
 		child.stderr.resume();
