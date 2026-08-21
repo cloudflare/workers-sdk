@@ -6649,7 +6649,12 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	return valid;
 };
 
-const validateObservability: ValidatorFn = (diagnostics, field, value) => {
+const validateObservability: ValidatorFn = (
+	diagnostics,
+	field,
+	value,
+	topLevelEnv
+) => {
 	if (value === undefined) {
 		return true;
 	}
@@ -6663,9 +6668,18 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 
 	const val = value as Observability;
 	let isValid = true;
+	if (
+		topLevelEnv?.observability?.metrics !== undefined &&
+		val.metrics === undefined
+	) {
+		diagnostics.warnings.push(
+			`The environment-level "${field}" configuration replaces the top-level "${field}" configuration but does not define "${field}.metrics". Metrics export will not be reconciled. Define "${field}.metrics.enabled" explicitly, or remove the environment-level "${field}" configuration to inherit all top-level observability settings.`
+		);
+	}
 
 	/**
-	 * One of observability.enabled, observability.logs.enabled, observability.traces.enabled must be defined
+	 * One of observability.enabled, observability.logs.enabled,
+	 * observability.traces.enabled, observability.metrics.enabled must be defined
 	 */
 	isValid =
 		validateAtLeastOnePropertyRequired(diagnostics, field, [
@@ -6682,6 +6696,11 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			{
 				key: "traces.enabled",
 				value: val.traces?.enabled,
+				type: "boolean",
+			},
+			{
+				key: "metrics.enabled",
+				value: val.metrics?.enabled,
 				type: "boolean",
 			},
 		]) && isValid;
@@ -6709,11 +6728,21 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"metrics",
+			val.metrics,
+			"object"
+		) && isValid;
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
 			"head_sampling_rate",
 			"logs",
 			"traces",
+			"metrics",
 		]) && isValid;
 
 	/**
@@ -6819,6 +6848,83 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 				field,
 				Object.keys(val.traces),
 				["enabled", "head_sampling_rate", "destinations", "persist"]
+			) && isValid;
+	}
+
+	/**
+	 * Validate the optional nested metrics configuration
+	 */
+	if (val.metrics !== null && typeof val.metrics === "object") {
+		isValid =
+			validateRequiredProperty(
+				diagnostics,
+				field,
+				"metrics.enabled",
+				val.metrics.enabled,
+				"boolean"
+			) && isValid;
+
+		isValid =
+			validateOptionalTypedArray(
+				diagnostics,
+				"metrics.destinations",
+				val.metrics?.destinations,
+				"string"
+			) && isValid;
+
+		if (
+			Array.isArray(val.metrics.destinations) &&
+			val.metrics.destinations.every(
+				(destination) => typeof destination === "string"
+			)
+		) {
+			const destinations = val.metrics.destinations.map((destination) =>
+				destination.trim()
+			);
+
+			if (destinations.some((destination) => destination.length === 0)) {
+				diagnostics.errors.push(
+					`"${field}.metrics.destinations" must not contain blank destinations.`
+				);
+				isValid = false;
+			}
+
+			if (new Set(destinations).size !== destinations.length) {
+				diagnostics.errors.push(
+					`"${field}.metrics.destinations" must not contain duplicate destinations.`
+				);
+				isValid = false;
+			}
+
+			val.metrics.destinations = destinations;
+		}
+
+		if (
+			val.metrics.enabled === true &&
+			val.metrics.destinations?.length === 0
+		) {
+			diagnostics.errors.push(
+				`"${field}.metrics.destinations" must contain at least one destination when "${field}.metrics.enabled" is true.`
+			);
+			isValid = false;
+		}
+
+		if (
+			val.metrics.enabled === true &&
+			val.metrics.destinations === undefined
+		) {
+			diagnostics.errors.push(
+				`"${field}.metrics.destinations" is required when "${field}.metrics.enabled" is true.`
+			);
+			isValid = false;
+		}
+
+		isValid =
+			validateAdditionalProperties(
+				diagnostics,
+				field,
+				Object.keys(val.metrics),
+				["enabled", "destinations"]
 			) && isValid;
 	}
 

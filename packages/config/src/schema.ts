@@ -426,6 +426,12 @@ const ObservabilitySchema = z.strictObject({
 			destinations: z.array(z.string()).optional(),
 		})
 		.optional(),
+	metrics: z
+		.strictObject({
+			enabled: z.boolean(),
+			destinations: z.array(z.string()).optional(),
+		})
+		.optional(),
 });
 
 const PlacementSchema = z.union([

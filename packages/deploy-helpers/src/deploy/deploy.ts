@@ -40,6 +40,10 @@ import {
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import {
+	reconcileMetricsExportConfig,
+	withoutMetricsExportConfig,
+} from "./helpers/metrics-export";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -351,7 +355,7 @@ async function deployWorker(
 						run_worker_first: assetsOptions.run_worker_first,
 					}
 				: undefined,
-		observability: config.observability,
+		observability: withoutMetricsExportConfig(config.observability),
 		cache: config.cache,
 		package_dependencies:
 			config.dependencies_instrumentation?.enabled !== false && projectRoot
@@ -538,10 +542,13 @@ async function deployWorker(
 					await patchNonVersionedScriptSettings(config, accountId, scriptName, {
 						tail_consumers: worker.tail_consumers,
 						logpush: worker.logpush,
-						// If the user hasn't specified observability assume that they want it disabled if they have it on.
-						// This is a no-op in the event that they don't have observability enabled, but will remove observability
-						// if it has been removed from their Wrangler configuration file
-						observability: worker.observability ?? { enabled: false },
+						// Keep the legacy disable fallback when observability is absent. A metrics-only
+						// block must stay omitted because metrics are reconciled separately.
+						observability:
+							worker.observability ??
+							(config.observability?.metrics === undefined
+								? { enabled: false }
+								: undefined),
 						tags: nextTags,
 					});
 				} catch {
@@ -772,6 +779,7 @@ async function deployWorker(
 		return { versionId, workerTag, assetUploadStats };
 	}
 	assert(accountId);
+
 	// deploy triggers
 	const targets = await triggersDeploy({
 		config,
@@ -783,6 +791,13 @@ async function deployWorker(
 		routes: props.routes,
 		validated: true,
 		dryRun: false,
+	});
+
+	await reconcileMetricsExportConfig({
+		config,
+		accountId,
+		scriptName,
+		bindings,
 	});
 
 	logger.log("Current Version ID:", versionId);

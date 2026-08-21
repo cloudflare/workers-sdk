@@ -332,6 +332,12 @@ export interface WorkerConfig {
 			 */
 			destinations?: string[];
 		};
+		metrics?: {
+			/** If metrics should be exported from this Worker. */
+			enabled: boolean;
+			/** What destinations metrics emitted from the Worker should be sent to. */
+			destinations?: string[];
+		};
 	};
 
 	/**

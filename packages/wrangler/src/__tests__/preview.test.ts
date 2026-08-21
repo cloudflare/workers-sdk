@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
 import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
+	assemblePreviewScriptSettings,
 	extractConfigBindings,
 	getBranchName,
 	previewContainerAppName,
@@ -155,13 +156,27 @@ describe("wrangler preview", () => {
 		vi.restoreAllMocks();
 	});
 
+	test("strips metrics export from Preview script settings", ({ expect }) => {
+		const config = {
+			...defaultWranglerConfig,
+			observability: {
+				enabled: true,
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		};
+
+		expect(assemblePreviewScriptSettings(config)).toEqual({
+			observability: { enabled: true },
+		});
+	});
+
 	describe("getBranchName", () => {
 		beforeEach(() => {
 			vi.unstubAllEnvs();
-			vi.stubEnv("WORKERS_CI_BRANCH", undefined);
-			vi.stubEnv("GITHUB_REF_NAME", undefined);
-			vi.stubEnv("GITHUB_HEAD_REF", undefined);
-			vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
+			vi.stubEnv("WORKERS_CI_BRANCH", "");
+			vi.stubEnv("GITHUB_REF_NAME", "");
+			vi.stubEnv("GITHUB_HEAD_REF", "");
+			vi.stubEnv("CI_COMMIT_REF_NAME", "");
 		});
 
 		afterAll(() => {
@@ -181,7 +196,7 @@ describe("wrangler preview", () => {
 			vi.stubEnv("GITHUB_HEAD_REF", "github-pr-branch");
 			expect(getBranchName()).toBe("github-pr-branch");
 
-			vi.stubEnv("GITHUB_HEAD_REF", undefined);
+			vi.stubEnv("GITHUB_HEAD_REF", "");
 			vi.stubEnv("GITHUB_REF_NAME", "github-push-branch");
 			expect(getBranchName()).toBe("github-push-branch");
 		});
@@ -530,9 +545,21 @@ describe("wrangler preview", () => {
 			);
 		});
 
-		test("should create a new preview with defaults applied", async ({
+		test("should ignore metrics export and create a new preview", async ({
 			expect,
 		}) => {
+			writeWranglerConfig({
+				name: "test-worker",
+				main: "src/index.ts",
+				compatibility_date: "2025-01-01",
+				observability: {
+					metrics: { enabled: true, destinations: ["destination"] },
+				},
+				previews: {
+					vars: { ENVIRONMENT: "preview" },
+					kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
+				},
+			});
 			let lookupPreviewUrl: string | undefined;
 			msw.use(
 				http.get(
