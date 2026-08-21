@@ -278,6 +278,14 @@ describe.sequential("owner presence integration", () => {
 			async fetch(request, env) {
 				try {
 					const url = new URL(request.url);
+					if (url.pathname === "/video") {
+						const video = env.STREAM.video(url.searchParams.get("id"));
+						return Response.json({
+							details: await video.details(),
+							captions: await video.captions.list(),
+							downloads: await video.downloads.get(),
+						});
+					}
 					if (url.pathname === "/watermark") {
 						const id = url.searchParams.get("id");
 						if (request.method === "POST") {
@@ -297,10 +305,10 @@ describe.sequential("owner presence integration", () => {
 							new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
 						).body;
 						const video = await env.STREAM.upload(body, {});
-						return Response.json({ id: video.id });
+						return Response.json(video);
 					}
 					const videos = await env.STREAM.videos.list();
-					return Response.json({ count: videos.length });
+					return Response.json({ count: videos.length, preview: videos[0]?.preview });
 				} catch (e) {
 					return Response.json({ error: String(e && e.stack || e) }, { status: 500 });
 				}
@@ -324,23 +332,38 @@ describe.sequential("owner presence integration", () => {
 			],
 		};
 		const owner = new Miniflare(await withIsolatedStorage(common));
-		await owner.ready;
+		const ownerUrl = await owner.ready;
 		const client = new Miniflare(await withIsolatedStorage(common));
 
 		try {
-			await client.ready;
+			const clientUrl = await client.ready;
 
 			// Client uploads a video (RPC through the owner)...
 			const put = (await (
 				await client.dispatchFetch("http://x/", { method: "PUT" })
-			).json()) as { id: string };
+			).json()) as { id: string; preview: string };
 			expect(put.id).toBeTruthy();
+			expect(new URL(put.preview).origin).toBe(clientUrl.origin);
+			expect(new URL(put.preview).origin).not.toBe(ownerUrl.origin);
 
 			// Resolve the nested `videos` RPC target through the client too.
 			const listed = (await (
 				await client.dispatchFetch("http://x/")
-			).json()) as { count?: number; error?: string };
-			expect(listed).toEqual({ count: 1 });
+			).json()) as { count?: number; preview?: string; error?: string };
+			expect(listed).toEqual({ count: 1, preview: put.preview });
+
+			const targets = (await (
+				await client.dispatchFetch(`http://x/video?id=${put.id}`)
+			).json()) as {
+				details: typeof put;
+				captions: unknown[];
+				downloads: Record<string, unknown>;
+			};
+			expect(targets).toEqual({
+				details: put,
+				captions: [],
+				downloads: {},
+			});
 
 			const watermark = (await (
 				await client.dispatchFetch("http://x/watermark", { method: "POST" })
@@ -362,9 +385,7 @@ describe.sequential("owner presence integration", () => {
 				).json()
 			).toEqual({ count: 0 });
 
-			const videoResponse = await client.dispatchFetch(
-				`http://x/__cf_local/stream/${put.id}/watch`
-			);
+			const videoResponse = await fetch(put.preview);
 			expect(videoResponse.status).toBe(200);
 			expect(new Uint8Array(await videoResponse.arrayBuffer())).toEqual(
 				new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
@@ -378,10 +399,16 @@ describe.sequential("owner presence integration", () => {
 						count?: number;
 						error?: string;
 					};
-					expect(result).toEqual({ count: 1 });
+					expect(result).toEqual({ count: 1, preview: put.preview });
 				},
 				{ timeout: 10_000, interval: 100 }
 			);
+
+			const failedOverVideoResponse = await fetch(put.preview);
+			expect(failedOverVideoResponse.status).toBe(200);
+			expect(
+				new Uint8Array(await failedOverVideoResponse.arrayBuffer())
+			).toEqual(new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
 		} finally {
 			await client.dispose().catch(() => {});
 			await owner.dispose().catch(() => {});
