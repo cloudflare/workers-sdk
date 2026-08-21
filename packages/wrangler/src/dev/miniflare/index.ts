@@ -343,19 +343,6 @@ function pipelineEntry(
 		throw new Error("Pipeline must have either a stream");
 	}
 }
-/**
- * Whether any binding opts into a remote Hyperdrive configuration. Used to keep
- * the (async) credential seeding off the reload path of configs that have no
- * such binding — which is every config that does not use this feature.
- */
-function hasRemoteHyperdriveBinding(
-	bindings: StartDevWorkerInput["bindings"]
-): boolean {
-	return Object.values(bindings ?? {}).some(
-		(binding) => binding.type === "hyperdrive" && binding.remote === true
-	);
-}
-
 function hyperdriveEntry(
 	hyperdrive: CfHyperdrive,
 	remoteProxyConnectionString?: RemoteProxyConnectionString,
@@ -1210,7 +1197,10 @@ export async function buildMiniflareOptions(
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID,
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
+	onDevRegistryUpdate?: (registry: WorkerRegistry) => void,
+	// Edge credentials for remote Hyperdrive bindings, prepared once per remote
+	// proxy session (see `maybeStartOrUpdateRemoteProxySession`).
+	hyperdriveConnectionStrings?: ReadonlyMap<string, string>
 ): Promise<Options> {
 	const upstream =
 		typeof config.localUpstream === "string"
@@ -1218,27 +1208,10 @@ export async function buildMiniflareOptions(
 			: undefined;
 
 	const { sourceOptions } = await buildSourceOptions(config);
-	// Remote Hyperdrive bindings need the edge session's credentials before the
-	// (synchronous) binding builder runs. Doing it here covers every dev path
-	// that goes through this function.
-	//
-	// This runs on every reload, so the guard is a cheap synchronous check that
-	// stays out of the way of configs this feature has nothing to do with: no
-	// remote Hyperdrive binding means no seeding, no lazy module load (the import
-	// is lazy to avoid a circular dependency), and no extra await here.
-	const seededHyperdriveConnectionStrings =
-		remoteProxyConnectionString && hasRemoteHyperdriveBinding(config.bindings)
-			? await import("../../api/remoteBindings").then((m) =>
-					m.seedRemoteHyperdriveBindings(
-						config.bindings ?? undefined,
-						remoteProxyConnectionString
-					)
-				)
-			: undefined;
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
 		remoteProxyConnectionString,
-		seededHyperdriveConnectionStrings
+		hyperdriveConnectionStrings
 	);
 	if (bindingOptions.browserRendering && getBrowserRenderingHeadfulFromEnv()) {
 		bindingOptions.browserRendering.headful = true;
