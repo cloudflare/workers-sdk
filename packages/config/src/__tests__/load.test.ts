@@ -5,6 +5,56 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { InputWorkerSchema } from "../schema";
 
+// Use a file:// URL rather than a raw filesystem path so the embedded
+// `import` specifier is valid on Windows (where absolute paths like
+// `C:\...` are not accepted as ESM specifiers).
+const SOURCE_ENTRY = pathToFileURL(path.resolve(__dirname, "../load.ts")).href;
+
+// Subprocess snippet that reports whether the config hooks are currently
+// installed in Node's hook chain. While they are, a `cf-worker` import is
+// short-circuited to a synthetic module whose default export is the entrypoint
+// path — tests pair this with an `src/index.ts` that has no default export of
+// its own, so a string default can only have come from the hooks.
+const CF_WORKER_PROBE = `
+	async function hooksInstalled() {
+		try {
+			const mod = await import(
+				"./src/index.ts?probe=" + Math.random(),
+				{ with: { type: "cf-worker" } }
+			);
+			return typeof mod.default === "string";
+		} catch {
+			return false;
+		}
+	}
+`;
+
+/**
+ * Run an ES module script in a Node subprocess and parse its stdout as JSON.
+ *
+ * @param script Module source to evaluate. It must write a JSON payload to
+ *   `process.stdout`.
+ * @param cwd Working directory for the subprocess. Defaults to the test's
+ *   temporary directory.
+ * @returns The parsed JSON payload written by the script.
+ */
+function runScriptInSubprocess<T>(script: string, cwd = process.cwd()): T {
+	const result = spawnSync(
+		process.execPath,
+		["--input-type=module", "-e", script],
+		{
+			cwd,
+			encoding: "utf8",
+		}
+	);
+	if (result.status !== 0) {
+		throw new Error(
+			`Subprocess failed (status ${result.status}):\n${result.stderr}`
+		);
+	}
+	return JSON.parse(result.stdout) as T;
+}
+
 // Vitest's module runner intercepts dynamic imports before Node's
 // `module.registerHooks` can see them, so we cannot exercise `loadConfig`
 // inside a test directly. Instead, we run a small Node program in a
@@ -19,15 +69,11 @@ function runLoadConfigInSubprocess(args: {
 	exports: Record<string, unknown>;
 	dependencies: string[];
 } {
-	// Use a file:// URL rather than a raw filesystem path so the embedded
-	// `import` specifier is valid on Windows (where absolute paths like
-	// `C:\...` are not accepted as ESM specifiers).
-	const sourceEntry = pathToFileURL(path.resolve(__dirname, "../load.ts")).href;
 	const options = args.include
 		? `, { include: ${JSON.stringify(args.include)} }`
 		: "";
 	const script = `
-		import { loadConfig } from ${JSON.stringify(sourceEntry)};
+		import { loadConfig } from ${JSON.stringify(SOURCE_ENTRY)};
 		const result = await loadConfig(${JSON.stringify(args.configPath)}${options});
 		const serialisable = {
 			config: result.exports.default,
@@ -43,17 +89,7 @@ function runLoadConfigInSubprocess(args: {
 			return v;
 		}));
 	`;
-	const result = spawnSync(
-		process.execPath,
-		["--input-type=module", "-e", script],
-		{ cwd: args.cwd, encoding: "utf8" }
-	);
-	if (result.status !== 0) {
-		throw new Error(
-			`Subprocess failed (status ${result.status}):\n${result.stderr}`
-		);
-	}
-	return JSON.parse(result.stdout);
+	return runScriptInSubprocess(script, args.cwd);
 }
 
 describe("loadConfig", () => {
@@ -218,12 +254,12 @@ describe("loadConfig", () => {
 			"cloudflare.config.ts": `export default { name: "first" };`,
 		});
 
-		const sourceEntry = pathToFileURL(
-			path.resolve(__dirname, "../load.ts")
-		).href;
-		const script = `
+		const parsed = runScriptInSubprocess<{
+			first: { name: string };
+			second: { name: string };
+		}>(`
 			import { writeFileSync } from "node:fs";
-			import { loadConfig } from ${JSON.stringify(sourceEntry)};
+			import { loadConfig } from ${JSON.stringify(SOURCE_ENTRY)};
 			const first = await loadConfig("./cloudflare.config.ts");
 			writeFileSync("./cloudflare.config.ts", 'export default { name: "second" };');
 			const second = await loadConfig("./cloudflare.config.ts");
@@ -231,19 +267,7 @@ describe("loadConfig", () => {
 				first: first.exports.default,
 				second: second.exports.default,
 			}));
-		`;
-		const sub = spawnSync(
-			process.execPath,
-			["--input-type=module", "-e", script],
-			{ cwd: process.cwd(), encoding: "utf8" }
-		);
-		if (sub.status !== 0) {
-			throw new Error(`Subprocess failed: ${sub.stderr}`);
-		}
-		const parsed = JSON.parse(sub.stdout) as {
-			first: { name: string };
-			second: { name: string };
-		};
+		`);
 		expect(parsed.first.name).toBe("first");
 		expect(parsed.second.name).toBe("second");
 	});
@@ -295,5 +319,134 @@ describe("loadConfig", () => {
 		expect(result.dependencies).not.toContain(pkgPath);
 		// Sanity: the config file itself is still tracked.
 		expect(result.dependencies).toContain(path.resolve("cloudflare.config.ts"));
+	});
+
+	it("releases the module hooks once the load has finished", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": `// not executed`,
+			"cloudflare.config.ts": `
+				import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
+				export default { name: "w", entrypoint };
+			`,
+			"plain.ts": `export const value = "plain";`,
+		});
+
+		// While the hooks are installed, a `cf-worker` import is short-circuited
+		// to a synthetic module whose default export is the entrypoint path.
+		// `src/index.ts` has no default export of its own, so a string default
+		// is a reliable signal that the hooks are still in Node's hook chain.
+		const result = runScriptInSubprocess<{
+			config: { name: string };
+			hooksInstalledAfterLoad: boolean;
+			hooksInstalledAfterReRegister: boolean;
+			hooksInstalledAfterRelease: boolean;
+			plainImportWorks: boolean;
+		}>(`
+			import { loadConfig, registerConfigHooks } from ${JSON.stringify(SOURCE_ENTRY)};
+			${CF_WORKER_PROBE}
+
+			const { exports } = await loadConfig("./cloudflare.config.ts");
+			const hooksInstalledAfterLoad = await hooksInstalled();
+
+			// A fresh registration must install the hooks again rather than
+			// hand back a stale, already-deregistered handle.
+			const release = registerConfigHooks();
+			const hooksInstalledAfterReRegister = await hooksInstalled();
+			release();
+			// Releasing twice must not double-decrement the reference count.
+			release();
+			const hooksInstalledAfterRelease = await hooksInstalled();
+
+			const { value } = await import("./plain.ts");
+
+			process.stdout.write(JSON.stringify({
+				config: exports.default,
+				hooksInstalledAfterLoad,
+				hooksInstalledAfterReRegister,
+				hooksInstalledAfterRelease,
+				plainImportWorks: value === "plain",
+			}));
+		`);
+
+		expect(result.config.name).toBe("w");
+		expect(result.hooksInstalledAfterLoad).toBe(false);
+		expect(result.hooksInstalledAfterReRegister).toBe(true);
+		expect(result.hooksInstalledAfterRelease).toBe(false);
+		expect(result.plainImportWorks).toBe(true);
+	});
+
+	it("keeps the hooks installed for overlapping loads and releases them exactly once", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/index.ts": `// not executed`,
+			// The dynamic `cf-worker` import runs after a tick, so it resolves
+			// while the other (faster) `loadConfig` call has already finished.
+			// If the hooks were released per-call rather than reference
+			// counted, this resolution would fail.
+			"slow.config.ts": `
+				await new Promise((resolve) => setTimeout(resolve, 100));
+				const entrypoint = await import("./src/index.ts", { with: { type: "cf-worker" } });
+				export default { name: "slow", entrypoint: entrypoint.default };
+			`,
+			"fast.config.ts": `export default { name: "fast" };`,
+		});
+
+		const result = runScriptInSubprocess<{
+			slow: { name: string; entrypoint: string };
+			fast: { name: string };
+			hooksInstalledAfterBoth: boolean;
+		}>(`
+			import { loadConfig } from ${JSON.stringify(SOURCE_ENTRY)};
+			${CF_WORKER_PROBE}
+
+			const [slow, fast] = await Promise.all([
+				loadConfig("./slow.config.ts"),
+				loadConfig("./fast.config.ts"),
+			]);
+
+			process.stdout.write(JSON.stringify({
+				slow: slow.exports.default,
+				fast: fast.exports.default,
+				hooksInstalledAfterBoth: await hooksInstalled(),
+			}));
+		`);
+
+		expect(result.fast.name).toBe("fast");
+		expect(result.slow.name).toBe("slow");
+		expect(result.slow.entrypoint).toBe(path.resolve("src/index.ts"));
+		expect(result.hooksInstalledAfterBoth).toBe(false);
+	});
+
+	it("releases the hooks when the config throws", async ({ expect }) => {
+		await seed({
+			"cloudflare.config.ts": `throw new Error("boom");`,
+			"src/index.ts": `// not executed`,
+		});
+
+		const result = runScriptInSubprocess<{
+			loadFailed: boolean;
+			hooksInstalledAfterFailure: boolean;
+		}>(`
+			import { loadConfig } from ${JSON.stringify(SOURCE_ENTRY)};
+			${CF_WORKER_PROBE}
+
+			let loadFailed = false;
+			try {
+				await loadConfig("./cloudflare.config.ts");
+			} catch {
+				loadFailed = true;
+			}
+
+			process.stdout.write(JSON.stringify({
+				loadFailed,
+				hooksInstalledAfterFailure: await hooksInstalled(),
+			}));
+		`);
+
+		expect(result.loadFailed).toBe(true);
+		expect(result.hooksInstalledAfterFailure).toBe(false);
 	});
 });
