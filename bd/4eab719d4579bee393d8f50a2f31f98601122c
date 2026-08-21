@@ -1,0 +1,35 @@
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_b554ffcd7ba695::t_1058cb719882ca 177-181
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_b554ffcd7ba695::t_cd983179ed11b1 1669-1710
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_b554ffcd7ba695::t_8e6a63021f2782 1635-1743
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_b554ffcd7ba695::t_a0b2fe4e8ddd81 1059-1102
+packages/workflows-shared/tests/binding.test.ts
+  s_64d521a6e999ed::t_0aa6b73f7acbbb 111-127,150,165-403
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bd4eab719d4579bee393d8f50a2f31f98601122c",
+  "prompts": {},
+  "sessions": {
+    "s_64d521a6e999ed": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019fd19b-30c6-7d5f-81e9-5815b21b9a15",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    },
+    "s_b554ffcd7ba695": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f74df-f5c8-71b4-88d3-30b0c9e17ab0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}
