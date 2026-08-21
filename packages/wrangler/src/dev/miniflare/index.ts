@@ -367,14 +367,15 @@ function hyperdriveEntry(
 			hyperdrive.binding
 		);
 		if (seededConnectionString === undefined) {
-			// Seeding is what makes a database client authenticate through the edge
-			// proxy; without it miniflare falls back to placeholder credentials (and
-			// a `mysql` scheme even for Postgres) and the login is rejected. Warn
-			// rather than throw, so dev paths that cannot seed — the entry points
-			// below are synchronous — stay usable and fail visibly instead of
-			// silently.
+			// The edge session's credentials are what let a database client
+			// authenticate through the proxy; without them miniflare falls back to
+			// placeholder credentials (and a `mysql` scheme even for Postgres) and
+			// the login is rejected. They are prepared by
+			// `maybeStartOrUpdateRemoteProxySession`, so reaching this means the
+			// caller did not pass them on. Warn rather than throw so the session
+			// stays usable and fails visibly instead of silently.
 			logger.once.warn(
-				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but its edge credentials could not be seeded in this context, so connections through it will likely fail to authenticate. Remote Hyperdrive bindings are currently supported in \`wrangler dev\` and \`getPlatformProxy()\`.`
+				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no edge credentials were provided for it, so connections through it will likely fail to authenticate.`
 			);
 		}
 		return [

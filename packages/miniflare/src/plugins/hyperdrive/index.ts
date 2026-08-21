@@ -12,6 +12,20 @@ import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
+/**
+ * Service (and proxy/bridge) name for a Hyperdrive binding.
+ *
+ * Namespaced by worker as well as binding name: in a multi-worker setup it is
+ * common for several workers to bind Hyperdrive under the same name (`DB`), and
+ * an unqualified name would make them collide on one service and one bridge.
+ */
+export function getHyperdriveServiceName(
+	workerIndex: number,
+	bindingName: string
+) {
+	return `${HYPERDRIVE_PLUGIN_NAME}:${workerIndex}:${bindingName}`;
+}
+
 // Placeholder connection string used to synthesise the local Hyperdrive binding
 // when a remote binding has no local connection string. workerd still needs a
 // scheme/database/user/password to build the magic `connectionString` it exposes
@@ -119,7 +133,7 @@ export const HyperdriveSchema = z
 
 export const HYPERDRIVE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hyperdrive",
-	getBindings(options) {
+	getBindings(options, workerIndex) {
 		return getHyperdrives(options.config, options.dev).map<Worker_Binding>(
 			([name, url]) => {
 				const database = url.pathname.replace("/", "");
@@ -133,7 +147,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 						// which relays to the edge. workerd is unmodified either way —
 						// pointing a Hyperdrive designator at a Worker service SIGSEGVs.
 						designator: {
-							name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
+							name: getHyperdriveServiceName(workerIndex, name),
 						},
 						database: decodeURIComponent(database),
 						user: decodeURIComponent(url.username),
@@ -163,7 +177,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 			})
 		);
 	},
-	async getServices({ options, hyperdriveProxyController }) {
+	async getServices({ options, workerIndex, hyperdriveProxyController }) {
 		const services = [];
 		for (const [name, url, remoteProxyConnectionString] of getHyperdrives(
 			options.config,
@@ -176,11 +190,11 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 			if (remoteProxyConnectionString) {
 				const bridgePort =
 					await hyperdriveProxyController.createRemoteTcpBridge({
-						name,
+						name: getHyperdriveServiceName(workerIndex, name),
 						remoteProxyConnectionString,
 					});
 				services.push({
-					name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
+					name: getHyperdriveServiceName(workerIndex, name),
 					external: {
 						address: `127.0.0.1:${bridgePort}`,
 						tcp: {},
@@ -203,7 +217,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 				// SSL modes (require, prefer) need the proxy to handle
 				// TLS negotiation with the target database
 				const proxyPort = await hyperdriveProxyController.createProxyServer({
-					name,
+					name: getHyperdriveServiceName(workerIndex, name),
 					targetHost: url.hostname,
 					targetPort,
 					scheme,
@@ -214,7 +228,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 			}
 
 			services.push({
-				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
+				name: getHyperdriveServiceName(workerIndex, name),
 				external: {
 					address,
 					tcp: {},
