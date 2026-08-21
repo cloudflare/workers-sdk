@@ -1,5 +1,6 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
+import { getPublicUrl } from "../shared/public-url";
 import { CorePaths } from "./constants";
 import {
 	findQueueConsumer,
@@ -36,6 +37,7 @@ const HANDLER_RESERVED_KEYS = new Set([
 interface Env {
 	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
 	DEV_REGISTRY_INSTANCE_ID: string;
+	MINIFLARE_LOOPBACK: Fetcher;
 }
 
 interface Props {
@@ -53,20 +55,133 @@ interface Props {
 }
 
 interface StreamFetcher extends Fetcher {
+	upload(
+		urlOrBody: string | ReadableStream<Uint8Array>,
+		params?: StreamUrlUploadParams
+	): Promise<StreamVideo>;
+	video(id: string): StreamVideoHandle;
 	videos: StreamVideos;
 	watermarks: StreamWatermarks;
+}
+
+/** Rewrites an owner-generated preview URL to the calling dev session. */
+function rewriteStreamVideo(video: StreamVideo, publicUrl: URL): StreamVideo {
+	return {
+		...video,
+		preview: `${publicUrl.origin}${CorePaths.STREAM_VIDEO}/${video.id}/watch`,
+	};
 }
 
 // The debug-port Fetcher cannot pipeline through an RPC property directly:
 // `fetcher.videos.list()` is interpreted as a call to a `videos()` method. These
 // local targets preserve Stream's nested API, then pipeline their methods to the owner.
 class ExternalStreamVideos extends RpcTarget implements StreamVideos {
-	constructor(private resolve: () => StreamFetcher) {
+	constructor(
+		private resolve: () => StreamFetcher,
+		private resolvePublicUrl: () => Promise<URL>
+	) {
 		super();
 	}
 
-	list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
-		return this.resolve().videos.list(params);
+	async list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
+		const [videos, publicUrl] = await Promise.all([
+			this.resolve().videos.list(params),
+			this.resolvePublicUrl(),
+		]);
+		return videos.map((video) => rewriteStreamVideo(video, publicUrl));
+	}
+}
+
+class ExternalStreamScopedCaptions
+	extends RpcTarget
+	implements StreamScopedCaptions
+{
+	constructor(private resolve: () => StreamScopedCaptions) {
+		super();
+	}
+
+	upload(language: string, input: ReadableStream): Promise<StreamCaption> {
+		return this.resolve().upload(language, input);
+	}
+
+	generate(language: string): Promise<StreamCaption> {
+		return this.resolve().generate(language);
+	}
+
+	list(language?: string): Promise<StreamCaption[]> {
+		return this.resolve().list(language);
+	}
+
+	delete(language: string): Promise<void> {
+		return this.resolve().delete(language);
+	}
+}
+
+class ExternalStreamScopedDownloads
+	extends RpcTarget
+	implements StreamScopedDownloads
+{
+	constructor(private resolve: () => StreamScopedDownloads) {
+		super();
+	}
+
+	generate(
+		downloadType: StreamDownloadType = "default"
+	): Promise<StreamDownloadGetResponse> {
+		return this.resolve().generate(downloadType);
+	}
+
+	get(): Promise<StreamDownloadGetResponse> {
+		return this.resolve().get();
+	}
+
+	delete(downloadType: StreamDownloadType = "default"): Promise<void> {
+		return this.resolve().delete(downloadType);
+	}
+}
+
+class ExternalStreamVideoHandle extends RpcTarget implements StreamVideoHandle {
+	readonly id: string;
+
+	constructor(
+		private resolve: () => StreamVideoHandle,
+		private resolvePublicUrl: () => Promise<URL>,
+		id: string
+	) {
+		super();
+		this.id = id;
+	}
+
+	async details(): Promise<StreamVideo> {
+		const [video, publicUrl] = await Promise.all([
+			this.resolve().details(),
+			this.resolvePublicUrl(),
+		]);
+		return rewriteStreamVideo(video, publicUrl);
+	}
+
+	async update(params: StreamUpdateVideoParams): Promise<StreamVideo> {
+		const [video, publicUrl] = await Promise.all([
+			this.resolve().update(params),
+			this.resolvePublicUrl(),
+		]);
+		return rewriteStreamVideo(video, publicUrl);
+	}
+
+	delete(): Promise<void> {
+		return this.resolve().delete();
+	}
+
+	generateToken(): Promise<string> {
+		return this.resolve().generateToken();
+	}
+
+	get downloads(): StreamScopedDownloads {
+		return new ExternalStreamScopedDownloads(() => this.resolve().downloads);
+	}
+
+	get captions(): StreamScopedCaptions {
+		return new ExternalStreamScopedCaptions(() => this.resolve().captions);
 	}
 }
 
@@ -165,8 +280,27 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	_targetAddress: string | undefined;
 	_targetInstanceId: string | undefined;
 	_entryFetcher: Fetcher | null = null;
-	_streamVideos = new ExternalStreamVideos(() => this._resolveStream());
+	_streamVideos = new ExternalStreamVideos(
+		() => this._resolveStream(),
+		() => this._resolveStreamPublicUrl()
+	);
 	_streamWatermarks = new ExternalStreamWatermarks(() => this._resolveStream());
+	_streamUpload = async (
+		urlOrBody: string | ReadableStream<Uint8Array>,
+		params?: StreamUrlUploadParams
+	): Promise<StreamVideo> => {
+		const [video, publicUrl] = await Promise.all([
+			this._resolveStream().upload(urlOrBody, params),
+			this._resolveStreamPublicUrl(),
+		]);
+		return rewriteStreamVideo(video, publicUrl);
+	};
+	_streamVideo = (id: string): StreamVideoHandle =>
+		new ExternalStreamVideoHandle(
+			() => this._resolveStream().video(id),
+			() => this._resolveStreamPublicUrl(),
+			id
+		);
 
 	constructor(ctx: ExecutionContext<Props>, env: Env) {
 		super(ctx, env);
@@ -187,6 +321,12 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 			get(target, prop) {
 				const streamStorageProxy =
 					ctx.props.storage && ctx.props.service === "stream:service";
+				if (streamStorageProxy && prop === "upload") {
+					return target._streamUpload;
+				}
+				if (streamStorageProxy && prop === "video") {
+					return target._streamVideo;
+				}
 				if (streamStorageProxy && prop === "videos") {
 					return target._streamVideos;
 				}
@@ -237,6 +377,10 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 			throw new Error(workerNotFoundMessage(this.ctx.props.service));
 		}
 		return fetcher;
+	}
+
+	_resolveStreamPublicUrl(): Promise<URL> {
+		return getPublicUrl(this.env.MINIFLARE_LOOPBACK);
 	}
 
 	fetch(request: Request): Promise<Response> | Response {
