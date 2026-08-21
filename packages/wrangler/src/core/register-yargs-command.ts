@@ -16,6 +16,7 @@ import chalk from "chalk";
 import {
 	runSkillsInstallFlow,
 	runSkillsUpdateFlow,
+	skillInstallPromptMessageAfterWranglerCommandHandler,
 } from "../agents-skills-install";
 import {
 	fetchKVGetValue,
@@ -352,23 +353,40 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						def.behaviour
 					);
 
-					const shouldCheckSkills =
+					const shouldSuggestSkills =
 						def.behaviour?.suggestSkillsAfterHandler ?? false;
-					const skillsCheckEnabled =
-						shouldCheckSkills === true ||
-						(typeof shouldCheckSkills === "function" &&
-							shouldCheckSkills(args) === true);
+					const suggestSkillsEnabled =
+						shouldSuggestSkills === true ||
+						(typeof shouldSuggestSkills === "function" &&
+							shouldSuggestSkills(args) === true);
+					const shouldInstall = false;
 
-					if (skillsCheckEnabled) {
+					if (suggestSkillsEnabled) {
 						try {
-							if (getNoSkillsUpdatePromptsFromEnv() !== true) {
+							const justInstalled = shouldInstall
+								? await runSkillsInstallFlow({
+										force: false,
+										command: sanitizedCommand,
+										promptMessage:
+											skillInstallPromptMessageAfterWranglerCommandHandler,
+									})
+								: false;
+
+							// Only check for updates when the install flow did not
+							// just perform a fresh install — a brand-new install
+							// already has the latest content — and the user has
+							// not opted out via environment variable.
+							if (
+								!justInstalled &&
+								getNoSkillsUpdatePromptsFromEnv() !== true
+							) {
 								await runSkillsUpdateFlow({
 									command: sanitizedCommand,
 								});
 							}
 						} catch (skillsErr) {
 							logger.debug(
-								`Skills update check failed: ${skillsErr instanceof Error ? skillsErr.message : skillsErr}`
+								`Skills suggestion failed: ${skillsErr instanceof Error ? skillsErr.message : skillsErr}`
 							);
 						}
 					}
