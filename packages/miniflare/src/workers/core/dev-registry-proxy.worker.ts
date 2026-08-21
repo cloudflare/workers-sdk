@@ -1,6 +1,5 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { getQueueServiceName, HEADER_QUEUE_NAME } from "../queues/constants";
-import { getPublicUrl } from "../shared/public-url";
 import { CorePaths } from "./constants";
 import {
 	findQueueConsumer,
@@ -52,29 +51,9 @@ interface Props {
 	// (first active worker in the dev registry)
 	storage?: boolean;
 	storageScope?: string;
+	rpcProperties?: string[];
 }
 
-interface StreamFetcher extends Fetcher {
-	upload(
-		urlOrBody: string | ReadableStream<Uint8Array>,
-		params?: StreamUrlUploadParams
-	): Promise<StreamVideo>;
-	video(id: string): StreamVideoHandle;
-	videos: StreamVideos;
-	watermarks: StreamWatermarks;
-}
-
-/** Rewrites an owner-generated preview URL to the calling dev session. */
-function rewriteStreamVideo(video: StreamVideo, publicUrl: URL): StreamVideo {
-	return {
-		...video,
-		preview: `${publicUrl.origin}${CorePaths.STREAM_VIDEO}/${video.id}/watch`,
-	};
-}
-
-// An RPC property promise cannot be forwarded transparently through this second
-// RPC boundary. Terminate the caller-facing hop with a local RpcTarget, then
-// forward its method calls to the target resolved through the debug port.
 class ExternalRpcTarget extends RpcTarget {
 	constructor(resolve: () => object) {
 		super();
@@ -87,97 +66,6 @@ class ExternalRpcTarget extends RpcTarget {
 			},
 		});
 	}
-}
-
-class ExternalStreamVideos extends RpcTarget implements StreamVideos {
-	constructor(
-		private resolve: () => StreamFetcher,
-		private resolvePublicUrl: () => Promise<URL>
-	) {
-		super();
-	}
-
-	async list(params?: StreamVideosListParams): Promise<StreamVideo[]> {
-		const [videos, publicUrl] = await Promise.all([
-			this.resolve().videos.list(params),
-			this.resolvePublicUrl(),
-		]);
-		return videos.map((video) => rewriteStreamVideo(video, publicUrl));
-	}
-}
-
-class ExternalStreamScopedCaptions
-	extends ExternalRpcTarget
-	implements StreamScopedCaptions
-{
-	declare upload: StreamScopedCaptions["upload"];
-	declare generate: StreamScopedCaptions["generate"];
-	declare list: StreamScopedCaptions["list"];
-	declare delete: StreamScopedCaptions["delete"];
-}
-
-class ExternalStreamScopedDownloads
-	extends ExternalRpcTarget
-	implements StreamScopedDownloads
-{
-	declare generate: StreamScopedDownloads["generate"];
-	declare get: StreamScopedDownloads["get"];
-	declare delete: StreamScopedDownloads["delete"];
-}
-
-class ExternalStreamVideoHandle extends RpcTarget implements StreamVideoHandle {
-	readonly id: string;
-
-	constructor(
-		private resolve: () => StreamVideoHandle,
-		private resolvePublicUrl: () => Promise<URL>,
-		id: string
-	) {
-		super();
-		this.id = id;
-	}
-
-	async details(): Promise<StreamVideo> {
-		const [video, publicUrl] = await Promise.all([
-			this.resolve().details(),
-			this.resolvePublicUrl(),
-		]);
-		return rewriteStreamVideo(video, publicUrl);
-	}
-
-	async update(params: StreamUpdateVideoParams): Promise<StreamVideo> {
-		const [video, publicUrl] = await Promise.all([
-			this.resolve().update(params),
-			this.resolvePublicUrl(),
-		]);
-		return rewriteStreamVideo(video, publicUrl);
-	}
-
-	delete(): Promise<void> {
-		return this.resolve().delete();
-	}
-
-	generateToken(): Promise<string> {
-		return this.resolve().generateToken();
-	}
-
-	get downloads(): StreamScopedDownloads {
-		return new ExternalStreamScopedDownloads(() => this.resolve().downloads);
-	}
-
-	get captions(): StreamScopedCaptions {
-		return new ExternalStreamScopedCaptions(() => this.resolve().captions);
-	}
-}
-
-class ExternalStreamWatermarks
-	extends ExternalRpcTarget
-	implements StreamWatermarks
-{
-	declare generate: StreamWatermarks["generate"];
-	declare list: StreamWatermarks["list"];
-	declare get: StreamWatermarks["get"];
-	declare delete: StreamWatermarks["delete"];
 }
 
 function getTarget(props: Props): RegistryEntry | undefined {
@@ -247,29 +135,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	_targetAddress: string | undefined;
 	_targetInstanceId: string | undefined;
 	_entryFetcher: Fetcher | null = null;
-	_streamVideos = new ExternalStreamVideos(
-		() => this._resolveStream(),
-		() => this._resolveStreamPublicUrl()
-	);
-	_streamWatermarks = new ExternalStreamWatermarks(
-		() => this._resolveStream().watermarks
-	);
-	_streamUpload = async (
-		urlOrBody: string | ReadableStream<Uint8Array>,
-		params?: StreamUrlUploadParams
-	): Promise<StreamVideo> => {
-		const [video, publicUrl] = await Promise.all([
-			this._resolveStream().upload(urlOrBody, params),
-			this._resolveStreamPublicUrl(),
-		]);
-		return rewriteStreamVideo(video, publicUrl);
-	};
-	_streamVideo = (id: string): StreamVideoHandle =>
-		new ExternalStreamVideoHandle(
-			() => this._resolveStream().video(id),
-			() => this._resolveStreamPublicUrl(),
-			id
-		);
 
 	constructor(ctx: ExecutionContext<Props>, env: Env) {
 		super(ctx, env);
@@ -288,25 +153,25 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 
 		return new Proxy(this, {
 			get(target, prop) {
-				const streamStorageProxy =
-					ctx.props.storage && ctx.props.service === "stream:service";
-				if (streamStorageProxy && prop === "upload") {
-					return target._streamUpload;
-				}
-				if (streamStorageProxy && prop === "video") {
-					return target._streamVideo;
-				}
-				if (streamStorageProxy && prop === "videos") {
-					return target._streamVideos;
-				}
-				if (streamStorageProxy && prop === "watermarks") {
-					return target._streamWatermarks;
-				}
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
 				if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
 					return undefined;
+				}
+				// A debug-port RpcProperty cannot itself cross this outer property path.
+				// Terminate the outer hop with a local target, then forward its methods.
+				if (
+					typeof prop === "string" &&
+					ctx.props.rpcProperties?.includes(prop)
+				) {
+					return new ExternalRpcTarget(() => {
+						const fetcher = target._resolve();
+						if (!fetcher) {
+							throw new Error(workerNotFoundMessage(ctx.props.service));
+						}
+						return Reflect.get(fetcher, prop) as object;
+					});
 				}
 
 				const fetcher = target._resolve();
@@ -338,18 +203,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		this._targetAddress = target.debugPortAddress;
 		this._targetInstanceId = target.instanceId;
 		return this._fetcher;
-	}
-
-	_resolveStream(): StreamFetcher {
-		const fetcher = this._resolve() as StreamFetcher | null;
-		if (!fetcher) {
-			throw new Error(workerNotFoundMessage(this.ctx.props.service));
-		}
-		return fetcher;
-	}
-
-	_resolveStreamPublicUrl(): Promise<URL> {
-		return getPublicUrl(this.env.MINIFLARE_LOOPBACK);
 	}
 
 	fetch(request: Request): Promise<Response> | Response {
