@@ -158,23 +158,40 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 			}
 		);
 	},
-	getNodeBindings(options) {
+	getNodeBindings(options, { hyperdriveProxyController, workerIndex }) {
 		return Object.fromEntries(
-			getHyperdrives(options.config, options.dev).map(([name, url]) => {
-				const connectionOverrides: Record<string | symbol, string | number> = {
-					connectionString: `${url}`,
-					port: Number.parseInt(url.port),
-					host: url.hostname,
-				};
-				const proxyNodeBinding = new ProxyNodeBinding({
-					get(target, prop) {
-						return prop in connectionOverrides
-							? connectionOverrides[prop]
-							: target[prop];
-					},
-				});
-				return [name, proxyNodeBinding];
-			})
+			getHyperdrives(options.config, options.dev).map(
+				([name, url, remoteProxyConnectionString]) => {
+					// A remote binding's connection string points at a
+					// `*.hyperdrive.local` host, which only resolves inside workerd via
+					// the binding's designator. Node has no such resolver, so hand it the
+					// local TCP bridge instead — same credentials, an address it can dial.
+					const bridgePort = remoteProxyConnectionString
+						? hyperdriveProxyController.getRemoteBridgePort(
+								getHyperdriveServiceName(workerIndex, name)
+							)
+						: undefined;
+					const nodeUrl = new URL(url);
+					if (bridgePort !== undefined) {
+						nodeUrl.hostname = "127.0.0.1";
+						nodeUrl.port = String(bridgePort);
+					}
+					const connectionOverrides: Record<string | symbol, string | number> =
+						{
+							connectionString: `${nodeUrl}`,
+							port: Number.parseInt(nodeUrl.port),
+							host: nodeUrl.hostname,
+						};
+					const proxyNodeBinding = new ProxyNodeBinding({
+						get(target, prop) {
+							return prop in connectionOverrides
+								? connectionOverrides[prop]
+								: target[prop];
+						},
+					});
+					return [name, proxyNodeBinding];
+				}
+			)
 		);
 	},
 	async getServices({ options, workerIndex, hyperdriveProxyController }) {
