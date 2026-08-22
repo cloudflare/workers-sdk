@@ -7,6 +7,10 @@ import { analyseBundle } from "../check/commands";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
+import {
+	deployContainerInstanceGroups,
+	prepareContainerInstanceGroups,
+} from "../containers/instance-groups";
 import { createCommand } from "../core/create-command";
 import {
 	sharedDeployVersionsArgs,
@@ -203,6 +207,8 @@ export async function runDeployCommandHandler(
 				getNormalizedContainerOptions,
 				buildContainer,
 				deployContainers,
+				prepareContainerInstanceGroups,
+				deployContainerInstanceGroups,
 				analyseBundle,
 			}
 		);

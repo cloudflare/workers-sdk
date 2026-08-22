@@ -348,6 +348,33 @@ export type ContainerApp = {
 };
 
 /**
+ * An image Wrangler prepares for a namespace-backed Container Instance Group.
+ */
+export type ContainerInstanceGroupImage = {
+	/**
+	 * Worker environment binding that receives the prepared digest-pinned image
+	 * reference.
+	 */
+	binding: string;
+
+	/**
+	 * Path to a Dockerfile or digest-pinned managed-registry image.
+	 */
+	image: string;
+};
+
+/**
+ * Namespace-backed Container Instance Group configuration.
+ */
+export type ContainerInstanceGroupConfig = {
+	/**
+	 * Images Wrangler builds or resolves, prepares for the Containers runtime,
+	 * and exposes to the Worker through their configured bindings.
+	 */
+	images?: ContainerInstanceGroupImage[];
+};
+
+/**
  * Configuration in wrangler for Durable Object Migrations
  */
 export type DurableObjectMigration = {
@@ -393,8 +420,9 @@ export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
  *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
  *    `storage` and `transfer_from` are both required.
  *
- * The live states may additionally attach a container via `container`, which
- * names an entry in the top-level `containers` array. Tombstones cannot.
+ * The live states may additionally attach a container via `container`. A
+ * string names an entry in the top-level `containers` array; an object
+ * configures a namespace-backed Container Instance Group. Tombstones cannot.
  */
 export type DurableObjectExport =
 	| {
@@ -402,13 +430,14 @@ export type DurableObjectExport =
 			state?: "created";
 			storage: DurableObjectExportStorage;
 			/**
-			 * Attach a container to this Durable Object. Must match the `name` of an
-			 * entry in the top-level `containers` array, and requires
+			 * Attach a container to this Durable Object. A string must match the
+			 * `name` of an entry in the top-level `containers` array. An object
+			 * configures a namespace-backed Container Instance Group. Both require
 			 * `storage: "sqlite"`.
 			 *
 			 * @optional
 			 */
-			container?: string;
+			container?: string | ContainerInstanceGroupConfig;
 	  }
 	| { type: "durable-object"; state: "deleted" }
 	| { type: "durable-object"; state: "renamed"; renamed_to: string }
@@ -423,13 +452,14 @@ export type DurableObjectExport =
 			storage: DurableObjectExportStorage;
 			transfer_from: string;
 			/**
-			 * Attach a container to this Durable Object. Must match the `name` of an
-			 * entry in the top-level `containers` array, and requires
+			 * Attach a container to this Durable Object. A string must match the
+			 * `name` of an entry in the top-level `containers` array. An object
+			 * configures a namespace-backed Container Instance Group. Both require
 			 * `storage: "sqlite"`.
 			 *
 			 * @optional
 			 */
-			container?: string;
+			container?: string | ContainerInstanceGroupConfig;
 	  };
 
 export interface WorkerEntrypointExport {

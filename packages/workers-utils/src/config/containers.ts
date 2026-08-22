@@ -1,5 +1,46 @@
 import { getDurableObjectExports } from "./durable-object-exports";
-import type { ContainerApp, Exports } from "./environment";
+import type {
+	ContainerApp,
+	ContainerInstanceGroupConfig,
+	Exports,
+} from "./environment";
+
+export type ContainerInstanceGroupExport = {
+	className: string;
+	config: ContainerInstanceGroupConfig;
+};
+
+export function isContainerInstanceGroupConfig(
+	container: unknown
+): container is ContainerInstanceGroupConfig {
+	return (
+		typeof container === "object" &&
+		container !== null &&
+		!Array.isArray(container)
+	);
+}
+
+export function getContainerInstanceGroupExports(
+	exports: Exports | undefined
+): ContainerInstanceGroupExport[] {
+	const groups: ContainerInstanceGroupExport[] = [];
+
+	for (const [className, entry] of Object.entries(
+		getDurableObjectExports(exports)
+	)) {
+		if (
+			(entry.state === undefined ||
+				entry.state === "created" ||
+				entry.state === "expecting-transfer") &&
+			"container" in entry &&
+			isContainerInstanceGroupConfig(entry.container)
+		) {
+			groups.push({ className, config: entry.container });
+		}
+	}
+
+	return groups;
+}
 
 /**
  * A container can be linked to a Durable Object from either direction:

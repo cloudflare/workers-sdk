@@ -1897,6 +1897,52 @@ describe("generate types - CLI", () => {
 		`);
 	});
 
+	it("should generate types for prepared Container Instance Group image bindings", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				durable_objects: {
+					bindings: [
+						{
+							name: "SANDBOX",
+							class_name: "Sandbox",
+						},
+					],
+				},
+				exports: {
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: {
+							images: [
+								{
+									binding: "SANDBOX_IMAGE",
+									image: "./Dockerfile",
+								},
+								{
+									binding: "TOOLS_IMAGE",
+									image: "./Dockerfile.tools",
+								},
+							],
+						},
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const generated = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+		expect(generated).toContain("SANDBOX_IMAGE: string;");
+		expect(generated).toContain("TOOLS_IMAGE: string;");
+		expect(generated).toContain(
+			"SANDBOX: DurableObjectNamespace /* Sandbox */;"
+		);
+	});
+
 	it("should override vars with secrets", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",

@@ -17,6 +17,7 @@ import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
+import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
 	applyServiceAndEnvironmentTags,
@@ -193,7 +194,7 @@ async function uploadWorkerVersion(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: getContainerMetadata(config),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,

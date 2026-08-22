@@ -2,6 +2,7 @@ import assert from "node:assert";
 import {
 	configFileName,
 	getDurableObjectExports,
+	isContainerInstanceGroupConfig,
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
@@ -109,9 +110,21 @@ export async function resolveDoLifecyclePayload(props: {
 	const durableObjectExports = getDurableObjectExports(props.config.exports);
 	const hasDurableObjectExports = Object.keys(durableObjectExports).length > 0;
 	if (hasDurableObjectExports) {
+		const uploadExports = Object.fromEntries(
+			Object.entries(durableObjectExports).map(([className, entry]) => {
+				if (
+					"container" in entry &&
+					isContainerInstanceGroupConfig(entry.container)
+				) {
+					const { container: _container, ...uploadEntry } = entry;
+					return [className, uploadEntry];
+				}
+				return [className, entry];
+			})
+		);
 		return {
 			migrations: undefined,
-			exports: durableObjectExports,
+			exports: uploadExports,
 		};
 	}
 

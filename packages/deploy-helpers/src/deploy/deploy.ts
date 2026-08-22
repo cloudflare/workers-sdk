@@ -8,6 +8,7 @@ import {
 	APIError,
 	formatTime,
 	getDockerPath,
+	getContainerInstanceGroupExports,
 	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	retryOnAPIFailure,
@@ -25,6 +26,7 @@ import {
 import { getBindings } from "./helpers/binding-utils";
 import { printBundleSize } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
+import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
 import {
@@ -126,6 +128,18 @@ export type DeployCallbacks = {
 		| ((
 				config: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
+				args: { versionId: string; accountId: string; scriptName: string }
+		  ) => Promise<void>)
+		| undefined;
+	prepareContainerInstanceGroups:
+		| ((
+				config: Config,
+				args: { dryRun: boolean; scriptName: string }
+		  ) => Promise<Record<string, string>>)
+		| undefined;
+	deployContainerInstanceGroups:
+		| ((
+				config: Config,
 				args: { versionId: string; accountId: string; scriptName: string }
 		  ) => Promise<void>)
 		| undefined;
@@ -293,6 +307,28 @@ async function deployWorker(
 		}
 	}
 
+	const containerImageBindings =
+		await callbacks.prepareContainerInstanceGroups?.(config, {
+			dryRun: Boolean(isDryRun),
+			scriptName,
+		});
+	for (const [bindingName, value] of Object.entries(
+		containerImageBindings ?? {}
+	)) {
+		if (bindings[bindingName] !== undefined) {
+			throw new UserError(
+				`The generated container image binding "${bindingName}" conflicts with another Worker binding. Choose a different exports container image_binding.`,
+				{
+					telemetryMessage: "container instance group image binding conflict",
+				}
+			);
+		}
+		bindings[bindingName] = {
+			type: "plain_text",
+			value,
+		};
+	}
+
 	addRequiredSecretsInheritBindings(config, bindings, {
 		type: "deploy",
 		workerExists,
@@ -322,7 +358,7 @@ async function deployWorker(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: getContainerMetadata(config),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -760,6 +796,17 @@ async function deployWorker(
 	) {
 		assert(versionId && accountId);
 		await callbacks.deployContainers(config, normalisedContainerConfig, {
+			versionId,
+			accountId,
+			scriptName,
+		});
+	}
+	if (
+		getContainerInstanceGroupExports(config.exports).length > 0 &&
+		callbacks.deployContainerInstanceGroups
+	) {
+		assert(versionId && accountId);
+		await callbacks.deployContainerInstanceGroups(config, {
 			versionId,
 			accountId,
 			scriptName,

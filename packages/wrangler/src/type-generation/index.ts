@@ -7,6 +7,7 @@ import {
 	configFileName,
 	experimental_readRawConfig,
 	FatalError,
+	getContainerInstanceGroupExports,
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -1965,8 +1966,11 @@ function collectAllVars(
 	const varsInfo: Record<string, Set<string>> = {};
 
 	// Collects onto the `varsInfo` object the vars and values for a specific environment
-	function collectEnvironmentVars(vars: RawEnvironment["vars"]) {
-		Object.entries(vars ?? {}).forEach(([key, value]) => {
+	function collectEnvironmentVars(
+		env: RawEnvironment,
+		inheritedExports?: RawEnvironment["exports"]
+	) {
+		Object.entries(env.vars ?? {}).forEach(([key, value]) => {
 			varsInfo[key] ??= new Set();
 
 			if (!args.strictVars) {
@@ -1990,17 +1994,26 @@ function collectAllVars(
 			// let's fallback to a safe `unknown` if we couldn't detect the type
 			varsInfo[key].add("unknown");
 		});
+
+		for (const { config: group } of getContainerInstanceGroupExports(
+			env.exports ?? inheritedExports
+		)) {
+			for (const image of group.images ?? []) {
+				varsInfo[image.binding] ??= new Set();
+				varsInfo[image.binding].add("string");
+			}
+		}
 	}
 
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
-		collectEnvironmentVars(envConfig.vars);
+		collectEnvironmentVars(envConfig, rawConfig.exports);
 	} else {
-		collectEnvironmentVars(rawConfig.vars);
+		collectEnvironmentVars(rawConfig);
 		for (const env of Object.values(rawConfig.env ?? {})) {
-			collectEnvironmentVars(env.vars);
+			collectEnvironmentVars(env, rawConfig.exports);
 		}
 	}
 
@@ -3027,10 +3040,13 @@ function collectVarsPerEnvironment(
 ): Map<string, Record<string, string[]>> {
 	const result = new Map<string, Record<string, string[]>>();
 
-	function collectVars(vars: RawEnvironment["vars"]): Record<string, string[]> {
+	function collectVars(
+		env: RawEnvironment,
+		inheritedExports?: RawEnvironment["exports"]
+	): Record<string, string[]> {
 		const varsInfo: Record<string, Set<string>> = {};
 
-		Object.entries(vars ?? {}).forEach(([key, value]) => {
+		Object.entries(env.vars ?? {}).forEach(([key, value]) => {
 			varsInfo[key] ??= new Set();
 
 			if (!args.strictVars) {
@@ -3053,6 +3069,15 @@ function collectVarsPerEnvironment(
 			varsInfo[key].add("unknown");
 		});
 
+		for (const { config: group } of getContainerInstanceGroupExports(
+			env.exports ?? inheritedExports
+		)) {
+			for (const image of group.images ?? []) {
+				varsInfo[image.binding] ??= new Set();
+				varsInfo[image.binding].add("string");
+			}
+		}
+
 		return Object.fromEntries(
 			Object.entries(varsInfo).map(([key, value]) => [key, [...value]])
 		);
@@ -3061,14 +3086,14 @@ function collectVarsPerEnvironment(
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	// Collect top-level vars
-	const topLevelVars = collectVars(rawConfig.vars);
+	const topLevelVars = collectVars(rawConfig);
 	if (Object.keys(topLevelVars).length > 0) {
 		result.set(TOP_LEVEL_ENV_NAME, topLevelVars);
 	}
 
 	// Collect per-environment vars
 	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
-		const envVars = collectVars(env.vars);
+		const envVars = collectVars(env, rawConfig.exports);
 		if (Object.keys(envVars).length > 0) {
 			result.set(envName, envVars);
 		}
