@@ -3794,6 +3794,213 @@ export default { async fetch() { return new Response("ok"); } };`
 			`);
 		});
 	});
+
+	describe("entrypoints inside framework build output", () => {
+		it("omits `mainModule` when the entrypoint is inside a build output directory", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("./.svelte-kit/cloudflare", { recursive: true });
+			fs.writeFileSync(
+				"./.svelte-kit/cloudflare/_worker.js",
+				`export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-build-output-entrypoint",
+					main: "./.svelte-kit/cloudflare/_worker.js",
+					vars: { myVar: "hello" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			// No `GlobalProps` at all: `mainModule` is suppressed and there are no
+			// Durable Objects to declare.
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				interface __BaseEnv_Env {
+					myVar: "hello";
+				}
+				declare namespace Cloudflare {
+					interface Env extends __BaseEnv_Env {}
+				}
+				interface Env extends __BaseEnv_Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+			expect(std.out).not.toContain("mainModule");
+		});
+
+		it("still declares `durableNamespaces` when `mainModule` is suppressed", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("./.svelte-kit/cloudflare", { recursive: true });
+			fs.writeFileSync(
+				"./.svelte-kit/cloudflare/_worker.js",
+				`import { DurableObject } from "cloudflare:workers";
+export class CounterDO extends DurableObject {}
+export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-build-output-entrypoint-with-do",
+					main: "./.svelte-kit/cloudflare/_worker.js",
+					durable_objects: {
+						bindings: [{ name: "COUNTER", class_name: "CounterDO" }],
+					},
+					exports: {
+						CounterDO: { type: "durable-object", storage: "sqlite" },
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			// `GlobalProps` must survive without `mainModule`. Note the `COUNTER`
+			// binding still imports from the build output — Durable Object, Service
+			// and Workflow entrypoints fall back to the main entrypoint and are not
+			// covered by this change, because suppressing them would downgrade
+			// `DurableObjectNamespace<...>` to an untyped `DurableObjectNamespace`.
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				interface __BaseEnv_Env {
+					COUNTER: DurableObjectNamespace<import("./.svelte-kit/cloudflare/_worker").CounterDO>;
+				}
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						durableNamespaces: "CounterDO";
+					}
+					interface Env extends __BaseEnv_Env {}
+				}
+				interface Env extends __BaseEnv_Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+			expect(std.out).not.toContain("mainModule");
+			expect(std.out).toContain('durableNamespaces: "CounterDO";');
+		});
+
+		it("keeps `mainModule` for an entrypoint in a regular nested directory", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("./build", { recursive: true });
+			fs.writeFileSync(
+				"./build/worker.js",
+				`export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-nested-entrypoint",
+					main: "./build/worker.js",
+					vars: { myVar: "hello" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toContain('mainModule: typeof import("./build/worker");');
+		});
+
+		it("keeps `mainModule` for an entrypoint whose file name starts with a dot", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("./build", { recursive: true });
+			fs.writeFileSync(
+				"./.worker.js",
+				`export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./build/.worker.js",
+				`export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-dot-prefixed-entrypoint",
+					main: "./.worker.js",
+					vars: { myVar: "hello" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			// Only directories are treated as build output, so a hidden file name
+			// keeps its `mainModule` declaration.
+			expect(std.out).toContain('mainModule: typeof import("./.worker");');
+
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-dot-prefixed-entrypoint",
+					main: "./build/.worker.js",
+					vars: { myVar: "hello" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toContain(
+				'mainModule: typeof import("./build/.worker");'
+			);
+		});
+
+		it("keeps `mainModule` for an entrypoint outside the config directory", async ({
+			expect,
+		}) => {
+			fs.mkdirSync("./worker-config", { recursive: true });
+			fs.writeFileSync(
+				"./index.ts",
+				`export default { async fetch() { return new Response("ok"); } };`
+			);
+			fs.writeFileSync(
+				"./worker-config/wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					name: "test-entrypoint-above-config",
+					main: "../index.ts",
+					vars: { myVar: "hello" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler(
+				"types --include-runtime=false -c ./worker-config/wrangler.json"
+			);
+
+			// A relative path starting with `..` means the entrypoint merely lives
+			// outside the config directory, which is not a build output directory.
+			expect(std.out).toContain("mainModule: typeof import(");
+		});
+	});
 });
 
 describe("generate types - API", () => {
