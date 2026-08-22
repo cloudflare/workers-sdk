@@ -1,24 +1,14 @@
-import { execSync } from "node:child_process";
 import * as fs from "node:fs";
-import * as path from "node:path";
+import { getWorkerBundleDir } from "@cloudflare/build-output-utils";
 import { describe, test } from "vitest";
 import { getJsonResponse, isBuild, rootDir } from "../../__test-utils__";
 
 describe.runIf(isBuild)("output directories", () => {
 	test("creates the correct output directories", ({ expect }) => {
-		expect(fs.existsSync(path.join(rootDir, "dist", "worker_a"))).toBe(true);
-		expect(fs.existsSync(path.join(rootDir, "dist", "worker_b"))).toBe(true);
-	});
-
-	test("does not include unwanted files in deployment bundle", async ({
-		expect,
-	}) => {
-		const output = execSync("pnpm wrangler deploy --dry-run", {
-			cwd: rootDir,
-			encoding: "utf8",
-		});
-		// There should be no additional modules, in particular ones in `.wrangler/tmp`.
-		expect(output).not.toContain("Attaching additional modules");
+		expect(fs.existsSync(getWorkerBundleDir(rootDir))).toBe(true);
+		expect(fs.existsSync(getWorkerBundleDir(rootDir, "auxiliary-worker"))).toBe(
+			true
+		);
 	});
 });
 

@@ -16,6 +16,10 @@ export default defineConfig({
 				}
 			},
 		},
-		cloudflare({ inspectorPort: false, persistState: false }),
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
 	],
 });

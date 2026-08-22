@@ -33,7 +33,6 @@ function createMockPluginContext(options: {
 	account_id?: string;
 }) {
 	const ctx = new PluginContext({
-		hasShownWorkerConfigWarnings: false,
 		restartingDevServerCount: 0,
 		tunnelHostnames: new Set(),
 	});
@@ -46,19 +45,13 @@ function createMockPluginContext(options: {
 			},
 		},
 	});
-	if (options.type === "workers") {
-		Object.defineProperty(ctx, "entryWorkerConfig", {
-			value: {
-				account_id: options.account_id,
-			},
-		});
-	}
-	Object.defineProperty(ctx, "allWorkerConfigs", {
-		value: [
-			{
-				account_id: options.account_id,
-			},
-		],
+	Object.defineProperty(ctx, "settings", {
+		value: options.account_id
+			? {
+					type: "settings",
+					accountId: options.account_id,
+				}
+			: undefined,
 	});
 	return ctx;
 }

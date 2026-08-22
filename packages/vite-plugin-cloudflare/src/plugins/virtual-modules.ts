@@ -32,15 +32,15 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 				if (source === VIRTUAL_USER_ENTRY) {
 					const workerConfig = ctx.getWorkerConfig(this.environment.name);
 					assert(workerConfig, "Expected `workerConfig` to be defined");
-					const main = await this.resolve(workerConfig.main);
+					const entrypoint = await this.resolve(workerConfig.entrypoint);
 
-					if (!main) {
+					if (!entrypoint) {
 						throw new Error(
-							`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+							`Failed to resolve Worker entrypoint "${workerConfig.entrypoint}" for environment "${this.environment.name}"`
 						);
 					}
 
-					return main;
+					return entrypoint;
 				}
 
 				return `\0${source}`;

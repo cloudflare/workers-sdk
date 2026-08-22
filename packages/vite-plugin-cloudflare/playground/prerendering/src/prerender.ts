@@ -1,8 +1,14 @@
+interface Env {
+	AUXILIARY_WORKER: Fetcher;
+}
+
 export default {
-	async fetch(request) {
+	async fetch(request, env) {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/prerendered") {
+			const auxiliaryResponse = await env.AUXILIARY_WORKER.fetch(request);
+			const auxiliaryText = await auxiliaryResponse.text();
 			return new Response(
 				`\
 <!DOCTYPE html>
@@ -13,7 +19,7 @@ export default {
 	<title>Pre-rendering</title>
 </head>
 <body>
-	<h1>Pre-rendered HTML</h1>
+	<h1>Pre-rendered HTML ${auxiliaryText}</h1>
 </body>
 </html>`,
 				{
@@ -24,4 +30,4 @@ export default {
 
 		return new Response(null, { status: 404 });
 	},
-} satisfies ExportedHandler;
+} satisfies ExportedHandler<Env>;

@@ -9,9 +9,9 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
+			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
-			auxiliaryWorkers: [{ configPath: "./worker-b/wrangler.jsonc" }],
 		}),
 	],
 });

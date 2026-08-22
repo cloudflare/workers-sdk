@@ -1,4 +1,3 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
 import express from "express";
 
 const isTest = process.env.VITEST;
@@ -13,7 +12,6 @@ export async function createServer(root = process.cwd()) {
 		server: {
 			middlewareMode: true,
 		},
-		plugins: [cloudflare({ persistState: false })],
 	});
 
 	app.use(vite.middlewares);

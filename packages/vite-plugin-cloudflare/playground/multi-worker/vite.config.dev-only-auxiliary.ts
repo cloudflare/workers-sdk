@@ -7,10 +7,8 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-a/wrangler.jsonc",
-			auxiliaryWorkers: [
-				{ configPath: "./worker-b/wrangler.jsonc", devOnly: true },
-			],
+			types: { includeRuntime: false },
+			auxiliaryWorkers: { auxiliaryWorker: { devOnly: true } },
 			inspectorPort: false,
 			persistState: false,
 		}),

@@ -2,10 +2,10 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+	// TODO: Configure Workflows when they are supported by cloudflare.config.ts.
 	plugins: [
 		cloudflare({
-			configPath: "./worker-a/wrangler.jsonc",
-			auxiliaryWorkers: [{ configPath: "./worker-b/wrangler.jsonc" }],
+			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
 		}),

@@ -6,7 +6,7 @@ import { getJsonResponse } from "../../__test-utils__";
 //
 // Under `vite dev`, outbound subrequests should carry a `CF-Worker` header
 // matching the zone name that owns the Worker (see this fixture's
-// `wrangler.jsonc`). Before the fix the plugin dropped the zone before
+// `cloudflare.config.ts`). Before the fix the plugin dropped the zone before
 // handing the Worker to Miniflare and Miniflare fell back to
 // `<worker-name>.example.com`. The fixture's route declares
 // `zone_name: "example.com"` explicitly, so we expect that — not the

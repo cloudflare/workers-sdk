@@ -5,5 +5,14 @@
 		"declarationMap": true
 	},
 	"include": ["src"],
-	"exclude": ["src/workers", "src/__tests__/fixtures"]
+	"exclude": [
+		"src/workers",
+		"src/__tests__/fixtures",
+		// TODO: Remove this exclusion when Containers are supported by
+		// cloudflare.config.ts.
+		"src/containers.ts",
+		// TODO: Remove this exclusion when `.env` and `.dev.vars` files are
+		// supported with cloudflare.config.ts.
+		"src/dev-vars.ts"
+	]
 }
