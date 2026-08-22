@@ -115,6 +115,28 @@ const remoteProxySessionsDataMap = new Map<
 	RemoteProxySessionData | null
 >();
 
+/**
+ * Disposes every remote proxy session that has been started.
+ *
+ * Each session runs a listening server, which keeps the event loop alive, so
+ * the sessions must be disposed for a `vite build` or a programmatic server
+ * close to be able to exit.
+ */
+export async function disposeRemoteProxySessions(): Promise<void> {
+	const remoteProxySessionsData = [...remoteProxySessionsDataMap.values()];
+	remoteProxySessionsDataMap.clear();
+
+	await Promise.all(
+		remoteProxySessionsData.map(async (remoteProxySessionData) => {
+			try {
+				await remoteProxySessionData?.session.dispose();
+			} catch (error) {
+				debuglog("Failed to dispose remote proxy session:", error);
+			}
+		})
+	);
+}
+
 function createRemoteBindingsLogger(logger: vite.Logger): RemoteBindingsLogger {
 	const write = (
 		level: "info" | "warn" | "error",
