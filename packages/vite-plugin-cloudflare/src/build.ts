@@ -9,7 +9,6 @@ import type {
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 const CLIENT_FALLBACK_ENTRY_NAME = "__cloudflare_fallback_entry__";
 
@@ -188,21 +187,4 @@ function getImportedAssetPaths(viteManifest: vite.Manifest): Set<string> {
 	);
 
 	return new Set(assetPaths);
-}
-
-/**
- * Used to remove the `assets` field from the entry Worker config if there are no assets
- */
-export function removeAssetsField(entryWorkerBuildDirectory: string): void {
-	const entryWorkerConfigPath = path.join(
-		entryWorkerBuildDirectory,
-		"wrangler.json"
-	);
-	const workerConfig = JSON.parse(
-		fs.readFileSync(entryWorkerConfigPath, "utf-8")
-	) as Unstable_Config;
-
-	workerConfig.assets = undefined;
-
-	fs.writeFileSync(entryWorkerConfigPath, JSON.stringify(workerConfig));
 }

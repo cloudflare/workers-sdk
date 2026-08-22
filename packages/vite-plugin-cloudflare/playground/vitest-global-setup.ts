@@ -1,7 +1,6 @@
 import { isDockerRunning } from "@cloudflare/containers-shared";
 import { chromium } from "playwright-chromium";
 import { version } from "vite";
-import { getDockerPath } from "../src/containers";
 import type { BrowserServer } from "playwright-chromium";
 import type { TestProject } from "vitest/node";
 
@@ -24,7 +23,9 @@ export async function setup({ provide }: TestProject): Promise<void> {
 
 console.log(`Testing with Vite ${version}`);
 
-const dockerIsRunning = await isDockerRunning(getDockerPath());
+const dockerIsRunning = await isDockerRunning(
+	process.env.WRANGLER_DOCKER_BIN || "docker"
+);
 
 /** Indicates whether the test is being run locally (not in CI) AND docker is currently not running on the system */
 const isLocalWithoutDockerRunning =

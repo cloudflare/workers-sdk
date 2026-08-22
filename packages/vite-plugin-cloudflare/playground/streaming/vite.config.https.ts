@@ -4,7 +4,11 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	plugins: [
-		cloudflare({ inspectorPort: false, persistState: false }),
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
 		basicSsl(),
 	],
 });

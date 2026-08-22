@@ -12,10 +12,13 @@ import type {
 	Worker,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type {
+	ParsedInputSettingsConfig,
+	ParsedInputWorkerConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 /**
  * Used to store state that should persist across server restarts.
@@ -24,7 +27,6 @@ import type { Unstable_Config } from "wrangler";
 export interface SharedContext {
 	miniflare?: Miniflare;
 	workerNameToExportTypesMap?: Map<string, ExportTypes>;
-	hasShownWorkerConfigWarnings: boolean;
 	/** Tracks the number of in-flight dev server restarts (0 means no restart in progress) */
 	restartingDevServerCount: number;
 	/** Allowed hostnames for tunnel connections */
@@ -100,15 +102,6 @@ export class PluginContext {
 		}
 
 		return this.#sharedContext.workerNameToExportTypesMap;
-	}
-
-	setHasShownWorkerConfigWarnings(hasShownWorkerConfigWarnings: boolean): void {
-		this.#sharedContext.hasShownWorkerConfigWarnings =
-			hasShownWorkerConfigWarnings;
-	}
-
-	get hasShownWorkerConfigWarnings(): boolean {
-		return this.#sharedContext.hasShownWorkerConfigWarnings;
 	}
 
 	beginRestartingDevServer(): void {
@@ -210,10 +203,12 @@ export class PluginContext {
 	getWorkerNewConfig(
 		environmentName: string
 	): ParsedInputWorkerConfig | undefined {
-		return this.#getWorker(environmentName)?.parsedNewWorkerConfig;
+		return this.#getWorker(environmentName)?.config;
 	}
 
-	get allWorkerConfigs(): Unstable_Config[] {
+	get allWorkerConfigs(): Array<
+		ParsedInputWorkerConfig | ParsedOutputWorkerConfig
+	> {
 		if (this.resolvedPluginConfig.type === "preview") {
 			return this.resolvedPluginConfig.workers.map((worker) => worker.config);
 		}
@@ -231,6 +226,14 @@ export class PluginContext {
 		return this.resolvedPluginConfig.environmentNameToWorkerMap.get(
 			this.resolvedPluginConfig.entryWorkerEnvironmentName
 		)?.config;
+	}
+
+	get settings(): ParsedInputSettingsConfig | undefined {
+		if (this.resolvedPluginConfig.type === "preview") {
+			return this.resolvedPluginConfig.workers[0]?.settings;
+		}
+
+		return this.resolvedPluginConfig.parsedConfig.settings;
 	}
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {

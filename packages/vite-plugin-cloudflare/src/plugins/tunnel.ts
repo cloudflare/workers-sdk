@@ -438,8 +438,10 @@ export async function setupDevTunnel(
 		origin,
 		shortcutPressed,
 		name: tunnel.name,
-		accountId: ctx.entryWorkerConfig?.account_id,
-		complianceRegion: ctx.entryWorkerConfig?.compliance_region,
+		accountId: ctx.settings?.accountId,
+		complianceRegion: toWranglerComplianceRegion(
+			ctx.settings?.complianceRegion
+		),
 		// We will restart the server with the tunnel hostnames in allowedHosts if needed
 		allowedHosts: true,
 	});
@@ -510,8 +512,10 @@ export async function setupPreviewTunnel(
 		shortcutPressed,
 		name: tunnel.name,
 		allowedHosts: preview?.allowedHosts,
-		accountId: ctx.allWorkerConfigs[0]?.account_id,
-		complianceRegion: ctx.allWorkerConfigs[0]?.compliance_region,
+		accountId: ctx.settings?.accountId,
+		complianceRegion: toWranglerComplianceRegion(
+			ctx.settings?.complianceRegion
+		),
 	});
 
 	if (!publicUrls) {
@@ -521,6 +525,12 @@ export async function setupPreviewTunnel(
 	if (shortcutPressed) {
 		server.printUrls();
 	}
+}
+
+function toWranglerComplianceRegion(
+	region: "public" | "fedramp-high" | undefined
+): wrangler.Unstable_Config["compliance_region"] {
+	return region === "fedramp-high" ? "fedramp_high" : region;
 }
 
 function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {
