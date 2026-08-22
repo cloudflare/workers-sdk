@@ -191,6 +191,7 @@ import {
 import { flagshipFlagsEvaluateCommand } from "./flagship/flags/evaluate";
 import { flagshipFlagsGetCommand } from "./flagship/flags/get";
 import { flagshipFlagsListCommand } from "./flagship/flags/list";
+import { flagshipFlagsPullCommand } from "./flagship/flags/pull";
 import { flagshipFlagsRolloutCommand } from "./flagship/flags/rollout";
 import { flagshipFlagsRulesDeleteCommand } from "./flagship/flags/rules/delete";
 import { flagshipFlagsRulesListCommand } from "./flagship/flags/rules/list";
@@ -1641,6 +1642,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler flagship flags get",
 			definition: flagshipFlagsGetCommand,
+		},
+		{
+			command: "wrangler flagship flags pull",
+			definition: flagshipFlagsPullCommand,
 		},
 		{
 			command: "wrangler flagship flags inspect",

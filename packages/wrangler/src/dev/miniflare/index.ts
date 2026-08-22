@@ -29,6 +29,7 @@ import type {
 	Binding,
 	CfD1Database,
 	CfDispatchNamespace,
+	CfFlagship,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfPipeline,
@@ -242,6 +243,28 @@ function kvNamespaceEntry(
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
+/**
+ * Build the Miniflare options for a Flagship binding, proxying to the remote
+ * app only when the user opted in with `remote: true`.
+ *
+ * @param binding The Flagship binding from the Worker's config.
+ * @param remoteProxyConnectionString The remote proxy session, if one is running.
+ * @returns The binding name and its Miniflare options.
+ */
+function flagshipEntry(
+	{ binding, app_id, remote }: CfFlagship,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+): [
+	string,
+	{ app_id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+] {
+	const id = getRemoteId(app_id) ?? binding;
+	if (!remoteProxyConnectionString || !remote) {
+		return [binding, { app_id: id }];
+	}
+	return [binding, { app_id: id, remoteProxyConnectionString }];
+}
+
 function r2BucketEntry(
 	{ binding, bucket_name, remote, local_dev }: CfR2Bucket,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
@@ -904,13 +927,9 @@ export function buildMiniflareBindingOptions(
 			helloWorldBindings.map((binding) => [binding.binding, binding])
 		),
 		flagship: Object.fromEntries(
-			flagshipBindings.map((binding) => [
-				binding.binding,
-				{
-					app_id: getRemoteId(binding.app_id) ?? binding.binding,
-					remoteProxyConnectionString,
-				},
-			])
+			flagshipBindings.map((binding) =>
+				flagshipEntry(binding, remoteProxyConnectionString)
+			)
 		),
 		artifacts: Object.fromEntries(
 			artifactsBindings.map((binding) => [

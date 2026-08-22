@@ -15,6 +15,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
+import FlagshipIcon from "../assets/icons/flagship.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
@@ -120,6 +121,7 @@ export function AppSidebar({
 	const kvNamespaces = bindings?.kv ?? [];
 	const r2Buckets = bindings?.r2 ?? [];
 	const workflows = bindings?.workflows ?? [];
+	const flagshipApps = bindings?.flagship ?? [];
 
 	const sidebarItemGroups = [
 		{
@@ -207,6 +209,22 @@ export function AppSidebar({
 				},
 			})),
 			title: "Workflows",
+		},
+		{
+			emptyLabel: "No Flagship apps",
+			groupId: "flagship" as const,
+			icon: FlagshipIcon,
+			items: flagshipApps.map((app) => ({
+				id: `${app.id}:${app.bindingName}`,
+				isActive: currentPath === `/flagship/${app.id}`,
+				label: app.bindingName,
+				link: {
+					params: { appId: app.id },
+					search: workerSearch,
+					to: "/flagship/$appId",
+				},
+			})),
+			title: "Flagship",
 		},
 	] satisfies Array<{
 		emptyLabel: string;

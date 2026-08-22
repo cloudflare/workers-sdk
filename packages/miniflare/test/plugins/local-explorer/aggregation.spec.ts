@@ -69,6 +69,7 @@ describe("Cross-process aggregation", () => {
 								exportName: "MyDO",
 							},
 							BUCKET_A: { type: "r2", name: "bucket-a" },
+							FLAGS_A: { type: "flagship", id: "app-a" },
 						},
 						exports: {
 							MyDO: { type: "durable-object", storage: "legacy-kv" },
@@ -105,6 +106,7 @@ describe("Cross-process aggregation", () => {
 								exportName: "OtherDO",
 							},
 							BUCKET_B: { type: "r2", name: "bucket-b" },
+							FLAGS_B: { type: "flagship", id: "app-b" },
 						},
 						exports: {
 							OtherDO: { type: "durable-object", storage: "legacy-kv" },
@@ -383,6 +385,120 @@ describe("Cross-process aggregation", () => {
 				  "count": 2,
 				}
 			`);
+		});
+	});
+
+	describe("Flagship aggregation", () => {
+		const FLAG = {
+			key: "peer-flag",
+			enabled: true,
+			default_variation: "off",
+			variations: { on: true, off: false },
+		};
+
+		test("lists apps from both instances", async ({ expect }) => {
+			const response = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps`
+			);
+			const data = (await response.json()) as ListResponse;
+
+			expect(normalizeListResponse(data)).toMatchInlineSnapshot(`
+				{
+				  "result": [
+				    {
+				      "bindings": [
+				        "FLAGS_A",
+				      ],
+				      "id": "app-a",
+				    },
+				    {
+				      "bindings": [
+				        "FLAGS_B",
+				      ],
+				      "id": "app-b",
+				    },
+				  ],
+				  "result_info": {
+				    "count": 2,
+				  },
+				}
+			`);
+		});
+
+		test("creates, reads, evaluates and deletes a flag owned by a peer", async ({
+			expect,
+		}) => {
+			const created = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(FLAG),
+				}
+			);
+			await created.text();
+			expect(created.status).toBe(200);
+
+			const listed = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags`
+			);
+			const listedData = (await listed.json()) as ListResponse;
+			expect(listedData.result?.map((flag) => flag.key)).toStrictEqual([
+				"peer-flag",
+			]);
+
+			const owned = await instanceB.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags/peer-flag`
+			);
+			await owned.text();
+			expect(owned.status).toBe(200);
+
+			const evaluated = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags/peer-flag/evaluate`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ context: {} }),
+				}
+			);
+			expect(
+				((await evaluated.json()) as { result?: { value?: unknown } }).result
+					?.value
+			).toBe(false);
+
+			const patched = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags/peer-flag`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ enabled: false }),
+				}
+			);
+			await patched.text();
+			expect(patched.status).toBe(200);
+
+			const deleted = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags/peer-flag`,
+				{ method: "DELETE" }
+			);
+			await deleted.text();
+			expect(deleted.status).toBe(200);
+
+			const afterDelete = await instanceB.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags`
+			);
+			expect(((await afterDelete.json()) as ListResponse).result).toStrictEqual(
+				[]
+			);
+		});
+
+		test("404s for an app no instance simulates", async ({ expect }) => {
+			const response = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-missing/flags`
+			);
+			await response.text();
+
+			expect(response.status).toBe(404);
 		});
 	});
 

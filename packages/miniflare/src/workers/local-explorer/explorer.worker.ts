@@ -17,6 +17,9 @@ import {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zFlagshipCreateFlagData,
+	zFlagshipEvaluateFlagData,
+	zFlagshipUpdateFlagData,
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
 	zWorkflowsChangeInstanceStatusData,
@@ -25,6 +28,15 @@ import {
 import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
+import {
+	createFlagshipFlag,
+	deleteFlagshipFlag,
+	evaluateFlagshipFlag,
+	getFlagshipFlag,
+	listFlagshipApps,
+	listFlagshipFlags,
+	updateFlagshipFlag,
+} from "./resources/flagship";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -365,6 +377,54 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 		c.req.param("workflow_name"),
 		c.req.param("instance_id")
 	)
+);
+
+// ============================================================================
+// Flagship Endpoints
+// ============================================================================
+
+app.get("/api/flagship/apps", (c) => listFlagshipApps(c));
+
+app.get("/api/flagship/apps/:app_id/flags", (c) =>
+	listFlagshipFlags(c, c.req.param("app_id"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags",
+	validateRequestBody(zFlagshipCreateFlagData.shape.body),
+	(c) => createFlagshipFlag(c, c.req.param("app_id"), c.req.valid("json"))
+);
+
+app.get("/api/flagship/apps/:app_id/flags/:flag_key", (c) =>
+	getFlagshipFlag(c, c.req.param("app_id"), c.req.param("flag_key"))
+);
+
+app.patch(
+	"/api/flagship/apps/:app_id/flags/:flag_key",
+	validateRequestBody(zFlagshipUpdateFlagData.shape.body),
+	(c) =>
+		updateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json")
+		)
+);
+
+app.delete("/api/flagship/apps/:app_id/flags/:flag_key", (c) =>
+	deleteFlagshipFlag(c, c.req.param("app_id"), c.req.param("flag_key"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags/:flag_key/evaluate",
+	validateRequestBody(zFlagshipEvaluateFlagData.shape.body),
+	(c) =>
+		evaluateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json").context ?? {}
+		)
 );
 
 // ============================================================================

@@ -145,6 +145,42 @@ describe("printBindings — AI Search bindings", () => {
 	});
 });
 
+describe("printBindings -- Flagship bindings", () => {
+	function callPrintBindingsInLocalDev(
+		bindings: StartDevWorkerInput["bindings"]
+	) {
+		const lines: string[] = [];
+		printBindings(bindings, [], [], [], {
+			log: (msg: string) => lines.push(msg),
+			local: true,
+		});
+		return lines.map((l) => stripVTControlCharacters(l)).join("\n");
+	}
+
+	it("shows Flagship bindings as local by default", ({ expect }) => {
+		const output = callPrintBindingsInLocalDev({
+			FLAGS: { type: "flagship", app_id: "my-app" },
+		});
+
+		expect(output).toContain("FLAGS");
+		expect(output).toContain("Flagship");
+		expect(output).toContain("my-app");
+		expect(output).toContain("local");
+		expect(output).not.toContain("remote");
+	});
+
+	it("shows Flagship bindings as remote when `remote: true` is set", ({
+		expect,
+	}) => {
+		const output = callPrintBindingsInLocalDev({
+			FLAGS: { type: "flagship", app_id: "my-app", remote: true },
+		});
+
+		expect(output).toContain("remote");
+		expect(output).not.toContain("local");
+	});
+});
+
 describe("printBindings -- Artifacts bindings", () => {
 	it("shows Artifacts bindings", ({ expect }) => {
 		const output = callPrintBindings({
@@ -234,6 +270,13 @@ describe("warnOrError", () => {
 	});
 
 	describe("local-and-remote bindings", () => {
+		it("no longer warns that Flagship is always remote", ({ expect }) => {
+			expect(() => warnOrError("flagship", true)).not.toThrow();
+			expect(() => warnOrError("flagship", false)).not.toThrow();
+			expect(() => warnOrError("flagship", undefined)).not.toThrow();
+			expect(std.warn).toBe("");
+		});
+
 		it("does not throw or warn for any `remote` value", ({ expect }) => {
 			expect(() => warnOrError("kv_namespace", true)).not.toThrow();
 			expect(() => warnOrError("kv_namespace", false)).not.toThrow();
