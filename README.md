@@ -45,6 +45,22 @@ yarn create cloudflare@latest
 
 For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
 
+## AI Agent Tooling
+
+This repo includes configurations for AI coding tools that understand Cloudflare's APIs natively. If you use an AI coding assistant (Claude Code, opencode, Cursor, etc.):
+
+- **MCP servers** — Pre-configured in [`CLAUDE.md`](./CLAUDE.md) and [`AGENTS.md`](./AGENTS.md) for token-efficient access to Cloudflare's API surface without guessing CLI flags or scraping docs.
+- **Cloudflare Agent Skills** — Install via `claude /install-skill cloudflare` to give Claude Code direct awareness of Workers, KV, D1, R2, and more.
+
+The MCP servers are also available for manual configuration in any MCP-compatible client:
+
+| Server | URL | Purpose |
+|--------|-----|---------|
+| Builds | `builds.mcp.cloudflare.com/mcp` | Manage Worker deployments |
+| Bindings | `bindings.mcp.cloudflare.com/mcp` | Scaffold KV, D1, R2 resources |
+| Observability | `observability.mcp.cloudflare.com/mcp` | Fetch deployment logs |
+| Code Mode | `mcp.cloudflare.com/mcp` | Full Cloudflare API access |
+
 ## Documentation
 
 Visit the official Workers documentation [here](https://developers.cloudflare.com/workers/).
