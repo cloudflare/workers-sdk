@@ -3415,6 +3415,7 @@ export class Miniflare {
 			this.#sharedOpts.unsafeEnableSharedStorage &&
 			[
 				D1_PLUGIN_NAME,
+				IMAGES_PLUGIN_NAME,
 				KV_PLUGIN_NAME,
 				R2_PLUGIN_NAME,
 				RATELIMIT_PLUGIN_NAME,

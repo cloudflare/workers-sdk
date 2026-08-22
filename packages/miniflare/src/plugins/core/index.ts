@@ -31,7 +31,7 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { getDurableObjectNamespaces } from "../do/namespaces";
-import { IMAGES_PLUGIN_NAME } from "../images";
+import { getImagesBindingServiceName } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
@@ -844,7 +844,7 @@ export function getGlobalServices({
 			"images"
 		)) {
 			if (getRemoteProxyConnectionString(binding, worker.dev) === undefined) {
-				imagesServiceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
+				imagesServiceName = getImagesBindingServiceName(name);
 				break;
 			}
 		}
