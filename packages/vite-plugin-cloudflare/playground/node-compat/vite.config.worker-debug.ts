@@ -1,5 +1,6 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { workerDebugConfig } from "./worker-configs";
 
 export default defineConfig({
 	build: {
@@ -7,7 +8,8 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-debug/wrangler.jsonc",
+			types: { includeRuntime: false },
+			config: workerDebugConfig,
 			inspectorPort: false,
 			persistState: false,
 		}),

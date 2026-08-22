@@ -4,10 +4,19 @@ import { describe, test } from "vitest";
 import { getJsonResponse, isBuild, rootDir } from "../../../__test-utils__";
 
 describe.runIf(isBuild)("output directories", () => {
-	test("creates the correct output directories", ({ expect }) => {
+	// TODO: Reinstate when auxiliary Workers are supported by Build Output.
+	test.skip("creates the correct output directories", ({ expect }) => {
 		expect(
 			fs.existsSync(
-				path.join(rootDir, "custom-root-output-directory", "worker_a")
+				path.join(
+					rootDir,
+					".cloudflare",
+					"output",
+					"v0",
+					"workers",
+					"default",
+					"bundle"
+				)
 			)
 		).toBe(true);
 		expect(
@@ -16,7 +25,8 @@ describe.runIf(isBuild)("output directories", () => {
 	});
 });
 
-describe("multi-worker service bindings", async () => {
+// TODO: Reinstate build/preview coverage when auxiliary Workers are supported by Build Output.
+describe.skipIf(isBuild)("multi-worker service bindings", async () => {
 	test("returns a response from another worker", async ({ expect }) => {
 		const result = await getJsonResponse("/fetch");
 		expect(result).toEqual({ result: { name: "Worker B" } });

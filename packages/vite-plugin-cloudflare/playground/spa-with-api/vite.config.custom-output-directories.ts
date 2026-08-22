@@ -13,5 +13,12 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [react(), cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		react(),
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
 });

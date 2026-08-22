@@ -1,8 +1,9 @@
 import { readBuildOutput } from "@cloudflare/build-output-utils";
-import { convertToWranglerConfig } from "@cloudflare/config";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-import type { ModuleType } from "@cloudflare/config";
-import type { Unstable_Config } from "wrangler";
+import type {
+	ModuleType,
+	ParsedOutputWorkerConfig,
+	ParsedSettingsConfig,
+} from "@cloudflare/config";
 
 export interface Bundle {
 	rootPath: string;
@@ -12,7 +13,9 @@ export interface Bundle {
 
 export interface BuildOutputPreviewWorker {
 	source: "build-output";
-	config: Unstable_Config;
+	config: ParsedOutputWorkerConfig;
+	settings: ParsedSettingsConfig | undefined;
+	assetsDir: string | undefined;
 	bundle: Bundle | undefined;
 }
 
@@ -33,34 +36,9 @@ export async function readBuildOutputWorkers(
 	const { workers, settings } = await readBuildOutput(root);
 	const [worker] = workers;
 
-	const { manifest, ...inputShape } = worker.config;
-	const rawConfig = convertToWranglerConfig(inputShape, settings);
-
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		undefined,
-		undefined,
-		{},
-		true
-	);
-
-	if (diagnostics.hasWarnings()) {
-		console.warn(diagnostics.renderWarnings());
-	}
-	if (diagnostics.hasErrors()) {
-		throw new Error(diagnostics.renderErrors());
-	}
-
-	if (worker.assetsDir) {
-		config.assets = {
-			...(config.assets ?? {}),
-			directory: worker.assetsDir,
-		};
-	}
-
+	const { manifest } = worker.config;
 	let bundle: Bundle | undefined;
 	if (manifest && worker.bundleDir) {
-		config.main = manifest.mainModule;
 		bundle = {
 			rootPath: worker.bundleDir,
 			mainModule: manifest.mainModule,
@@ -68,5 +46,13 @@ export async function readBuildOutputWorkers(
 		};
 	}
 
-	return [{ source: "build-output", config, bundle }];
+	return [
+		{
+			source: "build-output",
+			config: worker.config,
+			settings,
+			assetsDir: worker.assetsDir,
+			bundle,
+		},
+	];
 }

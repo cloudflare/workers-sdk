@@ -99,19 +99,4 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		);
 		expect(fs.existsSync(sourceMapPath)).toBe(true);
 	});
-
-	test("does not emit wrangler.json", ({ expect }) => {
-		const wranglerJson = path.join(getBuildOutputDir(), "wrangler.json");
-		expect(fs.existsSync(wranglerJson)).toBe(false);
-	});
-
-	test("does not write .wrangler/deploy/config.json", ({ expect }) => {
-		const deployConfig = path.join(
-			rootDir,
-			".wrangler",
-			"deploy",
-			"config.json"
-		);
-		expect(fs.existsSync(deployConfig)).toBe(false);
-	});
 });

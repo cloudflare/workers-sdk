@@ -13,9 +13,7 @@ export default defineConfig({
 		cloudflare({
 			inspectorPort: false,
 			persistState: false,
-			experimental: {
-				newConfig: { cfBuildOutput: true, types: { includeRuntime: false } },
-			},
+			types: { includeRuntime: false },
 		}),
 	],
 });

@@ -19,9 +19,15 @@ export default defineConfig({
 
 			await builder.build(clientEnvironment);
 
-			// The output `wrangler.json` will always include an `assets` field so will fail to run if there is no client build.
+			// The Build Output config includes assets, so it cannot run without a client build.
 			// To build correctly without assets, a custom `buildApp` would need to remove this field.
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
 });

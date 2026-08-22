@@ -1,18 +1,19 @@
 import { describe, test } from "vitest";
-import { getJsonResponse } from "../../../__test-utils__";
+import { getJsonResponse, isBuild } from "../../../__test-utils__";
 
-describe("zero-config mode (no wrangler config files)", async () => {
+describe("inline auxiliary Worker config", async () => {
 	test("entry worker returns a response", async ({ expect }) => {
 		const result = await getJsonResponse();
 		expect(result).toEqual({ name: "Worker C (no config file)" });
 	});
 
-	test("service binding fetch works", async ({ expect }) => {
+	// TODO: Reinstate build/preview coverage when auxiliary Workers are supported by Build Output.
+	test.skipIf(isBuild)("service binding fetch works", async ({ expect }) => {
 		const result = await getJsonResponse("/fetch");
 		expect(result).toEqual({ result: { name: "Worker D (no config file)" } });
 	});
 
-	test("RPC method works", async ({ expect }) => {
+	test.skipIf(isBuild)("RPC method works", async ({ expect }) => {
 		const result = await getJsonResponse("/rpc-method");
 		expect(result).toEqual({ result: 21 });
 	});

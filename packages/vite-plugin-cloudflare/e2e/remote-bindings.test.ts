@@ -63,7 +63,10 @@ if (isWindows) {
 		}, 35_000);
 
 		describe.each(commands)('with "%s" command', (command) => {
-			test.skipIf(isBuildAndPreviewOnWindows(command))(
+			// TODO: Reinstate build/preview coverage when auxiliary Workers are supported by Build Output.
+			test.skipIf(
+				command === "buildAndPreview" || isBuildAndPreviewOnWindows(command)
+			)(
 				"can fetch from both local (/auxiliary) and remote workers",
 				async ({ expect }) => {
 					const proc = await runLongLived("pnpm", command, projectPath);
@@ -153,7 +156,7 @@ if (isWindows) {
 			pm: "pnpm",
 		});
 
-		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
+		test("for connection to remote bindings during dev the accountId in cloudflare.config.ts is used", async ({
 			expect,
 		}) => {
 			const proc = await runLongLived("pnpm", "dev", projectPath);

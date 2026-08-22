@@ -2831,6 +2831,9 @@ importers:
 
   packages/vite-plugin-cloudflare:
     dependencies:
+      '@cloudflare/config':
+        specifier: workspace:*
+        version: link:../config
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
@@ -2853,9 +2856,6 @@ importers:
       '@cloudflare/build-output-utils':
         specifier: workspace:*
         version: link:../build-output-utils
-      '@cloudflare/config':
-        specifier: workspace:*
-        version: link:../config
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
