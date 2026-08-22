@@ -40,6 +40,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 					remote: true,
 				},
 			},
+			hyperdriveConnectionStrings: new Map(),
 		};
 
 		const result = await maybeStartOrUpdateRemoteProxySession(

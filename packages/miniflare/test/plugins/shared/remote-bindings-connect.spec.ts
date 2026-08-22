@@ -1,3 +1,4 @@
+import net from "node:net";
 import path from "node:path";
 // The relay helper under unit test. It is the same implementation bundled into
 // miniflare's dist and mirrored (byte-for-byte, comments aside) into the edge
@@ -14,6 +15,7 @@ import {
 	VPC_SERVICES_PLUGIN,
 } from "miniflare";
 import { beforeAll, describe, test } from "vitest";
+import { HyperdriveProxyController } from "../../../src/plugins/hyperdrive/hyperdrive-proxy";
 import { singleModuleManifest, useDispose } from "../../test-shared";
 import type { RemoteProxyConnectionString } from "miniflare";
 
@@ -772,5 +774,188 @@ describe("VPC_SERVICES plugin: raw TCP opt-in", () => {
 		}>;
 		expect(serviceList).toHaveLength(1);
 		expect(serviceList[0].worker?.compatibilityFlags).toEqual(["experimental"]);
+	});
+});
+
+// Reads from a raw TCP socket until the accumulated output contains `sentinel`,
+// or rejects after `timeoutMs`. Used to observe bytes coming back through the
+// Hyperdrive remote bridge.
+function readFromSocket(
+	socket: net.Socket,
+	sentinel: string,
+	timeoutMs = 10_000
+): Promise<string> {
+	return new Promise((resolve, reject) => {
+		let out = "";
+		const cleanup = () => {
+			clearTimeout(timer);
+			socket.off("data", onData);
+			socket.off("error", onError);
+		};
+		const timer = setTimeout(() => {
+			cleanup();
+			reject(new Error(`timed out waiting for ${JSON.stringify(sentinel)}`));
+		}, timeoutMs);
+		const onData = (chunk: Buffer) => {
+			out += chunk.toString("utf8");
+			if (out.includes(sentinel)) {
+				cleanup();
+				resolve(out);
+			}
+		};
+		const onError = (err: Error) => {
+			cleanup();
+			reject(err);
+		};
+		socket.on("data", onData);
+		socket.on("error", onError);
+	});
+}
+
+// The remote Hyperdrive path replaces the `connect()` model with a local TCP
+// bridge (`HyperdriveProxyController.createRemoteTcpBridge`): workerd's
+// `external.tcp` designator points at a Node `net.Server` on 127.0.0.1, which
+// relays each connection to the edge over a WebSocket into the real edge
+// binding via the same `handleConnect` path exercised above. A database client
+// (mysql2/pg) then speaks its wire protocol straight through the bridge.
+describe("Hyperdrive remote binding: local TCP bridge", () => {
+	test("relays bytes between a local TCP client and the edge binding", async ({
+		expect,
+	}) => {
+		// "Edge" running the real ProxyServerWorker, with a `HYPERDRIVE` binding
+		// wired to a connect-capable target that reflects the address and echoes.
+		const edge = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "proxy-server",
+						compatibilityDate: COMPAT_DATE,
+						compatibilityFlags: ["experimental"],
+						manifest: {
+							mainModule: "ProxyServerWorker.js",
+							modules: {
+								"ProxyServerWorker.js": {
+									type: "esm",
+									contents: proxyServerBundle,
+								},
+							},
+						},
+						env: { HYPERDRIVE: { type: "worker", workerName: "hd-target" } },
+					},
+				},
+				{
+					config: {
+						type: "worker",
+						name: "hd-target",
+						compatibilityDate: COMPAT_DATE,
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(VPC_TARGET_SCRIPT),
+					},
+				},
+			],
+		});
+		useDispose(edge);
+		const edgeUrl = await edge.ready;
+
+		const controller = new HyperdriveProxyController();
+		try {
+			const bridgePort = await controller.createRemoteTcpBridge({
+				name: "hyperdrive:0:HYPERDRIVE",
+				bindingName: "HYPERDRIVE",
+				remoteProxyConnectionString: edgeUrl,
+			});
+
+			const socket = net.connect(bridgePort, "127.0.0.1");
+			try {
+				await new Promise<void>((resolve, reject) => {
+					socket.once("connect", resolve);
+					socket.once("error", reject);
+				});
+				socket.write("PING\n");
+				const received = await readFromSocket(socket, "PING\n");
+				// The bridge sends a fixed connect address; the target reflects it.
+				expect(received).toContain("ADDR:hyperdrive.local:0|");
+				expect(received).toContain("PING\n");
+			} finally {
+				socket.destroy();
+			}
+		} finally {
+			controller.dispose();
+		}
+	});
+});
+
+// The edge mints per-session credentials for a remote Hyperdrive binding, so the
+// local binding config must be seeded with the edge session's `connectionString`
+// (fetched via the `MF-HD-Seed` guard endpoint) or a database client can't
+// authenticate through the proxy.
+describe("Hyperdrive remote binding: MF-HD-Seed endpoint", () => {
+	function makeSeedEdge(): Miniflare {
+		return new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "proxy-server",
+						compatibilityDate: COMPAT_DATE,
+						compatibilityFlags: ["experimental"],
+						manifest: {
+							mainModule: "ProxyServerWorker.js",
+							modules: {
+								"ProxyServerWorker.js": {
+									type: "esm",
+									contents: proxyServerBundle,
+								},
+							},
+						},
+						env: {
+							HYPERDRIVE: {
+								type: "hyperdrive",
+								id: "hyperdrive-id",
+								localConnectionString:
+									"mysql://hduser:hdpass@127.0.0.1:3306/testdb",
+							},
+						},
+					},
+				},
+			],
+		});
+	}
+
+	test("returns the binding's connectionString", async ({ expect }) => {
+		const edge = makeSeedEdge();
+		useDispose(edge);
+		const edgeUrl = await edge.ready;
+
+		const res = await fetch(edgeUrl, {
+			headers: { "MF-HD-Seed": "true", "MF-Binding": "HYPERDRIVE" },
+		});
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as { connectionString?: string };
+		expect(typeof body.connectionString).toBe("string");
+		// The connection string workerd exposes preserves the configured database
+		// (and credentials), which is exactly what the local binding must replay.
+		expect(body.connectionString).toContain("testdb");
+	});
+
+	test("rejects a request with no MF-Binding header", async ({ expect }) => {
+		const edge = makeSeedEdge();
+		useDispose(edge);
+		const edgeUrl = await edge.ready;
+
+		const res = await fetch(edgeUrl, { headers: { "MF-HD-Seed": "true" } });
+		expect(res.status).toBe(400);
+	});
+
+	test("404s an unknown binding", async ({ expect }) => {
+		const edge = makeSeedEdge();
+		useDispose(edge);
+		const edgeUrl = await edge.ready;
+
+		const res = await fetch(edgeUrl, {
+			headers: { "MF-HD-Seed": "true", "MF-Binding": "DOES_NOT_EXIST" },
+		});
+		expect(res.status).toBe(404);
 	});
 });

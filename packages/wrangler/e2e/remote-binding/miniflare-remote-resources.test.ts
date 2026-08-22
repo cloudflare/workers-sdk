@@ -208,6 +208,39 @@ const testCases: TestCase[] = [
 		],
 	},
 	{
+		name: "Hyperdrive",
+		scriptPath: "hyperdrive.js",
+		setup: async (helper) => {
+			const { id } = await helper.hyperdrive(false, "mysql");
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						HYPERDRIVE_BINDING: {
+							type: "hyperdrive",
+							id,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					HYPERDRIVE_BINDING: {
+						type: "hyperdrive",
+						id,
+						remote: remote(connection),
+						// A remote binding is seeded with the edge session's credentials;
+						// this stands in for the local database a non-remote binding needs.
+						localConnectionString:
+							"mysql://user:password@127.0.0.1:3306/database",
+					},
+				}),
+			};
+		},
+		getExpectFetchToMatch: (expect) => [
+			// Hyperdrive's proxy speaks the MySQL protocol, so a well-formed
+			// handshake (protocol version 10) means the tunnel carried real bytes.
+			expect.stringMatching(/"protocolVersion":10/),
+		],
+	},
+	{
 		name: "KV",
 		scriptPath: "kv.js",
 		setup: async (helper) => {

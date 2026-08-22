@@ -6,6 +6,7 @@ import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type {
 	DevConfig,
 	LegacyConfig,
+	MiniflareBinding,
 	MiniflareOptions,
 	MiniflareWorkerConfig,
 	WorkerOptions,
@@ -680,11 +681,29 @@ function addProductBindings(
 		env[name] = { type: "analytics-engine-dataset", name: binding.dataset };
 	}
 	for (const [name, value] of Object.entries(worker.hyperdrives ?? {})) {
-		env[name] = {
+		// The object form opts the binding into remote mode: the connection is
+		// relayed to the deployed Hyperdrive configuration rather than a local
+		// database, so `localConnectionString` carries the edge session's
+		// credentials and may be absent when none were seeded.
+		const isRemoteEntry = typeof value === "object" && !(value instanceof URL);
+		const localConnectionString = isRemoteEntry
+			? value.localConnectionString
+			: value;
+		const binding: Extract<MiniflareBinding, { type: "hyperdrive" }> = {
 			type: "hyperdrive",
 			id: name,
-			localConnectionString: String(value),
 		};
+		if (localConnectionString !== undefined) {
+			binding.localConnectionString = String(localConnectionString);
+		}
+		// Register the connection string with the shared collector, exactly as the
+		// other remote-capable bindings do — that is what populates
+		// `dev.remoteProxyConnectionString`, which the plugin reads back via
+		// `getRemoteProxyConnectionString`.
+		if (isRemoteEntry && isRemote(value.remoteProxyConnectionString)) {
+			binding.remote = true;
+		}
+		env[name] = binding;
 	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {
 		env[name] = {

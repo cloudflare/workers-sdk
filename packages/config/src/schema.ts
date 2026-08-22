@@ -84,6 +84,7 @@ export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
 	localConnectionString: z.string().optional(),
+	remote: z.boolean().optional(),
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [

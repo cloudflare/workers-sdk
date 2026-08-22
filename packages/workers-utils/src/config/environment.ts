@@ -1308,6 +1308,12 @@ export interface EnvironmentNonInheritable {
 		id: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
+		/**
+		 * Connect to the deployed Hyperdrive configuration at the edge during
+		 * `wrangler dev` (via the remote-bindings proxy) instead of a local
+		 * database.
+		 */
+		remote?: boolean;
 	}[];
 
 	/**

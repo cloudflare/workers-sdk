@@ -262,7 +262,7 @@ const V4QueueConsumerOptionsSchema = z.object({
 	retryDelay: V4QueueMessageDelaySchema,
 });
 
-const V4HyperdriveSchema = z
+const V4HyperdriveConnectionSchema = z
 	.union([z.url(), z.instanceof(URL)])
 	.superRefine((value, ctx) => {
 		const url = typeof value === "string" ? new URL(value) : value;
@@ -306,6 +306,17 @@ const V4HyperdriveSchema = z
 			});
 		}
 	});
+
+// A Hyperdrive entry is either the plain local connection string, or an object
+// that also carries `remoteProxyConnectionString`, opting the binding into
+// remote mode (traffic is relayed to the deployed Hyperdrive configuration).
+const V4HyperdriveSchema = z.union([
+	V4HyperdriveConnectionSchema,
+	z.object({
+		localConnectionString: V4HyperdriveConnectionSchema.optional(),
+		remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
+	}),
+]);
 
 const V4PipelineSchema = z.union([
 	z.string(),
@@ -828,7 +839,15 @@ export type V4WorkerOptionsShape = {
 				  })
 		  >
 		| string[];
-	hyperdrives?: Record<string, string | URL>;
+	hyperdrives?: Record<
+		string,
+		| string
+		| URL
+		| {
+				localConnectionString?: string | URL;
+				remoteProxyConnectionString?: RemoteProxyConnectionString;
+		  }
+	>;
 	ratelimits?: Record<
 		string,
 		{ namespace_id: string; simple: { limit: number; period?: 10 | 60 } }
