@@ -87,6 +87,103 @@ describe.sequential("DevRegistry", () => {
 		}
 	});
 
+	test("re-registers its entry after stale cleanup removes it", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe(registry.instanceId);
+
+			// Suspending the machine for longer than the stale window freezes this
+			// process's heartbeat as well, so on resume the sweep deletes an entry
+			// whose owner is still running.
+			const stale = new Date(Date.now() - 91_000);
+			await fs.utimes(definitionPath, stale, stale);
+			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+			await expect(fs.stat(definitionPath)).rejects.toMatchObject({
+				code: "ENOENT",
+			});
+
+			await vi.advanceTimersByTimeAsync(10_001);
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				instanceId: registry.instanceId,
+			});
+			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual(
+				expect.objectContaining({
+					worker: expect.objectContaining({
+						debugPortAddress: "127.0.0.1:1234",
+					}),
+				})
+			);
+		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("leaves an entry claimed by another process alone", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe(registry.instanceId);
+
+			await fs.writeFile(
+				definitionPath,
+				JSON.stringify({
+					...definition,
+					debugPortAddress: "127.0.0.1:5678",
+					instanceId: "another-instance",
+				})
+			);
+
+			await vi.advanceTimersByTimeAsync(30_001);
+
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				debugPortAddress: "127.0.0.1:5678",
+				instanceId: "another-instance",
+			});
+		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
 	test("registers workers by default unless opted out", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const worker = {
