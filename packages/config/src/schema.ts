@@ -56,6 +56,22 @@ export const R2BindingSchema = z.strictObject({
 	name: z.string().optional(),
 	jurisdiction: z.string().optional(),
 	remote: z.boolean().optional(),
+	localDev: z
+		.strictObject({
+			experimentalS3Credentials: z
+				// AWS SDK may add additional keys as internal metadata like `$source`.
+				.object({
+					accessKeyId: z.string(),
+					secretAccessKey: z.string(),
+				})
+				.optional(),
+		})
+		.optional(),
+});
+
+export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
+	type: z.literal("analytics-engine-dataset"),
+	name: z.string().optional(),
 });
 
 export const FlagshipBindingSchema = z.strictObject({
@@ -87,10 +103,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		namespace: z.string(),
 		remote: z.boolean().optional(),
 	}),
-	z.strictObject({
-		type: z.literal("analytics-engine-dataset"),
-		name: z.string().optional(),
-	}),
+	AnalyticsEngineDatasetBindingSchema,
 	z.strictObject({
 		type: z.literal("artifacts"),
 		namespace: z.string(),
@@ -463,6 +476,12 @@ const TriggerSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("scheduled"),
 		schedule: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("connect"),
+		protocol: z.enum(["tcp"]),
+		port: z.number(),
+		address: z.string().optional(),
 	}),
 ]);
 

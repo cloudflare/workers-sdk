@@ -15,6 +15,12 @@ const debugLog = util.debuglog("mock-npm-registry");
 const repoRoot = path.resolve(__dirname, "../../..");
 
 /**
+ * How long to wait for Verdaccio to actually exit after it has been killed,
+ * before giving up and letting teardown continue regardless.
+ */
+const EXIT_TIMEOUT = 10_000;
+
+/**
  * Start a mock local npm registry (using verdaccio) to host local copies of packages under test.
  *
  * The `targetPackages` will be published to the local npm repository along with any of their local dependencies.
@@ -289,6 +295,13 @@ async function startVerdaccioServer(configPath: string) {
 			require.resolve("verdaccio/bin/verdaccio"),
 			["-c", configPath]
 		);
+
+		// Attached before anything can stop the server, so the event can never
+		// be missed by a listener registered too late to see it.
+		const exited = new Promise<void>((res) => {
+			server.once("exit", () => res());
+		});
+
 		server.on("error", reject);
 		server.on("disconnect", reject);
 
@@ -302,14 +315,46 @@ async function startVerdaccioServer(configPath: string) {
 			}
 		});
 
-		function stop() {
-			return new Promise<void>((res) => {
-				if (server?.pid) {
-					treeKill(server.pid, () => res());
-				} else {
-					res();
-				}
+		/**
+		 * Stop the server, resolving only once it has really exited.
+		 *
+		 * `treeKill`'s callback fires once the signals have been *delivered*,
+		 * not once the process tree has finished exiting. Callers remove the
+		 * registry's storage directory immediately afterwards and may restart
+		 * on the same port, both of which race a Verdaccio that is still
+		 * shutting down — producing `ENOTEMPTY`/`EBUSY` on directory removal
+		 * (particularly on Windows, where an open file blocks deletion) and
+		 * `EADDRINUSE` on restart. So wait for the real `exit` event.
+		 *
+		 * Bounded, because a process wedged in an uninterruptible state must
+		 * not hang test teardown forever: after `EXIT_TIMEOUT` we proceed and
+		 * let the caller's own error handling deal with the consequences,
+		 * which is still strictly better than not waiting at all.
+		 */
+		async function stop() {
+			const pid = server.pid;
+			if (pid === undefined) {
+				return;
+			}
+			await new Promise<void>((res) => {
+				// Errors are ignored: the usual one is "no such process",
+				// meaning it has already exited, which is what we want anyway.
+				treeKill(pid, () => res());
 			});
+			let timer: NodeJS.Timeout | undefined;
+			try {
+				await Promise.race([
+					exited,
+					new Promise<void>((res) => {
+						timer = setTimeout(res, EXIT_TIMEOUT);
+						// Don't hold the event loop open just to await a
+						// timeout we may never need.
+						timer.unref();
+					}),
+				]);
+			} finally {
+				clearTimeout(timer);
+			}
 		}
 	});
 }

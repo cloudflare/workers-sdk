@@ -2,7 +2,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
@@ -21,13 +24,14 @@ export class Analog extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./dist/analog/server/index.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "./dist/analog/public",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./dist/analog/server/index.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./dist/analog/public" },
 		};
 	}
 }

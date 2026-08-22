@@ -7,6 +7,7 @@ import {
 	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getStorageService,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
@@ -46,7 +47,7 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 
 export const RATELIMIT_PLUGIN: Plugin = {
 	bindingTypeDescription: "Rate Limit",
-	getBindings(options) {
+	getBindings(options, sharedOptions) {
 		return getEnvBindingsOfType(
 			options.config,
 			"rate-limit"
@@ -57,10 +58,11 @@ export const RATELIMIT_PLUGIN: Plugin = {
 				innerBindings: [
 					{
 						name: "fetcher",
-						service: {
-							name: RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
-							props: buildObjectEntryProps(binding.namespace),
-						},
+						service: getStorageService(
+							RATELIMIT_LOCAL_ENTRY_SERVICE_NAME,
+							buildObjectEntryProps(binding.namespace),
+							sharedOptions
+						),
 					},
 					...buildJsonBindings({
 						limit: binding.simple.limit,
@@ -80,10 +82,9 @@ export const RATELIMIT_PLUGIN: Plugin = {
 	},
 	async getServices({ options, tmpPath, sharedOptions }) {
 		const ratelimits = getEnvBindingsOfType(options.config, "rate-limit");
-		if (ratelimits.length === 0) {
+		if (ratelimits.length === 0 && !sharedOptions.unsafeEnableSharedStorage) {
 			return [];
 		}
-
 		// Each namespace is supplied per-binding via props, so one service serves
 		// every rate limiter while shared namespaces still use the same DO name.
 		const services: Service[] = [
@@ -129,7 +130,7 @@ export const RATELIMIT_PLUGIN: Plugin = {
 				// which is backed by a per-actor `ActorCache` and is just as lossy).
 				//
 				// The namespace deliberately stays evictable: `deleteAllDurableObjects()`
-				// (what vitest-pool-workers' `reset()` calls) skips namespaces with
+				// (what vitest-plugin's `reset()` calls) skips namespaces with
 				// `preventEviction` set, and it is what resets these counters between
 				// tests, via `ActorNamespace::deleteAll()` -> `SqliteDatabase::reset()`.
 				durableObjectStorage: { localDisk: RATELIMIT_STORAGE_SERVICE_NAME },

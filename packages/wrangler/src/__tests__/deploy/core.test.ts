@@ -622,7 +622,7 @@ describe("deploy", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					configure: async () => ({ wranglerConfig: {} }),
+					configure: async () => ({ workerConfig: {} }),
 					isConfigured: () => false,
 				} as unknown as Framework,
 				outputDir: "public",
@@ -662,7 +662,7 @@ describe("deploy", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					configure: async () => ({ wranglerConfig: {} }),
+					configure: async () => ({ workerConfig: {} }),
 					isConfigured: () => false,
 				} as unknown as Framework,
 				outputDir: "public",
@@ -1940,7 +1940,6 @@ describe("deploy", () => {
 				scripts: {
 					build: "npm run build-my-static-site",
 				},
-				wranglerInstall: true,
 				wranglerConfig,
 				outputDir: "public",
 			};
@@ -1976,7 +1975,6 @@ describe("deploy", () => {
 			    "compatibility_date": "2025-12-02",
 			    "name": "my-site",
 			  },
-			  "wranglerInstall": true,
 			}
 		`);
 	});

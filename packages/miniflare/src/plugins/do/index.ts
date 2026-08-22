@@ -4,11 +4,10 @@ import { getUserServiceName } from "../core";
 import {
 	getEnvBindingsOfType,
 	getPersistPath,
-	kUnsafeEphemeralUniqueKey,
 	ProxyNodeBinding,
 } from "../shared";
 import type { Worker_Binding } from "../../runtime";
-import type { Plugin, UnsafeUniqueKey } from "../shared";
+import type { Plugin } from "../shared";
 
 // Options for a container attached to the DO
 export const DOContainerOptionsSchema = z.object({
@@ -16,17 +15,7 @@ export const DOContainerOptionsSchema = z.object({
 });
 export type DOContainerOptions = z.infer<typeof DOContainerOptionsSchema>;
 
-export function getDurableObjectUniqueKey(
-	className: string,
-	workerName: string | undefined,
-	unsafeUniqueKey: UnsafeUniqueKey | undefined
-): string | undefined {
-	if (unsafeUniqueKey === kUnsafeEphemeralUniqueKey) {
-		return undefined;
-	}
-
-	return unsafeUniqueKey ?? `${workerName ?? ""}-${className}`;
-}
+export { getDurableObjectUniqueKey } from "./namespaces";
 
 export const DURABLE_OBJECTS_PLUGIN_NAME = "do";
 
@@ -79,7 +68,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin = {
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
-			sharedOptions.resourcePersistencePath
+			sharedOptions.isolatedResourcePersistencePath
 		);
 		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`
 		// is like `mkdir -p`: it won't fail if the directory already exists, and it

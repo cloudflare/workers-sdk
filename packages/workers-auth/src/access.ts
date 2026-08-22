@@ -110,12 +110,10 @@ export async function getAccessHeaders(
 
 	if (clientId && clientSecret) {
 		logger.debug("Using Access Service Token headers for domain:", domain);
-		const headers = {
+		return {
 			"CF-Access-Client-Id": clientId,
 			"CF-Access-Client-Secret": clientSecret,
 		};
-		headersCache[domain] = headers;
-		return headers;
 	}
 
 	// Warn if only one of the two env vars is set

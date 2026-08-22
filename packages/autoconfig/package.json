@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/autoconfig",
-	"version": "0.2.7",
+	"version": "0.2.9",
 	"description": "Framework autoconfig detection and configuration for Cloudflare Workers",
 	"license": "MIT OR Apache-2.0",
 	"repository": {
@@ -30,10 +30,11 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/codemod": "workspace:*",
+		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@netlify/build-info": "^10.5.1",
 		"@types/esprima": "^4.0.3",

@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.123.0",
+	"version": "4.125.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -93,7 +93,6 @@
 		"@cloudflare/autoconfig": "workspace:*",
 		"@cloudflare/build-output-utils": "workspace:*",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
-		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
@@ -101,6 +100,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/runtime-types": "workspace:*",
+		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",

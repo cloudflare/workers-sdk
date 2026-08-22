@@ -159,6 +159,7 @@ export async function getDevMiniflareOptions(
 	const assetWorkers: Array<V4WorkerOptions> = [
 		{
 			name: ROUTER_WORKER_NAME,
+			access: entryWorkerConfig?.access?.dev,
 			unsafeRegisterWorker: false,
 			compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 			compatibilityFlags: ["enable_ctx_exports"],

@@ -5,6 +5,27 @@ const BROWSER_CLOSE_TIMEOUT = 5_000;
 
 type BrowserProcess = Pick<Process, "hasClosed" | "kill">;
 
+/**
+ * Chrome exited before announcing its DevTools endpoint — i.e. it never got
+ * as far as running.
+ *
+ * Distinguished from every other launch failure because it is the only one
+ * that can implicate the installation itself. Once Chrome has printed its
+ * banner it has already loaded the resources a partial download would be
+ * missing, so a failure after that point (a readiness probe timing out, a
+ * profile directory that cannot be created) says nothing about the install
+ * and must not be "recovered" by deleting it.
+ *
+ * The underlying message is preserved so callers and logs are unaffected.
+ */
+export class BrowserStartupError extends Error {
+	override readonly name = "BrowserStartupError";
+
+	constructor(cause: unknown) {
+		super(cause instanceof Error ? cause.message : String(cause), { cause });
+	}
+}
+
 function waitForGracefulClose(
 	browserProcess: BrowserProcess,
 	wsEndpoint: string,
@@ -39,9 +60,9 @@ function waitForGracefulClose(
 	});
 }
 
-async function waitForExit(
+export async function waitForExit(
 	browserProcess: BrowserProcess,
-	timeoutMs: number
+	timeoutMs = BROWSER_CLOSE_TIMEOUT
 ): Promise<void> {
 	let timeout: NodeJS.Timeout | undefined;
 	await Promise.race([

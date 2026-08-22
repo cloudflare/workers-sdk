@@ -7,11 +7,9 @@ import type {
 export class Static extends Framework {
 	configure({ outputDir }: ConfigurationOptions): ConfigurationResults {
 		return {
-			wranglerConfig: {
-				assets: {
-					directory: outputDir,
-				},
-			},
+			buildTool: "wrangler",
+			workerConfig: {},
+			buildConfig: { assetsDirectory: outputDir },
 		};
 	}
 }

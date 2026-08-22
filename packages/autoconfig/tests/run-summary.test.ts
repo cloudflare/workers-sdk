@@ -6,12 +6,11 @@ import { Astro } from "../src/frameworks/astro";
 import { Static } from "../src/frameworks/static";
 import { buildOperationsSummary } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { WorkerConfigInput } from "@cloudflare/config";
 
-const testRawConfig: RawConfig = {
-	$schema: "node_modules/wrangler/config-schema.json",
+const testWorkerConfig: WorkerConfigInput = {
 	name: "worker-name",
-	compatibility_date: "2025-01-01",
+	compatibilityDate: "2026-08-04",
 	observability: {
 		enabled: true,
 	},
@@ -34,12 +33,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
+				testWorkerConfig,
+				{ workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 					version: "npx wrangler versions upload",
 				},
+				false,
+				"wrangler",
 				context
 			);
 
@@ -49,7 +51,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				  {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "name": "worker-name",
-				    "compatibility_date": "2025-01-01",
+				    "compatibility_date": "2026-08-04",
 				    "observability": {
 				      "enabled": true
 				    }
@@ -67,13 +69,12 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "compatibility_date": "2025-01-01",
+				    "compatibility_date": "2026-08-04",
 				    "name": "worker-name",
 				    "observability": {
 				      "enabled": true,
 				    },
 				  },
-				  "wranglerInstall": false,
 				}
 			`);
 		});
@@ -94,12 +95,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
+				testWorkerConfig,
+				{ workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 					version: "npx wrangler versions upload",
 				},
+				true,
+				"wrangler",
 				context
 			);
 
@@ -123,13 +127,12 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "compatibility_date": "2025-01-01",
+				    "compatibility_date": "2026-08-04",
 				    "name": "worker-name",
 				    "observability": {
 				      "enabled": true,
 				    },
 				  },
-				  "wranglerInstall": true,
 				}
 			`);
 		});
@@ -152,12 +155,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
+				testWorkerConfig,
+				{ workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 					version: "npx wrangler versions upload",
 				},
+				true,
+				"wrangler",
 				context
 			);
 
@@ -181,15 +187,67 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "compatibility_date": "2025-01-01",
+				    "compatibility_date": "2026-08-04",
 				    "name": "worker-name",
 				    "observability": {
 				      "enabled": true,
 				    },
 				  },
-				  "wranglerInstall": true,
 				}
 			`);
+		});
+
+		test("uses cf scripts and previews package installation and generated config files", async ({
+			expect,
+		}) => {
+			const buildConfig = { assetsDirectory: "dist" };
+			const summary = await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					packageJson: { name: "my-project" },
+					configured: false,
+					outputDir: "dist",
+					buildCommand: "npm run build",
+					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
+				},
+				testWorkerConfig,
+				{
+					buildTool: "wrangler",
+					workerConfig: testWorkerConfig,
+					buildConfig,
+				},
+				{
+					build: "npm run build",
+					deploy: "cf deploy",
+				},
+				true,
+				"cf",
+				context,
+				{
+					deploy: "wrangler deploy",
+					preview: "wrangler dev",
+				}
+			);
+
+			expect(summary.scripts).toEqual({
+				deploy: "npm run build && cf deploy --no-build",
+				preview: "cf dev",
+			});
+			expect(std.out).toContain(
+				dedent`
+				📦 Install packages:
+				 - cf (devDependency)
+				 - wrangler (devDependency)
+				`
+			);
+			expect(std.out).toContain('  import { defineWorker } from "cf/config";');
+			expect(std.out).toContain("  export default defineWorker({");
+			expect(std.out).toContain(
+				'  import { defineWranglerConfig } from "wrangler/experimental-config";'
+			);
+			expect(std.out).toContain("  export default defineWranglerConfig({");
 		});
 
 		test("shows that when needed a framework specific configuration will be run", async ({
@@ -204,11 +262,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
+				testWorkerConfig,
+				{ workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 				},
+				false,
+				"wrangler",
 				context
 			);
 
@@ -235,11 +296,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					outputDir: "public",
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
+				testWorkerConfig,
+				{ workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 				},
+				false,
+				"wrangler",
 				context
 			);
 
