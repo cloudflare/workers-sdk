@@ -70,6 +70,7 @@ import {
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	STREAM_PLUGIN_NAME,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -2294,6 +2295,7 @@ export class Miniflare {
 							name: CoreBindings.DEV_REGISTRY_INSTANCE_ID,
 							text: this.#devRegistry.instanceId,
 						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					durableObjectStorage: { inMemory: kVoid },
 					// uniqueKey must match the target session's key for identical DO IDs.
@@ -3420,6 +3422,7 @@ export class Miniflare {
 				R2_PLUGIN_NAME,
 				RATELIMIT_PLUGIN_NAME,
 				SECRET_STORE_PLUGIN_NAME,
+				STREAM_PLUGIN_NAME,
 			].includes(pluginName)
 		) {
 			throw new TypeError(
