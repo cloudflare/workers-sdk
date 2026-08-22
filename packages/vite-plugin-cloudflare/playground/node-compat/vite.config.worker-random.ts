@@ -1,5 +1,6 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { workerRandomConfig } from "./worker-configs";
 
 export default defineConfig({
 	build: {
@@ -7,7 +8,8 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-random/wrangler.jsonc",
+			types: { includeRuntime: false },
+			config: workerRandomConfig,
 			inspectorPort: false,
 			persistState: false,
 		}),

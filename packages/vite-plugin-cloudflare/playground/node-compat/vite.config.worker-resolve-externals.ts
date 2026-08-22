@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { workerResolveExternalsConfig } from "./worker-configs";
 
 export default defineConfig({
 	build: {
@@ -8,7 +9,8 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-resolve-externals/wrangler.jsonc",
+			types: { includeRuntime: false },
+			config: workerResolveExternalsConfig,
 			inspectorPort: false,
 			persistState: false,
 		}),

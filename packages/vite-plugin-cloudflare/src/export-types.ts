@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import * as wrangler from "wrangler";
 import { debuglog } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { Worker, WorkersResolvedConfig } from "./plugin-config";
@@ -19,13 +18,24 @@ function getWorkerNameToWorkerEntrypointExportsMap(
 	);
 
 	for (const worker of workers) {
-		for (const value of worker.config.services ?? []) {
-			if (value.entrypoint !== undefined && value.entrypoint !== "default") {
+		for (const value of Object.values(worker.config.env ?? {})) {
+			if (
+				value.type === "worker" &&
+				value.exportName !== undefined &&
+				value.exportName !== "default"
+			) {
 				const exportNames = workerNameToWorkerEntrypointExportsMap.get(
-					value.service
+					value.worker
 				);
 
-				exportNames?.add(value.entrypoint);
+				exportNames?.add(value.exportName);
+			}
+		}
+		for (const [name, value] of Object.entries(worker.config.exports ?? {})) {
+			if (value.type === "worker") {
+				workerNameToWorkerEntrypointExportsMap
+					.get(worker.config.name)
+					?.add(name);
 			}
 		}
 	}
@@ -40,30 +50,36 @@ function getWorkerNameToDurableObjectExportsMap(
 		workers.map((worker) => [
 			worker.config.name,
 			new Set(
-				wrangler
-					.unstable_getDurableObjectClassNameToUseSQLiteMap(
-						worker.config.migrations,
-						worker.config.exports
+				Object.entries(worker.config.exports ?? {})
+					.filter(
+						([, value]) =>
+							value.type === "durable-object" &&
+							(value.state === undefined ||
+								value.state === "created" ||
+								value.state === "expecting-transfer")
 					)
-					.keys()
+					.map(([name]) => name)
 			),
 		])
 	);
 
 	for (const worker of workers) {
-		for (const value of worker.config.durable_objects.bindings) {
-			if (value.script_name) {
+		for (const [name, value] of Object.entries(worker.config.env ?? {})) {
+			if (value.type !== "durable-object") {
+				continue;
+			}
+			if (value.worker !== worker.config.name) {
 				const exportNames = workerNameToDurableObjectExportsMap.get(
-					value.script_name
+					value.worker
 				);
 
-				exportNames?.add(value.class_name);
+				exportNames?.add(value.exportName);
 			} else {
 				const exportNames = workerNameToDurableObjectExportsMap.get(
 					worker.config.name
 				);
 
-				exportNames?.add(value.class_name);
+				exportNames?.add(value.exportName ?? name);
 			}
 		}
 	}
@@ -78,24 +94,8 @@ function getWorkerNameToWorkflowEntrypointExportsMap(
 		workers.map((worker) => [worker.config.name, new Set<string>()])
 	);
 
-	for (const worker of workers) {
-		for (const value of worker.config.workflows) {
-			if (value.script_name) {
-				const exportNames = workerNameToWorkflowEntrypointExportsMap.get(
-					value.script_name
-				);
-
-				exportNames?.add(value.class_name);
-			} else {
-				const exportNames = workerNameToWorkflowEntrypointExportsMap.get(
-					worker.config.name
-				);
-
-				exportNames?.add(value.class_name);
-			}
-		}
-	}
-
+	// TODO: Add Workflow entrypoint exports when Workflows are supported by
+	// cloudflare.config.ts.
 	return workerNameToWorkflowEntrypointExportsMap;
 }
 

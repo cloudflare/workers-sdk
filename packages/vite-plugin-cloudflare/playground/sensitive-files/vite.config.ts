@@ -1,5 +1,6 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { auxiliaryWorkerConfig } from "./worker-configs";
 
 export default defineConfig({
 	server: {
@@ -9,9 +10,10 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
+			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
-			auxiliaryWorkers: [{ configPath: "./worker-b/wrangler.jsonc" }],
+			auxiliaryWorkers: [{ config: auxiliaryWorkerConfig }],
 		}),
 	],
 });

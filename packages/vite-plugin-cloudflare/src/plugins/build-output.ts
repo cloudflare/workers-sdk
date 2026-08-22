@@ -8,10 +8,7 @@ import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
 
-/**
- * Build Output Specification plugin. Replaces `outputConfigPlugin` when
- * `experimental.newConfig.cfBuildOutput` is set.
- */
+/** Emits the entry Worker using the Build Output Specification. */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	return {
 		async writeBundle(_, bundle) {
@@ -19,20 +16,14 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				return;
 			}
 
-			if (
-				ctx.resolvedPluginConfig.type === "assets-only" &&
-				this.environment.name === "client"
-			) {
-				const defaultExport = ctx.resolvedPluginConfig.parsedNewConfig?.default;
-				const workerNewConfig =
-					defaultExport?.type === "worker" ? defaultExport : undefined;
-				assert(
-					workerNewConfig,
-					"Expected a default worker export on assets-only resolved config"
-				);
+			if (ctx.resolvedPluginConfig.type === "assets-only") {
+				if (this.environment.name !== "client") {
+					return;
+				}
+
 				await writeWorkerConfig({
 					root: ctx.resolvedViteConfig.root,
-					config: workerNewConfig,
+					config: ctx.resolvedPluginConfig.config,
 				});
 				await writeSettings();
 				return;
@@ -110,9 +101,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 		if (ctx.resolvedPluginConfig.type === "preview") {
 			return;
 		}
-		const settingsExport = ctx.resolvedPluginConfig.parsedNewConfig?.settings;
-		const settings =
-			settingsExport?.type === "settings" ? settingsExport : undefined;
+		const settings = ctx.resolvedPluginConfig.parsedConfig.settings;
 
 		await writeSettingsConfig(
 			ctx.resolvedViteConfig.root,
@@ -122,9 +111,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	}
 });
 
-/**
- * Map a bundle filename to its declared module type.
- */
+/** Map a bundle filename to its native module type. */
 export function detectModuleType(filename: string): ModuleType {
 	const ext = path.extname(filename).toLowerCase();
 

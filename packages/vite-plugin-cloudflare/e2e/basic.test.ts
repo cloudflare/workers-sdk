@@ -77,7 +77,7 @@ describe("basic e2e tests", () => {
 			describe.skipIf(isBuildAndPreviewOnWindows(command))(
 				"environment variables",
 				() => {
-					test("can read vars from wrangler configuration and .env", async ({
+					test("can read vars from cloudflare.config.ts and .env", async ({
 						expect,
 					}) => {
 						await writeFile(
@@ -138,7 +138,7 @@ describe("basic e2e tests", () => {
 						});
 					});
 
-					test("can merge vars from wrangler configuration, .env, and .env.local", async ({
+					test("can merge vars from cloudflare.config.ts, .env, and .env.local", async ({
 						expect,
 					}) => {
 						await writeFile(
@@ -162,7 +162,7 @@ describe("basic e2e tests", () => {
 						});
 					});
 
-					test("can merge vars from wrangler configuration, .env, and .env.local, and environment specific files", async ({
+					test("can merge vars from cloudflare.config.ts, .env, .env.local, and environment specific files", async ({
 						expect,
 					}) => {
 						await writeFile(

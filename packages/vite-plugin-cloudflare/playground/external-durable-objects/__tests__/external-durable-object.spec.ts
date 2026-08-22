@@ -1,7 +1,8 @@
 import { describe, test } from "vitest";
-import { getTextResponse } from "../../__test-utils__";
+import { getTextResponse, isBuild } from "../../__test-utils__";
 
-describe("external durable objects", async () => {
+// TODO: Reinstate when build and preview support auxiliary Workers.
+describe.skipIf(isBuild)("external durable objects", async () => {
 	test("can use `scriptName` to bind to a Durable Object defined in another Worker", async ({
 		expect,
 	}) => {
