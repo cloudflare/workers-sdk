@@ -1,5 +1,51 @@
 # miniflare
 
+## 5.20260821.0-alpha
+
+### Minor Changes
+
+- [#15134](https://github.com/cloudflare/workers-sdk/pull/15134) [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a) Thanks [@gpanders](https://github.com/gpanders)! - Enable FUSE-capable local container development
+
+  Miniflare now automatically passes the Docker privileges needed for FUSE to local Durable Object containers when using local rootless Docker on Linux with `/dev/fuse` available, or a local Docker engine on macOS or through WSL where Linux containers run in a VM. This applies to Wrangler, the Cloudflare Vite plugin, and direct Miniflare use.
+
+- [#15169](https://github.com/cloudflare/workers-sdk/pull/15169) [`dd5148d`](https://github.com/cloudflare/workers-sdk/commit/dd5148d7da11665ad3f3338de338380ccea979cc) Thanks [@penalosa](https://github.com/penalosa)! - Add experimental shared local storage, letting several Miniflare instances read and write one set of local resources
+
+  Each instance previously kept its own copy of local state, so two dev sessions pointed at the same KV namespace or D1 database could not see each other's writes. Instances that opt in now elect a single storage owner through the dev registry and route storage through it, so resources with the same ID resolve to the same data.
+
+  Opt in with `unsafeEnableSharedStorage`, which requires three paths to be set:
+
+  ```js
+  new Miniflare({
+    unsafeEnableSharedStorage: true,
+    // Shared between instances: resources that participate in sharing live here
+    resourcePersistencePath: "/path/to/shared/state",
+    // Per project: resources that cannot be shared keep their own state here
+    isolatedResourcePersistencePath: "/path/to/project/state",
+    // Instances elect the storage owner through the dev registry
+    unsafeDevRegistryPath: "/path/to/registry",
+    // ...
+  });
+  ```
+
+  KV, D1, R2, Rate Limits, and Secrets Store participate in sharing. Cache, Durable Objects, Workflows, observability, and Hello World storage do not yet, and stay instance-local under `isolatedResourcePersistencePath`, keeping their state across restarts without concurrent access to the shared root.
+
+  This is experimental and the `unsafe`-prefixed options may change without a major version bump.
+
+### Patch Changes
+
+- [#15294](https://github.com/cloudflare/workers-sdk/pull/15294) [`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260820.1 | ^5.20260821.1 |
+  | workerd                   | 1.20260820.1  | 1.20260821.1  |
+
+- [#15242](https://github.com/cloudflare/workers-sdk/pull/15242) [`0cb8690`](https://github.com/cloudflare/workers-sdk/commit/0cb86908903b87a742d1786ac8aa5aa9dce6c575) Thanks [@aesopfrom0](https://github.com/aesopfrom0)! - Shut down `workerd` when Miniflare is terminated with `SIGHUP`
+
+  On `SIGHUP`, Miniflare now stops `workerd` and removes its temporary directory instead of leaving them behind. Previously only `SIGINT` and `SIGTERM` were handled, so tools that embed Miniflare, such as `@cloudflare/vitest-pool-workers` and `@cloudflare/vite-plugin`, could leave a stray process and directory behind on each run.
+
 ## 5.20260820.0-alpha
 
 ### Major Changes

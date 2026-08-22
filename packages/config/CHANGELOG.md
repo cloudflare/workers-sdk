@@ -1,5 +1,13 @@
 # @cloudflare/config
 
+## 0.7.1
+
+### Patch Changes
+
+- [#15297](https://github.com/cloudflare/workers-sdk/pull/15297) [`acb14d0`](https://github.com/cloudflare/workers-sdk/commit/acb14d01d64f21f0f21c247da7c2fcb0557ebb3d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix declaration emit for values returned by `defineSettings`
+
+  Projects can now export a `defineSettings()` result while generating TypeScript declarations without encountering TS4023.
+
 ## 0.7.0
 
 ### Minor Changes
