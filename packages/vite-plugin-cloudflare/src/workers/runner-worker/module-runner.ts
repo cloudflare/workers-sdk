@@ -33,6 +33,27 @@ let nextCallbackId = 0;
 const pendingCallbacks = new Map<number, () => Promise<unknown>>();
 const callbackResults = new Map<number, unknown>();
 
+let patchedFunction = false;
+function ensurePatchedFunction(env: WrapperEnv) {
+	if (patchedFunction) {
+		return;
+	}
+
+	patchedFunction = true;
+	// `new Function()` is disallowed in this context, but UnsafeEval's
+	// `newFunction()` has matching global-scope semantics.
+	globalThis.Function = new Proxy(globalThis.Function, {
+		construct(_target, args) {
+			const script = args.pop();
+			return env.__VITE_UNSAFE_EVAL__.newFunction(
+				String(script),
+				"anonymous",
+				...args.map(String)
+			);
+		},
+	});
+}
+
 /**
  * Executes a callback in the runner Durable Object's IoContext via RPC + shared memory.
  * The callback function is stored in a module-scope map (shared with the DO
@@ -176,6 +197,8 @@ async function createModuleRunner(
 	webSocket: WebSocket,
 	environmentName: string
 ) {
+	ensurePatchedFunction(env);
+
 	return new ModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
