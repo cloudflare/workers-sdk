@@ -22,6 +22,14 @@ function buildVariantUrl(
 	).toString();
 }
 
+function buildUploadUrl(publicUrl: URL, imageId: string): string {
+	return new URL(`${CorePaths.IMAGE_UPLOAD}/${imageId}`, publicUrl).toString();
+}
+
+function draftExpiryKey(imageId: string): string {
+	return `${imageId}:direct-upload-expiry`;
+}
+
 // Rewrites stored variant names (e.g. `["public"]`) to absolute URLs.
 async function withResolvedVariants(
 	metadata: ImageMetadata,
@@ -55,6 +63,160 @@ async function base64DecodeStream(
 	return base64DecodeArrayBuffer(buffer);
 }
 
+function resolveMetaPath(obj: unknown, path: string): unknown {
+	return path
+		.split(".")
+		.reduce<unknown>(
+			(acc, key) =>
+				acc && typeof acc === "object"
+					? (acc as Record<string, unknown>)[key]
+					: undefined,
+			obj
+		);
+}
+
+function matchesCondition(
+	actual: unknown,
+	condition: ImageMetadataFilterValue
+): boolean {
+	if (
+		condition === null ||
+		typeof condition !== "object" ||
+		Array.isArray(condition)
+	) {
+		return actual === condition;
+	}
+
+	return Object.entries(condition).every(([op, expected]) => {
+		switch (op) {
+			case "eq":
+				return actual === expected;
+			case "in":
+				return (
+					Array.isArray(expected) &&
+					expected.some((candidate) => candidate === actual)
+				);
+			case "gt":
+				return typeof actual === "number" && actual > (expected as number);
+			case "gte":
+				return typeof actual === "number" && actual >= (expected as number);
+			case "lt":
+				return typeof actual === "number" && actual < (expected as number);
+			case "lte":
+				return typeof actual === "number" && actual <= (expected as number);
+			default:
+				return false;
+		}
+	});
+}
+
+// AND logic across fields, matching images-core/images-edge-api behaviour.
+function matchesMetadataFilters(
+	image: ImageMetadata,
+	filters: Record<string, ImageMetadataFilterValue> | undefined
+): boolean {
+	if (!filters) {
+		return true;
+	}
+
+	return Object.entries(filters).every(([field, condition]) =>
+		matchesCondition(resolveMetaPath(image.meta ?? {}, field), condition)
+	);
+}
+
+// No real account signing key store exists in local dev, so this single
+// secret stands in for every account and `keyName`; it has no security value.
+const LOCAL_SIGNING_SECRET = "miniflare-local-dev-images-signing-key";
+
+async function hmacSha256Hex(secret: string, value: string): Promise<string> {
+	const encoder = new TextEncoder();
+	const key = await crypto.subtle.importKey(
+		"raw",
+		encoder.encode(secret),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"]
+	);
+	const signature = await crypto.subtle.sign(
+		"HMAC",
+		key,
+		encoder.encode(value)
+	);
+	return Array.from(new Uint8Array(signature))
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("");
+}
+
+function assertVariantName(variant: string): void {
+	if (variant === "") {
+		throw new Error("variant is required");
+	}
+	if (/[/?#%]/.test(variant)) {
+		throw new Error("variant contains invalid URL path characters");
+	}
+}
+
+function resolveExpiresAt(expiresIn: number | undefined): number | undefined {
+	if (expiresIn === undefined) {
+		return undefined;
+	}
+	if (!Number.isInteger(expiresIn) || expiresIn <= 0) {
+		throw new Error("expiresIn must be a positive integer");
+	}
+	return Math.floor(Date.now() / 1000) + expiresIn;
+}
+
+// Returns `null` when valid, or an error message otherwise.
+async function verifySignedRequest(url: URL): Promise<string | null> {
+	const sig = url.searchParams.get("sig");
+	if (!sig) {
+		return "Missing signature";
+	}
+
+	const exp = url.searchParams.get("exp");
+	if (exp !== null) {
+		const expiresAt = Number.parseInt(exp, 10);
+		if (Number.isNaN(expiresAt) || expiresAt < Date.now() / 1000) {
+			return "Signature expired";
+		}
+	}
+
+	const unsignedUrl = new URL(url);
+	unsignedUrl.searchParams.delete("sig");
+	const expectedSig = await hmacSha256Hex(
+		LOCAL_SIGNING_SECRET,
+		`${unsignedUrl.pathname}${unsignedUrl.search}`
+	);
+	if (sig !== expectedSig) {
+		return "Invalid signature";
+	}
+
+	return null;
+}
+
+const UUID_PATTERN =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MIN_DIRECT_UPLOAD_EXPIRES_IN = 120;
+const MAX_DIRECT_UPLOAD_EXPIRES_IN = 21600;
+const DEFAULT_DIRECT_UPLOAD_EXPIRES_IN = 1800;
+
+function assertCustomIdNotUuid(id: string): void {
+	if (UUID_PATTERN.test(id)) {
+		throw new Error("CustomID must not be UUID");
+	}
+}
+
+function resolveDirectUploadExpiresAt(expiresIn: number | undefined): number {
+	const duration = expiresIn ?? DEFAULT_DIRECT_UPLOAD_EXPIRES_IN;
+	if (
+		duration <= MIN_DIRECT_UPLOAD_EXPIRES_IN ||
+		duration >= MAX_DIRECT_UPLOAD_EXPIRES_IN
+	) {
+		throw new Error("expiry is out of accepted bound.");
+	}
+	return Math.floor(Date.now() / 1000) + duration;
+}
+
 class ImageHandleImpl extends RpcTarget {
 	readonly #imageId: string;
 	readonly #env: Env;
@@ -82,6 +244,28 @@ class ImageHandleImpl extends RpcTarget {
 			return null;
 		}
 		return new Blob([data]).stream();
+	}
+
+	async signedUrl(options: ImageSignedUrlOptions): Promise<string> {
+		assertVariantName(options.variant);
+
+		const publicUrl = await getPublicUrl(
+			this.#env[CoreBindings.SERVICE_LOOPBACK]
+		);
+		const expiresAt = resolveExpiresAt(options.expiresIn);
+		const url = new URL(
+			buildVariantUrl(publicUrl, this.#imageId, options.variant)
+		);
+		if (expiresAt !== undefined) {
+			url.searchParams.set("exp", String(expiresAt));
+		}
+
+		const signature = await hmacSha256Hex(
+			LOCAL_SIGNING_SECRET,
+			`${url.pathname}${url.search}`
+		);
+		url.searchParams.set("sig", signature);
+		return url.toString();
 	}
 
 	async update(options: ImageUpdateOptions): Promise<ImageMetadata> {
@@ -160,6 +344,35 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		return withResolvedVariants(metadata, this.env);
 	}
 
+	async createDirectUpload(
+		options?: ImageDirectUploadOptions
+	): Promise<ImageDirectUploadResult> {
+		if (options?.id !== undefined) {
+			assertCustomIdNotUuid(options.id);
+		}
+
+		const expiresAt = resolveDirectUploadExpiresAt(options?.expiresIn);
+		const id = options?.id ?? crypto.randomUUID();
+
+		const metadata: ImageMetadata = {
+			id,
+			uploaded: new Date().toISOString(),
+			requireSignedURLs: options?.requireSignedURLs ?? false,
+			meta: options?.metadata ?? {},
+			variants: ["public"],
+			draft: true,
+			creator: options?.creator,
+		};
+
+		await this.env.IMAGES_STORE.put(id, new ArrayBuffer(0), { metadata });
+		await this.env.IMAGES_STORE.put(draftExpiryKey(id), String(expiresAt));
+
+		const publicUrl = await getPublicUrl(
+			this.env[CoreBindings.SERVICE_LOOPBACK]
+		);
+		return { id, uploadURL: buildUploadUrl(publicUrl, id) };
+	}
+
 	async list(options?: ImageListOptions): Promise<ImageList> {
 		const limit = options?.limit ?? 50;
 
@@ -183,6 +396,15 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 				0,
 				allImages.length,
 				...allImages.filter((i) => i.creator === options.creator)
+			);
+		}
+
+		if (options?.filter?.metadata) {
+			const metadataFilter = options.filter.metadata;
+			allImages.splice(
+				0,
+				allImages.length,
+				...allImages.filter((i) => matchesMetadataFilters(i, metadataFilter))
 			);
 		}
 
@@ -247,6 +469,53 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		return "application/octet-stream";
 	}
 
+	async #completeDirectUpload(request: Request, url: URL): Promise<Response> {
+		if (request.method !== "POST") {
+			return new Response("Method not allowed", { status: 405 });
+		}
+
+		const imageId = url.pathname.slice(CorePaths.IMAGE_UPLOAD.length + 1);
+		if (!imageId) {
+			return new Response("Missing image ID", { status: 400 });
+		}
+
+		const existing = await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+			imageId,
+			"arrayBuffer"
+		);
+		if (existing.metadata === null) {
+			return new Response("Upload link not found", { status: 404 });
+		}
+		if (!existing.metadata.draft) {
+			return new Response("Upload link already used", { status: 409 });
+		}
+
+		const expiresAt = await this.env.IMAGES_STORE.get(draftExpiryKey(imageId));
+		if (expiresAt === null || Number(expiresAt) < Date.now() / 1000) {
+			return new Response("Upload link expired", { status: 410 });
+		}
+
+		const formData = await request.formData();
+		const file = formData.get("file");
+		if (!(file instanceof Blob)) {
+			return new Response("Missing file", { status: 400 });
+		}
+		const buffer = await file.arrayBuffer();
+
+		const completedMetadata: ImageMetadata = {
+			...existing.metadata,
+			filename: file instanceof File ? file.name : existing.metadata.filename,
+			draft: false,
+		};
+
+		await this.env.IMAGES_STORE.put(imageId, buffer, {
+			metadata: completedMetadata,
+		});
+		await this.env.IMAGES_STORE.delete(draftExpiryKey(imageId));
+
+		return Response.json({ id: imageId, success: true });
+	}
+
 	// Handle HTTP requests for image delivery and transform operations
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
@@ -261,15 +530,30 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 				return new Response("Missing image ID", { status: 400 });
 			}
 
-			const data = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
-			if (data === null) {
+			const { value: data, metadata } =
+				await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+					imageId,
+					"arrayBuffer"
+				);
+			if (data === null || metadata === null) {
 				return new Response("Image not found", { status: 404 });
+			}
+
+			if (metadata.requireSignedURLs) {
+				const verifyError = await verifySignedRequest(url);
+				if (verifyError !== null) {
+					return new Response(verifyError, { status: 401 });
+				}
 			}
 
 			const contentType = await this.#detectContentType(data);
 			return new Response(data, {
 				headers: { "Content-Type": contentType },
 			});
+		}
+
+		if (url.pathname.startsWith(`${CorePaths.IMAGE_UPLOAD}/`)) {
+			return this.#completeDirectUpload(request, url);
 		}
 
 		// Forward transform/info operations to Node.js via loopback where Sharp runs
