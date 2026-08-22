@@ -129,7 +129,7 @@ describe("convertV4MiniflareOptions", () => {
 				R2: {
 					type: "r2",
 					name: "bucket",
-					localDev: {
+					dev: {
 						experimentalS3Credentials: {
 							accessKeyId: "access-key",
 							secretAccessKey: "secret-key",
@@ -156,6 +156,27 @@ describe("convertV4MiniflareOptions", () => {
 			},
 			triggers: [{ type: "queue", name: "queue", maxBatchSize: 10 }],
 		});
+	});
+
+	test("nests remote binding configuration under dev", ({ expect }) => {
+		const remoteProxyConnectionString = new URL(
+			"http://localhost:1234"
+		) as unknown as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			kvNamespaces: {
+				KV: { id: "namespace", remoteProxyConnectionString },
+			},
+		});
+
+		expect(converted.workers[0].config.env?.KV).toEqual({
+			type: "kv",
+			id: "namespace",
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toBe(
+			remoteProxyConnectionString
+		);
 	});
 
 	test("treats empty versionMetadata binding as absent", ({ expect }) => {

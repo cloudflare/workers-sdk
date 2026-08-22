@@ -287,7 +287,7 @@ function makeLocal(userScript: string, edgeUrl: URL): Miniflare {
 						VPC: {
 							type: "vpc-network",
 							networkId: "test-network",
-							remote: true,
+							dev: { remote: true },
 						},
 					},
 				},
@@ -316,7 +316,7 @@ function makeLocalService(userScript: string, edgeUrl: URL): Miniflare {
 						VPC: {
 							type: "vpc-service",
 							id: "test-service",
-							remote: true,
+							dev: { remote: true },
 						},
 					},
 				},
@@ -758,7 +758,7 @@ describe("VPC_SERVICES plugin: raw TCP opt-in", () => {
 						VPC: {
 							type: "vpc-service",
 							id: "test-service",
-							remote: true,
+							dev: { remote: true },
 						},
 					},
 				},
