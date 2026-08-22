@@ -455,4 +455,58 @@ describe("splitSqlQuery()", () => {
 			]
 		`);
 	});
+
+	it("should handle a CASE used as a value expression, whose END is followed directly by a comma rather than whitespace", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER update_projection AFTER INSERT ON items
+				BEGIN
+					UPDATE totals
+					SET
+						count = CASE WHEN NEW.active THEN count + 1 ELSE count END,
+						updated_at = NEW.created_at
+					WHERE id = NEW.parent_id;
+				END;
+
+				CREATE INDEX items_parent_id_idx ON items (parent_id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER update_projection AFTER INSERT ON items
+							BEGIN
+								UPDATE totals
+								SET
+									count = CASE WHEN NEW.active THEN count + 1 ELSE count END,
+									updated_at = NEW.created_at
+								WHERE id = NEW.parent_id;
+							END",
+			  "CREATE INDEX items_parent_id_idx ON items (parent_id)",
+			]
+		`);
+	});
+
+	it("should not split inside a trigger body just because it contains a parenthesised CASE", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER my_trigger AFTER INSERT ON items
+				BEGIN
+					UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE 0 END);
+					UPDATE totals SET y = y + 1;
+				END;
+
+				CREATE INDEX items_idx ON items (id);`)
+		).toMatchInlineSnapshot(`
+			[
+			  "CREATE TRIGGER my_trigger AFTER INSERT ON items
+							BEGIN
+								UPDATE totals SET x = (CASE WHEN NEW.active THEN 1 ELSE 0 END);
+								UPDATE totals SET y = y + 1;
+							END",
+			  "CREATE INDEX items_idx ON items (id)",
+			]
+		`);
+	});
 });
