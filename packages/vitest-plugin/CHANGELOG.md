@@ -1,5 +1,32 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.1.0
+
+### Minor Changes
+
+- [#15272](https://github.com/cloudflare/workers-sdk/pull/15272) [`c921b3f`](https://github.com/cloudflare/workers-sdk/commit/c921b3f3f8e0d16416a12c2be611e0ad9ab75a50) Thanks [@penalosa](https://github.com/penalosa)! - Add an experimental `newConfig` option for loading the Worker's configuration from `cloudflare.config.ts`
+
+  Projects that have migrated to the new TypeScript configuration format had no way to run their Vitest suite against their real bindings, since there was no Wrangler configuration file left to point `wrangler.configPath` at. This adds the missing option, modelled on `@cloudflare/vite-plugin`'s `experimental.newConfig`:
+
+  ```ts
+  import { cloudflareTest } from "@cloudflare/vitest-plugin";
+  import { defineProject } from "vitest/config";
+
+  export default defineProject({
+    plugins: [cloudflareTest({ experimental: { newConfig: true } })],
+  });
+  ```
+
+  `newConfig: true` loads `cloudflare.config.ts` from the project root; pass `{ configPath: "..." }` to load it from elsewhere. Config functions are called with `ctx.mode` set to Vite's mode, which defaults to `"test"` and can be overridden with `--mode`. `experimental.newConfig` cannot be combined with `wrangler`.
+
+  This is experimental and may change without a major version bump. Wrangler environments, `wrangler.config.ts` tooling configuration, and type generation are not supported yet.
+
+### Patch Changes
+
+- Updated dependencies [[`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1), [`daefb3c`](https://github.com/cloudflare/workers-sdk/commit/daefb3cc0f0b884b8ce82b22ed9b67a9c43919be), [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a), [`0cb8690`](https://github.com/cloudflare/workers-sdk/commit/0cb86908903b87a742d1786ac8aa5aa9dce6c575), [`a4c3458`](https://github.com/cloudflare/workers-sdk/commit/a4c3458cec77afa31e01d671d6b22ecfcf2c0107), [`dd5148d`](https://github.com/cloudflare/workers-sdk/commit/dd5148d7da11665ad3f3338de338380ccea979cc)]:
+  - miniflare@5.20260821.0-alpha
+  - wrangler@4.126.0
+
 ## 1.0.0
 
 ### Major Changes

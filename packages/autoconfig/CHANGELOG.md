@@ -1,5 +1,18 @@
 # @cloudflare/autoconfig
 
+## 0.3.0
+
+### Minor Changes
+
+- [#15246](https://github.com/cloudflare/workers-sdk/pull/15246) [`daefb3c`](https://github.com/cloudflare/workers-sdk/commit/daefb3cc0f0b884b8ce82b22ed9b67a9c43919be) Thanks [@edmundhung](https://github.com/edmundhung)! - Prepare autoconfig for multiple configuration targets
+
+  Add target-specific configuration output while preserving Wrangler's existing setup and deployment behavior.
+
+### Patch Changes
+
+- Updated dependencies [[`acb14d0`](https://github.com/cloudflare/workers-sdk/commit/acb14d01d64f21f0f21c247da7c2fcb0557ebb3d)]:
+  - @cloudflare/config@0.7.1
+
 ## 0.2.9
 
 ### Patch Changes
