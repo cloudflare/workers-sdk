@@ -8,18 +8,17 @@ export function createConfig(assetsOnly: boolean) {
 	return defineConfig({
 		plugins: [
 			cloudflare({
+				types: { includeRuntime: false },
 				inspectorPort: false,
 				persistState: false,
 				viteEnvironment: { name: "ssr" },
 				assetsOnly: () => assetsOnly,
 				experimental: {
 					prerenderWorker: {
-						config(_, { entryWorkerConfig }) {
-							return {
-								...entryWorkerConfig,
-								name: "prerender",
-								main: "./src/prerender.ts",
-							};
+						config: {
+							name: "prerender",
+							entrypoint: "./src/prerender.ts",
+							compatibilityDate: "2024-12-30",
 						},
 					},
 				},

@@ -72,7 +72,7 @@ test("logs sent emails to a directory within the project directory", async ({
 		return emailPath as string;
 	}, WAIT_FOR_OPTIONS);
 
-	const projectEmailDir = slash(join(rootDir, ".wrangler", "tmp", "email"));
+	const projectEmailDir = slash(join(rootDir, ".cloudflare", "tmp", "email"));
 	expect(slash(loggedPath).startsWith(projectEmailDir)).toBe(true);
 
 	const fileContents = readFileSync(loggedPath, "utf-8");

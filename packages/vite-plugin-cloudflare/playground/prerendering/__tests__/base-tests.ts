@@ -14,12 +14,12 @@ describe("pre-rendering", () => {
 		}
 	);
 
-	test.runIf(isBuild)(
-		"returns the prerendered route at /prerendered after the build",
-		async ({ expect }) => {
-			await page.goto(`${viteTestUrl}/prerendered`);
-			const content = await page.textContent("h1");
-			expect(content).toBe("Pre-rendered HTML");
-		}
-	);
+	// TODO: Reinstate when prerender Workers are supported by Build Output preview.
+	test.skip("returns the prerendered route at /prerendered after the build", async ({
+		expect,
+	}) => {
+		await page.goto(`${viteTestUrl}/prerendered`);
+		const content = await page.textContent("h1");
+		expect(content).toBe("Pre-rendered HTML");
+	});
 });

@@ -1,5 +1,6 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { workerProcessConfig } from "./worker-configs";
 
 export default defineConfig({
 	build: {
@@ -7,7 +8,8 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-process/wrangler.jsonc",
+			types: { includeRuntime: false },
+			config: workerProcessConfig,
 			inspectorPort: false,
 			persistState: false,
 		}),

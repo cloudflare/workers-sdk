@@ -20,13 +20,9 @@ describe("config-changes", () => {
 				WAIT_FOR_OPTIONS
 			);
 
-			mockFileChange(path.join(__dirname, "../wrangler.json"), (content) =>
-				JSON.stringify({
-					...JSON.parse(content),
-					vars: {
-						MY_VAR: "two",
-					},
-				})
+			mockFileChange(
+				path.join(__dirname, "../cloudflare.config.ts"),
+				(content) => content.replace('value: "one"', 'value: "two"')
 			);
 
 			await vi.waitFor(
@@ -50,19 +46,17 @@ describe("config-changes", () => {
 				WAIT_FOR_OPTIONS
 			);
 
-			mockFileChange(path.join(__dirname, "../wrangler.json"), (content) =>
-				JSON.stringify({
-					...JSON.parse(content),
-					main: "./src/non-existing-file.ts",
-					vars: {
-						MY_VAR: "two",
-					},
-				})
+			mockFileChange(
+				path.join(__dirname, "../cloudflare.config.ts"),
+				(content) =>
+					content
+						.replace("./src/index.ts", "./src/non-existing-file.ts")
+						.replace('value: "one"', 'value: "two"')
 			);
 
 			await vi.waitFor(async () => {
 				expect(serverLogs.errors.join()).toMatch(
-					/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
+					/.*The configured Worker entrypoint .+? doesn't point to an existing file.*/
 				);
 				expect(await getTextResponse()).toContain(
 					'The value of MY_VAR is "one"'
@@ -82,11 +76,13 @@ describe("config-changes", () => {
 				WAIT_FOR_OPTIONS
 			);
 
-			mockFileChange(path.join(__dirname, "../wrangler.json"), (content) =>
-				JSON.stringify({
-					...JSON.parse(content),
-					main: "./src/missing-after-broken-update.ts",
-				})
+			mockFileChange(
+				path.join(__dirname, "../cloudflare.config.ts"),
+				(content) =>
+					content.replace(
+						"./src/index.ts",
+						"./src/missing-after-broken-update.ts"
+					)
 			);
 
 			await vi.waitFor(
@@ -100,14 +96,12 @@ describe("config-changes", () => {
 			// The restart triggered by the broken config fails and keeps the
 			// current server running. A subsequent config change must still be
 			// picked up.
-			mockFileChange(path.join(__dirname, "../wrangler.json"), (content) =>
-				JSON.stringify({
-					...JSON.parse(content),
-					main: "./src/index.ts",
-					vars: {
-						MY_VAR: "three",
-					},
-				})
+			mockFileChange(
+				path.join(__dirname, "../cloudflare.config.ts"),
+				(content) =>
+					content
+						.replace("./src/missing-after-broken-update.ts", "./src/index.ts")
+						.replace('value: "one"', 'value: "three"')
 			);
 
 			await vi.waitFor(

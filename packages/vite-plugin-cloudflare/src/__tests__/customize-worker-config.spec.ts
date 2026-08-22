@@ -7,13 +7,11 @@ function createMockWorkerConfig(
 	overrides: Partial<ResolvedWorkerConfig> = {}
 ): ResolvedWorkerConfig {
 	return {
+		type: "worker",
 		name: "test-worker",
-		topLevelName: "test-worker",
-		compatibility_date: "2024-01-01",
-		main: "./src/index.ts",
-		compatibility_flags: [],
-		limits: {},
-		rules: [],
+		compatibilityDate: "2024-01-01",
+		entrypoint: "./src/index.ts",
+		compatibilityFlags: [],
 		...overrides,
 	} as ResolvedWorkerConfig;
 }
@@ -27,20 +25,20 @@ describe("customizeWorkerConfig", () => {
 			workerConfig,
 			configCustomizer: undefined,
 		});
-		expect(result).toBe(workerConfig);
+		expect(result).toEqual(workerConfig);
 	});
 
 	test("should merge object configuration into the config", ({ expect }) => {
 		const workerConfig = createMockWorkerConfig({
-			compatibility_date: "2024-01-01",
+			compatibilityDate: "2024-01-01",
 		});
 		const result = customizeWorkerConfig({
 			workerConfig,
 			configCustomizer: {
-				compatibility_date: "2025-01-01",
+				compatibilityDate: "2025-01-01",
 			},
 		});
-		expect(result.compatibility_date).toBe("2025-01-01");
+		expect(result.compatibilityDate).toBe("2025-01-01");
 		expect(result.name).toBe("test-worker");
 	});
 
@@ -49,11 +47,11 @@ describe("customizeWorkerConfig", () => {
 		const result = customizeWorkerConfig({
 			workerConfig,
 			configCustomizer: (userConfig) => ({
-				compatibility_date: "2025-06-01",
+				compatibilityDate: "2025-06-01",
 				name: `modified-${userConfig.name}`,
 			}),
 		});
-		expect(result.compatibility_date).toBe("2025-06-01");
+		expect(result.compatibilityDate).toBe("2025-06-01");
 		expect(result.name).toBe("modified-test-worker");
 	});
 
@@ -67,40 +65,38 @@ describe("customizeWorkerConfig", () => {
 				// Function that returns void/undefined
 			},
 		});
-		expect(result).toBe(workerConfig);
+		expect(result).toEqual(workerConfig);
 	});
 
 	test("should allow function to mutate config in place", ({ expect }) => {
 		const workerConfig = createMockWorkerConfig({
-			compatibility_date: "2024-01-01",
+			compatibilityDate: "2024-01-01",
 		});
 		const result = customizeWorkerConfig({
 			workerConfig,
 			configCustomizer: (userConfig) => {
-				userConfig.compatibility_date = "2025-06-01";
+				userConfig.compatibilityDate = "2025-06-01";
 				// Return void to indicate in-place mutation
 			},
 		});
-		// The original config should be returned (same reference)
-		expect(result).toBe(workerConfig);
-		// And the mutation should be visible
-		expect(result.compatibility_date).toBe("2025-06-01");
+		// The mutation should be visible after schema validation.
+		expect(result.compatibilityDate).toBe("2025-06-01");
 	});
 
-	test("should merge compatibility_flags arrays using defu semantics", ({
+	test("should merge compatibilityFlags arrays using defu semantics", ({
 		expect,
 	}) => {
 		const workerConfig = createMockWorkerConfig({
-			compatibility_flags: ["a"],
+			compatibilityFlags: ["a"],
 		});
 		const result = customizeWorkerConfig({
 			workerConfig,
 			configCustomizer: {
-				compatibility_flags: ["b"],
+				compatibilityFlags: ["b"],
 			},
 		});
 		// defu merges arrays
-		expect(result.compatibility_flags).toEqual(
+		expect(result.compatibilityFlags).toEqual(
 			expect.arrayContaining(["a", "b"])
 		);
 	});
@@ -110,15 +106,15 @@ describe("customizeWorkerConfig", () => {
 	}) => {
 		const workerConfig = createMockWorkerConfig({
 			name: "original-name",
-			compatibility_date: "2024-01-01",
+			compatibilityDate: "2024-01-01",
 		});
 		const result = customizeWorkerConfig({
 			workerConfig,
 			configCustomizer: {
-				compatibility_date: "2025-01-01",
+				compatibilityDate: "2025-01-01",
 			},
 		});
 		expect(result.name).toBe("original-name");
-		expect(result.compatibility_date).toBe("2025-01-01");
+		expect(result.compatibilityDate).toBe("2025-01-01");
 	});
 });

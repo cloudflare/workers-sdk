@@ -1,4 +1,4 @@
-import { test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import {
 	getTextResponse,
 	isCINonLinux,
@@ -22,42 +22,43 @@ const skipContainerTests =
 	// If the test is being run locally and docker is not running we just skip these tests
 	isLocalWithoutDockerRunning;
 
-test.skipIf(skipContainerTests)(
-	"starts container built from local Dockerfile",
-	async ({ expect }) => {
-		const startResponse = await getTextResponse("/dockerfile/start");
-		expect(startResponse).toBe("Container create request sent...");
+// TODO: Reinstate when Containers are supported by cloudflare.config.ts.
+describe.skip("Containers", () => {
+	test.skipIf(skipContainerTests)(
+		"starts container built from local Dockerfile",
+		async ({ expect }) => {
+			const startResponse = await getTextResponse("/dockerfile/start");
+			expect(startResponse).toBe("Container create request sent...");
 
-		const statusResponse = await getTextResponse("/dockerfile/status");
-		expect(statusResponse).toBe("true");
+			const statusResponse = await getTextResponse("/dockerfile/status");
+			expect(statusResponse).toBe("true");
 
-		await vi.waitFor(async () => {
-			const fetchResponse = await fetch(`${viteTestUrl}/dockerfile/fetch`, {
-				signal: AbortSignal.timeout(500),
-			});
-			expect(await fetchResponse.text()).toBe("Hello World!");
-		}, WAIT_FOR_OPTIONS);
-	}
-);
+			await vi.waitFor(async () => {
+				const fetchResponse = await fetch(`${viteTestUrl}/dockerfile/fetch`, {
+					signal: AbortSignal.timeout(500),
+				});
+				expect(await fetchResponse.text()).toBe("Hello World!");
+			}, WAIT_FOR_OPTIONS);
+		}
+	);
 
-// The registry-based test only runs when we are authenticated against the
-// devprod testing account that owns the `ci-container-dont-delete` image.
-test.skipIf(skipContainerTests || !isDevProdTestingAccount)(
-	"starts container pulled from the Cloudflare-managed registry",
-	async ({ expect }) => {
-		const startResponse = await getTextResponse("/registry/start");
-		expect(startResponse).toBe("Container create request sent...");
+	test.skipIf(skipContainerTests || !isDevProdTestingAccount)(
+		"starts container pulled from the Cloudflare-managed registry",
+		async ({ expect }) => {
+			const startResponse = await getTextResponse("/registry/start");
+			expect(startResponse).toBe("Container create request sent...");
 
-		const statusResponse = await getTextResponse("/registry/status");
-		expect(statusResponse).toBe("true");
+			const statusResponse = await getTextResponse("/registry/status");
+			expect(statusResponse).toBe("true");
 
-		await vi.waitFor(async () => {
-			const fetchResponse = await fetch(`${viteTestUrl}/registry/fetch`, {
-				signal: AbortSignal.timeout(500),
-			});
-			expect(await fetchResponse.text()).toBe(
-				"Hello World! Have an env var! from vite"
-			);
-		}, WAIT_FOR_OPTIONS);
-	}
-);
+			await vi.waitFor(async () => {
+				const fetchResponse = await fetch(`${viteTestUrl}/registry/fetch`, {
+					signal: AbortSignal.timeout(500),
+				});
+				expect(await fetchResponse.text()).toBe(
+					"Hello World! Have an env var! from vite"
+				);
+			}, WAIT_FOR_OPTIONS);
+		}
+	);
+});

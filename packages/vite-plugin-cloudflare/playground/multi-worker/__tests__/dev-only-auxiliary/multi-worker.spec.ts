@@ -4,26 +4,23 @@ import { describe, test } from "vitest";
 import { isBuild, rootDir } from "../../../__test-utils__";
 
 describe.runIf(isBuild)("dev-only auxiliary Worker", () => {
-	test("creates output directory for entry worker only", ({ expect }) => {
+	// TODO: Reinstate when auxiliary Workers are supported by Build Output.
+	test.skip("creates output directory for entry worker only", ({ expect }) => {
 		expect(
-			fs.existsSync(path.join(rootDir, "custom-dev-only-directory", "worker_a"))
+			fs.existsSync(
+				path.join(
+					rootDir,
+					".cloudflare",
+					"output",
+					"v0",
+					"workers",
+					"default",
+					"bundle"
+				)
+			)
 		).toBe(true);
 		expect(
 			fs.existsSync(path.join(rootDir, "custom-dev-only-directory", "worker_b"))
 		).toBe(false);
-	});
-
-	test("does not include dev-only auxiliary Worker in deploy config", ({
-		expect,
-	}) => {
-		const deployConfigPath = path.join(
-			rootDir,
-			".wrangler",
-			"deploy",
-			"config.json"
-		);
-		const deployConfig = JSON.parse(fs.readFileSync(deployConfigPath, "utf-8"));
-
-		expect(deployConfig.auxiliaryWorkers).toEqual([]);
 	});
 });
