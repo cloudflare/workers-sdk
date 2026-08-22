@@ -34,6 +34,7 @@ import {
 	Request,
 	Response,
 } from "./http";
+import { readErrorStackBody } from "./http/error-stack";
 import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
@@ -123,7 +124,6 @@ import {
 	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
-	decodeErrorPayload,
 	LogLevel,
 	Mutex,
 	SharedHeaders,
@@ -2970,9 +2970,9 @@ export class Miniflare {
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
 		if (response.status === 500 && stack !== null) {
 			// `workerd` drops response bodies for `HEAD` requests, so fall back to
-			// the header copy of the serialised error
-			const serialised =
-				(await response.text()) || decodeErrorPayload(response);
+			// the header copy of the serialised error. Failed WebSocket upgrades
+			// skip undici's decompressor, so a gzipped body is inflated first.
+			const serialised = await readErrorStackBody(response);
 			if (serialised === null) {
 				throw new Error("Worker threw an uncaught exception");
 			}
