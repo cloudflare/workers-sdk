@@ -178,6 +178,41 @@ describe("handleWebSocket", () => {
 		expect(init.headers.get("sec-websocket-version")).toBe("13");
 	});
 
+	test("does not forward Accept-Encoding on the upgrade dispatchFetch", async ({
+		expect,
+	}) => {
+		const mf = await listen();
+
+		const deferred = new DeferredPromise<Response>();
+		const mockedDispatchFetch = vi
+			.spyOn(mf, "dispatchFetch")
+			.mockReturnValue(deferred);
+
+		const socket = await connect();
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n" +
+				"Accept-Encoding: gzip, deflate, br, zstd\r\n\r\n"
+		);
+
+		await vi.waitFor(() => expect(mf.dispatchFetch).toHaveBeenCalled());
+		deferred.resolve(new Response(null));
+		socket.destroy();
+
+		assert(mockedDispatchFetch.mock.lastCall);
+		const init = mockedDispatchFetch.mock.lastCall[1];
+		assert(
+			init?.headers instanceof Headers,
+			"Test expects headers object passed to dispatchFetch to be Headers instance"
+		);
+		expect(init.headers.get("accept-encoding")).toBeNull();
+		expect(init.headers.get("upgrade")).toBe("websocket");
+	});
+
 	/**
 	 * Performs a websocket upgrade with the given headers and returns the URL
 	 * that was dispatched to miniflare.
