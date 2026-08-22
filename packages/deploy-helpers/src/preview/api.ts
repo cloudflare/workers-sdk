@@ -378,8 +378,13 @@ export async function patchPreviewBaseConfig(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewBaseConfig: PreviewBaseConfigPatch
+	previewBaseConfig: PreviewBaseConfigPatch,
+	patchExistingPreviews = false
 ): Promise<PreviewBaseConfig> {
+	const queryParams = patchExistingPreviews
+		? new URLSearchParams({ patch_existing_previews: "true" })
+		: undefined;
+
 	const worker = await fetchResult<WorkerPreviewBaseConfigResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}`,
@@ -387,7 +392,8 @@ export async function patchPreviewBaseConfig(
 			method: "PATCH",
 			headers: { "Content-Type": "application/merge-patch+json" },
 			body: JSON.stringify({ previews_base_config: previewBaseConfig }),
-		}
+		},
+		queryParams
 	);
 
 	return worker.previews_base_config ?? {};
