@@ -1,9 +1,0 @@
-{
-	"$schema": "./node_modules/wrangler/config-schema.json",
-	"name": "stream-binding-worker",
-	"main": "./src/index.ts",
-	"compatibility_date": "2026-03-23",
-	"stream": {
-		"binding": "STREAM",
-	},
-}

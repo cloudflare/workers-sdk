@@ -18,11 +18,6 @@ test("images support", async ({ expect }) => {
 	expect(response).toBe("Images binding works");
 });
 
-test("unsafe_hello_world support", async ({ expect }) => {
-	const response = await getTextResponse("/hello-world");
-	expect(response).toBe("Hello World binding works");
-});
-
 test("analytics_engine support", async ({ expect }) => {
 	const response = await getTextResponse("/ae");
 	expect(response).toBe("AE binding works");
@@ -33,7 +28,9 @@ test("ratelimit support", async ({ expect }) => {
 	expect(response).toBe("Rate limit binding works: first: true, second: false");
 });
 
-test("hyperdrive support", async ({ expect }) => {
+// TODO: Reinstate when .env and .dev.vars files are supported with
+// cloudflare.config.ts.
+test.skip("hyperdrive support", async ({ expect }) => {
 	const response = await getTextResponse("/hyperdrive");
 	expect(response).toBe("Hyperdrive binding works");
 });

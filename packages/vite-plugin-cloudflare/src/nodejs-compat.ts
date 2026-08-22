@@ -39,8 +39,8 @@ export class NodeJsCompat {
 		const { env } = defineEnv({
 			presets: [
 				getCloudflarePreset({
-					compatibilityDate: workerConfig.compatibility_date,
-					compatibilityFlags: workerConfig.compatibility_flags,
+					compatibilityDate: workerConfig.compatibilityDate,
+					compatibilityFlags: workerConfig.compatibilityFlags,
 				}),
 			],
 		});
@@ -200,8 +200,8 @@ export class NodeJsCompat {
  */
 export function hasNodeJsCompat(workerConfig: ResolvedWorkerConfig) {
 	const nodeCompatMode = getNodeCompat(
-		workerConfig.compatibility_date,
-		workerConfig.compatibility_flags ?? []
+		workerConfig.compatibilityDate,
+		workerConfig.compatibilityFlags ?? []
 	).mode;
 
 	if (nodeCompatMode === "v2") {
@@ -224,8 +224,8 @@ export function hasNodeJsAls(workerConfig: ResolvedWorkerConfig | undefined) {
 	return (
 		workerConfig !== undefined &&
 		getNodeCompat(
-			workerConfig.compatibility_date,
-			workerConfig.compatibility_flags ?? []
+			workerConfig.compatibilityDate,
+			workerConfig.compatibilityFlags ?? []
 		).mode === "als"
 	);
 }
