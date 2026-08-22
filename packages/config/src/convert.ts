@@ -261,13 +261,16 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						namespace: binding.namespace,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
 			}
 			case "ai": {
-				result.ai = omitUndefined({ binding: name, remote: binding.remote });
+				result.ai = omitUndefined({
+					binding: name,
+					remote: binding.dev?.remote,
+				});
 				break;
 			}
 			case "ai-search": {
@@ -275,7 +278,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						instance_name: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -285,7 +288,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						namespace: binding.namespace,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -301,7 +304,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						namespace: binding.namespace,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -313,7 +316,7 @@ function convertBindingsAndAssets(
 			case "browser": {
 				result.browser = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -323,7 +326,7 @@ function convertBindingsAndAssets(
 						binding: name,
 						database_id: binding.id,
 						database_name: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -339,8 +342,8 @@ function convertBindingsAndAssets(
 						parameters: binding.outbound.parameters,
 					});
 				}
-				if (binding.remote !== undefined) {
-					entry.remote = binding.remote;
+				if (binding.dev?.remote !== undefined) {
+					entry.remote = binding.dev.remote;
 				}
 				dispatchNamespaces.push(entry);
 				break;
@@ -358,7 +361,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						app_id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -368,7 +371,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
-						localConnectionString: binding.localConnectionString,
+						localConnectionString: binding.dev?.connectionString,
 					})
 				);
 				break;
@@ -376,7 +379,7 @@ function convertBindingsAndAssets(
 			case "images": {
 				result.images = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -389,7 +392,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -401,7 +404,7 @@ function convertBindingsAndAssets(
 			case "media": {
 				result.media = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -410,7 +413,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						certificate_id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -420,7 +423,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						stream: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -431,7 +434,7 @@ function convertBindingsAndAssets(
 						binding: name,
 						queue: binding.name,
 						delivery_delay: binding.deliveryDelay,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -446,13 +449,13 @@ function convertBindingsAndAssets(
 			}
 			case "r2": {
 				const experimentalS3Credentials =
-					binding.localDev?.experimentalS3Credentials;
+					binding.dev?.experimentalS3Credentials;
 				r2Buckets.push(
 					omitUndefined({
 						binding: name,
 						bucket_name: binding.name,
 						jurisdiction: binding.jurisdiction,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 						local_dev:
 							experimentalS3Credentials === undefined
 								? undefined
@@ -482,7 +485,7 @@ function convertBindingsAndAssets(
 						destination_address: binding.destinationAddress,
 						allowed_destination_addresses: binding.allowedDestinationAddresses,
 						allowed_sender_addresses: binding.allowedSenderAddresses,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -490,7 +493,7 @@ function convertBindingsAndAssets(
 			case "stream": {
 				result.stream = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -503,7 +506,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						index_name: binding.name,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -517,7 +520,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						service_id: binding.id,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -531,7 +534,7 @@ function convertBindingsAndAssets(
 						omitUndefined({
 							binding: name,
 							tunnel_id: binding.tunnelId,
-							remote: binding.remote,
+							remote: binding.dev?.remote,
 						})
 					);
 				} else if (binding.networkId !== undefined) {
@@ -539,7 +542,7 @@ function convertBindingsAndAssets(
 						omitUndefined({
 							binding: name,
 							network_id: binding.networkId,
-							remote: binding.remote,
+							remote: binding.dev?.remote,
 						})
 					);
 				}
@@ -548,7 +551,7 @@ function convertBindingsAndAssets(
 			case "web-search": {
 				result.websearch = omitUndefined({
 					binding: name,
-					remote: binding.remote,
+					remote: binding.dev?.remote,
 				});
 				break;
 			}
@@ -559,7 +562,7 @@ function convertBindingsAndAssets(
 						service: binding.workerName,
 						entrypoint: binding.exportName,
 						props: binding.props,
-						remote: binding.remote,
+						remote: binding.dev?.remote,
 					})
 				);
 				break;
@@ -575,7 +578,7 @@ function convertBindingsAndAssets(
 			// 			binding: name,
 			// 			class_name: binding.exportName,
 			// 			script_name: binding.workerName,
-			// 			remote: binding.remote,
+			// 			remote: binding.dev?.remote,
 			// 		})
 			// 	);
 			// 	break;

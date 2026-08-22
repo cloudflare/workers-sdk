@@ -13,7 +13,7 @@ function getHyperdrives(
 ): [name: string, url: URL][] {
 	return getEnvBindingsOfType(config, "hyperdrive").map(([name, binding]) => [
 		name,
-		HyperdriveSchema.parse(binding.localConnectionString),
+		HyperdriveSchema.parse(binding.dev.connectionString),
 	]);
 }
 

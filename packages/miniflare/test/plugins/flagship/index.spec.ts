@@ -39,7 +39,7 @@ test("flagship: accepts flagship binding with remote", ({ expect }) => {
 				FLAGS: {
 					type: "flagship",
 					id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-					remote: true,
+					dev: { remote: true },
 				},
 			},
 		}),
