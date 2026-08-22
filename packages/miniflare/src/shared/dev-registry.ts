@@ -302,6 +302,30 @@ export class DevRegistry {
 			name,
 			setInterval(
 				() => {
+					if (!existsSync(definitionPath)) {
+						// The entry is gone while this Worker is still serving. A machine
+						// that suspends for longer than the stale window freezes this
+						// heartbeat, so on resume the sweep in `getWorkerRegistry()`
+						// deletes an entry whose owner is very much alive. Nobody else
+						// holds the name, so take it back — otherwise the branch below
+						// stands the heartbeat down and this Worker stays invisible to
+						// its peers until an unrelated config update re-registers it.
+						try {
+							mkdirSync(path.dirname(definitionPath), { recursive: true });
+							writeFileSync(
+								definitionPath,
+								JSON.stringify(
+									{ ...definition, instanceId: this.instanceId },
+									null,
+									2
+								)
+							);
+						} catch (e) {
+							this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
+						}
+						return;
+					}
+
 					const currentDefinition = readDefinition(definitionPath);
 					if (currentDefinition?.instanceId === this.instanceId) {
 						utimesSync(definitionPath, new Date(), new Date());
