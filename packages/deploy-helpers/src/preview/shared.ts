@@ -174,13 +174,14 @@ export function getRepositoryUrl(): string | undefined {
 }
 
 /**
- * The pull/merge request number and URL detected from the current CI
- * environment. Either field may be missing depending on what the detected
- * CI provider exposes.
+ * The pull/merge request number, URL, and title detected from the current CI
+ * environment. Any field may be missing depending on what the detected CI
+ * provider exposes.
  */
 export type PullRequestMetadata = {
 	number?: string;
 	url?: string;
+	title?: string;
 };
 
 /**
@@ -198,14 +199,30 @@ function normalizePullRequestNumber(number: string | number | undefined) {
 }
 
 /**
+ * Trims a pull/merge request title, treating a blank value the same as a
+ * missing one.
+ */
+function normalizePullRequestTitle(
+	title: string | undefined
+): string | undefined {
+	if (title === undefined) {
+		return undefined;
+	}
+
+	const trimmedTitle = title.trim();
+	return trimmedTitle ? trimmedTitle : undefined;
+}
+
+/**
  * Detects pull request metadata from a GitHub Actions environment.
  *
  * Prefers the `pull_request` event payload at `GITHUB_EVENT_PATH` (available
  * for `pull_request`/`pull_request_target`-triggered workflows), which
- * directly provides the PR number and URL. Falls back to parsing the PR
- * number out of `GITHUB_REF` (formatted `refs/pull/<number>/merge`) and
+ * directly provides the PR number, URL, and title. Falls back to parsing the
+ * PR number out of `GITHUB_REF` (formatted `refs/pull/<number>/merge`) and
  * building the URL from `GITHUB_REPOSITORY`/`GITHUB_SERVER_URL`, which covers
- * other trigger types where a `pull_request` payload isn't available.
+ * other trigger types where a `pull_request` payload isn't available — this
+ * fallback path can't recover a title, since that isn't encoded in the ref.
  */
 function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
 	if (process.env.GITHUB_EVENT_PATH) {
@@ -213,14 +230,19 @@ function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
 			const event = JSON.parse(
 				readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
 			) as {
-				pull_request?: { html_url?: string; number?: number };
+				pull_request?: {
+					html_url?: string;
+					number?: number;
+					title?: string;
+				};
 			};
 			const number = normalizePullRequestNumber(event.pull_request?.number);
 			const url = event.pull_request?.html_url
 				? normalizeRepositoryUrl(event.pull_request.html_url)
 				: undefined;
-			if (number || url) {
-				return { number, url };
+			const title = normalizePullRequestTitle(event.pull_request?.title);
+			if (number || url || title) {
+				return { number, url, title };
 			}
 		} catch {
 			// Fall back to environment-derived metadata below.
@@ -245,9 +267,9 @@ function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
 
 /**
  * Detects merge request metadata from a GitLab CI merge request pipeline,
- * using `CI_MERGE_REQUEST_IID` for the number and
+ * using `CI_MERGE_REQUEST_IID` for the number,
  * `CI_MERGE_REQUEST_PROJECT_URL` (or `CI_PROJECT_URL` as a fallback) to build
- * the merge request URL.
+ * the merge request URL, and `CI_MERGE_REQUEST_TITLE` for the title.
  */
 function getGitLabPullRequestMetadata(): PullRequestMetadata | undefined {
 	const number = normalizePullRequestNumber(process.env.CI_MERGE_REQUEST_IID);
@@ -265,16 +287,18 @@ function getGitLabPullRequestMetadata(): PullRequestMetadata | undefined {
 		url: normalizeRepositoryUrl(
 			`${normalizedProjectUrl}/-/merge_requests/${number}`
 		),
+		title: normalizePullRequestTitle(process.env.CI_MERGE_REQUEST_TITLE),
 	};
 }
 
 /**
  * Detects pull request metadata from generic, provider-agnostic env vars
  * (`PULL_REQUEST_URL`/`PR_URL`/`CHANGE_URL`/`CIRCLE_PULL_REQUEST` for the URL,
- * `PULL_REQUEST_NUMBER`/`PR_NUMBER`/`CHANGE_ID` for the number). These are
- * conventions used by some CI providers and custom pipelines, but aren't
- * officially documented, so this is a lower-confidence, best-effort fallback
- * checked before the provider-specific detectors.
+ * `PULL_REQUEST_NUMBER`/`PR_NUMBER`/`CHANGE_ID` for the number,
+ * `PULL_REQUEST_TITLE` for the title). These are conventions used by some CI
+ * providers and custom pipelines, but aren't officially documented, so this
+ * is a lower-confidence, best-effort fallback checked before the
+ * provider-specific detectors.
  */
 function getDirectPullRequestMetadata(): PullRequestMetadata | undefined {
 	const directUrl =
@@ -288,9 +312,10 @@ function getDirectPullRequestMetadata(): PullRequestMetadata | undefined {
 			process.env.CHANGE_ID
 	);
 	const url = directUrl ? normalizeRepositoryUrl(directUrl) : undefined;
+	const title = normalizePullRequestTitle(process.env.PULL_REQUEST_TITLE);
 
-	if (number || url) {
-		return { number, url };
+	if (number || url || title) {
+		return { number, url, title };
 	}
 
 	return undefined;

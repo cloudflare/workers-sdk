@@ -83,6 +83,7 @@ export interface DeploymentResource {
 		"workers/commit_sha"?: string;
 		"workers/message"?: string;
 		"workers/pull_request_number"?: string;
+		"workers/pull_request_title"?: string;
 		"workers/pull_request_url"?: string;
 		"workers/repository_url"?: string;
 		"workers/tag"?: string;
@@ -112,6 +113,7 @@ export type CreatePreviewDeploymentRequestParams = {
 		"workers/commit_sha"?: string;
 		"workers/message"?: string;
 		"workers/pull_request_number"?: string;
+		"workers/pull_request_title"?: string;
 		"workers/pull_request_url"?: string;
 		"workers/repository_url"?: string;
 		"workers/tag"?: string;

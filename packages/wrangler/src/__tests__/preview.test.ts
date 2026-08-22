@@ -169,6 +169,8 @@ function clearPreviewMetadataEnvs() {
 	vi.stubEnv("CI_COMMIT_SHA", "");
 	vi.stubEnv("CIRCLE_SHA1", "");
 	vi.stubEnv("COMMIT_SHA", "");
+	vi.stubEnv("CI_MERGE_REQUEST_TITLE", "");
+	vi.stubEnv("PULL_REQUEST_TITLE", "");
 }
 
 describe("wrangler preview", () => {
@@ -388,14 +390,38 @@ describe("wrangler preview", () => {
 				"https://git.example.com/acme/worker-project/pulls/13"
 			);
 			vi.stubEnv("PULL_REQUEST_NUMBER", "13");
+			vi.stubEnv("PULL_REQUEST_TITLE", "Add a cool new feature");
 
 			expect(getPullRequestMetadata()).toEqual({
 				number: "13",
 				url: "https://git.example.com/acme/worker-project/pulls/13",
+				title: "Add a cool new feature",
 			});
 		});
 
 		test("should use GitHub event pull request metadata", ({ expect }) => {
+			writeFileSync(
+				"github-event.json",
+				JSON.stringify({
+					pull_request: {
+						number: 13,
+						html_url: "https://github.com/acme/worker-project/pull/13",
+						title: "Add a cool new feature",
+					},
+				})
+			);
+			vi.stubEnv("GITHUB_EVENT_PATH", "github-event.json");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should not fail when the GitHub event pull request has no title", ({
+			expect,
+		}) => {
 			writeFileSync(
 				"github-event.json",
 				JSON.stringify({
@@ -413,12 +439,42 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should not recover a title from the GITHUB_REF fallback", ({
+			expect,
+		}) => {
+			vi.stubEnv("GITHUB_REF", "refs/pull/13/merge");
+			vi.stubEnv("GITHUB_REPOSITORY", "acme/worker-project");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+			});
+		});
+
 		test("should use GitLab merge request metadata", ({ expect }) => {
 			vi.stubEnv(
 				"CI_PROJECT_URL",
 				"https://gitlab.example.com/acme/worker-project"
 			);
 			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "Add a cool new feature");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should treat a blank title the same as a missing one", ({
+			expect,
+		}) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "   ");
 
 			expect(getPullRequestMetadata()).toEqual({
 				number: "13",
@@ -4689,6 +4745,7 @@ describe("wrangler preview", () => {
 				"https://gitlab.example.com/acme/worker-project.git"
 			);
 			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "Add a cool new feature");
 			vi.stubEnv("CI_COMMIT_SHA", "abc123def456");
 
 			let deploymentRequestBody:
@@ -4697,6 +4754,7 @@ describe("wrangler preview", () => {
 							"workers/commit_sha"?: string;
 							"workers/message"?: string;
 							"workers/pull_request_number"?: string;
+							"workers/pull_request_title"?: string;
 							"workers/pull_request_url"?: string;
 							"workers/repository_url"?: string;
 							"workers/tag"?: string;
@@ -4767,6 +4825,7 @@ describe("wrangler preview", () => {
 				"workers/commit_sha": "abc123def456",
 				"workers/message": "preview note",
 				"workers/pull_request_number": "13",
+				"workers/pull_request_title": "Add a cool new feature",
 				"workers/pull_request_url":
 					"https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
 				"workers/repository_url":
@@ -4778,6 +4837,8 @@ describe("wrangler preview", () => {
 				"https://gitlab.example.com/acme/worker-project/-/merge_requests/13"
 			);
 			expect(std.out).not.toContain("repository_url");
+			expect(std.out).not.toContain("pull_request_title");
+			expect(std.out).not.toContain("Add a cool new feature");
 		});
 
 		test("should fall back to HEAD commit metadata for annotations in CI", async ({

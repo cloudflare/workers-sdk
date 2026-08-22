@@ -463,6 +463,9 @@ async function assemblePreviewDeploymentSettings(
 			...(pullRequest?.number && {
 				"workers/pull_request_number": pullRequest.number,
 			}),
+			...(pullRequest?.title && {
+				"workers/pull_request_title": pullRequest.title,
+			}),
 			...(pullRequest?.url && { "workers/pull_request_url": pullRequest.url }),
 			...(repositoryUrl && { "workers/repository_url": repositoryUrl }),
 			...(options.tag && { "workers/tag": options.tag }),
