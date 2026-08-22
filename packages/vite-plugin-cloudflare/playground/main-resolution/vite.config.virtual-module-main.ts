@@ -2,6 +2,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+	mode: "virtual-module-main",
 	plugins: [
 		{
 			name: "virtual-module-plugin",
@@ -23,9 +24,9 @@ export default {
 			},
 		},
 		cloudflare({
+			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
-			configPath: "./wrangler.virtual-module-main.jsonc",
 		}),
 	],
 });
