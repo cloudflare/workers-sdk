@@ -95,5 +95,31 @@ describe("DevEnv", () => {
 
 			void devEnv.teardown();
 		});
+
+		test("should log ProxyWorker request errors without tearing down the dev session", ({
+			expect,
+		}) => {
+			const devEnv = new DevEnv();
+
+			const fatalEvents: unknown[] = [];
+			devEnv.on("error", (event) => fatalEvents.push(event));
+
+			devEnv.dispatch({
+				type: "error",
+				reason: "Error inside ProxyWorker",
+				cause: new Error(
+					"GET http://127.0.0.1:8787/ (failed after 3 attempts): Network connection lost."
+				),
+				source: "ProxyController",
+				data: {},
+			});
+
+			expect(std.err).toContain("Error inside ProxyWorker");
+			expect(std.err).toContain("Network connection lost.");
+			// one failed proxied request must not become a fatal dev-session error
+			expect(fatalEvents).toHaveLength(0);
+
+			void devEnv.teardown();
+		});
 	});
 });

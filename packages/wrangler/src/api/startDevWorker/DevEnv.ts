@@ -187,6 +187,22 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
 		}
+		// A proxied request to the UserWorker failed while the UserWorker was NOT
+		// being reloaded — e.g. the UserWorker's HTTP server closed a reused
+		// keep-alive connection at the same moment the ProxyWorker wrote a
+		// request into it. The affected request has already failed (and the
+		// ProxyWorker retries GET/HEAD before reporting), but the dev session
+		// itself is healthy: tearing it down would turn one failed request into
+		// a dead dev server (see https://github.com/cloudflare/workers-sdk/issues/14926). Log it and keep serving.
+		else if (
+			event.source === "ProxyController" &&
+			event.reason.startsWith("Error inside ProxyWorker")
+		) {
+			logger.error(
+				`${event.reason} (the affected request failed; the dev server continues): ${event.cause.message}`
+			);
+			logger.debug("=> Error contextual data:", event.data);
+		}
 		// Parse errors are recoverable by changing your Wrangler configuration file and saving
 		// All other errors from the ConfigController are non-recoverable
 		else if (
