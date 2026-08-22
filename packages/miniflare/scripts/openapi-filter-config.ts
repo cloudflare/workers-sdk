@@ -1,3 +1,4 @@
+import { EMAIL_OPENAPI_SCHEMAS } from "./email-openapi";
 import type { FilterConfig } from "./filter-openapi";
 
 /**
@@ -625,6 +626,279 @@ const config = {
 					},
 					summary: "List Workers in Dev Registry",
 					tags: ["Local Explorer"],
+				},
+			},
+
+			// Email endpoints (local-only, not pulling from upstream API)
+			"/local/email/routing": {
+				get: {
+					description:
+						"Lists emails received by any email() handler during this dev session. Use the optional `worker` query parameter to filter by worker, or `email_id` to return one email's details.",
+					operationId: "email-list-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return emails received by this worker's email() handler.",
+						},
+						{
+							in: "query",
+							name: "email_id",
+							schema: { type: "string" },
+							description:
+								"Return the details for this email instead of a paginated list.",
+						},
+						{
+							in: "query",
+							name: "cursor",
+							schema: { type: "string" },
+							description: "Opaque cursor for the next page of emails.",
+						},
+						{
+							in: "query",
+							name: "per_page",
+							schema: {
+								type: "integer",
+								minimum: 1,
+								maximum: 100,
+								default: 25,
+							},
+							description: "Number of emails per page.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														oneOf: [
+															{
+																items: {
+																	$ref: "#/components/schemas/email_routing-item",
+																},
+																type: "array",
+															},
+															{
+																$ref: "#/components/schemas/email_routing-detail",
+															},
+														],
+													},
+													result_info: {
+														type: "object",
+														properties: {
+															count: { type: "number" },
+															cursor: { type: "string" },
+															per_page: { type: "integer" },
+															has_more: { type: "boolean" },
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List received emails response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List received emails failure.",
+						},
+					},
+					summary: "List Received Emails",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/routing/send": {
+				post: {
+					description:
+						"Sends a test email to trigger the worker's email() handler. Only the first `to` address is used as the envelope recipient; any additional to and cc addresses appear only in the composed MIME headers. bcc addresses are accepted but, by convention, are not written into the composed message.",
+					operationId: "email-send-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string" },
+							description:
+								"Deliver the test email directly to this worker's email() handler. Required because a single dev port can serve multiple workers, so the target cannot be inferred from the recipient address.",
+						},
+					],
+					requestBody: {
+						required: true,
+						content: {
+							"application/json": {
+								schema: {
+									$ref: "#/components/schemas/email_send-request",
+								},
+							},
+						},
+					},
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															messageId: {
+																type: "string",
+																description:
+																	"RFC Message-ID header value of the delivered test email.",
+															},
+															outcome: {
+																type: "string",
+																enum: ["ok", "exception"],
+																description:
+																	"Whether the handler ran to completion or threw.",
+															},
+															rejectReason: {
+																type: "string",
+																description:
+																	"Reason passed to setReject(), if the handler rejected the message.",
+															},
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "Send test email response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Send test email failure.",
+						},
+					},
+					summary: "Send Test Email",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/sending": {
+				get: {
+					description:
+						"Lists emails sent through send_email bindings during this dev session, or returns one email's details when `email_id` is provided.",
+					operationId: "email-list-sending",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							schema: { type: "string" },
+							description:
+								"Only return emails sent through this worker's send_email bindings.",
+						},
+						{
+							in: "query",
+							name: "email_id",
+							schema: { type: "string" },
+							description:
+								"Return the details for this email instead of a paginated list.",
+						},
+						{
+							in: "query",
+							name: "cursor",
+							schema: { type: "string" },
+							description: "Opaque cursor for the next page of emails.",
+						},
+						{
+							in: "query",
+							name: "per_page",
+							schema: {
+								type: "integer",
+								minimum: 1,
+								maximum: 100,
+								default: 25,
+							},
+							description: "Number of emails per page.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														oneOf: [
+															{
+																items: {
+																	$ref: "#/components/schemas/email_sending-item",
+																},
+																type: "array",
+															},
+															{
+																$ref: "#/components/schemas/email_sending-detail",
+															},
+														],
+													},
+													result_info: {
+														type: "object",
+														properties: {
+															count: { type: "number" },
+															cursor: { type: "string" },
+															per_page: { type: "integer" },
+															has_more: { type: "boolean" },
+														},
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List sent emails response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List sent emails failure.",
+						},
+					},
+					summary: "List Sent Emails",
+					tags: ["Email"],
 				},
 			},
 
@@ -1764,6 +2038,23 @@ const config = {
 						},
 						description: "Workflow bindings",
 					},
+					sendEmail: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_named-binding",
+						},
+						description: "Send Email bindings",
+					},
+				},
+			},
+			"local-explorer_named-binding": {
+				type: "object",
+				required: ["bindingName"],
+				properties: {
+					bindingName: {
+						type: "string",
+						description: "Name of the binding in the worker's env",
+					},
 				},
 			},
 			"local-explorer_resource-binding": {
@@ -1968,6 +2259,7 @@ const config = {
 				},
 				required: ["columns", "rows"],
 			},
+			...EMAIL_OPENAPI_SCHEMAS,
 		},
 	},
 } satisfies FilterConfig;
