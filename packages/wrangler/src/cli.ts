@@ -24,6 +24,7 @@ import {
 	unstable_pages,
 	unstable_readConfig,
 } from "./api";
+import { registerOutputStreamErrorHandler } from "./output-stream-errors";
 import { main } from "./index";
 import type {
 	Binding,
@@ -52,6 +53,9 @@ import type { Request, Response } from "miniflare";
  * main only gets called when the script is run directly, not when it's imported as a module.
  */
 if (typeof vitest === "undefined" && require.main === module) {
+	registerOutputStreamErrorHandler(process.stdout);
+	registerOutputStreamErrorHandler(process.stderr);
+
 	main(hideBin(process.argv)).catch((e) => {
 		// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.
 		// Here we just want to ensure that the process exits with a non-zero code.
