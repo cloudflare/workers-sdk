@@ -715,6 +715,36 @@ describe("ConfigExportsSchema", () => {
 		}
 	});
 
+	it.for([
+		{
+			description: "object",
+			value: { staging: "staging-worker", production: "production-worker" },
+			path: ["WORKER_NAMES", "type"],
+		},
+		{
+			description: "primitive",
+			value: 42,
+			path: ["WORKER_NAMES"],
+		},
+	])(
+		"reports an actionable error for an unknown $description export",
+		({ value, path }, { expect }) => {
+			const result = ConfigExportsSchema.safeParse({
+				default: baseConfig,
+				WORKER_NAMES: value,
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]).toMatchObject({
+					path,
+					message:
+						"The `WORKER_NAMES` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.",
+				});
+			}
+		}
+	);
+
 	it("rejects a settings config on a non-`settings` export", ({ expect }) => {
 		const result = ConfigExportsSchema.safeParse({
 			default: baseConfig,

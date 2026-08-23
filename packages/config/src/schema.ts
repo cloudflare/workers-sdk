@@ -557,18 +557,30 @@ export const SettingsSchema = z.strictObject({
 export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
 
 const SETTINGS_EXPORT_NAME = "settings";
+const SUPPORTED_EXPORT_TYPES = new Set(["worker", "settings"]);
+
+function invalidConfigExportMessage(exportName: string): string {
+	return `The \`${exportName}\` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.`;
+}
 
 const ConfigExportsTypeSchema = z
-	.record(
-		z.string(),
-		z.looseObject({
-			type: z.enum(["worker", "settings"]),
-		})
-	)
+	.record(z.string(), z.unknown())
 	.check((ctx) => {
 		for (const [key, value] of Object.entries(ctx.value)) {
+			const isObject = typeof value === "object" && value !== null;
+			const type = isObject && "type" in value ? value.type : undefined;
+			if (typeof type !== "string" || !SUPPORTED_EXPORT_TYPES.has(type)) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: isObject ? [key, "type"] : [key],
+					message: invalidConfigExportMessage(key),
+				});
+				continue;
+			}
+
 			const isSettingsName = key === SETTINGS_EXPORT_NAME;
-			const isSettingsType = value.type === "settings";
+			const isSettingsType = type === "settings";
 			if (isSettingsType && !isSettingsName) {
 				ctx.issues.push({
 					code: "custom",
@@ -581,7 +593,7 @@ const ConfigExportsTypeSchema = z
 					code: "custom",
 					input: value,
 					path: [key],
-					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${value.type}\` config.`,
+					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${type}\` config.`,
 				});
 			}
 		}
