@@ -27,9 +27,10 @@ export interface BuildOutputPreviewWorker {
 export async function readBuildOutputWorkers(
 	root: string
 ): Promise<BuildOutputPreviewWorker[]> {
-	// `settings` comes from the optional top-level `config.json` holding
-	// project-level settings (`account_id`, `compliance_region`) shared by
-	// every Worker.
+	// `settings` comes from the top-level `config.json` holding project-level
+	// settings (`account_id`, `compliance_region`) shared by every Worker. It
+	// also carries the `mode` the build ran in, which `convertToWranglerConfig`
+	// ignores — preview does not act on it yet.
 	const { workers, settings } = await readBuildOutput(root);
 	const [worker] = workers;
 

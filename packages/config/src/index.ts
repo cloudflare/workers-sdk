@@ -16,6 +16,7 @@ export {
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
+	OutputSettingsSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
 	QueueBindingSchema,
@@ -39,6 +40,7 @@ export type {
 	ParsedConfigExports,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
 	ModuleType,
 } from "./schema";

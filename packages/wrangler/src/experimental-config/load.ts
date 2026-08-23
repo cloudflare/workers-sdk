@@ -35,6 +35,11 @@ export interface LoadNewConfigResult {
 	parsedWorkerConfig: ParsedInputWorkerConfig;
 	/** The validated `settings` export, if present. */
 	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/**
+	 * The mode the config was resolved in, from `--mode`/`--env` or
+	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
+	 */
+	mode: string | undefined;
 	/** Resolved absolute path to `cloudflare.config.ts`. */
 	cloudflareConfigPath: string;
 	/** Resolved absolute path to `wrangler.config.ts`, if present. */
@@ -155,6 +160,7 @@ export async function loadNewConfig(options: {
 		rawConfig,
 		parsedWorkerConfig: worker,
 		parsedSettingsConfig: settings,
+		mode,
 		cloudflareConfigPath,
 		wranglerConfigPath,
 		dependencies,

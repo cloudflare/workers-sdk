@@ -5,6 +5,7 @@ import {
 	ConfigExportsSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
+	OutputSettingsSchema,
 	OutputWorkerSchema,
 } from "../schema";
 import type { ParsedInputWorkerConfig } from "../schema";
@@ -777,6 +778,55 @@ describe("InputSettingsSchema", () => {
 	it("rejects unknown fields", ({ expect }) => {
 		const result = InputSettingsSchema.safeParse({
 			type: "settings",
+			name: "my-worker",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `mode`, which is supplied at build time rather than declared", ({
+		expect,
+	}) => {
+		const result = InputSettingsSchema.safeParse({
+			type: "settings",
+			mode: "staging",
+		});
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("OutputSettingsSchema", () => {
+	it("accepts a mode alongside the settings fields", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			accountId: "acc-123",
+			complianceRegion: "public",
+			mode: "staging",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts a config without a mode", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({ type: "settings" });
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects a non-string mode", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			mode: 123,
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown fields", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			mode: "staging",
 			name: "my-worker",
 		});
 

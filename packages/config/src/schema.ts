@@ -574,6 +574,16 @@ export const InputSettingsSchema = z.strictObject({
 
 export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
 
+/**
+ * Output settings schema — the shape of the top-level `config.json` in the
+ * Build Output Specification. Adds the `mode` the build was produced in.
+ */
+export const OutputSettingsSchema = InputSettingsSchema.extend({
+	mode: z.string().optional(),
+});
+
+export type ParsedOutputSettingsConfig = z.output<typeof OutputSettingsSchema>;
+
 const SETTINGS_EXPORT_NAME = "settings";
 const SUPPORTED_EXPORT_TYPES = new Set(["worker", "settings"]);
 

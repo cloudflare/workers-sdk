@@ -76,6 +76,11 @@ export interface NewConfig {
 	config: Config;
 	parsedWorkerConfig: ParsedInputWorkerConfig;
 	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/**
+	 * The mode the config was resolved in, from `--mode`/`--env` or
+	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
+	 */
+	mode: string | undefined;
 	dependencies: Set<string>;
 	types: NormalizedTypes;
 }
@@ -133,6 +138,7 @@ export async function readNewConfig(
 		config,
 		parsedWorkerConfig: loaded.parsedWorkerConfig,
 		parsedSettingsConfig: loaded.parsedSettingsConfig,
+		mode: loaded.mode,
 		dependencies: loaded.dependencies,
 		types: loaded.types,
 	};

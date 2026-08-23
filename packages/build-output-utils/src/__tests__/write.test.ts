@@ -9,12 +9,12 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
 	BUILD_OUTPUT_ROOT,
-	getRootConfigPath,
+	getSettingsConfigPath,
 	getWorkerConfigPath,
 } from "../paths";
 import {
 	cleanBuildOutputDir,
-	writeRootConfig,
+	writeSettingsConfig,
 	writeWorkerConfig,
 } from "../write";
 
@@ -31,19 +31,61 @@ const parsedSettingsConfig = InputSettingsSchema.parse({
 	complianceRegion: "public",
 });
 
-describe("writeRootConfig", () => {
+describe("writeSettingsConfig", () => {
 	runInTempDir();
 
 	it("writes the top-level config.json with the shared settings", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		await writeRootConfig(root, parsedSettingsConfig);
+		await writeSettingsConfig(root, parsedSettingsConfig);
 
 		const contents = JSON.parse(
-			fs.readFileSync(getRootConfigPath(root), "utf-8")
+			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
 		);
 		expect(contents).toEqual(parsedSettingsConfig);
+	});
+
+	it("records the mode alongside the shared settings", async ({ expect }) => {
+		const root = process.cwd();
+		await writeSettingsConfig(root, parsedSettingsConfig, "staging");
+
+		const contents = JSON.parse(
+			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
+		);
+		expect(contents).toEqual({ ...parsedSettingsConfig, mode: "staging" });
+	});
+
+	it("omits the mode key when no mode was selected", async ({ expect }) => {
+		const root = process.cwd();
+		await writeSettingsConfig(root, parsedSettingsConfig, undefined);
+
+		const contents = JSON.parse(
+			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
+		);
+		expect(contents).not.toHaveProperty("mode");
+	});
+
+	it("writes a config with just the type when there are no settings and no mode", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await writeSettingsConfig(root, undefined);
+
+		const contents = JSON.parse(
+			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
+		);
+		expect(contents).toEqual({ type: "settings" });
+	});
+
+	it("writes the mode when there are no settings", async ({ expect }) => {
+		const root = process.cwd();
+		await writeSettingsConfig(root, undefined, "production");
+
+		const contents = JSON.parse(
+			fs.readFileSync(getSettingsConfigPath(root), "utf-8")
+		);
+		expect(contents).toEqual({ type: "settings", mode: "production" });
 	});
 });
 
@@ -88,7 +130,7 @@ describe("cleanBuildOutputDir", () => {
 
 	it("removes the build output directory", async ({ expect }) => {
 		const root = process.cwd();
-		await writeRootConfig(root, parsedSettingsConfig);
+		await writeSettingsConfig(root, parsedSettingsConfig);
 		const outputDir = path.join(root, BUILD_OUTPUT_ROOT);
 		expect(fs.existsSync(outputDir)).toBe(true);
 
