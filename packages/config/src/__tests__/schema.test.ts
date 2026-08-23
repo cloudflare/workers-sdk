@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
 import {
+	BindingSchema,
 	ConfigExportsSchema,
 	InputWorkerSchema,
 	OutputWorkerSchema,
@@ -219,6 +220,66 @@ describe("InputWorkerSchema", () => {
 			if (!result.success) {
 				expect(result.error.issues[0]?.message).toBe(
 					"ai bindings can only be defined once"
+				);
+			}
+		});
+	});
+
+	describe("send-email bindings", () => {
+		it.for([
+			["no address restrictions", { type: "send-email" }],
+			[
+				"a destination address",
+				{
+					type: "send-email",
+					destinationAddress: "destination@example.com",
+				},
+			],
+			[
+				"allowed destination addresses",
+				{
+					type: "send-email",
+					allowedDestinationAddresses: ["destination@example.com"],
+				},
+			],
+			[
+				"sender restrictions without destination restrictions",
+				{
+					type: "send-email",
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+			[
+				"a destination address and sender restrictions",
+				{
+					type: "send-email",
+					destinationAddress: "destination@example.com",
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+			[
+				"allowed destination addresses and sender restrictions",
+				{
+					type: "send-email",
+					allowedDestinationAddresses: ["destination@example.com"],
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+		] as const)("accepts %s", ([, binding], { expect }) => {
+			expect(BindingSchema.safeParse(binding).success).toBe(true);
+		});
+
+		it("rejects both destination restriction forms", ({ expect }) => {
+			const result = BindingSchema.safeParse({
+				type: "send-email",
+				destinationAddress: "destination@example.com",
+				allowedDestinationAddresses: ["destination@example.com"],
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]?.message).toBe(
+					'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"'
 				);
 			}
 		});
