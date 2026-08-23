@@ -697,8 +697,8 @@ describe("ConfigExportsSchema", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.default?.type).toBe("worker");
-			expect(result.data.settings?.type).toBe("settings");
+			expect(result.data.default?.name).toBe("my-worker");
+			expect(result.data.settings?.accountId).toBe("acc-123");
 		}
 	});
 

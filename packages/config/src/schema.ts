@@ -556,25 +556,15 @@ export const SettingsSchema = z.strictObject({
 
 export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
 
-/**
- * Discriminated union of the config kinds a single export may resolve to.
- */
-const ConfigExportSchema = z.discriminatedUnion("type", [
-	InputWorkerSchema,
-	SettingsSchema,
-]);
-
 const SETTINGS_EXPORT_NAME = "settings";
 
-/**
- * Schema for the resolved config exports, keyed by export
- * name. Each value is discriminated on its `type` field. Reserves the
- * `settings` export name exclusively for settings configs: a `settings`
- * config must live on the `settings` export, and the `settings` export
- * may only hold a `settings` config.
- */
-export const ConfigExportsSchema = z
-	.record(z.string(), ConfigExportSchema)
+const ConfigExportsTypeSchema = z
+	.record(
+		z.string(),
+		z.looseObject({
+			type: z.enum(["worker", "settings"]),
+		})
+	)
 	.check((ctx) => {
 		for (const [key, value] of Object.entries(ctx.value)) {
 			const isSettingsName = key === SETTINGS_EXPORT_NAME;
@@ -596,6 +586,23 @@ export const ConfigExportsSchema = z
 			}
 		}
 	});
+
+const ConfigExportsObjectSchema = z
+	.object({
+		settings: SettingsSchema.optional(),
+	})
+	.catchall(InputWorkerSchema);
+
+/**
+ * Schema for the resolved config exports, keyed by export
+ * name. Each value is discriminated on its `type` field. Reserves the
+ * `settings` export name exclusively for settings configs: a `settings`
+ * config must live on the `settings` export, and the `settings` export
+ * may only hold a `settings` config.
+ */
+export const ConfigExportsSchema = ConfigExportsTypeSchema.pipe(
+	ConfigExportsObjectSchema
+);
 
 export type ParsedConfigExports = z.output<typeof ConfigExportsSchema>;
 
