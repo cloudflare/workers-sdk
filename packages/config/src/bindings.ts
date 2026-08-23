@@ -548,10 +548,12 @@ type VpcNetworkBindingOptions =
 	| {
 			/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with `networkId`. */
 			tunnelId: string;
+			networkId?: never;
 			/** Options that only apply during local development. */
 			dev?: BindingDevOptions;
 	  }
 	| {
+			tunnelId?: never;
 			/** The network ID to route traffic through. Mutually exclusive with `tunnelId`. */
 			networkId: string;
 			/** Options that only apply during local development. */
