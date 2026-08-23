@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
@@ -86,6 +85,7 @@ import {
 import { ContainerPrivilegesCache } from "./plugins/core/container";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
+import { writeTempFile } from "./plugins/core/temp-file";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -126,6 +126,7 @@ import {
 	decodeErrorPayload,
 	LogLevel,
 	Mutex,
+	sanitisePath,
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
@@ -1149,6 +1150,78 @@ export class Miniflare {
 	}
 
 	/**
+	 * Writes a request body to a temp file and responds with its on-disk path.
+	 *
+	 * By default the file is written to a single random path under this
+	 * instance's temp directory. Callers use the reserved `email/` prefix namespace
+	 * to select email destinations, which group files by session and mirror them
+	 * into the project directory.
+	 *
+	 * @param url in format: /core/store-temp-file?prefix&extension[&id]
+	 */
+	async #handleLoopbackStoreTempFileRequest(
+		request: Request,
+		url: URL
+	): Promise<Response> {
+		const extension = url.searchParams.get("extension") ?? "txt";
+		const rawPrefix = url.searchParams.get("prefix");
+		const emailPrefix =
+			rawPrefix !== null && rawPrefix.startsWith("email/")
+				? rawPrefix.slice("email/".length)
+				: undefined;
+		const prefix =
+			emailPrefix !== undefined
+				? `email/${emailPrefix}`
+				: rawPrefix
+					? `files/${rawPrefix}`
+					: "files";
+		if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(extension)) {
+			return new Response("Invalid temporary-file extension", { status: 400 });
+		}
+		const prefixParts = prefix.split("/");
+		if (
+			prefixParts.some(
+				(part) =>
+					part.length === 0 ||
+					part === "." ||
+					part === ".." ||
+					!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(part)
+			)
+		) {
+			return new Response("Invalid temporary-file prefix", { status: 400 });
+		}
+
+		const rawId = url.searchParams.get("id");
+		const id = rawId === null ? crypto.randomUUID() : sanitisePath(rawId);
+		const fileName = `${id}.${extension}`;
+		const contents = new Uint8Array(await request.arrayBuffer());
+		const filePath = await writeTempFile({
+			tmpPath: this.#tmpPath,
+			prefix,
+			fileName,
+			contents,
+		});
+		if (emailPrefix !== undefined) {
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.resourceTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				return new Response(
+					await writeTempFile({
+						tmpPath: emailPaths.sessionDir,
+						prefix: emailPrefix,
+						fileName,
+						contents,
+					}),
+					{ status: 200 }
+				);
+			}
+		}
+		return new Response(filePath, { status: 200 });
+	}
+
+	/**
 	 * Gets DO object IDs by checking filenames in the DO persistence directory.
 	 *
 	 * @param url in format: /core/do-storage/<namespaceId>
@@ -1643,16 +1716,7 @@ export class Miniflare {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
-				const prefix = url.searchParams.get("prefix");
-				const folder = prefix ? `files/${prefix}` : "files";
-				await mkdir(path.join(this.#tmpPath, folder), { recursive: true });
-				const filePath = path.join(
-					this.#tmpPath,
-					folder,
-					`${crypto.randomUUID()}.${url.searchParams.get("extension") ?? "txt"}`
-				);
-				await writeFile(filePath, await request.text());
-				response = new Response(filePath, { status: 200 });
+				response = await this.#handleLoopbackStoreTempFileRequest(request, url);
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
