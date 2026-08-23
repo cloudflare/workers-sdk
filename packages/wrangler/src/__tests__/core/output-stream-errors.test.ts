@@ -1,4 +1,5 @@
 import { PassThrough } from "node:stream";
+import { describe, it } from "vitest";
 import { registerOutputStreamErrorHandler } from "../../output-stream-errors";
 
 describe("registerOutputStreamErrorHandler", () => {
