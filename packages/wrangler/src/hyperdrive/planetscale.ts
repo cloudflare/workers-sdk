@@ -23,16 +23,10 @@ export const hyperdrivePlanetscaleSignatureCommand = createCommand({
 	async handler(_args, { config }) {
 		const signature = await createDatabaseSignature(config, "planetScale");
 
-		logger.log(
-			JSON.stringify(
-				{
-					account_id: signature.account_id,
-					timestamp: signature.timestamp,
-					signature: signature.signature,
-				},
-				null,
-				2
-			)
-		);
+		logger.json({
+			account_id: signature.account_id,
+			timestamp: signature.timestamp,
+			signature: signature.signature,
+		});
 	},
 });

@@ -179,8 +179,8 @@ export async function patchConfig(
 	);
 }
 
-// Passed as flags to the partner's own CLI to authorize a Cloudflare-billed
-// database creation.
+// Printed as JSON for the user to pipe into the partner's own CLI, which uses
+// it to authorize a Cloudflare-billed database creation.
 export type CreateDatabaseSignature = {
 	account_id: string;
 	timestamp: string;
