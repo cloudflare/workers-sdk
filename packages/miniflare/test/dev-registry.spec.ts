@@ -171,7 +171,7 @@ describe.sequential("DevRegistry", () => {
 				})
 			);
 
-			await vi.advanceTimersByTimeAsync(30_001);
+			await vi.advanceTimersByTimeAsync(10_001);
 
 			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
 				...definition,

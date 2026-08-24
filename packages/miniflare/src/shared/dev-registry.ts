@@ -245,6 +245,16 @@ export class DevRegistry {
 		this.refresh();
 	}
 
+	private writeWorkerDefinition(
+		definitionPath: string,
+		definition: WorkerDefinition
+	): void {
+		writeFileSync(
+			definitionPath,
+			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
+		);
+	}
+
 	private registerWorker(name: string, definition: WorkerDefinition): void {
 		assert(this.registryPath);
 		const definitionPath = path.join(this.registryPath, name);
@@ -293,33 +303,18 @@ export class DevRegistry {
 			clearInterval(existingHeartbeat);
 		}
 
-		writeFileSync(
-			definitionPath,
-			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
-		);
+		this.writeWorkerDefinition(definitionPath, definition);
 		this.registeredWorkers.add(name);
 		this.heartbeats.set(
 			name,
 			setInterval(
 				() => {
 					if (!existsSync(definitionPath)) {
-						// The entry is gone while this Worker is still serving. A machine
-						// that suspends for longer than the stale window freezes this
-						// heartbeat, so on resume the sweep in `getWorkerRegistry()`
-						// deletes an entry whose owner is very much alive. Nobody else
-						// holds the name, so take it back — otherwise the branch below
-						// stands the heartbeat down and this Worker stays invisible to
-						// its peers until an unrelated config update re-registers it.
+						// Stale cleanup may remove a live Worker's entry after system sleep.
+						// Recreate it so peers can discover this Worker again.
 						try {
 							mkdirSync(path.dirname(definitionPath), { recursive: true });
-							writeFileSync(
-								definitionPath,
-								JSON.stringify(
-									{ ...definition, instanceId: this.instanceId },
-									null,
-									2
-								)
-							);
+							this.writeWorkerDefinition(definitionPath, definition);
 						} catch (e) {
 							this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
 						}
