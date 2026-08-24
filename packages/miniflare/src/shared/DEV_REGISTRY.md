@@ -56,7 +56,7 @@ type WorkerDefinition = {
 };
 ```
 
-- **Heartbeat**: Every 30s, the file's mtime is touched to signal that the Worker is still running.
+- **Heartbeat**: Every 10s, the owning process touches its file's mtime. If the entry is missing, the owner recreates it; if another instance owns the name, the heartbeat stops.
 - **Registration**: Named workers are advertised by default. Workers with `unsafeRegisterWorker: false` are not advertised.
 - **Stale cleanup**: Workers heartbeat every 10 seconds and entries older than 90 seconds are deleted.
 - **Change detection**: Chokidar watches the registry directory. When a file changes, `refresh()` compares the new state against the previous JSON snapshot and fires `onUpdate` only if a watched external service actually changed.
