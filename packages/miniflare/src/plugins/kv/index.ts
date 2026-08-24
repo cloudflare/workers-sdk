@@ -2,11 +2,13 @@ import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { SharedBindings } from "../../workers";
 import {
+	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageService,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -47,7 +49,7 @@ function isWorkersSitesEnabled(
 
 export const KV_PLUGIN: Plugin = {
 	bindingTypeDescription: "KV namespace",
-	async getBindings(options) {
+	async getBindings(options, sharedOptions) {
 		const namespaces = getEnvBindingsOfType(options.config, "kv");
 		const bindings = namespaces.map<Worker_Binding>(([name, binding]) => {
 			const id = binding.id;
@@ -70,14 +72,11 @@ export const KV_PLUGIN: Plugin = {
 			// passed at runtime via props (read in object-entry.worker.ts).
 			return {
 				name,
-				kvNamespace: {
-					name: KV_LOCAL_ENTRY_SERVICE_NAME,
-					props: {
-						json: JSON.stringify({
-							[SharedBindings.TEXT_NAMESPACE]: id,
-						}),
-					},
-				},
+				kvNamespace: getStorageService(
+					KV_LOCAL_ENTRY_SERVICE_NAME,
+					buildObjectEntryProps(id),
+					sharedOptions
+				),
 			};
 		});
 
@@ -112,9 +111,10 @@ export const KV_PLUGIN: Plugin = {
 		const services: Service[] = [];
 
 		// One shared entry service for all local namespaces (id supplied via props).
-		const hasLocalNamespace = namespaces.some(
-			([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
-		);
+		const hasLocalNamespace =
+			namespaces.some(
+				([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
+			) || sharedOptions.unsafeEnableSharedStorage;
 		if (hasLocalNamespace) {
 			services.push({
 				name: KV_LOCAL_ENTRY_SERVICE_NAME,
@@ -177,7 +177,6 @@ export const KV_PLUGIN: Plugin = {
 			};
 			services.push(storageService, objectService);
 		}
-
 		if (isWorkersSitesEnabled(options)) {
 			services.push(...getSitesServices(options.legacy, options.dev?.rootPath));
 		}

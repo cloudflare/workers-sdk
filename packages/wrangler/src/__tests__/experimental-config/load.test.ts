@@ -279,6 +279,21 @@ describe("loadNewConfig", () => {
 				loadNewConfig({ cwd: process.cwd(), args: {} })
 			).rejects.toThrow(/\s*•\s+default\.name:/);
 		});
+
+		it("explains how to handle non-config exports", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export const WORKER_NAMES = { staging: "staging-worker" };
+					export default { type: "worker", name: "worker", compatibilityDate: "2026-05-18" };
+				`,
+			});
+
+			await expect(
+				loadNewConfig({ cwd: process.cwd(), args: {} })
+			).rejects.toThrow(
+				/The `WORKER_NAMES` export is not a supported export type[\s\S]*Move constants, helper functions, and other unsupported exports to a separate module/
+			);
+		});
 	});
 
 	describe("wrangler.config.ts schema validation", () => {

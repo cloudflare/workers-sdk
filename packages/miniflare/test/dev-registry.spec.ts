@@ -1,11 +1,92 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
 import { getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
-import { singleModuleManifest, useDispose, useTmp } from "./test-shared";
-import type { MiniflareOptions, WorkerRegistry } from "miniflare";
+import { DevRegistry } from "../src/shared/dev-registry";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+	useTmp,
+} from "./test-shared";
+import type {
+	MiniflareOptions,
+	WorkerDefinition,
+	WorkerRegistry,
+} from "miniflare";
 
 describe.sequential("DevRegistry", () => {
+	test("surfaces fresh legacy entries and removes them when stale", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "legacy-worker");
+		await fs.writeFile(
+			definitionPath,
+			JSON.stringify({
+				debugPortAddress: "127.0.0.1:1234",
+				defaultEntrypointService: "core:user:legacy-worker",
+				userWorkerService: "core:user:legacy-worker",
+			})
+		);
+
+		const legacyDefinition = getWorkerRegistry(unsafeDevRegistryPath)[
+			"legacy-worker"
+		];
+		expect(legacyDefinition).toEqual(
+			expect.objectContaining({
+				debugPortAddress: "127.0.0.1:1234",
+			})
+		);
+		expect(legacyDefinition.instanceId).toBeUndefined();
+
+		const stale = new Date(Date.now() - 91_000);
+		await fs.utimes(definitionPath, stale, stale);
+		expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual({});
+		await expect(fs.stat(definitionPath)).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+	});
+
+	test("registers after a conflicting entry becomes stale", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+		await fs.writeFile(
+			definitionPath,
+			JSON.stringify({ ...definition, instanceId: "previous-instance" })
+		);
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe("previous-instance");
+
+			await vi.advanceTimersByTimeAsync(90_001);
+
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe(registry.instanceId);
+		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
 	test("registers workers by default unless opted out", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const worker = {

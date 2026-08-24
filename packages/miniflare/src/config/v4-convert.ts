@@ -70,6 +70,7 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		unsafeInspectDurableObjects: options.unsafeInspectDurableObjects,
 		logRequests: options.logRequests,
 		resourcePersistencePath: options.resourcePersistencePath,
+		isolatedResourcePersistencePath: options.isolatedResourcePersistencePath,
 		resourceTmpPath: options.resourceTmpPath,
 		stripDisablePrettyError: options.stripDisablePrettyError,
 		telemetry: options.telemetry,
@@ -359,7 +360,7 @@ function addNamespaceBindings(
 			env[name] = {
 				type,
 				id: value.id,
-				remote: isRemote(value.remoteProxyConnectionString),
+				dev: { remote: isRemote(value.remoteProxyConnectionString) },
 			};
 		}
 	}
@@ -386,14 +387,10 @@ function addR2Bindings(
 			env[bindingName] = {
 				type: "r2",
 				name: bucket.id,
-				...(bucket.s3Credentials === undefined
-					? {}
-					: {
-							localDev: {
-								experimentalS3Credentials: bucket.s3Credentials,
-							},
-						}),
-				remote: isRemote(bucket.remoteProxyConnectionString),
+				dev: {
+					remote: isRemote(bucket.remoteProxyConnectionString),
+					experimentalS3Credentials: bucket.s3Credentials,
+				},
 			};
 		}
 	}
@@ -469,7 +466,9 @@ function addQueueBindings(
 					type: "queue",
 					name: producer.queueName,
 					deliveryDelay: producer.deliveryDelay,
-					remote: isRemote(producer.remoteProxyConnectionString),
+					dev: {
+						remote: isRemote(producer.remoteProxyConnectionString),
+					},
 				};
 			}
 		}
@@ -561,7 +560,7 @@ function convertOutboundService(
 			workerName: converted.workerName,
 			exportName: converted.exportName,
 			props: converted.props,
-			remote: converted.remote,
+			dev: converted.dev,
 		};
 	}
 	throwUnsupportedOption("outboundService");
@@ -595,7 +594,7 @@ function convertServiceDesignator(
 			workerName: convertWorkerName(binding.name),
 			exportName: binding.entrypoint,
 			props: binding.props,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	if ("network" in binding) {
@@ -639,14 +638,14 @@ function addProductBindings(
 	if (worker.ai !== undefined) {
 		env[worker.ai.binding] = {
 			type: "ai",
-			remote: isRemote(worker.ai.remoteProxyConnectionString),
+			dev: { remote: isRemote(worker.ai.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.agentMemory ?? {})) {
 		env[name] = {
 			type: "agent-memory",
 			namespace: binding.namespace,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -655,7 +654,7 @@ function addProductBindings(
 		env[name] = {
 			type: "ai-search-namespace",
 			namespace: binding.namespace ?? name,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -664,13 +663,13 @@ function addProductBindings(
 		env[name] = {
 			type: "ai-search",
 			name: binding.instance_name ?? binding.namespace ?? name,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.websearch ?? {})) {
 		env[name] = {
 			type: "web-search",
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -682,7 +681,7 @@ function addProductBindings(
 		env[name] = {
 			type: "hyperdrive",
 			id: name,
-			localConnectionString: String(value),
+			dev: { connectionString: String(value) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {
@@ -699,7 +698,7 @@ function addProductBindings(
 			destinationAddress: binding.destination_address,
 			allowedDestinationAddresses: binding.allowed_destination_addresses,
 			allowedSenderAddresses: binding.allowed_sender_addresses,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -715,7 +714,7 @@ function addProductBindings(
 		env[name] = {
 			type: "vectorize",
 			name: binding.index_name,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(
@@ -724,14 +723,14 @@ function addProductBindings(
 		env[name] = {
 			type: "dispatch-namespace",
 			namespace: binding.namespace,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.vpcServices ?? {})) {
 		env[name] = {
 			type: "vpc-service",
 			id: binding.service_id,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.vpcNetworks ?? {})) {
@@ -740,14 +739,14 @@ function addProductBindings(
 			...("tunnel_id" in binding
 				? { tunnelId: binding.tunnel_id }
 				: { networkId: binding.network_id }),
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.mtlsCertificates ?? {})) {
 		env[name] = {
 			type: "mtls-certificate",
 			id: binding.certificate_id,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.helloWorld ?? {})) {
@@ -757,14 +756,14 @@ function addProductBindings(
 		env[name] = {
 			type: "flagship",
 			id: binding.app_id,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {
@@ -793,7 +792,7 @@ function addProductBindings(
 				workflow.stepLimit === undefined
 					? undefined
 					: { steps: workflow.stepLimit },
-			remote: isRemote(workflow.remoteProxyConnectionString),
+			dev: { remote: isRemote(workflow.remoteProxyConnectionString) },
 		};
 	}
 }
@@ -821,10 +820,10 @@ function addPipelineBindings(
 					: "stream" in binding
 						? binding.stream
 						: binding.pipeline,
-			remote:
+			dev:
 				typeof binding === "string"
 					? undefined
-					: isRemote(binding.remoteProxyConnectionString),
+					: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 }
@@ -918,7 +917,7 @@ function addBrowserRenderingBinding(
 	if (binding !== undefined) {
 		env[binding.binding] = {
 			type: "browser",
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 			headful: binding.headful,
 		};
 	}
@@ -940,7 +939,7 @@ function addSingletonBinding<
 	if (binding !== undefined) {
 		env[binding.binding] = {
 			type,
-			remote: isRemote(binding.remoteProxyConnectionString),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 }

@@ -31,7 +31,8 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { getDurableObjectNamespaces } from "../do/namespaces";
-import { IMAGES_PLUGIN_NAME } from "../images";
+import { getEmailStoreServices } from "../email/store";
+import { getImagesBindingServiceName } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
@@ -56,6 +57,7 @@ import { STREAM_PLUGIN_NAME } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	EMAIL_STORE_SERVICE_NAME,
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
@@ -360,7 +362,7 @@ function getServiceBindings(
 }
 
 export const CORE_PLUGIN: Plugin = {
-	getBindings(options, workerIndex) {
+	getBindings(options, _sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
@@ -796,6 +798,10 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_DEV_CONTROL,
 			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
 		},
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -820,14 +826,17 @@ export function getGlobalServices({
 			},
 		});
 	}
-	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	const r2PublicService = getR2PublicService(
+		allWorkerOpts ?? [],
+		sharedOptions
+	);
 	if (r2PublicService !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_PUBLIC,
 			service: { name: R2_PUBLIC_SERVICE_NAME },
 		});
 	}
-	const r2S3Service = getR2S3Service(allWorkerOpts ?? []);
+	const r2S3Service = getR2S3Service(allWorkerOpts ?? [], sharedOptions);
 	if (r2S3Service !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_S3,
@@ -841,7 +850,7 @@ export function getGlobalServices({
 			"images"
 		)) {
 			if (getRemoteProxyConnectionString(binding, worker.dev) === undefined) {
-				imagesServiceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
+				imagesServiceName = getImagesBindingServiceName(name);
 				break;
 			}
 		}
@@ -957,6 +966,8 @@ export function getGlobalServices({
 		services.push(r2S3Service);
 	}
 
+	services.push(...getEmailStoreServices(tmpPath));
+
 	if (sharedOptions.unsafeLocalExplorer) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);
 		const workflowOptions = new Map<string, WorkflowOption>();
@@ -1003,7 +1014,7 @@ export function getGlobalServices({
 		services.push(
 			...getObservabilityServices(
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath
 			)
 		);
 	}

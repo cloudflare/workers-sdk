@@ -1,6 +1,10 @@
 import * as z from "zod";
 import type { SettingsConfig, WorkerConfig } from "./types";
 
+const RemoteBindingDevSchema = z.strictObject({
+	remote: z.boolean().optional(),
+});
+
 export const AssetsSchema = z.strictObject({
 	htmlHandling: z
 		.enum([
@@ -18,7 +22,7 @@ export const AssetsSchema = z.strictObject({
 
 export const BrowserBindingSchema = z.strictObject({
 	type: z.literal("browser"),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const WorkerBindingSchema = z.strictObject({
@@ -26,14 +30,14 @@ export const WorkerBindingSchema = z.strictObject({
 	workerName: z.string(),
 	exportName: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const D1BindingSchema = z.strictObject({
 	type: z.literal("d1"),
 	name: z.string().optional(),
 	id: z.string().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const KVBindingSchema = z.strictObject({
@@ -41,32 +45,29 @@ export const KVBindingSchema = z.strictObject({
 	id: z.string().optional(),
 	// TODO: name support not yet implemented
 	// name: z.string().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const QueueBindingSchema = z.strictObject({
 	type: z.literal("queue"),
 	name: z.string().optional(),
 	deliveryDelay: z.number().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const R2BindingSchema = z.strictObject({
 	type: z.literal("r2"),
 	name: z.string().optional(),
 	jurisdiction: z.string().optional(),
-	remote: z.boolean().optional(),
-	localDev: z
-		.strictObject({
-			experimentalS3Credentials: z
-				// AWS SDK may add additional keys as internal metadata like `$source`.
-				.object({
-					accessKeyId: z.string(),
-					secretAccessKey: z.string(),
-				})
-				.optional(),
-		})
-		.optional(),
+	dev: RemoteBindingDevSchema.extend({
+		experimentalS3Credentials: z
+			// AWS SDK may add additional keys as internal metadata like `$source`.
+			.object({
+				accessKeyId: z.string(),
+				secretAccessKey: z.string(),
+			})
+			.optional(),
+	}).optional(),
 });
 
 export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
@@ -77,37 +78,40 @@ export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
 export const FlagshipBindingSchema = z.strictObject({
 	type: z.literal("flagship"),
 	id: z.string().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
-	localConnectionString: z.string().optional(),
+	dev: z.strictObject({ connectionString: z.string().optional() }).optional(),
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
-	z.strictObject({ type: z.literal("ai"), remote: z.boolean().optional() }),
+	z.strictObject({
+		type: z.literal("ai"),
+		dev: RemoteBindingDevSchema.optional(),
+	}),
 	z.strictObject({
 		type: z.literal("ai-search"),
 		name: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("ai-search-namespace"),
 		namespace: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	AnalyticsEngineDatasetBindingSchema,
 	z.strictObject({
 		type: z.literal("artifacts"),
 		namespace: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("assets") }),
 	BrowserBindingSchema,
@@ -121,7 +125,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				parameters: z.array(z.string()).optional(),
 			})
 			.optional(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("durable-object"),
@@ -132,24 +136,24 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	HyperdriveBindingSchema,
 	z.strictObject({
 		type: z.literal("images"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("json"), value: z.json() }),
 	KVBindingSchema,
 	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
 	z.strictObject({
 		type: z.literal("media"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("mtls-certificate"),
 		id: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("pipeline"),
 		name: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	QueueBindingSchema,
 	z.strictObject({
@@ -172,30 +176,30 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		destinationAddress: z.string().optional(),
 		allowedDestinationAddresses: z.array(z.string()).optional(),
 		allowedSenderAddresses: z.array(z.string()).optional(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("stream"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("text"), value: z.string() }),
 	z.strictObject({
 		type: z.literal("vectorize"),
 		name: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("version-metadata") }),
 	z.strictObject({
 		type: z.literal("vpc-service"),
 		id: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z
 		.strictObject({
 			type: z.literal("vpc-network"),
 			tunnelId: z.string().optional(),
 			networkId: z.string().optional(),
-			remote: z.boolean().optional(),
+			dev: RemoteBindingDevSchema.optional(),
 		})
 		.superRefine((value, ctx) => {
 			const hasTunnel = value.tunnelId !== undefined;
@@ -211,7 +215,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		}),
 	z.strictObject({
 		type: z.literal("web-search"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
@@ -220,7 +224,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	// 	type: z.literal("workflow"),
 	// 	workerName: z.string(),
 	// 	exportName: z.string(),
-	// 	remote: z.boolean().optional(),
+	// 	dev: RemoteBindingDevSchema.optional(),
 	// }),
 ]);
 
@@ -556,29 +560,31 @@ export const SettingsSchema = z.strictObject({
 
 export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
 
-/**
- * Discriminated union of the config kinds a single export may resolve to.
- */
-const ConfigExportSchema = z.discriminatedUnion("type", [
-	InputWorkerSchema,
-	SettingsSchema,
-]);
-
 const SETTINGS_EXPORT_NAME = "settings";
+const SUPPORTED_EXPORT_TYPES = new Set(["worker", "settings"]);
 
-/**
- * Schema for the resolved config exports, keyed by export
- * name. Each value is discriminated on its `type` field. Reserves the
- * `settings` export name exclusively for settings configs: a `settings`
- * config must live on the `settings` export, and the `settings` export
- * may only hold a `settings` config.
- */
-export const ConfigExportsSchema = z
-	.record(z.string(), ConfigExportSchema)
+function invalidConfigExportMessage(exportName: string): string {
+	return `The \`${exportName}\` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.`;
+}
+
+const ConfigExportsTypeSchema = z
+	.record(z.string(), z.unknown())
 	.check((ctx) => {
 		for (const [key, value] of Object.entries(ctx.value)) {
+			const isObject = typeof value === "object" && value !== null;
+			const type = isObject && "type" in value ? value.type : undefined;
+			if (typeof type !== "string" || !SUPPORTED_EXPORT_TYPES.has(type)) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: isObject ? [key, "type"] : [key],
+					message: invalidConfigExportMessage(key),
+				});
+				continue;
+			}
+
 			const isSettingsName = key === SETTINGS_EXPORT_NAME;
-			const isSettingsType = value.type === "settings";
+			const isSettingsType = type === "settings";
 			if (isSettingsType && !isSettingsName) {
 				ctx.issues.push({
 					code: "custom",
@@ -591,11 +597,28 @@ export const ConfigExportsSchema = z
 					code: "custom",
 					input: value,
 					path: [key],
-					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${value.type}\` config.`,
+					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${type}\` config.`,
 				});
 			}
 		}
 	});
+
+const ConfigExportsObjectSchema = z
+	.object({
+		settings: SettingsSchema.optional(),
+	})
+	.catchall(InputWorkerSchema);
+
+/**
+ * Schema for the resolved config exports, keyed by export
+ * name. Each value is discriminated on its `type` field. Reserves the
+ * `settings` export name exclusively for settings configs: a `settings`
+ * config must live on the `settings` export, and the `settings` export
+ * may only hold a `settings` config.
+ */
+export const ConfigExportsSchema = ConfigExportsTypeSchema.pipe(
+	ConfigExportsObjectSchema
+);
 
 export type ParsedConfigExports = z.output<typeof ConfigExportsSchema>;
 

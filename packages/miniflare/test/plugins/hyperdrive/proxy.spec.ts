@@ -581,8 +581,10 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 							HYPERDRIVE: {
 								type: "hyperdrive",
 								id: "hyperdrive",
-								localConnectionString:
-									"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_IDENTITY",
+								dev: {
+									connectionString:
+										"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_IDENTITY",
+								},
 							},
 						},
 					},
@@ -611,8 +613,10 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 							HYPERDRIVE: {
 								type: "hyperdrive",
 								id: "hyperdrive",
-								localConnectionString:
-									"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_CA",
+								dev: {
+									connectionString:
+										"mysql://user:password@localhost:3306/database?ssl-mode=VERIFY_CA",
+								},
 							},
 						},
 					},
@@ -641,8 +645,10 @@ describe("MySQL ssl-mode parsing via Miniflare", () => {
 							HYPERDRIVE: {
 								type: "hyperdrive",
 								id: "hyperdrive",
-								localConnectionString:
-									"mysql://user:password@localhost:3306/database?ssl-mode=REQUIRED",
+								dev: {
+									connectionString:
+										"mysql://user:password@localhost:3306/database?ssl-mode=REQUIRED",
+								},
 							},
 						},
 					},

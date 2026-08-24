@@ -11,12 +11,13 @@
 - Main export (`exports["."]`), built as ESM (`.mjs`)
 - Orchestrates test execution
 
-### 2. Config (`src/config/index.ts`)
+### 2. Config (`src/pool/config.ts`)
 
-- Runs in Node.js
-- Exported as `exports["./config"]`, built as CJS (`.cjs`)
-- Provides `defineWorkersConfig()` / `defineWorkersProject()` helpers
-- Injects Vite plugin for `cloudflare:test` resolution, sets resolve conditions (`workerd`, `worker`, `browser`)
+- Runs in Node.js, part of the pool bundle (no separate package export)
+- Validates pool options (`WorkersPoolOptionsSchema`) and resolves the project's
+  Worker configuration into Miniflare options
+- `src/pool/plugin.ts` provides the `cloudflareTest()` Vite plugin, which injects
+  `cloudflare:test` resolution and sets resolve conditions (`workerd`, `worker`, `browser`)
 
 ### 3. Worker (`src/worker/index.ts`)
 
@@ -24,6 +25,23 @@
 - NOT exported via package.json — internal entry
 - Contains HACK: monkeypatches VitestExecutor to access singleton
 - Has direct cross-package source import into `miniflare/src/workers/core/devalue`
+
+## WORKER CONFIGURATION SOURCES
+
+`parseCustomPoolOptions()` in `src/pool/config.ts` resolves at most one configuration
+file into a normalised `Config`, then shares every downstream step (remote proxy
+session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, tails):
+
+- `wrangler: { configPath, environment }` — a Wrangler configuration file, via
+  `wrangler.unstable_readConfig()`
+- `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
+  (`@cloudflare/config`'s `loadAndValidateConfig()` → `convertToWranglerConfig()` →
+  `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s
+  `experimental.newConfig`. `ctx.mode` comes from `project.vite.config.mode`.
+
+The two are mutually exclusive. Whichever is used, the resolved path, config format and
+Worker name are recorded on `options.resolvedConfig` for the pool to consume — never
+re-read the config file from disk.
 
 ## BUILD
 
@@ -56,5 +74,5 @@ Resolved by custom Vite plugin (`@cloudflare/vitest-plugin:config`) that re-expo
 - Hook timeout: 60s, retry: 2
 - Global setup starts mock npm registry, installs local package to temp dir
 - Test helper: custom `test` fixture with `tmpPath`, `seed()`, `vitestRun()`, `vitestDev()`
-- Fixtures in `fixtures/vitest-plugin-examples/` (20+ sub-fixtures testing KV, R2, D1, DO, Queues, etc.)
+- Fixtures in `fixtures/vitest-plugin-examples/` (20+ sub-fixtures testing KV, R2, D1, DO, Queues, `cloudflare.config.ts`, etc.)
 - Skipped on Windows CI due to flakiness

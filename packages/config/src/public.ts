@@ -5,6 +5,7 @@
 
 export type {
 	Bindings,
+	BindingDevOptions,
 	AgentMemoryBinding,
 	AiBinding,
 	AiSearchBinding,
@@ -85,5 +86,8 @@ export type {
 	WorkerConfigInput,
 } from "./worker-definition";
 export { defineWorker } from "./worker-definition";
-export type { SettingsConfigInput } from "./settings-definition";
+export type {
+	SettingsConfigInput,
+	SettingsDefinition,
+} from "./settings-definition";
 export { defineSettings } from "./settings-definition";

@@ -12,6 +12,9 @@ import {
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
+	zEmailListRoutingData,
+	zEmailListSendingData,
+	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
@@ -25,6 +28,13 @@ import {
 import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
+import {
+	getReceivedEmail,
+	getSentEmail,
+	listReceivedEmails,
+	listSentEmails,
+	sendTestEmail,
+} from "./resources/email";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -61,6 +71,7 @@ import type {
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
+import type { EmailStoreService } from "../email/storage";
 import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
@@ -80,6 +91,8 @@ export type Env = {
 	// Internal observability collector's read API — only bound when local
 	// observability is enabled (see getExplorerServices).
 	[CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR]?: Fetcher;
+	// Email store RPC. Backs the Email tab's routing/sending views.
+	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -378,6 +391,39 @@ app.post(
 );
 
 app.post("/api/local/observability/clear", (c) => clearTraces(c));
+
+// ============================================================================
+// Email Endpoints
+// ============================================================================
+
+app.get(
+	"/api/local/email/routing",
+	validateQuery(zEmailListRoutingData.shape.query.unwrap()),
+	(c) => {
+		const query = c.req.valid("query");
+		return query.email_id === undefined
+			? listReceivedEmails(c, query)
+			: getReceivedEmail(c, query.email_id, query.worker);
+	}
+);
+
+app.post(
+	"/api/local/email/routing/send",
+	validateQuery(zEmailSendRoutingData.shape.query),
+	validateRequestBody(zEmailSendRoutingData.shape.body),
+	(c) => sendTestEmail(c, c.req.valid("json"), c.req.valid("query").worker)
+);
+
+app.get(
+	"/api/local/email/sending",
+	validateQuery(zEmailListSendingData.shape.query.unwrap()),
+	(c) => {
+		const query = c.req.valid("query");
+		return query.email_id === undefined
+			? listSentEmails(c, query)
+			: getSentEmail(c, query.email_id, query.worker);
+	}
+);
 
 // ============================================================================
 // Local Workers / Dev Registry Endpoint

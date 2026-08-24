@@ -73,6 +73,41 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts binding options nested under dev", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: {
+					KV: { type: "kv", dev: { remote: true } },
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive-id",
+						dev: { connectionString: "postgres://localhost/database" },
+					},
+					R2: {
+						type: "r2",
+						dev: {
+							remote: false,
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects remote at the binding root", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: { KV: { type: "kv", remote: true } },
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it.for([
 			["ai"],
 			["assets"],
@@ -697,8 +732,8 @@ describe("ConfigExportsSchema", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.default?.type).toBe("worker");
-			expect(result.data.settings?.type).toBe("settings");
+			expect(result.data.default?.name).toBe("my-worker");
+			expect(result.data.settings?.accountId).toBe("acc-123");
 		}
 	});
 
@@ -714,6 +749,36 @@ describe("ConfigExportsSchema", () => {
 			expect(result.error.issues[0]?.path).toEqual(["default", "type"]);
 		}
 	});
+
+	it.for([
+		{
+			description: "object",
+			value: { staging: "staging-worker", production: "production-worker" },
+			path: ["WORKER_NAMES", "type"],
+		},
+		{
+			description: "primitive",
+			value: 42,
+			path: ["WORKER_NAMES"],
+		},
+	])(
+		"reports an actionable error for an unknown $description export",
+		({ value, path }, { expect }) => {
+			const result = ConfigExportsSchema.safeParse({
+				default: baseConfig,
+				WORKER_NAMES: value,
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]).toMatchObject({
+					path,
+					message:
+						"The `WORKER_NAMES` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.",
+				});
+			}
+		}
+	);
 
 	it("rejects a settings config on a non-`settings` export", ({ expect }) => {
 		const result = ConfigExportsSchema.safeParse({

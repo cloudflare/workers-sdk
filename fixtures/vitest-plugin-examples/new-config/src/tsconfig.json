@@ -1,0 +1,13 @@
+{
+	"extends": "../../tsconfig.workerd.json",
+	"compilerOptions": {
+		// `cloudflare.config.ts` references the entrypoint by path, including its
+		// `.ts` extension
+		"allowImportingTsExtensions": true
+	},
+	"include": [
+		"./**/*.ts",
+		"../cloudflare.config.ts",
+		"../worker-configuration.d.ts"
+	]
+}
