@@ -1,4 +1,4 @@
-import { decodeWords } from "postal-mime";
+import PostalMime, { decodeWords } from "postal-mime";
 import { z } from "zod";
 import { EMAIL_STORE_SERVICE_NAME } from "../../../plugins/core/constants";
 import { CoreBindings, CorePaths } from "../../core";
@@ -803,11 +803,24 @@ export async function getReceivedEmail(
 	// Decode MIME "encoded-word" headers (e.g. `=?utf-8?B?...?=`) in each reply's
 	// display text so the explorer shows readable subjects.
 	const { captureTruncated, replies: storedReplies, ...storedEmail } = email;
+	let body: { text?: string; html?: string } = {};
+	if (email.rawBase64 !== undefined) {
+		try {
+			const parsed = await new PostalMime().parse(
+				base64ToBytes(email.rawBase64)
+			);
+			body = { text: parsed.text, html: parsed.html };
+		} catch {
+			// A truncated capture may end mid-MIME-part. Keep the raw message available
+			// even when a structured body cannot be recovered from it.
+		}
+	}
 	const replyCaptureTruncated = storedReplies.some(
 		(reply) => reply.captureTruncated
 	);
 	const decoded = {
 		...storedEmail,
+		...body,
 		replies: storedReplies.map(
 			({ captureTruncated: _captureTruncated, ...reply }) => ({
 				...reply,

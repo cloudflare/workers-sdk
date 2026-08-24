@@ -1209,9 +1209,69 @@ describe("Local Explorer email API", () => {
 			expect
 		);
 		expect(detail.result).toMatchObject({
+			text: "Received message.\n",
 			raw,
 			rawBase64: Buffer.from(raw).toString("base64"),
 		});
+	});
+
+	test("parses multipart received bodies from their lossless MIME bytes", async ({
+		expect,
+	}) => {
+		const beforeLatin1Body = new TextEncoder().encode(
+			[
+				"From: sender@example.com",
+				"To: recipient@example.com",
+				"Message-ID: <received-latin1@example.com>",
+				"MIME-Version: 1.0",
+				"Content-Type: multipart/alternative; boundary=example",
+				"",
+				"--example",
+				"Content-Type: text/plain; charset=iso-8859-1",
+				"Content-Transfer-Encoding: 8bit",
+				"",
+				"caf",
+			].join("\r\n")
+		);
+		const afterLatin1Body = new TextEncoder().encode(
+			[
+				"",
+				"--example",
+				"Content-Type: text/html; charset=utf-8",
+				"",
+				"<p>café</p>",
+				"--example--",
+				"",
+			].join("\r\n")
+		);
+		const raw = new Uint8Array(
+			beforeLatin1Body.byteLength + 1 + afterLatin1Body.byteLength
+		);
+		raw.set(beforeLatin1Body);
+		raw[beforeLatin1Body.byteLength] = 0xe9;
+		raw.set(afterLatin1Body, beforeLatin1Body.byteLength + 1);
+		const response = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/local/email?" +
+				new URLSearchParams({
+					from: "sender@example.com",
+					to: "recipient@example.com",
+					format: "json",
+				}).toString(),
+			{ method: "POST", body: raw }
+		);
+		expect(response.status).toBe(200);
+		await response.json();
+
+		const detail = await expectValidResponse(
+			await mf.dispatchFetch(
+				`${BASE_URL}/local/email/routing?email_id=received-latin1%40example.com`
+			),
+			zEmailRoutingDetailResponse,
+			expect
+		);
+		expect(detail.result?.rawBase64).toBe(Buffer.from(raw).toString("base64"));
+		expect(detail.result?.text).toBe("café\n");
+		expect(detail.result?.html).toBe("<p>café</p>\n");
 	});
 
 	test("omits BCC from routing items but retains it on sent items", async ({

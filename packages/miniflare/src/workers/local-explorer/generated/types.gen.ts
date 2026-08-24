@@ -1048,6 +1048,14 @@ export type EmailRoutingDetail = {
 		  }
 	>;
 	/**
+	 * Parsed plain text body, when present.
+	 */
+	text?: string;
+	/**
+	 * Parsed HTML body, when present.
+	 */
+	html?: string;
+	/**
 	 * Raw MIME content of the received email.
 	 */
 	raw: string;

@@ -674,6 +674,8 @@ export const zEmailRoutingDetail = z.object({
 			}),
 		])
 	),
+	text: z.string().optional(),
+	html: z.string().optional(),
 	raw: z.string(),
 	rawBase64: z.string().optional(),
 });

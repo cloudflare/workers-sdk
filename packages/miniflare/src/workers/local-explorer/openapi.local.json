@@ -4328,6 +4328,14 @@
 							"description": "One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry."
 						}
 					},
+					"text": {
+						"type": "string",
+						"description": "Parsed plain text body, when present."
+					},
+					"html": {
+						"type": "string",
+						"description": "Parsed HTML body, when present."
+					},
 					"raw": {
 						"type": "string",
 						"description": "Raw MIME content of the received email."

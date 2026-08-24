@@ -162,6 +162,8 @@ export const zEmailRoutingItem = zEmailBase.extend({
 export type EmailRoutingItem = z.infer<typeof zEmailRoutingItem>;
 
 export const zEmailRoutingDetail = zEmailRoutingItem.extend({
+	text: z.string().describe("Parsed plain text body, when present.").optional(),
+	html: z.string().describe("Parsed HTML body, when present.").optional(),
 	raw: z.string().describe("Raw MIME content of the received email."),
 	rawBase64: z
 		.string()
