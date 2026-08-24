@@ -560,29 +560,31 @@ export const SettingsSchema = z.strictObject({
 
 export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
 
-/**
- * Discriminated union of the config kinds a single export may resolve to.
- */
-const ConfigExportSchema = z.discriminatedUnion("type", [
-	InputWorkerSchema,
-	SettingsSchema,
-]);
-
 const SETTINGS_EXPORT_NAME = "settings";
+const SUPPORTED_EXPORT_TYPES = new Set(["worker", "settings"]);
 
-/**
- * Schema for the resolved config exports, keyed by export
- * name. Each value is discriminated on its `type` field. Reserves the
- * `settings` export name exclusively for settings configs: a `settings`
- * config must live on the `settings` export, and the `settings` export
- * may only hold a `settings` config.
- */
-export const ConfigExportsSchema = z
-	.record(z.string(), ConfigExportSchema)
+function invalidConfigExportMessage(exportName: string): string {
+	return `The \`${exportName}\` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.`;
+}
+
+const ConfigExportsTypeSchema = z
+	.record(z.string(), z.unknown())
 	.check((ctx) => {
 		for (const [key, value] of Object.entries(ctx.value)) {
+			const isObject = typeof value === "object" && value !== null;
+			const type = isObject && "type" in value ? value.type : undefined;
+			if (typeof type !== "string" || !SUPPORTED_EXPORT_TYPES.has(type)) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: isObject ? [key, "type"] : [key],
+					message: invalidConfigExportMessage(key),
+				});
+				continue;
+			}
+
 			const isSettingsName = key === SETTINGS_EXPORT_NAME;
-			const isSettingsType = value.type === "settings";
+			const isSettingsType = type === "settings";
 			if (isSettingsType && !isSettingsName) {
 				ctx.issues.push({
 					code: "custom",
@@ -595,11 +597,28 @@ export const ConfigExportsSchema = z
 					code: "custom",
 					input: value,
 					path: [key],
-					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${value.type}\` config.`,
+					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${type}\` config.`,
 				});
 			}
 		}
 	});
+
+const ConfigExportsObjectSchema = z
+	.object({
+		settings: SettingsSchema.optional(),
+	})
+	.catchall(InputWorkerSchema);
+
+/**
+ * Schema for the resolved config exports, keyed by export
+ * name. Each value is discriminated on its `type` field. Reserves the
+ * `settings` export name exclusively for settings configs: a `settings`
+ * config must live on the `settings` export, and the `settings` export
+ * may only hold a `settings` config.
+ */
+export const ConfigExportsSchema = ConfigExportsTypeSchema.pipe(
+	ConfigExportsObjectSchema
+);
 
 export type ParsedConfigExports = z.output<typeof ConfigExportsSchema>;
 
