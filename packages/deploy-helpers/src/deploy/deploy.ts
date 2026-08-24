@@ -327,7 +327,14 @@ async function deployWorker(
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
-		keepSecrets: keepVars || !!props.secretsFile,
+		// Replace mode is an explicit request to converge the remote secret set
+		// to the secrets file, so it wins over the keep-secrets side effect of
+		// --keep-vars. Secrets declared in `secrets.required` still survive via
+		// the explicit inherit bindings added above.
+		keepSecrets:
+			props.secretsFile && props.secretsFileMode === "replace"
+				? false
+				: keepVars || !!props.secretsFile,
 		logpush: props.logpush,
 		placement,
 		tail_consumers: config.tail_consumers,

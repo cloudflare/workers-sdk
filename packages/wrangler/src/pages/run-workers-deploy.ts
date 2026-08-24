@@ -80,6 +80,7 @@ export async function runPagesToWorkersDeploy(
 		nodeCompat: undefined,
 		dryRun: undefined,
 		secretsFile: undefined,
+		secretsFileMode: undefined,
 		// The agent's explicit inputs (name, compatibility date/flags) override
 		// the `undefined` placeholders above.
 		...delegation.deployArgs,

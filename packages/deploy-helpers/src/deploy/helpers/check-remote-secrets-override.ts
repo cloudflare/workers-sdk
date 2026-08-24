@@ -100,6 +100,45 @@ export async function checkRemoteSecretsOverride(
 	return { override: false };
 }
 
+/**
+ * Determines which remote secrets a replace-mode `--secrets-file` upload will
+ * drop: secrets that currently exist on the Worker but are neither supplied in
+ * the secrets file nor declared in `secrets.required` (declared secrets are
+ * kept via explicit inherit bindings).
+ *
+ * @param config - The resolved Wrangler configuration.
+ * @param scriptName - The name of the Worker being uploaded.
+ * @param accountId - The Cloudflare account id.
+ * @param suppliedSecretNames - Names of the secrets supplied in the secrets file.
+ * @returns The names of the remote secrets that the upload will drop. Empty if
+ *   the Worker does not exist yet.
+ */
+export async function getSecretsDroppedByReplaceMode(
+	config: Config,
+	scriptName: string,
+	accountId: string,
+	suppliedSecretNames: string[]
+): Promise<string[]> {
+	let remoteSecrets: { name: string; type: string }[];
+	try {
+		remoteSecrets = await fetchSecrets(config, scriptName, accountId);
+	} catch (e) {
+		if (isWorkerNotFoundError(e)) {
+			return [];
+		}
+		throw e;
+	}
+
+	const keptSecretNames = new Set<string>([
+		...suppliedSecretNames,
+		...(config.secrets?.required ?? []),
+	]);
+
+	return remoteSecrets
+		.map((secret) => secret.name)
+		.filter((secretName) => !keptSecretNames.has(secretName));
+}
+
 function extractBindingNames(config: Config): string[] {
 	return Object.entries(config).flatMap((entry) => {
 		const key = entry[0] as keyof Config;

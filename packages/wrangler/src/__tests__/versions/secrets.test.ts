@@ -392,4 +392,201 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			);
 		});
 	});
+
+	describe("--secrets-file-mode", () => {
+		function mockRemoteSecrets(secretNames: string[]) {
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult(
+								secretNames.map((name) => ({ name, type: "secret_text" }))
+							)
+						)
+				)
+			);
+		}
+
+		it("should not inherit unspecified secrets when --secrets-file-mode is replace", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			mockRemoteSecrets([]);
+			const secretsFile = "secrets.json";
+			writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					MY_SECRET: "secret_value",
+				})
+			);
+
+			const captured = captureRequestsFrom(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					async () => {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "version-id-123",
+								startup_time_ms: 100,
+								metadata: {
+									has_preview: false,
+								},
+							})
+						);
+					}
+				)
+			)();
+
+			await runWrangler(
+				`versions upload --name ${workerName} --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+
+			const formData = await captured.requests[0].clone().formData();
+			const metadata = JSON.parse(await toString(formData.get("metadata")));
+
+			expect(metadata.bindings).toEqual([
+				{
+					type: "secret_text",
+					name: "MY_SECRET",
+					text: "secret_value",
+				},
+			]);
+			expect(metadata.keep_bindings).toBeUndefined();
+		});
+
+		it("should warn about secrets that will not be carried over in replace mode", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			mockRemoteSecrets(["MY_SECRET", "OLD_SECRET"]);
+			const secretsFile = "secrets.json";
+			writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					MY_SECRET: "secret_value",
+				})
+			);
+
+			const captured = captureRequestsFrom(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					async () => {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "version-id-123",
+								startup_time_ms: 100,
+								metadata: {
+									has_preview: false,
+								},
+							})
+						);
+					}
+				)
+			)();
+
+			await runWrangler(
+				`versions upload --name ${workerName} --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+
+			expect(std.warn).toContain(
+				"will be removed when this version is deployed: OLD_SECRET"
+			);
+
+			const formData = await captured.requests[0].clone().formData();
+			const metadata = JSON.parse(await toString(formData.get("metadata")));
+			expect(metadata.keep_bindings).toBeUndefined();
+		});
+
+		it("should abort in strict mode when secrets would not be carried over in replace mode", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			mockRemoteSecrets(["OLD_SECRET"]);
+			const secretsFile = "secrets.json";
+			writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					MY_SECRET: "secret_value",
+				})
+			);
+
+			await runWrangler(
+				`versions upload --name ${workerName} --secrets-file ${secretsFile} --secrets-file-mode replace --strict`
+			);
+
+			expect(std.warn).toContain(
+				"will be removed when this version is deployed: OLD_SECRET"
+			);
+			expect(std.err).toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).not.toContain("Worker Version ID");
+			expect(process.exitCode).not.toBe(0);
+		});
+
+		it("should keep inherit bindings for secrets.required in replace mode", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				secrets: { required: ["SECRET1", "SECRET2"] },
+			});
+
+			mockGetScript();
+			mockRemoteSecrets([]);
+			const secretsFile = "secrets.json";
+			writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			const captured = captureRequestsFrom(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+					async () => {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "version-id-123",
+								startup_time_ms: 100,
+								metadata: {
+									has_preview: false,
+								},
+							})
+						);
+					}
+				)
+			)();
+
+			await runWrangler(
+				`versions upload --name ${workerName} --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+
+			const formData = await captured.requests[0].clone().formData();
+			const metadata = JSON.parse(await toString(formData.get("metadata")));
+
+			expect(metadata.bindings).toEqual(
+				expect.arrayContaining([
+					{ type: "secret_text", name: "SECRET1", text: "value1" },
+					{ type: "inherit", name: "SECRET2" },
+				])
+			);
+			expect(metadata.keep_bindings).toBeUndefined();
+		});
+
+		it("should error when --secrets-file-mode is used without --secrets-file", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					`versions upload --name ${workerName} --secrets-file-mode replace`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The --secrets-file-mode option can only be used together with --secrets-file.]`
+			);
+		});
+	});
 });

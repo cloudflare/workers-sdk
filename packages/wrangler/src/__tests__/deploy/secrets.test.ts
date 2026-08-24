@@ -450,6 +450,48 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			);
 		});
 
+		it("should keep inherit bindings for required secrets in replace mode", async () => {
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				secrets: { required: ["SECRET1", "SECRET2"] },
+			});
+
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "SECRET1",
+						text: "value1",
+					},
+					{
+						type: "inherit",
+						name: "SECRET2",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: false,
+			});
+
+			await runWrangler(
+				`deploy --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+		});
+
 		it("should use inherit bindings only for required secrets not provided by --secrets-file", async () => {
 			writeWranglerConfig({
 				name: workerName,
@@ -492,6 +534,308 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			});
 
 			await runWrangler(`deploy --secrets-file ${secretsFile}`);
+		});
+	});
+
+	describe("--secrets-file-mode", () => {
+		it("should not keep remote secrets when --secrets-file-mode is replace", async ({
+			expect,
+		}) => {
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					MY_SECRET: "secret_value",
+				})
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "MY_SECRET",
+						text: "secret_value",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				// no keep_bindings entries for secrets should be sent
+				keepSecrets: false,
+			});
+
+			await runWrangler(
+				`deploy --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should keep remote secrets when --secrets-file-mode is merge", async ({
+			expect,
+		}) => {
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					MY_SECRET: "secret_value",
+				})
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "MY_SECRET",
+						text: "secret_value",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: true,
+			});
+
+			await runWrangler(
+				`deploy --secrets-file ${secretsFile} --secrets-file-mode merge`
+			);
+
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should warn about remote secrets that will be deleted in replace mode", async ({
+			expect,
+		}) => {
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ name: "SECRET1", type: "secret_text" },
+								{ name: "OLD_SECRET", type: "secret_text" },
+							])
+						)
+				)
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "SECRET1",
+						text: "value1",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: false,
+			});
+
+			await runWrangler(
+				`deploy --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+
+			expect(std.warn).toContain("will be deleted: OLD_SECRET");
+			expect(std.warn).not.toContain("SECRET1");
+			// the warning does not prompt for confirmation
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should warn about remote secrets that will be deleted in replace mode in non-interactive sessions", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ name: "SECRET1", type: "secret_text" },
+								{ name: "OLD_SECRET", type: "secret_text" },
+							])
+						)
+				)
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "SECRET1",
+						text: "value1",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: false,
+			});
+
+			await runWrangler(
+				`deploy --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+
+			expect(std.warn).toContain("will be deleted: OLD_SECRET");
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should abort the deploy in replace mode when secrets would be deleted and --strict is set", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult([{ name: "OLD_SECRET", type: "secret_text" }])
+						)
+				)
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+
+			await runWrangler(
+				`deploy --secrets-file ${secretsFile} --secrets-file-mode replace --strict`
+			);
+
+			expect(std.warn).toContain("will be deleted: OLD_SECRET");
+			expect(std.err).toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).not.toContain("Uploaded test-name");
+			expect(process.exitCode).not.toBe(0);
+		});
+
+		it("should not warn about remote secrets declared in secrets.required in replace mode", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				secrets: { required: ["KEEP_ME"] },
+			});
+
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+					() =>
+						HttpResponse.json(
+							createFetchResult([
+								{ name: "KEEP_ME", type: "secret_text" },
+								{ name: "DROP_ME", type: "secret_text" },
+							])
+						)
+				)
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "SECRET1",
+						text: "value1",
+					},
+					{
+						type: "inherit",
+						name: "KEEP_ME",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: false,
+			});
+
+			await runWrangler(
+				`deploy --secrets-file ${secretsFile} --secrets-file-mode replace`
+			);
+
+			expect(std.warn).toContain("will be deleted: DROP_ME");
+			expect(std.warn).not.toContain("KEEP_ME");
+		});
+
+		it("should error when --secrets-file-mode is used without --secrets-file", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("deploy --secrets-file-mode replace")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The --secrets-file-mode option can only be used together with --secrets-file.]`
+			);
+		});
+
+		it("should error when --secrets-file-mode is given an unknown mode", async ({
+			expect,
+		}) => {
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(secretsFile, JSON.stringify({ SECRET1: "value1" }));
+
+			await expect(
+				runWrangler(
+					`deploy --secrets-file ${secretsFile} --secrets-file-mode bananas`
+				)
+			).rejects.toThrow();
 		});
 	});
 });

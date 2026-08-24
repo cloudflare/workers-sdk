@@ -198,9 +198,12 @@ async function uploadWorkerVersion(
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
-		// we never delete secret bindings when uploading, even if we are setting secrets from a file
-		// so inherit all unchanged secrets from the previous Worker Version
-		keepSecrets: true,
+		// By default we never delete secret bindings when uploading, even if we
+		// are setting secrets from a file, so all unchanged secrets are inherited
+		// from the previous Worker Version. In replace mode the new version only
+		// carries the secrets supplied in the file (plus the explicit inherit
+		// bindings added above for `secrets.required`).
+		keepSecrets: !(props.secretsFile && props.secretsFileMode === "replace"),
 		placement,
 		tail_consumers: config.tail_consumers,
 		limits: config.limits,

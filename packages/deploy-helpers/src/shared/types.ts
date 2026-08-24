@@ -90,6 +90,13 @@ export type SharedDeployVersionsProps = {
 	message: string | undefined;
 	/** From --secrets-file arg. */
 	secretsFile: string | undefined;
+	/**
+	 * From --secrets-file-mode arg. Only valid alongside `secretsFile`.
+	 * `"merge"` (also the behavior when undefined) keeps remote secrets that
+	 * are not present in the secrets file; `"replace"` deletes them, except
+	 * secrets declared in `secrets.required` which are always inherited.
+	 */
+	secretsFileMode: "merge" | "replace" | undefined;
 	/** From collectKeyValues(--var arg). CLI-only vars; config vars flow separately via getBindings(config). */
 	cliVars: Record<string, string>;
 	/** From --experimental-auto-create arg. */

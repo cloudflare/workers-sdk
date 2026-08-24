@@ -88,6 +88,7 @@ async function mergeSharedConfigArgs(
 		tag: args.tag,
 		message: args.message,
 		secretsFile: args.secretsFile,
+		secretsFileMode: args.secretsFileMode,
 		cliVars: collectKeyValues(args.var),
 		experimentalAutoCreate: args.experimentalAutoCreate,
 		accountId,

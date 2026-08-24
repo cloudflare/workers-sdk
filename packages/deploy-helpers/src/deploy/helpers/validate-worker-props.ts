@@ -14,12 +14,16 @@ import {
 } from "../../triggers/deploy";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
 import { getWorkersDevSubdomain } from "../../triggers/subdomain";
-import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
+import {
+	checkRemoteSecretsOverride,
+	getSecretsDroppedByReplaceMode,
+} from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import { getDeployConfirmFunction } from "./deploy-confirm";
 import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
+import { parseBulkInputToObject } from "./parse-bulk-input";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type { DeployProps, VersionsUploadProps } from "../../shared/types";
@@ -75,6 +79,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						? "missing compatibility date when deploying"
 						: "versions upload missing compatibility date",
 			}
+		);
+	}
+
+	if (props.secretsFileMode !== undefined && !props.secretsFile) {
+		throw new UserError(
+			"The --secrets-file-mode option can only be used together with --secrets-file.",
+			{ telemetryMessage: "secrets-file-mode without secrets-file" }
 		);
 	}
 
@@ -292,6 +303,38 @@ export async function preUploadApiChecks(
 		logger.warn(remoteSecretsCheck.deployErrorMessage);
 		if (!(await deployConfirm("Would you like to continue?"))) {
 			return { workerTag, tags, workerExists, aborted: true };
+		}
+	}
+
+	if (props.secretsFile && props.secretsFileMode === "replace") {
+		const secretsFileResult = await parseBulkInputToObject(props.secretsFile);
+		const droppedSecrets = await getSecretsDroppedByReplaceMode(
+			config,
+			name,
+			accountId,
+			Object.keys(secretsFileResult?.content ?? {})
+		);
+
+		if (droppedSecrets.length > 0) {
+			// Warn-only (no confirmation prompt): replace mode is an explicit
+			// opt-in whose documented purpose is removing unlisted secrets, and the
+			// analogous vars replacement (the default `--keep-vars=false` behavior)
+			// deletes remote vars without prompting. The warning is always logged so
+			// CI logs carry the audit trail of what was removed.
+			logger.warn(
+				`Because --secrets-file-mode is set to "replace", the following secrets exist on the remote Worker but are not present in the secrets file and will be ${
+					props.command === "deploy"
+						? "deleted"
+						: "removed when this version is deployed"
+				}: ${droppedSecrets.join(", ")}`
+			);
+			if (props.strict) {
+				logger.error(
+					"Aborting the upload operation because of conflicts. To override and upload anyway, remove the `--strict` flag"
+				);
+				process.exitCode = 1;
+				return { workerTag, tags, workerExists, aborted: true };
+			}
 		}
 	}
 

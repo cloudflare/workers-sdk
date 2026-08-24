@@ -1,3 +1,4 @@
+import { getSecretsDroppedByReplaceMode } from "@cloudflare/deploy-helpers";
 import { http, HttpResponse } from "msw";
 import { assert, describe, it } from "vitest";
 import { checkRemoteSecretsOverride } from "../../deploy/check-remote-secrets-override";
@@ -218,5 +219,54 @@ describe("checkRemoteSecretsOverride", () => {
 	}) => {
 		const result = await runCheckRemoteSecretsOverride({}, ["MY_SECRET"]);
 		expect(result.override).toBeFalsy();
+	});
+});
+
+describe("getSecretsDroppedByReplaceMode", () => {
+	mockAccountId();
+	mockApiToken();
+
+	it("should return the remote secrets that are neither supplied nor required", async ({
+		expect,
+	}) => {
+		mockSecrets(["SUPPLIED", "REQUIRED", "DROPPED_1", "DROPPED_2"]);
+
+		const droppedSecrets = await getSecretsDroppedByReplaceMode(
+			{
+				name: "test-script",
+				secrets: { required: ["REQUIRED"] },
+			} as Config,
+			"test-script",
+			"some-account-id",
+			["SUPPLIED"]
+		);
+
+		expect(droppedSecrets).toEqual(["DROPPED_1", "DROPPED_2"]);
+	});
+
+	it("should return an empty list when the Worker does not exist", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10007, message: "Not found" },
+						]),
+						{ status: 404 }
+					)
+			)
+		);
+
+		const droppedSecrets = await getSecretsDroppedByReplaceMode(
+			{ name: "test-script" } as Config,
+			"test-script",
+			"some-account-id",
+			[]
+		);
+
+		expect(droppedSecrets).toEqual([]);
 	});
 });

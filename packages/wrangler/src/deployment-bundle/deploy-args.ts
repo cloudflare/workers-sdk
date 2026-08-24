@@ -159,8 +159,15 @@ export const sharedDeployVersionsArgs = {
 	},
 	"secrets-file": {
 		describe:
-			"Path to a file containing secrets to upload with the version (JSON or .env format). Applies additively with secrets from previous deployments - omitted secrets will not be deleted.",
+			"Path to a file containing secrets to upload with the version (JSON or .env format). By default applies additively with secrets from previous deployments - omitted secrets will not be deleted. Use --secrets-file-mode to change this behavior.",
 		type: "string",
+		requiresArg: true,
+	},
+	"secrets-file-mode": {
+		describe:
+			'How secrets from --secrets-file combine with existing remote secrets: "merge" (the default) keeps remote secrets that are not present in the file, "replace" deletes them. Secrets declared in `secrets.required` are always kept.',
+		type: "string",
+		choices: ["merge", "replace"] as const,
 		requiresArg: true,
 	},
 	"keep-vars": {
