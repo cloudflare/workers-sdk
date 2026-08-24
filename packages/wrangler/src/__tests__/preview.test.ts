@@ -1771,11 +1771,10 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment URLs:");
 			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
+			expect(std.out).not.toContain("no active URLs");
 		});
 
-		test("should show compact success output when URL arrays are empty", async ({
-			expect,
-		}) => {
+		test("should note when URL arrays are empty", async ({ expect }) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1839,6 +1838,9 @@ describe("wrangler preview", () => {
 				"Preview: empty-urls-preview (new)",
 				"Deployment ID: deployment-id-empty-urls",
 			]);
+			expect(std.out).toContain(
+				"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information"
+			);
 		});
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
