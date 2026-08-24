@@ -210,7 +210,7 @@ function normalizePullRequestTitle(
 	}
 
 	const trimmedTitle = title.trim();
-	return trimmedTitle ? trimmedTitle : undefined;
+	return trimmedTitle || undefined;
 }
 
 /**
