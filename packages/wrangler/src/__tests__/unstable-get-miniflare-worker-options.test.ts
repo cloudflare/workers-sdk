@@ -226,9 +226,6 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			const { workerOptions } =
 				unstable_getMiniflareWorkerOptions("./wrangler.json");
 
-			// Retention and schedules are enforced by the Workflows service at deploy time; local dev
-			// only knows about the step limit. Passing them through would make miniflare reject the
-			// binding, so they must be stripped rather than spread.
 			expect(workerOptions.workflows).toEqual({
 				WORKFLOW: {
 					name: "my-workflow",
