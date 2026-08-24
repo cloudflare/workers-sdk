@@ -12,6 +12,7 @@ import {
 	parseNonHyphenedUuid,
 	retryOnAPIFailure,
 	UserError,
+	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
@@ -133,18 +134,44 @@ export type DeployCallbacks = {
 		| undefined;
 };
 
-export default async function deploy(
-	props: DeployProps,
-	config: Config,
-	buildResult: WorkerBuildResult,
-	callbacks: DeployCallbacks
-): Promise<{
+type DeployResult = {
 	sourceMapSize?: number;
 	versionId: string | null;
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
-}> {
+};
+
+export default async function deploy(
+	props: DeployProps,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	callbacks: DeployCallbacks
+): Promise<DeployResult> {
+	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
+
+	const result = await deployWorker(props, config, buildResult, callbacks);
+
+	writeOutput({
+		type: "deploy",
+		version: 1,
+		worker_name: props.name ?? null,
+		worker_tag: result.workerTag,
+		version_id: result.versionId,
+		targets: result.targets,
+		wrangler_environment: props.env,
+		worker_name_overridden: props.workerNameOverridden ?? false,
+	});
+
+	return result;
+}
+
+async function deployWorker(
+	props: DeployProps,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	callbacks: DeployCallbacks
+): Promise<DeployResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
 
@@ -751,10 +778,11 @@ export default async function deploy(
 		accountId,
 		scriptName,
 		workerTag,
-		env: props.env,
 		crons: props.triggers,
 		firstDeploy: !workerExists,
 		routes: props.routes,
+		validated: true,
+		dryRun: false,
 	});
 
 	logger.log("Current Version ID:", versionId);

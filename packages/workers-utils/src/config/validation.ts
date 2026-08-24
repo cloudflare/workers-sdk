@@ -1782,6 +1782,16 @@ function normalizeAndValidateEnvironment(
 			validateQueues(envName),
 			{ producers: [], consumers: [] }
 		),
+		connect: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"connect",
+			validateConnectHandlers(envName),
+			[]
+		),
 		r2_buckets: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2185,7 +2195,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"previews",
-			validatePreviewsConfig(envName),
+			validatePreviewsConfig(envName, configPath),
 			undefined
 		),
 	};
@@ -2873,6 +2883,31 @@ const validateDurableObjectBinding: ValidatorFn = (
 const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or hyphens.`;
 
 /**
+ * Check the shape of a single `default_retention` value.
+ */
+function validateWorkflowRetentionValue(
+	diagnostics: Diagnostics,
+	field: string,
+	key: string,
+	value: unknown
+): boolean {
+	const isValidNumber =
+		typeof value === "number" && Number.isInteger(value) && value > 0;
+	const isValidString = typeof value === "string" && value.length > 0;
+
+	if (isValidNumber || isValidString) {
+		return true;
+	}
+
+	diagnostics.errors.push(
+		`"${field}" bindings "default_retention.${key}" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ${JSON.stringify(
+			value
+		)}.`
+	);
+	return false;
+}
+
+/**
  * Check that the given field is a valid "workflow" binding object.
  */
 const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
@@ -2920,15 +2955,6 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isOptionalProperty(value, "script_name", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "script_name" field but got ${JSON.stringify(
-				value
-			)}.`
-		);
-		isValid = false;
-	}
-
-	if (!isOptionalProperty(value, "remote", "boolean")) {
-		diagnostics.errors.push(
-			`"${field}" bindings should, optionally, have a boolean "remote" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -3015,14 +3041,56 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		}
 	}
 
+	if (
+		hasProperty(value, "default_retention") &&
+		value.default_retention !== undefined
+	) {
+		if (
+			typeof value.default_retention !== "object" ||
+			value.default_retention === null ||
+			Array.isArray(value.default_retention)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "default_retention" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const defaultRetention = value.default_retention as Record<
+				string,
+				unknown
+			>;
+			for (const key of ["success_retention", "error_retention"]) {
+				if (
+					defaultRetention[key] !== undefined &&
+					!validateWorkflowRetentionValue(
+						diagnostics,
+						field,
+						key,
+						defaultRetention[key]
+					)
+				) {
+					isValid = false;
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.default_retention`,
+				Object.keys(defaultRetention),
+				["success_retention", "error_retention"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
-		"remote",
 		"limits",
 		"schedules",
+		"default_retention",
 	]);
 
 	return isValid;
@@ -3440,11 +3508,73 @@ function validateSshPublicKeys(
 	}
 }
 
+/**
+ * Validate `previews.containers`. Mirrors `validateContainerApp`, but rejects
+ * the application name outright. Every preview container is named at deploy
+ * time from the resolved worker name, preview slug, and class name, so that
+ * two previews of the same Worker cannot claim one name.
+ *
+ * Default-name generation is therefore switched off here. The resolved worker
+ * name is not known until deploy time, so requiring a name during validation
+ * would reject a config that omits the top-level `name` and supplies it with
+ * `--worker-name` instead.
+ */
+function validatePreviewsContainers(
+	envName: string,
+	configPath: string | undefined
+): ValidatorFn {
+	const innerValidator = validateContainerApp(envName, undefined, configPath, {
+		generateDefaultName: false,
+	});
+	return (diagnostics, field, value, config) => {
+		if (Array.isArray(value)) {
+			const nameFields = [...value.entries()]
+				.filter(
+					([, entry]) => entry && typeof entry === "object" && "name" in entry
+				)
+				.map(([index]) => `"${field}[${index}].name"`);
+			if (nameFields.length > 0) {
+				diagnostics.errors.push(
+					`${nameFields.join(", ")} cannot be set. A preview container's application name is generated from the worker name, preview slug, and Durable Object class name, so that separate previews of the same Worker do not collide. Remove it and identify the container with "class_name".`
+				);
+				return false;
+			}
+			// A Durable Object class is backed by at most one container
+			// application, so two entries for the same class are ambiguous.
+			const seenClasses = new Set<string>();
+			const duplicateClasses = new Set<string>();
+			for (const entry of value) {
+				if (!entry || typeof entry !== "object") {
+					continue;
+				}
+				if (typeof entry.class_name === "string") {
+					if (seenClasses.has(entry.class_name)) {
+						duplicateClasses.add(entry.class_name);
+					}
+					seenClasses.add(entry.class_name);
+				}
+			}
+			if (duplicateClasses.size > 0) {
+				const classList = [...duplicateClasses]
+					.map((className) => `"${className}"`)
+					.join(", ");
+				diagnostics.errors.push(
+					`"${field}" declares more than one container for the Durable Object class ${classList}; each Durable Object class may appear at most once.`
+				);
+				return false;
+			}
+		}
+		return innerValidator(diagnostics, field, value, config);
+	};
+}
+
 function validateContainerApp(
 	envName: string,
 	topLevelName: string | undefined,
-	configPath: string | undefined
+	configPath: string | undefined,
+	options: { generateDefaultName?: boolean } = {}
 ): ValidatorFn {
+	const { generateDefaultName = true } = options;
 	return (diagnostics, field, value, config) => {
 		if (!value) {
 			return true;
@@ -3473,7 +3603,7 @@ function validateContainerApp(
 				"string"
 			);
 			// try and add a default name
-			if (!containerAppOptional.name) {
+			if (generateDefaultName && !containerAppOptional.name) {
 				// The default name is derived from the class name, so without one there
 				// is nothing to derive it from. Such a container must be linked to a
 				// Durable Object from the `exports` side, which references it by name.
@@ -5248,6 +5378,146 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	return isValid;
 };
 
+/**
+ * Validate that the field is an array of `connect` handler definitions, each with a
+ * unique protocol/port combination.
+ */
+function validateConnectHandlers(envName: string): ValidatorFn {
+	return (diagnostics, field, value, config) => {
+		if (value === undefined) {
+			return true;
+		}
+
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (!Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an array but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		for (let i = 0; i < value.length; i++) {
+			if (
+				!validateConnectHandler(
+					diagnostics,
+					`${fieldPath}[${i}]`,
+					value[i],
+					config
+				)
+			) {
+				isValid = false;
+			}
+		}
+
+		// Reject duplicate protocol+port combinations within the same worker.
+		const firstIndexByKey = new Map<string, number>();
+		for (let i = 0; i < value.length; i++) {
+			const handler = value[i];
+			if (
+				typeof handler !== "object" ||
+				handler === null ||
+				typeof (handler as { port?: unknown }).port !== "number" ||
+				typeof (handler as { protocol?: unknown }).protocol !== "string"
+			) {
+				// Already reported by `validateConnectHandler` above.
+				continue;
+			}
+
+			const { protocol, port } = handler as {
+				protocol: string;
+				port: number;
+			};
+			const key = `${protocol}:${port}`;
+			const firstIndex = firstIndexByKey.get(key);
+			if (firstIndex !== undefined) {
+				diagnostics.errors.push(
+					`"${fieldPath}[${i}]" has the same "protocol" (${protocol}) and "port" (${port}) as "${fieldPath}[${firstIndex}]". Each entry in "connect" must use a unique protocol/port combination.`
+				);
+				isValid = false;
+			} else {
+				firstIndexByKey.set(key, i);
+			}
+		}
+
+		return isValid;
+	};
+}
+
+/**
+ * Check that the given field is a valid "connect" handler object.
+ */
+const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	if (
+		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"protocol",
+			"port",
+			"address",
+		])
+	) {
+		isValid = false;
+	}
+
+	if ("protocol" in value && value.protocol !== "tcp") {
+		diagnostics.errors.push(
+			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+				value.protocol
+			)}.`
+		);
+		isValid = false;
+	} else if (!("protocol" in value)) {
+		diagnostics.errors.push(
+			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "port", "number")) {
+		diagnostics.errors.push(
+			`"${field}" should have a number "port" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (
+		!Number.isInteger((value as { port: number }).port) ||
+		(value as { port: number }).port < 1 ||
+		(value as { port: number }).port > 65535
+	) {
+		diagnostics.errors.push(
+			`"${field}" should have an integer "port" field between 1 and 65535 but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isOptionalProperty(value, "address", "string")) {
+		diagnostics.errors.push(
+			`"${field}" should, optionally, have a string "address" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateCompatibilityDate: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined) {
 		return true;
@@ -5613,7 +5883,7 @@ function normalizeAndValidateLimits(
 }
 
 const validatePreviewsConfig =
-	(envName: string): ValidatorFn =>
+	(envName: string, configPath: string | undefined): ValidatorFn =>
 	(diagnostics, field, value) => {
 		if (value === undefined) {
 			return true;
@@ -5665,6 +5935,7 @@ const validatePreviewsConfig =
 				"ratelimits",
 				"vpc_services",
 				"version_metadata",
+				"containers",
 				"logpush",
 				"observability",
 				"limits",
@@ -5940,6 +6211,16 @@ const validatePreviewsConfig =
 					diagnostics,
 					`${field}.version_metadata`,
 					previews.version_metadata,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.containers !== undefined) {
+			isValid =
+				validatePreviewsContainers(envName, configPath)(
+					diagnostics,
+					`${field}.containers`,
+					previews.containers,
 					undefined
 				) && isValid;
 		}

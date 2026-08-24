@@ -75,6 +75,7 @@ describe("normalizeAndValidateConfig()", () => {
 				consumers: [],
 				producers: [],
 			},
+			connect: [],
 			r2_buckets: [],
 			secrets_store_secrets: [],
 			artifacts: [],
@@ -6003,6 +6004,198 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[connect]", () => {
+			it("should error if connect is not an array", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ connect: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(
+					expect.not.objectContaining({ connect: expect.anything })
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "connect" should be an array but got {}."
+				`);
+			});
+
+			it("should error if a connect handler entry is missing a protocol", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ port: 8081 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have a "protocol" field of "tcp" but got {"port":8081}."
+				`);
+			});
+
+			it("should error if a connect handler entry has an invalid protocol", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [{ protocol: "ftp", port: 8081 }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have a "protocol" field of "tcp" but got "ftp"."
+				`);
+			});
+
+			it("should error if a connect handler entry is missing a port", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp" },
+							{ protocol: "tcp", address: "0.0.0.0" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have a number "port" field but got {"protocol":"tcp"}.
+					  - "connect[1]" should have a number "port" field but got {"protocol":"tcp","address":"0.0.0.0"}."
+				`);
+			});
+
+			it("should error if a connect handler entry's port is not an integer", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 3.14 },
+							{ protocol: "tcp", port: Number.NaN },
+							{ protocol: "tcp", port: Number.POSITIVE_INFINITY },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":3.14}.
+					  - "connect[1]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":null}.
+					  - "connect[2]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":null}."
+				`);
+			});
+
+			it("should error if a connect handler entry's port is out of range", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 0 },
+							{ protocol: "tcp", port: -1 },
+							{ protocol: "tcp", port: 65536 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[0]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":0}.
+					  - "connect[1]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":-1}.
+					  - "connect[2]" should have an integer "port" field between 1 and 65535 but got {"protocol":"tcp","port":65536}."
+				`);
+			});
+
+			it("should error if a connect handler entry has unexpected fields", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 8081, invalidField: "madeupValue" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in connect[0] field: "invalidField""
+				`);
+			});
+
+			it("should accept a valid connect config with multiple unique protocol/port combinations", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 8081, address: "*" },
+							{ protocol: "tcp", port: 8082 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.connect).toEqual([
+					{ protocol: "tcp", port: 8081, address: "*" },
+					{ protocol: "tcp", port: 8082 },
+				]);
+			});
+
+			it("should error if two connect handlers share the same protocol and port", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						connect: [
+							{ protocol: "tcp", port: 8081 },
+							{ protocol: "tcp", port: 8082 },
+							{ protocol: "tcp", port: 8081, address: "0.0.0.0" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "connect[2]" has the same "protocol" (tcp) and "port" (8081) as "connect[0]". Each entry in "connect" must use a unique protocol/port combination."
+				`);
+			});
+		});
+
 		describe("[r2_buckets]", () => {
 			it("should error if r2_buckets is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -7592,7 +7785,6 @@ describe("normalizeAndValidateConfig()", () => {
 								name: "my-workflow",
 								class_name: "MyWorkflow",
 								script_name: "my-script",
-								remote: true,
 								limits: { steps: 100 },
 							},
 						],
@@ -7715,7 +7907,6 @@ describe("normalizeAndValidateConfig()", () => {
 								name: "my-workflow",
 								class_name: "MyWorkflow",
 								script_name: 123,
-								remote: "yes",
 							},
 						],
 					} as unknown as RawConfig,
@@ -7727,8 +7918,32 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "workflows[0]" bindings should, optionally, have a string "script_name" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}.
-					  - "workflows[0]" bindings should, optionally, have a boolean "remote" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123,"remote":"yes"}."
+					  - "workflows[0]" bindings should, optionally, have a string "script_name" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","script_name":123}."
+				`);
+			});
+
+			it("should warn if remote is configured", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								remote: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in workflows[0] field: "remote""
 				`);
 			});
 
@@ -7928,6 +8143,163 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "workflows[0]" has a step limit of 30000, which exceeds the production maximum of 25,000. This configuration may not work when deployed."
+				`);
+			});
+
+			it("should accept valid default_retention values", ({ expect }) => {
+				const validRetentions = [
+					{ success_retention: "3 days" },
+					{ error_retention: "1 hour" },
+					{ success_retention: 86400000 },
+					{ success_retention: "7 days", error_retention: 3600000 },
+				];
+
+				for (const default_retention of validRetentions) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							workflows: [
+								{
+									binding: "MY_WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									default_retention,
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(
+						diagnostics.hasErrors(),
+						`expected ${JSON.stringify(default_retention)} to be valid, got: ${diagnostics.renderErrors()}`
+					).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+				}
+			});
+
+			it("should error if default_retention is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: "3 days",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have an object "default_retention" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","default_retention":"3 days"}."
+				`);
+			});
+
+			// The duration grammar belongs to the Workflows API, which rejects unknown units at deploy
+			// time. Validating it here too would reject values that a newer API version accepts.
+			it("should not police the duration grammar", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "3 bananas" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if a default_retention value is an empty string", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.success_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ""."
+				`);
+			});
+
+			it("should error if a default_retention value is negative", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { error_retention: -1 },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("should warn on unexpected default_retention fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { retention: "3 days" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in workflows[0].default_retention field: "retention""
 				`);
 			});
 
@@ -12505,6 +12877,173 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderErrors()).toContain(
 					'The field "previews.browser" should be an object'
+				);
+			});
+
+			it("should accept previews.containers without a name", ({ expect }) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.containers in a named environment that relies on the inherited top-level name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					env: {
+						staging: {
+							previews: {
+								containers: [
+									{
+										class_name: "MyContainer",
+										image: "registry.cloudflare.com/test:latest",
+									},
+								],
+							},
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.containers when the worker name is omitted", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).not.toContain(
+					'Must have either a top level "name"'
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject a previews.containers entry that sets a name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+							{
+								class_name: "OtherContainer",
+								image: "registry.cloudflare.com/other:latest",
+								name: "custom-name",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.containers[1].name" cannot be set'
+				);
+			});
+
+			it("should reject two previews.containers entries sharing a class_name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/other:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.containers" declares more than one container for the Durable Object class "MyContainer"'
+				);
+			});
+
+			it("should reject previews.containers entries missing image", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [{ class_name: "MyContainer" }],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.image" field must be defined'
 				);
 			});
 		});

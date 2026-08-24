@@ -15,6 +15,7 @@ import {
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
 import {
+	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
@@ -98,6 +99,18 @@ export function getExplorerServices(
 			// workerdDebugPort bindings don't have any additional configuration
 			workerdDebugPort: kVoid,
 		},
+		// The email store service is registered alongside the explorer (see the
+		// core plugin's getServices), so it's always available to read from here.
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
+		// Direct service bindings to each user worker in this instance. These let
+		// the explorer invoke a worker's handlers (e.g. `email()`.
+		...workerNames.map((name) => ({
+			name: `${CoreBindings.SERVICE_EXPLORER_USER_WORKER_PREFIX}${name}`,
+			service: { name: getUserServiceName(name) },
+		})),
 	];
 
 	// Only bind the observability collector when observability is enabled —
@@ -215,17 +228,22 @@ export function constructExplorerBindingMap(
 			binding.name?.startsWith(
 				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
 			) &&
-			"kvNamespace" in binding &&
-			binding.kvNamespace?.name?.startsWith("kv:ns:")
+			"kvNamespace" in binding
 		) {
-			const namespaceId =
-				extractObjectEntryId(binding.kvNamespace.props?.json) ??
-				binding.kvNamespace.name.replace(/^kv:ns:/, "");
+			const namespaceId = extractObjectEntryId(
+				binding.kvNamespace?.props?.json
+			);
+			const fallbackNamespaceId = binding.kvNamespace?.name?.startsWith(
+				"kv:ns:"
+			)
+				? binding.kvNamespace.name.replace(/^kv:ns:/, "")
+				: undefined;
 			// Remote namespaces share one proxy service ("kv:ns:remote"). Remote
 			// resources aren't surfaced in the explorer, so skip them — otherwise
 			// they'd all collide under the literal id "remote".
-			if (namespaceId !== "remote") {
-				IDToBindingName.kv[namespaceId] = binding.name;
+			const id = namespaceId ?? fallbackNamespaceId;
+			if (id !== undefined && id !== "remote") {
+				IDToBindingName.kv[id] = binding.name;
 			}
 		}
 
@@ -236,17 +254,20 @@ export function constructExplorerBindingMap(
 			binding.name?.startsWith(
 				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:r2:`
 			) &&
-			"r2Bucket" in binding &&
-			binding.r2Bucket?.name?.startsWith("r2:bucket:")
+			"r2Bucket" in binding
 		) {
-			const bucketName =
-				extractObjectEntryId(binding.r2Bucket.props?.json) ??
-				binding.r2Bucket.name.replace(/^r2:bucket:/, "");
+			const bucketName = extractObjectEntryId(binding.r2Bucket?.props?.json);
+			const fallbackBucketName = binding.r2Bucket?.name?.startsWith(
+				"r2:bucket:"
+			)
+				? binding.r2Bucket.name.replace(/^r2:bucket:/, "")
+				: undefined;
 			// Remote buckets share one proxy service ("r2:bucket:remote"). Remote
 			// resources aren't surfaced in the explorer, so skip them — otherwise
 			// they'd all collide under the literal id "remote".
-			if (bucketName !== "remote") {
-				IDToBindingName.r2[bucketName] = binding.name;
+			const name = bucketName ?? fallbackBucketName;
+			if (name !== undefined && name !== "remote") {
+				IDToBindingName.r2[name] = binding.name;
 			}
 		}
 	}
@@ -339,6 +360,7 @@ export function constructExplorerWorkerOpts(
 			r2: [],
 			do: [],
 			workflows: [],
+			sendEmail: [],
 		};
 
 		for (const [bindingName, binding] of getEnvBindingsOfType(
@@ -394,6 +416,13 @@ export function constructExplorerWorkerOpts(
 				className: workflow.exportName,
 				scriptName: workflow.workerName ?? workerName,
 			});
+		}
+
+		for (const [bindingName] of getEnvBindingsOfType(
+			workerOpts.config,
+			"send-email"
+		) ?? {}) {
+			bindings.sendEmail.push({ bindingName });
 		}
 
 		result[workerName] = bindings;

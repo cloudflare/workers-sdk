@@ -12,9 +12,4 @@
 			},
 		],
 	},
-	"tail_consumers": [
-		{
-			"service": "exported-handler",
-		},
-	],
 }

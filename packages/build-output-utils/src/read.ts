@@ -1,17 +1,17 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import { OutputWorkerSchema, SettingsSchema } from "@cloudflare/config";
+import { OutputSettingsSchema, OutputWorkerSchema } from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
 	BUILD_OUTPUT_VERSION,
-	getRootConfigPath,
+	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 } from "./paths";
 import type {
+	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 
 interface BuildOutputWorkerBase {
@@ -55,10 +55,12 @@ export interface BuildOutput {
 	/** Version of the spec the tree conforms to. */
 	version: string;
 	/**
-	 * Project-level settings from the optional top-level `config.json`
-	 * (shared by every Worker), or `undefined` when the file is absent.
+	 * The parsed, schema-validated project-level settings shared by every
+	 * Worker, including the `mode` the build was produced in. Current writers
+	 * always emit the top-level `config.json`; `undefined` is retained for
+	 * compatibility with third-party build output.
 	 */
-	settings: ParsedSettingsConfig | undefined;
+	settings: ParsedOutputSettingsConfig | undefined;
 	/**
 	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`.
 	 * Guaranteed to contain at least one Worker; currently always exactly one.
@@ -70,7 +72,7 @@ export interface BuildOutput {
  * Read and validate the Build Output Specification tree at
  * `<root>/.cloudflare/output/v0/`.
  *
- * Reads the optional top-level `config.json` settings, then reads and
+ * Reads the optional top-level settings `config.json`, then reads and
  * schema-validates the Worker's `config.json` and resolves its
  * `bundle/` / `assets/` directories.
  *
@@ -88,6 +90,7 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
  * Read and schema-validate the Worker's `config.json` and resolve its
  * `bundle/` / `assets/` directories.
  *
+ * @returns the Worker, with whichever of its directories exist resolved.
  * @throws {BuildOutputError} if the config is missing, is not valid JSON, or
  * fails schema validation.
  */
@@ -95,7 +98,7 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 	const configPath = getWorkerConfigPath(root);
 
 	if (!fs.existsSync(configPath)) {
-		throw new BuildOutputError(`No Worker config found at ${configPath}.`);
+		throw new BuildOutputError(`no Worker config found at ${configPath}.`);
 	}
 
 	const contents = await fsp.readFile(configPath, "utf-8");
@@ -142,7 +145,11 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 
 /**
  * Read and schema-validate the optional top-level `config.json` holding the
- * project-level settings shared by every Worker.
+ * project-level settings shared by every Worker, including the mode the build
+ * was produced in.
+ *
+ * Returned whole: consumers that need only the settings the user declared
+ * narrow it themselves.
  *
  * @returns the parsed settings, or `undefined` when the file is absent.
  * @throws {BuildOutputError} if the file is not valid JSON or fails schema
@@ -150,18 +157,20 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
  */
 async function readSettings(
 	root: string
-): Promise<ParsedSettingsConfig | undefined> {
-	const configPath = getRootConfigPath(root);
+): Promise<ParsedOutputSettingsConfig | undefined> {
+	const configPath = getSettingsConfigPath(root);
 
 	if (!fs.existsSync(configPath)) {
 		return undefined;
 	}
 
 	const contents = await fsp.readFile(configPath, "utf-8");
-	const result = SettingsSchema.safeParse(parseJson(contents, configPath));
+	const result = OutputSettingsSchema.safeParse(
+		parseJson(contents, configPath)
+	);
 	if (!result.success) {
 		throw new BuildOutputError(
-			`invalid root config at ${configPath}.\n${result.error.message}`
+			`invalid settings config at ${configPath}.\n${result.error.message}`
 		);
 	}
 

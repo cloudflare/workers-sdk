@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { resolve } from "node:path";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect in module-scope helper functions */
 import {
-	describe as baseDescribe,
+	describe,
 	expect,
 	onTestFailed,
 	onTestFinished,
@@ -18,11 +18,6 @@ import {
 } from "../../../packages/vite-plugin-cloudflare/e2e/helpers";
 import { runWranglerDev as baseRunWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-// TODO: These tests are consistently failing on Windows in CI and are blocking
-// other work. Skipping them there as a temporary measure until the underlying
-// issue is fixed. There's still value in running them on macOS and Linux.
-const describe = baseDescribe.skipIf(process.platform === "win32");
-
 const waitForTimeout = 20_000;
 const cwd = resolve(__dirname, "..");
 const tmpPathBase = path.join(os.tmpdir(), "wrangler-tests");
@@ -32,8 +27,18 @@ const it = test.extend<{
 	// Fixture for creating a temporary directory
 	async devRegistryPath({}, use) {
 		const tmpPath = await fs.realpath(await fs.mkdtemp(tmpPathBase));
+
+		// Fixture teardown runs *before* `onTestFinished` callbacks, so removing
+		// the directory here would pull the registry out from under dev sessions
+		// that are still running. Registering the cleanup as an
+		// `onTestFinished` callback during fixture setup instead makes it the
+		// first one registered, and therefore the last one to run under Vitest's
+		// LIFO ordering — after every dev session has exited.
+		onTestFinished(async () => {
+			await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		});
+
 		await use(tmpPath);
-		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
 	},
 });
 
@@ -92,6 +97,27 @@ async function runWranglerDev(
 	}, waitForTimeout);
 
 	return url;
+}
+
+/**
+ * Starts a tail consumer, then its producer, returning both URLs.
+ *
+ * Vitest runs `onTestFinished` callbacks in LIFO order, so the session started
+ * last is torn down first. Starting the producer last therefore guarantees it
+ * is killed while its consumer is still running.
+ *
+ * The reverse order is not safe: killing a dev session that another running
+ * session is forwarding tail events to aborts workerd on the surviving side on
+ * Windows, which restarts the dev server mid-teardown and times the test out.
+ * The `tail_consumers` in this fixture are one-directional for the same reason
+ * — with a cycle there is no order that keeps every producer shorter-lived than
+ * its consumer.
+ */
+async function startTailPair(
+	startConsumer: () => Promise<string>,
+	startProducer: () => Promise<string>
+): Promise<[consumer: string, producer: string]> {
+	return [await startConsumer(), await startProducer()];
 }
 
 async function setupPlatformProxy(config: string, devRegistryPath?: string) {
@@ -400,17 +426,25 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		}, waitForTimeout);
 	});
 
-	it("supports tail handler", async ({ devRegistryPath }) => {
-		const exportedHandlerWithAssets = await runWranglerDev(
-			"wrangler.exported-handler-with-assets.jsonc",
-			devRegistryPath
-		);
-		const workerEntrypoint = await runWranglerDev(
-			[
-				"wrangler.worker-entrypoint.jsonc",
-				"wrangler.internal-durable-object.jsonc",
-			],
-			devRegistryPath
+	it("supports tail handler when the consumer has assets", async ({
+		devRegistryPath,
+	}) => {
+		// The producer runs alongside a second worker so that its logs are
+		// prefixed with the worker name, exercising multi-worker sessions too
+		const [exportedHandlerWithAssets, workerEntrypoint] = await startTailPair(
+			() =>
+				runWranglerDev(
+					"wrangler.exported-handler-with-assets.jsonc",
+					devRegistryPath
+				),
+			() =>
+				runWranglerDev(
+					[
+						"wrangler.worker-entrypoint.jsonc",
+						"wrangler.internal-durable-object.jsonc",
+					],
+					devRegistryPath
+				)
 		);
 
 		const searchParams = new URLSearchParams({
@@ -418,29 +452,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		});
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of worker-entrypoint via exported handler
-			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["hello world", "this is the 2nd log"]),
-			});
-			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
-
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
-
-			expect(await response.json()).toEqual({
-				worker: "Worker Entrypoint",
-				tailEvents: expect.arrayContaining([
-					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
-					[["[exported-handler]"], ["some other log"]],
-				]),
-			});
-		}, waitForTimeout);
-
-		await vi.waitFor(async () => {
-			// Trigger tail handler of exported-handler via worker-entrypoint
+			// Trigger tail handler of exported-handler-with-assets via worker-entrypoint
 			await fetch(`${workerEntrypoint}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
@@ -464,6 +476,45 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 						["[worker-entrypoint]", "[Worker Entrypoint]"],
 						["[worker-entrypoint]", "yet another log", "and another one"],
 					],
+				]),
+			});
+		}, waitForTimeout);
+	});
+
+	it("supports tail handler when the producer has assets", async ({
+		devRegistryPath,
+	}) => {
+		const [exportedHandler, exportedHandlerWithAssets] = await startTailPair(
+			() => runWranglerDev("wrangler.exported-handler.jsonc", devRegistryPath),
+			() =>
+				runWranglerDev(
+					"wrangler.exported-handler-with-assets.jsonc",
+					devRegistryPath
+				)
+		);
+
+		const searchParams = new URLSearchParams({
+			"test-method": "tail",
+		});
+
+		await vi.waitFor(async () => {
+			// Trigger tail handler of exported-handler via exported-handler-with-assets
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["hello world", "this is the 2nd log"]),
+			});
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["some other log"]),
+			});
+
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(await response.json()).toEqual({
+				worker: "exported-handler",
+				tailEvents: expect.arrayContaining([
+					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
+					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
@@ -715,14 +766,16 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		}, waitForTimeout);
 	});
 
-	it("supports tail handler", async ({ devRegistryPath }) => {
-		const exportedHandler = await runViteDev(
-			"vite.exported-handler.config.ts",
-			devRegistryPath
-		);
-		const workerEntrypointWithAssets = await runViteDev(
-			"vite.worker-entrypoint-with-assets.config.ts",
-			devRegistryPath
+	it("supports tail handler when the consumer has assets", async ({
+		devRegistryPath,
+	}) => {
+		const [exportedHandlerWithAssets, workerEntrypoint] = await startTailPair(
+			() =>
+				runViteDev(
+					"vite.exported-handler-with-assets.config.ts",
+					devRegistryPath
+				),
+			() => runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath)
 		);
 
 		const searchParams = new URLSearchParams({
@@ -730,38 +783,55 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		});
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of worker-entrypoint via exported-handler
-			await fetch(`${exportedHandler}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["hello world", "this is the 2nd log"]),
-			});
-			await fetch(`${exportedHandler}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
-
-			const response = await fetch(
-				`${workerEntrypointWithAssets}?${searchParams}`
-			);
-
-			expect(await response.json()).toEqual({
-				worker: "Worker Entrypoint",
-				tailEvents: expect.arrayContaining([
-					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
-					[["[exported-handler]"], ["some other log"]],
-				]),
-			});
-		}, waitForTimeout);
-
-		await vi.waitFor(async () => {
-			// Trigger tail handler of exported-handler via worker-entrypoint
-			await fetch(`${workerEntrypointWithAssets}?${searchParams}`, {
+			// Trigger tail handler of exported-handler-with-assets via worker-entrypoint
+			await fetch(`${workerEntrypoint}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
 			});
-			await fetch(`${workerEntrypointWithAssets}?${searchParams}`, {
+			await fetch(`${workerEntrypoint}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["yet another log", "and another one"]),
+			});
+
+			const response = await fetch(
+				`${exportedHandlerWithAssets}?${searchParams}`
+			);
+
+			expect(await response.json()).toEqual({
+				worker: "exported-handler",
+				tailEvents: expect.arrayContaining([
+					[["[Worker Entrypoint]"], ["hello from test"]],
+					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+				]),
+			});
+		}, waitForTimeout);
+	});
+
+	it("supports tail handler when the producer has assets", async ({
+		devRegistryPath,
+	}) => {
+		const [exportedHandler, exportedHandlerWithAssets] = await startTailPair(
+			() => runViteDev("vite.exported-handler.config.ts", devRegistryPath),
+			() =>
+				runViteDev(
+					"vite.exported-handler-with-assets.config.ts",
+					devRegistryPath
+				)
+		);
+
+		const searchParams = new URLSearchParams({
+			"test-method": "tail",
+		});
+
+		await vi.waitFor(async () => {
+			// Trigger tail handler of exported-handler via exported-handler-with-assets
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["hello world", "this is the 2nd log"]),
+			});
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["some other log"]),
 			});
 
 			const response = await fetch(`${exportedHandler}?${searchParams}`);
@@ -769,8 +839,8 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await response.json()).toEqual({
 				worker: "exported-handler",
 				tailEvents: expect.arrayContaining([
-					[["[Worker Entrypoint]"], ["hello from test"]],
-					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
+					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
@@ -977,14 +1047,16 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		}, waitForTimeout);
 	});
 
-	it("supports tail handler", async ({ devRegistryPath }) => {
-		const exportedHandlerWithStaticAssets = await runViteDev(
-			"vite.exported-handler-with-assets.config.ts",
-			devRegistryPath
-		);
-		const workerEntrypoint = await runWranglerDev(
-			"wrangler.worker-entrypoint.jsonc",
-			devRegistryPath
+	it("supports tail handler from wrangler dev to vite dev", async ({
+		devRegistryPath,
+	}) => {
+		const [exportedHandlerWithAssets, workerEntrypoint] = await startTailPair(
+			() =>
+				runViteDev(
+					"vite.exported-handler-with-assets.config.ts",
+					devRegistryPath
+				),
+			() => runWranglerDev("wrangler.worker-entrypoint.jsonc", devRegistryPath)
 		);
 
 		const searchParams = new URLSearchParams({
@@ -992,29 +1064,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		});
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of worker-entrypoint via exported-handler
-			await fetch(`${exportedHandlerWithStaticAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["hello world", "this is the 2nd log"]),
-			});
-			await fetch(`${exportedHandlerWithStaticAssets}?${searchParams}`, {
-				method: "POST",
-				body: JSON.stringify(["some other log"]),
-			});
-
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
-
-			expect(await response.json()).toEqual({
-				worker: "Worker Entrypoint",
-				tailEvents: expect.arrayContaining([
-					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
-					[["[exported-handler]"], ["some other log"]],
-				]),
-			});
-		}, waitForTimeout);
-
-		await vi.waitFor(async () => {
-			// Trigger tail handler of exported-handler via worker-entrypoint
+			// Trigger tail handler of exported-handler-with-assets via worker-entrypoint
 			await fetch(`${workerEntrypoint}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
@@ -1025,7 +1075,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			});
 
 			const response = await fetch(
-				`${exportedHandlerWithStaticAssets}?${searchParams}`
+				`${exportedHandlerWithAssets}?${searchParams}`
 			);
 
 			expect(await response.json()).toEqual({
@@ -1033,6 +1083,45 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
+				]),
+			});
+		}, waitForTimeout);
+	});
+
+	it("supports tail handler from vite dev to wrangler dev", async ({
+		devRegistryPath,
+	}) => {
+		const [exportedHandler, exportedHandlerWithAssets] = await startTailPair(
+			() => runWranglerDev("wrangler.exported-handler.jsonc", devRegistryPath),
+			() =>
+				runViteDev(
+					"vite.exported-handler-with-assets.config.ts",
+					devRegistryPath
+				)
+		);
+
+		const searchParams = new URLSearchParams({
+			"test-method": "tail",
+		});
+
+		await vi.waitFor(async () => {
+			// Trigger tail handler of exported-handler via exported-handler-with-assets
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["hello world", "this is the 2nd log"]),
+			});
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
+				method: "POST",
+				body: JSON.stringify(["some other log"]),
+			});
+
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(await response.json()).toEqual({
+				worker: "exported-handler",
+				tailEvents: expect.arrayContaining([
+					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
+					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);

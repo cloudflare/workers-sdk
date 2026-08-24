@@ -1,17 +1,17 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { InputWorkerSchema, SettingsSchema } from "@cloudflare/config";
+import { InputSettingsSchema, InputWorkerSchema } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { BuildOutputError } from "../errors";
 import {
-	getRootConfigPath,
+	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
 } from "../paths";
 import { readBuildOutput } from "../read";
-import { writeRootConfig, writeWorkerConfig } from "../write";
+import { writeSettingsConfig, writeWorkerConfig } from "../write";
 import type { ParsedOutputWorkerConfig } from "@cloudflare/config";
 
 const manifest: ParsedOutputWorkerConfig["manifest"] = {
@@ -19,7 +19,7 @@ const manifest: ParsedOutputWorkerConfig["manifest"] = {
 	modules: { "index.js": { type: "esm" } },
 };
 
-const parsedSettingsConfig = SettingsSchema.parse({
+const parsedSettingsConfig = InputSettingsSchema.parse({
 	type: "settings",
 	accountId: "1234567890",
 	complianceRegion: "public",
@@ -135,7 +135,7 @@ describe("readBuildOutput", () => {
 
 		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
 		await expect(readBuildOutput(root)).rejects.toThrow(
-			/No Worker config found/
+			/no Worker config found/
 		);
 	});
 
@@ -163,7 +163,7 @@ describe("readBuildOutput", () => {
 	it("returns the top-level settings when present", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		await writeRootConfig(root, parsedSettingsConfig);
+		await writeSettingsConfig(root, parsedSettingsConfig);
 
 		const { settings } = await readBuildOutput(root);
 
@@ -181,19 +181,73 @@ describe("readBuildOutput", () => {
 		expect(settings).toBeUndefined();
 	});
 
+	it("returns the mode recorded in the top-level config", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeSettingsConfig(root, parsedSettingsConfig, "staging");
+
+		const { settings } = await readBuildOutput(root);
+
+		// The settings are returned whole, so `mode` sits alongside the fields
+		// the user declared.
+		expect(settings).toEqual({ ...parsedSettingsConfig, mode: "staging" });
+	});
+
+	it("returns an undefined mode when the top-level config records none", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeSettingsConfig(root, parsedSettingsConfig);
+
+		const { settings } = await readBuildOutput(root);
+
+		expect(settings?.mode).toBeUndefined();
+	});
+
+	it("returns an undefined mode when the top-level config is absent", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+
+		const { settings } = await readBuildOutput(root);
+
+		expect(settings?.mode).toBeUndefined();
+	});
+
+	it("throws when the recorded mode is not a string", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		const configPath = getSettingsConfigPath(root);
+		await fsp.mkdir(path.dirname(configPath), { recursive: true });
+		await fsp.writeFile(
+			configPath,
+			JSON.stringify({ type: "settings", mode: 123 })
+		);
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/invalid settings config/
+		);
+	});
+
 	it("throws when the top-level config fails schema validation", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		const configPath = getRootConfigPath(root);
+		const configPath = getSettingsConfigPath(root);
 		await fsp.mkdir(path.dirname(configPath), { recursive: true });
 		await fsp.writeFile(
 			configPath,
 			JSON.stringify({ type: "settings", nope: 1 })
 		);
 
-		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/invalid settings config/
+		);
 	});
 
 	it("reads the top-level settings before the Worker config", async ({
@@ -202,13 +256,15 @@ describe("readBuildOutput", () => {
 		const root = process.cwd();
 		// Invalid settings plus a missing Worker config: the settings error
 		// surfaces first because settings are read first.
-		const configPath = getRootConfigPath(root);
+		const configPath = getSettingsConfigPath(root);
 		await fsp.mkdir(path.dirname(configPath), { recursive: true });
 		await fsp.writeFile(
 			configPath,
 			JSON.stringify({ type: "settings", nope: 1 })
 		);
 
-		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/invalid settings config/
+		);
 	});
 });

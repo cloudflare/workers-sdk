@@ -76,7 +76,7 @@ export const STREAM_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				STREAM_PLUGIN_NAME,
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 

@@ -12,6 +12,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageService,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -22,11 +23,18 @@ import type {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
-import type { MiniflareBinding, ParsedWorkerOptions, Plugin } from "../shared";
+import type {
+	MiniflareBinding,
+	ParsedInstanceOptions,
+	ParsedWorkerOptions,
+	Plugin,
+} from "../shared";
 
 /** Local-dev S3 credentials, derived from the parsed R2 binding. */
 type R2S3Credentials = NonNullable<
-	Extract<MiniflareBinding, { type: "r2" }>["s3Credentials"]
+	NonNullable<
+		Extract<MiniflareBinding, { type: "r2" }>["dev"]
+	>["experimentalS3Credentials"]
 >;
 
 export const R2_PLUGIN_NAME = "r2";
@@ -46,7 +54,11 @@ const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 };
 
 export function getR2PublicService(
-	allWorkerOpts: ParsedWorkerOptions[]
+	allWorkerOpts: ParsedWorkerOptions[],
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>
 ): Service | undefined {
 	const publicBucketIds = new Set<string>();
 	for (const worker of allWorkerOpts) {
@@ -62,10 +74,11 @@ export function getR2PublicService(
 	}
 	const bindings = Array.from(publicBucketIds).map<Worker_Binding>((id) => ({
 		name: id,
-		r2Bucket: {
-			name: R2_LOCAL_ENTRY_SERVICE_NAME,
-			props: buildObjectEntryProps(id),
-		},
+		r2Bucket: getStorageService(
+			R2_LOCAL_ENTRY_SERVICE_NAME,
+			buildObjectEntryProps(id),
+			sharedOptions
+		),
 	}));
 	return {
 		name: R2_PUBLIC_SERVICE_NAME,
@@ -78,14 +91,19 @@ export function getR2PublicService(
 }
 
 export function getR2S3Service(
-	allWorkerOpts: ParsedWorkerOptions[]
+	allWorkerOpts: ParsedWorkerOptions[],
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>
 ): Service | undefined {
 	const credentialsById: Record<string, R2S3Credentials> = {};
 	for (const worker of allWorkerOpts) {
 		for (const [, bucket] of getEnvBindingsOfType(worker.config, "r2")) {
+			const s3Credentials = bucket.dev?.experimentalS3Credentials;
 			if (
 				getRemoteProxyConnectionString(bucket, worker.dev) !== undefined ||
-				bucket.s3Credentials === undefined
+				s3Credentials === undefined
 			) {
 				continue;
 			}
@@ -94,8 +112,8 @@ export function getR2S3Service(
 			const existing = credentialsById[id];
 			if (
 				existing !== undefined &&
-				(existing.accessKeyId !== bucket.s3Credentials.accessKeyId ||
-					existing.secretAccessKey !== bucket.s3Credentials.secretAccessKey)
+				(existing.accessKeyId !== s3Credentials.accessKeyId ||
+					existing.secretAccessKey !== s3Credentials.secretAccessKey)
 			) {
 				throw new MiniflareCoreError(
 					"ERR_DIFFERENT_S3_CREDENTIALS",
@@ -103,7 +121,7 @@ export function getR2S3Service(
 				);
 			}
 
-			credentialsById[id] = bucket.s3Credentials;
+			credentialsById[id] = s3Credentials;
 		}
 	}
 
@@ -114,10 +132,11 @@ export function getR2S3Service(
 
 	const bindings = bucketIds.map<Worker_Binding>((id) => ({
 		name: `${R2S3Bindings.BUCKET_PREFIX}${id}`,
-		r2Bucket: {
-			name: R2_LOCAL_ENTRY_SERVICE_NAME,
-			props: buildObjectEntryProps(id),
-		},
+		r2Bucket: getStorageService(
+			R2_LOCAL_ENTRY_SERVICE_NAME,
+			buildObjectEntryProps(id),
+			sharedOptions
+		),
 	}));
 	bindings.push({
 		name: R2S3Bindings.JSON_CREDENTIALS,
@@ -137,7 +156,7 @@ export function getR2S3Service(
 
 export const R2_PLUGIN: Plugin = {
 	bindingTypeDescription: "R2 bucket",
-	getBindings(options) {
+	getBindings(options, sharedOptions) {
 		return getEnvBindingsOfType(options.config, "r2").map<Worker_Binding>(
 			([name, bucket]) => {
 				const id = bucket.name;
@@ -152,10 +171,11 @@ export const R2_PLUGIN: Plugin = {
 								name: R2_REMOTE_SERVICE_NAME,
 								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 							}
-						: {
-								name: R2_LOCAL_ENTRY_SERVICE_NAME,
-								props: buildObjectEntryProps(id),
-							},
+						: getStorageService(
+								R2_LOCAL_ENTRY_SERVICE_NAME,
+								buildObjectEntryProps(id),
+								sharedOptions
+							),
 				};
 			}
 		);
@@ -174,9 +194,10 @@ export const R2_PLUGIN: Plugin = {
 		const services: Service[] = [];
 
 		// One shared entry service for all local buckets (id supplied via props).
-		const hasLocal = buckets.some(
-			([, b]) => getRemoteProxyConnectionString(b, options.dev) === undefined
-		);
+		const hasLocal =
+			buckets.some(
+				([, b]) => getRemoteProxyConnectionString(b, options.dev) === undefined
+			) || sharedOptions.unsafeEnableSharedStorage;
 		if (hasLocal) {
 			services.push({
 				name: R2_LOCAL_ENTRY_SERVICE_NAME,
@@ -242,7 +263,6 @@ export const R2_PLUGIN: Plugin = {
 			};
 			services.push(storageService, objectService);
 		}
-
 		return services;
 	},
 };

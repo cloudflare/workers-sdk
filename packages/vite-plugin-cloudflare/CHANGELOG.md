@@ -1,5 +1,77 @@
 # @cloudflare/vite-plugin
 
+## 1.53.1
+
+### Patch Changes
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`5ae9d5b`](https://github.com/cloudflare/workers-sdk/commit/5ae9d5b205fea31516559f7ad89a21eda671af2f), [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a), [`ce9b151`](https://github.com/cloudflare/workers-sdk/commit/ce9b1510abf5c1152aedc94456f4d7ffe9402248), [`ef73a28`](https://github.com/cloudflare/workers-sdk/commit/ef73a28c1e7a208d730c6de64566bc96f683ca7b), [`649f667`](https://github.com/cloudflare/workers-sdk/commit/649f667bd871061da945881ce953ef8f81caea1a), [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`f2437e6`](https://github.com/cloudflare/workers-sdk/commit/f2437e606fc69891009285831d94b49bf44f6aff), [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17)]:
+  - wrangler@4.125.0
+  - miniflare@5.20260820.0-alpha
+
+## 1.53.0
+
+### Minor Changes
+
+- [#15026](https://github.com/cloudflare/workers-sdk/pull/15026) [`6529f0c`](https://github.com/cloudflare/workers-sdk/commit/6529f0ca5ecda93f67efbaa72a7f9a9f8fd814bf) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Allow containers to be attached to a Durable Object from its `exports` entry
+
+  A container can now be linked to its Durable Object from the export side, using a new `container` field that names an entry in the `containers` array. As a result `containers[].class_name` is now optional — a container that is referenced this way only needs a `name`:
+
+  ```jsonc
+  {
+    "name": "my-worker",
+    "main": "worker.js",
+    "compatibility_date": "2026-07-01",
+    "containers": [
+      { "name": "my-container", "image": "./Dockerfile", "max_instances": 1 }
+    ],
+    "exports": {
+      "MyContainerDO": {
+        "type": "durable-object",
+        "storage": "sqlite",
+        "container": "my-container"
+      }
+    }
+  }
+  ```
+
+  The existing `containers[].class_name` direction keeps working and either direction may be used, but the two must agree: a container that names its Durable Object cannot also be claimed by a different one.
+
+  `container` is only valid on live `durable-object` exports (`created` and `expecting-transfer`) and requires `storage: "sqlite"`. Wrangler now also reports an error when:
+
+  - a `container` reference names a container that does not exist
+  - two Durable Object exports claim the same container
+  - a container and a Durable Object export disagree about which one they are linked to
+  - a container ends up linked to no Durable Object at all
+  - two containers share a `name`
+  - a container's `class_name` names a Durable Object whose `storage` is `legacy-kv`
+  - two containers are attached to the same Durable Object
+
+  That last case was previously accepted but could never work: workerd attaches a single container per Durable Object namespace, and in local development every container for a class builds into the same image tag, so one silently overwrote the other. If you have two containers on one `class_name`, give each its own Durable Object class.
+
+### Patch Changes
+
+- [#15238](https://github.com/cloudflare/workers-sdk/pull/15238) [`3a4fc6b`](https://github.com/cloudflare/workers-sdk/commit/3a4fc6b2fce883248dac4734699d8df89dc7662a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Honor `access.dev` when running Workers with `@cloudflare/vite-plugin`, so `ctx.access.getIdentity()` returns the configured identity.
+
+- [#15028](https://github.com/cloudflare/workers-sdk/pull/15028) [`d4f441f`](https://github.com/cloudflare/workers-sdk/commit/d4f441fae6dd823364d57b0898031890357ee933) Thanks [@harshmathurx](https://github.com/harshmathurx)! - Handle Worker-side request body cancellation without surfacing stream controller errors in local dev.
+
+- [#15185](https://github.com/cloudflare/workers-sdk/pull/15185) [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use a fixed default compatibility date rather than the current date
+
+  When no compatibility date was set, Wrangler, C3 and the Vitest pool all defaulted to the current date. `workerd` only accepts a compatibility date up to 7 days beyond its own release, so whenever a `workerd` release was delayed the default could get ahead of the runtime that had been installed, and local development would fail to start.
+
+  The default is now fixed at the release date of the `workerd` version that ships with each release, which leaves a week of headroom and updates as `workerd` is upgraded. `@cloudflare/vite-plugin` previously inlined the date at which it was built. It now shares the same default.
+
+- [#15239](https://github.com/cloudflare/workers-sdk/pull/15239) [`f431166`](https://github.com/cloudflare/workers-sdk/commit/f43116682a2a08d47383be1125fd6f0b4ae3a0cc) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prevent date-enabled Node.js compatibility from adding conflicting globals to generated runtime types
+
+  Runtime type generation now treats Node.js compatibility enabled by a compatibility date the same way as an explicit `nodejs_compat` flag. Node.js globals continue to come from `@types/node` instead of being generated as `any` declarations that override those types.
+
+- [#15196](https://github.com/cloudflare/workers-sdk/pull/15196) [`8fb2b87`](https://github.com/cloudflare/workers-sdk/commit/8fb2b8760b9ba23d1584156d25c02ca2db8d2d80) Thanks [@skepticfx](https://github.com/skepticfx)! - Use the FedRAMP High managed container registry when Wrangler targets the FedRAMP High compliance region
+
+  Container builds, pushes, deployments, image commands, and local development now select the corresponding production or staging FedRAMP registry and API from either `compliance_region` or `CLOUDFLARE_COMPLIANCE_REGION`.
+
+- Updated dependencies [[`bc5726b`](https://github.com/cloudflare/workers-sdk/commit/bc5726bd0b88856f6781c62b4cb3c9c47b84eb07), [`1277a72`](https://github.com/cloudflare/workers-sdk/commit/1277a72e0d01325c37a05c0e8f5111a45100af77), [`ba54f0d`](https://github.com/cloudflare/workers-sdk/commit/ba54f0d39d1ba7eb5545d8bf9ba43624cfa211f9), [`6529f0c`](https://github.com/cloudflare/workers-sdk/commit/6529f0ca5ecda93f67efbaa72a7f9a9f8fd814bf), [`b7422b0`](https://github.com/cloudflare/workers-sdk/commit/b7422b0a8a2e74bba068a1924992dcfeff0bd126), [`186339c`](https://github.com/cloudflare/workers-sdk/commit/186339cf854cf3522614fb686ec66e6682c569b8), [`4f922dc`](https://github.com/cloudflare/workers-sdk/commit/4f922dc19941db31394357f7e146af320ae1f3d9), [`4d74b8d`](https://github.com/cloudflare/workers-sdk/commit/4d74b8d8fd5c034c012fa13973ee20bedbc844c7), [`2e0c962`](https://github.com/cloudflare/workers-sdk/commit/2e0c962da0c57bdc79b5edcaa64c7b725c1524f0), [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41), [`49f73de`](https://github.com/cloudflare/workers-sdk/commit/49f73de207124171b3f8e9ffb182facb48727388), [`7cee278`](https://github.com/cloudflare/workers-sdk/commit/7cee2784a937c86db6a88455c6efe8e8660ae69c), [`8777180`](https://github.com/cloudflare/workers-sdk/commit/8777180b8239d9df435acee465d02682477e93ea), [`265256a`](https://github.com/cloudflare/workers-sdk/commit/265256a5619fbf82e12473f7bb7c7944bdd368b4), [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41), [`f431166`](https://github.com/cloudflare/workers-sdk/commit/f43116682a2a08d47383be1125fd6f0b4ae3a0cc), [`8fb2b87`](https://github.com/cloudflare/workers-sdk/commit/8fb2b8760b9ba23d1584156d25c02ca2db8d2d80), [`75cf407`](https://github.com/cloudflare/workers-sdk/commit/75cf407fc0d7fa6f4d4d9848a9221e7b16930497)]:
+  - wrangler@4.124.0
+  - miniflare@5.20260815.0-alpha
+
 ## 1.52.1
 
 ### Patch Changes

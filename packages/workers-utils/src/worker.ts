@@ -94,10 +94,20 @@ export interface CfKvNamespace {
 export type CfSendEmailBindings = {
 	name: string;
 	remote?: boolean;
+	allowed_sender_addresses?: string[];
 } & (
-	| { destination_address?: string }
-	| { allowed_destination_addresses?: string[] }
-	| { allowed_sender_addresses?: string[] }
+	| {
+			destination_address: string;
+			allowed_destination_addresses?: never;
+	  }
+	| {
+			destination_address?: never;
+			allowed_destination_addresses: string[];
+	  }
+	| {
+			destination_address?: never;
+			allowed_destination_addresses?: never;
+	  }
 );
 
 /**
@@ -193,7 +203,6 @@ export interface CfWorkflow {
 	class_name: string;
 	binding: string;
 	script_name?: string;
-	remote?: boolean;
 	raw?: boolean;
 	limits?: {
 		steps?: number;

@@ -26,15 +26,15 @@ describe("buildDependantsGraph()", () => {
 		expect(graph).toHaveProperty("miniflare");
 		expect(graph).toHaveProperty("wrangler");
 		expect(graph).toHaveProperty("@cloudflare/vite-plugin");
-		expect(graph).toHaveProperty("@cloudflare/vitest-pool-workers");
+		expect(graph).toHaveProperty("@cloudflare/vitest-plugin");
 		expect(graph).toHaveProperty("create-cloudflare");
 
 		expect(graph["miniflare"]).toContain("wrangler");
-		expect(graph["miniflare"]).toContain("@cloudflare/vitest-pool-workers");
+		expect(graph["miniflare"]).toContain("@cloudflare/vitest-plugin");
 		expect(graph["miniflare"]).toContain("@cloudflare/vite-plugin");
 
 		expect(graph["wrangler"]).toContain("@cloudflare/vite-plugin");
-		expect(graph["wrangler"]).toContain("@cloudflare/vitest-pool-workers");
+		expect(graph["wrangler"]).toContain("@cloudflare/vitest-plugin");
 		expect(graph["wrangler"]).not.toContain("miniflare");
 
 		// Private packages should not be in the graph

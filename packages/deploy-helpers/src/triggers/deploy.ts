@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
 	APIError,
 	formatTime,
@@ -16,7 +17,10 @@ import {
 	publishRoutes,
 	renderRoute,
 } from "./publish-routes";
-import { updateQueueConsumers } from "./queue-consumers";
+import {
+	ensureQueuesExistByConfig,
+	updateQueueConsumers,
+} from "./queue-consumers";
 import { getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
@@ -26,8 +30,23 @@ import type { Config, Route } from "@cloudflare/workers-utils";
 export async function triggersDeploy(
 	props: TriggerProps
 ): Promise<string[] | void> {
-	const { config, accountId, scriptName, routes, crons } = props;
-	validateEventTriggerTargets(config, scriptName);
+	const { config, scriptName, routes, crons } = props;
+
+	if (props.validated !== true) {
+		validateEventTriggerTargets(config, scriptName);
+	}
+
+	if (props.dryRun) {
+		logger.log(`--dry-run: exiting now.`);
+		return;
+	}
+
+	const { accountId } = props;
+	assert(accountId);
+
+	if (props.validated !== true) {
+		await ensureQueuesExistByConfig(config, accountId, true, scriptName);
+	}
 
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
@@ -280,6 +299,16 @@ export async function triggersDeploy(
 						}
 					);
 				}
+				if (workflow.default_retention) {
+					throw new UserError(
+						`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
+							`Configure default_retention on the worker that defines the workflow.`,
+						{
+							telemetryMessage:
+								"triggers deploy workflow default_retention external script",
+						}
+					);
+				}
 				continue;
 			}
 
@@ -299,6 +328,9 @@ export async function triggersDeploy(
 									? workflow.schedules
 									: [workflow.schedules]
 								).map((cron) => ({ cron })),
+							}),
+							...(workflow.default_retention && {
+								default_retention: workflow.default_retention,
 							}),
 						}),
 						headers: {

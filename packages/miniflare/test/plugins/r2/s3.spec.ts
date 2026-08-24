@@ -56,16 +56,26 @@ const ctx = miniflareTest<{ BUCKET: R2Bucket }, MiniflareTestContext>(
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {
-						BUCKET: { type: "r2", name: "bucket", s3Credentials: CREDENTIALS },
+						BUCKET: {
+							type: "r2",
+							name: "bucket",
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
+						},
 						OTHER: {
 							type: "r2",
 							name: "other-bucket",
-							s3Credentials: CREDENTIALS,
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
 						},
 						THIRD: {
 							type: "r2",
 							name: "third-bucket",
-							s3Credentials: THIRD_CREDENTIALS,
+							dev: {
+								experimentalS3Credentials: THIRD_CREDENTIALS,
+							},
 						},
 					},
 				},
@@ -2110,7 +2120,7 @@ test("sets CORS headers on cross-origin responses", async ({ expect }) => {
 	expect(res.headers.get("Access-Control-Expose-Headers")).toBe("*");
 });
 
-test("rejects different s3Credentials for the same bucket", async ({
+test("rejects different S3 credentials for the same bucket", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
@@ -2122,7 +2132,13 @@ test("rejects different s3Credentials for the same bucket", async ({
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default {};"),
 					env: {
-						BUCKET: { type: "r2", name: "shared", s3Credentials: CREDENTIALS },
+						BUCKET: {
+							type: "r2",
+							name: "shared",
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
+						},
 					},
 				},
 			},
@@ -2136,9 +2152,11 @@ test("rejects different s3Credentials for the same bucket", async ({
 						BUCKET: {
 							type: "r2",
 							name: "shared",
-							s3Credentials: {
-								accessKeyId: "B".repeat(32),
-								secretAccessKey: "other-secret",
+							dev: {
+								experimentalS3Credentials: {
+									accessKeyId: "B".repeat(32),
+									secretAccessKey: "other-secret",
+								},
 							},
 						},
 					},
@@ -2171,7 +2189,13 @@ test("verifies signatures against the original host when `upstream` is set", asy
 						"export default { fetch: () => new Response(null, { status: 404 }) };"
 					),
 					env: {
-						BUCKET: { type: "r2", name: "bucket", s3Credentials: CREDENTIALS },
+						BUCKET: {
+							type: "r2",
+							name: "bucket",
+							dev: {
+								experimentalS3Credentials: CREDENTIALS,
+							},
+						},
 					},
 				},
 			},

@@ -1,5 +1,83 @@
 # @cloudflare/config
 
+## 0.7.0
+
+### Minor Changes
+
+- [#14995](https://github.com/cloudflare/workers-sdk/pull/14995) [`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Add `connect` trigger for raw sockets
+
+  You can now configure a Worker to receive raw socket connections during `wrangler dev`, delivered directly to the Worker's `connect(socket, env, ctx)` handler:
+
+  ```jsonc
+  {
+    "connect": [{ "protocol": "tcp", "port": 5432 }]
+  }
+  ```
+
+  Each entry opens a listening socket on `127.0.0.1` (or the given `address`) that forwards incoming connections straight to the Worker, bypassing the local dev HTTP entry point. This requires the `experimental` compatibility flag. Only `"tcp"` is supported at the moment.
+
+  `@cloudflare/config` also supports declaring this trigger via `triggers.connect(...)`, which lowers to the `connect` field above:
+
+  ```ts
+  import { defineWorker, triggers } from "@cloudflare/config";
+
+  export default defineWorker({
+    triggers: [
+      triggers.connect({ protocol: "tcp", port: 5432, address: "127.0.0.1" }),
+    ],
+  });
+  ```
+
+- [#15130](https://github.com/cloudflare/workers-sdk/pull/15130) [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864) Thanks [@emily-shen](https://github.com/emily-shen)! - Add R2 local S3 credentials to the shared config binding shape
+
+  R2 bindings now support `localDev.experimentalS3Credentials`, matching Wrangler's existing local S3 endpoint credentials configuration.
+
+### Patch Changes
+
+- [#15130](https://github.com/cloudflare/workers-sdk/pull/15130) [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864) Thanks [@emily-shen](https://github.com/emily-shen)! - Default local Analytics Engine dataset names in Miniflare
+
+  Analytics Engine dataset bindings without an explicit `name` now fallback to the worker and binding name as a default.
+
+- [#15130](https://github.com/cloudflare/workers-sdk/pull/15130) [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove unsupported `remote` configuration from Workflow bindings
+
+  Workflow bindings no longer accept `remote` in configuration, as remote Workflow bindings have never actually been supported.
+
+## 0.6.0
+
+### Minor Changes
+
+- [#15026](https://github.com/cloudflare/workers-sdk/pull/15026) [`6529f0c`](https://github.com/cloudflare/workers-sdk/commit/6529f0ca5ecda93f67efbaa72a7f9a9f8fd814bf) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add a `container` option to `exports.durableObject()`
+
+  Live Durable Object exports can now attach a container by name, matching the new `container` field in the Wrangler configuration format:
+
+  ```typescript
+  import { defineWorker, exports } from "@cloudflare/config";
+
+  export default defineWorker({
+    name: "my-worker",
+    compatibilityDate: "2026-07-01",
+    exports: {
+      MyContainerDO: exports.durableObject({
+        storage: "sqlite",
+        container: "my-container",
+      }),
+    },
+  });
+  ```
+
+  Containers are only supported on the SQLite storage engine, so `container` is only offered alongside `storage: "sqlite"`. Passing it with `storage: "legacy-kv"` is a type error rather than something only caught on deploy:
+
+  ```typescript
+  exports.durableObject({
+    storage: "legacy-kv",
+    // Object literal may only specify known properties,
+    // and 'container' does not exist in type '{ storage: "legacy-kv" }'
+    container: "my-container",
+  });
+  ```
+
+  This is an experimental feature: containers themselves are not yet configurable from `cloudflare.config.ts`, so the field is only useful once they are.
+
 ## 0.5.0
 
 ### Minor Changes

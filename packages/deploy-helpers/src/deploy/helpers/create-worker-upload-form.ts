@@ -219,25 +219,25 @@ export function createWorkerUploadForm(
 	});
 
 	send_email.forEach((emailBinding: CfSendEmailBindings) => {
-		const destination_address =
-			"destination_address" in emailBinding
-				? emailBinding.destination_address
-				: undefined;
-		const allowed_destination_addresses =
-			"allowed_destination_addresses" in emailBinding
-				? emailBinding.allowed_destination_addresses
-				: undefined;
-		const allowed_sender_addresses =
-			"allowed_sender_addresses" in emailBinding
-				? emailBinding.allowed_sender_addresses
-				: undefined;
-		metadataBindings.push({
+		const shared = {
 			name: emailBinding.name,
-			type: "send_email",
-			destination_address,
-			allowed_destination_addresses,
-			allowed_sender_addresses,
-		});
+			type: "send_email" as const,
+			allowed_sender_addresses: emailBinding.allowed_sender_addresses,
+		};
+		if (emailBinding.destination_address !== undefined) {
+			metadataBindings.push({
+				...shared,
+				destination_address: emailBinding.destination_address,
+			});
+		} else if (emailBinding.allowed_destination_addresses !== undefined) {
+			metadataBindings.push({
+				...shared,
+				allowed_destination_addresses:
+					emailBinding.allowed_destination_addresses,
+			});
+		} else {
+			metadataBindings.push(shared);
+		}
 	});
 
 	durable_objects.forEach(({ name, class_name, script_name, environment }) => {

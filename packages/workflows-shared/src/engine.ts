@@ -64,6 +64,8 @@ import type {
 interface Env {
 	ENGINE: DurableObjectNamespace<Engine>;
 	USER_WORKFLOW: WorkflowEntrypoint;
+	MINIFLARE_LOOPBACK?: Fetcher;
+	WORKFLOW_NAME?: string;
 	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
 }
 
@@ -797,7 +799,7 @@ export class Engine extends DurableObject<Env> {
 	}
 
 	// Called by the dispose function when introspecting the instance in tests
-	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-pool-workers
+	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-plugin
 	async unsafeAbort(reason?: string) {
 		await this.ctx.storage.sync();
 		await this.ctx.storage.deleteAll();
@@ -1035,6 +1037,37 @@ export class Engine extends DurableObject<Env> {
 		);
 
 		await this.abort(ABORT_REASONS.USER_TERMINATE);
+	}
+
+	/** Deletes all instance state and aborts its current execution. */
+	async deleteInstance(): Promise<void> {
+		if ((await this.ctx.storage.get(INSTANCE_METADATA)) === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		await this.ctx.storage.deleteAll();
+
+		if (
+			this.env.MINIFLARE_LOOPBACK !== undefined &&
+			this.env.WORKFLOW_NAME !== undefined
+		) {
+			try {
+				const response = await this.env.MINIFLARE_LOOPBACK.fetch(
+					`http://localhost/core/workflow-storage/${encodeURIComponent(this.env.WORKFLOW_NAME)}/${this.ctx.id.toString()}?defer=1`,
+					{ method: "DELETE" }
+				);
+				if (!response.ok && response.status !== 404) {
+					console.error("Failed to delete persisted workflow instance");
+				}
+			} catch (error) {
+				console.error("Failed to delete persisted workflow instance", error);
+			}
+		}
+
+		await this.abort(ABORT_REASONS.USER_DELETE);
 	}
 
 	async userTriggeredPause() {

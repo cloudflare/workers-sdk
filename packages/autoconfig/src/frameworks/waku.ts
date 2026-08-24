@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { transformFile } from "@cloudflare/codemod";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
@@ -45,14 +45,17 @@ export class Waku extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./src/waku.server",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./src/waku.server",
 				assets: {
-					binding: "ASSETS",
-					directory: "./dist/public",
-					html_handling: "drop-trailing-slash",
+					htmlHandling: "drop-trailing-slash",
+				},
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./dist/public" },
 		};
 	}
 }

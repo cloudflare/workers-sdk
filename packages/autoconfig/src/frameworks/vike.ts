@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { transformFile } from "@cloudflare/codemod";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
 import { isPackageInstalled } from "./utils/packages";
@@ -60,8 +60,9 @@ export class Vike extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "virtual:photon:cloudflare:server-entry",
+			buildTool: "vite",
+			workerConfig: {
+				entrypoint: "virtual:photon:cloudflare:server-entry",
 			},
 			packageJsonScriptsOverrides: {
 				preview: "vike build && vike preview",

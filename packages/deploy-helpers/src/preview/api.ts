@@ -79,6 +79,14 @@ export interface DeploymentResource {
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
 	cache?: CacheOptions;
+	annotations?: {
+		"workers/commit_sha"?: string;
+		"workers/message"?: string;
+		"workers/pull_request_number"?: string;
+		"workers/pull_request_url"?: string;
+		"workers/repository_url"?: string;
+		"workers/tag"?: string;
+	};
 	env?: EnvBindings;
 	created_on: string;
 }
@@ -101,7 +109,11 @@ export type CreatePreviewDeploymentRequestParams = {
 	compatibility_date?: string;
 	compatibility_flags?: string[];
 	annotations?: {
+		"workers/commit_sha"?: string;
 		"workers/message"?: string;
+		"workers/pull_request_number"?: string;
+		"workers/pull_request_url"?: string;
+		"workers/repository_url"?: string;
 		"workers/tag"?: string;
 	};
 	migrations?: CfWorkerInit["migrations"];
@@ -109,6 +121,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	placement?: CfPlacement;
 	cache?: CacheOptions;
 	env?: EnvBindings;
+	containers?: Array<{ class_name: string }>;
 };
 
 export type CreatePreviewRequestParams = {
@@ -162,6 +175,27 @@ export type PreviewBaseConfigPatch = Partial<Omit<PreviewBaseConfig, "env">> & {
 type WorkerPreviewBaseConfigResource = {
 	previews_base_config?: PreviewBaseConfig;
 };
+
+/** Create an undeployed Worker that can own Preview resources. */
+export async function createPreviewParentWorker(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	workersDevEnabled: boolean,
+	previewsEnabled: boolean
+): Promise<void> {
+	await fetchResult(config, `/accounts/${accountId}/workers/workers`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			name: workerName,
+			subdomain: {
+				enabled: workersDevEnabled,
+				previews_enabled: previewsEnabled,
+			},
+		}),
+	});
+}
 
 export async function getPreview(
 	config: Config,
