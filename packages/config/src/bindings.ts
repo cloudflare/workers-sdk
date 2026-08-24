@@ -446,25 +446,37 @@ export interface SecretsStoreSecretBinding extends SecretsStoreSecretBindingOpti
 	type: "secrets-store-secret";
 }
 
-interface SendEmailBindingOptions {
-	/** If this binding should be restricted to a specific verified address. */
-	destinationAddress?: string;
-	/** If this binding should be restricted to a set of verified addresses. */
-	allowedDestinationAddresses?: string[];
+type SendEmailDestinationOptions =
+	| {
+			/** If this binding should be restricted to a specific verified address. */
+			destinationAddress: string;
+			allowedDestinationAddresses?: never;
+	  }
+	| {
+			destinationAddress?: never;
+			/** If this binding should be restricted to a set of verified addresses. */
+			allowedDestinationAddresses: string[];
+	  }
+	| {
+			destinationAddress?: never;
+			allowedDestinationAddresses?: never;
+	  };
+
+type SendEmailBindingOptions = SendEmailDestinationOptions & {
 	/** If this binding should be restricted to a set of sender addresses. */
 	allowedSenderAddresses?: string[];
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
-}
+};
 
 /**
  * Binding for sending email from inside the Worker.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#email-bindings
  */
-export interface SendEmailBinding extends SendEmailBindingOptions {
+export type SendEmailBinding = SendEmailBindingOptions & {
 	type: "send-email";
-}
+};
 
 interface StreamBindingOptions {
 	/** Options that only apply during local development. */
@@ -536,10 +548,12 @@ type VpcNetworkBindingOptions =
 	| {
 			/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with `networkId`. */
 			tunnelId: string;
+			networkId?: never;
 			/** Options that only apply during local development. */
 			dev?: BindingDevOptions;
 	  }
 	| {
+			tunnelId?: never;
 			/** The network ID to route traffic through. Mutually exclusive with `tunnelId`. */
 			networkId: string;
 			/** Options that only apply during local development. */

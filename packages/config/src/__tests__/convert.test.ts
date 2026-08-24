@@ -461,13 +461,17 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps send-email with all address fields", ({ expect }) => {
+		it("maps send-email address restrictions", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					EM: {
+					EM_DESTINATION: {
 						type: "send-email",
 						destinationAddress: "dest@example.com",
+						allowedSenderAddresses: ["sender@x.com"],
+					},
+					EM_ALLOWLIST: {
+						type: "send-email",
 						allowedDestinationAddresses: ["a@x.com", "b@x.com"],
 						allowedSenderAddresses: ["sender@x.com"],
 					},
@@ -475,8 +479,12 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.send_email).toEqual([
 				{
-					name: "EM",
+					name: "EM_DESTINATION",
 					destination_address: "dest@example.com",
+					allowed_sender_addresses: ["sender@x.com"],
+				},
+				{
+					name: "EM_ALLOWLIST",
 					allowed_destination_addresses: ["a@x.com", "b@x.com"],
 					allowed_sender_addresses: ["sender@x.com"],
 				},

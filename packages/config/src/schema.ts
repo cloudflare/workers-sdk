@@ -1,4 +1,5 @@
 import * as z from "zod";
+import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { SettingsConfig, WorkerConfig } from "./types";
 
 const RemoteBindingDevSchema = z.strictObject({
@@ -171,13 +172,23 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		storeId: z.string(),
 		secretName: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("send-email"),
-		destinationAddress: z.string().optional(),
-		allowedDestinationAddresses: z.array(z.string()).optional(),
-		allowedSenderAddresses: z.array(z.string()).optional(),
-		dev: RemoteBindingDevSchema.optional(),
-	}),
+	z
+		.strictObject({
+			type: z.literal("send-email"),
+			destinationAddress: z.string().optional(),
+			allowedDestinationAddresses: z.array(z.string()).optional(),
+			allowedSenderAddresses: z.array(z.string()).optional(),
+			dev: RemoteBindingDevSchema.optional(),
+		})
+		.refine(
+			(value): value is SendEmailBinding =>
+				value.destinationAddress === undefined ||
+				value.allowedDestinationAddresses === undefined,
+			{
+				message:
+					'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"',
+			}
+		),
 	z.strictObject({
 		type: z.literal("stream"),
 		dev: RemoteBindingDevSchema.optional(),
@@ -201,18 +212,21 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 			networkId: z.string().optional(),
 			dev: RemoteBindingDevSchema.optional(),
 		})
-		.superRefine((value, ctx) => {
-			const hasTunnel = value.tunnelId !== undefined;
-			const hasNetwork = value.networkId !== undefined;
-			if (hasTunnel === hasNetwork) {
-				ctx.addIssue({
-					code: "custom",
-					message: hasTunnel
+		.refine(
+			(value): value is VpcNetworkBinding =>
+				(value.tunnelId !== undefined) !== (value.networkId !== undefined),
+			{
+				error: ({ input }) => {
+					const value = input as {
+						tunnelId?: string;
+						networkId?: string;
+					};
+					return value.tunnelId !== undefined && value.networkId !== undefined
 						? `"vpc-network" bindings must specify exactly one of "tunnelId" or "networkId", not both`
-						: `"vpc-network" bindings must specify either "tunnelId" or "networkId"`,
-				});
+						: `"vpc-network" bindings must specify either "tunnelId" or "networkId"`;
+				},
 			}
-		}),
+		),
 	z.strictObject({
 		type: z.literal("web-search"),
 		dev: RemoteBindingDevSchema.optional(),
@@ -679,25 +693,28 @@ const _assertSchemaMatchesWorkerConfig: _AssertSchemaMatchesWorkerConfig = [
 void _assertSchemaMatchesWorkerConfig;
 
 /**
- * Unidirectional drift check for `env`. The public binding return types
- * (e.g. `AiBinding`) carry phantom `__typeParams` / `__config` fields for
- * inference helpers that the schema does not (and cannot) validate at
- * runtime, so a bidirectional check would always fail in that direction.
+ * Drift checks between the schema and public `env` types. Schema input is
+ * intentionally broader for bindings with cross-field validation, so only
+ * assert that every public binding is accepted as input. After parsing, the
+ * schema output and public types should match bidirectionally.
  *
- * We therefore only assert that `WorkerConfig['env']` is assignable to
- * `z.input<typeof InputWorkerSchema>['env']` — i.e. every binding shape
- * the public type accepts is something the schema is willing to parse.
- * This catches drift where the public type drops a field the schema
- * still requires, renames a field, changes a field's type to one the
- * schema rejects, or adds a binding the schema doesn't know about.
+ * These checks catch fields or bindings that are missing, renamed, or typed
+ * differently between the public definitions and the schema.
  */
-type _AssertWorkerConfigEnvExtendsSchema = WorkerConfig["env"] extends z.input<
-	typeof InputWorkerSchema
->["env"]
-	? true
-	: false;
-const _assertWorkerConfigEnvExtendsSchema: _AssertWorkerConfigEnvExtendsSchema = true;
-void _assertWorkerConfigEnvExtendsSchema;
+type _AssertSchemaEnvMatchesWorkerConfig = [
+	WorkerConfig["env"] extends z.input<typeof InputWorkerSchema>["env"]
+		? true
+		: false,
+	z.output<typeof InputWorkerSchema>["env"] extends WorkerConfig["env"]
+		? true
+		: false,
+	WorkerConfig["env"] extends z.output<typeof InputWorkerSchema>["env"]
+		? true
+		: false,
+];
+const _assertSchemaEnvMatchesWorkerConfig: _AssertSchemaEnvMatchesWorkerConfig =
+	[true, true, true];
+void _assertSchemaEnvMatchesWorkerConfig;
 
 /**
  * Bidirectional drift check between {@link SettingsSchema} and the public
