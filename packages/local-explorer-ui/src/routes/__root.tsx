@@ -5,7 +5,7 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { localExplorerListWorkers } from "../api";
 import { NotFound } from "../components/NotFound";
 import { AppSidebar } from "../components/Sidebar";
@@ -23,6 +23,7 @@ import {
 	loadThemeMode,
 	saveThemeMode,
 } from "../utils/theme-state";
+import { getWorkerChangeDestination } from "../utils/worker-navigation";
 import type { ThemeMode } from "../utils/theme-state";
 
 export const Route = createRootRoute({
@@ -39,6 +40,10 @@ function RootLayout() {
 	const loaderData = Route.useLoaderData();
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
+	const isEmailList =
+		currentPath === "/email/sending" ||
+		currentPath === "/email/routing" ||
+		currentPath === "/email/routing/";
 	const router = useRouter();
 
 	const [sidebarOpen, setSidebarOpen] = useState<boolean>(loadSidebarOpenState);
@@ -72,20 +77,41 @@ function RootLayout() {
 
 	const selectedWorker = selectedWorkerObj?.name ?? "";
 
+	useEffect(() => {
+		if (selectedWorker === "") {
+			return;
+		}
+
+		const currentSearch = new URLSearchParams(routerState.location.searchStr);
+		if (currentSearch.get("worker") === selectedWorker) {
+			return;
+		}
+
+		currentSearch.set("worker", selectedWorker);
+		router.history.replace(
+			`${window.location.pathname}?${currentSearch.toString()}`
+		);
+	}, [router, routerState.location.searchStr, selectedWorker]);
+
 	const handleWorkerChange = useCallback(
 		(workerName: string) => {
 			const currentSearch = new URLSearchParams(routerState.location.searchStr);
 			currentSearch.set("worker", workerName);
-			router.history.push(
-				`${window.location.pathname}?${currentSearch.toString()}`
+			// When viewing a specific email on the routing detail page, the selected
+			// email belongs to the previous worker and won't exist under the new one.
+			// Send the user back to the parent list page for the interface they're
+			// using ("Routing" or "Sending") while preserving the worker selection.
+			const destinationPath = getWorkerChangeDestination(
+				window.location.pathname
 			);
+			router.history.push(`${destinationPath}?${currentSearch.toString()}`);
 		},
 		[router, routerState.location.searchStr]
 	);
 
 	return (
 		<Toasty>
-			<div className="flex h-screen">
+			<div className="flex h-screen overflow-hidden">
 				<Sidebar.Provider
 					onOpenChange={handleSidebarOpenChange}
 					open={sidebarOpen}
@@ -100,7 +126,11 @@ function RootLayout() {
 						themeMode={themeMode}
 						workers={visibleWorkers}
 					/>
-					<main className="flex flex-1 flex-col overflow-y-auto">
+					<main
+						className={`flex min-h-0 flex-1 flex-col ${
+							isEmailList ? "overflow-hidden" : "overflow-y-auto"
+						}`}
+					>
 						<Outlet />
 					</main>
 				</Sidebar.Provider>

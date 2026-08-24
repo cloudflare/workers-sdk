@@ -2,6 +2,8 @@ import { afterEach, describe, test } from "vitest";
 import { page, viteUrl } from "./utils";
 
 const WORKERS_ROUTE = "**/cdn-cgi/local/explorer/api/local/workers";
+const EMAIL_ROUTING_DETAIL_ROUTE =
+	"**/cdn-cgi/local/explorer/api/local/email/routing?*";
 
 function createWorkers(count: number) {
 	return Array.from({ length: count }, (_, index) => ({
@@ -32,11 +34,113 @@ function waitForWorkersResponse() {
 	);
 }
 
+async function mockEmailRoutingDetail(): Promise<void> {
+	await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
+		const emailId = new URL(route.request().url()).searchParams.get("email_id");
+		await route.fulfill({
+			contentType: "application/json",
+			body: JSON.stringify({
+				errors: [],
+				messages: emailId
+					? [
+							{
+								code: 10604,
+								message:
+									"Displayed received email content was truncated during local capture. The complete message was still delivered to the Worker.",
+							},
+						]
+					: [],
+				result: emailId
+					? {
+							messageId: "<test-email-id>",
+							from: "sender@example.com",
+							html: "<p>Rendered received HTML body</p>",
+							outcome: "ok",
+							raw: "Content-Type: text/plain\r\n\r\nPlain received text body",
+							to: "recipient@example.com",
+							subject: "Test email",
+							text: "Plain received text body",
+							receivedAt: "2024-01-01T00:00:00.000Z",
+							rawSize: 42,
+							attachments: [],
+							events: [],
+							forwards: [],
+							replies: [],
+						}
+					: [],
+				result_info: emailId
+					? undefined
+					: { count: 0, has_more: false, per_page: 25 },
+				success: true,
+			}),
+		});
+	});
+}
+
 afterEach(async () => {
 	await page.unroute(WORKERS_ROUTE);
+	await page.unroute(EMAIL_ROUTING_DETAIL_ROUTE);
 });
 
 describe("worker selector", () => {
+	test("discards stale email lists after switching workers", async ({
+		expect,
+	}) => {
+		let releaseStaleResponse: (() => void) | undefined;
+		const staleResponse = new Promise<void>((resolve) => {
+			releaseStaleResponse = resolve;
+		});
+		let workerOneRequests = 0;
+		await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
+			const worker = new URL(route.request().url()).searchParams.get("worker");
+			workerOneRequests += worker === "worker-1" ? 1 : 0;
+			if (worker === "worker-1" && workerOneRequests === 2) {
+				await staleResponse;
+			}
+			const subject = worker === "worker-2" ? "Worker two email" : "Old email";
+			await route.fulfill({
+				contentType: "application/json",
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result: [
+						{
+							attachments: [],
+							events: [],
+							forwards: [],
+							from: "sender@example.com",
+							messageId: `<${worker}-${workerOneRequests}>`,
+							outcome: "ok",
+							rawSize: 1,
+							receivedAt: "2026-08-24T00:00:00.000Z",
+							replies: [],
+							subject,
+							to: "recipient@example.com",
+						},
+					],
+					result_info: { count: 1, has_more: false, per_page: 10 },
+					success: true,
+				}),
+			});
+		});
+		await loadWorkers(2);
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/email/routing?worker=worker-1",
+				viteUrl
+			).toString()
+		);
+		await page.getByRole("link", { name: /Old email/ }).waitFor();
+		await page.getByRole("button", { name: "Refresh" }).click();
+		await page.getByRole("combobox").click();
+		await page.getByRole("option", { name: "worker-2" }).click();
+		await page.getByRole("link", { name: /Worker two email/ }).waitFor();
+		releaseStaleResponse?.();
+		await page.waitForTimeout(100);
+
+		expect(await page.getByRole("link", { name: /Old email/ }).count()).toBe(0);
+	});
+
 	test("stays hidden when there is only one worker", async ({ expect }) => {
 		await loadWorkers(1);
 
@@ -128,5 +232,45 @@ describe("worker selector", () => {
 			.toBe("worker-12");
 		await page.getByRole("combobox").getByText("worker-12").waitFor();
 		await page.waitForLoadState("networkidle");
+	});
+
+	test("returns to the routing list when switching workers on the email detail page", async ({
+		expect,
+	}) => {
+		await mockEmailRoutingDetail();
+		await loadWorkers(2);
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/email/routing/test-email-id?worker=worker-1",
+				viteUrl
+			).toString()
+		);
+		await page.waitForLoadState("networkidle");
+		await page
+			.getByText(/complete email was delivered to the Worker/)
+			.first()
+			.waitFor();
+		expect(
+			await page.getByText("Plain received text body", { exact: true }).count()
+		).toBe(0);
+		expect(
+			await page
+				.locator('iframe[title="Rendered received HTML email body"]')
+				.count()
+		).toBe(0);
+
+		const workersResponse = waitForWorkersResponse();
+		await page.getByRole("combobox").click();
+		await page.getByRole("option", { name: "worker-2" }).click();
+		await workersResponse;
+
+		// Switching workers on the detail page redirects back to the parent
+		// "Routing" list, carrying the newly selected worker forward.
+		await expect
+			.poll(() => new URL(page.url()).pathname)
+			.toMatch(/\/email\/routing$/);
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-2");
 	});
 });

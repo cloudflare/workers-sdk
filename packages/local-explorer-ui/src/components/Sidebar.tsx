@@ -15,6 +15,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
+import EmailIcon from "../assets/icons/email.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
@@ -207,6 +208,36 @@ export function AppSidebar({
 				},
 			})),
 			title: "Workflows",
+		},
+		{
+			emptyLabel: "No email",
+			groupId: "email" as const,
+			icon: EmailIcon,
+			items: [
+				{
+					id: "sending",
+					isActive: currentPath === "/email/sending",
+					label: "Sending",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/email/sending",
+					},
+				},
+				{
+					id: "routing",
+					isActive:
+						currentPath === "/email/routing" ||
+						currentPath.startsWith("/email/routing/"),
+					label: "Routing",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/email/routing",
+					},
+				},
+			],
+			title: "Email",
 		},
 	] satisfies Array<{
 		emptyLabel: string;
