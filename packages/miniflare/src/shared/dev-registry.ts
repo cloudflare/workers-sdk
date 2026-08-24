@@ -313,7 +313,6 @@ export class DevRegistry {
 						// Stale cleanup may remove a live Worker's entry after system sleep.
 						// Recreate it so peers can discover this Worker again.
 						try {
-							mkdirSync(path.dirname(definitionPath), { recursive: true });
 							this.writeWorkerDefinition(definitionPath, definition);
 						} catch (e) {
 							this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
