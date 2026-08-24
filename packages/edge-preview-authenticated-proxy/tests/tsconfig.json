@@ -7,7 +7,7 @@
 		"types": [
 			"@types/node",
 			"@cloudflare/workers-types/experimental",
-			"@cloudflare/vitest-pool-workers/types"
+			"@cloudflare/vitest-plugin/types"
 		],
 		"allowJs": true,
 		"checkJs": false,

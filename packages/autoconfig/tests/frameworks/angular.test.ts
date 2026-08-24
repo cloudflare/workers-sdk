@@ -10,6 +10,7 @@ import type { AutoConfigFrameworkPackageInfo } from "../../src/frameworks";
 const context = createMockContext();
 
 const BASE_OPTIONS = {
+	target: "cf" as const,
 	projectPath: process.cwd(),
 	workerName: "my-angular-app",
 	outputDir: "dist/my-angular-app/",
@@ -72,16 +73,13 @@ describe("Angular framework configure()", () => {
 			await mkdir(resolve("src"), { recursive: true });
 		});
 
-		it("returns assets-only wranglerConfig", async ({ expect }) => {
+		it("returns assets-only configuration", async ({ expect }) => {
 			const framework = new Angular({ id: "angular", name: "Angular" });
 			const result = await framework.configure(BASE_OPTIONS);
 
-			expect(result.wranglerConfig).toEqual({
-				assets: {
-					directory: "dist/my-angular-app/",
-				},
-			});
-			expect(result.wranglerConfig).not.toHaveProperty("main");
+			expect(result.workerConfig).toEqual({});
+			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
+			expect(result.workerConfig).not.toHaveProperty("entrypoint");
 		});
 
 		it("sets configurationDescription for SPA", async ({ expect }) => {
@@ -134,9 +132,8 @@ describe("Angular framework configure()", () => {
 				dryRun: true,
 			});
 
-			expect(result.wranglerConfig).toEqual({
-				assets: { directory: "dist/my-angular-app/" },
-			});
+			expect(result.workerConfig).toEqual({});
+			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
 			expect(installSpy).not.toHaveBeenCalled();
 		});
 	});
@@ -169,16 +166,15 @@ describe("Angular framework configure()", () => {
 			await mkdir(resolve("src"), { recursive: true });
 		});
 
-		it("returns assets-only wranglerConfig when ssr is false", async ({
+		it("returns assets-only configuration when ssr is false", async ({
 			expect,
 		}) => {
 			const framework = new Angular({ id: "angular", name: "Angular" });
 			const result = await framework.configure(BASE_OPTIONS);
 
-			expect(result.wranglerConfig).toEqual({
-				assets: { directory: "dist/my-angular-app/" },
-			});
-			expect(result.wranglerConfig).not.toHaveProperty("main");
+			expect(result.workerConfig).toEqual({});
+			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
+			expect(result.workerConfig).not.toHaveProperty("entrypoint");
 		});
 
 		it("sets SPA configurationDescription when ssr is false", async ({
@@ -221,7 +217,7 @@ describe("Angular framework configure()", () => {
 			await mkdir(resolve("src"), { recursive: true });
 		});
 
-		it("returns SSR wranglerConfig without crashing", async ({ expect }) => {
+		it("returns SSR configuration without crashing", async ({ expect }) => {
 			await mockAngularCoreVersion("21.0.0");
 			const framework = new Angular({ id: "angular", name: "Angular" });
 			framework.validateFrameworkVersion(
@@ -231,13 +227,15 @@ describe("Angular framework configure()", () => {
 			);
 			const result = await framework.configure(BASE_OPTIONS);
 
-			expect(result.wranglerConfig).toEqual({
-				main: "./dist/server/server.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "dist/my-angular-app/browser",
+			expect(result.workerConfig).toEqual({
+				entrypoint: "./dist/server/server.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			});
+			expect(result.buildConfig?.assetsDirectory).toBe(
+				"dist/my-angular-app/browser"
+			);
 		});
 
 		it("sets experimentalPlatform in angular.json when ssr was true (Angular <22)", async ({
@@ -316,7 +314,7 @@ describe("Angular framework configure()", () => {
 			await mkdir(resolve("src"), { recursive: true });
 		});
 
-		it("returns SSR wranglerConfig with main and assets", async ({
+		it("returns SSR configuration with an entrypoint and assets", async ({
 			expect,
 		}) => {
 			await mockAngularCoreVersion("21.0.0");
@@ -328,13 +326,15 @@ describe("Angular framework configure()", () => {
 			);
 			const result = await framework.configure(BASE_OPTIONS);
 
-			expect(result.wranglerConfig).toEqual({
-				main: "./dist/server/server.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "dist/my-angular-app/browser",
+			expect(result.workerConfig).toEqual({
+				entrypoint: "./dist/server/server.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			});
+			expect(result.buildConfig?.assetsDirectory).toBe(
+				"dist/my-angular-app/browser"
+			);
 		});
 
 		it("sets SSR configurationDescription", async ({ expect }) => {
@@ -436,7 +436,7 @@ describe("Angular framework configure()", () => {
 			});
 
 			// Config is still returned
-			expect(result.wranglerConfig).toHaveProperty("main");
+			expect(result.workerConfig).toHaveProperty("entrypoint");
 			// But side effects are skipped
 			expect(existsSync(resolve("src/server.ts"))).toBe(false);
 			expect(installSpy).not.toHaveBeenCalled();

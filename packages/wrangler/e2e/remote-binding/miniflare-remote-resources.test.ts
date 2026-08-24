@@ -609,6 +609,9 @@ const testCases: TestCase[] = [
 	{
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
+		// Currently this test starts failing whenever the VPC worker is doing a deployment
+		// Re-enable when EW-10563 is resolved
+		skip: true,
 		setup: async (helper) => {
 			const serviceName = generateResourceName();
 

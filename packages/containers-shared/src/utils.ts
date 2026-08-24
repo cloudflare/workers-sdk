@@ -1,9 +1,15 @@
-import { execFileSync, spawn } from "node:child_process";
+import {
+	execFile,
+	execFileSync,
+	spawn,
+	type StdioOptions,
+} from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { release } from "node:os";
 import { UserError } from "@cloudflare/workers-utils";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
-import type { StdioOptions } from "node:child_process";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -91,6 +97,88 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 		);
 	}
 };
+
+/**
+ * Permit elevated container options only when the selected daemon adds an
+ * isolation boundary. Rootless Docker limits `SYS_ADMIN` to its user
+ * namespace. Local Docker engines on macOS and through WSL run their Linux
+ * daemon in a VM.
+ */
+export async function containerPrivilegesAllowed(
+	dockerHost: string,
+	dockerPath = "docker"
+): Promise<boolean> {
+	const platform = process.platform;
+	if (
+		!isLocalDockerEndpoint(dockerHost) ||
+		(platform !== "darwin" && platform !== "linux")
+	) {
+		return false;
+	}
+
+	const securityOptions = await getDockerSecurityOptions(
+		dockerPath,
+		dockerHost
+	);
+	const rootless =
+		Array.isArray(securityOptions) &&
+		securityOptions.some(
+			(option) => option === "name=rootless" || option === "rootless"
+		);
+	const localVm =
+		platform === "darwin" || (platform === "linux" && detectWsl());
+	const localRootlessLinux =
+		platform === "linux" && existsSync("/dev/fuse") && rootless;
+
+	return localVm || localRootlessLinux;
+}
+
+/** Checks that workerd will connect to a local Unix socket. */
+function isLocalDockerEndpoint(dockerHost: string): boolean {
+	try {
+		const url = new URL(dockerHost);
+		return (
+			url.protocol === "unix:" &&
+			url.hostname === "" &&
+			url.pathname.startsWith("/")
+		);
+	} catch {
+		return false;
+	}
+}
+
+/** Reads the daemon security configuration with the selected Docker CLI. */
+async function getDockerSecurityOptions(
+	dockerPath: string,
+	dockerHost: string
+): Promise<unknown> {
+	const output = await new Promise<string>((resolve, reject) => {
+		execFile(
+			dockerPath,
+			["--host", dockerHost, "info", "--format", "{{json .SecurityOptions}}"],
+			{ encoding: "utf8", timeout: 5_000 },
+			(error, stdout) => {
+				if (error === null) {
+					resolve(stdout);
+				} else {
+					reject(error);
+				}
+			}
+		);
+	});
+	return JSON.parse(output);
+}
+
+/**
+ * WSL is detected from the kernel release because its environment variables
+ * can be removed or changed by the calling process.
+ */
+function detectWsl(): boolean {
+	return (
+		process.platform === "linux" &&
+		release().toLowerCase().includes("microsoft")
+	);
+}
 
 /** Checks whether docker is running on the system */
 export const isDockerRunning = async (dockerPath: string) => {

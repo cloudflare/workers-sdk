@@ -88,7 +88,7 @@ export const IMAGES_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				IMAGES_PLUGIN_NAME,
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath
 			);
 
 			await fs.mkdir(persistPath, { recursive: true });

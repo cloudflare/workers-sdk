@@ -1282,6 +1282,296 @@
 				"tags": ["Local Explorer"]
 			}
 		},
+		"/local/email/routing": {
+			"get": {
+				"description": "Lists emails received by any email() handler during this dev session. Use the optional `worker` query parameter to filter by worker, or `email_id` to return one email's details.",
+				"operationId": "email-list-routing",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "worker",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Only return emails received by this worker's email() handler."
+					},
+					{
+						"in": "query",
+						"name": "email_id",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Return the details for this email instead of a paginated list."
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Opaque cursor for the next page of emails."
+					},
+					{
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 100,
+							"default": 25
+						},
+						"description": "Number of emails per page."
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"oneOf": [
+														{
+															"items": {
+																"$ref": "#/components/schemas/email_routing-item"
+															},
+															"type": "array"
+														},
+														{
+															"$ref": "#/components/schemas/email_routing-detail"
+														}
+													]
+												},
+												"result_info": {
+													"type": "object",
+													"properties": {
+														"count": {
+															"type": "number"
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer"
+														},
+														"has_more": {
+															"type": "boolean"
+														}
+													}
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List received emails response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List received emails failure."
+					}
+				},
+				"summary": "List Received Emails",
+				"tags": ["Email"]
+			}
+		},
+		"/local/email/routing/send": {
+			"post": {
+				"description": "Sends a test email to trigger the worker's email() handler. Only the first `to` address is used as the envelope recipient; any additional to and cc addresses appear only in the composed MIME headers. bcc addresses are accepted but, by convention, are not written into the composed message.",
+				"operationId": "email-send-routing",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "worker",
+						"required": true,
+						"schema": {
+							"type": "string"
+						},
+						"description": "Deliver the test email directly to this worker's email() handler. Required because a single dev port can serve multiple workers, so the target cannot be inferred from the recipient address."
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/email_send-request"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"type": "object",
+													"properties": {
+														"messageId": {
+															"type": "string",
+															"description": "RFC Message-ID header value of the delivered test email."
+														},
+														"outcome": {
+															"type": "string",
+															"enum": ["ok", "exception"],
+															"description": "Whether the handler ran to completion or threw."
+														},
+														"rejectReason": {
+															"type": "string",
+															"description": "Reason passed to setReject(), if the handler rejected the message."
+														}
+													}
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Send test email response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Send test email failure."
+					}
+				},
+				"summary": "Send Test Email",
+				"tags": ["Email"]
+			}
+		},
+		"/local/email/sending": {
+			"get": {
+				"description": "Lists emails sent through send_email bindings during this dev session, or returns one email's details when `email_id` is provided.",
+				"operationId": "email-list-sending",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "worker",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Only return emails sent through this worker's send_email bindings."
+					},
+					{
+						"in": "query",
+						"name": "email_id",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Return the details for this email instead of a paginated list."
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Opaque cursor for the next page of emails."
+					},
+					{
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 100,
+							"default": 25
+						},
+						"description": "Number of emails per page."
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"oneOf": [
+														{
+															"items": {
+																"$ref": "#/components/schemas/email_sending-item"
+															},
+															"type": "array"
+														},
+														{
+															"$ref": "#/components/schemas/email_sending-detail"
+														}
+													]
+												},
+												"result_info": {
+													"type": "object",
+													"properties": {
+														"count": {
+															"type": "number"
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer"
+														},
+														"has_more": {
+															"type": "boolean"
+														}
+													}
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List sent emails response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List sent emails failure."
+					}
+				},
+				"summary": "List Sent Emails",
+				"tags": ["Email"]
+			}
+		},
 		"/workflows": {
 			"get": {
 				"description": "Returns the workflows configured for local development.",
@@ -1629,6 +1919,115 @@
 					}
 				},
 				"summary": "Create Workflow Instance",
+				"tags": ["Workflows"]
+			}
+		},
+		"/workflows/{workflow_name}/instances/batch/delete": {
+			"post": {
+				"description": "Deletes multiple workflow instances.",
+				"operationId": "workflows-batch-delete-instances",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "workflow_name",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workflows_workflow-name"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"instances": {
+										"type": "array",
+										"minItems": 1,
+										"maxItems": 100,
+										"items": {
+											"type": "string",
+											"minLength": 1,
+											"maxLength": 271,
+											"pattern": "^[a-zA-Z0-9, */#_-]+$"
+										}
+									}
+								},
+								"required": ["instances"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"type": "object",
+											"properties": {
+												"result": {
+													"type": "object",
+													"properties": {
+														"deleted": {
+															"type": "array",
+															"items": {
+																"type": "object",
+																"properties": {
+																	"id": {
+																		"type": "string"
+																	}
+																},
+																"required": ["id"]
+															}
+														},
+														"errors": {
+															"type": "array",
+															"items": {
+																"type": "object",
+																"properties": {
+																	"id": {
+																		"type": "string"
+																	},
+																	"code": {
+																		"type": "number"
+																	},
+																	"message": {
+																		"type": "string"
+																	}
+																},
+																"required": ["id", "code", "message"]
+															}
+														}
+													},
+													"required": ["deleted", "errors"]
+												}
+											}
+										}
+									]
+								}
+							}
+						},
+						"description": "Batch delete Workflow Instances response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Batch delete Workflow Instances response failure."
+					}
+				},
+				"summary": "Batch Delete Workflow Instances",
 				"tags": ["Workflows"]
 			}
 		},
@@ -3165,6 +3564,23 @@
 							"$ref": "#/components/schemas/local-explorer_workflow-binding"
 						},
 						"description": "Workflow bindings"
+					},
+					"sendEmail": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/local-explorer_named-binding"
+						},
+						"description": "Send Email bindings"
+					}
+				}
+			},
+			"local-explorer_named-binding": {
+				"type": "object",
+				"required": ["bindingName"],
+				"properties": {
+					"bindingName": {
+						"type": "string",
+						"description": "Name of the binding in the worker's env"
 					}
 				}
 			},
@@ -3400,6 +3816,830 @@
 					}
 				},
 				"required": ["columns", "rows"]
+			},
+			"email_handler-event": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["received", "reject", "unhandled"]
+							},
+							"timestamp": {
+								"type": "string",
+								"description": "ISO 8601 timestamp of when the event occurred."
+							}
+						},
+						"required": ["type", "timestamp"],
+						"additionalProperties": false
+					},
+					{
+						"type": "object",
+						"properties": {
+							"type": {
+								"type": "string",
+								"enum": ["forward", "reply"]
+							},
+							"timestamp": {
+								"type": "string",
+								"description": "ISO 8601 timestamp of when the event occurred."
+							},
+							"messageId": {
+								"type": "string",
+								"description": "Correlates with the matching `forwards`/`replies` entry."
+							}
+						},
+						"required": ["type", "timestamp", "messageId"],
+						"additionalProperties": false
+					}
+				],
+				"description": "One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry."
+			},
+			"email_handler-forward": {
+				"type": "object",
+				"properties": {
+					"messageId": {
+						"type": "string"
+					},
+					"recipient": {
+						"type": "string",
+						"description": "Envelope recipient the message was forwarded to."
+					},
+					"headers": {
+						"type": "array",
+						"items": {
+							"type": "array",
+							"items": {
+								"anyOf": [
+									{
+										"type": "string"
+									},
+									{
+										"type": "string"
+									}
+								]
+							},
+							"minItems": 2,
+							"maxItems": 2
+						},
+						"description": "Headers added to the forwarded message."
+					}
+				},
+				"required": ["messageId", "recipient", "headers"],
+				"additionalProperties": false
+			},
+			"email_handler-reply": {
+				"type": "object",
+				"properties": {
+					"messageId": {
+						"type": "string"
+					},
+					"sender": {
+						"type": "string",
+						"description": "Address the reply was sent from."
+					},
+					"raw": {
+						"type": "string",
+						"description": "Raw MIME content of the reply. Omitted from the routing list; present on the detail response."
+					},
+					"rawBase64": {
+						"type": "string",
+						"description": "Lossless base64 representation of the reply MIME."
+					}
+				},
+				"required": ["messageId", "sender"],
+				"additionalProperties": false
+			},
+			"email_base": {
+				"type": "object",
+				"properties": {
+					"worker": {
+						"type": "string",
+						"description": "Worker associated with the email, if known."
+					},
+					"from": {
+						"type": "string",
+						"description": "Envelope MAIL FROM address."
+					},
+					"subject": {
+						"type": "string"
+					},
+					"messageId": {
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
+					},
+					"attachments": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"filename": {
+									"type": "string"
+								},
+								"contentType": {
+									"type": "string"
+								},
+								"disposition": {
+									"type": "string",
+									"enum": ["inline", "attachment"]
+								},
+								"size": {
+									"type": "number"
+								}
+							},
+							"required": ["filename", "contentType", "disposition", "size"],
+							"additionalProperties": false,
+							"description": "Metadata describing an attachment on a captured email, without its content."
+						},
+						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
+					}
+				},
+				"required": ["from", "subject", "messageId", "attachments"],
+				"additionalProperties": false
+			},
+			"email_routing-item": {
+				"type": "object",
+				"properties": {
+					"worker": {
+						"type": "string",
+						"description": "Worker associated with the email, if known."
+					},
+					"from": {
+						"type": "string",
+						"description": "Envelope MAIL FROM address."
+					},
+					"subject": {
+						"type": "string"
+					},
+					"messageId": {
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
+					},
+					"attachments": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"filename": {
+									"type": "string"
+								},
+								"contentType": {
+									"type": "string"
+								},
+								"disposition": {
+									"type": "string",
+									"enum": ["inline", "attachment"]
+								},
+								"size": {
+									"type": "number"
+								}
+							},
+							"required": ["filename", "contentType", "disposition", "size"],
+							"additionalProperties": false,
+							"description": "Metadata describing an attachment on a captured email, without its content."
+						},
+						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
+					},
+					"to": {
+						"type": "string",
+						"description": "Envelope RCPT TO address."
+					},
+					"cc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"receivedAt": {
+						"type": "string"
+					},
+					"rawSize": {
+						"type": "number"
+					},
+					"outcome": {
+						"type": "string",
+						"enum": ["ok", "exception"],
+						"description": "Whether the handler ran to completion or threw."
+					},
+					"rejectReason": {
+						"type": "string",
+						"description": "Reason passed to setReject(), if the handler rejected the message."
+					},
+					"forwards": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"messageId": {
+									"type": "string"
+								},
+								"recipient": {
+									"type": "string",
+									"description": "Envelope recipient the message was forwarded to."
+								},
+								"headers": {
+									"type": "array",
+									"items": {
+										"type": "array",
+										"items": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "string"
+												}
+											]
+										},
+										"minItems": 2,
+										"maxItems": 2
+									},
+									"description": "Headers added to the forwarded message."
+								}
+							},
+							"required": ["messageId", "recipient", "headers"],
+							"additionalProperties": false
+						}
+					},
+					"replies": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"messageId": {
+									"type": "string"
+								},
+								"sender": {
+									"type": "string",
+									"description": "Address the reply was sent from."
+								},
+								"raw": {
+									"type": "string",
+									"description": "Raw MIME content of the reply. Omitted from the routing list; present on the detail response."
+								},
+								"rawBase64": {
+									"type": "string",
+									"description": "Lossless base64 representation of the reply MIME."
+								}
+							},
+							"required": ["messageId", "sender"],
+							"additionalProperties": false
+						}
+					},
+					"events": {
+						"type": "array",
+						"items": {
+							"oneOf": [
+								{
+									"type": "object",
+									"properties": {
+										"type": {
+											"type": "string",
+											"enum": ["received", "reject", "unhandled"]
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO 8601 timestamp of when the event occurred."
+										}
+									},
+									"required": ["type", "timestamp"],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"type": {
+											"type": "string",
+											"enum": ["forward", "reply"]
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO 8601 timestamp of when the event occurred."
+										},
+										"messageId": {
+											"type": "string",
+											"description": "Correlates with the matching `forwards`/`replies` entry."
+										}
+									},
+									"required": ["type", "timestamp", "messageId"],
+									"additionalProperties": false
+								}
+							],
+							"description": "One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry."
+						}
+					}
+				},
+				"required": [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"receivedAt",
+					"rawSize",
+					"outcome",
+					"forwards",
+					"replies",
+					"events"
+				],
+				"additionalProperties": false
+			},
+			"email_routing-detail": {
+				"type": "object",
+				"properties": {
+					"worker": {
+						"type": "string",
+						"description": "Worker associated with the email, if known."
+					},
+					"from": {
+						"type": "string",
+						"description": "Envelope MAIL FROM address."
+					},
+					"subject": {
+						"type": "string"
+					},
+					"messageId": {
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
+					},
+					"attachments": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"filename": {
+									"type": "string"
+								},
+								"contentType": {
+									"type": "string"
+								},
+								"disposition": {
+									"type": "string",
+									"enum": ["inline", "attachment"]
+								},
+								"size": {
+									"type": "number"
+								}
+							},
+							"required": ["filename", "contentType", "disposition", "size"],
+							"additionalProperties": false,
+							"description": "Metadata describing an attachment on a captured email, without its content."
+						},
+						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
+					},
+					"to": {
+						"type": "string",
+						"description": "Envelope RCPT TO address."
+					},
+					"cc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"receivedAt": {
+						"type": "string"
+					},
+					"rawSize": {
+						"type": "number"
+					},
+					"outcome": {
+						"type": "string",
+						"enum": ["ok", "exception"],
+						"description": "Whether the handler ran to completion or threw."
+					},
+					"rejectReason": {
+						"type": "string",
+						"description": "Reason passed to setReject(), if the handler rejected the message."
+					},
+					"forwards": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"messageId": {
+									"type": "string"
+								},
+								"recipient": {
+									"type": "string",
+									"description": "Envelope recipient the message was forwarded to."
+								},
+								"headers": {
+									"type": "array",
+									"items": {
+										"type": "array",
+										"items": {
+											"anyOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "string"
+												}
+											]
+										},
+										"minItems": 2,
+										"maxItems": 2
+									},
+									"description": "Headers added to the forwarded message."
+								}
+							},
+							"required": ["messageId", "recipient", "headers"],
+							"additionalProperties": false
+						}
+					},
+					"replies": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"messageId": {
+									"type": "string"
+								},
+								"sender": {
+									"type": "string",
+									"description": "Address the reply was sent from."
+								},
+								"raw": {
+									"type": "string",
+									"description": "Raw MIME content of the reply. Omitted from the routing list; present on the detail response."
+								},
+								"rawBase64": {
+									"type": "string",
+									"description": "Lossless base64 representation of the reply MIME."
+								}
+							},
+							"required": ["messageId", "sender"],
+							"additionalProperties": false
+						}
+					},
+					"events": {
+						"type": "array",
+						"items": {
+							"oneOf": [
+								{
+									"type": "object",
+									"properties": {
+										"type": {
+											"type": "string",
+											"enum": ["received", "reject", "unhandled"]
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO 8601 timestamp of when the event occurred."
+										}
+									},
+									"required": ["type", "timestamp"],
+									"additionalProperties": false
+								},
+								{
+									"type": "object",
+									"properties": {
+										"type": {
+											"type": "string",
+											"enum": ["forward", "reply"]
+										},
+										"timestamp": {
+											"type": "string",
+											"description": "ISO 8601 timestamp of when the event occurred."
+										},
+										"messageId": {
+											"type": "string",
+											"description": "Correlates with the matching `forwards`/`replies` entry."
+										}
+									},
+									"required": ["type", "timestamp", "messageId"],
+									"additionalProperties": false
+								}
+							],
+							"description": "One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry."
+						}
+					},
+					"raw": {
+						"type": "string",
+						"description": "Raw MIME content of the received email."
+					},
+					"rawBase64": {
+						"type": "string",
+						"description": "Lossless base64 representation of the received MIME."
+					}
+				},
+				"required": [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"receivedAt",
+					"rawSize",
+					"outcome",
+					"forwards",
+					"replies",
+					"events",
+					"raw"
+				],
+				"additionalProperties": false
+			},
+			"email_send-request": {
+				"type": "object",
+				"properties": {
+					"from": {
+						"type": "string",
+						"description": "Sender address."
+					},
+					"to": {
+						"minItems": 1,
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "Recipient addresses."
+					},
+					"cc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"bcc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"replyTo": {
+						"type": "string"
+					},
+					"subject": {
+						"type": "string"
+					},
+					"text": {
+						"type": "string",
+						"description": "Plain text body."
+					},
+					"html": {
+						"type": "string",
+						"description": "HTML body."
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"description": "Custom headers to include on the message."
+					},
+					"attachments": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"filename": {
+									"type": "string",
+									"description": "Name the attachment is presented under."
+								},
+								"type": {
+									"type": "string",
+									"description": "MIME type of the attachment, e.g. 'application/pdf'."
+								},
+								"content": {
+									"type": "string",
+									"description": "Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded."
+								},
+								"contentId": {
+									"type": "string",
+									"description": "Content-ID for an inline attachment."
+								},
+								"disposition": {
+									"type": "string",
+									"enum": ["inline", "attachment"],
+									"description": "How the attachment is presented. Defaults to 'attachment'."
+								}
+							},
+							"required": ["filename", "type", "content"],
+							"additionalProperties": false
+						},
+						"description": "Attachments to include on the message, mirroring the MessageBuilder `attachments` entries accepted by a send_email binding. Adding any attachment composes the message as multipart/mixed."
+					}
+				},
+				"required": ["from", "to", "subject"],
+				"additionalProperties": false,
+				"description": "Fields for composing a test email, mirroring MessageBuilder."
+			},
+			"email_attachment": {
+				"type": "object",
+				"properties": {
+					"filename": {
+						"type": "string"
+					},
+					"contentType": {
+						"type": "string"
+					},
+					"disposition": {
+						"type": "string",
+						"enum": ["inline", "attachment"]
+					},
+					"size": {
+						"type": "number"
+					}
+				},
+				"required": ["filename", "contentType", "disposition", "size"],
+				"additionalProperties": false,
+				"description": "Metadata describing an attachment on a captured email, without its content."
+			},
+			"email_sending-item": {
+				"type": "object",
+				"properties": {
+					"worker": {
+						"type": "string",
+						"description": "Worker associated with the email, if known."
+					},
+					"from": {
+						"type": "string",
+						"description": "Envelope MAIL FROM address."
+					},
+					"subject": {
+						"type": "string"
+					},
+					"messageId": {
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
+					},
+					"attachments": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"filename": {
+									"type": "string"
+								},
+								"contentType": {
+									"type": "string"
+								},
+								"disposition": {
+									"type": "string",
+									"enum": ["inline", "attachment"]
+								},
+								"size": {
+									"type": "number"
+								}
+							},
+							"required": ["filename", "contentType", "disposition", "size"],
+							"additionalProperties": false,
+							"description": "Metadata describing an attachment on a captured email, without its content."
+						},
+						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
+					},
+					"to": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"cc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"bcc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"replyTo": {
+						"type": "string"
+					},
+					"sentAt": {
+						"type": "string"
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					}
+				},
+				"required": [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"sentAt"
+				],
+				"additionalProperties": false
+			},
+			"email_sending-detail": {
+				"type": "object",
+				"properties": {
+					"worker": {
+						"type": "string",
+						"description": "Worker associated with the email, if known."
+					},
+					"from": {
+						"type": "string",
+						"description": "Envelope MAIL FROM address."
+					},
+					"subject": {
+						"type": "string"
+					},
+					"messageId": {
+						"type": "string",
+						"description": "RFC Message-ID header value. Identifies the email in the store."
+					},
+					"attachments": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"filename": {
+									"type": "string"
+								},
+								"contentType": {
+									"type": "string"
+								},
+								"disposition": {
+									"type": "string",
+									"enum": ["inline", "attachment"]
+								},
+								"size": {
+									"type": "number"
+								}
+							},
+							"required": ["filename", "contentType", "disposition", "size"],
+							"additionalProperties": false,
+							"description": "Metadata describing an attachment on a captured email, without its content."
+						},
+						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
+					},
+					"to": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"cc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"bcc": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"replyTo": {
+						"type": "string"
+					},
+					"sentAt": {
+						"type": "string"
+					},
+					"headers": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						}
+					},
+					"text": {
+						"type": "string"
+					},
+					"html": {
+						"type": "string"
+					},
+					"raw": {
+						"type": "string",
+						"description": "Raw MIME content, present when sent via the EmailMessage API."
+					},
+					"rawBase64": {
+						"type": "string",
+						"description": "Lossless base64 representation of sent MIME."
+					}
+				},
+				"required": [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"sentAt"
+				],
+				"additionalProperties": false
 			}
 		}
 	}

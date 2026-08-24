@@ -509,7 +509,6 @@ describe("getRemoteConfigsDiff", () => {
 						binding: "MY_WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						remote: false,
 					},
 				],
 				vpc_services: [

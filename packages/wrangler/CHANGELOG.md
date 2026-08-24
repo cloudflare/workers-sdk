@@ -1,5 +1,224 @@
 # wrangler
 
+## 4.125.0
+
+### Minor Changes
+
+- [#14995](https://github.com/cloudflare/workers-sdk/pull/14995) [`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Add `connect` trigger for raw sockets
+
+  You can now configure a Worker to receive raw socket connections during `wrangler dev`, delivered directly to the Worker's `connect(socket, env, ctx)` handler:
+
+  ```jsonc
+  {
+    "connect": [{ "protocol": "tcp", "port": 5432 }]
+  }
+  ```
+
+  Each entry opens a listening socket on `127.0.0.1` (or the given `address`) that forwards incoming connections straight to the Worker, bypassing the local dev HTTP entry point. This requires the `experimental` compatibility flag. Only `"tcp"` is supported at the moment.
+
+  `@cloudflare/config` also supports declaring this trigger via `triggers.connect(...)`, which lowers to the `connect` field above:
+
+  ```ts
+  import { defineWorker, triggers } from "@cloudflare/config";
+
+  export default defineWorker({
+    triggers: [
+      triggers.connect({ protocol: "tcp", port: 5432, address: "127.0.0.1" }),
+    ],
+  });
+  ```
+
+- [#15172](https://github.com/cloudflare/workers-sdk/pull/15172) [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add container support to worker previews
+
+  Worker previews now support containers through a new `previews.containers` configuration block. Container configuration doesn't inherit, so declare containers explicitly in the `previews` block to enable them for previews. This mirrors how `previews.durable_objects` works today. Wrangler names each preview container application `{worker_name}_{preview_slug}_{class_name}`, normalising and shortening the result to what the API accepts. Either change appends a short digest of the composed name, so two names that would otherwise land on one stay distinct. An entry cannot set its own `name`, because application names are unique to an account and a fixed name would collide between two previews of the same Worker. A Durable Object class is backed by at most one container application, so the validator rejects two entries that share a `class_name`. Wrangler skips container applications bound to Durable Object classes that another Worker implements through `script_name`, because the implementing Worker owns its own container application. A binding is not required: a Durable Object declared through `migrations` or `exports` and reached only over `ctx.exports` can still back a container. Every entry must set `class_name`. A `previews.containers` entry whose `class_name` matches no Durable Object class at all is rejected before the preview deployment is created, so a typo fails loudly instead of producing a preview with no container.
+
+  Wrangler creates the container applications on `wrangler preview`. Deleting a preview tears them down server side, so `wrangler preview delete` doesn't remove them.
+
+  Container build and deploy progress prints to stdout. `wrangler preview --json` suppresses wrangler's own output so it doesn't interleave with the payload, and warnings and errors still go to stderr. Docker's build output and the progress spinner write to stdout directly and bypass that suppression, so parse `--json` from a non interactive shell, where the spinner is skipped, and prefer a prebuilt `image` over a Dockerfile.
+
+- [#15174](https://github.com/cloudflare/workers-sdk/pull/15174) [`649f667`](https://github.com/cloudflare/workers-sdk/commit/649f667bd871061da945881ce953ef8f81caea1a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - [private beta]: Create the parent Worker automatically when `wrangler preview` targets one that doesn't exist yet
+
+  Previews hang off a parent Worker, so running `wrangler preview` before the Worker had ever been deployed failed with a raw API error naming the Preview endpoint. Wrangler now offers to create an empty parent Worker and then carries on creating the Preview. The parent uses the same workers.dev and Preview URL settings that `wrangler deploy` would resolve, without applying routes or cron triggers. In non-interactive environments, Wrangler creates the Worker without asking.
+
+- [#14735](https://github.com/cloudflare/workers-sdk/pull/14735) [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Add individual and batch Workflow instance deletion to the runtime and SDK.
+
+  - `WorkflowInstance.delete()` deletes one instance. Self-deletion stops the current execution.
+  - `env.MY_WORKFLOW.deleteBatch(instanceIds)` deletes up to 100 instances and returns `{ deleted, errors }` per input position.
+  - `wrangler workflows instances delete <name> [id..]` deletes instances remotely or with `--local`; IDs can also come from a JSON array passed with `--filename`, with a combined limit of 100.
+
+### Patch Changes
+
+- [#15260](https://github.com/cloudflare/workers-sdk/pull/15260) [`5ae9d5b`](https://github.com/cloudflare/workers-sdk/commit/5ae9d5b205fea31516559f7ad89a21eda671af2f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260815.1 | ^5.20260816.1 |
+  | workerd                   | 1.20260815.1  | 1.20260816.1  |
+
+- [#15264](https://github.com/cloudflare/workers-sdk/pull/15264) [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260816.1 | ^5.20260819.1 |
+  | workerd                   | 1.20260816.1  | 1.20260819.1  |
+
+- [#15277](https://github.com/cloudflare/workers-sdk/pull/15277) [`ce9b151`](https://github.com/cloudflare/workers-sdk/commit/ce9b1510abf5c1152aedc94456f4d7ffe9402248) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260819.1 | ^5.20260820.1 |
+  | workerd                   | 1.20260819.1  | 1.20260820.1  |
+
+- [#15192](https://github.com/cloudflare/workers-sdk/pull/15192) [`ef73a28`](https://github.com/cloudflare/workers-sdk/commit/ef73a28c1e7a208d730c6de64566bc96f683ca7b) Thanks [@ondraulehla](https://github.com/ondraulehla)! - Fixes `kv bulk put` corrupting binary values written to local KV
+
+  Values marked `base64: true` were stored incorrectly whenever they contained bytes that do not form valid UTF-8, which covers images, compressed data and most other binary payloads. A Worker reading such a key back under `wrangler dev` got a different, longer value than the one that was written: a 12 byte PNG header came back as 20 bytes.
+
+  `kv bulk put` writes to local KV by default, so the plain command was the affected one. Remote writes were never affected, and neither were entries without `base64` or values written with `kv key put`.
+
+- [#15284](https://github.com/cloudflare/workers-sdk/pull/15284) [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b) Thanks [@emily-shen](https://github.com/emily-shen)! - Move deploy output writing into shared deploy helpers
+
+- [#15130](https://github.com/cloudflare/workers-sdk/pull/15130) [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864) Thanks [@emily-shen](https://github.com/emily-shen)! - Remove unsupported `remote` configuration from Workflow bindings
+
+  Workflow bindings no longer accept `remote` in configuration, as remote Workflow bindings have never actually been supported.
+
+- [#15278](https://github.com/cloudflare/workers-sdk/pull/15278) [`f2437e6`](https://github.com/cloudflare/workers-sdk/commit/f2437e606fc69891009285831d94b49bf44f6aff) Thanks [@Sosokker](https://github.com/Sosokker)! - Fix the `--temporary` error on commands that authenticate more than one time
+
+  `wrangler d1 migrations apply --remote --temporary` failed with this error: `You're already authenticated with Cloudflare, so --temporary can't be used`. The failure occurred with no login and with no `CLOUDFLARE_API_TOKEN`. This command authenticates one time for each statement that it runs. The first authentication makes a temporary preview account. The second authentication read the token of this new account as an earlier login.
+
+  Wrangler now uses again the temporary account from the same command run. Commands that authenticate more than one time now work as `wrangler deploy --temporary` works. If real credentials are available, `--temporary` is still an error.
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`5ae9d5b`](https://github.com/cloudflare/workers-sdk/commit/5ae9d5b205fea31516559f7ad89a21eda671af2f), [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a), [`ce9b151`](https://github.com/cloudflare/workers-sdk/commit/ce9b1510abf5c1152aedc94456f4d7ffe9402248), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17)]:
+  - miniflare@5.20260820.0-alpha
+
+## 4.124.0
+
+### Minor Changes
+
+- [#15026](https://github.com/cloudflare/workers-sdk/pull/15026) [`6529f0c`](https://github.com/cloudflare/workers-sdk/commit/6529f0ca5ecda93f67efbaa72a7f9a9f8fd814bf) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Allow containers to be attached to a Durable Object from its `exports` entry
+
+  A container can now be linked to its Durable Object from the export side, using a new `container` field that names an entry in the `containers` array. As a result `containers[].class_name` is now optional — a container that is referenced this way only needs a `name`:
+
+  ```jsonc
+  {
+    "name": "my-worker",
+    "main": "worker.js",
+    "compatibility_date": "2026-07-01",
+    "containers": [
+      { "name": "my-container", "image": "./Dockerfile", "max_instances": 1 }
+    ],
+    "exports": {
+      "MyContainerDO": {
+        "type": "durable-object",
+        "storage": "sqlite",
+        "container": "my-container"
+      }
+    }
+  }
+  ```
+
+  The existing `containers[].class_name` direction keeps working and either direction may be used, but the two must agree: a container that names its Durable Object cannot also be claimed by a different one.
+
+  `container` is only valid on live `durable-object` exports (`created` and `expecting-transfer`) and requires `storage: "sqlite"`. Wrangler now also reports an error when:
+
+  - a `container` reference names a container that does not exist
+  - two Durable Object exports claim the same container
+  - a container and a Durable Object export disagree about which one they are linked to
+  - a container ends up linked to no Durable Object at all
+  - two containers share a `name`
+  - a container's `class_name` names a Durable Object whose `storage` is `legacy-kv`
+  - two containers are attached to the same Durable Object
+
+  That last case was previously accepted but could never work: workerd attaches a single container per Durable Object namespace, and in local development every container for a class builds into the same image tag, so one silently overwrote the other. If you have two containers on one `class_name`, give each its own Durable Object class.
+
+### Patch Changes
+
+- [#15211](https://github.com/cloudflare/workers-sdk/pull/15211) [`bc5726b`](https://github.com/cloudflare/workers-sdk/commit/bc5726bd0b88856f6781c62b4cb3c9c47b84eb07) Thanks [@nithin42](https://github.com/nithin42)! - Honor `access.dev` when running Workers with `@cloudflare/vitest-pool-workers`, so `ctx.access.getIdentity()` returns the configured identity just as it does with `wrangler dev`.
+
+- [#14999](https://github.com/cloudflare/workers-sdk/pull/14999) [`ba54f0d`](https://github.com/cloudflare/workers-sdk/commit/ba54f0d39d1ba7eb5545d8bf9ba43624cfa211f9) Thanks [@mittalpk](https://github.com/mittalpk)! - Fix `.env` loading on Windows leaking stale, differently-cased duplicate keys
+
+  On Windows, `wrangler` loads `.env` values through a case-insensitive `Proxy` wrapper so lookups like `env.PATH` and `env.Path` resolve to the same value, and this object is assigned directly to `process.env`. When a key was set again under a different casing (e.g. a value in `.env.local` overriding one from `.env` with different casing), the previous casing was never removed from the underlying object. `env.PATH`/`env.Path` still returned the correct, latest value, but anything that enumerates `process.env` — `Object.keys`, `for...in`, `JSON.stringify`, object spread, or a spawned subprocess inheriting the environment — would see both the stale and current key.
+
+  Duplicate entries no longer appear, so environment variables passed to subprocesses and any code that lists the environment now see only the latest value for each variable.
+
+- [#15044](https://github.com/cloudflare/workers-sdk/pull/15044) [`b7422b0`](https://github.com/cloudflare/workers-sdk/commit/b7422b0a8a2e74bba068a1924992dcfeff0bd126) Thanks [@stareezy-1](https://github.com/stareezy-1)! - Normalize structural CRLF line endings before sending D1 commands to the remote query API
+
+  `wrangler d1 migrations apply --remote` and `wrangler d1 execute --remote --command` failed with `incomplete input: SQLITE_ERROR` when the SQL contained CRLF line endings inside a compound statement such as a `CREATE TRIGGER ... BEGIN ... END;` body. Structural line endings are now normalized to LF before the command is sent to the D1 query API, while CRLF inside quoted values and identifiers remains unchanged.
+
+- [#15046](https://github.com/cloudflare/workers-sdk/pull/15046) [`186339c`](https://github.com/cloudflare/workers-sdk/commit/186339cf854cf3522614fb686ec66e6682c569b8) Thanks [@erwinzhang7](https://github.com/erwinzhang7)! - Fixes D1 SQL statements not handling lowercase `end`s correctly
+
+  `wrangler d1 execute` and `wrangler d1 migrations apply` split a SQL file into statements before running them. A `BEGIN` or `CASE` block closed with a lowercase `end` was not recognised as closed, so every statement after it was folded into that block instead of being run on its own. SQLite accepts either case, so a file like this applied only the trigger and silently skipped the table:
+
+  ```sql
+  CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
+  begin
+  	DELETE FROM updates WHERE item_id=old.id;
+  end;
+  CREATE TABLE after_the_trigger (id TEXT PRIMARY KEY);
+  ```
+
+  Files written with an uppercase `END` were unaffected. Both cases now behave the same.
+
+- [#15231](https://github.com/cloudflare/workers-sdk/pull/15231) [`4f922dc`](https://github.com/cloudflare/workers-sdk/commit/4f922dc19941db31394357f7e146af320ae1f3d9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260811.1 | ^5.20260814.1 |
+  | workerd                   | 1.20260811.1  | 1.20260814.1  |
+
+- [#15248](https://github.com/cloudflare/workers-sdk/pull/15248) [`4d74b8d`](https://github.com/cloudflare/workers-sdk/commit/4d74b8d8fd5c034c012fa13973ee20bedbc844c7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260814.1 | ^5.20260815.1 |
+  | workerd                   | 1.20260814.1  | 1.20260815.1  |
+
+- [#15185](https://github.com/cloudflare/workers-sdk/pull/15185) [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Resolve `--latest` to the newest compatibility date supported by the installed runtime
+
+  `wrangler deploy --latest` and `wrangler versions upload --latest` resolved the compatibility date to the current date, and `wrangler pages download config` did the same for projects configured to always use the latest compatibility date. Both write that date into a configuration file for subsequent commands to use, so a date that the installed `workerd` did not yet support left the project unable to run `wrangler dev`.
+
+  These now resolve to the latest compatibility date supported by this version of Wrangler, which is the release date of the `workerd` it ships with.
+
+- [#15151](https://github.com/cloudflare/workers-sdk/pull/15151) [`49f73de`](https://github.com/cloudflare/workers-sdk/commit/49f73de207124171b3f8e9ffb182facb48727388) Thanks [@maximilliangrand](https://github.com/maximilliangrand)! - Fix spurious `Trailing comma jsonc(519)` warnings for `wrangler.jsonc` in VS Code 1.131+
+
+  Trailing commas in `wrangler.jsonc` files that reference Wrangler's JSON schema are no longer reported as errors by recent versions of VS Code. Wrangler always accepted these files; only the editor warning was wrong.
+
+- [#14983](https://github.com/cloudflare/workers-sdk/pull/14983) [`7cee278`](https://github.com/cloudflare/workers-sdk/commit/7cee2784a937c86db6a88455c6efe8e8660ae69c) Thanks [@kdelay](https://github.com/kdelay)! - Respect `CLOUDFLARE_ACCOUNT_ID` in `wrangler pages project list`, `create` and `delete`
+
+  These three commands could target a previously used account even when `CLOUDFLARE_ACCOUNT_ID` was set, failing with `Authentication error [code: 10000]` in setups with more than one account. They now use the account named by `CLOUDFLARE_ACCOUNT_ID`, matching the rest of `wrangler pages`. When the variable is unset, the previously used account is still selected, as before.
+
+- [#15153](https://github.com/cloudflare/workers-sdk/pull/15153) [`265256a`](https://github.com/cloudflare/workers-sdk/commit/265256a5619fbf82e12473f7bb7c7944bdd368b4) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - Fix `wrangler preview base-config` commands showing an inherited `script` positional
+
+- [#15185](https://github.com/cloudflare/workers-sdk/pull/15185) [`1f79ace`](https://github.com/cloudflare/workers-sdk/commit/1f79ace67a81633e34dae47a666468fcdaf93f41) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use a fixed default compatibility date rather than the current date
+
+  When no compatibility date was set, Wrangler, C3 and the Vitest pool all defaulted to the current date. `workerd` only accepts a compatibility date up to 7 days beyond its own release, so whenever a `workerd` release was delayed the default could get ahead of the runtime that had been installed, and local development would fail to start.
+
+  The default is now fixed at the release date of the `workerd` version that ships with each release, which leaves a week of headroom and updates as `workerd` is upgraded. `@cloudflare/vite-plugin` previously inlined the date at which it was built. It now shares the same default.
+
+- [#15239](https://github.com/cloudflare/workers-sdk/pull/15239) [`f431166`](https://github.com/cloudflare/workers-sdk/commit/f43116682a2a08d47383be1125fd6f0b4ae3a0cc) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prevent date-enabled Node.js compatibility from adding conflicting globals to generated runtime types
+
+  Runtime type generation now treats Node.js compatibility enabled by a compatibility date the same way as an explicit `nodejs_compat` flag. Node.js globals continue to come from `@types/node` instead of being generated as `any` declarations that override those types.
+
+- [#15196](https://github.com/cloudflare/workers-sdk/pull/15196) [`8fb2b87`](https://github.com/cloudflare/workers-sdk/commit/8fb2b8760b9ba23d1584156d25c02ca2db8d2d80) Thanks [@skepticfx](https://github.com/skepticfx)! - Use the FedRAMP High managed container registry when Wrangler targets the FedRAMP High compliance region
+
+  Container builds, pushes, deployments, image commands, and local development now select the corresponding production or staging FedRAMP registry and API from either `compliance_region` or `CLOUDFLARE_COMPLIANCE_REGION`.
+
+- [#15082](https://github.com/cloudflare/workers-sdk/pull/15082) [`75cf407`](https://github.com/cloudflare/workers-sdk/commit/75cf407fc0d7fa6f4d4d9848a9221e7b16930497) Thanks [@penalosa](https://github.com/penalosa)! - Enable the new configuration format in the `cf-wrangler` dev delegate
+
+  Projects started through `cf dev` now load `cloudflare.config.ts` and optional `wrangler.config.ts`, matching the configuration used by the delegate's build path.
+
+- Updated dependencies [[`1277a72`](https://github.com/cloudflare/workers-sdk/commit/1277a72e0d01325c37a05c0e8f5111a45100af77), [`4f922dc`](https://github.com/cloudflare/workers-sdk/commit/4f922dc19941db31394357f7e146af320ae1f3d9), [`4d74b8d`](https://github.com/cloudflare/workers-sdk/commit/4d74b8d8fd5c034c012fa13973ee20bedbc844c7), [`2e0c962`](https://github.com/cloudflare/workers-sdk/commit/2e0c962da0c57bdc79b5edcaa64c7b725c1524f0), [`8777180`](https://github.com/cloudflare/workers-sdk/commit/8777180b8239d9df435acee465d02682477e93ea)]:
+  - miniflare@5.20260815.0-alpha
+
 ## 4.123.0
 
 ### Minor Changes

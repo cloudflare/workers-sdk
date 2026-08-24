@@ -1,12 +1,17 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import {
 	configFileName,
+	getDurableObjectExports,
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
+import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, PreviewDefaults } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+
+const MAX_CONTAINER_APP_NAME_LENGTH = 253;
 
 export function getBranchName(): string | undefined {
 	const workersCIBranch = getWorkersCIBranchName();
@@ -53,6 +58,257 @@ export function getHeadCommitMessage(): string | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+/**
+ * Detects the current commit's full SHA from well-known CI provider
+ * environment variables (GitHub Actions, GitLab CI, CircleCI), falling back
+ * to a generic `COMMIT_SHA` env var for providers without dedicated support.
+ */
+export function getCommitSha(): string | undefined {
+	return (
+		process.env.GITHUB_SHA ||
+		process.env.CI_COMMIT_SHA ||
+		process.env.CIRCLE_SHA1 ||
+		process.env.COMMIT_SHA ||
+		undefined
+	);
+}
+
+/**
+ * Normalizes a repository URL into a canonical `https://` form suitable for
+ * display and for sending to the API as the `workers/repository_url`
+ * annotation.
+ *
+ * Repository URLs collected from CI env vars or `git config` can arrive in
+ * several different shapes depending on the provider and remote protocol,
+ * e.g. `git@github.com:org/repo.git` (SCP-like SSH), `ssh://git@host/org/repo`,
+ * or `https://user:token@host/org/repo.git` (HTTPS with embedded credentials
+ * or a `.git` suffix). This strips embedded credentials, query strings, and
+ * hash fragments, drops the `.git` suffix, and converts SSH remotes to their
+ * `https://` equivalent, so the same repository always normalizes to the
+ * same, safe-to-share URL regardless of how it was originally configured.
+ */
+function normalizeRepositoryUrl(repositoryUrl: string): string | undefined {
+	const trimmed = repositoryUrl.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+
+	const scpLikeSshMatch = trimmed.match(/^git@([^:]+):(.+)$/);
+	if (scpLikeSshMatch) {
+		const [, host, pathname] = scpLikeSshMatch;
+		return `https://${host}/${pathname.replace(/\.git$/, "")}`;
+	}
+
+	try {
+		const url = new URL(trimmed);
+		if (url.protocol === "ssh:" && url.username === "git") {
+			return `https://${url.host}${url.pathname.replace(/\.git$/, "")}`;
+		}
+
+		if (url.protocol !== "https:" && url.protocol !== "http:") {
+			return undefined;
+		}
+
+		url.username = "";
+		url.password = "";
+		url.search = "";
+		url.hash = "";
+		url.pathname = url.pathname.replace(/\.git$/, "");
+		return url.toString().replace(/\/$/, "");
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Detects the current repository's URL from well-known CI provider
+ * environment variables (GitLab CI, CircleCI, Buildkite, Bitbucket, GitHub
+ * Actions, and a generic `REPOSITORY_URL` fallback), or from the local git
+ * remote when running in CI and no env var matched.
+ *
+ * The local git remote fallback is intentionally gated behind
+ * {@link shouldUseCIMetadataFallback}: unlike the env var checks, it shells
+ * out to read the developer's `git config`, so it's only attempted in CI to
+ * avoid uploading a local machine's repository details on every
+ * `wrangler preview` run outside CI.
+ */
+export function getRepositoryUrl(): string | undefined {
+	const repositoryUrl =
+		process.env.CI_PROJECT_URL ||
+		process.env.CI_REPOSITORY_URL ||
+		process.env.CIRCLE_REPOSITORY_URL ||
+		process.env.BUILDKITE_REPO ||
+		process.env.BITBUCKET_GIT_HTTP_ORIGIN ||
+		process.env.BITBUCKET_GIT_SSH_ORIGIN ||
+		process.env.REPOSITORY_URL;
+	if (repositoryUrl) {
+		return normalizeRepositoryUrl(repositoryUrl);
+	}
+
+	if (process.env.GITHUB_REPOSITORY) {
+		const githubServerUrl =
+			process.env.GITHUB_SERVER_URL || "https://github.com";
+		return normalizeRepositoryUrl(
+			`${githubServerUrl.replace(/\/$/, "")}/${process.env.GITHUB_REPOSITORY}`
+		);
+	}
+
+	// Only fall back to the local git remote when running in CI. Unlike the
+	// env var checks above (which only match known CI-published values),
+	// this shells out to the developer's local git config, so we don't want
+	// to do that for local, non-CI `wrangler preview` runs.
+	if (!shouldUseCIMetadataFallback()) {
+		return undefined;
+	}
+
+	try {
+		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
+		return normalizeRepositoryUrl(
+			execSync(`git config --get remote.origin.url`).toString()
+		);
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * The pull/merge request number and URL detected from the current CI
+ * environment. Either field may be missing depending on what the detected
+ * CI provider exposes.
+ */
+export type PullRequestMetadata = {
+	number?: string;
+	url?: string;
+};
+
+/**
+ * Normalizes a pull/merge request number into a trimmed string, so callers
+ * don't need to handle the mix of numeric (e.g. a parsed JSON field) and
+ * string (e.g. an env var) representations that the various CI providers use.
+ */
+function normalizePullRequestNumber(number: string | number | undefined) {
+	if (number === undefined) {
+		return undefined;
+	}
+
+	const normalizedNumber = String(number).trim();
+	return normalizedNumber ? normalizedNumber : undefined;
+}
+
+/**
+ * Detects pull request metadata from a GitHub Actions environment.
+ *
+ * Prefers the `pull_request` event payload at `GITHUB_EVENT_PATH` (available
+ * for `pull_request`/`pull_request_target`-triggered workflows), which
+ * directly provides the PR number and URL. Falls back to parsing the PR
+ * number out of `GITHUB_REF` (formatted `refs/pull/<number>/merge`) and
+ * building the URL from `GITHUB_REPOSITORY`/`GITHUB_SERVER_URL`, which covers
+ * other trigger types where a `pull_request` payload isn't available.
+ */
+function getGitHubPullRequestMetadata(): PullRequestMetadata | undefined {
+	if (process.env.GITHUB_EVENT_PATH) {
+		try {
+			const event = JSON.parse(
+				readFileSync(process.env.GITHUB_EVENT_PATH, "utf8")
+			) as {
+				pull_request?: { html_url?: string; number?: number };
+			};
+			const number = normalizePullRequestNumber(event.pull_request?.number);
+			const url = event.pull_request?.html_url
+				? normalizeRepositoryUrl(event.pull_request.html_url)
+				: undefined;
+			if (number || url) {
+				return { number, url };
+			}
+		} catch {
+			// Fall back to environment-derived metadata below.
+		}
+	}
+
+	const refPullRequestNumber =
+		process.env.GITHUB_REF?.match(/^refs\/pull\/(\d+)\//)?.[1];
+	const number = normalizePullRequestNumber(refPullRequestNumber);
+	if (!number || !process.env.GITHUB_REPOSITORY) {
+		return undefined;
+	}
+
+	const githubServerUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
+	return {
+		number,
+		url: normalizeRepositoryUrl(
+			`${githubServerUrl.replace(/\/$/, "")}/${process.env.GITHUB_REPOSITORY}/pull/${number}`
+		),
+	};
+}
+
+/**
+ * Detects merge request metadata from a GitLab CI merge request pipeline,
+ * using `CI_MERGE_REQUEST_IID` for the number and
+ * `CI_MERGE_REQUEST_PROJECT_URL` (or `CI_PROJECT_URL` as a fallback) to build
+ * the merge request URL.
+ */
+function getGitLabPullRequestMetadata(): PullRequestMetadata | undefined {
+	const number = normalizePullRequestNumber(process.env.CI_MERGE_REQUEST_IID);
+	const projectUrl =
+		process.env.CI_MERGE_REQUEST_PROJECT_URL || process.env.CI_PROJECT_URL;
+	if (!number || !projectUrl) {
+		return undefined;
+	}
+
+	const normalizedProjectUrl = projectUrl
+		.replace(/\.git$/, "")
+		.replace(/\/$/, "");
+	return {
+		number,
+		url: normalizeRepositoryUrl(
+			`${normalizedProjectUrl}/-/merge_requests/${number}`
+		),
+	};
+}
+
+/**
+ * Detects pull request metadata from generic, provider-agnostic env vars
+ * (`PULL_REQUEST_URL`/`PR_URL`/`CHANGE_URL`/`CIRCLE_PULL_REQUEST` for the URL,
+ * `PULL_REQUEST_NUMBER`/`PR_NUMBER`/`CHANGE_ID` for the number). These are
+ * conventions used by some CI providers and custom pipelines, but aren't
+ * officially documented, so this is a lower-confidence, best-effort fallback
+ * checked before the provider-specific detectors.
+ */
+function getDirectPullRequestMetadata(): PullRequestMetadata | undefined {
+	const directUrl =
+		process.env.PULL_REQUEST_URL ||
+		process.env.PR_URL ||
+		process.env.CHANGE_URL ||
+		process.env.CIRCLE_PULL_REQUEST;
+	const number = normalizePullRequestNumber(
+		process.env.PULL_REQUEST_NUMBER ||
+			process.env.PR_NUMBER ||
+			process.env.CHANGE_ID
+	);
+	const url = directUrl ? normalizeRepositoryUrl(directUrl) : undefined;
+
+	if (number || url) {
+		return { number, url };
+	}
+
+	return undefined;
+}
+
+/**
+ * Detects the pull/merge request associated with the current CI run, trying
+ * each supported source in order: direct/generic env vars, GitHub Actions,
+ * then GitLab CI. This is best effort — if none of the sources match (e.g.
+ * an unsupported CI provider, or running locally), the deployment proceeds
+ * without pull request metadata.
+ */
+export function getPullRequestMetadata(): PullRequestMetadata | undefined {
+	return (
+		getDirectPullRequestMetadata() ??
+		getGitHubPullRequestMetadata() ??
+		getGitLabPullRequestMetadata()
+	);
 }
 
 export function resolveWorkerName(
@@ -342,6 +598,114 @@ export function extractConfigBindings(config: Config): EnvBindings {
 	}
 
 	return env;
+}
+
+/**
+ * Returns the DO `class_name`s this script declares, through `migrations` or
+ * through `exports`, resolving them in the same order as wrangler's own
+ * `getDurableObjectClassNameToUseSQLiteMap`. Only the resulting names are
+ * needed here; that helper stays the authority on whether the migration
+ * sequence is valid, and it runs on this config immediately afterwards.
+ */
+function getDeclaredDOClassNames(config: Config): Set<string> {
+	const declared = new Set<string>();
+
+	for (const migration of config.migrations ?? []) {
+		for (const className of migration.deleted_classes ?? []) {
+			declared.delete(className);
+		}
+		for (const { from, to } of migration.renamed_classes ?? []) {
+			declared.delete(from);
+			declared.add(to);
+		}
+		for (const className of migration.new_classes ?? []) {
+			declared.add(className);
+		}
+		for (const className of migration.new_sqlite_classes ?? []) {
+			declared.add(className);
+		}
+	}
+
+	// A `deleted`, `renamed`, or `transferred` export no longer names a class
+	// this script implements.
+	for (const [className, entry] of Object.entries(
+		getDurableObjectExports(config.exports)
+	)) {
+		if (
+			entry.state === undefined ||
+			entry.state === "created" ||
+			entry.state === "expecting-transfer"
+		) {
+			declared.add(className);
+		}
+	}
+
+	return declared;
+}
+
+/**
+ * Returns the DO `class_name`s whose containers this preview owns: the classes
+ * the script declares through `migrations` or `exports`, plus the classes bound
+ * in the preview without a `script_name`.
+ *
+ * A binding is not required. A Durable Object reached only through
+ * `ctx.exports` is still implemented by this script, so its container belongs
+ * to this preview. A class reachable only through a `script_name` binding is
+ * implemented by another Worker, which owns its own container application.
+ */
+export function getPreviewOwnedContainerClassNames(
+	config: Config,
+	previews: PreviewsConfig | undefined
+): Set<string> {
+	const owned = getDeclaredDOClassNames(config);
+	for (const binding of previews?.durable_objects?.bindings ?? []) {
+		if (binding.script_name === undefined) {
+			owned.add(binding.class_name);
+		}
+	}
+	return owned;
+}
+
+/**
+ * Compose the auto-generated container application name for a preview-scoped
+ * container, in the form `{parentWorkerName}_{previewSlug}_{className}`.
+ *
+ * A container application name is capped at 253 characters and may not start
+ * or end with a dash, contain consecutive dashes, or start with a digit. A
+ * worker name is allowed all four, and the preview slug is derived from a
+ * branch name, so the composed name is normalised here rather than passed
+ * through.
+ *
+ * Wrangler looks an application up by name to choose between create and
+ * modify, so a name must identify one preview container. Both normalising and
+ * truncating can map two inputs onto one output, so either one earns a digest
+ * of the composed name.
+ */
+export function previewContainerAppName(
+	parentWorkerName: string,
+	previewSlug: string,
+	className: string
+): string {
+	const composed = `${parentWorkerName}_${previewSlug}_${className}`;
+	const normalised = composed
+		.replace(/[^A-Za-z0-9_-]/g, "-")
+		.replace(/-+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		// Prefix a letter rather than reject a name the Workers API accepted.
+		.replace(/^(?=[0-9])/, "w");
+
+	if (
+		normalised === composed &&
+		normalised.length <= MAX_CONTAINER_APP_NAME_LENGTH
+	) {
+		return normalised;
+	}
+
+	return truncateWithSuffix(
+		normalised,
+		`_${shortHash(composed)}`,
+		MAX_CONTAINER_APP_NAME_LENGTH
+	);
 }
 
 export function assemblePreviewScriptSettings(config: Config) {

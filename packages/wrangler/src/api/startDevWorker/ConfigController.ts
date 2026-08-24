@@ -329,7 +329,13 @@ async function resolveTriggers(
 			type: "cron",
 		})) ?? [];
 
-	return [...devRoutes, ...queueConsumers, ...crons];
+	const connectHandlers =
+		config.connect?.map<Extract<Trigger, { type: "connect" }>>((c) => ({
+			...c,
+			type: "connect",
+		})) ?? [];
+
+	return [...devRoutes, ...queueConsumers, ...crons, ...connectHandlers];
 }
 
 async function resolveConfig(

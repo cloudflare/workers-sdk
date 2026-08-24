@@ -28,10 +28,14 @@ export type Socket = {
 	name?: string;
 	address?: string;
 	service?: ServiceDesignator;
-} & ({ http?: HttpOptions } | { https?: Socket_Https });
+} & ({ http?: HttpOptions } | { https?: Socket_Https } | { tcp?: Socket_Tcp });
 
 export interface Socket_Https {
 	options?: HttpOptions;
+	tlsOptions?: TlsOptions;
+}
+
+export interface Socket_Tcp {
 	tlsOptions?: TlsOptions;
 }
 
@@ -197,7 +201,25 @@ export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
 	enableSql?: boolean;
+	container?: Worker_DurableObjectNamespace_ContainerOptions;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
+
+export interface Worker_DurableObjectNamespace_ContainerOptions {
+	imageName?: string;
+	privileges?: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges;
+}
+
+export interface Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges {
+	capabilities?: string[];
+	devices?: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device[];
+	securityOpt?: string[];
+}
+
+export interface Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device {
+	pathOnHost?: string;
+	pathInContainer?: string;
+	cgroupPermissions?: string;
+}
 
 export type ExternalServer = { address?: string } & (
 	| { http: HttpOptions }

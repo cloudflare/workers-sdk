@@ -8,5 +8,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Published workspace packages that consumers must install alongside autoconfig.
 	// They are kept external to share a single copy with wrangler and other SDK tools.
 	"@cloudflare/cli-shared-helpers",
+	// Its public types are exposed by autoconfig and must resolve for consumers.
+	"@cloudflare/config",
 	"@cloudflare/workers-utils",
 ];
