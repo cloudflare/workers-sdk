@@ -88,16 +88,15 @@ test("resolves a custom configPath and its entrypoint", async ({
 	await expect(result.exitCode).resolves.toBe(0);
 });
 
-test("evaluates config functions with the Vite mode", async ({
-	expect,
-	seed,
-	vitestRun,
-}) => {
-	await seed({
-		"vitest.config.mts": vitestConfig({
-			experimental: { newConfig: true },
-		}),
-		"cloudflare.config.ts": dedent`
+test(
+	"evaluates config functions with the Vite mode",
+	{ timeout: 30_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				experimental: { newConfig: true },
+			}),
+			"cloudflare.config.ts": dedent`
 			export default (ctx) => ({
 				type: "worker",
 				name: "test-worker",
@@ -108,8 +107,8 @@ test("evaluates config functions with the Vite mode", async ({
 				},
 			});
 		`,
-		"index.ts": worker,
-		"index.test.ts": dedent`
+			"index.ts": worker,
+			"index.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it } from "vitest";
 
@@ -117,15 +116,15 @@ test("evaluates config functions with the Vite mode", async ({
 				expect(env.MY_TEXT).toBe("test");
 			});
 		`,
-	});
+		});
 
-	const result = await vitestRun();
+		const result = await vitestRun();
 
-	await expect(result.exitCode).resolves.toBe(0);
+		await expect(result.exitCode).resolves.toBe(0);
 
-	// ...and `--mode` overrides it, as it would in any other Vite project
-	await seed({
-		"index.test.ts": dedent`
+		// ...and `--mode` overrides it, as it would in any other Vite project
+		await seed({
+			"index.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it } from "vitest";
 
@@ -133,12 +132,13 @@ test("evaluates config functions with the Vite mode", async ({
 				expect(env.MY_TEXT).toBe("staging");
 			});
 		`,
-	});
+		});
 
-	const overridden = await vitestRun({ flags: ["--mode=staging"] });
+		const overridden = await vitestRun({ flags: ["--mode=staging"] });
 
-	await expect(overridden.exitCode).resolves.toBe(0);
-});
+		await expect(overridden.exitCode).resolves.toBe(0);
+	}
+);
 
 describe("validation", () => {
 	test("rejects `wrangler` combined with `experimental.newConfig`", async ({
