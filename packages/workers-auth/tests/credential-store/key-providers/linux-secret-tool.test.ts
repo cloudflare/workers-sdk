@@ -94,6 +94,16 @@ describe("LinuxSecretToolKeyProvider", () => {
 			expect(probeSecretTool()).toBe(true);
 		});
 
+		it("returns true when secret-tool was launched but terminated by a signal", ({
+			expect,
+		}) => {
+			setLinuxSecretToolRunner(() => ({
+				...mockResult({ status: null }),
+				signal: "SIGTERM",
+			}));
+			expect(probeSecretTool()).toBe(true);
+		});
+
 		it("returns false when spawnSync reports ENOENT instead of throwing", ({
 			expect,
 		}) => {

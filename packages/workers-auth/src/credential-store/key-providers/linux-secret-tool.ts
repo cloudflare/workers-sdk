@@ -77,8 +77,9 @@ export function probeSecretTool(): boolean {
 	try {
 		const r = runner(["--version"]);
 		// `spawnSync` does not throw when the executable is missing: it
-		// reports the failure via `error` and leaves `status` as `null`.
-		result = r.error === undefined && r.status !== null;
+		// reports the failure via `error`. A result without an error proves
+		// the executable was launched, even if a signal terminated it.
+		result = r.error === undefined;
 	} catch {
 		result = false;
 	}
