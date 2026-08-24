@@ -1,9 +1,8 @@
-import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
+import { buildPublicUrl } from "miniflare";
 import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
-import { rewriteLegacyMiniflarePath } from "./trigger-handlers";
 
 /**
  * Plugin to provide core preview functionality
@@ -54,12 +53,6 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 			// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 			vitePreviewServer.middlewares.use(
 				createRequestHandler((request) => {
-					const url = new URL(request.url);
-					const rewritten = rewriteLegacyMiniflarePath(url.pathname);
-					if (rewritten !== url.pathname) {
-						url.pathname = rewritten;
-						request = new MiniflareRequest(url, request);
-					}
 					return ctx.miniflare.dispatchFetch(request, { redirect: "manual" });
 				})
 			);
