@@ -880,6 +880,16 @@ export type WorkflowBinding = {
 	};
 	/** Optional cron schedule(s) for automatically triggering workflow instances */
 	schedules?: string | string[];
+	/**
+	 * Optional default retention for instances of this Workflow, applied when an instance does not
+	 * set its own retention.
+	 */
+	default_retention?: {
+		/** How long to retain instances that complete successfully */
+		success_retention?: number | string;
+		/** How long to retain instances that end in an error */
+		error_retention?: number | string;
+	};
 };
 
 /**
