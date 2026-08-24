@@ -4,7 +4,10 @@ import {
 	type Exports,
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
-import type { ParsedInputWorkerConfig, ParsedSettingsConfig } from "./schema";
+import type {
+	ParsedInputSettingsConfig,
+	ParsedInputWorkerConfig,
+} from "./schema";
 import type { Json } from "./utils";
 
 /**
@@ -20,7 +23,7 @@ import type { Json } from "./utils";
  */
 export function convertToWranglerConfig(
 	workerConfig: ParsedInputWorkerConfig,
-	settingsConfig?: ParsedSettingsConfig
+	settingsConfig?: ParsedInputSettingsConfig
 ): RawConfig {
 	const result: RawConfig = {};
 
@@ -43,7 +46,7 @@ export function convertToWranglerConfig(
  * onto an existing Wrangler `RawConfig`.
  */
 function convertSettings(
-	settings: ParsedSettingsConfig,
+	settings: ParsedInputSettingsConfig,
 	result: RawConfig
 ): void {
 	if (settings.accountId !== undefined) {

@@ -99,6 +99,7 @@ describe("loadNewConfig", () => {
 			});
 
 			expect(result.rawConfig.name).toBe("worker-staging");
+			expect(result.mode).toBe("staging");
 		});
 
 		it("falls back to CLOUDFLARE_ENV when args.env is not provided", async ({
@@ -121,6 +122,7 @@ describe("loadNewConfig", () => {
 			});
 
 			expect(result.rawConfig.name).toBe("worker-preview");
+			expect(result.mode).toBe("preview");
 		});
 
 		it("uses undefined when neither args.env nor CLOUDFLARE_ENV is set", async ({
@@ -142,6 +144,7 @@ describe("loadNewConfig", () => {
 			});
 
 			expect(result.rawConfig.name).toBe("worker[undefined]");
+			expect(result.mode).toBeUndefined();
 		});
 
 		it("passes ctx.mode into the function-form wrangler.config.ts", async ({

@@ -3,14 +3,15 @@ import * as path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
 	getBuildOutputDir,
-	getRootConfigPath,
+	getSettingsConfigPath,
 	getWorkerConfigPath,
 	getWorkerDir,
 } from "./paths";
 import type {
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 
 /**
@@ -39,14 +40,27 @@ export async function writeWorkerConfig(
 }
 
 /**
- * Write the top-level `config.json` holding shared settings to the Build
- * Output Specification tree.
+ * Write the top-level `config.json` to the Build Output Specification tree.
+ *
+ * Holds the project-level settings shared by every Worker: those declared by
+ * the `settings` export, including the `mode`, which is supplied at build time
+ * rather than declared. Always written, even when there are no declared
+ * settings and no mode: the result then degrades to `{ "type": "settings" }`.
+ *
+ * `mode` is omitted when undefined, which is the case for Wrangler builds that
+ * selected no mode (Vite always resolves one).
  */
-export async function writeRootConfig(
+export async function writeSettingsConfig(
 	root: string,
-	settings: ParsedSettingsConfig
+	settings: ParsedInputSettingsConfig | undefined,
+	mode?: string
 ): Promise<void> {
-	const configPath = getRootConfigPath(root);
+	const outputConfig: ParsedOutputSettingsConfig = {
+		...settings,
+		type: "settings",
+		...(mode !== undefined ? { mode } : {}),
+	};
+	const configPath = getSettingsConfigPath(root);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });
-	await fsp.writeFile(configPath, JSON.stringify(settings));
+	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
 }
