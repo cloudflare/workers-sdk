@@ -4,6 +4,8 @@ import { page, viteUrl } from "./utils";
 const WORKERS_ROUTE = "**/cdn-cgi/local/explorer/api/local/workers";
 const EMAIL_ROUTING_DETAIL_ROUTE =
 	"**/cdn-cgi/local/explorer/api/local/email/routing?*";
+const EMAIL_ROUTING_SEND_ROUTE =
+	"**/cdn-cgi/local/explorer/api/local/email/routing/send?*";
 
 function createWorkers(count: number) {
 	return Array.from({ length: count }, (_, index) => ({
@@ -80,9 +82,258 @@ async function mockEmailRoutingDetail(): Promise<void> {
 afterEach(async () => {
 	await page.unroute(WORKERS_ROUTE);
 	await page.unroute(EMAIL_ROUTING_DETAIL_ROUTE);
+	await page.unroute(EMAIL_ROUTING_SEND_ROUTE);
 });
 
 describe("worker selector", () => {
+	test("canonicalizes missing and invalid workers before loading email data", async ({
+		expect,
+	}) => {
+		const requestedWorkers: Array<string | null> = [];
+		await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
+			const search = new URL(route.request().url()).searchParams;
+			const emailId = search.get("email_id");
+			requestedWorkers.push(search.get("worker"));
+			await route.fulfill({
+				contentType: "application/json",
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result: emailId
+						? {
+								attachments: [],
+								events: [],
+								forwards: [],
+								from: "sender@example.com",
+								messageId: "<test-email-id>",
+								outcome: "ok",
+								raw: "Content-Type: text/plain\r\n\r\nBody",
+								rawSize: 4,
+								receivedAt: "2026-08-24T00:00:00.000Z",
+								replies: [],
+								subject: "Direct email",
+								text: "Body",
+								to: "recipient@example.com",
+							}
+						: [],
+					result_info: emailId
+						? undefined
+						: { count: 0, has_more: false, per_page: 10 },
+					success: true,
+				}),
+			});
+		});
+		await loadWorkers(2);
+
+		await page.goto(
+			new URL("/cdn-cgi/local/explorer/email/routing", viteUrl).toString()
+		);
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-1");
+		await expect.poll(() => requestedWorkers.length).toBeGreaterThan(0);
+		expect(requestedWorkers.every((worker) => worker === "worker-1")).toBe(
+			true
+		);
+
+		requestedWorkers.length = 0;
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/email/routing?worker=missing-worker",
+				viteUrl
+			).toString()
+		);
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-1");
+		await expect.poll(() => requestedWorkers.length).toBeGreaterThan(0);
+		expect(requestedWorkers.every((worker) => worker === "worker-1")).toBe(
+			true
+		);
+
+		requestedWorkers.length = 0;
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/email/routing/test-email-id",
+				viteUrl
+			).toString()
+		);
+		await expect
+			.poll(() => new URL(page.url()).searchParams.get("worker"))
+			.toBe("worker-1");
+		await page.getByText("Direct email").last().waitFor();
+		await expect.poll(() => requestedWorkers.length).toBeGreaterThan(0);
+		expect(requestedWorkers.every((worker) => worker === "worker-1")).toBe(
+			true
+		);
+	});
+
+	test("waits for attachments and keeps an in-flight send dialog open", async ({
+		expect,
+	}) => {
+		await mockEmailRoutingDetail();
+		await loadWorkers(1);
+		let releaseSend: (() => void) | undefined;
+		const sendReleased = new Promise<void>((resolve) => {
+			releaseSend = resolve;
+		});
+		let sentBody: unknown;
+		await page.route(EMAIL_ROUTING_SEND_ROUTE, async (route) => {
+			sentBody = route.request().postDataJSON();
+			await sendReleased;
+			await route.fulfill({
+				contentType: "application/json",
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result: { messageId: "<sent@example.com>", outcome: "ok" },
+					success: true,
+				}),
+			});
+		});
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/email/routing?worker=worker-1",
+				viteUrl
+			).toString()
+		);
+		await page.getByRole("button", { name: "Send Test Email" }).click();
+		await page.getByLabel("From").fill("sender@example.com");
+		await page
+			.getByRole("textbox", { name: "To", exact: true })
+			.fill("recipient@example.com");
+		await page.evaluate(() => {
+			const arrayBuffer = File.prototype.arrayBuffer;
+			File.prototype.arrayBuffer = async function () {
+				await new Promise((resolve) => setTimeout(resolve, 200));
+				return arrayBuffer.call(this);
+			};
+		});
+		await page.getByLabel("Attachments").setInputFiles({
+			buffer: Buffer.from("attachment body"),
+			mimeType: "text/plain",
+			name: "example.txt",
+		});
+		const sendButton = page.getByRole("button", { name: "Send Email" });
+		await expect.poll(() => sendButton.isDisabled()).toBe(true);
+		await page.getByText("example.txt").waitFor();
+		await expect.poll(() => sendButton.isEnabled()).toBe(true);
+		await sendButton.click();
+		await page.keyboard.press("Escape");
+		await page.getByRole("heading", { name: "Send test email" }).waitFor();
+		await expect
+			.poll(() => sentBody)
+			.toMatchObject({
+				attachments: [
+					{
+						content: Buffer.from("attachment body").toString("base64"),
+						filename: "example.txt",
+						type: "text/plain",
+					},
+				],
+			});
+		releaseSend?.();
+		await expect
+			.poll(() =>
+				page.getByRole("heading", { name: "Send test email" }).count()
+			)
+			.toBe(0);
+	});
+
+	test("reports composer validation errors accessibly and rejects managed headers", async ({
+		expect,
+	}) => {
+		await mockEmailRoutingDetail();
+		await loadWorkers(1);
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/email/routing?worker=worker-1",
+				viteUrl
+			).toString()
+		);
+		await page.getByRole("button", { name: "Send Test Email" }).click();
+		await page.getByRole("heading", { name: "Send test email" }).waitFor();
+		await page.getByRole("button", { name: "Send Email" }).click();
+		await page
+			.getByRole("alert")
+			.filter({ hasText: "A sender address is required." })
+			.waitFor();
+
+		await page.getByLabel("From").fill("sender@example.com");
+		await page
+			.getByRole("textbox", { name: "To", exact: true })
+			.fill("recipient@example.com");
+		const headersInput = page.getByLabel("Custom headers", { exact: false });
+		await headersInput.fill("sUbJeCt: misleading subject");
+		await page.getByRole("button", { name: "Send Email" }).click();
+
+		await expect.poll(() => page.getByRole("alert").count()).toBe(1);
+		await page
+			.getByRole("alert")
+			.filter({ hasText: "Subject is managed by the email composer" })
+			.waitFor();
+		expect(await headersInput.getAttribute("aria-invalid")).toBe("true");
+		expect(await headersInput.getAttribute("aria-describedby")).toBe(
+			"test-email-headers-help"
+		);
+	});
+
+	test("preserves the current email page after a pagination failure and retries", async ({
+		expect,
+	}) => {
+		let failNextPage = true;
+		await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
+			const cursor = new URL(route.request().url()).searchParams.get("cursor");
+			if (cursor && failNextPage) {
+				failNextPage = false;
+				await route.fulfill({ status: 500, body: "Pagination failed" });
+				return;
+			}
+			const pageNumber = cursor ? 2 : 1;
+			await route.fulfill({
+				contentType: "application/json",
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result: [
+						{
+							attachments: [],
+							from: `sender-${pageNumber}@example.com`,
+							messageId: `<page-${pageNumber}@example.com>`,
+							rawSize: 4,
+							receivedAt: "2026-08-24T00:00:00.000Z",
+							subject: `Page ${pageNumber}`,
+							to: "recipient@example.com",
+						},
+					],
+					result_info: {
+						count: 1,
+						cursor: cursor ? undefined : "next-page",
+						has_more: !cursor,
+						per_page: 10,
+					},
+					success: true,
+				}),
+			});
+		});
+		await loadWorkers(1);
+		await page.goto(
+			new URL(
+				"/cdn-cgi/local/explorer/email/routing?worker=worker-1",
+				viteUrl
+			).toString()
+		);
+		await page.getByText("Page 1", { exact: true }).waitFor();
+
+		await page.getByRole("button", { name: "Next page" }).click();
+		await page.getByRole("alert").waitFor();
+		await page.getByText("Page 1", { exact: true }).waitFor();
+
+		await page.getByRole("button", { name: "Next page" }).click();
+		await page.getByText("Page 2", { exact: true }).waitFor();
+		expect(await page.getByRole("alert").count()).toBe(0);
+	});
+
 	test("discards stale email lists after switching workers", async ({
 		expect,
 	}) => {
@@ -130,15 +381,72 @@ describe("worker selector", () => {
 				viteUrl
 			).toString()
 		);
-		await page.getByRole("link", { name: /Old email/ }).waitFor();
+		await page.getByRole("button", { name: /Old email/ }).waitFor();
+		await page.getByRole("button", { name: "Send Test Email" }).click();
+		await page.getByLabel("From").waitFor();
+		await page.evaluate(() => {
+			const arrayBuffer = File.prototype.arrayBuffer;
+			File.prototype.arrayBuffer = function () {
+				document.documentElement.dataset.oversizedFileRead = "true";
+				return arrayBuffer.call(this);
+			};
+		});
+		await page.getByLabel("Attachments").setInputFiles({
+			buffer: Buffer.alloc(700 * 1024 + 1),
+			mimeType: "application/octet-stream",
+			name: "oversized.bin",
+		});
+		await page.getByText(/Attachments must total less than/).waitFor();
+		expect(
+			await page.locator("html").getAttribute("data-oversized-file-read")
+		).toBeNull();
+
+		await page.evaluate(() => {
+			const arrayBuffer = File.prototype.arrayBuffer;
+			File.prototype.arrayBuffer = async function () {
+				await new Promise((resolve) => setTimeout(resolve, 200));
+				return arrayBuffer.call(this);
+			};
+		});
+		const attachmentInput = page.getByLabel("Attachments");
+		await attachmentInput.setInputFiles({
+			buffer: Buffer.alloc(400 * 1024),
+			mimeType: "application/octet-stream",
+			name: "first-pending.bin",
+		});
+		await attachmentInput.setInputFiles({
+			buffer: Buffer.alloc(400 * 1024),
+			mimeType: "application/octet-stream",
+			name: "second-rejected.bin",
+		});
+		await page.getByText(/Attachments must total less than/).waitFor();
+		await page.getByText("first-pending.bin").waitFor();
+		expect(await page.getByText("second-rejected.bin").count()).toBe(0);
+
+		await page.keyboard.press("Escape");
+		await page.getByRole("button", { name: "Send Test Email" }).click();
+		await attachmentInput.setInputFiles({
+			buffer: Buffer.alloc(400 * 1024),
+			mimeType: "application/octet-stream",
+			name: "cancelled-on-close.bin",
+		});
+		await page.keyboard.press("Escape");
+		await page.waitForTimeout(250);
+		await page.getByRole("button", { name: "Send Test Email" }).click();
+		expect(await page.getByText("cancelled-on-close.bin").count()).toBe(0);
+		await page.getByText("No attachments").waitFor();
+		await page.keyboard.press("Escape");
+
 		await page.getByRole("button", { name: "Refresh" }).click();
 		await page.getByRole("combobox").click();
 		await page.getByRole("option", { name: "worker-2" }).click();
-		await page.getByRole("link", { name: /Worker two email/ }).waitFor();
+		await page.getByRole("button", { name: /Worker two email/ }).waitFor();
 		releaseStaleResponse?.();
 		await page.waitForTimeout(100);
 
-		expect(await page.getByRole("link", { name: /Old email/ }).count()).toBe(0);
+		expect(await page.getByRole("button", { name: /Old email/ }).count()).toBe(
+			0
+		);
 	});
 
 	test("stays hidden when there is only one worker", async ({ expect }) => {

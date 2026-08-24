@@ -29,6 +29,33 @@ export interface MimeMessage {
 	attachments?: MimeAttachment[];
 }
 
+const MIME_MESSAGE_FIELD_HEADER_NAMES = new Set([
+	"bcc",
+	"cc",
+	"from",
+	"reply-to",
+	"subject",
+	"to",
+]);
+
+const MIME_STRUCTURAL_HEADER_NAMES = new Set([
+	"content-transfer-encoding",
+	"content-type",
+	"date",
+	"message-id",
+	"mime-version",
+]);
+
+/**
+ * Checks whether a header is generated from a structured message field.
+ *
+ * @param name - Header name to check.
+ * @returns Whether the MIME composer owns the header value.
+ */
+export function isMimeMessageFieldHeader(name: string): boolean {
+	return MIME_MESSAGE_FIELD_HEADER_NAMES.has(name.toLowerCase());
+}
+
 export function buildMimeMessage(
 	message: MimeMessage,
 	messageId: string,
@@ -52,15 +79,16 @@ export function buildMimeMessage(
 		headers.push(`${key}: ${value}`);
 	}
 
-	const managedHeaders = new Set([
-		"bcc",
-		"message-id",
-		"content-type",
-		"content-transfer-encoding",
-		...Object.keys(generatedHeaders).map((name) => name.toLowerCase()),
-	]);
+	const generatedHeaderNames = new Set(
+		Object.keys(generatedHeaders).map((name) => name.toLowerCase())
+	);
 	for (const [key, value] of Object.entries(message.headers ?? {})) {
-		if (managedHeaders.has(key.toLowerCase())) {
+		const normalizedKey = key.toLowerCase();
+		if (
+			isMimeMessageFieldHeader(normalizedKey) ||
+			MIME_STRUCTURAL_HEADER_NAMES.has(normalizedKey) ||
+			generatedHeaderNames.has(normalizedKey)
+		) {
 			continue;
 		}
 		headers.push(`${key}: ${value}`);
@@ -198,19 +226,10 @@ export function buildReplyFromMessageBuilder(
 		throw new Error("invalid headers set");
 	}
 	for (const name of [
-		"from",
-		"to",
-		"cc",
-		"bcc",
-		"reply-to",
-		"subject",
-		"message-id",
+		...MIME_MESSAGE_FIELD_HEADER_NAMES,
+		...MIME_STRUCTURAL_HEADER_NAMES,
 		"in-reply-to",
 		"references",
-		"date",
-		"mime-version",
-		"content-type",
-		"content-transfer-encoding",
 	]) {
 		customHeaders.delete(name);
 	}

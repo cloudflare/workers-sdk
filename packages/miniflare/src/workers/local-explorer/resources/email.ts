@@ -21,7 +21,7 @@ import {
 	messageIdToStorageId,
 	synthesizeMessageId,
 } from "../../email/message-id";
-import { buildMimeMessage } from "../../email/mime";
+import { buildMimeMessage, isMimeMessageFieldHeader } from "../../email/mime";
 import {
 	fetchFromPeer,
 	getPeerEntrypoint,
@@ -606,6 +606,9 @@ function validateEmailRequest(body: EmailSendRequest): string | undefined {
 		new Headers(body.headers);
 	} catch {
 		return "Custom headers must use valid names and values.";
+	}
+	if (Object.keys(body.headers ?? {}).some(isMimeMessageFieldHeader)) {
+		return "Custom headers must not override managed email headers.";
 	}
 
 	for (const attachment of body.attachments ?? []) {

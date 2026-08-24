@@ -1529,6 +1529,36 @@ describe("Local Explorer email API", () => {
 		});
 	});
 
+	test("rejects custom headers managed by the email composer", async ({
+		expect,
+	}) => {
+		const response = await mf.dispatchFetch(
+			`${BASE_URL}/local/email/routing/send?worker=${WORKER_NAME}`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Canonical subject",
+					text: "Body text",
+					headers: {
+						sUbJeCt: "Misleading subject",
+					},
+				}),
+			}
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({
+			errors: [
+				{
+					message: "Custom headers must not override managed email headers.",
+				},
+			],
+		});
+	});
+
 	test("accepts a zero-byte attachment in a test email", async ({ expect }) => {
 		const response = await mf.dispatchFetch(
 			`${BASE_URL}/local/email/routing/send?worker=${WORKER_NAME}`,
