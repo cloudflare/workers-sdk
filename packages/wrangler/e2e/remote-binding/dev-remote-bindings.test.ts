@@ -6,6 +6,7 @@ import { beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { fetchText } from "../helpers/fetch-text";
+import { generateResourceName } from "../helpers/generate-resource-name";
 import { normalizeOutput } from "../helpers/normalize";
 import { makeRoot, seed } from "../helpers/setup";
 import { waitFor, waitForLong } from "../helpers/wait-for";
@@ -35,14 +36,18 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		it("handles both remote and local service bindings at the same time", async ({
 			expect,
 		}) => {
-			await spawnLocalWorker(helper);
+			const localWorkerName = await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					name: "remote-bindings-mixed-bindings-test",
 					main: "local-and-remote-service-bindings.js",
 					compatibility_date: "2025-05-07",
 					services: [
-						{ binding: "LOCAL_WORKER", service: "local-worker", remote: false },
+						{
+							binding: "LOCAL_WORKER",
+							service: localWorkerName,
+							remote: false,
+						},
 						{
 							binding: "REMOTE_WORKER",
 							service: remoteWorkerName,
@@ -64,7 +69,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		it("allows code changes during development", async ({ expect }) => {
-			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					name: "remote-bindings-mixed-bindings-test",
@@ -123,7 +127,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		it("handles workers AI alongside a local service binding", async ({
 			expect,
 		}) => {
-			await spawnLocalWorker(helper);
+			const localWorkerName = await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					name: "remote-bindings-mixed-bindings-test",
@@ -133,7 +137,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						binding: "AI",
 					},
 					services: [
-						{ binding: "LOCAL_WORKER", service: "local-worker", remote: false },
+						{
+							binding: "LOCAL_WORKER",
+							service: localWorkerName,
+							remote: false,
+						},
 					],
 				}),
 			});
@@ -152,7 +160,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		it("should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)", async ({
 			expect,
 		}) => {
-			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					name: "remote-bindings-mixed-bindings-test",
@@ -313,11 +320,17 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
-async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
+async function spawnLocalWorker(
+	helper: WranglerE2ETestHelper
+): Promise<string> {
 	const local = makeRoot();
+	// Windows test cleanup force-terminates child processes, so their dev registry
+	// entries can remain until the stale timeout. A unique name prevents the next
+	// test or retry from connecting to a dead process through a leftover entry.
+	const workerName = generateResourceName("local-worker");
 	await seed(local, {
 		"wrangler.json": JSON.stringify({
-			name: "local-worker",
+			name: workerName,
 			main: "index.js",
 			compatibility_date: "2025-05-07",
 		}),
@@ -330,4 +343,5 @@ async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
 	});
 	const localWorker = helper.runLongLived("wrangler dev", { cwd: local });
 	await localWorker.waitForReady();
+	return workerName;
 }
