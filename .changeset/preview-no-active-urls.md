@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 `[private beta]`: Explain unavailable Preview URLs after `wrangler preview` deployments
