@@ -188,13 +188,13 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
-	test("requires Hyperdrive localConnectionString", ({ expect }) => {
+	test("requires Hyperdrive dev.connectionString", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
 			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
-				HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive" },
+				HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive", dev: {} },
 			},
 		});
 
@@ -202,7 +202,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 		if (!result.success) {
 			expect(result.error.issues).toEqual([
 				expect.objectContaining({
-					path: ["env", "HYPERDRIVE", "localConnectionString"],
+					path: ["env", "HYPERDRIVE", "dev", "connectionString"],
 					message: "Invalid input: expected string, received undefined",
 				}),
 			]);
@@ -217,15 +217,19 @@ describe("MiniflareWorkerConfigSchema", () => {
 					HYPERDRIVE: {
 						type: "hyperdrive",
 						id: "hyperdrive",
-						localConnectionString:
-							"postgres://user:password@localhost:5432/database",
+						dev: {
+							connectionString:
+								"postgres://user:password@localhost:5432/database",
+						},
 					},
 				},
 			}).env?.HYPERDRIVE
 		).toEqual({
 			type: "hyperdrive",
 			id: "hyperdrive",
-			localConnectionString: "postgres://user:password@localhost:5432/database",
+			dev: {
+				connectionString: "postgres://user:password@localhost:5432/database",
+			},
 		});
 	});
 

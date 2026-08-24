@@ -66,7 +66,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 								MY_SERVICE: {
 									type: "worker",
 									workerName: remoteWorkerName,
-									remote: true,
+									dev: { remote: true },
 								},
 							},
 						},

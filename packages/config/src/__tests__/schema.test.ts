@@ -73,6 +73,41 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts binding options nested under dev", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: {
+					KV: { type: "kv", dev: { remote: true } },
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive-id",
+						dev: { connectionString: "postgres://localhost/database" },
+					},
+					R2: {
+						type: "r2",
+						dev: {
+							remote: false,
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects remote at the binding root", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: { KV: { type: "kv", remote: true } },
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it.for([
 			["ai"],
 			["assets"],

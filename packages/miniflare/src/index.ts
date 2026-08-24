@@ -21,7 +21,10 @@ import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
-import { MiniflareOptionsSchema } from "./config/schema";
+import {
+	isMiniflareUnsafeBinding,
+	MiniflareOptionsSchema,
+} from "./config/schema";
 import { exitHook } from "./exit-hook";
 import {
 	coupleWebSocket,
@@ -1967,7 +1970,7 @@ export class Miniflare {
 		// carry the plugin reference under `dev.plugin`.
 		for (const worker of workers) {
 			for (const binding of Object.values(worker.config.env ?? {})) {
-				if ("dev" in binding && binding.dev?.plugin) {
+				if (isMiniflareUnsafeBinding(binding) && binding.dev?.plugin) {
 					requestedExternalPlugins.set(
 						binding.dev.plugin.name,
 						binding.dev.plugin.package

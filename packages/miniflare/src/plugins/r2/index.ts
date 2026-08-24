@@ -33,7 +33,7 @@ import type {
 /** Local-dev S3 credentials, derived from the parsed R2 binding. */
 type R2S3Credentials = NonNullable<
 	NonNullable<
-		Extract<MiniflareBinding, { type: "r2" }>["localDev"]
+		Extract<MiniflareBinding, { type: "r2" }>["dev"]
 	>["experimentalS3Credentials"]
 >;
 
@@ -100,7 +100,7 @@ export function getR2S3Service(
 	const credentialsById: Record<string, R2S3Credentials> = {};
 	for (const worker of allWorkerOpts) {
 		for (const [, bucket] of getEnvBindingsOfType(worker.config, "r2")) {
-			const s3Credentials = bucket.localDev?.experimentalS3Credentials;
+			const s3Credentials = bucket.dev?.experimentalS3Credentials;
 			if (
 				getRemoteProxyConnectionString(bucket, worker.dev) !== undefined ||
 				s3Credentials === undefined
