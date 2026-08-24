@@ -1,9 +1,10 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { getFlag, toFlagInput, updateFlag } from "../client";
+import { toFlagInput } from "../client";
 import { renderFlag } from "../render";
 import { confirmRuleReplacement, parseWeights } from "../shared";
+import { flagStoreArgDefinitions, withFlagStore } from "../store";
 import type { Rule } from "../client";
 
 export const flagshipFlagsSplitCommand = createCommand({
@@ -61,57 +62,63 @@ export const flagshipFlagsSplitCommand = createCommand({
 			default: false,
 			description: "Return output as JSON",
 		},
+		...flagStoreArgDefinitions,
 	},
 	positionalArgs: ["app-id", "key"],
 	async handler(args, { config, confirm }) {
 		const { appId, key } = args;
-		const current = await getFlag(config, appId, key);
-		const weights = parseWeights(args.weight);
-		for (const variation of Object.keys(weights)) {
-			if (!(variation in current.variations)) {
-				throw new UserError(
-					`Unknown variation "${variation}". Available variations: ${Object.keys(current.variations).join(", ")}`,
-					{ telemetryMessage: "flagship split unknown variation" }
-				);
+		const flag = await withFlagStore(args, config, appId, async (store) => {
+			const current = await store.getFlag(key);
+			const weights = parseWeights(args.weight);
+			for (const variation of Object.keys(weights)) {
+				if (!(variation in current.variations)) {
+					throw new UserError(
+						`Unknown variation "${variation}". Available variations: ${Object.keys(current.variations).join(", ")}`,
+						{ telemetryMessage: "flagship split unknown variation" }
+					);
+				}
 			}
-		}
-		const total = Object.values(weights).reduce(
-			(sum, weight) => sum + weight,
-			0
-		);
-		let cumulative = 0;
-		let priority = 1;
-		const rules: Rule[] = [];
-		for (const [variation, weight] of Object.entries(weights)) {
-			if (weight === 0) {
-				continue;
+			const total = Object.values(weights).reduce(
+				(sum, weight) => sum + weight,
+				0
+			);
+			let cumulative = 0;
+			let priority = 1;
+			const rules: Rule[] = [];
+			for (const [variation, weight] of Object.entries(weights)) {
+				if (weight === 0) {
+					continue;
+				}
+				cumulative += (weight / total) * 100;
+				rules.push({
+					priority: priority++,
+					conditions: [],
+					serve_variation: variation,
+					rollout: {
+						percentage: Math.min(100, Number(cumulative.toFixed(6))),
+						attribute: args.by,
+					},
+				});
 			}
-			cumulative += (weight / total) * 100;
-			rules.push({
-				priority: priority++,
-				conditions: [],
-				serve_variation: variation,
-				rollout: {
-					percentage: Math.min(100, Number(cumulative.toFixed(6))),
-					attribute: args.by,
-				},
+			const confirmed = await confirmRuleReplacement(current.rules, {
+				json: args.json,
+				force: args.force,
+				action: "split",
+				confirm,
 			});
-		}
-		const confirmed = await confirmRuleReplacement(current.rules, {
-			json: args.json,
-			force: args.force,
-			action: "split",
-			confirm,
+			if (!confirmed) {
+				return undefined;
+			}
+			return store.updateFlag(key, {
+				...toFlagInput(current),
+				default_variation: args.defaultVariation ?? current.default_variation,
+				rules,
+			});
 		});
-		if (!confirmed) {
+		if (flag === undefined) {
 			logger.log("Aborting split.");
 			return;
 		}
-		const flag = await updateFlag(config, appId, key, {
-			...toFlagInput(current),
-			default_variation: args.defaultVariation ?? current.default_variation,
-			rules,
-		});
 		if (args.json) {
 			logger.json(flag);
 			return;

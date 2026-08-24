@@ -144,6 +144,42 @@ describe("printBindings — AI Search bindings", () => {
 	});
 });
 
+describe("printBindings -- Flagship bindings", () => {
+	function callPrintBindingsInLocalDev(
+		bindings: StartDevWorkerInput["bindings"]
+	) {
+		const lines: string[] = [];
+		printBindings(bindings, [], [], [], {
+			log: (msg: string) => lines.push(msg),
+			local: true,
+		});
+		return lines.map((l) => stripVTControlCharacters(l)).join("\n");
+	}
+
+	it("shows Flagship bindings as local by default", ({ expect }) => {
+		const output = callPrintBindingsInLocalDev({
+			FLAGS: { type: "flagship", app_id: "my-app" },
+		});
+
+		expect(output).toContain("FLAGS");
+		expect(output).toContain("Flagship");
+		expect(output).toContain("my-app");
+		expect(output).toContain("local");
+		expect(output).not.toContain("remote");
+	});
+
+	it("shows Flagship bindings as remote when `remote: true` is set", ({
+		expect,
+	}) => {
+		const output = callPrintBindingsInLocalDev({
+			FLAGS: { type: "flagship", app_id: "my-app", remote: true },
+		});
+
+		expect(output).toContain("remote");
+		expect(output).not.toContain("local");
+	});
+});
+
 describe("printBindings -- Artifacts bindings", () => {
 	it("shows Artifacts bindings", ({ expect }) => {
 		const output = callPrintBindings({

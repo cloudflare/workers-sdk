@@ -338,6 +338,35 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			],
 		},
 		{
+			name: "flagship app",
+			config: {
+				flagship: [
+					{
+						binding: "FLAGS",
+						app_id: "mock-flagship-app",
+						remote: true,
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				FLAGS: {
+					app_id: "mock-flagship-app",
+					remote: true,
+					type: "flagship",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					flagship: {
+						FLAGS: {
+							app_id: "mock-flagship-app",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
+		{
 			name: "r2 bucket",
 			config: {
 				r2_buckets: [
