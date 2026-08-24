@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/build-output.test.ts
+  s_357c04ec59d2d3::t_26df474c3edb1a 31-41,325-408
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dff4c849bc1a92cf98e934c9639efbe92d62d75c",
+  "prompts": {},
+  "sessions": {
+    "s_357c04ec59d2d3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028b29407ffepDP2kG3vNWyg0Z",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

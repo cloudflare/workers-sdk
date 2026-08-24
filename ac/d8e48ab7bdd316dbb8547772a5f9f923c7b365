@@ -1,0 +1,43 @@
+packages/miniflare/openapi-ts.config.ts
+  s_6e1f600c752d6d::t_01584771c1fb48 7
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_6e1f600c752d6d::t_1152100aa463ba 637-645,692-700,725-729,778-784,829-837,890-896,2239-2242,2257-2261,2286-2289,2292,2302,2312-2316,2323-2326,2359,2382,2417-2420,2452-2456,2463-2467,2469-2472,2480-2487,2492-2496,2503-2507,2526-2529,2531-2538
+packages/miniflare/src/workers/core/email.ts
+  s_6e1f600c752d6d::t_8b89d5330573ed 5-7,16-20,35,39-45,53-71,76,119,154,165,182-184,186,194,202,221-242,271,291,294-297,337,341-345,347,350,356-360,368,372-374,384,434
+packages/miniflare/src/workers/email/email-store.ts
+  s_6e1f600c752d6d::t_61a48b80a5c80e 10-14,17-31,39,45-46,52-53,60,62,64-65,69,71,73-74,79-119,122-210,220-250,255-277,279-291,294,297,299-300,303,311-317,324-325,328-334,341-342
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_6e1f600c752d6d::t_cef7d4e3a7cf46 9-20,36-37,41-42,45-48,51-52,59
+packages/miniflare/src/workers/email/message-id.ts
+  s_6e1f600c752d6d::t_3bbf1a521370e7 1-47
+packages/miniflare/src/workers/email/result.ts
+  s_6e1f600c752d6d::t_7a46a6417e87b2 48-49
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_6e1f600c752d6d::t_719102f66eb46a 2-3,5-6,8-19,23-25,27-28,30-44,70-79,110-113,118,120-125,129,131-166,169-177,183-184,200-206,208-213,216-220,222,300-305,337-372,376-389,392-393,401-430,434-471,474-482,484,488-501,503-509,512-513
+packages/miniflare/src/workers/email/storage.ts
+  s_6e1f600c752d6d::t_719644fbcaa05a 4-6,18-22,27-28,33-41,49-51,53-58,66-70,77-78,81-85,93-94,96-98,100
+packages/miniflare/src/workers/index.ts
+  s_6e1f600c752d6d::t_ba968ec36c6808 4
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_6e1f600c752d6d::t_70e108e78f79c1 825-828,845-848,862,870-873,880-883,947-950,969-972,979-982,984-986,991-994,1001-1004,1016-1019,1713-1718,1747-1752,1772-1775,1796-1801,1830-1835,1866-1871
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_6e1f600c752d6d::t_ddcead893ef006 551,559,573,590-605,611,615,625,632,634,639,646,653,1059-1063,1078-1082,1092,1105-1109,1124-1128,1145-1149
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_6e1f600c752d6d::t_c656fd3fe0abf4 1289-1298,1344-1353,1378-1380,1429-1436,1481-1490,1544-1551,3774-3777,3801-3802,3836-3841,3845,3854-3855,3874-3875,3887-3890,3927,3954,4008-4011,4047-4049,4079-4080,4085-4090,4098-4105,4110-4112,4142-4143,4169-4172,4175-4182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "acd8e48ab7bdd316dbb8547772a5f9f923c7b365",
+  "prompts": {},
+  "sessions": {
+    "s_6e1f600c752d6d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028d8866affegKfok4TFMf473c",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
