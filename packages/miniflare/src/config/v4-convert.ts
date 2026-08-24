@@ -830,6 +830,7 @@ function configAssets(
 	config.assets = {
 		directory: assets.directory,
 		hasUserWorker: getBooleanProperty(assets.routerConfig, "has_user_worker"),
+		basePath: getStringProperty(assets.assetConfig, "base_path"),
 		htmlHandling: getHtmlHandling(
 			getStringProperty(assets.assetConfig, "html_handling")
 		),

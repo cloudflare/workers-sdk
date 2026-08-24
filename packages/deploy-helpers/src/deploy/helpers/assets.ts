@@ -570,11 +570,11 @@ export function resolveAssetOptions(
 	const _headers = directoryExists
 		? maybeGetFile(path.join(directory, HEADERS_FILENAME))
 		: undefined;
-
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
+		base_path: config.assets?.base_path,
 		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
 		compatibility_date: config.compatibility_date,
 		compatibility_flags: config.compatibility_flags,

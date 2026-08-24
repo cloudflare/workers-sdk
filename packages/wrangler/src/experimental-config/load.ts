@@ -171,9 +171,9 @@ export async function loadNewConfig(options: {
  * Worker fields cannot appear in tooling (rejected by `WranglerConfigSchema`).
  * Tooling fields cannot appear in worker (rejected by `@cloudflare/config`'s
  * `InputWorkerSchema.strictObject`). The only overlap is `assets`, where worker
- * carries `binding`/`html_handling`/`not_found_handling`/`run_worker_first`
- * and tooling carries `directory` (sourced from the flat top-level
- * `assetsDirectory` field on `wrangler.config.ts`).
+ * carries `binding`/`html_handling`/`not_found_handling`/`base_path`/
+ * `run_worker_first` and tooling carries `directory` (sourced from the flat
+ * top-level `assetsDirectory` field on `wrangler.config.ts`).
  */
 export function mergeRawConfigs(
 	worker: RawConfig,
