@@ -45,6 +45,7 @@ interface TestFlagDialogProps {
 	initialFlagKey: string | null;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
+	worker?: string;
 }
 
 function contextFromRows(rows: ContextRow[]): Record<string, string> {
@@ -61,12 +62,19 @@ function contextFromRows(rows: ContextRow[]): Record<string, string> {
 function localEvaluateCurl(
 	appId: string,
 	flagKey: string,
-	context: Record<string, string>
+	context: Record<string, string>,
+	worker?: string
 ): string {
 	const origin = window.location.origin;
-	const url = `${origin}${LOCAL_EXPLORER_API_PATH}/flagship/apps/${encodeURIComponent(appId)}/flags/${encodeURIComponent(flagKey)}/evaluate`;
+	const url = new URL(
+		`${LOCAL_EXPLORER_API_PATH}/flagship/apps/${encodeURIComponent(appId)}/flags/${encodeURIComponent(flagKey)}/evaluate`,
+		origin
+	);
+	if (worker !== undefined) {
+		url.searchParams.set("worker", worker);
+	}
 	return [
-		`curl -X POST ${shellQuote(url)} \\`,
+		`curl -X POST ${shellQuote(url.toString())} \\`,
 		`  -H 'Content-Type: application/json' \\`,
 		`  -d ${shellQuote(JSON.stringify({ context }))}`,
 	].join("\n");
@@ -108,6 +116,7 @@ export function TestFlagDialog({
 	initialFlagKey,
 	onOpenChange,
 	open,
+	worker,
 }: TestFlagDialogProps): JSX.Element {
 	const flagKeys = useMemo(
 		() => flags.flatMap((flag) => (flag.key === undefined ? [] : [flag.key])),
@@ -169,6 +178,7 @@ export function TestFlagDialog({
 			const response = await flagshipEvaluateFlag({
 				body: { context: contextFromRows(rows) },
 				path: { app_id: appId, flag_key: selectedFlagKey },
+				query: { worker },
 			});
 			if (request !== latestRequest.current) {
 				return;
@@ -209,7 +219,12 @@ export function TestFlagDialog({
 		);
 	}
 
-	const curl = localEvaluateCurl(appId, selectedFlagKey, contextFromRows(rows));
+	const curl = localEvaluateCurl(
+		appId,
+		selectedFlagKey,
+		contextFromRows(rows),
+		worker
+	);
 	const resultJson = result === null ? "" : JSON.stringify(result, null, 2);
 
 	return (

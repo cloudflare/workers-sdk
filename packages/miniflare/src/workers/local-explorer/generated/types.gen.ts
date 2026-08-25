@@ -2544,7 +2544,12 @@ export type FlagshipListFlagsData = {
 	path: {
 		app_id: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
 	url: "/flagship/apps/{app_id}/flags";
 };
 
@@ -2602,7 +2607,12 @@ export type FlagshipCreateFlagData = {
 	path: {
 		app_id: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
 	url: "/flagship/apps/{app_id}/flags";
 };
 
@@ -2634,7 +2644,12 @@ export type FlagshipDeleteFlagData = {
 		app_id: string;
 		flag_key: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
 	url: "/flagship/apps/{app_id}/flags/{flag_key}";
 };
 
@@ -2668,7 +2683,12 @@ export type FlagshipGetFlagData = {
 		app_id: string;
 		flag_key: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
 	url: "/flagship/apps/{app_id}/flags/{flag_key}";
 };
 
@@ -2723,7 +2743,12 @@ export type FlagshipUpdateFlagData = {
 		app_id: string;
 		flag_key: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
 	url: "/flagship/apps/{app_id}/flags/{flag_key}";
 };
 
@@ -2762,7 +2787,12 @@ export type FlagshipEvaluateFlagData = {
 		app_id: string;
 		flag_key: string;
 	};
-	query?: never;
+	query?: {
+		/**
+		 * Worker whose local Flagship store should be used.
+		 */
+		worker?: string;
+	};
 	url: "/flagship/apps/{app_id}/flags/{flag_key}/evaluate";
 };
 

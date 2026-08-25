@@ -10,12 +10,11 @@ import { CoreBindings } from "../../workers";
 import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
-import { FLAGSHIP_PLUGIN_NAME } from "../flagship";
+import { getFlagshipService } from "../flagship";
 import {
 	getEnvBindingsOfType,
 	getRemoteProxyConnectionString,
 	getStorageService,
-	getUserBindingServiceName,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
@@ -201,13 +200,7 @@ export function getExplorerServices(
 	for (const flagshipInfo of Object.values(bindingIdMap.flagship)) {
 		explorerBindings.push({
 			name: flagshipInfo.binding,
-			service: {
-				name: getUserBindingServiceName(
-					FLAGSHIP_PLUGIN_NAME,
-					flagshipInfo.appId
-				),
-				entrypoint: "FlagshipBinding",
-			},
+			service: getFlagshipService(flagshipInfo.appId, sharedOptions),
 		});
 	}
 
