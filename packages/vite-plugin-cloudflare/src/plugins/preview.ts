@@ -12,7 +12,7 @@ import {
 	disposeRemoteProxySessions,
 	getPreviewMiniflareOptions,
 } from "../miniflare-options";
-import { createPlugin, createRequestHandler } from "../utils";
+import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
 import { rewriteLegacyMiniflarePath } from "./trigger-handlers";
 
@@ -37,7 +37,9 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 			vitePreviewServer.close = async () => {
 				await Promise.all([
 					ctx.disposeMiniflare(),
-					disposeRemoteProxySessions(),
+					disposeRemoteProxySessions().catch((error) => {
+						debuglog("Failed to dispose remote proxy sessions:", error);
+					}),
 					closePreviewServer(),
 				]);
 			};

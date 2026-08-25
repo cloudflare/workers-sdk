@@ -97,4 +97,68 @@ describe("preview server", () => {
 		await previewServer.close();
 		expect(dispose).toHaveBeenCalled();
 	});
+
+	test("retries remote proxy session dispose after a failed close", async ({
+		expect,
+	}) => {
+		const dispose = vi
+			.fn()
+			.mockRejectedValueOnce(new Error("dispose failed"))
+			.mockResolvedValue(undefined);
+
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockResolvedValue({
+			session: {
+				ready: Promise.resolve(),
+				dispose,
+				updateBindings: async () => {},
+				remoteProxyConnectionString:
+					"http://127.0.0.1:1234" as unknown as RemoteProxySession["remoteProxyConnectionString"],
+			},
+			remoteBindings: {},
+		});
+
+		const plugins = [
+			cloudflare({
+				inspectorPort: false,
+				persistState: false,
+				remoteBindings: true,
+			}),
+		];
+
+		const builder = await createBuilder({
+			root: fixturesPath,
+			logLevel: "silent",
+			plugins,
+		});
+		await builder.buildApp();
+
+		const firstPreview = await preview({
+			root: fixturesPath,
+			logLevel: "silent",
+			preview: { port: 0 },
+			plugins,
+		});
+
+		await expect(firstPreview.close()).resolves.toBeUndefined();
+		expect(dispose).toHaveBeenCalledTimes(1);
+
+		const secondPreview = await preview({
+			root: fixturesPath,
+			logLevel: "silent",
+			preview: { port: 0 },
+			plugins,
+		});
+
+		const lastStart = vi
+			.mocked(maybeStartOrUpdateRemoteProxySession)
+			.mock.calls.at(-1);
+		expect(lastStart?.[1]).toEqual(
+			expect.objectContaining({
+				session: expect.objectContaining({ dispose }),
+			})
+		);
+
+		await secondPreview.close();
+		expect(dispose).toHaveBeenCalledTimes(2);
+	});
 });

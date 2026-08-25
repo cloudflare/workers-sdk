@@ -123,17 +123,17 @@ const remoteProxySessionsDataMap = new Map<
  * close to be able to exit.
  */
 export async function disposeRemoteProxySessions(): Promise<void> {
-	const remoteProxySessionsData = [...remoteProxySessionsDataMap.values()];
-	remoteProxySessionsDataMap.clear();
-
 	await Promise.all(
-		remoteProxySessionsData.map(async (remoteProxySessionData) => {
-			try {
-				await remoteProxySessionData?.session.dispose();
-			} catch (error) {
-				debuglog("Failed to dispose remote proxy session:", error);
+		[...remoteProxySessionsDataMap.entries()].map(
+			async ([configPath, remoteProxySessionData]) => {
+				try {
+					await remoteProxySessionData?.session.dispose();
+					remoteProxySessionsDataMap.delete(configPath);
+				} catch (error) {
+					debuglog("Failed to dispose remote proxy session:", error);
+				}
 			}
-		})
+		)
 	);
 }
 
