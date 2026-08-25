@@ -209,7 +209,6 @@ const MiniflareWorkflowBindingSchema = z.strictObject({
 	workerName: z.string(),
 	exportName: z.string(),
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	dev: z.strictObject({ remote: z.boolean().optional() }).optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`

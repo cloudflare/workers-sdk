@@ -48,7 +48,6 @@ import {
 	getExportsOfType,
 	getGlobalServices,
 	getPersistPath,
-	getRemoteProxyConnectionString,
 	getStorageScope,
 	getTriggersOfType,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -72,6 +71,7 @@ import {
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	STREAM_PLUGIN_NAME,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -487,10 +487,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		// we only register the external entrypoint. Mirrors the DO block above.
 		for (const [, binding] of getEnvBindingsOfType(config, "workflow")) {
 			const { workerName, exportName } = binding;
-			if (
-				getRemoteProxyConnectionString(binding, dev) === undefined &&
-				!allWorkerNames.includes(workerName)
-			) {
+			if (!allWorkerNames.includes(workerName)) {
 				getEntrypoints(workerName).entrypoints.add(exportName);
 			}
 		}
@@ -2361,6 +2358,7 @@ export class Miniflare {
 							name: CoreBindings.DEV_REGISTRY_INSTANCE_ID,
 							text: this.#devRegistry.instanceId,
 						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					durableObjectStorage: { inMemory: kVoid },
 					// uniqueKey must match the target session's key for identical DO IDs.
@@ -3487,6 +3485,7 @@ export class Miniflare {
 				R2_PLUGIN_NAME,
 				RATELIMIT_PLUGIN_NAME,
 				SECRET_STORE_PLUGIN_NAME,
+				STREAM_PLUGIN_NAME,
 			].includes(pluginName)
 		) {
 			throw new TypeError(

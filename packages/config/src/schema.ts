@@ -238,7 +238,6 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	// 	type: z.literal("workflow"),
 	// 	workerName: z.string(),
 	// 	exportName: z.string(),
-	// 	dev: RemoteBindingDevSchema.optional(),
 	// }),
 ]);
 

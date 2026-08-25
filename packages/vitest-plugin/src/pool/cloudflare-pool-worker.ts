@@ -4,7 +4,7 @@ import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
-import { parseProjectOptions, remoteProxySessionsDataMap } from "./config";
+import { disposeAllRemoteProxySessions, parseProjectOptions } from "./config";
 import { poolWorkerStarted, poolWorkerStopped } from "./pages";
 import { type WorkerPoolOptionsContext } from "./plugin";
 import {
@@ -120,20 +120,20 @@ export class CloudflarePoolWorker implements PoolWorker {
 		});
 		this.mf = undefined;
 
-		if (this.parsedPoolOptions?.resolvedConfig) {
-			const session = remoteProxySessionsDataMap.get(
-				this.parsedPoolOptions.resolvedConfig.path
-			)?.session;
-			await session?.dispose?.()?.catch((err) => {
-				this.debug("remote proxy session dispose rejected: %O", err);
-			});
-		}
-
 		// Decrement the active worker count. When the last worker stops, this
 		// closes file watchers created by buildPagesASSETSBinding() during config
 		// evaluation — they're registered globally because vitest evaluates all
 		// project configs at startup, even for projects that won't run.
-		poolWorkerStopped();
+		const wasLastWorker = poolWorkerStopped();
+
+		// Remote proxy sessions are shared by all pool workers using the same
+		// Wrangler config, and consecutive workers overlap, so only dispose them
+		// once the last worker stops.
+		if (wasLastWorker) {
+			await disposeAllRemoteProxySessions().catch((err) => {
+				this.debug("remote proxy session dispose rejected: %O", err);
+			});
+		}
 	}
 
 	send(message: WorkerRequest): void {
