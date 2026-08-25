@@ -1,0 +1,19 @@
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_4882a987a2ec7e::t_c3e478c879ec0a 384,443,447
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2f0fdf08f0546af6dbb4ffbaf3592e29228c534b",
+  "prompts": {},
+  "sessions": {
+    "s_4882a987a2ec7e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03848-12c7-7871-a44f-d77a2503ddc4",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
