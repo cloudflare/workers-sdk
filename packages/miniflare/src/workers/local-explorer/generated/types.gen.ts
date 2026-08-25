@@ -2162,6 +2162,14 @@ export type WorkflowsListInstancesData = {
 			| "complete"
 			| "waitingForPause"
 			| "waiting";
+		/**
+		 * Only return instances created at or after this time. Accepts ISO 8601 with no timezone offsets and in UTC.
+		 */
+		date_start?: string;
+		/**
+		 * Only return instances created at or before this time. Accepts ISO 8601 with no timezone offsets and in UTC.
+		 */
+		date_end?: string;
 	};
 	url: "/workflows/{workflow_name}/instances";
 };

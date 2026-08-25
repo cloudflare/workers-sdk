@@ -1328,6 +1328,8 @@ export const zWorkflowsListInstancesData = z.object({
 					"waiting",
 				])
 				.optional(),
+			date_start: z.iso.datetime().optional(),
+			date_end: z.iso.datetime().optional(),
 		})
 		.optional(),
 });

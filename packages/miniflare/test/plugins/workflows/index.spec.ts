@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { scheduler } from "node:timers/promises";
@@ -605,5 +606,173 @@ describe("workflow instance lifecycle methods", () => {
 		// After restart, the workflow restarts from scratch and runs to completion
 		const finalStatus = await waitForStatus(mf, "restart-test", "complete");
 		expect(finalStatus.output).toBe("workflow-complete");
+	});
+});
+
+describe("listing workflow instances by creation date", () => {
+	interface ListedInstance {
+		id: string;
+		status?: string;
+		created_on?: string;
+	}
+
+	interface ListResponse {
+		result: ListedInstance[];
+		result_info: { total_count: number };
+	}
+
+	async function listInstances(
+		mf: Miniflare,
+		query: Record<string, string> = {}
+	): Promise<{ status: number; body: ListResponse }> {
+		const params = new URLSearchParams(query);
+		const response = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances?${params.toString()}`
+		);
+		return {
+			status: response.status,
+			body: (await response.json()) as ListResponse,
+		};
+	}
+
+	/**
+	 * Creates instances sequentially so that each has a distinct `created_on`,
+	 * and returns them keyed by instance id.
+	 */
+	async function createInstances(
+		mf: Miniflare,
+		ids: string[]
+	): Promise<Map<string, string>> {
+		for (const id of ids) {
+			const response = await mf.dispatchFetch(
+				`http://localhost/create?id=${id}`
+			);
+			await response.text();
+			// Creation timestamps have millisecond resolution, so separate them
+			// enough that the ordering is unambiguous.
+			await scheduler.wait(25);
+		}
+
+		const { body } = await listInstances(mf, { per_page: "100" });
+		const createdOnById = new Map<string, string>();
+		for (const instance of body.result) {
+			if (instance.created_on !== undefined) {
+				createdOnById.set(instance.id, instance.created_on);
+			}
+		}
+		return createdOnById;
+	}
+
+	test("filters instances by date_start and date_end", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const createdOn = await createInstances(mf, ["first", "second", "third"]);
+		expect(createdOn.size).toBe(3);
+
+		const firstCreatedOn = createdOn.get("first");
+		const secondCreatedOn = createdOn.get("second");
+		const thirdCreatedOn = createdOn.get("third");
+		assert(
+			firstCreatedOn !== undefined &&
+				secondCreatedOn !== undefined &&
+				thirdCreatedOn !== undefined
+		);
+
+		// date_start is inclusive, so the second instance bounds itself.
+		const fromSecond = await listInstances(mf, {
+			date_start: secondCreatedOn,
+		});
+		expect(fromSecond.status).toBe(200);
+		expect(fromSecond.body.result.map((i) => i.id).sort()).toEqual([
+			"second",
+			"third",
+		]);
+		expect(fromSecond.body.result_info.total_count).toBe(2);
+
+		// date_end is inclusive too.
+		const untilSecond = await listInstances(mf, { date_end: secondCreatedOn });
+		expect(untilSecond.body.result.map((i) => i.id).sort()).toEqual([
+			"first",
+			"second",
+		]);
+
+		// Both bounds together select only the middle instance.
+		const onlySecond = await listInstances(mf, {
+			date_start: secondCreatedOn,
+			date_end: secondCreatedOn,
+		});
+		expect(onlySecond.body.result.map((i) => i.id)).toEqual(["second"]);
+
+		// A range that predates every instance matches nothing.
+		const beforeAll = await listInstances(mf, {
+			date_end: new Date(Date.parse(firstCreatedOn) - 1000).toISOString(),
+		});
+		expect(beforeAll.body.result).toEqual([]);
+		expect(beforeAll.body.result_info.total_count).toBe(0);
+	});
+
+	test("combines a date filter with a status filter", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const createdOn = await createInstances(mf, ["done-1", "done-2"]);
+		await waitForStatus(mf, "done-1", "complete");
+		await waitForStatus(mf, "done-2", "complete");
+
+		const firstCreatedOn = createdOn.get("done-1");
+		const secondCreatedOn = createdOn.get("done-2");
+		assert(firstCreatedOn !== undefined && secondCreatedOn !== undefined);
+
+		const completeFromSecond = await listInstances(mf, {
+			status: "complete",
+			date_start: secondCreatedOn,
+		});
+		expect(completeFromSecond.body.result.map((i) => i.id)).toEqual(["done-2"]);
+
+		// The status filter still excludes instances inside the date range.
+		const erroredFromFirst = await listInstances(mf, {
+			status: "errored",
+			date_start: firstCreatedOn,
+		});
+		expect(erroredFromFirst.body.result).toEqual([]);
+	});
+
+	test("rejects an inverted date range", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const { status, body } = await listInstances(mf, {
+			date_start: "2026-02-01T00:00:00.000Z",
+			date_end: "2026-01-01T00:00:00.000Z",
+		});
+		expect(status).toBe(400);
+		expect(JSON.stringify(body)).toContain(
+			"'date_start' must not be after 'date_end'."
+		);
+	});
+
+	test("rejects a malformed date", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const { status } = await listInstances(mf, { date_start: "yesterday" });
+		expect(status).toBe(400);
 	});
 });

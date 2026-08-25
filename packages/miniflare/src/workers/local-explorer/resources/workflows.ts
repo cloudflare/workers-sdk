@@ -23,6 +23,7 @@ import type { z } from "zod";
 // ============================================================================
 
 const WORKFLOW_ERROR_NOT_FOUND = 10501;
+const WORKFLOW_ERROR_INVALID_DATE_RANGE = 10502;
 
 // ============================================================================
 // Types
@@ -386,7 +387,23 @@ export async function listWorkflowInstances(
 	workflowName: string,
 	query: ListInstancesQuery
 ): Promise<Response> {
-	const { page = 1, per_page: perPage = 25, status: statusFilter } = query;
+	const {
+		page = 1,
+		per_page: perPage = 25,
+		status: statusFilter,
+		date_start: dateStart,
+		date_end: dateEnd,
+	} = query;
+
+	if (dateStart !== undefined && dateEnd !== undefined) {
+		if (Date.parse(dateStart) > Date.parse(dateEnd)) {
+			return errorResponse(
+				400,
+				WORKFLOW_ERROR_INVALID_DATE_RANGE,
+				"'date_start' must not be after 'date_end'."
+			);
+		}
+	}
 
 	const workflowExists =
 		c.env.LOCAL_EXPLORER_BINDING_MAP.workflows[workflowName];
@@ -396,6 +413,8 @@ export async function listWorkflowInstances(
 			page,
 			perPage,
 			statusFilter,
+			dateStart,
+			dateEnd,
 		});
 	}
 
@@ -406,6 +425,12 @@ export async function listWorkflowInstances(
 		params.set("per_page", String(perPage));
 		if (statusFilter) {
 			params.set("status", statusFilter);
+		}
+		if (dateStart !== undefined) {
+			params.set("date_start", dateStart);
+		}
+		if (dateEnd !== undefined) {
+			params.set("date_end", dateEnd);
 		}
 		const peerPath = `/workflows/${encodeURIComponent(workflowName)}/instances?${params.toString()}`;
 		const response = await fetchFromPeer(ownerMiniflare, peerPath);
@@ -432,9 +457,15 @@ export async function listWorkflowInstances(
 async function executeListWorkflowInstances(
 	c: AppContext,
 	workflowName: string,
-	options: { page: number; perPage: number; statusFilter?: string }
+	options: {
+		page: number;
+		perPage: number;
+		statusFilter?: string;
+		dateStart?: string;
+		dateEnd?: string;
+	}
 ): Promise<Response> {
-	const { page, perPage, statusFilter } = options;
+	const { page, perPage, statusFilter, dateStart, dateEnd } = options;
 
 	if (c.env.MINIFLARE_LOOPBACK === undefined) {
 		return errorResponse(500, 10001, "Loopback service not available");
@@ -512,10 +543,40 @@ async function executeListWorkflowInstances(
 	let instances: Array<{ id: string; status?: string; created_on?: string }>;
 	let totalCount: number;
 
-	if (statusFilter) {
-		// Status filter requires resolving ALL instances to filter server-side
+	const dateStartMs =
+		dateStart !== undefined ? Date.parse(dateStart) : undefined;
+	const dateEndMs = dateEnd !== undefined ? Date.parse(dateEnd) : undefined;
+	const hasDateFilter = dateStartMs !== undefined || dateEndMs !== undefined;
+
+	if (statusFilter || hasDateFilter) {
+		// Neither status nor creation date is known from the filesystem, so
+		// filtering has to resolve ALL instances server-side
+
 		const allResolved = await Promise.all(sqliteFiles.map(resolveInstance));
-		const filtered = allResolved.filter((inst) => inst.status === statusFilter);
+		const filtered = allResolved.filter((inst) => {
+			if (statusFilter && inst.status !== statusFilter) {
+				return false;
+			}
+			if (!hasDateFilter) {
+				return true;
+			}
+			// An instance with unknown creation time cannot be confirmed to fall
+			// within the range, so exclude it rather than reporting a false match.
+			if (inst.created_on === undefined) {
+				return false;
+			}
+			const createdMs = Date.parse(inst.created_on);
+			if (Number.isNaN(createdMs)) {
+				return false;
+			}
+			if (dateStartMs !== undefined && createdMs < dateStartMs) {
+				return false;
+			}
+			if (dateEndMs !== undefined && createdMs > dateEndMs) {
+				return false;
+			}
+			return true;
+		});
 		totalCount = filtered.length;
 		const offset = (page - 1) * perPage;
 		instances = filtered.slice(offset, offset + perPage);

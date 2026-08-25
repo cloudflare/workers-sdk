@@ -89,6 +89,49 @@ export const validateStatus = (status: string): InstanceStatus => {
 	}
 };
 
+/** Matches the `YYYY-MM-DD` date portion of an ISO 8601 date or timestamp. */
+const ISO_DATE_PREFIX_REG_EXP = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/;
+
+/**
+ * `Date` rolls `2026-02-30` over to 2026-03-02 instead of failing, so the
+ * result is compared back to the input. `Date.UTC` remaps years 0-99.
+ */
+function isRealCalendarDate(year: number, month: number, day: number): boolean {
+	const date = new Date(0);
+	date.setUTCFullYear(year, month - 1, day);
+	return (
+		date.getUTCFullYear() === year &&
+		date.getUTCMonth() === month - 1 &&
+		date.getUTCDate() === day
+	);
+}
+
+/**
+ * Normalises an ISO 8601 date or timestamp to UTC, the only format the
+ * Workflows API accepts. Rejects locale formats such as `January 1, 2026`.
+ */
+export function validateInstanceDate(value: string, flag: string): string {
+	const dateParts = ISO_DATE_PREFIX_REG_EXP.exec(value);
+	const parsed = Date.parse(value);
+
+	if (dateParts === null || Number.isNaN(parsed)) {
+		throw new UserError(
+			`Looks like you have provided an invalid date "${value}" for ${flag}. Provide an ISO 8601 date or timestamp, for example 2026-01-01 or 2026-01-01T13:00:00Z.`,
+			{ telemetryMessage: "workflows instances list invalid date" }
+		);
+	}
+
+	const [, year, month, day] = dateParts;
+	if (!isRealCalendarDate(Number(year), Number(month), Number(day))) {
+		throw new UserError(
+			`The date "${value}" provided for ${flag} is not a real calendar date, so it would filter on a different date than intended. Check the month and day.`,
+			{ telemetryMessage: "workflows instances list invalid date" }
+		);
+	}
+
+	return new Date(parsed).toISOString();
+}
+
 export async function getInstanceIdFromArgs(
 	accountId: string,
 	args: { id: string; name: string },
