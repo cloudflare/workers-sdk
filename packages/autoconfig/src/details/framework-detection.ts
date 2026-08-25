@@ -225,11 +225,6 @@ function throwMultipleFrameworksNonInteractiveError(
 	);
 }
 
-/**
- * Mirrors the relevant fields from @netlify/build-info's `Settings` type.
- * Framework detections come from `Project.getBuildSettings()`, while
- * autoconfig also creates synthetic Static and Cloudflare Pages values.
- */
 type DetectedFramework = {
 	baseDirectory?: string;
 	framework: {
