@@ -1,5 +1,6 @@
 import {
 	getBranchName,
+	getPreviewDeployment,
 	NO_ACTIVE_PREVIEW_URLS_MESSAGE,
 	patchPreviewDeployment,
 } from "@cloudflare/deploy-helpers";
@@ -59,6 +60,53 @@ export function noPreviewDeploymentListMessage(previewName: string) {
 
 export function previewNotFoundMessage(previewName: string) {
 	return `The Preview "${previewName}" was not found. Please check the Preview name, or create it with \`wrangler preview\`.`;
+}
+
+/**
+ * Fetches the names of the `secret_text` bindings on the latest deployment of
+ * a Preview, mapping the API's no-deployment and not-found errors to the same
+ * user-facing messages the secret patch flow uses.
+ *
+ * @param config - The resolved Wrangler configuration.
+ * @param accountId - The Cloudflare account id.
+ * @param workerName - The parent Worker name.
+ * @param previewName - The Preview name.
+ * @param telemetryMessages - Telemetry messages for the mapped errors.
+ * @returns The names of the secrets on the latest Preview deployment.
+ */
+export async function fetchPreviewDeploymentSecretNames(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewName: string,
+	telemetryMessages: { noDeployment: string; previewNotFound: string }
+): Promise<string[]> {
+	try {
+		const deployment = await getPreviewDeployment(
+			config,
+			accountId,
+			workerName,
+			previewName,
+			"latest"
+		);
+		return Object.entries(deployment.env ?? {})
+			.filter(([, binding]) => binding.type === "secret_text")
+			.map(([name]) => name);
+	} catch (e) {
+		if (e instanceof APIError) {
+			if (e.code === NO_PREVIEW_DEPLOYMENT_GET_ERR_CODE) {
+				throw new UserError(noPreviewDeploymentPatchMessage(previewName), {
+					telemetryMessage: telemetryMessages.noDeployment,
+				});
+			}
+			if (e.code === PREVIEW_NOT_FOUND_ERR_CODE) {
+				throw new UserError(previewNotFoundMessage(previewName), {
+					telemetryMessage: telemetryMessages.previewNotFound,
+				});
+			}
+		}
+		throw e;
+	}
 }
 
 export async function patchPreviewDeploymentSecrets(

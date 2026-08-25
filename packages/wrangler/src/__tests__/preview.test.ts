@@ -144,6 +144,111 @@ function mockContainerPreview({
 	);
 }
 
+type EnvBindings = Record<
+	string,
+	{ type: string; text?: string; namespace_id?: string } | null
+>;
+
+/**
+ * Install msw handlers for the requests a `wrangler preview` run makes against
+ * a Preview that does not exist yet: the lookup that misses, the Preview
+ * creation, the deployment creation, and (for `--secrets-file-mode replace`)
+ * the follow-up deployment patch.
+ *
+ * @param options.respondEnv - Maps the deployment request's env onto the env
+ *   the create response reports, simulating server-side merging of base config
+ *   or carried-over secrets. Return `undefined` to omit `env` from the
+ *   response entirely. Defaults to echoing the request env.
+ * @param options.patchRespondEnv - Maps the patch request's env onto the env
+ *   the patch response reports. Defaults to omitting `env` from the response.
+ * @returns The captured deployment create and patch request bodies.
+ */
+function mockSecretsPreviewFlow({
+	respondEnv,
+	patchRespondEnv,
+}: {
+	respondEnv?: (requestEnv: EnvBindings) => EnvBindings | undefined;
+	patchRespondEnv?: (patchEnv: EnvBindings) => EnvBindings;
+} = {}) {
+	const deploymentRequests: { env?: EnvBindings }[] = [];
+	const patchRequests: { env?: EnvBindings }[] = [];
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+			() =>
+				HttpResponse.json(
+					{
+						success: false,
+						result: null,
+						errors: [{ code: 10025, message: "Preview not found" }],
+					},
+					{ status: 404 }
+				)
+		),
+		http.post(`*/accounts/:accountId/workers/workers/:workerId/previews`, () =>
+			HttpResponse.json(
+				{
+					success: true,
+					result: {
+						id: "preview-id-1",
+						name: "test-preview",
+						slug: "test-preview",
+						urls: ["https://test-preview.test-worker.cloudflare.app"],
+						worker_name: "test-worker",
+						created_on: new Date().toISOString(),
+					},
+				},
+				{ status: 201 }
+			)
+		),
+		http.post(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+			async ({ request }) => {
+				const body = (await request.json()) as { env?: EnvBindings };
+				deploymentRequests.push(body);
+				const responseEnv = respondEnv
+					? respondEnv(body.env ?? {})
+					: (body.env ?? {});
+				return HttpResponse.json(
+					{
+						success: true,
+						result: {
+							id: "deployment-id-1",
+							preview_id: "preview-id-1",
+							preview_name: "test-preview",
+							urls: ["https://abc12345.test-worker.cloudflare.app"],
+							compatibility_date: "2025-01-01",
+							...(responseEnv !== undefined && { env: responseEnv }),
+							created_on: new Date().toISOString(),
+						},
+					},
+					{ status: 201 }
+				);
+			}
+		),
+		http.patch(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+			async ({ request }) => {
+				const body = (await request.json()) as { env?: EnvBindings };
+				patchRequests.push(body);
+				const responseEnv = patchRespondEnv?.(body.env ?? {});
+				return HttpResponse.json({
+					success: true,
+					result: {
+						id: "deployment-id-2",
+						preview_id: "preview-id-1",
+						preview_name: "test-preview",
+						urls: ["https://abc12345.test-worker.cloudflare.app"],
+						...(responseEnv !== undefined && { env: responseEnv }),
+						created_on: new Date().toISOString(),
+					},
+				});
+			}
+		)
+	);
+	return { deploymentRequests, patchRequests };
+}
+
 function clearPreviewMetadataEnvs() {
 	vi.stubEnv("GITHUB_REPOSITORY", "");
 	vi.stubEnv("GITHUB_SERVER_URL", "");
@@ -1734,6 +1839,203 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.env?.SECRET_B).toEqual({
 				type: "secret_text",
 				text: "value-b",
+			});
+		});
+
+		describe("--secrets-file-mode", () => {
+			test("explicit merge mode keeps secrets the deployment carries that are not in the file", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "API_KEY=file-secret\n");
+				const { patchRequests } = mockSecretsPreviewFlow({
+					respondEnv: (requestEnv) => ({
+						...requestEnv,
+						CARRIED_SECRET: { type: "secret_text", text: "carried" },
+					}),
+				});
+
+				await runWrangler(
+					"preview --name test-preview --secrets-file secrets.env --secrets-file-mode merge"
+				);
+
+				expect(patchRequests).toHaveLength(0);
+				expect(std.warn).not.toContain("CARRIED_SECRET");
+				expect(std.out).toContain("Deployment ID: deployment-id-1");
+			});
+
+			test("errors when --secrets-file-mode is used without --secrets-file", async ({
+				expect,
+			}) => {
+				const { deploymentRequests } = mockSecretsPreviewFlow();
+
+				await expect(
+					runWrangler("preview --name test-preview --secrets-file-mode replace")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The --secrets-file-mode option can only be used together with --secrets-file.]`
+				);
+				expect(deploymentRequests).toHaveLength(0);
+			});
+
+			test("errors when --secrets-file-mode is given an unknown mode", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "API_KEY=file-secret\n");
+				const { deploymentRequests } = mockSecretsPreviewFlow();
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --secrets-file secrets.env --secrets-file-mode bananas"
+					)
+				).rejects.toThrow();
+				expect(deploymentRequests).toHaveLength(0);
+			});
+
+			describe("replace mode", () => {
+				test("deletes secrets the deployment carries that are not in the file", async ({
+					expect,
+				}) => {
+					writeFileSync("secrets.env", "API_KEY=file-secret\n");
+					const { deploymentRequests, patchRequests } = mockSecretsPreviewFlow({
+						// Simulate the server merging a base config secret and a plain
+						// binding into the deployment on top of the request env.
+						respondEnv: (requestEnv) => ({
+							...requestEnv,
+							BASE_SECRET: { type: "secret_text", text: "from-base-config" },
+							BASE_VAR: { type: "plain_text", text: "not-a-secret" },
+						}),
+					});
+
+					await runWrangler(
+						"preview --name test-preview --secrets-file secrets.env --secrets-file-mode replace"
+					);
+
+					expect(deploymentRequests[0]?.env).toMatchObject({
+						API_KEY: { type: "secret_text", text: "file-secret" },
+					});
+					// Only the unlisted secret is deleted; plain bindings and the
+					// file-supplied secret are untouched.
+					expect(patchRequests).toHaveLength(1);
+					expect(patchRequests[0]?.env).toEqual({ BASE_SECRET: null });
+					expect(std.warn).toContain(
+						'Because --secrets-file-mode is set to "replace", the following secrets exist on the Preview deployment but are not present in the secrets file and will be deleted: BASE_SECRET'
+					);
+					expect(std.warn).not.toContain("BASE_VAR");
+					expect(std.warn).not.toContain("API_KEY");
+					// The follow-up deployment is the one reported to the user.
+					expect(std.out).toContain("Deployment ID: deployment-id-2");
+				});
+
+				test("keeps secrets declared in secrets.required", async ({
+					expect,
+				}) => {
+					writeFileSync(
+						"wrangler.json",
+						JSON.stringify({
+							name: "test-worker",
+							main: "src/index.ts",
+							compatibility_date: "2025-01-01",
+							secrets: { required: ["REQUIRED_SECRET"] },
+						})
+					);
+					writeFileSync("secrets.env", "API_KEY=file-secret\n");
+					const { patchRequests } = mockSecretsPreviewFlow({
+						respondEnv: (requestEnv) => ({
+							...requestEnv,
+							REQUIRED_SECRET: { type: "secret_text", text: "required" },
+							BASE_SECRET: { type: "secret_text", text: "from-base-config" },
+						}),
+					});
+
+					await runWrangler(
+						"preview --name test-preview --secrets-file secrets.env --secrets-file-mode replace"
+					);
+
+					expect(patchRequests).toHaveLength(1);
+					expect(patchRequests[0]?.env).toEqual({ BASE_SECRET: null });
+					expect(std.warn).not.toContain("REQUIRED_SECRET");
+				});
+
+				test("cuts no follow-up deployment when nothing would be dropped", async ({
+					expect,
+				}) => {
+					writeFileSync("secrets.env", "API_KEY=file-secret\n");
+					const { patchRequests } = mockSecretsPreviewFlow();
+
+					await runWrangler(
+						"preview --name test-preview --secrets-file secrets.env --secrets-file-mode replace"
+					);
+
+					expect(patchRequests).toHaveLength(0);
+					expect(std.warn).not.toContain("replace");
+					expect(std.out).toContain("Deployment ID: deployment-id-1");
+				});
+
+				test("falls back to fetching the deployment when the create response omits env", async ({
+					expect,
+				}) => {
+					writeFileSync("secrets.env", "API_KEY=file-secret\n");
+					const { patchRequests } = mockSecretsPreviewFlow({
+						respondEnv: () => undefined,
+					});
+					msw.use(
+						http.get(
+							`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+							() =>
+								HttpResponse.json({
+									success: true,
+									result: {
+										id: "deployment-id-1",
+										preview_id: "preview-id-1",
+										preview_name: "test-preview",
+										env: {
+											API_KEY: { type: "secret_text", text: "file-secret" },
+											STALE_SECRET: { type: "secret_text", text: "stale" },
+										},
+										created_on: new Date().toISOString(),
+									},
+								})
+						)
+					);
+
+					await runWrangler(
+						"preview --name test-preview --secrets-file secrets.env --secrets-file-mode replace"
+					);
+
+					expect(patchRequests).toHaveLength(1);
+					expect(patchRequests[0]?.env).toEqual({ STALE_SECRET: null });
+					expect(std.warn).toContain("STALE_SECRET");
+				});
+
+				test("redacts secret values echoed back on the follow-up deployment from --json output", async ({
+					expect,
+				}) => {
+					writeFileSync("secrets.env", "API_KEY=file-secret\n");
+					mockSecretsPreviewFlow({
+						respondEnv: (requestEnv) => ({
+							...requestEnv,
+							BASE_SECRET: { type: "secret_text", text: "from-base-config" },
+						}),
+						// The follow-up deployment's response echoes the surviving
+						// secret back with its value.
+						patchRespondEnv: () => ({
+							API_KEY: { type: "secret_text", text: "file-secret" },
+						}),
+					});
+
+					await runWrangler(
+						"preview --name test-preview --secrets-file secrets.env --secrets-file-mode replace --json"
+					);
+
+					expect(std.out).not.toContain("file-secret");
+					const output = JSON.parse(std.out) as {
+						deployment: {
+							env: Record<string, { type: string; text?: string }>;
+						};
+					};
+					expect(output.deployment.env.API_KEY).toEqual({
+						type: "secret_text",
+					});
+				});
 			});
 		});
 

@@ -5,6 +5,7 @@ import { logger } from "../../logger";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import {
+	fetchPreviewDeploymentSecretNames,
 	NO_ACTIVE_PREVIEW_URLS_MESSAGE,
 	patchPreviewDeploymentSecrets,
 	resolvePreviewName,
@@ -46,6 +47,13 @@ export const previewSecretBulkCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		"secrets-file-mode": {
+			describe:
+				'How the supplied secrets combine with the Preview deployment\'s existing secrets: "merge" (the default) keeps existing secrets that are not present in the input, "replace" deletes them. Secrets declared in `secrets.required` are always kept.',
+			type: "string",
+			choices: ["merge", "replace"] as const,
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		suggestSkillsAfterHandler: true,
@@ -68,19 +76,58 @@ export const previewSecretBulkCommand = createCommand({
 		}
 
 		const { content } = result;
-		const created = Object.keys(content).filter(
-			(name) => content[name] !== null
-		);
-		const deleted = Object.keys(content).filter(
-			(name) => content[name] === null
-		);
+		const env = toSecretBindingsPatch(content);
+
+		// In replace mode the Preview deployment's secret set converges to the
+		// input: existing secrets that are neither present in the input nor
+		// declared in `secrets.required` are deleted in the same patch. Keys the
+		// input explicitly sets to null are already deletions, so they are
+		// excluded here rather than deleted (and reported) twice.
+		if (args.secretsFileMode === "replace") {
+			const existingSecretNames = await fetchPreviewDeploymentSecretNames(
+				config,
+				accountId,
+				workerName,
+				previewName,
+				{
+					noDeployment: "preview secret bulk no preview deployment",
+					previewNotFound: "preview secret bulk preview not found",
+				}
+			);
+			const keptSecretNames = new Set<string>([
+				...Object.keys(content),
+				...(config.secrets?.required ?? []),
+			]);
+			const replacedSecrets = existingSecretNames.filter(
+				(name) => !keptSecretNames.has(name)
+			);
+			if (replacedSecrets.length > 0) {
+				// Warn-only, matching `wrangler deploy --secrets-file-mode replace`:
+				// the flag is an explicit opt-in whose documented purpose is removing
+				// unlisted secrets, and the warning is always logged so CI logs carry
+				// the audit trail.
+				logger.warn(
+					`Because --secrets-file-mode is set to "replace", the following secrets exist on the Preview deployment but are not present in the secrets file and will be deleted: ${replacedSecrets.join(", ")}`
+				);
+				for (const name of replacedSecrets) {
+					env[name] = null;
+				}
+			}
+		}
+
+		const created = Object.entries(env)
+			.filter(([, binding]) => binding !== null)
+			.map(([name]) => name);
+		const deleted = Object.entries(env)
+			.filter(([, binding]) => binding === null)
+			.map(([name]) => name);
 
 		const deployment = await patchPreviewDeploymentSecrets(
 			config,
 			accountId,
 			workerName,
 			previewName,
-			toSecretBindingsPatch(content),
+			env,
 			{
 				message:
 					args.message ??

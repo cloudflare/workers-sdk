@@ -783,6 +783,161 @@ describe("wrangler preview", () => {
 					)
 				).rejects.toThrow(/Preview "test-preview" was not found/);
 			});
+
+			test("does not read the current deployment in the default merge mode", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "API_KEY=one\n");
+				let deploymentRead = false;
+				mockGetLatestPreviewDeployment({}, () => {
+					deploymentRead = true;
+				});
+				let requestBody: PreviewDeploymentPatchBody | undefined;
+				mockPatchLatestPreviewDeployment(({ body }) => {
+					requestBody = body;
+				});
+
+				await runWrangler(
+					"preview secret bulk secrets.env --name test-preview --worker-name test-worker"
+				);
+
+				expect(deploymentRead).toBe(false);
+				expect(requestBody?.env).toEqual({
+					API_KEY: { type: "secret_text", text: "one" },
+				});
+			});
+
+			describe("--secrets-file-mode replace", () => {
+				test("deletes existing secrets that are not in the file", async ({
+					expect,
+				}) => {
+					writeFileSync("secrets.env", "KEEP=new-value\nNEW_KEY=fresh\n");
+					mockGetLatestPreviewDeployment({
+						KEEP: { type: "secret_text", text: "old-value" },
+						OLD_SECRET: { type: "secret_text", text: "obsolete" },
+						PLAIN: { type: "plain_text", text: "not-a-secret" },
+					});
+					let requestBody: PreviewDeploymentPatchBody | undefined;
+					mockPatchLatestPreviewDeployment(({ body }) => {
+						requestBody = body;
+					});
+
+					await runWrangler(
+						"preview secret bulk secrets.env --secrets-file-mode replace --name test-preview --worker-name test-worker"
+					);
+
+					// One patch converges the set: file secrets set, unlisted secrets
+					// deleted, non-secret bindings untouched.
+					expect(requestBody?.env).toEqual({
+						KEEP: { type: "secret_text", text: "new-value" },
+						NEW_KEY: { type: "secret_text", text: "fresh" },
+						OLD_SECRET: null,
+					});
+					expect(std.warn).toContain(
+						'Because --secrets-file-mode is set to "replace", the following secrets exist on the Preview deployment but are not present in the secrets file and will be deleted: OLD_SECRET'
+					);
+					expect(std.warn).not.toContain("PLAIN");
+					expect(std.out).toContain(
+						"Successfully deleted secret for key: OLD_SECRET"
+					);
+					expect(std.out).toContain("with 2 created and 1 deleted secrets");
+				});
+
+				test("keeps secrets declared in secrets.required", async ({
+					expect,
+				}) => {
+					writeFileSync(
+						"wrangler.json",
+						JSON.stringify({
+							name: "test-worker",
+							main: "src/index.ts",
+							compatibility_date: "2025-01-01",
+							secrets: { required: ["REQUIRED_SECRET"] },
+						})
+					);
+					writeFileSync("secrets.env", "API_KEY=one\n");
+					mockGetLatestPreviewDeployment({
+						REQUIRED_SECRET: { type: "secret_text", text: "required" },
+						OLD_SECRET: { type: "secret_text", text: "obsolete" },
+					});
+					let requestBody: PreviewDeploymentPatchBody | undefined;
+					mockPatchLatestPreviewDeployment(({ body }) => {
+						requestBody = body;
+					});
+
+					await runWrangler(
+						"preview secret bulk secrets.env --secrets-file-mode replace --name test-preview --worker-name test-worker"
+					);
+
+					expect(requestBody?.env).toEqual({
+						API_KEY: { type: "secret_text", text: "one" },
+						OLD_SECRET: null,
+					});
+					expect(std.warn).not.toContain("REQUIRED_SECRET");
+				});
+
+				test("does not double-delete keys the file explicitly sets to null", async ({
+					expect,
+				}) => {
+					writeFileSync(
+						"secrets.json",
+						JSON.stringify({ KEEP: "value", GONE: null })
+					);
+					mockGetLatestPreviewDeployment({
+						KEEP: { type: "secret_text", text: "old" },
+						GONE: { type: "secret_text", text: "old" },
+						EXTRA: { type: "secret_text", text: "old" },
+					});
+					let requestBody: PreviewDeploymentPatchBody | undefined;
+					mockPatchLatestPreviewDeployment(({ body }) => {
+						requestBody = body;
+					});
+
+					await runWrangler(
+						"preview secret bulk secrets.json --secrets-file-mode replace --name test-preview --worker-name test-worker"
+					);
+
+					expect(requestBody?.env).toEqual({
+						KEEP: { type: "secret_text", text: "value" },
+						GONE: null,
+						EXTRA: null,
+					});
+					// GONE was deleted by the file itself, so only EXTRA is reported as
+					// dropped by replace mode.
+					expect(std.warn).toContain("EXTRA");
+					expect(std.warn).not.toContain("GONE");
+					expect(requestBody?.annotations?.["workers/message"]).toBe(
+						"Created 1 and deleted 2 secrets"
+					);
+					expect(std.out).toContain("with 1 created and 2 deleted secrets");
+				});
+
+				test("fails clearly when the Preview has no deployments", async ({
+					expect,
+				}) => {
+					writeFileSync("secrets.env", "API_KEY=one\n");
+					mockGetPreviewDeploymentError(10222);
+
+					await expect(
+						runWrangler(
+							"preview secret bulk secrets.env --secrets-file-mode replace --name test-preview --worker-name test-worker"
+						)
+					).rejects.toThrow(/no deployments for the Preview/);
+				});
+
+				test("fails clearly when the Preview is not found", async ({
+					expect,
+				}) => {
+					writeFileSync("secrets.env", "API_KEY=one\n");
+					mockGetPreviewDeploymentError(10025);
+
+					await expect(
+						runWrangler(
+							"preview secret bulk secrets.env --secrets-file-mode replace --name test-preview --worker-name test-worker"
+						)
+					).rejects.toThrow(/Preview "test-preview" was not found/);
+				});
+			});
 		});
 	});
 });

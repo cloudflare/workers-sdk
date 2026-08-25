@@ -1,5 +1,5 @@
 import { preview } from "@cloudflare/deploy-helpers";
-import { getWranglerTmpDir } from "@cloudflare/workers-utils";
+import { getWranglerTmpDir, UserError } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { createCommand } from "../core/create-command";
@@ -65,8 +65,15 @@ export const previewCommand = createCommand({
 		},
 		"secrets-file": {
 			describe:
-				"Path to a file containing secrets to upload with the Preview deployment (JSON or .env format)",
+				"Path to a file containing secrets to upload with the Preview deployment (JSON or .env format). By default applies additively with secrets the Preview deployment would otherwise have - omitted secrets will not be deleted. Use --secrets-file-mode to change this behavior.",
 			type: "string",
+			requiresArg: true,
+		},
+		"secrets-file-mode": {
+			describe:
+				'How secrets from --secrets-file combine with secrets the Preview deployment would otherwise have: "merge" (the default) keeps secrets that are not present in the file, "replace" deletes them. Secrets declared in `secrets.required` are always kept.',
+			type: "string",
+			choices: ["merge", "replace"] as const,
 			requiresArg: true,
 		},
 	},
@@ -74,6 +81,14 @@ export const previewCommand = createCommand({
 		useConfigRedirectIfAvailable: true,
 		printBanner: (args) => args.json !== true,
 		suggestSkillsAfterHandler: (args) => args.json !== true,
+	},
+	validateArgs: (args) => {
+		if (args.secretsFileMode !== undefined && !args.secretsFile) {
+			throw new UserError(
+				"The --secrets-file-mode option can only be used together with --secrets-file.",
+				{ telemetryMessage: "secrets-file-mode without secrets-file" }
+			);
+		}
 	},
 	handler: async function previewHandler(args, { config }) {
 		const accountId = await requireAuth(config);

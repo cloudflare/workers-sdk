@@ -3,7 +3,7 @@
 "wrangler": minor
 ---
 
-Add `--secrets-file-mode` to `wrangler deploy` and `wrangler versions upload` for replacing remote secrets
+Add `--secrets-file-mode` to `wrangler deploy`, `wrangler versions upload`, and `wrangler preview` for replacing remote secrets
 
 By default `--secrets-file` is additive: remote secrets that are not present in the file are kept. The new `--secrets-file-mode` flag makes that behavior explicit and adds an opt-in replace mode:
 
@@ -18,4 +18,8 @@ Secrets declared in the `secrets.required` config field are always kept via inhe
 
 For `wrangler versions upload`, replace mode means the new version carries only the supplied secrets (plus required ones), and the removal of the others takes effect when that version is deployed.
 
-The flag can only be used together with `--secrets-file`, and the default behavior without it is unchanged.
+The `wrangler preview` command (private beta), whose `--secrets-file` support is added separately, also accepts `--secrets-file-mode`. In replace mode, secrets the Preview deployment would otherwise carry (for example from the Preview base config, or carried over from earlier Preview deployments) that are neither in the file nor declared in `secrets.required` are deleted via an immediate follow-up Preview deployment, after the same warning.
+
+`wrangler preview secret bulk` accepts `--secrets-file-mode replace` as well: existing secrets on the latest Preview deployment that are not present in the supplied file are deleted in the same patch, converging the Preview's secret set to the file in a single new Preview deployment.
+
+The flag can only be used together with a secrets file, and the default behavior without it is unchanged.

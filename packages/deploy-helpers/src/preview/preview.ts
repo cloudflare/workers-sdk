@@ -24,6 +24,7 @@ import {
 	getPreview,
 	getPreviewDeployment,
 	getWorkerPreviewDefaults,
+	patchPreviewDeployment,
 } from "./api";
 import {
 	assemblePreviewScriptSettings,
@@ -71,6 +72,14 @@ export type PreviewArgs = {
 	workerName?: string;
 	"worker-name"?: string;
 	secretsFile?: string;
+	/**
+	 * From --secrets-file-mode arg. Only valid alongside `secretsFile`.
+	 * `"merge"` (also the behavior when undefined) keeps secrets the Preview
+	 * deployment would otherwise have (from the Preview base config, or carried
+	 * over from earlier Preview deployments); `"replace"` deletes them, except
+	 * secrets declared in `secrets.required` which are always kept.
+	 */
+	secretsFileMode?: "merge" | "replace";
 	/** Parsed `--var` args. CLI-only vars; config vars flow separately via `extractConfigBindings(config)`. */
 	cliVars?: Record<string, string>;
 };
@@ -577,6 +586,84 @@ async function assemblePreviewDeploymentSettings(
 	return request;
 }
 
+/**
+ * Converges a freshly created Preview deployment's secrets to the contents of
+ * the secrets file (replace mode): every `secret_text` binding on the
+ * deployment that is neither supplied in the file nor declared in
+ * `secrets.required` is deleted by cutting one follow-up deployment that
+ * patches those bindings to `null`.
+ *
+ * The deployment's effective env, after any server-side merging of the Preview
+ * base config and secrets carried over from earlier Preview deployments, is
+ * only known once the deployment exists, so replace mode converges the created
+ * deployment instead of trying to predict that merge client-side.
+ *
+ * @param config - The resolved Wrangler configuration.
+ * @param accountId - The Cloudflare account id.
+ * @param workerName - The parent Worker name.
+ * @param previewId - The id of the Preview the deployment belongs to.
+ * @param deployment - The Preview deployment that was just created.
+ * @param suppliedSecretNames - Names of the secrets supplied in the secrets file.
+ * @returns The follow-up deployment, or the given deployment when there was
+ *   nothing to delete.
+ */
+async function convergePreviewDeploymentSecrets(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewId: string,
+	deployment: DeploymentResource,
+	suppliedSecretNames: string[]
+): Promise<DeploymentResource> {
+	// The create response carries the deployment's effective env; fall back to
+	// fetching the deployment in case the API omitted the field.
+	const effectiveEnv =
+		deployment.env ??
+		(
+			await getPreviewDeployment(
+				config,
+				accountId,
+				workerName,
+				previewId,
+				"latest"
+			)
+		).env ??
+		{};
+
+	const keptSecretNames = new Set<string>([
+		...suppliedSecretNames,
+		...(config.secrets?.required ?? []),
+	]);
+	const droppedSecrets = Object.entries(effectiveEnv)
+		.filter(
+			([name, binding]) =>
+				binding.type === "secret_text" && !keptSecretNames.has(name)
+		)
+		.map(([name]) => name);
+
+	if (droppedSecrets.length === 0) {
+		return deployment;
+	}
+
+	// Warn-only, matching `wrangler deploy --secrets-file-mode replace`: the
+	// flag is an explicit opt-in whose documented purpose is removing unlisted
+	// secrets, and the warning is always logged so CI logs carry the audit
+	// trail. Warnings go to stderr, so a `--json` payload stays parseable.
+	logger.warn(
+		`Because --secrets-file-mode is set to "replace", the following secrets exist on the Preview deployment but are not present in the secrets file and will be deleted: ${droppedSecrets.join(", ")}`
+	);
+
+	// Annotations are deliberately not patched, so the follow-up deployment
+	// keeps the message/tag annotations the create request carried.
+	return patchPreviewDeployment(
+		config,
+		accountId,
+		workerName,
+		previewId,
+		Object.fromEntries(droppedSecrets.map((name) => [name, null]))
+	);
+}
+
 function formatUrlLines(label: string, urls: string[] | undefined): string[] {
 	if (urls === undefined || urls.length === 0) {
 		return [];
@@ -821,17 +908,31 @@ export async function preview(
 			cliVars: args.cliVars,
 		}
 	);
-	const deployment = await createPreviewDeployment(
+	let deployment = await createPreviewDeployment(
 		config,
 		accountId,
 		workerName,
 		previewResource.id,
 		deploymentRequest
 	);
+
+	if (args.secretsFile && args.secretsFileMode === "replace") {
+		deployment = await convergePreviewDeploymentSecrets(
+			config,
+			accountId,
+			workerName,
+			previewResource.id,
+			deployment,
+			Object.keys(secrets ?? {})
+		);
+	}
+
 	// The API may echo the uploaded env back on the deployment. Redact secret
-	// values as soon as it is received, before anything can log or return them
-	// (e.g. --json output) - matching `preview secret list`, which only ever
-	// outputs secret names and types.
+	// values before anything can log or return them (e.g. --json output) -
+	// matching `preview secret list`, which only ever outputs secret names and
+	// types. This runs after the replace-mode convergence above, so whichever
+	// deployment is ultimately reported is the one redacted; the convergence
+	// itself only reads binding types and names.
 	for (const binding of Object.values(deployment.env ?? {})) {
 		if (binding.type === "secret_text") {
 			delete binding.text;
