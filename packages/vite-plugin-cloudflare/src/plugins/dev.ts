@@ -52,7 +52,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						} catch (error) {
 							debuglog("Failed to dispose Miniflare instance:", error);
 						}
-						await disposeRemoteProxySessions();
+						try {
+							await disposeRemoteProxySessions();
+						} catch (error) {
+							debuglog("Failed to dispose remote proxy sessions:", error);
+						}
 					}
 					if (!containerCleanup.isRestarting) {
 						containerCleanup.cleanup();
