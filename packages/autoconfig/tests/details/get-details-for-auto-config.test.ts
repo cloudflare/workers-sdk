@@ -45,14 +45,27 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({ configured: false });
 	});
 
-	it("should default to cloudflare.config.ts configuration detection", async ({
+	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
 		expect,
 	}) => {
-		await writeFile("cloudflare.config.ts", "export default {};");
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "astro build", dev: "cf dev" },
+				dependencies: { astro: "5" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
 
 		await expect(
 			details.getDetailsForAutoConfig({ context })
-		).resolves.toMatchObject({ configured: true });
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "astro" },
+			buildCommand: "npm run build",
+			devCommand: "npx astro dev",
+			packageManager: { type: "npm" },
+		});
 	});
 
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
