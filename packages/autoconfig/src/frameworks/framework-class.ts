@@ -1,4 +1,6 @@
 import assert from "node:assert";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import semiver from "semiver";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
@@ -10,6 +12,9 @@ import type { PackageManager } from "@cloudflare/workers-utils";
 export abstract class Framework {
 	readonly id: FrameworkInfo["id"];
 	readonly name: FrameworkInfo["name"];
+	protected get configurationFiles(): string[] {
+		return ["cloudflare.config.ts"];
+	}
 
 	#frameworkVersion: string | undefined;
 	get frameworkVersion(): string {
@@ -26,14 +31,20 @@ export abstract class Framework {
 	}
 
 	isConfigured(
-		_projectPath: string,
+		projectPath: string,
 		{
-			target: _target = "cf",
+			target = "cf",
 		}: {
 			target?: AutoConfigTarget;
 		} = {}
 	): boolean {
-		return false;
+		return (
+			target === "cf" &&
+			this.configurationFiles.length > 0 &&
+			this.configurationFiles.every((file) =>
+				existsSync(resolve(projectPath, file))
+			)
+		);
 	}
 
 	abstract configure(

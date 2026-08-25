@@ -31,8 +31,7 @@ import type { Settings } from "@netlify/build-info";
  *
  * @param projectPath Path to the project root
  * @param context Autoconfig context used for logging and user interaction
- * @param wranglerConfig Optional parsed wrangler config for the project
- * @param target Configuration target used to select target-specific commands
+ * @param options Detection options
  * @returns An object containing:
  *   - `detectedFramework`: The matched framework, its build and development
  *     commands, and its output directory.
@@ -48,8 +47,13 @@ import type { Settings } from "@netlify/build-info";
 export async function detectFramework(
 	projectPath: string,
 	context: AutoConfigContext,
-	wranglerConfig?: Config,
-	target: AutoConfigTarget = "cf"
+	{
+		wranglerConfig,
+		target = "cf",
+	}: {
+		wranglerConfig?: Config;
+		target?: AutoConfigTarget;
+	} = {}
 ): Promise<{
 	detectedFramework: DetectedFramework;
 	packageManager: PackageManager;

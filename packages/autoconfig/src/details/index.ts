@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
@@ -24,8 +24,6 @@ import type {
 } from "../types";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
-
-const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
 
 /**
  * Asserts that the current project being targeted for autoconfig is not already configured.
@@ -75,9 +73,7 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 /**
  * Detects project details needed for autoconfig: framework, package manager,
  * output directory, worker name, commands, and whether the project is already configured.
- * By default, the project is considered configured when `cloudflare.config.ts`
- * exists. Passing `target: "wrangler"` opts into Wrangler configuration
- * detection instead.
+ * Each framework determines whether the project is ready for the selected target.
  *
  * @param options - Detection options including project path, wrangler config, and context.
  * @returns The detected project details.
@@ -101,9 +97,6 @@ export async function getDetailsForAutoConfig({
 
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
-	const hasCloudflareConfig =
-		target === "cf" && existsSync(resolve(projectPath, CLOUDFLARE_CONFIG_FILE));
-
 	if (
 		target === "wrangler" &&
 		// If a real Wrangler config has been found the project is already configured for Workers
@@ -121,7 +114,7 @@ export async function getDetailsForAutoConfig({
 	}
 
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
-		await detectFramework(projectPath, context, wranglerConfig, target);
+		await detectFramework(projectPath, context, { wranglerConfig, target });
 
 	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -137,8 +130,7 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const configured =
-		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
+	const configured = framework.isConfigured(projectPath, { target });
 
 	const outputDir =
 		detectedFramework?.dist ?? (await findAssetsDir(projectPath));

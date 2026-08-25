@@ -228,6 +228,34 @@ describe("runAutoConfig()", () => {
 		);
 	});
 
+	it("preserves an existing Cloudflare config while repairing framework setup", async ({
+		expect,
+	}) => {
+		const existingConfig = "export default { name: 'existing' };\n";
+		await seed({
+			"cloudflare.config.ts": existingConfig,
+			"dist/index.html": "<h1>Hello World</h1>",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "repaired-app",
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		expect(readFileSync("cloudflare.config.ts", "utf8")).toBe(existingConfig);
+	});
+
 	it("fails rather than overwriting existing Wrangler build configuration", async ({
 		expect,
 	}) => {

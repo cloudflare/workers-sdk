@@ -68,11 +68,31 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("should use a framework build override when a Cloudflare config exists", async ({
+	it("should treat Next.js with only a Cloudflare config as unconfigured", async ({
 		expect,
 	}) => {
 		await seed({
 			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				dependencies: { next: "15" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: false,
+			framework: { id: "next" },
+			buildCommand: "npx opennextjs-cloudflare build",
+		});
+	});
+
+	it("should treat Next.js with OpenNext configuration as configured", async ({
+		expect,
+	}) => {
+		await seed({
+			"open-next.config.ts": "export default {};",
 			"package.json": JSON.stringify({
 				dependencies: { next: "15" },
 			}),

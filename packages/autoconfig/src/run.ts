@@ -274,7 +274,12 @@ export async function runAutoConfig(
 	}
 
 	if (target === "cf") {
-		if (workerConfig !== null) {
+		if (
+			workerConfig !== null &&
+			!existsSync(
+				resolve(autoConfigDetails.projectPath, "cloudflare.config.ts")
+			)
+		) {
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
 		}
 		if (
@@ -605,7 +610,11 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	if (target === "cf" && workerConfig) {
+	if (
+		target === "cf" &&
+		workerConfig &&
+		!existsSync(resolve(autoConfigDetails.projectPath, "cloudflare.config.ts"))
+	) {
 		logger.log("📄 Create cloudflare.config.ts:");
 		logger.log(indentFileContent(renderCloudflareConfig(workerConfig)));
 		logger.log("");

@@ -7,6 +7,10 @@ import type {
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class NextJs extends Framework {
+	protected get configurationFiles(): string[] {
+		return ["open-next.config.ts"];
+	}
+
 	getBuildCommandOverride(packageManager: PackageManager): string {
 		return `${packageManager.npx} opennextjs-cloudflare build`;
 	}
