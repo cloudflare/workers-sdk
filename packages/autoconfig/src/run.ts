@@ -568,8 +568,10 @@ export async function buildOperationsSummary(
 	if (autoConfigDetails.packageJson) {
 		const scriptOverrides =
 			target === "wrangler" ? packageJsonScriptsOverrides : undefined;
-		const buildCommandPrefix = projectCommands.build
-			? `${projectCommands.build} && `
+		const scriptBuildCommand =
+			target === "cf" ? projectCommands.build : autoConfigDetails.buildCommand;
+		const buildCommandPrefix = scriptBuildCommand
+			? `${scriptBuildCommand} && `
 			: "";
 		summary.scripts = {
 			deploy:
