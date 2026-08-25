@@ -241,14 +241,6 @@ function kvNamespaceEntry(
 	}
 	return [binding, { id, remoteProxyConnectionString }];
 }
-/**
- * Build the Miniflare options for a Flagship binding, proxying to the remote
- * app only when the user opted in with `remote: true`.
- *
- * @param binding The Flagship binding from the Worker's config.
- * @param remoteProxyConnectionString The remote proxy session, if one is running.
- * @returns The binding name and its Miniflare options.
- */
 function flagshipEntry(
 	{ binding, app_id, remote }: CfFlagship,
 	remoteProxyConnectionString?: RemoteProxyConnectionString

@@ -9,7 +9,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
-import { usingLocalFlagshipAPI } from "../flagship/local";
+import { usingLocalFlagshipAPI } from "../flagship/store";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -109,6 +109,17 @@ describe("flagship", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	async function readLocalState() {
+		return usingLocalFlagshipAPI(
+			undefined,
+			readWranglerConfig(),
+			"app-1",
+			async (admin) => ({
+				accountTag: await admin.getAccountTag(),
+				flags: await admin.listFlags(),
+			})
+		);
+	}
 
 	beforeEach(() => setIsTTY(true));
 	afterEach(() => clearDialogs());
@@ -1763,20 +1774,6 @@ describe("flagship", () => {
 			],
 		};
 
-		/** Read the local store back through the same API the pull writes with. */
-		async function readLocalStore() {
-			const config = readWranglerConfig();
-			return usingLocalFlagshipAPI(
-				undefined,
-				config,
-				"app-1",
-				async (admin) => ({
-					accountTag: await admin.getAccountTag(),
-					flags: await admin.listFlags(),
-				})
-			);
-		}
-
 		beforeEach(() => writeWranglerConfig());
 
 		it("writes remote flags and the account tag into the local store", async ({
@@ -1786,9 +1783,7 @@ describe("flagship", () => {
 
 			await runWrangler("flagship flags pull app-1");
 
-			const { accountTag, flags } = await readLocalStore();
-			// Seeding with the real account tag is what makes local rollout
-			// buckets match the remote app's.
+			const { accountTag, flags } = await readLocalState();
 			expect(accountTag).toBe("some-account-id");
 			expect(flags).toEqual([
 				expect.objectContaining({
@@ -1822,7 +1817,7 @@ describe("flagship", () => {
 
 			await runWrangler("flagship flags pull app-1");
 
-			const { flags } = await readLocalStore();
+			const { flags } = await readLocalState();
 			expect(flags.map((flag) => flag.key)).toEqual(["local_only", "new-ui"]);
 			expect(std.out).toContain("Left 1 local-only flag untouched: local_only");
 		});
@@ -1833,9 +1828,6 @@ describe("flagship", () => {
 			mockGet("apps/app-1/flags", [REMOTE_FLAG], { count: 1, cursor: null });
 			await runWrangler("flagship flags pull app-1");
 
-			// Mirrors how `wrangler dev` configures the binding: same persistence
-			// root and app id, but the binding name is the user's choice. The store
-			// is keyed by app id, so the pulled flags must still be visible.
 			const persist = getLocalPersistencePath(undefined, readWranglerConfig());
 			const mf = new Miniflare(
 				convertV4MiniflareOptions({
@@ -1852,10 +1844,6 @@ describe("flagship", () => {
 				]);
 				expect(await admin.getAccountTag()).toBe("some-account-id");
 
-				// The pulled account tag seeds bucketing. Under `some-account-id`
-				// this flag seeds to 75, which buckets "3" to 14 (inside the 50%
-				// rollout) and "1" to 52 (outside it). Getting these right proves
-				// the tag reached evaluation rather than falling back to `local`.
 				expect(
 					await admin.evaluateFlag("new-ui", { targetingKey: "3" })
 				).toMatchObject({ value: true, reason: "SPLIT" });
@@ -1880,33 +1868,25 @@ describe("flagship", () => {
 				pulled: ["new-ui", "second"],
 				localOnly: [],
 			});
-			const { flags } = await readLocalStore();
+			const { flags } = await readLocalState();
 			expect(flags.map((flag) => flag.key)).toEqual(["new-ui", "second"]);
 		});
 	});
 
 	describe("--local", () => {
-		/** Read the local store directly, bypassing the commands under test. */
-		async function readLocalFlags() {
-			return usingLocalFlagshipAPI(
-				undefined,
-				readWranglerConfig(),
-				"app-1",
-				(admin) => admin.listFlags()
-			);
-		}
-
 		beforeEach(() => writeWranglerConfig());
 
 		it("creates, lists, gets and deletes without touching the network", async ({
 			expect,
 		}) => {
-			// No msw handlers are registered in this block: any HTTP request would
-			// fail the test, which is the point.
 			await runWrangler(
 				"flagship flags create app-1 new-ui --type boolean --local"
 			);
 			expect(std.out).toContain("Created flag");
+			expect(await readLocalState()).toMatchObject({
+				accountTag: null,
+				flags: [{ key: "new-ui" }],
+			});
 
 			await runWrangler("flagship flags list app-1 --local");
 			expect(std.out).toContain("new-ui");
@@ -1915,7 +1895,7 @@ describe("flagship", () => {
 			expect(std.out).toContain('"key": "new-ui"');
 
 			await runWrangler("flagship flags delete app-1 new-ui --force --local");
-			expect(await readLocalFlags()).toEqual([]);
+			expect((await readLocalState()).flags).toEqual([]);
 		});
 
 		it("round-trips a rollout through update and evaluate", async ({
@@ -1935,18 +1915,14 @@ describe("flagship", () => {
 			expect(std.out).toContain("true");
 		});
 
-		it("reports a missing flag without falling back to the remote app", async ({
+		it("reports local failures as user errors without falling back", async ({
 			expect,
 		}) => {
-			await expect(
-				runWrangler("flagship flags get app-1 absent --local")
-			).rejects.toThrow("Flag 'absent' not found");
-		});
-
-		it("reports local store failures as user errors", async ({ expect }) => {
-			await expect(
-				runWrangler("flagship flags get app-1 absent --local")
-			).rejects.toThrow(UserError);
+			const error = await runWrangler(
+				"flagship flags get app-1 absent --local"
+			).catch((cause: unknown) => cause);
+			expect(error).toBeInstanceOf(UserError);
+			expect(error).toHaveProperty("message", "Flag 'absent' not found");
 
 			await runWrangler(
 				"flagship flags create app-1 new-ui --type boolean --local"
@@ -1968,21 +1944,6 @@ describe("flagship", () => {
 			await expect(
 				runWrangler("flagship flags list app-1 --persist-to /tmp/flags")
 			).rejects.toThrow("Cannot use --persist-to without --local");
-		});
-
-		it("does not claim an account tag that no pull established", async ({
-			expect,
-		}) => {
-			await runWrangler(
-				"flagship flags create app-1 new-ui --type boolean --local"
-			);
-			const tag = await usingLocalFlagshipAPI(
-				undefined,
-				readWranglerConfig(),
-				"app-1",
-				(admin) => admin.getAccountTag()
-			);
-			expect(tag).toBeNull();
 		});
 	});
 

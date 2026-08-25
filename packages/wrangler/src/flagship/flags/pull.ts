@@ -3,7 +3,7 @@ import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { listAllFlags, toFlagInput } from "../client";
-import { usingLocalFlagshipAPI } from "../local";
+import { usingLocalFlagshipAPI } from "../store";
 
 export const flagshipFlagsPullCommand = createCommand({
 	metadata: {

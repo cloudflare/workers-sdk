@@ -4,10 +4,14 @@ import { describe, it } from "vitest";
 import { printBindings } from "../utils/print-bindings";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 
-function callPrintBindings(bindings: StartDevWorkerInput["bindings"]) {
+function callPrintBindings(
+	bindings: StartDevWorkerInput["bindings"],
+	local = false
+) {
 	const lines: string[] = [];
 	printBindings(bindings, {
 		log: (msg: string) => lines.push(msg),
+		local,
 	});
 	return lines.map((l) => stripVTControlCharacters(l)).join("\n");
 }
@@ -145,21 +149,11 @@ describe("printBindings — AI Search bindings", () => {
 });
 
 describe("printBindings -- Flagship bindings", () => {
-	function callPrintBindingsInLocalDev(
-		bindings: StartDevWorkerInput["bindings"]
-	) {
-		const lines: string[] = [];
-		printBindings(bindings, [], [], [], {
-			log: (msg: string) => lines.push(msg),
-			local: true,
-		});
-		return lines.map((l) => stripVTControlCharacters(l)).join("\n");
-	}
-
 	it("shows Flagship bindings as local by default", ({ expect }) => {
-		const output = callPrintBindingsInLocalDev({
-			FLAGS: { type: "flagship", app_id: "my-app" },
-		});
+		const output = callPrintBindings(
+			{ FLAGS: { type: "flagship", app_id: "my-app" } },
+			true
+		);
 
 		expect(output).toContain("FLAGS");
 		expect(output).toContain("Flagship");
@@ -171,9 +165,10 @@ describe("printBindings -- Flagship bindings", () => {
 	it("shows Flagship bindings as remote when `remote: true` is set", ({
 		expect,
 	}) => {
-		const output = callPrintBindingsInLocalDev({
-			FLAGS: { type: "flagship", app_id: "my-app", remote: true },
-		});
+		const output = callPrintBindings(
+			{ FLAGS: { type: "flagship", app_id: "my-app", remote: true } },
+			true
+		);
 
 		expect(output).toContain("remote");
 		expect(output).not.toContain("local");

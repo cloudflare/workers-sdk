@@ -1,4 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
+import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import { getDefaultPersistRoot } from "../dev/miniflare";
 import {
 	createFlag,
 	deleteFlag,
@@ -8,7 +11,6 @@ import {
 	listFlags,
 	updateFlag,
 } from "./client";
-import { usingLocalFlagshipAPI } from "./local";
 import type { EvaluationResult, Flag, FlagInput, Page } from "./client";
 import type { Config } from "@cloudflare/workers-utils";
 import type { FlagshipAdmin } from "miniflare";
@@ -58,6 +60,33 @@ export function useLocalStore(args: FlagStoreArgs): boolean {
 	return args.local === true || args.remote === false;
 }
 
+export async function usingLocalFlagshipAPI<T>(
+	persistTo: string | undefined,
+	config: Config,
+	appId: string,
+	callback: (admin: FlagshipAdmin) => Promise<T>
+): Promise<T> {
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			script:
+				'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+			resourcePersistencePath: getDefaultPersistRoot(
+				getLocalPersistencePath(persistTo, config)
+			),
+			flagship: { FLAGS: { app_id: appId } },
+		})
+	);
+	try {
+		const binding = await mf.getFlagshipBindingAPI("FLAGS");
+		const result = await callback(binding());
+		return result === undefined
+			? result
+			: (JSON.parse(JSON.stringify(result)) as T);
+	} finally {
+		await mf.dispose();
+	}
+}
+
 function remoteStore(config: Config, appId: string): FlagStore {
 	return {
 		listFlags: (limit, cursor) => listFlags(config, appId, limit, cursor),
@@ -71,7 +100,7 @@ function remoteStore(config: Config, appId: string): FlagStore {
 	};
 }
 
-async function asUserError<T>(
+async function localOperation<T>(
 	telemetryMessage: string,
 	operation: () => Promise<T>
 ): Promise<T> {
@@ -94,8 +123,9 @@ function localStore(admin: FlagshipAdmin): FlagStore {
 					{ telemetryMessage: "flagship local store cursor unsupported" }
 				);
 			}
-			const items = await asUserError("flagship local store list failed", () =>
-				admin.listFlags()
+			const items = await localOperation(
+				"flagship local store list failed",
+				() => admin.listFlags()
 			);
 			return {
 				items: limit === undefined ? items : items.slice(0, limit),
@@ -103,27 +133,29 @@ function localStore(admin: FlagshipAdmin): FlagStore {
 			};
 		},
 		listAllFlags: () =>
-			asUserError("flagship local store list failed", () => admin.listFlags()),
+			localOperation("flagship local store list failed", () =>
+				admin.listFlags()
+			),
 		getFlag: (flagKey) =>
-			asUserError("flagship local store get failed", () =>
+			localOperation("flagship local store get failed", () =>
 				admin.getFlag(flagKey)
 			),
 		createFlag: (flag) =>
-			asUserError("flagship local store create failed", () =>
+			localOperation("flagship local store create failed", () =>
 				admin.createFlag(flag)
 			),
 		updateFlag: (flagKey, flag) =>
-			asUserError("flagship local store update failed", () =>
+			localOperation("flagship local store update failed", () =>
 				admin.updateFlag(flagKey, flag)
 			),
 		deleteFlag: async (flagKey) => {
-			await asUserError("flagship local store delete failed", () =>
+			await localOperation("flagship local store delete failed", () =>
 				admin.deleteFlag(flagKey)
 			);
 			return { key: flagKey };
 		},
 		evaluateFlag: (flagKey, context) =>
-			asUserError("flagship local store evaluate failed", () =>
+			localOperation("flagship local store evaluate failed", () =>
 				admin.evaluateFlag(flagKey, context)
 			),
 	};
