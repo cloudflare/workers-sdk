@@ -7,6 +7,7 @@ import {
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
+import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
 import { usingLocalFlagshipAPI } from "../flagship/store";
@@ -112,7 +113,7 @@ describe("flagship", () => {
 	async function readLocalState() {
 		return usingLocalFlagshipAPI(
 			undefined,
-			readWranglerConfig(),
+			readConfig({}),
 			"app-1",
 			async (admin) => ({
 				accountTag: await admin.getAccountTag(),
@@ -1801,7 +1802,7 @@ describe("flagship", () => {
 		}) => {
 			await usingLocalFlagshipAPI(
 				undefined,
-				readWranglerConfig(),
+				readConfig({}),
 				"app-1",
 				async (admin) => {
 					await admin.putFlag({
@@ -1828,7 +1829,7 @@ describe("flagship", () => {
 			mockGet("apps/app-1/flags", [REMOTE_FLAG], { count: 1, cursor: null });
 			await runWrangler("flagship flags pull app-1");
 
-			const persist = getLocalPersistencePath(undefined, readWranglerConfig());
+			const persist = getLocalPersistencePath(undefined, readConfig({}));
 			const mf = new Miniflare(
 				convertV4MiniflareOptions({
 					script:
