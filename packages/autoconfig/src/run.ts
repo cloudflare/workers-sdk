@@ -155,15 +155,23 @@ export async function runAutoConfig(
 	}
 
 	const { npx } = packageManager;
+	let buildCommand =
+		dryRunConfigurationResults.buildCommandOverride ??
+		autoConfigDetails.buildCommand;
+
+	if (
+		target === "cf" &&
+		autoConfigDetails.packageJson?.scripts?.build !== undefined
+	) {
+		buildCommand = `${packageManager.type} run build`;
+	}
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		dryRunWorkerConfig,
 		dryRunConfigurationResults,
 		{
-			build:
-				dryRunConfigurationResults.buildCommandOverride ??
-				autoConfigDetails.buildCommand,
+			build: buildCommand,
 			deploy:
 				dryRunConfigurationResults.deployCommandOverride ??
 				`${npx} ${target} deploy`,
@@ -295,9 +303,6 @@ export async function runAutoConfig(
 			`${autoConfigDetails.projectPath}/.assetsignore`
 		);
 	}
-
-	const buildCommand =
-		configurationResults.buildCommandOverride ?? autoConfigDetails.buildCommand;
 
 	if (buildCommand && runBuild) {
 		await context.runCommand(
