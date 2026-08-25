@@ -29,7 +29,6 @@ export function createProxyPrototypeClass<
 					if (value !== undefined) {
 						return value;
 					}
-					// noinspection SuspiciousTypeOfGuard
 					if (typeof key === "symbol" || IGNORED_KEYS.includes(key)) {
 						return;
 					}
