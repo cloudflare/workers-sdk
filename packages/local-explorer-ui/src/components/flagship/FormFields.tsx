@@ -19,14 +19,6 @@ interface TextInputProps {
 	value: string;
 }
 
-/**
- * Renders a single-line text input using Kumo's own input styling.
- *
- * Kumo's `Input` component cannot be typed reliably in this workspace because of
- * the duplicated `@types/react` versions, so the flagship forms render a plain
- * element styled with the exported `inputVariants` recipe. Styling therefore
- * stays in step with the design system instead of drifting from it.
- */
 export function TextInput({
 	ariaLabel,
 	className,
@@ -42,9 +34,6 @@ export function TextInput({
 	size = "base",
 	value,
 }: TextInputProps): JSX.Element {
-	/**
-	 * Forwards Enter presses so dialogs can submit from any field.
-	 */
 	function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
 		if (event.key === "Enter" && onEnter !== undefined) {
 			event.preventDefault();
@@ -90,9 +79,6 @@ interface FieldProps {
 	optional?: boolean;
 }
 
-/**
- * Renders a labelled form field with helper text or a validation message.
- */
 export function Field({
 	children,
 	description,

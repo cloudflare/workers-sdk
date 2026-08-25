@@ -1,5 +1,12 @@
 export type FlagType = "boolean" | "string" | "number" | "json";
 
+export const FLAG_TYPE_LABELS: Record<FlagType, string> = {
+	boolean: "Boolean",
+	json: "JSON",
+	number: "Number",
+	string: "String",
+};
+
 export interface VariationDraft {
 	id: string;
 	name: string;
@@ -40,13 +47,6 @@ export function defaultVariationsForType(
 	];
 }
 
-/**
- * Determines a flag's type from the values it serves.
- *
- * Used as a fallback for flags whose stored `type` is missing.
- *
- * @returns The inferred flag type, defaulting to JSON for objects and arrays
- */
 export function inferFlagType(
 	variations: Record<string, unknown> | undefined
 ): FlagType {
@@ -63,12 +63,6 @@ export function inferFlagType(
 	return "json";
 }
 
-/**
- * Renders a stored variation value as editable text.
- *
- * This is the inverse of {@link parseVariationValue}, so a value that is loaded
- * into the form and saved again round-trips unchanged.
- */
 export function serializeVariationValue(
 	type: FlagType,
 	value: unknown
@@ -85,18 +79,10 @@ export function serializeVariationValue(
 	return JSON.stringify(value) ?? "";
 }
 
-/**
- * Converts stored variations into editable form rows.
- *
- * @returns One draft row per variation, falling back to the type's examples when empty
- */
 export function variationDraftsFrom(
 	type: FlagType,
 	variations: Record<string, unknown> | undefined
 ): [VariationDraft, ...VariationDraft[]] {
-	/**
-	 * Builds a single editable row from a stored variation.
-	 */
 	function toDraft([name, value]: [string, unknown]): VariationDraft {
 		return {
 			id: crypto.randomUUID(),
@@ -182,17 +168,7 @@ export function flagshipErrorMessage(error: unknown, fallback: string): string {
 	return fallback;
 }
 
-/**
- * Quotes a value for use as a single argument in a POSIX shell.
- *
- * Single quotes stop the shell expanding anything inside, so a value
- * containing `$(...)`, backticks or quotes stays inert when a copied command
- * is pasted into a terminal.
- *
- * @param value - Value to quote
- *
- * @returns The value as a single quoted shell argument
- */
 export function shellQuote(value: string): string {
+	// Single quotes keep copied shell arguments inert; embedded quotes close and reopen safely.
 	return `'${value.replaceAll("'", `'\\''`)}'`;
 }

@@ -37,16 +37,9 @@ interface TagInputProps {
 	ariaLabel: string;
 	disabled?: boolean;
 	onChange: (value: string) => void;
-	/** Newline separated list of entries. */
 	value: string;
 }
 
-/**
- * Renders a list value as removable chips.
- *
- * The `in` and `not_in` operators compare against a list, so entries are added
- * with Enter or a comma and removed with Backspace or the chip's close button.
- */
 function TagInput({
 	ariaLabel,
 	disabled,
@@ -55,9 +48,6 @@ function TagInput({
 }: TagInputProps): JSX.Element {
 	const entries = value.split("\n").filter((entry) => entry !== "");
 
-	/**
-	 * Adds or removes entries in response to Enter, comma, and Backspace.
-	 */
 	function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
 		const input = event.currentTarget;
 		const typed = input.value.trim();
@@ -134,9 +124,6 @@ interface ConditionRowProps {
 	onRemove: () => void;
 }
 
-/**
- * Renders one condition of a targeting rule.
- */
 function ConditionRow({
 	condition,
 	disabled,
@@ -219,9 +206,6 @@ interface RuleCardProps {
 	variationNames: string[];
 }
 
-/**
- * Renders a single targeting rule.
- */
 function RuleCard({
 	disabled,
 	error,
@@ -238,9 +222,6 @@ function RuleCard({
 		rule.conditions.length === 0 &&
 		(rule.rollout === null || rule.rollout.percentage === 100);
 
-	/**
-	 * Replaces one condition, keyed by its position in the flat list.
-	 */
 	function updateCondition(
 		position: number,
 		patch: Partial<UICondition>
@@ -253,9 +234,6 @@ function RuleCard({
 		});
 	}
 
-	/**
-	 * Removes a condition, resetting the join on whichever row is now first.
-	 */
 	function removeCondition(position: number): void {
 		const conditions = rule.conditions.filter(
 			(_, current) => current !== position
@@ -267,13 +245,16 @@ function RuleCard({
 		onChange({ ...rule, conditions });
 	}
 
-	/**
-	 * Inserts a condition after the given position.
-	 */
 	function insertCondition(position: number, join: "AND" | "OR"): void {
 		const conditions = [...rule.conditions];
 		conditions.splice(position + 1, 0, emptyCondition(join));
 		onChange({ ...rule, conditions });
+	}
+
+	function updateRollout(patch: Partial<NonNullable<UIRule["rollout"]>>): void {
+		if (rule.rollout !== null) {
+			onChange({ ...rule, rollout: { ...rule.rollout, ...patch } });
+		}
 	}
 
 	return (
@@ -442,12 +423,8 @@ function RuleCard({
 									numeric
 									onValueChange={(next) => {
 										const parsed = Number(next);
-										onChange({
-											...rule,
-											rollout: {
-												attribute: rule.rollout?.attribute ?? "",
-												percentage: Number.isNaN(parsed) ? 0 : parsed,
-											},
+										updateRollout({
+											percentage: Number.isNaN(parsed) ? 0 : parsed,
 										});
 									}}
 									value={String(rule.rollout.percentage)}
@@ -461,15 +438,7 @@ function RuleCard({
 									ariaLabel={`Rollout attribute for rule ${index + 1}`}
 									disabled={disabled}
 									mono
-									onValueChange={(attribute) =>
-										onChange({
-											...rule,
-											rollout: {
-												attribute,
-												percentage: rule.rollout?.percentage ?? 0,
-											},
-										})
-									}
+									onValueChange={(attribute) => updateRollout({ attribute })}
 									placeholder="targetingKey"
 									value={rule.rollout.attribute}
 								/>
@@ -508,12 +477,6 @@ interface RuleEditorProps {
 	variationNames: string[];
 }
 
-/**
- * Renders the targeting rules for a flag.
- *
- * Rules are evaluated top to bottom and the first match wins, so their order is
- * the order shown here.
- */
 export function RuleEditor({
 	disabled,
 	errors,
@@ -523,9 +486,6 @@ export function RuleEditor({
 }: RuleEditorProps): JSX.Element {
 	const [firstVariation] = variationNames;
 
-	/**
-	 * Moves a rule up or down, changing the order it is evaluated in.
-	 */
 	function moveRule(index: number, direction: -1 | 1): void {
 		const target = index + direction;
 		const moved = rules[index];
