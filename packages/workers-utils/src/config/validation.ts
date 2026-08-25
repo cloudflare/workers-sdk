@@ -3083,12 +3083,50 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		}
 	}
 
+	if (hasProperty(value, "concurrency") && value.concurrency !== undefined) {
+		if (
+			typeof value.concurrency !== "object" ||
+			value.concurrency === null ||
+			Array.isArray(value.concurrency)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "concurrency" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const concurrency = value.concurrency as Record<string, unknown>;
+			if (concurrency.limit !== undefined) {
+				if (
+					typeof concurrency.limit !== "number" ||
+					!Number.isInteger(concurrency.limit) ||
+					concurrency.limit < 1
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
+							concurrency.limit
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.concurrency`,
+				Object.keys(concurrency),
+				["limit"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
 		"limits",
+		"concurrency",
 		"schedules",
 		"default_retention",
 	]);

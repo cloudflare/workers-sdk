@@ -878,6 +878,11 @@ export type WorkflowBinding = {
 		/** Maximum number of steps a Workflow instance can execute */
 		steps?: number;
 	};
+	/** Optional concurrency configuration for the Workflow */
+	concurrency?: {
+		/** Maximum number of Workflow instances that can run concurrently */
+		limit?: number;
+	};
 	/** Optional cron schedule(s) for automatically triggering workflow instances */
 	schedules?: string | string[];
 	/**
