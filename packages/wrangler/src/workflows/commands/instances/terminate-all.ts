@@ -3,6 +3,7 @@ import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
+import { jsonWorkflowArgs } from "../../utils";
 
 export const workflowsInstancesTerminateAllCommand = createCommand({
 	metadata: {
@@ -15,6 +16,7 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 	positionalArgs: ["name"],
 
 	args: {
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -24,6 +26,9 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 			describe: "Filter instances to be terminated by status",
 			type: "string",
 		},
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
 	},
 	validateArgs: (args) => {
 		const validStatusToTerminate = [
@@ -61,6 +66,11 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 			},
 			maybeURLQueryString
 		);
+
+		if (args.json) {
+			logger.json({ name: args.name, status: result.status });
+			return;
+		}
 
 		if (result.status === "ok") {
 			logger.info(

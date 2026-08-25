@@ -8,7 +8,7 @@ import {
 	getLocalInstanceIdFromArgs,
 	localWorkflowArgs,
 } from "../../local";
-import { getInstanceIdFromArgs } from "../../utils";
+import { getInstanceIdFromArgs, jsonWorkflowArgs } from "../../utils";
 
 export const workflowsInstancesSendEventCommand = createCommand({
 	metadata: {
@@ -19,6 +19,7 @@ export const workflowsInstancesSendEventCommand = createCommand({
 	positionalArgs: ["name", "id"],
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -43,6 +44,9 @@ export const workflowsInstancesSendEventCommand = createCommand({
 			default: "{}",
 		},
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 
 	async handler(args, { config }) {
 		let payload;
@@ -58,7 +62,9 @@ export const workflowsInstancesSendEventCommand = createCommand({
 		let id: string;
 
 		if (args.local) {
-			id = await getLocalInstanceIdFromArgs(args.port, args);
+			id = await getLocalInstanceIdFromArgs(args.port, args, {
+				quiet: args.json,
+			});
 
 			await fetchLocalResult(
 				args.port,
@@ -83,6 +89,11 @@ export const workflowsInstancesSendEventCommand = createCommand({
 					body: args.payload,
 				}
 			);
+		}
+
+		if (args.json) {
+			logger.json({ name: args.name, id, type: args.type, success: true });
+			return;
 		}
 
 		const payloadInfo =

@@ -104,10 +104,15 @@ export async function fetchLocalResult<T>(
 /**
  * List all workflow instances locally and resolve "latest" to an actual ID.
  * Mirrors `getInstanceIdFromArgs` but uses the local explorer API.
+ *
+ * @param options.quiet Suppress the informational "Latest instance is ..."
+ * message. Callers rendering JSON must set this so that the resolved id is not
+ * written to stdout ahead of the payload.
  */
 export async function getLocalInstanceIdFromArgs(
 	port: number,
-	args: { id: string; name: string }
+	args: { id: string; name: string },
+	options: { quiet?: boolean } = {}
 ): Promise<string> {
 	let id = args.id;
 
@@ -128,7 +133,9 @@ export async function getLocalInstanceIdFromArgs(
 		);
 
 		id = sorted[0].id;
-		logger.info(`Latest instance is "${id}"`);
+		if (!options.quiet) {
+			logger.info(`Latest instance is "${id}"`);
+		}
 	}
 
 	return id;
