@@ -4,8 +4,13 @@ import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
+import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class NextJs extends Framework {
+	getBuildCommandOverride(packageManager: PackageManager): string {
+		return `${packageManager.npx} opennextjs-cloudflare build`;
+	}
+
 	async configure({
 		dryRun,
 		projectPath,
@@ -37,7 +42,7 @@ export class NextJs extends Framework {
 				preview: "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 				deploy: "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 			},
-			buildCommandOverride: `${npx} opennextjs-cloudflare build`,
+			buildCommandOverride: this.getBuildCommandOverride(packageManager),
 			deployCommandOverride: `${npx} opennextjs-cloudflare deploy`,
 			versionCommandOverride: `${npx} opennextjs-cloudflare upload`,
 		};

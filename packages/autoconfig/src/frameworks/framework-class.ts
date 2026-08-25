@@ -40,6 +40,17 @@ export abstract class Framework {
 		options: ConfigurationOptions
 	): Promise<ConfigurationResults> | ConfigurationResults;
 
+	/**
+	 * Returns the framework-specific build command that should take precedence
+	 * over the command reported by project detection.
+	 *
+	 * @param packageManager The package manager used by the project.
+	 * @returns The build command override, if the framework defines one.
+	 */
+	getBuildCommandOverride(_packageManager: PackageManager): string | undefined {
+		return undefined;
+	}
+
 	configurationDescription?: string;
 
 	/**

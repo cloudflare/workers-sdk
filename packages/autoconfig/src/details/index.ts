@@ -121,7 +121,7 @@ export async function getDetailsForAutoConfig({
 	}
 
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
-		await detectFramework(projectPath, context, wranglerConfig);
+		await detectFramework(projectPath, context, wranglerConfig, target);
 
 	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -149,10 +149,9 @@ export async function getDetailsForAutoConfig({
 		packageJson,
 		packageManager,
 		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
-		buildCommand: getProjectCommand(
-			detectedFramework.buildCommand,
-			packageManager
-		),
+		buildCommand:
+			framework.getBuildCommandOverride(packageManager) ??
+			getProjectCommand(detectedFramework.buildCommand, packageManager),
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
 

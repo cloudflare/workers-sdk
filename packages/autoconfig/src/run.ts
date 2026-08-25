@@ -155,16 +155,9 @@ export async function runAutoConfig(
 	}
 
 	const { npx } = packageManager;
-	let buildCommand =
+	const buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
 		autoConfigDetails.buildCommand;
-
-	if (
-		target === "cf" &&
-		autoConfigDetails.packageJson?.scripts?.build !== undefined
-	) {
-		buildCommand = `${packageManager.type} run build`;
-	}
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
@@ -575,14 +568,14 @@ export async function buildOperationsSummary(
 	if (autoConfigDetails.packageJson) {
 		const scriptOverrides =
 			target === "wrangler" ? packageJsonScriptsOverrides : undefined;
-		const buildCommandPrefix = autoConfigDetails.buildCommand
-			? `${autoConfigDetails.buildCommand} && `
+		const buildCommandPrefix = projectCommands.build
+			? `${projectCommands.build} && `
 			: "";
 		summary.scripts = {
 			deploy:
 				scriptOverrides?.deploy ??
 				`${buildCommandPrefix}${target} deploy${
-					target === "cf" && autoConfigDetails.buildCommand ? " --no-build" : ""
+					target === "cf" && projectCommands.build ? " --no-build" : ""
 				}`,
 			preview:
 				scriptOverrides?.preview ??
