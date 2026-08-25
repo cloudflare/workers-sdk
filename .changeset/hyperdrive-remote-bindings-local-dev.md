@@ -24,4 +24,6 @@ Miniflare stands up a local TCP bridge and points the binding's designator at it
 
 Credentials are seeded in `wrangler dev` (single- and multi-worker) and `getPlatformProxy()`. `unstable_getMiniflareWorkerOptions()` is synchronous and so cannot fetch them; a `remote: true` Hyperdrive binding used through it — for example under `@cloudflare/vite-plugin` or `@cloudflare/vitest-pool-workers` — warns that connections will likely fail to authenticate rather than failing silently.
 
+The `wrangler dev` binding table also reports a `remote: true` Hyperdrive binding as `remote` rather than always reporting `local`.
+
 This is opt-in — bindings without `remote: true` keep the existing local-only behaviour and need no configuration changes.
