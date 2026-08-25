@@ -78,11 +78,11 @@ function FlagshipAppView(): JSX.Element {
 	const routerState = useRouterState();
 
 	const bindingName = useMemo(() => {
-		const worker = getSelectedWorker(
+		const selectedWorker = getSelectedWorker(
 			rootData.workers,
 			routerState.location.searchStr
 		);
-		return worker?.bindings?.flagship?.find((app) => app.id === appId)
+		return selectedWorker?.bindings?.flagship?.find((app) => app.id === appId)
 			?.bindingName;
 	}, [appId, rootData.workers, routerState.location.searchStr]);
 
