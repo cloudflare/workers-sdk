@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Fix `wrangler login --use-keyring` incorrectly reporting that `secret-tool` is missing on Linux
+- [#15320](https://github.com/cloudflare/workers-sdk/pull/15320) [`c809851`](https://github.com/cloudflare/workers-sdk/commit/c809851f38f0fe4805e876b6c8bfcd6556f49afb) Thanks [@Om-singhaI](https://github.com/Om-singhaI)! - Fix `wrangler login --use-keyring` incorrectly reporting that `secret-tool` is missing on Linux
 
   Libsecret's `secret-tool` does not support `--version`; it prints usage and exits 2, which Wrangler previously interpreted as unavailable. Wrangler now reports it missing only when launching the executable fails.
 

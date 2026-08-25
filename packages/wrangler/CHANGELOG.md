@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Add `default_retention` to Workflow bindings for configuring how long instances are retained
+- [#15332](https://github.com/cloudflare/workers-sdk/pull/15332) [`d1cc3af`](https://github.com/cloudflare/workers-sdk/commit/d1cc3af5c485030387aa04a533f256924df1ac64) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `default_retention` to Workflow bindings for configuring how long instances are retained
 
   Workflow instances are retained for an account-wide default period after they finish. You can now set a per-Workflow default in your Wrangler configuration, applied to instances that do not specify their own retention:
 
@@ -26,7 +26,7 @@
 
   Each side is optional and accepts either a duration string such as `"3 days"` or a whole number of milliseconds. Durations are interpreted by the Workflows API, which also caps them at your account's retention limit.
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Include a chronological list of handler events in email test harness results, so programmatic local email tests can assert the order in which messages are received, forwarded, replied to, or rejected.
+- [#15064](https://github.com/cloudflare/workers-sdk/pull/15064) [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Include a chronological list of handler events in email test harness results, so programmatic local email tests can assert the order in which messages are received, forwarded, replied to, or rejected.
 
   ```ts
   const result = await server.getWorker().email({
@@ -57,7 +57,7 @@
   ]);
   ```
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Add experimental `wrangler hyperdrive planetscale signature` for provisioning Cloudflare-billed PlanetScale databases
+- [#15065](https://github.com/cloudflare/workers-sdk/pull/15065) [`ad89456`](https://github.com/cloudflare/workers-sdk/commit/ad894562ce2a0cb5f4a2d540210956e02810a022) Thanks [@mtlemilio](https://github.com/mtlemilio)! - Add experimental `wrangler hyperdrive planetscale signature` for provisioning Cloudflare-billed PlanetScale databases
 
   `wrangler hyperdrive planetscale signature` prints a signed authorization as JSON, proving to PlanetScale that Cloudflare will be billed for the database you are about to create:
 
@@ -78,15 +78,15 @@
 
   This command is experimental and its interface may change.
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Enable FUSE-capable local container development
+- [#15134](https://github.com/cloudflare/workers-sdk/pull/15134) [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a) Thanks [@gpanders](https://github.com/gpanders)! - Enable FUSE-capable local container development
 
   Miniflare now automatically passes the Docker privileges needed for FUSE to local Durable Object containers when using local rootless Docker on Linux with `/dev/fuse` available, or a local Docker engine on macOS or through WSL where Linux containers run in a VM. This applies to Wrangler, the Cloudflare Vite plugin, and direct Miniflare use.
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Record the selected mode in the Build Output Specification top-level `config.json`
+- [#15326](https://github.com/cloudflare/workers-sdk/pull/15326) [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Record the selected mode in the Build Output Specification top-level `config.json`
 
   The mode a build was produced in is now written to `.cloudflare/output/v0/config.json` as a `mode` field, alongside the account and compliance settings.
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Add pull request metadata to `wrangler preview` deployments
+- [#14966](https://github.com/cloudflare/workers-sdk/pull/14966) [`a4c3458`](https://github.com/cloudflare/workers-sdk/commit/a4c3458cec77afa31e01d671d6b22ecfcf2c0107) Thanks [@yomna-shousha](https://github.com/yomna-shousha)! - Add pull request metadata to `wrangler preview` deployments
 
   `wrangler preview` now detects the pull request associated with the current CI run (GitHub Actions, GitLab CI, CircleCI, and a generic `PULL_REQUEST_URL`/`PR_URL`/`CHANGE_URL` fallback) and attaches it, along with the repository URL, to the preview deployment as annotations (`workers/pull_request_number`, `workers/pull_request_url`, `workers/repository_url`).
 
@@ -100,7 +100,7 @@
 
 ### Patch Changes
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Update dependencies of "miniflare", "wrangler"
+- [#15294](https://github.com/cloudflare/workers-sdk/pull/15294) [`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
 
   The following dependency versions have been updated:
 
@@ -109,7 +109,7 @@
   | @cloudflare/workers-types | ^5.20260820.1 | ^5.20260821.1 |
   | workerd                   | 1.20260820.1  | 1.20260821.1  |
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Update dependencies of "miniflare", "wrangler"
+- [#15328](https://github.com/cloudflare/workers-sdk/pull/15328) [`2d78137`](https://github.com/cloudflare/workers-sdk/commit/2d7813781e935b171ace346ce322738f1c4048a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
 
   The following dependency versions have been updated:
 
@@ -118,7 +118,7 @@
   | @cloudflare/workers-types | ^5.20260821.1 | ^5.20260823.1 |
   | workerd                   | 1.20260821.1  | 1.20260824.1  |
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Update dependencies of "miniflare", "wrangler"
+- [#15346](https://github.com/cloudflare/workers-sdk/pull/15346) [`04e8564`](https://github.com/cloudflare/workers-sdk/commit/04e856464dfaf094e9b622c9bbf92d871b98f9ff) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
 
   The following dependency versions have been updated:
 
@@ -127,23 +127,23 @@
   | @cloudflare/workers-types | ^5.20260823.1 | ^5.20260825.1 |
   | workerd                   | 1.20260824.1  | 1.20260825.1  |
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Prepare autoconfig for multiple configuration targets
+- [#15246](https://github.com/cloudflare/workers-sdk/pull/15246) [`daefb3c`](https://github.com/cloudflare/workers-sdk/commit/daefb3cc0f0b884b8ce82b22ed9b67a9c43919be) Thanks [@edmundhung](https://github.com/edmundhung)! - Prepare autoconfig for multiple configuration targets
 
   Add target-specific configuration output and command detection while preserving Wrangler's existing setup and deployment behavior.
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Fix `wrangler login --use-keyring` incorrectly reporting that `secret-tool` is missing on Linux
+- [#15320](https://github.com/cloudflare/workers-sdk/pull/15320) [`c809851`](https://github.com/cloudflare/workers-sdk/commit/c809851f38f0fe4805e876b6c8bfcd6556f49afb) Thanks [@Om-singhaI](https://github.com/Om-singhaI)! - Fix `wrangler login --use-keyring` incorrectly reporting that `secret-tool` is missing on Linux
 
   Libsecret's `secret-tool` does not support `--version`; it prints usage and exits 2, which Wrangler previously interpreted as unavailable. Wrangler now reports it missing only when launching the executable fails.
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - `[private beta]`: Explain unavailable Preview URLs after `wrangler preview` deployments
+- [#15336](https://github.com/cloudflare/workers-sdk/pull/15336) [`22182da`](https://github.com/cloudflare/workers-sdk/commit/22182daf4de3f5eed77e87a92eed7cde9937e077) Thanks [@podonnell-dev](https://github.com/podonnell-dev)! - `[private beta]`: Explain unavailable Preview URLs after `wrangler preview` deployments
 
   When a Preview deployment has no active URLs, Wrangler now explains how to enable Preview Deployments on workers.dev or a custom domain.
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Stop automatically offering to install Cloudflare skills for new users
+- [#15296](https://github.com/cloudflare/workers-sdk/pull/15296) [`d589d30`](https://github.com/cloudflare/workers-sdk/commit/d589d30b567595eacfea50e8810fe67a59b56825) Thanks [@MattieTK](https://github.com/MattieTK)! - Stop automatically offering to install Cloudflare skills for new users
 
   Wrangler will no longer prompt new users to install Cloudflare skills after commands complete. It will continue to offer updates to skills that Wrangler previously installed.
 
-- Updated dependencies [[`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f)]:
+- Updated dependencies [[`aa54b49`](https://github.com/cloudflare/workers-sdk/commit/aa54b491a42c83d410983197b84088dc5319564c), [`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1), [`2d78137`](https://github.com/cloudflare/workers-sdk/commit/2d7813781e935b171ace346ce322738f1c4048a3), [`04e8564`](https://github.com/cloudflare/workers-sdk/commit/04e856464dfaf094e9b622c9bbf92d871b98f9ff), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`37ed753`](https://github.com/cloudflare/workers-sdk/commit/37ed753470232676a8f8ba4a424d4f73ac58dc5b), [`f76b68e`](https://github.com/cloudflare/workers-sdk/commit/f76b68efd1f1a148b6d96340f3711d3aed52323a), [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`74de3ab`](https://github.com/cloudflare/workers-sdk/commit/74de3ab56f0dfabfc09da368f3d19eaf82093d10), [`0cb8690`](https://github.com/cloudflare/workers-sdk/commit/0cb86908903b87a742d1786ac8aa5aa9dce6c575), [`dd5148d`](https://github.com/cloudflare/workers-sdk/commit/dd5148d7da11665ad3f3338de338380ccea979cc), [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c)]:
   - miniflare@5.20260825.0-alpha
 
 ## 4.125.0

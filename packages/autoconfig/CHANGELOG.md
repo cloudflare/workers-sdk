@@ -4,13 +4,13 @@
 
 ### Minor Changes
 
-- [#15355](https://github.com/cloudflare/workers-sdk/pull/15355) [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f) Thanks [@penalosa](https://github.com/penalosa)! - Prepare autoconfig for multiple configuration targets
+- [#15246](https://github.com/cloudflare/workers-sdk/pull/15246) [`daefb3c`](https://github.com/cloudflare/workers-sdk/commit/daefb3cc0f0b884b8ce82b22ed9b67a9c43919be) Thanks [@edmundhung](https://github.com/edmundhung)! - Prepare autoconfig for multiple configuration targets
 
   Add target-specific configuration output and command detection while preserving Wrangler's existing setup and deployment behavior.
 
 ### Patch Changes
 
-- Updated dependencies [[`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f), [`e56d2e6`](https://github.com/cloudflare/workers-sdk/commit/e56d2e671b1db7381c9f65788b918ec953bd543f)]:
+- Updated dependencies [[`ead8f69`](https://github.com/cloudflare/workers-sdk/commit/ead8f69e85efa758dd066b4d1cfc2fec406939dd), [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a), [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a), [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c), [`7f66836`](https://github.com/cloudflare/workers-sdk/commit/7f668362bd5675afb95c1cb5128fad6aa092a430), [`acb14d0`](https://github.com/cloudflare/workers-sdk/commit/acb14d01d64f21f0f21c247da7c2fcb0557ebb3d)]:
   - @cloudflare/config@0.8.0
 
 ## 0.2.9
