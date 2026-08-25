@@ -40,6 +40,7 @@ interface FlagDialogProps {
 	onOpenChange: (open: boolean) => void;
 	onSaved: () => Promise<void>;
 	open: boolean;
+	worker?: string;
 }
 
 interface FormState {
@@ -134,6 +135,7 @@ export function FlagDialog({
 	onOpenChange,
 	onSaved,
 	open,
+	worker,
 }: FlagDialogProps): JSX.Element {
 	const [form, setForm] = useState<FormState>(emptyForm);
 	const [error, setError] = useState<FormError | null>(null);
@@ -335,6 +337,7 @@ export function FlagDialog({
 						variations,
 					}),
 					path: { app_id: appId, flag_key: flag.key },
+					query: { worker },
 				});
 			} else {
 				await flagshipCreateFlag({
@@ -347,6 +350,7 @@ export function FlagDialog({
 						variations,
 					},
 					path: { app_id: appId },
+					query: { worker },
 				});
 			}
 		} catch (caught) {
