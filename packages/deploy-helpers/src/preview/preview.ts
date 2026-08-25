@@ -923,7 +923,9 @@ export async function previewDelete(
 				await getPreview(config, accountId, workerName, previewName)
 			).slug;
 		} catch (error) {
-			if (!(error instanceof Error && "code" in error && error.code === 10025)) {
+			if (
+				!(error instanceof Error && "code" in error && error.code === 10025)
+			) {
 				throw error;
 			}
 		}
