@@ -44,9 +44,11 @@ const rootRoute = getRouteApi("__root__");
 export const Route = createFileRoute("/flagship/$appId")({
 	component: FlagshipAppView,
 	errorComponent: ResourceError,
-	loader: async ({ params }) => {
+	loaderDeps: ({ search }) => ({ worker: search.worker }),
+	loader: async ({ deps, params }) => {
 		const response = await flagshipListFlags({
 			path: { app_id: params.appId },
+			query: { worker: deps.worker },
 			throwOnError: false,
 		});
 		if (response.response?.status === 404) {
@@ -68,6 +70,7 @@ export const Route = createFileRoute("/flagship/$appId")({
  */
 function FlagshipAppView(): JSX.Element {
 	const { appId } = Route.useParams();
+	const { worker } = Route.useSearch();
 	const { flags } = Route.useLoaderData();
 	const router = useRouter();
 	const toast = useKumoToastManager();
@@ -132,6 +135,7 @@ function FlagshipAppView(): JSX.Element {
 			await flagshipUpdateFlag({
 				body: { enabled: !flag.enabled },
 				path: { app_id: appId, flag_key: flag.key },
+				query: { worker },
 			});
 		} catch (error) {
 			toast.add({
@@ -154,6 +158,7 @@ function FlagshipAppView(): JSX.Element {
 		try {
 			await flagshipDeleteFlag({
 				path: { app_id: appId, flag_key: deleteTarget.key },
+				query: { worker },
 			});
 		} catch (error) {
 			toast.add({
@@ -316,6 +321,7 @@ function FlagshipAppView(): JSX.Element {
 				}}
 				onSaved={refresh}
 				open={creating || editTarget !== null}
+				worker={worker}
 			/>
 
 			<TestFlagDialog
@@ -328,6 +334,7 @@ function FlagshipAppView(): JSX.Element {
 					}
 				}}
 				open={testTarget !== undefined}
+				worker={worker}
 			/>
 
 			<Dialog.Root

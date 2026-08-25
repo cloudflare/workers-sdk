@@ -71,6 +71,7 @@ describe("Cross-process aggregation", () => {
 							},
 							BUCKET_A: { type: "r2", name: "bucket-a" },
 							FLAGS_A: { type: "flagship", id: "app-a" },
+							SHARED_A: { type: "flagship", id: "shared-app" },
 						},
 						exports: {
 							MyDO: { type: "durable-object", storage: "legacy-kv" },
@@ -108,6 +109,7 @@ describe("Cross-process aggregation", () => {
 							},
 							BUCKET_B: { type: "r2", name: "bucket-b" },
 							FLAGS_B: { type: "flagship", id: "app-b" },
+							SHARED_B: { type: "flagship", id: "shared-app" },
 						},
 						exports: {
 							OtherDO: { type: "durable-object", storage: "legacy-kv" },
@@ -385,12 +387,43 @@ describe("Cross-process aggregation", () => {
 				      ],
 				      "id": "app-b",
 				    },
+				    {
+				      "bindings": [
+				        "SHARED_A",
+				      ],
+				      "id": "shared-app",
+				    },
 				  ],
 				  "result_info": {
-				    "count": 2,
+				    "count": 3,
 				  },
 				}
 			`);
+		});
+
+		test("routes a shared app to the selected worker", async ({ expect }) => {
+			const created = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/shared-app/flags?worker=worker-b`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ ...FLAG, key: "worker-b-flag" }),
+				}
+			);
+			await created.text();
+			expect(created.status).toBe(200);
+
+			const local = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/shared-app/flags?worker=worker-a`
+			);
+			expect(((await local.json()) as ListResponse).result).toStrictEqual([]);
+
+			const peer = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/shared-app/flags?worker=worker-b`
+			);
+			expect(
+				((await peer.json()) as ListResponse).result?.map((flag) => flag.key)
+			).toStrictEqual(["worker-b-flag"]);
 		});
 
 		test("creates, reads, evaluates and deletes a flag owned by a peer", async ({

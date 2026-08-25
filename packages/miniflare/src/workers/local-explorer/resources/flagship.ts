@@ -14,6 +14,7 @@ import type { Env } from "../explorer.worker";
 import type {
 	FlagshipApp,
 	FlagshipCreateFlagData,
+	LocalExplorerWorker,
 	FlagshipRule,
 	FlagshipUpdateFlagData,
 } from "../generated";
@@ -80,6 +81,47 @@ async function findAppOwner(
 	return owners.find((url) => url !== null) ?? null;
 }
 
+function workerHasApp(worker: LocalExplorerWorker, appId: string): boolean {
+	return (
+		worker.bindings?.flagship?.some((binding) => binding.id === appId) === true
+	);
+}
+
+async function findWorkerOwner(
+	c: AppContext,
+	workerName: string,
+	appId: string
+): Promise<string | null> {
+	const peerUrls = await getPeerUrlsIfAggregating(c);
+	const owners = await Promise.all(
+		peerUrls.map(async (url) => {
+			const response = await fetchFromPeer(url, "/local/workers");
+			if (!response?.ok) {
+				return null;
+			}
+			try {
+				const data = (await response.json()) as {
+					result?: LocalExplorerWorker[];
+				};
+				return data.result?.some(
+					(worker) => worker.name === workerName && workerHasApp(worker, appId)
+				) === true
+					? url
+					: null;
+			} catch {
+				return null;
+			}
+		})
+	);
+	return owners.find((url) => url !== null) ?? null;
+}
+
+function withWorkerQuery(path: string, worker: string): string {
+	const url = new URL(path, "http://localhost");
+	url.searchParams.set("worker", worker);
+	return `${url.pathname}${url.search}`;
+}
+
 async function withApp(
 	c: AppContext,
 	appId: string,
@@ -87,6 +129,31 @@ async function withApp(
 	handler: (admin: FlagshipAdmin) => Promise<Response>,
 	init?: RequestInit
 ): Promise<Response> {
+	const workerName = c.req.query("worker");
+	if (workerName !== undefined) {
+		const localWorker = c.env.MINIFLARE_EXPLORER_WORKER_OPTS[workerName];
+		if (localWorker !== undefined) {
+			const admin = getAdmin(c.env, appId);
+			return localWorker.flagship.some((binding) => binding.id === appId) &&
+				admin
+				? handler(admin)
+				: notFound(appId);
+		}
+
+		const owner = await findWorkerOwner(c, workerName, appId);
+		if (owner !== null) {
+			const response = await fetchFromPeer(
+				owner,
+				withWorkerQuery(peerPath, workerName),
+				init
+			);
+			if (response !== null) {
+				return response;
+			}
+		}
+		return notFound(appId);
+	}
+
 	// Aggregated apps may belong to another local dev process.
 	const admin = getAdmin(c.env, appId);
 	if (admin !== null) {
