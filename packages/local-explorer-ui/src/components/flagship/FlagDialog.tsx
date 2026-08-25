@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flagshipCreateFlag, flagshipUpdateFlag } from "../../api";
 import {
 	defaultVariationsForType,
+	FLAG_TYPE_LABELS,
 	flagshipErrorMessage,
 	inferFlagType,
 	parseVariationValue,
@@ -32,18 +33,9 @@ const TYPE_TABS: Array<{ className: string; label: string; value: FlagType }> =
 		{ className: "flex-1 justify-center", label: "JSON", value: "json" },
 	];
 
-const TYPE_LABELS: Record<FlagType, string> = {
-	boolean: "Boolean",
-	json: "JSON",
-	number: "Number",
-	string: "String",
-};
-
 interface FlagDialogProps {
 	appId: string;
-	/** Flag to edit, or null to create a new one. */
 	flag: FlagshipFlag | null;
-	/** Every flag in the app, used to reject duplicate keys. */
 	flags: FlagshipFlag[];
 	onOpenChange: (open: boolean) => void;
 	onSaved: () => Promise<void>;
@@ -55,33 +47,20 @@ interface FormState {
 	description: string;
 	enabled: boolean;
 	key: string;
-	/**
-	 * Targeting rules, or null when the stored rules use nesting the editor
-	 * cannot represent. In that case they are left untouched on save.
-	 */
 	rules: UIRule[] | null;
 	type: FlagType;
 	variations: VariationDraft[];
 }
 
-/**
- * Which part of the form a validation message belongs to, so it can be shown
- * next to the control that caused it rather than in a banner far above it.
- */
 type ErrorField = "form" | "key" | "rules" | "variations";
 
 interface FormError {
 	field: ErrorField;
 	message: string;
-	/** Variant row the message belongs to, so the offending input can be flagged. */
 	variationId?: string;
-	/** Which cell of that row is at fault. */
 	variationField?: "name" | "value";
 }
 
-/**
- * Builds the initial form state for a new boolean flag.
- */
 function emptyForm(): FormState {
 	const variations = defaultVariationsForType("boolean");
 	return {
@@ -105,16 +84,6 @@ interface SavedValues {
 	variations: Record<string, unknown>;
 }
 
-/**
- * Narrows an update to the fields that actually changed.
- *
- * Sending only what was edited means a concurrent change to another field, made
- * from the CLI or a second window, survives this save instead of being reverted
- * to the state the dialog was opened with. Rules are omitted entirely when they
- * could not be represented in the editor.
- *
- * @returns The request body for a partial update
- */
 function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
 	const body: UpdateBody = {};
 	const currentUiRules = uiRulesFrom(flag.rules);
@@ -143,9 +112,6 @@ function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
 	return body;
 }
 
-/**
- * Builds form state from an existing flag.
- */
 function formFromFlag(flag: FlagshipFlag): FormState {
 	const type = flag.type ?? inferFlagType(flag.variations);
 	const variations = variationDraftsFrom(type, flag.variations);
@@ -161,10 +127,6 @@ function formFromFlag(flag: FlagshipFlag): FormState {
 	};
 }
 
-/**
- * Renders the dialog used to add a flag to the local Flagship store, or to edit
- * one that is already there.
- */
 export function FlagDialog({
 	appId,
 	flag,
@@ -210,9 +172,6 @@ export function FlagDialog({
 	);
 	const isBoolean = form.type === "boolean";
 
-	/**
-	 * Forwards the new open state, resetting the form once it closes.
-	 */
 	function handleOpenChange(next: boolean): void {
 		if (!next) {
 			setError(null);
@@ -222,9 +181,6 @@ export function FlagDialog({
 		onOpenChange(next);
 	}
 
-	/**
-	 * Switches the flag type and seeds matching example variants.
-	 */
 	function handleTypeChange(value: string): void {
 		const selected = TYPE_TABS.find((tab) => tab.value === value);
 		if (selected === undefined) {
@@ -244,9 +200,6 @@ export function FlagDialog({
 		}));
 	}
 
-	/**
-	 * Updates a single variant row.
-	 */
 	function updateVariation(
 		id: string,
 		patch: Partial<Pick<VariationDraft, "name" | "value">>
@@ -275,9 +228,6 @@ export function FlagDialog({
 		});
 	}
 
-	/**
-	 * Appends an empty variant row.
-	 */
 	function addVariation(): void {
 		setForm((current) => ({
 			...current,
@@ -288,9 +238,6 @@ export function FlagDialog({
 		}));
 	}
 
-	/**
-	 * Removes a variant row, reassigning the default when needed.
-	 */
 	function removeVariation(id: string): void {
 		setForm((current) => {
 			const variations = current.variations.filter((row) => row.id !== id);
@@ -305,9 +252,6 @@ export function FlagDialog({
 		});
 	}
 
-	/**
-	 * Reports a problem with one of the variants.
-	 */
 	function failVariations(
 		message: string,
 		variationId?: string,
@@ -316,9 +260,6 @@ export function FlagDialog({
 		setError({ field: "variations", message, variationField, variationId });
 	}
 
-	/**
-	 * Validates the form and writes the flag to the local store.
-	 */
 	async function handleSave(): Promise<void> {
 		setError(null);
 
@@ -506,7 +447,7 @@ export function FlagDialog({
 						{editing ? (
 							<>
 								<p className="flex h-9 items-center rounded-lg bg-kumo-elevated px-3 text-sm text-kumo-subtle ring-1 ring-kumo-fill">
-									{TYPE_LABELS[form.type]}
+									{FLAG_TYPE_LABELS[form.type]}
 								</p>
 								<p className="text-xs text-kumo-subtle">
 									Changing a flag's type would invalidate every variant, so

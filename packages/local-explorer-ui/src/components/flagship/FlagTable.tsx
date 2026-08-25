@@ -19,6 +19,7 @@ import { useMemo, useState } from "react";
 import { formatDate } from "../../utils/format";
 import { timeAgo } from "../../utils/time";
 import { CopyButton } from "../CopyButton";
+import { FLAG_TYPE_LABELS } from "./flag-helpers";
 import type { FlagshipFlag } from "../../api";
 import type { JSX, ReactNode } from "react";
 
@@ -40,16 +41,6 @@ interface SortState {
 	direction: SortDirection;
 }
 
-const TYPE_LABELS = {
-	boolean: "Boolean",
-	json: "JSON",
-	number: "Number",
-	string: "String",
-} as const;
-
-/**
- * Renders the sort affordance for a column header.
- */
 function SortIcon({
 	direction,
 }: {
@@ -78,9 +69,6 @@ interface SortableHeadProps {
 	sort: SortState;
 }
 
-/**
- * Renders a table header cell that toggles sorting for its column.
- */
 function SortableHead({
 	children,
 	className,
@@ -118,9 +106,6 @@ interface ActionMenuProps {
 	pending: boolean;
 }
 
-/**
- * Renders the per-row action menu for a flag.
- */
 function ActionMenu({
 	enabled,
 	onDelete,
@@ -169,14 +154,6 @@ function ActionMenu({
 	);
 }
 
-/**
- * Renders a flag value as a compact, single-line string.
- *
- * Values are JSON encoded so the type is obvious at a glance, which matters when
- * a string `"10"` and a number `10` would otherwise look identical.
- *
- * @returns A display string for the value, or an empty string when unset
- */
 function formatValue(value: unknown): string {
 	if (value === undefined) {
 		return "";
@@ -184,10 +161,6 @@ function formatValue(value: unknown): string {
 	return JSON.stringify(value) ?? String(value);
 }
 
-/**
- * Renders a variation value, revealing the full text in a tooltip only when the
- * cell is long enough to be truncated.
- */
 function ValueText({ value }: { value: string }): JSX.Element {
 	if (value === "") {
 		return <span className="text-xs text-kumo-subtle">—</span>;
@@ -207,11 +180,6 @@ function ValueText({ value }: { value: string }): JSX.Element {
 	);
 }
 
-/**
- * Reads a flag's last-modified time as a sortable number.
- *
- * @returns Epoch milliseconds, or 0 when the timestamp is missing or invalid
- */
 function updatedTime(flag: FlagshipFlag): number {
 	if (flag.updated_at === undefined) {
 		return 0;
@@ -220,11 +188,6 @@ function updatedTime(flag: FlagshipFlag): number {
 	return Number.isNaN(time) ? 0 : time;
 }
 
-/**
- * Compares two flags for the given sort column.
- *
- * @returns A negative, zero, or positive number in ascending order
- */
 function compareFlags(
 	a: FlagshipFlag,
 	b: FlagshipFlag,
@@ -239,9 +202,6 @@ function compareFlags(
 	return 0;
 }
 
-/**
- * Renders the list of feature flags for a locally simulated Flagship app.
- */
 export function FlagTable({
 	flags,
 	onDelete,
@@ -267,9 +227,6 @@ export function FlagTable({
 		});
 	}, [flags, sort]);
 
-	/**
-	 * Sorts by the requested column, flipping the direction when it is already active.
-	 */
 	function handleSort(column: SortColumn): void {
 		setSort((current) => {
 			if (current.column === column) {
@@ -368,7 +325,9 @@ export function FlagTable({
 								</Table.Cell>
 								<Table.Cell>
 									{flag.type === undefined ? null : (
-										<Badge variant="secondary">{TYPE_LABELS[flag.type]}</Badge>
+										<Badge variant="secondary">
+											{FLAG_TYPE_LABELS[flag.type]}
+										</Badge>
 									)}
 								</Table.Cell>
 								<Table.Cell>
