@@ -6,7 +6,7 @@ details into this file: copied versions, rule lists, and counts become stale.
 
 ## Start Here
 
-- Use `pnpm`, not npm or yarn.
+- Use `pnpm`, definitely not npm or yarn.
 - Use the Node.js and pnpm versions declared in `package.json`.
 - Install dependencies with `pnpm install`.
 - Run commands from the workspace root unless package documentation says
