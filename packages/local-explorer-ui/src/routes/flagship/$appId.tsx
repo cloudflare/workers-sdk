@@ -20,7 +20,7 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	flagshipDeleteFlag,
 	flagshipListFlags,
@@ -85,8 +85,7 @@ function FlagshipAppView(): JSX.Element {
 
 	const [creating, setCreating] = useState(false);
 	const [editTarget, setEditTarget] = useState<FlagshipFlag | null>(null);
-	const [testing, setTesting] = useState(false);
-	const [initialTestKey, setInitialTestKey] = useState<string | null>(null);
+	const [testTarget, setTestTarget] = useState<string | null>();
 	const [deleteTarget, setDeleteTarget] = useState<FlagshipFlag | null>(null);
 	const [deleting, setDeleting] = useState(false);
 	const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -105,15 +104,11 @@ function FlagshipAppView(): JSX.Element {
 		});
 	}, [flags, query]);
 
-	/**
-	 * Opens the evaluation dialog, optionally preselecting a flag.
-	 */
 	function openTest(flag?: FlagshipFlag): void {
-		setInitialTestKey(flag?.key ?? null);
-		setTesting(true);
+		setTestTarget(flag?.key ?? null);
 	}
 
-	const refresh = useCallback(async () => {
+	async function refresh(): Promise<void> {
 		setRefreshing(true);
 		try {
 			await router.invalidate();
@@ -126,35 +121,32 @@ function FlagshipAppView(): JSX.Element {
 		} finally {
 			setRefreshing(false);
 		}
-	}, [router, toast]);
+	}
 
-	const toggleFlag = useCallback(
-		async (flag: FlagshipFlag) => {
-			if (flag.key === undefined) {
-				return;
-			}
-			setPendingKey(flag.key);
-			try {
-				await flagshipUpdateFlag({
-					body: { enabled: !flag.enabled },
-					path: { app_id: appId, flag_key: flag.key },
-				});
-			} catch (error) {
-				toast.add({
-					description: flagshipErrorMessage(error, "Failed to update flag"),
-					title: "Update failed",
-					variant: "error",
-				});
-				return;
-			} finally {
-				setPendingKey(null);
-			}
-			await refresh();
-		},
-		[appId, refresh, toast]
-	);
+	async function toggleFlag(flag: FlagshipFlag): Promise<void> {
+		if (flag.key === undefined) {
+			return;
+		}
+		setPendingKey(flag.key);
+		try {
+			await flagshipUpdateFlag({
+				body: { enabled: !flag.enabled },
+				path: { app_id: appId, flag_key: flag.key },
+			});
+		} catch (error) {
+			toast.add({
+				description: flagshipErrorMessage(error, "Failed to update flag"),
+				title: "Update failed",
+				variant: "error",
+			});
+			return;
+		} finally {
+			setPendingKey(null);
+		}
+		await refresh();
+	}
 
-	const confirmDelete = useCallback(async () => {
+	async function confirmDelete(): Promise<void> {
 		if (deleteTarget?.key === undefined) {
 			return;
 		}
@@ -175,7 +167,7 @@ function FlagshipAppView(): JSX.Element {
 		}
 		setDeleteTarget(null);
 		await refresh();
-	}, [appId, deleteTarget, refresh, toast]);
+	}
 
 	const searching = query.trim() !== "";
 
@@ -314,36 +306,28 @@ function FlagshipAppView(): JSX.Element {
 
 			<FlagDialog
 				appId={appId}
-				flag={null}
-				flags={flags}
-				onOpenChange={setCreating}
-				onSaved={refresh}
-				open={creating}
-			/>
-
-			<FlagDialog
-				appId={appId}
 				flag={editTarget}
 				flags={flags}
 				onOpenChange={(open) => {
 					if (!open) {
+						setCreating(false);
 						setEditTarget(null);
 					}
 				}}
 				onSaved={refresh}
-				open={editTarget !== null}
+				open={creating || editTarget !== null}
 			/>
 
 			<TestFlagDialog
 				appId={appId}
 				flags={flags}
-				initialFlagKey={initialTestKey}
+				initialFlagKey={testTarget ?? null}
 				onOpenChange={(open) => {
 					if (!open) {
-						setTesting(false);
+						setTestTarget(undefined);
 					}
 				}}
-				open={testing}
+				open={testTarget !== undefined}
 			/>
 
 			<Dialog.Root

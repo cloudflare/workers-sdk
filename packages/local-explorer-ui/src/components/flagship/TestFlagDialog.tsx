@@ -47,11 +47,6 @@ interface TestFlagDialogProps {
 	open: boolean;
 }
 
-/**
- * Converts editable context rows into the record sent to the evaluate endpoint.
- *
- * @returns A context record with blank keys removed
- */
 function contextFromRows(rows: ContextRow[]): Record<string, string> {
 	const context: Record<string, string> = {};
 	for (const row of rows) {
@@ -63,9 +58,6 @@ function contextFromRows(rows: ContextRow[]): Record<string, string> {
 	return context;
 }
 
-/**
- * Builds a cURL command that reproduces the evaluation against the local API.
- */
 function localEvaluateCurl(
 	appId: string,
 	flagKey: string,
@@ -80,9 +72,6 @@ function localEvaluateCurl(
 	].join("\n");
 }
 
-/**
- * Renders a flag value the way the Worker would receive it.
- */
 function formatResultValue(value: unknown): string {
 	if (value === undefined) {
 		return "undefined";
@@ -93,21 +82,12 @@ function formatResultValue(value: unknown): string {
 	return JSON.stringify(value);
 }
 
-/**
- * Renders the heading for the result pane.
- *
- * This is deliberately not a `Label`: the pane shows output rather than a form
- * control, so a `label` element would have nothing to describe.
- */
 function ResultHeading(): JSX.Element {
 	return (
 		<h3 className="text-sm font-medium text-kumo-default">Evaluation result</h3>
 	);
 }
 
-/**
- * Renders placeholder lines while an evaluation is in flight.
- */
 function ResultSkeleton(): JSX.Element {
 	return (
 		<div className="flex flex-col gap-4 p-5">
@@ -122,9 +102,6 @@ function ResultSkeleton(): JSX.Element {
 	);
 }
 
-/**
- * Renders the dialog used to evaluate a flag against an ad-hoc context.
- */
 export function TestFlagDialog({
 	appId,
 	flags,
@@ -164,9 +141,6 @@ export function TestFlagDialog({
 		};
 	}, []);
 
-	/**
-	 * Clears the transient state so the next open starts from a clean form.
-	 */
 	function reset(): void {
 		latestRequest.current += 1;
 		setRows([]);
@@ -176,9 +150,6 @@ export function TestFlagDialog({
 		setCopied(null);
 	}
 
-	/**
-	 * Resets the form when the dialog closes and forwards the new state.
-	 */
 	function handleOpenChange(next: boolean): void {
 		if (!next) {
 			reset();
@@ -186,9 +157,6 @@ export function TestFlagDialog({
 		onOpenChange(next);
 	}
 
-	/**
-	 * Evaluates the selected flag with the context entered in the form.
-	 */
 	async function evaluate(): Promise<void> {
 		if (selectedFlagKey === "" || evaluating) {
 			return;
@@ -222,9 +190,6 @@ export function TestFlagDialog({
 		}
 	}
 
-	/**
-	 * Copies a value to the clipboard and flashes the confirmation icon.
-	 */
 	async function copy(kind: "result" | "curl", value: string): Promise<void> {
 		try {
 			await navigator.clipboard.writeText(value);
@@ -238,9 +203,6 @@ export function TestFlagDialog({
 		copyTimeout.current = setTimeout(() => setCopied(null), 1500);
 	}
 
-	/**
-	 * Updates a single field of a context row.
-	 */
 	function updateRow(id: string, patch: Partial<ContextRow>): void {
 		setRows((current) =>
 			current.map((row) => (row.id === id ? { ...row, ...patch } : row))

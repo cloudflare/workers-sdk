@@ -80,21 +80,6 @@ async function findAppOwner(
 	return owners.find((url) => url !== null) ?? null;
 }
 
-/**
- * Runs an app-scoped operation against whichever instance owns the app.
- *
- * Apps bound in this instance are served directly. Apps discovered from a peer
- * during aggregation are proxied to their owner, so an app that appears in the
- * list is always usable.
- *
- * @param c - Hono app context
- * @param appId - The Flagship app the request targets
- * @param peerPath - Path to replay against the owning peer
- * @param handler - Runs when this instance owns the app
- * @param init - Request init to replay against the owning peer
- *
- * @returns The owner's response, or a 404 when no instance owns the app
- */
 async function withApp(
 	c: AppContext,
 	appId: string,
@@ -102,6 +87,7 @@ async function withApp(
 	handler: (admin: FlagshipAdmin) => Promise<Response>,
 	init?: RequestInit
 ): Promise<Response> {
+	// Aggregated apps may belong to another local dev process.
 	const admin = getAdmin(c.env, appId);
 	if (admin !== null) {
 		return handler(admin);
@@ -201,17 +187,6 @@ export async function createFlagshipFlag(
 	);
 }
 
-/**
- * Converts rules from the request body into stored rules.
- *
- * Every field is optional on the wire, so missing values are passed through
- * unchanged for `validateFlagInput` to reject rather than being defaulted to
- * something that silently changes the author's intent.
- *
- * @param rules - Rules supplied by the client, in priority order
- *
- * @returns The rules in their stored shape
- */
 function toRules(rules: FlagshipRule[]): Rule[] {
 	return rules.map((rule, index) => ({
 		priority: rule.priority ?? index + 1,

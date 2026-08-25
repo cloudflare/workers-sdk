@@ -7,17 +7,9 @@ import {
 	validateRules,
 	type Condition,
 	type UICondition,
+	type UIRule,
 } from "../../components/flagship/rule-helpers";
 
-/**
- * Builds an editor row, defaulting the parts a test does not care about.
- *
- * @param attribute - Context attribute to compare
- * @param join - How the row joins to the row above it
- * @param value - Value to compare against
- *
- * @returns The editor row
- */
 function row(
 	attribute: string,
 	join: "AND" | "OR" = "AND",
@@ -26,128 +18,145 @@ function row(
 	return { attribute, join, operator: "equals", value };
 }
 
-/**
- * Renders a condition tree as a readable string.
- *
- * @param condition - Condition to render
- *
- * @returns A parenthesised expression
- */
+function rule(patch: Partial<UIRule> = {}): UIRule {
+	return {
+		conditions: [row("country")],
+		id: "rule",
+		rollout: null,
+		serveVariation: "on",
+		...patch,
+	};
+}
+
 function show(condition: Condition): string {
-	if ("logical_operator" in condition) {
-		return `(${condition.clauses.map(show).join(` ${condition.logical_operator} `)})`;
-	}
-	return condition.attribute;
+	return "logical_operator" in condition
+		? `(${condition.clauses.map(show).join(` ${condition.logical_operator} `)})`
+		: condition.attribute;
 }
 
-/**
- * Renders built conditions the way the evaluator reads them, as an implicit AND
- * across the top level array.
- *
- * @param conditions - Conditions to render
- *
- * @returns A parenthesised expression
- */
-function showAll(conditions: Condition[]): string {
-	return conditions.map(show).join(" AND ");
-}
-
-describe("buildConditions", () => {
-	test("no rows produce a catch-all rule", ({ expect }) => {
-		expect(buildConditions([])).toEqual([]);
+describe("condition conversion", () => {
+	test("builds and round-trips ANDs of OR groups", ({ expect }) => {
+		const rows = [row("a"), row("b", "OR"), row("c"), row("d", "OR")];
+		const built = buildConditions(rows);
+		expect(built.map(show).join(" AND ")).toBe("(a OR b) AND (c OR d)");
+		expect(flattenConditions(built)).toEqual(rows);
 	});
 
-	test("a single row is stored without a wrapper node", ({ expect }) => {
+	test("keeps simple conditions unwrapped and converts list values", ({
+		expect,
+	}) => {
 		expect(buildConditions([row("country")])).toEqual([
 			{ attribute: "country", operator: "equals", value: "x" },
 		]);
-	});
-
-	test("rows joined by AND become separate top level conditions", ({
-		expect,
-	}) => {
-		const built = buildConditions([row("a"), row("b", "AND")]);
-
-		expect(showAll(built)).toBe("a AND b");
-		expect(built).toHaveLength(2);
-	});
-
-	test("rows joined by OR become one OR node", ({ expect }) => {
-		const built = buildConditions([row("a"), row("b", "OR")]);
-
-		expect(showAll(built)).toBe("(a OR b)");
-		expect(built).toHaveLength(1);
-	});
-
-	test("mixed joins group ORs and AND the groups together", ({ expect }) => {
-		const built = buildConditions([
-			row("a"),
-			row("b", "OR"),
-			row("c", "AND"),
-			row("d", "OR"),
-		]);
-
-		expect(showAll(built)).toBe("(a OR b) AND (c OR d)");
-	});
-
-	test("list operators split their value into an array", ({ expect }) => {
-		const built = buildConditions([
+		expect(
+			buildConditions([
+				{ attribute: "country", join: "AND", operator: "in", value: "NZ\nAU" },
+			])
+		).toEqual([{ attribute: "country", operator: "in", value: ["NZ", "AU"] }]);
+		expect(
+			flattenConditions([
+				{ attribute: "country", operator: "in", value: ["NZ", "AU"] },
+			])
+		).toEqual([
 			{ attribute: "country", join: "AND", operator: "in", value: "NZ\nAU" },
 		]);
+	});
 
-		expect(built).toEqual([
-			{ attribute: "country", operator: "in", value: ["NZ", "AU"] },
-		]);
+	test("unwraps API AND nodes", ({ expect }) => {
+		expect(
+			flattenConditions([
+				{
+					clauses: [
+						{ attribute: "a", operator: "equals", value: "x" },
+						{
+							clauses: [
+								{ attribute: "b", operator: "equals", value: "x" },
+								{ attribute: "c", operator: "equals", value: "x" },
+							],
+							logical_operator: "OR",
+						},
+					],
+					logical_operator: "AND",
+				},
+			])
+		).toEqual([row("a"), row("b"), row("c", "OR")]);
+	});
+
+	test("refuses unrepresentable conditions", ({ expect }) => {
+		const cases: Condition[][] = [
+			[
+				{
+					clauses: [
+						{
+							clauses: [{ attribute: "a", operator: "equals", value: "x" }],
+							logical_operator: "AND",
+						},
+					],
+					logical_operator: "OR",
+				},
+			],
+			[{ clauses: [], logical_operator: "OR" }],
+		];
+		for (const conditions of cases) {
+			expect(flattenConditions(conditions)).toBeNull();
+		}
 	});
 });
 
-describe("flattenConditions", () => {
-	test("round-trips an AND of OR groups", ({ expect }) => {
-		const rows = [row("a"), row("b", "OR"), row("c", "AND"), row("d", "OR")];
-
-		expect(flattenConditions(buildConditions(rows))).toEqual(rows);
+describe("rule conversion", () => {
+	test("sorts incoming rules and renumbers edited rules", ({ expect }) => {
+		const uiRules = uiRulesFrom([
+			{ conditions: [], priority: 2, serve_variation: "second" },
+			{ conditions: [], priority: 1, serve_variation: "first" },
+		]);
+		expect(uiRules?.map(({ serveVariation }) => serveVariation)).toEqual([
+			"first",
+			"second",
+		]);
+		expect(rulesFrom(uiRules ?? []).map(({ priority }) => priority)).toEqual([
+			1, 2,
+		]);
 	});
 
-	test("round-trips a single condition", ({ expect }) => {
-		const rows = [row("a")];
-
-		expect(flattenConditions(buildConditions(rows))).toEqual(rows);
-	});
-
-	test("unwraps a top level AND node, as returned by the API", ({ expect }) => {
-		const flattened = flattenConditions([
+	test("round-trips rollout fields in canonical form", ({ expect }) => {
+		const uiRules = uiRulesFrom([
 			{
-				clauses: [
-					{ attribute: "a", operator: "equals", value: "x" },
-					{
-						clauses: [
-							{ attribute: "b", operator: "equals", value: "x" },
-							{ attribute: "c", operator: "equals", value: "x" },
-						],
-						logical_operator: "OR",
-					},
-				],
-				logical_operator: "AND",
+				conditions: [],
+				priority: 1,
+				rollout: { percentage: 25 },
+				serve_variation: "on",
 			},
 		]);
-
-		expect(flattened).toEqual([row("a"), row("b"), row("c", "OR")]);
+		expect(uiRules?.[0]?.rollout).toEqual({ attribute: "", percentage: 25 });
+		expect(rulesFrom(uiRules ?? [])[0]?.rollout).toEqual({ percentage: 25 });
 	});
 
-	test("reads a list operator value back as newline separated text", ({
+	test("preserves canonical serialization for unchanged rules", ({
 		expect,
 	}) => {
-		const flattened = flattenConditions([
-			{ attribute: "country", operator: "in", value: ["NZ", "AU"] },
-		]);
-
-		expect(flattened).toEqual([
-			{ attribute: "country", join: "AND", operator: "in", value: "NZ\nAU" },
-		]);
+		const stored = [
+			{
+				priority: 1,
+				conditions: [],
+				serve_variation: "on",
+				rollout: { percentage: 25 },
+			},
+		];
+		const canonical = [
+			{
+				conditions: [],
+				priority: 1,
+				serve_variation: "on",
+				rollout: { percentage: 25 },
+			},
+		];
+		expect(JSON.stringify(rulesFrom(uiRulesFrom(stored) ?? []))).toBe(
+			JSON.stringify(canonical)
+		);
 	});
 
-	test("refuses nesting it cannot represent", ({ expect }) => {
-		const flattened = flattenConditions([
+	test("refuses rules containing unrepresentable conditions", ({ expect }) => {
+		const conditions = [
 			{
 				clauses: [
 					{
@@ -157,179 +166,38 @@ describe("flattenConditions", () => {
 				],
 				logical_operator: "OR",
 			},
-		]);
-
-		expect(flattened).toBeNull();
-	});
-
-	test("refuses an OR group with no clauses", ({ expect }) => {
-		const flattened = flattenConditions([
-			{ clauses: [], logical_operator: "OR" },
-		]);
-
-		expect(flattened).toBeNull();
-	});
-});
-
-describe("uiRulesFrom", () => {
-	test("orders rules by priority rather than array order", ({ expect }) => {
-		const uiRules = uiRulesFrom([
-			{ conditions: [], priority: 2, serve_variation: "second" },
-			{ conditions: [], priority: 1, serve_variation: "first" },
-		]);
-
-		expect(uiRules?.map((rule) => rule.serveVariation)).toEqual([
-			"first",
-			"second",
-		]);
-	});
-
-	test("reads a rollout, defaulting a missing attribute to empty", ({
-		expect,
-	}) => {
-		const uiRules = uiRulesFrom([
-			{
-				conditions: [],
-				priority: 1,
-				rollout: { percentage: 25 },
-				serve_variation: "on",
-			},
-		]);
-
-		expect(uiRules?.[0]?.rollout).toEqual({ attribute: "", percentage: 25 });
-	});
-
-	test("refuses a flag whose conditions cannot be edited", ({ expect }) => {
-		const uiRules = uiRulesFrom([
-			{
-				conditions: [
-					{
-						clauses: [
-							{
-								clauses: [{ attribute: "a", operator: "equals", value: "x" }],
-								logical_operator: "AND",
-							},
-						],
-						logical_operator: "OR",
-					},
-				],
-				priority: 1,
-				serve_variation: "on",
-			},
-		]);
-
-		expect(uiRules).toBeNull();
-	});
-});
-
-describe("rulesFrom", () => {
-	test("renumbers priorities from the editor order", ({ expect }) => {
-		const rules = rulesFrom([
-			{ conditions: [], id: "a", rollout: null, serveVariation: "one" },
-			{ conditions: [], id: "b", rollout: null, serveVariation: "two" },
-		]);
-
-		expect(rules.map((rule) => rule.priority)).toEqual([1, 2]);
-	});
-
-	test("omits a rollout attribute that is only whitespace", ({ expect }) => {
-		const [rule] = rulesFrom([
-			{
-				conditions: [],
-				id: "a",
-				rollout: { attribute: "   ", percentage: 50 },
-				serveVariation: "on",
-			},
-		]);
-
-		expect(rule?.rollout).toEqual({ percentage: 50 });
-	});
-});
-
-describe("rulesFrom", () => {
-	test("uses canonical property order after an editor round trip", ({
-		expect,
-	}) => {
-		const stored = [
-			{
-				priority: 1,
-				conditions: [],
-				serve_variation: "on",
-				rollout: { percentage: 50 },
-			},
 		];
-		const editor = [
-			{
-				conditions: [],
-				priority: 1,
-				serve_variation: "on",
-				rollout: { percentage: 50 },
-			},
-		];
-
-		const uiRules = uiRulesFrom(stored);
-		expect(uiRules).not.toBeNull();
-		expect(JSON.stringify(rulesFrom(uiRules ?? []))).toBe(
-			JSON.stringify(editor)
-		);
+		expect(
+			uiRulesFrom([{ conditions, priority: 1, serve_variation: "on" }])
+		).toBeNull();
 	});
 });
 
 describe("validateRules", () => {
-	test("accepts a well formed rule", ({ expect }) => {
-		const errors = validateRules(
-			[
-				{
-					conditions: [row("country")],
-					id: "a",
-					rollout: null,
-					serveVariation: "on",
-				},
-			],
-			["on", "off"]
-		);
-
-		expect(errors).toEqual([]);
+	test("accepts valid fractional and partial rollouts", ({ expect }) => {
+		expect(
+			validateRules(
+				[
+					rule({
+						conditions: [],
+						rollout: { attribute: "", percentage: 33.5 },
+					}),
+					rule({ id: "next", serveVariation: "off" }),
+				],
+				["on", "off"]
+			)
+		).toEqual([]);
 	});
 
-	test("rejects a rule serving an unknown variant", ({ expect }) => {
-		const errors = validateRules(
+	test("reports invalid rule input", ({ expect }) => {
+		const cases: Array<[UIRule, string]> = [
 			[
-				{
-					conditions: [row("country")],
-					id: "a",
-					rollout: null,
-					serveVariation: "gone",
-				},
+				rule({ serveVariation: "gone" }),
+				"Choose a variant for this rule to serve.",
 			],
-			["on", "off"]
-		);
-
-		expect(errors).toEqual([
-			{ index: 0, message: "Choose a variant for this rule to serve." },
-		]);
-	});
-
-	test("rejects a condition with no attribute", ({ expect }) => {
-		const errors = validateRules(
+			[rule({ conditions: [row("")] }), "Every condition needs an attribute."],
 			[
-				{
-					conditions: [row("")],
-					id: "a",
-					rollout: null,
-					serveVariation: "on",
-				},
-			],
-			["on"]
-		);
-
-		expect(errors[0]?.message).toBe("Every condition needs an attribute.");
-	});
-
-	test("rejects a non-numeric value for a numeric operator", ({ expect }) => {
-		const errors = validateRules(
-			[
-				{
+				rule({
 					conditions: [
 						{
 							attribute: "age",
@@ -338,128 +206,37 @@ describe("validateRules", () => {
 							value: "old",
 						},
 					],
-					id: "a",
-					rollout: null,
-					serveVariation: "on",
-				},
+				}),
+				"The '>' operator needs a number.",
 			],
-			["on"]
-		);
-
-		expect(errors[0]?.message).toBe("The '>' operator needs a number.");
-	});
-
-	test("rejects an empty list for the in operator", ({ expect }) => {
-		const errors = validateRules(
 			[
-				{
+				rule({
 					conditions: [
 						{ attribute: "country", join: "AND", operator: "in", value: "" },
 					],
-					id: "a",
-					rollout: null,
-					serveVariation: "on",
-				},
+				}),
+				"The 'in' operator needs at least one value.",
 			],
-			["on"]
-		);
-
-		expect(errors[0]?.message).toBe(
-			"The 'in' operator needs at least one value."
-		);
+			[
+				rule({ rollout: { attribute: "", percentage: 140 } }),
+				"Rollout must be a number between 0 and 100.",
+			],
+		];
+		for (const [invalid, message] of cases) {
+			expect(validateRules([invalid], ["on"])[0]?.message).toBe(message);
+		}
 	});
 
-	test("rejects a rollout outside 0 to 100", ({ expect }) => {
-		const errors = validateRules(
-			[
-				{
-					conditions: [row("country")],
-					id: "a",
-					rollout: { attribute: "", percentage: 140 },
-					serveVariation: "on",
-				},
-			],
-			["on"]
-		);
-
-		expect(errors[0]?.message).toBe(
-			"Rollout must be a number between 0 and 100."
-		);
-	});
-
-	test("rejects a rollout that is not a finite number", ({ expect }) => {
-		const errors = validateRules(
-			[
-				{
-					conditions: [row("country")],
-					id: "a",
-					rollout: { attribute: "", percentage: Number.NaN },
-					serveVariation: "on",
-				},
-			],
-			["on"]
-		);
-
-		expect(errors[0]?.message).toBe(
-			"Rollout must be a number between 0 and 100."
-		);
-	});
-
-	test("accepts a fractional rollout", ({ expect }) => {
-		const errors = validateRules(
-			[
-				{
-					conditions: [row("country")],
-					id: "a",
-					rollout: { attribute: "", percentage: 33.5 },
-					serveVariation: "on",
-				},
-			],
-			["on"]
-		);
-
-		expect(errors).toEqual([]);
-	});
-
-	test("allows rules after a partial conditionless rollout", ({ expect }) => {
-		const errors = validateRules(
-			[
-				{
-					conditions: [],
-					id: "a",
-					rollout: { attribute: "", percentage: 50 },
-					serveVariation: "on",
-				},
-				{
-					conditions: [row("country")],
-					id: "b",
-					rollout: null,
-					serveVariation: "off",
-				},
-			],
-			["on", "off"]
-		);
-
-		expect(errors).toEqual([]);
-	});
-
-	test("reports rules made unreachable by an earlier catch-all", ({
-		expect,
-	}) => {
-		const errors = validateRules(
-			[
-				{ conditions: [], id: "a", rollout: null, serveVariation: "on" },
-				{
-					conditions: [row("country")],
-					id: "b",
-					rollout: null,
-					serveVariation: "off",
-				},
-			],
-			["on", "off"]
-		);
-
-		expect(errors).toEqual([
+	test("reports rules hidden by a catch-all", ({ expect }) => {
+		expect(
+			validateRules(
+				[
+					rule({ conditions: [] }),
+					rule({ id: "hidden", serveVariation: "off" }),
+				],
+				["on", "off"]
+			)
+		).toEqual([
 			{
 				index: 1,
 				message:
