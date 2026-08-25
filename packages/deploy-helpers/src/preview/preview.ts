@@ -297,6 +297,9 @@ async function prepareContainersForPreview(
 	return { scopedContainerConfig, normalisedContainerConfig };
 }
 
+export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
+	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
+
 function toBase64(content: string | Uint8Array): string {
 	return Buffer.from(content).toString("base64");
 }
@@ -463,6 +466,9 @@ async function assemblePreviewDeploymentSettings(
 			...(pullRequest?.number && {
 				"workers/pull_request_number": pullRequest.number,
 			}),
+			...(pullRequest?.title && {
+				"workers/pull_request_title": pullRequest.title,
+			}),
 			...(pullRequest?.url && { "workers/pull_request_url": pullRequest.url }),
 			...(repositoryUrl && { "workers/repository_url": repositoryUrl }),
 			...(options.tag && { "workers/tag": options.tag }),
@@ -581,6 +587,9 @@ function formatPreviewDeploymentSummary(
 	const pullRequestNumber =
 		deployment.annotations?.["workers/pull_request_number"] ??
 		pullRequest?.number;
+	const hasActiveUrls =
+		(previewResource.urls?.length ?? 0) > 0 ||
+		(deployment.urls?.length ?? 0) > 0;
 
 	return [
 		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
@@ -595,6 +604,7 @@ function formatPreviewDeploymentSummary(
 					}`,
 				]
 			: []),
+		...(hasActiveUrls ? [] : [NO_ACTIVE_PREVIEW_URLS_MESSAGE]),
 	].join("\n");
 }
 

@@ -5,7 +5,7 @@ import {
 	BUILD_OUTPUT_VERSION,
 	CONFIG_FILENAME,
 	DEFAULT_WORKER_EXPORT,
-	getRootConfigPath,
+	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
@@ -25,8 +25,10 @@ describe("path resolvers", () => {
 	const root = path.resolve("/project");
 	const outputDir = path.join(root, ".cloudflare", "output", "v0");
 
-	it("resolve the top-level config path", ({ expect }) => {
-		expect(getRootConfigPath(root)).toBe(path.join(outputDir, "config.json"));
+	it("resolve the top-level settings config path", ({ expect }) => {
+		expect(getSettingsConfigPath(root)).toBe(
+			path.join(outputDir, "config.json")
+		);
 	});
 
 	it("resolve the workers directory", ({ expect }) => {

@@ -299,6 +299,16 @@ export async function triggersDeploy(
 						}
 					);
 				}
+				if (workflow.default_retention) {
+					throw new UserError(
+						`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
+							`Configure default_retention on the worker that defines the workflow.`,
+						{
+							telemetryMessage:
+								"triggers deploy workflow default_retention external script",
+						}
+					);
+				}
 				continue;
 			}
 
@@ -318,6 +328,9 @@ export async function triggersDeploy(
 									? workflow.schedules
 									: [workflow.schedules]
 								).map((cron) => ({ cron })),
+							}),
+							...(workflow.default_retention && {
+								default_retention: workflow.default_retention,
 							}),
 						}),
 						headers: {

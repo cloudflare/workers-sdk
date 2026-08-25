@@ -5,6 +5,7 @@
 
 export type {
 	Bindings,
+	BindingDevOptions,
 	AgentMemoryBinding,
 	AiBinding,
 	AiSearchBinding,

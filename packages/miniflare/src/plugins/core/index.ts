@@ -31,7 +31,8 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { getDurableObjectNamespaces } from "../do/namespaces";
-import { IMAGES_PLUGIN_NAME } from "../images";
+import { getEmailStoreServices } from "../email/store";
+import { getImagesBindingServiceName } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
@@ -40,7 +41,6 @@ import {
 } from "../r2";
 import {
 	buildRemoteProxyProps,
-	getUserBindingServiceName,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -52,10 +52,11 @@ import {
 	getExportsOfType,
 	getRemoteProxyConnectionString,
 } from "../shared";
-import { STREAM_PLUGIN_NAME } from "../stream";
+import { getStreamService } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	EMAIL_STORE_SERVICE_NAME,
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
@@ -796,6 +797,10 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_DEV_CONTROL,
 			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
 		},
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -814,10 +819,7 @@ export function getGlobalServices({
 	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
-			service: {
-				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
-				entrypoint: "StreamBinding",
-			},
+			service: getStreamService(sharedOptions),
 		});
 	}
 	const r2PublicService = getR2PublicService(
@@ -844,7 +846,7 @@ export function getGlobalServices({
 			"images"
 		)) {
 			if (getRemoteProxyConnectionString(binding, worker.dev) === undefined) {
-				imagesServiceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
+				imagesServiceName = getImagesBindingServiceName(name);
 				break;
 			}
 		}
@@ -959,6 +961,8 @@ export function getGlobalServices({
 	if (r2S3Service !== undefined) {
 		services.push(r2S3Service);
 	}
+
+	services.push(...getEmailStoreServices(tmpPath));
 
 	if (sharedOptions.unsafeLocalExplorer) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);

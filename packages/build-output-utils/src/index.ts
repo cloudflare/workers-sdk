@@ -3,7 +3,7 @@ export {
 	BUILD_OUTPUT_VERSION,
 	CONFIG_FILENAME,
 	DEFAULT_WORKER_EXPORT,
-	getRootConfigPath,
+	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
@@ -12,7 +12,7 @@ export {
 } from "./paths";
 export {
 	cleanBuildOutputDir,
-	writeRootConfig,
+	writeSettingsConfig,
 	writeWorkerConfig,
 } from "./write";
 export { BuildOutputError } from "./errors";

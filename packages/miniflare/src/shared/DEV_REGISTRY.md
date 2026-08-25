@@ -56,7 +56,7 @@ type WorkerDefinition = {
 };
 ```
 
-- **Heartbeat**: Every 30s, the file's mtime is touched to signal that the Worker is still running.
+- **Heartbeat**: Every 10s, the owning process touches its file's mtime. If the entry is missing, the owner recreates it; if another instance owns the name, the heartbeat stops.
 - **Registration**: Named workers are advertised by default. Workers with `unsafeRegisterWorker: false` are not advertised.
 - **Stale cleanup**: Workers heartbeat every 10 seconds and entries older than 90 seconds are deleted.
 - **Change detection**: Chokidar watches the registry directory. When a file changes, `refresh()` compares the new state against the previous JSON snapshot and fires `onUpdate` only if a watched external service actually changed.
@@ -86,7 +86,7 @@ When `unsafeEnableSharedStorage` is enabled, each Miniflare instance registers a
 
 Storage candidates heartbeat every 2 seconds and expire after 10 seconds. Registry watchers also refresh on a timer so a dead candidate expires without requiring another filesystem event. Graceful disposal stops the runtime before withdrawing its candidate, preventing overlap with the replacement owner.
 
-KV, D1, R2, Rate Limits, and Secrets Store route through the elected candidate. Cache, user Durable Objects, Workflows, observability, and Hello World storage remain instance-local while shared mode is active and use the configured `isolatedResourcePersistencePath`, allowing that state to persist across restarts without mounting the shared owner root concurrently.
+KV, D1, R2, Rate Limits, Secrets Store, Images data, and Streams route through the elected candidate. Cache, user Durable Objects, Workflows, observability, and Hello World storage remain instance-local while shared mode is active and use the configured `isolatedResourcePersistencePath`, allowing that state to persist across restarts without mounting the shared owner root concurrently.
 
 Every instance -- including the elected owner -- routes these bindings through the proxy worker, so the owner would otherwise connect back to its own debug port over TCP. Because the registry entry carries the owner's `instanceId`, the proxy recognises that case and uses the in-process debug port instead.
 
