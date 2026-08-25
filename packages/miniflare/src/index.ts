@@ -48,7 +48,6 @@ import {
 	getExportsOfType,
 	getGlobalServices,
 	getPersistPath,
-	getRemoteProxyConnectionString,
 	getStorageScope,
 	getTriggersOfType,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -487,10 +486,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		// we only register the external entrypoint. Mirrors the DO block above.
 		for (const [, binding] of getEnvBindingsOfType(config, "workflow")) {
 			const { workerName, exportName } = binding;
-			if (
-				getRemoteProxyConnectionString(binding, dev) === undefined &&
-				!allWorkerNames.includes(workerName)
-			) {
+			if (!allWorkerNames.includes(workerName)) {
 				getEntrypoints(workerName).entrypoints.add(exportName);
 			}
 		}

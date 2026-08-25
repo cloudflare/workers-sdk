@@ -792,7 +792,6 @@ function addProductBindings(
 				workflow.stepLimit === undefined
 					? undefined
 					: { steps: workflow.stepLimit },
-			dev: { remote: isRemote(workflow.remoteProxyConnectionString) },
 		};
 	}
 }

@@ -581,7 +581,6 @@ function convertBindingsAndAssets(
 			// 			binding: name,
 			// 			class_name: binding.exportName,
 			// 			script_name: binding.workerName,
-			// 			remote: binding.dev?.remote,
 			// 		})
 			// 	);
 			// 	break;
