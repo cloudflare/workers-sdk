@@ -1,4 +1,4 @@
-# Review Guidelines
+# Review
 
 This file provides guidance when reviewing PRs in this repository. For general development guidelines, see [AGENTS.md](./AGENTS.md).
 
