@@ -1,13 +1,5 @@
 # @cloudflare/workers-auth
 
-## 0.6.6
-
-### Patch Changes
-
-- [#15320](https://github.com/cloudflare/workers-sdk/pull/15320) [`c809851`](https://github.com/cloudflare/workers-sdk/commit/c809851f38f0fe4805e876b6c8bfcd6556f49afb) Thanks [@Om-singhaI](https://github.com/Om-singhaI)! - Fix `wrangler login --use-keyring` incorrectly reporting that `secret-tool` is missing on Linux
-
-  Libsecret's `secret-tool` does not support `--version`; it prints usage and exits 2, which Wrangler previously interpreted as unavailable. Wrangler now reports it missing only when launching the executable fails.
-
 ## 0.6.5
 
 ### Patch Changes
