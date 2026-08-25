@@ -245,7 +245,7 @@ export function constructExplorerBindingMap(
 		do: {},
 		r2: {},
 		workflows: {},
-		flagship: {},
+		flagship: Object.create(null) as BindingIdMap["flagship"],
 	};
 
 	// Flagship apps are addressed by app id rather than through a proxy
