@@ -106,6 +106,13 @@ function buildTlsConnectionOptions(
 }
 
 /**
+ * How long to wait for the edge to close a bridged tunnel after the local
+ * database client has gone away, before forcing it down. See `clientGone` in
+ * `#handleRemoteBridgeConnection`.
+ */
+const EDGE_CLOSE_GRACE_MS = 1_000;
+
+/**
  * HyperdriveProxyController establishes TLS-enabled connections between workerd
  * and external Postgres/MySQL databases. Supports PostgreSQL sslmode options
  * ('require', 'prefer', 'disable', 'verify-full', 'verify-ca') by proxying
@@ -322,21 +329,48 @@ export class HyperdriveProxyController {
 		});
 
 		let closed = false;
+		let forceCloseTimer: NodeJS.Timeout | undefined;
 		const teardown = () => {
 			if (closed) {
 				return;
 			}
 			closed = true;
+			if (forceCloseTimer !== undefined) {
+				clearTimeout(forceCloseTimer);
+				forceCloseTimer = undefined;
+			}
 			try {
 				clientSocket.destroy();
 			} catch {
 				// ignore
 			}
 			try {
-				ws.close();
+				ws.terminate();
 			} catch {
 				// ignore
 			}
+		};
+
+		// A database client disconnects at the protocol level (Postgres
+		// `Terminate`, MySQL `COM_QUIT`) before dropping its TCP connection, and
+		// that message has already been relayed, so the edge closes the tunnel
+		// itself within a few milliseconds. Closing the WebSocket from here races
+		// that: when this side wins, the runtime severs the edge relay mid-flight
+		// and reports it as a request that hung. So give the edge a moment to
+		// close, and only force the tunnel down if it does not — which is what
+		// happens when a client dies without disconnecting cleanly.
+		const clientGone = () => {
+			if (closed || forceCloseTimer !== undefined) {
+				return;
+			}
+			try {
+				clientSocket.destroy();
+			} catch {
+				// ignore
+			}
+			forceCloseTimer = setTimeout(teardown, EDGE_CLOSE_GRACE_MS);
+			// Never let a lingering tunnel keep the dev process alive.
+			forceCloseTimer.unref();
 		};
 
 		ws.on("open", () => {
@@ -359,8 +393,8 @@ export class HyperdriveProxyController {
 		});
 		ws.on("close", teardown);
 		ws.on("error", teardown);
-		clientSocket.on("close", teardown);
-		clientSocket.on("error", teardown);
+		clientSocket.on("close", clientGone);
+		clientSocket.on("error", clientGone);
 	}
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
