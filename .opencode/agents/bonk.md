@@ -1,7 +1,7 @@
 ---
 description: Cloudflare Workers SDK engineer. Triages issues, reviews PRs, and implements fixes.
 mode: primary
-model: anthropic/claude-opus-4-8
+model: cloudflare-ai-gateway/openai/gpt-5.6-terra
 temperature: 0.2
 ---
 

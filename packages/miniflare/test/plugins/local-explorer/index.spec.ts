@@ -659,6 +659,8 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 							MY_KV: { type: "kv", id: "kv-namespace-id" },
 							MY_DB: { type: "d1", id: "d1-database-id" },
 							MY_BUCKET: { type: "r2", name: "r2-bucket-name" },
+							SEND_EMAIL_PRIMARY: { type: "send-email" },
+							SEND_EMAIL_SECONDARY: { type: "send-email" },
 							MY_DO: {
 								type: "durable-object",
 								workerName: "worker-a1",
@@ -768,6 +770,14 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			            "id": "r2-bucket-name",
 			          },
 			        ],
+			        "sendEmail": [
+			          {
+			            "bindingName": "SEND_EMAIL_PRIMARY",
+			          },
+			          {
+			            "bindingName": "SEND_EMAIL_SECONDARY",
+			          },
+			        ],
 			        "workflows": [],
 			      },
 			      "isSelf": true,
@@ -784,6 +794,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			          },
 			        ],
 			        "r2": [],
+			        "sendEmail": [],
 			        "workflows": [],
 			      },
 			      "isSelf": true,
@@ -800,6 +811,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			        "do": [],
 			        "kv": [],
 			        "r2": [],
+			        "sendEmail": [],
 			        "workflows": [],
 			      },
 			      "isSelf": false,

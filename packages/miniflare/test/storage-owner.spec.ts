@@ -395,7 +395,7 @@ describe.sequential("owner presence integration", () => {
 		}
 	});
 
-	it.todo("routes a client's Images store to the owner without dangling services", async ({
+	it("routes a client's Images store to the owner without dangling services", async ({
 		expect,
 	}) => {
 		const persistRoot = await useTmp();
@@ -411,9 +411,18 @@ describe.sequential("owner presence integration", () => {
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
-						manifest: singleModuleManifest(
-							"export default { async fetch(_request, env) { return new Response(typeof env.IMAGES.info); } }"
-						),
+						manifest: singleModuleManifest(`export default {
+			async fetch(request, env) {
+				if (request.method === "PUT") {
+					return Response.json(await env.IMAGES.hosted.upload(
+						await request.arrayBuffer(),
+						{ id: "shared-image" }
+					));
+				}
+				const stream = await env.IMAGES.hosted.image("shared-image").bytes();
+				return new Response(stream, { status: stream === null ? 404 : 200 });
+			}
+		}`),
 						env: { IMAGES: { type: "images" } },
 					},
 				},
@@ -422,14 +431,26 @@ describe.sequential("owner presence integration", () => {
 		const owner = new Miniflare(await withIsolatedStorage(common));
 		const client = new Miniflare(await withIsolatedStorage(common));
 		try {
-			// Both reaching `ready` proves the routed client doesn't reference a
-			// local images storage service it no longer stands up (the owner does),
-			// and the transform worker + its routed `IMAGES_STORE` binding resolve.
 			await owner.ready;
 			await client.ready;
-			expect(await (await client.dispatchFetch("http://x/")).text()).toBe(
-				"function"
+			const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+			const upload = await client.dispatchFetch("http://x/", {
+				method: "PUT",
+				body: bytes,
+			});
+			await upload.json();
+			expect(upload.status).toBe(200);
+
+			expect(
+				new Uint8Array(
+					await (await owner.dispatchFetch("http://x/")).arrayBuffer()
+				)
+			).toEqual(bytes);
+			const delivery = await client.dispatchFetch(
+				"http://x/__cf_local/imagedelivery/shared-image/public"
 			);
+			expect(delivery.status).toBe(200);
+			expect(new Uint8Array(await delivery.arrayBuffer())).toEqual(bytes);
 		} finally {
 			await client.dispose();
 			await owner.dispose();

@@ -1,7 +1,8 @@
 import { red } from "kleur/colors";
 import PostalMime from "postal-mime";
-import { RAW_EMAIL } from "./constants";
+import { RAW_EMAIL } from "./capture";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
+import { setMessageIdHeader, synthesizeMessageId } from "./message-id";
 import type { Email } from "postal-mime";
 
 // Email Routing has some limits on what emails can be responded to, documented at https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/
@@ -64,7 +65,7 @@ export async function isEmailReplyable(
 export async function validateReply(
 	incomingMessage: Email,
 	replyMessage: EmailMessage
-): Promise<Uint8Array> {
+): Promise<{ raw: Uint8Array; messageId: string }> {
 	const rawEmail: ReadableStream<Uint8Array> = replyMessage[RAW_EMAIL];
 
 	const rawEmailBuffer = new Uint8Array(
@@ -83,9 +84,15 @@ export async function validateReply(
 		throw new Error("From: header does not match mail from");
 	}
 
-	if (parsedReply.messageId === undefined) {
+	const hasMessageIdHeader = parsedReply.headers.some(
+		(header) => header.key.toLowerCase() === "message-id"
+	);
+	if (parsedReply.messageId === undefined && hasMessageIdHeader) {
 		throw new Error("invalid message-id");
 	}
+
+	const messageId = synthesizeMessageId(replyMessage.from);
+	const headersToPrepend: string[] = [];
 
 	const replyEmailHeaders = new Headers(
 		parsedReply.headers.map((header) => [header.key, header.value])
@@ -119,19 +126,20 @@ export async function validateReply(
 		}
 	} else {
 		// Otherwise, we need to construct a new References header according to https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.4
-		const replyReferences = `References: ${incomingMessage.messageId}${incomingReferences.length > 0 ? " " : ""}${incomingReferences}\r\n`;
-
-		const encodedReferences = new TextEncoder().encode(replyReferences);
-
-		const finalReplyEmail = new Uint8Array(
-			encodedReferences.byteLength + rawEmailBuffer.byteLength
+		headersToPrepend.push(
+			`References: ${incomingReferences}${incomingReferences.length > 0 ? " " : ""}${incomingMessage.messageId}\r\n`
 		);
-
-		// prepend References to be in the headers instead of the end of the body
-		finalReplyEmail.set(encodedReferences, 0);
-		finalReplyEmail.set(rawEmailBuffer, encodedReferences.byteLength);
-		return finalReplyEmail;
 	}
 
-	return rawEmailBuffer;
+	let finalReplyEmail = rawEmailBuffer;
+	if (headersToPrepend.length > 0) {
+		const encodedHeaders = new TextEncoder().encode(headersToPrepend.join(""));
+		const replyWithReferences = new Uint8Array(
+			encodedHeaders.byteLength + finalReplyEmail.byteLength
+		);
+		replyWithReferences.set(encodedHeaders, 0);
+		replyWithReferences.set(finalReplyEmail, encodedHeaders.byteLength);
+		finalReplyEmail = replyWithReferences;
+	}
+	return { raw: setMessageIdHeader(finalReplyEmail, messageId), messageId };
 }
