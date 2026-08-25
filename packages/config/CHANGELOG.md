@@ -1,35 +1,5 @@
 # @cloudflare/config
 
-## 0.8.0
-
-### Minor Changes
-
-- [#15326](https://github.com/cloudflare/workers-sdk/pull/15326) [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename the settings config schema exports to the input/output convention
-
-  `SettingsSchema` is now `InputSettingsSchema` and `ParsedSettingsConfig` is now `ParsedInputSettingsConfig`.
-
-- [#15326](https://github.com/cloudflare/workers-sdk/pull/15326) [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Record the selected mode in the Build Output Specification top-level `config.json`
-
-  The mode a build was produced in is now written to `.cloudflare/output/v0/config.json` as a `mode` field, alongside the account and compliance settings.
-
-- [#15318](https://github.com/cloudflare/workers-sdk/pull/15318) [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Consolidate development-only binding configuration under `dev`
-
-  This experimental configuration now uses `dev.remote` for remote bindings and `dev.connectionString` for Hyperdrive. Miniflare's v5 binding configuration follows the same shape, and R2's local S3 credentials now share the `dev` object.
-
-- [#15325](https://github.com/cloudflare/workers-sdk/pull/15325) [`7f66836`](https://github.com/cloudflare/workers-sdk/commit/7f668362bd5675afb95c1cb5128fad6aa092a430) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Reject conflicting destination restrictions in send-email bindings
-
-  Send-email bindings now match Wrangler validation by allowing either `destinationAddress` or `allowedDestinationAddresses`, but not both. `allowedSenderAddresses` remains an independent restriction that can accompany either destination mode.
-
-### Patch Changes
-
-- [#15324](https://github.com/cloudflare/workers-sdk/pull/15324) [`ead8f69`](https://github.com/cloudflare/workers-sdk/commit/ead8f69e85efa758dd066b4d1cfc2fec406939dd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix the inferred type of `ConfigExportsSchema` to reserve the `settings` key for settings configuration
-
-  Parsed config exports now expose `settings` as a settings configuration while treating all other exports as Worker configurations. Validation continues to report specific errors when a settings configuration uses the wrong export name or the reserved name contains a Worker configuration, and now explains how to handle unsupported exports.
-
-- [#15297](https://github.com/cloudflare/workers-sdk/pull/15297) [`acb14d0`](https://github.com/cloudflare/workers-sdk/commit/acb14d01d64f21f0f21c247da7c2fcb0557ebb3d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix declaration emit for values returned by `defineSettings`
-
-  Projects can now export a `defineSettings()` result while generating TypeScript declarations without encountering TS4023.
-
 ## 0.7.0
 
 ### Minor Changes

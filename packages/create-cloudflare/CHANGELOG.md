@@ -1,29 +1,5 @@
 # create-cloudflare
 
-## 2.72.3
-
-### Patch Changes
-
-- [#15321](https://github.com/cloudflare/workers-sdk/pull/15321) [`c457bfc`](https://github.com/cloudflare/workers-sdk/commit/c457bfc6b5a575586354f5b0ad7a1100eff915fe) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
-
-  The following dependency versions have been updated:
-
-  | Dependency      | From   | To     |
-  | --------------- | ------ | ------ |
-  | @angular/create | 22.1.4 | 22.1.5 |
-
-- [#15322](https://github.com/cloudflare/workers-sdk/pull/15322) [`9da6bbd`](https://github.com/cloudflare/workers-sdk/commit/9da6bbd5bea10deda3cf99c32ce3e093adbf9f5c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
-
-  The following dependency versions have been updated:
-
-  | Dependency      | From   | To     |
-  | --------------- | ------ | ------ |
-  | create-next-app | 16.3.1 | 16.3.2 |
-
-- [#15328](https://github.com/cloudflare/workers-sdk/pull/15328) [`2d78137`](https://github.com/cloudflare/workers-sdk/commit/2d7813781e935b171ace346ce322738f1c4048a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update the Hello World templates to use `@cloudflare/vitest-plugin` v1
-
-  Newly generated Workers projects now use the renamed Vitest integration package instead of the deprecated `@cloudflare/vitest-pool-workers` package.
-
 ## 2.72.2
 
 ### Patch Changes
