@@ -70,6 +70,7 @@ describe("Flagship API", () => {
 							FLAGS: { type: "flagship", id: "app-1" },
 							ALIAS: { type: "flagship", id: "app-1" },
 							OTHER: { type: "flagship", id: "app-2" },
+							PROTO: { type: "flagship", id: "__proto__" },
 						},
 					},
 				},
@@ -90,6 +91,7 @@ describe("Flagship API", () => {
 		expect(apps.result).toEqual([
 			{ id: "app-1", bindings: ["FLAGS", "ALIAS"] },
 			{ id: "app-2", bindings: ["OTHER"] },
+			{ id: "__proto__", bindings: ["PROTO"] },
 		]);
 
 		const flags = await expectValidResponse(
@@ -106,6 +108,12 @@ describe("Flagship API", () => {
 			expect
 		);
 		expect(other.result).toEqual([]);
+		const proto = await expectValidResponse(
+			await request("/__proto__/flags"),
+			zFlagshipListFlagsResponse,
+			expect
+		);
+		expect(proto.result).toEqual([]);
 	});
 
 	test("supports full CRUD and evaluates changes through the binding", async ({
