@@ -5,10 +5,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	builder: {
 		async buildApp(builder) {
-			const workerEnvironment = builder.environments.worker;
+			const workerEnvironment = builder.environments.ssr;
 			const clientEnvironment = builder.environments.client;
 
-			assert(workerEnvironment, `No "worker" environment`);
+			assert(workerEnvironment, `No "ssr" environment`);
 			assert(clientEnvironment, `No "client" environment`);
 
 			builder.config.logger.info("__before-build__");

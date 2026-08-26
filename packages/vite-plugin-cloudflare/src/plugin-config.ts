@@ -394,8 +394,7 @@ export async function resolvePluginConfig(
 		});
 
 		prerenderWorkerEnvironmentName =
-			prerenderWorkerConfig.viteEnvironment?.name ??
-			workerNameToEnvironmentName(workerResolvedConfig.config.name);
+			prerenderWorkerConfig.viteEnvironment?.name ?? "prerender";
 
 		validateAndAddEnvironmentName(prerenderWorkerEnvironmentName);
 
@@ -442,8 +441,7 @@ export async function resolvePluginConfig(
 	}
 
 	const entryWorkerEnvironmentName =
-		pluginConfig.viteEnvironment?.name ??
-		workerNameToEnvironmentName(entryWorkerResolvedConfig.config.name);
+		pluginConfig.viteEnvironment?.name ?? "ssr";
 
 	validateAndAddEnvironmentName(entryWorkerEnvironmentName);
 

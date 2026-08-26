@@ -11,7 +11,7 @@ export default defineConfig({
 		},
 	},
 	environments: {
-		worker: {
+		ssr: {
 			optimizeDeps: {
 				exclude: ["@playground/module-resolution-excludes"],
 			},
