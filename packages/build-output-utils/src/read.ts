@@ -4,10 +4,12 @@ import { OutputSettingsSchema, OutputWorkerSchema } from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
 	BUILD_OUTPUT_VERSION,
+	DEFAULT_WORKER_DIRECTORY_NAME,
 	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
+	getWorkersDir,
 } from "./paths";
 import type {
 	ParsedOutputSettingsConfig,
@@ -46,6 +48,11 @@ export type BuildOutputWorker = BuildOutputWorkerBase &
 		  }
 	);
 
+export type BuildOutputWorkers = Record<string, BuildOutputWorker> & {
+	/** The Worker in the default directory. */
+	default: BuildOutputWorker;
+};
+
 /**
  * The result of reading a Build Output Specification tree.
  */
@@ -62,10 +69,10 @@ export interface BuildOutput {
 	 */
 	settings: ParsedOutputSettingsConfig | undefined;
 	/**
-	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`.
-	 * Guaranteed to contain at least one Worker; currently always exactly one.
+	 * The Workers found under `<root>/.cloudflare/output/v0/workers/`, keyed by
+	 * their directory names. Guaranteed to contain the `default` Worker.
 	 */
-	workers: [BuildOutputWorker, ...BuildOutputWorker[]];
+	workers: BuildOutputWorkers;
 }
 
 /**
@@ -81,9 +88,33 @@ export interface BuildOutput {
  */
 export async function readBuildOutput(root: string): Promise<BuildOutput> {
 	const settings = await readSettings(root);
-	const worker = await readWorker(root);
+	const defaultWorker = await readWorker(root, DEFAULT_WORKER_DIRECTORY_NAME);
+	const additionalWorkerDirectoryNames = (
+		await fsp.readdir(getWorkersDir(root), {
+			withFileTypes: true,
+		})
+	)
+		.filter(
+			(entry) =>
+				entry.isDirectory() && entry.name !== DEFAULT_WORKER_DIRECTORY_NAME
+		)
+		.map((entry) => entry.name)
+		.sort();
+	const additionalWorkers = await Promise.all(
+		additionalWorkerDirectoryNames.map(
+			async (workerDirectoryName) =>
+				[
+					workerDirectoryName,
+					await readWorker(root, workerDirectoryName),
+				] as const
+		)
+	);
+	const workers: BuildOutputWorkers = {
+		default: defaultWorker,
+		...Object.fromEntries(additionalWorkers),
+	};
 
-	return { root, version: BUILD_OUTPUT_VERSION, settings, workers: [worker] };
+	return { root, version: BUILD_OUTPUT_VERSION, settings, workers };
 }
 
 /**
@@ -94,8 +125,11 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
  * @throws {BuildOutputError} if the config is missing, is not valid JSON, or
  * fails schema validation.
  */
-async function readWorker(root: string): Promise<BuildOutputWorker> {
-	const configPath = getWorkerConfigPath(root);
+async function readWorker(
+	root: string,
+	workerDirectoryName: string
+): Promise<BuildOutputWorker> {
+	const configPath = getWorkerConfigPath(root, workerDirectoryName);
 
 	if (!fs.existsSync(configPath)) {
 		throw new BuildOutputError(`no Worker config found at ${configPath}.`);
@@ -109,8 +143,8 @@ async function readWorker(root: string): Promise<BuildOutputWorker> {
 		);
 	}
 
-	const bundleDir = getWorkerBundleDir(root);
-	const assetsDir = getWorkerAssetsDir(root);
+	const bundleDir = getWorkerBundleDir(root, workerDirectoryName);
+	const assetsDir = getWorkerAssetsDir(root, workerDirectoryName);
 	const hasBundleDir = fs.existsSync(bundleDir);
 	const hasAssetsDir = fs.existsSync(assetsDir);
 

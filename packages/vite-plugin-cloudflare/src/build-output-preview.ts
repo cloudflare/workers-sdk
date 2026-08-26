@@ -1,4 +1,7 @@
-import { readBuildOutput } from "@cloudflare/build-output-utils";
+import {
+	DEFAULT_WORKER_DIRECTORY_NAME,
+	readBuildOutput,
+} from "@cloudflare/build-output-utils";
 import { convertToWranglerConfig } from "@cloudflare/config";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
 import type { ModuleType } from "@cloudflare/config";
@@ -21,8 +24,8 @@ export interface BuildOutputPreviewWorker {
  * `<root>/.cloudflare/output/v0/workers/default/` and reconstruct a
  * `BuildOutputPreviewWorker`.
  *
- * The spec currently holds a single Worker, so this returns a single-element
- * array.
+ * Preview currently uses only the `default` Worker, so this returns a
+ * single-element array.
  */
 export async function readBuildOutputWorkers(
 	root: string
@@ -32,7 +35,7 @@ export async function readBuildOutputWorkers(
 	// also carries the `mode` the build ran in, which `convertToWranglerConfig`
 	// ignores — preview does not act on it yet.
 	const { workers, settings } = await readBuildOutput(root);
-	const [worker] = workers;
+	const worker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
 
 	const { manifest, ...inputShape } = worker.config;
 	const rawConfig = convertToWranglerConfig(inputShape, settings);

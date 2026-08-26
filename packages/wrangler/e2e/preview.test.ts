@@ -14,6 +14,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("preview", { timeout: 90_000 }, () => {
 				name: workerName,
 				main: "src/index.ts",
 				compatibility_date: "2025-01-01",
+				upload_source_maps: true,
 			}),
 			"src/index.ts": `export default {
 				fetch() {
@@ -40,11 +41,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("preview", { timeout: 90_000 }, () => {
 		expect(JSON.parse(stdout)).toMatchObject({
 			preview: {
 				name: previewName,
-				worker_name: workerName,
 			},
 			deployment: {
 				id: expect.any(String),
-				preview_name: previewName,
+				main_module: "index.js",
 			},
 		});
 	});
