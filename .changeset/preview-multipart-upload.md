@@ -1,6 +1,6 @@
 ---
-"@cloudflare/deploy-helpers": minor
-"wrangler": minor
+"@cloudflare/deploy-helpers": patch
+"wrangler": patch
 ---
 
 Upload `wrangler preview` modules as multipart form data

@@ -62,6 +62,7 @@ async function readPreviewDeploymentRequest(
 ): Promise<
 	Record<string, unknown> & { modules: PreviewDeploymentModulePart[] }
 > {
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API for parsing multipart bodies; only deprecated on undici's server-side types
 	const form = await request.formData();
 
 	const metadataPart = form.get("metadata");
