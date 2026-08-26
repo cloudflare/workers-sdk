@@ -1,10 +1,13 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import {
+	DEFAULT_WORKER_DIRECTORY_NAME,
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
+import { PRERENDER_WORKER_DIRECTORY_NAME } from "../build-output";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
+import { assertIsNotPreview } from "../context";
 import { createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
 
@@ -12,6 +15,8 @@ import type { ModuleType } from "@cloudflare/config";
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	return {
 		async writeBundle(_, bundle) {
+			assertIsNotPreview(ctx);
+
 			if (ctx.isChildEnvironment(this.environment.name)) {
 				return;
 			}
@@ -29,16 +34,21 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				return;
 			}
 
-			// The Build Output Specification currently holds a single Worker in
-			// the `default` directory. Only the entry Worker is emitted;
-			// auxiliary Worker environments are ignored for now.
-			if (
+			const isPrerenderWorker =
+				this.environment.name ===
+				ctx.resolvedPluginConfig.prerenderWorkerEnvironmentName;
+			const isEntryWorker =
 				ctx.resolvedPluginConfig.type === "workers" &&
-				this.environment.name !==
-					ctx.resolvedPluginConfig.entryWorkerEnvironmentName
-			) {
+				this.environment.name ===
+					ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
+
+			// Auxiliary Worker environments are not yet included in Build Output.
+			if (!isPrerenderWorker && !isEntryWorker) {
 				return;
 			}
+			const workerDirectoryName = isPrerenderWorker
+				? PRERENDER_WORKER_DIRECTORY_NAME
+				: DEFAULT_WORKER_DIRECTORY_NAME;
 
 			const workerNewConfig = ctx.getWorkerNewConfig(this.environment.name);
 
@@ -85,6 +95,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					mainModule: entryChunk.fileName,
 					modules,
 				},
+				workerDirectoryName,
 			});
 			await writeSettings();
 		},

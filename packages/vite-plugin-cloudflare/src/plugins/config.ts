@@ -8,6 +8,7 @@ import {
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp } from "../build";
+import { PRERENDER_WORKER_DIRECTORY_NAME } from "../build-output";
 import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
@@ -285,16 +286,27 @@ function forceBuildOutputDirs(
 ): void {
 	const { root } = resolvedViteConfig;
 
-	// The Build Output Specification currently holds a single Worker in the
-	// `default` directory (the default export in `cloudflare.config.ts`). Only
-	// the entry Worker is emitted; auxiliary Worker environments keep their
-	// normal build output and are ignored by the spec.
+	// The entry Worker corresponds to the default export in
+	// `cloudflare.config.ts`. Auxiliary Worker environments retain their normal
+	// build output and are ignored by the spec.
 	if (resolvedPluginConfig.type === "workers") {
 		const entryName = resolvedPluginConfig.entryWorkerEnvironmentName;
 		const entryEnvironment = resolvedViteConfig.environments[entryName];
 		if (entryEnvironment) {
 			entryEnvironment.build.outDir = getWorkerBundleDir(root);
 		}
+	}
+
+	const prerenderEnvironmentName =
+		resolvedPluginConfig.prerenderWorkerEnvironmentName;
+	const prerenderEnvironment = prerenderEnvironmentName
+		? resolvedViteConfig.environments[prerenderEnvironmentName]
+		: undefined;
+	if (prerenderEnvironment) {
+		prerenderEnvironment.build.outDir = getWorkerBundleDir(
+			root,
+			PRERENDER_WORKER_DIRECTORY_NAME
+		);
 	}
 
 	const clientEnvironment = resolvedViteConfig.environments.client;

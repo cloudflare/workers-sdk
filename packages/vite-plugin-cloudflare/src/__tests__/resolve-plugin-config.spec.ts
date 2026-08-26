@@ -295,10 +295,25 @@ describe("resolvePluginConfig", () => {
 		);
 
 		expect(result.type).toBe("preview");
-		expect(readBuildOutputWorkersMock).toHaveBeenCalledWith(root);
+		expect(readBuildOutputWorkersMock).toHaveBeenCalledWith(root, false);
 		if (result.type === "preview") {
 			expect(result.workers[0]?.config.name).toBe("preview-worker");
 		}
+	});
+
+	test("preview selects the prerender Build Output during a build", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_VITE_BUILD", "true");
+		readBuildOutputWorkersMock.mockResolvedValue([]);
+
+		await resolvePluginConfig(
+			{} satisfies PluginConfig,
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(readBuildOutputWorkersMock).toHaveBeenCalledWith(root, true);
 	});
 
 	test("preview ignores auxiliary Workers and reads only Build Output", async ({
