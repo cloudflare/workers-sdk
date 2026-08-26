@@ -289,6 +289,16 @@ export async function triggersDeploy(
 						}
 					);
 				}
+				if (workflow.concurrency) {
+					throw new UserError(
+						`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
+							`Configure concurrency on the worker that defines the workflow.`,
+						{
+							telemetryMessage:
+								"triggers deploy workflow concurrency external script",
+						}
+					);
+				}
 				if (workflow.schedules) {
 					throw new UserError(
 						`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
@@ -323,6 +333,9 @@ export async function triggersDeploy(
 							script_name: scriptName,
 							class_name: workflow.class_name,
 							...(workflow.limits && { limits: workflow.limits }),
+							...(workflow.concurrency && {
+								concurrency: workflow.concurrency,
+							}),
 							...(workflow.schedules && {
 								schedules: (Array.isArray(workflow.schedules)
 									? workflow.schedules
