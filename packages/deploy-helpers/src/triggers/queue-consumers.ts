@@ -310,6 +310,29 @@ export async function deletePullConsumer(
 	);
 }
 
+export async function deleteNotificationConsumer(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	queueName: string
+): Promise<void> {
+	const queue = await getQueue(complianceConfig, accountId, queueName);
+	const consumer = queue.consumers[0];
+	if (consumer?.type !== "notification") {
+		throw new UserError(
+			`No notification consumer exists for queue ${queueName}`,
+			{
+				telemetryMessage: "queues notification consumer missing",
+			}
+		);
+	}
+	return deleteConsumerById(
+		complianceConfig,
+		accountId,
+		queue.queue_id,
+		consumer.consumer_id
+	);
+}
+
 export async function listConsumers(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
