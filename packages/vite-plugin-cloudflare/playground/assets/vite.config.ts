@@ -11,7 +11,7 @@ export default defineConfig({
 				},
 			},
 		},
-		worker: {
+		ssr: {
 			build: {
 				assetsInlineLimit: 0,
 			},

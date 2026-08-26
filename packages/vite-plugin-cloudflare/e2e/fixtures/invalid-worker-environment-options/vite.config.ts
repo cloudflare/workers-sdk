@@ -10,7 +10,7 @@ export default defineConfig({
 		}),
 	],
 	environments: {
-		worker: {
+		ssr: {
 			resolve: {
 				external: true,
 			},

@@ -86,10 +86,8 @@ describe("cloudflare.config.ts", () => {
 		expect(result.configPaths).toContain(
 			path.join(root, "cloudflare.config.ts")
 		);
-		expect(result.entryWorkerEnvironmentName).toBe("entry_worker");
-		expect(
-			result.environmentNameToWorkerMap.get("entry_worker")?.config
-		).toMatchObject({
+		expect(result.entryWorkerEnvironmentName).toBe("ssr");
+		expect(result.environmentNameToWorkerMap.get("ssr")?.config).toMatchObject({
 			name: "entry-worker",
 			compatibilityDate: "2024-12-30",
 			entrypoint: "./src/index.ts",
@@ -145,7 +143,7 @@ describe("cloudflare.config.ts", () => {
 			viteEnv
 		)) as WorkersResolvedConfig;
 
-		const entry = result.environmentNameToWorkerMap.get("entry_worker");
+		const entry = result.environmentNameToWorkerMap.get("ssr");
 		expect(entry?.config.env).toMatchObject({
 			FILE_ONLY: { type: "text", value: "file" },
 			PLUGIN_ONLY: { type: "text", value: "plugin" },

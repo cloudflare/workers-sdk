@@ -7,8 +7,8 @@ export default defineConfig({
 		{
 			name: "test-plugin",
 			configureServer(viteDevServer) {
-				const worker = viteDevServer.environments.worker;
-				assert(worker, `'worker' environment not found`);
+				const worker = viteDevServer.environments.ssr;
+				assert(worker, `'ssr' environment not found`);
 
 				return () => {
 					viteDevServer.middlewares.use(async (_, __, next) => {
