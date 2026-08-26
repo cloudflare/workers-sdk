@@ -160,7 +160,7 @@ interface DispatchNamespaceBindingOptions {
 	/** Details about the outbound Worker which will handle outbound requests from your namespace. */
 	outbound?: {
 		/** Name of the Worker handling the outbound requests. */
-		workerName: string;
+		worker: string;
 		/** (Optional) List of parameter names, for sending context from your dispatch Worker to the outbound handler. */
 		parameters?: string[];
 	};
@@ -179,13 +179,13 @@ export interface DispatchNamespaceBinding extends DispatchNamespaceBindingOption
 
 interface DurableObjectBindingOptions {
 	/** The name of the Worker that defines the Durable Object class. */
-	workerName: string;
+	worker: string;
 	/** The exported class name of the Durable Object. */
 	exportName: string;
 }
 
 /**
- * Binding to a Durable Object class. `workerName` is the name of the Worker
+ * Binding to a Durable Object class. `worker` is the name of the Worker
  * that defines the class; `exportName` is the exported class name.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
@@ -195,7 +195,7 @@ export interface DurableObjectBinding extends DurableObjectBindingOptions {
 }
 
 /**
- * Binding to a Durable Object class. `workerName` is the name of the Worker
+ * Binding to a Durable Object class. `worker` is the name of the Worker
  * that defines the class; `exportName` is the exported class name.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
@@ -204,7 +204,7 @@ export interface TypedDurableObjectBinding<
 	TConfig,
 	TExportName extends string,
 > extends DurableObjectBinding {
-	workerName: string;
+	worker: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -592,7 +592,7 @@ export interface WebSearchBinding extends WebSearchBindingOptions {
 
 interface WorkerBindingOptions {
 	/** The name of the bound Worker. */
-	workerName: string;
+	worker: string;
 	/** The named export to bind to (defaults to the default export). */
 	exportName?: string;
 	/** Optional properties that will be made available to the service via `ctx.props`. */
@@ -602,7 +602,7 @@ interface WorkerBindingOptions {
 }
 
 /**
- * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+ * Service binding (Worker-to-Worker). `worker` is the name of the bound
  * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
  * the default export).
  *
@@ -613,7 +613,7 @@ export interface WorkerBinding extends WorkerBindingOptions {
 }
 
 /**
- * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+ * Service binding (Worker-to-Worker). `worker` is the name of the bound
  * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
  * the default export).
  *
@@ -623,7 +623,7 @@ export interface TypedWorkerBinding<
 	TConfig,
 	TExportName extends string,
 > extends WorkerBinding {
-	workerName: string;
+	worker: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -636,13 +636,13 @@ export interface WorkerLoaderBinding {
 
 interface WorkflowBindingOptions {
 	/** The name of the Worker that defines the Workflow. */
-	workerName: string;
+	worker: string;
 	/** The exported class name of the Workflow. */
 	exportName: string;
 }
 
 /**
- * Binding to a Workflow. `workerName` is the name of the Worker that defines
+ * Binding to a Workflow. `worker` is the name of the Worker that defines
  * the Workflow; `exportName` is the exported `WorkflowEntrypoint` class name.
  */
 export interface WorkflowBinding extends WorkflowBindingOptions {
@@ -650,14 +650,14 @@ export interface WorkflowBinding extends WorkflowBindingOptions {
 }
 
 /**
- * Binding to a Workflow. `workerName` is the name of the Worker that defines
+ * Binding to a Workflow. `worker` is the name of the Worker that defines
  * the Workflow; `exportName` is the exported `WorkflowEntrypoint` class name.
  */
 export interface TypedWorkflowBinding<
 	TConfig,
 	TExportName extends string,
 > extends WorkflowBinding {
-	workerName: string;
+	worker: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -733,7 +733,7 @@ export interface Bindings {
 		options?: DispatchNamespaceBindingOptions
 	): DispatchNamespaceBinding;
 	/**
-	 * Binding to a Durable Object class. `workerName` is the name of the Worker
+	 * Binding to a Durable Object class. `worker` is the name of the Worker
 	 * that defines the class; `exportName` is the exported class name.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
@@ -846,7 +846,7 @@ export interface Bindings {
 	 */
 	webSearch(options?: WebSearchBindingOptions): WebSearchBinding;
 	/**
-	 * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+	 * Service binding (Worker-to-Worker). `worker` is the name of the bound
 	 * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
 	 * the default export).
 	 *
@@ -858,7 +858,7 @@ export interface Bindings {
 	// TODO: re-enable when workflow bindings return.
 	// /**
 	//  * Create a Workflow binding.
-	//  * `workerName` must match a known config's name (or any `string` for untyped bindings).
+	//  * `worker` must match a known config's name (or any `string` for untyped bindings).
 	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
 	//  */
 	// workflow(options: WorkflowBindingOptions): WorkflowBinding;

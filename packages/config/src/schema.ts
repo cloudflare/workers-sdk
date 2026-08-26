@@ -28,7 +28,7 @@ export const BrowserBindingSchema = z.strictObject({
 
 export const WorkerBindingSchema = z.strictObject({
 	type: z.literal("worker"),
-	workerName: z.string(),
+	worker: z.string(),
 	exportName: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
 	dev: RemoteBindingDevSchema.optional(),
@@ -122,7 +122,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		namespace: z.string().optional(),
 		outbound: z
 			.strictObject({
-				workerName: z.string(),
+				worker: z.string(),
 				parameters: z.array(z.string()).optional(),
 			})
 			.optional(),
@@ -130,7 +130,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("durable-object"),
-		workerName: z.string(),
+		worker: z.string(),
 		exportName: z.string(),
 	}),
 	FlagshipBindingSchema,
@@ -236,7 +236,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	// TODO: support Workflows
 	// z.strictObject({
 	// 	type: z.literal("workflow"),
-	// 	workerName: z.string(),
+	// 	worker: z.string(),
 	// 	exportName: z.string(),
 	// }),
 ]);
@@ -465,7 +465,7 @@ const PlacementSchema = z.union([
 ]);
 
 export const TailConsumerSchema = z.strictObject({
-	workerName: z.string(),
+	worker: z.string(),
 	streaming: z.boolean().optional(),
 });
 

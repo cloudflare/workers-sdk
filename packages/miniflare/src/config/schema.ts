@@ -184,11 +184,11 @@ const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
 });
 
 /**
- * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
+ * Extended worker (service) binding. `worker` may be `kCurrentWorker`
  * (the SELF marker) in addition to a plain worker name.
  */
 const MiniflareWorkerBindingSchema = WorkerBindingSchema.extend({
-	workerName: z.union([
+	worker: z.union([
 		z.string(),
 		z.custom<typeof kCurrentWorker>((v) => v === kCurrentWorker),
 	]),
@@ -206,7 +206,7 @@ const HelloWorldBindingSchema = z.strictObject({
 const MiniflareWorkflowBindingSchema = z.strictObject({
 	type: z.literal("workflow"),
 	name: z.string(),
-	workerName: z.string(),
+	worker: z.string(),
 	exportName: z.string(),
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
 });

@@ -389,7 +389,7 @@ export function constructExplorerWorkerOpts(
 			"durable-object"
 		)) {
 			const className = binding.exportName;
-			const scriptName = binding.workerName;
+			const scriptName = binding.worker;
 			const serviceName = getUserServiceName(scriptName);
 			const uniqueKey = `${scriptName}-${className}`;
 
@@ -414,7 +414,7 @@ export function constructExplorerWorkerOpts(
 				id: workflow.name,
 				bindingName,
 				className: workflow.exportName,
-				scriptName: workflow.workerName ?? workerName,
+				scriptName: workflow.worker ?? workerName,
 			});
 		}
 

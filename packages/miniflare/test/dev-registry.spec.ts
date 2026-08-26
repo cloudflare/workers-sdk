@@ -259,7 +259,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -311,7 +311,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -407,7 +407,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -490,7 +490,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -575,7 +575,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "TestEntrypoint",
 							},
 						},
@@ -681,7 +681,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "PropsEntrypoint",
 								props: { foo: 123, bar: { baz: "hello from props" } },
 							},
@@ -725,7 +725,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -820,7 +820,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -920,7 +920,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -957,7 +957,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1000,7 +1000,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1043,7 +1043,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1089,7 +1089,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1132,7 +1132,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1186,7 +1186,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1223,7 +1223,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1262,7 +1262,7 @@ describe.sequential("DevRegistry", () => {
 							MY_WORKFLOW: {
 								type: "workflow",
 								name: "MY_WORKFLOW",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyWorkflow",
 							},
 						},
@@ -1343,7 +1343,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1385,7 +1385,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1426,7 +1426,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -1501,7 +1501,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1614,7 +1614,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							REMOTE: { type: "worker", workerName: "remote-worker" },
+							REMOTE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1694,9 +1694,9 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 						env: {
-							remote: { type: "worker", workerName: "remote-worker" },
+							remote: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1737,9 +1737,9 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 						env: {
-							remote: { type: "worker", workerName: "remote-worker" },
+							remote: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1825,7 +1825,7 @@ describe.sequential("DevRegistry", () => {
 			`),
 						tailConsumers: [
 							{
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								entrypoint: "TailCollector",
 								props: { tailKey: "from-tail-binding" },
 							},
@@ -1879,7 +1879,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -1988,7 +1988,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2069,7 +2069,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -2113,7 +2113,7 @@ describe.sequential("DevRegistry", () => {
 						env: {
 							DO: {
 								type: "durable-object",
-								workerName: "remote-worker",
+								worker: "remote-worker",
 								exportName: "MyDurableObject",
 							},
 						},
@@ -2172,7 +2172,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2294,7 +2294,7 @@ describe.sequential("DevRegistry", () => {
 				}
 			`),
 						env: {
-							SERVICE: { type: "worker", workerName: "remote-worker" },
+							SERVICE: { type: "worker", worker: "remote-worker" },
 						},
 					},
 				},
@@ -2440,7 +2440,7 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`),
-						tailConsumers: [{ workerName: "remote-worker" }],
+						tailConsumers: [{ worker: "remote-worker" }],
 					},
 				},
 			],

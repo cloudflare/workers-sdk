@@ -65,7 +65,7 @@ describe("Cross-process aggregation", () => {
 							DB_A: { type: "d1", id: "db-a" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDO",
 							},
 							BUCKET_A: { type: "r2", name: "bucket-a" },
@@ -101,7 +101,7 @@ describe("Cross-process aggregation", () => {
 							DB_B: { type: "d1", id: "db-b" },
 							OTHER_DO: {
 								type: "durable-object",
-								workerName: "worker-b",
+								worker: "worker-b",
 								exportName: "OtherDO",
 							},
 							BUCKET_B: { type: "r2", name: "bucket-b" },
@@ -567,7 +567,7 @@ describe("Same ID across multiple instances with different persistence directori
 							MY_DB: { type: "d1", id: "shared-db-id" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDO",
 							},
 						},
@@ -598,7 +598,7 @@ describe("Same ID across multiple instances with different persistence directori
 							MY_DB: { type: "d1", id: "shared-db-id" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDO",
 							},
 						},
