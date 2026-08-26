@@ -79,7 +79,7 @@ describe("resolvePluginConfig", () => {
 		)) as WorkersResolvedConfig;
 
 		expect(
-			result.environmentNameToWorkerMap.get("entry_worker")?.config.entrypoint
+			result.environmentNameToWorkerMap.get("ssr")?.config.entrypoint
 		).toBe(entrypoint);
 	});
 
@@ -95,7 +95,7 @@ describe("resolvePluginConfig", () => {
 		)) as WorkersResolvedConfig;
 
 		expect(
-			result.environmentNameToWorkerMap.get("entry_worker")?.config.entrypoint
+			result.environmentNameToWorkerMap.get("ssr")?.config.entrypoint
 		).toBe(entrypoint);
 	});
 
@@ -226,10 +226,9 @@ describe("resolvePluginConfig", () => {
 			buildEnv
 		)) as WorkersResolvedConfig;
 
-		expect(result.prerenderWorkerEnvironmentName).toBe("prerender_worker");
+		expect(result.prerenderWorkerEnvironmentName).toBe("prerender");
 		expect(
-			result.environmentNameToWorkerMap.get("prerender_worker")?.config
-				.entrypoint
+			result.environmentNameToWorkerMap.get("prerender")?.config.entrypoint
 		).toBe(path.join(root, "src/prerender.ts"));
 	});
 

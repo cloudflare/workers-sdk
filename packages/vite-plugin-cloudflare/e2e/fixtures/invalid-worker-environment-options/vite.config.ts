@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
 	environments: {
-		worker: {
+		ssr: {
 			resolve: {
 				external: true,
 			},
