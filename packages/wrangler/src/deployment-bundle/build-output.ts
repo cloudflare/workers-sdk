@@ -54,7 +54,7 @@ export async function writeBuildOutput({
 		assetsOptions ? writeAssets({ root, assetsOptions }) : Promise.resolve(),
 	]);
 
-	await writeWorkerConfig(root, parsedWorkerConfig, manifest);
+	await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
 	await writeSettingsConfig(root, parsedSettingsConfig, mode);
 }
 
