@@ -3097,19 +3097,18 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 			isValid = false;
 		} else {
 			const concurrency = value.concurrency as Record<string, unknown>;
-			if (concurrency.limit !== undefined) {
-				if (
-					typeof concurrency.limit !== "number" ||
+			if (
+				concurrency.limit !== undefined &&
+				(typeof concurrency.limit !== "number" ||
 					!Number.isInteger(concurrency.limit) ||
-					concurrency.limit < 1
-				) {
-					diagnostics.errors.push(
-						`"${field}" bindings "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
-							concurrency.limit
-						)}.`
-					);
-					isValid = false;
-				}
+					concurrency.limit < 1)
+			) {
+				diagnostics.errors.push(
+					`"${field}" bindings "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
+						concurrency.limit
+					)}.`
+				);
+				isValid = false;
 			}
 			validateAdditionalProperties(
 				diagnostics,
