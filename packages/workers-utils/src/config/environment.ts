@@ -1849,6 +1849,12 @@ export interface Observability {
 	enabled?: boolean;
 	/** The sampling rate */
 	head_sampling_rate?: number;
+	/**
+	 * Whether query strings are removed from request URLs in logs and traces.
+	 *
+	 * @default false
+	 */
+	redact_query_string?: boolean;
 	logs?: {
 		enabled?: boolean;
 		/** The sampling rate */

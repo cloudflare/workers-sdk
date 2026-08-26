@@ -132,6 +132,9 @@ function convertObservability(
 	if (observability.headSamplingRate !== undefined) {
 		out.head_sampling_rate = observability.headSamplingRate;
 	}
+	if (observability.redactQueryString !== undefined) {
+		out.redact_query_string = observability.redactQueryString;
+	}
 	if (observability.logs !== undefined) {
 		const logs: NonNullable<NonNullable<RawConfig["observability"]>["logs"]> =
 			{};

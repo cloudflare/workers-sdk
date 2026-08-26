@@ -296,6 +296,12 @@ export interface WorkerConfig {
 		enabled?: boolean;
 		/** The sampling rate. */
 		headSamplingRate?: number;
+		/**
+		 * Whether query strings are removed from request URLs in logs and traces.
+		 *
+		 * @default false
+		 */
+		redactQueryString?: boolean;
 		logs?: {
 			enabled?: boolean;
 			/** The sampling rate. */

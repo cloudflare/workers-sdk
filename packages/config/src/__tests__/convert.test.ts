@@ -57,6 +57,7 @@ describe("convertToWranglerConfig", () => {
 				observability: {
 					enabled: true,
 					headSamplingRate: 0.5,
+					redactQueryString: true,
 					logs: {
 						enabled: true,
 						headSamplingRate: 0.25,
@@ -75,6 +76,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.observability).toEqual({
 				enabled: true,
 				head_sampling_rate: 0.5,
+				redact_query_string: true,
 				logs: {
 					enabled: true,
 					head_sampling_rate: 0.25,

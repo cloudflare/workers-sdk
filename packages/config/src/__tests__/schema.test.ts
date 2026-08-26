@@ -462,6 +462,34 @@ describe("InputWorkerSchema", () => {
 			}
 		});
 
+		it("accepts camelCase query string redaction configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					redactQueryString: true,
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects snake_case query string redaction configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					redact_query_string: true,
+				},
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it("rejects unknown keys inside a trigger", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
