@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	environments: {
-		worker: {
+		ssr: {
 			build: {
 				rollupOptions: {
 					output: {
