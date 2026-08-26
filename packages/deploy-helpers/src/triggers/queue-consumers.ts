@@ -316,7 +316,7 @@ export async function deleteNotificationConsumer(
 	queueName: string
 ): Promise<void> {
 	const queue = await getQueue(complianceConfig, accountId, queueName);
-	const consumer = queue.consumers[0];
+	const consumer = queue.consumers.find((c) => c.type === "notification");
 	if (consumer?.type !== "notification") {
 		throw new UserError(
 			`No notification consumer exists for queue ${queueName}`,

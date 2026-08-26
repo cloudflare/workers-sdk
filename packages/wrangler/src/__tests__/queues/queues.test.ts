@@ -733,6 +733,7 @@ describe("wrangler", () => {
 					  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Worker Consumer
 					  wrangler queues consumer list <queue-name>                  List consumers for a queue
 					  wrangler queues consumer http                               Configure Queue HTTP Pull Consumers
+					  wrangler queues consumer notification                       Configure Queue Notification Consumers
 					  wrangler queues consumer worker                             Configure Queue Worker Consumers
 
 					GLOBAL FLAGS
@@ -1943,11 +1944,11 @@ describe("wrangler", () => {
 					│ 1002 │ my-dlq │ 5 │ 2 │ 10000 │ 15 │
 					└─┴─┴─┴─┴─┴─┘
 					Notification consumers:
-					┌─┬─┬─┬─┬─┬─┐
+					┌─┬─┬─┬─┬─┐
 					│ consumer_id │ dead_letter_queue │ email │ pagerduty │ webhooks │
-					├─┼─┼─┼─┼─┼─┤
+					├─┼─┼─┼─┼─┤
 					│ 1003 │ my-dlq │ user@example.com │ pd-key-1 │ wh-1 │
-					└─┴─┴─┴─┴─┴─┘"
+					└─┴─┴─┴─┴─┘"
 				`);
 			});
 
@@ -2030,11 +2031,11 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Notification consumers:
-					┌─┬─┬─┬─┬─┬─┐
+					┌─┬─┬─┬─┬─┐
 					│ consumer_id │ dead_letter_queue │ email │ pagerduty │ webhooks │
-					├─┼─┼─┼─┼─┼─┤
+					├─┼─┼─┼─┼─┤
 					│ 1003 │ my-dlq │ user@example.com │ pd-key-1 │ wh-1 │
-					└─┴─┴─┴─┴─┴─┘"
+					└─┴─┴─┴─┴─┘"
 				`);
 			});
 
