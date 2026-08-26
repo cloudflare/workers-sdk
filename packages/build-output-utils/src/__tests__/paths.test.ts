@@ -4,7 +4,7 @@ import {
 	BUILD_OUTPUT_ROOT,
 	BUILD_OUTPUT_VERSION,
 	CONFIG_FILENAME,
-	DEFAULT_WORKER_EXPORT,
+	DEFAULT_WORKER_DIRECTORY_NAME,
 	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
@@ -17,7 +17,7 @@ describe("path constants", () => {
 		expect(BUILD_OUTPUT_VERSION).toBe("v0");
 		expect(BUILD_OUTPUT_ROOT).toBe(".cloudflare/output");
 		expect(CONFIG_FILENAME).toBe("config.json");
-		expect(DEFAULT_WORKER_EXPORT).toBe("default");
+		expect(DEFAULT_WORKER_DIRECTORY_NAME).toBe("default");
 	});
 });
 
@@ -40,5 +40,33 @@ describe("path resolvers", () => {
 		expect(getWorkerConfigPath(root)).toBe(path.join(workerDir, "config.json"));
 		expect(getWorkerBundleDir(root)).toBe(path.join(workerDir, "bundle"));
 		expect(getWorkerAssetsDir(root)).toBe(path.join(workerDir, "assets"));
+	});
+
+	it("resolve paths for a named Worker directory", ({ expect }) => {
+		const workerDir = path.join(outputDir, "workers", "additional");
+		expect(getWorkerConfigPath(root, "additional")).toBe(
+			path.join(workerDir, "config.json")
+		);
+		expect(getWorkerBundleDir(root, "additional")).toBe(
+			path.join(workerDir, "bundle")
+		);
+		expect(getWorkerAssetsDir(root, "additional")).toBe(
+			path.join(workerDir, "assets")
+		);
+	});
+
+	it("rejects invalid Worker directory names", ({ expect }) => {
+		for (const workerDirectoryName of [
+			"",
+			".",
+			"..",
+			"nested/worker",
+			"nested\\worker",
+			"worker\0name",
+		]) {
+			expect(() => getWorkerConfigPath(root, workerDirectoryName)).toThrow(
+				"Worker directory names must be non-empty, single path segments."
+			);
+		}
 	});
 });

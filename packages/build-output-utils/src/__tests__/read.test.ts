@@ -35,8 +35,8 @@ function inputWorkerConfig(name: string) {
 }
 
 /**
- * Seed the single `default` Worker into the Build Output Specification tree,
- * optionally creating the `bundle/` and `assets/` directories on disk.
+ * Seed a Worker into the Build Output Specification tree, optionally creating
+ * the `bundle/` and `assets/` directories on disk.
  *
  * `hasBundle` controls whether the config is written with a manifest and
  * whether the `bundle/` directory is created. `bundleDir` can override just the
@@ -46,27 +46,34 @@ function inputWorkerConfig(name: string) {
 async function seedWorker(
 	root: string,
 	{
+		workerDirectoryName = "default",
 		name = "my-worker",
 		hasBundle = true,
 		bundleDir = hasBundle,
 		assets = false,
 	}: {
+		workerDirectoryName?: string;
 		name?: string;
 		hasBundle?: boolean;
 		bundleDir?: boolean;
 		assets?: boolean;
 	} = {}
 ) {
-	await writeWorkerConfig(
+	await writeWorkerConfig({
 		root,
-		inputWorkerConfig(name),
-		hasBundle ? manifest : undefined
-	);
+		config: inputWorkerConfig(name),
+		manifest: hasBundle ? manifest : undefined,
+		workerDirectoryName,
+	});
 	if (bundleDir) {
-		await fsp.mkdir(getWorkerBundleDir(root), { recursive: true });
+		await fsp.mkdir(getWorkerBundleDir(root, workerDirectoryName), {
+			recursive: true,
+		});
 	}
 	if (assets) {
-		await fsp.mkdir(getWorkerAssetsDir(root), { recursive: true });
+		await fsp.mkdir(getWorkerAssetsDir(root, workerDirectoryName), {
+			recursive: true,
+		});
 	}
 }
 
@@ -83,13 +90,30 @@ describe("readBuildOutput", () => {
 
 		expect(output.version).toBe("v0");
 		expect(output.root).toBe(root);
-		expect(output.workers[0].configPath).toBe(getWorkerConfigPath(root));
-		expect(output.workers[0].bundleDir).toBe(getWorkerBundleDir(root));
-		expect(output.workers[0].assetsDir).toBeUndefined();
+		expect(output.workers.default.configPath).toBe(getWorkerConfigPath(root));
+		expect(output.workers.default.bundleDir).toBe(getWorkerBundleDir(root));
+		expect(output.workers.default.assetsDir).toBeUndefined();
 
-		expect(output.workers[0].config.name).toBe("my-worker");
-		expect(output.workers[0].config.manifest).toEqual(manifest);
-		expect(output.workers[0].config).not.toHaveProperty("entrypoint");
+		expect(output.workers.default.config.name).toBe("my-worker");
+		expect(output.workers.default.config.manifest).toEqual(manifest);
+		expect(output.workers.default.config).not.toHaveProperty("entrypoint");
+	});
+
+	it("reads Workers keyed by directory name", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await seedWorker(root, {
+			workerDirectoryName: "additional",
+			name: "additional-worker",
+		});
+
+		const { workers } = await readBuildOutput(root);
+
+		expect(Object.keys(workers)).toEqual(["default", "additional"]);
+		expect(workers.additional?.config.name).toBe("additional-worker");
+		expect(workers.additional?.bundleDir).toBe(
+			getWorkerBundleDir(root, "additional")
+		);
 	});
 
 	it("resolves the assets directory when present and leaves bundle undefined for assets-only Workers", async ({
@@ -98,12 +122,10 @@ describe("readBuildOutput", () => {
 		const root = process.cwd();
 		await seedWorker(root, { hasBundle: false, assets: true });
 
-		const {
-			workers: [worker],
-		} = await readBuildOutput(root);
+		const { workers } = await readBuildOutput(root);
 
-		expect(worker.bundleDir).toBeUndefined();
-		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
+		expect(workers.default.bundleDir).toBeUndefined();
+		expect(workers.default.assetsDir).toBe(getWorkerAssetsDir(root));
 	});
 
 	it("throws when the config has a manifest but no bundle directory", async ({
