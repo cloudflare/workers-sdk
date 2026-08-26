@@ -1,5 +1,64 @@
 # @cloudflare/deploy-helpers
 
+## 0.9.0
+
+### Minor Changes
+
+- [#14966](https://github.com/cloudflare/workers-sdk/pull/14966) [`a4c3458`](https://github.com/cloudflare/workers-sdk/commit/a4c3458cec77afa31e01d671d6b22ecfcf2c0107) Thanks [@yomna-shousha](https://github.com/yomna-shousha)! - Add pull request metadata to `wrangler preview` deployments
+
+  `wrangler preview` now detects the pull request associated with the current CI run (GitHub Actions, GitLab CI, CircleCI, and a generic `PULL_REQUEST_URL`/`PR_URL`/`CHANGE_URL` fallback) and attaches it, along with the repository URL, to the preview deployment as annotations (`workers/pull_request_number`, `workers/pull_request_url`, `workers/repository_url`).
+
+  This is best effort: if no pull request can be detected, nothing changes. When a pull request is detected, its URL is now also shown in the `wrangler preview` command output.
+
+- [#15307](https://github.com/cloudflare/workers-sdk/pull/15307) [`433fa98`](https://github.com/cloudflare/workers-sdk/commit/433fa9846cd0e5c8bf034453b9ec1b834ed90273) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Add pull request title to `wrangler preview` deployment annotations
+
+  `wrangler preview` now also detects the title of the pull/merge request associated with the current CI run (GitHub Actions and GitLab CI, plus a generic `PULL_REQUEST_TITLE` fallback) and attaches it to the preview deployment as the `workers/pull_request_title` annotation, alongside the existing pull request number/URL, repository URL, and commit SHA annotations.
+
+  This is best effort: if no pull request title can be detected, nothing changes.
+
+### Patch Changes
+
+- Updated dependencies [[`aa54b49`](https://github.com/cloudflare/workers-sdk/commit/aa54b491a42c83d410983197b84088dc5319564c), [`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1), [`2d78137`](https://github.com/cloudflare/workers-sdk/commit/2d7813781e935b171ace346ce322738f1c4048a3), [`04e8564`](https://github.com/cloudflare/workers-sdk/commit/04e856464dfaf094e9b622c9bbf92d871b98f9ff), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`37ed753`](https://github.com/cloudflare/workers-sdk/commit/37ed753470232676a8f8ba4a424d4f73ac58dc5b), [`f76b68e`](https://github.com/cloudflare/workers-sdk/commit/f76b68efd1f1a148b6d96340f3711d3aed52323a), [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`74de3ab`](https://github.com/cloudflare/workers-sdk/commit/74de3ab56f0dfabfc09da368f3d19eaf82093d10), [`0cb8690`](https://github.com/cloudflare/workers-sdk/commit/0cb86908903b87a742d1786ac8aa5aa9dce6c575), [`dd5148d`](https://github.com/cloudflare/workers-sdk/commit/dd5148d7da11665ad3f3338de338380ccea979cc), [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c)]:
+  - miniflare@5.20260825.0-alpha
+
+## 0.8.0
+
+### Minor Changes
+
+- [#15172](https://github.com/cloudflare/workers-sdk/pull/15172) [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add container support to worker previews
+
+  Worker previews now support containers through a new `previews.containers` configuration block. Container configuration doesn't inherit, so declare containers explicitly in the `previews` block to enable them for previews. This mirrors how `previews.durable_objects` works today. Wrangler names each preview container application `{worker_name}_{preview_slug}_{class_name}`, normalising and shortening the result to what the API accepts. Either change appends a short digest of the composed name, so two names that would otherwise land on one stay distinct. An entry cannot set its own `name`, because application names are unique to an account and a fixed name would collide between two previews of the same Worker. A Durable Object class is backed by at most one container application, so the validator rejects two entries that share a `class_name`. Wrangler skips container applications bound to Durable Object classes that another Worker implements through `script_name`, because the implementing Worker owns its own container application. A binding is not required: a Durable Object declared through `migrations` or `exports` and reached only over `ctx.exports` can still back a container. Every entry must set `class_name`. A `previews.containers` entry whose `class_name` matches no Durable Object class at all is rejected before the preview deployment is created, so a typo fails loudly instead of producing a preview with no container.
+
+  Wrangler creates the container applications on `wrangler preview`. Deleting a preview tears them down server side, so `wrangler preview delete` doesn't remove them.
+
+  Container build and deploy progress prints to stdout. `wrangler preview --json` suppresses wrangler's own output so it doesn't interleave with the payload, and warnings and errors still go to stderr. Docker's build output and the progress spinner write to stdout directly and bypass that suppression, so parse `--json` from a non interactive shell, where the spinner is skipped, and prefer a prebuilt `image` over a Dockerfile.
+
+- [#15174](https://github.com/cloudflare/workers-sdk/pull/15174) [`649f667`](https://github.com/cloudflare/workers-sdk/commit/649f667bd871061da945881ce953ef8f81caea1a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - [private beta]: Create the parent Worker automatically when `wrangler preview` targets one that doesn't exist yet
+
+  Previews hang off a parent Worker, so running `wrangler preview` before the Worker had ever been deployed failed with a raw API error naming the Preview endpoint. Wrangler now offers to create an empty parent Worker and then carries on creating the Preview. The parent uses the same workers.dev and Preview URL settings that `wrangler deploy` would resolve, without applying routes or cron triggers. In non-interactive environments, Wrangler creates the Worker without asking.
+
+### Patch Changes
+
+- [#15253](https://github.com/cloudflare/workers-sdk/pull/15253) [`630048b`](https://github.com/cloudflare/workers-sdk/commit/630048b3d8a9e8f76b57be23f81743a3fb7de177) Thanks [@emily-shen](https://github.com/emily-shen)! - Refactor triggers deploy validation and dry-run
+
+  Move more logic into the deploy-helpers package for easy reuse by `cf`.
+
+- [#15284](https://github.com/cloudflare/workers-sdk/pull/15284) [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b) Thanks [@emily-shen](https://github.com/emily-shen)! - Move deploy output writing into shared deploy helpers
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`5ae9d5b`](https://github.com/cloudflare/workers-sdk/commit/5ae9d5b205fea31516559f7ad89a21eda671af2f), [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a), [`ce9b151`](https://github.com/cloudflare/workers-sdk/commit/ce9b1510abf5c1152aedc94456f4d7ffe9402248), [`5c10e39`](https://github.com/cloudflare/workers-sdk/commit/5c10e398979c0a054f58dcf2751012cc99e977d2), [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17)]:
+  - miniflare@5.20260820.0-alpha
+  - @cloudflare/workers-utils@0.34.0
+  - @cloudflare/cli-shared-helpers@0.1.25
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [[`1277a72`](https://github.com/cloudflare/workers-sdk/commit/1277a72e0d01325c37a05c0e8f5111a45100af77), [`fb6b51b`](https://github.com/cloudflare/workers-sdk/commit/fb6b51b87bf73edca9866bdf2d0810d7bf491108), [`4f922dc`](https://github.com/cloudflare/workers-sdk/commit/4f922dc19941db31394357f7e146af320ae1f3d9), [`4d74b8d`](https://github.com/cloudflare/workers-sdk/commit/4d74b8d8fd5c034c012fa13973ee20bedbc844c7), [`2e0c962`](https://github.com/cloudflare/workers-sdk/commit/2e0c962da0c57bdc79b5edcaa64c7b725c1524f0), [`1b73c87`](https://github.com/cloudflare/workers-sdk/commit/1b73c879c168dcc78b0f2657d04bc784b8af7da3), [`8777180`](https://github.com/cloudflare/workers-sdk/commit/8777180b8239d9df435acee465d02682477e93ea)]:
+  - miniflare@5.20260815.0-alpha
+  - @cloudflare/workers-utils@0.33.1
+  - @cloudflare/cli-shared-helpers@0.1.24
+
 ## 0.7.0
 
 ### Minor Changes

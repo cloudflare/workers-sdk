@@ -1,6 +1,9 @@
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
@@ -27,13 +30,14 @@ export class SolidStart extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./.output/server/index.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "./.output/public",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./.output/server/index.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./.output/public" },
 		};
 	}
 }

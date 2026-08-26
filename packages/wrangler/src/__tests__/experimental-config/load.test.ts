@@ -99,6 +99,7 @@ describe("loadNewConfig", () => {
 			});
 
 			expect(result.rawConfig.name).toBe("worker-staging");
+			expect(result.mode).toBe("staging");
 		});
 
 		it("falls back to CLOUDFLARE_ENV when args.env is not provided", async ({
@@ -121,6 +122,7 @@ describe("loadNewConfig", () => {
 			});
 
 			expect(result.rawConfig.name).toBe("worker-preview");
+			expect(result.mode).toBe("preview");
 		});
 
 		it("uses undefined when neither args.env nor CLOUDFLARE_ENV is set", async ({
@@ -142,6 +144,7 @@ describe("loadNewConfig", () => {
 			});
 
 			expect(result.rawConfig.name).toBe("worker[undefined]");
+			expect(result.mode).toBeUndefined();
 		});
 
 		it("passes ctx.mode into the function-form wrangler.config.ts", async ({
@@ -278,6 +281,21 @@ describe("loadNewConfig", () => {
 			await expect(
 				loadNewConfig({ cwd: process.cwd(), args: {} })
 			).rejects.toThrow(/\s*•\s+default\.name:/);
+		});
+
+		it("explains how to handle non-config exports", async ({ expect }) => {
+			await seed({
+				"cloudflare.config.ts": `
+					export const WORKER_NAMES = { staging: "staging-worker" };
+					export default { type: "worker", name: "worker", compatibilityDate: "2026-05-18" };
+				`,
+			});
+
+			await expect(
+				loadNewConfig({ cwd: process.cwd(), args: {} })
+			).rejects.toThrow(
+				/The `WORKER_NAMES` export is not a supported export type[\s\S]*Move constants, helper functions, and other unsupported exports to a separate module/
+			);
 		});
 	});
 

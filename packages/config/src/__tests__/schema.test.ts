@@ -1,10 +1,12 @@
 import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
 import {
+	BindingSchema,
 	ConfigExportsSchema,
+	InputSettingsSchema,
 	InputWorkerSchema,
+	OutputSettingsSchema,
 	OutputWorkerSchema,
-	SettingsSchema,
 } from "../schema";
 import type { ParsedInputWorkerConfig } from "../schema";
 
@@ -71,6 +73,41 @@ describe("InputWorkerSchema", () => {
 			});
 
 			expect(result.success).toBe(true);
+		});
+
+		it("accepts binding options nested under dev", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: {
+					KV: { type: "kv", dev: { remote: true } },
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive-id",
+						dev: { connectionString: "postgres://localhost/database" },
+					},
+					R2: {
+						type: "r2",
+						dev: {
+							remote: false,
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects remote at the binding root", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: { KV: { type: "kv", remote: true } },
+			});
+
+			expect(result.success).toBe(false);
 		});
 
 		it.for([
@@ -184,6 +221,66 @@ describe("InputWorkerSchema", () => {
 			if (!result.success) {
 				expect(result.error.issues[0]?.message).toBe(
 					"ai bindings can only be defined once"
+				);
+			}
+		});
+	});
+
+	describe("send-email bindings", () => {
+		it.for([
+			["no address restrictions", { type: "send-email" }],
+			[
+				"a destination address",
+				{
+					type: "send-email",
+					destinationAddress: "destination@example.com",
+				},
+			],
+			[
+				"allowed destination addresses",
+				{
+					type: "send-email",
+					allowedDestinationAddresses: ["destination@example.com"],
+				},
+			],
+			[
+				"sender restrictions without destination restrictions",
+				{
+					type: "send-email",
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+			[
+				"a destination address and sender restrictions",
+				{
+					type: "send-email",
+					destinationAddress: "destination@example.com",
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+			[
+				"allowed destination addresses and sender restrictions",
+				{
+					type: "send-email",
+					allowedDestinationAddresses: ["destination@example.com"],
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+		] as const)("accepts %s", ([, binding], { expect }) => {
+			expect(BindingSchema.safeParse(binding).success).toBe(true);
+		});
+
+		it("rejects both destination restriction forms", ({ expect }) => {
+			const result = BindingSchema.safeParse({
+				type: "send-email",
+				destinationAddress: "destination@example.com",
+				allowedDestinationAddresses: ["destination@example.com"],
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]?.message).toBe(
+					'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"'
 				);
 			}
 		});
@@ -387,6 +484,57 @@ describe("InputWorkerSchema", () => {
 				expect(issue?.path).toEqual(["triggers", 0]);
 				expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
 					"cronz"
+				);
+			}
+		});
+
+		it("accepts a connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						address: "127.0.0.1",
+					},
+				],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "ftp", port: 5432 }],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects unknown keys inside a connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						hostname: "127.0.0.1",
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				const issue = result.error.issues.find(
+					(i) => i.code === "unrecognized_keys"
+				);
+				expect(issue).toBeDefined();
+				expect(issue?.path).toEqual(["triggers", 0]);
+				expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+					"hostname"
 				);
 			}
 		});
@@ -610,15 +758,15 @@ describe("InputWorkerSchema type discriminant", () => {
 	});
 });
 
-describe("SettingsSchema", () => {
+describe("InputSettingsSchema", () => {
 	it("accepts a minimal settings config", ({ expect }) => {
-		const result = SettingsSchema.safeParse({ type: "settings" });
+		const result = InputSettingsSchema.safeParse({ type: "settings" });
 
 		expect(result.success).toBe(true);
 	});
 
 	it("accepts accountId and complianceRegion", ({ expect }) => {
-		const result = SettingsSchema.safeParse({
+		const result = InputSettingsSchema.safeParse({
 			type: "settings",
 			accountId: "acc-123",
 			complianceRegion: "fedramp-high",
@@ -628,8 +776,57 @@ describe("SettingsSchema", () => {
 	});
 
 	it("rejects unknown fields", ({ expect }) => {
-		const result = SettingsSchema.safeParse({
+		const result = InputSettingsSchema.safeParse({
 			type: "settings",
+			name: "my-worker",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `mode`, which is supplied at build time rather than declared", ({
+		expect,
+	}) => {
+		const result = InputSettingsSchema.safeParse({
+			type: "settings",
+			mode: "staging",
+		});
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("OutputSettingsSchema", () => {
+	it("accepts a mode alongside the settings fields", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			accountId: "acc-123",
+			complianceRegion: "public",
+			mode: "staging",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts a config without a mode", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({ type: "settings" });
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects a non-string mode", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			mode: 123,
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown fields", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			mode: "staging",
 			name: "my-worker",
 		});
 
@@ -646,8 +843,8 @@ describe("ConfigExportsSchema", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.default?.type).toBe("worker");
-			expect(result.data.settings?.type).toBe("settings");
+			expect(result.data.default?.name).toBe("my-worker");
+			expect(result.data.settings?.accountId).toBe("acc-123");
 		}
 	});
 
@@ -663,6 +860,36 @@ describe("ConfigExportsSchema", () => {
 			expect(result.error.issues[0]?.path).toEqual(["default", "type"]);
 		}
 	});
+
+	it.for([
+		{
+			description: "object",
+			value: { staging: "staging-worker", production: "production-worker" },
+			path: ["WORKER_NAMES", "type"],
+		},
+		{
+			description: "primitive",
+			value: 42,
+			path: ["WORKER_NAMES"],
+		},
+	])(
+		"reports an actionable error for an unknown $description export",
+		({ value, path }, { expect }) => {
+			const result = ConfigExportsSchema.safeParse({
+				default: baseConfig,
+				WORKER_NAMES: value,
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]).toMatchObject({
+					path,
+					message:
+						"The `WORKER_NAMES` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.",
+				});
+			}
+		}
+	);
 
 	it("rejects a settings config on a non-`settings` export", ({ expect }) => {
 		const result = ConfigExportsSchema.safeParse({

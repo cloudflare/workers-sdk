@@ -197,6 +197,12 @@ const V4UnsafeDirectSocketSchema = z.object({
 	proxy: z.boolean().optional(),
 });
 
+const V4ConnectHandlerSchema = z.object({
+	protocol: z.enum(["tcp"]),
+	port: z.number(),
+	address: z.string().optional(),
+});
+
 const V4IdEntrySchema = z.object({
 	id: z.string(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
@@ -364,11 +370,11 @@ const V4WorkerOptionsShapeSchema = z.object({
 	outboundService: V4ServiceDesignatorSchema.optional(),
 	unsafeEphemeralDurableObjects: z.boolean().optional(),
 	unsafeDirectSockets: z.array(V4UnsafeDirectSocketSchema).optional(),
+	connectHandlers: z.array(V4ConnectHandlerSchema).optional(),
 	unsafeOverrideFetchWorker: z.string().optional(),
 	unsafeEvalBinding: z.string().optional(),
 	unsafeUseModuleFallbackService: z.boolean().optional(),
 	unsafeRegisterWorker: z.boolean().optional(),
-	hasAssetsAndIsVitest: z.boolean().optional(),
 	tails: z.array(V4ServiceDesignatorSchema).optional(),
 	streamingTails: z.array(V4ServiceDesignatorSchema).optional(),
 	stripCfConnectingIp: z.boolean().default(true),
@@ -451,8 +457,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 				className: z.string(),
 				scriptName: z.string().optional(),
 				external: z.boolean().optional(),
-				remoteProxyConnectionString:
-					RemoteProxyConnectionStringSchema.optional(),
 				stepLimit: z.number().int().min(1).optional(),
 			})
 		)
@@ -648,6 +652,8 @@ export const V4SharedOptionsSchema = z.object({
 	logRequests: z.boolean().default(true),
 	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
 	resourcePersistencePath: z.string().optional(),
+	/** Per-instance root for resources that cannot participate in shared storage. */
+	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
 	stripDisablePrettyError: z.boolean().default(true),
@@ -778,11 +784,15 @@ export type V4WorkerOptionsShape = {
 		entrypoint?: string;
 		proxy?: boolean;
 	}>;
+	connectHandlers?: Array<{
+		protocol: "tcp";
+		port: number;
+		address?: string;
+	}>;
 	unsafeOverrideFetchWorker?: string;
 	unsafeEvalBinding?: string;
 	unsafeUseModuleFallbackService?: boolean;
 	unsafeRegisterWorker?: boolean;
-	hasAssetsAndIsVitest?: boolean;
 	tails?: V4ServiceDesignator[];
 	streamingTails?: V4ServiceDesignator[];
 	stripCfConnectingIp?: boolean;
@@ -839,7 +849,6 @@ export type V4WorkerOptionsShape = {
 			className: string;
 			scriptName?: string;
 			external?: boolean;
-			remoteProxyConnectionString?: RemoteProxyConnectionString;
 			stepLimit?: number;
 		}
 	>;
@@ -936,6 +945,7 @@ export type V4SharedOptions = {
 	unsafeInspectDurableObjects?: boolean;
 	logRequests?: boolean;
 	resourcePersistencePath?: string;
+	isolatedResourcePersistencePath?: string;
 	resourceTmpPath?: string;
 	stripDisablePrettyError?: boolean;
 	telemetry?: { enabled?: boolean; deviceId?: string };

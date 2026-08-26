@@ -238,7 +238,14 @@ describe("createCredentialStorageContext — resolver", () => {
 		}) => {
 			stubPlatform("linux");
 			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "true");
-			setLinuxSecretToolRunner(() => mockResult({ status: 127 }));
+			// `spawnSync` reports a missing executable via `error` with a `null`
+			// status rather than by throwing.
+			setLinuxSecretToolRunner(() => ({
+				...mockResult({ status: null }),
+				error: Object.assign(new Error("spawn secret-tool ENOENT"), {
+					code: "ENOENT",
+				}),
+			}));
 
 			expect(() => resolveStore({ isKeyringEnabled: true })).toThrow(
 				/CLOUDFLARE_AUTH_USE_KEYRING is set but `secret-tool` is required/
@@ -395,6 +402,86 @@ describe("createCredentialStorageContext — resolver", () => {
 			expect(() =>
 				resolveStore({ isKeyringEnabled: true, isNonInteractiveOrCI: false })
 			).toThrow();
+		});
+
+		it("stops retrying when npm exits 0 but the binding is still unloadable", ({
+			expect,
+		}) => {
+			// npm exits 0 when the platform-specific optional package cannot be
+			// fetched, leaving an `index.js` that cannot be required. Unless
+			// that counts as an install failure the session latch never gets
+			// set, so the multi-second install is respawned on every single
+			// credential read and write — and still fails at the end of each.
+			stubPlatform("win32");
+
+			let installCalls = 0;
+			const bindingDir = path.join(
+				getKeyringInstallDir(getGlobalConfigPath()),
+				"node_modules",
+				"@napi-rs",
+				"keyring"
+			);
+			setNpmRunner((args) => {
+				if (args[0] === "install") {
+					installCalls += 1;
+					mkdirSync(bindingDir, { recursive: true });
+					writeFileSync(
+						path.join(bindingDir, "index.js"),
+						'require("./keyring.win32-x64-msvc.node");'
+					);
+					return mockResult({});
+				}
+				return mockResult({ status: 0, stdout: "/nowhere\n" });
+			});
+
+			const { getActiveStore } = createCredentialStorageContext({
+				serviceName: "wrangler",
+				getConfigPath: () => getGlobalConfigPath(),
+				isKeyringEnabled: () => true,
+				logger: silentLogger,
+				isNonInteractiveOrCI: () => false,
+				loginCommand: "wrangler login",
+			});
+			const kinds = [
+				getActiveStore().kind,
+				getActiveStore().kind,
+				getActiveStore().kind,
+			];
+			expect(installCalls).toBe(1);
+			expect(kinds).toEqual(["file", "file", "file"]);
+			expect(warn).toHaveBeenCalledWith(
+				expect.stringContaining("still cannot be loaded")
+			);
+		});
+
+		it("hard-errors when CLOUDFLARE_AUTH_USE_KEYRING=true and the install lands no loadable binding", ({
+			expect,
+		}) => {
+			stubPlatform("win32");
+			vi.stubEnv("CLOUDFLARE_AUTH_USE_KEYRING", "true");
+			const bindingDir = path.join(
+				getKeyringInstallDir(getGlobalConfigPath()),
+				"node_modules",
+				"@napi-rs",
+				"keyring"
+			);
+			setNpmRunner((args) => {
+				if (args[0] === "install") {
+					mkdirSync(bindingDir, { recursive: true });
+					writeFileSync(
+						path.join(bindingDir, "index.js"),
+						'require("./keyring.win32-x64-msvc.node");'
+					);
+					return mockResult({});
+				}
+				return mockResult({ status: 0, stdout: "/nowhere\n" });
+			});
+
+			// Reported verbatim rather than silently downgraded to the
+			// plaintext file, because the user demanded keyring storage.
+			expect(() =>
+				resolveStore({ isKeyringEnabled: true, isNonInteractiveOrCI: false })
+			).toThrow(/still cannot be loaded/);
 		});
 	});
 

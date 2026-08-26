@@ -45,7 +45,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	kv_namespace: "local-and-remote",
 	r2_bucket: "local-and-remote",
 	d1: "local-and-remote",
-	workflow: "local-and-remote",
+	workflow: "local-only",
 	browser: "local-and-remote",
 	images: "local-and-remote",
 	stream: "local-and-remote",

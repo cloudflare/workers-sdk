@@ -20,7 +20,6 @@ import {
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { writeOutput } from "../output";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
@@ -188,32 +187,25 @@ export async function runDeployCommandHandler(
 	try {
 		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 		const preMergeName = getScriptName(args, config);
-		const workerNameOverridden =
+		props.workerNameOverridden =
 			props.name !== undefined && props.name !== preMergeName;
 
 		const beforeUpload = Date.now();
 
 		const buildResult = await buildWorker(buildProps, config);
 
-		const { sourceMapSize, versionId, workerTag, assetUploadStats, targets } =
-			await deploy(props, config, buildResult, {
+		const { sourceMapSize, assetUploadStats } = await deploy(
+			props,
+			config,
+			buildResult,
+			{
 				syncWorkersSite,
 				getNormalizedContainerOptions,
 				buildContainer,
 				deployContainers,
 				analyseBundle,
-			});
-
-		writeOutput({
-			type: "deploy",
-			version: 1,
-			worker_name: props.name ?? null,
-			worker_tag: workerTag,
-			version_id: versionId,
-			targets,
-			wrangler_environment: args.env,
-			worker_name_overridden: workerNameOverridden,
-		});
+			}
+		);
 
 		metrics.sendMetricsEvent(
 			"deploy worker script",

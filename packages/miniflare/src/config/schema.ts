@@ -1,25 +1,26 @@
 import path from "node:path";
 import {
+	AnalyticsEngineDatasetBindingSchema,
 	AssetsSchema as RawAssetsConfigSchema,
 	BrowserBindingSchema,
+	D1BindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
 	DurableObjectExpectingTransferExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
+	FlagshipBindingSchema,
+	HyperdriveBindingSchema,
 	KnownBindingSchema,
+	KVBindingSchema,
 	ModuleTypeSchema,
 	OutputWorkerSchema,
+	QueueBindingSchema,
+	R2BindingSchema,
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
-	D1BindingSchema,
-	FlagshipBindingSchema,
-	KVBindingSchema,
-	QueueBindingSchema,
-	R2BindingSchema,
 	TailConsumerSchema,
-	HyperdriveBindingSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
 import { z } from "zod";
@@ -40,7 +41,6 @@ import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
-import type { S3Credentials } from "../workers/r2/constants";
 import type * as http from "node:http";
 
 const AbsolutePathSchema = z
@@ -179,26 +179,9 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
-/**
- * `s3Credentials` is a local-dev-only field (used to expose the bucket via the
- * S3-compatible endpoint), so it lives here rather than in the shared config
- * schema. The credentials shape is inlined (rather than a named schema) to keep
- * it out of the bundled public API surface; consumers derive the type from the
- * R2 binding via `Extract<MiniflareBinding, { type: "r2" }>`.
- */
-const MiniflareR2BindingSchema = R2BindingSchema.extend({
-	s3Credentials: z
-		// Allow internal source metadata used when checking duplicate credentials.
-		.object({
-			accessKeyId: z.string(),
-			secretAccessKey: z.string(),
-		})
-		.optional() satisfies z.ZodType<S3Credentials | undefined>,
+const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
+	dev: z.strictObject({ connectionString: z.string() }),
 });
-
-const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.omit({
-	localConnectionString: true,
-}).extend({ localConnectionString: z.string() });
 
 /**
  * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
@@ -226,7 +209,6 @@ const MiniflareWorkflowBindingSchema = z.strictObject({
 	workerName: z.string(),
 	exportName: z.string(),
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	remote: z.boolean().optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`
@@ -235,7 +217,6 @@ const MiniflareWorkflowBindingSchema = z.strictObject({
 const OVERRIDDEN_BASE_BINDING_SCHEMAS = [
 	BrowserBindingSchema,
 	WorkerBindingSchema,
-	R2BindingSchema,
 	HyperdriveBindingSchema,
 ] as const;
 
@@ -252,7 +233,6 @@ const PassthroughBindingSchemas = KnownBindingSchema.options.filter(
 
 const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	MiniflareBrowserBindingSchema,
-	MiniflareR2BindingSchema,
 	MiniflareHyperdriveBindingSchema,
 	MiniflareWorkerBindingSchema,
 	FetcherBindingSchema,
@@ -283,11 +263,18 @@ const ParsedMiniflareFlagshipBindingSchema = FlagshipBindingSchema.omit({
 	id: z.string(),
 });
 
-const ParsedMiniflareR2BindingSchema = MiniflareR2BindingSchema.omit({
+const ParsedMiniflareR2BindingSchema = R2BindingSchema.omit({
 	name: true,
 }).extend({
 	name: z.string(),
 });
+
+const ParsedMiniflareAnalyticsEngineDatasetBindingSchema =
+	AnalyticsEngineDatasetBindingSchema.omit({
+		name: true,
+	}).extend({
+		name: z.string(),
+	});
 
 const ParsedMiniflareQueueBindingSchema = QueueBindingSchema.omit({
 	name: true,
@@ -299,7 +286,8 @@ const OVERRIDDEN_PARSED_BINDING_SCHEMAS = [
 	KVBindingSchema,
 	D1BindingSchema,
 	FlagshipBindingSchema,
-	MiniflareR2BindingSchema,
+	R2BindingSchema,
+	AnalyticsEngineDatasetBindingSchema,
 	QueueBindingSchema,
 ] as const;
 
@@ -319,6 +307,7 @@ export const ParsedMiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	ParsedMiniflareD1BindingSchema,
 	ParsedMiniflareFlagshipBindingSchema,
 	ParsedMiniflareR2BindingSchema,
+	ParsedMiniflareAnalyticsEngineDatasetBindingSchema,
 	ParsedMiniflareQueueBindingSchema,
 	...ParsedPassthroughBindingSchemas,
 ]);
@@ -449,6 +438,13 @@ export type MiniflareBinding =
 	| z.output<typeof ParsedMiniflareKnownBindingSchema>
 	| z.output<typeof UnsafeBindingSchema>;
 
+/** Returns whether a parsed Miniflare binding is an unsafe plugin binding. */
+export function isMiniflareUnsafeBinding(
+	binding: MiniflareBinding
+): binding is z.output<typeof UnsafeBindingSchema> {
+	return binding.type.startsWith("unsafe:");
+}
+
 export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	manifest: true,
 	env: true,
@@ -501,6 +497,7 @@ function defaultBindingIdentifiers(
 						{ ...binding, id: binding.id ?? defaultIdentifier },
 					];
 				case "r2":
+				case "analytics-engine-dataset":
 				case "queue":
 					return [
 						bindingName,
@@ -612,7 +609,6 @@ export const DevConfigSchema = z.strictObject({
 	/** Whether this Worker is 'public' - whether should be advertised in the dev registry
 	 * and whether it should be included in local obs capture. Defaults to `true`. */
 	unsafeRegisterWorker: z.boolean().default(true),
-	hasAssetsAndIsVitest: z.boolean().optional(),
 	// TODO(soon): remove in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 	unsafeEphemeralDurableObjects: z.boolean().optional(),
 	// Strip the CF-Connecting-IP header from outbound fetches
@@ -711,10 +707,27 @@ export const InstanceOptionsSchema = z.strictObject({
 	stripDisablePrettyError: z.boolean().default(true),
 
 	// Persistence
-	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
+	/**
+	 * Root directory for persisted local resource state; relative to cwd if not
+	 * absolute. When `unsafeEnableSharedStorage` is set this is canonicalised to
+	 * an absolute real path before use, so every instance sharing the directory
+	 * derives the same ownership scope.
+	 */
 	resourcePersistencePath: z.string().optional(),
+	/**
+	 * Root for resources that cannot participate in shared storage. Belongs at
+	 * the project level -- each project keeps its own copy of this state rather
+	 * than partitioning it under the shared resource root.
+	 *
+	 * Required when `unsafeEnableSharedStorage` is set. Parsing resolves this to
+	 * the effective isolated root, falling back to `resourcePersistencePath`
+	 * when shared storage is off, so readers never need to decide themselves.
+	 */
+	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
+
+	unsafeEnableSharedStorage: z.boolean().optional(),
 
 	containerEngine: z
 		.union([
@@ -779,7 +792,47 @@ export type ParsedLegacyConfig = NonNullable<ParsedWorkerOptions["legacy"]>;
 
 export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 	workers: z.array(WorkerOptionsSchema),
-});
+})
+	.superRefine((options, ctx) => {
+		if (!options.unsafeEnableSharedStorage) {
+			return;
+		}
+		if (!options.resourcePersistencePath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["resourcePersistencePath"],
+				message:
+					"Shared storage requires `resourcePersistencePath` to be set to the directory instances should share.",
+			});
+		}
+		if (!options.isolatedResourcePersistencePath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["isolatedResourcePersistencePath"],
+				message:
+					"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared.",
+			});
+		}
+		if (!options.unsafeDevRegistryPath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["unsafeDevRegistryPath"],
+				message:
+					"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry.",
+			});
+		}
+	})
+	.transform((options) => ({
+		...options,
+		// Resolve the effective isolated root once, here, so that everything
+		// downstream reads a single field that is always the path to persist to.
+		// Without shared storage nothing is shared, so every resource is isolated
+		// and the configured resource root is the isolated root. Validation above
+		// has already required an explicit isolated root when sharing is enabled.
+		isolatedResourcePersistencePath: options.unsafeEnableSharedStorage
+			? options.isolatedResourcePersistencePath
+			: options.resourcePersistencePath,
+	}));
 
 export type MiniflareOptions = z.input<typeof MiniflareOptionsSchema>;
 
@@ -827,14 +880,14 @@ export function getTriggersOfType<T extends string>(
 
 /**
  * Resolves the remote proxy connection string for a binding. A binding is
- * proxied remotely iff `binding.remote === true` _and_
+ * proxied remotely iff `binding.dev.remote === true` _and_
  * `dev.remoteProxyConnectionString` is set (mirroring wrangler's model).
  */
 export function getRemoteProxyConnectionString(
-	binding: { remote?: boolean },
+	binding: { dev?: { remote?: boolean } },
 	dev: ParsedDevConfig | undefined
 ): RemoteProxyConnectionString | undefined {
-	return binding.remote && dev?.remoteProxyConnectionString
+	return binding.dev?.remote && dev?.remoteProxyConnectionString
 		? dev.remoteProxyConnectionString
 		: undefined;
 }

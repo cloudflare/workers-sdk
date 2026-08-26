@@ -161,6 +161,8 @@ export type { Logger, LoggerLevel } from "./logger";
 
 export { isCI, isInteractive, isNonInteractiveOrCI } from "./is-interactive";
 export { openInBrowser } from "./open-in-browser";
+export { clearOutputFilePath, writeOutput } from "./output";
+export type { OutputEntry } from "./output";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";

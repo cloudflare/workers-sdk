@@ -14,13 +14,31 @@ import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
+import { randomUUID } from "node:crypto";
 import type { Log } from "./log";
 import type { FSWatcher } from "chokidar";
 
+export const STORAGE_CANDIDATE_PREFIX = "__miniflare_storage_candidate__-";
+const STORAGE_CANDIDATE_HEARTBEAT_MS = 2_000;
+const STORAGE_CANDIDATE_STALE_MS = 10_000;
+const WORKER_HEARTBEAT_MS = 10_000;
+const WORKER_STALE_MS = 90_000;
+
+export function getStorageCandidateName(instanceId: string): string {
+	return `${STORAGE_CANDIDATE_PREFIX}${instanceId}`;
+}
+
+export function isStorageCandidateName(name: string): boolean {
+	return name.startsWith(STORAGE_CANDIDATE_PREFIX);
+}
+
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
+	private registrationRetries = new Map<string, NodeJS.Timeout>();
 	private registeredWorkers: Set<string> = new Set();
+	private storageCandidateRefresh: NodeJS.Timeout | undefined;
 	private watchQueueConsumers = false;
+	private watchStorageCandidates = false;
 	private externalServices: Map<
 		string,
 		{
@@ -30,11 +48,16 @@ export class DevRegistry {
 	> = new Map();
 	private watcher: FSWatcher | undefined;
 
+	// UUID to let us tell whether a dev registry entry was added by _this_ Miniflare process
+	public instanceId: string;
+
 	constructor(
 		private registryPath: string | undefined,
 		private onUpdate: ((registry: WorkerRegistry) => void) | undefined,
 		private log: Log
-	) {}
+	) {
+		this.instanceId = randomUUID();
+	}
 
 	/**
 	 * Watch files inside the registry directory for changes.
@@ -47,14 +70,27 @@ export class DevRegistry {
 				entrypoints: Set<string | undefined>;
 			}
 		>,
-		watchQueueConsumers = false
+		watchQueueConsumers = false,
+		watchStorageCandidates = false
 	): void {
-		if ((services.size === 0 && !watchQueueConsumers) || !this.registryPath) {
+		if (
+			(services.size === 0 &&
+				!watchQueueConsumers &&
+				!watchStorageCandidates) ||
+			!this.registryPath
+		) {
 			return;
 		}
 
 		this.externalServices = new Map(services);
 		this.watchQueueConsumers = watchQueueConsumers;
+		this.watchStorageCandidates = watchStorageCandidates;
+		if (watchStorageCandidates && this.storageCandidateRefresh === undefined) {
+			this.storageCandidateRefresh = setInterval(
+				() => this.refresh(),
+				STORAGE_CANDIDATE_HEARTBEAT_MS
+			);
+		}
 
 		mkdirSync(this.registryPath, { recursive: true });
 
@@ -82,6 +118,10 @@ export class DevRegistry {
 	 */
 	public dispose(): Promise<void> | undefined {
 		this.unregisterWorkers();
+		if (this.storageCandidateRefresh !== undefined) {
+			clearInterval(this.storageCandidateRefresh);
+			this.storageCandidateRefresh = undefined;
+		}
 
 		// Only this step is async and could be awaited
 		return this.watcher?.close().finally(() => {
@@ -93,6 +133,11 @@ export class DevRegistry {
 	 * Withdraw every entry this instance has registered.
 	 */
 	public unregisterWorkers() {
+		for (const retry of this.registrationRetries.values()) {
+			clearTimeout(retry);
+		}
+		this.registrationRetries.clear();
+
 		for (const worker of this.registeredWorkers) {
 			this.unregister(worker);
 		}
@@ -114,7 +159,11 @@ export class DevRegistry {
 			}
 
 			if (this.registryPath) {
-				unlinkSync(path.join(this.registryPath, name));
+				const definitionPath = path.join(this.registryPath, name);
+				const definition = readDefinition(definitionPath);
+				if (definition?.instanceId === this.instanceId) {
+					unlinkSync(definitionPath);
+				}
 			}
 		} catch (e) {
 			this.log?.debug(`Failed to unregister worker "${name}": ${e}`);
@@ -154,6 +203,10 @@ export class DevRegistry {
 			// Close the existing watcher if it exists.
 			// It will watch the new path if there is any dependent services in a later step
 			await this.watcher?.close();
+			if (this.storageCandidateRefresh !== undefined) {
+				clearInterval(this.storageCandidateRefresh);
+				this.storageCandidateRefresh = undefined;
+			}
 
 			this.watcher = undefined;
 			this.registryPath = registryPath;
@@ -167,6 +220,10 @@ export class DevRegistry {
 
 		// Make sure the registry path exists
 		mkdirSync(this.registryPath, { recursive: true });
+		for (const retry of this.registrationRetries.values()) {
+			clearTimeout(retry);
+		}
+		this.registrationRetries.clear();
 
 		// Drop the entries for Workers this instance no longer has. Workers that
 		// remain are overwritten in place below instead of being deleted and
@@ -183,24 +240,102 @@ export class DevRegistry {
 		}
 
 		for (const [name, definition] of Object.entries(workers)) {
-			const definitionPath = path.join(this.registryPath, name);
-			const existingHeartbeat = this.heartbeats.get(name);
-			if (existingHeartbeat) {
-				clearInterval(existingHeartbeat);
-			}
-
-			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
-			this.registeredWorkers.add(name);
-			this.heartbeats.set(
-				name,
-				setInterval(() => {
-					if (existsSync(definitionPath)) {
-						utimesSync(definitionPath, new Date(), new Date());
-					}
-				}, 30_000)
-			);
+			this.registerWorker(name, definition);
 		}
 		this.refresh();
+	}
+
+	private writeWorkerDefinition(
+		definitionPath: string,
+		definition: WorkerDefinition
+	): void {
+		writeFileSync(
+			definitionPath,
+			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
+		);
+	}
+
+	private registerWorker(name: string, definition: WorkerDefinition): void {
+		assert(this.registryPath);
+		const definitionPath = path.join(this.registryPath, name);
+
+		const stats = statSync(definitionPath, { throwIfNoEntry: false });
+
+		const oldDefinition = stats ? readDefinition(definitionPath) : undefined;
+		const staleMs = isStorageCandidateName(name)
+			? STORAGE_CANDIDATE_STALE_MS
+			: WORKER_STALE_MS;
+		if (stats && stats.mtime.getTime() < Date.now() - staleMs) {
+			try {
+				unlinkSync(definitionPath);
+			} catch {}
+		} else if (stats && oldDefinition?.instanceId !== this.instanceId) {
+			// Debug rather than warn: a non-graceful exit leaves an entry behind, so
+			// this fires routinely on restart. Registration is rescheduled for when
+			// that entry expires, and keeps retrying while another process holds the
+			// name.
+			this.log.debug(
+				`Skipping registration of Worker ${name} as a Worker with this name is already registered in the dev registry by another process`
+			);
+			const retryDelay = Math.max(
+				1,
+				stats.mtime.getTime() + staleMs - Date.now()
+			);
+			this.registrationRetries.set(
+				name,
+				setTimeout(() => {
+					this.registrationRetries.delete(name);
+					this.registerWorker(name, definition);
+					this.refresh();
+				}, retryDelay)
+			);
+			return;
+		}
+
+		const retry = this.registrationRetries.get(name);
+		if (retry !== undefined) {
+			clearTimeout(retry);
+			this.registrationRetries.delete(name);
+		}
+
+		const existingHeartbeat = this.heartbeats.get(name);
+		if (existingHeartbeat) {
+			clearInterval(existingHeartbeat);
+		}
+
+		this.writeWorkerDefinition(definitionPath, definition);
+		this.registeredWorkers.add(name);
+		this.heartbeats.set(
+			name,
+			setInterval(
+				() => {
+					if (!existsSync(definitionPath)) {
+						// Stale cleanup may remove a live Worker's entry after system sleep.
+						// Recreate it so peers can discover this Worker again.
+						try {
+							this.writeWorkerDefinition(definitionPath, definition);
+						} catch (e) {
+							this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
+						}
+						return;
+					}
+
+					const currentDefinition = readDefinition(definitionPath);
+					if (currentDefinition?.instanceId === this.instanceId) {
+						utimesSync(definitionPath, new Date(), new Date());
+					} else {
+						const heartbeat = this.heartbeats.get(name);
+						if (heartbeat !== undefined) {
+							clearInterval(heartbeat);
+							this.heartbeats.delete(name);
+						}
+					}
+				},
+				isStorageCandidateName(name)
+					? STORAGE_CANDIDATE_HEARTBEAT_MS
+					: WORKER_HEARTBEAT_MS
+			)
+		);
 	}
 
 	private previousJSON = "{}";
@@ -228,6 +363,14 @@ export class DevRegistry {
 			this.onUpdate(registry);
 			return;
 		}
+		if (
+			this.watchStorageCandidates &&
+			getStorageCandidatesView(registry) !==
+				getStorageCandidatesView(previousRegistry)
+		) {
+			this.onUpdate(registry);
+			return;
+		}
 		for (const [service] of this.externalServices) {
 			if (
 				JSON.stringify(registry[service]) !==
@@ -238,6 +381,23 @@ export class DevRegistry {
 			}
 		}
 	}
+}
+
+function getStorageCandidatesView(registry: WorkerRegistry): string {
+	return JSON.stringify(
+		Object.entries(registry)
+			.filter(([name]) => isStorageCandidateName(name))
+			.map(([name, definition]) => [
+				name,
+				definition.instanceId,
+				definition.debugPortAddress,
+				definition.storageScope,
+				definition.created,
+			])
+			.sort(([previousName], [nextName]) =>
+				String(previousName).localeCompare(String(nextName))
+			)
+	);
 }
 
 /**
@@ -266,7 +426,7 @@ function getQueueConsumersView(registry: WorkerRegistry): string {
 /**
  * Read the worker registry from the specified path.
  *
- * Skips stale workers that haven't sent a heartbeat in over 5 minutes,
+ * Skips stale workers that haven't sent a heartbeat within their stale window,
  * and removes their files from disk.
  */
 export function getWorkerRegistry(registryPath: string): WorkerRegistry {
@@ -281,25 +441,47 @@ export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 			const definitionPath = path.join(registryPath, workerName);
 			const stats = statSync(definitionPath, { throwIfNoEntry: false });
 
-			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
-			if (stats === undefined || stats.mtime.getTime() < Date.now() - 300_000) {
+			if (stats === undefined) {
+				continue;
+			}
+			const definition = readDefinition(definitionPath);
+			if (definition === undefined) {
+				continue;
+			}
+			const staleMs = isStorageCandidateName(workerName)
+				? STORAGE_CANDIDATE_STALE_MS
+				: WORKER_STALE_MS;
+			if (stats.mtime.getTime() < Date.now() - staleMs) {
 				try {
 					unlinkSync(definitionPath);
 				} catch {}
 				continue;
 			}
 
-			const file = readFileSync(definitionPath, {
-				encoding: "utf8",
-				flag: "r",
-			});
-			registry[workerName] = JSON.parse(file);
+			registry[workerName] = {
+				...definition,
+				created: stats.birthtimeMs,
+			};
 		} catch {
 			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel process
 		}
 	}
 
 	return registry;
+}
+
+function readDefinition(
+	definitionPath: string
+): (WorkerDefinition & { instanceId?: string }) | undefined {
+	try {
+		const value: unknown = JSON.parse(
+			readFileSync(definitionPath, { encoding: "utf8", flag: "r" })
+		);
+		if (typeof value === "object" && value !== null) {
+			return value as WorkerDefinition & { instanceId?: string };
+		}
+	} catch {}
+	return undefined;
 }
 
 /**

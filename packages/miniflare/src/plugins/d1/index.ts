@@ -8,6 +8,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageService,
 	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -36,7 +37,7 @@ const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 
 export const D1_PLUGIN: Plugin = {
 	bindingTypeDescription: "D1 database",
-	getBindings(options) {
+	getBindings(options, sharedOptions) {
 		return getEnvBindingsOfType(options.config, "d1").map<Worker_Binding>(
 			([name, binding]) => {
 				const id = binding.id;
@@ -52,10 +53,11 @@ export const D1_PLUGIN: Plugin = {
 							name: D1_REMOTE_SERVICE_NAME,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 						}
-					: {
-							name: D1_LOCAL_ENTRY_SERVICE_NAME,
-							props: buildObjectEntryProps(id),
-						};
+					: getStorageService(
+							D1_LOCAL_ENTRY_SERVICE_NAME,
+							buildObjectEntryProps(id),
+							sharedOptions
+						);
 
 				return {
 					name,
@@ -86,9 +88,11 @@ export const D1_PLUGIN: Plugin = {
 		const services: Service[] = [];
 
 		// One shared entry service for all local databases (id supplied via props).
-		const hasLocal = databases.some(
-			([, db]) => getRemoteProxyConnectionString(db, options.dev) === undefined
-		);
+		const hasLocal =
+			databases.some(
+				([, db]) =>
+					getRemoteProxyConnectionString(db, options.dev) === undefined
+			) || sharedOptions.unsafeEnableSharedStorage;
 		if (hasLocal) {
 			services.push({
 				name: D1_LOCAL_ENTRY_SERVICE_NAME,
@@ -155,7 +159,6 @@ export const D1_PLUGIN: Plugin = {
 			};
 			services.push(storageService, objectService);
 		}
-
 		return services;
 	},
 };

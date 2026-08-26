@@ -44,6 +44,29 @@ describe("types", () => {
 		expect(output.stdout).toContain("📖 Read about runtime types");
 	});
 
+	it("should not generate Node.js globals when nodejs_compat is enabled by the compatibility date", async ({
+		expect,
+	}) => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			...seed,
+			"wrangler.toml": dedent`
+				name = "test-worker"
+				main = "src/index.ts"
+				compatibility_date = "2026-08-04"
+			`,
+		});
+
+		await helper.run("wrangler types");
+
+		const file = readFileSync(
+			path.join(helper.tmpPath, "worker-configuration.d.ts"),
+			"utf8"
+		);
+		expect(file).not.toMatch(/^declare (?:const|let|var) Buffer\b/m);
+		expect(file).not.toMatch(/^declare (?:const|let|var) process\b/m);
+	});
+
 	it("should generate runtime types and env types in one file at the default path", async ({
 		expect,
 	}) => {

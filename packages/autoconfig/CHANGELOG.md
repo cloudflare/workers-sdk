@@ -1,5 +1,34 @@
 # @cloudflare/autoconfig
 
+## 0.3.0
+
+### Minor Changes
+
+- [#15246](https://github.com/cloudflare/workers-sdk/pull/15246) [`daefb3c`](https://github.com/cloudflare/workers-sdk/commit/daefb3cc0f0b884b8ce82b22ed9b67a9c43919be) Thanks [@edmundhung](https://github.com/edmundhung)! - Prepare autoconfig for multiple configuration targets
+
+  Add target-specific configuration output and command detection while preserving Wrangler's existing setup and deployment behavior.
+
+### Patch Changes
+
+- Updated dependencies [[`ead8f69`](https://github.com/cloudflare/workers-sdk/commit/ead8f69e85efa758dd066b4d1cfc2fec406939dd), [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a), [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a), [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c), [`7f66836`](https://github.com/cloudflare/workers-sdk/commit/7f668362bd5675afb95c1cb5128fad6aa092a430), [`acb14d0`](https://github.com/cloudflare/workers-sdk/commit/acb14d01d64f21f0f21c247da7c2fcb0557ebb3d)]:
+  - @cloudflare/config@0.8.0
+
+## 0.2.9
+
+### Patch Changes
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a), [`5c10e39`](https://github.com/cloudflare/workers-sdk/commit/5c10e398979c0a054f58dcf2751012cc99e977d2), [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b)]:
+  - @cloudflare/workers-utils@0.34.0
+  - @cloudflare/cli-shared-helpers@0.1.25
+
+## 0.2.8
+
+### Patch Changes
+
+- Updated dependencies [[`fb6b51b`](https://github.com/cloudflare/workers-sdk/commit/fb6b51b87bf73edca9866bdf2d0810d7bf491108), [`1b73c87`](https://github.com/cloudflare/workers-sdk/commit/1b73c879c168dcc78b0f2657d04bc784b8af7da3)]:
+  - @cloudflare/workers-utils@0.33.1
+  - @cloudflare/cli-shared-helpers@0.1.24
+
 ## 0.2.7
 
 ### Patch Changes

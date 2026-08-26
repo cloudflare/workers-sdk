@@ -1,5 +1,13 @@
 # edge-preview-authenticated-proxy
 
+## 0.3.3
+
+### Patch Changes
+
+- [#15224](https://github.com/cloudflare/workers-sdk/pull/15224) [`32782e4`](https://github.com/cloudflare/workers-sdk/commit/32782e45b4a49762d702df4e4fa1cad620430962) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix missing request and error metrics for the edge preview proxy
+
+  The proxy stopped reporting its request and error counters, so dashboards and alerts based on them had no data. Metrics reporting now works again.
+
 ## 0.3.2
 
 ### Patch Changes

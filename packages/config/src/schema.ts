@@ -1,5 +1,10 @@
 import * as z from "zod";
+import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { SettingsConfig, WorkerConfig } from "./types";
+
+const RemoteBindingDevSchema = z.strictObject({
+	remote: z.boolean().optional(),
+});
 
 export const AssetsSchema = z.strictObject({
 	htmlHandling: z
@@ -18,7 +23,7 @@ export const AssetsSchema = z.strictObject({
 
 export const BrowserBindingSchema = z.strictObject({
 	type: z.literal("browser"),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const WorkerBindingSchema = z.strictObject({
@@ -26,14 +31,14 @@ export const WorkerBindingSchema = z.strictObject({
 	workerName: z.string(),
 	exportName: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const D1BindingSchema = z.strictObject({
 	type: z.literal("d1"),
 	name: z.string().optional(),
 	id: z.string().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const KVBindingSchema = z.strictObject({
@@ -41,60 +46,73 @@ export const KVBindingSchema = z.strictObject({
 	id: z.string().optional(),
 	// TODO: name support not yet implemented
 	// name: z.string().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const QueueBindingSchema = z.strictObject({
 	type: z.literal("queue"),
 	name: z.string().optional(),
 	deliveryDelay: z.number().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const R2BindingSchema = z.strictObject({
 	type: z.literal("r2"),
 	name: z.string().optional(),
 	jurisdiction: z.string().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.extend({
+		experimentalS3Credentials: z
+			// AWS SDK may add additional keys as internal metadata like `$source`.
+			.object({
+				accessKeyId: z.string(),
+				secretAccessKey: z.string(),
+			})
+			.optional(),
+	}).optional(),
+});
+
+export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
+	type: z.literal("analytics-engine-dataset"),
+	name: z.string().optional(),
 });
 
 export const FlagshipBindingSchema = z.strictObject({
 	type: z.literal("flagship"),
 	id: z.string().optional(),
-	remote: z.boolean().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
-	localConnectionString: z.string().optional(),
+	dev: z.strictObject({ connectionString: z.string().optional() }).optional(),
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
-	z.strictObject({ type: z.literal("ai"), remote: z.boolean().optional() }),
+	z.strictObject({
+		type: z.literal("ai"),
+		dev: RemoteBindingDevSchema.optional(),
+	}),
 	z.strictObject({
 		type: z.literal("ai-search"),
 		name: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("ai-search-namespace"),
 		namespace: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
-	z.strictObject({
-		type: z.literal("analytics-engine-dataset"),
-		name: z.string().optional(),
-	}),
+	AnalyticsEngineDatasetBindingSchema,
 	z.strictObject({
 		type: z.literal("artifacts"),
 		namespace: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("assets") }),
 	BrowserBindingSchema,
@@ -108,7 +126,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				parameters: z.array(z.string()).optional(),
 			})
 			.optional(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("durable-object"),
@@ -119,24 +137,24 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	HyperdriveBindingSchema,
 	z.strictObject({
 		type: z.literal("images"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("json"), value: z.json() }),
 	KVBindingSchema,
 	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
 	z.strictObject({
 		type: z.literal("media"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("mtls-certificate"),
 		id: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({
 		type: z.literal("pipeline"),
 		name: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	QueueBindingSchema,
 	z.strictObject({
@@ -154,51 +172,64 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		storeId: z.string(),
 		secretName: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("send-email"),
-		destinationAddress: z.string().optional(),
-		allowedDestinationAddresses: z.array(z.string()).optional(),
-		allowedSenderAddresses: z.array(z.string()).optional(),
-		remote: z.boolean().optional(),
-	}),
+	z
+		.strictObject({
+			type: z.literal("send-email"),
+			destinationAddress: z.string().optional(),
+			allowedDestinationAddresses: z.array(z.string()).optional(),
+			allowedSenderAddresses: z.array(z.string()).optional(),
+			dev: RemoteBindingDevSchema.optional(),
+		})
+		.refine(
+			(value): value is SendEmailBinding =>
+				value.destinationAddress === undefined ||
+				value.allowedDestinationAddresses === undefined,
+			{
+				message:
+					'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"',
+			}
+		),
 	z.strictObject({
 		type: z.literal("stream"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("text"), value: z.string() }),
 	z.strictObject({
 		type: z.literal("vectorize"),
 		name: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("version-metadata") }),
 	z.strictObject({
 		type: z.literal("vpc-service"),
 		id: z.string(),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z
 		.strictObject({
 			type: z.literal("vpc-network"),
 			tunnelId: z.string().optional(),
 			networkId: z.string().optional(),
-			remote: z.boolean().optional(),
+			dev: RemoteBindingDevSchema.optional(),
 		})
-		.superRefine((value, ctx) => {
-			const hasTunnel = value.tunnelId !== undefined;
-			const hasNetwork = value.networkId !== undefined;
-			if (hasTunnel === hasNetwork) {
-				ctx.addIssue({
-					code: "custom",
-					message: hasTunnel
+		.refine(
+			(value): value is VpcNetworkBinding =>
+				(value.tunnelId !== undefined) !== (value.networkId !== undefined),
+			{
+				error: ({ input }) => {
+					const value = input as {
+						tunnelId?: string;
+						networkId?: string;
+					};
+					return value.tunnelId !== undefined && value.networkId !== undefined
 						? `"vpc-network" bindings must specify exactly one of "tunnelId" or "networkId", not both`
-						: `"vpc-network" bindings must specify either "tunnelId" or "networkId"`,
-				});
+						: `"vpc-network" bindings must specify either "tunnelId" or "networkId"`;
+				},
 			}
-		}),
+		),
 	z.strictObject({
 		type: z.literal("web-search"),
-		remote: z.boolean().optional(),
+		dev: RemoteBindingDevSchema.optional(),
 	}),
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
@@ -207,7 +238,6 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	// 	type: z.literal("workflow"),
 	// 	workerName: z.string(),
 	// 	exportName: z.string(),
-	// 	remote: z.boolean().optional(),
 	// }),
 ]);
 
@@ -464,6 +494,12 @@ const TriggerSchema = z.discriminatedUnion("type", [
 		type: z.literal("scheduled"),
 		schedule: z.string(),
 	}),
+	z.strictObject({
+		type: z.literal("connect"),
+		protocol: z.enum(["tcp"]),
+		port: z.number(),
+		address: z.string().optional(),
+	}),
 ]);
 
 const UnsafeSchema = z.strictObject({
@@ -526,40 +562,52 @@ export const InputWorkerSchema = BaseWorkerSchema.extend({
 export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
 
 /**
- * Settings schema — validates the named `settings` export of a
+ * Input settings schema — validates the named `settings` export of a
  * `cloudflare.config.ts`. Holds account/deployment settings shared by the other exports.
  */
-export const SettingsSchema = z.strictObject({
+export const InputSettingsSchema = z.strictObject({
 	type: z.literal("settings"),
 	accountId: z.string().optional(),
 	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
 });
 
-export type ParsedSettingsConfig = z.output<typeof SettingsSchema>;
+export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
 
 /**
- * Discriminated union of the config kinds a single export may resolve to.
+ * Output settings schema — the shape of the top-level `config.json` in the
+ * Build Output Specification. Adds the `mode` the build was produced in.
  */
-const ConfigExportSchema = z.discriminatedUnion("type", [
-	InputWorkerSchema,
-	SettingsSchema,
-]);
+export const OutputSettingsSchema = InputSettingsSchema.extend({
+	mode: z.string().optional(),
+});
+
+export type ParsedOutputSettingsConfig = z.output<typeof OutputSettingsSchema>;
 
 const SETTINGS_EXPORT_NAME = "settings";
+const SUPPORTED_EXPORT_TYPES = new Set(["worker", "settings"]);
 
-/**
- * Schema for the resolved config exports, keyed by export
- * name. Each value is discriminated on its `type` field. Reserves the
- * `settings` export name exclusively for settings configs: a `settings`
- * config must live on the `settings` export, and the `settings` export
- * may only hold a `settings` config.
- */
-export const ConfigExportsSchema = z
-	.record(z.string(), ConfigExportSchema)
+function invalidConfigExportMessage(exportName: string): string {
+	return `The \`${exportName}\` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.`;
+}
+
+const ConfigExportsTypeSchema = z
+	.record(z.string(), z.unknown())
 	.check((ctx) => {
 		for (const [key, value] of Object.entries(ctx.value)) {
+			const isObject = typeof value === "object" && value !== null;
+			const type = isObject && "type" in value ? value.type : undefined;
+			if (typeof type !== "string" || !SUPPORTED_EXPORT_TYPES.has(type)) {
+				ctx.issues.push({
+					code: "custom",
+					input: value,
+					path: isObject ? [key, "type"] : [key],
+					message: invalidConfigExportMessage(key),
+				});
+				continue;
+			}
+
 			const isSettingsName = key === SETTINGS_EXPORT_NAME;
-			const isSettingsType = value.type === "settings";
+			const isSettingsType = type === "settings";
 			if (isSettingsType && !isSettingsName) {
 				ctx.issues.push({
 					code: "custom",
@@ -572,11 +620,28 @@ export const ConfigExportsSchema = z
 					code: "custom",
 					input: value,
 					path: [key],
-					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${value.type}\` config.`,
+					message: `The \`${SETTINGS_EXPORT_NAME}\` export is reserved for a \`settings\` config; found a \`${type}\` config.`,
 				});
 			}
 		}
 	});
+
+const ConfigExportsObjectSchema = z
+	.object({
+		settings: InputSettingsSchema.optional(),
+	})
+	.catchall(InputWorkerSchema);
+
+/**
+ * Schema for the resolved config exports, keyed by export
+ * name. Each value is discriminated on its `type` field. Reserves the
+ * `settings` export name exclusively for settings configs: a `settings`
+ * config must live on the `settings` export, and the `settings` export
+ * may only hold a `settings` config.
+ */
+export const ConfigExportsSchema = ConfigExportsTypeSchema.pipe(
+	ConfigExportsObjectSchema
+);
 
 export type ParsedConfigExports = z.output<typeof ConfigExportsSchema>;
 
@@ -637,36 +702,37 @@ const _assertSchemaMatchesWorkerConfig: _AssertSchemaMatchesWorkerConfig = [
 void _assertSchemaMatchesWorkerConfig;
 
 /**
- * Unidirectional drift check for `env`. The public binding return types
- * (e.g. `AiBinding`) carry phantom `__typeParams` / `__config` fields for
- * inference helpers that the schema does not (and cannot) validate at
- * runtime, so a bidirectional check would always fail in that direction.
+ * Drift checks between the schema and public `env` types. Schema input is
+ * intentionally broader for bindings with cross-field validation, so only
+ * assert that every public binding is accepted as input. After parsing, the
+ * schema output and public types should match bidirectionally.
  *
- * We therefore only assert that `WorkerConfig['env']` is assignable to
- * `z.input<typeof InputWorkerSchema>['env']` — i.e. every binding shape
- * the public type accepts is something the schema is willing to parse.
- * This catches drift where the public type drops a field the schema
- * still requires, renames a field, changes a field's type to one the
- * schema rejects, or adds a binding the schema doesn't know about.
+ * These checks catch fields or bindings that are missing, renamed, or typed
+ * differently between the public definitions and the schema.
  */
-type _AssertWorkerConfigEnvExtendsSchema = WorkerConfig["env"] extends z.input<
-	typeof InputWorkerSchema
->["env"]
-	? true
-	: false;
-const _assertWorkerConfigEnvExtendsSchema: _AssertWorkerConfigEnvExtendsSchema = true;
-void _assertWorkerConfigEnvExtendsSchema;
+type _AssertSchemaEnvMatchesWorkerConfig = [
+	WorkerConfig["env"] extends z.input<typeof InputWorkerSchema>["env"]
+		? true
+		: false,
+	z.output<typeof InputWorkerSchema>["env"] extends WorkerConfig["env"]
+		? true
+		: false,
+	WorkerConfig["env"] extends z.output<typeof InputWorkerSchema>["env"]
+		? true
+		: false,
+];
+const _assertSchemaEnvMatchesWorkerConfig: _AssertSchemaEnvMatchesWorkerConfig =
+	[true, true, true];
+void _assertSchemaEnvMatchesWorkerConfig;
 
 /**
- * Bidirectional drift check between {@link SettingsSchema} and the public
+ * Bidirectional drift check between {@link InputSettingsSchema} and the public
  * {@link SettingsConfig} interface.
  */
-type _AssertSettingsSchemaMatchesConfig = [
-	z.input<typeof SettingsSchema> extends SettingsConfig ? true : false,
-	SettingsConfig extends z.input<typeof SettingsSchema> ? true : false,
+type _AssertInputSettingsSchemaMatchesConfig = [
+	z.input<typeof InputSettingsSchema> extends SettingsConfig ? true : false,
+	SettingsConfig extends z.input<typeof InputSettingsSchema> ? true : false,
 ];
-const _assertSettingsSchemaMatchesConfig: _AssertSettingsSchemaMatchesConfig = [
-	true,
-	true,
-];
-void _assertSettingsSchemaMatchesConfig;
+const _assertInputSettingsSchemaMatchesConfig: _AssertInputSettingsSchemaMatchesConfig =
+	[true, true];
+void _assertInputSettingsSchemaMatchesConfig;

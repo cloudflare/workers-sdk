@@ -1,5 +1,6 @@
 import { describe, test, vi } from "vitest";
 import {
+	MiniflareOptionsSchema,
 	MiniflareWorkerConfigSchema,
 	WorkerOptionsSchema,
 } from "../../src/config/schema";
@@ -91,6 +92,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 				DB: { type: "d1" },
 				FLAGS: { type: "flagship" },
 				BUCKET: { type: "r2" },
+				AE: { type: "analytics-engine-dataset" },
 				QUEUE: { type: "queue" },
 			},
 		});
@@ -100,6 +102,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 			DB: { type: "d1", id: "DB-api" },
 			FLAGS: { type: "flagship", id: "FLAGS-api" },
 			BUCKET: { type: "r2", name: "BUCKET-api" },
+			AE: { type: "analytics-engine-dataset", name: "AE-api" },
 			QUEUE: { type: "queue", name: "QUEUE-api" },
 		});
 	});
@@ -170,6 +173,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 				DB: { type: "d1", id: "custom-db" },
 				FLAGS: { type: "flagship", id: "custom-flags" },
 				BUCKET: { type: "r2", name: "custom-bucket" },
+				AE: { type: "analytics-engine-dataset", name: "custom-dataset" },
 				QUEUE: { type: "queue", name: "custom-queue" },
 			},
 		});
@@ -179,17 +183,18 @@ describe("MiniflareWorkerConfigSchema", () => {
 			DB: { type: "d1", id: "custom-db" },
 			FLAGS: { type: "flagship", id: "custom-flags" },
 			BUCKET: { type: "r2", name: "custom-bucket" },
+			AE: { type: "analytics-engine-dataset", name: "custom-dataset" },
 			QUEUE: { type: "queue", name: "custom-queue" },
 		});
 	});
 
-	test("requires Hyperdrive localConnectionString", ({ expect }) => {
+	test("requires Hyperdrive dev.connectionString", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
 			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
-				HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive" },
+				HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive", dev: {} },
 			},
 		});
 
@@ -197,7 +202,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 		if (!result.success) {
 			expect(result.error.issues).toEqual([
 				expect.objectContaining({
-					path: ["env", "HYPERDRIVE", "localConnectionString"],
+					path: ["env", "HYPERDRIVE", "dev", "connectionString"],
 					message: "Invalid input: expected string, received undefined",
 				}),
 			]);
@@ -212,16 +217,47 @@ describe("MiniflareWorkerConfigSchema", () => {
 					HYPERDRIVE: {
 						type: "hyperdrive",
 						id: "hyperdrive",
-						localConnectionString:
-							"postgres://user:password@localhost:5432/database",
+						dev: {
+							connectionString:
+								"postgres://user:password@localhost:5432/database",
+						},
 					},
 				},
 			}).env?.HYPERDRIVE
 		).toEqual({
 			type: "hyperdrive",
 			id: "hyperdrive",
-			localConnectionString: "postgres://user:password@localhost:5432/database",
+			dev: {
+				connectionString: "postgres://user:password@localhost:5432/database",
+			},
 		});
+	});
+
+	test("rejects dev options on Workflow bindings", ({ expect }) => {
+		const result = MiniflareWorkerConfigSchema.safeParse({
+			type: "worker",
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			env: {
+				WORKFLOW: {
+					type: "workflow",
+					name: "workflow",
+					workerName: "api",
+					exportName: "Workflow",
+					dev: { remote: true },
+				},
+			},
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toEqual([
+				expect.objectContaining({
+					path: ["env", "WORKFLOW"],
+					message: 'Unrecognized key: "dev"',
+				}),
+			]);
+		}
 	});
 
 	test("strips tombstoned durable object exports", ({ expect }) => {
@@ -262,5 +298,51 @@ describe("MiniflareWorkerConfigSchema", () => {
 			},
 			Entrypoint: { type: "worker" },
 		});
+	});
+});
+
+describe("MiniflareOptionsSchema", () => {
+	const worker = {
+		config: {
+			type: "worker" as const,
+			name: "worker",
+			compatibilityDate: "2025-01-01",
+		},
+	};
+
+	test("resolves the isolated root to the resource root without shared storage", ({
+		expect,
+	}) => {
+		const parsed = MiniflareOptionsSchema.parse({
+			resourcePersistencePath: "/state",
+			workers: [worker],
+		});
+
+		// Nothing is shared, so every resource is isolated and belongs under the
+		// configured resource root. Readers must not have to work this out.
+		expect(parsed.isolatedResourcePersistencePath).toBe("/state");
+	});
+
+	test("keeps an explicit isolated root when shared storage is enabled", ({
+		expect,
+	}) => {
+		const parsed = MiniflareOptionsSchema.parse({
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: "/shared",
+			isolatedResourcePersistencePath: "/isolated",
+			unsafeDevRegistryPath: "/registry",
+			workers: [worker],
+		});
+
+		expect(parsed.resourcePersistencePath).toBe("/shared");
+		expect(parsed.isolatedResourcePersistencePath).toBe("/isolated");
+	});
+
+	test("leaves the isolated root unset when nothing is persisted", ({
+		expect,
+	}) => {
+		const parsed = MiniflareOptionsSchema.parse({ workers: [worker] });
+
+		expect(parsed.isolatedResourcePersistencePath).toBeUndefined();
 	});
 });

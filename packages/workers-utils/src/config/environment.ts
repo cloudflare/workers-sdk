@@ -873,8 +873,6 @@ export type WorkflowBinding = {
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */
 	script_name?: string;
-	/** Whether the Workflow should be remote or not in local development */
-	remote?: boolean;
 	/** Optional limits for the Workflow */
 	limits?: {
 		/** Maximum number of steps a Workflow instance can execute */
@@ -882,6 +880,17 @@ export type WorkflowBinding = {
 	};
 	/** Optional cron schedule(s) for automatically triggering workflow instances */
 	schedules?: string | string[];
+	/**
+	 * Optional default retention for instances of this Workflow, applied when an instance does not
+	 * set its own retention. Accepts milliseconds or a duration string such as `"3 days"`, and is
+	 * validated by the Workflows API at deploy time.
+	 */
+	default_retention?: {
+		/** How long to retain instances that completed successfully or were terminated */
+		success_retention?: number | string;
+		/** How long to retain errored instances */
+		error_retention?: number | string;
+	};
 };
 
 /**
@@ -1093,6 +1102,29 @@ export interface EnvironmentNonInheritable {
 			retry_delay?: number;
 		}[];
 	};
+
+	/**
+	 * Specifies raw sockets that this Worker should listen on.
+	 * Each entry opens a listening socket on the
+	 * given port that delivers incoming connections directly to the Worker's
+	 * `connect(socket, env, ctx)` handler.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	connect: {
+		/** The transport protocol to listen for. */
+		protocol: "tcp";
+
+		/** The port to listen on. */
+		port: number;
+
+		/** The address to bind to. Defaults to `127.0.0.1`. */
+		address?: string;
+	}[];
 
 	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.

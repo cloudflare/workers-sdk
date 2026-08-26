@@ -29,11 +29,10 @@ import { MiniflareCoreError, type Log } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { getCacheServiceName } from "../cache";
-import {
-	DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
-	getDurableObjectUniqueKey,
-} from "../do";
-import { IMAGES_PLUGIN_NAME } from "../images";
+import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import { getDurableObjectNamespaces } from "../do/namespaces";
+import { getEmailStoreServices } from "../email/store";
+import { getImagesBindingServiceName } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
@@ -42,7 +41,6 @@ import {
 } from "../r2";
 import {
 	buildRemoteProxyProps,
-	getUserBindingServiceName,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -54,10 +52,11 @@ import {
 	getExportsOfType,
 	getRemoteProxyConnectionString,
 } from "../shared";
-import { STREAM_PLUGIN_NAME } from "../stream";
+import { getStreamService } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	EMAIL_STORE_SERVICE_NAME,
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
@@ -86,7 +85,6 @@ import type {
 	ServiceDesignator,
 	Worker_Binding,
 	Worker_ContainerEngine,
-	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "../../runtime";
 import type { Awaitable } from "../../workers";
@@ -363,7 +361,7 @@ function getServiceBindings(
 }
 
 export const CORE_PLUGIN: Plugin = {
-	getBindings(options, workerIndex) {
+	getBindings(options, _sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
@@ -483,6 +481,7 @@ export const CORE_PLUGIN: Plugin = {
 		workerBindings,
 		workerIndex,
 		durableObjectClassNames,
+		containerPrivilegesCache,
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
@@ -523,6 +522,14 @@ export const CORE_PLUGIN: Plugin = {
 		const serviceName = getUserServiceName(config.name);
 		const classNames = durableObjectClassNames.get(serviceName);
 		const classNamesEntries = Array.from(classNames ?? []);
+		const containerEngine = getContainerEngine(sharedOptions.containerEngine);
+		containerPrivilegesCache.setEngine(containerEngine);
+		const hasContainers = classNamesEntries.some(
+			([, { container }]) => container !== undefined
+		);
+		const containerPrivileges = hasContainers
+			? await containerPrivilegesCache.get(containerEngine)
+			: undefined;
 
 		// Wrap Durable Object classes for the local explorer
 		// This injects a method onto user defined DO classes to allow
@@ -604,40 +611,11 @@ export const CORE_PLUGIN: Plugin = {
 				compatibilityDate,
 				compatibilityFlags,
 				bindings: workerBindings,
-				durableObjectNamespaces:
-					classNamesEntries.map<Worker_DurableObjectNamespace>(
-						([
-							className,
-							{
-								enableSql,
-								unsafeUniqueKey,
-								unsafePreventEviction: preventEviction,
-								container,
-							},
-						]) => {
-							const uniqueKey = getDurableObjectUniqueKey(
-								className,
-								config.name,
-								unsafeUniqueKey
-							);
-
-							return uniqueKey === undefined
-								? {
-										className,
-										enableSql,
-										ephemeralLocal: kVoid,
-										preventEviction,
-										container,
-									}
-								: {
-										className,
-										enableSql,
-										uniqueKey,
-										preventEviction,
-										container,
-									};
-						}
-					),
+				durableObjectNamespaces: getDurableObjectNamespaces(
+					classNames,
+					config.name,
+					containerPrivileges
+				),
 				durableObjectStorage:
 					classNamesEntries.length === 0
 						? undefined
@@ -657,7 +635,7 @@ export const CORE_PLUGIN: Plugin = {
 				streamingTails: tailConsumers
 					.filter((consumer) => consumer.streaming)
 					.map<ServiceDesignator>(getTailServiceDesignator),
-				containerEngine: getContainerEngine(sharedOptions.containerEngine),
+				containerEngine,
 				...(dev?.access
 					? {
 							accessBlobHeader: CoreHeaders.ACCESS_BLOB,
@@ -819,6 +797,10 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_DEV_CONTROL,
 			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
 		},
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -837,20 +819,20 @@ export function getGlobalServices({
 	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
-			service: {
-				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
-				entrypoint: "StreamBinding",
-			},
+			service: getStreamService(sharedOptions),
 		});
 	}
-	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	const r2PublicService = getR2PublicService(
+		allWorkerOpts ?? [],
+		sharedOptions
+	);
 	if (r2PublicService !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_PUBLIC,
 			service: { name: R2_PUBLIC_SERVICE_NAME },
 		});
 	}
-	const r2S3Service = getR2S3Service(allWorkerOpts ?? []);
+	const r2S3Service = getR2S3Service(allWorkerOpts ?? [], sharedOptions);
 	if (r2S3Service !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_S3,
@@ -864,7 +846,7 @@ export function getGlobalServices({
 			"images"
 		)) {
 			if (getRemoteProxyConnectionString(binding, worker.dev) === undefined) {
-				imagesServiceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
+				imagesServiceName = getImagesBindingServiceName(name);
 				break;
 			}
 		}
@@ -980,6 +962,8 @@ export function getGlobalServices({
 		services.push(r2S3Service);
 	}
 
+	services.push(...getEmailStoreServices(tmpPath));
+
 	if (sharedOptions.unsafeLocalExplorer) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);
 		const workflowOptions = new Map<string, WorkflowOption>();
@@ -1026,7 +1010,7 @@ export function getGlobalServices({
 		services.push(
 			...getObservabilityServices(
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath
 			)
 		);
 	}

@@ -1,5 +1,6 @@
 import { DEFINITION } from "./definition";
 import type {
+	BindingDevOptions,
 	Bindings,
 	TypedDurableObjectBinding,
 	TypedWorkerBinding,
@@ -56,7 +57,7 @@ export interface TypedWorkerDefinition<
 		workerName: TWorkerName;
 		exportName?: TExportName;
 		props?: Record<string, unknown>;
-		remote?: boolean;
+		dev?: BindingDevOptions;
 	}): TypedWorkerBinding<
 		TConfig,
 		TExportName extends string ? TExportName : "default"
@@ -67,7 +68,6 @@ export interface TypedWorkerDefinition<
 	// >(options: {
 	// 	workerName: TWorkerName;
 	// 	exportName: TExportName;
-	// 	remote?: boolean;
 	// }): TypedWorkflowBinding<TConfig, TExportName>;
 }
 

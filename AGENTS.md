@@ -1,248 +1,153 @@
 # AGENTS.md
 
-This file provides guidance to AI coding agents working in this repository.
+This file helps AI coding agents work effectively in the Cloudflare Workers SDK
+monorepo. Prefer authoritative configuration and documentation over copying
+details into this file: copied versions, rule lists, and counts become stale.
 
-## Project Overview
+## Start Here
 
-This is the **Cloudflare Workers SDK** monorepo containing tools and libraries for developing, testing, and deploying applications on Cloudflare. The main components are Wrangler (CLI), Miniflare (local dev simulator), and Create Cloudflare (project scaffolding).
+- Use `pnpm`, not npm or yarn.
+- Use the Node.js and pnpm versions declared in `package.json`.
+- Install dependencies with `pnpm install`.
+- Run commands from the workspace root unless package documentation says
+  otherwise.
+- Before changing a package, read its `AGENTS.md` if it has one.
+- Do not edit generated files directly. Change their source or generator and
+  regenerate them.
 
-## Development Commands
+## Common Commands
 
-**Package Management:**
+The root `package.json` is authoritative for available scripts.
 
-- Use `pnpm` - never use npm or yarn
-- `pnpm install` - Install dependencies for all packages
-- `pnpm build` - Build all packages (uses Turbo for caching)
+- `pnpm build` — build the workspace with Turbo.
+- `pnpm test:ci` — run tests in CI mode.
+- `pnpm test:e2e` — run end-to-end tests; many require Cloudflare credentials.
+- `pnpm check` — run the repository's validation, lint, type, and format checks.
+- `pnpm fix` — apply supported lint and formatting fixes.
+- `pnpm prettify` — format files with oxfmt.
+- `pnpm run <script> --filter <package>` — run a Turbo task for one package.
+- `pnpm -w test:ci -F <package> -- <test-file>` — run a package's specific test
+  file when its test configuration supports it.
 
-**Testing:**
+Prefer the narrowest relevant test while developing, then run the broader
+package checks appropriate to the change. Do not run credentialed E2E tests
+unless the task and environment support them.
 
-- `pnpm test:ci` - Run tests in CI mode
-- `pnpm test:e2e` - Run end-to-end tests (requires Cloudflare credentials)
-- `pnpm test -F <package> "pattern"` - Run a single test by name pattern
+## Repository Map
 
-**Code Quality:**
+| Task                                        | Location                                                              | Notes                                                         |
+| ------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Add or modify a Wrangler command            | `packages/wrangler/src/`                                              | Commands are registered from `src/index.ts`.                  |
+| Change local development behavior           | `packages/miniflare/src/`                                             | `src/index.ts` contains the main `Miniflare` class.           |
+| Modify embedded runtime workers             | `packages/miniflare/src/workers/`                                     | Worker scripts use `worker:` virtual imports.                 |
+| Change project scaffolding                  | `packages/create-cloudflare/`                                         | Templates and framework support live here.                    |
+| Change the Vite integration                 | `packages/vite-plugin-cloudflare/`                                    | Includes package-specific playgrounds.                        |
+| Change the Vitest integration               | `packages/vitest-plugin/`                                             | Vitest integration for tests running in workerd.              |
+| Change shared config handling               | `packages/workers-utils/src/config/`                                  | Shared types, normalization, and validation.                  |
+| Use shared test helpers                     | `packages/workers-utils/src/test-helpers/`                            | Includes temporary-directory and console helpers.             |
+| Change deploy or versions-upload validation | `packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts` | Keep deploy and versions-upload behavior aligned.             |
+| Add a fixture                               | `fixtures/`                                                           | Fixtures are workspace members with their own `package.json`. |
+| Change CI                                   | `.github/workflows/`                                                  | `test-and-check.yml` is the main test workflow.               |
+| Change deployment tooling                   | `tools/deployments/`                                                  | Scripts run directly through `esbuild-register`.              |
+| Create a changeset                          | `.changeset/README.md`                                                | Read this file before deciding whether one is required.       |
 
-- `pnpm check` - Run all checks (lint, type, format)
-- `pnpm fix` - Auto-fix linting issues and format code
+Turbo orchestrates workspace tasks. Shared TypeScript configuration lives in
+`packages/workers-tsconfig/`; lint and formatting behavior is defined by
+`.oxlintrc.jsonc`, `.oxfmtrc.jsonc`, and `packages/lint-config-shared/`.
 
-**Working with Specific Packages:**
+## Cross-Tool Development Features
 
-- `pnpm run build --filter <package-name>` - Build specific package
-- `pnpm run test:ci --filter <package-name>` - Test specific package
-- `pnpm --filter <package> test:watch` - Watch mode for a specific package
+Wrangler, the Vite plugin, and the Vitest plugin are all consumers of the
+Workers development platform. A development feature is not complete merely
+because it works through one of them.
 
-## Architecture Overview
+Implement development features in Miniflare wherever possible so that every
+consumer benefits from the same behavior. Keep the integration layers in
+Wrangler, the Vite plugin, and the Vitest plugin thin instead of implementing
+equivalent behavior independently in each tool. If Miniflare is not the
+appropriate layer, put shared behavior in the lowest suitable shared package.
 
-**Core Tools:**
+When adding or changing development functionality:
 
-- `packages/wrangler/` - Main CLI tool for Workers development and deployment
-- `packages/miniflare/` - Local development simulator powered by workerd runtime
-- `packages/create-cloudflare/` - Project scaffolding CLI (C3)
-- `packages/vite-plugin-cloudflare/` - Vite plugin for Cloudflare Workers
+- assess its impact on Miniflare, Wrangler, the Vite plugin, and the Vitest
+  plugin;
+- update shared configuration types, validation, and runtime behavior where
+  applicable;
+- add coverage at the shared implementation layer; add consumer-specific tests
+  when the consumer's integration or behavior is affected;
+- document intentional differences or unsupported consumers in the change and
+  pull request.
 
-**Development & Testing:**
+## Implementation Conventions
 
-- `packages/vitest-pool-workers/` - Vitest integration for testing Workers in actual runtime
-- `packages/chrome-devtools-patches/` - Modified Chrome DevTools for Workers debugging
+The checked-in configuration is authoritative. Run `pnpm check` rather than
+relying on a duplicated list of every enforced rule. In particular:
 
-**Shared Libraries:**
+- Keep TypeScript strictly typed. Avoid `any`, non-null assertions, and floating
+  promises.
+- Use type-only imports where appropriate and `node:` prefixes for Node.js
+  built-ins.
+- Prefer function declarations for named or exported functions.
+- Add well-formatted JSDoc to exported or public functions and to functions whose
+  purpose is not evident, including useful tags such as `@param` and `@returns`
+  where appropriate.
+- Comments should explain why; do not add comments that merely restate code.
+- Lint-disable comments require a reason after `--`.
+- In Wrangler, use the logger rather than calling `console.*` directly, except
+  inside the logger implementation.
+- Use the Cloudflare TypeScript SDK rather than adding direct REST API calls.
+- Import `ci-info` through its default export.
 
-- `packages/pages-shared/` - Code shared between Wrangler and Cloudflare Pages
-- `packages/workers-shared/` - Code shared between Wrangler and Workers Assets
-- `packages/workers-utils/` - Utility package for common Worker operations
-- `packages/workflows-shared/` - Internal Cloudflare Workflows functionality
-- `packages/containers-shared/` - Shared container functionality
-- `packages/unenv-preset/` - Cloudflare preset for unenv (Node.js polyfills)
-- `packages/cli/` - SDK for building workers-sdk CLIs
-- `packages/kv-asset-handler/` - KV-based asset handling for Workers Sites
+oxfmt determines whitespace, quoting, import order, and package.json sorting.
+Do not reproduce those rules manually; run `pnpm prettify`.
 
-**Build System:**
+## Dependencies and Security
 
-- Turbo (turborepo) orchestrates builds across packages
-- TypeScript compilation with shared configs in `packages/workers-tsconfig/`
-- Shared lint config in `packages/lint-config-shared/`
-- Dependency management via pnpm catalog system
+- Packages normally bundle their dependencies. The repository validator in
+  `tools/deployments/validate-package-dependencies.ts` is authoritative.
+- A package that must leave a dependency external declares it in that package's
+  `scripts/deps.ts` as part of `EXTERNAL_DEPENDENCIES`, with an explanation.
+- After changing dependencies, run `pnpm install` so that the lockfile is
+  updated.
+- Do not build shell commands with interpolated or concatenated untrusted input.
+  The custom `workers-sdk/no-unsafe-command-execution` oxlint rule enforces the
+  repository's command-execution constraints.
 
-## WHERE TO LOOK
+## Testing Conventions
 
-| Task                                           | Location                                                              | Notes                                                                                                                                                                        |
-| ---------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Add/modify a CLI command                       | `packages/wrangler/src/`                                              | Commands registered in `src/index.ts` (2k+ line yargs tree)                                                                                                                  |
-| Change local dev behavior                      | `packages/miniflare/src/`                                             | `src/index.ts` is the main `Miniflare` class                                                                                                                                 |
-| Modify Workers runtime simulation              | `packages/miniflare/src/workers/`                                     | ~30 embedded worker scripts, built via `worker:` virtual imports                                                                                                             |
-| Add a test fixture                             | `fixtures/`                                                           | Each fixture is a full workspace member with own `package.json`                                                                                                              |
-| Shared config types/validation                 | `packages/workers-utils/src/config/`                                  | `validation.ts` is the config normalizer (large file)                                                                                                                        |
-| Test helpers (runInTempDir, seed, mockConsole) | `packages/workers-utils/src/test-helpers/`                            | Shared across wrangler, miniflare, others                                                                                                                                    |
-| Cloudflare API mocks for tests                 | `packages/wrangler/src/__tests__/helpers/msw/`                        | MSW handlers per API domain                                                                                                                                                  |
-| CI workflows                                   | `.github/workflows/`                                                  | `test-and-check.yml` is the primary gate                                                                                                                                     |
-| Build/deploy scripts                           | `tools/deployments/`                                                  | Validation + deployment helpers, run via `esbuild-register`                                                                                                                  |
-| Deploy/versions-upload validation              | `packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts` | `validateWorkerProps()` for sync checks, `preUploadApiChecks()` for API checks (service metadata, config diff, secrets, workflows). All new pre-upload validation goes here. |
-| Changeset config and rules                     | `.changeset/README.md`                                                | Must read before creating changesets                                                                                                                                         |
+- Use Vitest for unit and integration tests.
+- Use fixtures for filesystem and Worker scenarios; treat fixtures as
+  user-facing examples and keep them clear and realistic.
+- Use the Vitest plugin when behavior must be tested in workerd.
+- In Vitest tests, obtain `expect` from the test context rather than importing
+  it from `vitest`. Pass `ExpectStatic` to helpers that need it; use
+  `node:assert` where test context is unavailable.
+- Prefer `runInTempDir()` and real filesystem operations over filesystem mocks.
+- Use `mockConsoleMethods()` to capture output and assert against its `out`,
+  `err`, and `warn` properties.
+- Update relevant snapshots when changing user-facing output.
+- New examples under `fixtures/vitest-plugin-examples/` need a
+  `tsconfig.json`.
 
-## Development Guidelines
+The shared defaults are defined in `vitest.shared.ts`; package configurations
+may override them.
 
-**Requirements:**
+## Changes and Pull Requests
 
-- Node.js >= 20
-- pnpm
+- Work on a branch rather than committing directly to `main`.
+- Read `.changeset/README.md` to determine whether a changeset is required and
+  how to write it. Do not assume every package-code change needs one.
+- Use `.github/PULL_REQUEST_TEMPLATE.md` when preparing a pull request.
+- The PR description requirements are enforced by
+  `tools/deployments/validate-pr-description.ts`; treat that validator and the
+  template as authoritative.
+- Use the repository's established `[package] description` PR-title style.
+- Run the relevant tests and checks locally before pushing.
 
-**Code Style:**
+## Package-Specific Guidance
 
-- TypeScript with strict mode
-- Use `import type { X }` for type-only imports (`@typescript-eslint/consistent-type-imports`)
-- No `any` (`@typescript-eslint/no-explicit-any`)
-- No non-null assertions (`!`)
-- No floating promises - must be awaited or explicitly voided (`@typescript-eslint/no-floating-promises`)
-- Always use curly braces for control flow (`curly: error`)
-- Use `node:` prefix for Node.js imports (`import/enforce-node-protocol-usage`)
-- Prefix unused variables with `_`
-- No `.only()` in tests (`no-only-tests/no-only-tests`)
-- Prefer `function` declarations over `const` arrow function assignments for named/exported functions
-- Add a well formatted JSDoc comment to every function, ideally including tags such as `@param` and `@returns`
-- ESLint disable comments must use double-dash separator: `// eslint-disable-next-line rule-name -- reason here`
-- Never modify generated files directly — modify the generator or config, then regenerate
-- Format with oxfmt - run `pnpm prettify` in the workspace root before committing
-- All changes to published packages require a changeset (see below)
-
-**Formatting (oxfmt):**
-
-- Tabs (not spaces), double quotes, semicolons, trailing commas (es5)
-- Import order enforced: builtins → third-party → parent → sibling → index → types
-- `sortPackageJson` option sorts package.json keys
-
-**Security:**
-
-- Custom ESLint rule `workers-sdk/no-unsafe-command-execution`: no template literals or string concatenation in `exec`/`spawn`/`execFile` calls (command injection prevention, CWE-78). Disabled in test files only.
-
-**Dependencies:**
-
-- Packages must bundle deps into distributables; runtime `dependencies` are forbidden except for an explicit allowlist
-- External (non-bundled) deps must be declared in `scripts/deps.ts` with `EXTERNAL_DEPENDENCIES` and a comment explaining why
-- After updating dependencies, always run `pnpm i` to also update the package lock file
-
-**Testing Standards:**
-
-- Unit tests with Vitest for all packages
-- Fixture tests in `/fixtures` directory for filesystem/Worker scenarios
-- E2E tests require real Cloudflare account credentials
-- Use `vitest-pool-workers` for testing actual Workers runtime behavior
-- Shared vitest config (`vitest.shared.ts`): 50s timeouts, `retry: 1`, `restoreMocks: true`
-- Vitest 4 pool config: use `maxWorkers: 1` instead of the removed `poolOptions.forks.singleFork: true` when tests must run sequentially
-- **`expect` must come from test context** — never `import { expect } from "vitest"`:
-  - Use destructured test context: `it("name", ({ expect }) => { ... })`
-  - For helper functions that need `expect`, pass it as a parameter with type `ExpectStatic`
-  - Always use `import type` for `ExpectStatic`: `import { beforeAll, type ExpectStatic, test } from "vitest"`
-  - When test context is unavailable (e.g. setup files), use `node:assert` instead
-  - E2E vitest configs do NOT set `globals: true` — this rule is critical there; forgetting `{ expect }` in the callback causes `ReferenceError` at runtime
-- When changing user-facing strings or output messages, update corresponding test snapshots
-- New test fixtures in `vitest-pool-workers-examples/` must include a `tsconfig.json`
-- Test fixtures serve as user-facing recipes — use clean patterns, avoid type casting where possible
-- Use the `runInTmpDir()` utility instead of mocking filesystem operations. Real filesystem operations are preferred over mocking. The utility creates isolated temporary directories, handles cleanup automatically in `afterEach` hooks, and allows tests to write actual files and assert against them
-- Use the `mockConsoleMethods()` helper to capture stdout/stderr. Use the pattern `const std = mockConsoleMethods()` in test setup, then access captured output via `std.out`, `std.err`, `std.warn` properties. Assert against captured output using `expect(std.out).toMatchInlineSnapshot()`
-- Run specific wrangler test files locally using `pnpm -w test:ci -F wrangler -- [test-file-name]` (e.g. `pnpm -w test:ci -F wrangler -- r2.test.ts`)
-
-**Git Workflow:**
-
-- Check you are not on main before committing. Create a new branch for your work from main if needed.
-- Clean commit history required before first review
-- Don't squash commits after review
-- Never commit without changesets for user-facing changes
-- PR template requirements: Remove "Fixes #..." line when no relevant issue exists, keep all checkboxes (don't delete unchecked ones)
-
-**Creating Pull Requests:**
-
-- Always use the PR template from `.github/PULL_REQUEST_TEMPLATE.md` - do not replace it with your own format
-- Fill in the template: replace the issue link placeholder, add description, check appropriate boxes
-- Keep all checkboxes in the template (don't delete unchecked ones)
-- PR title format: `[package name] description` (e.g. `[wrangler] Fix bug in dev command`)
-- If the change doesn't require a changeset, add the `no-changeset-required` label
-- CI validates the PR description (see `tools/deployments/validate-pr-description.ts`). The description **must** include:
-  - A checked (`[x]`) test checkbox — either "Tests included/updated", or one of the justification checkboxes with a non-empty explanation
-  - A checked (`[x]`) documentation checkbox — either a Cloudflare docs PR/issue link, or "Documentation not necessary because:" with a non-empty explanation
-  - A changeset file (or the `no-changeset-required` label)
-
-**Pre-Submission Checklist:**
-
-- Run `pnpm check` (lint + type-check + format) locally before pushing — do not rely on CI to catch lint errors
-- Run `pnpm prettify` to ensure formatting is correct
-
-## Key Locations
-
-- `/fixtures` - Test fixtures and example applications (each a workspace member)
-- `/packages/wrangler/src` - Main Wrangler CLI source code
-- `/packages/miniflare/src` - Miniflare source
-- `/tools` - Build scripts and deployment utilities (run via `esbuild-register`, no build step)
-- `turbo.json` - Turbo build configuration
-- `pnpm-workspace.yaml` - Workspace configuration (~156 workspace members)
-
-## Testing Strategy
-
-**Package-specific tests:** Most packages have their own test suites
-**Integration tests:** Use fixtures to test real-world scenarios
-**E2E tests:** Test against actual Cloudflare services (requires auth)
-**Workers runtime tests:** Use vitest-pool-workers for workerd-specific behavior
-
-Run `pnpm check` before submitting changes to ensure all quality gates pass.
-
-## Changesets
-
-Every change to package code requires a changeset or it will not trigger a release. Read `.changeset/README.md` before creating changesets.
-
-**Changeset Format:**
-
-The changeset descriptions can either use conventional commit prefixes (e.g., "fix: remove unused option") or
-start with a capital letter and describe the change directly (e.g., "Remove unused option" not").
-
-**Changeset Rules:**
-
-- Major versions for `wrangler` are currently **forbidden**
-- `patch`: bug fixes; `minor`: new features, deprecations, experimental breaking changes; `major`: stable breaking changes only
-- No h1/h2/h3 headers in changeset descriptions (changelog uses h3)
-- Config examples must use `wrangler.json` (JSONC), not `wrangler.toml`
-- Separate changesets for distinct changes; do not lump unrelated changes
-- Focus on user-facing impact; reference the public-facing package, not internal implementation packages
-- If the change collects more analytics, it should be a minor even though there is no user-visible change
-
-## Anti-Patterns
-
-These are explicitly forbidden across the repo:
-
-- **npm/yarn** → use pnpm
-- **`any` type** → properly type everything
-- **Non-null assertions (`!`)** → use type narrowing
-- **Floating promises** → await or void explicitly
-- **Missing curly braces** → always brace control flow
-- **`console.*` in wrangler** → use the `logger` singleton
-- **Direct Cloudflare REST API calls** → use the Cloudflare TypeScript SDK
-- **Named imports from `ci-info`** → use default import (`import ci from "ci-info"`)
-- **Runtime dependencies** → bundle deps; external deps need explicit allowlist entry
-- **Committing to main** → always work on a branch
-- **Trivial/obvious code comments** → don't add comments that restate what the code does; comments should explain "why", not "what"
-- **Duplicating types/constants across packages** → export from the owning package and import where needed
-
-## Subdirectory Knowledge
-
-Packages with their own AGENTS.md for deeper context:
-
-- `packages/wrangler/AGENTS.md` - CLI architecture, command structure, test patterns
-- `packages/miniflare/AGENTS.md` - Worker simulation, embedded workers, build system
-- `packages/vite-plugin-cloudflare/AGENTS.md` - Plugin architecture, playground setup
-- `packages/create-cloudflare/AGENTS.md` - Scaffolding, template system
-- `packages/vitest-pool-workers/AGENTS.md` - 3-context architecture, cloudflare:test module
-- `packages/workers-utils/AGENTS.md` - Shared config validation, test helpers
-
-When making architectural changes to a package (renaming files, adding entry points, changing build output), update the relevant AGENTS.md to reflect the new structure.
-
-## Cloudflare Workers Specifics
-
-- When removing or modifying scheduled functions in Cloudflare Workers, remember to update both the code in the Worker file and the corresponding cron trigger in the `wrangler.jsonc` configuration file.
-
-## Adding Native Node.js Module Support (unenv-preset)
-
-- The authoritative source for Node.js module compatibility flags and dates is the workerd repository's `compatibility-date.capnp` file at https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp.
-- If the module is marked as `$experimental` in workerd (no `$impliedByAfterDate`), follow the pattern used by other experimental modules in `preset.ts`.
-- The pattern for adding a new module override involves:
-  - Creating a `get<Module>Overrides()` function similar to existing ones (e.g., `getVmOverrides()`)
-  - Adding the override to `getCloudflarePreset()` and spreading into `dynamicNativeModules` and `dynamicHybridModules`
-  - Adding tests to `packages/wrangler/e2e/unenv-preset/preset.test.ts`
-  - Adding test functions to `packages/wrangler/e2e/unenv-preset/worker/index.ts`
+Many packages provide their own `AGENTS.md`. Locate and read the closest
+applicable file before making changes. When a change makes guidance inaccurate,
+update that file in the same change. Put package-specific knowledge in the
+package's file; keep this root file focused on repository-wide workflow and
+navigation.
