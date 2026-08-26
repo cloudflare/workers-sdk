@@ -447,6 +447,26 @@ export async function listWorkflowInstances(
 }
 
 /**
+ * Bounds are inclusive and an unbounded range matches everything. A missing or
+ * unparseable creation time is excluded rather than reported as a match.
+ */
+function isWithinDateRange(
+	createdOn: string | undefined,
+	startMs: number | undefined,
+	endMs: number | undefined
+): boolean {
+	if (startMs === undefined && endMs === undefined) {
+		return true;
+	}
+	const createdMs = Date.parse(createdOn ?? "");
+	return (
+		!Number.isNaN(createdMs) &&
+		createdMs >= (startMs ?? -Infinity) &&
+		createdMs <= (endMs ?? Infinity)
+	);
+}
+
+/**
  * List workflow instances with server-side pagination.
  *
  * 1. Loopback returns all .sqlite files with birthtimeMs (cheap fs.stat)
@@ -551,32 +571,12 @@ async function executeListWorkflowInstances(
 	if (statusFilter || hasDateFilter) {
 		// Neither status nor creation date is known from the filesystem, so
 		// filtering has to resolve ALL instances server-side
-
 		const allResolved = await Promise.all(sqliteFiles.map(resolveInstance));
-		const filtered = allResolved.filter((inst) => {
-			if (statusFilter && inst.status !== statusFilter) {
-				return false;
-			}
-			if (!hasDateFilter) {
-				return true;
-			}
-			// An instance with unknown creation time cannot be confirmed to fall
-			// within the range, so exclude it rather than reporting a false match.
-			if (inst.created_on === undefined) {
-				return false;
-			}
-			const createdMs = Date.parse(inst.created_on);
-			if (Number.isNaN(createdMs)) {
-				return false;
-			}
-			if (dateStartMs !== undefined && createdMs < dateStartMs) {
-				return false;
-			}
-			if (dateEndMs !== undefined && createdMs > dateEndMs) {
-				return false;
-			}
-			return true;
-		});
+		const filtered = allResolved.filter(
+			(instance) =>
+				(statusFilter === undefined || instance.status === statusFilter) &&
+				isWithinDateRange(instance.created_on, dateStartMs, dateEndMs)
+		);
 		totalCount = filtered.length;
 		const offset = (page - 1) * perPage;
 		instances = filtered.slice(offset, offset + perPage);

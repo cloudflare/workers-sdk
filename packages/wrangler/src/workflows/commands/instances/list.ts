@@ -22,11 +22,11 @@ function validateDateRange(
 	const dateStart =
 		rawDateStart === undefined
 			? undefined
-			: validateInstanceDate(rawDateStart, "--date-start");
+			: validateInstanceDate(rawDateStart, "--date-start", "start");
 	const dateEnd =
 		rawDateEnd === undefined
 			? undefined
-			: validateInstanceDate(rawDateEnd, "--date-end");
+			: validateInstanceDate(rawDateEnd, "--date-end", "end");
 
 	if (
 		dateStart !== undefined &&
@@ -75,7 +75,7 @@ export const workflowsInstancesListCommand = createCommand({
 		},
 		"date-end": {
 			describe:
-				"Only list instances created at or before this date (ISO 8601, e.g. 2026-01-31 or 2026-01-31T13:00:00Z)",
+				"Only list instances created at or before this date (ISO 8601). A date without a time covers the whole UTC day, so 2026-01-31 includes everything up to 2026-01-31T23:59:59.999Z",
 			type: "string",
 			requiresArg: true,
 		},
