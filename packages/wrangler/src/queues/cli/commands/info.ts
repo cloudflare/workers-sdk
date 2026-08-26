@@ -41,15 +41,20 @@ export const queuesInfoCommand = createCommand({
 						if (c.type === "r2_bucket") {
 							return `${c.type}:${c.bucket_name}`;
 						}
-						if (c.type === "http_pull") {
-							return `HTTP Pull Consumer.
+					if (c.type === "http_pull") {
+						return `HTTP Pull Consumer.
 Pull messages using:
 curl "https://api.cloudflare.com/client/v4/accounts/${accountId || "<add your account id here>"}/queues/${queue.queue_id || "<add your queue id here>"}/messages/pull" \\
 	--header "Authorization: Bearer <add your api key here>" \\
 	--header "Content-Type: application/json" \\
 	--data '{ "visibility_timeout": 10000, "batch_size": 2 }'`;
-						}
-						return `${c.type}:${c.script}`;
+					}
+					if (c.type === "notification") {
+						const ids = (entries?: { id: string }[]) =>
+							entries?.map((e) => e.id).join(", ") ?? "none";
+						return `Notification Consumer (email: ${ids(c.settings.email)}, pagerduty: ${ids(c.settings.pagerduty)}, webhooks: ${ids(c.settings.webhooks)})`;
+					}
+					return `${c.type}:${c.script}`;
 					})
 					.toString()}`
 			);

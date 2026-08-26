@@ -339,6 +339,10 @@ import { queuesConsumerHttpAddCommand } from "./queues/cli/commands/consumer/htt
 import { queuesConsumerHttpListCommand } from "./queues/cli/commands/consumer/http-pull/list";
 import { queuesConsumerHttpRemoveCommand } from "./queues/cli/commands/consumer/http-pull/remove";
 import { queuesConsumerListCommand } from "./queues/cli/commands/consumer/list";
+import { queuesConsumerNotificationNamespace } from "./queues/cli/commands/consumer/notification";
+import { queuesConsumerNotificationAddCommand } from "./queues/cli/commands/consumer/notification/add";
+import { queuesConsumerNotificationListCommand } from "./queues/cli/commands/consumer/notification/list";
+import { queuesConsumerNotificationRemoveCommand } from "./queues/cli/commands/consumer/notification/remove";
 import { queuesConsumerWorkerNamespace } from "./queues/cli/commands/consumer/worker";
 import { queuesConsumerAddCommand } from "./queues/cli/commands/consumer/worker/add";
 import { queuesConsumerWorkerListCommand } from "./queues/cli/commands/consumer/worker/list";
@@ -1221,6 +1225,22 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler queues consumer http list",
 			definition: queuesConsumerHttpListCommand,
+		},
+		{
+			command: "wrangler queues consumer notification",
+			definition: queuesConsumerNotificationNamespace,
+		},
+		{
+			command: "wrangler queues consumer notification add",
+			definition: queuesConsumerNotificationAddCommand,
+		},
+		{
+			command: "wrangler queues consumer notification remove",
+			definition: queuesConsumerNotificationRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer notification list",
+			definition: queuesConsumerNotificationListCommand,
 		},
 		{
 			command: "wrangler queues consumer worker",
