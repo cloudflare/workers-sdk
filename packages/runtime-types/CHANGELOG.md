@@ -1,5 +1,12 @@
 # @cloudflare/runtime-types
 
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [[`412c79e`](https://github.com/cloudflare/workers-sdk/commit/412c79e2735176727bdb2ab108fe581d4c7961d0)]:
+  - miniflare@5.20260826.0-alpha
+
 ## 0.0.17
 
 ### Patch Changes

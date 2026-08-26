@@ -1,5 +1,13 @@
 # @cloudflare/build-output-utils
 
+## 0.3.0
+
+### Minor Changes
+
+- [#15371](https://github.com/cloudflare/workers-sdk/pull/15371) [`e9df120`](https://github.com/cloudflare/workers-sdk/commit/e9df1204238ba26ed0e065b5bf441cfa4b4e683a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support multiple named Workers in the experimental Build Output utilities
+
+  Build Output paths and config writing can now target any named Worker directory, and reading Build Output returns every Worker keyed by its directory name. `writeWorkerConfig` now accepts a single options object.
+
 ## 0.2.0
 
 ### Minor Changes
