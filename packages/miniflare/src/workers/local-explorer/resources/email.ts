@@ -13,6 +13,8 @@ import {
 } from "../../email/contracts";
 import {
 	hasControlCharacters,
+	hasInvalidHeaderValueCharacters,
+	isHeaderName,
 	isMimeType,
 	normalizeBase64,
 } from "../../email/input-validation";
@@ -21,7 +23,7 @@ import {
 	messageIdToStorageId,
 	synthesizeMessageId,
 } from "../../email/message-id";
-import { buildMimeMessage, isMimeMessageFieldHeader } from "../../email/mime";
+import { buildMimeMessage } from "../../email/mime";
 import {
 	fetchFromPeer,
 	getPeerEntrypoint,
@@ -599,18 +601,12 @@ function validateEmailRequest(body: EmailSendRequest): string | undefined {
 		return "Email fields must not contain control characters.";
 	}
 
-	if (Object.values(body.headers ?? {}).some(hasControlCharacters)) {
+	if (
+		Object.keys(body.headers ?? {}).some((name) => !isHeaderName(name)) ||
+		Object.values(body.headers ?? {}).some(hasInvalidHeaderValueCharacters)
+	) {
 		return "Custom headers must use valid names and values.";
 	}
-	try {
-		new Headers(body.headers);
-	} catch {
-		return "Custom headers must use valid names and values.";
-	}
-	if (Object.keys(body.headers ?? {}).some(isMimeMessageFieldHeader)) {
-		return "Custom headers must not override managed email headers.";
-	}
-
 	for (const attachment of body.attachments ?? []) {
 		if (
 			hasControlCharacters(attachment.filename) ||

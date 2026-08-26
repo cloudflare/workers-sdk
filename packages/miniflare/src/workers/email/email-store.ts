@@ -24,6 +24,8 @@ import {
 } from "./capture";
 import {
 	zEmailBase,
+	zEmailHeaders,
+	zEmailHandlerEvent,
 	zEmailHandlerForward,
 	zEmailHandlerReplyApi,
 	zEmailSendingDetail,
@@ -149,28 +151,18 @@ const zStoredEmailReply = zEmailHandlerReplyApi.omit({
 const zStoredEmailReplyMetadata = zStoredEmailReply.extend({
 	captureTruncated: z.boolean().optional(),
 });
-const zStoredEmailEvent = z.discriminatedUnion("type", [
-	z.object({
-		type: z.enum(["forward", "reply"]),
-		timestamp: z.string(),
-		messageId: z.string(),
-	}),
-	z.object({
-		type: z.enum(["received", "reject", "unhandled"]),
-		timestamp: z.string(),
-	}),
-]);
 export const zStoredRoutingEmailSummary = zEmailBase.extend({
 	to: z.string(),
 	cc: z.array(z.string()).optional(),
 	headers: z.record(z.string(), z.string()).optional(),
+	headerEntries: zEmailHeaders.optional(),
 	receivedAt: z.string(),
 	rawSize: z.number(),
 	outcome: z.enum(["ok", "exception"]),
 	rejectReason: z.string().optional(),
 	forwards: z.array(zEmailHandlerForward),
 	replies: z.array(zStoredEmailReply),
-	events: z.array(zStoredEmailEvent),
+	events: z.array(zEmailHandlerEvent),
 });
 const zStoredRoutingEmailMetadata = zStoredRoutingEmailSummary.extend({
 	captureTruncated: z.boolean().optional(),

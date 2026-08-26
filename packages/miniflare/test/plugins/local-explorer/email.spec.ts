@@ -181,7 +181,6 @@ async function sendRoutingTestEmail(
 	instance: Miniflare,
 	worker: string,
 	email: {
-		messageId: string;
 		subject: string;
 		text: string;
 		from?: string;
@@ -200,7 +199,6 @@ async function sendRoutingTestEmail(
 				to: email.to ?? ["recipient@example.com"],
 				subject: email.subject,
 				text: email.text,
-				headers: { "Message-ID": email.messageId },
 			}),
 		}
 	);
@@ -323,6 +321,8 @@ const EMAIL_WORKER = dedent /* javascript */ `
 					}
 			} else if (mode === "reject") {
 				message.setReject("Rejected by test worker");
+			} else if (mode === "exception") {
+				throw new Error("Test email handler failed");
 			}
 		},
 	};
@@ -970,14 +970,14 @@ describe("Local Explorer email API", () => {
 					subject: "Many replies",
 					text: "Many replies",
 					headers: {
-						"Message-ID": "<received-many-replies@example.com>",
 						"X-Test-Mode": "reply-many",
 					},
 				}),
 			}
 		);
-		expect(response.status).toBe(200);
-		const sendResult = (await response.json()) as {
+		const responseBody = await response.text();
+		expect(response.status, responseBody).toBe(200);
+		const sendResult = JSON.parse(responseBody) as {
 			result: { messageId: string };
 		};
 		const incomingMessageId = sendResult.result.messageId;
@@ -1057,7 +1057,6 @@ describe("Local Explorer email API", () => {
 	test("sends a >1 MiB test email and truncates only the captured copy", async ({
 		expect,
 	}) => {
-		const suppliedMessageId = "<received-large-test-send@example.com>";
 		const response = await mf.dispatchFetch(
 			`${BASE_URL}/local/email/routing/send?worker=${WORKER_NAME}`,
 			{
@@ -1069,7 +1068,6 @@ describe("Local Explorer email API", () => {
 					subject: "Large test email",
 					text: "x".repeat(2 * 1024 * 1024),
 					headers: {
-						"Message-ID": suppliedMessageId,
 						"X-Test-Mode": "assert-large-body",
 					},
 				}),
@@ -1084,7 +1082,6 @@ describe("Local Explorer email API", () => {
 		expect(result).toMatchObject({ result: { outcome: "ok" } });
 		const messageId = result.result.messageId;
 		expect(messageId).toMatch(/^<[A-Za-z0-9]{36}@example\.com>$/);
-		expect(messageId).not.toBe(suppliedMessageId);
 
 		const detail = await expectValidResponse(
 			await mf.dispatchFetch(
@@ -1095,7 +1092,6 @@ describe("Local Explorer email API", () => {
 		);
 		expect(detail.result?.messageId).toBe(messageId);
 		expect(detail.result?.raw).toContain(`Message-ID: ${messageId}`);
-		expect(detail.result?.raw).not.toContain(suppliedMessageId);
 		expect(detail.result?.raw?.match(/^Message-ID:/gim)).toHaveLength(1);
 		expect(detail.result?.rawSize).toBeGreaterThan(MAX_EMAIL_BODY_BYTES);
 		expect(
@@ -1286,6 +1282,8 @@ describe("Local Explorer email API", () => {
 			Message-ID: ${routingMessageId}
 			Subject: Routing BCC
 			X-Test-Mode: assert-no-bcc
+			X-Duplicate: first
+			X-Duplicate: second
 			MIME-Version: 1.0
 			Content-Type: text/plain
 
@@ -1325,6 +1323,19 @@ describe("Local Explorer email API", () => {
 				key.toLowerCase()
 			)
 		).not.toContain("bcc");
+		expect(
+			routingDetail.result?.headerEntries?.filter(
+				([name]) => name.toLowerCase() === "x-duplicate"
+			)
+		).toEqual([
+			["x-duplicate", "first"],
+			["x-duplicate", "second"],
+		]);
+		expect(
+			routingDetail.result?.headerEntries?.some(
+				([name]) => name.toLowerCase() === "bcc"
+			)
+		).toBe(false);
 		expect(routingDetail.result?.raw).not.toMatch(/^bcc:/imu);
 
 		const sentResponse = await mf.dispatchFetch(
@@ -1398,7 +1409,6 @@ describe("Local Explorer email API", () => {
 					subject: "Rejected message",
 					text: "Rejected",
 					headers: {
-						"Message-ID": "<received-reject@example.com>",
 						"X-Test-Mode": "reject",
 					},
 				}),
@@ -1454,7 +1464,7 @@ describe("Local Explorer email API", () => {
 		expect(detail.result).toBeNull();
 	});
 
-	test("does not duplicate Content-Type when a test email supplies one", async ({
+	test("stores test-email exception outcomes without changing handler events", async ({
 		expect,
 	}) => {
 		const response = await mf.dispatchFetch(
@@ -1465,39 +1475,37 @@ describe("Local Explorer email API", () => {
 				body: JSON.stringify({
 					from: "sender@example.com",
 					to: ["recipient@example.com"],
-					subject: "Custom content type",
-					text: "Body text",
-					headers: {
-						"Message-ID": "<received-custom-ct@example.com>",
-						// A caller-supplied content type must not be emitted: the
-						// generated one describes the actual body.
-						"Content-Type": "application/json",
-					},
+					subject: "Worker exception",
+					text: "Throw from the email handler",
+					headers: { "X-Test-Mode": "exception" },
 				}),
 			}
 		);
 
 		expect(response.status).toBe(200);
 		const sendResult = (await response.json()) as {
-			result: { messageId: string; outcome: string };
+			result: {
+				messageId: string;
+				outcome: string;
+			};
 		};
-		expect(sendResult.result).toMatchObject({ outcome: "ok" });
-		const messageId = sendResult.result.messageId;
+		expect(sendResult.result).toMatchObject({
+			outcome: "exception",
+		});
+		expect(sendResult.result).not.toHaveProperty("error");
 
 		const detail = await expectValidResponse(
 			await mf.dispatchFetch(
-				`${BASE_URL}/local/email/routing?email_id=${encodeURIComponent(messageId)}`
+				`${BASE_URL}/local/email/routing?email_id=${encodeURIComponent(sendResult.result.messageId)}&worker=${WORKER_NAME}`
 			),
 			zEmailRoutingDetailResponse,
 			expect
 		);
-		const raw = detail.result?.raw ?? "";
-		const contentTypeLines = raw
-			.split(/\r?\n/)
-			.filter((line) => /^content-type:/i.test(line));
-		// Exactly one Content-Type, and it's the generated one describing the body.
-		expect(contentTypeLines).toEqual([
-			"Content-Type: text/plain; charset=utf-8",
+		expect(detail.result).toMatchObject({
+			outcome: "exception",
+		});
+		expect(detail.result.events).toEqual([
+			{ type: "received", timestamp: expect.any(String) },
 		]);
 	});
 
@@ -1529,7 +1537,116 @@ describe("Local Explorer email API", () => {
 		});
 	});
 
-	test("rejects custom headers managed by the email composer", async ({
+	test("folds multiline custom header values", async ({ expect }) => {
+		const response = await mf.dispatchFetch(
+			`${BASE_URL}/local/email/routing/send?worker=${WORKER_NAME}`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Multiline custom header",
+					text: "Body text",
+					headers: {
+						"X-Multiline": "first line\nsecond line",
+					},
+				}),
+			}
+		);
+
+		const responseBody = await response.text();
+		expect(response.status, responseBody).toBe(200);
+		const sendResult = JSON.parse(responseBody) as {
+			result: { messageId: string };
+		};
+		const detail = await expectValidResponse(
+			await mf.dispatchFetch(
+				`${BASE_URL}/local/email/routing?email_id=${encodeURIComponent(sendResult.result.messageId)}`
+			),
+			zEmailRoutingDetailResponse,
+			expect
+		);
+		expect(detail.result?.raw).toContain(
+			"X-Multiline: first line\r\n second line"
+		);
+	});
+
+	test("folds injection-shaped multiline values without adding a header", async ({
+		expect,
+	}) => {
+		const response = await mf.dispatchFetch(
+			`${BASE_URL}/local/email/routing/send?worker=${WORKER_NAME}`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Injection-shaped custom header",
+					text: "Body text",
+					headers: {
+						"X-Multiline": "safe\nBcc: victim@example.com",
+						"X-Test-Mode": "assert-no-bcc",
+					},
+				}),
+			}
+		);
+
+		const responseBody = await response.text();
+		expect(response.status, responseBody).toBe(200);
+		const sendResult = JSON.parse(responseBody) as {
+			result: { messageId: string; outcome: string };
+		};
+		expect(sendResult.result.outcome).toBe("ok");
+		const detail = await expectValidResponse(
+			await mf.dispatchFetch(
+				`${BASE_URL}/local/email/routing?email_id=${encodeURIComponent(sendResult.result.messageId)}`
+			),
+			zEmailRoutingDetailResponse,
+			expect
+		);
+		expect(detail.result?.raw).toContain(
+			"X-Multiline: safe\r\n Bcc: victim@example.com"
+		);
+		expect(
+			detail.result?.headerEntries?.some(
+				([name]) => name.toLowerCase() === "bcc"
+			)
+		).toBe(false);
+	});
+
+	test("rejects bare carriage returns in custom header values", async ({
+		expect,
+	}) => {
+		const response = await mf.dispatchFetch(
+			`${BASE_URL}/local/email/routing/send?worker=${WORKER_NAME}`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Invalid custom header value",
+					text: "Body text",
+					headers: {
+						"X-Test": "safe\rInjected: nope",
+					},
+				}),
+			}
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({
+			errors: [
+				{
+					message: "Custom headers must use valid names and values.",
+				},
+			],
+		});
+	});
+
+	test("ignores custom headers managed by the email composer", async ({
 		expect,
 	}) => {
 		const response = await mf.dispatchFetch(
@@ -1549,14 +1666,22 @@ describe("Local Explorer email API", () => {
 			}
 		);
 
-		expect(response.status).toBe(400);
-		expect(await response.json()).toMatchObject({
-			errors: [
-				{
-					message: "Custom headers must not override managed email headers.",
-				},
-			],
+		const responseBody = await response.text();
+		expect(response.status, responseBody).toBe(200);
+		const sendResult = JSON.parse(responseBody) as {
+			result: { messageId: string };
+		};
+		const detail = await expectValidResponse(
+			await mf.dispatchFetch(
+				`${BASE_URL}/local/email/routing?email_id=${encodeURIComponent(sendResult.result.messageId)}`
+			),
+			zEmailRoutingDetailResponse,
+			expect
+		);
+		expect(detail.result).toMatchObject({
+			subject: "Canonical subject",
 		});
+		expect(detail.result?.raw).not.toContain("Misleading subject");
 	});
 
 	test("accepts a zero-byte attachment in a test email", async ({ expect }) => {
@@ -1605,7 +1730,7 @@ describe("Local Explorer email API", () => {
 		]);
 	});
 
-	test("reports a descriptive error when the target worker has no email() handler", async ({
+	test("reports and stores a missing email handler as an unhandled flow event", async ({
 		expect,
 	}) => {
 		const failure = await expectValidResponse(
@@ -1619,7 +1744,6 @@ describe("Local Explorer email API", () => {
 						to: ["recipient@example.com"],
 						subject: "No handler",
 						text: "No handler",
-						headers: { "Message-ID": "<no-handler@example.com>" },
 					}),
 				}
 			),
@@ -1648,7 +1772,12 @@ describe("Local Explorer email API", () => {
 			messageId: expect.stringMatching(/^<[A-Za-z0-9]{36}@example\.com>$/),
 			outcome: "exception",
 		});
-		expect(detail?.events.map(({ type }) => type)).toEqual(["unhandled"]);
+		expect(detail?.events).toEqual([
+			{
+				type: "unhandled",
+				timestamp: expect.any(String),
+			},
+		]);
 	});
 
 	test("stores reply events and reply content", async ({ expect }) => {
@@ -1663,7 +1792,6 @@ describe("Local Explorer email API", () => {
 					subject: "Reply target",
 					text: "Reply target",
 					headers: {
-						"Message-ID": "<received-reply@example.com>",
 						"X-Test-Mode": "reply",
 					},
 				}),
@@ -1917,9 +2045,6 @@ describe("Local Explorer email API", () => {
 						to: ["recipient@example.com"],
 						subject: "Stale cursor",
 						text: "Stale cursor",
-						headers: {
-							"Message-ID": `<stale-cursor-${index}@example.com>`,
-						},
 					}),
 				}
 			);
@@ -1982,7 +2107,6 @@ describe("Local Explorer email aggregation", () => {
 			instanceA,
 			"email-b",
 			{
-				messageId: "<ignored-peer-received@example.com>",
 				subject: "Peer email",
 				text: "Stored by the peer instance",
 			},
@@ -2045,7 +2169,6 @@ describe("Local Explorer email aggregation", () => {
 			instanceA,
 			"email-c",
 			{
-				messageId: "<ignored-multi-peer-received@example.com>",
 				subject: "Multi-peer email",
 				text: "Stored by the owning peer instance",
 			},

@@ -33,6 +33,10 @@ export const zEmailHandlerEvent = z
 		"One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry."
 	) satisfies z.ZodType<EmailHandlerEvent>;
 
+export const zEmailHeaders = z
+	.array(z.tuple([z.string(), z.string()]))
+	.describe("Email headers as ordered name/value pairs, including duplicates.");
+
 export interface EmailHandlerForward {
 	messageId: string;
 	recipient: string;
@@ -143,6 +147,7 @@ export const zEmailRoutingItem = zEmailBase.extend({
 	to: z.string().describe("Envelope RCPT TO address."),
 	cc: z.array(z.string()).optional(),
 	headers: z.record(z.string(), z.string()).optional(),
+	headerEntries: zEmailHeaders.optional(),
 	receivedAt: z.string(),
 	rawSize: z.number(),
 	outcome: z

@@ -1,7 +1,9 @@
 import { extractEmailAddress, formatEmailAddress } from "./address";
 import { bytesToBase64 } from "./capture";
 import {
+	foldHeaderValue,
 	hasControlCharacters,
+	isManagedEmailHeaderName,
 	isMimeType,
 	normalizeBase64,
 } from "./input-validation";
@@ -27,33 +29,6 @@ export interface MimeMessage {
 	text?: string;
 	html?: string;
 	attachments?: MimeAttachment[];
-}
-
-const MIME_MESSAGE_FIELD_HEADER_NAMES = new Set([
-	"bcc",
-	"cc",
-	"from",
-	"reply-to",
-	"subject",
-	"to",
-]);
-
-const MIME_STRUCTURAL_HEADER_NAMES = new Set([
-	"content-transfer-encoding",
-	"content-type",
-	"date",
-	"message-id",
-	"mime-version",
-]);
-
-/**
- * Checks whether a header is generated from a structured message field.
- *
- * @param name - Header name to check.
- * @returns Whether the MIME composer owns the header value.
- */
-export function isMimeMessageFieldHeader(name: string): boolean {
-	return MIME_MESSAGE_FIELD_HEADER_NAMES.has(name.toLowerCase());
 }
 
 export function buildMimeMessage(
@@ -85,13 +60,12 @@ export function buildMimeMessage(
 	for (const [key, value] of Object.entries(message.headers ?? {})) {
 		const normalizedKey = key.toLowerCase();
 		if (
-			isMimeMessageFieldHeader(normalizedKey) ||
-			MIME_STRUCTURAL_HEADER_NAMES.has(normalizedKey) ||
+			isManagedEmailHeaderName(normalizedKey) ||
 			generatedHeaderNames.has(normalizedKey)
 		) {
 			continue;
 		}
-		headers.push(`${key}: ${value}`);
+		headers.push(`${key}: ${foldHeaderValue(value)}`);
 	}
 
 	const text = message.text ?? "";
@@ -225,13 +199,14 @@ export function buildReplyFromMessageBuilder(
 	if (customHeaders.has("received")) {
 		throw new Error("invalid headers set");
 	}
-	for (const name of [
-		...MIME_MESSAGE_FIELD_HEADER_NAMES,
-		...MIME_STRUCTURAL_HEADER_NAMES,
-		"in-reply-to",
-		"references",
-	]) {
-		customHeaders.delete(name);
+	for (const name of Array.from(customHeaders.keys())) {
+		if (
+			isManagedEmailHeaderName(name) ||
+			name === "in-reply-to" ||
+			name === "references"
+		) {
+			customHeaders.delete(name);
+		}
 	}
 
 	const incomingMessageId = incomingMessage.messageId;

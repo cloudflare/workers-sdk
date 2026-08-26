@@ -561,125 +561,6 @@ export const zEmailHandlerReply = z.object({
 	rawBase64: z.string().optional(),
 });
 
-export const zEmailBase = z.object({
-	worker: z.string().optional(),
-	from: z.string(),
-	subject: z.string(),
-	messageId: z.string(),
-	attachments: z.array(
-		z.object({
-			filename: z.string(),
-			contentType: z.string(),
-			disposition: z.enum(["inline", "attachment"]),
-			size: z.number(),
-		})
-	),
-});
-
-export const zEmailRoutingItem = z.object({
-	worker: z.string().optional(),
-	from: z.string(),
-	subject: z.string(),
-	messageId: z.string(),
-	attachments: z.array(
-		z.object({
-			filename: z.string(),
-			contentType: z.string(),
-			disposition: z.enum(["inline", "attachment"]),
-			size: z.number(),
-		})
-	),
-	to: z.string(),
-	cc: z.array(z.string()).optional(),
-	headers: z.record(z.string(), z.string()).optional(),
-	receivedAt: z.string(),
-	rawSize: z.number(),
-	outcome: z.enum(["ok", "exception"]),
-	rejectReason: z.string().optional(),
-	forwards: z.array(
-		z.object({
-			messageId: z.string(),
-			recipient: z.string(),
-			headers: z.array(z.tuple([z.string(), z.string()])),
-		})
-	),
-	replies: z.array(
-		z.object({
-			messageId: z.string(),
-			sender: z.string(),
-			raw: z.string().optional(),
-			rawBase64: z.string().optional(),
-		})
-	),
-	events: z.array(
-		z.union([
-			z.object({
-				type: z.enum(["received", "reject", "unhandled"]),
-				timestamp: z.string(),
-			}),
-			z.object({
-				type: z.enum(["forward", "reply"]),
-				timestamp: z.string(),
-				messageId: z.string(),
-			}),
-		])
-	),
-});
-
-export const zEmailRoutingDetail = z.object({
-	worker: z.string().optional(),
-	from: z.string(),
-	subject: z.string(),
-	messageId: z.string(),
-	attachments: z.array(
-		z.object({
-			filename: z.string(),
-			contentType: z.string(),
-			disposition: z.enum(["inline", "attachment"]),
-			size: z.number(),
-		})
-	),
-	to: z.string(),
-	cc: z.array(z.string()).optional(),
-	headers: z.record(z.string(), z.string()).optional(),
-	receivedAt: z.string(),
-	rawSize: z.number(),
-	outcome: z.enum(["ok", "exception"]),
-	rejectReason: z.string().optional(),
-	forwards: z.array(
-		z.object({
-			messageId: z.string(),
-			recipient: z.string(),
-			headers: z.array(z.tuple([z.string(), z.string()])),
-		})
-	),
-	replies: z.array(
-		z.object({
-			messageId: z.string(),
-			sender: z.string(),
-			raw: z.string().optional(),
-			rawBase64: z.string().optional(),
-		})
-	),
-	events: z.array(
-		z.union([
-			z.object({
-				type: z.enum(["received", "reject", "unhandled"]),
-				timestamp: z.string(),
-			}),
-			z.object({
-				type: z.enum(["forward", "reply"]),
-				timestamp: z.string(),
-				messageId: z.string(),
-			}),
-		])
-	),
-	text: z.string().optional(),
-	html: z.string().optional(),
-	raw: z.string(),
-	rawBase64: z.string().optional(),
-});
-
 /**
  * Fields for composing a test email, mirroring MessageBuilder.
  */
@@ -716,19 +597,62 @@ export const zEmailAttachment = z.object({
 	size: z.number(),
 });
 
+export const zEmailBase = z.object({
+	worker: z.string().optional(),
+	from: z.string(),
+	subject: z.string(),
+	messageId: z.string(),
+	attachments: z.array(zEmailAttachment),
+});
+
+export const zEmailRoutingItem = z.object({
+	worker: z.string().optional(),
+	from: z.string(),
+	subject: z.string(),
+	messageId: z.string(),
+	attachments: z.array(zEmailAttachment),
+	to: z.string(),
+	cc: z.array(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
+	headerEntries: z.array(z.tuple([z.string(), z.string()])).optional(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply),
+	events: z.array(zEmailHandlerEvent),
+});
+
+export const zEmailRoutingDetail = z.object({
+	worker: z.string().optional(),
+	from: z.string(),
+	subject: z.string(),
+	messageId: z.string(),
+	attachments: z.array(zEmailAttachment),
+	to: z.string(),
+	cc: z.array(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
+	headerEntries: z.array(z.tuple([z.string(), z.string()])).optional(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zEmailHandlerReply),
+	events: z.array(zEmailHandlerEvent),
+	text: z.string().optional(),
+	html: z.string().optional(),
+	raw: z.string(),
+	rawBase64: z.string().optional(),
+});
+
 export const zEmailSendingItem = z.object({
 	worker: z.string().optional(),
 	from: z.string(),
 	subject: z.string(),
 	messageId: z.string(),
-	attachments: z.array(
-		z.object({
-			filename: z.string(),
-			contentType: z.string(),
-			disposition: z.enum(["inline", "attachment"]),
-			size: z.number(),
-		})
-	),
+	attachments: z.array(zEmailAttachment),
 	to: z.array(z.string()),
 	cc: z.array(z.string()).optional(),
 	bcc: z.array(z.string()).optional(),
@@ -742,14 +666,7 @@ export const zEmailSendingDetail = z.object({
 	from: z.string(),
 	subject: z.string(),
 	messageId: z.string(),
-	attachments: z.array(
-		z.object({
-			filename: z.string(),
-			contentType: z.string(),
-			disposition: z.enum(["inline", "attachment"]),
-			size: z.number(),
-		})
-	),
+	attachments: z.array(zEmailAttachment),
 	to: z.array(z.string()),
 	cc: z.array(z.string()).optional(),
 	bcc: z.array(z.string()).optional(),

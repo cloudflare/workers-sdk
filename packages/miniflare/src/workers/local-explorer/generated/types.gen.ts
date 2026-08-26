@@ -857,12 +857,7 @@ export type EmailBase = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 };
 
 export type EmailRoutingItem = {
@@ -882,12 +877,7 @@ export type EmailRoutingItem = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	/**
 	 * Envelope RCPT TO address.
 	 */
@@ -896,6 +886,10 @@ export type EmailRoutingItem = {
 	headers?: {
 		[key: string]: string;
 	};
+	/**
+	 * Email headers as ordered name/value pairs, including duplicates.
+	 */
+	headerEntries?: Array<[string, string]>;
 	receivedAt: string;
 	rawSize: number;
 	/**
@@ -906,55 +900,9 @@ export type EmailRoutingItem = {
 	 * Reason passed to setReject(), if the handler rejected the message.
 	 */
 	rejectReason?: string;
-	forwards: Array<{
-		messageId: string;
-		/**
-		 * Envelope recipient the message was forwarded to.
-		 */
-		recipient: string;
-		/**
-		 * Headers added to the forwarded message.
-		 */
-		headers: Array<[string, string]>;
-	}>;
-	replies: Array<{
-		messageId: string;
-		/**
-		 * Address the reply was sent from.
-		 */
-		sender: string;
-		/**
-		 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
-		 */
-		raw?: string;
-		/**
-		 * Lossless base64 representation of the reply MIME.
-		 */
-		rawBase64?: string;
-	}>;
-	/**
-	 * One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
-	 */
-	events: Array<
-		| {
-				type: "received" | "reject" | "unhandled";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-		  }
-		| {
-				type: "forward" | "reply";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-				/**
-				 * Correlates with the matching `forwards`/`replies` entry.
-				 */
-				messageId: string;
-		  }
-	>;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
 };
 
 export type EmailRoutingDetail = {
@@ -974,12 +922,7 @@ export type EmailRoutingDetail = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	/**
 	 * Envelope RCPT TO address.
 	 */
@@ -988,6 +931,10 @@ export type EmailRoutingDetail = {
 	headers?: {
 		[key: string]: string;
 	};
+	/**
+	 * Email headers as ordered name/value pairs, including duplicates.
+	 */
+	headerEntries?: Array<[string, string]>;
 	receivedAt: string;
 	rawSize: number;
 	/**
@@ -998,55 +945,9 @@ export type EmailRoutingDetail = {
 	 * Reason passed to setReject(), if the handler rejected the message.
 	 */
 	rejectReason?: string;
-	forwards: Array<{
-		messageId: string;
-		/**
-		 * Envelope recipient the message was forwarded to.
-		 */
-		recipient: string;
-		/**
-		 * Headers added to the forwarded message.
-		 */
-		headers: Array<[string, string]>;
-	}>;
-	replies: Array<{
-		messageId: string;
-		/**
-		 * Address the reply was sent from.
-		 */
-		sender: string;
-		/**
-		 * Raw MIME content of the reply. Omitted from the routing list; present on the detail response.
-		 */
-		raw?: string;
-		/**
-		 * Lossless base64 representation of the reply MIME.
-		 */
-		rawBase64?: string;
-	}>;
-	/**
-	 * One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.
-	 */
-	events: Array<
-		| {
-				type: "received" | "reject" | "unhandled";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-		  }
-		| {
-				type: "forward" | "reply";
-				/**
-				 * ISO 8601 timestamp of when the event occurred.
-				 */
-				timestamp: string;
-				/**
-				 * Correlates with the matching `forwards`/`replies` entry.
-				 */
-				messageId: string;
-		  }
-	>;
+	forwards: Array<EmailHandlerForward>;
+	replies: Array<EmailHandlerReply>;
+	events: Array<EmailHandlerEvent>;
 	/**
 	 * Parsed plain text body, when present.
 	 */
@@ -1149,12 +1050,7 @@ export type EmailSendingItem = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	to: Array<string>;
 	cc?: Array<string>;
 	bcc?: Array<string>;
@@ -1182,12 +1078,7 @@ export type EmailSendingDetail = {
 	/**
 	 * Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.
 	 */
-	attachments: Array<{
-		filename: string;
-		contentType: string;
-		disposition: "inline" | "attachment";
-		size: number;
-	}>;
+	attachments: Array<EmailAttachment>;
 	to: Array<string>;
 	cc?: Array<string>;
 	bcc?: Array<string>;
