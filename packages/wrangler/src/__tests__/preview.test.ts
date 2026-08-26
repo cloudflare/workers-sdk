@@ -45,6 +45,61 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 	};
 }
 
+type PreviewDeploymentModulePart = {
+	name: string;
+	content_type: string;
+	content: Uint8Array;
+};
+
+function decodeModuleContent(
+	module: PreviewDeploymentModulePart | undefined
+): string {
+	return module ? new TextDecoder().decode(module.content) : "";
+}
+
+async function readPreviewDeploymentRequest(
+	request: Request
+): Promise<
+	Record<string, unknown> & { modules: PreviewDeploymentModulePart[] }
+> {
+	const form = await request.formData();
+
+	const metadataPart = form.get("metadata");
+	if (typeof metadataPart !== "string") {
+		throw new Error(
+			"Preview deployment request is missing its `metadata` form part"
+		);
+	}
+	const metadata = JSON.parse(metadataPart) as Record<string, unknown>;
+	if ("modules" in metadata) {
+		throw new Error(
+			"Preview deployment `metadata` must not carry `modules`; modules belong in their own form parts"
+		);
+	}
+
+	const moduleParts = form.getAll("files");
+	if (moduleParts.length === 0) {
+		throw new Error("Preview deployment request has no module file parts");
+	}
+
+	const modules = await Promise.all(
+		moduleParts.map(async (part) => {
+			if (!(part instanceof File)) {
+				throw new Error(
+					"Preview deployment module part is a plain field, not a file"
+				);
+			}
+			return {
+				name: part.name,
+				content_type: part.type,
+				content: new Uint8Array(await part.arrayBuffer()),
+			};
+		})
+	);
+
+	return { ...metadata, modules };
+}
+
 /**
  * Write a Worker entrypoint and a `wrangler.json` whose `previews` block binds
  * one Durable Object and attaches a registry-image container to it.
@@ -1290,8 +1345,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1535,10 +1591,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -1573,8 +1626,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1596,10 +1650,7 @@ describe("wrangler preview", () => {
 			const mainModule = deploymentRequestBody?.modules?.find(
 				(module) => module.name === deploymentRequestBody?.main_module
 			);
-			const code = Buffer.from(
-				mainModule?.content_base64 ?? "",
-				"base64"
-			).toString("utf8");
+			const code = decodeModuleContent(mainModule);
 
 			expect(code).toContain("redirected-message");
 		});
@@ -1692,10 +1743,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -1741,8 +1789,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -2235,8 +2284,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 
 						return HttpResponse.json(
 							{
@@ -2390,10 +2440,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2489,10 +2538,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2581,10 +2629,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2979,10 +3026,9 @@ describe("wrangler preview", () => {
 					http.post(
 						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 						async ({ request }) => {
-							deploymentRequest = (await request.json()) as Record<
-								string,
-								unknown
-							>;
+							deploymentRequest = (await readPreviewDeploymentRequest(
+								request
+							)) as Record<string, unknown>;
 							return HttpResponse.json(
 								{
 									success: true,
@@ -3394,10 +3440,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3469,10 +3514,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3565,10 +3609,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4165,11 +4208,7 @@ describe("wrangler preview", () => {
 
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
-						modules?: Array<{
-							name: string;
-							content_type: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  })
 				| undefined;
 
@@ -4207,8 +4246,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4230,13 +4270,13 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --name test-preview");
 
-			expect(deploymentRequestBody?.modules).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						name: expect.stringMatching(/\.map$/),
-						content_type: "application/source-map",
-					}),
-				])
+			const sourceMap = deploymentRequestBody?.modules?.find((module) =>
+				module.name.endsWith(".map")
+			);
+
+			expect(sourceMap?.content_type).toBe("application/source-map");
+			expect(JSON.parse(decodeModuleContent(sourceMap))).toEqual(
+				expect.objectContaining({ version: 3 })
 			);
 		});
 
@@ -4263,10 +4303,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -4301,8 +4338,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -4324,10 +4362,7 @@ describe("wrangler preview", () => {
 			const mainModule = deploymentRequestBody?.modules?.find(
 				(module) => module.name === deploymentRequestBody?.main_module
 			);
-			const code = Buffer.from(
-				mainModule?.content_base64 ?? "",
-				"base64"
-			).toString("utf8");
+			const code = decodeModuleContent(mainModule);
 			expect(code).toContain("preview-value");
 			expect(code).not.toContain("top-level");
 		});
@@ -4396,8 +4431,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -4489,8 +4525,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -4601,8 +4638,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4709,8 +4747,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4798,8 +4837,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4893,8 +4933,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4998,8 +5039,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -5122,8 +5164,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -5217,8 +5260,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -5301,8 +5345,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
