@@ -101,7 +101,7 @@ describe("writeWorkerConfig", () => {
 			modules: { "index.js": { type: "esm" as const } },
 		};
 
-		await writeWorkerConfig(root, parsedWorkerConfig, manifest);
+		await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
 
 		const contents = JSON.parse(
 			fs.readFileSync(getWorkerConfigPath(root), "utf-8")
@@ -116,12 +116,26 @@ describe("writeWorkerConfig", () => {
 		expect,
 	}) => {
 		const root = process.cwd();
-		await writeWorkerConfig(root, parsedWorkerConfig);
+		await writeWorkerConfig({ root, config: parsedWorkerConfig });
 
 		const contents = JSON.parse(
 			fs.readFileSync(getWorkerConfigPath(root), "utf-8")
 		);
 		expect(contents).not.toHaveProperty("manifest");
+	});
+
+	it("writes config.json for a named Worker directory", async ({ expect }) => {
+		const root = process.cwd();
+		await writeWorkerConfig({
+			root,
+			config: parsedWorkerConfig,
+			workerDirectoryName: "additional",
+		});
+
+		const contents = JSON.parse(
+			fs.readFileSync(getWorkerConfigPath(root, "additional"), "utf-8")
+		);
+		expect(contents.name).toBe("my-worker");
 	});
 });
 
