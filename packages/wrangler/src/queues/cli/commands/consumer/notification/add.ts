@@ -27,7 +27,7 @@ export const queuesConsumerNotificationAddCommand = createCommand({
 			array: true,
 			description: "PagerDuty integration keys for notifications",
 		},
-		webhooks: {
+		webhook: {
 			type: "string",
 			array: true,
 			description: "Webhook IDs for notifications",
@@ -41,11 +41,11 @@ export const queuesConsumerNotificationAddCommand = createCommand({
 	async handler(args, { config }) {
 		const email = args.email ?? [];
 		const pagerduty = args.pagerduty ?? [];
-		const webhooks = args.webhooks ?? [];
+		const webhook = args.webhook ?? [];
 
-		if (email.length === 0 && pagerduty.length === 0 && webhooks.length === 0) {
+		if (email.length === 0 && pagerduty.length === 0 && webhook.length === 0) {
 			throw new CommandLineArgsError(
-				"At least one notification mechanism must be specified (--email, --pagerduty, or --webhooks)",
+				"At least one notification mechanism must be specified (--email, --pagerduty, or --webhook)",
 				{
 					telemetryMessage:
 						"queues notification consumer add no mechanisms",
@@ -61,7 +61,7 @@ export const queuesConsumerNotificationAddCommand = createCommand({
 			settings: {
 				email: toEntries(email),
 				pagerduty: toEntries(pagerduty),
-				webhooks: toEntries(webhooks),
+				webhooks: toEntries(webhook),
 			},
 			dead_letter_queue: args.deadLetterQueue,
 		} as PostTypedConsumerBody;
