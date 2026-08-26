@@ -67,6 +67,10 @@ export interface PostTypedConsumerBody {
 	dead_letter_queue?: string;
 }
 
+export interface MechanismEntry {
+	id: string;
+}
+
 export interface ConsumerSettings {
 	batch_size?: number;
 	max_retries?: number;
@@ -74,6 +78,9 @@ export interface ConsumerSettings {
 	max_concurrency?: number | null;
 	visibility_timeout_ms?: number;
 	retry_delay?: number;
+	email?: MechanismEntry[];
+	webhooks?: MechanismEntry[];
+	pagerduty?: MechanismEntry[];
 }
 
 export interface PurgeQueueBody {
