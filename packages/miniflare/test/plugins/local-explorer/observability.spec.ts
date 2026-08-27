@@ -84,7 +84,7 @@ describe("Observability API", () => {
 						env: {
 							TRACE_STORE: {
 								type: "durable-object",
-								workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+								worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 								exportName: "TraceStore",
 							},
 						},

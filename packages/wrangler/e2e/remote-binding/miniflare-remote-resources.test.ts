@@ -185,12 +185,12 @@ const testCases: TestCase[] = [
 				miniflareConfig: (connection) => ({
 					SERVICE: {
 						type: "worker",
-						workerName: targetWorkerName,
+						worker: targetWorkerName,
 						dev: { remote: remote(connection) },
 					},
 					SERVICE_WITH_ENTRYPOINT: {
 						type: "worker",
-						workerName: targetWorkerName,
+						worker: targetWorkerName,
 						exportName: "CustomEntrypoint",
 						dev: { remote: remote(connection) },
 					},

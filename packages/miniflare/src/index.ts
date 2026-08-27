@@ -407,11 +407,11 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		if (tailConsumers !== undefined) {
 			for (let i = 0; i < tailConsumers.length; i++) {
 				const consumer = tailConsumers[i];
-				const serviceName = consumer.workerName;
+				const serviceName = consumer.worker;
 				if (serviceName && !allWorkerNames.includes(serviceName)) {
 					getEntrypoints(serviceName).entrypoints.add(consumer.entrypoint);
 					tailConsumers[i] = {
-						workerName: SERVICE_DEV_REGISTRY_PROXY,
+						worker: SERVICE_DEV_REGISTRY_PROXY,
 						streaming: consumer.streaming,
 						entrypoint: "ExternalServiceProxy",
 						// User-supplied `props` are preserved in `userProps` so the proxy
@@ -450,7 +450,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 				// remote entrypoint via the debug port.
 				env[name] = {
 					type: "worker",
-					workerName: SERVICE_DEV_REGISTRY_PROXY,
+					worker: SERVICE_DEV_REGISTRY_PROXY,
 					exportName: "ExternalServiceProxy",
 					props: {
 						service: serviceName,
@@ -466,29 +466,29 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 			config,
 			"durable-object"
 		)) {
-			const { workerName, exportName } = binding;
-			if (!allWorkerNames.includes(workerName)) {
+			const { worker, exportName } = binding;
+			if (!allWorkerNames.includes(worker)) {
 				// Point it at the outbound DO proxy class on the dev-registry proxy
 				// worker. The proxy worker registers the namespace (with a matching
 				// unique key) itself, so no extra config is needed on the binding.
 				env[bindingName] = {
 					type: "durable-object",
-					workerName: SERVICE_DEV_REGISTRY_PROXY,
-					exportName: getOutboundDoProxyClassName(workerName, exportName),
+					worker: SERVICE_DEV_REGISTRY_PROXY,
+					exportName: getOutboundDoProxyClassName(worker, exportName),
 				};
-				getEntrypoints(workerName).classNames.add(exportName);
+				getEntrypoints(worker).classNames.add(exportName);
 			}
 		}
 
-		// Cross-worker workflow bindings: when `workerName` refers to a worker
+		// Cross-worker workflow bindings: when `worker` refers to a worker
 		// outside this Miniflare instance (registered in the dev registry), record
 		// its entrypoint so the dev-registry proxy exposes it. The workflows plugin
 		// reroutes the engine's USER_WORKFLOW binding through the proxy itself; here
 		// we only register the external entrypoint. Mirrors the DO block above.
 		for (const [, binding] of getEnvBindingsOfType(config, "workflow")) {
-			const { workerName, exportName } = binding;
-			if (!allWorkerNames.includes(workerName)) {
-				getEntrypoints(workerName).entrypoints.add(exportName);
+			const { worker, exportName } = binding;
+			if (!allWorkerNames.includes(worker)) {
+				getEntrypoints(worker).entrypoints.add(exportName);
 			}
 		}
 	}
@@ -3331,7 +3331,7 @@ export class Miniflare {
 		const binding = workerOpts.config.env?.[classNameOrBindingName];
 		if (binding?.type === "durable-object") {
 			className = binding.exportName;
-			scriptName = binding.workerName;
+			scriptName = binding.worker;
 		} else if (
 			getExportsOfType(workerOpts.config, "durable-object").some(
 				([exportName]) => exportName === classNameOrBindingName

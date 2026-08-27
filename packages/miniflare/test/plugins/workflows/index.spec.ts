@@ -46,7 +46,7 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 						MY_WORKFLOW: {
 							type: "workflow",
 							name: "MY_WORKFLOW",
-							workerName: "workflow-compatibility-flags-worker",
+							worker: "workflow-compatibility-flags-worker",
 							exportName: "MyWorkflow",
 						},
 					},
@@ -79,7 +79,7 @@ test("persists Workflow data on file-system between runs", async ({
 						MY_WORKFLOW: {
 							type: "workflow",
 							name: "MY_WORKFLOW",
-							workerName: "worker",
+							worker: "worker",
 							exportName: "MyWorkflow",
 						},
 					},
@@ -236,7 +236,7 @@ function lifecycleMiniflareOpts(tmp: string): MiniflareOptions {
 						LIFECYCLE_WORKFLOW: {
 							type: "workflow",
 							name: "LIFECYCLE_WORKFLOW",
-							workerName: "lifecycle-worker",
+							worker: "lifecycle-worker",
 							exportName: "LifecycleWorkflow",
 						},
 					},

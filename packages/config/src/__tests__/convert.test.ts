@@ -426,7 +426,7 @@ describe("convertToWranglerConfig", () => {
 					DN: {
 						type: "dispatch-namespace",
 						namespace: "ns-1",
-						outbound: { workerName: "out-worker", parameters: ["p1", "p2"] },
+						outbound: { worker: "out-worker", parameters: ["p1", "p2"] },
 					},
 				},
 			});
@@ -559,7 +559,7 @@ describe("convertToWranglerConfig", () => {
 				env: {
 					W: {
 						type: "worker",
-						workerName: "other-worker",
+						worker: "other-worker",
 						exportName: "MyEntry",
 						props: { foo: "bar" },
 						dev: { remote: true },
@@ -605,7 +605,7 @@ describe("convertToWranglerConfig", () => {
 				env: {
 					DO: {
 						type: "durable-object",
-						workerName: "other-worker",
+						worker: "other-worker",
 						exportName: "MyDO",
 					},
 				},
@@ -1154,7 +1154,7 @@ describe("convertToWranglerConfig", () => {
 		it("maps non-streaming consumers to tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				tailConsumers: [{ workerName: "tail-worker" }],
+				tailConsumers: [{ worker: "tail-worker" }],
 			});
 			expect(result.tail_consumers).toEqual([{ service: "tail-worker" }]);
 			expect(result.streaming_tail_consumers).toBeUndefined();
@@ -1163,7 +1163,7 @@ describe("convertToWranglerConfig", () => {
 		it("maps streaming consumers to streaming_tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				tailConsumers: [{ workerName: "stream-worker", streaming: true }],
+				tailConsumers: [{ worker: "stream-worker", streaming: true }],
 			});
 			expect(result.streaming_tail_consumers).toEqual([
 				{ service: "stream-worker" },
@@ -1175,9 +1175,9 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				tailConsumers: [
-					{ workerName: "a" },
-					{ workerName: "b", streaming: true },
-					{ workerName: "c", streaming: false },
+					{ worker: "a" },
+					{ worker: "b", streaming: true },
+					{ worker: "c", streaming: false },
 				],
 			});
 			expect(result.tail_consumers).toEqual([

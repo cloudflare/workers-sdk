@@ -75,7 +75,7 @@ test("persists Durable Object data in-memory between options reloads", async ({
 					env: {
 						COUNTER: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "Counter",
 						},
 					},
@@ -138,7 +138,7 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 					env: {
 						COUNTER: {
 							type: "durable-object",
-							workerName: "worker",
+							worker: "worker",
 							exportName: "Counter",
 						},
 					},
@@ -199,7 +199,7 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 					env: {
 						COUNTER: {
 							type: "durable-object",
-							workerName: "worker",
+							worker: "worker",
 							exportName: "Counter",
 						},
 					},
@@ -252,8 +252,8 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
           }
         }`),
 					env: {
-						A: { type: "worker", workerName: "a" },
-						B: { type: "worker", workerName: "b" },
+						A: { type: "worker", worker: "a" },
+						B: { type: "worker", worker: "b" },
 					},
 				},
 			},
@@ -266,12 +266,12 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 					env: {
 						COUNTER_A: {
 							type: "durable-object",
-							workerName: "a",
+							worker: "a",
 							exportName: "Counter",
 						},
 						COUNTER_B: {
 							type: "durable-object",
-							workerName: "b",
+							worker: "b",
 							exportName: "Counter",
 						},
 					},
@@ -289,12 +289,12 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 					env: {
 						COUNTER_A: {
 							type: "durable-object",
-							workerName: "a",
+							worker: "a",
 							exportName: "Counter",
 						},
 						COUNTER_B: {
 							type: "durable-object",
-							workerName: "b",
+							worker: "b",
 							exportName: "Counter",
 						},
 					},
@@ -358,7 +358,7 @@ test("can use Durable Object ID from one object in another", async ({
 					env: {
 						OBJECT_B: {
 							type: "durable-object",
-							workerName: "a",
+							worker: "a",
 							exportName: "b_B",
 						},
 					},
@@ -403,7 +403,7 @@ test("can use Durable Object ID from one object in another", async ({
 					env: {
 						OBJECT_B: {
 							type: "durable-object",
-							workerName: "b",
+							worker: "b",
 							exportName: "B",
 						},
 					},
@@ -436,7 +436,7 @@ test("proxies Durable Object methods", async ({ expect }) => {
 					env: {
 						COUNTER: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "Counter",
 						},
 					},
@@ -495,7 +495,7 @@ test("proxies Durable Object methods", async ({ expect }) => {
 					env: {
 						WEBSOCKET: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "WebSocketObject",
 						},
 					},
@@ -536,7 +536,7 @@ describe("evictions", { concurrent: true }, () => {
 						env: {
 							DURABLE_OBJECT: {
 								type: "durable-object",
-								workerName: "",
+								worker: "",
 								exportName: "DurableObject",
 							},
 						},
@@ -578,7 +578,7 @@ describe("evictions", { concurrent: true }, () => {
 						env: {
 							DURABLE_OBJECT: {
 								type: "durable-object",
-								workerName: "",
+								worker: "",
 								exportName: "DurableObject",
 							},
 						},
@@ -639,7 +639,7 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 					env: {
 						SQLITE_DURABLE_OBJECT: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "SQLiteDurableObject",
 						},
 					},
@@ -718,7 +718,7 @@ test("gets SQLite storage for Durable Objects", async ({ expect }) => {
 					env: {
 						OBJECT: {
 							type: "durable-object",
-							workerName: "worker",
+							worker: "worker",
 							exportName: "TestObject",
 						},
 					},
@@ -816,7 +816,7 @@ test("colo-local actors", async ({ expect }) => {
 					env: {
 						OBJECT: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "TestObject",
 						},
 					},
@@ -882,7 +882,7 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 						env: {
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDo",
 							},
 						},
@@ -900,7 +900,7 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 						env: {
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDo",
 							},
 						},
@@ -951,7 +951,7 @@ test("Durable Object RPC calls do not block Node.js event loop", async ({
 					env: {
 						BLOCKING_DO: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "BlockingDO",
 						},
 					},
@@ -995,7 +995,7 @@ test("Durable Object RPC calls complete when unblocked", async ({ expect }) => {
 					env: {
 						BLOCKING_DO: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "BlockingDO",
 						},
 					},

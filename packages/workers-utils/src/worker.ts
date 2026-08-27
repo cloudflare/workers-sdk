@@ -207,6 +207,9 @@ export interface CfWorkflow {
 	limits?: {
 		steps?: number;
 	};
+	concurrency?: {
+		limit?: number;
+	};
 	schedules?: string | string[];
 }
 
