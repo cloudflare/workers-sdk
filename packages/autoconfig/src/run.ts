@@ -204,10 +204,15 @@ export async function runAutoConfig(
 
 	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
 		if (target === "cf") {
-			await installPackages(packageManager.type, ["cf@latest"], {
-				dev: true,
-				isWorkspaceRoot,
-			});
+			const hasCfDependency =
+				autoConfigDetails.packageJson.dependencies?.cf !== undefined ||
+				autoConfigDetails.packageJson.devDependencies?.cf !== undefined;
+			if (!hasCfDependency) {
+				await installPackages(packageManager.type, ["cf@latest"], {
+					dev: true,
+					isWorkspaceRoot,
+				});
+			}
 		} else {
 			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
