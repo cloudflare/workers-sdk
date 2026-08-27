@@ -548,7 +548,9 @@ export default <ExportedHandler<Env>>{
 			const imagesDelivery = env[CoreBindings.SERVICE_IMAGES_DELIVERY];
 			if (
 				(url.pathname === CorePaths.IMAGE_DELIVERY ||
-					url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`)) &&
+					url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`) ||
+					url.pathname === CorePaths.IMAGE_UPLOAD ||
+					url.pathname.startsWith(`${CorePaths.IMAGE_UPLOAD}/`)) &&
 				imagesDelivery
 			) {
 				return await imagesDelivery.fetch(request);
