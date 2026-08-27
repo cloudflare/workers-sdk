@@ -30,6 +30,7 @@ import {
 import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
+import { MAX_EMAIL_BODY_BYTES } from "../src/workers/email/capture";
 import {
 	FIXTURES_PATH,
 	singleModuleManifest,
@@ -2476,6 +2477,66 @@ This is a random email body.
 	expect(await res.text()).toBe("false");
 });
 
+test("Miniflare: manually triggered email handler - missing email() handler", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+
+	const mf = new Miniflare({
+		log,
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			export default {
+				fetch() {
+					return new Response("ok");
+				}
+			}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const raw = `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`;
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: raw,
+			method: "POST",
+		}
+	);
+	const body = await res.text();
+	expect(res.status).toBe(500);
+	expect(body).toBe(
+		"Worker does not export an email() handler; message stored without delivery."
+	);
+
+	const jsonRes = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?format=json&from=someone@example.com&to=someone-else@example.com",
+		{ body: raw, method: "POST" }
+	);
+	expect(jsonRes.status).toBe(500);
+	expect(await jsonRes.json()).toEqual({
+		outcome: "exception",
+		forwards: [],
+		replies: [],
+		events: [{ type: "unhandled", timestamp: expect.any(String) }],
+	});
+});
+
 test("Miniflare: manually triggered email handler - reply handler works", async ({
 	expect,
 }) => {
@@ -2549,7 +2610,9 @@ This is a random email body.
 test("Miniflare: manually triggered email handler - structured result", async ({
 	expect,
 }) => {
+	const log = new TestLog();
 	const mf = new Miniflare({
+		log,
 		unsafeTriggerHandlers: true,
 		workers: [
 			{
@@ -2572,15 +2635,29 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						"archive@example.com",
 						new Headers({ "X-Test": mode })
 					);
+					const replyPrefix =
+						\`From: reply-\${mode}@example.com\\r\\n\` +
+						\`To: \${message.from}\\r\\n\` +
+						\`In-Reply-To: <\${mode}@example.com>\\r\\n\` +
+						\`References: <\${mode}@example.com>\\r\\n\` +
+						\`Message-ID: <reply-\${mode}@example.com>\\r\\n\` +
+						"Content-Type: text/plain\\r\\n\\r\\n";
+					const replyBody = mode === "large"
+						? "x".repeat(
+								${MAX_EMAIL_BODY_BYTES} -
+								new TextEncoder().encode(replyPrefix).byteLength -
+								1
+							) + "€complete reply"
+						: \`Reply for \${mode}\\r\\n\`;
 					await message.reply(new EmailMessage(
 						\`reply-\${mode}@example.com\`,
 						message.from,
-						\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+						replyPrefix + replyBody
 					));
 
 					if (mode === "exception") {
 						message.setReject("triggered exception");
-						throw new Error("sensitive handler error");
+						throw new Error("email handler failed");
 					}
 				}
 			}`),
@@ -2617,7 +2694,10 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						timestamp: string;
 						messageId: string;
 				  }
-				| { type: "reject"; timestamp: string }
+				| {
+						type: "received" | "reject" | "unhandled";
+						timestamp: string;
+				  }
 			)[];
 		};
 	}
@@ -2642,6 +2722,10 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 	});
 	expect(okResult.events).toEqual([
 		{
+			type: "received",
+			timestamp: expect.any(String),
+		},
+		{
 			type: "forward",
 			timestamp: expect.any(String),
 			messageId: okResult.forwards[0]?.messageId,
@@ -2653,6 +2737,14 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		},
 	]);
 
+	const largeResult = await dispatchEmail("large");
+	const largeReply = largeResult.replies[0]?.raw ?? "";
+	expect(new TextEncoder().encode(largeReply).byteLength).toBeGreaterThan(
+		MAX_EMAIL_BODY_BYTES
+	);
+	expect(largeReply).toContain("€complete reply");
+	expect(largeReply).not.toContain("\uFFFD");
+
 	const rejectedResult = await dispatchEmail("rejected");
 	expect(rejectedResult).toMatchObject({
 		outcome: "ok",
@@ -2661,6 +2753,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		replies: [],
 	});
 	expect(rejectedResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{ type: "reject", timestamp: expect.any(String) },
 	]);
 
@@ -2683,6 +2776,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		],
 	});
 	expect(exceptionResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{
 			type: "forward",
 			timestamp: expect.any(String),
@@ -2695,6 +2789,9 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		},
 		{ type: "reject", timestamp: expect.any(String) },
 	]);
+	expect(log.logsAtLevel(LogLevel.ERROR)).toContainEqual(
+		expect.stringContaining("Error: email handler failed")
+	);
 });
 
 test("Miniflare: unrecognised /cdn-cgi/local/ routes fall through to user worker", async ({

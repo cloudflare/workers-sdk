@@ -1,4 +1,4 @@
-import fs, { existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -7,6 +7,7 @@ import {
 	LogLevel,
 	Miniflare,
 } from "miniflare";
+import PostalMime from "postal-mime";
 import dedent from "ts-dedent";
 import { describe, type ExpectStatic, test, vi } from "vitest";
 import {
@@ -55,6 +56,49 @@ async function useProjectTmpPath(): Promise<string> {
 	return path.join(await useTmp(), "project-tmp");
 }
 
+async function expectPersistedEmail(
+	log: TestLog,
+	expectedEmail: string,
+	originalMessageId: string,
+	generatedMessageIdDomain: string,
+	expect: ExpectStatic
+): Promise<void> {
+	await vi.waitFor(
+		async () => {
+			const entry = log.logs.find(
+				([type, message]) =>
+					type === LogLevel.INFO &&
+					message.match(
+						/send_email binding called with the following message:\n/
+					)
+			);
+			if (!entry) {
+				throw new Error(
+					"send_email binding log not found in " +
+						JSON.stringify(log.logs, null, 2)
+				);
+			}
+			const fileMatch = entry[1].match(/^Email: (.+)$/m);
+			expect(fileMatch).not.toBeNull();
+			const file = fileMatch?.[1];
+			expect(file).toBeDefined();
+			const fileContent = await readFile(String(file), "utf-8");
+			const messageId = fileContent.match(/^Message-ID: (.+)$/m)?.[1];
+			expect(messageId).toEqual(
+				synthesizedMessageId(expect, generatedMessageIdDomain)
+			);
+			expect(messageId).not.toBe(originalMessageId);
+			expect(
+				fileContent.replace(
+					`Message-ID: ${messageId}`,
+					`Message-ID: ${originalMessageId}`
+				)
+			).toBe(expectedEmail);
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
+}
+
 test("Unbound send_email binding works", async ({ expect }) => {
 	const log = new TestLog();
 	const projectTmpPath = await useProjectTmpPath();
@@ -101,29 +145,12 @@ test("Unbound send_email binding works", async ({ expect }) => {
 	);
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.match(
-						/send_email binding called with the following message:\n/
-					)
-			);
-			if (!entry) {
-				throw new Error(
-					"send_email binding log not found in " +
-						JSON.stringify(log.logs, null, 2)
-				);
-			}
-			const message = entry[1];
-			const fileMatch = message.match(/^Email: (.+)$/m);
-			expect(fileMatch).not.toBeNull();
-			const file = fileMatch?.[1];
-			expect(file).toBeDefined();
-			expect(await readFile(String(file), "utf-8")).toBe(email);
-		},
-		{ timeout: 5_000, interval: 100 }
+	await expectPersistedEmail(
+		log,
+		email,
+		"<im-a-random-message-id@example.com>",
+		"example.com",
+		expect
 	);
 });
 
@@ -156,7 +183,7 @@ test("Invalid email throws", async ({ expect }) => {
 		}
 	);
 
-	expect((await res.text()).startsWith("Error: invalid message-id"));
+	expect(await res.text()).toMatch(/^Error: invalid message-id/);
 	expect(res.status).toBe(500);
 });
 
@@ -217,29 +244,12 @@ test("Single allowed destination send_email binding works", async ({
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.match(
-						/send_email binding called with the following message:\n/
-					)
-			);
-			if (!entry) {
-				throw new Error(
-					"send_email binding log not found in " +
-						JSON.stringify(log.logs, null, 2)
-				);
-			}
-			const message = entry[1];
-			const fileMatch = message.match(/^Email: (.+)$/m);
-			expect(fileMatch).not.toBeNull();
-			const file = fileMatch?.[1];
-			expect(file).toBeDefined();
-			expect(await readFile(String(file), "utf-8")).toBe(email);
-		},
-		{ timeout: 5_000, interval: 100 }
+	await expectPersistedEmail(
+		log,
+		email,
+		"<im-a-random-message-id@example.com>",
+		"example.com",
+		expect
 	);
 });
 
@@ -286,10 +296,8 @@ This is a random email body.
 		}
 	);
 
-	expect(
-		(await res.text()).startsWith(
-			"Error: email to someone-else@example.com not allowed"
-		)
+	expect(await res.text()).toMatch(
+		/^Error: email to someone-else@example\.com not allowed/
 	);
 	expect(res.status).toBe(500);
 });
@@ -440,10 +448,8 @@ This is a random email body.
 		}
 	);
 
-	expect(
-		(await res.text()).startsWith(
-			"Error: email from notallowed@example.com not allowed"
-		)
+	expect(await res.text()).toMatch(
+		/^Error: email from notallowed@example\.com not allowed/
 	);
 	expect(res.status).toBe(500);
 });
@@ -494,10 +500,8 @@ This is a random email body.
 		}
 	);
 
-	expect(
-		(await res.text()).startsWith(
-			"Error: email to helly.r@example.com not allowed"
-		)
+	expect(await res.text()).toMatch(
+		/^Error: email to helly\.r@example\.com not allowed/
 	);
 	expect(res.status).toBe(500);
 });
@@ -545,7 +549,7 @@ test("reply validation: x-auto-response-suppress", async ({ expect }) => {
 			method: "POST",
 		}
 	);
-	expect((await res.text()).includes("Original email is not replyable"));
+	expect(await res.text()).toContain("Original email is not replyable");
 });
 
 test("reply validation: Auto-Submitted", async ({ expect }) => {
@@ -591,7 +595,7 @@ test("reply validation: Auto-Submitted", async ({ expect }) => {
 			method: "POST",
 		}
 	);
-	expect((await res.text()).includes("Original email is not replyable"));
+	expect(await res.text()).toContain("Original email is not replyable");
 });
 
 test("reply validation: only In-Reply-To", async ({ expect }) => {
@@ -637,7 +641,7 @@ test("reply validation: only In-Reply-To", async ({ expect }) => {
 			method: "POST",
 		}
 	);
-	expect((await res.text()).includes("Original email is not replyable"));
+	expect(await res.text()).toContain("Original email is not replyable");
 });
 
 test("reply validation: only References", async ({ expect }) => {
@@ -683,7 +687,7 @@ test("reply validation: only References", async ({ expect }) => {
 			method: "POST",
 		}
 	);
-	expect((await res.text()).includes("Original email is not replyable"));
+	expect(await res.text()).toContain("Original email is not replyable");
 });
 
 test("reply validation: >100 References", async ({ expect }) => {
@@ -730,7 +734,7 @@ test("reply validation: >100 References", async ({ expect }) => {
 			method: "POST",
 		}
 	);
-	expect((await res.text()).includes("Original email is not replyable"));
+	expect(await res.text()).toContain("Original email is not replyable");
 	expect(log.logs[1][0]).toBe(LogLevel.ERROR);
 	expect(log.logs[1][1].split("\n")[0]).toBe(
 		'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/'
@@ -780,7 +784,7 @@ test("reply: mismatched From: header", async ({ expect }) => {
 		}
 	);
 
-	expect((await res.text()).includes("From: header does not match mail from"));
+	expect(await res.text()).toContain("From: header does not match mail from");
 });
 
 test("reply: unparseable", async ({ expect }) => {
@@ -826,10 +830,10 @@ test("reply: unparseable", async ({ expect }) => {
 		}
 	);
 
-	expect((await res.text()).includes("could not parse email"));
+	expect(await res.text()).toContain("could not parse email");
 });
 
-test("reply: no message id", async ({ expect }) => {
+test("reply: generates a message id when omitted", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -850,6 +854,7 @@ test("reply: no message id", async ({ expect }) => {
 								To: someone <someone@example.com>
 								MIME-Version: 1.0
 								Content-Type: text/plain
+								In-Reply-To: <im-a-random-message-id@example.com>
 
 								This is a random email body.`)
 						)
@@ -882,7 +887,254 @@ test("reply: no message id", async ({ expect }) => {
 		}
 	);
 
-	expect((await res.text()).includes("invalid message-id"));
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+
+	const replyLog = log
+		.logsAtLevel(LogLevel.INFO)
+		.find((message) =>
+			message.startsWith(
+				"Email handler replied to sender with the following message:"
+			)
+		);
+	expect(replyLog).toBeDefined();
+	const file = replyLog?.match(/^ {2}(.+)$/m)?.[1];
+	expect(file).toBeDefined();
+	const fileContent = await readFile(String(file), "utf-8");
+	expect(fileContent).toMatch(/^Message-ID: <[A-Za-z0-9]{36}@example\.com>$/m);
+	expect(fileContent).toContain(
+		"References: <im-a-random-message-id@example.com>"
+	);
+});
+
+test("reply: rejects an empty message id", async ({ expect }) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								Message-ID:
+								In-Reply-To: <im-a-random-message-id@example.com>
+								MIME-Version: 1.0
+								Content-Type: text/plain
+
+								This is a random email body.`)
+						)
+					),
+				},
+			},
+		],
+	});
+
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?" +
+			new URLSearchParams({
+				from: "someone@example.com",
+				to: "someone-else@example.com",
+			}).toString(),
+		{
+			body: dedent`
+				From: someone <someone@example.com>
+				To: someone else <someone-else@example.com>
+				Message-ID: <im-a-random-message-id@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+
+				This is a random email body.`,
+			method: "POST",
+		}
+	);
+
+	expect(await res.text()).toContain("invalid message-id");
+	expect(res.status).toBe(500);
+});
+
+test("reply: supports EmailReplyMessageBuilder", async ({ expect }) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(dedent /* javascript */ `
+							export default {
+								fetch() {},
+								async email(message) {
+									await message.reply({
+										from: {
+											name: 'Reply "Sender" \\\\ Team',
+											email: "reply@example.com",
+										},
+										replyTo: {
+											name: "Support",
+											email: "support@example.com",
+									},
+									subject: "Builder reply",
+									headers: {
+										"X-Builder": "yes",
+										"In-Reply-To": "<wrong@example.com>",
+										"References": "<wrong@example.com>",
+										"Subject": "Wrong subject",
+									},
+									text: "Plain reply",
+									html: "<p>HTML reply</p>",
+									attachments: [{
+										disposition: "inline",
+										contentId: "greeting",
+										filename: "greeting.png",
+										type: "image/png",
+										content: "aGVsbG8=",
+									}, {
+										disposition: "attachment",
+										filename: "bytes.bin",
+										type: "application/octet-stream",
+										content: new Uint8Array([0, 104, 105, 0]).subarray(1, 3),
+									}],
+								});
+							},
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=worker@example.com",
+		{
+			body: dedent`
+				From: Sender <sender@example.com>
+				To: Worker <worker@example.com>
+				Message-ID: <incoming@example.com>
+				In-Reply-To: <root@example.com>
+				References: <root@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+
+				Incoming body.`,
+			method: "POST",
+		}
+	);
+	const result = (await res.json()) as {
+		replies: Array<{ messageId: string; sender: string; raw: string }>;
+	};
+
+	expect(res.status).toBe(200);
+	expect(result.replies).toHaveLength(1);
+	const reply = result.replies[0];
+	expect(reply?.messageId).toMatch(/^<[A-Za-z0-9]{36}@example\.com>$/);
+	expect(reply?.sender).toBe(
+		'"Reply \\"Sender\\" \\\\ Team" <reply@example.com>'
+	);
+
+	const parsed = await PostalMime.parse(reply?.raw ?? "");
+	expect(parsed.from).toMatchObject({
+		name: 'Reply "Sender" \\ Team',
+		address: "reply@example.com",
+	});
+	expect(parsed.to).toEqual([
+		expect.objectContaining({ address: "sender@example.com" }),
+	]);
+	expect(parsed.replyTo).toEqual([
+		expect.objectContaining({
+			name: "Support",
+			address: "support@example.com",
+		}),
+	]);
+	expect(parsed.subject).toBe("Builder reply");
+	expect(parsed.inReplyTo).toBe("<incoming@example.com>");
+	expect(parsed.references).toBe("<root@example.com> <incoming@example.com>");
+	expect(parsed.headers).toContainEqual(
+		expect.objectContaining({ key: "x-builder", value: "yes" })
+	);
+	expect(parsed.text).toContain("Plain reply");
+	expect(parsed.html).toContain("<p>HTML reply</p>");
+	expect(parsed.attachments).toHaveLength(2);
+	expect(parsed.attachments[0]).toMatchObject({
+		filename: "greeting.png",
+		mimeType: "image/png",
+		disposition: "inline",
+		contentId: "<greeting>",
+	});
+	const attachmentContent = parsed.attachments[0]?.content;
+	expect(
+		typeof attachmentContent === "string"
+			? attachmentContent
+			: new TextDecoder().decode(attachmentContent)
+	).toBe("hello");
+	expect(parsed.attachments[1]).toMatchObject({
+		filename: "bytes.bin",
+		mimeType: "application/octet-stream",
+		disposition: "attachment",
+	});
+	const binaryAttachmentContent = parsed.attachments[1]?.content;
+	expect(
+		typeof binaryAttachmentContent === "string"
+			? binaryAttachmentContent
+			: new TextDecoder().decode(binaryAttachmentContent)
+	).toBe("hi");
+});
+
+test("reply: rejects invalid custom header names", async ({ expect }) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(dedent /* javascript */ `
+						export default {
+							fetch() {},
+							async email(message) {
+								await message.reply({
+									from: "reply@example.com",
+									subject: "Invalid custom header",
+									headers: {
+										"Invalid Header": "value",
+									},
+									text: "Reply body",
+								});
+							},
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?from=sender@example.com&to=worker@example.com",
+		{
+			body: dedent`
+				From: sender@example.com
+				To: worker@example.com
+				Message-ID: <incoming@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+
+				Incoming body.`,
+			method: "POST",
+		}
+	);
+
+	expect(response.status).toBe(500);
+	expect(await response.text()).toContain("invalid headers set");
 });
 
 test("reply: disallowed header", async ({ expect }) => {
@@ -940,7 +1192,7 @@ test("reply: disallowed header", async ({ expect }) => {
 		}
 	);
 
-	expect((await res.text()).includes("invalid headers set"));
+	expect(await res.text()).toContain("invalid headers set");
 });
 
 test("reply: missing In-Reply-To", async ({ expect }) => {
@@ -997,8 +1249,8 @@ test("reply: missing In-Reply-To", async ({ expect }) => {
 		}
 	);
 
-	expect(
-		(await res.text()).includes("no In-Reply-To header found in reply message")
+	expect(await res.text()).toContain(
+		"no In-Reply-To header found in reply message"
 	);
 });
 
@@ -1057,10 +1309,8 @@ test("reply: wrong In-Reply-To", async ({ expect }) => {
 		}
 	);
 
-	expect(
-		(await res.text()).includes(
-			"In-Reply-To does not match original Message-ID"
-		)
+	expect(await res.text()).toContain(
+		"In-Reply-To does not match original Message-ID"
 	);
 });
 
@@ -1119,7 +1369,7 @@ test("reply: invalid references", async ({ expect }) => {
 			method: "POST",
 		}
 	);
-	expect((await res.text()).includes("provided References header is invalid"));
+	expect(await res.text()).toContain("provided References header is invalid");
 });
 
 test("reply: references generated correctly", async ({ expect }) => {
@@ -1160,6 +1410,8 @@ test("reply: references generated correctly", async ({ expect }) => {
 		From: someone <someone@example.com>
 		To: someone else <someone-else@example.com>
 		Message-ID: <im-a-random-parent-message-id@example.com>
+		In-Reply-To: <root@example.com>
+		References: <root@example.com>
 		MIME-Version: 1.0
 		Content-Type: text/plain
 
@@ -1190,11 +1442,13 @@ test("reply: references generated correctly", async ({ expect }) => {
 	expect(file).toBeDefined();
 	const fileContent = await readFile(String(file), "utf-8");
 	expect(fileContent).toBeTruthy();
-	expect(
-		fileContent.includes(
-			`References: <im-a-random-parent-message-id@example.com>`
-		)
-	).toBe(true);
+	expect(fileContent).toMatch(/^Message-ID: <[A-Za-z0-9]{36}@example\.com>$/m);
+	expect(fileContent).not.toContain(
+		"Message-ID: <im-a-random-message-id@example.com>"
+	);
+	expect(fileContent).toContain(
+		"References: <root@example.com> <im-a-random-parent-message-id@example.com>"
+	);
 });
 
 const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
@@ -1207,29 +1461,98 @@ const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
 	};
 `;
 
-test("MessageBuilder with text only", async ({ expect }) => {
-	const log = new TestLog();
-	const projectTmpPath = await useProjectTmpPath();
-	const mf = new Miniflare({
-		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
+const MESSAGE_BUILDER_RETURNS_RESULT_WORKER = dedent /* javascript */ `
+	export default {
+		async fetch(request, env) {
+			const builder = await request.json();
+			const result = await env.SEND_EMAIL.send(builder);
+			return Response.json(result);
 		},
-		resourceTmpPath: projectTmpPath,
+	};
+`;
+
+interface MessageBuilderMiniflareOptions {
+	log?: TestLog;
+	resourceTmpPath?: string;
+	workerScript?: string;
+	allowedDestinationAddresses?: string[];
+	allowedSenderAddresses?: string[];
+}
+
+function useMessageBuilderMiniflare({
+	log,
+	resourceTmpPath,
+	workerScript = MESSAGE_BUILDER_WORKER,
+	allowedDestinationAddresses,
+	allowedSenderAddresses,
+}: MessageBuilderMiniflareOptions = {}): Miniflare {
+	const mf = new Miniflare({
+		...(log === undefined
+			? {}
+			: {
+					log,
+					handleStructuredLogs({ message }: { message: string }) {
+						log.info(message);
+					},
+				}),
+		resourceTmpPath,
 		workers: [
 			{
 				config: {
 					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
+					manifest: singleModuleManifest(workerScript),
+					env: {
+						SEND_EMAIL: {
+							type: "send-email",
+							allowedDestinationAddresses,
+							allowedSenderAddresses,
+						},
+					},
 				},
 			},
 		],
 	});
-
 	useDispose(mf);
+	return mf;
+}
+
+async function waitForMessageBuilderLog(log: TestLog): Promise<string> {
+	return vi.waitFor(
+		() => {
+			const message = log.logs.find(
+				([type, message]) =>
+					type === LogLevel.INFO &&
+					message.includes("send_email binding called with MessageBuilder:")
+			)?.[1];
+			if (message === undefined) {
+				throw new Error(
+					"send_email binding log not found in " +
+						JSON.stringify(log.logs, null, 2)
+				);
+			}
+			return message;
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
+}
+
+function getLoggedArtifactPath(message: string, prefix: string): string {
+	const line = message.split("\n").find((line) => line.startsWith(prefix));
+	if (line === undefined) {
+		throw new Error(`Artifact log line starting with "${prefix}" not found`);
+	}
+	return line.slice(prefix.length);
+}
+
+test("MessageBuilder with text only", async ({ expect }) => {
+	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		resourceTmpPath: projectTmpPath,
+	});
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1244,52 +1567,17 @@ test("MessageBuilder with text only", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error(
-					"send_email binding log not found in " +
-						JSON.stringify(log.logs, null, 2)
-				);
-			}
-			const message = entry[1];
-
-			// Verify the formatted message contains expected fields
-			expect(message).toContain("From: sender@example.com");
-			expect(message).toContain("To: recipient@example.com");
-			expect(message).toContain("Subject: Test Email");
-			expect(message).toContain("Text: ");
-			const textFile = message.match(/^Text: (.+)$/m)?.[1];
-			expect(textFile).toBeDefined();
-			expect(await readFile(String(textFile), "utf-8")).toBe(
-				"Hello, this is a test email!"
-			);
-		},
-		{ timeout: 5_000, interval: 100 }
-	);
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("From: sender@example.com");
+	expect(message).toContain("To: recipient@example.com");
+	expect(message).toContain("Subject: Test Email");
+	expect(
+		await readFile(getLoggedArtifactPath(message, "Text: "), "utf-8")
+	).toBe("Hello, this is a test email!");
 });
 
 test("MessageBuilder with HTML only", async ({ expect }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
-	});
-
-	useDispose(mf);
+	const mf = useMessageBuilderMiniflare();
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1306,21 +1594,7 @@ test("MessageBuilder with HTML only", async ({ expect }) => {
 });
 
 test("MessageBuilder with both text and HTML", async ({ expect }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
-	});
-
-	useDispose(mf);
+	const mf = useMessageBuilderMiniflare();
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1340,26 +1614,10 @@ test("MessageBuilder with both text and HTML", async ({ expect }) => {
 test("MessageBuilder with attachments", async ({ expect }) => {
 	const log = new TestLog();
 	const projectTmpPath = await useProjectTmpPath();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
 		resourceTmpPath: projectTmpPath,
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1382,55 +1640,21 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error("send_email binding log not found");
-			}
-			const message = entry[1];
-
-			// Verify attachment file path is logged
-			expect(message).toContain("Attachment (attachment): test.txt ->");
-			const attachmentFile = message.match(
-				/^Attachment \(attachment\): test\.txt -> (.+)$/m
-			)?.[1];
-			expect(attachmentFile).toBeDefined();
-			expect(await readFile(String(attachmentFile), "utf-8")).toBe(
-				"base64content"
-			);
-		},
-		{ timeout: 5_000, interval: 100 }
+	const message = await waitForMessageBuilderLog(log);
+	const attachmentFile = getLoggedArtifactPath(
+		message,
+		"Attachment (attachment): test.txt -> "
 	);
+	expect(await readFile(attachmentFile, "utf-8")).toBe("base64content");
 });
 
 test("MessageBuilder log output format snapshot", async ({ expect }) => {
 	const log = new TestLog();
 	const projectTmpPath = await useProjectTmpPath();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
 		resourceTmpPath: projectTmpPath,
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1451,7 +1675,6 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 					content: "iVBORw0KGgo=",
 				},
 				{
-					disposition: "attachment",
 					filename: "report.pdf",
 					type: "application/pdf",
 					content: "JVBERi0xLjc=",
@@ -1463,64 +1686,31 @@ test("MessageBuilder log output format snapshot", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error("send_email binding log not found");
-			}
-			const message = entry[1];
+	const message = await waitForMessageBuilderLog(log);
+	const cleanMessage = message
+		.replace(/\x1b\[[0-9;]*m/g, "")
+		.replace(
+			/(?:[A-Z]:\\|\/)[^\s]*[/\\](email-text|email-html|email-attachment)[/\\][^/\\\s]+\.(txt|html|png|pdf)/g,
+			"/$1/[FILE].$2"
+		);
 
-			// Strip ANSI color codes and normalize file paths for snapshot
-			const cleanMessage = message
-				.replace(/\x1b\[[0-9;]*m/g, "")
-				// Replace dynamic file paths with placeholders (Unix and Windows)
-				.replace(
-					/(?:[A-Z]:\\|\/)[^\s]*[/\\](email-text|email-html|email-attachment)[/\\][a-f0-9-]+\.(txt|html|png|pdf)/g,
-					"/$1/[FILE].$2"
-				);
+	expect(cleanMessage).toMatchInlineSnapshot(`
+		"send_email binding called with MessageBuilder:
+		From: "Alice Sender" <alice@example.com>
+		To: bob@example.com, charlie@example.com
+		Cc: team@example.com
+		Bcc: boss@example.com
+		Subject: Quarterly Report
 
-			// Snapshot the entire formatted output. Because a project temp path is
-			// configured, the binding logs the "project" location in preference to
-			// the "system" one.
-			expect(cleanMessage).toMatchInlineSnapshot(`
-				"send_email binding called with MessageBuilder:
-				From: "Alice Sender" <alice@example.com>
-				To: bob@example.com, charlie@example.com
-				Cc: team@example.com
-				Bcc: boss@example.com
-				Subject: Quarterly Report
-
-				Text: /email-text/[FILE].txt
-				HTML: /email-html/[FILE].html
-				Attachment (inline): logo.png -> /email-attachment/[FILE].png
-				Attachment (attachment): report.pdf -> /email-attachment/[FILE].pdf"
-			`);
-		},
-		{ timeout: 5_000, interval: 100 }
-	);
+		Text: /email-text/[FILE].txt
+		HTML: /email-html/[FILE].html
+		Attachment (inline): logo.png -> /email-attachment/[FILE].png
+		Attachment (attachment): report.pdf -> /email-attachment/[FILE].pdf"
+	`);
 });
 
 test("MessageBuilder with inline attachment", async ({ expect }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
-	});
-
-	useDispose(mf);
+	const mf = useMessageBuilderMiniflare();
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1547,25 +1737,9 @@ test("MessageBuilder with inline attachment", async ({ expect }) => {
 
 test("MessageBuilder with EmailAddress objects", async ({ expect }) => {
 	const log = new TestLog();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1580,48 +1754,17 @@ test("MessageBuilder with EmailAddress objects", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error("send_email binding log not found");
-			}
-			const message = entry[1];
-
-			// Verify named addresses are formatted correctly
-			expect(message).toContain('"John Doe" <john@example.com>');
-			expect(message).toContain('"Jane Smith" <jane@example.com>');
-			expect(message).toContain("Subject: Named Address Test");
-		},
-		{ timeout: 5_000, interval: 100 }
-	);
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain('"John Doe" <john@example.com>');
+	expect(message).toContain('"Jane Smith" <jane@example.com>');
+	expect(message).toContain("Subject: Named Address Test");
 });
 
 test("MessageBuilder with named recipient arrays", async ({ expect }) => {
 	const log = new TestLog();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1644,53 +1787,22 @@ test("MessageBuilder with named recipient arrays", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error("send_email binding log not found");
-			}
-			const message = entry[1];
-
-			// Verify named recipient arrays are formatted correctly
-			expect(message).toContain(
-				'To: "Jane Smith" <jane@example.com>, "Bob Wilson" <bob@example.com>'
-			);
-			expect(message).toContain('Cc: "CC One" <cc1@example.com>');
-			expect(message).toContain(
-				'Bcc: "BCC One" <bcc1@example.com>, "BCC Two" <bcc2@example.com>'
-			);
-			expect(message).toContain("Subject: Named Recipient Arrays Test");
-		},
-		{ timeout: 5_000, interval: 100 }
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain(
+		'To: "Jane Smith" <jane@example.com>, "Bob Wilson" <bob@example.com>'
 	);
+	expect(message).toContain('Cc: "CC One" <cc1@example.com>');
+	expect(message).toContain(
+		'Bcc: "BCC One" <bcc1@example.com>, "BCC Two" <bcc2@example.com>'
+	);
+	expect(message).toContain("Subject: Named Recipient Arrays Test");
 });
 
 test("MessageBuilder with mixed recipients", async ({ expect }) => {
 	const log = new TestLog();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1713,53 +1825,22 @@ test("MessageBuilder with mixed recipients", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error("send_email binding log not found");
-			}
-			const message = entry[1];
-
-			// Verify mixed recipients are formatted correctly
-			expect(message).toContain(
-				'To: plain@example.com, "Jane Doe" <jane@example.com>'
-			);
-			expect(message).toContain(
-				'Cc: "CC Person" <cc@example.com>, plain-cc@example.com'
-			);
-			expect(message).toContain("Bcc: plain-bcc@example.com");
-			expect(message).toContain("Subject: Mixed Recipients Test");
-		},
-		{ timeout: 5_000, interval: 100 }
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain(
+		'To: plain@example.com, "Jane Doe" <jane@example.com>'
 	);
+	expect(message).toContain(
+		'Cc: "CC Person" <cc@example.com>, plain-cc@example.com'
+	);
+	expect(message).toContain("Bcc: plain-bcc@example.com");
+	expect(message).toContain("Subject: Mixed Recipients Test");
 });
 
 test("MessageBuilder with multiple recipients", async ({ expect }) => {
 	const log = new TestLog();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1776,45 +1857,16 @@ test("MessageBuilder with multiple recipients", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error("send_email binding log not found");
-			}
-			const message = entry[1];
-
-			// Verify multiple recipients are listed
-			expect(message).toContain(
-				"To: recipient1@example.com, recipient2@example.com"
-			);
-			expect(message).toContain("Cc: cc@example.com");
-			expect(message).toContain("Bcc: bcc1@example.com, bcc2@example.com");
-		},
-		{ timeout: 5_000, interval: 100 }
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain(
+		"To: recipient1@example.com, recipient2@example.com"
 	);
+	expect(message).toContain("Cc: cc@example.com");
+	expect(message).toContain("Bcc: bcc1@example.com, bcc2@example.com");
 });
 
 test("MessageBuilder with custom headers", async ({ expect }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
-	});
-
-	useDispose(mf);
+	const mf = useMessageBuilderMiniflare();
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1836,26 +1888,9 @@ test("MessageBuilder with custom headers", async ({ expect }) => {
 test("MessageBuilder respects allowed_destination_addresses", async ({
 	expect,
 }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: {
-						SEND_EMAIL: {
-							type: "send-email",
-							allowedDestinationAddresses: ["allowed@example.com"],
-						},
-					},
-				},
-			},
-		],
+	const mf = useMessageBuilderMiniflare({
+		allowedDestinationAddresses: ["allowed@example.com"],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1873,26 +1908,9 @@ test("MessageBuilder respects allowed_destination_addresses", async ({
 });
 
 test("MessageBuilder respects allowed_sender_addresses", async ({ expect }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: {
-						SEND_EMAIL: {
-							type: "send-email",
-							allowedSenderAddresses: ["allowed@example.com"],
-						},
-					},
-				},
-			},
-		],
+	const mf = useMessageBuilderMiniflare({
+		allowedSenderAddresses: ["allowed@example.com"],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -1912,26 +1930,9 @@ test("MessageBuilder respects allowed_sender_addresses", async ({ expect }) => {
 test("MessageBuilder allowed_destination_addresses with named recipients", async ({
 	expect,
 }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: {
-						SEND_EMAIL: {
-							type: "send-email",
-							allowedDestinationAddresses: ["allowed@example.com"],
-						},
-					},
-				},
-			},
-		],
+	const mf = useMessageBuilderMiniflare({
+		allowedDestinationAddresses: ["allowed@example.com"],
 	});
-
-	useDispose(mf);
 
 	// Named allowed recipient should succeed
 	const resAllowed = await mf.dispatchFetch("http://localhost", {
@@ -1963,26 +1964,9 @@ test("MessageBuilder allowed_destination_addresses with named recipients", async
 test("MessageBuilder allowed_sender_addresses with named from", async ({
 	expect,
 }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: {
-						SEND_EMAIL: {
-							type: "send-email",
-							allowedSenderAddresses: ["allowed@example.com"],
-						},
-					},
-				},
-			},
-		],
+	const mf = useMessageBuilderMiniflare({
+		allowedSenderAddresses: ["allowed@example.com"],
 	});
-
-	useDispose(mf);
 
 	// Named allowed sender should succeed
 	const resAllowed = await mf.dispatchFetch("http://localhost", {
@@ -2013,25 +1997,9 @@ test("MessageBuilder allowed_sender_addresses with named from", async ({
 
 test("MessageBuilder with RFC5322 string addresses", async ({ expect }) => {
 	const log = new TestLog();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -2048,54 +2016,22 @@ test("MessageBuilder with RFC5322 string addresses", async ({ expect }) => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error("send_email binding log not found");
-			}
-			const message = entry[1];
-
-			// Verify RFC5322 strings are passed through to the log as-is
-			expect(message).toContain('From: "John Doe" <john@example.com>');
-			expect(message).toContain(
-				'To: "Jane Smith" <jane@example.com>, plain@example.com'
-			);
-			expect(message).toContain('Cc: "CC Person" <cc@example.com>');
-			expect(message).toContain('Bcc: "BCC Person" <bcc@example.com>');
-			expect(message).toContain("Subject: RFC5322 Address Test");
-		},
-		{ timeout: 5_000, interval: 100 }
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain('From: "John Doe" <john@example.com>');
+	expect(message).toContain(
+		'To: "Jane Smith" <jane@example.com>, plain@example.com'
 	);
+	expect(message).toContain('Cc: "CC Person" <cc@example.com>');
+	expect(message).toContain('Bcc: "BCC Person" <bcc@example.com>');
+	expect(message).toContain("Subject: RFC5322 Address Test");
 });
 
 test("MessageBuilder allowed_destination_addresses with RFC5322 string recipients", async ({
 	expect,
 }) => {
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: {
-						SEND_EMAIL: {
-							type: "send-email",
-							allowedDestinationAddresses: ["allowed@example.com"],
-						},
-					},
-				},
-			},
-		],
+	const mf = useMessageBuilderMiniflare({
+		allowedDestinationAddresses: ["allowed@example.com"],
 	});
-
-	useDispose(mf);
 
 	// RFC5322-formatted allowed recipient should succeed
 	const resAllowed = await mf.dispatchFetch("http://localhost", {
@@ -2186,8 +2122,7 @@ const SEND_EMAIL_RETURNS_RESULT_WORKER = dedent /* javascript */ `
 	};
 `;
 
-// Both branches return an id in the shape production returns:
-// `<{36 alphanumeric chars}@{sender domain}>`, angle brackets included.
+// Both branches return a synthesized id with the sender's domain.
 function synthesizedMessageId(expect: ExpectStatic, domain: string) {
 	return expect.stringMatching(
 		new RegExp(`^<[A-Za-z0-9]{36}@${domain.replace(/\./g, "\\.")}>$`)
@@ -2237,10 +2172,81 @@ test("send() on an EmailMessage returns a synthesized messageId", async ({
 	});
 });
 
-test("send() on a MessageBuilder returns a synthesized messageId", async ({
+test("send() on an EmailMessage larger than 1 MiB is captured without the local explorer", async ({
 	expect,
 }) => {
+	const log = new TestLog();
 	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(SEND_EMAIL_RETURNS_RESULT_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
+	});
+
+	useDispose(mf);
+
+	const email =
+		[
+			"From: someone <someone@sender.domain>",
+			"To: someone else <someone-else@example.com>",
+			"Message-ID: <large-send@example.com>",
+			"MIME-Version: 1.0",
+			"Content-Type: text/plain",
+			"",
+			"x".repeat(2 * 1024 * 1024),
+		].join("\r\n") + "\r\n";
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/?" +
+			new URLSearchParams({
+				from: "someone@sender.domain",
+				to: "someone-else@example.com",
+			}).toString(),
+		{ body: email, method: "POST" }
+	);
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
+	await vi.waitFor(() => {
+		expect(log.logsAtLevel(LogLevel.INFO)).toEqual(
+			expect.arrayContaining([
+				expect.stringContaining(
+					"send_email binding called with the following message:"
+				),
+			])
+		);
+	});
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("local storage row")])
+	);
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("Failed to capture")])
+	);
+});
+
+test("receiving an email larger than 1 MiB is captured without the local explorer", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		unsafeTriggerHandlers: true,
 		workers: [
 			{
 				config: {
@@ -2249,20 +2255,60 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(dedent /* javascript */ `
 						export default {
-							async fetch(request, env) {
-								const builder = await request.json();
-								const result = await env.SEND_EMAIL.send(builder);
-								return Response.json(result);
+							async email(message) {
+								await message.forward("forwarded@example.com");
 							},
 						};
 					`),
-					env: { SEND_EMAIL: { type: "send-email" } },
 				},
 			},
 		],
 	});
 
 	useDispose(mf);
+
+	const email =
+		[
+			"From: someone <someone@sender.domain>",
+			"To: someone else <someone-else@example.com>",
+			"Message-ID: <large-received@example.com>",
+			"MIME-Version: 1.0",
+			"Content-Type: text/plain",
+			"",
+			"x".repeat(2 * 1024 * 1024),
+		].join("\r\n") + "\r\n";
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?" +
+			new URLSearchParams({
+				from: "someone@sender.domain",
+				to: "someone-else@example.com",
+				format: "json",
+			}).toString(),
+		{ body: email, method: "POST" }
+	);
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toMatchObject({ outcome: "ok" });
+	expect(log.logsAtLevel(LogLevel.INFO)).toEqual(
+		expect.arrayContaining([
+			expect.stringContaining("Email handler forwarded message"),
+		])
+	);
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("local storage row")])
+	);
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("Failed to capture")])
+	);
+});
+
+test("send() on a MessageBuilder returns a synthesized messageId", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -2278,6 +2324,38 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 	expect(await res.json()).toEqual({
 		messageId: synthesizedMessageId(expect, "sender.domain"),
 	});
+});
+
+test("send() on a MessageBuilder larger than 1 MiB is captured without the local explorer", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@sender.domain",
+			to: "recipient@example.com",
+			subject: "Large builder",
+			text: "y".repeat(2 * 1024 * 1024),
+		}),
+	});
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
+	await waitForMessageBuilderLog(log);
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("local storage row")])
+	);
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("Failed to capture")])
+	);
 });
 
 test("send_email binding is available from getBindings", async ({ expect }) => {
@@ -2331,132 +2409,63 @@ test("disposing does not remove a concurrent email session", async ({
 					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(""),
+					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
 					env: { SEND_EMAIL: { type: "send-email" } },
 				},
 			},
 		],
 	});
+	let disposed = false;
 
-	await mf.getBindings();
+	try {
+		// Sending an email creates this instance's project email session
+		// directory under `<projectTmpPath>/email/<session-id>`.
+		const email = dedent`
+			From: someone <someone@example.com>
+			To: someone else <someone-else@example.com>
+			Message-ID: <concurrent-session@example.com>
+			MIME-Version: 1.0
+			Content-Type: text/plain
 
-	const emailParentPath = path.join(projectTmpPath, "email");
-	const [sessionName] = await readdir(emailParentPath);
-	if (sessionName === undefined) {
-		throw new Error("Expected an email session directory");
+			Creates a project email session`;
+		const response = await mf.dispatchFetch(
+			"http://localhost/?" +
+				new URLSearchParams({
+					from: "someone@example.com",
+					to: "someone-else@example.com",
+				}).toString(),
+			{ method: "POST", body: email }
+		);
+		expect(await response.text()).toBe("ok");
+
+		const emailParentPath = path.join(projectTmpPath, "email");
+		const sessionName = await vi.waitFor(async () => {
+			const sessions = await readdir(emailParentPath);
+			if (sessions[0] === undefined) {
+				throw new Error("Expected an email session directory");
+			}
+			return sessions[0];
+		});
+		const concurrentSessionPath = path.join(
+			emailParentPath,
+			"concurrent-session"
+		);
+		await mkdir(concurrentSessionPath);
+
+		await mf.dispose();
+		disposed = true;
+
+		expect(existsSync(path.join(emailParentPath, sessionName))).toBe(false);
+		expect(existsSync(concurrentSessionPath)).toBe(true);
+	} finally {
+		if (!disposed) {
+			await mf.dispose();
+		}
 	}
-	const concurrentSessionPath = path.join(
-		emailParentPath,
-		"concurrent-session"
-	);
-	await mkdir(concurrentSessionPath);
-
-	// A separate emptiness check reintroduces the race. Return a stale result so
-	// regressing to read-then-remove would delete the concurrent session.
-	const readdirSpy = vi.spyOn(fs.promises, "readdir").mockResolvedValueOnce([]);
-
-	await mf.dispose();
-
-	expect(readdirSpy).not.toHaveBeenCalled();
-	expect(existsSync(concurrentSessionPath)).toBe(true);
 });
 
 describe("EMAIL_PLUGIN.getServices", () => {
-	test("creates disk services for system temp and project directories", async ({
-		expect,
-	}) => {
-		const tmp = await useTmp();
-		const projectTmpPath = path.join(tmp, ".wrangler", "tmp");
-
-		const result = await EMAIL_PLUGIN.getServices({
-			options: {
-				config: { env: { SEND_EMAIL: { type: "send-email" } } },
-			},
-			sharedOptions: { resourceTmpPath: projectTmpPath },
-			tmpPath: tmp,
-			workerNames: ["default"],
-			workerIndex: 0,
-		} as unknown as Parameters<typeof EMAIL_PLUGIN.getServices>[0]);
-
-		if (!Array.isArray(result)) {
-			throw new Error("Expected getServices to return an array of services");
-		}
-		const services = result;
-
-		expect(services).toHaveLength(3);
-
-		const diskServices = services.filter((s) => "disk" in s) as Array<{
-			name: string;
-			disk: { path: string; writable?: boolean };
-		}>;
-		expect(diskServices).toHaveLength(2);
-
-		const systemTempDisk = diskServices.find(
-			(s) => s.name === "email:disk:system"
-		);
-		const projectDisk = diskServices.find(
-			(s) => s.name === "email:disk:project"
-		);
-		if (!systemTempDisk || !projectDisk) {
-			throw new Error("Expected both disk services to be present");
-		}
-
-		// System temp directory
-		expect(systemTempDisk.disk.path).toBe(path.join(tmp, "email"));
-		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
-
-		// Project temp directory
-		expect(projectDisk.disk.path).toBe(
-			path.join(projectTmpPath, "email", path.basename(tmp))
-		);
-		expect(existsSync(projectDisk.disk.path)).toBe(true);
-
-		const workerService = services.find(
-			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
-		) as
-			| {
-					name: string;
-					worker: { bindings: { name: string; json?: string }[] };
-			  }
-			| undefined;
-		if (!workerService) {
-			throw new Error("Expected send_email worker service to be present");
-		}
-
-		const bindings = workerService.worker.bindings;
-
-		// Each disk service is bound so the worker can write to it via fetch.
-		const systemServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_SYSTEM"
-		) as { name: string; service?: { name: string } } | undefined;
-		const projectServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_PROJECT"
-		) as { name: string; service?: { name: string } } | undefined;
-		expect(systemServiceBinding?.service?.name).toBe("email:disk:system");
-		expect(projectServiceBinding?.service?.name).toBe("email:disk:project");
-
-		const emailDiskServicesBinding = bindings.find(
-			(b) => b.name === "email_disk_services"
-		);
-		if (!emailDiskServicesBinding?.json) {
-			throw new Error("Expected email_disk_services binding with JSON value");
-		}
-
-		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
-		expect(emailDiskServices).toHaveLength(2);
-		expect(emailDiskServices[0].bindingName).toBe(
-			"MINIFLARE_EMAIL_DISK_SYSTEM"
-		);
-		expect(emailDiskServices[0].location).toBe("system");
-		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
-		expect(emailDiskServices[1].bindingName).toBe(
-			"MINIFLARE_EMAIL_DISK_PROJECT"
-		);
-		expect(emailDiskServices[1].location).toBe("project");
-		expect(emailDiskServices[1].path).toBe(projectDisk.disk.path);
-	});
-
-	test("creates only system disk service when resourceTmpPath is undefined", async ({
+	test("creates a worker-scoped send_email service with capture bindings", async ({
 		expect,
 	}) => {
 		const tmp = await useTmp();
@@ -2477,62 +2486,22 @@ describe("EMAIL_PLUGIN.getServices", () => {
 		}
 		const services = result;
 
-		expect(services).toHaveLength(2);
-
-		const diskServices = services.filter((s) => "disk" in s) as Array<{
-			name: string;
-			disk: { path: string; writable?: boolean };
-		}>;
-		expect(diskServices).toHaveLength(1);
-
-		const systemTempDisk = diskServices.find(
-			(s) => s.name === "email:disk:system"
-		);
-		if (!systemTempDisk) {
-			throw new Error("Expected system disk service to be present");
-		}
-
-		expect(systemTempDisk.disk.path).toBe(path.join(tmp, "email"));
-		expect(existsSync(systemTempDisk.disk.path)).toBe(true);
-
-		const workerService = services.find(
-			(s) => s.name === "SEND-EMAIL-WORKER:SEND_EMAIL"
-		) as
-			| {
-					name: string;
-					worker: { bindings: { name: string; json?: string }[] };
-			  }
-			| undefined;
-		if (!workerService) {
+		expect(services).toHaveLength(1);
+		expect(services[0]?.name).toBe("SEND-EMAIL-WORKER:default:SEND_EMAIL");
+		if (services[0] === undefined || !("worker" in services[0])) {
 			throw new Error("Expected send_email worker service to be present");
 		}
-
-		const bindings = workerService.worker.bindings;
-
-		const systemServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_SYSTEM"
-		) as { name: string; service?: { name: string } } | undefined;
-		expect(systemServiceBinding?.service?.name).toBe("email:disk:system");
-
-		const projectServiceBinding = bindings.find(
-			(b) => b.name === "MINIFLARE_EMAIL_DISK_PROJECT"
-		);
-		expect(projectServiceBinding).toBeUndefined();
-
-		const emailDiskServicesBinding = bindings.find(
-			(b) => b.name === "email_disk_services"
-		);
-		if (!emailDiskServicesBinding?.json) {
-			throw new Error("Expected email_disk_services binding with JSON value");
+		const worker = services[0].worker;
+		if (worker === undefined) {
+			throw new Error("Expected send_email worker service configuration");
 		}
-
-		const emailDiskServices = JSON.parse(emailDiskServicesBinding.json);
-		expect(emailDiskServices).toHaveLength(1);
-		expect(emailDiskServices[0].bindingName).toBe(
-			"MINIFLARE_EMAIL_DISK_SYSTEM"
-		);
-		expect(emailDiskServices[0].location).toBe("system");
-		expect(emailDiskServices[0].path).toBe(path.join(tmp, "email"));
+		const bindings = worker.bindings ?? [];
+		expect(
+			bindings.find((binding) => binding.name === "MINIFLARE_EMAIL_STORE")
+		).toMatchObject({ service: { name: "email:store" } });
+		expect(
+			bindings.find((binding) => binding.name === "SEND_EMAIL_OWNER_WORKER")
+		).toMatchObject({ json: JSON.stringify("default") });
 	});
 });
 
@@ -2561,25 +2530,9 @@ test("MessageBuilder writes files to system temp when resourceTmpPath is unset",
 	expect,
 }) => {
 	const log = new TestLog();
-	const mf = new Miniflare({
+	const mf = useMessageBuilderMiniflare({
 		log,
-		handleStructuredLogs({ message }: { message: string }) {
-			log.info(message);
-		},
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "",
-					compatibilityDate: "2025-03-17",
-					manifest: singleModuleManifest(MESSAGE_BUILDER_WORKER),
-					env: { SEND_EMAIL: { type: "send-email" } },
-				},
-			},
-		],
 	});
-
-	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost", {
 		method: "POST",
@@ -2594,33 +2547,10 @@ test("MessageBuilder writes files to system temp when resourceTmpPath is unset",
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await vi.waitFor(
-		async () => {
-			const entry = log.logs.find(
-				([type, message]) =>
-					type === LogLevel.INFO &&
-					message.includes("send_email binding called with MessageBuilder:")
-			);
-			if (!entry) {
-				throw new Error(
-					"send_email binding log not found in " +
-						JSON.stringify(log.logs, null, 2)
-				);
-			}
-			const message = entry[1];
-
-			// Should log text file path
-			const textMatch = message.match(/^Text: (.+)$/m);
-			expect(textMatch).not.toBeNull();
-
-			const textPath = String(textMatch?.[1]);
-
-			// File exists in system temp
-			expect(existsSync(textPath)).toBe(true);
-			expect(await readFile(textPath, "utf-8")).toBe(
-				"This should appear in system temp only"
-			);
-		},
-		{ timeout: 5_000, interval: 100 }
+	const message = await waitForMessageBuilderLog(log);
+	const textPath = getLoggedArtifactPath(message, "Text: ");
+	expect(existsSync(textPath)).toBe(true);
+	expect(await readFile(textPath, "utf-8")).toBe(
+		"This should appear in system temp only"
 	);
 });

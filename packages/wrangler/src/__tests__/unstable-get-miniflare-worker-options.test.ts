@@ -197,6 +197,46 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 		});
 	});
 
+	describe("workflow bindings", () => {
+		it("drops deploy-only workflow fields that the local runtime has no concept of", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							limits: { steps: 5000 },
+							schedules: "0 * * * *",
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86400000,
+							},
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+			expect(workerOptions.workflows).toEqual({
+				WORKFLOW: {
+					name: "my-workflow",
+					className: "MyWorkflow",
+					scriptName: undefined,
+					stepLimit: 5000,
+				},
+			});
+		});
+	});
+
 	describe("typed services bindings with `dev.plugin`", () => {
 		it("routes a typed service binding with `dev.plugin` to miniflare's unsafe-binding plugin pathway", ({
 			expect,

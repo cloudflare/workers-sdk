@@ -1,5 +1,76 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.1.0
+
+### Minor Changes
+
+- [#15117](https://github.com/cloudflare/workers-sdk/pull/15117) [`f0c9c66`](https://github.com/cloudflare/workers-sdk/commit/f0c9c668701c8da8525c335cd99fbf51ff97dbeb) Thanks [@edmundhung](https://github.com/edmundhung)! - Support Workerd's new module registry in Workers Vitest tests
+
+  The pool now follows Workerd's V2 module fallback protocol when `new_module_registry` is selected while retaining the V1 path for `legacy_module_registry`. Tests using the new registry preserve URL-based `import.meta` behavior and load CommonJS dependencies as native CommonJS modules with named exports.
+
+- [#15272](https://github.com/cloudflare/workers-sdk/pull/15272) [`c921b3f`](https://github.com/cloudflare/workers-sdk/commit/c921b3f3f8e0d16416a12c2be611e0ad9ab75a50) Thanks [@penalosa](https://github.com/penalosa)! - Add an experimental `newConfig` option for loading the Worker's configuration from `cloudflare.config.ts`
+
+  Projects that have migrated to the new TypeScript configuration format had no way to run their Vitest suite against their real bindings, since there was no Wrangler configuration file left to point `wrangler.configPath` at. This adds the missing option, modelled on `@cloudflare/vite-plugin`'s `experimental.newConfig`:
+
+  ```ts
+  import { cloudflareTest } from "@cloudflare/vitest-plugin";
+  import { defineProject } from "vitest/config";
+
+  export default defineProject({
+    plugins: [cloudflareTest({ experimental: { newConfig: true } })],
+  });
+  ```
+
+  `newConfig: true` loads `cloudflare.config.ts` from the project root; pass `{ configPath: "..." }` to load it from elsewhere. Config functions are called with `ctx.mode` set to Vite's mode, which defaults to `"test"` and can be overridden with `--mode`. `experimental.newConfig` cannot be combined with `wrangler`.
+
+  This is experimental and may change without a major version bump. Wrangler environments, `wrangler.config.ts` tooling configuration, and type generation are not supported yet.
+
+### Patch Changes
+
+- [#15293](https://github.com/cloudflare/workers-sdk/pull/15293) [`7a9b8a7`](https://github.com/cloudflare/workers-sdk/commit/7a9b8a72f53d3f8e414e8c05eb460e3e9b4ba249) Thanks [@thatsKevinJain](https://github.com/thatsKevinJain)! - Fix "Network connection lost" when multiple test files use remote bindings
+
+  Remote proxy sessions are shared across pool workers by Wrangler config path, but were disposed during each test file's teardown. Because Vitest starts the next file's worker before the previous one finishes stopping, later files reused an already-disposed session and failed with "Network connection lost". Sessions are now disposed only once the last pool worker stops.
+
+- Updated dependencies [[`aa54b49`](https://github.com/cloudflare/workers-sdk/commit/aa54b491a42c83d410983197b84088dc5319564c), [`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1), [`2d78137`](https://github.com/cloudflare/workers-sdk/commit/2d7813781e935b171ace346ce322738f1c4048a3), [`04e8564`](https://github.com/cloudflare/workers-sdk/commit/04e856464dfaf094e9b622c9bbf92d871b98f9ff), [`d1cc3af`](https://github.com/cloudflare/workers-sdk/commit/d1cc3af5c485030387aa04a533f256924df1ac64), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`daefb3c`](https://github.com/cloudflare/workers-sdk/commit/daefb3cc0f0b884b8ce82b22ed9b67a9c43919be), [`37ed753`](https://github.com/cloudflare/workers-sdk/commit/37ed753470232676a8f8ba4a424d4f73ac58dc5b), [`f76b68e`](https://github.com/cloudflare/workers-sdk/commit/f76b68efd1f1a148b6d96340f3711d3aed52323a), [`ad89456`](https://github.com/cloudflare/workers-sdk/commit/ad894562ce2a0cb5f4a2d540210956e02810a022), [`c809851`](https://github.com/cloudflare/workers-sdk/commit/c809851f38f0fe4805e876b6c8bfcd6556f49afb), [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`74de3ab`](https://github.com/cloudflare/workers-sdk/commit/74de3ab56f0dfabfc09da368f3d19eaf82093d10), [`0cb8690`](https://github.com/cloudflare/workers-sdk/commit/0cb86908903b87a742d1786ac8aa5aa9dce6c575), [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a), [`22182da`](https://github.com/cloudflare/workers-sdk/commit/22182daf4de3f5eed77e87a92eed7cde9937e077), [`a4c3458`](https://github.com/cloudflare/workers-sdk/commit/a4c3458cec77afa31e01d671d6b22ecfcf2c0107), [`433fa98`](https://github.com/cloudflare/workers-sdk/commit/433fa9846cd0e5c8bf034453b9ec1b834ed90273), [`d589d30`](https://github.com/cloudflare/workers-sdk/commit/d589d30b567595eacfea50e8810fe67a59b56825), [`dd5148d`](https://github.com/cloudflare/workers-sdk/commit/dd5148d7da11665ad3f3338de338380ccea979cc), [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c)]:
+  - miniflare@5.20260825.0-alpha
+  - wrangler@4.126.0
+
+## 1.0.0
+
+### Major Changes
+
+- [#15074](https://github.com/cloudflare/workers-sdk/pull/15074) [`bfcc442`](https://github.com/cloudflare/workers-sdk/commit/bfcc4423fa5d2dc007ebdc41293bd68f863777f6) Thanks [@penalosa](https://github.com/penalosa)! - Rename `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` for the v1 release
+
+  The package has been renamed from `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` to be clearer about it's usage.
+
+  To migrate, run the codemod from the root of your project:
+
+  ```sh
+  npx @cloudflare/codemods vitest:pool-workers-to-vitest-plugin
+  ```
+
+  This handles the whole rename for you:
+
+  - Replaces the dependency in your `package.json`, moving plain version ranges to `^1.0.0` while preserving `workspace:`/`catalog:`/`link:`/`file:` protocol references, along with any `overrides`, `resolutions` and `pnpm.overrides` entries.
+  - Rewrites imports such as `import { cloudflareTest } from "@cloudflare/vitest-pool-workers"` to `import { cloudflareTest } from "@cloudflare/vitest-plugin"`, preserving any subpaths.
+  - Updates the `types` entry in your test `tsconfig.json` from `@cloudflare/vitest-pool-workers/types` to `@cloudflare/vitest-plugin/types`.
+
+  Pass `--dry-run` to preview the changes first, or `--files <glob>` to restrict which files are considered.
+
+  If you would rather migrate by hand, the only changes needed are the dependency name in `package.json`, the package specifier in any `import`/`require` of the plugin, and the `types` entry in your test `tsconfig.json`.
+
+### Minor Changes
+
+- [#14690](https://github.com/cloudflare/workers-sdk/pull/14690) [`d81fae7`](https://github.com/cloudflare/workers-sdk/commit/d81fae7487abee539d985c348dddf39bca3196f7) Thanks [@penalosa](https://github.com/penalosa)! - Add a central CLI for Cloudflare codemods
+
+  Run a codemod by name, e.g. `npx @cloudflare/codemods vitest:v3-to-v4`. The initial migrations cover Vitest v3 to v4 configuration (`vitest:v3-to-v4`) and the `@cloudflare/vitest-pool-workers` to `@cloudflare/vitest-plugin` v1 rename (`vitest:pool-workers-to-vitest-plugin`). The existing Vitest transform now lives in this dedicated package.
+
+### Patch Changes
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`5ae9d5b`](https://github.com/cloudflare/workers-sdk/commit/5ae9d5b205fea31516559f7ad89a21eda671af2f), [`4b52975`](https://github.com/cloudflare/workers-sdk/commit/4b52975aac295c8483d6b4001d0b50945293265a), [`ce9b151`](https://github.com/cloudflare/workers-sdk/commit/ce9b1510abf5c1152aedc94456f4d7ffe9402248), [`ef73a28`](https://github.com/cloudflare/workers-sdk/commit/ef73a28c1e7a208d730c6de64566bc96f683ca7b), [`649f667`](https://github.com/cloudflare/workers-sdk/commit/649f667bd871061da945881ce953ef8f81caea1a), [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`99a1f49`](https://github.com/cloudflare/workers-sdk/commit/99a1f49d7c037a25d4a19a3fe3054337e7201864), [`f2437e6`](https://github.com/cloudflare/workers-sdk/commit/f2437e606fc69891009285831d94b49bf44f6aff), [`30c2d47`](https://github.com/cloudflare/workers-sdk/commit/30c2d47965c51350aca6b2c70db8fc6496bdaa17)]:
+  - wrangler@4.125.0
+  - miniflare@5.20260820.0-alpha
+
 ## 0.22.0
 
 ### Minor Changes

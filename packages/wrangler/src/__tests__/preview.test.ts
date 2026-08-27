@@ -5,6 +5,9 @@ import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	extractConfigBindings,
 	getBranchName,
+	getCommitSha,
+	getPullRequestMetadata,
+	getRepositoryUrl,
 	previewContainerAppName,
 } from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
@@ -40,6 +43,62 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 		...defaultWranglerConfig,
 		previews,
 	};
+}
+
+type PreviewDeploymentModulePart = {
+	name: string;
+	content_type: string;
+	content: Uint8Array;
+};
+
+function decodeModuleContent(
+	module: PreviewDeploymentModulePart | undefined
+): string {
+	return module ? new TextDecoder().decode(module.content) : "";
+}
+
+async function readPreviewDeploymentRequest(
+	request: Request
+): Promise<
+	Record<string, unknown> & { modules: PreviewDeploymentModulePart[] }
+> {
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API for parsing multipart bodies; only deprecated on undici's server-side types
+	const form = await request.formData();
+
+	const metadataPart = form.get("metadata");
+	if (typeof metadataPart !== "string") {
+		throw new Error(
+			"Preview deployment request is missing its `metadata` form part"
+		);
+	}
+	const metadata = JSON.parse(metadataPart) as Record<string, unknown>;
+	if ("modules" in metadata) {
+		throw new Error(
+			"Preview deployment `metadata` must not carry `modules`; modules belong in their own form parts"
+		);
+	}
+
+	const moduleParts = form.getAll("files");
+	if (moduleParts.length === 0) {
+		throw new Error("Preview deployment request has no module file parts");
+	}
+
+	const modules = await Promise.all(
+		moduleParts.map(async (part) => {
+			if (!(part instanceof File)) {
+				throw new Error(
+					"Preview deployment module part is a plain field, not a file"
+				);
+			}
+			return {
+				name: part.name,
+				content_type: part.type,
+				content: new Uint8Array(await part.arrayBuffer()),
+			};
+		})
+	);
+
+	return { ...metadata, modules };
 }
 
 /**
@@ -141,6 +200,35 @@ function mockContainerPreview({
 	);
 }
 
+function clearPreviewMetadataEnvs() {
+	vi.stubEnv("GITHUB_REPOSITORY", "");
+	vi.stubEnv("GITHUB_SERVER_URL", "");
+	vi.stubEnv("GITHUB_EVENT_PATH", "");
+	vi.stubEnv("GITHUB_REF", "");
+	vi.stubEnv("CI_PROJECT_URL", "");
+	vi.stubEnv("CI_REPOSITORY_URL", "");
+	vi.stubEnv("CI_MERGE_REQUEST_IID", "");
+	vi.stubEnv("CI_MERGE_REQUEST_PROJECT_URL", "");
+	vi.stubEnv("CIRCLE_REPOSITORY_URL", "");
+	vi.stubEnv("CIRCLE_PULL_REQUEST", "");
+	vi.stubEnv("BUILDKITE_REPO", "");
+	vi.stubEnv("BITBUCKET_GIT_HTTP_ORIGIN", "");
+	vi.stubEnv("BITBUCKET_GIT_SSH_ORIGIN", "");
+	vi.stubEnv("REPOSITORY_URL", "");
+	vi.stubEnv("PULL_REQUEST_URL", "");
+	vi.stubEnv("PULL_REQUEST_NUMBER", "");
+	vi.stubEnv("PR_URL", "");
+	vi.stubEnv("PR_NUMBER", "");
+	vi.stubEnv("CHANGE_URL", "");
+	vi.stubEnv("CHANGE_ID", "");
+	vi.stubEnv("GITHUB_SHA", "");
+	vi.stubEnv("CI_COMMIT_SHA", "");
+	vi.stubEnv("CIRCLE_SHA1", "");
+	vi.stubEnv("COMMIT_SHA", "");
+	vi.stubEnv("CI_MERGE_REQUEST_TITLE", "");
+	vi.stubEnv("PULL_REQUEST_TITLE", "");
+}
+
 describe("wrangler preview", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
@@ -162,6 +250,7 @@ describe("wrangler preview", () => {
 			vi.stubEnv("GITHUB_REF_NAME", undefined);
 			vi.stubEnv("GITHUB_HEAD_REF", undefined);
 			vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
+			clearPreviewMetadataEnvs();
 		});
 
 		afterAll(() => {
@@ -275,6 +364,228 @@ describe("wrangler preview", () => {
 					"MyContainer"
 				)
 			);
+		});
+	});
+
+	describe("getRepositoryUrl", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use GitHub Actions repository env vars", ({ expect }) => {
+			vi.stubEnv("GITHUB_REPOSITORY", "cloudflare/workers-sdk");
+
+			expect(getRepositoryUrl()).toBe(
+				"https://github.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use GitHub Enterprise server URL", ({ expect }) => {
+			vi.stubEnv("GITHUB_SERVER_URL", "https://github.example.com/");
+			vi.stubEnv("GITHUB_REPOSITORY", "cloudflare/workers-sdk");
+
+			expect(getRepositoryUrl()).toBe(
+				"https://github.example.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use GitLab project URL", ({ expect }) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/cloudflare/workers-sdk.git"
+			);
+
+			expect(getRepositoryUrl()).toBe(
+				"https://gitlab.example.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use and normalize git remote origin URL when in CI", ({
+			expect,
+		}) => {
+			vi.stubEnv("CI", "true");
+			vi.mocked(childProcess.execSync)
+				.mockImplementationOnce(() => Buffer.from("true"))
+				.mockImplementationOnce(() =>
+					Buffer.from("git@git.example.com:acme/worker-project.git\n")
+				);
+
+			expect(getRepositoryUrl()).toBe(
+				"https://git.example.com/acme/worker-project"
+			);
+		});
+
+		test("should not shell out to the local git remote outside CI", ({
+			expect,
+		}) => {
+			vi.stubEnv("CI", undefined);
+
+			expect(getRepositoryUrl()).toBeUndefined();
+			expect(childProcess.execSync).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("getPullRequestMetadata", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use direct pull request URL env vars", ({ expect }) => {
+			vi.stubEnv(
+				"PULL_REQUEST_URL",
+				"https://git.example.com/acme/worker-project/pulls/13"
+			);
+			vi.stubEnv("PULL_REQUEST_NUMBER", "13");
+			vi.stubEnv("PULL_REQUEST_TITLE", "Add a cool new feature");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://git.example.com/acme/worker-project/pulls/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should use GitHub event pull request metadata", ({ expect }) => {
+			writeFileSync(
+				"github-event.json",
+				JSON.stringify({
+					pull_request: {
+						number: 13,
+						html_url: "https://github.com/acme/worker-project/pull/13",
+						title: "Add a cool new feature",
+					},
+				})
+			);
+			vi.stubEnv("GITHUB_EVENT_PATH", "github-event.json");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should not fail when the GitHub event pull request has no title", ({
+			expect,
+		}) => {
+			writeFileSync(
+				"github-event.json",
+				JSON.stringify({
+					pull_request: {
+						number: 13,
+						html_url: "https://github.com/acme/worker-project/pull/13",
+					},
+				})
+			);
+			vi.stubEnv("GITHUB_EVENT_PATH", "github-event.json");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+			});
+		});
+
+		test("should not recover a title from the GITHUB_REF fallback", ({
+			expect,
+		}) => {
+			vi.stubEnv("GITHUB_REF", "refs/pull/13/merge");
+			vi.stubEnv("GITHUB_REPOSITORY", "acme/worker-project");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+			});
+		});
+
+		test("should use GitLab merge request metadata", ({ expect }) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "Add a cool new feature");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should treat a blank title the same as a missing one", ({
+			expect,
+		}) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "   ");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+			});
+		});
+	});
+
+	describe("getCommitSha", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use the GitHub Actions commit SHA", ({ expect }) => {
+			vi.stubEnv("GITHUB_SHA", "abc123def456");
+
+			expect(getCommitSha()).toBe("abc123def456");
+		});
+
+		test("should use the GitLab CI commit SHA", ({ expect }) => {
+			vi.stubEnv("CI_COMMIT_SHA", "def456abc123");
+
+			expect(getCommitSha()).toBe("def456abc123");
+		});
+
+		test("should use the CircleCI commit SHA", ({ expect }) => {
+			vi.stubEnv("CIRCLE_SHA1", "123abc456def");
+
+			expect(getCommitSha()).toBe("123abc456def");
+		});
+
+		test("should use the generic COMMIT_SHA fallback", ({ expect }) => {
+			vi.stubEnv("COMMIT_SHA", "789fed321cba");
+
+			expect(getCommitSha()).toBe("789fed321cba");
+		});
+
+		test("should prefer GitHub Actions over other providers", ({ expect }) => {
+			vi.stubEnv("GITHUB_SHA", "github-sha");
+			vi.stubEnv("CI_COMMIT_SHA", "gitlab-sha");
+			vi.stubEnv("CIRCLE_SHA1", "circleci-sha");
+			vi.stubEnv("COMMIT_SHA", "generic-sha");
+
+			expect(getCommitSha()).toBe("github-sha");
+		});
+
+		test("should return undefined when no commit SHA env var is set", ({
+			expect,
+		}) => {
+			expect(getCommitSha()).toBeUndefined();
 		});
 	});
 
@@ -484,6 +795,7 @@ describe("wrangler preview", () => {
 	describe("preview command", () => {
 		beforeEach(() => {
 			vi.stubEnv("CI", undefined);
+			clearPreviewMetadataEnvs();
 			mkdirSync("src", { recursive: true });
 			writeFileSync(
 				"src/index.ts",
@@ -1034,8 +1346,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1279,10 +1592,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -1317,8 +1627,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1340,10 +1651,7 @@ describe("wrangler preview", () => {
 			const mainModule = deploymentRequestBody?.modules?.find(
 				(module) => module.name === deploymentRequestBody?.main_module
 			);
-			const code = Buffer.from(
-				mainModule?.content_base64 ?? "",
-				"base64"
-			).toString("utf8");
+			const code = decodeModuleContent(mainModule);
 
 			expect(code).toContain("redirected-message");
 		});
@@ -1436,10 +1744,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -1485,8 +1790,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1571,11 +1877,10 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment URLs:");
 			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
+			expect(std.out).not.toContain("no active URLs");
 		});
 
-		test("should show compact success output when URL arrays are empty", async ({
-			expect,
-		}) => {
+		test("should note when URL arrays are empty", async ({ expect }) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1639,6 +1944,9 @@ describe("wrangler preview", () => {
 				"Preview: empty-urls-preview (new)",
 				"Deployment ID: deployment-id-empty-urls",
 			]);
+			expect(std.out).toContain(
+				"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information"
+			);
 		});
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
@@ -1977,8 +2285,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 
 						return HttpResponse.json(
 							{
@@ -2132,10 +2441,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2231,10 +2539,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2323,10 +2630,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2721,10 +3027,9 @@ describe("wrangler preview", () => {
 					http.post(
 						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 						async ({ request }) => {
-							deploymentRequest = (await request.json()) as Record<
-								string,
-								unknown
-							>;
+							deploymentRequest = (await readPreviewDeploymentRequest(
+								request
+							)) as Record<string, unknown>;
 							return HttpResponse.json(
 								{
 									success: true,
@@ -3136,10 +3441,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3211,10 +3515,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3307,10 +3610,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3907,11 +4209,7 @@ describe("wrangler preview", () => {
 
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
-						modules?: Array<{
-							name: string;
-							content_type: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  })
 				| undefined;
 
@@ -3949,8 +4247,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3972,13 +4271,13 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --name test-preview");
 
-			expect(deploymentRequestBody?.modules).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						name: expect.stringMatching(/\.map$/),
-						content_type: "application/source-map",
-					}),
-				])
+			const sourceMap = deploymentRequestBody?.modules?.find((module) =>
+				module.name.endsWith(".map")
+			);
+
+			expect(sourceMap?.content_type).toBe("application/source-map");
+			expect(JSON.parse(decodeModuleContent(sourceMap))).toEqual(
+				expect.objectContaining({ version: 3 })
 			);
 		});
 
@@ -4005,10 +4304,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -4043,8 +4339,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -4066,10 +4363,7 @@ describe("wrangler preview", () => {
 			const mainModule = deploymentRequestBody?.modules?.find(
 				(module) => module.name === deploymentRequestBody?.main_module
 			);
-			const code = Buffer.from(
-				mainModule?.content_base64 ?? "",
-				"base64"
-			).toString("utf8");
+			const code = decodeModuleContent(mainModule);
 			expect(code).toContain("preview-value");
 			expect(code).not.toContain("top-level");
 		});
@@ -4138,8 +4432,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -4231,8 +4526,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -4343,8 +4639,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4451,8 +4748,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4481,12 +4779,28 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.migrations?.old_tag).toBeUndefined();
 		});
 
-		test("should include deployment annotations from message and tag args", async ({
+		test("should include deployment annotations from metadata and args", async ({
 			expect,
 		}) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project.git"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "Add a cool new feature");
+			vi.stubEnv("CI_COMMIT_SHA", "abc123def456");
+
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
-						annotations?: Record<string, string>;
+						annotations?: {
+							"workers/commit_sha"?: string;
+							"workers/message"?: string;
+							"workers/pull_request_number"?: string;
+							"workers/pull_request_title"?: string;
+							"workers/pull_request_url"?: string;
+							"workers/repository_url"?: string;
+							"workers/tag"?: string;
+						};
 				  })
 				| undefined;
 
@@ -4524,8 +4838,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4550,9 +4865,23 @@ describe("wrangler preview", () => {
 			);
 
 			expect(deploymentRequestBody?.annotations).toEqual({
+				"workers/commit_sha": "abc123def456",
 				"workers/message": "preview note",
+				"workers/pull_request_number": "13",
+				"workers/pull_request_title": "Add a cool new feature",
+				"workers/pull_request_url":
+					"https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+				"workers/repository_url":
+					"https://gitlab.example.com/acme/worker-project",
 				"workers/tag": "v1.2.3",
 			});
+			expect(std.out).toContain("Pull Request:");
+			expect(std.out).toContain(
+				"https://gitlab.example.com/acme/worker-project/-/merge_requests/13"
+			);
+			expect(std.out).not.toContain("repository_url");
+			expect(std.out).not.toContain("pull_request_title");
+			expect(std.out).not.toContain("Add a cool new feature");
 		});
 
 		test("should fall back to HEAD commit metadata for annotations in CI", async ({
@@ -4605,8 +4934,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4710,8 +5040,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4834,8 +5165,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -4929,8 +5261,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -5013,8 +5346,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,

@@ -15,7 +15,7 @@ vi.mock("../../src/frameworks/utils/packages");
 /** Minimal concrete subclass so we can instantiate the abstract Framework */
 class TestFramework extends Framework {
 	configure(_options: ConfigurationOptions): ConfigurationResults {
-		return { wranglerConfig: null };
+		return { workerConfig: null };
 	}
 }
 

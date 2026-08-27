@@ -62,8 +62,25 @@ export function convertConfigToBindings(
 				if (pages) {
 					break;
 				}
-				for (const { name, ...x } of info) {
-					output[name] = { type: "send_email", ...x };
+				for (const {
+					name,
+					destination_address,
+					allowed_destination_addresses,
+					allowed_sender_addresses,
+					remote,
+				} of info) {
+					const shared = {
+						type: "send_email" as const,
+						allowed_sender_addresses,
+						remote,
+					};
+					if (destination_address !== undefined) {
+						output[name] = { ...shared, destination_address };
+					} else if (allowed_destination_addresses !== undefined) {
+						output[name] = { ...shared, allowed_destination_addresses };
+					} else {
+						output[name] = shared;
+					}
 				}
 				break;
 			}

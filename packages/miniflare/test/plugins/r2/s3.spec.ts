@@ -59,21 +59,21 @@ const ctx = miniflareTest<{ BUCKET: R2Bucket }, MiniflareTestContext>(
 						BUCKET: {
 							type: "r2",
 							name: "bucket",
-							localDev: {
+							dev: {
 								experimentalS3Credentials: CREDENTIALS,
 							},
 						},
 						OTHER: {
 							type: "r2",
 							name: "other-bucket",
-							localDev: {
+							dev: {
 								experimentalS3Credentials: CREDENTIALS,
 							},
 						},
 						THIRD: {
 							type: "r2",
 							name: "third-bucket",
-							localDev: {
+							dev: {
 								experimentalS3Credentials: THIRD_CREDENTIALS,
 							},
 						},
@@ -2135,7 +2135,7 @@ test("rejects different S3 credentials for the same bucket", async ({
 						BUCKET: {
 							type: "r2",
 							name: "shared",
-							localDev: {
+							dev: {
 								experimentalS3Credentials: CREDENTIALS,
 							},
 						},
@@ -2152,7 +2152,7 @@ test("rejects different S3 credentials for the same bucket", async ({
 						BUCKET: {
 							type: "r2",
 							name: "shared",
-							localDev: {
+							dev: {
 								experimentalS3Credentials: {
 									accessKeyId: "B".repeat(32),
 									secretAccessKey: "other-secret",
@@ -2192,7 +2192,7 @@ test("verifies signatures against the original host when `upstream` is set", asy
 						BUCKET: {
 							type: "r2",
 							name: "bucket",
-							localDev: {
+							dev: {
 								experimentalS3Credentials: CREDENTIALS,
 							},
 						},

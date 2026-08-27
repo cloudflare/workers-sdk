@@ -24,11 +24,15 @@ export const NO_AGGREGATE_HEADER = "X-Miniflare-Explorer-No-Aggregate";
  */
 function getPeerDebugPortAddresses(
 	registry: WorkerRegistry,
-	selfWorkerNames: string[]
+	selfWorkerNames: string[],
+	selfInstanceId: string | null
 ): string[] {
 	const selfSet = new Set(selfWorkerNames);
 	const addresses = Object.entries(registry)
-		.filter(([name]) => !selfSet.has(name))
+		.filter(
+			([name, definition]) =>
+				!selfSet.has(name) && definition.instanceId !== selfInstanceId
+		)
 		.map(([, def]) => def.debugPortAddress)
 		.filter((addr): addr is string => typeof addr === "string");
 	// A single Miniflare process with multiple workers registers multiple
@@ -47,7 +51,21 @@ export async function getPeerUrlsIfAggregating(
 	const workerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
 	const response = await loopback.fetch("http://localhost/core/dev-registry");
 	const registry = (await response.json()) as WorkerRegistry;
-	return getPeerDebugPortAddresses(registry, workerNames);
+	return getPeerDebugPortAddresses(
+		registry,
+		workerNames,
+		response.headers.get("X-Miniflare-Dev-Registry-Instance-Id")
+	);
+}
+
+export function getPeerEntrypoint(
+	peerDebugPortAddress: string,
+	service: string
+): Fetcher {
+	const client = (env as AppContext["env"]).DEV_REGISTRY_DEBUG_PORT.connect(
+		peerDebugPortAddress
+	);
+	return client.getEntrypoint(service);
 }
 
 /**
@@ -64,10 +82,7 @@ export async function fetchFromPeer(
 	init?: RequestInit
 ): Promise<Response | null> {
 	try {
-		const client = (env as AppContext["env"]).DEV_REGISTRY_DEBUG_PORT.connect(
-			peerDebugPortAddress
-		);
-		const fetcher = client.getEntrypoint("core:entry");
+		const fetcher = getPeerEntrypoint(peerDebugPortAddress, "core:entry");
 		const url = new URL(`http://localhost${EXPLORER_API_PATH}${apiPath}`);
 		const response = await fetcher.fetch(url.toString(), {
 			...init,

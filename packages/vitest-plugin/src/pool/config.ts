@@ -16,10 +16,12 @@ import {
 	getRelativeProjectConfigPath,
 	getRelativeProjectPath,
 } from "./helpers";
+import { loadNewConfig, NEW_CONFIG_FILENAME } from "./new-config";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
+import type { Config } from "@cloudflare/workers-utils";
 import type { LegacyWorkerOptions, V4ModuleRule } from "miniflare";
 import type { TestProject } from "vitest/node";
 import type { ZodError } from "zod";
@@ -27,6 +29,14 @@ import type { ZodError } from "zod";
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
 }
+
+const ExperimentalNewConfigSchema = z.object({
+	/**
+	 * Path to the `cloudflare.config.ts` file, resolved relative to the project
+	 * root. Defaults to `cloudflare.config.ts` in the project root.
+	 */
+	configPath: z.string().optional(),
+});
 
 const WorkersPoolOptionsSchema = z.object({
 	/**
@@ -77,6 +87,22 @@ const WorkersPoolOptionsSchema = z.object({
 			environment: z.string().optional(),
 		})
 		.optional(),
+	experimental: z
+		.object({
+			/**
+			 * Load the Worker's configuration from a `cloudflare.config.ts` file
+			 * instead of a Wrangler configuration file. Cannot be combined with
+			 * `wrangler`.
+			 *
+			 * Pass `true` to load `cloudflare.config.ts` from the project root, or
+			 * an object to customise the behaviour.
+			 *
+			 * Config functions are called with `ctx.mode` set to Vite's mode, which
+			 * defaults to `"test"` and can be overridden with `--mode`.
+			 */
+			newConfig: z.union([z.boolean(), ExperimentalNewConfigSchema]).optional(),
+		})
+		.optional(),
 });
 
 type CompatibleWorkerOptions = LegacyWorkerOptions & {
@@ -102,6 +128,26 @@ export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 	moduleRules?: V4ModuleRule[];
+	/**
+	 * Details of the configuration file these options were resolved from. Set
+	 * while parsing; not a user-facing option. Undefined when the project
+	 * configures the Worker entirely through `miniflare` options.
+	 */
+	resolvedConfig?: {
+		/** Absolute path of the configuration file. */
+		path: string;
+		/**
+		 * Whether that file is a `cloudflare.config.ts` rather than a Wrangler
+		 * configuration file. Determines how config fields are named in errors.
+		 */
+		newConfig: boolean;
+		/**
+		 * The Worker name declared in the configuration file, before any
+		 * environment name is appended. Self-referential service, tail and
+		 * Workflow bindings are written against this name.
+		 */
+		workerName: string | undefined;
+	};
 };
 
 function normalizeMiniflareWorkerOptions(value: Record<string, unknown>): void {
@@ -243,9 +289,42 @@ export const remoteProxySessionsDataMap = new Map<
 	RemoteProxySessionData | null
 >();
 
+/**
+ * Disposes every remote proxy session and clears the map.
+ *
+ * Sessions are shared across pool workers by Wrangler config path and
+ * consecutive workers overlap, so this is only safe to call once the last
+ * pool worker has stopped — calling it earlier would dispose sessions that
+ * later workers still depend on.
+ */
+export async function disposeAllRemoteProxySessions(): Promise<void> {
+	const sessions = [...remoteProxySessionsDataMap.values()];
+	remoteProxySessionsDataMap.clear();
+	await Promise.all(sessions.map((data) => data?.session.dispose()));
+}
+
+/**
+ * Normalise the `experimental.newConfig` option into its resolved form.
+ *
+ * @param option The user-provided option value.
+ * @returns The resolved options, or `undefined` when new config is disabled.
+ */
+function normalizeNewConfigOption(
+	option: boolean | { configPath?: string } | undefined
+): { configPath: string } | undefined {
+	if (option === undefined || option === false) {
+		return undefined;
+	}
+	if (option === true) {
+		return { configPath: NEW_CONFIG_FILENAME };
+	}
+	return { configPath: option.configPath ?? NEW_CONFIG_FILENAME };
+}
+
 async function parseCustomPoolOptions(
 	rootPath: string,
-	value: unknown
+	value: unknown,
+	mode: string | undefined
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(
@@ -299,38 +378,64 @@ async function parseCustomPoolOptions(
 	options.moduleRules = miniflareModuleRules;
 	delete options.miniflare.modulesRules;
 
-	// Try to parse Wrangler config if any
-	if (options.wrangler?.configPath !== undefined) {
-		const configPath = path.resolve(rootPath, options.wrangler.configPath);
+	// Try to parse the project's configuration file, whichever format it uses
+	const newConfig = normalizeNewConfigOption(options.experimental?.newConfig);
+
+	if (newConfig !== undefined && options.wrangler !== undefined) {
+		throw new TypeError(
+			"`wrangler` cannot be used together with `experimental.newConfig`. Configure the Worker via `cloudflare.config.ts` instead."
+		);
+	}
+
+	let configPath: string | undefined;
+	let config: Config | undefined;
+	// Wrangler environments have no `cloudflare.config.ts` equivalent yet
+	let environment: string | undefined;
+
+	if (newConfig !== undefined) {
+		configPath = path.resolve(rootPath, newConfig.configPath);
+		config = await loadNewConfig(configPath, mode);
+	} else if (options.wrangler?.configPath !== undefined) {
+		configPath = path.resolve(rootPath, options.wrangler.configPath);
 		// Make sure future accesses to `configPath` see a fully-resolved path
 		// (e.g. for getting accurate relative paths in error messages)
 		options.wrangler.configPath = configPath;
+		environment = options.wrangler.environment;
 
-		// Lazily import `wrangler` if and when we need it
+		// Lazily import `wrangler` if and when we need it. Parse the config once so
+		// we can pass the parsed config straight into
+		// `unstable_getMiniflareWorkerOptions` without re-parsing it.
+		const wrangler = await import("wrangler");
+		config = wrangler.unstable_readConfig({
+			config: configPath,
+			env: environment,
+		});
+	}
+
+	if (configPath !== undefined && config !== undefined) {
+		options.resolvedConfig = {
+			path: configPath,
+			newConfig: newConfig !== undefined,
+			workerName: config.topLevelName,
+		};
+
+		// Already imported above for a Wrangler config; the module registry makes
+		// this a no-op when it was, and keeps it lazy when it wasn't
 		const wrangler = await import("wrangler");
 
-		// Parse the wrangler config once so we can pass the parsed config
-		// straight into `unstable_getMiniflareWorkerOptions` without
-		// re-parsing it.
-		const wranglerConfig = wrangler.unstable_readConfig({
-			config: configPath,
-			env: options.wrangler.environment,
-		});
-
-		const preExistingRemoteProxySessionData = options.wrangler?.configPath
-			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
-			: undefined;
+		const preExistingRemoteProxySessionData =
+			remoteProxySessionsDataMap.get(configPath);
 
 		const remoteProxySessionData = options.remoteBindings
 			? await maybeStartOrUpdateRemoteProxySession(
 					{
-						name: wranglerConfig.name ?? "worker",
+						name: config.name ?? "worker",
 						bindings:
 							wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-								wranglerConfig
+								config
 							) ?? {},
-						complianceRegion: getCloudflareComplianceRegion(wranglerConfig),
-						account_id: wranglerConfig.account_id,
+						complianceRegion: getCloudflareComplianceRegion(config),
+						account_id: config.account_id,
 						profileDir: path.dirname(configPath),
 					},
 					preExistingRemoteProxySessionData ?? null,
@@ -339,29 +444,22 @@ async function parseCustomPoolOptions(
 				)
 			: null;
 
-		if (options.wrangler?.configPath && remoteProxySessionData) {
-			remoteProxySessionsDataMap.set(
-				options.wrangler.configPath,
-				remoteProxySessionData
-			);
+		if (remoteProxySessionData) {
+			remoteProxySessionsDataMap.set(configPath, remoteProxySessionData);
 		}
 
 		const { workerOptions, externalWorkers, define, main } =
-			wrangler.unstable_getMiniflareWorkerOptions(
-				wranglerConfig,
-				options.wrangler.environment,
-				{
-					overrides: {
-						assets: options.miniflare.assets,
-						// doesn't work with containers yet so let's just disable it
-						enableContainers: false,
-					},
-					remoteProxyConnectionString:
-						remoteProxySessionData?.session?.remoteProxyConnectionString,
-				}
-			);
+			wrangler.unstable_getMiniflareWorkerOptions(config, environment, {
+				overrides: {
+					assets: options.miniflare.assets,
+					// doesn't work with containers yet so let's just disable it
+					enableContainers: false,
+				},
+				remoteProxyConnectionString:
+					remoteProxySessionData?.session?.remoteProxyConnectionString,
+			});
 
-		// If `main` wasn't explicitly configured, fall back to Wrangler config's
+		// If `main` wasn't explicitly configured, fall back to the config's entrypoint
 		options.main ??= main;
 
 		options.miniflare.workers = [
@@ -386,7 +484,7 @@ async function parseCustomPoolOptions(
 		) as SourcelessWorkerOptions;
 		options.moduleRules = mergedModuleRules.modulesRules;
 
-		// Merge generated Miniflare options from Wrangler with specified overrides
+		// Merge generated Miniflare options from the config with specified overrides
 		options.miniflare = mergeWorkerOptions(
 			workerOptionsWithoutModuleRules,
 			options.miniflare as SourcelessWorkerOptions
@@ -400,7 +498,7 @@ async function parseCustomPoolOptions(
 			),
 		};
 
-		// Record any Wrangler `define`s
+		// Record any `define`s from the config
 		options.defines = define;
 	}
 
@@ -444,7 +542,13 @@ export async function parseProjectOptions(
 	const projectPath = getProjectPath(project);
 
 	try {
-		return await parseCustomPoolOptions(projectPath, poolOptions);
+		return await parseCustomPoolOptions(
+			projectPath,
+			poolOptions,
+			// Vitest is Vite, so `cloudflare.config.ts` functions see the same mode
+			// Vite would give them. Defaults to `"test"`, overridable with `--mode`.
+			project.vite.config.mode
+		);
 	} catch (e) {
 		if (!isZodErrorLike(e)) {
 			throw e;

@@ -111,7 +111,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				AI: { type: "ai", remote: remote(connection) },
+				AI: { type: "ai", dev: { remote: remote(connection) } },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [
@@ -132,7 +132,7 @@ const testCases: TestCase[] = [
 			miniflareConfig: (connection) => ({
 				BROWSER: {
 					type: "browser",
-					remote: remote(connection),
+					dev: { remote: remote(connection) },
 				},
 			}),
 		}),
@@ -186,13 +186,13 @@ const testCases: TestCase[] = [
 					SERVICE: {
 						type: "worker",
 						workerName: targetWorkerName,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 					SERVICE_WITH_ENTRYPOINT: {
 						type: "worker",
 						workerName: targetWorkerName,
 						exportName: "CustomEntrypoint",
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -228,7 +228,7 @@ const testCases: TestCase[] = [
 					KV_BINDING: {
 						type: "kv",
 						id: ns,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -264,7 +264,7 @@ const testCases: TestCase[] = [
 					R2_BINDING: {
 						type: "r2",
 						name,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -300,7 +300,7 @@ const testCases: TestCase[] = [
 					DB: {
 						type: "d1",
 						id,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -331,7 +331,7 @@ const testCases: TestCase[] = [
 					VECTORIZE_BINDING: {
 						type: "vectorize",
 						name,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -354,7 +354,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				IMAGES: { type: "images", remote: remote(connection) },
+				IMAGES: { type: "images", dev: { remote: remote(connection) } },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [expect.stringContaining(`image/avif`)],
@@ -371,7 +371,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				MEDIA: { type: "media", remote: remote(connection) },
+				MEDIA: { type: "media", dev: { remote: remote(connection) } },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [expect.stringContaining(`image/jpeg`)],
@@ -414,7 +414,7 @@ const testCases: TestCase[] = [
 					DISPATCH: {
 						type: "dispatch-namespace",
 						namespace,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -450,7 +450,7 @@ const testCases: TestCase[] = [
 					AI_SEARCH_NS: {
 						type: "ai-search-namespace",
 						namespace: "default",
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 					R2_BUCKET_NAME: { type: "text", value: bucketName },
 				}),
@@ -480,7 +480,7 @@ const testCases: TestCase[] = [
 					AI_SEARCH_INST: {
 						type: "ai-search",
 						name: instanceId,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -507,7 +507,7 @@ const testCases: TestCase[] = [
 					MEMORY: {
 						type: "agent-memory",
 						namespace,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -530,7 +530,7 @@ const testCases: TestCase[] = [
 				PIPELINE: {
 					type: "pipeline",
 					name: "preserve-e2e-pipelines",
-					remote: remote(connection),
+					dev: { remote: remote(connection) },
 				},
 			}),
 		}),
@@ -551,7 +551,7 @@ const testCases: TestCase[] = [
 				},
 			},
 			miniflareConfig: (connection) => ({
-				EMAIL: { type: "send-email", remote: remote(connection) },
+				EMAIL: { type: "send-email", dev: { remote: remote(connection) } },
 			}),
 		}),
 		getExpectFetchToMatch: (expect) => [
@@ -589,12 +589,12 @@ const testCases: TestCase[] = [
 					VPC_NETWORK_TUNNEL: {
 						type: "vpc-network",
 						tunnelId,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 					VPC_NETWORK_MESH: {
 						type: "vpc-network",
 						networkId: "cf1:network",
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -609,6 +609,9 @@ const testCases: TestCase[] = [
 	{
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
+		// Currently this test starts failing whenever the VPC worker is doing a deployment
+		// Re-enable when EW-10563 is resolved
+		skip: true,
 		setup: async (helper) => {
 			const serviceName = generateResourceName();
 
@@ -646,7 +649,7 @@ const testCases: TestCase[] = [
 					VPC_SERVICE: {
 						type: "vpc-service",
 						id: serviceId,
-						remote: remote(connection),
+						dev: { remote: remote(connection) },
 					},
 				}),
 			};
@@ -802,7 +805,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 								MTLS: {
 									type: "mtls-certificate",
 									id: certificateId,
-									remote: true,
+									dev: { remote: true },
 								},
 							},
 						},

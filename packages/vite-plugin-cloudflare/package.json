@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.53.0",
+	"version": "1.54.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",

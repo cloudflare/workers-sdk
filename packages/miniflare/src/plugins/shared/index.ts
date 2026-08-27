@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MiniflareCoreError } from "../../shared";
+import { getUserServiceName } from "../core";
+import { SERVICE_DEV_REGISTRY_PROXY, type UnsafeUniqueKey } from "./constants";
 import type {
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
@@ -9,6 +11,7 @@ import type {
 import type {
 	Extension,
 	Service,
+	ServiceDesignator,
 	Worker_Binding,
 	Worker_Module,
 } from "../../runtime";
@@ -18,9 +21,9 @@ import type {
 	QueueConsumerSchema,
 	QueueProducerSchema,
 } from "../../workers";
+import type { ContainerPrivilegesCache } from "../core/container";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
-import type { UnsafeUniqueKey } from "./constants";
 import type { z } from "zod";
 
 // Maps workflow binding names to their workflow options
@@ -75,6 +78,7 @@ export interface PluginServicesOptions {
 	// the dev-registry proxy worker, e.g. so the queue broker can deliver
 	// messages to a consumer in another `wrangler dev` process.
 	devRegistryEnabled: boolean;
+	containerPrivilegesCache: ContainerPrivilegesCache;
 	hyperdriveProxyController: HyperdriveProxyController;
 }
 
@@ -92,6 +96,7 @@ export interface Plugin {
 	bindingTypeDescription?: string;
 	getBindings(
 		options: ParsedWorkerOptions,
+		sharedOptions: ParsedInstanceOptions,
 		workerIndex: number
 	): Awaitable<Worker_Binding[] | void>;
 	getNodeBindings(
@@ -268,3 +273,49 @@ export type {
 	ParsedMiniflareWorkerConfig,
 	ParsedWorkerOptions,
 } from "../../config/schema";
+
+export function getStorageService(
+	localServiceName: string,
+	props: Record<string, unknown>,
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>,
+	options: {
+		entrypoint?: string;
+		rpcProperties?: string[];
+	} = {}
+): ServiceDesignator {
+	const { entrypoint, rpcProperties } = options;
+	const storageScope = getStorageScope(sharedOptions.resourcePersistencePath);
+	return sharedOptions.unsafeEnableSharedStorage && storageScope !== undefined
+		? {
+				name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
+				entrypoint: "ExternalServiceProxy",
+				props: {
+					json: JSON.stringify({
+						service: localServiceName,
+						entrypoint,
+						rpcProperties,
+						userProps: props,
+						storage: true,
+						storageScope,
+					}),
+				},
+			}
+		: {
+				name: localServiceName,
+				...(entrypoint === undefined ? {} : { entrypoint }),
+				props: {
+					json: JSON.stringify(props),
+				},
+			};
+}
+
+export function getStorageScope(
+	resourcePersistencePath: string | undefined
+): string | undefined {
+	return resourcePersistencePath === undefined
+		? undefined
+		: path.resolve(resourcePersistencePath);
+}

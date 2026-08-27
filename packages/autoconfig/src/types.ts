@@ -1,5 +1,7 @@
-import type { AutoConfigContext } from "./context";
+import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type { Framework } from "./frameworks/framework-class";
+import type { BuildConfig } from "./frameworks/framework-class";
+import type { WorkerConfigInput } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
@@ -17,6 +19,8 @@ type AutoConfigDetailsBase = {
 	configured: boolean;
 	/** Details about the detected framework. It can be a JS framework or 'Static' if no actual JS framework is used. */
 	framework: Framework;
+	/** The dev command used to run the project locally (if any) */
+	devCommand?: string;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
 	/** The output directory (if no framework is used, points to the raw asset files) */
@@ -45,6 +49,8 @@ export type AutoConfigDetails =
 	| AutoConfigDetailsForNonConfiguredProject;
 
 export type AutoConfigOptions = {
+	/** The configuration target, defaults to cf. */
+	target?: AutoConfigTarget;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
 	/** Whether to run autoconfig without actually applying any filesystem modification (default: false) */
@@ -62,14 +68,15 @@ export type AutoConfigOptions = {
 	 */
 	skipConfirmations?: boolean;
 	/**
-	 * Whether to install Wrangler during autoconfig
+	 * Whether to install the selected target CLI during autoconfig.
 	 */
-	enableWranglerInstallation?: boolean;
+	enableTargetCliInstallation?: boolean;
 };
 
 export type AutoConfigSummary = {
 	scripts: Record<string, string>;
-	wranglerInstall: boolean;
+	workerConfig?: WorkerConfigInput;
+	buildConfig?: BuildConfig;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
 	outputDir: string;
