@@ -1,0 +1,22 @@
+packages/local-explorer-ui/src/__e2e__/email/email-routing.spec.ts
+  s_dabb4773aed416::t_45a3fd4ab8bdd2 132-216
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_dabb4773aed416::t_9906da4070bfce 26,51-53,55-66,441-443
+  s_dabb4773aed416::t_6cd52b0ae25000 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6fea30aa181fa52ff195a97a652e425b7cc4b021",
+  "prompts": {},
+  "sessions": {
+    "s_dabb4773aed416": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03f05-a9b9-7673-8100-25804b5737f1",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
