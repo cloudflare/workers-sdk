@@ -23,12 +23,14 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("includes relativeWranglerConfigPath in error message when provided", ({
+		it("names fields in camelCase when the config is a cloudflare.config.ts", ({
 			expect,
 		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityFlags: ["disable-flag"],
+				relativeConfigPath: "cloudflare.config.ts",
+				camelCaseConfigFields: true,
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
 			const result = flagAssertions.assertIsEnabled({
@@ -37,7 +39,7 @@ describe("FlagAssertions", () => {
 			});
 			expect(result.isValid).toBe(false);
 			expect(result.errorMessage).toBe(
-				'In project /path/to/project, `options.compatibilityFlags` must not contain "disable-flag".\nThis flag is incompatible with `@cloudflare/vitest-plugin`.'
+				'In project /path/to/project\'s configuration file cloudflare.config.ts, `compatibilityFlags` must not contain "disable-flag".\nThis flag is incompatible with `@cloudflare/vitest-plugin`.'
 			);
 		});
 
@@ -47,7 +49,7 @@ describe("FlagAssertions", () => {
 			const options = {
 				...baseOptions,
 				compatibilityFlags: ["disable-flag"],
-				relativeWranglerConfigPath: "wrangler.toml",
+				relativeConfigPath: "wrangler.toml",
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
 			const result = flagAssertions.assertIsEnabled({
@@ -210,14 +212,14 @@ describe("FlagAssertions", () => {
 			);
 		});
 
-		it("includes relativeWranglerConfigPath in error message when provided", ({
+		it("includes relativeConfigPath in error message when provided", ({
 			expect,
 		}) => {
 			const options = {
 				...baseOptions,
 				compatibilityDate: "2020-01-01",
 				compatibilityFlags: [],
-				relativeWranglerConfigPath: "wrangler.toml",
+				relativeConfigPath: "wrangler.toml",
 			};
 			const flagAssertions = new CompatibilityFlagAssertions(options);
 			const result = flagAssertions.assertAtLeastOneFlagExists([

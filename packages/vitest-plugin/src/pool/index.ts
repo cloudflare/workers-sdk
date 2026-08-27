@@ -23,7 +23,6 @@ import {
 	structuredSerializableRevivers,
 } from "miniflare";
 import semverSatisfies from "semver/functions/satisfies.js";
-import { experimental_readRawConfig } from "wrangler";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { guessWorkerExports } from "./guess-exports";
 import {
@@ -228,24 +227,12 @@ function getDurableObjectClasses(worker: SourcelessWorkerOptions): Set<string> {
 	return result;
 }
 
-function getWranglerWorkerName(
-	relativeWranglerConfigPath?: string
-): string | undefined {
-	if (!relativeWranglerConfigPath) {
-		return undefined;
-	}
-	const wranglerConfigObject = experimental_readRawConfig({
-		config: relativeWranglerConfigPath,
-	});
-	return wranglerConfigObject.rawConfig.name;
-}
-
 /**
  * Gets a set of class names for Workflows defined in the SELF Worker.
  */
 function getWorkflowClasses(
 	worker: SourcelessWorkerOptions,
-	relativeWranglerConfigPath: string | undefined
+	configWorkerName: string | undefined
 ): Set<string> {
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
@@ -260,11 +247,8 @@ function getWorkflowClasses(
 		let workerName: string | undefined;
 		// If the designator's scriptName matches its own Worker name,
 		// use that as the worker name, otherwise use the vitest worker's name
-		const wranglerWorkerName = getWranglerWorkerName(
-			relativeWranglerConfigPath
-		);
-		if (wranglerWorkerName && designator.scriptName === wranglerWorkerName) {
-			workerName = wranglerWorkerName;
+		if (configWorkerName && designator.scriptName === configWorkerName) {
+			workerName = configWorkerName;
 		} else {
 			workerName = worker.name;
 		}
@@ -290,18 +274,18 @@ const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
 function rewriteStreamingTailSelfReferences(
 	worker: LegacyWorkerOptions,
-	wranglerWorkerName: string,
+	configWorkerName: string,
 	runnerWorkerName: string
 ) {
 	worker.streamingTails = worker.streamingTails?.map((tail) => {
-		if (tail === wranglerWorkerName) {
+		if (tail === configWorkerName) {
 			return runnerWorkerName;
 		}
 		if (
 			typeof tail === "object" &&
 			tail !== null &&
 			"name" in tail &&
-			tail.name === wranglerWorkerName
+			tail.name === configWorkerName
 		) {
 			return { ...tail, name: runnerWorkerName };
 		}
@@ -314,26 +298,26 @@ async function buildProjectWorkerOptions(
 	customOptions: WorkersPoolOptionsWithDefines,
 	main: string | undefined
 ): Promise<ProjectWorkers> {
-	const relativeWranglerConfigPath = maybeApply(
+	const relativeConfigPath = maybeApply(
 		(v) => path.relative("", v),
-		customOptions.wrangler?.configPath
+		customOptions.resolvedConfig?.path
 	);
 	const runnerWorker = customOptions.miniflare ?? {};
 
 	// `unstable_getMiniflareWorkerOptions` returns service bindings whose `name`
 	// is the literal `config.name` for self-references (e.g. `{ name: "my-worker" }`
-	// when the wrangler config has `name: "my-worker"`). We rename the runner
-	// worker below, so rewrite those self-references to `kCurrentWorker` first.
-	// That symbol resolves at request time relative to the referer worker, so it
-	// survives the rename.
-	const wranglerWorkerName = getWranglerWorkerName(relativeWranglerConfigPath);
-	if (wranglerWorkerName && runnerWorker.serviceBindings) {
+	// when the config has `name: "my-worker"`). We rename the runner worker below,
+	// so rewrite those self-references to `kCurrentWorker` first. That symbol
+	// resolves at request time relative to the referer worker, so it survives the
+	// rename.
+	const configWorkerName = customOptions.resolvedConfig?.workerName;
+	if (configWorkerName && runnerWorker.serviceBindings) {
 		for (const [key, sb] of Object.entries(runnerWorker.serviceBindings)) {
 			if (
 				typeof sb === "object" &&
 				sb !== null &&
 				"name" in sb &&
-				sb.name === wranglerWorkerName
+				sb.name === configWorkerName
 			) {
 				runnerWorker.serviceBindings[key] = { ...sb, name: kCurrentWorker };
 			}
@@ -374,7 +358,8 @@ async function buildProjectWorkerOptions(
 		compatibilityFlags: runnerWorker.compatibilityFlags,
 		optionsPath: `miniflare`,
 		relativeProjectPath: getRelativeProjectPath(project),
-		relativeWranglerConfigPath,
+		relativeConfigPath,
+		camelCaseConfigFields: customOptions.resolvedConfig?.newConfig ?? false,
 	});
 
 	const assertions = [
@@ -441,10 +426,7 @@ async function buildProjectWorkerOptions(
 	runnerWorker.durableObjects ??= {};
 	const durableObjectClassNames = getDurableObjectClasses(runnerWorker);
 
-	const workflowClassNames = getWorkflowClasses(
-		runnerWorker,
-		relativeWranglerConfigPath
-	);
+	const workflowClassNames = getWorkflowClasses(runnerWorker, configWorkerName);
 
 	const selfWorkerExports: string[] = [];
 	if (
@@ -616,10 +598,10 @@ async function buildProjectWorkerOptions(
 
 			// Miniflare will validate these options
 			const workerOptions = worker as LegacyWorkerOptions;
-			if (wranglerWorkerName) {
+			if (configWorkerName) {
 				rewriteStreamingTailSelfReferences(
 					workerOptions,
-					wranglerWorkerName,
+					configWorkerName,
 					runnerWorker.name
 				);
 			}

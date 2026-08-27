@@ -20,15 +20,52 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("should set configured: true if a configPath exists", async ({
+	it("should set configured: true if a configPath exists during legacy Wrangler detection", async ({
 		expect,
 	}) => {
 		await expect(
 			details.getDetailsForAutoConfig({
 				wranglerConfig: { configPath: "/tmp" } as Config,
+				target: "wrangler",
 				context,
 			})
 		).resolves.toMatchObject({ configured: true });
+	});
+
+	it("should migrate an existing Wrangler project by default", async ({
+		expect,
+	}) => {
+		await writeFile("index.html", "<h1>Hello World</h1>");
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				wranglerConfig: { configPath: "/tmp" } as Config,
+				context,
+			})
+		).resolves.toMatchObject({ configured: false });
+	});
+
+	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				scripts: { build: "astro build", dev: "cf dev" },
+				dependencies: { astro: "5" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "astro" },
+			buildCommand: "npm run build",
+			devCommand: "npx astro dev",
+			packageManager: { type: "npm" },
+		});
 	});
 
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
@@ -59,6 +96,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				details.getDetailsForAutoConfig({ context })
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
+				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
 				configured: false,
 				outputDir: "dist",
 				packageJson: {

@@ -2883,6 +2883,31 @@ const validateDurableObjectBinding: ValidatorFn = (
 const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or hyphens.`;
 
 /**
+ * Check the shape of a single `default_retention` value.
+ */
+function validateWorkflowRetentionValue(
+	diagnostics: Diagnostics,
+	field: string,
+	key: string,
+	value: unknown
+): boolean {
+	const isValidNumber =
+		typeof value === "number" && Number.isInteger(value) && value > 0;
+	const isValidString = typeof value === "string" && value.length > 0;
+
+	if (isValidNumber || isValidString) {
+		return true;
+	}
+
+	diagnostics.errors.push(
+		`"${field}" bindings "default_retention.${key}" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ${JSON.stringify(
+			value
+		)}.`
+	);
+	return false;
+}
+
+/**
  * Check that the given field is a valid "workflow" binding object.
  */
 const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
@@ -3016,13 +3041,93 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		}
 	}
 
+	if (
+		hasProperty(value, "default_retention") &&
+		value.default_retention !== undefined
+	) {
+		if (
+			typeof value.default_retention !== "object" ||
+			value.default_retention === null ||
+			Array.isArray(value.default_retention)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "default_retention" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const defaultRetention = value.default_retention as Record<
+				string,
+				unknown
+			>;
+			for (const key of ["success_retention", "error_retention"]) {
+				if (
+					defaultRetention[key] !== undefined &&
+					!validateWorkflowRetentionValue(
+						diagnostics,
+						field,
+						key,
+						defaultRetention[key]
+					)
+				) {
+					isValid = false;
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.default_retention`,
+				Object.keys(defaultRetention),
+				["success_retention", "error_retention"]
+			);
+		}
+	}
+
+	if (hasProperty(value, "concurrency") && value.concurrency !== undefined) {
+		if (
+			typeof value.concurrency !== "object" ||
+			value.concurrency === null ||
+			Array.isArray(value.concurrency)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "concurrency" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const concurrency = value.concurrency as Record<string, unknown>;
+			if (
+				concurrency.limit !== undefined &&
+				(typeof concurrency.limit !== "number" ||
+					!Number.isInteger(concurrency.limit) ||
+					concurrency.limit < 1)
+			) {
+				diagnostics.errors.push(
+					`"${field}" bindings "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
+						concurrency.limit
+					)}.`
+				);
+				isValid = false;
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.concurrency`,
+				Object.keys(concurrency),
+				["limit"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
 		"limits",
+		"concurrency",
 		"schedules",
+		"default_retention",
 	]);
 
 	return isValid;

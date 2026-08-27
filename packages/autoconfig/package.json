@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/autoconfig",
-	"version": "0.2.8",
+	"version": "0.3.0",
 	"description": "Framework autoconfig detection and configuration for Cloudflare Workers",
 	"license": "MIT OR Apache-2.0",
 	"repository": {
@@ -30,6 +30,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*"
 	},
 	"devDependencies": {

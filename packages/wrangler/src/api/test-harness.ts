@@ -56,6 +56,7 @@ import type {
 	DurableObjectStorageHandle,
 	DurableObjectStorageOptions,
 	DispatchFetch,
+	EmailHandlerResult,
 	Json,
 	Miniflare,
 	RequestInfo,
@@ -106,31 +107,7 @@ export type FetcherEmailOptions = {
 	raw: string | ReadableStream<Uint8Array>;
 };
 
-export type FetcherEmailResult = {
-	outcome: "ok" | "exception";
-	rejectReason?: string;
-	forwards: Array<{
-		messageId: string;
-		recipient: string;
-		headers: [string, string][];
-	}>;
-	replies: Array<{
-		messageId: string;
-		sender: string;
-		raw: string;
-	}>;
-	events: Array<
-		| {
-				type: "forward" | "reply";
-				timestamp: string;
-				messageId: string;
-		  }
-		| {
-				type: "reject";
-				timestamp: string;
-		  }
-	>;
-};
+export type FetcherEmailResult = EmailHandlerResult;
 
 export type WorkerDefaultExport =
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.

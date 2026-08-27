@@ -179,9 +179,9 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
-const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.omit({
-	localConnectionString: true,
-}).extend({ localConnectionString: z.string() });
+const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
+	dev: z.strictObject({ connectionString: z.string() }),
+});
 
 /**
  * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
@@ -209,7 +209,6 @@ const MiniflareWorkflowBindingSchema = z.strictObject({
 	workerName: z.string(),
 	exportName: z.string(),
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	remote: z.boolean().optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`
@@ -438,6 +437,13 @@ const MiniflareTailConsumerSchema = TailConsumerSchema.extend({
 export type MiniflareBinding =
 	| z.output<typeof ParsedMiniflareKnownBindingSchema>
 	| z.output<typeof UnsafeBindingSchema>;
+
+/** Returns whether a parsed Miniflare binding is an unsafe plugin binding. */
+export function isMiniflareUnsafeBinding(
+	binding: MiniflareBinding
+): binding is z.output<typeof UnsafeBindingSchema> {
+	return binding.type.startsWith("unsafe:");
+}
 
 export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	manifest: true,
@@ -701,10 +707,27 @@ export const InstanceOptionsSchema = z.strictObject({
 	stripDisablePrettyError: z.boolean().default(true),
 
 	// Persistence
-	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
+	/**
+	 * Root directory for persisted local resource state; relative to cwd if not
+	 * absolute. When `unsafeEnableSharedStorage` is set this is canonicalised to
+	 * an absolute real path before use, so every instance sharing the directory
+	 * derives the same ownership scope.
+	 */
 	resourcePersistencePath: z.string().optional(),
+	/**
+	 * Root for resources that cannot participate in shared storage. Belongs at
+	 * the project level -- each project keeps its own copy of this state rather
+	 * than partitioning it under the shared resource root.
+	 *
+	 * Required when `unsafeEnableSharedStorage` is set. Parsing resolves this to
+	 * the effective isolated root, falling back to `resourcePersistencePath`
+	 * when shared storage is off, so readers never need to decide themselves.
+	 */
+	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
+
+	unsafeEnableSharedStorage: z.boolean().optional(),
 
 	containerEngine: z
 		.union([
@@ -769,7 +792,47 @@ export type ParsedLegacyConfig = NonNullable<ParsedWorkerOptions["legacy"]>;
 
 export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 	workers: z.array(WorkerOptionsSchema),
-});
+})
+	.superRefine((options, ctx) => {
+		if (!options.unsafeEnableSharedStorage) {
+			return;
+		}
+		if (!options.resourcePersistencePath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["resourcePersistencePath"],
+				message:
+					"Shared storage requires `resourcePersistencePath` to be set to the directory instances should share.",
+			});
+		}
+		if (!options.isolatedResourcePersistencePath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["isolatedResourcePersistencePath"],
+				message:
+					"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared.",
+			});
+		}
+		if (!options.unsafeDevRegistryPath?.trim()) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["unsafeDevRegistryPath"],
+				message:
+					"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry.",
+			});
+		}
+	})
+	.transform((options) => ({
+		...options,
+		// Resolve the effective isolated root once, here, so that everything
+		// downstream reads a single field that is always the path to persist to.
+		// Without shared storage nothing is shared, so every resource is isolated
+		// and the configured resource root is the isolated root. Validation above
+		// has already required an explicit isolated root when sharing is enabled.
+		isolatedResourcePersistencePath: options.unsafeEnableSharedStorage
+			? options.isolatedResourcePersistencePath
+			: options.resourcePersistencePath,
+	}));
 
 export type MiniflareOptions = z.input<typeof MiniflareOptionsSchema>;
 
@@ -817,14 +880,14 @@ export function getTriggersOfType<T extends string>(
 
 /**
  * Resolves the remote proxy connection string for a binding. A binding is
- * proxied remotely iff `binding.remote === true` _and_
+ * proxied remotely iff `binding.dev.remote === true` _and_
  * `dev.remoteProxyConnectionString` is set (mirroring wrangler's model).
  */
 export function getRemoteProxyConnectionString(
-	binding: { remote?: boolean },
+	binding: { dev?: { remote?: boolean } },
 	dev: ParsedDevConfig | undefined
 ): RemoteProxyConnectionString | undefined {
-	return binding.remote && dev?.remoteProxyConnectionString
+	return binding.dev?.remote && dev?.remoteProxyConnectionString
 		? dev.remoteProxyConnectionString
 		: undefined;
 }

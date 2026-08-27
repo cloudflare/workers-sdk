@@ -32,8 +32,8 @@ import type { Settings } from "@netlify/build-info";
  * @param projectPath Path to the project root
  * @param wranglerConfig Optional parsed wrangler config for the project
  * @returns An object containing:
- *   - `detectedFramework`: The matched framework together with its build
- *     command and output directory.
+ *   - `detectedFramework`: The matched framework, its build and development
+ *     commands, and its output directory.
  *   - `packageManager`: The package manager detected in the project.
  *   - `isWorkspaceRoot`: `true` when the project path is the root of a
  *     monorepo workspace (only present when relevant).
@@ -96,6 +96,16 @@ export async function detectFramework(
 		buildSettings,
 		context
 	);
+	if (maybeDetectedFramework) {
+		// @netlify/build-info prefers package.json dev scripts over the framework's
+		// built-in command. cf needs the direct command so that `cf dev` can delegate
+		// without invoking a script that may itself call `cf dev`.
+		maybeDetectedFramework.devCommand = project.frameworks
+			.get(maybeDetectedFramework.baseDirectory ?? "")
+			?.find(
+				({ id }) => id === maybeDetectedFramework.framework.id
+			)?.dev?.command;
+	}
 
 	if (
 		await isPagesProject(
@@ -216,10 +226,12 @@ function throwMultipleFrameworksNonInteractiveError(
 }
 
 type DetectedFramework = {
+	baseDirectory?: string;
 	framework: {
 		name: string;
 		id: string;
 	};
+	devCommand?: string | undefined;
 	buildCommand?: string | undefined;
 	dist?: string;
 };

@@ -514,8 +514,9 @@ export class ReactRouter extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./workers/app.ts",
+			buildTool: "vite",
+			workerConfig: {
+				entrypoint: "./workers/app.ts",
 			},
 		};
 	}

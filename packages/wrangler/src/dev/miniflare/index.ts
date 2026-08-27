@@ -886,6 +886,13 @@ export function buildMiniflareBindingOptions(
 							{ telemetryMessage: "workflow limits on external script" }
 						);
 					}
+					if (workflow.concurrency) {
+						throw new UserError(
+							`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
+								`Configure concurrency on the worker that defines the workflow.`,
+							{ telemetryMessage: "workflow concurrency on external script" }
+						);
+					}
 					if (workflow.schedules) {
 						throw new UserError(
 							`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
