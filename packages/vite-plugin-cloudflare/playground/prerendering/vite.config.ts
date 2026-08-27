@@ -13,22 +13,20 @@ export function createConfig(assetsOnly: boolean) {
 				persistState: false,
 				viteEnvironment: { name: "ssr" },
 				assetsOnly: () => assetsOnly,
-				experimental: {
-					prerenderWorker: {
-						config(_, { entryWorkerConfig }) {
-							return {
-								...entryWorkerConfig,
-								name: "prerender",
-								entrypoint: "./src/prerender.ts",
-								env: {
-									...entryWorkerConfig.env,
-									AUXILIARY_WORKER: {
-										type: "worker",
-										worker: "auxiliary-worker",
-									},
+				prerenderWorker: {
+					config(_, { entryWorkerConfig }) {
+						return {
+							...entryWorkerConfig,
+							name: "prerender",
+							entrypoint: "./src/prerender.ts",
+							env: {
+								...entryWorkerConfig.env,
+								AUXILIARY_WORKER: {
+									type: "worker",
+									worker: "auxiliary-worker",
 								},
-							};
-						},
+							},
+						};
 					},
 				},
 			}),
