@@ -242,7 +242,7 @@ describe("MiniflareWorkerConfigSchema", () => {
 				WORKFLOW: {
 					type: "workflow",
 					name: "workflow",
-					workerName: "api",
+					worker: "api",
 					exportName: "Workflow",
 					dev: { remote: true },
 				},

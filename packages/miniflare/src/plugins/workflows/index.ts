@@ -95,7 +95,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = workflows.map<Service>(([bindingName, binding]) => {
-			const external = !workerNames.includes(binding.workerName);
+			const external = !workerNames.includes(binding.worker);
 			const stepLimit = binding.limits?.steps;
 			// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
 			// otherwise workerd will crash because there's two equal DO namespaces
@@ -159,7 +159,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 										entrypoint: "ExternalServiceProxy",
 										props: {
 											json: JSON.stringify({
-												service: binding.workerName,
+												service: binding.worker,
 												entrypoint: binding.exportName,
 											}),
 										},
@@ -168,7 +168,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							: {
 									name: "USER_WORKFLOW",
 									service: {
-										name: getUserServiceName(binding.workerName),
+										name: getUserServiceName(binding.worker),
 										entrypoint: binding.exportName,
 									},
 								},

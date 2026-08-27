@@ -295,7 +295,7 @@ describe("ProxyClient", () => {
 						env: {
 							OBJECT: {
 								type: "durable-object",
-								workerName: "",
+								worker: "",
 								exportName: "DurableObject",
 							},
 						},

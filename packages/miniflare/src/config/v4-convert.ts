@@ -411,7 +411,7 @@ function addDurableObjectBindings(
 		const targetWorkerName = objectOptions.scriptName ?? workerName;
 		env[bindingName] = {
 			type: "durable-object",
-			workerName: targetWorkerName,
+			worker: targetWorkerName,
 			exportName: objectOptions.className,
 		};
 		isRemote(objectOptions.remoteProxyConnectionString);
@@ -516,15 +516,12 @@ function addServiceBindingArray(
 			throwUnsupportedOption(`${option}[].remoteProxyConnectionString`);
 		}
 		const converted = convertServiceDesignator(binding, () => false);
-		if (
-			converted.type !== "worker" ||
-			typeof converted.workerName !== "string"
-		) {
+		if (converted.type !== "worker" || typeof converted.worker !== "string") {
 			throwUnsupportedOption(option);
 		}
 		config.tailConsumers ??= [];
 		config.tailConsumers.push({
-			workerName: converted.workerName,
+			worker: converted.worker,
 			entrypoint: converted.exportName,
 			props: converted.props,
 			streaming,
@@ -554,10 +551,10 @@ function convertOutboundService(
 	if (converted.type === "fetcher" || converted.type === "node-handler") {
 		return converted;
 	}
-	if (converted.type === "worker" && typeof converted.workerName === "string") {
+	if (converted.type === "worker" && typeof converted.worker === "string") {
 		return {
 			type: "worker",
-			workerName: converted.workerName,
+			worker: converted.worker,
 			exportName: converted.exportName,
 			props: converted.props,
 			dev: converted.dev,
@@ -574,24 +571,24 @@ function convertServiceDesignator(
 		return { type: "fetcher", handler: binding };
 	}
 	if (typeof binding === "string") {
-		return { type: "worker", workerName: binding };
+		return { type: "worker", worker: binding };
 	}
 	if (binding === kCurrentWorker) {
 		return {
 			type: "worker",
-			workerName: getCurrentWorkerBindingName(),
+			worker: getCurrentWorkerBindingName(),
 		};
 	}
 	if (typeof binding !== "object" || binding === null) {
 		return {
 			type: "worker",
-			workerName: getCurrentWorkerBindingName(),
+			worker: getCurrentWorkerBindingName(),
 		};
 	}
 	if ("name" in binding) {
 		return {
 			type: "worker",
-			workerName: convertWorkerName(binding.name),
+			worker: convertWorkerName(binding.name),
 			exportName: binding.entrypoint,
 			props: binding.props,
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
@@ -609,13 +606,11 @@ function convertServiceDesignator(
 	return { type: "node-handler", handler: binding.node };
 }
 
-function getCurrentWorkerBindingName(): ServiceBinding["workerName"] {
+function getCurrentWorkerBindingName(): ServiceBinding["worker"] {
 	return kCurrentWorker;
 }
 
-function convertWorkerName(
-	name: string | symbol
-): ServiceBinding["workerName"] {
+function convertWorkerName(name: string | symbol): ServiceBinding["worker"] {
 	return typeof name === "string" ? name : getCurrentWorkerBindingName();
 }
 
@@ -786,7 +781,7 @@ function addProductBindings(
 		env[bindingName] = {
 			type: "workflow",
 			name: workflow.name,
-			workerName: targetWorkerName,
+			worker: targetWorkerName,
 			exportName: workflow.className,
 			limits:
 				workflow.stepLimit === undefined

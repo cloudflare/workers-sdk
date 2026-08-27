@@ -663,7 +663,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 							SEND_EMAIL_SECONDARY: { type: "send-email" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a1",
+								worker: "worker-a1",
 								exportName: "TestDO",
 							},
 						},

@@ -237,7 +237,7 @@ export interface WorkerConfig {
 	 */
 	tailConsumers?: Array<{
 		/** The name of the service tail events will be forwarded to. */
-		workerName: string;
+		worker: string;
 		/** Whether to stream tail events in real time. */
 		streaming?: boolean;
 	}>;
