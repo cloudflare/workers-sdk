@@ -38,6 +38,10 @@
 		"./global-wrangler-config-path": {
 			"import": "./dist/global-wrangler-config-path.mjs",
 			"types": "./dist/global-wrangler-config-path.d.mts"
+		},
+		"./local-env": {
+			"import": "./dist/local-env.mjs",
+			"types": "./dist/local-env.d.mts"
 		}
 	},
 	"scripts": {
@@ -50,6 +54,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
+		"dotenv": "catalog:default",
 		"undici": "catalog:default"
 	},
 	"devDependencies": {
@@ -63,6 +68,7 @@
 		"cloudflare": "^5.2.0",
 		"command-exists": "catalog:default",
 		"concurrently": "^8.2.2",
+		"dotenv-expand": "13.0.0",
 		"empathic": "^2.0.0",
 		"jsonc-parser": "catalog:default",
 		"kleur": "^4.1.5",

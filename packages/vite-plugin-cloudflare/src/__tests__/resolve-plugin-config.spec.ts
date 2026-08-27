@@ -9,13 +9,13 @@ import type {
 	WorkersResolvedConfig,
 } from "../plugin-config";
 
-const { readBuildOutputWorkersMock } = vi.hoisted(() => ({
-	readBuildOutputWorkersMock: vi.fn(),
+const { readBuildOutputPreviewMock } = vi.hoisted(() => ({
+	readBuildOutputPreviewMock: vi.fn(),
 }));
 
 vi.mock("../build-output-preview", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../build-output-preview")>()),
-	readBuildOutputWorkers: readBuildOutputWorkersMock,
+	readBuildOutputPreview: readBuildOutputPreviewMock,
 }));
 
 const FIXTURES_ROOT = path.resolve(__dirname, "fixtures", "plugin-config");
@@ -25,7 +25,7 @@ describe("resolvePluginConfig", () => {
 	let root: string;
 
 	beforeEach(() => {
-		readBuildOutputWorkersMock.mockReset();
+		readBuildOutputPreviewMock.mockReset();
 		fs.mkdirSync(FIXTURES_ROOT, { recursive: true });
 		root = fs.realpathSync(fs.mkdtempSync(path.join(FIXTURES_ROOT, "case-")));
 	});
@@ -245,6 +245,51 @@ describe("resolvePluginConfig", () => {
 		});
 	});
 
+	test("resolves Cloudflare environment files from Vite's envDir without mutating process.env", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		const envDir = path.join(root, "environment");
+		fs.mkdirSync(envDir);
+		fs.writeFileSync(
+			path.join(envDir, ".env.production"),
+			"CLOUDFLARE_VITE_FORCE_LOCAL=true"
+		);
+		fs.writeFileSync(
+			path.join(envDir, ".dev.vars.production"),
+			"SECRET=from-dev-vars"
+		);
+		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+
+		const result = await resolvePluginConfig(
+			{ remoteBindings: true },
+			{ root, envDir: "environment" },
+			buildEnv
+		);
+
+		expect(result.remoteBindings).toBe(false);
+		expect(result.localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL).toBe("true");
+		expect(result.devVars?.SECRET).toBe("from-dev-vars");
+		expect(process.env.CLOUDFLARE_VITE_FORCE_LOCAL).toBeUndefined();
+	});
+
+	test("honours Vite's envDir false option", async ({ expect }) => {
+		writeEntryConfig();
+		fs.writeFileSync(
+			path.join(root, ".env.production"),
+			"CLOUDFLARE_VITE_FORCE_LOCAL=true"
+		);
+		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+
+		const result = await resolvePluginConfig(
+			{ remoteBindings: true },
+			{ root, envDir: false },
+			buildEnv
+		);
+
+		expect(result.remoteBindings).toBe(true);
+	});
+
 	test("rejects duplicate Vite environment names", async ({ expect }) => {
 		writeEntryConfig();
 		writeSource("src/aux.ts");
@@ -272,19 +317,20 @@ describe("resolvePluginConfig", () => {
 	test("preview reads only the Build Output Specification", async ({
 		expect,
 	}) => {
-		readBuildOutputWorkersMock.mockResolvedValue([
-			{
-				source: "build-output",
-				config: {
-					type: "worker",
-					name: "preview-worker",
-					compatibilityDate: "2024-12-30",
+		readBuildOutputPreviewMock.mockResolvedValue({
+			settings: undefined,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "preview-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
 				},
-				settings: undefined,
-				assetsDir: undefined,
-				bundle: undefined,
-			},
-		]);
+			],
+		});
 
 		const result = await resolvePluginConfig(
 			{} satisfies PluginConfig,
@@ -293,7 +339,7 @@ describe("resolvePluginConfig", () => {
 		);
 
 		expect(result.type).toBe("preview");
-		expect(readBuildOutputWorkersMock).toHaveBeenCalledWith(root, false);
+		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, false);
 		if (result.type === "preview") {
 			expect(result.workers[0]?.config.name).toBe("preview-worker");
 		}
@@ -303,7 +349,10 @@ describe("resolvePluginConfig", () => {
 		expect,
 	}) => {
 		vi.stubEnv("CLOUDFLARE_VITE_BUILD", "true");
-		readBuildOutputWorkersMock.mockResolvedValue([]);
+		readBuildOutputPreviewMock.mockResolvedValue({
+			settings: undefined,
+			workers: [],
+		});
 
 		await resolvePluginConfig(
 			{} satisfies PluginConfig,
@@ -311,25 +360,71 @@ describe("resolvePluginConfig", () => {
 			{ mode: "production", command: "serve", isPreview: true }
 		);
 
-		expect(readBuildOutputWorkersMock).toHaveBeenCalledWith(root, true);
+		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, true);
+	});
+
+	test("preview loads local env using the mode recorded in Build Output", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			path.join(root, ".env.production"),
+			"PREVIEW_MODE_VALUE=preview-mode"
+		);
+		fs.writeFileSync(
+			path.join(root, ".env.staging"),
+			"PREVIEW_MODE_VALUE=build-mode"
+		);
+		fs.writeFileSync(
+			path.join(root, ".dev.vars.production"),
+			"PREVIEW_SECRET=preview-mode"
+		);
+		fs.writeFileSync(
+			path.join(root, ".dev.vars.staging"),
+			"PREVIEW_SECRET=build-mode"
+		);
+		readBuildOutputPreviewMock.mockResolvedValue({
+			settings: { type: "settings", mode: "staging" },
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "preview-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
+				},
+			],
+		});
+
+		const result = await resolvePluginConfig(
+			{} satisfies PluginConfig,
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(result.type).toBe("preview");
+		expect(result.localEnv.values.PREVIEW_MODE_VALUE).toBe("build-mode");
+		expect(result.devVars?.PREVIEW_SECRET).toBe("build-mode");
 	});
 
 	test("preview ignores auxiliary Workers and reads only Build Output", async ({
 		expect,
 	}) => {
-		readBuildOutputWorkersMock.mockResolvedValue([
-			{
-				source: "build-output",
-				config: {
-					type: "worker",
-					name: "entry-worker",
-					compatibilityDate: "2024-12-30",
+		readBuildOutputPreviewMock.mockResolvedValue({
+			settings: undefined,
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "entry-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
 				},
-				settings: undefined,
-				assetsDir: undefined,
-				bundle: undefined,
-			},
-		]);
+			],
+		});
 		const result = await resolvePluginConfig(
 			{
 				auxiliaryWorkers: [

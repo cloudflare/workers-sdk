@@ -230,7 +230,7 @@ export class PluginContext {
 
 	get settings(): ParsedInputSettingsConfig | undefined {
 		if (this.resolvedPluginConfig.type === "preview") {
-			return this.resolvedPluginConfig.workers[0]?.settings;
+			return this.resolvedPluginConfig.settings;
 		}
 
 		return this.resolvedPluginConfig.parsedConfig.settings;

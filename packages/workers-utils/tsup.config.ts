@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup";
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 
 export default defineConfig(() => [
 	{
@@ -14,6 +15,7 @@ export default defineConfig(() => [
 			// pulling in the barrel's CommonJS dependencies.
 			"src/fs-helpers.ts",
 			"src/global-wrangler-config-path.ts",
+			"src/local-env.ts",
 		],
 		platform: "node",
 		format: "esm",
@@ -25,6 +27,6 @@ export default defineConfig(() => [
 		define: {
 			"process.env.NODE_ENV": `'${"production"}'`,
 		},
-		external: ["@cloudflare/*", "vitest", "undici"],
+		external: ["@cloudflare/*", "vitest", ...EXTERNAL_DEPENDENCIES],
 	},
 ]);

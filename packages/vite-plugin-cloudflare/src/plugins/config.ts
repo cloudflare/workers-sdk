@@ -5,6 +5,7 @@ import {
 	getWorkerBundleDir,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
+import { getDevVarsCandidatePaths } from "@cloudflare/workers-utils/local-env";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp } from "../build";
@@ -101,6 +102,13 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			// config changes, including the one that fixes the config, would be
 			// ignored for the rest of the session.
 			let restartInFlight = false;
+			const localDevVarsFiles = new Set(
+				getDevVarsCandidatePaths(
+					ctx.resolvedViteConfig.envDir,
+					ctx.resolvedViteConfig.mode
+				)
+			);
+			viteDevServer.watcher.add([...localDevVarsFiles]);
 
 			const configChangedHandler = async (changedFilePath: string) => {
 				assertIsNotPreview(ctx);
@@ -109,9 +117,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					return;
 				}
 
-				// TODO: Reinstate .env and .dev.vars watching when local variable
-				// loading is supported with cloudflare.config.ts.
 				if (
+					localDevVarsFiles.has(changedFilePath) ||
 					ctx.resolvedPluginConfig.configPaths.has(changedFilePath) ||
 					hasAssetsConfigChanged(
 						ctx.resolvedPluginConfig,
@@ -131,6 +138,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			};
 
 			viteDevServer.watcher.on("change", configChangedHandler);
+			viteDevServer.watcher.on("add", configChangedHandler);
+			viteDevServer.watcher.on("unlink", configChangedHandler);
 		},
 		buildApp: {
 			order: "post",
