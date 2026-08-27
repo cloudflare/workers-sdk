@@ -86,8 +86,6 @@ interface ResolvedTypeGenerationOptions {
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
-	/** Experimental support for a dedicated prerender Worker */
-	prerenderWorker?: PrerenderWorkerConfig;
 }
 
 function normalizeTypes(
@@ -115,6 +113,8 @@ type WorkerConfigProvider =
 
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
+	/** Configuration for a dedicated prerender Worker. */
+	prerenderWorker?: PrerenderWorkerConfig;
 	persistState?: PersistState;
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
@@ -386,7 +386,7 @@ export async function resolvePluginConfig(
 	const environmentNameToWorkerMap = new Map<string, Worker>();
 	const environmentNameToChildEnvironmentNamesMap = new Map<string, string[]>();
 
-	const prerenderWorkerConfig = pluginConfig.experimental?.prerenderWorker;
+	const prerenderWorkerConfig = pluginConfig.prerenderWorker;
 	let prerenderWorkerEnvironmentName: string | undefined;
 
 	if (prerenderWorkerConfig && viteEnv.command === "build") {

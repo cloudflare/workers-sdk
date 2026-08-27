@@ -13,13 +13,11 @@ export function createConfig(assetsOnly: boolean) {
 				persistState: false,
 				viteEnvironment: { name: "ssr" },
 				assetsOnly: () => assetsOnly,
-				experimental: {
-					prerenderWorker: {
-						config: {
-							name: "prerender",
-							entrypoint: "./src/prerender.ts",
-							compatibilityDate: "2024-12-30",
-						},
+				prerenderWorker: {
+					config: {
+						name: "prerender",
+						entrypoint: "./src/prerender.ts",
+						compatibilityDate: "2024-12-30",
 					},
 				},
 			}),
