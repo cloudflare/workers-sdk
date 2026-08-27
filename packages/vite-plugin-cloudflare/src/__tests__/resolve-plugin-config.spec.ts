@@ -212,13 +212,11 @@ describe("resolvePluginConfig", () => {
 		writeSource("src/prerender.ts");
 		const result = (await resolvePluginConfig(
 			{
-				experimental: {
-					prerenderWorker: {
-						config: {
-							name: "prerender-worker",
-							entrypoint: "./src/prerender.ts",
-							compatibilityDate: "2024-12-30",
-						},
+				prerenderWorker: {
+					config: {
+						name: "prerender-worker",
+						entrypoint: "./src/prerender.ts",
+						compatibilityDate: "2024-12-30",
 					},
 				},
 			},
