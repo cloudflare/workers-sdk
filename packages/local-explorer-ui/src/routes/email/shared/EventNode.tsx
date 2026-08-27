@@ -8,6 +8,7 @@ import {
 	WarningIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
+import { formatEmailAddress, formatMessageId } from "../../../utils/format";
 import { formatEmailTimestamp } from "./format";
 import type { InfoEvent } from "./types";
 import type { JSX } from "react";
@@ -54,7 +55,7 @@ const EVENT_CONFIG: Record<
 function EventIcon({ type }: { type: InfoEvent["type"] }): JSX.Element {
 	const config = EVENT_CONFIG[type];
 	const Icon = config.icon;
-	return <Icon size={20} className={config.color} />;
+	return <Icon size={16} className={config.color} />;
 }
 
 const Field = ({
@@ -65,9 +66,7 @@ const Field = ({
 	children: React.ReactNode;
 }) => (
 	<div className="flex min-w-0 flex-col gap-1">
-		<span className="text-xs font-semibold tracking-wide text-kumo-subtle uppercase">
-			{label}
-		</span>
+		<span className="text-sm font-medium text-kumo-subtle">{label}</span>
 		<span className="text-sm break-words text-kumo-default">{children}</span>
 	</div>
 );
@@ -101,7 +100,6 @@ export function EventNode({ event }: EventNodeProps): JSX.Element {
 		(forward.recipient.length > 0 || forwardHeaders.length > 0);
 	const hasReplyFields = reply !== undefined;
 	const hasRejectFields = rejectReason !== undefined && rejectReason.length > 0;
-
 	const isExpandable = hasForwardFields || hasReplyFields || hasRejectFields;
 
 	return (
@@ -111,20 +109,19 @@ export function EventNode({ event }: EventNodeProps): JSX.Element {
 					data-testid="log-detail-event-node"
 					data-event-type={event.type}
 					data-open={open || undefined}
-					className={cn(
-						"list-none rounded-lg bg-kumo-base shadow-sm ring ring-kumo-hairline",
-						"max-w-[420px] min-w-[280px]"
-					)}
+					className="max-w-[420px] min-w-[280px] list-none rounded-lg bg-kumo-base shadow-sm ring ring-kumo-hairline"
 				>
 					<Flow.Anchor
 						render={
-							<div className="flex min-h-12 items-center gap-3 px-4 py-2">
-								<EventIcon type={event.type} />
+							<div className="flex min-h-12 items-start gap-3 px-4 py-2">
+								<span className="flex h-lh shrink-0 items-center">
+									<EventIcon type={event.type} />
+								</span>
 								<div className="flex min-w-0 flex-1 flex-col">
 									<span className="truncate text-sm font-medium text-kumo-default">
 										{config.label}
 									</span>
-									<span className="text-xs text-kumo-subtle">
+									<span className="text-sm text-kumo-subtle">
 										{formatEmailTimestamp(event.timestamp)}
 									</span>
 								</div>
@@ -157,8 +154,8 @@ export function EventNode({ event }: EventNodeProps): JSX.Element {
 									{forward && (
 										<Field label="Recipient">{forward.recipient}</Field>
 									)}
-									{forwardHeaders.map(([key, value]) => (
-										<Field key={key} label={key ?? ""}>
+									{forwardHeaders.map(([key, value], index) => (
+										<Field key={`${key}-${index}`} label={key ?? ""}>
 											{value ?? ""}
 										</Field>
 									))}
@@ -167,12 +164,14 @@ export function EventNode({ event }: EventNodeProps): JSX.Element {
 							)}
 							{reply && (
 								<div className="grid grid-cols-2 gap-4 border-t border-kumo-line px-4 py-3">
-									<Field label="From">{reply.sender}</Field>
-									<Field label="Message-ID">{reply.messageId}</Field>
+									<Field label="From">{formatEmailAddress(reply.sender)}</Field>
+									<Field label="Message-ID">
+										{formatMessageId(reply.messageId)}
+									</Field>
 								</div>
 							)}
 							{reply?.raw && (
-								<pre className="max-h-[40vh] overflow-auto border-t border-kumo-line bg-kumo-elevated p-4 font-mono text-xs whitespace-pre-wrap text-kumo-default">
+								<pre className="max-h-[40vh] overflow-auto border-t border-kumo-line bg-kumo-elevated px-4 py-3 font-mono text-sm whitespace-pre-wrap text-kumo-default">
 									{reply.raw}
 								</pre>
 							)}

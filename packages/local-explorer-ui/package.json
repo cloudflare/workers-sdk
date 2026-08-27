@@ -47,6 +47,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@hey-api/openapi-ts": "catalog:default",
 		"@tanstack/react-router-devtools": "^1.158.0",
 		"@tanstack/router-plugin": "^1.158.0",

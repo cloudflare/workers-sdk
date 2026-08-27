@@ -2,8 +2,16 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { emailListRouting, localExplorerListWorkers } from "../../../api";
 import EmailIcon from "../../../assets/icons/email.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
-import { hasEmailTruncationWarning } from "../../../components/email/EmailTruncationWarning";
-import { ReceivedEmailContent } from "../../../components/email/ReceivedEmailContent";
+import { EmailContent } from "../../../components/email/EmailContent";
+import {
+	EmailHandlerOutcomeWarning,
+	hasEmailHandlerException,
+} from "../../../components/email/EmailHandlerOutcomeWarning";
+import {
+	EmailTruncationWarning,
+	hasEmailTruncationWarning,
+} from "../../../components/email/EmailTruncationWarning";
+import { ReceivedEmailHeaders } from "../../../components/email/ReceivedEmailHeaders";
 import { NotFound } from "../../../components/NotFound";
 import { ResourceError } from "../../../components/ResourceError";
 import { getSelectedWorker } from "../../../components/WorkerSelector";
@@ -44,8 +52,13 @@ export const Route = createFileRoute("/email/routing/$emailId")({
 			response.data?.messages ?? [],
 			"received"
 		);
+		const replyTruncated = hasEmailTruncationWarning(
+			response.data?.messages ?? [],
+			"reply"
+		);
 		return {
 			email,
+			replyTruncated,
 			truncated,
 		};
 	},
@@ -89,8 +102,9 @@ function toInfoMessage(email: EmailRoutingDetail): InfoMessage {
 }
 
 function EmailRoutingDetailView(): JSX.Element {
-	const { email, truncated } = Route.useLoaderData();
+	const { email, replyTruncated, truncated } = Route.useLoaderData();
 	const message = toInfoMessage(email);
+	const handlerThrew = hasEmailHandlerException(email);
 
 	return (
 		<>
@@ -113,10 +127,23 @@ function EmailRoutingDetailView(): JSX.Element {
 			/>
 
 			<div className="space-y-6 px-8 py-6">
+				{handlerThrew || replyTruncated ? (
+					<div className="space-y-2">
+						{handlerThrew ? <EmailHandlerOutcomeWarning /> : null}
+						{replyTruncated ? <EmailTruncationWarning kind="reply" /> : null}
+					</div>
+				) : null}
 				<InfoFlow message={message} />
 				<ConstantsCard message={message} />
-				<ReceivedEmailContent
+				<ReceivedEmailHeaders
+					headers={email.headerEntries ?? Object.entries(email.headers ?? {})}
+				/>
+				<EmailContent
 					html={email.html}
+					kind="received"
+					previewTitle="Rendered received HTML email body"
+					raw={email.raw}
+					rawBase64={email.rawBase64}
 					text={email.text}
 					truncated={truncated}
 				/>

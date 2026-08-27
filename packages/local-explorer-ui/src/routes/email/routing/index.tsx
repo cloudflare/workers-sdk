@@ -1,5 +1,5 @@
 import { Button } from "@cloudflare/kumo";
-import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
+import { PaperPlaneTiltIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState, type JSX } from "react";
 import { emailListRouting, localExplorerListWorkers } from "../../../api";
@@ -8,12 +8,15 @@ import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { EmailList } from "../../../components/email/EmailList";
 import { EMAIL_PAGE_SIZE } from "../../../components/email/EmailPagination";
 import { SendTestEmailDialog } from "../../../components/email/SendTestEmailDialog";
+import { useTestEmailDrafts } from "../../../components/email/TestEmailDraftsContext";
 import { ResourceError } from "../../../components/ResourceError";
 import { getSelectedWorker } from "../../../components/WorkerSelector";
 import { timeAgo } from "../../../components/workflows/helpers";
+import { formatEmailAddress } from "../../../utils/format";
 import { toEmailId } from "../shared/types";
 import { useCursorPaginatedList } from "../shared/useCursorPaginatedList";
 import type { EmailRoutingItem } from "../../../api";
+import type { TestEmailDraft } from "../../../components/email/TestEmailDraftsContext";
 
 export const Route = createFileRoute("/email/routing/")({
 	component: EmailRoutingView,
@@ -46,6 +49,9 @@ function EmailRoutingView(): JSX.Element {
 	const navigate = Route.useNavigate();
 	const { worker } = loaderData;
 	const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+	const [dialogDraft, setDialogDraft] = useState<TestEmailDraft>();
+	const { drafts, setDrafts } = useTestEmailDrafts();
+	const lastSentDraft = worker ? drafts[worker] : undefined;
 
 	const fetchEmails = useCallback(
 		async (cursor?: string) => {
@@ -97,32 +103,55 @@ function EmailRoutingView(): JSX.Element {
 			<div className="flex min-h-0 w-full flex-1 overflow-hidden border-y border-kumo-fill bg-kumo-base">
 				<EmailList
 					actions={
-						<Button
-							onClick={(e) => {
-								e.currentTarget.blur();
-								setDialogOpen(true);
-							}}
-							variant="primary"
-						>
-							<PaperPlaneTiltIcon size={14} weight="fill" />
-							Send Test Email
-						</Button>
+						<div className="flex items-center gap-2">
+							<Button
+								onClick={(event) => {
+									event.currentTarget.blur();
+									setDialogDraft(undefined);
+									setDialogOpen(true);
+								}}
+								variant="primary"
+							>
+								<PaperPlaneTiltIcon size={14} weight="fill" />
+								Send Test Email
+							</Button>
+							<Button
+								disabled={!lastSentDraft}
+								onClick={(event) => {
+									if (!lastSentDraft) {
+										return;
+									}
+									event.currentTarget.blur();
+									setDialogDraft(lastSentDraft);
+									setDialogOpen(true);
+								}}
+								variant="secondary"
+							>
+								<PencilSimpleIcon size={14} />
+								Edit and resend
+							</Button>
+						</div>
 					}
 					className="flex-1"
 					disabled={paging || refreshing}
 					emptyState={
 						<>
 							No emails received yet. Use &ldquo;Send Test Email&rdquo; to
-							deliver one to the email() handler.
+							deliver one. Email capture only works when the selected Worker has
+							an email() handler configured.
 						</>
 					}
 					error={refreshError}
 					getRow={(email) => ({
 						id: toEmailId(email.messageId),
 						primary: email.subject || "(no subject)",
-						secondary: `${email.from} → ${email.to}`,
-						secondaryTitle: `From: ${email.from}; To: ${email.to}`,
+						secondary: `${formatEmailAddress(email.from)} → ${formatEmailAddress(email.to)}`,
+						secondaryTitle: `From: ${formatEmailAddress(email.from)}; To: ${formatEmailAddress(email.to)}`,
 						timestamp: timeAgo(email.receivedAt) || "—",
+						warning:
+							email.outcome === "exception"
+								? "Email processing exception"
+								: undefined,
 					})}
 					hasNext={hasNext}
 					hasPrevious={hasPrevious}
@@ -142,8 +171,14 @@ function EmailRoutingView(): JSX.Element {
 			</div>
 
 			<SendTestEmailDialog
+				initialDraft={dialogDraft}
 				onOpenChange={setDialogOpen}
-				onSent={() => void refresh()}
+				onSent={(draft) => {
+					if (worker) {
+						setDrafts((current) => ({ ...current, [worker]: draft }));
+					}
+					void refresh();
+				}}
 				open={dialogOpen}
 				worker={worker}
 			/>

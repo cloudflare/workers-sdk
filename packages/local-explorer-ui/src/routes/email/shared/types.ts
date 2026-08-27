@@ -5,6 +5,7 @@
  * email routing data model.
  */
 
+import { formatMessageId } from "../../../utils/format";
 import type {
 	EmailAttachment,
 	EmailHandlerEvent,
@@ -18,7 +19,7 @@ import type {
  * storage ID.
  */
 export function toEmailId(messageId: string): string {
-	return messageId.replace(/^<|>$/g, "");
+	return formatMessageId(messageId);
 }
 
 export interface InfoEvent {

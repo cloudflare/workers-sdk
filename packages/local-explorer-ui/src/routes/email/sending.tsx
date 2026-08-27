@@ -22,6 +22,7 @@ import { SentEmailDetails } from "../../components/email/SentEmailDetails";
 import { ResourceError } from "../../components/ResourceError";
 import { getSelectedWorker } from "../../components/WorkerSelector";
 import { timeAgo } from "../../components/workflows/helpers";
+import { formatEmailAddress } from "../../utils/format";
 import { toEmailId } from "./shared/types";
 import { useCursorPaginatedList } from "./shared/useCursorPaginatedList";
 import type { EmailSendingDetail, EmailSendingItem } from "../../api";
@@ -50,9 +51,6 @@ export const Route = createFileRoute("/email/sending")({
 				: undefined,
 		};
 	},
-	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
-		worker: typeof search.worker === "string" ? search.worker : undefined,
-	}),
 });
 
 const rootRoute = getRouteApi("__root__");
@@ -206,7 +204,7 @@ function EmailSendingView(): JSX.Element {
 					title="Email"
 				/>
 				<EmailServiceEmptyState
-					title="No Sending Service"
+					title="No sending service"
 					description="This worker has no Send Email bindings configured. Add a send_email binding to your Wrangler configuration to send emails from this worker."
 				/>
 			</>
@@ -221,7 +219,7 @@ function EmailSendingView(): JSX.Element {
 				title="Email"
 			/>
 
-			<div className="flex min-h-0 w-full flex-1 overflow-hidden border-y border-kumo-fill bg-kumo-base">
+			<div className="[container-type:inline-size] flex min-h-0 w-full flex-1 overflow-hidden border-y border-kumo-fill bg-kumo-base">
 				<EmailList
 					className={`flex-none transition-[flex-basis] duration-300 ease-in-out ${
 						selectedId === null ? "" : "border-r border-kumo-fill"
@@ -232,8 +230,8 @@ function EmailSendingView(): JSX.Element {
 					getRow={(email) => ({
 						id: toEmailId(email.messageId),
 						primary: email.subject || "(no subject)",
-						secondary: email.to.join(", "),
-						secondaryTitle: `To: ${email.to.join(", ")}`,
+						secondary: email.to.map(formatEmailAddress).join(", "),
+						secondaryTitle: `To: ${email.to.map(formatEmailAddress).join(", ")}`,
 						timestamp: timeAgo(email.sentAt) || "—",
 					})}
 					hasNext={hasNext}
@@ -259,11 +257,14 @@ function EmailSendingView(): JSX.Element {
 					inert={selectedId === null}
 					style={{ flexBasis: selectedId === null ? "0%" : "50%" }}
 				>
-					<SentEmailDetails
-						email={selected}
-						loading={loadingDetails}
-						truncated={detailsTruncated}
-					/>
+					{/* Preserve the open content width while the clipping pane collapses. */}
+					<div className="h-full w-[50cqw] shrink-0">
+						<SentEmailDetails
+							email={selected}
+							loading={loadingDetails}
+							truncated={detailsTruncated}
+						/>
+					</div>
 				</section>
 			</div>
 		</div>

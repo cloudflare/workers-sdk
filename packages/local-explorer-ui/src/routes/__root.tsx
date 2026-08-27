@@ -2,10 +2,11 @@ import { Sidebar, Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
+	useMatchRoute,
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { localExplorerListWorkers } from "../api";
 import { NotFound } from "../components/NotFound";
 import { AppSidebar } from "../components/Sidebar";
@@ -23,7 +24,6 @@ import {
 	loadThemeMode,
 	saveThemeMode,
 } from "../utils/theme-state";
-import { getWorkerChangeDestination } from "../utils/worker-navigation";
 import type { ThemeMode } from "../utils/theme-state";
 
 export const Route = createRootRoute({
@@ -40,11 +40,12 @@ function RootLayout() {
 	const loaderData = Route.useLoaderData();
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
-	const isEmailList =
-		currentPath === "/email/sending" ||
-		currentPath === "/email/routing" ||
-		currentPath === "/email/routing/";
 	const router = useRouter();
+	const matchRoute = useMatchRoute();
+	const routingDetailParams = matchRoute({
+		includeSearch: false,
+		to: "/email/routing/$emailId",
+	});
 
 	const [sidebarOpen, setSidebarOpen] = useState<boolean>(loadSidebarOpenState);
 	const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
@@ -77,36 +78,25 @@ function RootLayout() {
 
 	const selectedWorker = selectedWorkerObj?.name ?? "";
 
-	useEffect(() => {
-		if (selectedWorker === "") {
-			return;
-		}
-
-		const currentSearch = new URLSearchParams(routerState.location.searchStr);
-		if (currentSearch.get("worker") === selectedWorker) {
-			return;
-		}
-
-		currentSearch.set("worker", selectedWorker);
-		router.history.replace(
-			`${window.location.pathname}?${currentSearch.toString()}`
-		);
-	}, [router, routerState.location.searchStr, selectedWorker]);
-
 	const handleWorkerChange = useCallback(
 		(workerName: string) => {
+			if (routingDetailParams) {
+				// Email details belong to one worker. Redirect while the selector action
+				// is known so browser history changes are not mistaken for worker switches.
+				void router.navigate({
+					search: (previous) => ({ ...previous, worker: workerName }),
+					to: "/email/routing",
+				});
+				return;
+			}
+
 			const currentSearch = new URLSearchParams(routerState.location.searchStr);
 			currentSearch.set("worker", workerName);
-			// When viewing a specific email on the routing detail page, the selected
-			// email belongs to the previous worker and won't exist under the new one.
-			// Send the user back to the parent list page for the interface they're
-			// using ("Routing" or "Sending") while preserving the worker selection.
-			const destinationPath = getWorkerChangeDestination(
-				window.location.pathname
+			router.history.push(
+				`${window.location.pathname}?${currentSearch.toString()}`
 			);
-			router.history.push(`${destinationPath}?${currentSearch.toString()}`);
 		},
-		[router, routerState.location.searchStr]
+		[router, routerState.location.searchStr, routingDetailParams]
 	);
 
 	return (
@@ -126,11 +116,7 @@ function RootLayout() {
 						themeMode={themeMode}
 						workers={visibleWorkers}
 					/>
-					<main
-						className={`flex min-h-0 flex-1 flex-col ${
-							isEmailList ? "overflow-hidden" : "overflow-y-auto"
-						}`}
-					>
+					<main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 						<Outlet />
 					</main>
 				</Sidebar.Provider>

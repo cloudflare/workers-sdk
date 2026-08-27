@@ -393,7 +393,15 @@ export function AppSidebar({
 						{sidebarItemGroups.map((group) => (
 							<SidebarGroupPopup
 								emptyLabel={group.emptyLabel}
-								icon={<group.icon width={20} height={20} />}
+								icon={
+									<group.icon
+										aria-label={
+											group.groupId === "email" ? group.title : undefined
+										}
+										height={20}
+										width={20}
+									/>
+								}
 								items={group.items}
 								key={group.groupId}
 								title={group.title}

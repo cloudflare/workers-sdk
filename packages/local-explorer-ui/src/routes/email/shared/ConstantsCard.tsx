@@ -1,6 +1,10 @@
 import { Badge, ClipboardText, LayerCard } from "@cloudflare/kumo";
 import { PaperclipIcon } from "@phosphor-icons/react";
-import { formatSize } from "../../../utils/format";
+import {
+	formatEmailAddress,
+	formatMessageId,
+	formatSize,
+} from "../../../utils/format";
 import { formatEmailTimestamp } from "./format";
 import type { InfoMessage } from "./types";
 
@@ -18,9 +22,7 @@ const Row = ({
 	className?: string;
 }) => (
 	<div className={`flex min-w-0 flex-col gap-1 ${className ?? ""}`}>
-		<span className="text-xs font-semibold tracking-wide text-kumo-subtle uppercase">
-			{label}
-		</span>
+		<span className="text-sm font-medium text-kumo-subtle">{label}</span>
 		<div className="text-sm break-words text-kumo-default">{children}</div>
 	</div>
 );
@@ -42,11 +44,13 @@ export function ConstantsCard({ message }: ConstantsCardProps) {
 					</Row>
 					{message.messageId ? (
 						<Row label="Message ID" className="sm:col-span-2">
-							<ClipboardText text={message.messageId} />
+							<ClipboardText text={formatMessageId(message.messageId)} />
 						</Row>
 					) : null}
 					<Row label="From">
-						<Badge variant="outline">{message.from || "—"}</Badge>
+						<Badge variant="outline">
+							{formatEmailAddress(message.from) || "—"}
+						</Badge>
 					</Row>
 					<Row label="To">
 						<Badge variant="outline">{message.to || "—"}</Badge>
@@ -68,10 +72,10 @@ export function ConstantsCard({ message }: ConstantsCardProps) {
 										<span className="truncate text-sm text-kumo-default">
 											{attachment.filename}
 										</span>
-										<span className="shrink-0 text-xs text-kumo-subtle">
+										<span className="shrink-0 text-sm text-kumo-subtle">
 											{attachment.contentType}
 										</span>
-										<span className="ml-auto shrink-0 text-xs text-kumo-subtle">
+										<span className="ml-auto shrink-0 text-sm text-kumo-subtle">
 											{formatSize(attachment.size)}
 										</span>
 									</div>

@@ -1,5 +1,5 @@
 import { Button } from "@cloudflare/kumo";
-import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, WarningIcon } from "@phosphor-icons/react";
 import { EmailPagination } from "./EmailPagination";
 import type { CSSProperties, JSX, ReactNode } from "react";
 
@@ -9,6 +9,7 @@ export interface EmailListRow {
 	secondary: string;
 	secondaryTitle: string;
 	timestamp: string;
+	warning?: string;
 }
 
 interface EmailListProps<T> {
@@ -53,7 +54,7 @@ export function EmailList<T>({
 }: EmailListProps<T>): JSX.Element {
 	return (
 		<section
-			className={`flex min-w-0 flex-col overflow-hidden p-4 ${className}`}
+			className={`flex min-w-0 flex-col overflow-hidden px-4 py-3 ${className}`}
 			data-testid={testId}
 			style={style}
 		>
@@ -104,18 +105,30 @@ export function EmailList<T>({
 							return (
 								<button
 									aria-pressed={selectedId === undefined ? undefined : selected}
-									className={`grid h-12 min-h-12 w-full shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 border-b border-kumo-fill px-4 text-left text-sm transition-colors last:border-b-0 hover:bg-kumo-fill ${
+									className={`grid h-12 min-h-12 w-full shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 border-b border-kumo-fill px-4 text-left text-sm last:border-b-0 hover:bg-kumo-fill ${
 										selected ? "bg-kumo-fill" : "bg-kumo-base"
 									}`}
 									key={row.id}
 									onClick={() => onRowClick(row.id)}
 									type="button"
 								>
-									<span
-										className="truncate font-medium text-kumo-default"
-										title={row.primary}
-									>
-										{row.primary}
+									<span className="flex min-w-0 items-center gap-2">
+										{row.warning ? (
+											<span
+												aria-label={row.warning}
+												className="flex h-lh shrink-0 items-center text-kumo-danger"
+												role="img"
+												title={row.warning}
+											>
+												<WarningIcon aria-hidden="true" size={16} />
+											</span>
+										) : null}
+										<span
+											className="truncate font-medium text-kumo-default"
+											title={row.primary}
+										>
+											{row.primary}
+										</span>
 									</span>
 									<span
 										className="truncate text-kumo-subtle"

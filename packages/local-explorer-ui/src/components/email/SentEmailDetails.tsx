@@ -1,7 +1,7 @@
 import { PaperclipIcon } from "@phosphor-icons/react";
 import { formatEmailTimestamp } from "../../routes/email/shared/format";
-import { EmailHtmlPreview } from "./EmailHtmlPreview";
-import { EmailTruncationWarning } from "./EmailTruncationWarning";
+import { formatEmailAddress, formatMessageId } from "../../utils/format";
+import { EmailContent } from "./EmailContent";
 import type { EmailSendingDetail } from "../../api";
 import type { JSX } from "react";
 
@@ -15,14 +15,42 @@ function MetaRow({
 	return (
 		<div className="grid grid-cols-[120px_1fr] gap-3 py-1.5">
 			<span className="text-sm text-kumo-subtle">{label}</span>
-			<span className="text-sm break-all text-kumo-default">{value}</span>
+			<span className="text-sm break-all whitespace-pre-wrap text-kumo-default">
+				{value}
+			</span>
 		</div>
 	);
 }
 
+const STRUCTURED_HEADER_NAMES = new Set([
+	"bcc",
+	"cc",
+	"from",
+	"message-id",
+	"reply-to",
+	"subject",
+	"to",
+]);
+
+const STANDARD_HEADER_NAMES = new Set([
+	...STRUCTURED_HEADER_NAMES,
+	"content-disposition",
+	"content-language",
+	"content-transfer-encoding",
+	"content-type",
+	"date",
+	"in-reply-to",
+	"mime-version",
+	"references",
+	"return-path",
+	"sender",
+]);
+
 function SectionHeading({ children }: { children: string }): JSX.Element {
 	return (
-		<h2 className="mb-2 text-sm font-semibold text-kumo-default">{children}</h2>
+		<h2 className="mb-2 text-base font-semibold text-kumo-default">
+			{children}
+		</h2>
 	);
 }
 
@@ -51,7 +79,33 @@ export function SentEmailDetails({
 		);
 	}
 
-	const customHeaders = Object.entries(email.headers ?? {});
+	const capturedHeaders = Object.entries(email.headers ?? {});
+	const extraStandardHeaders = capturedHeaders.filter(
+		([name]) =>
+			STANDARD_HEADER_NAMES.has(name.toLowerCase()) &&
+			!STRUCTURED_HEADER_NAMES.has(name.toLowerCase())
+	);
+	const customHeaders = capturedHeaders.filter(
+		([name]) => !STANDARD_HEADER_NAMES.has(name.toLowerCase())
+	);
+	const standardHeaders: Array<[string, string]> = [
+		["From", formatEmailAddress(email.from)],
+		["To", email.to.map(formatEmailAddress).join(", ")],
+	];
+	if (email.cc?.length) {
+		standardHeaders.push(["Cc", email.cc.map(formatEmailAddress).join(", ")]);
+	}
+	if (email.bcc?.length) {
+		standardHeaders.push(["Bcc", email.bcc.map(formatEmailAddress).join(", ")]);
+	}
+	if (email.replyTo) {
+		standardHeaders.push(["Reply-To", formatEmailAddress(email.replyTo)]);
+	}
+	standardHeaders.push(
+		["Subject", email.subject || "(no subject)"],
+		["Message-ID", formatMessageId(email.messageId)],
+		...extraStandardHeaders
+	);
 
 	return (
 		<div className="h-full overflow-y-auto">
@@ -59,28 +113,19 @@ export function SentEmailDetails({
 				<h1 className="text-lg font-semibold break-words text-kumo-default">
 					{email.subject || "(no subject)"}
 				</h1>
-				<p className="mt-1 text-xs text-kumo-subtle">
+				<p className="mt-1 text-sm text-kumo-subtle">
 					{formatEmailTimestamp(email.sentAt)}
 				</p>
 			</div>
 
-			<div className="space-y-6 p-6">
-				<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-4">
-					<MetaRow label="From" value={email.from} />
-					<MetaRow label="To" value={email.to.join(", ")} />
-					{email.cc?.length ? (
-						<MetaRow label="Cc" value={email.cc.join(", ")} />
-					) : null}
-					{email.bcc?.length ? (
-						<MetaRow label="Bcc" value={email.bcc.join(", ")} />
-					) : null}
-					{email.replyTo ? (
-						<MetaRow label="Reply-To" value={email.replyTo} />
-					) : null}
-					<MetaRow label="Message-ID" value={email.messageId} />
-					{email.worker ? (
-						<MetaRow label="Worker" value={email.worker} />
-					) : null}
+			<div className="space-y-6 px-6 py-5">
+				<div>
+					<SectionHeading>Standard headers</SectionHeading>
+					<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-3">
+						{standardHeaders.map(([name, value]) => (
+							<MetaRow key={name} label={name} value={value} />
+						))}
+					</div>
 				</div>
 
 				{customHeaders.length > 0 ? (
@@ -110,10 +155,10 @@ export function SentEmailDetails({
 									<span className="min-w-0 truncate text-sm text-kumo-default">
 										{attachment.filename}
 									</span>
-									<span className="text-xs text-kumo-subtle">
+									<span className="text-sm text-kumo-subtle">
 										{attachment.contentType}
 									</span>
-									<span className="ml-auto shrink-0 text-xs text-kumo-subtle">
+									<span className="ml-auto shrink-0 text-sm text-kumo-subtle">
 										{attachment.size} bytes
 									</span>
 								</div>
@@ -122,51 +167,15 @@ export function SentEmailDetails({
 					</div>
 				) : null}
 
-				{email.text ? (
-					<div>
-						<SectionHeading>Text body</SectionHeading>
-						{truncated ? (
-							<EmailTruncationWarning kind="sent" />
-						) : (
-							<pre className="max-h-80 overflow-auto rounded-lg border border-kumo-fill bg-kumo-elevated p-4 text-sm whitespace-pre-wrap text-kumo-default">
-								{email.text}
-							</pre>
-						)}
-					</div>
-				) : null}
-
-				{email.html ? (
-					<div>
-						<SectionHeading>HTML body</SectionHeading>
-						{truncated ? (
-							<EmailTruncationWarning kind="sent" />
-						) : (
-							<EmailHtmlPreview
-								html={email.html}
-								title="Rendered HTML email body"
-							/>
-						)}
-					</div>
-				) : null}
-
-				{email.raw ? (
-					<div>
-						<SectionHeading>Raw message</SectionHeading>
-						{truncated ? (
-							<EmailTruncationWarning kind="sent" />
-						) : (
-							<pre className="max-h-80 overflow-auto rounded-lg border border-kumo-fill bg-kumo-elevated p-4 font-mono text-xs whitespace-pre-wrap text-kumo-default">
-								{email.raw}
-							</pre>
-						)}
-					</div>
-				) : null}
-
-				{!email.text && !email.html && !email.raw ? (
-					<div className="rounded-lg border border-kumo-fill bg-kumo-elevated px-5 py-8 text-center text-sm text-kumo-subtle">
-						This email has no captured text or HTML body.
-					</div>
-				) : null}
+				<EmailContent
+					html={email.html}
+					kind="sent"
+					previewTitle="Rendered HTML email body"
+					raw={email.raw}
+					rawBase64={email.rawBase64}
+					text={email.text}
+					truncated={truncated}
+				/>
 			</div>
 		</div>
 	);
