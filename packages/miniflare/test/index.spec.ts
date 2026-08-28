@@ -2533,7 +2533,12 @@ This is a random email body.
 		outcome: "exception",
 		forwards: [],
 		replies: [],
-		events: [{ type: "unhandled", timestamp: expect.any(String) }],
+		events: [
+			{
+				type: "unhandled",
+				timestamp: expect.any(String),
+			},
+		],
 	});
 });
 

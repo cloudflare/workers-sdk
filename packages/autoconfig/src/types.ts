@@ -23,6 +23,8 @@ type AutoConfigDetailsBase = {
 	devCommand?: string;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
+	/** Environment required when running the detected dev or build commands. */
+	env?: Readonly<Record<string, string>>;
 	/** The output directory (if no framework is used, points to the raw asset files) */
 	outputDir: string;
 	/** The detected package manager for the project */
