@@ -106,9 +106,9 @@ patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: 67542a8abb29df36ad2c426409243d1167ca0080d2763f6ae3cce3c731c69107
     path: patches/@cloudflare__component-listbox@1.10.6.patch
-  '@netlify/build-info':
-    hash: 33ea78efb143b613c74982678a25159c8700b1677e6a009776a6c8b690c87045
-    path: patches/@netlify__build-info.patch
+  '@netlify/build-info@10.5.1':
+    hash: d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039
+    path: patches/@netlify__build-info@10.5.1.patch
   buffer-equal-constant-time@1.0.1:
     hash: cc16d31ed54afc06e628965b2acc54f0dbcc6d079da331da5f14040ce4d62024
     path: patches/buffer-equal-constant-time@1.0.1.patch
@@ -1706,8 +1706,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@netlify/build-info':
-        specifier: ^10.5.1
-        version: 10.5.1(patch_hash=33ea78efb143b613c74982678a25159c8700b1677e6a009776a6c8b690c87045)
+        specifier: 10.5.1
+        version: 10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)
       '@types/esprima':
         specifier: ^4.0.3
         version: 4.0.3
@@ -4637,8 +4637,8 @@ importers:
         specifier: 0.8.1
         version: 0.8.1
       '@netlify/build-info':
-        specifier: ^10.5.1
-        version: 10.5.1(patch_hash=33ea78efb143b613c74982678a25159c8700b1677e6a009776a6c8b690c87045)
+        specifier: 10.5.1
+        version: 10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)
       '@sentry/node':
         specifier: ^7.86.0
         version: 7.87.0(supports-color@9.2.2)
@@ -11887,9 +11887,6 @@ packages:
   es-errors@1.3.0:
     resolution: {integrity: sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==}
     engines: {node: '>= 0.4'}
-
-  es-module-lexer@2.0.0:
-    resolution: {integrity: sha512-5POEcUuZybH7IdmGsD8wlf0AI55wMecM9rVBTI/qEAy2c1kTOm3DjFYjrBdI2K3BaJjJYfYFeRtM0t9ssnRuxw==}
 
   es-module-lexer@2.3.1:
     resolution: {integrity: sha512-shc1dbU90Yl/xq1QrC7QRtfcwURZuVRfPhZbDoldJ1cn1gzDvBaBWlv0eFolj5+0znnPJz5TXLxsN77X/12KTA==}
@@ -20088,7 +20085,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@netlify/build-info@10.5.1(patch_hash=33ea78efb143b613c74982678a25159c8700b1677e6a009776a6c8b690c87045)':
+  '@netlify/build-info@10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)':
     dependencies:
       '@bugsnag/js': 8.6.0
       '@iarna/toml': 2.2.5
@@ -20096,8 +20093,8 @@ snapshots:
       find-up: 7.0.0
       minimatch: 10.2.5
       read-pkg: 9.0.1
-      semver: 7.7.3
-      yaml: 2.8.1
+      semver: 7.8.5
+      yaml: 2.9.0
       yargs: 17.7.2
 
   '@noble/ciphers@2.1.1': {}
@@ -24150,8 +24147,6 @@ snapshots:
   es-define-property@1.0.1: {}
 
   es-errors@1.3.0: {}
-
-  es-module-lexer@2.0.0: {}
 
   es-module-lexer@2.3.1: {}
 
@@ -29497,7 +29492,7 @@ snapshots:
       '@vitest/snapshot': 4.1.0
       '@vitest/spy': 4.1.0
       '@vitest/utils': 4.1.0
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.1
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.4
@@ -29526,7 +29521,7 @@ snapshots:
       '@vitest/snapshot': 4.1.0
       '@vitest/spy': 4.1.0
       '@vitest/utils': 4.1.0
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.1
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.4
@@ -29555,7 +29550,7 @@ snapshots:
       '@vitest/snapshot': 4.1.0
       '@vitest/spy': 4.1.0
       '@vitest/utils': 4.1.0
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.1
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.4
@@ -29584,7 +29579,7 @@ snapshots:
       '@vitest/snapshot': 4.1.0
       '@vitest/spy': 4.1.0
       '@vitest/utils': 4.1.0
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.1
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.4
@@ -29613,7 +29608,7 @@ snapshots:
       '@vitest/snapshot': 4.1.0
       '@vitest/spy': 4.1.0
       '@vitest/utils': 4.1.0
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.1
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.4
@@ -29642,7 +29637,7 @@ snapshots:
       '@vitest/snapshot': 4.1.0
       '@vitest/spy': 4.1.0
       '@vitest/utils': 4.1.0
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.1
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.4
