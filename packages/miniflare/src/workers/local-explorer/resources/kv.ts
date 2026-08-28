@@ -87,10 +87,9 @@ type ListNamespacesQuery = NonNullable<
 >;
 
 /**
- * List all KV namespaces across all connected instances.
+ * List local KV namespaces and namespaces configured by shared-storage peers.
  *
- * This is an aggregated endpoint - it fetches namespaces from the local instance
- * and all peer instances in the dev registry, then merges the results.
+ * Shared-storage peers are scoped by their canonical persistence root.
  *
  * Supports sorting via `direction` and `order` query parameters.
  *
@@ -107,7 +106,8 @@ export async function listKVNamespaces(
 	const aggregatedNamespaces = await aggregateListResults(
 		c,
 		localNamespaces,
-		"/storage/kv/namespaces"
+		"/storage/kv/namespaces",
+		{ sharedStorageOnly: true }
 	);
 
 	// deduplicate by id - not totally correct, since local dev can use binding names as an 'id' :/

@@ -8,6 +8,7 @@ import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	disposeWithRetry,
 	singleModuleManifest,
+	useTmp,
 	waitForWorkersInRegistry,
 } from "../../test-shared";
 
@@ -129,7 +130,7 @@ describe("Cross-process aggregation", () => {
 	});
 
 	describe("KV namespace aggregation", () => {
-		test("lists KV namespaces from both instances when queried from instance A", async ({
+		test("only lists local KV namespaces without shared storage", async ({
 			expect,
 		}) => {
 			const response = await instanceA.dispatchFetch(
@@ -148,19 +149,15 @@ describe("Cross-process aggregation", () => {
 				      "id": "kv-a-2",
 				      "title": "KV_A_2",
 				    },
-				    {
-				      "id": "kv-b-1",
-				      "title": "KV_B_1",
-				    },
 				  ],
 				  "result_info": {
-				    "count": 3,
+				    "count": 2,
 				  },
 				}
 			`);
 		});
 
-		test("lists KV namespaces from both instances when queried from instance B", async ({
+		test("only lists its local KV namespaces from instance B", async ({
 			expect,
 		}) => {
 			const response = await instanceB.dispatchFetch(
@@ -172,20 +169,12 @@ describe("Cross-process aggregation", () => {
 				{
 				  "result": [
 				    {
-				      "id": "kv-a-1",
-				      "title": "KV_A_1",
-				    },
-				    {
-				      "id": "kv-a-2",
-				      "title": "KV_A_2",
-				    },
-				    {
 				      "id": "kv-b-1",
 				      "title": "KV_B_1",
 				    },
 				  ],
 				  "result_info": {
-				    "count": 3,
+				    "count": 1,
 				  },
 				}
 			`);
@@ -276,7 +265,9 @@ describe("Cross-process aggregation", () => {
 	});
 
 	describe("D1 database aggregation", () => {
-		test("lists D1 databases from both instances", async ({ expect }) => {
+		test("only lists local D1 databases without shared storage", async ({
+			expect,
+		}) => {
 			const response = await instanceA.dispatchFetch(`${BASE_URL}/d1/database`);
 			const data = (await response.json()) as ListResponse;
 
@@ -288,14 +279,9 @@ describe("Cross-process aggregation", () => {
 				      "uuid": "db-a",
 				      "version": "production",
 				    },
-				    {
-				      "name": "DB_B",
-				      "uuid": "db-b",
-				      "version": "production",
-				    },
 				  ],
 				  "result_info": {
-				    "count": 2,
+				    "count": 1,
 				  },
 				}
 			`);
@@ -369,7 +355,9 @@ describe("Cross-process aggregation", () => {
 	});
 
 	describe("r2 bucket aggregation", () => {
-		test("lists r2 buckets from both instances", async ({ expect }) => {
+		test("only lists local R2 buckets without shared storage", async ({
+			expect,
+		}) => {
 			const response = await instanceA.dispatchFetch(`${BASE_URL}/r2/buckets`);
 			const data = (await response.json()) as ListResponse;
 
@@ -379,21 +367,26 @@ describe("Cross-process aggregation", () => {
 				    {
 				      "name": "bucket-a",
 				    },
+				  ],
+				}
+			`);
+			expect(data.result_info).toMatchInlineSnapshot(`
+				{
+				  "count": 1,
+				}
+			`);
+
+			const responseB = await instanceB.dispatchFetch(`${BASE_URL}/r2/buckets`);
+			const dataB = (await responseB.json()) as ListResponse;
+			expect(dataB.result).toMatchInlineSnapshot(`
+				{
+				  "buckets": [
 				    {
 				      "name": "bucket-b",
 				    },
 				  ],
 				}
 			`);
-			expect(data.result_info).toMatchInlineSnapshot(`
-				{
-				  "count": 2,
-				}
-			`);
-
-			const responseB = await instanceB.dispatchFetch(`${BASE_URL}/r2/buckets`);
-			const dataB = (await responseB.json()) as ListResponse;
-			expect(dataB).toEqual(data);
 		});
 	});
 });
@@ -402,13 +395,18 @@ describe("Multi-worker peer deduplication", () => {
 	let registryPath: string;
 	let instanceA: Miniflare;
 	let instanceB: Miniflare;
+	let instanceC: Miniflare;
 
 	beforeAll(async () => {
 		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-multiworker-"));
+		const persistencePath = await useTmp();
 
 		instanceA = new Miniflare({
 			inspectorPort: 0,
 			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistencePath,
+			isolatedResourcePersistencePath: await useTmp(),
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
@@ -434,6 +432,9 @@ describe("Multi-worker peer deduplication", () => {
 		instanceB = new Miniflare({
 			inspectorPort: 0,
 			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistencePath,
+			isolatedResourcePersistencePath: await useTmp(),
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
@@ -468,11 +469,38 @@ describe("Multi-worker peer deduplication", () => {
 		});
 		await instanceB.ready;
 
+		instanceC = new Miniflare({
+			inspectorPort: 0,
+			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: await useTmp(),
+			isolatedResourcePersistencePath: await useTmp(),
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-c",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker C"); } }`
+						),
+						env: {
+							KV_C: { type: "kv", id: "kv-c" },
+						},
+					},
+				},
+			],
+		});
+		await instanceC.ready;
+
 		// Wait for all workers to register in the dev registry
 		await waitForWorkersInRegistry(registryPath, [
 			"worker-a",
 			"worker-b1",
 			"worker-b2",
+			"worker-c",
 		]);
 	});
 
@@ -480,11 +508,12 @@ describe("Multi-worker peer deduplication", () => {
 		await Promise.all([
 			disposeWithRetry(instanceA),
 			disposeWithRetry(instanceB),
+			disposeWithRetry(instanceC),
 		]);
 		removeDirSync(registryPath);
 	});
 
-	test("does not duplicate results when peer has multiple workers", async ({
+	test("only lists resources from peers in the same shared-storage scope", async ({
 		expect,
 	}) => {
 		const response = await instanceA.dispatchFetch(

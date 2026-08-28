@@ -164,10 +164,9 @@ function getLocalR2Buckets(env: Env): Required<Pick<R2BucketType, "name">>[] {
 // ============================================================================
 
 /**
- * List all R2 buckets across all connected instances.
+ * List local R2 buckets and buckets configured by shared-storage peers.
  *
- * This is an aggregated endpoint - it fetches buckets from the local instance
- * and all peer instances in the dev registry, then merges the results.
+ * Shared-storage peers are scoped by their canonical persistence root.
  *
  * @see https://developers.cloudflare.com/api/resources/r2/subresources/buckets/methods/list/
  */
@@ -175,7 +174,10 @@ export async function listR2Buckets(c: AppContext) {
 	const localBuckets = getLocalR2Buckets(c.env);
 	const aggregatedBuckets = await aggregateListResults<{
 		name: string;
-	}>(c, localBuckets, "/r2/buckets", "buckets");
+	}>(c, localBuckets, "/r2/buckets", {
+		resultKey: "buckets",
+		sharedStorageOnly: true,
+	});
 
 	// Deduplicate by name
 	const localNames = new Set(localBuckets.map((b) => b.name));

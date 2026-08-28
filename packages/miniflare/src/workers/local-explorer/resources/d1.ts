@@ -41,7 +41,7 @@ type ListDatabasesQuery = z.output<
 >;
 
 /**
- * Lists all D1 databases available across all connected instances.
+ * Lists local D1 databases and databases configured by shared-storage peers.
  */
 export async function listD1Databases(
 	c: AppContext,
@@ -53,7 +53,8 @@ export async function listD1Databases(
 	const aggregatedDatabases = await aggregateListResults(
 		c,
 		localDatabases,
-		"/d1/database"
+		"/d1/database",
+		{ sharedStorageOnly: true }
 	);
 
 	// Deduplicate by id. This isn't completely correct because local development
