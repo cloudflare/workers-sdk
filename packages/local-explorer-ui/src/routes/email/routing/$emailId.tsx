@@ -1,6 +1,6 @@
+import { EnvelopeSimpleIcon } from "@phosphor-icons/react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { emailListRouting, localExplorerListWorkers } from "../../../api";
-import EmailIcon from "../../../assets/icons/email.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { EmailContent } from "../../../components/email/EmailContent";
 import {
@@ -109,7 +109,7 @@ function EmailRoutingDetailView(): JSX.Element {
 	return (
 		<>
 			<Breadcrumbs
-				icon={EmailIcon}
+				icon={EnvelopeSimpleIcon}
 				items={[
 					<Link
 						className="text-kumo-link hover:underline"

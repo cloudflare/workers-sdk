@@ -1,9 +1,12 @@
 import { Button } from "@cloudflare/kumo";
-import { PaperPlaneTiltIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import {
+	EnvelopeSimpleIcon,
+	PaperPlaneTiltIcon,
+	PencilSimpleIcon,
+} from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState, type JSX } from "react";
 import { emailListRouting, localExplorerListWorkers } from "../../../api";
-import EmailIcon from "../../../assets/icons/email.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { EmailList } from "../../../components/email/EmailList";
 import { EMAIL_PAGE_SIZE } from "../../../components/email/EmailPagination";
@@ -95,7 +98,7 @@ function EmailRoutingView(): JSX.Element {
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden">
 			<Breadcrumbs
-				icon={EmailIcon}
+				icon={EnvelopeSimpleIcon}
 				items={[<span key="routing">Routing</span>]}
 				title="Email"
 			/>

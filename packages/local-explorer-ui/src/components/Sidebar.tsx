@@ -6,6 +6,7 @@ import {
 	useSidebar,
 } from "@cloudflare/kumo";
 import {
+	EnvelopeSimpleIcon,
 	MonitorIcon,
 	MoonIcon,
 	PulseIcon,
@@ -15,7 +16,6 @@ import { useRouter } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
-import EmailIcon from "../assets/icons/email.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
 import WorkflowsIcon from "../assets/icons/workflows.svg?react";
@@ -212,7 +212,7 @@ export function AppSidebar({
 		{
 			emptyLabel: "No email",
 			groupId: "email" as const,
-			icon: EmailIcon,
+			icon: EnvelopeSimpleIcon,
 			items: [
 				{
 					id: "sending",

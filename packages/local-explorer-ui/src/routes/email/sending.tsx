@@ -1,3 +1,4 @@
+import { EnvelopeSimpleIcon } from "@phosphor-icons/react";
 import {
 	createFileRoute,
 	getRouteApi,
@@ -12,7 +13,6 @@ import {
 	type JSX,
 } from "react";
 import { emailListSending, localExplorerListWorkers } from "../../api";
-import EmailIcon from "../../assets/icons/email.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { EmailList } from "../../components/email/EmailList";
 import { EMAIL_PAGE_SIZE } from "../../components/email/EmailPagination";
@@ -199,7 +199,7 @@ function EmailSendingView(): JSX.Element {
 		return (
 			<>
 				<Breadcrumbs
-					icon={EmailIcon}
+					icon={EnvelopeSimpleIcon}
 					items={[<span key="sending">Sending</span>]}
 					title="Email"
 				/>
@@ -214,7 +214,7 @@ function EmailSendingView(): JSX.Element {
 	return (
 		<div className="flex h-full min-h-0 flex-col overflow-hidden">
 			<Breadcrumbs
-				icon={EmailIcon}
+				icon={EnvelopeSimpleIcon}
 				items={[<span key="sending">Sending</span>]}
 				title="Email"
 			/>
