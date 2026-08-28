@@ -84,6 +84,7 @@ export type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	// Worker names for this instance, used to filter self from dev registry during aggregation
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
+	[CoreBindings.SERVICE_D1]: Fetcher;
 	[CoreBindings.SERVICE_KV]: Fetcher;
 	[CoreBindings.SERVICE_R2]: Fetcher;
 	// Per-worker resource bindings for the /local/workers endpoint

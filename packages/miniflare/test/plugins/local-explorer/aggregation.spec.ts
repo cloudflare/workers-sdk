@@ -191,9 +191,7 @@ describe("Cross-process aggregation", () => {
 			`);
 		});
 
-		test("proxies KV key list to peer instance when namespace not found locally", async ({
-			expect,
-		}) => {
+		test("resolves arbitrary KV namespace IDs locally", async ({ expect }) => {
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
 			await kvB.put("peer-key-1", "value1");
 
@@ -204,13 +202,11 @@ describe("Cross-process aggregation", () => {
 
 			expect(data).toMatchObject({
 				success: true,
-				result: expect.arrayContaining([
-					expect.objectContaining({ name: "peer-key-1" }),
-				]),
+				result: [],
 			});
 		});
 
-		test("proxies KV value get to peer instance when namespace not found locally", async ({
+		test("does not read an arbitrary KV namespace ID from a peer", async ({
 			expect,
 		}) => {
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
@@ -220,15 +216,14 @@ describe("Cross-process aggregation", () => {
 				`${BASE_URL}/storage/kv/namespaces/kv-b-1/values/peer-value-key`
 			);
 
-			expect(response.status).toBe(200);
-			expect(await response.text()).toMatchInlineSnapshot(
-				`"peer-value-content"`
-			);
+			expect(response.status).toBe(404);
+			expect(await response.json()).toMatchObject({
+				errors: [expect.objectContaining({ code: 10009 })],
+				success: false,
+			});
 		});
 
-		test("proxies KV value put to peer instance when namespace not found locally", async ({
-			expect,
-		}) => {
+		test("writes an arbitrary KV namespace ID locally", async ({ expect }) => {
 			const response = await instanceA.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/kv-b-1/values/cross-write-key`,
 				{
@@ -241,12 +236,14 @@ describe("Cross-process aggregation", () => {
 			await response.json(); // Consume body
 
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
-			expect(await kvB.get("cross-write-key")).toMatchInlineSnapshot(
-				`"cross-written-value"`
+			expect(await kvB.get("cross-write-key")).toBeNull();
+			const localResponse = await instanceA.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/kv-b-1/values/cross-write-key`
 			);
+			expect(await localResponse.text()).toBe("cross-written-value");
 		});
 
-		test("proxies KV value delete to peer instance when namespace not found locally", async ({
+		test("does not delete from an arbitrary KV namespace ID on a peer", async ({
 			expect,
 		}) => {
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
@@ -260,30 +257,21 @@ describe("Cross-process aggregation", () => {
 			expect(response.status).toBe(200);
 			await response.json(); // Consume body
 
-			expect(await kvB.get("to-delete-key")).toBeNull();
+			expect(await kvB.get("to-delete-key")).toBe("value");
 		});
 
-		test("returns 404 when resource not found locally or on peers", async ({
+		test("returns an empty list for an arbitrary KV namespace ID", async ({
 			expect,
 		}) => {
 			const response = await instanceA.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/non-existent/keys`
 			);
 
-			expect(response.status).toBe(404);
-			expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "errors": [
-			    {
-			      "code": 10013,
-			      "message": "list keys: 'namespace not found'",
-			    },
-			  ],
-			  "messages": [],
-			  "result": null,
-			  "success": false,
-			}
-		`);
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				result: [],
+				success: true,
+			});
 		});
 	});
 
@@ -313,9 +301,7 @@ describe("Cross-process aggregation", () => {
 			`);
 		});
 
-		test("proxies D1 raw query to peer instance when database not found locally", async ({
-			expect,
-		}) => {
+		test("resolves arbitrary D1 database IDs locally", async ({ expect }) => {
 			const dbB = await instanceB.getD1Database("DB_B");
 			await dbB.exec(
 				"CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)"
@@ -329,7 +315,7 @@ describe("Cross-process aggregation", () => {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						sql: "SELECT name FROM test_table",
+						sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'test_table'",
 						params: [],
 					}),
 				}
@@ -346,11 +332,7 @@ describe("Cross-process aggregation", () => {
 				  "columns": [
 				    "name",
 				  ],
-				  "rows": [
-				    [
-				      "peer-row",
-				    ],
-				  ],
+				  "rows": [],
 				}
 			`);
 		});

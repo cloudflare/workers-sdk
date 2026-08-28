@@ -8,6 +8,7 @@ import {
 	type Worker_Module,
 } from "../../runtime";
 import { CoreBindings } from "../../workers";
+import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
 import {
@@ -74,6 +75,7 @@ export function getExplorerServices(
 		sharedOptions,
 	} = options;
 	const directStorageProxyPrefixes = [
+		`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`,
 		`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`,
 		`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:r2:`,
 	];
@@ -85,7 +87,7 @@ export function getExplorerServices(
 	);
 
 	const explorerBindings: Worker_Binding[] = [
-		// KV and R2 operations use dedicated internal storage service bindings.
+		// D1, KV and R2 operations use dedicated internal storage service bindings.
 		// Other resources still access their configured user bindings here.
 		...explorerProxyBindings,
 		{
@@ -104,6 +106,14 @@ export function getExplorerServices(
 		{
 			name: CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES,
 			json: JSON.stringify(workerNames),
+		},
+		{
+			name: CoreBindings.SERVICE_D1,
+			service: getStorageService(
+				D1_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
 		},
 		{
 			name: CoreBindings.SERVICE_KV,
