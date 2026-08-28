@@ -154,6 +154,12 @@ async function uploadWorkerVersion(
 		config,
 		dispatchNamespace: undefined,
 	});
+	if (migrations !== undefined) {
+		throw new UserError(
+			"This Worker has a pending Durable Object migration, which cannot be applied by `wrangler versions upload`. Durable Object migrations must be applied with `wrangler deploy`. Run `wrangler deploy` to apply the migration, then retry `wrangler versions upload`.",
+			{ telemetryMessage: "versions upload pending durable object migration" }
+		);
+	}
 
 	// Upload assets if assets is being used
 	const assetsUploadResult =
