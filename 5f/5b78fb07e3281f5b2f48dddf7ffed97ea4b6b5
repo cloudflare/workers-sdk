@@ -1,0 +1,23 @@
+packages/deploy-helpers/src/preview/preview.ts
+  s_48839f9cf2b98c::t_08424b38e156eb 3,29-30,41,196-197,234-240,244-252,309-315,318-319,322,325,327,329,334,336-337,340,342-344,347,350-358,360-372,375-396,464-465,516-517,521-547,555,557,559
+packages/deploy-helpers/src/preview/shared.ts
+  s_48839f9cf2b98c::t_bcf709633f0575 2,59-212
+packages/wrangler/src/__tests__/preview.test.ts
+  s_48839f9cf2b98c::t_9ab8596b64f209 7-8,42-64,112-197,404,526-537,785,941,962-1045,1369,1506-1508,1511,1578-1580,1668,1671-1676,1710-1714,1728-1729,1733-1734
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5f5b78fb07e3281f5b2f48dddf7ffed97ea4b6b5",
+  "prompts": {},
+  "sessions": {
+    "s_48839f9cf2b98c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02d98b4a5ffel0VVrj9O2YrF2M",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}
