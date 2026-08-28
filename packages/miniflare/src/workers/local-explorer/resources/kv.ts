@@ -87,7 +87,7 @@ type ListNamespacesQuery = NonNullable<
 >;
 
 /**
- * List local KV namespaces and namespaces configured by shared-storage peers.
+ * List all local KV namespaces and namespaces configured by shared-storage peers.
  *
  * Shared-storage peers are scoped by their canonical persistence root.
  *
@@ -146,13 +146,19 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 	const prefix = query.prefix;
 
 	const url = new URL("http://kv/");
-	if (cursor !== undefined) url.searchParams.set(KVParams.LIST_CURSOR, cursor);
+	if (cursor !== undefined) {
+		url.searchParams.set(KVParams.LIST_CURSOR, cursor);
+	}
 	if (limit !== undefined && limit > 0) {
 		url.searchParams.set(KVParams.LIST_LIMIT, String(limit));
 	}
-	if (prefix !== undefined) url.searchParams.set(KVParams.LIST_PREFIX, prefix);
+	if (prefix !== undefined) {
+		url.searchParams.set(KVParams.LIST_PREFIX, prefix);
+	}
 	const response = await sendKVRequest(c, namespace_id, url);
-	if (!response.ok) return toKVErrorResponse(response);
+	if (!response.ok) {
+		return toKVErrorResponse(response);
+	}
 	const listResult = (await response.json()) as KVListResult;
 
 	return c.json({
@@ -252,7 +258,9 @@ export async function putKVValue(
 		headers,
 		body: value,
 	});
-	if (!response.ok) return toKVErrorResponse(response);
+	if (!response.ok) {
+		return toKVErrorResponse(response);
+	}
 	await response.arrayBuffer();
 	return c.json(wrapResponse({}));
 }
@@ -270,7 +278,9 @@ export async function deleteKVValue(
 	const response = await sendKVRequest(c, namespaceId, getKVKeyUrl(keyName), {
 		method: "DELETE",
 	});
-	if (!response.ok) return toKVErrorResponse(response);
+	if (!response.ok) {
+		return toKVErrorResponse(response);
+	}
 	await response.arrayBuffer();
 	return c.json(wrapResponse({}));
 }
@@ -295,7 +305,9 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ keys }),
 	});
-	if (!response.ok) return toKVErrorResponse(response);
+	if (!response.ok) {
+		return toKVErrorResponse(response);
+	}
 	const values = (await response.json()) as Record<string, string | null>;
 	return c.json(wrapResponse({ values }));
 }

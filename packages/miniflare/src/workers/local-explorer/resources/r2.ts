@@ -67,7 +67,9 @@ async function sendR2PutRequest(
 	const metadata = encoder.encode(JSON.stringify({ version: 1, ...request }));
 	const body = new Uint8Array(metadata.byteLength + (value?.byteLength ?? 0));
 	body.set(metadata);
-	if (value !== undefined) body.set(new Uint8Array(value), metadata.byteLength);
+	if (value !== undefined) {
+		body.set(new Uint8Array(value), metadata.byteLength);
+	}
 	return c.env.MINIFLARE_R2.fetch("http://r2/", {
 		method: "PUT",
 		headers: {
@@ -157,7 +159,7 @@ function getLocalR2Buckets(env: Env): Required<Pick<R2BucketType, "name">>[] {
 // ============================================================================
 
 /**
- * List local R2 buckets and buckets configured by shared-storage peers.
+ * List all local R2 buckets and buckets configured by shared-storage peers.
  *
  * Shared-storage peers are scoped by their canonical persistence root.
  *
@@ -219,7 +221,9 @@ export async function listR2Objects(
 		// and the caller does not specify an include list.
 		include: [],
 	});
-	if (!response.ok) return toR2ErrorResponse(response);
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
+	}
 	const { metadata: listResult } =
 		await decodeR2Response<R2ListResponse>(response);
 	const objects = listResult.objects.map(toExplorerObject);
@@ -257,11 +261,15 @@ export async function getR2Object(
 		method: metadataOnly ? "head" : "get",
 		object: object_key,
 	});
-	if (!response.ok) return toR2ErrorResponse(response);
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
+	}
 	const { metadata: object, body } =
 		await decodeR2Response<R2HeadResponse>(response);
 	const explorerObject = toExplorerObject(object);
-	if (metadataOnly) return c.json(wrapResponse(explorerObject));
+	if (metadataOnly) {
+		return c.json(wrapResponse(explorerObject));
+	}
 
 	const responseHeaders = new Headers();
 	if (object.httpFields?.contentType !== undefined) {
@@ -325,7 +333,9 @@ export async function putR2Object(
 		},
 		body
 	);
-	if (!response.ok) return toR2ErrorResponse(response);
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
+	}
 	const { metadata: object } = await decodeR2Response<R2HeadResponse>(response);
 	return c.json(
 		wrapResponse({
@@ -364,6 +374,8 @@ export async function deleteR2Objects(
 		method: "delete",
 		objects: keys,
 	});
-	if (!response.ok) return toR2ErrorResponse(response);
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
+	}
 	return c.json(wrapResponse(keys.map((key) => ({ key }))));
 }

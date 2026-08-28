@@ -95,15 +95,23 @@ export async function rawD1Database(
 		body: JSON.stringify(queries.length === 1 ? queries[0] : queries),
 	});
 
+	if (!response.ok) {
+		const body = await response.text();
+		let message = response.statusText || "Internal D1 request failed";
+		try {
+			const error = JSON.parse(body) as D1FailureResponse;
+			message = error.error || message;
+		} catch {
+			message = body || message;
+		}
+		return errorResponse(response.status, 10001, message);
+	}
+
 	const results = (await response.json()) as
 		| D1RawResultResponse[]
 		| D1FailureResponse;
-	if (!response.ok || !Array.isArray(results)) {
-		return errorResponse(
-			response.ok ? 500 : response.status,
-			10001,
-			Array.isArray(results) ? response.statusText : results.error
-		);
+	if (!Array.isArray(results)) {
+		return errorResponse(500, 10001, results.error);
 	}
 	return c.json(wrapResponse(results));
 }

@@ -45,13 +45,17 @@ function getSharedStoragePeerDebugPortAddresses(
 	registry: WorkerRegistry,
 	selfInstanceId: string | null
 ): string[] {
-	if (selfInstanceId === null) return [];
+	if (selfInstanceId === null) {
+		return [];
+	}
 	const selfStorageScope = Object.values(registry).find(
 		(definition) =>
 			definition.instanceId === selfInstanceId &&
 			definition.storageScope !== undefined
 	)?.storageScope;
-	if (selfStorageScope === undefined) return [];
+	if (selfStorageScope === undefined) {
+		return [];
+	}
 
 	const addresses = Object.values(registry)
 		.filter(
