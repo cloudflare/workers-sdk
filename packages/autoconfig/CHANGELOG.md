@@ -1,5 +1,18 @@
 # @cloudflare/autoconfig
 
+## 0.4.0
+
+### Minor Changes
+
+- [#15363](https://github.com/cloudflare/workers-sdk/pull/15363) [`baa7bd0`](https://github.com/cloudflare/workers-sdk/commit/baa7bd02af1dd9ad3b9ae8d175ca5b39c1b5fdd6) Thanks [@edmundhung](https://github.com/edmundhung)! - Resolve canonical framework build commands for the `cf` target
+
+  Autoconfig now returns framework commands instead of package scripts for `cf`. Generated deploy scripts delegate build selection to `cf deploy`. Wrangler's existing package-script detection remains unchanged.
+
+### Patch Changes
+
+- Updated dependencies [[`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3)]:
+  - @cloudflare/config@0.9.0
+
 ## 0.3.0
 
 ### Minor Changes

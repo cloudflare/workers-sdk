@@ -1,5 +1,49 @@
 # miniflare
 
+## 5.20260828.0-alpha
+
+### Minor Changes
+
+- [#15337](https://github.com/cloudflare/workers-sdk/pull/15337) [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Add email inspection and testing to Local Explorer
+
+  Add an Email group with Routing and Sending views for inspecting messages received by a Worker's `email()` handler and messages sent through its `send_email` bindings. Detail views show message content, metadata, attachments, and handler activity including forwarding, replies, rejection, and unhandled messages.
+
+  Add a test-email composer that delivers custom text, HTML, headers, and attachments directly to the selected Worker's `email()` handler during local development.
+
+- [#15305](https://github.com/cloudflare/workers-sdk/pull/15305) [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234) Thanks [@Monark-Arkmon](https://github.com/Monark-Arkmon)! - Support `env.IMAGES.hosted.createDirectUpload()` in local development. Creates a draft image and returns an `uploadURL` served by a new local endpoint that accepts the completed upload as `multipart/form-data` (field name `file`). Matches production's validation (`expiresIn` bounds of 120–21600 seconds, rejecting UUID custom IDs) and single-use/expiry semantics: completing an unknown or already-used upload link returns 404/409, and an expired link returns 410.
+
+- [#15305](https://github.com/cloudflare/workers-sdk/pull/15305) [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234) Thanks [@Monark-Arkmon](https://github.com/Monark-Arkmon)! - Support the `filter.metadata` option on `env.IMAGES.hosted.list()` in local development, matching the metadata filtering behaviour of the production Images binding. Filters support the `eq` (implicit for bare values), `in`, `gt`, `gte`, `lt`, and `lte` operators, dot-notation nested field paths, and AND logic across multiple fields.
+
+- [#15305](https://github.com/cloudflare/workers-sdk/pull/15305) [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234) Thanks [@Monark-Arkmon](https://github.com/Monark-Arkmon)! - Support `env.IMAGES.hosted.image(id).signedUrl()` in local development. A fixed local-dev signing secret is used to generate and verify signed delivery URLs, so images uploaded with `requireSignedURLs: true` can only be fetched from the local image delivery endpoint with a valid, unexpired signature — matching the production Images binding's signed URL behaviour end-to-end.
+
+- [#15373](https://github.com/cloudflare/workers-sdk/pull/15373) [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename Worker target fields from `workerName` to `worker`
+
+  The experimental `@cloudflare/config` and Miniflare configuration APIs now use `worker` consistently for Worker, Durable Object, Workflow, dispatch namespace, and tail consumer targets.
+
+### Patch Changes
+
+- [#15383](https://github.com/cloudflare/workers-sdk/pull/15383) [`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260826.1 | ^5.20260827.1 |
+  | workerd                   | 1.20260826.1  | 1.20260827.1  |
+
+- [#15393](https://github.com/cloudflare/workers-sdk/pull/15393) [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260827.1 | ^5.20260828.1 |
+  | workerd                   | 1.20260827.1  | 1.20260828.1  |
+
+- [#15337](https://github.com/cloudflare/workers-sdk/pull/15337) [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368) Thanks [@tpmmorris](https://github.com/tpmmorris)! - Validate custom headers sent through the Local Explorer test-email endpoint
+
+  Reject header names and values that cannot be safely encoded. Multiline values remain supported and are folded into valid MIME continuation lines.
+
 ## 5.20260826.0-alpha
 
 ### Patch Changes
