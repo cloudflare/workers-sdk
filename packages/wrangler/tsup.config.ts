@@ -6,6 +6,32 @@ import type { Options } from "tsup";
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 const workersContexts = new Map<string, esbuild.BuildContext>();
+
+/**
+ * Omits Zod's unused collection of locale modules from the Wrangler bundle.
+ * Zod's separately imported English locale remains available for default
+ * validation messages.
+ */
+const omitZodLocalesPlugin: Exclude<Options["esbuildPlugins"], undefined>[0] = {
+	name: "omit-zod-locales",
+	setup(build) {
+		const namespace = "empty-zod-locales";
+		build.onResolve({ filter: /^\.\.\/locales\/index\.js$/ }, (args) => {
+			if (
+				!/[\\/]zod[\\/]v4[\\/](?:(?:classic|mini)[\\/]external|core[\\/]index)\.js$/.test(
+					args.importer
+				)
+			) {
+				return;
+			}
+			return { namespace, path: "zod-locales" };
+		});
+		build.onLoad({ filter: /.*/, namespace }, () => ({
+			contents: "export {};",
+		}));
+	},
+};
+
 function embedWorkersPlugin({
 	isWatch,
 }: {
@@ -111,7 +137,10 @@ export default defineConfig((options) => [
 					}
 				: {}),
 		},
-		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
+		esbuildPlugins: [
+			omitZodLocalesPlugin,
+			embedWorkersPlugin({ isWatch: !!options.watch }),
+		],
 		esbuildOptions(esbuildOptions) {
 			esbuildOptions.logOverride = {
 				...esbuildOptions.logOverride,
