@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { startTunnel } from "@cloudflare/workers-utils";
+import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
 import { createDeferred } from "@cloudflare/workers-utils/test-helpers";
 import { createServer, preview } from "vite";
 import {
@@ -10,7 +10,6 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
-import * as wrangler from "wrangler";
 import { PluginContext } from "../context";
 import {
 	QUICK_TUNNEL_ALLOWED_HOST,
@@ -24,8 +23,27 @@ import {
 import type { TunnelConfig } from "../plugin-config";
 import type * as vite from "vite";
 
+const authMocks = vi.hoisted(() => ({
+	auth: {
+		setProfile: vi.fn(),
+		requireAuth: vi.fn(
+			(options: { account_id?: string }) =>
+				options.account_id ?? "selected-account-id"
+		),
+		requireApiToken: vi.fn(() => ({ apiToken: "test-token" })),
+	},
+	profileStore: { resolve: vi.fn(() => ({ name: "test-profile" })) },
+}));
+
 vi.mock("@cloudflare/workers-utils");
-vi.mock("wrangler");
+vi.mock("@cloudflare/workers-auth/cf", () => ({
+	createCfAuth: vi.fn(() => authMocks.auth),
+	createCfProfileStore: vi.fn(() => authMocks.profileStore),
+}));
+vi.mock("@cloudflare/workers-auth/wrangler", () => ({
+	createWranglerAuth: vi.fn(() => authMocks.auth),
+	createWranglerProfileStore: vi.fn(() => authMocks.profileStore),
+}));
 
 function createMockPluginContext(options: {
 	type: "workers" | "preview";
@@ -499,7 +517,7 @@ describe("tunnel plugin", () => {
 	it("starts a named preview tunnel and keeps only allowed hosts", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: [
 				"dev.example.com",
 				"preview.example.com",
@@ -534,13 +552,10 @@ describe("tunnel plugin", () => {
 
 		await setupPreviewTunnel(previewServer, ctx, tunnelManager);
 
-		expect(wrangler.unstable_resolveNamedTunnel).toHaveBeenCalledWith(
+		expect(resolveNamedTunnel).toHaveBeenCalledWith(
 			"my-tunnel",
 			expect.any(URL),
-			{
-				accountId: "account-id",
-				complianceRegion: undefined,
-			}
+			{ accountId: "account-id", sdk: expect.any(Object) }
 		);
 		expect(tunnelManager.publicUrls).toEqual([
 			"https://dev.example.com",
@@ -551,7 +566,7 @@ describe("tunnel plugin", () => {
 	it("throws when no named preview tunnel hosts are allowed", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: ["dev.example.com", "preview.example.com"],
 			token: "TOKEN",
 		});
@@ -596,9 +611,7 @@ describe("tunnel plugin", () => {
 			hostnames: string[];
 			token: string;
 		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
-		);
+		vi.mocked(resolveNamedTunnel).mockReturnValue(namedTunnelDeferred.promise);
 
 		const server = await createServer();
 		const tunnelManager = new TunnelManager(server.config.logger);
@@ -634,9 +647,7 @@ describe("tunnel plugin", () => {
 			hostnames: string[];
 			token: string;
 		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
-		);
+		vi.mocked(resolveNamedTunnel).mockReturnValue(namedTunnelDeferred.promise);
 
 		const server = await createServer();
 		const tunnelManager = new TunnelManager(server.config.logger);

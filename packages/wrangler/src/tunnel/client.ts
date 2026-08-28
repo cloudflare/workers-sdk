@@ -1,22 +1,14 @@
-import { FatalError, UserError } from "@cloudflare/workers-utils";
+import {
+	resolveNamedTunnel as resolveNamedTunnelWithClient,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Cloudflare as CloudflareSDK } from "cloudflare";
 import { createCloudflareClient } from "../cfetch/internal";
 import { requireAuth } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
 import type Cloudflare from "cloudflare";
 import type { CloudflareTunnel } from "cloudflare/resources/shared";
-import type {
-	CloudflaredCreateResponse,
-	ConfigurationGetResponse,
-} from "cloudflare/resources/zero-trust/tunnels/cloudflared";
-
-const LOCAL_TUNNEL_HOSTNAMES = new Set([
-	"localhost",
-	"127.0.0.1",
-	"::1",
-	"0.0.0.0",
-	"::",
-]);
+import type { CloudflaredCreateResponse } from "cloudflare/resources/zero-trust/tunnels/cloudflared";
 
 /**
  * Error message for tunnel permission issues when using OAuth login.
@@ -205,136 +197,9 @@ export async function resolveNamedTunnel(
 	const sdk = createCloudflareClient({
 		compliance_region: options.complianceRegion,
 	});
-	const tunnel = await withTunnelErrorHandling(async () => {
-		for await (const item of sdk.zeroTrust.tunnels.cloudflared.list({
-			account_id: accountId,
-			name,
-			is_deleted: false,
-		})) {
-			if (item.name === name) {
-				return normalizeTunnelResponse(item);
-			}
-		}
-
-		return null;
-	});
-
-	if (!tunnel) {
-		throw new UserError(
-			`No Cloudflare Tunnel named "${name}" was found in this account. Use "wrangler tunnel list" to see available tunnels.`,
-			{ telemetryMessage: "tunnel resolve named missing tunnel" }
-		);
-	}
-
-	const tunnelId = tunnel.id;
-	if (!tunnelId) {
-		throw new FatalError(
-			`Tunnel "${name}" was found but has no ID. This is unexpected.`,
-			{ telemetryMessage: "tunnel resolve named missing tunnel id" }
-		);
-	}
-
-	const configuration = await withTunnelErrorHandling(() =>
-		sdk.zeroTrust.tunnels.cloudflared.configurations.get(tunnelId, {
-			account_id: accountId,
-		})
+	return withTunnelErrorHandling(() =>
+		resolveNamedTunnelWithClient(name, origin, { sdk, accountId })
 	);
-	const hostnames = getMatchingIngressHostnames(
-		origin,
-		configuration.config?.ingress ?? []
-	);
-	if (hostnames.length === 0) {
-		throw new UserError(
-			createMissingIngressMessage(
-				name,
-				origin,
-				`https://dash.cloudflare.com/${accountId}/tunnels/${tunnelId}`,
-				configuration.config?.ingress ?? []
-			),
-			{ telemetryMessage: "tunnel resolve named ingress mismatch" }
-		);
-	}
-
-	const token = await getTunnelToken(sdk, accountId, tunnelId);
-
-	return { hostnames, token };
-}
-
-/**
- * Return ingress hostnames whose configured service targets the current local dev origin.
- */
-function getMatchingIngressHostnames(
-	origin: URL,
-	ingressConfig: ConfigurationGetResponse.Config.Ingress[]
-): string[] {
-	const hostnames = new Set<string>();
-	const originUrl = normalizeURL(origin);
-
-	for (const ingress of ingressConfig) {
-		try {
-			const serviceUrl = normalizeURL(ingress.service);
-
-			if (ingress.hostname && serviceUrl.toString() === originUrl.toString()) {
-				hostnames.add(ingress.hostname);
-			}
-		} catch {
-			// Ignore invalid service URLs in ingress rules
-		}
-	}
-
-	return [...hostnames];
-}
-
-function normalizeURL(url: URL | string): URL {
-	const normalizedUrl = new URL(url);
-
-	if (LOCAL_TUNNEL_HOSTNAMES.has(normalizedUrl.hostname)) {
-		normalizedUrl.hostname = "localhost";
-	}
-
-	if (!normalizedUrl.port) {
-		switch (normalizedUrl.protocol) {
-			case "http:":
-				normalizedUrl.port = "80";
-				break;
-			case "https:":
-				normalizedUrl.port = "443";
-				break;
-		}
-	}
-
-	return normalizedUrl;
-}
-
-function createMissingIngressMessage(
-	name: string,
-	origin: URL,
-	dashboardUrl: string,
-	ingress: ConfigurationGetResponse.Config.Ingress[]
-): string {
-	if (ingress.length === 0) {
-		return [
-			`Tunnel "${name}" has no routes configured.`,
-			"",
-			`Add a route for ${origin} in the Cloudflare dashboard:`,
-			dashboardUrl,
-			"",
-		].join("\n");
-	}
-
-	return [
-		`Tunnel "${name}" has no route for ${origin}`,
-		"",
-		"Resolved routes:",
-		...ingress.map(
-			({ hostname, service }) =>
-				`  - ${hostname ?? "(no hostname)"} -> ${service}`
-		),
-		"",
-		"Update your local server settings or the tunnel routes in the Cloudflare dashboard:",
-		dashboardUrl,
-		"",
-	].join("\n");
 }
 
 /**

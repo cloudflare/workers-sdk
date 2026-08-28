@@ -1,14 +1,40 @@
-import { startTunnel } from "@cloudflare/workers-utils";
+import { format } from "node:util";
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
+import {
+	createCfAuth,
+	createCfProfileStore,
+} from "@cloudflare/workers-auth/cf";
+import {
+	createWranglerAuth,
+	createWranglerProfileStore,
+} from "@cloudflare/workers-auth/wrangler";
+import {
+	getCloudflareApiBaseUrl,
+	isNonInteractiveOrCI,
+	resolveNamedTunnel as resolveNamedTunnelWithClient,
+	startTunnel,
+	UserError,
+} from "@cloudflare/workers-utils";
+import Cloudflare from "cloudflare";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import encodeQR from "qr";
-import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { debuglog, createPlugin } from "../utils";
 import type { PluginContext } from "../context";
 import type { Tunnel } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
+
+type TunnelComplianceRegion = "public" | "fedramp-high" | undefined;
+
+class NoDefaultValueProvided extends UserError {
+	constructor() {
+		super("This command cannot be run in a non-interactive context", {
+			telemetryMessage: "vite tunnel prompt default missing",
+		});
+	}
+}
 
 function createPublicExposureWarning(
 	mode: "dev" | "preview",
@@ -68,6 +94,94 @@ export const QUICK_TUNNEL_SSE_WARNING =
 
 export const QUICK_TUNNEL_ALLOWED_HOST = ".trycloudflare.com";
 
+async function resolveNamedTunnel(
+	name: string,
+	origin: URL,
+	accountId: string | undefined,
+	complianceRegion: TunnelComplianceRegion,
+	profileDir: string,
+	logger: vite.Logger
+) {
+	const normalizedComplianceRegion =
+		complianceRegion === "fedramp-high" ? "fedramp_high" : complianceRegion;
+	const authLogger = {
+		debug: (message?: unknown, ...args: unknown[]) =>
+			debuglog(format(message, ...args)),
+		log: (message?: unknown, ...args: unknown[]) =>
+			logger.info(format(message, ...args)),
+		info: (message?: unknown, ...args: unknown[]) =>
+			logger.info(format(message, ...args)),
+		warn: (message?: unknown, ...args: unknown[]) =>
+			logger.warn(format(message, ...args)),
+		error: (message?: unknown, ...args: unknown[]) =>
+			logger.error(format(message, ...args)),
+	};
+	const context = {
+		logger: authLogger,
+		userAgent: "vite-plugin",
+		async prompt(question: string) {
+			if (isNonInteractiveOrCI()) {
+				throw new NoDefaultValueProvided();
+			}
+			return inputPrompt<string>({
+				type: "text",
+				question,
+				label: "Answer",
+				throwOnError: true,
+			});
+		},
+		async select(
+			question: string,
+			options: { choices: { title: string; value: string }[] }
+		) {
+			if (isNonInteractiveOrCI()) {
+				throw new NoDefaultValueProvided();
+			}
+			return inputPrompt<string>({
+				type: "select",
+				question,
+				label: "Account",
+				options: options.choices.map((choice) => ({
+					label: choice.title,
+					value: choice.value,
+				})),
+				throwOnError: true,
+			});
+		},
+		isNoDefaultValueProvidedError: (error: unknown) =>
+			error instanceof NoDefaultValueProvided,
+	};
+	const useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env;
+	const auth = useCfAuth ? createCfAuth(context) : createWranglerAuth(context);
+	const profileStore = useCfAuth
+		? createCfProfileStore({ logger: authLogger })
+		: createWranglerProfileStore({ logger: authLogger });
+	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
+	accountId = await auth.requireAuth({
+		...(accountId ? { account_id: accountId } : {}),
+		...(normalizedComplianceRegion
+			? { compliance_region: normalizedComplianceRegion }
+			: {}),
+	});
+	const credentials = auth.requireApiToken();
+	const client = new Cloudflare({
+		...("apiToken" in credentials
+			? { apiToken: credentials.apiToken }
+			: {
+					apiKey: credentials.authKey,
+					apiEmail: credentials.authEmail,
+				}),
+		baseURL: getCloudflareApiBaseUrl({
+			compliance_region: normalizedComplianceRegion,
+		}),
+	});
+
+	return resolveNamedTunnelWithClient(name, origin, {
+		sdk: client,
+		accountId,
+	});
+}
+
 export class TunnelManager {
 	#logger: vite.Logger;
 	#origin?: string;
@@ -109,7 +223,8 @@ export class TunnelManager {
 		shortcutPressed?: boolean;
 		allowedHosts: true | string[] | undefined;
 		accountId: string | undefined;
-		complianceRegion: wrangler.Unstable_Config["compliance_region"];
+		complianceRegion: TunnelComplianceRegion;
+		profileDir?: string;
 	}): Promise<string[] | null> {
 		try {
 			const previousTunnel = this.#tunnel;
@@ -135,13 +250,13 @@ export class TunnelManager {
 
 			const namedTunnel =
 				options.name !== undefined
-					? await wrangler.unstable_resolveNamedTunnel(
+					? await resolveNamedTunnel(
 							options.name,
 							new URL(options.origin),
-							{
-								accountId: options.accountId,
-								complianceRegion: options.complianceRegion,
-							}
+							options.accountId,
+							options.complianceRegion,
+							options.profileDir ?? process.cwd(),
+							this.#logger
 						)
 					: undefined;
 
@@ -439,9 +554,8 @@ export async function setupDevTunnel(
 		shortcutPressed,
 		name: tunnel.name,
 		accountId: ctx.settings?.accountId,
-		complianceRegion: toWranglerComplianceRegion(
-			ctx.settings?.complianceRegion
-		),
+		complianceRegion: ctx.settings?.complianceRegion,
+		profileDir: server.config.root,
 		// We will restart the server with the tunnel hostnames in allowedHosts if needed
 		allowedHosts: true,
 	});
@@ -513,9 +627,8 @@ export async function setupPreviewTunnel(
 		name: tunnel.name,
 		allowedHosts: preview?.allowedHosts,
 		accountId: ctx.settings?.accountId,
-		complianceRegion: toWranglerComplianceRegion(
-			ctx.settings?.complianceRegion
-		),
+		complianceRegion: ctx.settings?.complianceRegion,
+		profileDir: server.config.root,
 	});
 
 	if (!publicUrls) {
@@ -525,12 +638,6 @@ export async function setupPreviewTunnel(
 	if (shortcutPressed) {
 		server.printUrls();
 	}
-}
-
-function toWranglerComplianceRegion(
-	region: "public" | "fedramp-high" | undefined
-): wrangler.Unstable_Config["compliance_region"] {
-	return region === "fedramp-high" ? "fedramp_high" : region;
 }
 
 function patchPrintUrls(server: vite.ViteDevServer | vite.PreviewServer) {

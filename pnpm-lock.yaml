@@ -2856,6 +2856,9 @@ importers:
       '@cloudflare/build-output-utils':
         specifier: workspace:*
         version: link:../build-output-utils
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
@@ -2868,6 +2871,9 @@ importers:
       '@cloudflare/runtime-types':
         specifier: workspace:*
         version: link:../runtime-types
+      '@cloudflare/workers-auth':
+        specifier: workspace:*
+        version: link:../workers-auth
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
@@ -2895,6 +2901,9 @@ importers:
       am-i-vibing:
         specifier: ^0.5.0
         version: 0.5.0
+      cloudflare:
+        specifier: ^5.2.0
+        version: 5.2.0(encoding@0.1.13)
       defu:
         specifier: ^6.1.4
         version: 6.1.4
