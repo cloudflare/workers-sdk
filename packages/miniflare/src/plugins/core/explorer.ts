@@ -8,9 +8,11 @@ import {
 	type Worker_Module,
 } from "../../runtime";
 import { CoreBindings } from "../../workers";
+import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
 import {
 	extractObjectEntryId,
 	getEnvBindingsOfType,
+	getStorageService,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
@@ -23,6 +25,7 @@ import {
 } from "./constants";
 import type {
 	DurableObjectClassNames,
+	ParsedInstanceOptions,
 	ParsedWorkerOptions,
 	WorkflowOption,
 } from "../shared";
@@ -46,6 +49,10 @@ export interface ExplorerServicesOptions {
 	};
 	/** Whether local observability is enabled — gates the collector binding. */
 	observabilityEnabled: boolean;
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>;
 }
 
 /**
@@ -63,11 +70,19 @@ export function getExplorerServices(
 		explorerWorkerOpts,
 		telemetry,
 		observabilityEnabled,
+		sharedOptions,
 	} = options;
+	const explorerProxyBindings = proxyBindings.filter(
+		(binding) =>
+			!binding.name?.startsWith(
+				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:r2:`
+			)
+	);
 
 	const explorerBindings: Worker_Binding[] = [
-		// Gives explorer access to all user resource bindings
-		...proxyBindings,
+		// R2 operations use a dedicated internal storage service binding.
+		// Other resources still access their configured user bindings here.
+		...explorerProxyBindings,
 		{
 			name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
 			json: JSON.stringify(bindingIdMap),
@@ -84,6 +99,14 @@ export function getExplorerServices(
 		{
 			name: CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES,
 			json: JSON.stringify(workerNames),
+		},
+		{
+			name: CoreBindings.SERVICE_R2,
+			service: getStorageService(
+				R2_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
 		},
 		// Per-worker resource bindings for the /local/workers endpoint
 		{

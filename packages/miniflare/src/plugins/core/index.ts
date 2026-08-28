@@ -1000,6 +1000,7 @@ export function getGlobalServices({
 				explorerWorkerOpts,
 				telemetry: sharedOptions.telemetry,
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
+				sharedOptions,
 			})
 		);
 	}
