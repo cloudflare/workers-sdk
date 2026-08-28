@@ -10,6 +10,7 @@ import type { PackageManager } from "@cloudflare/workers-utils";
 export abstract class Framework {
 	readonly id: FrameworkInfo["id"];
 	readonly name: FrameworkInfo["name"];
+	declare readonly env?: Readonly<Record<string, string>>;
 
 	#frameworkVersion: string | undefined;
 	get frameworkVersion(): string {
