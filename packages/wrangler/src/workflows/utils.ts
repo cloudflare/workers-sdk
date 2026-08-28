@@ -146,7 +146,7 @@ export function validateInstanceDate(
 	const [, year, month, day] = dateParts;
 	if (!isRealCalendarDate(Number(year), Number(month), Number(day))) {
 		throw new UserError(
-			`The date "${value}" provided for ${flag} is not a real calendar date, so it would filter on a different date than intended. Check the month and day.`,
+			`The date "${value}" provided for ${flag} is not a real calendar date. Check the month and day.`,
 			{ telemetryMessage: "workflows instances list invalid date" }
 		);
 	}
