@@ -12,9 +12,12 @@ import {
 	dispatchFetchWithRetry,
 	disposeWithRetry,
 	singleModuleManifest,
-	useTmp,
 } from "../../test-shared";
-import { expectValidResponse } from "./helpers";
+import {
+	createSharedStorageExplorerPair,
+	createUnboundStorageExplorer,
+	expectValidResponse,
+} from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
@@ -416,22 +419,7 @@ describe("R2 API", () => {
 test("addresses arbitrary bucket IDs without an R2 binding", async ({
 	expect,
 }) => {
-	const mf = new Miniflare({
-		inspectorPort: 0,
-		unsafeLocalExplorer: true,
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "worker",
-					compatibilityDate: "2025-01-01",
-					manifest: singleModuleManifest(
-						`export default { fetch() { return new Response("worker"); } }`
-					),
-				},
-			},
-		],
-	});
+	const mf = createUnboundStorageExplorer();
 
 	try {
 		await mf.ready;
@@ -454,49 +442,7 @@ test("addresses arbitrary bucket IDs without an R2 binding", async ({
 test("routes arbitrary bucket IDs through the shared-storage owner", async ({
 	expect,
 }) => {
-	const persistencePath = await useTmp();
-	const registryPath = await useTmp();
-	const owner = new Miniflare({
-		inspectorPort: 0,
-		unsafeLocalExplorer: true,
-		unsafeEnableSharedStorage: true,
-		resourcePersistencePath: persistencePath,
-		isolatedResourcePersistencePath: await useTmp(),
-		unsafeDevRegistryPath: registryPath,
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "owner",
-					compatibilityDate: "2025-01-01",
-					manifest: singleModuleManifest(
-						`export default { fetch() { return new Response("owner"); } }`
-					),
-				},
-			},
-		],
-	});
-	await owner.ready;
-	const client = new Miniflare({
-		inspectorPort: 0,
-		unsafeLocalExplorer: true,
-		unsafeEnableSharedStorage: true,
-		resourcePersistencePath: persistencePath,
-		isolatedResourcePersistencePath: await useTmp(),
-		unsafeDevRegistryPath: registryPath,
-		workers: [
-			{
-				config: {
-					type: "worker",
-					name: "client",
-					compatibilityDate: "2025-01-01",
-					manifest: singleModuleManifest(
-						`export default { fetch() { return new Response("client"); } }`
-					),
-				},
-			},
-		],
-	});
+	const { owner, client } = await createSharedStorageExplorerPair();
 
 	try {
 		await client.ready;

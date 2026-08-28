@@ -4,9 +4,14 @@ import { SharedHeaders } from "../../shared/constants";
 import { aggregateListResults } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import type {
+	R2DeleteRequestSchema,
 	R2ErrorResponse,
+	R2GetRequestSchema,
 	R2HeadResponse,
+	R2HeadRequestSchema,
+	R2ListRequestSchema,
 	R2ListResponse,
+	R2PutRequestSchema,
 } from "../../r2/schemas.worker";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
@@ -22,26 +27,14 @@ import type z from "zod";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-type R2GetRequest =
-	| { method: "head"; object: string }
-	| { method: "get"; object: string }
-	| {
-			method: "list";
-			limit?: number;
-			prefix?: string;
-			cursor?: string;
-			delimiter?: string;
-			include: [];
-	  };
-
 type R2PutRequest =
-	| {
-			method: "put";
-			object: string;
-			httpFields?: { contentType: string };
-			customFields?: { k: string; v: string }[];
-	  }
-	| { method: "delete"; objects: string[] };
+	| z.input<typeof R2PutRequestSchema>
+	| z.input<typeof R2DeleteRequestSchema>;
+
+type R2GetRequest =
+	| z.input<typeof R2HeadRequestSchema>
+	| z.input<typeof R2GetRequestSchema>
+	| z.input<typeof R2ListRequestSchema>;
 
 interface DecodedR2Response<T> {
 	metadata: T;
@@ -172,18 +165,13 @@ function getLocalR2Buckets(env: Env): Required<Pick<R2BucketType, "name">>[] {
  */
 export async function listR2Buckets(c: AppContext) {
 	const localBuckets = getLocalR2Buckets(c.env);
-	const aggregatedBuckets = await aggregateListResults<{
+	const allBuckets = await aggregateListResults<{
 		name: string;
 	}>(c, localBuckets, "/r2/buckets", {
+		getKey: (bucket) => bucket.name,
 		resultKey: "buckets",
 		sharedStorageOnly: true,
 	});
-
-	// Deduplicate by name
-	const localNames = new Set(localBuckets.map((b) => b.name));
-	const allBuckets = aggregatedBuckets.filter(
-		(b, index) => index < localBuckets.length || !localNames.has(b.name)
-	);
 
 	// Sort by name
 	allBuckets.sort((a, b) => a.name.localeCompare(b.name));

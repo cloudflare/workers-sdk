@@ -396,6 +396,7 @@ describe("Multi-worker peer deduplication", () => {
 	let instanceA: Miniflare;
 	let instanceB: Miniflare;
 	let instanceC: Miniflare;
+	let instanceD: Miniflare;
 
 	beforeAll(async () => {
 		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-multiworker-"));
@@ -469,6 +470,34 @@ describe("Multi-worker peer deduplication", () => {
 		});
 		await instanceB.ready;
 
+		// A separate peer advertises the same namespace as worker-b1. Since both
+		// peers share storage, the namespace should only appear once.
+		instanceD = new Miniflare({
+			inspectorPort: 0,
+			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistencePath,
+			isolatedResourcePersistencePath: await useTmp(),
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-d",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker D"); } }`
+						),
+						env: {
+							KV_B1: { type: "kv", id: "kv-b1" },
+						},
+					},
+				},
+			],
+		});
+		await instanceD.ready;
+
 		instanceC = new Miniflare({
 			inspectorPort: 0,
 			unsafeLocalExplorer: true,
@@ -501,6 +530,7 @@ describe("Multi-worker peer deduplication", () => {
 			"worker-b1",
 			"worker-b2",
 			"worker-c",
+			"worker-d",
 		]);
 	});
 
@@ -509,6 +539,7 @@ describe("Multi-worker peer deduplication", () => {
 			disposeWithRetry(instanceA),
 			disposeWithRetry(instanceB),
 			disposeWithRetry(instanceC),
+			disposeWithRetry(instanceD),
 		]);
 		removeDirSync(registryPath);
 	});
@@ -521,8 +552,8 @@ describe("Multi-worker peer deduplication", () => {
 		);
 		const data = (await response.json()) as ListResponse;
 
-		// Should have exactly 3 namespaces (kv-a, kv-b1, kv-b2)
-		// NOT 5 which would happen without URL deduplication
+		// The multi-worker process is fetched once, the duplicate kv-b1 advertised
+		// by worker-d is collapsed, and kv-c's different storage scope is excluded.
 		expect(normalizeListResponse(data)).toMatchInlineSnapshot(`
 			{
 			  "result": [

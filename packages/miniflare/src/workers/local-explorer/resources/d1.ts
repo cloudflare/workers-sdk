@@ -50,18 +50,11 @@ export async function listD1Databases(
 	const { name } = query;
 
 	const localDatabases = getLocalD1Databases(c.env);
-	const aggregatedDatabases = await aggregateListResults(
+	let allDatabases = await aggregateListResults(
 		c,
 		localDatabases,
 		"/d1/database",
-		{ sharedStorageOnly: true }
-	);
-
-	// Deduplicate by id. This isn't completely correct because local development
-	// can use binding names as ids, but preserves the existing discovery behaviour.
-	const localIds = new Set(localDatabases.map((db) => db.uuid));
-	let allDatabases = aggregatedDatabases.filter(
-		(db, index) => index < localDatabases.length || !localIds.has(db.uuid)
+		{ getKey: (database) => database.uuid, sharedStorageOnly: true }
 	);
 
 	if (name) {

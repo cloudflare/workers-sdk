@@ -127,7 +127,8 @@ export async function fetchFromPeer(
 	}
 }
 
-interface AggregateListResultsOptions {
+interface AggregateListResultsOptions<T> {
+	getKey?: (result: T) => string | undefined;
 	resultKey?: string;
 	sharedStorageOnly?: boolean;
 }
@@ -144,13 +145,9 @@ export async function aggregateListResults<T>(
 	c: AppContext,
 	localResults: T[],
 	apiPath: string,
-	options: AggregateListResultsOptions = {}
+	options: AggregateListResultsOptions<T> = {}
 ): Promise<T[]> {
 	const peerUrls = await getPeerUrlsIfAggregating(c, options);
-	if (peerUrls.length === 0) {
-		return localResults;
-	}
-
 	const peerResults = await Promise.all(
 		peerUrls.map(async (url) => {
 			const response = await fetchFromPeer(url, apiPath);
@@ -172,5 +169,22 @@ export async function aggregateListResults<T>(
 		})
 	);
 
-	return [...localResults, ...peerResults.flat()];
+	const results = [...localResults, ...peerResults.flat()];
+	const getKey = options.getKey;
+	if (getKey === undefined) {
+		return results;
+	}
+
+	const seen = new Set<string>();
+	return results.filter((result) => {
+		const key = getKey(result);
+		if (key === undefined) {
+			return true;
+		}
+		if (seen.has(key)) {
+			return false;
+		}
+		seen.add(key);
+		return true;
+	});
 }

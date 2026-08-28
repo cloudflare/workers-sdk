@@ -103,18 +103,11 @@ export async function listKVNamespaces(
 	const order = query.order ?? "id";
 
 	const localNamespaces = getLocalKVNamespaces(c.env);
-	const aggregatedNamespaces = await aggregateListResults(
+	const allNamespaces = await aggregateListResults(
 		c,
 		localNamespaces,
 		"/storage/kv/namespaces",
-		{ sharedStorageOnly: true }
-	);
-
-	// deduplicate by id - not totally correct, since local dev can use binding names as an 'id' :/
-	// TODO: check persistence path to properly verify local uniqueness
-	const localIds = new Set(localNamespaces.map((ns) => ns.id));
-	const allNamespaces = aggregatedNamespaces.filter(
-		(ns, index) => index < localNamespaces.length || !localIds.has(ns.id)
+		{ getKey: (namespace) => namespace.id, sharedStorageOnly: true }
 	);
 
 	// Sort results
@@ -140,7 +133,6 @@ type ListKeysQuery = NonNullable<
  * List a Namespace's Keys
  *
  * This endpoint keeps pagination as-is since it operates on a single namespace.
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/keys/methods/list/
  */
@@ -182,8 +174,6 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 /**
  * Read key-value pair
  *
- * If the namespace is not found locally, it proxies to peer instances.
- *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/get/
  */
 export async function getKVValue(
@@ -204,8 +194,6 @@ export async function getKVValue(
 
 /**
  * Write key-value pair with optional metadata
- *
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/update/
  */
@@ -272,8 +260,6 @@ export async function putKVValue(
 /**
  * Delete key-value pair
  *
- * If the namespace is not found locally, it proxies to peer instances.
- *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/delete/
  */
 export async function deleteKVValue(
@@ -294,8 +280,6 @@ type BulkGetBody = NonNullable<
 >;
 /**
  * Get multiple key-value pairs
- *
- * If the namespace is not found locally, it proxies to peer instances.
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_get/
  */
