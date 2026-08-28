@@ -2286,6 +2286,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@hey-api/openapi-ts':
         specifier: catalog:default
         version: 0.94.0(typescript@5.8.3)
