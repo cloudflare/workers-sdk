@@ -50,7 +50,9 @@ function getDOBinding(
 	useSQLite: boolean;
 } | null {
 	const info = env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
-	if (!info) return null;
+	if (!info) {
+		return null;
+	}
 	return {
 		binding: env[
 			info.binding
@@ -78,7 +80,9 @@ async function findDONamespaceOwner(
 	namespaceId: string
 ): Promise<string | null> {
 	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) return null;
+	if (peerUrls.length === 0) {
+		return null;
+	}
 
 	const responses = await Promise.all(
 		peerUrls.map(async (url) => {
@@ -86,7 +90,9 @@ async function findDONamespaceOwner(
 				url,
 				"/workers/durable_objects/namespaces"
 			);
-			if (!response?.ok) return null;
+			if (!response?.ok) {
+				return null;
+			}
 			const data = (await response.json()) as {
 				result?: Array<{ id: string }>;
 			};
@@ -158,15 +164,21 @@ export async function listDOObjects(
 	const ownerMiniflare = await findDONamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const params = new URLSearchParams();
-		if (cursor) params.set("cursor", cursor);
-		if (limit !== undefined) params.set("limit", String(limit));
+		if (cursor) {
+			params.set("cursor", cursor);
+		}
+		if (limit !== undefined) {
+			params.set("limit", String(limit));
+		}
 		const queryString = params.toString();
 		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(
 			namespaceId
 		)}/objects${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -327,7 +339,9 @@ export async function queryDOSqlite(
 				body: JSON.stringify(body),
 			}
 		);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(

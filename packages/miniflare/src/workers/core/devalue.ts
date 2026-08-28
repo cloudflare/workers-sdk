@@ -115,7 +115,9 @@ export const structuredSerializableRevivers: ReducersRevivers = {
 		] as (typeof ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS)[number];
 		assert(ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS.includes(ctor));
 		let length = byteLength;
-		if ("BYTES_PER_ELEMENT" in ctor) length /= ctor.BYTES_PER_ELEMENT;
+		if ("BYTES_PER_ELEMENT" in ctor) {
+			length /= ctor.BYTES_PER_ELEMENT;
+		}
 		return new ctor(buffer as ArrayBuffer, byteOffset, length);
 	},
 	RegExp(value) {
@@ -163,7 +165,9 @@ export function createHTTPReducers(
 ): ReducersRevivers {
 	return {
 		Headers(val) {
-			if (val instanceof impl.Headers) return [...val.entries()];
+			if (val instanceof impl.Headers) {
+				return [...val.entries()];
+			}
 		},
 		Request(val) {
 			if (val instanceof impl.Request) {
@@ -316,7 +320,9 @@ export class __MiniflareFunctionWrapper {
 	) {
 		return new Proxy(this, {
 			get: (_, key) => {
-				if (key === "__miniflareWrappedFunction") return fnWithProps;
+				if (key === "__miniflareWrappedFunction") {
+					return fnWithProps;
+				}
 				return fnWithProps[key];
 			},
 		});
@@ -345,7 +351,9 @@ export function parseWithReadableStreams<RS>(
 				assert(buffer instanceof ArrayBuffer);
 				assert(typeof type === "string");
 				const opts: WorkerBlobOptions = {};
-				if (type !== "") opts.type = type;
+				if (type !== "") {
+					opts.type = type;
+				}
 				return new impl.Blob([buffer], opts);
 			} else {
 				// File
@@ -356,7 +364,9 @@ export function parseWithReadableStreams<RS>(
 				assert(typeof name === "string");
 				assert(typeof lastModified === "number");
 				const opts: WorkerFileOptions = { lastModified };
-				if (type !== "") opts.type = type;
+				if (type !== "") {
+					opts.type = type;
+				}
 				return new impl.File([buffer], name, opts);
 			}
 		},

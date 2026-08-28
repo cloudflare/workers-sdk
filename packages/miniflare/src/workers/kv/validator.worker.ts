@@ -3,7 +3,9 @@ import { HttpError } from "miniflare:shared";
 import { KVLimits, KVParams } from "./constants";
 
 export function decodeKey({ key }: { key: string }, query: URLSearchParams) {
-	if (query.get(KVParams.URL_ENCODED)?.toLowerCase() !== "true") return key;
+	if (query.get(KVParams.URL_ENCODED)?.toLowerCase() !== "true") {
+		return key;
+	}
 	try {
 		return decodeURIComponent(key);
 	} catch (e: any) {
@@ -148,5 +150,7 @@ export function validateListOptions(options: KVNamespaceListOptions): void {
 
 	// Validate key prefix
 	const prefix = options.prefix;
-	if (prefix != null) validateKeyLength(prefix);
+	if (prefix != null) {
+		validateKeyLength(prefix);
+	}
 }

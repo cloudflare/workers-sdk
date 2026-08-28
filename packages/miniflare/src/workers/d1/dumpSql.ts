@@ -56,14 +56,20 @@ export function* dumpSql(
 	}
 
 	for (const { name: table, sql } of tables) {
-		if (filterTables.size > 0 && !filterTables.has(table)) continue;
+		if (filterTables.size > 0 && !filterTables.has(table)) {
+			continue;
+		}
 
 		if (table === "sqlite_sequence") {
-			if (!noSchema) yield `DELETE FROM sqlite_sequence;`;
+			if (!noSchema) {
+				yield `DELETE FROM sqlite_sequence;`;
+			}
 		} else if (table.match(/^sqlite_stat./)) {
 			// This feels like it should really appear _after_ the contents of sqlite_stat[1,4] but I'm choosing
 			// to match SQLite's dump output exactly so writing it immediately like they do.
-			if (!noSchema) yield `ANALYZE sqlite_schema;`;
+			if (!noSchema) {
+				yield `ANALYZE sqlite_schema;`;
+			}
 		} else if (sql.startsWith(`CREATE VIRTUAL TABLE`)) {
 			throw new Error(
 				`D1 Export error: cannot export databases with Virtual Tables (fts5)`
@@ -75,13 +81,19 @@ export function* dumpSql(
 			// quoted i.e. "Table", then in the dump it has `IF NOT EXISTS` injected. I don't understand
 			// why, but on the off chance there's a good reason to I am following suit.
 			if (sql.match(/CREATE TABLE ['"].*/)) {
-				if (!noSchema) yield `CREATE TABLE IF NOT EXISTS ${sql.substring(13)};`;
+				if (!noSchema) {
+					yield `CREATE TABLE IF NOT EXISTS ${sql.substring(13)};`;
+				}
 			} else {
-				if (!noSchema) yield `${sql};`;
+				if (!noSchema) {
+					yield `${sql};`;
+				}
 			}
 		}
 
-		if (noData) continue;
+		if (noData) {
+			continue;
+		}
 		// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- input is escaped via escapeId() so this PRAGMA call is safe
 		const columns_cursor = db.exec(`PRAGMA table_info=${escapeId(table)}`);
 
@@ -174,7 +186,9 @@ export function* dumpSql(
 			].join(" ")
 		);
 		for (const { name, sql } of rest_of_schema) {
-			if (filterTables.size > 0 && !filterTables.has(name as string)) continue;
+			if (filterTables.size > 0 && !filterTables.has(name as string)) {
+				continue;
+			}
 			yield `${sql};`;
 		}
 		if (stats) {
@@ -209,8 +223,12 @@ function outputQuotedEscapedString(cell: unknown) {
 		escapeQuotesDetectingNewlines
 	);
 	let output_string = `'${escaped_string}'`;
-	if (crs) output_string = `replace(${output_string},'\\r',char(13))`;
-	if (lfs) output_string = `replace(${output_string},'\\n',char(10))`;
+	if (crs) {
+		output_string = `replace(${output_string},'\\r',char(13))`;
+	}
+	if (lfs) {
+		output_string = `replace(${output_string},'\\n',char(10))`;
+	}
 	return output_string;
 }
 
