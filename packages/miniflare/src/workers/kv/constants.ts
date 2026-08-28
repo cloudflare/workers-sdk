@@ -27,6 +27,8 @@ export const KVHeaders = {
 	METADATA: "CF-KV-Metadata",
 } as const;
 
+export const KV_LOCAL_ENTRY_SERVICE_NAME = "kv:ns:entry";
+
 export const SiteBindings = {
 	KV_NAMESPACE_SITE: "__STATIC_CONTENT",
 	JSON_SITE_MANIFEST: "__STATIC_CONTENT_MANIFEST",
