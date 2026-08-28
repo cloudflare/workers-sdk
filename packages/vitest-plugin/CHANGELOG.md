@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.1.2
+
+### Patch Changes
+
+- [#15106](https://github.com/cloudflare/workers-sdk/pull/15106) [`d5f3e56`](https://github.com/cloudflare/workers-sdk/commit/d5f3e56bce1622754388ad5d7543a71e5e028850) Thanks [@thinkter](https://github.com/thinkter)! - Fix slowdowns and crashes in tests that repeatedly recreate Durable Objects
+
+  Tests that construct the same Durable Object many times could get progressively slower and eventually fail with a stack overflow. Repeated constructions now behave the same as the first one.
+
+- Updated dependencies [[`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753), [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368)]:
+  - miniflare@5.20260828.0-alpha
+  - wrangler@4.127.1
+
 ## 1.1.1
 
 ### Patch Changes

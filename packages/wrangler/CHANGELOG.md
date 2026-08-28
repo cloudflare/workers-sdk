@@ -1,5 +1,30 @@
 # wrangler
 
+## 4.127.1
+
+### Patch Changes
+
+- [#15383](https://github.com/cloudflare/workers-sdk/pull/15383) [`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260826.1 | ^5.20260827.1 |
+  | workerd                   | 1.20260826.1  | 1.20260827.1  |
+
+- [#15393](https://github.com/cloudflare/workers-sdk/pull/15393) [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260827.1 | ^5.20260828.1 |
+  | workerd                   | 1.20260827.1  | 1.20260828.1  |
+
+- Updated dependencies [[`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753), [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368)]:
+  - miniflare@5.20260828.0-alpha
+
 ## 4.127.0
 
 ### Minor Changes

@@ -1,5 +1,13 @@
 # @cloudflare/config
 
+## 0.9.0
+
+### Minor Changes
+
+- [#15373](https://github.com/cloudflare/workers-sdk/pull/15373) [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename Worker target fields from `workerName` to `worker`
+
+  The experimental `@cloudflare/config` and Miniflare configuration APIs now use `worker` consistently for Worker, Durable Object, Workflow, dispatch namespace, and tail consumer targets.
+
 ## 0.8.0
 
 ### Minor Changes
