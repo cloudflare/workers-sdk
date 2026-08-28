@@ -590,6 +590,16 @@ export interface WebSearchBinding extends WebSearchBindingOptions {
 	type: "web-search";
 }
 
+interface AnalyticsSQLBindingOptions {
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
+}
+
+/** Account-scoped Analytics SQL binding. */
+export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
+	type: "analytics-sql";
+}
+
 interface WorkerBindingOptions {
 	/** The name of the bound Worker. */
 	worker: string;
@@ -845,6 +855,8 @@ export interface Bindings {
 	 * the binding is zero-config — only the variable name is required.
 	 */
 	webSearch(options?: WebSearchBindingOptions): WebSearchBinding;
+	/** Account-scoped Analytics SQL binding. */
+	analyticsSQL(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
 	/**
 	 * Service binding (Worker-to-Worker). `worker` is the name of the bound
 	 * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
@@ -910,6 +922,7 @@ export const bindings = {
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 	webSearch: (options) => ({ type: "web-search", ...options }),
+	analyticsSQL: (options) => ({ type: "analytics-sql", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),
 	workerLoader: () => ({ type: "worker-loader" }),
 	// TODO: re-enable when workflow bindings return.

@@ -56,6 +56,7 @@ const reorderableBindings = {
 	stream: false,
 	media: false,
 	websearch: false,
+	analytics: false,
 	version_metadata: false,
 	unsafe: false,
 	assets: false,
@@ -258,6 +259,7 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		"stream",
 		"media",
 		"websearch",
+		"analytics",
 	] as const;
 	for (const singleBindingField of singleBindingFields) {
 		if (

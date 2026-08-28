@@ -40,6 +40,9 @@ import type {
 	RawEnvironment,
 } from "@cloudflare/workers-utils";
 
+const ANALYTICS_SQL_BINDING_TYPE =
+	"{ query<T extends Record<string, unknown> = Record<string, unknown>>(request: { query: string; params?: readonly (string | number | boolean | null)[] | Readonly<Record<string, string | number | boolean | null>> }): Promise<{ data: T[]; rows: number }> }";
+
 export interface GenerateTypesOptions {
 	/**
 	 * Path to the Wrangler config file to use. Can be an array for multi-config type resolution.
@@ -2448,6 +2451,25 @@ function collectCoreBindings(
 			}
 		}
 
+		if (env.analytics) {
+			if (!env.analytics.binding) {
+				throwMissingBindingError({
+					binding: env.analytics,
+					bindingType: "analytics",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(
+					env.analytics.binding,
+					ANALYTICS_SQL_BINDING_TYPE,
+					"analytics",
+					envName
+				);
+			}
+		}
+
 		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
 			if (!agentMemory.binding) {
 				throwMissingBindingError({
@@ -3628,6 +3650,24 @@ function collectCoreBindingsPerEnvironment(
 					bindingCategory: "websearch",
 					name: env.websearch.binding,
 					type: "WebSearch",
+				});
+			}
+		}
+
+		if (env.analytics) {
+			if (!env.analytics.binding) {
+				throwMissingBindingError({
+					binding: env.analytics,
+					bindingType: "analytics",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "analytics",
+					name: env.analytics.binding,
+					type: ANALYTICS_SQL_BINDING_TYPE,
 				});
 			}
 		}

@@ -305,6 +305,13 @@ export function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "analytics":
+						{
+							configObj.analytics = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "agent_memory": {
 						configObj.agent_memory = [
 							...(configObj.agent_memory ?? []),

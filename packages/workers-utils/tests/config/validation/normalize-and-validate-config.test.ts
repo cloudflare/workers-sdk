@@ -141,6 +141,7 @@ describe("normalizeAndValidateConfig()", () => {
 			images: undefined,
 			media: undefined,
 			stream: undefined,
+			analytics: undefined,
 			previews: undefined,
 			access: undefined,
 		} satisfies Config);
@@ -3581,6 +3582,33 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - binding should have a string "binding" field."
 				`);
+			});
+		});
+
+		describe("[analytics]", () => {
+			it("should accept a valid Analytics SQL binding", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics: { binding: "ANALYTICS" } } as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if Analytics SQL has no binding name", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'binding should have a string "binding" field'
+				);
 			});
 		});
 

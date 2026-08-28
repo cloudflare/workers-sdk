@@ -255,6 +255,11 @@ export function convertConfigToBindings(
 				output[binding] = { type: "websearch", ...x };
 				break;
 			}
+			case "analytics": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "analytics", ...x };
+				break;
+			}
 			case "agent_memory": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "agent_memory", ...x };
