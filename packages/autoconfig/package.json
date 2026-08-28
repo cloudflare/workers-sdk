@@ -36,7 +36,7 @@
 	"devDependencies": {
 		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@netlify/build-info": "catalog:old-node",
+		"@netlify/build-info": "10.5.1",
 		"@types/esprima": "^4.0.3",
 		"@types/node": "catalog:default",
 		"chalk": "catalog:default",

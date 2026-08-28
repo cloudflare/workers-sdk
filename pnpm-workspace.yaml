@@ -149,12 +149,3 @@ catalog:
   # dependency. They therefore depend on this older published 0.x release under the old name.
   # TODO: Repoint these to "@cloudflare/vitest-plugin" once v1.0.0 is published to npm.
   "@cloudflare/vitest-pool-workers": "0.13.3"
-
-catalogs:
-  # This old-node catalog is for packages pinned to older versions because newer releases require a Node.js version higher than the minimum we support.
-  # Ideally we should try to remove packages from this catalog whenever we bump our minimum supported version.
-  old-node:
-    # @netlify/build-info >10.5.1 (11.1.0) requires a Node.js version (>=22.12.0) newer than our
-    # supported minimum (which currently is 22.0.0). Do not bump until our minimum Node.js version is raised.
-    # See: https://npmx.dev/package-code/@netlify/build-info/v/11.1.0/package.json#L69
-    "@netlify/build-info": "10.5.1"

@@ -93,10 +93,6 @@ catalogs:
     zod:
       specifier: 4.4.3
       version: 4.4.3
-  old-node:
-    '@netlify/build-info':
-      specifier: 10.5.1
-      version: 10.5.1
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
@@ -1710,7 +1706,7 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@netlify/build-info':
-        specifier: catalog:old-node
+        specifier: 10.5.1
         version: 10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)
       '@types/esprima':
         specifier: ^4.0.3
@@ -4638,7 +4634,7 @@ importers:
         specifier: 0.8.1
         version: 0.8.1
       '@netlify/build-info':
-        specifier: catalog:old-node
+        specifier: 10.5.1
         version: 10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)
       '@sentry/node':
         specifier: ^7.86.0
