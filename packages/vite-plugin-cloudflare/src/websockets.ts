@@ -1,8 +1,9 @@
+import * as http from "node:http";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
 import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
-import type { Headers, Miniflare } from "miniflare";
+import type { Headers, Miniflare, Response } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
@@ -84,7 +85,30 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					socket.destroy();
+					// Destroy unclaimed upgrades that the Worker does not route (404 Worker miss).
+					if (response.status === 404) {
+						socket.destroy();
+						if (response.body != null) {
+							void response.body.cancel().catch(() => {});
+						}
+						return;
+					}
+
+					if (!socket.destroyed && !socket.closed) {
+						socket.resume();
+						try {
+							await writeHttpResponse(
+								socket,
+								response as unknown as Response,
+								request.method
+							);
+						} catch {
+							// Client disconnected or write failed
+							socket.destroy();
+						}
+					} else if (response.body != null) {
+						void response.body.cancel().catch(() => {});
+					}
 					return;
 				}
 
@@ -166,4 +190,181 @@ const SANDBOX_ORIGIN_REGEXP =
 
 function hasSandboxOrigin(origin: string) {
 	return SANDBOX_ORIGIN_REGEXP.test(origin);
+}
+
+/**
+ * Waits for a socket to drain when `write()` returns false.
+ * Resolves on 'drain', 'close', or 'error' to prevent hanging indefinitely
+ * if the remote peer disconnects while backpressure is being relieved.
+ */
+export function waitForSocketDrain(socket: Duplex): Promise<void> {
+	if (socket.destroyed || socket.closed) {
+		return Promise.resolve();
+	}
+	return new Promise<void>((resolve) => {
+		const cleanup = () => {
+			socket.off("drain", onDrain);
+			socket.off("close", onClose);
+			socket.off("error", onError);
+		};
+		const onDrain = () => {
+			cleanup();
+			resolve();
+		};
+		const onClose = () => {
+			cleanup();
+			resolve();
+		};
+		const onError = () => {
+			cleanup();
+			resolve();
+		};
+		socket.once("drain", onDrain);
+		socket.once("close", onClose);
+		socket.once("error", onError);
+	});
+}
+
+/**
+ * Writes an HTTP response directly to a raw socket with backpressure support and orderly EOF.
+ * Used when a Worker returns a non-101 rejection response to a WebSocket upgrade request.
+ */
+async function writeHttpResponse(
+	socket: Duplex,
+	response: Response,
+	requestMethod?: string
+) {
+	if (socket.destroyed || socket.closed) {
+		if (response.body != null) {
+			void response.body.cancel().catch(() => {});
+		}
+		return;
+	}
+
+	const status = response.status;
+	const statusText =
+		response.statusText || http.STATUS_CODES[status] || "Unknown";
+	let headerString = `HTTP/1.1 ${status} ${statusText}\r\n`;
+
+	let hasConnection = false;
+	const setCookies =
+		typeof response.headers.getSetCookie === "function"
+			? response.headers.getSetCookie()
+			: [];
+	for (const cookie of setCookies) {
+		headerString += `Set-Cookie: ${cookie}\r\n`;
+	}
+
+	for (const [name, value] of response.headers.entries()) {
+		const lower = name.toLowerCase();
+		if (lower === "set-cookie") {
+			continue;
+		}
+		if (lower === "connection") {
+			hasConnection = true;
+		}
+		headerString += `${name}: ${value}\r\n`;
+	}
+
+	if (!hasConnection) {
+		headerString += "Connection: close\r\n";
+	}
+	headerString += "\r\n";
+
+	if (socket.destroyed || socket.closed) {
+		if (response.body != null) {
+			void response.body.cancel().catch(() => {});
+		}
+		return;
+	}
+
+	if (socket.write(headerString) === false) {
+		await waitForSocketDrain(socket);
+	}
+
+	if (response.body != null) {
+		if (requestMethod === "HEAD" || socket.destroyed || socket.closed) {
+			void response.body.cancel().catch(() => {});
+		} else {
+			const reader = response.body.getReader();
+			let isSocketClosed = false;
+			let onSocketTerminal: (() => void) | undefined;
+
+			const socketClosedPromise = new Promise<{
+				done: true;
+				value: undefined;
+			}>((resolve) => {
+				onSocketTerminal = () => {
+					isSocketClosed = true;
+					void reader.cancel().catch(() => {});
+					resolve({ done: true, value: undefined });
+				};
+				if (socket.destroyed || socket.closed) {
+					onSocketTerminal();
+				}
+			});
+
+			if (onSocketTerminal && !socket.destroyed && !socket.closed) {
+				socket.once("close", onSocketTerminal);
+				socket.once("error", onSocketTerminal);
+				socket.once("end", onSocketTerminal);
+			}
+
+			try {
+				while (!isSocketClosed && !socket.destroyed && !socket.closed) {
+					const { done, value } = await Promise.race([
+						reader.read(),
+						socketClosedPromise,
+					]);
+					if (done) {
+						break;
+					}
+					if (isSocketClosed || socket.destroyed || socket.closed) {
+						break;
+					}
+					if (value && socket.write(value) === false) {
+						await waitForSocketDrain(socket);
+					}
+				}
+			} catch {
+				// Reader was cancelled or read threw on disconnect/error
+			} finally {
+				if (onSocketTerminal) {
+					socket.off("close", onSocketTerminal);
+					socket.off("error", onSocketTerminal);
+					socket.off("end", onSocketTerminal);
+				}
+				if (isSocketClosed || socket.destroyed || socket.closed) {
+					try {
+						await reader.cancel();
+					} catch {}
+				}
+				try {
+					reader.releaseLock();
+				} catch {}
+			}
+		}
+	}
+
+	if (!socket.destroyed && !socket.closed) {
+		socket.end();
+		await new Promise<void>((resolve) => {
+			let timer: NodeJS.Timeout | undefined;
+			const done = () => {
+				if (timer) clearTimeout(timer);
+				resolve();
+			};
+			socket.once("close", done);
+			socket.once("error", done);
+			// If remote peer does not drain unread bytes or close its write half,
+			// tear down the socket to avoid hanging the upgrade listener.
+			timer = setTimeout(() => {
+				if (!socket.destroyed && !socket.closed) {
+					socket.destroy();
+				}
+				done();
+			}, 100);
+			timer.unref?.();
+		});
+	}
 }
