@@ -24,6 +24,7 @@ import {
 	unstable_pages,
 	unstable_readConfig,
 } from "./api";
+import { handleBrokenPipe } from "./utils/handle-broken-pipe";
 import { main } from "./index";
 import type {
 	Binding,
@@ -52,6 +53,11 @@ import type { Request, Response } from "miniflare";
  * main only gets called when the script is run directly, not when it's imported as a module.
  */
 if (typeof vitest === "undefined" && require.main === module) {
+	// Exit quietly if whoever is reading our output goes away, rather than
+	// looping on EPIPE while trying to report the EPIPE. Must be installed
+	// before anything is written.
+	handleBrokenPipe();
+
 	main(hideBin(process.argv)).catch((e) => {
 		// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.
 		// Here we just want to ensure that the process exits with a non-zero code.
