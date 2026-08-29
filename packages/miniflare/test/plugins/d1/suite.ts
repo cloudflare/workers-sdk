@@ -654,10 +654,9 @@ test("dumpSql exports Infinity and -Infinity as valid, re-importable SQL literal
 	await originalDb.exec(
 		`CREATE TABLE inf_test (id INTEGER PRIMARY KEY, r REAL)`
 	);
-	await originalDb
-		.prepare(`INSERT INTO inf_test (id, r) VALUES (?, ?), (?, ?)`)
-		.bind(1, Infinity, 2, -Infinity)
-		.run();
+	await originalDb.exec(
+		`INSERT INTO inf_test (id, r) VALUES (1, 9e999), (2, -9e999)`
+	);
 
 	const result = await originalDb
 		.prepare("PRAGMA miniflare_d1_export(?,?,?);")
@@ -686,8 +685,13 @@ test("dumpSql exports Infinity and -Infinity as valid, re-importable SQL literal
 	// would reject them at parse time and exec would throw.)
 	await mirrorDb.exec(dump);
 
-	// D1's JS binding layer normalises SQLite's internal Infinity representation
-	// to null, so we assert both rows were inserted (not lost/skipped).
+	// Assert the exported SQL actually contains the correctly-signed literal
+	// for each row — this is the real guarantee of the fix, checked before
+	// the D1 JS binding's Infinity->null normalisation can hide it.
+	expect(dump).toMatch(/INSERT INTO "inf_test" \("id","r"\) VALUES\(1,9e999\);/);
+	expect(dump).toMatch(/INSERT INTO "inf_test" \("id","r"\) VALUES\(2,-9e999\);/);
+
+	// And confirm the import actually succeeded (rows exist post-import)
 	const rows = await mirrorDb
 		.prepare(`SELECT id FROM inf_test ORDER BY id`)
 		.raw();
