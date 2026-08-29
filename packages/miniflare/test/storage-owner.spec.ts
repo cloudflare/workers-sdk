@@ -267,7 +267,7 @@ describe.sequential("owner presence integration", () => {
 		}
 	});
 
-	it.todo("routes a client's Stream through the owner over RPC so storage is shared", async ({
+	it("routes a client's Stream through the owner over RPC so storage is shared", async ({
 		expect,
 	}) => {
 		const persistRoot = await useTmp();
@@ -277,15 +277,38 @@ describe.sequential("owner presence integration", () => {
 		const WORKER = `export default {
 			async fetch(request, env) {
 				try {
+					const url = new URL(request.url);
+					if (url.pathname === "/video") {
+						const video = env.STREAM.video(url.searchParams.get("id"));
+						return Response.json({
+							details: await video.details(),
+							captions: await video.captions.list(),
+							downloads: await video.downloads.get(),
+						});
+					}
+					if (url.pathname === "/watermark") {
+						const id = url.searchParams.get("id");
+						if (request.method === "POST") {
+							const body = new Response(new Uint8Array([0, 1, 2, 3])).body;
+							return Response.json(await env.STREAM.watermarks.generate(body, { name: "shared" }));
+						}
+						if (request.method === "DELETE" && id !== null) {
+							await env.STREAM.watermarks.delete(id);
+							return Response.json({ count: (await env.STREAM.watermarks.list()).length });
+						}
+						return Response.json(id === null
+							? { count: (await env.STREAM.watermarks.list()).length }
+							: await env.STREAM.watermarks.get(id));
+					}
 					if (request.method === "PUT") {
 						const body = new Response(
 							new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
 						).body;
 						const video = await env.STREAM.upload(body, {});
-						return Response.json({ id: video.id });
+						return Response.json(video);
 					}
 					const videos = await env.STREAM.videos.list();
-					return Response.json({ count: videos.length });
+					return Response.json({ count: videos.length, preview: videos[0]?.preview });
 				} catch (e) {
 					return Response.json({ error: String(e && e.stack || e) }, { status: 500 });
 				}
@@ -309,30 +332,92 @@ describe.sequential("owner presence integration", () => {
 			],
 		};
 		const owner = new Miniflare(await withIsolatedStorage(common));
-		await owner.ready;
+		const ownerUrl = await owner.ready;
 		const client = new Miniflare(await withIsolatedStorage(common));
 
 		try {
-			await client.ready;
+			const clientUrl = await client.ready;
 
 			// Client uploads a video (RPC through the owner)...
 			const put = (await (
 				await client.dispatchFetch("http://x/", { method: "PUT" })
-			).json()) as { id: string };
+			).json()) as { id: string; preview: string };
 			expect(put.id).toBeTruthy();
+			expect(new URL(put.preview).origin).toBe(ownerUrl.origin);
 
-			// ...and the owner sees it (shared store), proving the RPC round-trip
-			// and the shared backing storage.
+			// Resolve the nested `videos` RPC target through the client too.
+			const listed = (await (
+				await client.dispatchFetch("http://x/")
+			).json()) as { count?: number; preview?: string; error?: string };
+			expect(listed).toEqual({ count: 1, preview: put.preview });
+
+			const targets = (await (
+				await client.dispatchFetch(`http://x/video?id=${put.id}`)
+			).json()) as {
+				details: typeof put;
+				captions: unknown[];
+				downloads: Record<string, unknown>;
+			};
+			expect(targets).toEqual({
+				details: put,
+				captions: [],
+				downloads: {},
+			});
+
+			const watermark = (await (
+				await client.dispatchFetch("http://x/watermark", { method: "POST" })
+			).json()) as { id: string; name: string };
+			expect(watermark.name).toBe("shared");
 			expect(
-				(
-					(await (await owner.dispatchFetch("http://x/")).json()) as {
-						count: number;
-					}
-				).count
-			).toBe(1);
-		} finally {
-			await client.dispose();
+				await (
+					await client.dispatchFetch(`http://x/watermark?id=${watermark.id}`)
+				).json()
+			).toMatchObject(watermark);
+			expect(
+				await (await client.dispatchFetch("http://x/watermark")).json()
+			).toEqual({ count: 1 });
+			expect(
+				await (
+					await client.dispatchFetch(`http://x/watermark?id=${watermark.id}`, {
+						method: "DELETE",
+					})
+				).json()
+			).toEqual({ count: 0 });
+
+			const videoResponse = await fetch(put.preview);
+			expect(videoResponse.status).toBe(200);
+			expect(new Uint8Array(await videoResponse.arrayBuffer())).toEqual(
+				new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7])
+			);
+
 			await owner.dispose();
+			let failedOverPreview = "";
+			await vi.waitFor(
+				async () => {
+					const response = await client.dispatchFetch("http://x/");
+					const result = (await response.json()) as {
+						count?: number;
+						preview?: string;
+						error?: string;
+					};
+					expect(result.count).toBe(1);
+					expect(result.preview).toBeTruthy();
+					if (result.preview !== undefined) {
+						failedOverPreview = result.preview;
+						expect(new URL(result.preview).origin).toBe(clientUrl.origin);
+					}
+				},
+				{ timeout: 10_000, interval: 100 }
+			);
+
+			const failedOverVideoResponse = await fetch(failedOverPreview);
+			expect(failedOverVideoResponse.status).toBe(200);
+			expect(
+				new Uint8Array(await failedOverVideoResponse.arrayBuffer())
+			).toEqual(new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]));
+		} finally {
+			await client.dispose().catch(() => {});
+			await owner.dispose().catch(() => {});
 		}
 	});
 
@@ -395,7 +480,7 @@ describe.sequential("owner presence integration", () => {
 		}
 	});
 
-	it.todo("routes a client's Images store to the owner without dangling services", async ({
+	it("routes a client's Images store to the owner without dangling services", async ({
 		expect,
 	}) => {
 		const persistRoot = await useTmp();
@@ -411,9 +496,18 @@ describe.sequential("owner presence integration", () => {
 						name: "worker",
 						compatibilityDate: "2025-01-01",
 						compatibilityFlags: ["experimental"],
-						manifest: singleModuleManifest(
-							"export default { async fetch(_request, env) { return new Response(typeof env.IMAGES.info); } }"
-						),
+						manifest: singleModuleManifest(`export default {
+			async fetch(request, env) {
+				if (request.method === "PUT") {
+					return Response.json(await env.IMAGES.hosted.upload(
+						await request.arrayBuffer(),
+						{ id: "shared-image" }
+					));
+				}
+				const stream = await env.IMAGES.hosted.image("shared-image").bytes();
+				return new Response(stream, { status: stream === null ? 404 : 200 });
+			}
+		}`),
 						env: { IMAGES: { type: "images" } },
 					},
 				},
@@ -422,14 +516,26 @@ describe.sequential("owner presence integration", () => {
 		const owner = new Miniflare(await withIsolatedStorage(common));
 		const client = new Miniflare(await withIsolatedStorage(common));
 		try {
-			// Both reaching `ready` proves the routed client doesn't reference a
-			// local images storage service it no longer stands up (the owner does),
-			// and the transform worker + its routed `IMAGES_STORE` binding resolve.
 			await owner.ready;
 			await client.ready;
-			expect(await (await client.dispatchFetch("http://x/")).text()).toBe(
-				"function"
+			const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+			const upload = await client.dispatchFetch("http://x/", {
+				method: "PUT",
+				body: bytes,
+			});
+			await upload.json();
+			expect(upload.status).toBe(200);
+
+			expect(
+				new Uint8Array(
+					await (await owner.dispatchFetch("http://x/")).arrayBuffer()
+				)
+			).toEqual(bytes);
+			const delivery = await client.dispatchFetch(
+				"http://x/__cf_local/imagedelivery/shared-image/public"
 			);
+			expect(delivery.status).toBe(200);
+			expect(new Uint8Array(await delivery.arrayBuffer())).toEqual(bytes);
 		} finally {
 			await client.dispose();
 			await owner.dispose();

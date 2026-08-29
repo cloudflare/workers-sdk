@@ -18,6 +18,8 @@ export const CorePaths = {
 	STREAM_VIDEO: "/__cf_local/stream",
 	/** Local image delivery endpoint (outside /cdn-cgi/ for tunnel access) */
 	IMAGE_DELIVERY: "/__cf_local/imagedelivery",
+	/** Local Direct Creator Upload completion endpoint (outside /cdn-cgi/ for tunnel access) */
+	IMAGE_UPLOAD: "/__cf_local/imageupload",
 	/** Public R2 bucket object serving endpoint */
 	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 	/** S3-compatible API endpoint for local R2 buckets */
@@ -99,6 +101,10 @@ export const CoreBindings = {
 	SERVICE_OBSERVABILITY_COLLECTOR: "MINIFLARE_OBSERVABILITY_COLLECTOR",
 	JSON_ACCESS_BLOB_PREFIX: "MINIFLARE_ACCESS_BLOB_",
 	TEXT_FALLBACK_WORKER_NAME: "MINIFLARE_FALLBACK_WORKER_NAME",
+	SERVICE_EMAIL_STORE: "MINIFLARE_EMAIL_STORE",
+	// Prefix for the local explorer's direct service bindings to each user
+	// worker in this instance to invoke handlers (e.g email()).
+	SERVICE_EXPLORER_USER_WORKER_PREFIX: "MINIFLARE_EXPLORER_USER_WORKER_",
 } as const;
 
 export const ProxyOps = {

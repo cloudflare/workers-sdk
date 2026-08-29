@@ -31,7 +31,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin = {
 			name,
 			durableObjectNamespace: {
 				className: binding.exportName,
-				serviceName: getUserServiceName(binding.workerName),
+				serviceName: getUserServiceName(binding.worker),
 			},
 		}));
 	},

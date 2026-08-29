@@ -179,16 +179,16 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
-const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.omit({
-	localConnectionString: true,
-}).extend({ localConnectionString: z.string() });
+const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
+	dev: z.strictObject({ connectionString: z.string() }),
+});
 
 /**
- * Extended worker (service) binding. `workerName` may be `kCurrentWorker`
+ * Extended worker (service) binding. `worker` may be `kCurrentWorker`
  * (the SELF marker) in addition to a plain worker name.
  */
 const MiniflareWorkerBindingSchema = WorkerBindingSchema.extend({
-	workerName: z.union([
+	worker: z.union([
 		z.string(),
 		z.custom<typeof kCurrentWorker>((v) => v === kCurrentWorker),
 	]),
@@ -206,10 +206,9 @@ const HelloWorldBindingSchema = z.strictObject({
 const MiniflareWorkflowBindingSchema = z.strictObject({
 	type: z.literal("workflow"),
 	name: z.string(),
-	workerName: z.string(),
+	worker: z.string(),
 	exportName: z.string(),
 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	remote: z.boolean().optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`
@@ -438,6 +437,13 @@ const MiniflareTailConsumerSchema = TailConsumerSchema.extend({
 export type MiniflareBinding =
 	| z.output<typeof ParsedMiniflareKnownBindingSchema>
 	| z.output<typeof UnsafeBindingSchema>;
+
+/** Returns whether a parsed Miniflare binding is an unsafe plugin binding. */
+export function isMiniflareUnsafeBinding(
+	binding: MiniflareBinding
+): binding is z.output<typeof UnsafeBindingSchema> {
+	return binding.type.startsWith("unsafe:");
+}
 
 export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	manifest: true,
@@ -874,14 +880,14 @@ export function getTriggersOfType<T extends string>(
 
 /**
  * Resolves the remote proxy connection string for a binding. A binding is
- * proxied remotely iff `binding.remote === true` _and_
+ * proxied remotely iff `binding.dev.remote === true` _and_
  * `dev.remoteProxyConnectionString` is set (mirroring wrangler's model).
  */
 export function getRemoteProxyConnectionString(
-	binding: { remote?: boolean },
+	binding: { dev?: { remote?: boolean } },
 	dev: ParsedDevConfig | undefined
 ): RemoteProxyConnectionString | undefined {
-	return binding.remote && dev?.remoteProxyConnectionString
+	return binding.dev?.remote && dev?.remoteProxyConnectionString
 		? dev.remoteProxyConnectionString
 		: undefined;
 }

@@ -7,11 +7,17 @@ import type { PipelineRecord } from "cloudflare:pipelines";
 // BINDING TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Options that control a binding during local development. */
+export interface BindingDevOptions {
+	/** Whether the binding should connect to the remote resource. */
+	remote?: boolean;
+}
+
 interface AgentMemoryBindingOptions {
 	/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
 	namespace: string;
-	/** Whether the Agent Memory binding should be remote in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -23,8 +29,8 @@ export interface AgentMemoryBinding extends AgentMemoryBindingOptions {
 }
 
 interface AiBindingOptions {
-	/** Whether the AI binding should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -51,8 +57,8 @@ export interface TypedAiBinding<
 interface AiSearchBindingOptions {
 	/** The user-chosen instance name. Must exist in Cloudflare at deploy time. */
 	name: string;
-	/** Whether the AI Search instance binding should be remote in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -66,8 +72,8 @@ export interface AiSearchBinding extends AiSearchBindingOptions {
 interface AiSearchNamespaceBindingOptions {
 	/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
 	namespace: string;
-	/** Whether the AI Search namespace binding should be remote in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -95,8 +101,8 @@ export interface AnalyticsEngineDatasetBinding extends AnalyticsEngineDatasetBin
 interface ArtifactsBindingOptions {
 	/** The namespace to use. */
 	namespace: string;
-	/** Whether to use the remote Artifacts service in local dev. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -117,8 +123,8 @@ export interface AssetsBinding {
 }
 
 interface BrowserBindingOptions {
-	/** Whether the Browser binding should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -135,8 +141,8 @@ interface D1BindingOptions {
 	id?: string;
 	/** The name of this D1 database. */
 	name?: string;
-	/** Whether the D1 database should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -154,12 +160,12 @@ interface DispatchNamespaceBindingOptions {
 	/** Details about the outbound Worker which will handle outbound requests from your namespace. */
 	outbound?: {
 		/** Name of the Worker handling the outbound requests. */
-		workerName: string;
+		worker: string;
 		/** (Optional) List of parameter names, for sending context from your dispatch Worker to the outbound handler. */
 		parameters?: string[];
 	};
-	/** Whether the Dispatch Namespace should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -173,13 +179,13 @@ export interface DispatchNamespaceBinding extends DispatchNamespaceBindingOption
 
 interface DurableObjectBindingOptions {
 	/** The name of the Worker that defines the Durable Object class. */
-	workerName: string;
+	worker: string;
 	/** The exported class name of the Durable Object. */
 	exportName: string;
 }
 
 /**
- * Binding to a Durable Object class. `workerName` is the name of the Worker
+ * Binding to a Durable Object class. `worker` is the name of the Worker
  * that defines the class; `exportName` is the exported class name.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
@@ -189,7 +195,7 @@ export interface DurableObjectBinding extends DurableObjectBindingOptions {
 }
 
 /**
- * Binding to a Durable Object class. `workerName` is the name of the Worker
+ * Binding to a Durable Object class. `worker` is the name of the Worker
  * that defines the class; `exportName` is the exported class name.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
@@ -198,7 +204,7 @@ export interface TypedDurableObjectBinding<
 	TConfig,
 	TExportName extends string,
 > extends DurableObjectBinding {
-	workerName: string;
+	worker: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -207,8 +213,8 @@ export interface TypedDurableObjectBinding<
 interface FlagshipBindingOptions {
 	/** The Flagship app ID to bind to. */
 	id?: string;
-	/** Set to `true` to suppress the remote binding warning in local dev. Flagship bindings are always remote. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /** Binding to a Flagship feature-flag service. */
@@ -219,8 +225,11 @@ export interface FlagshipBinding extends FlagshipBindingOptions {
 interface HyperdriveBindingOptions {
 	/** The ID of the Hyperdrive configuration. */
 	id: string;
-	/** The local database connection string used during local development. */
-	localConnectionString?: string;
+	/** Options that only apply during local development. */
+	dev?: {
+		/** The database connection string used during local development. */
+		connectionString?: string;
+	};
 }
 
 /**
@@ -233,8 +242,8 @@ export interface HyperdriveBinding extends HyperdriveBindingOptions {
 }
 
 interface ImagesBindingOptions {
-	/** Whether the Images binding should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -261,8 +270,8 @@ interface KvBindingOptions {
 	id?: string;
 	// TODO: name support not yet implemented
 	// name?: string;
-	/** Whether the KV namespace should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -297,8 +306,8 @@ export interface LogfwdrBinding extends LogfwdrBindingOptions {
 }
 
 interface MediaBindingOptions {
-	/** Whether the Media binding should be remote or not. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /** Binding to Cloudflare Media Transformations. */
@@ -309,8 +318,8 @@ export interface MediaBinding extends MediaBindingOptions {
 interface MtlsCertificateBindingOptions {
 	/** The UUID of the uploaded mTLS certificate. */
 	id: string;
-	/** Whether the mTLS fetcher should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -325,8 +334,8 @@ export interface MtlsCertificateBinding extends MtlsCertificateBindingOptions {
 interface PipelineBindingOptions {
 	/** Name of the Pipeline to bind. */
 	name: string;
-	/** Whether the pipeline should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /** Binding to a Cloudflare Pipeline. */
@@ -347,8 +356,8 @@ interface QueueBindingOptions {
 	name?: string;
 	/** The number of seconds to wait before delivering a message. */
 	deliveryDelay?: number;
-	/** Whether the Queue producer should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -375,10 +384,8 @@ interface R2BindingOptions {
 	name?: string;
 	/** The jurisdiction that the bucket exists in. Default if not present. */
 	jurisdiction?: string;
-	/** Whether the R2 bucket should be remote or not in local development. */
-	remote?: boolean;
 	/** Settings that only apply to local development. */
-	localDev?: {
+	dev?: BindingDevOptions & {
 		/** EXPERIMENTAL: credentials for the local S3-compatible endpoint. */
 		experimentalS3Credentials?: {
 			accessKeyId: string;
@@ -439,29 +446,41 @@ export interface SecretsStoreSecretBinding extends SecretsStoreSecretBindingOpti
 	type: "secrets-store-secret";
 }
 
-interface SendEmailBindingOptions {
-	/** If this binding should be restricted to a specific verified address. */
-	destinationAddress?: string;
-	/** If this binding should be restricted to a set of verified addresses. */
-	allowedDestinationAddresses?: string[];
+type SendEmailDestinationOptions =
+	| {
+			/** If this binding should be restricted to a specific verified address. */
+			destinationAddress: string;
+			allowedDestinationAddresses?: never;
+	  }
+	| {
+			destinationAddress?: never;
+			/** If this binding should be restricted to a set of verified addresses. */
+			allowedDestinationAddresses: string[];
+	  }
+	| {
+			destinationAddress?: never;
+			allowedDestinationAddresses?: never;
+	  };
+
+type SendEmailBindingOptions = SendEmailDestinationOptions & {
 	/** If this binding should be restricted to a set of sender addresses. */
 	allowedSenderAddresses?: string[];
-	/** Whether the binding should be remote or not in local development. */
-	remote?: boolean;
-}
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
+};
 
 /**
  * Binding for sending email from inside the Worker.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#email-bindings
  */
-export interface SendEmailBinding extends SendEmailBindingOptions {
+export type SendEmailBinding = SendEmailBindingOptions & {
 	type: "send-email";
-}
+};
 
 interface StreamBindingOptions {
-	/** Whether the Stream binding should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /** Binding to Cloudflare Stream. */
@@ -507,8 +526,8 @@ export interface UnsafeBinding extends UnsafeBindingOptions {
 interface VectorizeBindingOptions {
 	/** The name of the Vectorize index. */
 	name: string;
-	/** Whether the Vectorize index should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -529,14 +548,16 @@ type VpcNetworkBindingOptions =
 	| {
 			/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with `networkId`. */
 			tunnelId: string;
-			/** Whether the VPC network is remote or not. */
-			remote?: boolean;
+			networkId?: never;
+			/** Options that only apply during local development. */
+			dev?: BindingDevOptions;
 	  }
 	| {
+			tunnelId?: never;
 			/** The network ID to route traffic through. Mutually exclusive with `tunnelId`. */
 			networkId: string;
-			/** Whether the VPC network is remote or not. */
-			remote?: boolean;
+			/** Options that only apply during local development. */
+			dev?: BindingDevOptions;
 	  };
 
 /** Binding to a VPC network. */
@@ -547,8 +568,8 @@ export type VpcNetworkBinding = VpcNetworkBindingOptions & {
 interface VpcServiceBindingOptions {
 	/** The service ID of the VPC connectivity service. */
 	id: string;
-	/** Whether the VPC service is remote or not. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /** Binding to a VPC service. */
@@ -557,8 +578,8 @@ export interface VpcServiceBinding extends VpcServiceBindingOptions {
 }
 
 interface WebSearchBindingOptions {
-	/** Whether the Web Search binding should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -571,17 +592,17 @@ export interface WebSearchBinding extends WebSearchBindingOptions {
 
 interface WorkerBindingOptions {
 	/** The name of the bound Worker. */
-	workerName: string;
+	worker: string;
 	/** The named export to bind to (defaults to the default export). */
 	exportName?: string;
 	/** Optional properties that will be made available to the service via `ctx.props`. */
 	props?: Record<string, unknown>;
-	/** Whether the service binding should be remote or not in local development. */
-	remote?: boolean;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
- * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+ * Service binding (Worker-to-Worker). `worker` is the name of the bound
  * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
  * the default export).
  *
@@ -592,7 +613,7 @@ export interface WorkerBinding extends WorkerBindingOptions {
 }
 
 /**
- * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+ * Service binding (Worker-to-Worker). `worker` is the name of the bound
  * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
  * the default export).
  *
@@ -602,7 +623,7 @@ export interface TypedWorkerBinding<
 	TConfig,
 	TExportName extends string,
 > extends WorkerBinding {
-	workerName: string;
+	worker: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -615,13 +636,13 @@ export interface WorkerLoaderBinding {
 
 interface WorkflowBindingOptions {
 	/** The name of the Worker that defines the Workflow. */
-	workerName: string;
+	worker: string;
 	/** The exported class name of the Workflow. */
 	exportName: string;
 }
 
 /**
- * Binding to a Workflow. `workerName` is the name of the Worker that defines
+ * Binding to a Workflow. `worker` is the name of the Worker that defines
  * the Workflow; `exportName` is the exported `WorkflowEntrypoint` class name.
  */
 export interface WorkflowBinding extends WorkflowBindingOptions {
@@ -629,14 +650,14 @@ export interface WorkflowBinding extends WorkflowBindingOptions {
 }
 
 /**
- * Binding to a Workflow. `workerName` is the name of the Worker that defines
+ * Binding to a Workflow. `worker` is the name of the Worker that defines
  * the Workflow; `exportName` is the exported `WorkflowEntrypoint` class name.
  */
 export interface TypedWorkflowBinding<
 	TConfig,
 	TExportName extends string,
 > extends WorkflowBinding {
-	workerName: string;
+	worker: string;
 	exportName: TExportName;
 	/** @internal Carries the config type for inference */
 	__config: TConfig;
@@ -712,7 +733,7 @@ export interface Bindings {
 		options?: DispatchNamespaceBindingOptions
 	): DispatchNamespaceBinding;
 	/**
-	 * Binding to a Durable Object class. `workerName` is the name of the Worker
+	 * Binding to a Durable Object class. `worker` is the name of the Worker
 	 * that defines the class; `exportName` is the exported class name.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
@@ -825,7 +846,7 @@ export interface Bindings {
 	 */
 	webSearch(options?: WebSearchBindingOptions): WebSearchBinding;
 	/**
-	 * Service binding (Worker-to-Worker). `workerName` is the name of the bound
+	 * Service binding (Worker-to-Worker). `worker` is the name of the bound
 	 * Worker; `exportName` selects a named `WorkerEntrypoint` export (defaults to
 	 * the default export).
 	 *
@@ -837,7 +858,7 @@ export interface Bindings {
 	// TODO: re-enable when workflow bindings return.
 	// /**
 	//  * Create a Workflow binding.
-	//  * `workerName` must match a known config's name (or any `string` for untyped bindings).
+	//  * `worker` must match a known config's name (or any `string` for untyped bindings).
 	//  * `exportName` must be a valid `WorkflowEntrypoint` export for the given Worker.
 	//  */
 	// workflow(options: WorkflowBindingOptions): WorkflowBinding;

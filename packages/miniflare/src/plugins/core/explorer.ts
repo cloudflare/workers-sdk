@@ -15,6 +15,7 @@ import {
 	SERVICE_DEV_REGISTRY_PROXY,
 } from "../shared";
 import {
+	EMAIL_STORE_SERVICE_NAME,
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
@@ -98,6 +99,18 @@ export function getExplorerServices(
 			// workerdDebugPort bindings don't have any additional configuration
 			workerdDebugPort: kVoid,
 		},
+		// The email store service is registered alongside the explorer (see the
+		// core plugin's getServices), so it's always available to read from here.
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
+		// Direct service bindings to each user worker in this instance. These let
+		// the explorer invoke a worker's handlers (e.g. `email()`.
+		...workerNames.map((name) => ({
+			name: `${CoreBindings.SERVICE_EXPLORER_USER_WORKER_PREFIX}${name}`,
+			service: { name: getUserServiceName(name) },
+		})),
 	];
 
 	// Only bind the observability collector when observability is enabled —
@@ -347,6 +360,7 @@ export function constructExplorerWorkerOpts(
 			r2: [],
 			do: [],
 			workflows: [],
+			sendEmail: [],
 		};
 
 		for (const [bindingName, binding] of getEnvBindingsOfType(
@@ -375,7 +389,7 @@ export function constructExplorerWorkerOpts(
 			"durable-object"
 		)) {
 			const className = binding.exportName;
-			const scriptName = binding.workerName;
+			const scriptName = binding.worker;
 			const serviceName = getUserServiceName(scriptName);
 			const uniqueKey = `${scriptName}-${className}`;
 
@@ -400,8 +414,15 @@ export function constructExplorerWorkerOpts(
 				id: workflow.name,
 				bindingName,
 				className: workflow.exportName,
-				scriptName: workflow.workerName ?? workerName,
+				scriptName: workflow.worker ?? workerName,
 			});
+		}
+
+		for (const [bindingName] of getEnvBindingsOfType(
+			workerOpts.config,
+			"send-email"
+		) ?? {}) {
+			bindings.sendEmail.push({ bindingName });
 		}
 
 		result[workerName] = bindings;

@@ -8146,6 +8146,163 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should accept valid default_retention values", ({ expect }) => {
+				const validRetentions = [
+					{ success_retention: "3 days" },
+					{ error_retention: "1 hour" },
+					{ success_retention: 86400000 },
+					{ success_retention: "7 days", error_retention: 3600000 },
+				];
+
+				for (const default_retention of validRetentions) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							workflows: [
+								{
+									binding: "MY_WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									default_retention,
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(
+						diagnostics.hasErrors(),
+						`expected ${JSON.stringify(default_retention)} to be valid, got: ${diagnostics.renderErrors()}`
+					).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+				}
+			});
+
+			it("should error if default_retention is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: "3 days",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have an object "default_retention" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","default_retention":"3 days"}."
+				`);
+			});
+
+			// The duration grammar belongs to the Workflows API, which rejects unknown units at deploy
+			// time. Validating it here too would reject values that a newer API version accepts.
+			it("should not police the duration grammar", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "3 bananas" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if a default_retention value is an empty string", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.success_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ""."
+				`);
+			});
+
+			it("should error if a default_retention value is negative", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { error_retention: -1 },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("should warn on unexpected default_retention fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { retention: "3 days" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in workflows[0].default_retention field: "retention""
+				`);
+			});
+
 			it("should warn on unexpected fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

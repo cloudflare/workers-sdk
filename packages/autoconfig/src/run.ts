@@ -155,15 +155,16 @@ export async function runAutoConfig(
 	}
 
 	const { npx } = packageManager;
+	const buildCommand =
+		dryRunConfigurationResults.buildCommandOverride ??
+		autoConfigDetails.buildCommand;
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		dryRunWorkerConfig,
 		dryRunConfigurationResults,
 		{
-			build:
-				dryRunConfigurationResults.buildCommandOverride ??
-				autoConfigDetails.buildCommand,
+			build: buildCommand,
 			deploy:
 				dryRunConfigurationResults.deployCommandOverride ??
 				`${npx} ${target} deploy`,
@@ -203,10 +204,15 @@ export async function runAutoConfig(
 
 	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
 		if (target === "cf") {
-			await installPackages(packageManager.type, ["cf@latest"], {
-				dev: true,
-				isWorkspaceRoot,
-			});
+			const hasCfDependency =
+				autoConfigDetails.packageJson.dependencies?.cf !== undefined ||
+				autoConfigDetails.packageJson.devDependencies?.cf !== undefined;
+			if (!hasCfDependency) {
+				await installPackages(packageManager.type, ["cf@latest"], {
+					dev: true,
+					isWorkspaceRoot,
+				});
+			}
 		} else {
 			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
@@ -295,9 +301,6 @@ export async function runAutoConfig(
 			`${autoConfigDetails.projectPath}/.assetsignore`
 		);
 	}
-
-	const buildCommand =
-		configurationResults.buildCommandOverride ?? autoConfigDetails.buildCommand;
 
 	if (buildCommand && runBuild) {
 		await context.runCommand(
@@ -570,18 +573,14 @@ export async function buildOperationsSummary(
 	if (autoConfigDetails.packageJson) {
 		const scriptOverrides =
 			target === "wrangler" ? packageJsonScriptsOverrides : undefined;
-		const buildCommandPrefix = autoConfigDetails.buildCommand
-			? `${autoConfigDetails.buildCommand} && `
-			: "";
+		const buildCommandPrefix =
+			target === "wrangler" && autoConfigDetails.buildCommand
+				? `${autoConfigDetails.buildCommand} && `
+				: "";
 		summary.scripts = {
 			deploy:
-				scriptOverrides?.deploy ??
-				`${buildCommandPrefix}${target} deploy${
-					target === "cf" && autoConfigDetails.buildCommand ? " --no-build" : ""
-				}`,
-			preview:
-				scriptOverrides?.preview ??
-				`${target === "wrangler" ? buildCommandPrefix : ""}${target} dev`,
+				scriptOverrides?.deploy ?? `${buildCommandPrefix}${target} deploy`,
+			preview: scriptOverrides?.preview ?? `${buildCommandPrefix}${target} dev`,
 		};
 
 		const containsServerSideCode =

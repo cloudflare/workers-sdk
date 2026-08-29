@@ -290,6 +290,20 @@ export const remoteProxySessionsDataMap = new Map<
 >();
 
 /**
+ * Disposes every remote proxy session and clears the map.
+ *
+ * Sessions are shared across pool workers by Wrangler config path and
+ * consecutive workers overlap, so this is only safe to call once the last
+ * pool worker has stopped — calling it earlier would dispose sessions that
+ * later workers still depend on.
+ */
+export async function disposeAllRemoteProxySessions(): Promise<void> {
+	const sessions = [...remoteProxySessionsDataMap.values()];
+	remoteProxySessionsDataMap.clear();
+	await Promise.all(sessions.map((data) => data?.session.dispose()));
+}
+
+/**
  * Normalise the `experimental.newConfig` option into its resolved form.
  *
  * @param option The user-provided option value.

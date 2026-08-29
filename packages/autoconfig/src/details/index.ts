@@ -101,17 +101,8 @@ export async function getDetailsForAutoConfig({
 
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
-	if (
-		target === "cf" &&
-		existsSync(resolve(projectPath, CLOUDFLARE_CONFIG_FILE))
-	) {
-		return {
-			configured: true,
-			projectPath,
-			workerName: getWorkerName(undefined, projectPath),
-			packageManager: NpmPackageManager,
-		};
-	}
+	const hasCloudflareConfig =
+		target === "cf" && existsSync(resolve(projectPath, CLOUDFLARE_CONFIG_FILE));
 
 	if (
 		target === "wrangler" &&
@@ -130,7 +121,7 @@ export async function getDetailsForAutoConfig({
 	}
 
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
-		await detectFramework(projectPath, context, wranglerConfig);
+		await detectFramework(projectPath, context, { wranglerConfig, target });
 
 	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -146,7 +137,8 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const configured = framework.isConfigured(projectPath, { target });
+	const configured =
+		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
 
 	const outputDir =
 		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
@@ -161,6 +153,7 @@ export async function getDetailsForAutoConfig({
 			detectedFramework.buildCommand,
 			packageManager
 		),
+		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
 

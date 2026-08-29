@@ -17,7 +17,8 @@ export function poolWorkerStarted(): void {
 	activeWorkers++;
 }
 
-export function poolWorkerStopped(): void {
+// Returns whether the stopped worker was the last active one.
+export function poolWorkerStopped(): boolean {
 	activeWorkers--;
 	if (activeWorkers <= 0) {
 		activeWorkers = 0;
@@ -25,7 +26,9 @@ export function poolWorkerStopped(): void {
 			ac.abort();
 		}
 		registeredControllers.clear();
+		return true;
 	}
+	return false;
 }
 
 export async function buildPagesASSETSBinding(

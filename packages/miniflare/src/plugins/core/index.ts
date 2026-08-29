@@ -31,7 +31,8 @@ import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import { getDurableObjectNamespaces } from "../do/namespaces";
-import { IMAGES_PLUGIN_NAME } from "../images";
+import { getEmailStoreServices } from "../email/store";
+import { getImagesBindingServiceName } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
@@ -40,7 +41,6 @@ import {
 } from "../r2";
 import {
 	buildRemoteProxyProps,
-	getUserBindingServiceName,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -52,10 +52,11 @@ import {
 	getExportsOfType,
 	getRemoteProxyConnectionString,
 } from "../shared";
-import { STREAM_PLUGIN_NAME } from "../stream";
+import { getStreamService } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	EMAIL_STORE_SERVICE_NAME,
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
@@ -185,14 +186,14 @@ function getCustomServiceDesignator(
 			serviceName = `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`;
 			// Remote config travels via props to a generic proxy worker.
 			props = buildRemoteProxyProps(remoteProxyConnectionString, name);
-		} else if (service.workerName === kCurrentWorker) {
+		} else if (service.worker === kCurrentWorker) {
 			serviceName = getUserServiceName(refererName);
 			entrypoint = service.exportName;
 			if (service.props) {
 				props = { json: JSON.stringify(service.props) };
 			}
 		} else {
-			serviceName = getUserServiceName(service.workerName);
+			serviceName = getUserServiceName(service.worker);
 			entrypoint = service.exportName;
 			if (service.props) {
 				props = { json: JSON.stringify(service.props) };
@@ -332,12 +333,12 @@ function getGlobalOutbound(
 }
 
 function getTailServiceDesignator(consumer: {
-	workerName: string;
+	worker: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
 }): ServiceDesignator {
 	return {
-		name: getUserServiceName(consumer.workerName),
+		name: getUserServiceName(consumer.worker),
 		entrypoint: consumer.entrypoint,
 		props:
 			consumer.props !== undefined
@@ -572,7 +573,7 @@ export const CORE_PLUGIN: Plugin = {
 					// how the collector attributes each captured invocation to its worker
 					// (each worker streams to the collector with its own props).
 					{
-						workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 						streaming: true,
 						props: { worker: config.name },
 					},
@@ -796,6 +797,10 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_DEV_CONTROL,
 			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
 		},
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -814,10 +819,7 @@ export function getGlobalServices({
 	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
-			service: {
-				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
-				entrypoint: "StreamBinding",
-			},
+			service: getStreamService(sharedOptions),
 		});
 	}
 	const r2PublicService = getR2PublicService(
@@ -844,7 +846,7 @@ export function getGlobalServices({
 			"images"
 		)) {
 			if (getRemoteProxyConnectionString(binding, worker.dev) === undefined) {
-				imagesServiceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
+				imagesServiceName = getImagesBindingServiceName(name);
 				break;
 			}
 		}
@@ -960,6 +962,8 @@ export function getGlobalServices({
 		services.push(r2S3Service);
 	}
 
+	services.push(...getEmailStoreServices(tmpPath));
+
 	if (sharedOptions.unsafeLocalExplorer) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);
 		const workflowOptions = new Map<string, WorkflowOption>();
@@ -971,7 +975,7 @@ export function getGlobalServices({
 				workflowOptions.set(binding.name, {
 					name: binding.name,
 					className: binding.exportName,
-					scriptName: binding.workerName,
+					scriptName: binding.worker,
 				});
 			}
 		}

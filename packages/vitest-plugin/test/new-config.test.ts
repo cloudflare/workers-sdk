@@ -88,7 +88,7 @@ test("resolves a custom configPath and its entrypoint", async ({
 	await expect(result.exitCode).resolves.toBe(0);
 });
 
-test("evaluates config functions with the Vite mode", async ({
+test("defaults config functions to test mode", async ({
 	expect,
 	seed,
 	vitestRun,
@@ -122,9 +122,29 @@ test("evaluates config functions with the Vite mode", async ({
 	const result = await vitestRun();
 
 	await expect(result.exitCode).resolves.toBe(0);
+});
 
-	// ...and `--mode` overrides it, as it would in any other Vite project
+test("overrides config function mode with --mode", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
 	await seed({
+		"vitest.config.mts": vitestConfig({
+			experimental: { newConfig: true },
+		}),
+		"cloudflare.config.ts": dedent`
+			export default (ctx) => ({
+				type: "worker",
+				name: "test-worker",
+				compatibilityDate: "2025-12-02",
+				entrypoint: "./index.ts",
+				env: {
+					MY_TEXT: { type: "text", value: ctx.mode },
+				},
+			});
+		`,
+		"index.ts": worker,
 		"index.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it } from "vitest";
@@ -135,9 +155,9 @@ test("evaluates config functions with the Vite mode", async ({
 		`,
 	});
 
-	const overridden = await vitestRun({ flags: ["--mode=staging"] });
+	const result = await vitestRun({ flags: ["--mode=staging"] });
 
-	await expect(overridden.exitCode).resolves.toBe(0);
+	await expect(result.exitCode).resolves.toBe(0);
 });
 
 describe("validation", () => {

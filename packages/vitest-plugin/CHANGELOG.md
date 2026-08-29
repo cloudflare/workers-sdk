@@ -1,5 +1,60 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.1.2
+
+### Patch Changes
+
+- [#15106](https://github.com/cloudflare/workers-sdk/pull/15106) [`d5f3e56`](https://github.com/cloudflare/workers-sdk/commit/d5f3e56bce1622754388ad5d7543a71e5e028850) Thanks [@thinkter](https://github.com/thinkter)! - Fix slowdowns and crashes in tests that repeatedly recreate Durable Objects
+
+  Tests that construct the same Durable Object many times could get progressively slower and eventually fail with a stack overflow. Repeated constructions now behave the same as the first one.
+
+- Updated dependencies [[`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753), [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368)]:
+  - miniflare@5.20260828.0-alpha
+  - wrangler@4.127.1
+
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`412c79e`](https://github.com/cloudflare/workers-sdk/commit/412c79e2735176727bdb2ab108fe581d4c7961d0), [`92874f6`](https://github.com/cloudflare/workers-sdk/commit/92874f639a197ee62ee6cd2fc508a87acb3ceb00), [`fe265f8`](https://github.com/cloudflare/workers-sdk/commit/fe265f87347ce253ed9ef00302f4cd2cdcb2bb19)]:
+  - miniflare@5.20260826.0-alpha
+  - wrangler@4.127.0
+
+## 1.1.0
+
+### Minor Changes
+
+- [#15117](https://github.com/cloudflare/workers-sdk/pull/15117) [`f0c9c66`](https://github.com/cloudflare/workers-sdk/commit/f0c9c668701c8da8525c335cd99fbf51ff97dbeb) Thanks [@edmundhung](https://github.com/edmundhung)! - Support Workerd's new module registry in Workers Vitest tests
+
+  The pool now follows Workerd's V2 module fallback protocol when `new_module_registry` is selected while retaining the V1 path for `legacy_module_registry`. Tests using the new registry preserve URL-based `import.meta` behavior and load CommonJS dependencies as native CommonJS modules with named exports.
+
+- [#15272](https://github.com/cloudflare/workers-sdk/pull/15272) [`c921b3f`](https://github.com/cloudflare/workers-sdk/commit/c921b3f3f8e0d16416a12c2be611e0ad9ab75a50) Thanks [@penalosa](https://github.com/penalosa)! - Add an experimental `newConfig` option for loading the Worker's configuration from `cloudflare.config.ts`
+
+  Projects that have migrated to the new TypeScript configuration format had no way to run their Vitest suite against their real bindings, since there was no Wrangler configuration file left to point `wrangler.configPath` at. This adds the missing option, modelled on `@cloudflare/vite-plugin`'s `experimental.newConfig`:
+
+  ```ts
+  import { cloudflareTest } from "@cloudflare/vitest-plugin";
+  import { defineProject } from "vitest/config";
+
+  export default defineProject({
+    plugins: [cloudflareTest({ experimental: { newConfig: true } })],
+  });
+  ```
+
+  `newConfig: true` loads `cloudflare.config.ts` from the project root; pass `{ configPath: "..." }` to load it from elsewhere. Config functions are called with `ctx.mode` set to Vite's mode, which defaults to `"test"` and can be overridden with `--mode`. `experimental.newConfig` cannot be combined with `wrangler`.
+
+  This is experimental and may change without a major version bump. Wrangler environments, `wrangler.config.ts` tooling configuration, and type generation are not supported yet.
+
+### Patch Changes
+
+- [#15293](https://github.com/cloudflare/workers-sdk/pull/15293) [`7a9b8a7`](https://github.com/cloudflare/workers-sdk/commit/7a9b8a72f53d3f8e414e8c05eb460e3e9b4ba249) Thanks [@thatsKevinJain](https://github.com/thatsKevinJain)! - Fix "Network connection lost" when multiple test files use remote bindings
+
+  Remote proxy sessions are shared across pool workers by Wrangler config path, but were disposed during each test file's teardown. Because Vitest starts the next file's worker before the previous one finishes stopping, later files reused an already-disposed session and failed with "Network connection lost". Sessions are now disposed only once the last pool worker stops.
+
+- Updated dependencies [[`aa54b49`](https://github.com/cloudflare/workers-sdk/commit/aa54b491a42c83d410983197b84088dc5319564c), [`4a67a28`](https://github.com/cloudflare/workers-sdk/commit/4a67a2827862a1e09ec341df1930d0a9f88b6fa1), [`2d78137`](https://github.com/cloudflare/workers-sdk/commit/2d7813781e935b171ace346ce322738f1c4048a3), [`04e8564`](https://github.com/cloudflare/workers-sdk/commit/04e856464dfaf094e9b622c9bbf92d871b98f9ff), [`d1cc3af`](https://github.com/cloudflare/workers-sdk/commit/d1cc3af5c485030387aa04a533f256924df1ac64), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`daefb3c`](https://github.com/cloudflare/workers-sdk/commit/daefb3cc0f0b884b8ce82b22ed9b67a9c43919be), [`37ed753`](https://github.com/cloudflare/workers-sdk/commit/37ed753470232676a8f8ba4a424d4f73ac58dc5b), [`f76b68e`](https://github.com/cloudflare/workers-sdk/commit/f76b68efd1f1a148b6d96340f3711d3aed52323a), [`ad89456`](https://github.com/cloudflare/workers-sdk/commit/ad894562ce2a0cb5f4a2d540210956e02810a022), [`c809851`](https://github.com/cloudflare/workers-sdk/commit/c809851f38f0fe4805e876b6c8bfcd6556f49afb), [`c66d2d5`](https://github.com/cloudflare/workers-sdk/commit/c66d2d5303393381632d1ec474b8e7622dafe30a), [`693ca29`](https://github.com/cloudflare/workers-sdk/commit/693ca294baf6419a0c42f267ad28146cd5f43646), [`74de3ab`](https://github.com/cloudflare/workers-sdk/commit/74de3ab56f0dfabfc09da368f3d19eaf82093d10), [`0cb8690`](https://github.com/cloudflare/workers-sdk/commit/0cb86908903b87a742d1786ac8aa5aa9dce6c575), [`9fcb1c9`](https://github.com/cloudflare/workers-sdk/commit/9fcb1c9c0a8a0edee04675c4446cd88b34c85b8a), [`22182da`](https://github.com/cloudflare/workers-sdk/commit/22182daf4de3f5eed77e87a92eed7cde9937e077), [`a4c3458`](https://github.com/cloudflare/workers-sdk/commit/a4c3458cec77afa31e01d671d6b22ecfcf2c0107), [`433fa98`](https://github.com/cloudflare/workers-sdk/commit/433fa9846cd0e5c8bf034453b9ec1b834ed90273), [`d589d30`](https://github.com/cloudflare/workers-sdk/commit/d589d30b567595eacfea50e8810fe67a59b56825), [`dd5148d`](https://github.com/cloudflare/workers-sdk/commit/dd5148d7da11665ad3f3338de338380ccea979cc), [`82d11fc`](https://github.com/cloudflare/workers-sdk/commit/82d11fca0c826ef54000e5fbe1dc87db73a5ef9c)]:
+  - miniflare@5.20260825.0-alpha
+  - wrangler@4.126.0
+
 ## 1.0.0
 
 ### Major Changes

@@ -1413,6 +1413,202 @@ describe("wrangler workflows", () => {
 			expect(std.warn).not.toContain("step limit");
 		});
 
+		it("should accept workflow binding with valid concurrency", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: { limit: 10 },
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should accept workflow binding with empty concurrency object", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: {},
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should accept workflow binding with concurrency.limit at boundary value 1", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: { limit: 1 },
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should reject workflow binding with concurrency.limit of 0", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: { limit: 0 },
+					},
+				],
+			} as RawConfig);
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"concurrency.limit" field must be a positive integer'
+			);
+		});
+
+		it("should reject workflow binding with non-integer concurrency.limit", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: { limit: 1.5 },
+					},
+				],
+			} as unknown as RawConfig);
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"concurrency.limit" field must be a positive integer'
+			);
+		});
+
+		it("should reject workflow binding with negative concurrency.limit", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: { limit: -1 },
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"concurrency.limit" field must be a positive integer'
+			);
+		});
+
+		it("should reject workflow binding with non-object concurrency", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: "invalid",
+					},
+				],
+			} as RawConfig);
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'should, optionally, have an object "concurrency" field'
+			);
+		});
+
+		it("should reject workflow binding with array concurrency", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						concurrency: [1, 2, 3],
+					},
+				],
+			} as RawConfig);
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'should, optionally, have an object "concurrency" field'
+			);
+		});
+
+		it("should warn on unexpected fields in workflow binding concurrency", async ({
+			expect,
+		}) => {
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+						concurrency: {
+							limit: 10,
+							// @ts-expect-error Testing unexpected fields in concurrency
+							unknownProp: "foo",
+						},
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.warn).toContain(
+				'Unexpected fields found in workflows[0].concurrency field: "unknownProp"'
+			);
+		});
+
 		it("should reject workflows binding with same name", async ({ expect }) => {
 			writeWorkerSource({ format: "ts" });
 			writeWranglerConfig({

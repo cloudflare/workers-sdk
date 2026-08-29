@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
@@ -22,7 +21,10 @@ import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
-import { MiniflareOptionsSchema } from "./config/schema";
+import {
+	isMiniflareUnsafeBinding,
+	MiniflareOptionsSchema,
+} from "./config/schema";
 import { exitHook } from "./exit-hook";
 import {
 	coupleWebSocket,
@@ -46,7 +48,6 @@ import {
 	getExportsOfType,
 	getGlobalServices,
 	getPersistPath,
-	getRemoteProxyConnectionString,
 	getStorageScope,
 	getTriggersOfType,
 	HELLO_WORLD_PLUGIN_NAME,
@@ -70,6 +71,7 @@ import {
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	STREAM_PLUGIN_NAME,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -86,6 +88,7 @@ import {
 import { ContainerPrivilegesCache } from "./plugins/core/container";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
+import { writeTempFile } from "./plugins/core/temp-file";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
 	cfImageLocalFetcher,
@@ -126,6 +129,7 @@ import {
 	decodeErrorPayload,
 	LogLevel,
 	Mutex,
+	sanitisePath,
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
@@ -403,11 +407,11 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		if (tailConsumers !== undefined) {
 			for (let i = 0; i < tailConsumers.length; i++) {
 				const consumer = tailConsumers[i];
-				const serviceName = consumer.workerName;
+				const serviceName = consumer.worker;
 				if (serviceName && !allWorkerNames.includes(serviceName)) {
 					getEntrypoints(serviceName).entrypoints.add(consumer.entrypoint);
 					tailConsumers[i] = {
-						workerName: SERVICE_DEV_REGISTRY_PROXY,
+						worker: SERVICE_DEV_REGISTRY_PROXY,
 						streaming: consumer.streaming,
 						entrypoint: "ExternalServiceProxy",
 						// User-supplied `props` are preserved in `userProps` so the proxy
@@ -446,7 +450,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 				// remote entrypoint via the debug port.
 				env[name] = {
 					type: "worker",
-					workerName: SERVICE_DEV_REGISTRY_PROXY,
+					worker: SERVICE_DEV_REGISTRY_PROXY,
 					exportName: "ExternalServiceProxy",
 					props: {
 						service: serviceName,
@@ -462,32 +466,29 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 			config,
 			"durable-object"
 		)) {
-			const { workerName, exportName } = binding;
-			if (!allWorkerNames.includes(workerName)) {
+			const { worker, exportName } = binding;
+			if (!allWorkerNames.includes(worker)) {
 				// Point it at the outbound DO proxy class on the dev-registry proxy
 				// worker. The proxy worker registers the namespace (with a matching
 				// unique key) itself, so no extra config is needed on the binding.
 				env[bindingName] = {
 					type: "durable-object",
-					workerName: SERVICE_DEV_REGISTRY_PROXY,
-					exportName: getOutboundDoProxyClassName(workerName, exportName),
+					worker: SERVICE_DEV_REGISTRY_PROXY,
+					exportName: getOutboundDoProxyClassName(worker, exportName),
 				};
-				getEntrypoints(workerName).classNames.add(exportName);
+				getEntrypoints(worker).classNames.add(exportName);
 			}
 		}
 
-		// Cross-worker workflow bindings: when `workerName` refers to a worker
+		// Cross-worker workflow bindings: when `worker` refers to a worker
 		// outside this Miniflare instance (registered in the dev registry), record
 		// its entrypoint so the dev-registry proxy exposes it. The workflows plugin
 		// reroutes the engine's USER_WORKFLOW binding through the proxy itself; here
 		// we only register the external entrypoint. Mirrors the DO block above.
 		for (const [, binding] of getEnvBindingsOfType(config, "workflow")) {
-			const { workerName, exportName } = binding;
-			if (
-				getRemoteProxyConnectionString(binding, dev) === undefined &&
-				!allWorkerNames.includes(workerName)
-			) {
-				getEntrypoints(workerName).entrypoints.add(exportName);
+			const { worker, exportName } = binding;
+			if (!allWorkerNames.includes(worker)) {
+				getEntrypoints(worker).entrypoints.add(exportName);
 			}
 		}
 	}
@@ -1149,6 +1150,78 @@ export class Miniflare {
 	}
 
 	/**
+	 * Writes a request body to a temp file and responds with its on-disk path.
+	 *
+	 * By default the file is written to a single random path under this
+	 * instance's temp directory. Callers use the reserved `email/` prefix namespace
+	 * to select email destinations, which group files by session and mirror them
+	 * into the project directory.
+	 *
+	 * @param url in format: /core/store-temp-file?prefix&extension[&id]
+	 */
+	async #handleLoopbackStoreTempFileRequest(
+		request: Request,
+		url: URL
+	): Promise<Response> {
+		const extension = url.searchParams.get("extension") ?? "txt";
+		const rawPrefix = url.searchParams.get("prefix");
+		const emailPrefix =
+			rawPrefix !== null && rawPrefix.startsWith("email/")
+				? rawPrefix.slice("email/".length)
+				: undefined;
+		const prefix =
+			emailPrefix !== undefined
+				? `email/${emailPrefix}`
+				: rawPrefix
+					? `files/${rawPrefix}`
+					: "files";
+		if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(extension)) {
+			return new Response("Invalid temporary-file extension", { status: 400 });
+		}
+		const prefixParts = prefix.split("/");
+		if (
+			prefixParts.some(
+				(part) =>
+					part.length === 0 ||
+					part === "." ||
+					part === ".." ||
+					!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(part)
+			)
+		) {
+			return new Response("Invalid temporary-file prefix", { status: 400 });
+		}
+
+		const rawId = url.searchParams.get("id");
+		const id = rawId === null ? crypto.randomUUID() : sanitisePath(rawId);
+		const fileName = `${id}.${extension}`;
+		const contents = new Uint8Array(await request.arrayBuffer());
+		const filePath = await writeTempFile({
+			tmpPath: this.#tmpPath,
+			prefix,
+			fileName,
+			contents,
+		});
+		if (emailPrefix !== undefined) {
+			const emailPaths = getEmailPathsToClean(
+				this.#sharedOpts.resourceTmpPath,
+				this.#tmpPath
+			);
+			if (emailPaths) {
+				return new Response(
+					await writeTempFile({
+						tmpPath: emailPaths.sessionDir,
+						prefix: emailPrefix,
+						fileName,
+						contents,
+					}),
+					{ status: 200 }
+				);
+			}
+		}
+		return new Response(filePath, { status: 200 });
+	}
+
+	/**
 	 * Gets DO object IDs by checking filenames in the DO persistence directory.
 	 *
 	 * @param url in format: /core/do-storage/<namespaceId>
@@ -1643,16 +1716,7 @@ export class Miniflare {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
 			} else if (url.pathname === "/core/store-temp-file") {
-				const prefix = url.searchParams.get("prefix");
-				const folder = prefix ? `files/${prefix}` : "files";
-				await mkdir(path.join(this.#tmpPath, folder), { recursive: true });
-				const filePath = path.join(
-					this.#tmpPath,
-					folder,
-					`${crypto.randomUUID()}.${url.searchParams.get("extension") ?? "txt"}`
-				);
-				await writeFile(filePath, await request.text());
-				response = new Response(filePath, { status: 200 });
+				response = await this.#handleLoopbackStoreTempFileRequest(request, url);
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
 			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
@@ -1903,7 +1967,7 @@ export class Miniflare {
 		// carry the plugin reference under `dev.plugin`.
 		for (const worker of workers) {
 			for (const binding of Object.values(worker.config.env ?? {})) {
-				if ("dev" in binding && binding.dev?.plugin) {
+				if (isMiniflareUnsafeBinding(binding) && binding.dev?.plugin) {
 					requestedExternalPlugins.set(
 						binding.dev.plugin.name,
 						binding.dev.plugin.package
@@ -2294,6 +2358,7 @@ export class Miniflare {
 							name: CoreBindings.DEV_REGISTRY_INSTANCE_ID,
 							text: this.#devRegistry.instanceId,
 						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					durableObjectStorage: { inMemory: kVoid },
 					// uniqueKey must match the target session's key for identical DO IDs.
@@ -3266,7 +3331,7 @@ export class Miniflare {
 		const binding = workerOpts.config.env?.[classNameOrBindingName];
 		if (binding?.type === "durable-object") {
 			className = binding.exportName;
-			scriptName = binding.workerName;
+			scriptName = binding.worker;
 		} else if (
 			getExportsOfType(workerOpts.config, "durable-object").some(
 				([exportName]) => exportName === classNameOrBindingName
@@ -3415,10 +3480,12 @@ export class Miniflare {
 			this.#sharedOpts.unsafeEnableSharedStorage &&
 			[
 				D1_PLUGIN_NAME,
+				IMAGES_PLUGIN_NAME,
 				KV_PLUGIN_NAME,
 				R2_PLUGIN_NAME,
 				RATELIMIT_PLUGIN_NAME,
 				SECRET_STORE_PLUGIN_NAME,
+				STREAM_PLUGIN_NAME,
 			].includes(pluginName)
 		) {
 			throw new TypeError(

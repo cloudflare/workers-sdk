@@ -457,8 +457,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 				className: z.string(),
 				scriptName: z.string().optional(),
 				external: z.boolean().optional(),
-				remoteProxyConnectionString:
-					RemoteProxyConnectionStringSchema.optional(),
 				stepLimit: z.number().int().min(1).optional(),
 			})
 		)
@@ -851,7 +849,6 @@ export type V4WorkerOptionsShape = {
 			className: string;
 			scriptName?: string;
 			external?: boolean;
-			remoteProxyConnectionString?: RemoteProxyConnectionString;
 			stepLimit?: number;
 		}
 	>;

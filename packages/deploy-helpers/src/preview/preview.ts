@@ -44,6 +44,7 @@ import type {
 	Binding,
 	CreatePreviewDeploymentRequestParams,
 	DeploymentResource,
+	PreviewDeploymentModule,
 	PreviewResource,
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
@@ -53,12 +54,6 @@ import type {
 	ContainerApp,
 	PreviewsConfig,
 } from "@cloudflare/workers-utils";
-
-type PreviewDeploymentModule = {
-	name: string;
-	content_type: string;
-	content_base64: string;
-};
 
 export type PreviewArgs = {
 	script?: string;
@@ -297,9 +292,8 @@ async function prepareContainersForPreview(
 	return { scopedContainerConfig, normalisedContainerConfig };
 }
 
-function toBase64(content: string | Uint8Array): string {
-	return Buffer.from(content).toString("base64");
-}
+export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
+	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
 
 function getPreviewMigrationsToUpload(
 	workerName: string,
@@ -357,7 +351,7 @@ function buildResultToDeploymentModules(
 		{
 			name: mainModuleName,
 			content_type: mainContentType,
-			content_base64: toBase64(buildResult.content),
+			content: buildResult.content,
 		},
 		...buildResult.modules.map((mod) => {
 			const contentType =
@@ -365,7 +359,7 @@ function buildResultToDeploymentModules(
 			return {
 				name: mod.name,
 				content_type: contentType,
-				content_base64: toBase64(mod.content),
+				content: mod.content,
 			};
 		}),
 	];
@@ -375,7 +369,7 @@ function buildResultToDeploymentModules(
 			...buildResult.sourceMaps.map((sourceMap) => ({
 				name: sourceMap.name,
 				content_type: "application/source-map",
-				content_base64: toBase64(sourceMap.content),
+				content: sourceMap.content,
 			}))
 		);
 	}
@@ -384,7 +378,7 @@ function buildResultToDeploymentModules(
 		deploymentModules.push({
 			name: "_headers",
 			content_type: "text/plain",
-			content_base64: toBase64(assetFiles._headers),
+			content: assetFiles._headers,
 		});
 	}
 
@@ -392,7 +386,7 @@ function buildResultToDeploymentModules(
 		deploymentModules.push({
 			name: "_redirects",
 			content_type: "text/plain",
-			content_base64: toBase64(assetFiles._redirects),
+			content: assetFiles._redirects,
 		});
 	}
 
@@ -462,6 +456,9 @@ async function assemblePreviewDeploymentSettings(
 			...(options.message && { "workers/message": options.message }),
 			...(pullRequest?.number && {
 				"workers/pull_request_number": pullRequest.number,
+			}),
+			...(pullRequest?.title && {
+				"workers/pull_request_title": pullRequest.title,
 			}),
 			...(pullRequest?.url && { "workers/pull_request_url": pullRequest.url }),
 			...(repositoryUrl && { "workers/repository_url": repositoryUrl }),
@@ -581,6 +578,9 @@ function formatPreviewDeploymentSummary(
 	const pullRequestNumber =
 		deployment.annotations?.["workers/pull_request_number"] ??
 		pullRequest?.number;
+	const hasActiveUrls =
+		(previewResource.urls?.length ?? 0) > 0 ||
+		(deployment.urls?.length ?? 0) > 0;
 
 	return [
 		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
@@ -595,6 +595,7 @@ function formatPreviewDeploymentSummary(
 					}`,
 				]
 			: []),
+		...(hasActiveUrls ? [] : [NO_ACTIVE_PREVIEW_URLS_MESSAGE]),
 	].join("\n");
 }
 

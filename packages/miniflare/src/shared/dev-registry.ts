@@ -245,6 +245,16 @@ export class DevRegistry {
 		this.refresh();
 	}
 
+	private writeWorkerDefinition(
+		definitionPath: string,
+		definition: WorkerDefinition
+	): void {
+		writeFileSync(
+			definitionPath,
+			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
+		);
+	}
+
 	private registerWorker(name: string, definition: WorkerDefinition): void {
 		assert(this.registryPath);
 		const definitionPath = path.join(this.registryPath, name);
@@ -293,15 +303,23 @@ export class DevRegistry {
 			clearInterval(existingHeartbeat);
 		}
 
-		writeFileSync(
-			definitionPath,
-			JSON.stringify({ ...definition, instanceId: this.instanceId }, null, 2)
-		);
+		this.writeWorkerDefinition(definitionPath, definition);
 		this.registeredWorkers.add(name);
 		this.heartbeats.set(
 			name,
 			setInterval(
 				() => {
+					if (!existsSync(definitionPath)) {
+						// Stale cleanup may remove a live Worker's entry after system sleep.
+						// Recreate it so peers can discover this Worker again.
+						try {
+							this.writeWorkerDefinition(definitionPath, definition);
+						} catch (e) {
+							this.log.debug(`Failed to re-register Worker "${name}": ${e}`);
+						}
+						return;
+					}
+
 					const currentDefinition = readDefinition(definitionPath);
 					if (currentDefinition?.instanceId === this.instanceId) {
 						utimesSync(definitionPath, new Date(), new Date());
