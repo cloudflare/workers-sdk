@@ -111,7 +111,7 @@ export function* dumpSql(
 					return "NULL";
 				} else if (cellType === "number") {
 					if (!Number.isFinite(cell)) {
-						return cell > 0 ? "9e999" : "-9e999";
+						return (cell as number) > 0 ? "9e999" : "-9e999";
 					}
 					return cell;
 				} else if (cellType === "string") {
