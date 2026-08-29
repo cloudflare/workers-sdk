@@ -116,6 +116,9 @@ export {
 	parseBuildArgs as parseCfWranglerBuildArgs,
 	parseArgs as parseCfWranglerArgs,
 } from "./cf-wrangler/args";
+// `cf-wrangler` runs in-process, so `require.main === module` is false here and
+// it does not get the guard installed below. It installs this itself instead.
+export { handleBrokenPipe } from "./utils/handle-broken-pipe";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";
