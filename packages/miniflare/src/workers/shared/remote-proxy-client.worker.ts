@@ -92,14 +92,30 @@ export default class Client extends WorkerEntrypoint<
 					return Reflect.get(target, prop);
 				}
 				// workerd probes optional WorkerEntrypoint handlers during startup. Return
-				// a deferred method so these probes and fetch-only bindings don't create
-				// an unused WebSocket RPC session.
-				return (...args: unknown[]) => {
-					const rpcMethod = Reflect.get(getStub(), prop) as (
-						...args: unknown[]
-					) => unknown;
-					return rpcMethod(...args);
-				};
+				// a deferred RPC property so these probes and fetch-only bindings don't
+				// create an unused WebSocket RPC session. Cap'n Web properties are both
+				// callable and thenable, so forward invocation and property resolution.
+				let rpcProperty: unknown;
+				let isRpcPropertyResolved = false;
+				function getRpcProperty() {
+					if (!isRpcPropertyResolved) {
+						rpcProperty = Reflect.get(getStub(), prop);
+						isRpcPropertyResolved = true;
+					}
+					return rpcProperty;
+				}
+				return new Proxy(
+					(...args: unknown[]) => {
+						const rpcMethod = getRpcProperty() as (
+							...args: unknown[]
+						) => unknown;
+						return Reflect.apply(rpcMethod, undefined, args);
+					},
+					{
+						get: (_target, rpcProp) =>
+							Reflect.get(getRpcProperty() as object, rpcProp),
+					}
+				);
 			},
 		});
 	}

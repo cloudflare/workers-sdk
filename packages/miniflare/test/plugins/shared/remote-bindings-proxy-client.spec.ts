@@ -21,9 +21,21 @@ const RPC_SCRIPT = /* javascript */ `
 	};
 `;
 
+const RPC_GETTER_SCRIPT = /* javascript */ `
+	export default {
+		async fetch(request, env) {
+			return new Response(await env.SERVICE.greeting);
+		},
+	};
+`;
+
 class EchoRpcTarget extends RpcTarget {
 	echo(value: string): string {
 		return value;
+	}
+
+	get greeting(): string {
+		return "hello";
 	}
 }
 
@@ -98,6 +110,31 @@ describe("remote-bindings proxy client", () => {
 			}
 		);
 		const mf = makeRemoteServiceMiniflare(RPC_SCRIPT, proxyUrl);
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost/");
+		expect(await response.text()).toBe("hello");
+		expect(webSocketConnections).toBe(1);
+	});
+
+	test("opens an RPC WebSocket when an RPC property is awaited", async ({
+		expect,
+	}) => {
+		let webSocketConnections = 0;
+		const { http: proxyUrl } = await useServer(
+			(req, res) => {
+				res.statusCode = 500;
+				res.end("expected a WebSocket request");
+			},
+			(socket) => {
+				webSocketConnections++;
+				newWebSocketRpcSession(
+					socket as unknown as WebSocket,
+					new EchoRpcTarget()
+				);
+			}
+		);
+		const mf = makeRemoteServiceMiniflare(RPC_GETTER_SCRIPT, proxyUrl);
 		useDispose(mf);
 
 		const response = await mf.dispatchFetch("http://localhost/");
