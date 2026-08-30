@@ -688,8 +688,12 @@ test("dumpSql exports Infinity and -Infinity as valid, re-importable SQL literal
 	// Assert the exported SQL actually contains the correctly-signed literal
 	// for each row — this is the real guarantee of the fix, checked before
 	// the D1 JS binding's Infinity->null normalisation can hide it.
-	expect(dump).toMatch(/INSERT INTO "inf_test" \("id","r"\) VALUES\(1,9e999\);/);
-	expect(dump).toMatch(/INSERT INTO "inf_test" \("id","r"\) VALUES\(2,-9e999\);/);
+	expect(dump).toMatch(
+		/INSERT INTO "inf_test" \("id","r"\) VALUES\(1,9e999\);/
+	);
+	expect(dump).toMatch(
+		/INSERT INTO "inf_test" \("id","r"\) VALUES\(2,-9e999\);/
+	);
 
 	// And confirm the import actually succeeded (rows exist post-import)
 	const rows = await mirrorDb
