@@ -9,6 +9,7 @@ import { cleanupDestination } from "../deployment-bundle/merge-config-args";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import { deployPreviewContainers, verifyContainersScope } from "./containers";
+import { warnIfWranglerPreviewVersionUnsupported } from "./version-warning";
 
 export const previewCommand = createCommand({
 	metadata: {
@@ -63,6 +64,8 @@ export const previewCommand = createCommand({
 		suggestSkillsAfterHandler: (args) => args.json !== true,
 	},
 	handler: async function previewHandler(args, { config }) {
+		warnIfWranglerPreviewVersionUnsupported();
+
 		const accountId = await requireAuth(config);
 
 		const entry = await getEntry({ script: args.script }, config, "deploy");
