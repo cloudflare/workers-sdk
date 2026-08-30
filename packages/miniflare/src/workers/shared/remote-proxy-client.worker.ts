@@ -72,25 +72,34 @@ export default class Client extends WorkerEntrypoint<
 	) {
 		super(ctx, env);
 
-		const stub = ctx.props.remoteProxyConnectionString
-			? makeRemoteProxyStub(
-					ctx.props.remoteProxyConnectionString,
-					ctx.props.binding,
-					undefined,
-					ctx.props.cfTraceId,
-					env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
-				)
-			: undefined;
+		let stub: Fetcher | undefined;
+		function getStub() {
+			if (!ctx.props.remoteProxyConnectionString) {
+				throwRemoteRequired(ctx.props.binding);
+			}
+			return (stub ??= makeRemoteProxyStub(
+				ctx.props.remoteProxyConnectionString,
+				ctx.props.binding,
+				undefined,
+				ctx.props.cfTraceId,
+				env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+			));
+		}
 
 		return new Proxy(this, {
 			get: (target, prop) => {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
-				if (!stub) {
-					throwRemoteRequired(ctx.props.binding);
-				}
-				return Reflect.get(stub, prop);
+				// workerd probes optional WorkerEntrypoint handlers during startup. Return
+				// a deferred method so these probes and fetch-only bindings don't create
+				// an unused WebSocket RPC session.
+				return (...args: unknown[]) => {
+					const rpcMethod = Reflect.get(getStub(), prop) as (
+						...args: unknown[]
+					) => unknown;
+					return rpcMethod(...args);
+				};
 			},
 		});
 	}
