@@ -931,6 +931,14 @@ export class Miniflare {
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
+			for (const { browserProcess } of this.#browserProcesses.values()) {
+				try {
+					browserProcess.kill();
+				} catch {
+					// Process might already be dead
+				}
+			}
+			this.#browserProcesses.clear();
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
