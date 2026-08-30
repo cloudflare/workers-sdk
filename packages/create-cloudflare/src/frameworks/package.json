@@ -4,7 +4,7 @@
 		"@angular/create": "22.1.5",
 		"@tanstack/cli": "0.70.2",
 		"create-analog": "2.7.0",
-		"create-astro": "5.2.3",
+		"create-astro": "5.2.4",
 		"create-docusaurus": "3.10.2",
 		"create-hono": "0.19.4",
 		"create-next-app": "16.3.2",
