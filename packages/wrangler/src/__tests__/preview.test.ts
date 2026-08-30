@@ -1138,6 +1138,16 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					kv_namespaces: [{ binding: "IMPORTANT_BINDING", id: "kv-id-123" }],
+					d1_databases: [
+						{
+							binding: "DB",
+							database_name: "production-db",
+							database_id: "production-db-id",
+						},
+					],
+					hyperdrive: [{ binding: "HYPERDRIVE", id: "production-db" }],
+					vectorize: [{ binding: "VECTORIZE", index_name: "production-index" }],
+					services: [{ binding: "API", service: "production-api" }],
 				})
 			);
 
@@ -1201,18 +1211,33 @@ describe("wrangler preview", () => {
 			const normalizedWarningOutput = warningOutput.replace(/\s+/g, " ");
 
 			expect(normalizedWarningOutput).toContain(
-				"Your configuration has diverged."
+				"Preview deployment created, but its runtime configuration is incomplete."
 			);
 			expect(normalizedWarningOutput).toContain(
-				"The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker."
-			);
-			expect(warningOutput).toContain("IMPORTANT_BINDING");
-			expect(warningOutput).toContain("KV Namespace");
-			expect(normalizedWarningOutput).toContain(
-				'Either include these bindings in the "previews" field of your Wrangler config'
+				"Your Preview URL is live, but requests may fail or behave differently from production."
 			);
 			expect(normalizedWarningOutput).toContain(
-				"or update the Previews settings of your Worker in the Cloudflare dashboard."
+				"These bindings exist in your top-level Wrangler config, but are missing from this Worker's Preview configuration:"
+			);
+			expect(normalizedWarningOutput).toContain(
+				"IMPORTANT_BINDING KV Namespace"
+			);
+			expect(normalizedWarningOutput).toContain("DB D1 Database");
+			expect(normalizedWarningOutput).toContain("HYPERDRIVE Hyperdrive Config");
+			expect(normalizedWarningOutput).toContain("VECTORIZE Vectorize Index");
+			expect(normalizedWarningOutput).toContain("API Worker");
+			expect(normalizedWarningOutput).toContain(
+				'Fix: add these bindings to the "previews" field in your Wrangler config using Preview-safe values.'
+			);
+			expect(normalizedWarningOutput).toContain(
+				"Do not reuse production resources for KV Namespace, D1 Database, Hyperdrive Config, Vectorize Index, and Worker unless you intentionally want Preview traffic to share production data."
+			);
+			expect(normalizedWarningOutput).toContain(
+				"Docs: https://developers.cloudflare.com/workers/previews/configuration/#wrangler-configuration-file"
+			);
+			expect(std.out).toContain("Preview: test-preview (new with warnings)");
+			expect(std.out).toContain(
+				"Preview URL: https://test-preview.test-worker.cloudflare.app"
 			);
 		});
 
@@ -1941,11 +1966,29 @@ describe("wrangler preview", () => {
 					(line) => line.startsWith("Preview") || line.startsWith("Deployment")
 				);
 			expect(summaryLines).toEqual([
-				"Preview: empty-urls-preview (new)",
+				"Preview: empty-urls-preview (new with warnings)",
 				"Deployment ID: deployment-id-empty-urls",
 			]);
 			expect(std.out).toContain(
-				"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information"
+				"Note: This Preview deployment was created, but it has no active URLs."
+			);
+			expect(std.out).toContain(
+				"Enable at least one Preview URL, then run `wrangler deploy` to apply routing:"
+			);
+			expect(std.out).toContain(
+				"workers.dev: set `preview_urls` to `true` in your Wrangler config. If `preview_urls` is omitted, it follows `workers_dev`."
+			);
+			expect(std.out).toContain(
+				"Custom domain: set `custom_domain` and `previews_enabled` to `true` on a route."
+			);
+			expect(std.out).toContain(
+				"Choose one source of truth for routes. If Wrangler manages this Worker, keep these settings in your Wrangler config so your next deploy does not turn them off."
+			);
+			expect(std.out).toContain(
+				"workers.dev Previews: https://developers.cloudflare.com/workers/previews/custom-domains/#enable-workersdev-previews"
+			);
+			expect(std.out).toContain(
+				"Custom domain Previews: https://developers.cloudflare.com/workers/previews/custom-domains/#enable-custom-domain-previews"
 			);
 		});
 

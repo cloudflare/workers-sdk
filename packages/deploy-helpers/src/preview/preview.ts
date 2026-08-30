@@ -293,7 +293,7 @@ async function prepareContainersForPreview(
 }
 
 export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
+	"Note: This Preview deployment was created, but it has no active URLs.\n\nEnable at least one Preview URL, then run `wrangler deploy` to apply routing:\n\n- workers.dev: set `preview_urls` to `true` in your Wrangler config. If `preview_urls` is omitted, it follows `workers_dev`.\n- Custom domain: set `custom_domain` and `previews_enabled` to `true` on a route.\n\nYou can also enable Preview URLs in the Cloudflare dashboard. Choose one source of truth for routes. If Wrangler manages this Worker, keep these settings in your Wrangler config so your next deploy does not turn them off.\n\nDocs:\n- workers.dev Previews: https://developers.cloudflare.com/workers/previews/custom-domains/#enable-workersdev-previews\n- Custom domain Previews: https://developers.cloudflare.com/workers/previews/custom-domains/#enable-custom-domain-previews";
 
 function getPreviewMigrationsToUpload(
 	workerName: string,
@@ -570,17 +570,23 @@ function formatPreviewDeploymentSummary(
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	isNew: boolean,
+	hasWarnings = false,
 	pullRequest?: PullRequestMetadata
 ): string {
-	const statusLabel = isNew ? chalk.green("(new)") : chalk.dim("(updated)");
+	const hasActiveUrls =
+		(previewResource.urls?.length ?? 0) > 0 ||
+		(deployment.urls?.length ?? 0) > 0;
+	const statusLabel =
+		hasWarnings || !hasActiveUrls
+			? chalk.yellow(`(${isNew ? "new" : "updated"} with warnings)`)
+			: isNew
+				? chalk.green("(new)")
+				: chalk.dim("(updated)");
 	const pullRequestUrl =
 		deployment.annotations?.["workers/pull_request_url"] ?? pullRequest?.url;
 	const pullRequestNumber =
 		deployment.annotations?.["workers/pull_request_number"] ??
 		pullRequest?.number;
-	const hasActiveUrls =
-		(previewResource.urls?.length ?? 0) > 0 ||
-		(deployment.urls?.length ?? 0) > 0;
 
 	return [
 		`${chalk.bold("Preview:")} ${previewResource.name} ${statusLabel}`,
@@ -599,11 +605,48 @@ function formatPreviewDeploymentSummary(
 	].join("\n");
 }
 
+const previewProductionResourceBindingTypes = new Set([
+	"kv_namespace",
+	"d1",
+	"r2_bucket",
+	"queue",
+	"workflow",
+	"hyperdrive",
+	"vectorize",
+	"service",
+]);
+
+const listFormatter = new Intl.ListFormat("en-US");
+
+function formatPreviewResourceWarning(
+	missingBindings: Record<string, { type: string }>
+): string {
+	const missingResourceTypes = [
+		...new Set(
+			Object.values(missingBindings)
+				.map((binding) => binding.type)
+				.filter((type) => previewProductionResourceBindingTypes.has(type))
+				.map((type) =>
+					getBindingTypeFriendlyName(
+						type as Parameters<typeof getBindingTypeFriendlyName>[0]
+					)
+				)
+		),
+	];
+
+	if (missingResourceTypes.length === 0) {
+		return "Use Preview-safe values instead of production values.";
+	}
+
+	return `Do not reuse production resources for ${listFormatter.format(missingResourceTypes)} unless you intentionally want Preview traffic to share production data.`;
+}
+
 function logMissingPreviewsBindingsWarning(
 	topLevelBindings: Record<string, { type: string }>,
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
-	localPreviewBindings: Record<string, Binding>
-) {
+	localPreviewBindings: Record<string, Binding>,
+	hasActiveUrls: boolean
+): boolean {
 	const availableBindingNames = new Set([
 		...Object.keys(remotePreviewDefaultBindings ?? {}),
 		...Object.keys(localPreviewBindings),
@@ -615,11 +658,14 @@ function logMissingPreviewsBindingsWarning(
 	);
 
 	if (Object.keys(missingBindings).length === 0) {
-		return;
+		return false;
 	}
 
-	logger.warn(`Your configuration has diverged.
-The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker.
+	logger.warn(`Preview deployment created, but its runtime configuration is incomplete.
+
+${hasActiveUrls ? "Your Preview URL is live, but requests may fail or behave differently from production." : "Requests may fail or behave differently from production when this Preview has an active URL."}
+
+These bindings exist in your top-level Wrangler config, but are missing from this Worker's Preview configuration:
 
 ${Object.entries(missingBindings)
 	.map(
@@ -628,7 +674,13 @@ ${Object.entries(missingBindings)
 	)
 	.join("\n")}
 
-Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
+Fix: add these bindings to the ${chalk.cyan(`"previews"`)} field in your Wrangler config using Preview-safe values.
+
+${formatPreviewResourceWarning(missingBindings)}
+
+Docs: https://developers.cloudflare.com/workers/previews/configuration/#wrangler-configuration-file`);
+
+	return true;
 }
 
 /**
@@ -822,15 +874,10 @@ export async function preview(
 			JSON.stringify({ preview: previewResource, deployment }, null, 2)
 		);
 	} else {
-		logger.log(
-			formatPreviewDeploymentSummary(
-				previewResource,
-				deployment,
-				isNewPreview,
-				pullRequest
-			)
-		);
-
+		let hasWarnings = false;
+		const hasActiveUrls =
+			(previewResource.urls?.length ?? 0) > 0 ||
+			(deployment.urls?.length ?? 0) > 0;
 		const topLevelBindings = getBindings(config);
 		if (Object.keys(topLevelBindings).length > 0) {
 			const previewDefaults = await getWorkerPreviewDefaults(
@@ -838,12 +885,23 @@ export async function preview(
 				accountId,
 				workerName
 			);
-			logMissingPreviewsBindingsWarning(
+			hasWarnings = logMissingPreviewsBindingsWarning(
 				topLevelBindings,
 				previewDefaults.env,
-				extractConfigBindings(config)
+				extractConfigBindings(config),
+				hasActiveUrls
 			);
 		}
+
+		logger.log(
+			formatPreviewDeploymentSummary(
+				previewResource,
+				deployment,
+				isNewPreview,
+				hasWarnings,
+				pullRequest
+			)
+		);
 	}
 
 	return { preview: previewResource, deployment, isNewPreview };

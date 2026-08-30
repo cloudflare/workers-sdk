@@ -21,7 +21,7 @@ const BRANCH_ENV_VARS = [
 	"CI_COMMIT_REF_NAME",
 ] as const;
 const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
+	"Note: This Preview deployment was created, but it has no active URLs.\n\nEnable at least one Preview URL, then run `wrangler deploy` to apply routing:\n\n- workers.dev: set `preview_urls` to `true` in your Wrangler config. If `preview_urls` is omitted, it follows `workers_dev`.\n- Custom domain: set `custom_domain` and `previews_enabled` to `true` on a route.\n\nYou can also enable Preview URLs in the Cloudflare dashboard. Choose one source of truth for routes. If Wrangler manages this Worker, keep these settings in your Wrangler config so your next deploy does not turn them off.\n\nDocs:\n- workers.dev Previews: https://developers.cloudflare.com/workers/previews/custom-domains/#enable-workersdev-previews\n- Custom domain Previews: https://developers.cloudflare.com/workers/previews/custom-domains/#enable-custom-domain-previews";
 
 async function withoutBranchEnvVars<T>(callback: () => Promise<T>): Promise<T> {
 	const originalBranchEnv = Object.fromEntries(
