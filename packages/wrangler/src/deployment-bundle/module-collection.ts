@@ -52,6 +52,27 @@ function stripQueryString(modulePath: string): string {
 	return queryIndex !== -1 ? modulePath.slice(0, queryIndex) : modulePath;
 }
 
+/**
+ * Name used for a collected module in the bundle and the multipart upload.
+ * An absolute specifier is machine-local, so preserving it verbatim produces a
+ * bundle that only fails at upload. Under `preserve_file_names` we keep the
+ * basename and make it relative, matching how the hashed branch already
+ * flattens paths.
+ */
+function collectedModuleName(
+	cleanedPath: string,
+	fileHash: string,
+	preserveFileNames?: boolean
+): string {
+	if (!preserveFileNames) {
+		return `./${fileHash}-${path.basename(cleanedPath)}`;
+	}
+	if (path.isAbsolute(cleanedPath)) {
+		return `./${path.basename(cleanedPath)}`;
+	}
+	return cleanedPath;
+}
+
 // This is a combination of an esbuild plugin and a mutable array
 // that we use to collect module references from source code.
 // There will be modules that _shouldn't_ be inlined directly into
@@ -223,9 +244,11 @@ export function createModuleCollector(props: {
 								.createHash("sha1")
 								.update(fileContent)
 								.digest("hex");
-							const fileName = props.preserveFileNames
-								? cleanedPath
-								: `./${fileHash}-${path.basename(cleanedPath)}`;
+							const fileName = collectedModuleName(
+								cleanedPath,
+								fileHash,
+								props.preserveFileNames
+							);
 
 							const { rule } =
 								rulesMatchers.find(({ regex }) => regex.test(fileName)) || {};
@@ -326,9 +349,11 @@ export function createModuleCollector(props: {
 									.createHash("sha1")
 									.update(fileContent)
 									.digest("hex");
-								const fileName = props.preserveFileNames
-									? cleanedPath
-									: `./${fileHash}-${path.basename(cleanedPath)}`;
+								const fileName = collectedModuleName(
+									cleanedPath,
+									fileHash,
+									props.preserveFileNames
+								);
 
 								// add the module to the array
 								modules.push({
