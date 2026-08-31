@@ -3633,6 +3633,9 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/node-compat:
     devDependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: 3.1081.0
+        version: 3.1081.0
       '@cloudflare/vite-plugin':
         specifier: workspace:*
         version: link:../..
@@ -4964,6 +4967,10 @@ packages:
     resolution: {integrity: sha512-u+NT61JZEkRFtpL0CAw1N1dwxnaLgwVXQl/zjJxTGgLyS/jTIdg2SdoEoCTHxgDyCnqa1HEi9QOoE9/pYRNpOQ==}
     engines: {node: '>=20.0.0'}
 
+  '@aws-sdk/client-dynamodb@3.1081.0':
+    resolution: {integrity: sha512-gQ2XvMVY+5Co6znCODeCuLVaGRPKTeRQ+lATsw4Cm4/v+HHVQ3OJacE3wwO5FRg7shgYswOTusPM5icLEzsv9w==}
+    engines: {node: '>=20.0.0'}
+
   '@aws-sdk/client-s3@3.721.0':
     resolution: {integrity: sha512-uCZC8elYhUFF21yq1yB5TrE/VYz8A4/VnttUHc65/jqnHReTDvEC0XAc756tJnjfrReyM1ws12FzBLHoW/NDjg==}
     engines: {node: '>=16.0.0'}
@@ -4988,6 +4995,10 @@ packages:
 
   '@aws-sdk/core@3.977.6':
     resolution: {integrity: sha512-QiaJV4/zDrB4ZY2mfeSXSzSTc36W16sZXcGz+SPFk0CJ26gziO0cS+4LjJUMAbdeeBOvS0k0Aq1cZpfGdUXxSw==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/core@3.977.9':
+    resolution: {integrity: sha512-reqPFEQrZxDZpeGj4PFMepBeR5LGYHRqq/L0motTzgFkCRBA4rFdaVXDSLYyGHhxVz7sT2PDnPN9CluGSfgyJA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/credential-provider-env@3.716.0':
@@ -5054,6 +5065,14 @@ packages:
     resolution: {integrity: sha512-SnlEmQa6SjOgs6iOPLUQl1Eyq4AKiAdPQlkOhFhqNfDtDCwibMGvL6QlkSmf3o6vAUSImzdPCxowT5dfQUZP1A==}
     engines: {node: '>=20.0.0'}
 
+  '@aws-sdk/dynamodb-codec@3.973.44':
+    resolution: {integrity: sha512-eo27HNeBqMAfy9JBQug6ErU6DeG8OmOH6ou8+KmX3/fWdTmWUsHsfisz2tEQOG+GJ57bBC7kC6AjKAjpcxU4QA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/endpoint-cache@3.972.11':
+    resolution: {integrity: sha512-8q1ICxcDjHId3bBryuu/j+1L9y5/3uQnwzLDt5j2ElcjZSoWmFtymdJy7OjLrluSMe0Z4mq5bcH4fxBXvlEHfw==}
+    engines: {node: '>=20.0.0'}
+
   '@aws-sdk/eventstream-handler-node@3.972.31':
     resolution: {integrity: sha512-/BRzvkp46mF6eXBL/l9WKPQQfifLlUPaWli6n9/T/WDLUg8he7TCyuNFnk6RvHP5j5W/kMj5Gxw7W778LJaXDA==}
     engines: {node: '>=20.0.0'}
@@ -5061,6 +5080,10 @@ packages:
   '@aws-sdk/middleware-bucket-endpoint@3.721.0':
     resolution: {integrity: sha512-5UyoDoX3z3UhmetoqqqZulq2uF55Jyj9lUKAJWgTxVhDEG5TijTQS40LP9DqwRl0hJkoUUZKAwE0hwnUsiGXAg==}
     engines: {node: '>=16.0.0'}
+
+  '@aws-sdk/middleware-endpoint-discovery@3.972.30':
+    resolution: {integrity: sha512-0hmD7/NG2NoVOVHvUb6rtY5POQYr+/9gdHvrYhIBA1zmCqKOBd5Gz3dL+iZ15FHOJbs/5kLplGoePc8PHTlzYA==}
+    engines: {node: '>=20.0.0'}
 
   '@aws-sdk/middleware-eventstream@3.972.26':
     resolution: {integrity: sha512-2eIvouTZoxPu5ClHY6ij13De1yhY8Rmllt0dlGeBNXX3wmR7fU1pvMCGb50fKm1GxcuntWK0t1T0cMjTyDoUQA==}
@@ -5148,6 +5171,10 @@ packages:
     resolution: {integrity: sha512-3W6IUtSxFbH6X7Wb7DzGCV5QiFQsd0g8bOfntpmDxQlzBoKWUMBu/JPQR0DwkE+Hpnxd6db1tXbOwdeHddG6cA==}
     engines: {node: '>=20.0.0'}
 
+  '@aws-sdk/types@3.974.5':
+    resolution: {integrity: sha512-LkwLL2BLbC6wNNm4JaH9mbEqBMdOZCct6VAYqhdN4U1xrWM+fUJQEfbHwQgDypapOWTRtlk25akb5afM0P8CIQ==}
+    engines: {node: '>=20.0.0'}
+
   '@aws-sdk/util-arn-parser@3.693.0':
     resolution: {integrity: sha512-WC8x6ca+NRrtpAH64rWu+ryDZI3HuLwlEr8EU6/dbC/pt+r/zC0PBoC15VEygUaBA+isppCikQpGyEDu0Yj7gQ==}
     engines: {node: '>=16.0.0'}
@@ -5182,6 +5209,10 @@ packages:
 
   '@aws-sdk/xml-builder@3.972.37':
     resolution: {integrity: sha512-zKq4HQum8JwDyEuyfuI4bbiAcU0KxP6qy+9PR/IsR92IyE/DaBAikzAS50tjxip4bqIIANpCcG+Yyj6CVhXupg==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/xml-builder@3.972.40':
+    resolution: {integrity: sha512-wlFmCIGUlwF4zx/kncw+bmxTQh1HeSJq4mYV/V5cZUSJadDP3kXvGW8Rn21cimj/7y9ju+47oYWXi97vF7czaA==}
     engines: {node: '>=20.0.0'}
 
   '@aws/lambda-invoke-store@0.3.0':
@@ -9391,6 +9422,10 @@ packages:
     resolution: {integrity: sha512-CyogUINxvi7C7LDsh8Syo6hVJOT9ckz4rG8dRZfTJ8r91HkMY59PnNooaj7WcHyxEkxPfBAmbgztZU+xTo76lg==}
     engines: {node: '>=18.0.0'}
 
+  '@smithy/core@3.33.3':
+    resolution: {integrity: sha512-CsOeKq/9kA3y6VJHt+/+VTCtBaxJ4OTFpgrjIUhPpDIKxBci1k2bJaQASF2h/ELWrulGp+t97DZ0mevfAD8idg==}
+    engines: {node: '>=18.0.0'}
+
   '@smithy/credential-provider-imds@3.2.8':
     resolution: {integrity: sha512-ZCY2yD0BY+K9iMXkkbnjo+08T2h8/34oHd0Jmh6BZUSZwaaGlGCyBT/3wnS7u7Xl33/EEfN4B6nQr3Gx5bYxgw==}
     engines: {node: '>=16.0.0'}
@@ -9528,6 +9563,10 @@ packages:
 
   '@smithy/types@4.16.1':
     resolution: {integrity: sha512-0JFs3V2y2M9tKW5na/qxe69Zv+uxLMO7QBbhxF/FHu/Gp2NFZAAL9tWl9PU02xxo07pb3G9FTyjNc6D5uZrJIg==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/types@4.17.2':
+    resolution: {integrity: sha512-FOKpVZob9MPTn2znRzGrnsMHv7BOsKVw3XiP/cOyYLDVZ9qKp4nifIiSCuUU/fIj5Vu0UOAxCFr+qRAtG0NUkA==}
     engines: {node: '>=18.0.0'}
 
   '@smithy/url-parser@3.0.11':
@@ -13718,6 +13757,9 @@ packages:
   mlly@1.7.4:
     resolution: {integrity: sha512-qmdSIPC4bDJXgZTCR7XosJiNKySV7O215tsPtDN9iEO/7q/76b/ijtgRu/+epFXSJhijtTCCGp3DWS549P3xKw==}
 
+  mnemonist@0.38.3:
+    resolution: {integrity: sha512-2K9QYubXx/NAjv4VLq1d1Ly8pWNC5L3BrixtdkyTegXWJIqY+zLNDhhX/A+ZwWt70tB1S8H4BE8FLYEFyNoOBw==}
+
   mock-socket@9.3.1:
     resolution: {integrity: sha512-qxBgB7Qa2sEQgHFjj0dSigq7fX4k6Saisd5Nelwp2q8mlbAFh5dHV9JTTlF8viYJLSSWgMCZFUom8PJcMNBoJw==}
     engines: {node: '>= 8'}
@@ -13993,6 +14035,9 @@ packages:
   object.entries@1.1.6:
     resolution: {integrity: sha512-leTPzo4Zvg3pmbQ3rDK69Rl8GQvIqMWubrkxONG9/ojtFE2rD9fjMKfSI5BxW3osRH1m6VdzmqK8oAY9aT4x5w==}
     engines: {node: '>= 0.4'}
+
+  obliterator@1.6.1:
+    resolution: {integrity: sha512-9WXswnqINnnhOG/5SLimUlzuU1hFJUc8zkwyD59Sd+dPOMf05PmnYG/d6Q7HZ+KmgkZJa1PxRso6QdM3sTNHig==}
 
   obuf@1.1.2:
     resolution: {integrity: sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==}
@@ -16867,20 +16912,20 @@ snapshots:
   '@aws-crypto/crc32@5.2.0':
     dependencies:
       '@aws-crypto/util': 5.2.0
-      '@aws-sdk/types': 3.714.0
+      '@aws-sdk/types': 3.974.2
       tslib: 2.8.1
 
   '@aws-crypto/crc32c@5.2.0':
     dependencies:
       '@aws-crypto/util': 5.2.0
-      '@aws-sdk/types': 3.714.0
+      '@aws-sdk/types': 3.974.2
       tslib: 2.8.1
 
   '@aws-crypto/sha1-browser@5.2.0':
     dependencies:
       '@aws-crypto/supports-web-crypto': 5.2.0
       '@aws-crypto/util': 5.2.0
-      '@aws-sdk/types': 3.714.0
+      '@aws-sdk/types': 3.974.2
       '@aws-sdk/util-locate-window': 3.693.0
       '@smithy/util-utf8': 2.3.0
       tslib: 2.8.1
@@ -16890,7 +16935,7 @@ snapshots:
       '@aws-crypto/sha256-js': 5.2.0
       '@aws-crypto/supports-web-crypto': 5.2.0
       '@aws-crypto/util': 5.2.0
-      '@aws-sdk/types': 3.714.0
+      '@aws-sdk/types': 3.974.2
       '@aws-sdk/util-locate-window': 3.693.0
       '@smithy/util-utf8': 2.3.0
       tslib: 2.8.1
@@ -16907,7 +16952,7 @@ snapshots:
 
   '@aws-crypto/util@5.2.0':
     dependencies:
-      '@aws-sdk/types': 3.714.0
+      '@aws-sdk/types': 3.974.2
       '@smithy/util-utf8': 2.3.0
       tslib: 2.8.1
 
@@ -16924,7 +16969,20 @@ snapshots:
       '@aws-sdk/types': 3.974.2
       '@smithy/core': 3.31.1
       '@smithy/fetch-http-handler': 5.6.13
-      '@smithy/node-http-handler': 4.7.3
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/client-dynamodb@3.1081.0':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/credential-provider-node': 3.972.78
+      '@aws-sdk/dynamodb-codec': 3.973.44
+      '@aws-sdk/middleware-endpoint-discovery': 3.972.30
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
@@ -17149,6 +17207,17 @@ snapshots:
       bowser: 2.11.0
       tslib: 2.8.1
 
+  '@aws-sdk/core@3.977.9':
+    dependencies:
+      '@aws-sdk/types': 3.974.5
+      '@aws-sdk/xml-builder': 3.972.40
+      '@aws/lambda-invoke-store': 0.3.0
+      '@smithy/core': 3.33.3
+      '@smithy/signature-v4': 5.6.12
+      '@smithy/types': 4.17.2
+      bowser: 2.11.0
+      tslib: 2.8.1
+
   '@aws-sdk/credential-provider-env@3.716.0':
     dependencies:
       '@aws-sdk/core': 3.716.0
@@ -17324,6 +17393,18 @@ snapshots:
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
+  '@aws-sdk/dynamodb-codec@3.973.44':
+    dependencies:
+      '@aws-sdk/core': 3.977.9
+      '@smithy/core': 3.33.3
+      '@smithy/types': 4.17.2
+      tslib: 2.8.1
+
+  '@aws-sdk/endpoint-cache@3.972.11':
+    dependencies:
+      mnemonist: 0.38.3
+      tslib: 2.8.1
+
   '@aws-sdk/eventstream-handler-node@3.972.31':
     dependencies:
       '@aws-sdk/types': 3.974.2
@@ -17339,6 +17420,14 @@ snapshots:
       '@smithy/protocol-http': 4.1.8
       '@smithy/types': 3.7.2
       '@smithy/util-config-provider': 3.0.0
+      tslib: 2.8.1
+
+  '@aws-sdk/middleware-endpoint-discovery@3.972.30':
+    dependencies:
+      '@aws-sdk/endpoint-cache': 3.972.11
+      '@aws-sdk/types': 3.974.5
+      '@smithy/core': 3.33.3
+      '@smithy/types': 4.17.2
       tslib: 2.8.1
 
   '@aws-sdk/middleware-eventstream@3.972.26':
@@ -17524,6 +17613,11 @@ snapshots:
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
+  '@aws-sdk/types@3.974.5':
+    dependencies:
+      '@smithy/types': 4.17.2
+      tslib: 2.8.1
+
   '@aws-sdk/util-arn-parser@3.693.0':
     dependencies:
       tslib: 2.8.1
@@ -17569,6 +17663,11 @@ snapshots:
   '@aws-sdk/xml-builder@3.972.37':
     dependencies:
       '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/xml-builder@3.972.40':
+    dependencies:
+      '@smithy/types': 4.17.2
       tslib: 2.8.1
 
   '@aws/lambda-invoke-store@0.3.0': {}
@@ -21426,6 +21525,11 @@ snapshots:
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
+  '@smithy/core@3.33.3':
+    dependencies:
+      '@smithy/types': 4.17.2
+      tslib: 2.8.1
+
   '@smithy/credential-provider-imds@3.2.8':
     dependencies:
       '@smithy/node-config-provider': 3.1.12
@@ -21651,6 +21755,10 @@ snapshots:
       tslib: 2.8.1
 
   '@smithy/types@4.16.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@smithy/types@4.17.2':
     dependencies:
       tslib: 2.8.1
 
@@ -26189,6 +26297,10 @@ snapshots:
       pkg-types: 1.3.1
       ufo: 1.5.4
 
+  mnemonist@0.38.3:
+    dependencies:
+      obliterator: 1.6.1
+
   mock-socket@9.3.1: {}
 
   modern-tar@0.7.6: {}
@@ -26441,6 +26553,8 @@ snapshots:
       call-bind: 1.0.8
       define-properties: 1.2.1
       es-abstract: 1.24.0
+
+  obliterator@1.6.1: {}
 
   obuf@1.1.2: {}
 

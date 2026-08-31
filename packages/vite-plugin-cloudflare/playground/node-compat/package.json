@@ -4,11 +4,14 @@
 	"description": "",
 	"type": "module",
 	"scripts": {
+		"aws-sdk:build": "vite build --app -c vite.config.worker-aws-sdk.ts",
+		"aws-sdk:dev": "vite dev -c vite.config.worker-aws-sdk.ts",
+		"aws-sdk:preview": "vite preview -c vite.config.worker-aws-sdk.ts",
 		"basic:build": "vite build --app -c vite.config.worker-basic.ts",
 		"basic:dev": "vite dev -c vite.config.worker-basic.ts",
 		"basic:preview": "vite preview -c vite.config.worker-basic.ts",
 		"basic:test": "vitest run -c ../vitest.config.e2e.ts worker-basic",
-		"build:default": "pnpm run basic:build && pnpm run cross-env:build && pnpm run crypto:build && pnpm run postgres:build && pnpm run process:build && pnpm run random:build",
+		"build:default": "pnpm run aws-sdk:build && pnpm run basic:build && pnpm run cross-env:build && pnpm run crypto:build && pnpm run postgres:build && pnpm run process:build && pnpm run random:build",
 		"check:type": "tsc --build",
 		"cloudflare-node:build": "vite build -c vite.config.cloudflare-node.ts",
 		"cloudflare-node:dev": "vite dev -c vite.config.cloudflare-node.ts",
@@ -49,6 +52,7 @@
 		"resolve-externals:preview": "vite preview -c vite.config.worker-resolve-externals.ts"
 	},
 	"devDependencies": {
+		"@aws-sdk/client-dynamodb": "3.1081.0",
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",

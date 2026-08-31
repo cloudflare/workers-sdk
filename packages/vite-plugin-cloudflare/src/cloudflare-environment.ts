@@ -185,7 +185,14 @@ export const cloudflareBuiltInModules = [
 	"cloudflare:workflows",
 ];
 
-const defaultConditions = ["workerd", "worker", "module", "browser"];
+function getDefaultConditions(hasNodeJsCompat: boolean): string[] {
+	return [
+		"workerd",
+		"worker",
+		"module",
+		...(hasNodeJsCompat ? [] : ["browser"]),
+	];
+}
 
 // v8 supports es2024 features as of 11.9
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
@@ -232,6 +239,7 @@ export function createCloudflareEnvironmentOptions({
 			}
 		: {};
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
+	const defaultConditions = getDefaultConditions(hasNodeJsCompat);
 
 	return {
 		resolve: {
