@@ -21,7 +21,10 @@ import {
 	ensureQueuesExistByConfig,
 	updateQueueConsumers,
 } from "./queue-consumers";
-import { getWorkersDevSubdomain } from "./subdomain";
+import {
+	getWorkersDevSubdomain,
+	getWorkersDevSubdomainIfAccessible,
+} from "./subdomain";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
 import type { RouteObject } from "./publish-routes";
@@ -657,10 +660,16 @@ async function validateSubdomainMixedState(
 		return after;
 	}
 
-	const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-		configPath: config.configPath,
-	});
-	const previewUrl = `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`;
+	const userSubdomain = await getWorkersDevSubdomainIfAccessible(
+		config,
+		accountId,
+		{
+			configPath: config.configPath,
+		}
+	);
+	const previewUrl = userSubdomain
+		? `https://<VERSION_PREFIX>-${scriptName}.${userSubdomain}`
+		: `https://<VERSION_PREFIX>-${scriptName}.<YOUR_SUBDOMAIN>.workers.dev`;
 
 	// Scenario 1: User disables workers.dev while having preview URLs enabled
 	if (!after.workers_dev && after.preview_urls) {
@@ -709,11 +718,15 @@ async function subdomainDeploy(
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {
-		const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-			configPath: config.configPath,
-		});
-		const workersDevURL = `${scriptName}.${userSubdomain}`;
-		deployments.push(Promise.resolve({ targets: [workersDevURL] }));
+		const userSubdomain = await getWorkersDevSubdomainIfAccessible(
+			config,
+			accountId,
+			{ configPath: config.configPath }
+		);
+		const workersDevTarget = userSubdomain
+			? `${scriptName}.${userSubdomain}`
+			: "workers.dev (hostname unavailable to this API token)";
+		deployments.push(Promise.resolve({ targets: [workersDevTarget] }));
 	}
 
 	// Get current subdomain enablement status.

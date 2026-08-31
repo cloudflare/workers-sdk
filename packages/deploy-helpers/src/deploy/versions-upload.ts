@@ -12,7 +12,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
-import { getWorkersDevSubdomain } from "../triggers/subdomain";
+import { getWorkersDevSubdomainIfAccessible } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import { getBindings } from "./helpers/binding-utils";
@@ -434,16 +434,22 @@ async function uploadWorkerVersion(
 			}>(config, `${workerUrl}/subdomain`);
 
 		if (previews_available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-				configPath: config.configPath,
-			});
-			const shortVersion = versionId.slice(0, 8);
-			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
-			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
+			const userSubdomain = await getWorkersDevSubdomainIfAccessible(
+				config,
+				accountId,
+				{
+					configPath: config.configPath,
+				}
+			);
+			if (userSubdomain) {
+				const shortVersion = versionId.slice(0, 8);
+				versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
+				logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 
-			if (props.previewAlias) {
-				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
-				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
+				if (props.previewAlias) {
+					versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
+					logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
+				}
 			}
 		}
 	}

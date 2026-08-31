@@ -1541,6 +1541,45 @@ describe("resource provisioning", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it("uploads an R2 binding when granular auth prevents reading bucket metadata", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				r2_buckets: [
+					{
+						binding: "BUCKET",
+						bucket_name: "existing-bucket-name",
+					},
+				],
+			});
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/r2/buckets/existing-bucket-name", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10000, message: "Authentication error" },
+						]),
+						{ status: 403 }
+					)
+				)
+			);
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "BUCKET",
+						type: "r2_bucket",
+						bucket_name: "existing-bucket-name",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain("Uploaded test-name");
+			expect(std.err).toBe("");
+		});
+
 		it("won't prompt to provision if a D1 database name belongs to an existing database", async ({
 			expect,
 		}) => {

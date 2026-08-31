@@ -13,7 +13,7 @@ import {
 	validateEventTriggerTargets,
 } from "../../triggers/deploy";
 import { ensureQueuesExistByConfig } from "../../triggers/queue-consumers";
-import { getWorkersDevSubdomain } from "../../triggers/subdomain";
+import { getWorkersDevSubdomainIfAccessible } from "../../triggers/subdomain";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
@@ -333,7 +333,7 @@ export async function preUploadApiChecks(
 	//     workers.dev and previously never required a subdomain (workflows on
 	//     such deploys still get a correctly-worded prompt in the triggers phase).
 	if (!workerExists && wantsWorkersDev) {
-		await getWorkersDevSubdomain(config, accountId, {
+		await getWorkersDevSubdomainIfAccessible(config, accountId, {
 			autoRegisterSubdomain: props.autoRegisterWorkersDevSubdomain,
 			configPath: config.configPath,
 		});

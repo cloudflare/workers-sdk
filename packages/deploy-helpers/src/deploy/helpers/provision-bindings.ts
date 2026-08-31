@@ -245,6 +245,11 @@ class R2Handler extends ProvisionResourceHandler<
 			// This bucket_name exists! We don't need to provision it.
 			return true;
 		} catch (e) {
+			if (e instanceof APIError && e.code === 10000) {
+				// The Worker upload validates the binding itself. A granular token may
+				// be allowed to bind this bucket without reading its metadata.
+				return true;
+			}
 			if (!(e instanceof APIError && e.code === 10006)) {
 				// This is an error that is not "bucket not found", so we do want to throw.
 				throw e;

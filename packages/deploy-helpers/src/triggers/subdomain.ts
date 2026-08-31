@@ -1,4 +1,5 @@
 import {
+	APIError,
 	configFileName,
 	getComplianceRegionSubdomain,
 	UserError,
@@ -89,6 +90,28 @@ export async function getWorkersDevSubdomain(
 			configPath,
 			registrationContext
 		);
+	}
+}
+
+/**
+ * Gets the account's workers.dev hostname when the token can read it.
+ *
+ * Granular Worker tokens may manage a Worker without access to account-level
+ * subdomain metadata. Callers should use this helper only when the hostname is
+ * optional and the Worker-scoped API can validate the requested operation.
+ */
+export async function getWorkersDevSubdomainIfAccessible(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions = {}
+): Promise<string | undefined> {
+	try {
+		return await getWorkersDevSubdomain(complianceConfig, accountId, options);
+	} catch (error) {
+		if (error instanceof APIError && error.code === 10000) {
+			return undefined;
+		}
+		throw error;
 	}
 }
 

@@ -49,6 +49,38 @@ describe("delete", () => {
 		`);
 	});
 
+	it("reports success when granular auth prevents legacy KV cleanup", async ({
+		expect,
+	}) => {
+		mockConfirm({
+			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+			result: true,
+		});
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		mockDeleteWorkerRequest(expect, { name: "my-script" });
+		msw.use(
+			http.get("*/accounts/:accountId/storage/kv/namespaces", () =>
+				HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 10000, message: "Authentication error" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 403 }
+				)
+			)
+		);
+
+		await runWrangler("delete --name my-script");
+
+		expect(std.out).toContain("Successfully deleted my-script");
+		expect(std.warn).toContain(
+			"The Worker was deleted, but Wrangler could not check for associated legacy Workers Sites KV namespaces"
+		);
+	});
+
 	it("should delete a service using positional name argument", async ({
 		expect,
 	}) => {
@@ -309,6 +341,58 @@ describe("delete", () => {
 			  "warn": "",
 			}
 		`);
+	});
+
+	it("continues legacy KV cleanup when granular auth prevents deleting a namespace", async ({
+		expect,
+	}) => {
+		mockConfirm({
+			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+			result: true,
+		});
+		mockListKVNamespacesRequest(
+			expect,
+			{
+				title: "__my-script-workers_sites_assets",
+				id: "denied-namespace",
+			},
+			{
+				title: "__my-script-workers_sites_assets_preview",
+				id: "allowed-namespace",
+			}
+		);
+		msw.use(
+			http.delete(
+				"*/accounts/:accountId/storage/kv/namespaces/denied-namespace",
+				() =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 403 }
+					)
+			),
+			http.delete(
+				"*/accounts/:accountId/storage/kv/namespaces/allowed-namespace",
+				() => HttpResponse.json({ success: true, result: null })
+			)
+		);
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		mockDeleteWorkerRequest(expect, { name: "my-script" });
+
+		await runWrangler("delete --name my-script");
+
+		expect(std.out).toContain("Successfully deleted my-script");
+		expect(std.out).toContain(
+			'Deleted asset namespace for Workers Site "__my-script-workers_sites_assets_preview"'
+		);
+		expect(std.warn).toContain(
+			"does not have access to delete one or more associated legacy Workers Sites KV namespaces"
+		);
 	});
 
 	it("should error helpfully if pages_build_output_dir is set", async ({

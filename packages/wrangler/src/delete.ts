@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
 import { createCommand } from "./core/create-command";
 import { confirm } from "./dialogs";
@@ -168,13 +168,37 @@ async function deleteSiteNamespaceIfExisting(
 ): Promise<void> {
 	const title = `__${scriptName}-workers_sites_assets`;
 	const previewTitle = `__${scriptName}-workers_sites_assets_preview`;
-	const allNamespaces = await listKVNamespaces(complianceConfig, accountId);
+	let allNamespaces;
+	try {
+		allNamespaces = await listKVNamespaces(complianceConfig, accountId);
+	} catch (error) {
+		if (!(error instanceof APIError && error.code === 10000)) {
+			throw error;
+		}
+		logger.warn(
+			"The Worker was deleted, but Wrangler could not check for associated legacy Workers Sites KV namespaces because the API token does not have access to list KV namespaces."
+		);
+		return;
+	}
 	const namespacesToDelete = allNamespaces.filter(
 		(ns) => ns.title === title || ns.title === previewTitle
 	);
+	let cleanupIncomplete = false;
 	for (const ns of namespacesToDelete) {
-		await deleteKVNamespace(complianceConfig, accountId, ns.id);
-		logger.log(`🌀 Deleted asset namespace for Workers Site "${ns.title}"`);
+		try {
+			await deleteKVNamespace(complianceConfig, accountId, ns.id);
+			logger.log(`🌀 Deleted asset namespace for Workers Site "${ns.title}"`);
+		} catch (error) {
+			if (!(error instanceof APIError && error.code === 10000)) {
+				throw error;
+			}
+			cleanupIncomplete = true;
+		}
+	}
+	if (cleanupIncomplete) {
+		logger.warn(
+			"The Worker was deleted, but the API token does not have access to delete one or more associated legacy Workers Sites KV namespaces."
+		);
 	}
 }
 
