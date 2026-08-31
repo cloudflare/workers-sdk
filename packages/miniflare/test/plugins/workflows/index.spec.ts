@@ -62,6 +62,169 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 	);
 });
 
+test("subscribes to Workflow instance events through an RPC target", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "workflow-subscription-worker",
+					compatibilityDate: "2026-08-28",
+					manifest: singleModuleManifest(`
+						import { WorkflowEntrypoint } from "cloudflare:workers";
+						export class SubscriptionWorkflow extends WorkflowEntrypoint {
+							async run(event, step) {
+								await step.do("subscription step", async () => "step output");
+								return "workflow output";
+							}
+						}
+						export default {
+							async fetch(request, env) {
+								const instance = await env.SUBSCRIPTION_WORKFLOW.create({
+									id: "subscription-test",
+									params: { input: true },
+								});
+								using subscription = await instance.subscribe();
+								const events = [];
+								while (true) {
+									const result = await subscription.next();
+									if (result.done) break;
+									events.push(result.value);
+								}
+								return Response.json(events);
+							},
+						};
+					`),
+					env: {
+						SUBSCRIPTION_WORKFLOW: {
+							type: "workflow",
+							name: "SUBSCRIPTION_WORKFLOW",
+							worker: "workflow-subscription-worker",
+							exportName: "SubscriptionWorkflow",
+						},
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const body = await response.text();
+	expect(response.status, body).toBe(200);
+	const events = JSON.parse(body) as Array<Record<string, unknown>>;
+	expect(events.map(({ type }) => type)).toEqual([
+		"workflow_queued",
+		"workflow_started",
+		"step_started",
+		"attempt_started",
+		"attempt_completed",
+		"step_completed",
+		"workflow_completed",
+	]);
+	expect(events[1]).toMatchObject({
+		instanceId: "subscription-test",
+		params: { input: true },
+	});
+	expect(events[2]).toMatchObject({
+		stepName: "subscription step-1",
+		config: {
+			retries: { limit: 5, delay: 1000, backoff: "exponential" },
+			timeout: "10 minutes",
+		},
+	});
+	expect(events[5]).toMatchObject({
+		stepName: "subscription step-1",
+		output: "step output",
+	});
+	expect(events[6]).toMatchObject({ output: "workflow output" });
+});
+
+test("subscribes to structured and streamed step outputs", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "workflow-step-output-subscription-worker",
+					compatibilityDate: "2026-08-28",
+					manifest: singleModuleManifest(`
+						import { WorkflowEntrypoint } from "cloudflare:workers";
+						export class SubscriptionWorkflow extends WorkflowEntrypoint {
+							async run(event, step) {
+								await step.do("structured output", async () => ({ total: 1n }));
+								const stream = await step.do("stream output", async () => {
+									return new ReadableStream({
+										start(controller) {
+											controller.enqueue(new TextEncoder().encode("stream output"));
+											controller.close();
+										},
+									});
+								});
+								await new Response(stream).arrayBuffer();
+								return "done";
+							}
+						}
+						export default {
+							async fetch(request, env) {
+								const instance = await env.SUBSCRIPTION_WORKFLOW.create({
+									id: "step-output-subscription-test",
+								});
+								using subscription = await instance.subscribe({
+									filter: ["step_completed", "workflow_completed"],
+								});
+								const outputs = [];
+								while (true) {
+									const result = await subscription.next();
+									if (result.done) break;
+									if (result.value.type !== "step_completed") continue;
+									if (result.value.output instanceof ReadableStream) {
+										outputs.push({
+											stepName: result.value.stepName,
+											output: await new Response(result.value.output).text(),
+										});
+									} else {
+										outputs.push({
+											stepName: result.value.stepName,
+											output: { total: result.value.output.total.toString() },
+										});
+									}
+								}
+								return Response.json(outputs);
+							},
+						};
+					`),
+					env: {
+						SUBSCRIPTION_WORKFLOW: {
+							type: "workflow",
+							name: "SUBSCRIPTION_WORKFLOW",
+							worker: "workflow-step-output-subscription-worker",
+							exportName: "SubscriptionWorkflow",
+						},
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const body = await response.text();
+	expect(response.status, body).toBe(200);
+	expect(JSON.parse(body)).toEqual([
+		{ stepName: "structured output-1", output: { total: "1" } },
+		{ stepName: "stream output-1", output: "stream output" },
+	]);
+});
+
 test("persists Workflow data on file-system between runs", async ({
 	expect,
 }) => {
