@@ -42,7 +42,7 @@ describe.each([
 	{
 		name: "with Node.js compatibility",
 		hasNodeJsCompat: true,
-		baseConditions: ["workerd", "worker", "module"],
+		baseConditions: ["workerd", "worker", "module", "node"],
 	},
 ])(
 	"Cloudflare environment conditions $name",

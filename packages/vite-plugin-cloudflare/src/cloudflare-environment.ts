@@ -190,7 +190,7 @@ function getDefaultConditions(hasNodeJsCompat: boolean): string[] {
 		"workerd",
 		"worker",
 		"module",
-		...(hasNodeJsCompat ? [] : ["browser"]),
+		...(hasNodeJsCompat ? ["node"] : ["browser"]),
 	];
 }
 
