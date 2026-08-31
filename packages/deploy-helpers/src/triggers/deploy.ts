@@ -161,9 +161,9 @@ export async function triggersDeploy(
 
 			for (const worker in routesWithOtherBindings) {
 				const assignedRoutes = routesWithOtherBindings[worker];
-				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-					(r) => `  - ${chalk.underline(r)}\n`
-				)}`;
+				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes
+					.map((r) => `  - ${chalk.underline(r)}\n`)
+					.join("")}`;
 			}
 
 			const resolution =

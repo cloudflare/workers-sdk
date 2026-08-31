@@ -439,6 +439,68 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should list every conflicting route when routes are assigned to another worker", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				routes: ["example.com/route-one/*", "example.com/route-two/*"],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
+				// Simulate both routes already being assigned to another worker.
+				{ pattern: "example.com/route-one/*", script: "other-worker" },
+				{ pattern: "example.com/route-two/*", script: "other-worker" },
+			]);
+			await expect(runWrangler("deploy ./index")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Can't deploy routes that are assigned to another worker.
+				"other-worker" is already assigned to routes:
+				  - example.com/route-one/*
+				  - example.com/route-two/*
+
+				Unassign other workers from the routes you want to deploy to, and then try again.
+				Visit https://dash.cloudflare.com/some-account-id/workers/overview to unassign a worker from a route.]
+			`);
+		});
+
+		it("should list every previously deployed route in the fallback warning", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				routes: ["example.com/some-route/*"],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id", [
+				// Simulate that the worker has already been deployed to two other routes.
+				{ pattern: "foo.example.com/other-route", script: "test-name" },
+				{ pattern: "bar.example.com/other-route", script: "test-name" },
+			]);
+			// Simulate the bulk-routes API failing with a not authorized error.
+			mockUnauthorizedPublishRoutesRequest();
+			mockPublishRoutesFallbackRequest({
+				pattern: "example.com/some-route/*",
+				script: "test-name",
+			});
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
+
+				  The following routes were already associated with this worker, and have not been deleted:
+				   - "foo.example.com/other-route"
+				   - "bar.example.com/other-route"
+				  If these routes are not wanted then you can remove them in the dashboard.
+
+				"
+			`);
+		});
+
 		describe("custom domains", () => {
 			it("should deploy routes marked with 'custom_domain' as separate custom domains", async ({
 				expect,
