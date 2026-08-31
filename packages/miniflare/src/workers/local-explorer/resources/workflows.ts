@@ -400,7 +400,7 @@ export async function listWorkflowInstances(
 			return errorResponse(
 				400,
 				WORKFLOW_ERROR_INVALID_DATE_RANGE,
-				"'date_start' must not be after 'date_end'."
+				"'date_start' must not be after 'date_end'. Update 'date_start' or 'date_end' so 'date_start' is before or equal to 'date_end'."
 			);
 		}
 	}

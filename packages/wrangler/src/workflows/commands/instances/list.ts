@@ -34,7 +34,7 @@ function validateDateRange(
 		Date.parse(dateStart) > Date.parse(dateEnd)
 	) {
 		throw new UserError(
-			`--date-start (${dateStart}) must not be after --date-end (${dateEnd}).`,
+			`--date-start (${dateStart}) must not be after --date-end (${dateEnd}). Update --date-start or --date-end so --date-start is before or equal to --date-end.`,
 			{ telemetryMessage: "workflows instances list inverted date range" }
 		);
 	}

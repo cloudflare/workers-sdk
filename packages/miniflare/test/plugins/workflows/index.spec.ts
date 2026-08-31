@@ -1,9 +1,8 @@
-import assert from "node:assert";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { scheduler } from "node:timers/promises";
 import { Miniflare, WORKFLOWS_PLUGIN_NAME } from "miniflare";
-import { describe, test, vi } from "vitest";
+import { assert, describe, test, vi } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
@@ -760,7 +759,7 @@ describe("listing workflow instances by creation date", () => {
 		});
 		expect(status).toBe(400);
 		expect(JSON.stringify(body)).toContain(
-			"'date_start' must not be after 'date_end'."
+			"Update 'date_start' or 'date_end' so 'date_start' is before or equal to 'date_end'."
 		);
 	});
 

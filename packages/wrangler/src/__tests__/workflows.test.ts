@@ -638,7 +638,7 @@ describe("wrangler workflows", () => {
 							`workflows instances list some-workflow --date-start ${date}`
 						)
 					).rejects.toThrow(
-						`The date "${date}" provided for --date-start is not a real calendar date, so it would filter on a different date than intended. Check the month and day.`
+						`The date "${date}" provided for --date-start is not a real calendar date. Check the month and day.`
 					);
 				});
 			}
@@ -681,7 +681,7 @@ describe("wrangler workflows", () => {
 						`workflows instances list some-workflow --date-start 2026-02-01 --date-end 2026-01-01`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: --date-start (2026-02-01T00:00:00.000Z) must not be after --date-end (2026-01-01T23:59:59.999Z).]`
+					`[Error: --date-start (2026-02-01T00:00:00.000Z) must not be after --date-end (2026-01-01T23:59:59.999Z). Update --date-start or --date-end so --date-start is before or equal to --date-end.]`
 				);
 			});
 
