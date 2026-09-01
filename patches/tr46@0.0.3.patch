@@ -1,0 +1,29 @@
+diff --git a/.npmignore b/.npmignore
+deleted file mode 100644
+index 96e9161fde31e9906718f689d5cc135e507a51e1..0000000000000000000000000000000000000000
+diff --git a/index.js b/index.js
+index 9ce12ca2d026fa202f7a0d32e0a7c8526660ed78..7c3b5d7ff1624d2bfbb5b83f69a9b460e38dbeab 100644
+--- a/index.js
++++ b/index.js
+@@ -1,6 +1,6 @@
+ "use strict";
+ 
+-var punycode = require("punycode");
++var punycode = require("punycode/");
+ var mappingTable = require("./lib/mappingTable.json");
+ 
+ var PROCESSING_OPTIONS = {
+diff --git a/package.json b/package.json
+index b6826da1f7817f97ad6d307d698ad2004807c40a..f009d3c509dc412d71f87f09d77952c65f632445 100644
+--- a/package.json
++++ b/package.json
+@@ -24,6 +24,9 @@
+     "url": "https://github.com/Sebmaster/tr46.js/issues"
+   },
+   "homepage": "https://github.com/Sebmaster/tr46.js#readme",
++  "dependencies": {
++    "punycode": "^2.3.1"
++  },
+   "devDependencies": {
+     "mocha": "^2.2.5",
+     "request": "^2.57.0"

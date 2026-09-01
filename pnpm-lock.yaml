@@ -102,6 +102,8 @@ overrides:
   '@types/node': 22.15.17
   '@types/node>undici-types': 7.29.0
 
+packageExtensionsChecksum: sha256-UxbzwzEYdCyYfQrzlOS2vSdBi/DU3m6WV596zrZlpO4=
+
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: 67542a8abb29df36ad2c426409243d1167ca0080d2763f6ae3cce3c731c69107
@@ -118,6 +120,12 @@ patchedDependencies:
   toucan-js@4.0.0:
     hash: 60bdb1dcdbde0a135bb56d6fa1a1027caba891b149e2cfcb48d6a5b3524e0a91
     path: patches/toucan-js@4.0.0.patch
+  tr46@0.0.3:
+    hash: 9e8c64d8e8d2799b8b2358fec99feb2efcbf1b8dc9debfc5bd86afed8f868644
+    path: patches/tr46@0.0.3.patch
+  whatwg-url@5.0.0:
+    hash: 32c763e8b3bce24c1843a53b065a050fc58536ad6918547d435ffcbf513be644
+    path: patches/whatwg-url@5.0.0.patch
   youch@4.1.0-beta.10:
     hash: 3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269
     path: patches/youch@4.1.0-beta.10.patch
@@ -26351,13 +26359,13 @@ snapshots:
 
   node-fetch@2.6.7(encoding@0.1.13):
     dependencies:
-      whatwg-url: 5.0.0
+      whatwg-url: 5.0.0(patch_hash=32c763e8b3bce24c1843a53b065a050fc58536ad6918547d435ffcbf513be644)
     optionalDependencies:
       encoding: 0.1.13
 
   node-fetch@2.7.0(encoding@0.1.13):
     dependencies:
-      whatwg-url: 5.0.0
+      whatwg-url: 5.0.0(patch_hash=32c763e8b3bce24c1843a53b065a050fc58536ad6918547d435ffcbf513be644)
     optionalDependencies:
       encoding: 0.1.13
 
@@ -28651,7 +28659,9 @@ snapshots:
     dependencies:
       tldts: 7.0.19
 
-  tr46@0.0.3: {}
+  tr46@0.0.3(patch_hash=9e8c64d8e8d2799b8b2358fec99feb2efcbf1b8dc9debfc5bd86afed8f868644):
+    dependencies:
+      punycode: 2.3.1
 
   tr46@1.0.1:
     dependencies:
@@ -29691,9 +29701,10 @@ snapshots:
       tr46: 5.1.1
       webidl-conversions: 7.0.0
 
-  whatwg-url@5.0.0:
+  whatwg-url@5.0.0(patch_hash=32c763e8b3bce24c1843a53b065a050fc58536ad6918547d435ffcbf513be644):
     dependencies:
-      tr46: 0.0.3
+      punycode: 2.3.1
+      tr46: 0.0.3(patch_hash=9e8c64d8e8d2799b8b2358fec99feb2efcbf1b8dc9debfc5bd86afed8f868644)
       webidl-conversions: 3.0.1
 
   whatwg-url@7.1.0:
