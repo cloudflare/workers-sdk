@@ -1,9 +1,8 @@
-import assert from "node:assert";
+import * as path from "node:path";
 import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
@@ -15,7 +14,6 @@ import {
 } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
 import {
-	resolveDevOnly,
 	type AssetsOnlyResolvedConfig,
 	type WorkersResolvedConfig,
 } from "../plugin-config";
@@ -132,65 +130,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			viteDevServer.watcher.on("change", configChangedHandler);
 		},
-		buildApp: {
-			order: "post",
-			async handler(builder) {
-				if (ctx.resolvedPluginConfig.type !== "workers") {
-					return;
-				}
-
-				const workerEnvironments = [
-					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.entries(),
-				]
-					.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
-					.map(([environmentName]) => {
-						const environment = builder.environments[environmentName];
-						assert(environment, `"${environmentName}" environment not found`);
-
-						return environment;
-					});
-
-				// Build Worker environments that have not yet been built and are not dev-only
-				await Promise.all(
-					workerEnvironments
-						.filter((environment) => !environment.isBuilt)
-						.map((environment) => builder.build(environment))
-				);
-
-				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
-				const entryWorkerEnvironment =
-					builder.environments[entryWorkerEnvironmentName];
-				assert(
-					entryWorkerEnvironment,
-					`No "${entryWorkerEnvironmentName}" environment`
-				);
-
-				if (!entryWorkerEnvironment.isBuilt) {
-					// The entry Worker was only used in development so we emit an assets-only config
-
-					const clientEnvironment = builder.environments.client;
-					assert(clientEnvironment, 'No "client" environment');
-
-					if (!clientEnvironment.isBuilt) {
-						throw new Error(
-							"If `assetsOnly` is set to `true`, the client environment must be built"
-						);
-					}
-
-					const entryWorkerNewConfig = ctx.getWorkerNewConfig(
-						entryWorkerEnvironmentName
-					);
-					assert(
-						entryWorkerNewConfig,
-						`No config found for "${entryWorkerEnvironmentName}" environment`
-					);
-					await writeWorkerConfig({
-						root: builder.config.root,
-						config: entryWorkerNewConfig,
-					});
-				}
-			},
-		},
 	};
 });
 
@@ -274,8 +213,8 @@ function getEnvironmentsConfig(
 
 /**
  * When the Build Output Specification is enabled,
- * force the entry Worker environment's and the client environment's
- * `build.outDir` to the spec-mandated location.
+ * force Worker and client `build.outDir` values to their spec-mandated
+ * locations. Child environments are nested within their parent environment.
  *
  * Runs after Vite's merge in `configResolved`, so it overrides any
  * user-supplied `build.outDir`
@@ -307,6 +246,28 @@ function forceBuildOutputDirs(
 			root,
 			PRERENDER_WORKER_DIRECTORY_NAME
 		);
+	}
+
+	for (const [
+		parentEnvironmentName,
+		childEnvironmentNames,
+	] of resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap) {
+		const parentEnvironment =
+			resolvedViteConfig.environments[parentEnvironmentName];
+		if (!parentEnvironment) {
+			continue;
+		}
+
+		for (const childEnvironmentName of childEnvironmentNames) {
+			const childEnvironment =
+				resolvedViteConfig.environments[childEnvironmentName];
+			if (childEnvironment) {
+				childEnvironment.build.outDir = path.join(
+					parentEnvironment.build.outDir,
+					childEnvironmentName
+				);
+			}
+		}
 	}
 
 	const clientEnvironment = resolvedViteConfig.environments.client;

@@ -125,7 +125,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 										env: {
 											SERVICE: {
 												type: "worker",
-											worker: "primary-worker",
+												worker: "primary-worker",
 											},
 										},
 									},
