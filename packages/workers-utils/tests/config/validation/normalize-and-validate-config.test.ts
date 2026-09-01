@@ -11642,6 +11642,7 @@ describe("normalizeAndValidateConfig()", () => {
 						observability: {
 							notEnabled: "true",
 							head_sampling_rate: true,
+							redact_query_string: "true",
 						},
 					} as unknown as RawConfig,
 					undefined,
@@ -11659,7 +11660,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
-					  - Expected "observability.head_sampling_rate" to be of type number but got true."
+					  - Expected "observability.head_sampling_rate" to be of type number but got true.
+					  - Expected "observability.redact_query_string" to be of type boolean but got "true"."
 				`);
 			});
 
@@ -11685,6 +11687,7 @@ describe("normalizeAndValidateConfig()", () => {
 						observability: {
 							enabled: true,
 							head_sampling_rate: 1,
+							redact_query_string: true,
 							logs: {
 								enabled: true,
 								head_sampling_rate: 1,

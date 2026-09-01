@@ -426,6 +426,7 @@ const LimitsSchema = z.strictObject({
 const ObservabilitySchema = z.strictObject({
 	enabled: z.boolean().optional(),
 	headSamplingRate: z.number().optional(),
+	redactQueryString: z.boolean().optional(),
 	logs: z
 		.strictObject({
 			enabled: z.boolean().optional(),
