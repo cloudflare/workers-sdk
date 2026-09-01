@@ -6,6 +6,7 @@ import {
 	configFileName,
 	DEFAULT_COMPAT_DATE,
 	formatConfigSnippet,
+	getCloudflareEnv,
 	getDisableConfigWatching,
 	getDockerPath,
 	UserError,
@@ -248,7 +249,10 @@ async function resolveBindings(
 }> {
 	const bindings = getBindings(
 		config,
-		input.env,
+		// Config loading already falls back to CLOUDFLARE_ENV; do the same for
+		// `.env.<env>` / `.dev.vars.<env>` so those files match the active env.
+		// Don't write this onto `input.env` — that field is what `--env` set.
+		input.env ?? getCloudflareEnv(),
 		input.envFiles,
 		!input.dev?.remote,
 		input.bindings,
