@@ -18,8 +18,10 @@ describe("detectFramework() / Pages project detection", () => {
 		});
 
 		const result = await detectFramework(process.cwd(), context, {
-			pages_build_output_dir: "./dist",
-		} as Config);
+			wranglerConfig: {
+				pages_build_output_dir: "./dist",
+			} as Config,
+		});
 
 		expect(result.detectedFramework?.framework.id).toBe("cloudflare-pages");
 		expect(result.detectedFramework?.framework.name).toBe("Cloudflare Pages");

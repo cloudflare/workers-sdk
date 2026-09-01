@@ -155,7 +155,9 @@ export async function aggregateListResults<T>(
 	const peerResults = await Promise.all(
 		peerUrls.map(async (url) => {
 			const response = await fetchFromPeer(url, apiPath);
-			if (!response?.ok) return [];
+			if (!response?.ok) {
+				return [];
+			}
 			try {
 				const data = (await response.json()) as {
 					result: T[] | { [key: string]: T[] };

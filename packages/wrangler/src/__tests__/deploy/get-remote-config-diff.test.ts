@@ -623,6 +623,7 @@ describe("getRemoteConfigsDiff", () => {
 				{
 					enabled: true,
 					head_sampling_rate: 1,
+					redact_query_string: false,
 					logs: {
 						enabled: true,
 						head_sampling_rate: 1,

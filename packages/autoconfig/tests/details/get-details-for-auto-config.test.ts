@@ -62,7 +62,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({
 			configured: true,
 			framework: { id: "astro" },
-			buildCommand: "npm run build",
+			buildCommand: "npx astro build",
 			devCommand: "npx astro dev",
 			packageManager: { type: "npm" },
 		});
@@ -204,7 +204,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		expect(std.warn).toContain("project is part of a workspace");
 	});
 
-	it("should use npm build instead of framework build if present", async ({
+	it("should use the direct framework build instead of an npm script for cf", async ({
 		expect,
 	}) => {
 		await writeFile(
@@ -222,7 +222,48 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await expect(
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
+			buildCommand: "npx astro build",
+		});
+	});
+
+	it("should preserve npm build script detection for Wrangler", async ({
+		expect,
+	}) => {
+		await writeFile(
+			"package.json",
+			JSON.stringify({
+				scripts: {
+					build: "echo build",
+				},
+				dependencies: {
+					astro: "5",
+				},
+			})
+		);
+
+		await expect(
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
+		).resolves.toMatchObject({
 			buildCommand: "npm run build",
+		});
+	});
+
+	it("should include the Vite plugin command environment for cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({ dependencies: { vite: "8" } }),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			framework: { id: "vite" },
+			buildCommand: "npx vite build",
+			env: {
+				CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+			},
 		});
 	});
 

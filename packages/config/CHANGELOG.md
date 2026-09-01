@@ -1,5 +1,25 @@
 # @cloudflare/config
 
+## 0.10.0
+
+### Minor Changes
+
+- [#15379](https://github.com/cloudflare/workers-sdk/pull/15379) [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46) Thanks [@ibbykhazanchi](https://github.com/ibbykhazanchi)! - Add query string redaction to Workers observability configuration
+
+  Set `observability.redact_query_string` in `wrangler.json` or `observability.redactQueryString` in the experimental `cloudflare.config.ts` format to remove query strings from request URLs in logs and traces.
+
+- [#15388](https://github.com/cloudflare/workers-sdk/pull/15388) [`10d6bfb`](https://github.com/cloudflare/workers-sdk/commit/10d6bfbaf0ab7466892f4d97af1301494ca71e37) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support partial manifests in the experimental Build Output Specification
+
+  Build output producers now declare whether their module inventory is complete. `readBuildOutput()` resolves partial manifests by discovering `.js`, `.mjs`, and `.map` files while preserving explicit module type overrides.
+
+## 0.9.0
+
+### Minor Changes
+
+- [#15373](https://github.com/cloudflare/workers-sdk/pull/15373) [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename Worker target fields from `workerName` to `worker`
+
+  The experimental `@cloudflare/config` and Miniflare configuration APIs now use `worker` consistently for Worker, Durable Object, Workflow, dispatch namespace, and tail consumer targets.
+
 ## 0.8.0
 
 ### Minor Changes

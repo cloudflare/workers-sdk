@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
 	DEFAULT_COMPAT_DATE,
+	extractBindingsOfType,
 	formatConfigSnippet,
 	getDisableConfigWatching,
 	getDockerPath,
@@ -257,19 +257,18 @@ async function resolveBindings(
 
 	// Create a print function that captures the current bindings context
 	const printCurrentBindings = (registry: WorkerRegistry | null) => {
-		printBindings(
-			bindings,
-			input.tailConsumers ?? config.tail_consumers,
-			input.streamingTailConsumers ?? config.streaming_tail_consumers,
-			config.containers,
-			{
-				registry,
-				local: !input.dev?.remote,
-				isMultiWorker: getFlag("MULTIWORKER"),
-				remoteBindingsDisabled: input.dev?.remote === false,
-				name: config.name,
-			}
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: input.tailConsumers ?? config.tail_consumers,
+			streamingTailConsumers:
+				input.streamingTailConsumers ?? config.streaming_tail_consumers,
+			containers: config.containers,
+			registry,
+			local: !input.dev?.remote,
+			isMultiWorker: getFlag("MULTIWORKER"),
+			remoteBindingsDisabled: input.dev?.remote === false,
+			name: config.name,
+		});
 	};
 
 	// Print the initial bindings table

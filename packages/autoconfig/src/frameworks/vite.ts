@@ -15,6 +15,10 @@ import type {
 } from "./framework-class";
 
 export class Vite extends Framework {
+	readonly env = {
+		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+	} as const;
+
 	isConfigured(
 		projectPath: string,
 		{ target = "cf" }: { target?: AutoConfigTarget } = {}

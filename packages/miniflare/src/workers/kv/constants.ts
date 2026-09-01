@@ -118,9 +118,13 @@ export function testSiteRegExps(
 	key: string
 ): boolean {
 	// Either include globs undefined, or name matches them
-	if (regExps.include !== undefined) return testRegExps(regExps.include, key);
+	if (regExps.include !== undefined) {
+		return testRegExps(regExps.include, key);
+	}
 	// Either exclude globs undefined, or name doesn't match them
-	if (regExps.exclude !== undefined) return !testRegExps(regExps.exclude, key);
+	if (regExps.exclude !== undefined) {
+		return !testRegExps(regExps.exclude, key);
+	}
 	return true;
 }
 

@@ -1,5 +1,35 @@
 # @cloudflare/deploy-helpers
 
+## 0.10.0
+
+### Minor Changes
+
+- [#15454](https://github.com/cloudflare/workers-sdk/pull/15454) [`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move binding utilities into `@cloudflare/workers-utils`
+
+  Binding conversion, printing, and local-development validation are now exported from `@cloudflare/workers-utils` so they can be shared by Wrangler, the Cloudflare Vite plugin, and other consumers.
+
+  The corresponding exports have been removed from `@cloudflare/deploy-helpers`. Consumers should import them directly from `@cloudflare/workers-utils` instead.
+
+  Wrangler's `unstable_printBindings` API now accepts the bindings and an options object instead of five positional parameters.
+
+### Patch Changes
+
+- [#15379](https://github.com/cloudflare/workers-sdk/pull/15379) [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46) Thanks [@ibbykhazanchi](https://github.com/ibbykhazanchi)! - Add query string redaction to Workers observability configuration
+
+  Set `observability.redact_query_string` in `wrangler.json` or `observability.redactQueryString` in the experimental `cloudflare.config.ts` format to remove query strings from request URLs in logs and traces.
+
+- Updated dependencies [[`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45), [`200780f`](https://github.com/cloudflare/workers-sdk/commit/200780faa81ab5e58bc656e2d21a20fdd3a4b725), [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71), [`87a7acf`](https://github.com/cloudflare/workers-sdk/commit/87a7acf197629f5bf16bb38a2e411dc6c21339e0), [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46)]:
+  - @cloudflare/workers-utils@0.35.0
+  - miniflare@5.20260831.0-alpha
+  - @cloudflare/cli-shared-helpers@0.1.26
+
+## 0.9.2
+
+### Patch Changes
+
+- Updated dependencies [[`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753), [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368)]:
+  - miniflare@5.20260828.0-alpha
+
 ## 0.9.1
 
 ### Patch Changes

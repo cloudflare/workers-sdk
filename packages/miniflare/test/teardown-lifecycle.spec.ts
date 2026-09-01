@@ -146,7 +146,9 @@ test("Miniflare: dispose waits for workerd exit and continues cleanup before ret
 			"injected proxy cleanup failure"
 		);
 	} finally {
-		if (!runtimeExitReleased) releaseRuntimeExit();
+		if (!runtimeExitReleased) {
+			releaseRuntimeExit();
+		}
 		emit.mockRestore();
 		proxyDispose.mockRestore();
 		webSocketClose.mockRestore();
