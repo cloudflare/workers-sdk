@@ -9,7 +9,7 @@ import {
 	getWranglerHiddenDirPath,
 	isUnsafeBindingType,
 	UserError,
-	warnOrError,
+	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
@@ -680,35 +680,35 @@ export function buildMiniflareBindingOptions(
 	const externalWorkers: V4WorkerOptions[] = [];
 
 	for (const ai of aiBindings) {
-		warnOrError("ai", ai.remote, logger.warn);
+		validateBindingRemoteSetting("ai", ai.remote, logger.warn);
 	}
 
 	for (const ns of aiSearchNamespaceBindings) {
-		warnOrError("ai_search_namespace", ns.remote, logger.warn);
+		validateBindingRemoteSetting("ai_search_namespace", ns.remote, logger.warn);
 	}
 
 	for (const inst of aiSearchInstanceBindings) {
-		warnOrError("ai_search", inst.remote, logger.warn);
+		validateBindingRemoteSetting("ai_search", inst.remote, logger.warn);
 	}
 
 	for (const ws of websearchBindings) {
-		warnOrError("websearch", ws.remote, logger.warn);
+		validateBindingRemoteSetting("websearch", ws.remote, logger.warn);
 	}
 
 	for (const memory of agentMemoryBindings) {
-		warnOrError("agent_memory", memory.remote, logger.warn);
+		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
 
 	for (const media of mediaBindings) {
-		warnOrError("media", media.remote, logger.warn);
+		validateBindingRemoteSetting("media", media.remote, logger.warn);
 	}
 
 	for (const artifact of artifactsBindings) {
-		warnOrError("artifacts", artifact.remote, logger.warn);
+		validateBindingRemoteSetting("artifacts", artifact.remote, logger.warn);
 	}
 
 	for (const flagship of flagshipBindings) {
-		warnOrError("flagship", flagship.remote, logger.warn);
+		validateBindingRemoteSetting("flagship", flagship.remote, logger.warn);
 	}
 
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
@@ -980,7 +980,11 @@ export function buildMiniflareBindingOptions(
 
 		vectorize: Object.fromEntries(
 			vectorizeBindings.map((vectorize) => {
-				warnOrError("vectorize", vectorize.remote, logger.warn);
+				validateBindingRemoteSetting(
+					"vectorize",
+					vectorize.remote,
+					logger.warn
+				);
 				return [
 					vectorize.binding,
 					{
@@ -995,7 +999,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcServices: Object.fromEntries(
 			vpcServices.map((vpc) => {
-				warnOrError("vpc_service", vpc.remote, logger.warn);
+				validateBindingRemoteSetting("vpc_service", vpc.remote, logger.warn);
 				return [
 					vpc.binding,
 					{
@@ -1007,7 +1011,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcNetworks: Object.fromEntries(
 			vpcNetworks.map((vpc) => {
-				warnOrError("vpc_network", vpc.remote, logger.warn);
+				validateBindingRemoteSetting("vpc_network", vpc.remote, logger.warn);
 				const id =
 					vpc.tunnel_id !== undefined
 						? { tunnel_id: vpc.tunnel_id }
@@ -1018,7 +1022,7 @@ export function buildMiniflareBindingOptions(
 
 		dispatchNamespaces: Object.fromEntries(
 			dispatchNamespaces.map((dispatchNamespace) => {
-				warnOrError(
+				validateBindingRemoteSetting(
 					"dispatch_namespace",
 					dispatchNamespace.remote,
 					logger.warn
@@ -1059,7 +1063,11 @@ export function buildMiniflareBindingOptions(
 
 		mtlsCertificates: Object.fromEntries(
 			mtlsCertificates.map((mtlsCertificate) => {
-				warnOrError("mtls_certificate", mtlsCertificate.remote, logger.warn);
+				validateBindingRemoteSetting(
+					"mtls_certificate",
+					mtlsCertificate.remote,
+					logger.warn
+				);
 				return [
 					mtlsCertificate.binding,
 					{

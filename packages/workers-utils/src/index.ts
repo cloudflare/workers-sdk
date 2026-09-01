@@ -73,7 +73,7 @@ export const friendlyBindingNames = validation.friendlyBindingNames;
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
-	warnOrError,
+	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
 
 export { validatePagesConfig } from "./config/validation-pages";

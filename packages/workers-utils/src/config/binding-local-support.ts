@@ -5,7 +5,7 @@ import type { Binding } from "../types";
 
 /**
  * Local-dev capability of each binding type. Source of truth for
- * `pickRemoteBindings()` and `warnOrError()`.
+ * `pickRemoteBindings()` and `validateBindingRemoteSetting()`.
  *
  * - `local-and-remote`: local simulator; `remote: true` opts into proxying.
  * - `local-only`: local simulator only; `remote: true` is a config error.
@@ -91,7 +91,7 @@ export function getBindingLocalSupport(
  * invalid combinations and uses the caller-provided logger for
  * valid-but-noteworthy ones.
  */
-export function warnOrError(
+export function validateBindingRemoteSetting(
 	type: Binding["type"],
 	remote: boolean | undefined,
 	warn: (message: string) => void
