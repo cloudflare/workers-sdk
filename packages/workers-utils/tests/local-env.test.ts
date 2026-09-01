@@ -139,6 +139,20 @@ describe("loadEnv", () => {
 		);
 	});
 
+	it("treats ENOTDIR as a missing candidate", async ({ expect }) => {
+		writeFile("not-a-directory", "");
+
+		const result = await loadEnv(path.resolve("not-a-directory"));
+
+		expect(result.values.FILE_VALUE).toBeUndefined();
+	});
+
+	it("propagates unexpected file system errors", async ({ expect }) => {
+		await expect(loadEnv("\0")).rejects.toMatchObject({
+			code: "ERR_INVALID_ARG_VALUE",
+		});
+	});
+
 	it.skipIf(process.platform === "win32")(
 		"loads environment values from a FIFO",
 		async ({ expect }) => {

@@ -146,14 +146,24 @@ async function tryParseFile(
 		if (!stat.isFile() && !stat.isFIFO()) {
 			return;
 		}
-	} catch {
-		return;
+		return {
+			path: filePath,
+			values: parse(await fs.readFile(filePath, "utf8")),
+		};
+	} catch (error) {
+		if (isMissingFileError(error)) {
+			return;
+		}
+		throw error;
 	}
+}
 
-	return {
-		path: filePath,
-		values: parse(await fs.readFile(filePath, "utf8")),
-	};
+function isMissingFileError(error: unknown): boolean {
+	return (
+		error instanceof Error &&
+		"code" in error &&
+		(error.code === "ENOENT" || error.code === "ENOTDIR")
+	);
 }
 
 function copyProcessEnv(): Record<string, string> {
