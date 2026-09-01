@@ -11,6 +11,9 @@ export default defineWorker({
 	assets: { notFoundHandling: "single-page-application" },
 	env: {
 		ASSETS: bindings.assets(),
+		SECRET_A: bindings.secret(),
+		SECRET_B: bindings.secret(),
+		SECRET_C: bindings.secret(),
 		VAR_1: bindings.text("var-1"),
 	},
 });

@@ -15,16 +15,19 @@ import {
 	DEFAULT_COMPAT_DATE,
 	getWorkerNameFromProject,
 } from "@cloudflare/workers-utils";
+import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { defu } from "defu";
-import * as vite from "vite";
-import { readBuildOutputWorkers } from "./build-output-preview";
+import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
 import type {
 	ParsedConfigExports,
 	ParsedInputWorkerConfig,
+	ParsedOutputSettingsConfig,
 } from "@cloudflare/config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
+import type * as vite from "vite";
 
 export type PersistState = boolean | { path: string };
 export type TunnelConfig = {
@@ -163,6 +166,8 @@ interface BaseResolvedConfig {
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
 	tunnel: TunnelConfig;
+	localEnv: LoadedEnv;
+	devVars: Record<string, string> | undefined;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -188,6 +193,7 @@ export interface WorkersResolvedConfig extends NonPreviewResolvedConfig {
 
 export interface PreviewResolvedConfig extends BaseResolvedConfig {
 	type: "preview";
+	settings: ParsedOutputSettingsConfig | undefined;
 	workers: BuildOutputPreviewWorker[];
 }
 
@@ -352,6 +358,16 @@ export async function resolvePluginConfig(
 		"mode" in userConfig && typeof userConfig.mode === "string"
 			? userConfig.mode
 			: viteEnv.mode;
+	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
+	const envDir = resolveEnvDir(root, userConfig.envDir);
+	const preview = viteEnv.isPreview
+		? await readBuildOutputPreview(root, !!process.env.CLOUDFLARE_VITE_BUILD)
+		: undefined;
+	const localEnvMode = preview ? preview.settings?.mode : mode;
+	const [localEnv, devVars] = await Promise.all([
+		loadEnv(envDir, localEnvMode),
+		loadDevVars(envDir, localEnvMode),
+	]);
 	const types = normalizeTypes(pluginConfig.types);
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
@@ -368,35 +384,25 @@ export async function resolvePluginConfig(
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
 		},
+		localEnv,
+		devVars,
 	};
-	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
-	const prefixedEnv = vite.loadEnv(mode, root, [
-		"CLOUDFLARE_",
-		// TODO: Remove deprecated WRANGLER prefix support in next major version
-		"WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_",
-	]);
-
-	// Make Cloudflare-prefixed environment variables available while resolving
-	// config and starting development services.
-	Object.assign(process.env, prefixedEnv);
 
 	// The `cf-vite` delegate binary's `--local` flag sets this env var to
 	// force remote bindings off, overriding any `remoteBindings` value in the
 	// plugin config (mirrors `wrangler dev --local`).
 	const remoteBindings =
-		prefixedEnv.CLOUDFLARE_VITE_FORCE_LOCAL === "true"
+		localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL === "true"
 			? false
 			: (pluginConfig.remoteBindings ?? true);
 
-	if (viteEnv.isPreview) {
+	if (preview !== undefined) {
 		return {
 			...shared,
 			remoteBindings,
 			type: "preview",
-			workers: await readBuildOutputWorkers(
-				root,
-				!!process.env.CLOUDFLARE_VITE_BUILD
-			),
+			settings: preview.settings,
+			workers: preview.workers,
 		};
 	}
 
@@ -637,6 +643,20 @@ function addAuxiliaryWorkers(options: {
 			);
 		}
 	}
+}
+
+/**
+ * Resolves Vite's environment directory before `configResolved` is available.
+ *
+ * @param root The already-resolved Vite root.
+ * @param envDir The user-provided Vite `envDir` option.
+ * @returns An absolute environment directory, or `false` when disabled.
+ */
+export function resolveEnvDir(
+	root: string,
+	envDir: string | false | undefined
+): string | false {
+	return envDir === false ? false : path.resolve(root, envDir ?? ".");
 }
 
 const RESERVED_WORKER_EXPORT_NAMES = new Set(["default", "prerender"]);
