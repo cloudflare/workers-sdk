@@ -66,20 +66,18 @@ export default {
 					}
 				);
 			}
-			// TODO: Reinstate when .env and .dev.vars files are supported with
-			// cloudflare.config.ts.
-			// case "/hyperdrive": {
-			// 	if (
-			// 		typeof env.HYPERDRIVE.connect !== "function" ||
-			// 		typeof env.HYPERDRIVE.connectionString !== "string"
-			// 	) {
-			// 		return new Response("Hyperdrive binding is not configured properly", {
-			// 			status: 500,
-			// 		});
-			// 	}
+			case "/hyperdrive": {
+				if (
+					typeof env.HYPERDRIVE.connect !== "function" ||
+					typeof env.HYPERDRIVE.connectionString !== "string"
+				) {
+					return new Response("Hyperdrive binding is not configured properly", {
+						status: 500,
+					});
+				}
 
-			// 	return new Response("Hyperdrive binding works");
-			// }
+				return new Response("Hyperdrive binding works");
+			}
 		}
 
 		return new Response("Please specify a binding you want to test", {
