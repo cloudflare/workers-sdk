@@ -89,6 +89,15 @@ const batch = createMessageBatch("test", [
 		body: { value: "test" },
 	},
 ]);
+createMessageBatch("test", [
+	{
+		id: "serialized-message",
+		timestamp: new Date(),
+		attempts: 1,
+		// @ts-expect-error createMessageBatch rejects serialized bodies at runtime
+		serializedBody: new ArrayBuffer(0),
+	},
+]);
 void getQueueResult(batch, createExecutionContext());
 
 type Handler = PagesFunction<Cloudflare.Env, "id", { value: string }>;

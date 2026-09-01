@@ -162,7 +162,8 @@ declare module "cloudflare:test" {
 		id: string;
 		timestamp: Date;
 		attempts: number;
-	} & ({ body: Body } | { serializedBody: ArrayBuffer | ArrayBufferView });
+		body: Body;
+	};
 	/**
 	 * Creates an instance of `MessageBatch` for use as the 1st argument to
 	 * modules-format `queue()` exported handlers.
