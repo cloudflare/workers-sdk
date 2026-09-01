@@ -24,6 +24,7 @@ describe("dockerLoginImageRegistry", () => {
 		}));
 		initContainersSharedContext({
 			accountId: "abc123",
+			apiFamily: "containers",
 			fetchResult: fetchResult as FetchResultFetcher,
 		});
 
@@ -72,5 +73,41 @@ describe("dockerLoginImageRegistry", () => {
 			{ stdio: ["pipe", "inherit", "inherit"] }
 		);
 		expect(writes).toEqual(["secret"]);
+	});
+
+	it("uses the configured API family for registry credentials", async ({
+		expect,
+	}) => {
+		const fetchResult = vi.fn(async () => ({
+			username: "v1",
+			password: "secret",
+		}));
+		initContainersSharedContext({
+			accountId: "abc123",
+			apiFamily: "cloudchamber",
+			fetchResult: fetchResult as FetchResultFetcher,
+		});
+
+		const child = Object.assign(new PassThrough(), {
+			stdin: new PassThrough(),
+		});
+		spawn.mockReturnValue(child);
+
+		const login = dockerLoginImageRegistry(
+			"docker",
+			"registry.cloudflare.com",
+			{ compliance_region: "public" }
+		);
+		await vi.waitFor(() => {
+			expect(spawn).toHaveBeenCalled();
+		});
+		child.emit("close", 0);
+		await login;
+
+		expect(fetchResult).toHaveBeenCalledWith(
+			{ compliance_region: "public" },
+			"/accounts/abc123/cloudchamber/registries/registry.cloudflare.com/credentials",
+			expect.any(Object)
+		);
 	});
 });

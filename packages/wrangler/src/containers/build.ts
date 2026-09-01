@@ -1,18 +1,20 @@
+import { initContainersSharedContext } from "@cloudflare/containers-shared";
+import { fetchResult } from "../cfetch";
 import {
 	buildAndMaybePush,
 	buildCommand,
 	pushCommand,
 } from "../cloudchamber/build";
-import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { ensureCloudchamberApiAuth } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { containersScope } from ".";
-import type { ImageRef } from "../cloudchamber/build";
 import type {
 	ContainerNormalizedConfig,
+	ImageRef,
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils";
 
 // --- Command definitions ---
 
@@ -58,8 +60,7 @@ export const containersBuildCommand = createCommand({
 	},
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
-		await fillOpenAPIConfiguration(config, containersScope);
-		await buildCommand(args, config);
+		await buildCommand(args, config, "containers", containersScope);
 	},
 });
 
@@ -84,8 +85,7 @@ export const containersPushCommand = createCommand({
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
-		await fillOpenAPIConfiguration(config, containersScope);
-		await pushCommand(args, config);
+		await pushCommand(args, config, "containers", containersScope);
 	},
 });
 
@@ -108,10 +108,24 @@ export async function buildContainer(
 	dryRun: boolean,
 	pathToDocker: string,
 	verifyDockerIsRunning?: boolean,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: Config
 ): Promise<ImageRef> {
 	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
 	logger.log("Building image", imageFullName);
+
+	if (!dryRun) {
+		if (complianceConfig === undefined) {
+			throw new Error("Container image push requires Wrangler config");
+		}
+		initContainersSharedContext({
+			accountId: await ensureCloudchamberApiAuth(
+				complianceConfig,
+				containersScope
+			),
+			apiFamily: "containers",
+			fetchResult,
+		});
+	}
 
 	return await buildAndMaybePush(
 		{

@@ -60,6 +60,7 @@ export function configureContainerPull(
 
 	initContainersSharedContext({
 		accountId,
+		apiFamily: "containers",
 		fetchResult: async (requestComplianceConfig, ...args) =>
 			fetchResult(
 				requestComplianceConfig ??

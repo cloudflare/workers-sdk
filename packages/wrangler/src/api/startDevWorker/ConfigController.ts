@@ -508,6 +508,7 @@ async function resolveConfig(
 	if (needsPulling && !resolved.dev.remote) {
 		initContainersSharedContext({
 			accountId: await requireAuth(config),
+			apiFamily: "containers",
 			fetchResult,
 		});
 	}

@@ -90,6 +90,25 @@ export type BuildArgs = {
 	setNetworkToHost?: boolean;
 };
 
+/**
+ * An image reference returned by the build/push helpers.
+ *
+ * `{ remoteDigest: string }` implies the image was pushed to, or already exists in,
+ * the managed registry. Deployments should use this digest-pinned reference.
+ *
+ * `{ newTag: string }` implies the image was built locally without pushing.
+ */
+export type ImageRef = { remoteDigest: string } | { newTag: string };
+
+export type ContainerAccountDetails = {
+	external_account_id: string;
+	limits: {
+		vcpu_per_deployment: number;
+		memory_mib_per_deployment: number;
+		disk_mb_per_deployment: number;
+	};
+};
+
 export type ContainerNormalizedConfig = SharedContainerConfig &
 	(ImageURIConfig | DockerfileConfig);
 export type DockerfileConfig = {

@@ -1,14 +1,11 @@
-import {
-	dockerImageInspect,
-	InstanceType,
-} from "@cloudflare/containers-shared";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import {
-	ensureContainerLimits,
-	ensureImageFitsLimits,
-} from "../../cloudchamber/limits";
-import type { CompleteAccountCustomer } from "@cloudflare/containers-api";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+import { dockerImageInspect } from "../src/inspect";
+import { ensureContainerLimits, ensureImageFitsLimits } from "../src/push";
+import { InstanceType } from "../src/types";
+import type {
+	ContainerAccountDetails,
+	ContainerNormalizedConfig,
+} from "../src/types";
 
 const MB = 1000 * 1000;
 const commonLimits = {
@@ -17,19 +14,15 @@ const commonLimits = {
 	disk_mb_per_deployment: 20000,
 };
 
-vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
-	const actual = await importOriginal();
-	return Object.assign({}, actual, {
-		dockerImageInspect: vi.fn(),
-	});
-});
+vi.mock("../src/inspect", () => ({
+	dockerImageInspect: vi.fn(),
+}));
 
 describe("ensureContainerLimits", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 
-		// Returns image size and number of layers - used to calculate required size.
-		// required size = 53387881 * 1.1 + 2 * 16 * MiB = 93MB
+		// required size = 53387881 * 1.1 + 2 * 16 MiB = 93MB
 		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
 	});
 	afterEach(() => {
@@ -49,7 +42,7 @@ describe("ensureContainerLimits", () => {
 							...commonLimits,
 							vcpu_per_deployment: 0.0625,
 						},
-					} as CompleteAccountCustomer,
+					} as ContainerAccountDetails,
 					containerConfig: {
 						instance_type: InstanceType.STANDARD,
 					} as ContainerNormalizedConfig,
@@ -71,7 +64,7 @@ describe("ensureContainerLimits", () => {
 							...commonLimits,
 							memory_mib_per_deployment: 1024,
 						},
-					} as CompleteAccountCustomer,
+					} as ContainerAccountDetails,
 					containerConfig: {
 						instance_type: InstanceType.STANDARD,
 					} as ContainerNormalizedConfig,
@@ -93,7 +86,7 @@ describe("ensureContainerLimits", () => {
 							...commonLimits,
 							disk_mb_per_deployment: 2000,
 						},
-					} as CompleteAccountCustomer,
+					} as ContainerAccountDetails,
 					containerConfig: {
 						instance_type: InstanceType.STANDARD,
 					} as ContainerNormalizedConfig,
@@ -111,7 +104,7 @@ describe("ensureContainerLimits", () => {
 				imageTag: "docker.io/test-app:tag",
 				account: {
 					limits: commonLimits,
-				} as CompleteAccountCustomer,
+				} as ContainerAccountDetails,
 				containerConfig: {
 					instance_type: InstanceType.STANDARD,
 				} as ContainerNormalizedConfig,
@@ -130,7 +123,7 @@ describe("ensureContainerLimits", () => {
 					imageTag: "docker.io/test-app:tag",
 					account: {
 						limits: commonLimits,
-					} as CompleteAccountCustomer,
+					} as ContainerAccountDetails,
 					containerConfig: {
 						vcpu: 5,
 						memory_mib: 4096,
@@ -151,7 +144,7 @@ describe("ensureContainerLimits", () => {
 					imageTag: "docker.io/test-app:tag",
 					account: {
 						limits: commonLimits,
-					} as CompleteAccountCustomer,
+					} as ContainerAccountDetails,
 					containerConfig: {
 						vcpu: 1,
 						memory_mib: 999999,
@@ -172,7 +165,7 @@ describe("ensureContainerLimits", () => {
 					imageTag: "docker.io/test-app:tag",
 					account: {
 						limits: commonLimits,
-					} as CompleteAccountCustomer,
+					} as ContainerAccountDetails,
 					containerConfig: {
 						vcpu: 1,
 						memory_mib: 4096,
@@ -192,7 +185,7 @@ describe("ensureContainerLimits", () => {
 				imageTag: "docker.io/test-app:tag",
 				account: {
 					limits: commonLimits,
-				} as CompleteAccountCustomer,
+				} as ContainerAccountDetails,
 				containerConfig: {
 					vcpu: 1,
 					memory_mib: 4096,
@@ -215,7 +208,7 @@ describe("ensureImageFitsLimits", () => {
 	it("should throw error if image size exceeds allowed size", async ({
 		expect,
 	}) => {
-		// required size = 907387881 * 1.1 + 128 * 16 * MiB = 3146MB
+		// required size = 907387881 * 1.1 + 128 * 16 MiB = 3146MB
 		vi.mocked(dockerImageInspect).mockResolvedValue("907387881 128");
 
 		await expect(() =>
@@ -231,14 +224,14 @@ describe("ensureImageFitsLimits", () => {
 		expect(dockerImageInspect).toHaveBeenCalledExactlyOnceWith(
 			"path/to/docker",
 			{
-				imageTag: `docker.io/test-app:tag`,
+				imageTag: "docker.io/test-app:tag",
 				formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 			}
 		);
 	});
 
 	it("should not throw when disk size is within limits", async ({ expect }) => {
-		// required size = 53387881 * 1.1 + 2 * 16 * MiB = 93MB
+		// required size = 53387881 * 1.1 + 2 * 16 MiB = 93MB
 		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
 
 		const result = await ensureImageFitsLimits({
@@ -250,7 +243,7 @@ describe("ensureImageFitsLimits", () => {
 		expect(dockerImageInspect).toHaveBeenCalledExactlyOnceWith(
 			"path/to/docker",
 			{
-				imageTag: `docker.io/test-app:tag`,
+				imageTag: "docker.io/test-app:tag",
 				formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 			}
 		);

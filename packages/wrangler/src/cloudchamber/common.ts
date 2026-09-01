@@ -168,18 +168,8 @@ export async function fillOpenAPIConfiguration(
 ) {
 	const headers = new Headers();
 
-	const accountId = await requireAuth(config);
+	const accountId = await ensureCloudchamberApiAuth(config, scope);
 	const auth = requireApiToken();
-	const scopes = getScopes();
-	if (scopes !== undefined && !scopes.includes(scope)) {
-		logger.error(`You don't have '${scope}' in your list of scopes`);
-		printScopes(scopes ?? []);
-		throw new UserError(
-			`You need '${scope}', try logging in again or creating an appropiate API token`,
-			{ telemetryMessage: "cloudchamber auth missing scope" }
-		);
-	}
-
 	addAuthorizationHeader(headers, auth);
 	addUserAgent(headers);
 
@@ -200,6 +190,24 @@ export async function fillOpenAPIConfiguration(
 		...Object.fromEntries(headers.entries()),
 	};
 	OpenAPI.LOGGER = logger;
+}
+
+export async function ensureCloudchamberApiAuth(
+	config: Config,
+	scope: typeof containersScope | typeof cloudchamberScope
+): Promise<string> {
+	const accountId = await requireAuth(config);
+	const scopes = getScopes();
+	if (scopes !== undefined && !scopes.includes(scope)) {
+		logger.error(`You don't have '${scope}' in your list of scopes`);
+		printScopes(scopes ?? []);
+		throw new UserError(
+			`You need '${scope}', try logging in again or creating an appropiate API token`,
+			{ telemetryMessage: "cloudchamber auth missing scope" }
+		);
+	}
+
+	return accountId;
 }
 
 type NonObject = undefined | null | boolean | string | number;

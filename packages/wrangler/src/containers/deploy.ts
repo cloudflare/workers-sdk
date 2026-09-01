@@ -48,7 +48,6 @@ import {
 } from "../utils/sortObjectRecursive";
 import { fetchVersion } from "../versions/api";
 import { containersScope } from ".";
-import type { ImageRef } from "../cloudchamber/build";
 import type { ApiVersion } from "../versions/types";
 import type {
 	Application,
@@ -59,7 +58,10 @@ import type {
 	Observability as ObservabilityConfiguration,
 	RolloutStepRequest,
 } from "@cloudflare/containers-api";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+import type {
+	ContainerNormalizedConfig,
+	ImageRef,
+} from "@cloudflare/containers-shared";
 import type {
 	ComplianceConfig,
 	Config,
