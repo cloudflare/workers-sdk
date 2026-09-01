@@ -180,7 +180,6 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI", remote: true });
 		});
-
 	});
 
 	it("creates draft provisionable bindings with the binding factories", ({
