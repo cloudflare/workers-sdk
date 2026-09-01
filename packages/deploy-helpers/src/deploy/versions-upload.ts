@@ -16,7 +16,11 @@ import { getWorkersDevSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
 	applyServiceAndEnvironmentTags,
@@ -59,6 +63,7 @@ type VersionsUploadResult = {
 	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
+	bundleSize?: BundleSize;
 };
 
 export default async function versionsUpload(
@@ -86,6 +91,12 @@ export default async function versionsUpload(
 		preview_alias_url: result.versionPreviewAliasUrl,
 		wrangler_environment: props.env,
 		worker_name_overridden: props.workerNameOverridden ?? false,
+		bundle_size: result.bundleSize
+			? {
+					raw_bytes: result.bundleSize.size,
+					gzip_bytes: result.bundleSize.gzipSize,
+				}
+			: undefined,
 	});
 
 	return result;
@@ -238,10 +249,8 @@ async function uploadWorkerVersion(
 				: undefined,
 	};
 
-	await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	let workerBundle: FormData;
 
@@ -421,7 +430,7 @@ async function uploadWorkerVersion(
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, bundleSize };
 	}
 	assert(accountId);
 
@@ -472,5 +481,6 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 		assetUploadStats: assetsUploadResult?.assetUploadStats,
 		versionPreviewUrl,
 		versionPreviewAliasUrl,
+		bundleSize,
 	};
 }

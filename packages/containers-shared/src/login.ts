@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils/errors";
 import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
 import { OpenAPI } from "./client/core/OpenAPI";
 
