@@ -26,9 +26,7 @@ test("ratelimit support", async ({ expect }) => {
 	expect(response).toBe("Rate limit binding works: first: true, second: false");
 });
 
-// TODO: Reinstate when .env and .dev.vars files are supported with
-// cloudflare.config.ts.
-test.skip("hyperdrive support", async ({ expect }) => {
+test("hyperdrive support", async ({ expect }) => {
 	const response = await getTextResponse("/hyperdrive");
 	expect(response).toBe("Hyperdrive binding works");
 });

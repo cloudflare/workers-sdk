@@ -1,5 +1,5 @@
 import { beforeEach, describe, test, vi } from "vitest";
-import { readBuildOutputWorkers } from "../build-output-preview";
+import { readBuildOutputPreview } from "../build-output-preview";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
 
 const { readBuildOutputMock } = vi.hoisted(() => ({
@@ -24,12 +24,12 @@ function createWorker(name: string): BuildOutputWorker {
 	};
 }
 
-describe("readBuildOutputWorkers", () => {
+describe("readBuildOutputPreview", () => {
 	beforeEach(() => {
 		readBuildOutputMock.mockReset();
 	});
 
-	test("selects the default and auxiliary Workers for preview", async ({
+	test("selects the default and auxiliary Workers for ordinary preview", async ({
 		expect,
 	}) => {
 		readBuildOutputMock.mockResolvedValue({
@@ -41,9 +41,9 @@ describe("readBuildOutputWorkers", () => {
 			},
 		});
 
-		const result = await readBuildOutputWorkers("/project", false);
+		const result = await readBuildOutputPreview("/project", false);
 
-		expect(result.map((worker) => worker.config.name)).toEqual([
+		expect(result.workers.map((worker) => worker.config.name)).toEqual([
 			"entry-worker",
 			"auxiliary-worker",
 		]);
@@ -61,9 +61,9 @@ describe("readBuildOutputWorkers", () => {
 			},
 		});
 
-		const result = await readBuildOutputWorkers("/project", true);
+		const result = await readBuildOutputPreview("/project", true);
 
-		expect(result.map((worker) => worker.config.name)).toEqual([
+		expect(result.workers.map((worker) => worker.config.name)).toEqual([
 			"prerender-worker",
 			"auxiliary-worker",
 		]);
@@ -80,9 +80,9 @@ describe("readBuildOutputWorkers", () => {
 			},
 		});
 
-		const result = await readBuildOutputWorkers("/project", true);
+		const result = await readBuildOutputPreview("/project", true);
 
-		expect(result.map((worker) => worker.config.name)).toEqual([
+		expect(result.workers.map((worker) => worker.config.name)).toEqual([
 			"entry-worker",
 			"auxiliary-worker",
 		]);

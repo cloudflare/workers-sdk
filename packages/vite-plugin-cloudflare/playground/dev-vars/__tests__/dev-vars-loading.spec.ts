@@ -1,11 +1,7 @@
 import { test, vi } from "vitest";
 import { getJsonResponse, WAIT_FOR_OPTIONS } from "../../__test-utils__";
 
-// TODO: Reinstate when .env and .dev.vars files are supported with
-// cloudflare.config.ts.
-test.skip("reading variables from a standard .dev.vars file", async ({
-	expect,
-}) => {
+test("reads Worker secrets from .dev.vars", async ({ expect }) => {
 	await vi.waitFor(
 		async () =>
 			expect(await getJsonResponse()).toEqual({

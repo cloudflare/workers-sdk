@@ -2,6 +2,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+	envDir: "worker-process-populated-env",
 	build: {
 		outDir: "dist/worker-process-populated-env",
 	},
@@ -16,7 +17,10 @@ export default defineConfig({
 					"nodejs_compat",
 					"nodejs_compat_populate_process_env",
 				],
-				env: { FOO: { type: "text", value: "foo value" } },
+				env: {
+					FOO: { type: "text", value: "foo value" },
+					BAR: { type: "secret" },
+				},
 			},
 			inspectorPort: false,
 			persistState: false,
