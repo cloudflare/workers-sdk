@@ -5,6 +5,11 @@ export default defineConfig({
 	environments: {
 		ssr: {
 			build: {
+				rollupOptions: {
+					output: {
+						entryFileNames: "chunks/[name]-[hash].mjs",
+					},
+				},
 				sourcemap: true,
 			},
 		},

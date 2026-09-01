@@ -4,6 +4,7 @@ import * as path from "node:path";
 import MagicString from "magic-string";
 import * as vite from "vite";
 import { cleanUrl, createPlugin } from "../utils";
+import type { ModuleType } from "@cloudflare/config";
 
 /**
  * Plugin to support additional module types (`CompiledWasm`, `Data` and `Text`)
@@ -17,8 +18,12 @@ export const additionalModulesPlugin = createPlugin(
 			// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
+			perEnvironmentStartEndDuringDev: true,
 			applyToEnvironment(environment) {
 				return ctx.getWorkerConfig(environment.name) !== undefined;
+			},
+			buildStart() {
+				ctx.clearAdditionalModules(this.environment.name);
 			},
 			resolveId: {
 				filter: { id: moduleRuleFilters },
@@ -61,7 +66,12 @@ export const additionalModulesPlugin = createPlugin(
 
 					for (const match of matches) {
 						magicString ??= new MagicString(code);
-						const [full, _, modulePath] = match;
+						const [full, additionalModuleType, modulePath] = match;
+
+						assert(
+							isAdditionalModuleType(additionalModuleType),
+							`Unexpected error: invalid additional module type in reference ${full}.`
+						);
 
 						assert(
 							modulePath,
@@ -86,6 +96,11 @@ export const additionalModulesPlugin = createPlugin(
 						});
 
 						const emittedFileName = this.getFileName(referenceId);
+						ctx.addAdditionalModule(
+							this.environment.name,
+							emittedFileName,
+							toModuleType(additionalModuleType)
+						);
 						const relativePath = vite.normalizePath(
 							path.relative(path.dirname(chunk.fileName), emittedFileName)
 						);
@@ -116,6 +131,23 @@ export const additionalModulesPlugin = createPlugin(
 
 const ADDITIONAL_MODULE_TYPES = ["CompiledWasm", "Data", "Text"] as const;
 type AdditionalModuleType = (typeof ADDITIONAL_MODULE_TYPES)[number];
+
+function isAdditionalModuleType(
+	type: string | undefined
+): type is AdditionalModuleType {
+	return ADDITIONAL_MODULE_TYPES.some((moduleType) => moduleType === type);
+}
+
+function toModuleType(type: AdditionalModuleType): ModuleType {
+	switch (type) {
+		case "CompiledWasm":
+			return "wasm";
+		case "Data":
+			return "data";
+		case "Text":
+			return "text";
+	}
+}
 
 const ADDITIONAL_MODULE_PATTERN = `__CLOUDFLARE_MODULE__(${ADDITIONAL_MODULE_TYPES.join("|")})__(.*?)__CLOUDFLARE_MODULE__`;
 export const additionalModuleRE = new RegExp(ADDITIONAL_MODULE_PATTERN);
