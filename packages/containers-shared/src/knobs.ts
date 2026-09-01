@@ -1,9 +1,9 @@
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getComplianceRegionSubdomain,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/compliance";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
 
 /**
  * Returns the managed container registry for the configured API environment and compliance region.

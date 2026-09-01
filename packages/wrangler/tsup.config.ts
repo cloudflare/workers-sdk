@@ -5,6 +5,30 @@ import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 import type { Options } from "tsup";
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
+const MONOREPO_PACKAGE_ALIASES = {
+	"@cloudflare/autoconfig": path.join(__dirname, "../autoconfig/src/index.ts"),
+	"@cloudflare/deploy-helpers/context": path.join(
+		__dirname,
+		"../deploy-helpers/src/shared/context.ts"
+	),
+	"@cloudflare/deploy-helpers/create-worker-upload-form": path.join(
+		__dirname,
+		"../deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts"
+	),
+	"@cloudflare/deploy-helpers": path.join(
+		__dirname,
+		"../deploy-helpers/src/index.ts"
+	),
+	"@cloudflare/pages-functions": path.join(
+		__dirname,
+		"../pages-functions/src/index.ts"
+	),
+	"@cloudflare/runtime-types": path.join(
+		__dirname,
+		"../runtime-types/src/index.ts"
+	),
+	"@cloudflare/workers-utils": path.join(__dirname, "../workers-utils/src"),
+};
 const workersContexts = new Map<string, esbuild.BuildContext>();
 function embedWorkersPlugin({
 	isWatch,
@@ -113,6 +137,14 @@ export default defineConfig((options) => [
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
 		esbuildOptions(esbuildOptions) {
+			// These workspace packages publish bundles for npm consumers. Resolving
+			// their sources here gives Wrangler's monorepo build enough module
+			// structure to tree-shake exports it doesn't use, without changing the
+			// dependencies installed with the published package.
+			esbuildOptions.alias = {
+				...esbuildOptions.alias,
+				...MONOREPO_PACKAGE_ALIASES,
+			};
 			esbuildOptions.logOverride = {
 				...esbuildOptions.logOverride,
 				// Suppress the warning for the intentional runtime dynamic

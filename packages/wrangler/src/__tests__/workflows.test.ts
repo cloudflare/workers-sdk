@@ -379,6 +379,325 @@ describe("wrangler workflows", () => {
 			`
 			);
 		});
+
+		describe("date filtering", () => {
+			/** Captures the query string the command sends to the Workflows API. */
+			const mockGetInstancesCapturingQuery = (
+				instances: Instance[] = []
+			): { getSearchParams: () => URLSearchParams | undefined } => {
+				let searchParams: URLSearchParams | undefined;
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workflows/some-workflow/instances`,
+						async ({ request }) => {
+							searchParams = new URL(request.url).searchParams;
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: instances,
+							});
+						},
+						{ once: true }
+					)
+				);
+				return { getSearchParams: () => searchParams };
+			};
+
+			it("sends date_start and date_end as UTC ISO 8601", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-start 2026-01-01T13:00:00Z --date-end 2026-01-31T13:00:00Z`
+				);
+
+				const searchParams = getSearchParams();
+				expect(searchParams?.get("date_start")).toEqual(
+					"2026-01-01T13:00:00.000Z"
+				);
+				expect(searchParams?.get("date_end")).toEqual(
+					"2026-01-31T13:00:00.000Z"
+				);
+			});
+
+			it("normalises a date-only value to a UTC timestamp", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-start 2026-01-01`
+				);
+
+				expect(getSearchParams()?.get("date_start")).toEqual(
+					"2026-01-01T00:00:00.000Z"
+				);
+			});
+
+			it("expands a date-only end bound to cover the whole UTC day", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-start 2026-01-01 --date-end 2026-01-31`
+				);
+
+				const searchParams = getSearchParams();
+				expect(searchParams?.get("date_start")).toEqual(
+					"2026-01-01T00:00:00.000Z"
+				);
+				// Without this an instance created on Jan 31 at 09:00 would be omitted.
+				expect(searchParams?.get("date_end")).toEqual(
+					"2026-01-31T23:59:59.999Z"
+				);
+			});
+
+			it("treats the same date for both bounds as that whole day", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-start 2026-01-31 --date-end 2026-01-31`
+				);
+
+				const searchParams = getSearchParams();
+				expect(searchParams?.get("date_start")).toEqual(
+					"2026-01-31T00:00:00.000Z"
+				);
+				expect(searchParams?.get("date_end")).toEqual(
+					"2026-01-31T23:59:59.999Z"
+				);
+			});
+
+			/** Runs `fn` with a fixed non-UTC host timezone. */
+			const withHostTimezone = async (tz: string, fn: () => Promise<void>) => {
+				const original = process.env.TZ;
+				process.env.TZ = tz;
+				try {
+					await fn();
+				} finally {
+					if (original === undefined) {
+						delete process.env.TZ;
+					} else {
+						process.env.TZ = original;
+					}
+				}
+			};
+
+			it("treats an offset-less time as UTC regardless of host timezone", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				// Date.parse would read this as local time, shifting the bound by the
+				// host offset, so the result must not depend on the runner's zone.
+				for (const tz of ["Asia/Tokyo", "America/New_York", "UTC"]) {
+					await withHostTimezone(tz, async () => {
+						const { getSearchParams } = mockGetInstancesCapturingQuery([
+							mockInstances[0],
+						]);
+
+						await runWrangler(
+							`workflows instances list some-workflow --date-start 2026-01-01T13:00:00`
+						);
+
+						expect(getSearchParams()?.get("date_start")).toEqual(
+							"2026-01-01T13:00:00.000Z"
+						);
+					});
+				}
+			});
+
+			it("honours an explicit UTC offset regardless of host timezone", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				for (const tz of ["Asia/Tokyo", "UTC"]) {
+					await withHostTimezone(tz, async () => {
+						const { getSearchParams } = mockGetInstancesCapturingQuery([
+							mockInstances[0],
+						]);
+
+						await runWrangler(
+							`workflows instances list some-workflow --date-start 2026-01-01T13:00:00-05:00`
+						);
+
+						expect(getSearchParams()?.get("date_start")).toEqual(
+							"2026-01-01T18:00:00.000Z"
+						);
+					});
+				}
+			});
+
+			it("leaves an end bound with an explicit time exact", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-end 2026-01-31T09:00:00Z`
+				);
+
+				expect(getSearchParams()?.get("date_end")).toEqual(
+					"2026-01-31T09:00:00.000Z"
+				);
+			});
+
+			it("omits date params when the flags are not provided", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(`workflows instances list some-workflow`);
+
+				const searchParams = getSearchParams();
+				expect(searchParams?.has("date_start")).toBe(false);
+				expect(searchParams?.has("date_end")).toBe(false);
+			});
+
+			it("combines a date filter with a status filter", async ({ expect }) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --status complete --date-start 2026-01-01`
+				);
+
+				const searchParams = getSearchParams();
+				expect(searchParams?.get("status")).toEqual("complete");
+				expect(searchParams?.get("date_start")).toEqual(
+					"2026-01-01T00:00:00.000Z"
+				);
+			});
+
+			it("errors on an unparseable date", async ({ expect }) => {
+				writeWranglerConfig();
+
+				await expect(
+					runWrangler(
+						`workflows instances list some-workflow --date-start yesterday`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Looks like you have provided an invalid date "yesterday" for --date-start. Provide an ISO 8601 date or timestamp, for example 2026-01-01 or 2026-01-01T13:00:00Z.]`
+				);
+			});
+
+			it("errors on a non-ISO date that Date.parse would accept", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				await expect(
+					runWrangler(
+						`workflows instances list some-workflow --date-start "January 1, 2026"`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Looks like you have provided an invalid date "January 1, 2026" for --date-start. Provide an ISO 8601 date or timestamp, for example 2026-01-01 or 2026-01-01T13:00:00Z.]`
+				);
+			});
+
+			const impossibleDates = [
+				{ date: "2026-02-30", reason: "a day beyond the end of the month" },
+				{ date: "2026-02-29", reason: "Feb 29 in a non-leap year" },
+				{ date: "2026-04-31", reason: "April 31" },
+			];
+
+			for (const { date, reason } of impossibleDates) {
+				it(`errors rather than silently shifting the window for ${date} (${reason})`, async ({
+					expect,
+				}) => {
+					writeWranglerConfig();
+
+					await expect(
+						runWrangler(
+							`workflows instances list some-workflow --date-start ${date}`
+						)
+					).rejects.toThrow(
+						`The date "${date}" provided for --date-start is not a real calendar date. Check the month and day.`
+					);
+				});
+			}
+
+			it("accepts a real leap day", async ({ expect }) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-start 2024-02-29`
+				);
+
+				expect(getSearchParams()?.get("date_start")).toEqual(
+					"2024-02-29T00:00:00.000Z"
+				);
+			});
+
+			it("converts a timestamp with a UTC offset", async ({ expect }) => {
+				writeWranglerConfig();
+				const { getSearchParams } = mockGetInstancesCapturingQuery([
+					mockInstances[0],
+				]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-start 2026-01-01T23:00:00-05:00`
+				);
+
+				expect(getSearchParams()?.get("date_start")).toEqual(
+					"2026-01-02T04:00:00.000Z"
+				);
+			});
+
+			it("errors when date-start is after date-end", async ({ expect }) => {
+				writeWranglerConfig();
+
+				await expect(
+					runWrangler(
+						`workflows instances list some-workflow --date-start 2026-02-01 --date-end 2026-01-01`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --date-start (2026-02-01T00:00:00.000Z) must not be after --date-end (2026-01-01T23:59:59.999Z). Update --date-start or --date-end so --date-start is before or equal to --date-end.]`
+				);
+			});
+
+			it("warns that no instances matched the filters", async ({ expect }) => {
+				writeWranglerConfig();
+				mockGetInstancesCapturingQuery([]);
+
+				await runWrangler(
+					`workflows instances list some-workflow --date-start 2026-01-01`
+				);
+
+				expect(std.warn).toContain(
+					'No instances in workflow "some-workflow" matched the provided filters.'
+				);
+			});
+		});
 	});
 
 	describe("instances describe", () => {
@@ -1900,6 +2219,45 @@ describe("wrangler workflows", () => {
 				await runWrangler("workflows instances list my-workflow --local");
 				expect(std.warn).toContain(
 					'There are no instances in workflow "my-workflow"'
+				);
+			});
+
+			it("sends the same normalised date bounds as the remote path", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+
+				let searchParams: URLSearchParams | undefined;
+				msw.use(
+					http.get(
+						`${LOCAL_BASE}/workflows/:workflowName/instances`,
+						({ request }) => {
+							searchParams = new URL(request.url).searchParams;
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+								result_info: {
+									page: 1,
+									per_page: 25,
+									total_count: 0,
+									total_pages: 0,
+								},
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances list my-workflow --local --date-start 2026-01-01 --date-end 2026-01-31"
+				);
+
+				expect(searchParams?.get("date_start")).toEqual(
+					"2026-01-01T00:00:00.000Z"
+				);
+				expect(searchParams?.get("date_end")).toEqual(
+					"2026-01-31T23:59:59.999Z"
 				);
 			});
 		});
