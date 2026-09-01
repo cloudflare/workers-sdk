@@ -2434,20 +2434,6 @@ function collectCoreBindings(
 			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
-		if (env.websearch) {
-			if (!env.websearch.binding) {
-				throwMissingBindingError({
-					binding: env.websearch,
-					bindingType: "websearch",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				addBinding(env.websearch.binding, "WebSearch", "websearch", envName);
-			}
-		}
-
 		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {
 			if (!agentMemory.binding) {
 				throwMissingBindingError({
@@ -3612,24 +3598,6 @@ function collectCoreBindingsPerEnvironment(
 				name: aiSearch.binding,
 				type: "AiSearchInstance",
 			});
-		}
-
-		if (env.websearch) {
-			if (!env.websearch.binding) {
-				throwMissingBindingError({
-					binding: env.websearch,
-					bindingType: "websearch",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				bindings.push({
-					bindingCategory: "websearch",
-					name: env.websearch.binding,
-					type: "WebSearch",
-				});
-			}
 		}
 
 		for (const [index, agentMemory] of (env.agent_memory ?? []).entries()) {

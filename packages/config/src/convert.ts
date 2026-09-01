@@ -554,13 +554,6 @@ function convertBindingsAndAssets(
 				}
 				break;
 			}
-			case "web-search": {
-				result.websearch = omitUndefined({
-					binding: name,
-					remote: binding.dev?.remote,
-				});
-				break;
-			}
 			case "worker": {
 				services.push(
 					omitUndefined({

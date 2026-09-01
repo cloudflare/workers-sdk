@@ -93,7 +93,6 @@ describe("normalizeAndValidateConfig()", () => {
 			text_blobs: undefined,
 			browser: undefined,
 			ai: undefined,
-			websearch: undefined,
 			version_metadata: undefined,
 			triggers: {
 				crons: undefined,
@@ -3536,50 +3535,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The field "browser" should be an object but got null."
-				`);
-			});
-		});
-
-		describe("[websearch]", () => {
-			it("should accept a valid websearch binding", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: { binding: "WEBSEARCH" } } as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(false);
-			});
-
-			it("should error if websearch is an array", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: [] } as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - The field "websearch" should be an object but got []."
-				`);
-			});
-
-			it("should error if websearch has no binding name", ({ expect }) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ websearch: {} } as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - binding should have a string "binding" field."
 				`);
 			});
 		});
