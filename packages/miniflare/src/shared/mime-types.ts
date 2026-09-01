@@ -56,5 +56,7 @@ export function isCompressedByCloudflareFL(
 
 	const [contentType] = contentTypeHeader.split(";");
 
-	return compressedByCloudflareFL.has(contentType);
+	// Media types are case-insensitive and may carry whitespace before the
+	// parameter separator, e.g. `Text/HTML ; charset=utf-8`.
+	return compressedByCloudflareFL.has(contentType.trim().toLowerCase());
 }
