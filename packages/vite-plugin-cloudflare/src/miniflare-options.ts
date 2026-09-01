@@ -28,6 +28,7 @@ import {
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { getInputInspectorPort } from "./debug";
+import { resolveLocalBindings } from "./local-env";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { getRemoteBindings } from "./remote-bindings";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
@@ -44,12 +45,17 @@ import type {
 	PreviewPluginContext,
 	WorkersPluginContext,
 } from "./context";
+import type { ResolvedLocalBindings } from "./local-env";
 import type { PersistState } from "./plugin-config";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type {
+	ParsedInputWorkerConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
+import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 import type {
 	MiniflareOptions,
 	WorkerdStructuredLog,
@@ -221,6 +227,16 @@ export async function getDevMiniflareOptions(
 		resolvedPluginConfig,
 		entryWorkerConfig,
 		resolvedViteConfig
+	);
+	const resolvedLocalBindingsByWorkerName = resolveLocalBindingsByWorkerName(
+		ctx.allWorkerConfigs,
+		resolvedPluginConfig.localEnv,
+		resolvedPluginConfig.devVars
+	);
+	warnForMissingSecrets(
+		resolvedLocalBindingsByWorkerName,
+		resolvedViteConfig.mode,
+		viteDevServer.config.logger
 	);
 	const [routerWorkerManifest, assetWorkerManifest, viteProxyWorkerManifest] =
 		await Promise.all([
@@ -498,8 +514,13 @@ export async function getDevMiniflareOptions(
 								assets: _assets,
 								...config
 							} = worker.config;
+							const resolvedLocalBindings =
+								resolvedLocalBindingsByWorkerName.get(worker.config.name);
+							assert(resolvedLocalBindings);
 							const env: MiniflareEnv = {};
-							for (const [name, binding] of Object.entries(config.env ?? {})) {
+							for (const [name, binding] of Object.entries(
+								resolvedLocalBindings.bindings
+							)) {
 								if (binding.type === "hyperdrive") {
 									assert(
 										binding.dev?.connectionString !== undefined,
@@ -757,6 +778,16 @@ export async function getPreviewMiniflareOptions(
 		vitePreviewServer
 	);
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
+	const resolvedLocalBindingsByWorkerName = resolveLocalBindingsByWorkerName(
+		ctx.allWorkerConfigs,
+		resolvedPluginConfig.localEnv,
+		resolvedPluginConfig.devVars
+	);
+	warnForMissingSecrets(
+		resolvedLocalBindingsByWorkerName,
+		resolvedViteConfig.mode,
+		vitePreviewServer.config.logger
+	);
 	// TODO: Add Container Miniflare configuration when Containers are supported by
 	// cloudflare.config.ts.
 	const workers: WorkerOptions[] = await Promise.all(
@@ -773,9 +804,9 @@ export async function getPreviewMiniflareOptions(
 							name: workerConfig.name,
 							bindings: bindings ?? {},
 							complianceRegion: toRemoteComplianceRegion(
-								previewWorker.settings?.complianceRegion
+								resolvedPluginConfig.settings?.complianceRegion
 							),
-							account_id: previewWorker.settings?.accountId,
+							account_id: resolvedPluginConfig.settings?.accountId,
 							profileDir: resolvedViteConfig.root,
 						},
 						preExistingRemoteProxySessionData ?? null,
@@ -795,8 +826,14 @@ export async function getPreviewMiniflareOptions(
 			}
 
 			const { manifest: _manifest, assets, exports, ...config } = workerConfig;
+			const resolvedLocalBindings = resolvedLocalBindingsByWorkerName.get(
+				workerConfig.name
+			);
+			assert(resolvedLocalBindings);
 			const env: MiniflareEnv = {};
-			for (const [name, binding] of Object.entries(config.env ?? {})) {
+			for (const [name, binding] of Object.entries(
+				resolvedLocalBindings.bindings
+			)) {
 				if (binding.type === "hyperdrive") {
 					assert(
 						binding.dev?.connectionString !== undefined,
@@ -891,6 +928,45 @@ export async function getPreviewMiniflareOptions(
 	};
 
 	return miniflareOptions;
+}
+
+function resolveLocalBindingsByWorkerName(
+	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
+	localEnv: LoadedEnv,
+	devVars: Record<string, string> | undefined
+): Map<string, ResolvedLocalBindings> {
+	const resolvedLocalBindingsByWorkerName = new Map<
+		string,
+		ResolvedLocalBindings
+	>();
+	for (const config of workerConfigs) {
+		resolvedLocalBindingsByWorkerName.set(
+			config.name,
+			resolveLocalBindings(config.env, localEnv.values, devVars)
+		);
+	}
+	return resolvedLocalBindingsByWorkerName;
+}
+
+function warnForMissingSecrets(
+	resolvedLocalBindingsByWorkerName: Map<string, ResolvedLocalBindings>,
+	mode: string,
+	logger: vite.Logger
+): void {
+	for (const [
+		workerName,
+		{ missingSecrets },
+	] of resolvedLocalBindingsByWorkerName) {
+		if (missingSecrets.length === 0) {
+			continue;
+		}
+		logger.warn(
+			`Missing required secrets for Worker "${workerName}": ${missingSecrets.join(", ")}. ` +
+				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
+				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
+				"Alternatively, set them as environment variables."
+		);
+	}
 }
 
 /**
