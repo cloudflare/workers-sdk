@@ -17,6 +17,71 @@ import type { Readable } from "node:stream";
 import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
+type R2ObjectsListResponse = {
+	result?: Array<{ key?: string; name?: string }>;
+	result_info?: {
+		is_truncated?: boolean;
+		cursor?: string;
+	};
+	// Keep this permissive for older tests/mocks and any API envelope changes.
+	objects?: Array<{ key?: string; name?: string }>;
+	truncated?: boolean;
+	cursor?: string;
+};
+
+export async function listR2ObjectKeys(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<string[]> {
+	const keys: string[] = [];
+	let cursor: string | undefined;
+
+	do {
+		const headers: HeadersInit = {};
+		if (jurisdiction !== undefined) {
+			headers["cf-r2-jurisdiction"] = jurisdiction;
+		}
+
+		const query = new URLSearchParams();
+		query.set("per_page", "1000");
+		if (cursor !== undefined) {
+			query.set("cursor", cursor);
+		}
+
+		const response = await fetchR2Objects(
+			complianceConfig,
+			`/accounts/${accountId}/r2/buckets/${bucketName}/objects${
+				query.size > 0 ? `?${query.toString()}` : ""
+			}`,
+			{ headers }
+		);
+
+		if (response === null) {
+			return keys;
+		}
+
+		const body = (await response.json()) as R2ObjectsListResponse;
+		const objects = Array.isArray(body.result)
+			? body.result
+			: (body.objects ?? []);
+		for (const object of objects) {
+			const key = object.key ?? object.name;
+			if (key !== undefined) {
+				keys.push(key);
+			}
+		}
+
+		const isTruncated = body.result_info?.is_truncated ?? body.truncated;
+		cursor = isTruncated
+			? (body.result_info?.cursor ?? body.cursor)
+			: undefined;
+	} while (cursor !== undefined);
+
+	return keys;
+}
+
 /**
  * Downloads an object
  */
