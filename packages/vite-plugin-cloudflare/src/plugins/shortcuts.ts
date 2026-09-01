@@ -1,12 +1,15 @@
 import { convertToWranglerConfig } from "@cloudflare/config";
 import {
+	convertConfigToBindings,
+	printBindings,
+} from "@cloudflare/workers-utils";
+import {
 	CorePaths,
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
 } from "miniflare";
 import open from "open";
 import colors from "picocolors";
-import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
@@ -57,14 +60,13 @@ export function addShortcuts(
 
 			for (const workerConfig of workerConfigs) {
 				const wranglerConfig = convertToWranglerConfig(workerConfig);
-				const bindings =
-					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-						wranglerConfig
-					);
+				const bindings = convertConfigToBindings(wranglerConfig, {
+					usePreviewIds: true,
+				});
 
 				// TODO: Include Containers when they are supported by
 				// cloudflare.config.ts.
-				wrangler.unstable_printBindings(bindings, {
+				printBindings(bindings, {
 					tailConsumers: wranglerConfig.tail_consumers,
 					streamingTailConsumers: wranglerConfig.streaming_tail_consumers,
 					containers: wranglerConfig.containers,
@@ -72,7 +74,7 @@ export function addShortcuts(
 					isMultiWorker: workerConfigs.length > 1,
 					name: workerConfig.name ?? "Your Worker",
 					registry: getWorkerRegistry(registryPath),
-					log: (message: string) => viteServer.config.logger.info(message),
+					log: (message) => viteServer.config.logger.info(message),
 				});
 			}
 		},
