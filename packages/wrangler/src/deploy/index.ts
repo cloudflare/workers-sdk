@@ -4,9 +4,9 @@ import {
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
 import { analyseBundle } from "../check/commands";
-import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
-import { deployContainers } from "../containers/deploy";
+import { containersScope } from "../containers";
+import { ensureCloudchamberApiAuth } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import {
 	sharedDeployVersionsArgs,
@@ -189,6 +189,18 @@ export async function runDeployCommandHandler(
 		const preMergeName = getScriptName(args, config);
 		props.workerNameOverridden =
 			props.name !== undefined && props.name !== preMergeName;
+		if (
+			config.containers !== undefined &&
+			config.containers.length > 0 &&
+			props.containersRollout !== "none" &&
+			!props.dryRun
+		) {
+			await ensureCloudchamberApiAuth(config, containersScope);
+		}
+		props.normalisedContainerConfig = await getNormalizedContainerOptions(
+			config,
+			props
+		);
 
 		const beforeUpload = Date.now();
 
@@ -200,9 +212,6 @@ export async function runDeployCommandHandler(
 			buildResult,
 			{
 				syncWorkersSite,
-				getNormalizedContainerOptions,
-				buildContainer,
-				deployContainers,
 				analyseBundle,
 			}
 		);

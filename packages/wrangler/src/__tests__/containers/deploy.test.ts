@@ -1828,12 +1828,12 @@ describe("wrangler deploy with containers", () => {
 				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
-			)
-			.mockImplementationOnce(
 				mockDockerImageInspectSize(expect, containerName, tag)
 			)
 			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
+			.mockImplementationOnce(
+				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
+			)
 			// Mock docker image rm call since we skip the push
 			.mockImplementationOnce(
 				mockDockerImageDelete(expect, containerName, tag)
@@ -1941,12 +1941,12 @@ describe("wrangler deploy with containers", () => {
 				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
-			)
-			.mockImplementationOnce(
 				mockDockerImageInspectSize(expect, containerName, tag)
 			)
 			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
+			.mockImplementationOnce(
+				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
+			)
 			.mockImplementationOnce(
 				mockDockerImageDelete(expect, containerName, tag)
 			);
@@ -3019,9 +3019,9 @@ function createDockerMockChain(
 			dockerfilePath || "FROM scratch",
 			buildContext || process.cwd()
 		),
-		mockDockerImageInspectDigests(expect, containerName, tag),
 		mockDockerImageInspectSize(expect, containerName, tag),
 		mockDockerLogin(expect, "mockpassword"),
+		mockDockerImageInspectDigests(expect, containerName, tag),
 		// Default manifest inspect output is invalid JSON, so Dockerfile deploy tests exercise
 		// the push path before using the post-push RepoDigests lookup.
 		mockDockerTag(

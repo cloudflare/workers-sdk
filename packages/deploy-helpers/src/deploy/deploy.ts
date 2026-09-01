@@ -31,6 +31,7 @@ import {
 } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
+import { buildContainerForDeploy, deployContainers } from "./helpers/containers";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
 import {
 	applyServiceAndEnvironmentTags,
@@ -74,10 +75,7 @@ import type {
 	Percentage,
 	VersionId,
 } from "./helpers/versions-types";
-import type {
-	ContainerNormalizedConfig,
-	ImageURIConfig,
-} from "@cloudflare/containers-shared";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	CfModule,
 	CfWorkerInit,
@@ -108,7 +106,7 @@ export type DeployCallbacks = {
 				namespace: string | undefined;
 		  }>)
 		| undefined;
-	getNormalizedContainerOptions:
+	getNormalizedContainerOptions?:
 		| ((
 				config: Config,
 				args: {
@@ -116,22 +114,6 @@ export type DeployCallbacks = {
 					dryRun?: boolean;
 				}
 		  ) => Promise<ContainerNormalizedConfig[]>)
-		| undefined;
-	buildContainer:
-		| ((
-				containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
-				imageTag: string,
-				dryRun: boolean,
-				pathToDocker: string,
-				verifyDockerIsRunning: boolean
-		  ) => Promise<unknown>)
-		| undefined;
-	deployContainers:
-		| ((
-				config: Config,
-				normalisedContainerConfig: ContainerNormalizedConfig[],
-				args: { versionId: string; accountId: string; scriptName: string }
-		  ) => Promise<void>)
 		| undefined;
 	analyseBundle:
 		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
@@ -227,9 +209,7 @@ async function deployWorker(
 
 	const isDryRun = props.dryRun;
 
-	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
-		? await callbacks.getNormalizedContainerOptions(config, props)
-		: [];
+	const normalisedContainerConfig = props.normalisedContainerConfig ?? [];
 	const {
 		modules,
 		dependencies,
@@ -428,10 +408,9 @@ async function deployWorker(
 			for (const container of normalisedContainerConfig) {
 				if (
 					"dockerfile" in container &&
-					props.containersRollout !== "none" &&
-					callbacks.buildContainer
+					props.containersRollout !== "none"
 				) {
-					await callbacks.buildContainer(
+					await buildContainerForDeploy(
 						container,
 						workerTag ?? "worker-tag",
 						isDryRun,
@@ -765,11 +744,10 @@ async function deployWorker(
 
 	if (
 		normalisedContainerConfig.length &&
-		props.containersRollout !== "none" &&
-		callbacks.deployContainers
+		props.containersRollout !== "none"
 	) {
 		assert(versionId && accountId);
-		await callbacks.deployContainers(config, normalisedContainerConfig, {
+		await deployContainers(config, normalisedContainerConfig, {
 			versionId,
 			accountId,
 			scriptName,
