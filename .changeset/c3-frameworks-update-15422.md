@@ -9,3 +9,5 @@ The following dependency versions have been updated:
 | Dependency  | From    | To      |
 | ----------- | ------- | ------- |
 | create-vike | 0.0.677 | 0.0.681 |
+
+Preserve framework-generated `dangerouslyAllowAllBuilds` settings instead of adding a conflicting pnpm `allowBuilds` configuration.
