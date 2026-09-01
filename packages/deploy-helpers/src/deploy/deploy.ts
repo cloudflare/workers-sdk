@@ -23,7 +23,11 @@ import {
 	syncAssets,
 } from "./helpers/assets";
 import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
@@ -140,6 +144,7 @@ type DeployResult = {
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
+	bundleSize?: BundleSize;
 };
 
 export default async function deploy(
@@ -161,6 +166,12 @@ export default async function deploy(
 		targets: result.targets,
 		wrangler_environment: props.env,
 		worker_name_overridden: props.workerNameOverridden ?? false,
+		bundle_size: result.bundleSize
+			? {
+					raw_bytes: result.bundleSize.size,
+					gzip_bytes: result.bundleSize.gzipSize,
+				}
+			: undefined,
 	});
 
 	return result;
@@ -367,10 +378,8 @@ async function deployWorker(
 		0
 	);
 
-	await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	// We can use the new versions/deployments APIs if we:
 	// * are uploading a worker that already exists
@@ -746,7 +755,7 @@ async function deployWorker(
 
 	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, bundleSize };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -769,7 +778,7 @@ async function deployWorker(
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats };
+		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
 	// deploy triggers
@@ -793,5 +802,6 @@ async function deployWorker(
 		workerTag,
 		assetUploadStats,
 		targets: targets ?? [],
+		bundleSize,
 	};
 }

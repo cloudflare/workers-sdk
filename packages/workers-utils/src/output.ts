@@ -74,6 +74,13 @@ interface OutputEntryBase<T extends string> {
 	type: T;
 }
 
+interface OutputEntryBundleSize {
+	/** The uncompressed size of the Worker bundle. */
+	raw_bytes: number;
+	/** The gzip-compressed size of the Worker bundle. */
+	gzip_bytes: number;
+}
+
 /**
  * All the different types of entry that can be written to the output file.
  */
@@ -112,6 +119,8 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+	/** Exact Worker bundle sizes in bytes. */
+	bundle_size?: OutputEntryBundleSize;
 }
 
 interface OutputEntryPreview extends OutputEntryBase<"preview"> {
@@ -194,6 +203,8 @@ interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+	/** Exact Worker bundle sizes in bytes. */
+	bundle_size?: OutputEntryBundleSize;
 }
 
 interface OutputEntryVersionDeployment extends OutputEntryBase<"version-deploy"> {

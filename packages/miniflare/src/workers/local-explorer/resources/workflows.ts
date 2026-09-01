@@ -23,6 +23,7 @@ import type { z } from "zod";
 // ============================================================================
 
 const WORKFLOW_ERROR_NOT_FOUND = 10501;
+const WORKFLOW_ERROR_INVALID_DATE_RANGE = 10502;
 
 // ============================================================================
 // Types
@@ -386,7 +387,23 @@ export async function listWorkflowInstances(
 	workflowName: string,
 	query: ListInstancesQuery
 ): Promise<Response> {
-	const { page = 1, per_page: perPage = 25, status: statusFilter } = query;
+	const {
+		page = 1,
+		per_page: perPage = 25,
+		status: statusFilter,
+		date_start: dateStart,
+		date_end: dateEnd,
+	} = query;
+
+	if (dateStart !== undefined && dateEnd !== undefined) {
+		if (Date.parse(dateStart) > Date.parse(dateEnd)) {
+			return errorResponse(
+				400,
+				WORKFLOW_ERROR_INVALID_DATE_RANGE,
+				"'date_start' must not be after 'date_end'. Update 'date_start' or 'date_end' so 'date_start' is before or equal to 'date_end'."
+			);
+		}
+	}
 
 	const workflowExists =
 		c.env.LOCAL_EXPLORER_BINDING_MAP.workflows[workflowName];
@@ -396,6 +413,8 @@ export async function listWorkflowInstances(
 			page,
 			perPage,
 			statusFilter,
+			dateStart,
+			dateEnd,
 		});
 	}
 
@@ -406,6 +425,12 @@ export async function listWorkflowInstances(
 		params.set("per_page", String(perPage));
 		if (statusFilter) {
 			params.set("status", statusFilter);
+		}
+		if (dateStart !== undefined) {
+			params.set("date_start", dateStart);
+		}
+		if (dateEnd !== undefined) {
+			params.set("date_end", dateEnd);
 		}
 		const peerPath = `/workflows/${encodeURIComponent(workflowName)}/instances?${params.toString()}`;
 		const response = await fetchFromPeer(ownerMiniflare, peerPath);
@@ -422,6 +447,26 @@ export async function listWorkflowInstances(
 }
 
 /**
+ * Bounds are inclusive and an unbounded range matches everything. A missing or
+ * unparseable creation time is excluded rather than reported as a match.
+ */
+function isWithinDateRange(
+	createdOn: string | undefined,
+	startMs: number | undefined,
+	endMs: number | undefined
+): boolean {
+	if (startMs === undefined && endMs === undefined) {
+		return true;
+	}
+	const createdMs = Date.parse(createdOn ?? "");
+	return (
+		!Number.isNaN(createdMs) &&
+		createdMs >= (startMs ?? -Infinity) &&
+		createdMs <= (endMs ?? Infinity)
+	);
+}
+
+/**
  * List workflow instances with server-side pagination.
  *
  * 1. Loopback returns all .sqlite files with birthtimeMs (cheap fs.stat)
@@ -432,9 +477,15 @@ export async function listWorkflowInstances(
 async function executeListWorkflowInstances(
 	c: AppContext,
 	workflowName: string,
-	options: { page: number; perPage: number; statusFilter?: string }
+	options: {
+		page: number;
+		perPage: number;
+		statusFilter?: string;
+		dateStart?: string;
+		dateEnd?: string;
+	}
 ): Promise<Response> {
-	const { page, perPage, statusFilter } = options;
+	const { page, perPage, statusFilter, dateStart, dateEnd } = options;
 
 	if (c.env.MINIFLARE_LOOPBACK === undefined) {
 		return errorResponse(500, 10001, "Loopback service not available");
@@ -512,10 +563,20 @@ async function executeListWorkflowInstances(
 	let instances: Array<{ id: string; status?: string; created_on?: string }>;
 	let totalCount: number;
 
-	if (statusFilter) {
-		// Status filter requires resolving ALL instances to filter server-side
+	const dateStartMs =
+		dateStart !== undefined ? Date.parse(dateStart) : undefined;
+	const dateEndMs = dateEnd !== undefined ? Date.parse(dateEnd) : undefined;
+	const hasDateFilter = dateStartMs !== undefined || dateEndMs !== undefined;
+
+	if (statusFilter || hasDateFilter) {
+		// Neither status nor creation date is known from the filesystem, so
+		// filtering has to resolve ALL instances server-side
 		const allResolved = await Promise.all(sqliteFiles.map(resolveInstance));
-		const filtered = allResolved.filter((inst) => inst.status === statusFilter);
+		const filtered = allResolved.filter(
+			(instance) =>
+				(statusFilter === undefined || instance.status === statusFilter) &&
+				isWithinDateRange(instance.created_on, dateStartMs, dateEndMs)
+		);
 		totalCount = filtered.length;
 		const offset = (page - 1) * perPage;
 		instances = filtered.slice(offset, offset + perPage);
