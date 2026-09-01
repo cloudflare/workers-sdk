@@ -19,6 +19,8 @@ jobs:
     name: Measure published packages
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      SOURCEMAPS: "false"
     steps:
       - name: Check out the exact PR merge commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
