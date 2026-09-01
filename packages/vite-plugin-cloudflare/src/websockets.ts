@@ -66,6 +66,10 @@ export function handleWebSocket(
 				}
 
 				const headers = createHeaders(request);
+				// A 101 has no body. Forwarding the browser's `Accept-Encoding`
+				// makes workerd gzip ERROR_STACK 500s; miniflare's WebSocket
+				// upgrade path then JSON.parses the compressed bytes (#15198, #15199).
+				headers.delete("Accept-Encoding");
 
 				if (entryWorkerName) {
 					headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
