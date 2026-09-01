@@ -5,7 +5,9 @@ import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	APIError,
 	formatTime,
+	getBindings,
 	ParseError,
+	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
@@ -15,7 +17,6 @@ import { fetchResult, logger } from "../shared/context";
 import { getWorkersDevSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
-import { getBindings } from "./helpers/binding-utils";
 import {
 	getSize,
 	printBundleSize,
@@ -33,7 +34,6 @@ import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-e
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
-import { printBindings } from "./helpers/print-bindings";
 import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
@@ -259,13 +259,12 @@ async function uploadWorkerVersion(
 			dryRun: true,
 			unsafe: config.unsafe,
 		});
-		printBindings(
-			bindings,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			undefined,
-			{ unsafeMetadata: config.unsafe?.metadata }
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: config.tail_consumers,
+			streamingTailConsumers: config.streaming_tail_consumers,
+			unsafeMetadata: config.unsafe?.metadata,
+		});
 	} else {
 		assert(accountId, "Missing accountId");
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
@@ -315,24 +314,22 @@ async function uploadWorkerVersion(
 
 			logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 			bindingsPrinted = true;
-			printBindings(
-				bindings,
-				config.tail_consumers,
-				config.streaming_tail_consumers,
-				undefined,
-				{ unsafeMetadata: config.unsafe?.metadata }
-			);
+			printBindings(bindings, {
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				unsafeMetadata: config.unsafe?.metadata,
+			});
 			versionId = result.id;
 			hasPreview = result.metadata.has_preview;
 		} catch (err) {
 			if (!bindingsPrinted) {
-				printBindings(
-					bindings,
-					config.tail_consumers,
-					config.streaming_tail_consumers,
-					undefined,
-					{ unsafeMetadata: config.unsafe?.metadata }
-				);
+				printBindings(bindings, {
+					log: logger.log,
+					tailConsumers: config.tail_consumers,
+					streamingTailConsumers: config.streaming_tail_consumers,
+					unsafeMetadata: config.unsafe?.metadata,
+				});
 			}
 
 			// A binding references a DO class declared in `exports` but not yet

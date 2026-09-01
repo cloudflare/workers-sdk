@@ -93,7 +93,9 @@ function getUserRequest(
 		// If a custom `upstream` was specified, make sure the URL starts with it
 		let path = url.pathname + url.search;
 		// Remove leading slash, so we resolve relative to `upstream`'s path
-		if (path.startsWith("/")) path = `./${path.substring(1)}`;
+		if (path.startsWith("/")) {
+			path = `./${path.substring(1)}`;
+		}
 		url = new URL(path, upstreamUrl);
 		rewriteHeadersFromOriginalUrl = true;
 	}
@@ -172,7 +174,9 @@ function getTargetService(
 const LOCALHOST_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
 
 function isCdnCgiRequest(url: string | null): boolean {
-	if (url === null) return false;
+	if (url === null) {
+		return false;
+	}
 
 	try {
 		return new URL(url).pathname.startsWith("/cdn-cgi/");
@@ -320,7 +324,9 @@ function maybeParseAcceptEncodingElement(
 	element: string
 ): AcceptedEncoding | undefined {
 	const match = acceptEncodingElement.exec(element);
-	if (match?.groups == null) return;
+	if (match?.groups == null) {
+		return;
+	}
 	return {
 		coding: match.groups.coding,
 		weight:
@@ -331,7 +337,9 @@ function parseAcceptEncoding(header: string): AcceptedEncoding[] {
 	const encodings: AcceptedEncoding[] = [];
 	for (const element of header.split(",")) {
 		const maybeEncoding = maybeParseAcceptEncodingElement(element.trim());
-		if (maybeEncoding !== undefined) encodings.push(maybeEncoding);
+		if (maybeEncoding !== undefined) {
+			encodings.push(maybeEncoding);
+		}
 	}
 	// `Array#sort()` is stable, so original ordering preserved for same weights
 	return encodings.sort((a, b) => b.weight - a.weight);
@@ -343,9 +351,13 @@ function ensureAcceptableEncoding(
 	// https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3
 
 	// If the client hasn't specified any acceptable encodings, assume anything is
-	if (clientAcceptEncoding === null) return response;
+	if (clientAcceptEncoding === null) {
+		return response;
+	}
 	const encodings = parseAcceptEncoding(clientAcceptEncoding);
-	if (encodings.length === 0) return response;
+	if (encodings.length === 0) {
+		return response;
+	}
 
 	const contentEncoding = response.headers.get("Content-Encoding");
 	const contentType = response.headers.get("Content-Type");
@@ -390,12 +402,16 @@ function ensureAcceptableEncoding(
 				headers: { "Accept-Encoding": "br, gzip" },
 			});
 		}
-		if (contentEncoding === null) return response;
+		if (contentEncoding === null) {
+			return response;
+		}
 		response = new Response(response.body, response); // Ensure mutable headers
 		response.headers.delete("Content-Encoding"); // Use identity
 		return response;
 	} else {
-		if (contentEncoding === desiredEncoding) return response;
+		if (contentEncoding === desiredEncoding) {
+			return response;
+		}
 		response = new Response(response.body, response); // Ensure mutable headers
 		response.headers.set("Content-Encoding", desiredEncoding); // Use desired
 		return response;
@@ -403,9 +419,15 @@ function ensureAcceptableEncoding(
 }
 
 function colourFromHTTPStatus(status: number): Colorize {
-	if (200 <= status && status < 300) return green;
-	if (400 <= status && status < 500) return yellow;
-	if (500 <= status) return red;
+	if (200 <= status && status < 300) {
+		return green;
+	}
+	if (400 <= status && status < 500) {
+		return yellow;
+	}
+	if (500 <= status) {
+		return red;
+	}
 	return blue;
 }
 
@@ -424,7 +446,9 @@ function maybeLogRequest(
 	);
 	res.headers.delete(ADDITIONAL_RESPONSE_LOG_HEADER_NAME);
 
-	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return res;
+	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) {
+		return res;
+	}
 
 	const url = new URL(req.url);
 	const statusText = (res.statusText.trim() || STATUS_CODES[res.status]) ?? "";

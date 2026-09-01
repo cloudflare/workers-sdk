@@ -200,11 +200,15 @@ function resolveLocalhost(host: string) {
 function maybeGetLocallyAccessibleHost(
 	h: string
 ): "localhost" | "127.0.0.1" | "[::1]" | undefined {
-	if (h === "localhost") return "localhost";
+	if (h === "localhost") {
+		return "localhost";
+	}
 	if (h === "127.0.0.1" || h === "*" || h === "0.0.0.0" || h === "::") {
 		return "127.0.0.1";
 	}
-	if (h === "::1") return "[::1]";
+	if (h === "::1") {
+		return "[::1]";
+	}
 }
 
 /**
@@ -623,7 +627,9 @@ function getInternalDurableObjectProxyBindings(
 	plugin: string,
 	service: Service
 ): Worker_Binding[] | undefined {
-	if (!("worker" in service)) return;
+	if (!("worker" in service)) {
+		return;
+	}
 	assert(service.worker !== undefined);
 	const serviceName = service.name;
 	assert(serviceName !== undefined);
@@ -657,9 +663,13 @@ export function _transformsForContentEncodingAndContentType(
 	type: string | undefined | null
 ): Transform[] {
 	const encoders: Transform[] = [];
-	if (!encoding) return encoders;
+	if (!encoding) {
+		return encoders;
+	}
 	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
-	if (!isCompressedByCloudflareFL(type)) return encoders;
+	if (!isCompressedByCloudflareFL(type)) {
+		return encoders;
+	}
 
 	// Reverse of https://github.com/nodejs/undici/blob/48d9578f431cbbd6e74f77455ba92184f57096cf/lib/fetch/index.js#L1660
 	const codings = encoding
@@ -1026,7 +1036,9 @@ export class Miniflare {
 	}
 
 	async #pushRegistryUpdate(retries = 3): Promise<void> {
-		if (this.#disposeController.signal.aborted) return;
+		if (this.#disposeController.signal.aborted) {
+			return;
+		}
 		if (!this.#devRegistryDispatcher) {
 			return;
 		}
@@ -1572,9 +1584,13 @@ export class Miniflare {
 			// These headers are unsupported in undici fetch requests, they're added
 			// automatically. For custom service bindings, we may pass this request
 			// straight through to another fetch so strip them now.
-			if (restrictedUndiciHeaders.includes(name)) continue;
+			if (restrictedUndiciHeaders.includes(name)) {
+				continue;
+			}
 			if (Array.isArray(values)) {
-				for (const value of values) headers.append(name, value);
+				for (const value of values) {
+					headers.append(name, value);
+				}
 			} else if (values !== undefined) {
 				headers.append(name, values);
 			}
@@ -1629,7 +1645,9 @@ export class Miniflare {
 				);
 				const logLevel = level as LogLevel;
 				let message = await request.text();
-				if (!colors$.enabled) message = stripAnsi(message);
+				if (!colors$.enabled) {
+					message = stripAnsi(message);
+				}
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/core/remote-bindings-access-warning") {
@@ -1872,7 +1890,9 @@ export class Miniflare {
 		if (response.body) {
 			try {
 				for await (const chunk of response.body) {
-					if (chunk) initialStream.write(chunk);
+					if (chunk) {
+						initialStream.write(chunk);
+					}
 				}
 			} catch (error) {
 				this.#log.debug(
@@ -1906,7 +1926,9 @@ export class Miniflare {
 	}
 
 	#startLoopbackServer(hostname: string): Promise<StoppableServer> {
-		if (hostname === "*") hostname = "::";
+		if (hostname === "*") {
+			hostname = "::";
+		}
 
 		return new Promise((resolve) => {
 			const server = stoppable(
@@ -2599,7 +2621,9 @@ export class Miniflare {
 					this.#disposeController.signal
 				)
 		);
-		if (this.#disposeController.signal.aborted) return;
+		if (this.#disposeController.signal.aborted) {
+			return;
+		}
 		if (maybeSocketPorts === undefined) {
 			throw new MiniflareCoreError(
 				"ERR_RUNTIME_FAILURE",
@@ -2765,7 +2789,9 @@ export class Miniflare {
 		// If we called `dispose()`, we may not have a `#runtimeEntryURL` if we
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
-		if (disposing) return new URL("http://[100::]/");
+		if (disposing) {
+			return new URL("http://[100::]/");
+		}
 		// if there is an inspector proxy let's wait for it to be ready
 		await this.#maybeInspectorProxyController?.ready;
 		// Make sure `dispose()` wasn't called in the time we've been waiting
@@ -3052,8 +3078,9 @@ export class Miniflare {
 		// Technically, at this point, this a malformed response so let's remove the header
 		// Retain it as MF-Content-Encoding so we can tell the body was actually compressed.
 		const contentEncoding = response.headers.get("Content-Encoding");
-		if (contentEncoding)
+		if (contentEncoding) {
 			response.headers.set("MF-Content-Encoding", contentEncoding);
+		}
 		response.headers.delete("Content-Encoding");
 
 		if (
@@ -3071,7 +3098,9 @@ export class Miniflare {
 			);
 			Error.stackTraceLimit = originalLimit;
 			setImmediate(() => {
-				if (!response.bodyUsed) throw error;
+				if (!response.bodyUsed) {
+					throw error;
+				}
 			});
 		}
 
@@ -3616,9 +3645,15 @@ export class Miniflare {
 		// existing behavior when an earlier cleanup operation fails.
 		maybeInstanceRegistry?.delete(this);
 
-		if (independentCleanupFailed) throw independentCleanupError;
-		if (!runtimeCleanupOutcome.ok) throw runtimeCleanupOutcome.error;
-		if (waitForReadyFailed) throw waitForReadyError;
+		if (independentCleanupFailed) {
+			throw independentCleanupError;
+		}
+		if (!runtimeCleanupOutcome.ok) {
+			throw runtimeCleanupOutcome.error;
+		}
+		if (waitForReadyFailed) {
+			throw waitForReadyError;
+		}
 	}
 }
 

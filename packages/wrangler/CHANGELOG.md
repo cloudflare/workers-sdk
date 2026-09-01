@@ -1,5 +1,57 @@
 # wrangler
 
+## 4.128.0
+
+### Minor Changes
+
+- [#15454](https://github.com/cloudflare/workers-sdk/pull/15454) [`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move binding utilities into `@cloudflare/workers-utils`
+
+  Binding conversion, printing, and local-development validation are now exported from `@cloudflare/workers-utils` so they can be shared by Wrangler, the Cloudflare Vite plugin, and other consumers.
+
+  The corresponding exports have been removed from `@cloudflare/deploy-helpers`. Consumers should import them directly from `@cloudflare/workers-utils` instead.
+
+  Wrangler's `unstable_printBindings` API now accepts the bindings and an options object instead of five positional parameters.
+
+- [#15353](https://github.com/cloudflare/workers-sdk/pull/15353) [`87a7acf`](https://github.com/cloudflare/workers-sdk/commit/87a7acf197629f5bf16bb38a2e411dc6c21339e0) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `--date-start` and `--date-end` filters to `wrangler workflows instances list`
+
+  You can now narrow an instance listing to a creation-time window:
+
+  `wrangler workflows instances list my-workflow --date-start 2026-01-01 --date-end 2026-01-31`
+
+  Either flag can be used independently. Both accept an ISO 8601 date or timestamp and are normalised to UTC before being sent, so a date-only value such as `2026-01-01` works as well as a full `2026-01-01T13:00:00Z`. The bounds are inclusive and compose with the existing `--status` filter.
+
+- [#15379](https://github.com/cloudflare/workers-sdk/pull/15379) [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46) Thanks [@ibbykhazanchi](https://github.com/ibbykhazanchi)! - Add query string redaction to Workers observability configuration
+
+  Set `observability.redact_query_string` in `wrangler.json` or `observability.redactQueryString` in the experimental `cloudflare.config.ts` format to remove query strings from request URLs in logs and traces.
+
+- [#14915](https://github.com/cloudflare/workers-sdk/pull/14915) [`707cb6f`](https://github.com/cloudflare/workers-sdk/commit/707cb6f22bd8685bce7d1dfa0b53853057200eee) Thanks [@longlho](https://github.com/longlho)! - Include exact raw and gzip-compressed Worker bundle sizes in structured `deploy` and `version-upload` output.
+
+### Patch Changes
+
+- [#15436](https://github.com/cloudflare/workers-sdk/pull/15436) [`200780f`](https://github.com/cloudflare/workers-sdk/commit/200780faa81ab5e58bc656e2d21a20fdd3a4b725) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260828.1 | ^5.20260831.1 |
+  | workerd                   | 1.20260828.1  | 1.20260831.1  |
+
+- [#15406](https://github.com/cloudflare/workers-sdk/pull/15406) [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce the installed bundle sizes of Wrangler and Miniflare
+
+  Wrangler now resolves bundled workspace dependencies from source during monorepo builds so unused exports can be removed. Miniflare, its shared CLI and container dependencies now use granular `@cloudflare/workers-utils` entry points instead of loading the package barrel, reducing the raw Wrangler and Miniflare artifacts by 6.16 MiB (31.4%) and 1.06 MiB (22.9%) respectively without changing runtime behavior or installed dependencies.
+
+- [#15398](https://github.com/cloudflare/workers-sdk/pull/15398) [`1809c5e`](https://github.com/cloudflare/workers-sdk/commit/1809c5edadfd4a93e6733dab77ca67305c8d6c97) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce Wrangler's published package size
+
+  Stop including the unused build metafile in the npm package, reducing its unpacked size by approximately 3.1 MiB.
+
+- [#15382](https://github.com/cloudflare/workers-sdk/pull/15382) [`b3fb2bf`](https://github.com/cloudflare/workers-sdk/commit/b3fb2bf0d9e43b126738a63ba168ba1e2807e7e8) Thanks [@Om-singhaI](https://github.com/Om-singhaI)! - Skip the skills install status lookup when telemetry is disabled
+
+  Telemetry events include a `currentAgentSkillsInstalled` property, and computing it can query the GitHub API. The lookup used to start before the telemetry permission was checked, so users who opted out via `WRANGLER_SEND_METRICS`, `DO_NOT_TRACK`, or `send_metrics` in their Wrangler config still triggered network requests on behalf of telemetry. The dispatcher now checks the permission first and only performs the lookup when telemetry is enabled.
+
+- Updated dependencies [[`200780f`](https://github.com/cloudflare/workers-sdk/commit/200780faa81ab5e58bc656e2d21a20fdd3a4b725), [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71), [`87a7acf`](https://github.com/cloudflare/workers-sdk/commit/87a7acf197629f5bf16bb38a2e411dc6c21339e0)]:
+  - miniflare@5.20260831.0-alpha
+
 ## 4.127.1
 
 ### Patch Changes

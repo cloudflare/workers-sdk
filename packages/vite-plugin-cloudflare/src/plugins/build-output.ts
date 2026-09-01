@@ -90,6 +90,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				root: ctx.resolvedViteConfig.root,
 				config: workerNewConfig,
 				manifest: {
+					type: "complete",
 					mainModule: entryChunk.fileName,
 					modules,
 				},

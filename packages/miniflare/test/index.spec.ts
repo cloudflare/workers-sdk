@@ -3019,7 +3019,9 @@ test("Miniflare: getBindings() returns all bindings", async ({
 	});
 	let disposed = false;
 	onTestFinished(() => {
-		if (!disposed) return mf.dispose();
+		if (!disposed) {
+			return mf.dispose();
+		}
 	});
 
 	interface Env {
@@ -3637,8 +3639,11 @@ unixSerialTest(
 		process.env.MINIFLARE_WORKERD_PATH = workerdPath;
 		onTestFinished(() => {
 			// Setting key/values pairs on `process.env` coerces values to strings
-			if (original === undefined) delete process.env.MINIFLARE_WORKERD_PATH;
-			else process.env.MINIFLARE_WORKERD_PATH = original;
+			if (original === undefined) {
+				delete process.env.MINIFLARE_WORKERD_PATH;
+			} else {
+				process.env.MINIFLARE_WORKERD_PATH = original;
+			}
 		});
 
 		const mf = new Miniflare({
@@ -4455,7 +4460,9 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 			const specifier = url.searchParams.get("specifier");
 			assert(specifier !== null);
 			const maybeModule = modules[specifier];
-			if (maybeModule === undefined) return new Response(null, { status: 404 });
+			if (maybeModule === undefined) {
+				return new Response(null, { status: 404 });
+			}
 			const name = path.posix.relative(modulesRoot, specifier);
 			return new Response(JSON.stringify({ name, ...maybeModule }));
 		},

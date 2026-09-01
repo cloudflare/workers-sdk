@@ -180,7 +180,9 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		// Get value from storage
 		validateGetOptions(key, { cacheTtl });
 		const entry = await this.storage.get(key);
-		if (entry === null) throw new HttpError(404, "Not Found");
+		if (entry === null) {
+			throw new HttpError(404, "Not Found");
+		}
 
 		// Return value in runtime-friendly format
 		const headers = new Headers();
@@ -218,8 +220,11 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		let value = req.body;
 		const contentLength = parseInt(req.headers.get("Content-Length") ?? "NaN");
 		let valueLengthHint: number | undefined;
-		if (!Number.isNaN(contentLength)) valueLengthHint = contentLength;
-		else if (value === null) valueLengthHint = 0;
+		if (!Number.isNaN(contentLength)) {
+			valueLengthHint = contentLength;
+		} else if (value === null) {
+			valueLengthHint = 0;
+		}
 
 		// Empty values may be put with `null` bodies:
 		// https://github.com/cloudflare/miniflare/issues/703
