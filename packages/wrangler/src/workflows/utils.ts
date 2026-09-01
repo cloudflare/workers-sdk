@@ -89,6 +89,77 @@ export const validateStatus = (status: string): InstanceStatus => {
 	}
 };
 
+/** Matches the `YYYY-MM-DD` date portion of an ISO 8601 date or timestamp. */
+const ISO_DATE_PREFIX_REG_EXP = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/;
+
+/** Matches a trailing `Z` or a `+HH:MM` / `-HHMM` / `+HH` style UTC offset. */
+const UTC_DESIGNATOR_REG_EXP = /(?:[Zz]|[+-]\d{2}(?::?\d{2})?)$/;
+
+/**
+ * `Date.parse` reads an offset-less date-time as local time but a date-only
+ * value as UTC, so `Z` is added to keep every bound machine-independent.
+ */
+function withUtcDesignator(value: string): string {
+	const timeIndex = value.indexOf("T");
+	if (
+		timeIndex === -1 ||
+		UTC_DESIGNATOR_REG_EXP.test(value.slice(timeIndex + 1))
+	) {
+		return value;
+	}
+	return `${value}Z`;
+}
+
+/**
+ * `Date` rolls `2026-02-30` over to 2026-03-02 instead of failing, so the
+ * result is compared back to the input. `Date.UTC` remaps years 0-99.
+ */
+function isRealCalendarDate(year: number, month: number, day: number): boolean {
+	const date = new Date(0);
+	date.setUTCFullYear(year, month - 1, day);
+	return (
+		date.getUTCFullYear() === year &&
+		date.getUTCMonth() === month - 1 &&
+		date.getUTCDate() === day
+	);
+}
+
+/**
+ * Normalises an ISO 8601 date or timestamp to UTC. A date-only value covers the
+ * whole UTC day, so an `end` bound becomes 23:59:59.999 rather than midnight.
+ */
+export function validateInstanceDate(
+	value: string,
+	flag: string,
+	bound: "start" | "end"
+): string {
+	const dateParts = ISO_DATE_PREFIX_REG_EXP.exec(value);
+	const parsed = Date.parse(withUtcDesignator(value));
+
+	if (dateParts === null || Number.isNaN(parsed)) {
+		throw new UserError(
+			`Looks like you have provided an invalid date "${value}" for ${flag}. Provide an ISO 8601 date or timestamp, for example 2026-01-01 or 2026-01-01T13:00:00Z.`,
+			{ telemetryMessage: "workflows instances list invalid date" }
+		);
+	}
+
+	const [, year, month, day] = dateParts;
+	if (!isRealCalendarDate(Number(year), Number(month), Number(day))) {
+		throw new UserError(
+			`The date "${value}" provided for ${flag} is not a real calendar date. Check the month and day.`,
+			{ telemetryMessage: "workflows instances list invalid date" }
+		);
+	}
+
+	const normalised = new Date(parsed);
+	// `2026-01-31` as an end bound should include everything that happened that
+	// day, not just the instant at midnight.
+	if (bound === "end" && !value.includes("T")) {
+		normalised.setUTCHours(23, 59, 59, 999);
+	}
+	return normalised.toISOString();
+}
+
 export async function getInstanceIdFromArgs(
 	accountId: string,
 	args: { id: string; name: string },
