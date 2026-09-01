@@ -639,6 +639,57 @@ test("rejects HEAD dispatchFetch with the user error, not a parse error", async 
 	).rejects.toThrow("Unusual oops!");
 });
 
+// Failed WebSocket upgrades skip undici's decompressor (`ws` unexpected-response).
+// A gzipped ERROR_STACK body with no payload header must still revive the Worker
+// error rather than throwing `JSON.parse` on gzip magic. See #15198.
+const GZIPPED_JSON_ERROR_SCRIPT = `
+export default {
+	async fetch() {
+		const body = JSON.stringify({ name: "Error", message: "Unusual oops!" });
+		const stream = new Blob([body]).stream().pipeThrough(
+			new CompressionStream("gzip")
+		);
+		return new Response(stream, {
+			status: 500,
+			headers: {
+				"Content-Type": "application/json",
+				"Content-Encoding": "gzip",
+				"MF-Experimental-Error-Stack": "true",
+			},
+		});
+	},
+}`;
+
+test("revives a gzipped ERROR_STACK body on WebSocket upgrade", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(GZIPPED_JSON_ERROR_SCRIPT),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await expect(
+		mf.dispatchFetch(await mf.ready, {
+			headers: {
+				"Accept-Encoding": "gzip",
+				Connection: "Upgrade",
+				"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+				"Sec-WebSocket-Version": "13",
+				Upgrade: "websocket",
+			},
+		})
+	).rejects.toThrow("Unusual oops!");
+});
+
 // A stack too large to fit in a header is sent without the payload copy, so a
 // `HEAD` request has no way to recover it. Reporting must still degrade to a
 // plain error rather than leaking a JSON parse failure from miniflare.

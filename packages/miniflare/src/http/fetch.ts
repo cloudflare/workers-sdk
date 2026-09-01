@@ -1,13 +1,20 @@
 import assert from "node:assert";
+import { Readable } from "node:stream";
 import * as undici from "undici";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
+import {
+	isGzip,
+	MAX_ERROR_STACK_BYTES,
+	MAX_ERROR_STACK_PLAIN_BYTES,
+} from "./error-stack";
 import { Request } from "./request";
 import { Response } from "./response";
 import { coupleWebSocket, WebSocketPair } from "./websocket";
 import type { RequestInfo, RequestInit } from "./request";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type http from "node:http";
+import type { BodyInit } from "undici";
 import type { UndiciHeaders } from "undici/types/dispatcher";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
@@ -73,13 +80,44 @@ export async function fetch(
 			});
 			responsePromise.resolve(couplePromise.then(() => response));
 		});
-		ws.once("unexpected-response", (_, req) => {
-			const headers = convertUndiciHeadersToStandard(req.headers);
-			const response = new Response(req, {
-				status: req.statusCode,
-				headers,
-			});
-			responsePromise.resolve(response);
+		ws.once("unexpected-response", (_, incoming) => {
+			const headers = convertUndiciHeadersToStandard(incoming.headers);
+			/**
+			 * Only ERROR_STACK 500s need a byte buffer: `IncomingMessage` is not a
+			 * valid `BodyInit`, and undici would decode gzip as text (#15198). Gzip
+			 * is capped at the inflate ceiling; plain JSON at a larger finite
+			 * ceiling. Other failed upgrades stream through.
+			 */
+			const isErrorStack =
+				incoming.statusCode === 500 &&
+				headers.get(CoreHeaders.ERROR_STACK) !== null;
+			if (!isErrorStack) {
+				responsePromise.resolve(
+					new Response(Readable.toWeb(incoming) as BodyInit, {
+						headers,
+						status: incoming.statusCode,
+					})
+				);
+				return;
+			}
+			void bufferIncomingMessage(incoming).then(
+				({ body, truncated }) => {
+					if (truncated) {
+						headers.delete("Content-Encoding");
+						headers.delete("Content-Length");
+						headers.set("Content-Length", "0");
+					}
+					responsePromise.resolve(
+						new Response(body, {
+							headers,
+							status: incoming.statusCode,
+						})
+					);
+				},
+				(error: unknown) => {
+					responsePromise.reject(error);
+				}
+			);
 		});
 		return responsePromise;
 	}
@@ -96,6 +134,54 @@ export type DispatchFetch = (
 ) => Promise<Response>;
 
 export type AnyHeaders = http.IncomingHttpHeaders | string[];
+
+/**
+ * Buffers an ERROR_STACK `IncomingMessage` as bytes. Gzip is capped at the
+ * inflate ceiling so a compression bomb cannot fill memory. Plain JSON uses a
+ * larger finite ceiling so a long stack survives and a plain 500 cannot grow
+ * without bound.
+ */
+function bufferIncomingMessage(
+	incoming: http.IncomingMessage
+): Promise<{ body: Buffer; truncated: boolean }> {
+	return new Promise((resolve, reject) => {
+		const chunks: Buffer[] = [];
+		let gzip: boolean | undefined;
+		let settled = false;
+		let total = 0;
+		const finish = (body: Buffer, truncated = false) => {
+			if (settled) {
+				return;
+			}
+			settled = true;
+			resolve({ body, truncated });
+		};
+		incoming.on("data", (chunk: Buffer | string) => {
+			if (settled) {
+				return;
+			}
+			const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+			total += buf.length;
+			chunks.push(buf);
+			if (gzip === undefined && total >= 2) {
+				gzip = isGzip(Buffer.concat(chunks, 2));
+			}
+			const overGzip = gzip === true && total > MAX_ERROR_STACK_BYTES;
+			const overPlain = gzip === false && total > MAX_ERROR_STACK_PLAIN_BYTES;
+			if (overGzip || overPlain) {
+				incoming.destroy();
+				finish(Buffer.alloc(0), true);
+			}
+		});
+		incoming.on("end", () => finish(Buffer.concat(chunks)));
+		incoming.on("error", (error) => {
+			if (!settled) {
+				settled = true;
+				reject(error);
+			}
+		});
+	});
+}
 
 function isIterable(
 	headers: UndiciHeaders
