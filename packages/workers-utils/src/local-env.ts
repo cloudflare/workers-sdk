@@ -20,7 +20,8 @@ interface ParsedFile {
 /**
  * Returns the local `.env` candidates in increasing precedence order.
  *
- * @param envDir The resolved environment directory, or `false` to disable file loading.
+ * @param envDir The resolved environment directory. `false` disables file
+ * loading, matching Vite's `envDir` convention.
  * @param mode The optional mode used for mode-specific files.
  * @returns Absolute candidate paths in load order.
  */
@@ -40,7 +41,8 @@ export function getEnvPaths(envDir: string | false, mode?: string): string[] {
 /**
  * Returns the `.dev.vars` candidates in decreasing selection priority.
  *
- * @param envDir The resolved environment directory, or `false` to disable file loading.
+ * @param envDir The resolved environment directory. `false` disables file
+ * loading, matching Vite's `envDir` convention.
  * @param mode The optional mode used to select `.dev.vars.<mode>`.
  * @returns Absolute candidate paths in selection order.
  */
@@ -66,7 +68,8 @@ export function getDevVarsCandidatePaths(
  * declared earlier in the merged environment, but not values declared later.
  * Loading has no process-global side effects.
  *
- * @param envDir The resolved environment directory, or `false` to disable file loading.
+ * @param envDir The resolved environment directory. `false` disables file
+ * loading, matching Vite's `envDir` convention.
  * @param mode The optional mode used for mode-specific files.
  * @returns Resolved values and metadata describing their sources.
  */
@@ -114,7 +117,8 @@ export async function loadEnv(
  * Loads the first existing `.dev.vars` candidate without merging it with other
  * files or process-environment values.
  *
- * @param envDir The resolved environment directory, or `false` to disable file loading.
+ * @param envDir The resolved environment directory. `false` disables file
+ * loading, matching Vite's `envDir` convention.
  * @param mode The optional mode used to select `.dev.vars.<mode>`.
  * @returns The selected `.dev.vars` values, or `undefined` when no candidate exists.
  */
