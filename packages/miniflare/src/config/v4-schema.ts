@@ -338,10 +338,6 @@ const V4EmailBindingOptionsSchema = z
 		])
 	);
 
-const V4RemoteBindingSchema = z.object({
-	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-});
-
 const V4RemoteBindingWithNameSchema = z.object({
 	binding: z.string(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
