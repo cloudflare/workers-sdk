@@ -40,7 +40,7 @@ export function* dumpSql(
 	const { noData, noSchema } = options || {};
 
 	// Taken from SQLite shell.c.in https://github.com/sqlite/sqlite/blob/105c20648e1b05839fd0638686b95f2e3998abcb/src/shell.c.in#L8463-L8469
-	// @ts-expect-error -- SqlStorageStatement needs to be callable
+	// @ts-ignore (SqlStorageStatement needs to be callable)
 	const tables_cursor = db.prepare(`
     SELECT name, type, sql
       FROM sqlite_schema AS o
@@ -184,34 +184,47 @@ export function* dumpSql(
 	}
 }
 
-// Ported `output_quoted_escaped_string` from https://github.com/sqlite/sqlite/blob/master/src/shell.c.in#L1799-L1862
+// Ported from SQLite's pre-unistr() `output_quoted_escaped_string` in shell.c.in.
+// https://github.com/sqlite/sqlite/blob/dd2deecbbd03ec1478701b2029479c4983d8fae7/src/shell.c.in#L1959-L2015
 function outputQuotedEscapedString(cell: unknown) {
-	let lfs = false;
-	let crs = false;
+	const value = cell as string;
+	const hasNewline = value.includes("\n");
+	const hasCarriageReturn = value.includes("\r");
+	if (!hasNewline && !hasCarriageReturn) {
+		return `'${value.replaceAll("'", "''")}'`;
+	}
 
-	const quotesOrNewlinesRegexp = /'|(\n)|(\r)/g;
+	const newlinePlaceholder = unusedString(value, "\\n", "\\012");
+	const carriageReturnPlaceholder = unusedString(value, "\\r", "\\015");
 
-	// Function to replace ' with '', while also tracking whether the string contains any \r or \n chars
-	const escapeQuotesDetectingNewlines = (_: string, lf: string, cr: string) => {
-		if (lf) {
-			lfs = true;
-			return `\\n`;
-		}
-		if (cr) {
-			crs = true;
-			return `\\r`;
-		}
-		return `''`;
-	};
+	const escaped = value
+		.replaceAll("'", "''")
+		.replaceAll("\n", newlinePlaceholder)
+		.replaceAll("\r", carriageReturnPlaceholder);
+	let output = `'${escaped}'`;
+	if (hasCarriageReturn) {
+		output = `replace(${output},'${carriageReturnPlaceholder}',char(13))`;
+	}
+	if (hasNewline) {
+		output = `replace(${output},'${newlinePlaceholder}',char(10))`;
+	}
+	return output;
+}
 
-	const escaped_string = (cell as string).replace(
-		quotesOrNewlinesRegexp,
-		escapeQuotesDetectingNewlines
-	);
-	let output_string = `'${escaped_string}'`;
-	if (crs) output_string = `replace(${output_string},'\\r',char(13))`;
-	if (lfs) output_string = `replace(${output_string},'\\n',char(10))`;
-	return output_string;
+// Find a string that is not found anywhere in value.
+//
+// Try to use primary and secondary first, or try e.g. `(\n0)` `(\n1)` etc until no matches.
+// https://github.com/sqlite/sqlite/blob/dd2deecbbd03ec1478701b2029479c4983d8fae7/src/shell.c.in#L1892-L1911
+function unusedString(value: string, primary: string, secondary: string) {
+	if (!value.includes(primary)) return primary;
+	if (!value.includes(secondary)) return secondary;
+
+	let suffix = 0;
+	let candidate: string;
+	do {
+		candidate = `(${primary}${suffix++})`;
+	} while (value.includes(candidate));
+	return candidate;
 }
 
 // Ported from quoteChar: https://github.com/sqlite/sqlite/blob/378bf82e2bc09734b8c5869f9b148efe37d29527/src/shell.c.in#L990
