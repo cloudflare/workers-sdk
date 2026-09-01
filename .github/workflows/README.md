@@ -72,6 +72,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Updates to PRs.
 - Actions
   - Creates an installable pre-release of any package containing `{ "workers-sdk": { "prerelease": true } }` in its `package.json` (e.g. Wrangler, C3, and Miniflare) on every PR.
+  - PRs with the `preview:wrangler` label build and publish only Wrangler. This supports experimental Wrangler changes that prevent downstream workspace packages from building with the changed CLI.
   - Adds a comment to the PR with links to the pre-releases.
 
 ## Housekeeping actions

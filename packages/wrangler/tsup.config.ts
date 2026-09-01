@@ -100,7 +100,7 @@ export default defineConfig((options) => [
 	{
 		treeshake: true,
 		keepNames: true,
-		entry: ["src/cli.ts"],
+		entry: ["src/cli.ts", "src/v5-stub.ts"],
 		platform: "node",
 		format: "cjs",
 		dts: {
