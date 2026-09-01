@@ -227,10 +227,6 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				},
 			}
 		),
-	z.strictObject({
-		type: z.literal("web-search"),
-		dev: RemoteBindingDevSchema.optional(),
-	}),
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
 	// TODO: support Workflows
@@ -302,7 +298,6 @@ const SINGLETON_BINDING_TYPES = new Set([
 	"media",
 	"stream",
 	"version-metadata",
-	"web-search",
 ]);
 
 const listFormatter = new Intl.ListFormat("en-US");
