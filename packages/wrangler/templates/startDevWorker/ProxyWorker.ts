@@ -165,6 +165,9 @@ export class ProxyWorker implements DurableObject {
 
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
 			void fetch(userWorkerUrl, new Request(request, { headers }))
+				.catch((error: Error) => {
+					throw new UserWorkerFetchError(error);
+				})
 				.then(async (res) => {
 					res = new Response(res.body, res);
 					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
@@ -197,6 +200,31 @@ export class ProxyWorker implements DurableObject {
 					if (
 						isSameUserWorkerOrigin(userWorkerUrl, this.proxyData?.userWorkerUrl)
 					) {
+						// The fetch itself rejected, so this request never reached a
+						// response: the UserWorker could not be reached, or the request
+						// body could not be read because the client that queued it (during
+						// startup or a reload) has since gone away. Either way it is the
+						// outcome of this one request, not a defect in the ProxyWorker, so
+						// answer it with a 502 instead of failing the whole dev session.
+						if (error instanceof UserWorkerFetchError) {
+							void sendMessageToProxyController(this.env, {
+								type: "debug-log",
+								args: [
+									"Could not proxy request to the UserWorker:",
+									request.method,
+									request.url,
+									error.message,
+								],
+							});
+							deferredResponse.resolve(
+								new Response(
+									`Could not proxy this request to your Worker: ${error.message}`,
+									{ status: 502 }
+								)
+							);
+							return;
+						}
+
 						void sendMessageToProxyController(this.env, {
 							type: "error",
 							error: {
@@ -282,6 +310,20 @@ function isRequestForLiveReloadWebsocket(req: Request): boolean {
 	const isWebSocketUpgrade = req.headers.get("Upgrade") === "websocket";
 
 	return isWebSocketUpgrade && websocketProtocol === LIVE_RELOAD_PROTOCOL;
+}
+
+/**
+ * Marks a rejection of the `fetch()` to the UserWorker itself, as opposed to an
+ * error thrown while post-processing its response. A rejected fetch is a
+ * network-level outcome for a single request (UserWorker unreachable, or the
+ * client's request body could not be read because the client disconnected)
+ * and is never treated as a ProxyWorker failure.
+ */
+class UserWorkerFetchError extends Error {
+	constructor(cause: Error) {
+		super(cause.message, { cause });
+		this.name = "UserWorkerFetchError";
+	}
 }
 
 function sendMessageToProxyController(

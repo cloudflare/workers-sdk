@@ -3305,3 +3305,71 @@ describe(".env support in local dev", () => {
 		`);
 	});
 });
+
+describe("client disconnects", () => {
+	/**
+	 * Opens a POST with a large announced body, sends only the first chunk and
+	 * then destroys the connection — what a caller with a timeout does while
+	 * uploading. workerd then fails the read of that request body.
+	 */
+	function abortUploadMidBody(url: string): Promise<void> {
+		const { hostname, port } = new URL(url);
+		return new Promise((resolve, reject) => {
+			const socket = nodeNet.connect(Number(port), hostname, () => {
+				socket.write(
+					`POST /upload HTTP/1.1\r\nHost: ${hostname}:${port}\r\nContent-Type: application/octet-stream\r\nContent-Length: 2000000\r\n\r\n`
+				);
+				socket.write(Buffer.alloc(64 * 1024), () => {
+					socket.destroy();
+					resolve();
+				});
+			});
+			socket.on("error", reject);
+		});
+	}
+
+	it("does not exit `wrangler dev` when a client aborts a request mid-body", async ({
+		expect,
+	}) => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request) {
+						if (request.method === "POST") {
+							await request.text();
+						}
+						return new Response("ok");
+					}
+				}
+			`,
+			"package.json": dedent`
+				{
+					"name": "worker",
+					"version": "0.0.0",
+					"private": true
+				}
+			`,
+		});
+		const worker = helper.runLongLived("wrangler dev");
+		const { url } = await worker.waitForReady();
+		await expect(fetchText(url)).resolves.toBe("ok");
+
+		for (let i = 0; i < 3; i++) {
+			await abortUploadMidBody(url);
+			await setTimeout(500);
+		}
+
+		// The dev session must still be alive and serving.
+		await expect(
+			Promise.race([worker.exitCode, setTimeout(2_000, "still running")])
+		).resolves.toBe("still running");
+		expect(worker.currentOutput).not.toContain("Error inside ProxyWorker");
+		await expect(fetchText(url)).resolves.toBe("ok");
+	});
+});
