@@ -13,6 +13,10 @@ export type MigrationsConfigErrorCode =
 	| "MIGRATIONS_PATTERN_REQUIRES_DIR"
 	| "MIGRATIONS_PATTERN_OUTSIDE_DIR";
 
+export type CreateMigrationErrorCode =
+	| "MIGRATION_NAME_CONTAINS_PATH_SEPARATOR"
+	| "MIGRATION_NAME_DOES_NOT_MATCH_PATTERN";
+
 /** A consumer-neutral migration configuration validation error. */
 export class MigrationsConfigError extends Error {
 	constructor(
@@ -26,6 +30,22 @@ export class MigrationsConfigError extends Error {
 	) {
 		super(message);
 		this.name = "MigrationsConfigError";
+	}
+}
+
+/** A consumer-neutral migration creation validation error. */
+export class CreateMigrationError extends Error {
+	constructor(
+		message: string,
+		readonly code: CreateMigrationErrorCode,
+		readonly details: {
+			migrationMessage: string;
+			migrationName?: string;
+			migrationPath?: string;
+		}
+	) {
+		super(message);
+		this.name = "CreateMigrationError";
 	}
 }
 
@@ -396,4 +416,77 @@ export function getNextMigrationNumber(
 		// Math.max.
 		.filter((n) => Number.isFinite(n));
 	return Math.max(...migrationNumbers, 0) + 1;
+}
+
+export type PreparedMigration = {
+	name: string;
+	path: string;
+	contents: string;
+};
+
+export type CreatedMigration = Pick<PreparedMigration, "name" | "path">;
+
+/** Validate and describe the next numbered, top-level migration file. */
+export function prepareMigration(
+	migrationsConfig: MigrationsConfig,
+	message: string,
+	timestamp = new Date()
+): PreparedMigration {
+	const migrationMessage = message.replaceAll(" ", "_");
+	if (/[\\/]/.test(migrationMessage)) {
+		throw new CreateMigrationError(
+			"Migration messages cannot contain path separators.",
+			"MIGRATION_NAME_CONTAINS_PATH_SEPARATOR",
+			{ migrationMessage: message }
+		);
+	}
+
+	const migrationNumber = getNextMigrationNumber(migrationsConfig)
+		.toString()
+		.padStart(4, "0");
+	const migrationName = `${migrationNumber}_${migrationMessage}.sql`;
+	const migrationPath = normalizeRelativePath(
+		`${migrationsConfig.migrationsDir}/${migrationName}`
+	);
+	const migrationsDirPattern = stripDirPrefix(
+		migrationsConfig.migrationsPattern,
+		migrationsConfig.migrationsDir
+	);
+
+	if (
+		!new Minimatch(migrationsDirPattern, { dot: false }).match(migrationName)
+	) {
+		throw new CreateMigrationError(
+			"The new migration does not match the configured migrations pattern.",
+			"MIGRATION_NAME_DOES_NOT_MATCH_PATTERN",
+			{ migrationMessage: message, migrationName, migrationPath }
+		);
+	}
+
+	return {
+		name: migrationName,
+		path: path.resolve(
+			migrationsConfig.projectPath,
+			migrationsConfig.migrationsDir,
+			migrationName
+		),
+		contents: `-- Migration number: ${migrationNumber} \t ${timestamp.toISOString()}\n`,
+	};
+}
+
+/** Write a prepared migration file. */
+export function writeMigration(migration: PreparedMigration): CreatedMigration {
+	fs.writeFileSync(migration.path, migration.contents);
+	return { name: migration.name, path: migration.path };
+}
+
+/** Create the next numbered, top-level migration file and its directory. */
+export function createMigration(
+	migrationsConfig: MigrationsConfig,
+	message: string,
+	timestamp = new Date()
+): CreatedMigration {
+	const migration = prepareMigration(migrationsConfig, message, timestamp);
+	fs.mkdirSync(path.dirname(migration.path), { recursive: true });
+	return writeMigration(migration);
 }

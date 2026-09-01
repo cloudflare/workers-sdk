@@ -25,11 +25,15 @@ import type { MigrationsConfig as SharedMigrationsConfig } from "@cloudflare/wor
 export {
 	buildMigrationQuery,
 	compareMigrationPaths,
+	createMigration,
+	CreateMigrationError,
 	getCreateMigrationsTableQuery,
 	getListAppliedMigrationsQuery,
 	getNextMigrationNumber,
 	getUnappliedMigrationNames,
 	normalizeRelativePath,
+	prepareMigration,
+	writeMigration,
 } from "@cloudflare/workers-utils/d1-migrations";
 
 export type MigrationsConfig = SharedMigrationsConfig & {

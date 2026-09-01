@@ -23,7 +23,7 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 
 ### Shared runtime utilities
 
-- `@cloudflare/workers-utils/d1-migrations` — Consumer-neutral D1 migration configuration resolution, discovery, ordering, and SQL query generation. CLI-specific prompting, logging, error presentation, and query execution stay in consumers.
+- `@cloudflare/workers-utils/d1-migrations` — Consumer-neutral D1 migration configuration resolution, creation, discovery, ordering, and SQL query generation. CLI-specific prompting, logging, error presentation, and query execution stay in consumers.
 
 - `createConfigCache(logger)` — file-backed JSON config cache (node_modules/.cache or `.wrangler/cache`). Generic mechanism; the consumer passes its logger (this package has no logger singleton). Both `wrangler` (`src/config-cache.ts`) and `@cloudflare/workers-auth` build their own instances.
 - `openInBrowser(url, logger)` — opens the `open` package with a graceful copy-paste fallback when no browser opener is available. Logger is a parameter, not imported.
