@@ -2,7 +2,7 @@ import {
 	containerPrivilegesAllowed,
 	FUSE_CONTAINER_PRIVILEGES,
 } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { beforeEach, test, vi } from "vitest";
 import {
 	ContainerPrivilegesCache,
@@ -13,8 +13,10 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
 	containerPrivilegesAllowed: vi.fn(),
 }));
-vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
+vi.mock("@cloudflare/workers-utils/docker-path", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("@cloudflare/workers-utils/docker-path")
+	>()),
 	getDockerPath: vi.fn(),
 }));
 
