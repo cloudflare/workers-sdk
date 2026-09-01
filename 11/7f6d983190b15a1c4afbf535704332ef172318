@@ -1,0 +1,35 @@
+packages/wrangler/bin/wrangler.js
+  s_11a2b580ce093d::t_9ef4b5f6baef9e 3
+packages/wrangler/package.json
+  s_587be098454de6::t_e9b4df612eb42d 3
+packages/wrangler/src/__tests__/v5-stub.test.ts
+  s_11a2b580ce093d::t_fcc2b10dcd3447 1-25
+packages/wrangler/src/v5-stub.ts
+  s_11a2b580ce093d::t_9b2b48ef1cfbd3 1-63
+packages/wrangler/tsup.config.ts
+  s_587be098454de6::t_59d651a790a8db 103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "117f6d983190b15a1c4afbf535704332ef172318",
+  "prompts": {},
+  "sessions": {
+    "s_11a2b580ce093d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0496e-9bd6-7b80-8a1a-ee068d59277c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    },
+    "s_587be098454de6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0496e-9c83-72c3-83a2-182dd084c25e",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
