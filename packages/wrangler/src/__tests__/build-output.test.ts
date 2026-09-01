@@ -75,10 +75,12 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(config.compatibilityDate).toBe("2026-05-18");
 		expect(config.entrypoint).toBeUndefined();
 		const manifest = config.manifest as {
+			type: string;
 			mainModule: string;
 			modules: Record<string, { type: string }>;
 		};
 		expect(manifest).toBeDefined();
+		expect(manifest.type).toBe("complete");
 		expect(manifest.mainModule).toBe("index.js");
 		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
 
@@ -106,10 +108,12 @@ describe("wrangler build --experimental-cf-build-output", () => {
 
 		const config = readOutputConfig();
 		const manifest = config.manifest as {
+			type: string;
 			mainModule: string;
 			modules: Record<string, { type: string }>;
 		};
 		expect(manifest).toBeDefined();
+		expect(manifest.type).toBe("complete");
 		expect(manifest.mainModule).toBe("index.js");
 		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
 		expect(fs.existsSync(bundlePath("index.js"))).toBe(true);

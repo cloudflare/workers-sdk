@@ -63,6 +63,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(config).not.toHaveProperty("entrypoint");
 		expect(typeof config.manifest).toBe("object");
 		const manifest = config.manifest as Record<string, unknown>;
+		expect(manifest.type).toBe("complete");
 		expect(typeof manifest.mainModule).toBe("string");
 		expect(typeof manifest.modules).toBe("object");
 	});
