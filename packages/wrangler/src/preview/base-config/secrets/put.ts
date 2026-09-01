@@ -16,7 +16,7 @@ export const previewBaseConfigSecretPutCommand = createCommand({
 			"Create or update a secret variable on the Preview base config",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	positionalArgs: ["key"],
 	args: {

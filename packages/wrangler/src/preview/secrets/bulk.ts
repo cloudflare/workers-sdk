@@ -17,7 +17,7 @@ export const previewSecretBulkCommand = createCommand({
 			"Upload multiple secrets to a Worker Preview and create a new deployment",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	positionalArgs: ["file"],
 	args: {
