@@ -20,12 +20,12 @@ declare module "cloudflare:test" {
 	 * persisted data. Note this can only be used with `stub`s pointing to Durable
 	 * Objects defined in the `main` worker.
 	 */
-	import type * as Rpc from "cloudflare:workers";
-	export function runInDurableObject<
-		O extends DurableObject | Rpc.DurableObject,
-		R,
-	>(
+	export function runInDurableObject<O extends Rpc.DurableObjectBranded, R>(
 		stub: DurableObjectStub<O>,
+		callback: (instance: O, state: DurableObjectState) => R | Promise<R>
+	): Promise<R>;
+	export function runInDurableObject<O extends DurableObject, R>(
+		stub: DurableObjectStub,
 		callback: (instance: O, state: DurableObjectState) => R | Promise<R>
 	): Promise<R>;
 	/**
@@ -73,9 +73,9 @@ declare module "cloudflare:test" {
 	/**
 	 * Gets the IDs of all objects that have been created in the `namespace`.
 	 */
-	export function listDurableObjectIds<T>(
-		namespace: DurableObjectNamespace<T>
-	): Promise<DurableObjectId[]>;
+	export function listDurableObjectIds<
+		T extends Rpc.DurableObjectBranded | undefined,
+	>(namespace: DurableObjectNamespace<T>): Promise<DurableObjectId[]>;
 
 	/**
 	 * Deletes all data from all attached bindings. This is
@@ -150,17 +150,41 @@ declare module "cloudflare:test" {
 	 * Creates an instance of `ScheduledController` for use as the 1st argument to
 	 * modules-format `scheduled()` exported handlers.
 	 */
+	export interface ScheduledControllerOptions {
+		scheduledTime?: Date;
+		cron?: string;
+	}
 	export function createScheduledController(
-		options?: FetcherScheduledOptions
+		options?: ScheduledControllerOptions
 	): ScheduledController;
+	/** A message used to construct a `MessageBatch` for a queue handler. */
+	export type MessageBatchMessage<Body = unknown> = {
+		id: string;
+		timestamp: Date;
+		attempts: number;
+	} & ({ body: Body } | { serializedBody: ArrayBuffer | ArrayBufferView });
 	/**
 	 * Creates an instance of `MessageBatch` for use as the 1st argument to
 	 * modules-format `queue()` exported handlers.
 	 */
 	export function createMessageBatch<Body = unknown>(
 		queueName: string,
-		messages: ServiceBindingQueueMessage<Body>[]
+		messages: MessageBatchMessage<Body>[]
 	): MessageBatch<Body>;
+	/** The acknowledgement and retry state collected from a queue handler. */
+	export interface QueueResult {
+		outcome: string;
+		ackAll: boolean;
+		retryBatch: {
+			retry: boolean;
+			delaySeconds?: number;
+		};
+		explicitAcks: string[];
+		retryMessages: {
+			msgId: string;
+			delaySeconds?: number;
+		}[];
+	}
 	/**
 	 * Gets the ack/retry state of messages in the `MessageBatch`, and waits for
 	 * all `ExecutionContext#waitUntil()`ed `Promise`s to settle. Only accepts
@@ -170,7 +194,7 @@ declare module "cloudflare:test" {
 	export function getQueueResult(
 		batch: MessageBatch,
 		ctx: ExecutionContext
-	): Promise<FetcherQueueResult>;
+	): Promise<QueueResult>;
 
 	export interface D1Migration {
 		name: string;
@@ -534,7 +558,10 @@ declare module "cloudflare:test" {
 		 * @param times - Optional number of times the step will time out. Useful for
 		 * testing retry logic. If omitted, it will time out on **every attempt**.
 		 */
-		forceStepTimeout(step: { name: string; index?: number }, times?: number);
+		forceStepTimeout(
+			step: { name: string; index?: number },
+			times?: number
+		): Promise<void>;
 
 		/**
 		 * Sends a mock event to the Workflow instance. This causes a `step.waitForEvent()`
@@ -688,7 +715,7 @@ declare module "cloudflare:test" {
 		: { params: Record<Params, string | string[]> };
 	type EventContextInitData<Data> =
 		Data extends Record<string, never> ? { data?: Data } : { data: Data };
-	type EventContextInit<E extends EventContext<unknown, unknown, unknown>> =
+	type EventContextInit<E extends EventContext<unknown, string, unknown>> =
 		E extends EventContext<unknown, infer Params, infer Data>
 			? EventContextInitBase &
 					EventContextInitParams<Params> &
