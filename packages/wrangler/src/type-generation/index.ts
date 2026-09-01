@@ -2017,12 +2017,19 @@ function collectAllVars(
  * @returns a string representing the types of such array
  *
  * @example
+ * `[]` => `unknown[]`
  * `[1, 2, 3]` => `number[]`
  * `[1, 2, 'three']` => `(number|string)[]`
  * `['false', true]` => `(string|boolean)[]`
  */
 function typeofArray(array: unknown[]): string {
 	const typesInArray = [...new Set(array.map((item) => typeof item))].sort();
+
+	if (typesInArray.length === 0) {
+		// An empty array tells us nothing about its element type, and joining an
+		// empty list below would emit `()[]`, which is not valid TypeScript.
+		return "unknown[]";
+	}
 
 	if (typesInArray.length === 1) {
 		return `${typesInArray[0]}[]`;
