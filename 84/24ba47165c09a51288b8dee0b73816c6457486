@@ -1,0 +1,31 @@
+packages/wrangler/bin/wrangler.js
+  s_11a2b580ce093d::t_2d8e97335a7995 2,4,7,9-15,17,21-23
+packages/wrangler/package.json
+  s_11a2b580ce093d::t_0267a044673f1f 3
+packages/wrangler/src/__tests__/v5-cf-proxy.test.ts
+  s_11a2b580ce093d::t_c2f0e29de2cb5d 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8424ba47165c09a51288b8dee0b73816c6457486",
+  "prompts": {},
+  "sessions": {
+    "s_11a2b580ce093d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0496e-9bd6-7b80-8a1a-ee068d59277c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    },
+    "s_7a19376b8536ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04973-7248-77b1-bfa1-93565250fc86",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
