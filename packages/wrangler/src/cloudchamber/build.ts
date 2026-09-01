@@ -6,16 +6,19 @@ import {
 	dockerImageInspect,
 	dockerLoginImageRegistry,
 	getCloudflareContainerRegistry,
+	initContainersSharedContext,
 	resolveImageName,
 	runDockerCmd,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
 	isDirectory,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
@@ -245,11 +248,16 @@ export async function buildAndMaybePush(
 				containerConfig,
 			});
 
+			initContainersSharedContext({
+				accountId: account.external_account_id,
+				fetchResult,
+			});
 			await dockerLoginImageRegistry(
 				pathToDocker,
 				// Won't be an external registry since this is building from a Dockerfile
 				// rather than specifying an image uri.
-				getCloudflareContainerRegistry(complianceConfig)
+				getCloudflareContainerRegistry(complianceConfig),
+				complianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN
 			);
 			try {
 				// We don't try to parse until this point because we don't want to fail on
@@ -412,12 +420,17 @@ export async function pushCommand(
 	config: Config
 ) {
 	try {
+		const accountId = await getOrSelectAccountId(config);
+		initContainersSharedContext({
+			accountId,
+			fetchResult,
+		});
 		await dockerLoginImageRegistry(
 			args.pathToDocker,
-			getCloudflareContainerRegistry(config)
+			getCloudflareContainerRegistry(config),
+			config
 		);
 
-		const accountId = await getOrSelectAccountId(config);
 		const newTag = resolveImageName(accountId, args.TAG, config);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await checkImagePlatform(dockerPath, args.TAG);

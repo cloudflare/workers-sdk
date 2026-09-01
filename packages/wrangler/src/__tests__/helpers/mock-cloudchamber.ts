@@ -3,14 +3,14 @@ import {
 	DeploymentType,
 	NodeGroup,
 	PlacementStatusHealth,
-	SchedulingPolicy,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
+import { SchedulingPolicy } from "@cloudflare/containers-shared";
 import type {
 	Application,
 	DashApplication,
 	DeploymentV2,
 	PlacementWithEvents,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 
 export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 	{

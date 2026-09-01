@@ -8,7 +8,7 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { DashApplication } from "@cloudflare/containers-shared";
+import type { DashApplication } from "@cloudflare/containers-api";
 
 /** Helper: wrap DashApplication[] in V4 envelope for MSW */
 function dashAppsResponse(

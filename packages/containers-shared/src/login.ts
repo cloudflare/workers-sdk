@@ -1,22 +1,12 @@
 import { spawn } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils/errors";
-import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
-import { OpenAPI } from "./client/core/OpenAPI";
+import { fetchResult, getRegistryCredentialsResource } from "./context";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
 
-export function configureOpenAPIForContainerPull(
-	accountId: string,
-	apiToken: string,
-	apiBase = "https://api.cloudflare.com/client/v4"
-): void {
-	OpenAPI.BASE = `${apiBase}/accounts/${accountId}/containers`;
-	OpenAPI.CREDENTIALS = "omit";
-	const existingHeaders =
-		typeof OpenAPI.HEADERS === "object" ? OpenAPI.HEADERS : {};
-	OpenAPI.HEADERS = {
-		...existingHeaders,
-		Authorization: `Bearer ${apiToken}`,
-	};
-}
+type AccountRegistryToken = {
+	username: string;
+	password?: string;
+};
 
 /**
  * Gets push and pull credentials for a configured image registry
@@ -25,19 +15,32 @@ export function configureOpenAPIForContainerPull(
  */
 export async function dockerLoginImageRegistry(
 	pathToDocker: string,
-	domain: string
+	domain: string,
+	complianceConfig: ComplianceConfig
 ) {
 	// how long the credentials should be valid for
 	const expirationMinutes = 15;
 
-	const credentials =
-		await ImageRegistriesService.generateImageRegistryCredentials(domain, {
-			expiration_minutes: expirationMinutes,
-			permissions: [
-				ImageRegistryPermissions.PUSH,
-				ImageRegistryPermissions.PULL,
-			],
+	const credentials = await fetchResult<AccountRegistryToken>(
+		complianceConfig,
+		getRegistryCredentialsResource(domain),
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				expiration_minutes: expirationMinutes,
+				permissions: ["push", "pull"],
+			}),
+		}
+	);
+
+	if (credentials.password === undefined) {
+		throw new UserError("Unable to retrieve registry credentials.", {
+			telemetryMessage: false,
 		});
+	}
 
 	const child = spawn(
 		pathToDocker,

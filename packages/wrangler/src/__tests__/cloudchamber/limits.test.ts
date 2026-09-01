@@ -7,10 +7,8 @@ import {
 	ensureContainerLimits,
 	ensureImageFitsLimits,
 } from "../../cloudchamber/limits";
-import type {
-	CompleteAccountCustomer,
-	ContainerNormalizedConfig,
-} from "@cloudflare/containers-shared";
+import type { CompleteAccountCustomer } from "@cloudflare/containers-api";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 
 const MB = 1000 * 1000;
 const commonLimits = {

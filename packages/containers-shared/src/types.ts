@@ -1,11 +1,66 @@
-import type {
-	ApplicationAffinityColocation,
-	InstanceType,
-	SchedulingPolicy,
-	UserSSHPublicKey,
-	WranglerSSHConfig,
-} from "./client";
-import type { ApplicationAffinityHardwareGeneration } from "./client/models/ApplicationAffinityHardwareGeneration";
+export enum ApplicationAffinityColocation {
+	DATACENTER = "datacenter",
+}
+
+export enum ApplicationAffinityHardwareGeneration {
+	HIGHEST_OVERALL_PERFORMANCE = "highest-overall-performance",
+}
+
+export type ApplicationAffinities = {
+	colocation?: ApplicationAffinityColocation;
+	hardware_generation?: ApplicationAffinityHardwareGeneration;
+};
+
+export enum AssignIPv4 {
+	NONE = "none",
+	PREDEFINED = "predefined",
+	ACCOUNT = "account",
+}
+
+export enum AssignIPv6 {
+	PREDEFINED = "predefined",
+	ACCOUNT = "account",
+}
+
+export enum ExternalRegistryKind {
+	ECR = "ECR",
+	DOCKER_HUB = "DockerHub",
+	GAR = "GAR",
+}
+
+export enum InstanceType {
+	LITE = "lite",
+	DEV = "dev",
+	BASIC = "basic",
+	STANDARD = "standard",
+	STANDARD_1 = "standard-1",
+	STANDARD_2 = "standard-2",
+	STANDARD_3 = "standard-3",
+	STANDARD_4 = "standard-4",
+}
+
+export enum SchedulingPolicy {
+	MOON = "moon",
+	GPU = "gpu",
+	REGIONAL = "regional",
+	FILL_METALS = "fill_metals",
+	DEFAULT = "default",
+}
+
+export type NetworkParameters = {
+	assign_ipv4?: AssignIPv4;
+	assign_ipv6?: AssignIPv6;
+};
+
+export type UserSSHPublicKey = {
+	name?: string;
+	public_key: string;
+};
+
+export type WranglerSSHConfig = {
+	enabled: boolean;
+	port?: number;
+};
 
 export interface WranglerLogger {
 	debug: (...args: unknown[]) => void;

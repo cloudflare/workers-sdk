@@ -23,9 +23,9 @@ import {
 	ApiError,
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
-	resolveImageName,
 	RolloutsService,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
+import { resolveImageName } from "@cloudflare/containers-shared";
 import {
 	APIError,
 	FatalError,
@@ -54,12 +54,12 @@ import type {
 	Application,
 	ApplicationID,
 	ApplicationName,
-	ContainerNormalizedConfig,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 	Observability as ObservabilityConfiguration,
 	RolloutStepRequest,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	ComplianceConfig,
 	Config,

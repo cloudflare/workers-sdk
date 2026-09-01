@@ -1,33 +1,76 @@
-import { afterEach, describe, it } from "vitest";
-import { OpenAPI } from "../src/client/core/OpenAPI";
-import { configureOpenAPIForContainerPull } from "../src/login";
+import { PassThrough } from "node:stream";
+import { afterEach, describe, it, vi } from "vitest";
+import { initContainersSharedContext } from "../src/context";
+import { dockerLoginImageRegistry } from "../src/login";
+import type { FetchResultFetcher } from "@cloudflare/workers-utils";
 
-describe("configureOpenAPIForContainerPull", () => {
+const spawn = vi.hoisted(() => vi.fn());
+
+vi.mock("node:child_process", () => ({
+	spawn,
+}));
+
+describe("dockerLoginImageRegistry", () => {
 	afterEach(() => {
-		OpenAPI.BASE = "";
-		OpenAPI.HEADERS = undefined;
-		OpenAPI.CREDENTIALS = "include";
+		vi.resetAllMocks();
 	});
 
-	it("sets BASE, HEADERS, and CREDENTIALS", ({ expect }) => {
-		configureOpenAPIForContainerPull("abc123", "my-token");
-		expect(OpenAPI.BASE).toBe(
-			"https://api.cloudflare.com/client/v4/accounts/abc123/containers"
-		);
-		expect(OpenAPI.CREDENTIALS).toBe("omit");
-		expect((OpenAPI.HEADERS as Record<string, string>)["Authorization"]).toBe(
-			"Bearer my-token"
-		);
-	});
+	it("fetches registry credentials and passes them to docker login", async ({
+		expect,
+	}) => {
+		const fetchResult = vi.fn(async () => ({
+			username: "v1",
+			password: "secret",
+		}));
+		initContainersSharedContext({
+			accountId: "abc123",
+			fetchResult: fetchResult as FetchResultFetcher,
+		});
 
-	it("uses custom apiBase when provided", ({ expect }) => {
-		configureOpenAPIForContainerPull(
-			"abc123",
-			"my-token",
-			"https://staging.cloudflare.com/client/v4"
+		const stdin = new PassThrough();
+		const child = Object.assign(new PassThrough(), {
+			stdin,
+		});
+		spawn.mockReturnValue(child);
+		const writes: string[] = [];
+		stdin.on("data", (chunk) => writes.push(chunk.toString()));
+
+		const login = dockerLoginImageRegistry(
+			"docker",
+			"registry.cloudflare.com",
+			{ compliance_region: "public" }
 		);
-		expect(OpenAPI.BASE).toBe(
-			"https://staging.cloudflare.com/client/v4/accounts/abc123/containers"
+		await vi.waitFor(() => {
+			expect(spawn).toHaveBeenCalled();
+		});
+		child.emit("close", 0);
+		await login;
+
+		expect(fetchResult).toHaveBeenCalledWith(
+			{ compliance_region: "public" },
+			"/accounts/abc123/containers/registries/registry.cloudflare.com/credentials",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					expiration_minutes: 15,
+					permissions: ["push", "pull"],
+				}),
+			}
 		);
+		expect(spawn).toHaveBeenCalledWith(
+			"docker",
+			[
+				"login",
+				"--password-stdin",
+				"--username",
+				"v1",
+				"registry.cloudflare.com",
+			],
+			{ stdio: ["pipe", "inherit", "inherit"] }
+		);
+		expect(writes).toEqual(["secret"]);
 	});
 });

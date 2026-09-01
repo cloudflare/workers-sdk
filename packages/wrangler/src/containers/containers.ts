@@ -4,7 +4,7 @@ import {
 	startSection,
 } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
-import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import { ApiError, ApplicationsService } from "@cloudflare/containers-api";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import YAML from "yaml";

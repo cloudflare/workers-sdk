@@ -9,7 +9,7 @@ import {
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { DeploymentsService } from "@cloudflare/containers-shared";
+import { DeploymentsService } from "@cloudflare/containers-api";
 import { UserError } from "@cloudflare/workers-utils";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
@@ -19,7 +19,7 @@ import type {
 	DeploymentV2,
 	Placement,
 	PlacementStatusHealth,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 
 function ipv6(placement: Placement | undefined) {
 	if (!placement) {

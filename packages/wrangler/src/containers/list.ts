@@ -1,6 +1,6 @@
 import { dim, green, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import { ApiError, ApplicationsService } from "@cloudflare/containers-api";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
@@ -9,7 +9,7 @@ import { logger } from "../logger";
 import { onKeyPress } from "../utils/onKeyPress";
 import { containersScope } from "./index";
 import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
-import type { DashApplication } from "@cloudflare/containers-shared";
+import type { DashApplication } from "@cloudflare/containers-api";
 
 type ContainerState = "active" | "ready" | "provisioning" | "degraded";
 

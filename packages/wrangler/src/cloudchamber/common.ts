@@ -8,7 +8,7 @@ import {
 	ApiError,
 	DeploymentMutationError,
 	OpenAPI,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import {
 	addAuthorizationHeader,
 	getCloudflareApiBaseUrl,
@@ -36,7 +36,7 @@ import type {
 	InstanceType,
 	Label,
 	NetworkParameters,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { CloudchamberConfig, Config } from "@cloudflare/workers-utils";
 
 export const cloudchamberScope = "cloudchamber:write" as const;

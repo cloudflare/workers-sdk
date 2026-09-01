@@ -3,11 +3,11 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import {
+	ApplicationAffinityHardwareGeneration,
 	getCloudflareContainerRegistry,
 	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -36,7 +36,7 @@ import type {
 	Application,
 	CreateApplicationRequest,
 	ImageRegistryCredentialsConfiguration,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { ChildProcess } from "node:child_process";
 import type { ExpectStatic } from "vitest";
 

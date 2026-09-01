@@ -15,11 +15,11 @@ import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
+	ApplicationAffinityHardwareGeneration,
 	ContainerNormalizedConfig,
 	InstanceTypeOrLimits,
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
-import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import type { Config, ContainerApp } from "@cloudflare/workers-utils";
 
 /**

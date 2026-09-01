@@ -3,7 +3,7 @@ import {
 	bgRed,
 	bgYellow,
 } from "@cloudflare/cli-shared-helpers/colors";
-import { type PlacementStatusHealth } from "@cloudflare/containers-shared";
+import { type PlacementStatusHealth } from "@cloudflare/containers-api";
 
 export function statusToColored(status?: PlacementStatusHealth): string {
 	if (!status) {

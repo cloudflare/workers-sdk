@@ -1,6 +1,6 @@
 import { dim, green, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import { ApiError, ApplicationsService } from "@cloudflare/containers-api";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
@@ -14,7 +14,7 @@ import type {
 	DashApplicationInstance,
 	DashApplicationInstances,
 	ResultInfo,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 
 type InstanceState =
 	| "provisioning"

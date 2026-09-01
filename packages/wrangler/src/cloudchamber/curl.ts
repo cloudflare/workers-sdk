@@ -6,8 +6,8 @@ import {
 	cyanBright,
 	yellow,
 } from "@cloudflare/cli-shared-helpers/colors";
-import { ApiError, OpenAPI } from "@cloudflare/containers-shared";
-import { request } from "@cloudflare/containers-shared/src/client/core/request";
+import { ApiError, OpenAPI } from "@cloudflare/containers-api";
+import { request } from "@cloudflare/containers-api/src/client/core/request";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import formatLabelledValues from "../utils/render-labelled-values";

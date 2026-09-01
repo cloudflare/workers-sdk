@@ -1,6 +1,9 @@
 import assert from "node:assert";
 import path from "node:path";
-import { resolveDockerHost } from "@cloudflare/containers-shared";
+import {
+	initContainersSharedContext,
+	resolveDockerHost,
+} from "@cloudflare/containers-shared";
 import {
 	configFileName,
 	DEFAULT_COMPAT_DATE,
@@ -13,9 +16,8 @@ import {
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
-import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
+import { fetchResult } from "../../cfetch";
 import { readConfig, readNewConfig } from "../../config";
-import { containersScope } from "../../containers";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
@@ -504,7 +506,10 @@ async function resolveConfig(
 		(c) => "image_uri" in c && c.image_uri
 	);
 	if (needsPulling && !resolved.dev.remote) {
-		await fillOpenAPIConfiguration(config, containersScope);
+		initContainersSharedContext({
+			accountId: await requireAuth(config),
+			fetchResult,
+		});
 	}
 
 	// TODO(queues) support remote wrangler dev

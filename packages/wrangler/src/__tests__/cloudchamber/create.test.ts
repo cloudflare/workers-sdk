@@ -10,7 +10,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
-import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
+import type { SSHPublicKeyItem } from "@cloudflare/containers-api";
 import type { ExpectStatic } from "vitest";
 
 function mockDeploymentPost(expect: ExpectStatic) {
