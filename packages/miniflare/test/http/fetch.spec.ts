@@ -53,7 +53,9 @@ test("fetch: performs web socket upgrade", async ({ expect }) => {
 	const messages: MessageEvent["data"][] = [];
 	webSocket.addEventListener("message", (e) => {
 		messages.push(e.data);
-		if (e.data === "hello server") eventPromise.resolve();
+		if (e.data === "hello server") {
+			eventPromise.resolve();
+		}
 	});
 	webSocket.accept();
 	webSocket.send("hello server");
@@ -127,18 +129,24 @@ test(
 					}
 
 					clientCloses++;
-					if (clientCloses === 2) clientClosePromise.resolve();
+					if (clientCloses === 2) {
+						clientClosePromise.resolve();
+					}
 				});
 			} else if (req.url === "/server") {
 				ws.on("message", (data) => {
-					if (data.toString() === "close") ws.close(3003, "Server Close");
+					if (data.toString() === "close") {
+						ws.close(3003, "Server Close");
+					}
 				});
 				ws.on("close", (code, reason) => {
 					expect(code).toBe(3003);
 					expect(reason.toString()).toBe("Server Close");
 
 					serverCloses++;
-					if (serverCloses === 2) serverClosePromise.resolve();
+					if (serverCloses === 2) {
+						serverClosePromise.resolve();
+					}
 				});
 			}
 		});

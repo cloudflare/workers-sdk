@@ -55,11 +55,17 @@ export const PathSchema = z.string().transform((p) => {
 
 /** @internal */
 export function _isCyclic(value: unknown, seen = new Set<unknown>()) {
-	if (typeof value !== "object" || value === null) return false;
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
 	for (const child of Object.values(value)) {
-		if (seen.has(child)) return true;
+		if (seen.has(child)) {
+			return true;
+		}
 		seen.add(child);
-		if (_isCyclic(child, seen)) return true;
+		if (_isCyclic(child, seen)) {
+			return true;
+		}
 		seen.delete(child);
 	}
 	return false;

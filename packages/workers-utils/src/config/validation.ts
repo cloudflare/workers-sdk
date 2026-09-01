@@ -6801,6 +6801,15 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"redact_query_string",
+			val.redact_query_string,
+			"boolean"
+		) && isValid;
+
+	isValid =
 		validateOptionalProperty(diagnostics, field, "logs", val.logs, "object") &&
 		isValid;
 
@@ -6817,6 +6826,7 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
 			"head_sampling_rate",
+			"redact_query_string",
 			"logs",
 			"traces",
 		]) && isValid;

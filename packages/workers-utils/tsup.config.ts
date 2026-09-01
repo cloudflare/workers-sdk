@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup";
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 
 export default defineConfig(() => [
 	{
@@ -9,11 +10,15 @@ export default defineConfig(() => [
 			"src/browser.ts",
 			"src/prometheus-metrics.ts",
 			"src/test-helpers/index.ts",
-			// Leaf entry points that only depend on Node.js builtins, so they can
-			// be imported by packages bundling to ESM (e.g. via Vite) without
-			// pulling in the barrel's CommonJS dependencies.
+			// Leaf entry points let consumers bundle individual utilities without
+			// pulling in the broad package barrel and its transitive dependencies.
+			"src/compliance.ts",
+			"src/compatibility-date.ts",
+			"src/docker-path.ts",
+			"src/errors.ts",
 			"src/fs-helpers.ts",
 			"src/global-wrangler-config-path.ts",
+			"src/zod-format.ts",
 		],
 		platform: "node",
 		format: "esm",
@@ -25,6 +30,6 @@ export default defineConfig(() => [
 		define: {
 			"process.env.NODE_ENV": `'${"production"}'`,
 		},
-		external: ["@cloudflare/*", "vitest", "undici"],
+		external: ["@cloudflare/*", "vitest", ...EXTERNAL_DEPENDENCIES],
 	},
 ]);

@@ -59,7 +59,9 @@ export const QUEUES_PLUGIN: Plugin = {
 			(trigger) => trigger.name
 		);
 		const queueIds = new Set([...produced, ...consumed]);
-		if (queueIds.size === 0) return [];
+		if (queueIds.size === 0) {
+			return [];
+		}
 
 		const services = Array.from(queueIds).map<Service>((id) => ({
 			name: getQueueServiceName(id),

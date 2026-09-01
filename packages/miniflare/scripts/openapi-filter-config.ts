@@ -1122,6 +1122,26 @@ const config = {
 								description: "Filter instances by status.",
 							},
 						},
+						{
+							in: "query",
+							name: "date_start",
+							schema: {
+								type: "string",
+								format: "date-time",
+								description:
+									"Only return instances created at or after this time. Accepts ISO 8601 with no timezone offsets and in UTC.",
+							},
+						},
+						{
+							in: "query",
+							name: "date_end",
+							schema: {
+								type: "string",
+								format: "date-time",
+								description:
+									"Only return instances created at or before this time. Accepts ISO 8601 with no timezone offsets and in UTC.",
+							},
+						},
 					],
 					responses: {
 						"200": {

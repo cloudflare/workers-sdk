@@ -74,12 +74,16 @@ async function findD1DatabaseOwner(
 	databaseId: string
 ): Promise<string | null> {
 	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) return null;
+	if (peerUrls.length === 0) {
+		return null;
+	}
 
 	const responses = await Promise.all(
 		peerUrls.map(async (url) => {
 			const response = await fetchFromPeer(url, "/d1/database");
-			if (!response?.ok) return null;
+			if (!response?.ok) {
+				return null;
+			}
 			const data = (await response.json()) as {
 				result?: Array<{ uuid: string }>;
 			};
@@ -196,7 +200,9 @@ export async function rawD1Database(
 				body: JSON.stringify(body),
 			}
 		);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(

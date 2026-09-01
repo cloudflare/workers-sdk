@@ -1,7 +1,7 @@
 import path from "node:path";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	DEFAULT_COMPAT_DATE,
+	extractBindingsOfType,
 	getContainerDurableObjectClassNames,
 	getRegistryPath,
 } from "@cloudflare/workers-utils";

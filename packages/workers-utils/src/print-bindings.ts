@@ -1,30 +1,25 @@
 import { stripVTControlCharacters } from "node:util";
-import { brandColor, dim, white } from "@cloudflare/cli-shared-helpers/colors";
-import {
-	assertNever,
-	getBindingLocalSupport,
-	getBindingTypeFriendlyName,
-	UserError,
-} from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { logger } from "../../shared/context";
 import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
-import type { Binding, StartDevWorkerInput } from "@cloudflare/workers-utils";
-import type {
-	CfSendEmailBindings,
-	CfTailConsumer,
-	ContainerApp,
-} from "@cloudflare/workers-utils";
-import type { WorkerRegistry } from "miniflare";
+import { getBindingTypeFriendlyName } from "./config/validation";
+import type { ContainerApp } from "./config/environment";
+import type { Binding } from "./types";
+import type { CfSendEmailBindings, CfTailConsumer } from "./worker";
+
+const { dim, white } = chalk;
+const brandColor = chalk.hex("#BD5B08");
 
 /**
  * Tracks whether we have already explained the connected status
  */
 let isConnectedStatusExplained = false;
 
-type PrintContext = {
-	log?: (message: string) => void;
-	registry?: WorkerRegistry | null;
+export type PrintBindingsOptions = {
+	log: (message: string) => void;
+	tailConsumers?: CfTailConsumer[];
+	streamingTailConsumers?: CfTailConsumer[];
+	containers?: ContainerApp[];
+	registry?: Record<string, { debugPortAddress?: string }> | null;
 	local?: boolean;
 	isMultiWorker?: boolean;
 	remoteBindingsDisabled?: boolean;
@@ -36,18 +31,21 @@ type PrintContext = {
 
 /**
  * Print all the bindings a worker would have access to.
- * Accepts StartDevWorkerInput["bindings"] format
+ * Accepts the flat binding record used by StartDevWorkerInput["bindings"].
  */
 export function printBindings(
-	bindings: StartDevWorkerInput["bindings"],
-	tailConsumers: CfTailConsumer[] = [],
-	streamingTailConsumers: CfTailConsumer[] = [],
-	containers: ContainerApp[] = [],
-	context: PrintContext = {}
+	bindings: Record<string, Binding> | undefined,
+	options: PrintBindingsOptions
 ) {
+	const {
+		containers = [],
+		log,
+		streamingTailConsumers = [],
+		tailConsumers = [],
+	} = options;
+	const context = options;
 	let hasConnectionStatus = false;
 
-	const log = context.log ?? logger.log;
 	const isMultiWorker = context.isMultiWorker ?? false;
 	const getMode = createGetMode({
 		isProvisioning: context.provisioning,
@@ -1015,64 +1013,4 @@ function createGetMode({
 
 		return `${isSimulatedLocally ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
 	};
-}
-
-/**
- * Validates the user's `remote` setting for a given binding against the
- * binding type's local-development capabilities (sourced from
- * {@link getBindingLocalSupport}). Throws `UserError` for invalid combinations
- * and emits warnings for valid-but-noteworthy ones.
- */
-export function warnOrError(
-	type: Binding["type"],
-	remote: boolean | undefined
-) {
-	const support = getBindingLocalSupport(type);
-	switch (support) {
-		case "local-and-remote":
-			return;
-		case "local-only":
-			if (remote === true) {
-				throw new UserError(
-					`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
-					{
-						telemetryMessage: "utils bindings unsupported remote resources",
-					}
-				);
-			}
-			return;
-		case "remote":
-			if (remote === false) {
-				throw new UserError(
-					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
-					{
-						telemetryMessage: "utils bindings unsupported local development",
-					}
-				);
-			}
-			if (remote === undefined) {
-				logger.warn(
-					`${getBindingTypeFriendlyName(type)} bindings do not support local development, and so parts of your Worker may not work correctly. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
-				);
-			}
-			return;
-		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
-			if (remote === false) {
-				throw new UserError(
-					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
-					{
-						telemetryMessage:
-							"utils bindings unsupported local development always remote",
-					}
-				);
-			}
-			if (remote === undefined) {
-				logger.warn(
-					`${getBindingTypeFriendlyName(type)} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
-				);
-			}
-			return;
-		default:
-			assertNever(support);
-	}
 }

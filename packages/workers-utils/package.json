@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.34.0",
+	"version": "0.35.0",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -27,6 +27,10 @@
 			"import": "./dist/prometheus-metrics.mjs",
 			"types": "./dist/prometheus-metrics.d.mts"
 		},
+		"./compliance": {
+			"import": "./dist/compliance.mjs",
+			"types": "./dist/compliance.d.mts"
+		},
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",
 			"types": "./dist/test-helpers/index.d.mts"
@@ -35,9 +39,25 @@
 			"import": "./dist/fs-helpers.mjs",
 			"types": "./dist/fs-helpers.d.mts"
 		},
+		"./compatibility-date": {
+			"import": "./dist/compatibility-date.mjs",
+			"types": "./dist/compatibility-date.d.mts"
+		},
+		"./docker-path": {
+			"import": "./dist/docker-path.mjs",
+			"types": "./dist/docker-path.d.mts"
+		},
+		"./errors": {
+			"import": "./dist/errors.mjs",
+			"types": "./dist/errors.d.mts"
+		},
 		"./global-wrangler-config-path": {
 			"import": "./dist/global-wrangler-config-path.mjs",
 			"types": "./dist/global-wrangler-config-path.d.mts"
+		},
+		"./zod-format": {
+			"import": "./dist/zod-format.mjs",
+			"types": "./dist/zod-format.d.mts"
 		}
 	},
 	"scripts": {
@@ -50,6 +70,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
+		"chalk": "catalog:default",
 		"undici": "catalog:default"
 	},
 	"devDependencies": {

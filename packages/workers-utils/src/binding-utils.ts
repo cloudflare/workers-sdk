@@ -1,12 +1,10 @@
-import type {
-	Binding,
-	Config,
-	ConfigBindingFieldName,
-} from "@cloudflare/workers-utils";
+import type { Config } from "./config/config";
+import type { ConfigBindingFieldName } from "./config/validation";
+import type { Binding } from "./types";
 
 function assertNever(_value: never) {}
 
-interface ConvertBindingsOptions {
+export interface ConvertBindingsOptions {
 	/**
 	 * Use preview IDs (preview_id, preview_bucket_name, preview_database_id) instead of production IDs when resolving a binding ID.
 	 * This means that the rest of Wrangler does not need to be aware of preview IDs, and can just use regular IDs.
