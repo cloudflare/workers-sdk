@@ -97,9 +97,10 @@ describe("writeWorkerConfig", () => {
 	}) => {
 		const root = process.cwd();
 		const manifest = {
+			type: "complete",
 			mainModule: "index.js",
-			modules: { "index.js": { type: "esm" as const } },
-		};
+			modules: { "index.js": { type: "esm" } },
+		} as const;
 
 		await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
 

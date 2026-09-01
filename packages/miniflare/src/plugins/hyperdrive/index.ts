@@ -26,9 +26,15 @@ function hasMysqlProtocol(url: URL) {
 }
 
 function getPort(url: URL) {
-	if (url.port !== "") return url.port;
-	if (hasPostgresProtocol(url)) return "5432";
-	if (hasMysqlProtocol(url)) return "3306";
+	if (url.port !== "") {
+		return url.port;
+	}
+	if (hasPostgresProtocol(url)) {
+		return "5432";
+	}
+	if (hasMysqlProtocol(url)) {
+		return "3306";
+	}
 	// Validated in `HyperdriveSchema`
 	assert.fail(`Expected known protocol, got ${url.protocol}`);
 }
@@ -37,7 +43,9 @@ function getPort(url: URL) {
 export const HyperdriveSchema = z
 	.union([z.url(), z.instanceof(URL)])
 	.transform((url, ctx) => {
-		if (typeof url === "string") url = new URL(url);
+		if (typeof url === "string") {
+			url = new URL(url);
+		}
 		if (url.protocol === "") {
 			ctx.addIssue({
 				code: "custom",

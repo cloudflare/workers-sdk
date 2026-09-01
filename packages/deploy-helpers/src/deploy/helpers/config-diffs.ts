@@ -286,6 +286,7 @@ function normalizeObservability(
 	const fullObservabilityDefaults = {
 		enabled,
 		head_sampling_rate: 1,
+		redact_query_string: false,
 		logs: {
 			enabled,
 			head_sampling_rate: 1,

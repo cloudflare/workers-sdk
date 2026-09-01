@@ -39,7 +39,9 @@ function getR2Binding(env: Env, bucket_name: string): R2Bucket | null {
 
 	// Find the binding name for this bucket
 	const bindingName = bindingMap[bucket_name];
-	if (!bindingName) return null;
+	if (!bindingName) {
+		return null;
+	}
 
 	return env[bindingName] as R2Bucket;
 }
@@ -49,12 +51,16 @@ async function findR2BucketOwner(
 	bucketName: string
 ): Promise<string | null> {
 	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) return null;
+	if (peerUrls.length === 0) {
+		return null;
+	}
 
 	const responses = await Promise.all(
 		peerUrls.map(async (url) => {
 			const response = await fetchFromPeer(url, "/r2/buckets");
-			if (!response?.ok) return null;
+			if (!response?.ok) {
+				return null;
+			}
 			const data = (await response.json()) as R2ListBucketsResponse;
 			const found = data.result?.buckets?.some((b) => b.name === bucketName);
 			return found ? url : null;
@@ -146,17 +152,27 @@ export async function listR2Objects(
 	const ownerMiniflare = await findR2BucketOwner(c, bucket_name);
 	if (ownerMiniflare) {
 		const params = new URLSearchParams();
-		if (prefix) params.set("prefix", prefix);
-		if (delimiter) params.set("delimiter", delimiter);
-		if (cursor) params.set("cursor", cursor);
-		if (limit !== undefined) params.set("per_page", String(limit));
+		if (prefix) {
+			params.set("prefix", prefix);
+		}
+		if (delimiter) {
+			params.set("delimiter", delimiter);
+		}
+		if (cursor) {
+			params.set("cursor", cursor);
+		}
+		if (limit !== undefined) {
+			params.set("per_page", String(limit));
+		}
 		const queryString = params.toString();
 		const path = `/r2/buckets/${encodeURIComponent(bucket_name)}/objects${
 			queryString ? `?${queryString}` : ""
 		}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -297,7 +313,9 @@ export async function getR2Object(
 		const response = await fetchFromPeer(ownerMiniflare, route, {
 			headers: metadataOnly ? { "cf-metadata-only": "true" } : undefined,
 		});
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -375,7 +393,9 @@ export async function putR2Object(
 			headers: fetchHeaders,
 			body,
 		});
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -423,7 +443,9 @@ export async function deleteR2Objects(
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(keys),
 		});
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(

@@ -2,13 +2,13 @@ import path from "node:path";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	getBindings,
 	getBindingTypeFriendlyName,
 	getDockerPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
-import { getBindings } from "../deploy/helpers/binding-utils";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";

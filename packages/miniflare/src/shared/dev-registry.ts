@@ -10,7 +10,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { getGlobalConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 import { watch } from "chokidar";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 export type { WorkerDefinition, WorkerRegistry };
