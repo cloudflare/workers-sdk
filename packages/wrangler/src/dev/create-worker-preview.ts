@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { URL } from "node:url";
 import { getWorkersDevSubdomain } from "@cloudflare/deploy-helpers";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
@@ -188,12 +187,12 @@ export async function createPreviewSession(
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal,
-	name: string | undefined
+	name: string
 ): Promise<CfPreviewSession> {
 	const { accountId, apiToken } = account;
 	const initUrl = ctx.zone
 		? `/zones/${ctx.zone}/workers/edge-preview`
-		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
+		: `/accounts/${accountId}/workers/scripts/${name}/subdomain/edge-preview`;
 
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
@@ -222,7 +221,7 @@ export async function createPreviewSession(
 					abortSignal: withTimeout(abortSignal),
 				}
 			);
-			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
+			host = `${name}.${subdomain}`;
 		}
 		return {
 			value: previewSessionToken,

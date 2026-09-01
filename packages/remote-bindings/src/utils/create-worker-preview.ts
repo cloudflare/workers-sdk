@@ -206,7 +206,7 @@ export async function createPreviewSession(
 	name: string
 ): Promise<CfPreviewSession> {
 	const { accountId } = account;
-	const initUrl = `/accounts/${accountId}/workers/subdomain/edge-preview`;
+	const initUrl = `/accounts/${accountId}/workers/scripts/${name}/subdomain/edge-preview`;
 
 	const { token, exchange_url } = await fetchResult<{
 		token: string;

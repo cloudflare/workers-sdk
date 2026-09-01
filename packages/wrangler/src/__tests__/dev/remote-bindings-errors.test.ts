@@ -62,7 +62,7 @@ describe("errors during dev with remote bindings", () => {
 	}) => {
 		msw.use(
 			http.get(
-				"*/accounts/test-account-id/workers/subdomain/edge-preview",
+				"*/accounts/test-account-id/workers/scripts/:scriptName/subdomain/edge-preview",
 				() =>
 					HttpResponse.json(createFetchResult({ token: "test-session-value" }))
 			),
