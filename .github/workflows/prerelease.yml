@@ -38,6 +38,7 @@ jobs:
           disable-cache: "true"
 
       - name: Build
+        if: ${{ !contains(github.event.*.labels.*.name, 'preview:wrangler') }}
         run: pnpm build --filter="./packages/*"
         env:
           NODE_ENV: "production"
@@ -49,5 +50,22 @@ jobs:
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
           WRANGLER_PRERELEASE_LABEL: ${{ github.head_ref || github.ref_name }}
 
+      - name: Build Wrangler preview
+        if: ${{ contains(github.event.*.labels.*.name, 'preview:wrangler') }}
+        run: pnpm build --filter=wrangler
+        env:
+          NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
+          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
+          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          WRANGLER_PRERELEASE_LABEL: ${{ github.head_ref || github.ref_name }}
+
       - name: Upload packages
+        if: ${{ !contains(github.event.*.labels.*.name, 'preview:wrangler') }}
         run: node -r esbuild-register .github/prereleases/upload.mjs
+
+      - name: Upload Wrangler preview
+        if: ${{ contains(github.event.*.labels.*.name, 'preview:wrangler') }}
+        run: pnpm dlx pkg-pr-new publish --pnpm --compact --no-template packages/wrangler
