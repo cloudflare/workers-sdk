@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup";
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 
 export default defineConfig(() => [
 	{
@@ -29,6 +30,6 @@ export default defineConfig(() => [
 		define: {
 			"process.env.NODE_ENV": `'${"production"}'`,
 		},
-		external: ["@cloudflare/*", "vitest", "undici"],
+		external: ["@cloudflare/*", "vitest", ...EXTERNAL_DEPENDENCIES],
 	},
 ]);

@@ -1,13 +1,12 @@
 import { stripVTControlCharacters } from "node:util";
 import { INHERIT_SYMBOL } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
-import { printBindings, warnOrError } from "../utils/print-bindings";
-import { mockConsoleMethods } from "./helpers/mock-console";
+import { printBindings } from "../utils/print-bindings";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 
 function callPrintBindings(bindings: StartDevWorkerInput["bindings"]) {
 	const lines: string[] = [];
-	printBindings(bindings, [], [], [], {
+	printBindings(bindings, {
 		log: (msg: string) => lines.push(msg),
 	});
 	return lines.map((l) => stripVTControlCharacters(l)).join("\n");
@@ -157,88 +156,5 @@ describe("printBindings -- Artifacts bindings", () => {
 		expect(output).toContain("MY_ARTIFACTS");
 		expect(output).toContain("Artifacts");
 		expect(output).toContain("default");
-	});
-});
-
-describe("warnOrError", () => {
-	const std = mockConsoleMethods();
-
-	describe("local-only bindings", () => {
-		it("throws when `remote: true` is set on a local-only binding", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("ratelimit", true)).toThrow(
-				"Rate Limit bindings do not support accessing remote resources."
-			);
-		});
-
-		it("does not throw or warn for `remote: false` or `remote: undefined`", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("ratelimit", false)).not.toThrow();
-			expect(() => warnOrError("ratelimit", undefined)).not.toThrow();
-			expect(std.warn).toBe("");
-		});
-	});
-
-	describe("remote-only bindings (no local simulator yet)", () => {
-		it("throws when `remote: false` is set on a remote-only binding", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("vectorize", false)).toThrow(
-				"Vectorize Index bindings do not support local development. You can set `remote: true` for the binding definition in your configuration file to access a remote version of the resource."
-			);
-		});
-
-		it("warns (but does not throw) when `remote` is omitted on a remote-only binding", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("vectorize", undefined)).not.toThrow();
-			expect(std.warn).toContain(
-				"Vectorize Index bindings do not support local development"
-			);
-		});
-
-		it("does not throw or warn when `remote: true` is set on a remote-only binding", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("vectorize", true)).not.toThrow();
-			expect(std.warn).toBe("");
-		});
-	});
-
-	describe("always-remote bindings (no local simulator, ever)", () => {
-		it("throws when `remote: false` is set on an always-remote binding", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("ai", false)).toThrow(
-				"AI bindings do not support local development. You can set `remote: true` for the binding definition in your configuration file to access a remote version of the resource."
-			);
-		});
-
-		it("warns about usage charges when `remote` is omitted on an always-remote binding", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("ai", undefined)).not.toThrow();
-			expect(std.warn).toContain(
-				"AI bindings always access remote resources, and so may incur usage charges even in local dev"
-			);
-		});
-
-		it("does not throw or warn when `remote: true` is set on an always-remote binding", ({
-			expect,
-		}) => {
-			expect(() => warnOrError("ai", true)).not.toThrow();
-			expect(std.warn).toBe("");
-		});
-	});
-
-	describe("local-and-remote bindings", () => {
-		it("does not throw or warn for any `remote` value", ({ expect }) => {
-			expect(() => warnOrError("kv_namespace", true)).not.toThrow();
-			expect(() => warnOrError("kv_namespace", false)).not.toThrow();
-			expect(() => warnOrError("kv_namespace", undefined)).not.toThrow();
-			expect(std.warn).toBe("");
-		});
 	});
 });

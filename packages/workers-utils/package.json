@@ -70,6 +70,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
+		"chalk": "catalog:default",
 		"undici": "catalog:default"
 	},
 	"devDependencies": {
