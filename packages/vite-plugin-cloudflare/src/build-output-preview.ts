@@ -17,11 +17,14 @@ export interface Bundle {
 }
 
 export interface BuildOutputPreviewWorker {
-	source: "build-output";
 	config: ParsedOutputWorkerConfig;
-	settings: ParsedOutputSettingsConfig | undefined;
 	assetsDir: string | undefined;
 	bundle: Bundle | undefined;
+}
+
+export interface BuildOutputPreview {
+	settings: ParsedOutputSettingsConfig | undefined;
+	workers: BuildOutputPreviewWorker[];
 }
 
 /**
@@ -29,26 +32,24 @@ export interface BuildOutputPreviewWorker {
  * During prerendering, the `prerender` directory is preferred when present;
  * ordinary preview uses the `default` directory.
  */
-export async function readBuildOutputWorkers(
+export async function readBuildOutputPreview(
 	root: string,
 	isPrerender: boolean
-): Promise<BuildOutputPreviewWorker[]> {
+): Promise<BuildOutputPreview> {
 	// `settings` comes from the top-level `config.json` holding project-level
 	// settings (`account_id`, `compliance_region`) shared by every Worker. It
-	// also carries the `mode` the build ran in.
+	// also carries the `mode` the build ran in, which preview uses to select
+	// local env files.
 	const { workers, settings } = await readBuildOutput(root);
 	const defaultWorker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
 	const worker = isPrerender
 		? (workers[PRERENDER_WORKER_DIRECTORY_NAME] ?? defaultWorker)
 		: defaultWorker;
 
-	return [toPreviewWorker(worker, settings)];
+	return { settings, workers: [toPreviewWorker(worker)] };
 }
 
-function toPreviewWorker(
-	worker: BuildOutputWorker,
-	settings: ParsedOutputSettingsConfig | undefined
-): BuildOutputPreviewWorker {
+function toPreviewWorker(worker: BuildOutputWorker): BuildOutputPreviewWorker {
 	const { manifest } = worker.config;
 	let bundle: Bundle | undefined;
 	if (manifest && worker.bundleDir) {
@@ -60,9 +61,7 @@ function toPreviewWorker(
 	}
 
 	return {
-		source: "build-output",
 		config: worker.config,
-		settings,
 		assetsDir: worker.assetsDir,
 		bundle,
 	};
