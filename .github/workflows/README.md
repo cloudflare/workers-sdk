@@ -29,7 +29,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 - Actions
   - Builds all the packages.
   - Runs formatting, linting and type checks.
-  - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
+  - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and Oxlint + Oxfmt checks.
   - Adds the PR to a GitHub project
   - Makes sure that Wrangler's warning for old Node.js versions works.
 
