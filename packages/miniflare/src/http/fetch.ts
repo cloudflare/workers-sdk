@@ -193,7 +193,9 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		cfBlob?: IncomingRequestCfProperties
 	) {
 		super();
-		if (cfBlob !== undefined) this.cfBlobJson = JSON.stringify(cfBlob);
+		if (cfBlob !== undefined) {
+			this.cfBlobJson = JSON.stringify(cfBlob);
+		}
 	}
 
 	addHeaders(
@@ -216,7 +218,9 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	): boolean {
 		let origin = String(options.origin);
 		// The first request in a redirect chain will always match the user origin
-		if (origin === this.userRuntimeOrigin) origin = this.actualRuntimeOrigin;
+		if (origin === this.userRuntimeOrigin) {
+			origin = this.actualRuntimeOrigin;
+		}
 		if (origin === this.actualRuntimeOrigin) {
 			// If this is now a request to the runtime, rewrite dispatching origin to
 			// the runtime's
@@ -273,8 +277,12 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		callback?: () => void
 	): Promise<void> {
 		let err: Error | null = null;
-		if (typeof errCallback === "function") callback = errCallback;
-		if (errCallback instanceof Error) err = errCallback;
+		if (typeof errCallback === "function") {
+			callback = errCallback;
+		}
+		if (errCallback instanceof Error) {
+			err = errCallback;
+		}
 
 		await Promise.all([
 			this.globalDispatcher.destroy(err),

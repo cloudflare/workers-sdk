@@ -35,7 +35,9 @@ function getKVBinding(env: Env, namespace_id: string): KVNamespace | null {
 
 	// Find the binding name for this namespace ID
 	const bindingName = bindingMap[namespace_id];
-	if (!bindingName) return null;
+	if (!bindingName) {
+		return null;
+	}
 
 	return env[bindingName] as KVNamespace;
 }
@@ -45,12 +47,16 @@ async function findKVNamespaceOwner(
 	namespaceId: string
 ): Promise<string | null> {
 	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) return null;
+	if (peerUrls.length === 0) {
+		return null;
+	}
 
 	const responses = await Promise.all(
 		peerUrls.map(async (url) => {
 			const response = await fetchFromPeer(url, "/storage/kv/namespaces");
-			if (!response?.ok) return null;
+			if (!response?.ok) {
+				return null;
+			}
 			const data = (await response.json()) as {
 				result?: Array<{ id: string }>;
 			};
@@ -163,16 +169,24 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
 	if (ownerMiniflare) {
 		const params = new URLSearchParams();
-		if (cursor) params.set("cursor", cursor);
-		if (limit !== undefined) params.set("limit", String(limit));
-		if (prefix) params.set("prefix", prefix);
+		if (cursor) {
+			params.set("cursor", cursor);
+		}
+		if (limit !== undefined) {
+			params.set("limit", String(limit));
+		}
+		if (prefix) {
+			params.set("prefix", prefix);
+		}
 		const queryString = params.toString();
 		const path = `/storage/kv/namespaces/${encodeURIComponent(
 			namespace_id
 		)}/keys${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -239,7 +253,9 @@ export async function getKVValue(
 				namespaceId
 			)}/values/${encodeURIComponent(keyName)}`
 		);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -284,7 +300,9 @@ export async function putKVValue(
 				body,
 			}
 		);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -344,7 +362,9 @@ async function executePutKVValue(
 	}
 
 	const options: KVNamespacePutOptions = {};
-	if (metadata) options.metadata = metadata;
+	if (metadata) {
+		options.metadata = metadata;
+	}
 
 	await kv.put(key_name, value, options);
 	return c.json(wrapResponse({}));
@@ -378,7 +398,9 @@ export async function deleteKVValue(
 			)}/values/${encodeURIComponent(keyName)}`,
 			{ method: "DELETE" }
 		);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(
@@ -431,7 +453,9 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 				body: JSON.stringify(body),
 			}
 		);
-		if (response) return response;
+		if (response) {
+			return response;
+		}
 	}
 
 	return errorResponse(

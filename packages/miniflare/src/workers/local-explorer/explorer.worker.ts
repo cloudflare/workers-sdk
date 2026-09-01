@@ -454,7 +454,9 @@ app.get("/api/local/workers", async (c) => {
 		const peerResults = await Promise.all(
 			peerUrls.map(async (url) => {
 				const peerResponse = await fetchFromPeer(url, "/local/workers");
-				if (!peerResponse?.ok) return [];
+				if (!peerResponse?.ok) {
+					return [];
+				}
 				try {
 					const data = (await peerResponse.json()) as {
 						result?: LocalExplorerWorker[];
