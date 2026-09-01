@@ -1,9 +1,8 @@
-import assert from "node:assert";
+import * as path from "node:path";
 import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
@@ -14,7 +13,6 @@ import {
 } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
 import {
-	resolveDevOnly,
 	type AssetsOnlyResolvedConfig,
 	type WorkersResolvedConfig,
 } from "../plugin-config";
@@ -131,69 +129,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			viteDevServer.watcher.on("change", configChangedHandler);
 		},
-		buildApp: {
-			order: "post",
-			async handler(builder) {
-				if (ctx.resolvedPluginConfig.type === "preview") {
-					return;
-				}
-
-				const workerEnvironments = [
-					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.entries(),
-				]
-					.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
-					.map(([environmentName]) => {
-						const environment = builder.environments[environmentName];
-						assert(environment, `"${environmentName}" environment not found`);
-
-						return environment;
-					});
-
-				// Build Worker environments that have not yet been built and are not dev-only
-				await Promise.all(
-					workerEnvironments
-						.filter((environment) => !environment.isBuilt)
-						.map((environment) => builder.build(environment))
-				);
-
-				if (ctx.resolvedPluginConfig.type === "assets-only") {
-					return;
-				}
-
-				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
-				const entryWorkerEnvironment =
-					builder.environments[entryWorkerEnvironmentName];
-				assert(
-					entryWorkerEnvironment,
-					`No "${entryWorkerEnvironmentName}" environment`
-				);
-
-				if (!entryWorkerEnvironment.isBuilt) {
-					// The entry Worker was only used in development so we emit an assets-only config
-
-					const clientEnvironment = builder.environments.client;
-					assert(clientEnvironment, 'No "client" environment');
-
-					if (!clientEnvironment.isBuilt) {
-						throw new Error(
-							"If `assetsOnly` is set to `true`, the client environment must be built"
-						);
-					}
-
-					const entryWorkerNewConfig = ctx.getWorkerNewConfig(
-						entryWorkerEnvironmentName
-					);
-					assert(
-						entryWorkerNewConfig,
-						`No config found for "${entryWorkerEnvironmentName}" environment`
-					);
-					await writeWorkerConfig({
-						root: builder.config.root,
-						config: entryWorkerNewConfig,
-					});
-				}
-			},
-		},
 	};
 });
 
@@ -225,19 +160,11 @@ function getEnvironmentsConfig(
 					mode,
 					hasNodeJsCompat: ctx.getNodeJsCompat(environmentName) !== undefined,
 				};
-				const isEntryWorker =
-					environmentName ===
-						ctx.resolvedPluginConfig.prerenderWorkerEnvironmentName ||
-					(ctx.resolvedPluginConfig.type === "workers" &&
-						environmentName ===
-							ctx.resolvedPluginConfig.entryWorkerEnvironmentName);
-
 				const parentConfig = [
 					environmentName,
 					createCloudflareEnvironmentOptions({
 						...sharedOptions,
 						environmentName,
-						isEntryWorker,
 						isParentEnvironment: true,
 					}),
 				] as const;
@@ -249,7 +176,6 @@ function getEnvironmentsConfig(
 							createCloudflareEnvironmentOptions({
 								...sharedOptions,
 								environmentName: childEnvironmentName,
-								isEntryWorker: false,
 								isParentEnvironment: false,
 							}),
 						] as const
@@ -278,7 +204,7 @@ function getEnvironmentsConfig(
 /**
  * When the Build Output Specification is enabled,
  * force Worker and client `build.outDir` values to their spec-mandated
- * locations.
+ * locations. Child environments are nested within their parent environment.
  *
  * Runs after Vite's merge in `configResolved`, so it overrides any
  * user-supplied `build.outDir`
@@ -296,6 +222,28 @@ function forceBuildOutputDirs(
 		const environment = resolvedViteConfig.environments[environmentName];
 		if (environment) {
 			environment.build.outDir = getWorkerBundleDir(root, worker.directoryName);
+		}
+	}
+
+	for (const [
+		parentEnvironmentName,
+		childEnvironmentNames,
+	] of resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap) {
+		const parentEnvironment =
+			resolvedViteConfig.environments[parentEnvironmentName];
+		if (!parentEnvironment) {
+			continue;
+		}
+
+		for (const childEnvironmentName of childEnvironmentNames) {
+			const childEnvironment =
+				resolvedViteConfig.environments[childEnvironmentName];
+			if (childEnvironment) {
+				childEnvironment.build.outDir = path.join(
+					parentEnvironment.build.outDir,
+					childEnvironmentName
+				);
+			}
 		}
 	}
 

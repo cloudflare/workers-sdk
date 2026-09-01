@@ -13,6 +13,7 @@ import type {
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type {
+	ModuleType,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
@@ -33,6 +34,13 @@ export interface SharedContext {
 	tunnelHostnames: Set<string>;
 }
 
+/** An explicitly typed additional module emitted by a Vite environment. */
+export interface AdditionalModuleMetadata {
+	environmentName: string;
+	fileName: string;
+	type: ModuleType;
+}
+
 /**
  * Used to provide context to internal plugins.
  * It should be reinstantiated each time the main plugin is created.
@@ -41,6 +49,10 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#environmentNameToAdditionalModules = new Map<
+		string,
+		Map<string, ModuleType>
+	>();
 
 	constructor(sharedContext: SharedContext) {
 		this.#sharedContext = sharedContext;
@@ -204,6 +216,53 @@ export class PluginContext {
 		environmentName: string
 	): ParsedInputWorkerConfig | undefined {
 		return this.#getWorker(environmentName)?.config;
+	}
+
+	/** Clear the additional modules collected for an environment before rebuilding it. */
+	clearAdditionalModules(environmentName: string): void {
+		this.#environmentNameToAdditionalModules.delete(environmentName);
+	}
+
+	/** Record an explicitly typed additional module emitted by an environment. */
+	addAdditionalModule(
+		environmentName: string,
+		fileName: string,
+		type: ModuleType
+	): void {
+		const additionalModules =
+			this.#environmentNameToAdditionalModules.get(environmentName) ??
+			new Map();
+		const existingType = additionalModules.get(fileName);
+		assert(
+			existingType === undefined || existingType === type,
+			`Additional module "${fileName}" was emitted with conflicting types "${existingType}" and "${type}".`
+		);
+		additionalModules.set(fileName, type);
+		this.#environmentNameToAdditionalModules.set(
+			environmentName,
+			additionalModules
+		);
+	}
+
+	/** Get the additional modules emitted by a Worker environment and its children. */
+	getAdditionalModules(
+		workerEnvironmentName: string
+	): AdditionalModuleMetadata[] {
+		const environmentNames = [
+			workerEnvironmentName,
+			...(this.resolvedPluginConfig.type === "preview"
+				? []
+				: (this.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.get(
+						workerEnvironmentName
+					) ?? [])),
+		];
+
+		return environmentNames.flatMap((environmentName) =>
+			Array.from(
+				this.#environmentNameToAdditionalModules.get(environmentName) ?? [],
+				([fileName, type]) => ({ environmentName, fileName, type })
+			)
+		);
 	}
 
 	get allWorkerConfigs(): Array<
