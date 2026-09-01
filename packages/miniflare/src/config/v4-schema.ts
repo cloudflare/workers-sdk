@@ -510,6 +510,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 		)
 		.optional(),
 	websearch: z.record(z.string(), V4RemoteBindingSchema).optional(),
+	analyticsSql: z.record(z.string(), V4RemoteBindingSchema).optional(),
 	browserRendering: z
 		.object({
 			binding: z.string(),
@@ -894,6 +895,7 @@ export type V4WorkerOptionsShape = {
 		{ namespace?: string; instance_name?: string } & V4RemoteBinding
 	>;
 	websearch?: Record<string, V4RemoteBinding>;
+	analyticsSql?: Record<string, V4RemoteBinding>;
 	browserRendering?: V4RemoteBindingWithName & { headful?: boolean };
 	dispatchNamespaces?: Record<string, { namespace: string } & V4RemoteBinding>;
 	images?: V4RemoteBindingWithName;

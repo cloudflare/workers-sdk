@@ -88,6 +88,7 @@ export type ConfigBindingFieldName =
 	| "ai_search_namespaces"
 	| "ai_search"
 	| "websearch"
+	| "analytics"
 	| "agent_memory"
 	| "hyperdrive"
 	| "r2_buckets"
@@ -129,6 +130,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	ai_search_namespaces: "AI Search Namespace",
 	ai_search: "AI Search Instance",
 	websearch: "Web Search",
+	analytics: "Analytics SQL",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
@@ -188,6 +190,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	ai_search_namespace: "AI Search Namespace",
 	ai_search: "AI Search Instance",
 	websearch: "Web Search",
+	analytics: "Analytics SQL",
 	agent_memory: "Agent Memory",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
@@ -1852,6 +1855,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		analytics: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"analytics",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		agent_memory: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3406,6 +3419,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"ai_search_namespace",
 			"ai_search",
 			"websearch",
+			"analytics",
 			"agent_memory",
 			"kv_namespace",
 			"durable_object_namespace",

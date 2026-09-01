@@ -667,6 +667,12 @@ function addProductBindings(
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
+	for (const [name, binding] of Object.entries(worker.analyticsSql ?? {})) {
+		env[name] = {
+			type: "analytics-sql",
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const [name, binding] of Object.entries(
 		worker.analyticsEngineDatasets ?? {}
 	)) {

@@ -558,6 +558,13 @@ function convertBindingsAndAssets(
 				});
 				break;
 			}
+			case "analytics-sql": {
+				result.analytics = omitUndefined({
+					binding: name,
+					remote: binding.dev?.remote,
+				});
+				break;
+			}
 			case "worker": {
 				services.push(
 					omitUndefined({

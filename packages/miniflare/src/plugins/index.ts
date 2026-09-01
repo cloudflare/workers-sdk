@@ -5,6 +5,10 @@ import {
 	ANALYTICS_ENGINE_PLUGIN,
 	ANALYTICS_ENGINE_PLUGIN_NAME,
 } from "./analytics-engine";
+import {
+	ANALYTICS_SQL_PLUGIN,
+	ANALYTICS_SQL_PLUGIN_NAME,
+} from "./analytics-sql";
 import { ARTIFACTS_PLUGIN, ARTIFACTS_PLUGIN_NAME } from "./artifacts";
 import { ASSETS_PLUGIN } from "./assets";
 import { ASSETS_PLUGIN_NAME } from "./assets/constants";
@@ -65,6 +69,7 @@ export const PLUGINS = {
 	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
+	[ANALYTICS_SQL_PLUGIN_NAME]: ANALYTICS_SQL_PLUGIN,
 	[AI_PLUGIN_NAME]: AI_PLUGIN,
 	[AGENT_MEMORY_PLUGIN_NAME]: AGENT_MEMORY_PLUGIN,
 	[AI_SEARCH_PLUGIN_NAME]: AI_SEARCH_PLUGIN,
@@ -131,6 +136,7 @@ export * from "./pipelines";
 export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";
+export * from "./analytics-sql";
 export * from "./ai";
 export * from "./agent-memory";
 export * from "./ai-search";

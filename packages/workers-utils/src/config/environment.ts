@@ -1307,6 +1307,25 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
+	 * Cloudflare Analytics SQL binding. The binding is account-scoped and
+	 * zero-config, so only the variable name is required.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	analytics:
+		| {
+				/** The binding name used to refer to Analytics SQL in the Worker. */
+				binding: string;
+				/** Whether the Analytics SQL binding should be remote in local development. */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

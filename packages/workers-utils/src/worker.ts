@@ -272,6 +272,11 @@ export interface CfWebSearch {
 	remote?: boolean;
 }
 
+export interface CfAnalyticsSQL {
+	binding: string;
+	remote?: boolean;
+}
+
 export interface CfAgentMemory {
 	binding: string;
 	namespace: string | typeof INHERIT_SYMBOL;

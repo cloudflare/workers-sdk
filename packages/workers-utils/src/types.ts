@@ -24,6 +24,7 @@ import type {
 	CfDurableObject,
 	CfExports,
 	CfDurableObjectMigrations,
+	CfAnalyticsSQL,
 	CfFlagship,
 	CfHelloWorld,
 	CfHyperdrive,
@@ -87,6 +88,7 @@ export type WorkerMetadataBinding =
 	| { type: "ai_search_namespace"; name: string; namespace: string }
 	| { type: "ai_search"; name: string; instance_name: string }
 	| { type: "websearch"; name: string }
+	| { type: "analytics"; name: string }
 	| { type: "agent_memory"; name: string; namespace: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
@@ -477,6 +479,7 @@ export type Binding =
 	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
 	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
 	| ({ type: "websearch" } & BindingOmit<CfWebSearch>)
+	| ({ type: "analytics" } & BindingOmit<CfAnalyticsSQL>)
 	| ({ type: "agent_memory" } & BindingOmit<CfAgentMemory>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)

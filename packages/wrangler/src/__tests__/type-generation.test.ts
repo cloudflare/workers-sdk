@@ -553,6 +553,7 @@ const bindingsConfigMock: Omit<
 	],
 	vpc_networks: [],
 	websearch: undefined,
+	analytics: { binding: "ANALYTICS_SQL_BINDING" },
 	connect: [],
 };
 
@@ -800,6 +801,7 @@ describe("generate types - CLI", () => {
 				VPC_SERVICE_BINDING: Fetcher;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
+				ANALYTICS_SQL_BINDING: { query<T extends Record<string, unknown> = Record<string, unknown>>(request: { query: string; params?: readonly (string | number | boolean | null)[] | Readonly<Record<string, string | number | boolean | null>> }): Promise<{ data: T[]; rows: number }> };
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
@@ -920,6 +922,7 @@ describe("generate types - CLI", () => {
 				VPC_SERVICE_BINDING: Fetcher;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
+				ANALYTICS_SQL_BINDING: { query<T extends Record<string, unknown> = Record<string, unknown>>(request: { query: string; params?: readonly (string | number | boolean | null)[] | Readonly<Record<string, string | number | boolean | null>> }): Promise<{ data: T[]; rows: number }> };
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
@@ -1103,6 +1106,7 @@ describe("generate types - CLI", () => {
 				VPC_SERVICE_BINDING: Fetcher;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
+				ANALYTICS_SQL_BINDING: { query<T extends Record<string, unknown> = Record<string, unknown>>(request: { query: string; params?: readonly (string | number | boolean | null)[] | Readonly<Record<string, string | number | boolean | null>> }): Promise<{ data: T[]; rows: number }> };
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;

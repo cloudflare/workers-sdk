@@ -160,6 +160,7 @@ describe("convertToWranglerConfig", () => {
 					MY_STREAM: { type: "stream" },
 					MY_VM: { type: "version-metadata" },
 					MY_WEB_SEARCH: { type: "web-search" },
+					MY_ANALYTICS: { type: "analytics-sql" },
 				},
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI" });
@@ -169,6 +170,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.stream).toEqual({ binding: "MY_STREAM" });
 			expect(result.version_metadata).toEqual({ binding: "MY_VM" });
 			expect(result.websearch).toEqual({ binding: "MY_WEB_SEARCH" });
+			expect(result.analytics).toEqual({ binding: "MY_ANALYTICS" });
 		});
 
 		it("includes the remote flag on singletons that support it", ({
