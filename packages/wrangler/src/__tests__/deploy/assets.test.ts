@@ -27,6 +27,7 @@ import {
 	mockDeploymentsListRequest,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
+	mockServiceScriptData,
 	writeAssets,
 } from "./helpers";
 import type { AssetManifest } from "../../assets";
@@ -1535,6 +1536,10 @@ describe("deploy", () => {
 				expectedCompatibilityFlags: ["nodejs_compat"],
 				expectedMainModule: undefined,
 				expectedDispatchNamespace: "my-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "my-namespace",
 			});
 			await runWrangler("deploy --dispatch-namespace my-namespace");
 		});

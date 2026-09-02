@@ -4619,6 +4619,276 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
+			it("should accept a Durable Object-managed container alongside migrations", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						durable_objects: {
+							bindings: [
+								{
+									name: "SANDBOX",
+									class_name: "Sandbox",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_sqlite_classes: ["Sandbox"],
+							},
+						],
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									sandbox: {
+										dockerfile: "./Dockerfile",
+									},
+									tools: {
+										image:
+											"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.migrations).toEqual([
+					{
+						tag: "v1",
+						new_sqlite_classes: ["Sandbox"],
+					},
+				]);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox",
+						scheduling_policy: "durable_object",
+						images: {
+							sandbox: {
+								dockerfile: "./Dockerfile",
+							},
+							tools: {
+								image:
+									"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+							},
+						},
+					},
+				]);
+			});
+
+			it("should preserve an explicit Durable Object-managed container name without named images", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								name: "sandbox-app",
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it("should reserve the Durable Object-managed image binding name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								name: "sandbox-app",
+								scheduling_policy: "durable_object",
+							},
+						],
+						vars: {
+							EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: "user value",
+						},
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES assigned to Environment Variable and Container images bindings"
+				);
+			});
+
+			it("should append the environment to a generated Durable Object-managed container name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								containers: [
+									{
+										class_name: "Sandbox",
+										scheduling_policy: "durable_object",
+									},
+								],
+							},
+						},
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox-staging",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it("should reject scheduler fields on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								image: "./Dockerfile",
+								max_instances: 5,
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in containers field: "image","max_instances"'
+				);
+			});
+
+			it("should require a class name for a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.class_name" must be a non-empty string when "containers.scheduling_policy" is "durable_object".'
+				);
+			});
+
+			it("should reject malformed Durable Object-managed container images", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									missing: {},
+									docker: { dockerfile: "" },
+									remote: { image: "" },
+									both: {
+										dockerfile: "./Dockerfile",
+										image:
+											"registry.cloudflare.com/account/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				const errors = diagnostics.renderErrors();
+				expect(errors).toContain(
+					'"containers.images.missing" must specify exactly one of "dockerfile" or "image".'
+				);
+				expect(errors).toContain(
+					'"containers.images.docker.dockerfile" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.remote.image" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.both" must specify exactly one of "dockerfile" or "image".'
+				);
+			});
+
+			it("should reject named images on a scheduler-backed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "Sandbox",
+								image: "./Dockerfile",
+								images: {
+									sandbox: { dockerfile: "./Dockerfile" },
+								},
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in containers field: "images"'
+				);
+			});
+
 			it("should provide a name in a named environment that inherits the top level worker name", ({
 				expect,
 			}) => {

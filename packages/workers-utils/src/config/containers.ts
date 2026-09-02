@@ -1,6 +1,29 @@
 import { getDurableObjectExports } from "./durable-object-exports";
 import type { ContainerApp, Exports } from "./environment";
 
+export const CONTAINER_IMAGES_BINDING =
+	"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES";
+
+export type DurableObjectContainerApp = ContainerApp & {
+	class_name: string;
+	name: string;
+	scheduling_policy: "durable_object";
+};
+
+export function isDurableObjectContainerApp(
+	container: ContainerApp
+): container is DurableObjectContainerApp {
+	return container.scheduling_policy === "durable_object";
+}
+
+export function getDurableObjectContainerApps(
+	containers: ContainerApp[] | undefined
+): DurableObjectContainerApp[] {
+	return Array.isArray(containers)
+		? containers.filter(isDurableObjectContainerApp)
+		: [];
+}
+
 /**
  * A container can be linked to a Durable Object from either direction:
  *

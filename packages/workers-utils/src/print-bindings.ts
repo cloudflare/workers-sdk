@@ -951,7 +951,11 @@ export function printBindings(
 
 		log(
 			`${containersTitle}\n${containers
-				.map((c) => `- ${c.name} (${c.image})`)
+				.map((container) =>
+					container.scheduling_policy === "durable_object"
+						? `- ${container.class_name} (durable_object)`
+						: `- ${container.name} (${container.image})`
+				)
 				.join("\n")}`
 		);
 		log("");

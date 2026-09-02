@@ -7,7 +7,11 @@ import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
-import { getContainerNameToClassNameMap } from "./containers";
+import {
+	CONTAINER_IMAGES_BINDING,
+	getContainerNameToClassNameMap,
+	getDurableObjectContainerApps,
+} from "./containers";
 import { Diagnostics } from "./diagnostics";
 import { getDurableObjectExports } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
@@ -3565,6 +3569,21 @@ function validatePreviewsContainers(
 	});
 	return (diagnostics, field, value, config) => {
 		if (Array.isArray(value)) {
+			const durableObjectPolicyFields = [...value.entries()]
+				.filter(
+					([, entry]) =>
+						entry &&
+						typeof entry === "object" &&
+						entry.scheduling_policy === "durable_object"
+				)
+				.map(([index]) => `"${field}[${index}].scheduling_policy"`);
+			if (durableObjectPolicyFields.length > 0) {
+				diagnostics.errors.push(
+					`${durableObjectPolicyFields.join(", ")} cannot be "durable_object". Durable Object-managed Containers are configured only in the top-level "containers" array.`
+				);
+				return false;
+			}
+
 			const nameFields = [...value.entries()]
 				.filter(
 					([, entry]) => entry && typeof entry === "object" && "name" in entry
@@ -3605,6 +3624,98 @@ function validatePreviewsContainers(
 	};
 }
 
+function validateDurableObjectContainerImages(
+	diagnostics: Diagnostics,
+	field: string,
+	images: unknown
+): boolean {
+	if (images === undefined) {
+		return true;
+	}
+
+	if (
+		typeof images !== "object" ||
+		images === null ||
+		Array.isArray(images) ||
+		Object.keys(images).length === 0
+	) {
+		diagnostics.errors.push(
+			`"${field}" must be a non-empty object when present.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const entries = Object.entries(images);
+	if (entries.length > 100) {
+		diagnostics.errors.push(`"${field}" must contain at most 100 images.`);
+		valid = false;
+	}
+
+	for (const [imageName, imageValue] of entries) {
+		const imageField = `${field}.${imageName}`;
+		if (imageName.length === 0 || imageName.length > 128) {
+			diagnostics.errors.push(
+				`"${field}" image names must be between 1 and 128 characters.`
+			);
+			valid = false;
+		}
+		if (
+			typeof imageValue !== "object" ||
+			imageValue === null ||
+			Array.isArray(imageValue)
+		) {
+			diagnostics.errors.push(
+				`"${imageField}" must be an object with either a "dockerfile" or "image" field.`
+			);
+			valid = false;
+			continue;
+		}
+
+		const image = imageValue as Record<string, unknown>;
+		const hasDockerfile = image.dockerfile !== undefined;
+		const hasImage = image.image !== undefined;
+		if (hasDockerfile === hasImage) {
+			diagnostics.errors.push(
+				`"${imageField}" must specify exactly one of "dockerfile" or "image".`
+			);
+			valid = false;
+		}
+		if (
+			hasDockerfile &&
+			(typeof image.dockerfile !== "string" || image.dockerfile.length === 0)
+		) {
+			diagnostics.errors.push(
+				`"${imageField}.dockerfile" must be a non-empty string.`
+			);
+			valid = false;
+		}
+		if (
+			hasImage &&
+			(typeof image.image !== "string" || image.image.length === 0)
+		) {
+			diagnostics.errors.push(
+				`"${imageField}.image" must be a non-empty string.`
+			);
+			valid = false;
+		}
+
+		const unsupportedFields = Object.keys(image).filter(
+			(property) => property !== "dockerfile" && property !== "image"
+		);
+		if (unsupportedFields.length > 0) {
+			diagnostics.errors.push(
+				`Unexpected fields found in ${imageField} field: ${unsupportedFields
+					.map((property) => `"${property}"`)
+					.join(", ")}`
+			);
+			valid = false;
+		}
+	}
+
+	return valid;
+}
+
 function validateContainerApp(
 	envName: string,
 	topLevelName: string | undefined,
@@ -3625,13 +3736,28 @@ function validateContainerApp(
 		}
 
 		for (const containerAppOptional of value) {
-			validateOptionalProperty(
-				diagnostics,
-				field,
-				"class_name",
-				containerAppOptional.class_name,
-				"string"
-			);
+			const isDurableObjectManaged =
+				containerAppOptional.scheduling_policy === "durable_object";
+			const hasValidDurableObjectClassName =
+				typeof containerAppOptional.class_name === "string" &&
+				containerAppOptional.class_name.length > 0;
+
+			if (isDurableObjectManaged) {
+				if (!hasValidDurableObjectClassName) {
+					diagnostics.errors.push(
+						`"containers.class_name" must be a non-empty string when "containers.scheduling_policy" is "durable_object".`
+					);
+				}
+			} else {
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"class_name",
+					containerAppOptional.class_name,
+					"string"
+				);
+			}
+
 			validateOptionalProperty(
 				diagnostics,
 				field,
@@ -3639,8 +3765,13 @@ function validateContainerApp(
 				containerAppOptional.name,
 				"string"
 			);
+
 			// try and add a default name
-			if (generateDefaultName && !containerAppOptional.name) {
+			if (
+				generateDefaultName &&
+				!containerAppOptional.name &&
+				(!isDurableObjectManaged || hasValidDurableObjectClassName)
+			) {
 				// The default name is derived from the class name, so without one there
 				// is nothing to derive it from. Such a container must be linked to a
 				// Durable Object from the `exports` side, which references it by name.
@@ -3663,6 +3794,22 @@ function validateContainerApp(
 					containerAppOptional.name = name.toLowerCase().replace(/ /g, "-");
 				}
 			}
+
+			if (isDurableObjectManaged) {
+				validateDurableObjectContainerImages(
+					diagnostics,
+					`${field}.images`,
+					containerAppOptional.images
+				);
+				validateAdditionalProperties(
+					diagnostics,
+					field,
+					Object.keys(containerAppOptional),
+					["name", "class_name", "scheduling_policy", "images"]
+				);
+				continue;
+			}
+
 			if (
 				!containerAppOptional.configuration?.image &&
 				!containerAppOptional.image
@@ -4912,7 +5059,9 @@ const validateBindingsHaveUniqueNames = (
 	// Add secrets to binding name validation (secrets is not a CfWorkerInit binding type,
 	// but we want to validate that secret names don't conflict with other bindings)
 	bindingsGroupedByType["Secret"] = config.secrets?.required ?? [];
-
+	if (getDurableObjectContainerApps(config.containers).length > 0) {
+		bindingsGroupedByType["Container images"] = [CONTAINER_IMAGES_BINDING];
+	}
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
 	for (const bindingType in bindingsGroupedByType) {
@@ -7240,7 +7389,6 @@ function validateContainerExportLinks(
 	const durableObjectExports = getDurableObjectExports(exports);
 	const liveExportClassNames = new Set<string>();
 	const classNamesByContainerName = new Map<string, string[]>();
-
 	for (const [className, entry] of Object.entries(durableObjectExports)) {
 		if (
 			entry.state !== undefined &&

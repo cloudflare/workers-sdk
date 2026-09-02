@@ -9,6 +9,7 @@ import {
 	formatTime,
 	getBindings,
 	getDockerPath,
+	getDurableObjectContainerApps,
 	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	printBindings,
@@ -30,6 +31,11 @@ import {
 	type BundleSize,
 } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
+import { addContainerImagesBinding } from "./helpers/container-image-bindings";
+import {
+	getContainerMetadata,
+	getContainerMetadataForRolloutSkip,
+} from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
 import {
@@ -70,6 +76,7 @@ import type { DeployProps, WorkerBuildResult } from "../shared/types";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
+	ApiDeployment,
 	ApiVersion,
 	Percentage,
 	VersionId,
@@ -130,6 +137,18 @@ export type DeployCallbacks = {
 		| ((
 				config: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
+				args: { versionId: string; accountId: string; scriptName: string }
+		  ) => Promise<void>)
+		| undefined;
+	prepareDurableObjectContainerApplications:
+		| ((
+				config: Config,
+				args: { dryRun: boolean; scriptName: string }
+		  ) => Promise<Record<string, Record<string, string>>>)
+		| undefined;
+	deployDurableObjectContainerApplications:
+		| ((
+				config: Config,
 				args: { versionId: string; accountId: string; scriptName: string }
 		  ) => Promise<void>)
 		| undefined;
@@ -213,13 +232,15 @@ async function deployWorker(
 	const { format } = entry;
 	const { projectRoot } = entry;
 
+	let latestDeployment: ApiDeployment | undefined;
 	if (!props.dispatchNamespace && accountId && scriptName) {
-		const yes = await confirmLatestDeploymentOverwrite(
+		const confirmation = await confirmLatestDeploymentOverwrite(
 			config,
 			accountId,
 			scriptName
 		);
-		if (!yes) {
+		latestDeployment = confirmation.latestDeployment;
+		if (!confirmation.confirmed) {
 			cancel("Aborting deploy...");
 			return { versionId, workerTag };
 		}
@@ -238,6 +259,25 @@ async function deployWorker(
 		content,
 		sourceMaps,
 	} = buildResult;
+	const skipContainerChanges = props.containersRollout === "none";
+	const preparedContainerImages = skipContainerChanges
+		? undefined
+		: await callbacks.prepareDurableObjectContainerApplications?.(config, {
+				dryRun: Boolean(isDryRun),
+				scriptName,
+			});
+	const rolloutSkipContainerState = skipContainerChanges
+		? await getContainerMetadataForRolloutSkip(config, {
+				accountId,
+				scriptName,
+				dispatchNamespace: props.dispatchNamespace,
+				workerExists,
+				latestDeployment,
+			})
+		: undefined;
+	const containerMetadata =
+		rolloutSkipContainerState?.containers ??
+		getContainerMetadata(config, preparedContainerImages);
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
 	const { migrations, exports } = await resolveExportsUploadPayload({
@@ -308,6 +348,12 @@ async function deployWorker(
 		type: "deploy",
 		workerExists,
 	});
+	addContainerImagesBinding(config, bindings, preparedContainerImages ?? {}, {
+		preserveExisting: skipContainerChanges,
+		workerExists,
+		hasExistingBinding:
+			rolloutSkipContainerState?.hasExistingContainerImagesBinding,
+	});
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
@@ -333,7 +379,7 @@ async function deployWorker(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: containerMetadata,
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -774,6 +820,18 @@ async function deployWorker(
 	) {
 		assert(versionId && accountId);
 		await callbacks.deployContainers(config, normalisedContainerConfig, {
+			versionId,
+			accountId,
+			scriptName,
+		});
+	}
+	if (
+		!skipContainerChanges &&
+		getDurableObjectContainerApps(config.containers).length > 0 &&
+		callbacks.deployDurableObjectContainerApplications
+	) {
+		assert(versionId && accountId);
+		await callbacks.deployDurableObjectContainerApplications(config, {
 			versionId,
 			accountId,
 			scriptName,
