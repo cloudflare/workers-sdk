@@ -143,7 +143,7 @@ export async function getBinaryFileContents(file: File<string | Uint8Array>) {
  *
  * WorkerMetadataBinding uses different field names than Binding:
  * - KV: namespace_id -> id
- * - D1: id -> database_id
+ * - D1: database_id (or legacy id) -> database_id
  * - plain_text/json: text/json -> value
  * - dispatch_namespace: outbound.worker.service -> outbound.service
  */
@@ -189,7 +189,8 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				const b = binding as Extract<WorkerMetadataBinding, { type: "d1" }>;
 				output[name] = {
 					type: "d1",
-					database_id: b.id,
+					// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
+					database_id: b.database_id ?? b.id,
 					database_internal_env: b.internalEnv,
 					raw: b.raw,
 				};

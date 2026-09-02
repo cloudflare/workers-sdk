@@ -4,9 +4,32 @@ import {
 	convertStartDevOptionsToBindings,
 } from "../../../api/startDevWorker/binding-utils";
 import {
+	convertWorkerMetadataBindingsToFlatBindings,
 	isSameUserWorkerOrigin,
 	rewriteUrlInHeaderValue,
 } from "../../../api/startDevWorker/utils";
+
+describe("convertWorkerMetadataBindingsToFlatBindings", () => {
+	it("prefers canonical D1 IDs and supports legacy IDs", ({ expect }) => {
+		expect(
+			convertWorkerMetadataBindingsToFlatBindings([
+				{ type: "d1", name: "CANONICAL", database_id: "canonical-id" },
+				// Legacy API responses predate `database_id`.
+				{ type: "d1", name: "LEGACY", id: "legacy-id" } as never,
+				{
+					type: "d1",
+					name: "BOTH",
+					database_id: "canonical-id",
+					id: "legacy-id",
+				},
+			])
+		).toMatchObject({
+			CANONICAL: { type: "d1", database_id: "canonical-id" },
+			LEGACY: { type: "d1", database_id: "legacy-id" },
+			BOTH: { type: "d1", database_id: "canonical-id" },
+		});
+	});
+});
 
 describe("isSameUserWorkerOrigin", () => {
 	const userWorker = { protocol: "http:", hostname: "localhost", port: "8787" };
