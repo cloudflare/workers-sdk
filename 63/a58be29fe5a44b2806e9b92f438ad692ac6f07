@@ -1,0 +1,19 @@
+packages/workers-utils/src/types.ts
+  s_fb73438c5bfa7c::t_2ee99c74349d5f 69-90,152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "63a58be29fe5a44b2806e9b92f438ad692ac6f07",
+  "prompts": {},
+  "sessions": {
+    "s_fb73438c5bfa7c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9d84bc2fffeP71J2Nl3pDlfyO",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}
