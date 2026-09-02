@@ -1,5 +1,5 @@
+import { z } from "miniflare:zod";
 import { decodeWords } from "postal-mime";
-import { z } from "zod";
 import { EMAIL_STORE_SERVICE_NAME } from "../../../plugins/core/constants";
 import { CoreBindings, CorePaths } from "../../core";
 import { handleEmail } from "../../core/email";
