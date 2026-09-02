@@ -11,18 +11,33 @@ describe("createPreviewSession", () => {
 		expect,
 	}) => {
 		let requestedWorker: string | undefined;
+		let requestedAccountSubdomain = false;
 		msw.use(
 			http.get(
 				"*/accounts/test-account-id/workers/scripts/:worker/subdomain/edge-preview",
 				({ params }) => {
 					requestedWorker = params.worker as string;
 					return HttpResponse.json(
-						createFetchResult({ token: "test-session-token" })
+						createFetchResult({
+							token: "test-session-token",
+							exchange_url:
+								"https://preview-token.test-subdomain.workers.dev/cdn-cgi/workers/preview/",
+						})
 					);
 				}
 			),
-			http.get("*/accounts/test-account-id/workers/subdomain", () =>
-				HttpResponse.json(createFetchResult({ subdomain: "test-subdomain" }))
+			http.get("*/accounts/test-account-id/workers/subdomain", () => {
+				requestedAccountSubdomain = true;
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				);
+			}),
+			http.get(
+				"https://preview-token.test-subdomain.workers.dev/cdn-cgi/workers/preview/",
+				() => new HttpResponse(null, { status: 500 })
 			)
 		);
 
@@ -44,6 +59,7 @@ describe("createPreviewSession", () => {
 		);
 
 		expect(requestedWorker).toBe("test-worker");
+		expect(requestedAccountSubdomain).toBe(false);
 		expect(session).toEqual({
 			value: "test-session-token",
 			host: "test-worker.test-subdomain.workers.dev",

@@ -54,6 +54,25 @@ function withTimeout(signal: AbortSignal): AbortSignal {
 	return AbortSignal.any([signal, AbortSignal.timeout(PREVIEW_API_TIMEOUT_MS)]);
 }
 
+function getWorkersDevPreviewHost(
+	exchangeUrl: string | undefined,
+	name: string
+): string | undefined {
+	if (!exchangeUrl) {
+		return undefined;
+	}
+
+	try {
+		const exchangeHost = new URL(exchangeUrl).hostname;
+		const firstDot = exchangeHost.indexOf(".");
+		return firstDot === -1
+			? undefined
+			: `${name}${exchangeHost.slice(firstDot)}`;
+	} catch {
+		return undefined;
+	}
+}
+
 async function getOrRegisterWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	account: CfAccount,
@@ -218,12 +237,15 @@ export async function createPreviewSession(
 		: token;
 
 	try {
-		const subdomain = await getOrRegisterWorkersDevSubdomain(
-			complianceConfig,
-			account,
-			withTimeout(abortSignal)
-		);
-		const host = `${name}.${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
+		let host = getWorkersDevPreviewHost(exchange_url, name);
+		if (!host) {
+			const subdomain = await getOrRegisterWorkersDevSubdomain(
+				complianceConfig,
+				account,
+				withTimeout(abortSignal)
+			);
+			host = `${name}.${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
+		}
 		return {
 			value: previewSessionToken,
 			host,

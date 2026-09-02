@@ -124,6 +124,25 @@ function switchHost(
 	return url;
 }
 
+function getWorkersDevPreviewHost(
+	exchangeUrl: string | undefined,
+	name: string
+): string | undefined {
+	if (!exchangeUrl) {
+		return undefined;
+	}
+
+	try {
+		const exchangeHost = new URL(exchangeUrl).hostname;
+		const firstDot = exchangeHost.indexOf(".");
+		return firstDot === -1
+			? undefined
+			: `${name}${exchangeHost.slice(firstDot)}`;
+	} catch {
+		return undefined;
+	}
+}
+
 /**
  * Try and get a re-encoded token from the edge. Returns null if the exchange
  * fails for any reason (expected with particular zone settings).
@@ -212,7 +231,9 @@ export async function createPreviewSession(
 		: token;
 
 	try {
-		let host = ctx.host;
+		let host =
+			ctx.host ??
+			getWorkersDevPreviewHost(ctx.zone ? undefined : exchange_url, name);
 		if (!host) {
 			const subdomain = await getWorkersDevSubdomain(
 				complianceConfig,
