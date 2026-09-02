@@ -1276,10 +1276,6 @@ export async function provisionBindings(
 			) {
 				continue;
 			}
-			if (skippedProvisioning.get(binding.type)?.has(bindingName)) {
-				continue;
-			}
-
 			const bindingToWrite = toConfigBinding(bindingName, binding);
 			addBindingToPatch(patch, binding.type, bindingToWrite);
 		}

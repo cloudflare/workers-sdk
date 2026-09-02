@@ -329,6 +329,74 @@ describe("resource provisioning", () => {
 		);
 	});
 
+	it("preserves skipped binding array positions when a later binding of the same type provisions successfully", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [
+				{ binding: "R2_ONE", bucket_name: "first-bucket" },
+				{ binding: "R2_TWO" },
+			],
+		});
+		mockGetSettings();
+
+		let firstBucketCreated = false;
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/first-bucket", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			),
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(createFetchResult({ buckets: [] }))
+			),
+			http.post("*/accounts/:accountId/r2/buckets", async ({ request }) => {
+				const requestBody = await request.json();
+				if (
+					typeof requestBody === "object" &&
+					requestBody !== null &&
+					"name" in requestBody &&
+					requestBody.name === "first-bucket"
+				) {
+					firstBucketCreated = true;
+				}
+				expect(requestBody).toMatchObject({ name: "test-name-r2-two" });
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "R2_ONE", type: "r2_bucket", bucket_name: "first-bucket" },
+				{ name: "R2_TWO", type: "r2_bucket", bucket_name: "test-name-r2-two" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(firstBucketCreated).toBe(false);
+		expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
+			"compatibility_date = "2022-01-12"
+			name = "test-name"
+			main = "index.js"
+
+			[[r2_buckets]]
+			binding = "R2_ONE"
+			bucket_name = "first-bucket"
+
+			[[r2_buckets]]
+			binding = "R2_TWO"
+			bucket_name = "test-name-r2-two"
+			"
+		`);
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for R2 Bucket bindings (R2_ONE)"
+		);
+	});
+
 	it("provisions a Queue used by both a producer and consumer", async ({
 		expect,
 	}) => {
