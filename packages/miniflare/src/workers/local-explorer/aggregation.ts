@@ -41,8 +41,39 @@ function getPeerDebugPortAddresses(
 	return [...new Set(addresses)];
 }
 
+function getSharedStoragePeerDebugPortAddresses(
+	registry: WorkerRegistry,
+	selfInstanceId: string | null
+): string[] {
+	if (selfInstanceId === null) {
+		return [];
+	}
+	const selfStorageScope = Object.values(registry).find(
+		(definition) =>
+			definition.instanceId === selfInstanceId &&
+			definition.storageScope !== undefined
+	)?.storageScope;
+	if (selfStorageScope === undefined) {
+		return [];
+	}
+
+	const addresses = Object.values(registry)
+		.filter(
+			(definition) =>
+				definition.instanceId !== selfInstanceId &&
+				definition.storageScope === selfStorageScope
+		)
+		.map((definition) => definition.debugPortAddress);
+	return [...new Set(addresses)];
+}
+
+interface PeerAggregationOptions {
+	sharedStorageOnly?: boolean;
+}
+
 export async function getPeerUrlsIfAggregating(
-	c: AppContext
+	c: AppContext,
+	options: PeerAggregationOptions = {}
 ): Promise<string[]> {
 	if (c.req.raw.headers.has(NO_AGGREGATE_HEADER)) {
 		return [];
@@ -51,11 +82,13 @@ export async function getPeerUrlsIfAggregating(
 	const workerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
 	const response = await loopback.fetch("http://localhost/core/dev-registry");
 	const registry = (await response.json()) as WorkerRegistry;
-	return getPeerDebugPortAddresses(
-		registry,
-		workerNames,
-		response.headers.get("X-Miniflare-Dev-Registry-Instance-Id")
+	const selfInstanceId = response.headers.get(
+		"X-Miniflare-Dev-Registry-Instance-Id"
 	);
+	if (options.sharedStorageOnly) {
+		return getSharedStoragePeerDebugPortAddresses(registry, selfInstanceId);
+	}
+	return getPeerDebugPortAddresses(registry, workerNames, selfInstanceId);
 }
 
 export function getPeerEntrypoint(
@@ -98,29 +131,33 @@ export async function fetchFromPeer(
 	}
 }
 
+interface AggregateListResultsOptions<T> {
+	getKey?: (result: T) => string | undefined;
+	resultKey?: string;
+	sharedStorageOnly?: boolean;
+}
+
 /**
  * Aggregate list results from local data and peer instances.
  *
  * @param c - Hono app context
  * @param localResults - Results from the local instance
  * @param apiPath - API path relative to the explorer API base
- * @param resultKey - horrible special case because r2 bucket list nests its results
+ * @param options - Aggregation scope and response-shape options
  */
 export async function aggregateListResults<T>(
 	c: AppContext,
 	localResults: T[],
 	apiPath: string,
-	resultKey?: string
+	options: AggregateListResultsOptions<T> = {}
 ): Promise<T[]> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
-	if (peerUrls.length === 0) {
-		return localResults;
-	}
-
+	const peerUrls = await getPeerUrlsIfAggregating(c, options);
 	const peerResults = await Promise.all(
 		peerUrls.map(async (url) => {
 			const response = await fetchFromPeer(url, apiPath);
-			if (!response?.ok) return [];
+			if (!response?.ok) {
+				return [];
+			}
 			try {
 				const data = (await response.json()) as {
 					result: T[] | { [key: string]: T[] };
@@ -128,8 +165,8 @@ export async function aggregateListResults<T>(
 				if (Array.isArray(data.result)) {
 					return data.result;
 				}
-				if (resultKey) {
-					return data.result[resultKey] ?? [];
+				if (options.resultKey) {
+					return data.result[options.resultKey] ?? [];
 				}
 				throw new Error("unreachable");
 			} catch {
@@ -138,5 +175,22 @@ export async function aggregateListResults<T>(
 		})
 	);
 
-	return [...localResults, ...peerResults.flat()];
+	const results = [...localResults, ...peerResults.flat()];
+	const getKey = options.getKey;
+	if (getKey === undefined) {
+		return results;
+	}
+
+	const seen = new Set<string>();
+	return results.filter((result) => {
+		const key = getKey(result);
+		if (key === undefined) {
+			return true;
+		}
+		if (seen.has(key)) {
+			return false;
+		}
+		seen.add(key);
+		return true;
+	});
 }

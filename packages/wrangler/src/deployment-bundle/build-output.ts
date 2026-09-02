@@ -97,7 +97,7 @@ async function writeBundle({
 		modules[key] = { type: "sourcemap" };
 	}
 
-	return { mainModule: entryKey, modules };
+	return { type: "complete", mainModule: entryKey, modules };
 }
 
 async function writeAssets({

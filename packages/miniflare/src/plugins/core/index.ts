@@ -656,7 +656,9 @@ export const CORE_PLUGIN: Plugin = {
 				service,
 				dev
 			);
-			if (maybeService !== undefined) services.push(maybeService);
+			if (maybeService !== undefined) {
+				services.push(maybeService);
+			}
 		}
 
 		if (dev?.outboundService !== undefined) {
@@ -667,7 +669,9 @@ export const CORE_PLUGIN: Plugin = {
 				dev.outboundService,
 				dev
 			);
-			if (maybeService !== undefined) services.push(maybeService);
+			if (maybeService !== undefined) {
+				services.push(maybeService);
+			}
 		}
 
 		{
@@ -980,6 +984,7 @@ export function getGlobalServices({
 			}
 		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
 			workflowOptions
@@ -1000,6 +1005,7 @@ export function getGlobalServices({
 				explorerWorkerOpts,
 				telemetry: sharedOptions.telemetry,
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
+				sharedOptions,
 			})
 		);
 	}

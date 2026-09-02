@@ -4429,6 +4429,12 @@ importers:
 
   packages/workers-utils:
     dependencies:
+      chalk:
+        specifier: catalog:default
+        version: 5.3.0
+      dotenv:
+        specifier: catalog:default
+        version: 16.3.1
       undici:
         specifier: catalog:default
         version: 7.29.0
@@ -4463,6 +4469,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      dotenv-expand:
+        specifier: 13.0.0
+        version: 13.0.0
       empathic:
         specifier: ^2.0.0
         version: 2.0.0
@@ -11648,6 +11657,10 @@ packages:
     resolution: {integrity: sha512-lXpXz2ZE1cea1gL4sz2Ipj8y4PiVjytYr3Ij0SWoms1PGxIv7m2CRKuRuCRtHdVuvM/hNJPMxt5PbhboNC4dPQ==}
     engines: {node: '>=12'}
 
+  dotenv-expand@13.0.0:
+    resolution: {integrity: sha512-aBfBS8eYIeXmpHI9ThIlA7/WLq+SLt18iXUZhb52rW89QLKQFoIpPG1bPeewoPZsTyjSSO3T7234FBVUM1V2rA==}
+    engines: {node: '>=12'}
+
   dotenv@16.0.3:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
     engines: {node: '>=12'}
@@ -11662,6 +11675,10 @@ packages:
 
   dotenv@17.2.4:
     resolution: {integrity: sha512-mudtfb4zRB4bVvdj0xRo+e6duH1csJRM8IukBqfTRvHotn9+LBXB8ynAidP9zHqoRC/fsllXgk4kCKlR21fIhw==}
+    engines: {node: '>=12'}
+
+  dotenv@17.4.2:
+    resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
 
   dotenv@8.6.0:
@@ -23956,6 +23973,10 @@ snapshots:
     dependencies:
       dotenv: 16.6.1
 
+  dotenv-expand@13.0.0:
+    dependencies:
+      dotenv: 17.4.2
+
   dotenv@16.0.3: {}
 
   dotenv@16.3.1: {}
@@ -23963,6 +23984,8 @@ snapshots:
   dotenv@16.6.1: {}
 
   dotenv@17.2.4: {}
+
+  dotenv@17.4.2: {}
 
   dotenv@8.6.0: {}
 

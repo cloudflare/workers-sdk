@@ -7,9 +7,11 @@ import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
 	formatTime,
+	getBindings,
 	getDockerPath,
 	hasDurableObjectExports,
 	parseNonHyphenedUuid,
+	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
@@ -22,7 +24,6 @@ import {
 	resolveAssetOptions,
 	syncAssets,
 } from "./helpers/assets";
-import { getBindings } from "./helpers/binding-utils";
 import {
 	getSize,
 	printBundleSize,
@@ -47,7 +48,6 @@ import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-e
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
-import { printBindings } from "./helpers/print-bindings";
 import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
@@ -456,13 +456,14 @@ async function deployWorker(
 			}
 		);
 
-		printBindings(
-			bindings,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			config.containers,
-			{ warnIfNoBindings: true, unsafeMetadata: config.unsafe?.metadata }
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: config.tail_consumers,
+			streamingTailConsumers: config.streaming_tail_consumers,
+			containers: config.containers,
+			warnIfNoBindings: true,
+			unsafeMetadata: config.unsafe?.metadata,
+		});
 	} else {
 		assert(accountId, "Missing accountId");
 
@@ -625,13 +626,13 @@ async function deployWorker(
 			}
 			bindingsPrinted = true;
 
-			printBindings(
-				bindings,
-				config.tail_consumers,
-				config.streaming_tail_consumers,
-				config.containers,
-				{ unsafeMetadata: config.unsafe?.metadata }
-			);
+			printBindings(bindings, {
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				containers: config.containers,
+				unsafeMetadata: config.unsafe?.metadata,
+			});
 
 			versionId = parseNonHyphenedUuid(result.deployment_id);
 
@@ -657,13 +658,13 @@ async function deployWorker(
 			}
 		} catch (err) {
 			if (!bindingsPrinted) {
-				printBindings(
-					bindings,
-					config.tail_consumers,
-					config.streaming_tail_consumers,
-					config.containers,
-					{ unsafeMetadata: config.unsafe?.metadata }
-				);
+				printBindings(bindings, {
+					log: logger.log,
+					tailConsumers: config.tail_consumers,
+					streamingTailConsumers: config.streaming_tail_consumers,
+					containers: config.containers,
+					unsafeMetadata: config.unsafe?.metadata,
+				});
 			}
 
 			// Reconciliation errors include structured per-class details.

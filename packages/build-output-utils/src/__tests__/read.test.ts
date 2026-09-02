@@ -14,7 +14,8 @@ import { readBuildOutput } from "../read";
 import { writeSettingsConfig, writeWorkerConfig } from "../write";
 import type { ParsedOutputWorkerConfig } from "@cloudflare/config";
 
-const manifest: ParsedOutputWorkerConfig["manifest"] = {
+const completeManifest: ParsedOutputWorkerConfig["manifest"] = {
+	type: "complete",
 	mainModule: "index.js",
 	modules: { "index.js": { type: "esm" } },
 };
@@ -32,6 +33,18 @@ function inputWorkerConfig(name: string) {
 		compatibilityDate: "2026-06-01",
 		entrypoint: "index.js",
 	});
+}
+
+async function writeBundleFiles(
+	root: string,
+	files: Record<string, string>
+): Promise<void> {
+	const bundleDir = getWorkerBundleDir(root);
+	for (const [fileName, contents] of Object.entries(files)) {
+		const filePath = path.join(bundleDir, fileName);
+		await fsp.mkdir(path.dirname(filePath), { recursive: true });
+		await fsp.writeFile(filePath, contents);
+	}
 }
 
 /**
@@ -62,7 +75,7 @@ async function seedWorker(
 	await writeWorkerConfig({
 		root,
 		config: inputWorkerConfig(name),
-		manifest: hasBundle ? manifest : undefined,
+		manifest: hasBundle ? completeManifest : undefined,
 		workerDirectoryName,
 	});
 	if (bundleDir) {
@@ -95,7 +108,7 @@ describe("readBuildOutput", () => {
 		expect(output.workers.default.assetsDir).toBeUndefined();
 
 		expect(output.workers.default.config.name).toBe("my-worker");
-		expect(output.workers.default.config.manifest).toEqual(manifest);
+		expect(output.workers.default.config.manifest).toEqual(completeManifest);
 		expect(output.workers.default.config).not.toHaveProperty("entrypoint");
 	});
 
@@ -113,6 +126,103 @@ describe("readBuildOutput", () => {
 		expect(workers.additional?.config.name).toBe("additional-worker");
 		expect(workers.additional?.bundleDir).toBe(
 			getWorkerBundleDir(root, "additional")
+		);
+	});
+
+	it("resolves a partial manifest from bundle files and explicit overrides", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeWorkerConfig({
+			root,
+			config: inputWorkerConfig("my-worker"),
+			manifest: {
+				type: "partial",
+				mainModule: "index.js",
+				modules: {
+					"chunks/worker.mjs": { type: "cjs" },
+					"data.txt": { type: "text" },
+				},
+			},
+		});
+		await writeBundleFiles(root, {
+			"index.js": "module.exports = {};",
+			"chunks/worker.mjs": "export default {};",
+			"chunks/worker.mjs.map": "{}",
+			"data.txt": "data",
+			"ignored.json": "{}",
+		});
+
+		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
+			.default.config;
+
+		expect(resolvedManifest).toEqual({
+			type: "complete",
+			mainModule: "index.js",
+			modules: {
+				"chunks/worker.mjs": { type: "cjs" },
+				"chunks/worker.mjs.map": { type: "sourcemap" },
+				"data.txt": { type: "text" },
+				"index.js": { type: "esm" },
+			},
+		});
+	});
+
+	it("does not scan bundle files for a complete manifest", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeBundleFiles(root, {
+			"index.js": "export default {};",
+			"unlisted.js": "export default {};",
+		});
+
+		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
+			.default.config;
+
+		expect(resolvedManifest).toEqual(completeManifest);
+	});
+
+	it("throws when a partial manifest's main module cannot be resolved", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeWorkerConfig({
+			root,
+			config: inputWorkerConfig("my-worker"),
+			manifest: {
+				type: "partial",
+				mainModule: "missing.js",
+				modules: {},
+			},
+		});
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/partial manifest .* has main module "missing\.js", but it was not found as an ES module/
+		);
+	});
+
+	it("throws when a partial manifest's main module is a source map", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeWorkerConfig({
+			root,
+			config: inputWorkerConfig("my-worker"),
+			manifest: {
+				type: "partial",
+				mainModule: "index.js.map",
+				modules: {},
+			},
+		});
+		await writeBundleFiles(root, { "index.js.map": "{}" });
+
+		await expect(readBuildOutput(root)).rejects.toThrow(
+			/partial manifest .* has main module "index\.js\.map", but it was not found as an ES module/
 		);
 	});
 
