@@ -115,6 +115,41 @@ describe("runAutoConfig()", () => {
 		});
 	});
 
+	it("creates an assets ignore file when the assets directory is the project root", async ({
+		expect,
+	}) => {
+		await seed({
+			"index.html": "<h1>Hello World</h1>",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-static-app",
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: ".",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				enableTargetCliInstallation: false,
+				runBuild: false,
+			}
+		);
+
+		expect(readFileSync(".assetsignore", "utf8")).toMatchInlineSnapshot(`
+			"# wrangler files
+			.wrangler
+			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
+			"
+		`);
+	});
+
 	it("installs cf and Wrangler for cf projects", async ({ expect }) => {
 		const installPackages = vi
 			.spyOn(cliPackages, "installPackages")

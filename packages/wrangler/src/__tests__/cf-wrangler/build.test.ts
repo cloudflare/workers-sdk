@@ -41,4 +41,41 @@ describe("cf-wrangler build", () => {
 			)
 		).toBe(true);
 	});
+
+	it("emits an assets-only project whose assets directory is the project root", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `export default {
+				type: "worker",
+				name: "cf-wrangler-static-worker",
+				compatibilityDate: "2026-05-18",
+			};`,
+			"wrangler.config.ts": `export default {
+				assetsDirectory: ".",
+			};`,
+			"index.html": "<h1>static</h1>",
+			".assetsignore": ".dev.vars*",
+			".cloudflare/custom.txt": "keep",
+		});
+
+		const exitCode = await runCfWranglerBuild({});
+		const assetsDir = path.resolve(
+			".cloudflare/output/v0/workers/default/assets"
+		);
+
+		expect(exitCode).toBe(0);
+		expect(fs.readFileSync(path.join(assetsDir, "index.html"), "utf8")).toBe(
+			"<h1>static</h1>"
+		);
+		expect(fs.readFileSync(path.join(assetsDir, ".assetsignore"), "utf8")).toBe(
+			".dev.vars*"
+		);
+		expect(
+			fs.readFileSync(path.join(assetsDir, ".cloudflare/custom.txt"), "utf8")
+		).toBe("keep");
+		expect(fs.existsSync(path.join(assetsDir, ".cloudflare/output"))).toBe(
+			false
+		);
+	});
 });
