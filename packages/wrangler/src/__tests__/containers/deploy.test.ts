@@ -3,11 +3,17 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import {
+	ContainerImagePreparationStatus,
 	getCloudflareContainerRegistry,
 	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import {
+	CONTAINER_IMAGES_BINDING,
+	CONTAINER_IMAGES_METADATA_BINDING,
+	CONTAINER_IMAGES_METADATA_VERSION,
+} from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -15,6 +21,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
+import { deployDurableObjectContainerApplications } from "../../containers/durable-object-applications";
 import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockServiceScriptData } from "../deploy/helpers";
@@ -35,8 +42,10 @@ import type {
 	AccountRegistryToken,
 	Application,
 	CreateApplicationRequest,
+	CreateDurableObjectApplicationRequest,
 	ImageRegistryCredentialsConfiguration,
 } from "@cloudflare/containers-shared";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { ChildProcess } from "node:child_process";
 import type { ExpectStatic } from "vitest";
 
@@ -59,6 +68,17 @@ describe("wrangler deploy with containers", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 	});
+
+	it("should upload an empty container list when explicitly configured", async () => {
+		writeWranglerConfig({ containers: [] });
+		mockUploadWorkerRequest({
+			expectedContainers: [],
+			useOldUploadApi: true,
+		});
+
+		await runWrangler("deploy index.js");
+	});
+
 	it("should fail early if no docker is detected when deploying a container from a dockerfile", async ({
 		expect,
 	}) => {
@@ -110,6 +130,772 @@ describe("wrangler deploy with containers", () => {
 			Image appears to belong to account: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 			Current account: "some-account-id"]
 		`);
+	});
+	it("should deploy a Durable Object-managed container without scheduler lookups or rollouts", async ({
+		expect,
+	}) => {
+		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+		const image =
+			"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+		mockGetVersion("Galaxy-Class", [
+			{
+				...defaultDOBinding,
+				namespace_id: namespaceId,
+			},
+		]);
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+					images: {
+						tools: { image },
+					},
+				},
+			],
+		});
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+				{
+					json: {
+						ExampleDurableObject: {
+							tools: image,
+						},
+					},
+					name: CONTAINER_IMAGES_BINDING,
+					type: "json",
+				},
+				{
+					name: CONTAINER_IMAGES_METADATA_BINDING,
+					type: "json",
+					json: CONTAINER_IMAGES_METADATA_VERSION,
+				},
+			],
+			expectedContainers: [
+				{
+					name: "test-name-exampledurableobject",
+					class_name: "ExampleDurableObject",
+					images: { tools: image },
+				},
+			],
+			expectedExports: undefined,
+			useOldUploadApi: true,
+		});
+
+		const applicationRequests: unknown[] = [];
+		const preparationRequests: string[] = [];
+		let listRequests = 0;
+		let modifyRequests = 0;
+		let rolloutRequests = 0;
+		msw.use(
+			http.post("*/image-preparations", async ({ request }) => {
+				const body = (await request.json()) as { image: string };
+				preparationRequests.push(body.image);
+				return HttpResponse.json(
+					createFetchResult({
+						image: body.image,
+						status: ContainerImagePreparationStatus.READY,
+					})
+				);
+			}),
+			http.get("*/applications", () => {
+				listRequests++;
+				return HttpResponse.json(createFetchResult([]));
+			}),
+			http.patch("*/applications/:applicationId", () => {
+				modifyRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			}),
+			http.post("*/applications/:applicationId/rollouts", () => {
+				rolloutRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			}),
+			http.post("*/applications", async ({ request }) => {
+				const body = await request.json();
+				applicationRequests.push(body);
+				return HttpResponse.json(createFetchResult(body));
+			})
+		);
+
+		await runWrangler("deploy index.js");
+
+		expect(preparationRequests).toEqual([image]);
+		expect(applicationRequests).toEqual([
+			expectedDurableObjectApplicationRequest(
+				"test-name-exampledurableobject",
+				namespaceId
+			),
+		]);
+		expect(listRequests).toBe(0);
+		expect(modifyRequests).toBe(0);
+		expect(rolloutRequests).toBe(0);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+	it("should reuse the idempotent application create contract on repeat deployments", async ({
+		expect,
+	}) => {
+		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+		const config = {
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					name: "managed-app",
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+					images: {},
+				},
+			],
+		} as Parameters<typeof deployDurableObjectContainerApplications>[0];
+		mockGetVersion("Galaxy-Class", [
+			{
+				...defaultDOBinding,
+				namespace_id: namespaceId,
+			},
+		]);
+
+		const applicationRequests: unknown[] = [];
+		msw.use(
+			http.post("*/applications", async ({ request }) => {
+				const body = await request.json();
+				applicationRequests.push(body);
+				return HttpResponse.json(createFetchResult(body));
+			})
+		);
+
+		const args = {
+			versionId: "Galaxy-Class",
+			accountId: "some-account-id",
+			scriptName: "test-name",
+		};
+		await deployDurableObjectContainerApplications(config, args);
+		await deployDurableObjectContainerApplications(config, args);
+
+		expect(applicationRequests).toEqual([
+			expectedDurableObjectApplicationRequest("managed-app", namespaceId),
+			expectedDurableObjectApplicationRequest("managed-app", namespaceId),
+		]);
+	});
+	it("should preserve Durable Object-managed container images when --containers-rollout=none", async ({
+		expect,
+	}) => {
+		const configuredImage =
+			"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+		const deployedImage =
+			"registry.cloudflare.com/some-account-id/tools@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+		mockGetVersion(
+			"test-name:version:0",
+			[
+				defaultDOBinding,
+				{
+					name: CONTAINER_IMAGES_METADATA_BINDING,
+					type: "json",
+					json: CONTAINER_IMAGES_METADATA_VERSION,
+				},
+				{
+					name: CONTAINER_IMAGES_BINDING,
+					type: "json",
+					json: {
+						ExampleDurableObject: { tools: deployedImage },
+					},
+				},
+			],
+			[
+				{
+					name: "test-name-exampledurableobject",
+					class_name: "ExampleDurableObject",
+					images: { tools: deployedImage },
+				},
+			]
+		);
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+					images: {
+						tools: { image: configuredImage },
+					},
+				},
+			],
+		});
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+				{ name: CONTAINER_IMAGES_METADATA_BINDING, type: "inherit" },
+				{
+					name: CONTAINER_IMAGES_BINDING,
+					type: "inherit",
+				},
+			],
+			expectedBindingsInherit: "strict",
+			expectedContainers: [
+				{
+					name: "test-name-exampledurableobject",
+					class_name: "ExampleDurableObject",
+					images: { tools: deployedImage },
+				},
+			],
+			useOldUploadApi: true,
+		});
+
+		let preparationRequests = 0;
+		let applicationRequests = 0;
+		msw.use(
+			http.post("*/image-preparations", () => {
+				preparationRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			}),
+			http.post("*/applications", () => {
+				applicationRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+
+		await runWrangler("deploy index.js --containers-rollout=none");
+
+		expect(preparationRequests).toBe(0);
+		expect(applicationRequests).toBe(0);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+	it.for(["empty", "omitted"])(
+		"should preserve deployed managed containers when local configuration is %s and rollout is disabled",
+		async (configuration, { expect }) => {
+			const deployedImage =
+				"registry.cloudflare.com/some-account-id/tools@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+			mockGetVersion(
+				"test-name:version:0",
+				[
+					defaultDOBinding,
+					{
+						name: CONTAINER_IMAGES_METADATA_BINDING,
+						type: "json",
+						json: CONTAINER_IMAGES_METADATA_VERSION,
+					},
+					{
+						name: CONTAINER_IMAGES_BINDING,
+						type: "json",
+						json: {
+							ExampleDurableObject: { tools: deployedImage },
+						},
+					},
+				],
+				[
+					{
+						name: "test-name-exampledurableobject",
+						class_name: "ExampleDurableObject",
+						images: { tools: deployedImage },
+					},
+				]
+			);
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				...(configuration === "empty" ? { containers: [] } : {}),
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						class_name: "ExampleDurableObject",
+						name: "EXAMPLE_DO_BINDING",
+						type: "durable_object_namespace",
+					},
+					{ name: CONTAINER_IMAGES_METADATA_BINDING, type: "inherit" },
+					{
+						name: CONTAINER_IMAGES_BINDING,
+						type: "inherit",
+					},
+				],
+				expectedBindingsInherit: "strict",
+				expectedContainers: [
+					{
+						name: "test-name-exampledurableobject",
+						class_name: "ExampleDurableObject",
+						images: { tools: deployedImage },
+					},
+				],
+				useOldUploadApi: true,
+			});
+
+			let preparationRequests = 0;
+			let applicationRequests = 0;
+			msw.use(
+				http.post("*/image-preparations", () => {
+					preparationRequests++;
+					return HttpResponse.json(createFetchResult({}));
+				}),
+				http.post("*/applications", () => {
+					applicationRequests++;
+					return HttpResponse.json(createFetchResult({}));
+				})
+			);
+
+			await runWrangler("deploy index.js --containers-rollout=none");
+
+			expect(preparationRequests).toBe(0);
+			expect(applicationRequests).toBe(0);
+			expect(spawn).not.toHaveBeenCalled();
+		}
+	);
+	it.for([undefined, []])(
+		"preserves deployed containers %j instead of adding local managed entries when rollout is disabled",
+		async (containers, { expect }) => {
+			mockGetVersion("test-name:version:0", [defaultDOBinding], containers);
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						class_name: "ExampleDurableObject",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						class_name: "ExampleDurableObject",
+						name: "EXAMPLE_DO_BINDING",
+						type: "durable_object_namespace",
+					},
+				],
+				expectedBindingsInherit: "strict",
+				expectedContainers: containers,
+				useOldUploadApi: true,
+			});
+			await runWrangler("deploy index.js --containers-rollout=none");
+			expect(spawn).not.toHaveBeenCalled();
+		}
+	);
+	it.for([
+		{ missing: true, emptyConfig: false },
+		{ missing: true, emptyConfig: true },
+		{ missing: false, emptyConfig: false },
+		{ missing: false, emptyConfig: true },
+	])(
+		"rejects rollout skip before upload without deployed versions: %j",
+		async ({ missing, emptyConfig }, { expect }) => {
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				...(emptyConfig ? { containers: [] } : {}),
+			});
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+					() =>
+						HttpResponse.json(
+							createFetchResult({
+								deployments: missing ? [] : [{ versions: [] }],
+							})
+						)
+				)
+			);
+			const mutations: string[] = [];
+			msw.use(
+				http.all("*", ({ request }) => {
+					if (request.method !== "GET") {
+						mutations.push(request.url);
+						return HttpResponse.json(createFetchResult({}));
+					}
+				})
+			);
+
+			await expect(
+				runWrangler("deploy index.js --containers-rollout=none")
+			).rejects.toThrow("deployed Container metadata could not be recovered");
+			expect(mutations).toEqual([]);
+			expect(spawn).not.toHaveBeenCalled();
+		}
+	);
+
+	it("allows rollout skip for a first deployment without inheriting an image binding", async ({
+		expect,
+	}) => {
+		mockServiceScriptData({});
+		mockSubDomainRequest("test-sub-domain", true, false);
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+				() => HttpResponse.json(createFetchResult({ deployments: [] }))
+			)
+		);
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					name: "managed-app",
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+					images: { app: { dockerfile: "./Dockerfile" } },
+				},
+			],
+		});
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+			],
+			expectedContainers: [
+				{ name: "managed-app", class_name: "ExampleDurableObject" },
+			],
+			useOldUploadApi: true,
+		});
+		await runWrangler("deploy index.js --containers-rollout=none");
+		expect(spawn).not.toHaveBeenCalled();
+	});
+
+	it("preserves the generated marker and binding when inherited image maps are empty", async () => {
+		const containers = [
+			{ name: "managed-app", class_name: "ExampleDurableObject" },
+		];
+		mockGetVersion(
+			"test-name:version:0",
+			[
+				defaultDOBinding,
+				{
+					name: CONTAINER_IMAGES_BINDING,
+					type: "json",
+					json: { ExampleDurableObject: {} },
+				},
+				{
+					name: CONTAINER_IMAGES_METADATA_BINDING,
+					type: "json",
+					json: CONTAINER_IMAGES_METADATA_VERSION,
+				},
+			],
+			containers
+		);
+		writeWranglerConfig({ ...DEFAULT_DURABLE_OBJECTS });
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					name: "EXAMPLE_DO_BINDING",
+					class_name: "ExampleDurableObject",
+					type: "durable_object_namespace",
+				},
+				{ name: CONTAINER_IMAGES_BINDING, type: "inherit" },
+				{ name: CONTAINER_IMAGES_METADATA_BINDING, type: "inherit" },
+			],
+			expectedBindingsInherit: "strict",
+			expectedContainers: containers,
+			useOldUploadApi: true,
+		});
+		await runWrangler("deploy index.js --containers-rollout=none");
+	});
+
+	it("should preserve mixed scheduler and Durable Object-managed metadata when --containers-rollout=none", async ({
+		expect,
+	}) => {
+		const configuredImage =
+			"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+		const deployedImage =
+			"registry.cloudflare.com/some-account-id/tools@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+		mockGetVersion(
+			"test-name:version:0",
+			[
+				{
+					name: CONTAINER_IMAGES_METADATA_BINDING,
+					type: "json",
+					json: CONTAINER_IMAGES_METADATA_VERSION,
+				},
+				{
+					name: CONTAINER_IMAGES_BINDING,
+					type: "json",
+					json: {
+						ManagedDurableObject: { tools: deployedImage },
+					},
+				},
+			],
+			[
+				{
+					name: "scheduler-app",
+					class_name: "SchedulerDurableObject",
+				},
+				{
+					name: "managed-app",
+					class_name: "ManagedDurableObject",
+					images: { tools: deployedImage },
+				},
+			]
+		);
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		fs.writeFileSync(
+			"index.js",
+			`export class SchedulerDurableObject {}; export class ManagedDurableObject {}; export default{};`
+		);
+		writeWranglerConfig({
+			durable_objects: {
+				bindings: [
+					{
+						name: "SCHEDULER",
+						class_name: "SchedulerDurableObject",
+					},
+					{
+						name: "MANAGED",
+						class_name: "ManagedDurableObject",
+					},
+				],
+			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: [
+						"SchedulerDurableObject",
+						"ManagedDurableObject",
+					],
+				},
+			],
+			containers: [
+				{
+					name: "scheduler-app",
+					class_name: "SchedulerDurableObject",
+					scheduling_policy: "default",
+					image: "./Dockerfile",
+				},
+				{
+					name: "managed-app",
+					class_name: "ManagedDurableObject",
+					scheduling_policy: "durable_object",
+					images: {
+						tools: { image: configuredImage },
+					},
+				},
+			],
+		});
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "SchedulerDurableObject",
+					name: "SCHEDULER",
+					type: "durable_object_namespace",
+				},
+				{
+					class_name: "ManagedDurableObject",
+					name: "MANAGED",
+					type: "durable_object_namespace",
+				},
+				{ name: CONTAINER_IMAGES_METADATA_BINDING, type: "inherit" },
+				{
+					name: CONTAINER_IMAGES_BINDING,
+					type: "inherit",
+				},
+			],
+			expectedBindingsInherit: "strict",
+			expectedContainers: [
+				{
+					name: "scheduler-app",
+					class_name: "SchedulerDurableObject",
+				},
+				{
+					name: "managed-app",
+					class_name: "ManagedDurableObject",
+					images: { tools: deployedImage },
+				},
+			],
+			useOldUploadApi: true,
+		});
+
+		let preparationRequests = 0;
+		let applicationRequests = 0;
+		msw.use(
+			http.post("*/image-preparations", () => {
+				preparationRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			}),
+			http.post("*/applications", () => {
+				applicationRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+
+		await runWrangler("deploy index.js --containers-rollout=none");
+
+		expect(preparationRequests).toBe(0);
+		expect(applicationRequests).toBe(0);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+	it("should reject legacy-storage Durable Object-managed containers before upload", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			durable_objects: {
+				bindings: [
+					{
+						name: "EXAMPLE_DO_BINDING",
+						class_name: "ExampleDurableObject",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_classes: ["ExampleDurableObject"] }],
+			containers: [
+				{
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+				},
+			],
+		});
+
+		let preparationRequests = 0;
+		let uploadRequests = 0;
+		msw.use(
+			http.post("*/image-preparations", () => {
+				preparationRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			}),
+			http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
+				uploadRequests++;
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+
+		await expect(runWrangler("deploy index.js")).rejects.toThrow(
+			"Durable Object-managed Containers require SQLite-backed Durable Objects."
+		);
+		expect(preparationRequests).toBe(0);
+		expect(uploadRequests).toBe(0);
+	});
+	it("should deploy scheduler-backed and Durable Object-managed containers together", async ({
+		expect,
+	}) => {
+		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+		const image =
+			"registry.cloudflare.com/some-account-id/tools@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+		const durableObjectBinding = {
+			type: "durable_object_namespace",
+			namespace_id: namespaceId,
+			class_name: "ManagedDurableObject",
+		};
+		mockGetVersion("Galaxy-Class", [defaultDOBinding, durableObjectBinding]);
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export class ManagedDurableObject {}; export default{};`
+		);
+		writeWranglerConfig({
+			durable_objects: {
+				bindings: [
+					{
+						name: "SCHEDULED",
+						class_name: "ExampleDurableObject",
+					},
+					{
+						name: "MANAGED",
+						class_name: "ManagedDurableObject",
+					},
+				],
+			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["ExampleDurableObject", "ManagedDurableObject"],
+				},
+			],
+			containers: [
+				{
+					name: "scheduler-app",
+					class_name: "ExampleDurableObject",
+					image: "registry.cloudflare.com/hello:world",
+					scheduling_policy: "default",
+				},
+				{
+					name: "managed-app",
+					class_name: "ManagedDurableObject",
+					scheduling_policy: "durable_object",
+					images: {
+						tools: { image },
+					},
+				},
+			],
+		});
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "SCHEDULED",
+					type: "durable_object_namespace",
+				},
+				{
+					class_name: "ManagedDurableObject",
+					name: "MANAGED",
+					type: "durable_object_namespace",
+				},
+				{
+					json: {
+						ManagedDurableObject: {
+							tools: image,
+						},
+					},
+					name: CONTAINER_IMAGES_BINDING,
+					type: "json",
+				},
+				{
+					name: CONTAINER_IMAGES_METADATA_BINDING,
+					type: "json",
+					json: CONTAINER_IMAGES_METADATA_VERSION,
+				},
+			],
+			expectedContainers: [
+				{
+					name: "scheduler-app",
+					class_name: "ExampleDurableObject",
+				},
+				{
+					name: "managed-app",
+					class_name: "ManagedDurableObject",
+					images: { tools: image },
+				},
+			],
+			expectedExports: undefined,
+			useOldUploadApi: true,
+		});
+
+		const applicationRequests: unknown[] = [];
+		const preparationRequests: string[] = [];
+		msw.use(
+			http.post("*/image-preparations", async ({ request }) => {
+				const body = (await request.json()) as { image: string };
+				preparationRequests.push(body.image);
+				return HttpResponse.json(
+					createFetchResult({
+						image: body.image,
+						status: ContainerImagePreparationStatus.READY,
+					})
+				);
+			}),
+			http.get("*/applications", () =>
+				HttpResponse.json(createFetchResult([]))
+			),
+			http.post("*/applications", async ({ request }) => {
+				const body = await request.json();
+				applicationRequests.push(body);
+				return HttpResponse.json(createFetchResult(body));
+			})
+		);
+
+		await runWrangler("deploy index.js");
+
+		expect(preparationRequests).toEqual([image]);
+		expect(applicationRequests).toHaveLength(2);
+		expect(applicationRequests[0]).toMatchObject({
+			name: "scheduler-app",
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			durable_objects: { namespace_id: "1" },
+		});
+		expect(applicationRequests[1]).toEqual(
+			expectedDurableObjectApplicationRequest("managed-app", namespaceId)
+		);
+		expect(spawn).not.toHaveBeenCalled();
 	});
 	it("should be able to deploy a new container from a dockerfile", async ({
 		expect,
@@ -1217,9 +2003,27 @@ describe("wrangler deploy with containers", () => {
 
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
 
-		mockGetVersion("Galaxy-Class");
 		mockGetApplications([]);
 		mockCreateApplication(expect);
+		mockGetVersion(
+			"test-name:version:0",
+			[defaultDOBinding],
+			[{ name: "my-container", class_name: "ExampleDurableObject" }]
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+			],
+			expectedBindingsInherit: "strict",
+			expectedContainers: [
+				{ name: "my-container", class_name: "ExampleDurableObject" },
+			],
+			useOldUploadApi: true,
+		});
 
 		fs.writeFileSync(
 			"index.js",
@@ -2430,6 +3234,78 @@ describe("wrangler deploy with containers", () => {
 			`);
 		});
 
+		it("should find a durable object namespace after the first page", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+			});
+
+			const requestedPages: string[] = [];
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/durable_objects/namespaces",
+					({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.get("per_page")).toBe("1000");
+						const page = url.searchParams.get("page") ?? "1";
+						requestedPages.push(page);
+
+						const durableObjects =
+							page === "1"
+								? Array.from({ length: 1000 }, (_, index) => ({
+										id: `other-id-${index}`,
+										name: `other-name-${index}`,
+										script: "other-script",
+										class: "OtherDurableObject",
+										useSqlite: true,
+									}))
+								: [
+										{
+											id: "target-id",
+											name: "target-name",
+											script: "test-name",
+											class: "ExampleDurableObject",
+											useSqlite: true,
+										},
+									];
+
+						return HttpResponse.json(
+							createFetchResult(durableObjects, true, [], [], {
+								page: Number(page),
+								per_page: 1000,
+								count: durableObjects.length,
+								total_count: 1001,
+							})
+						);
+					}
+				)
+			);
+			mockGetApplications([]);
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				expectedContainers: [
+					{ name: "my-container", class_name: "ExampleDurableObject" },
+				],
+			});
+			mockCreateApplication(expect, {
+				name: "my-container",
+				max_instances: 10,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				durable_objects: {
+					namespace_id: "target-id",
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(requestedPages).toEqual(["1", "2"]);
+		});
+
 		it("should be able to deploy a container referenced from a declarative durable object export", async ({
 			expect,
 		}) => {
@@ -2818,12 +3694,24 @@ describe("wrangler deploy with containers and dispatch namespace", () => {
 				{ once: false }
 			)
 		);
-		mockSubDomainRequest();
+		mockContainersAccount();
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
+	});
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("should deploy containers when using --dispatch-namespace", async ({
+		expect,
+	}) => {
 		mockServiceScriptData({
 			script: { id: "test-name", migration_tag: "v1" },
 			dispatchNamespace: "test-namespace",
 		});
-		mockContainersAccount();
 		mockUploadWorkerRequest({
 			expectedBindings: [
 				{
@@ -2838,19 +3726,6 @@ describe("wrangler deploy with containers and dispatch namespace", () => {
 				{ name: "my-container", class_name: "ExampleDurableObject" },
 			],
 		});
-		fs.writeFileSync(
-			"index.js",
-			`export class ExampleDurableObject {}; export default{};`
-		);
-		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
-	});
-	afterEach(() => {
-		vi.unstubAllEnvs();
-	});
-
-	it("should deploy containers when using --dispatch-namespace", async ({
-		expect,
-	}) => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -2874,6 +3749,129 @@ describe("wrangler deploy with containers and dispatch namespace", () => {
 		expect(std.out).toContain("Current Version ID: Galaxy-Class");
 		expect(cliStd.stdout).toContain("my-container");
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it.for<{ description: string; containers: RawConfig["containers"] }>([
+		{ description: "omitted", containers: undefined },
+		{ description: "empty", containers: [] },
+		{
+			description: "renamed",
+			containers: [
+				{
+					name: "renamed",
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+				},
+			],
+		},
+		{
+			description: "scheduler-backed",
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		},
+		{
+			description: "mixed with an additional class",
+			containers: [
+				DEFAULT_CONTAINER_FROM_REGISTRY,
+				{
+					name: "added",
+					class_name: "AddedDurableObject",
+					scheduling_policy: "durable_object",
+				},
+			],
+		},
+	])(
+		"rejects rollout skip before uploading an existing dispatch script with $description local containers",
+		async ({ containers }, { expect }) => {
+			mockServiceScriptData({
+				script: { id: "test-name", migration_tag: "v1" },
+				dispatchNamespace: "test-namespace",
+			});
+			fs.writeFileSync(
+				"index.js",
+				"export class ExampleDurableObject {}; export class AddedDurableObject {}; export default {};"
+			);
+			writeWranglerConfig({
+				durable_objects: {
+					bindings: [
+						{ name: "EXAMPLE", class_name: "ExampleDurableObject" },
+						{ name: "ADDED", class_name: "AddedDurableObject" },
+					],
+				},
+				migrations: [
+					{
+						tag: "v1",
+						new_sqlite_classes: ["ExampleDurableObject", "AddedDurableObject"],
+					},
+				],
+				...(containers === undefined ? {} : { containers }),
+			});
+			const mutations: string[] = [];
+			msw.use(
+				http.all("*", ({ request }) => {
+					if (request.method !== "GET") {
+						mutations.push(request.url);
+						return HttpResponse.json(createFetchResult({}));
+					}
+				})
+			);
+
+			await expect(
+				runWrangler(
+					"deploy index.js --dispatch-namespace test-namespace --containers-rollout=none"
+				)
+			).rejects.toThrow(
+				"Cannot use --containers-rollout=none for an existing dispatch script"
+			);
+
+			expect(mutations).toEqual([]);
+			expect(spawn).not.toHaveBeenCalled();
+		}
+	);
+
+	it("should omit Durable Object-managed images for a new dispatch script when rollout is disabled", async ({
+		expect,
+	}) => {
+		mockServiceScriptData({
+			dispatchNamespace: "test-namespace",
+		});
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "EXAMPLE_DO_BINDING",
+					type: "durable_object_namespace",
+				},
+			],
+			expectedContainers: [
+				{
+					name: "test-name-exampledurableobject",
+					class_name: "ExampleDurableObject",
+				},
+			],
+			useOldUploadApi: true,
+			expectedDispatchNamespace: "test-namespace",
+		});
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					class_name: "ExampleDurableObject",
+					scheduling_policy: "durable_object",
+					images: {
+						app: {
+							image:
+								"registry.cloudflare.com/some-account-id/app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+						},
+					},
+				},
+			],
+		});
+
+		await runWrangler(
+			"deploy index.js --dispatch-namespace test-namespace --containers-rollout=none"
+		);
+
+		expect(spawn).not.toHaveBeenCalled();
 	});
 });
 
@@ -3140,11 +4138,32 @@ const defaultDOBinding = {
 	namespace_id: "1",
 	class_name: "ExampleDurableObject",
 };
-function mockGetVersion(versionId: string, bindings = [defaultDOBinding]) {
+
+function expectedDurableObjectApplicationRequest(
+	name: string,
+	namespaceId: string
+): CreateDurableObjectApplicationRequest {
+	return {
+		name,
+		scheduling_policy: SchedulingPolicy.DURABLE_OBJECT,
+		durable_objects: { namespace_id: namespaceId },
+	};
+}
+
+function mockGetVersion(
+	versionId: string,
+	bindings: Record<string, unknown>[] = [defaultDOBinding],
+	containers?: {
+		name?: string;
+		class_name?: string;
+		images?: Record<string, string>;
+	}[]
+) {
 	msw.use(
 		http.get(
-			`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
-			async () => {
+			"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
+			async ({ params }) => {
+				assert(params.versionId === versionId);
 				return HttpResponse.json(
 					createFetchResult({
 						id: versionId,
@@ -3152,6 +4171,9 @@ function mockGetVersion(versionId: string, bindings = [defaultDOBinding]) {
 						number: 2,
 						resources: {
 							bindings,
+							script_runtime: {
+								containers,
+							},
 						},
 					})
 				);

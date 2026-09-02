@@ -7,6 +7,7 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCloudflareApiBaseUrl,
 	isDockerfile,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
 } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
@@ -68,6 +69,13 @@ export function getContainerOptions(options: {
 
 	return containersConfig
 		.map((container) => {
+			if (
+				isDurableObjectContainerApp(container) ||
+				container.image === undefined
+			) {
+				return undefined;
+			}
+
 			// A container is linked to its Durable Object either by its own `class_name`,
 			// or by the Durable Object's `exports` entry naming it via `container`.
 			// Config validation rejects containers with neither.
