@@ -339,7 +339,7 @@ export function createWorkerUploadForm(
 				metadataBindings.push({
 					name: binding,
 					type: "d1",
-					id: database_id,
+					database_id,
 					internalEnv: database_internal_env,
 					raw,
 				});
