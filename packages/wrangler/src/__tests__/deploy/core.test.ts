@@ -1956,7 +1956,13 @@ describe("deploy", () => {
 			.map((line) => JSON.parse(line)) as OutputEntry[];
 
 		expect(outputEntries).toContainEqual(
-			expect.objectContaining({ type: "deploy" })
+			expect.objectContaining({
+				type: "deploy",
+				bundle_size: {
+					raw_bytes: expect.any(Number),
+					gzip_bytes: expect.any(Number),
+				},
+			})
 		);
 
 		const autoconfigOutputEntry = outputEntries.find(

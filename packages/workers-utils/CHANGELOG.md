@@ -1,5 +1,27 @@
 # @cloudflare/workers-utils
 
+## 0.35.0
+
+### Minor Changes
+
+- [#15454](https://github.com/cloudflare/workers-sdk/pull/15454) [`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move binding utilities into `@cloudflare/workers-utils`
+
+  Binding conversion, printing, and local-development validation are now exported from `@cloudflare/workers-utils` so they can be shared by Wrangler, the Cloudflare Vite plugin, and other consumers.
+
+  The corresponding exports have been removed from `@cloudflare/deploy-helpers`. Consumers should import them directly from `@cloudflare/workers-utils` instead.
+
+  Wrangler's `unstable_printBindings` API now accepts the bindings and an options object instead of five positional parameters.
+
+- [#15379](https://github.com/cloudflare/workers-sdk/pull/15379) [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46) Thanks [@ibbykhazanchi](https://github.com/ibbykhazanchi)! - Add query string redaction to Workers observability configuration
+
+  Set `observability.redact_query_string` in `wrangler.json` or `observability.redactQueryString` in the experimental `cloudflare.config.ts` format to remove query strings from request URLs in logs and traces.
+
+### Patch Changes
+
+- [#15406](https://github.com/cloudflare/workers-sdk/pull/15406) [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce the installed bundle sizes of Wrangler and Miniflare
+
+  Wrangler now resolves bundled workspace dependencies from source during monorepo builds so unused exports can be removed. Miniflare, its shared CLI and container dependencies now use granular `@cloudflare/workers-utils` entry points instead of loading the package barrel, reducing the raw Wrangler and Miniflare artifacts by 6.16 MiB (31.4%) and 1.06 MiB (22.9%) respectively without changing runtime behavior or installed dependencies.
+
 ## 0.34.0
 
 ### Minor Changes

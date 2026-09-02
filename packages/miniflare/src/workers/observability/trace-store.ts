@@ -96,7 +96,9 @@ export class TraceStore extends DurableObject {
 	constructor(ctx: DurableObjectState, env: unknown) {
 		super(ctx, env as never);
 		this.ctx.blockConcurrencyWhile(async () => {
-			for (const stmt of SCHEMA) this.sql.exec(stmt);
+			for (const stmt of SCHEMA) {
+				this.sql.exec(stmt);
+			}
 		});
 	}
 

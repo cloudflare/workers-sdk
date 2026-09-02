@@ -4976,7 +4976,10 @@ describe("wrangler preview", () => {
 					compatibility_date: "2025-01-01",
 					placement: { mode: "smart" },
 					previews: {
-						observability: { enabled: true },
+						observability: {
+							enabled: true,
+							redact_query_string: true,
+						},
 						vars: { TOP_LEVEL_PREVIEW: "top-value" },
 						kv_namespaces: [{ binding: "TOP_KV", id: "top-kv-id" }],
 					},
@@ -4988,7 +4991,10 @@ describe("wrangler preview", () => {
 
 			let createPreviewRequestBody:
 				| {
-						observability?: { enabled?: boolean };
+						observability?: {
+							enabled?: boolean;
+							redact_query_string?: boolean;
+						};
 				  }
 				| undefined;
 			let deploymentRequestBody:
@@ -5066,6 +5072,7 @@ describe("wrangler preview", () => {
 
 			expect(createPreviewRequestBody?.observability).toEqual({
 				enabled: true,
+				redact_query_string: true,
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
 			expect(deploymentRequestBody?.placement).toEqual({ mode: "smart" });

@@ -200,7 +200,9 @@ describe("ProxyClient", () => {
 		});
 		let disposed = false;
 		onTestFinished(() => {
-			if (!disposed) return mf.dispose();
+			if (!disposed) {
+				return mf.dispose();
+			}
 		});
 		let caches = await mf.getCaches();
 		let defaultCache = caches.default;
@@ -420,7 +422,9 @@ describe("ProxyClient", () => {
 
 		async function readStream(objectKey: string, stream?: ReadableStream) {
 			logs.push(`[${objectKey}] stream start`);
-			if (!stream) return;
+			if (!stream) {
+				return;
+			}
 			await stream.pipeTo(
 				new WritableStream({
 					write(_chunk) {

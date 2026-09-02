@@ -1,5 +1,25 @@
 # @cloudflare/vitest-pool-workers
 
+## 1.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45), [`200780f`](https://github.com/cloudflare/workers-sdk/commit/200780faa81ab5e58bc656e2d21a20fdd3a4b725), [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71), [`87a7acf`](https://github.com/cloudflare/workers-sdk/commit/87a7acf197629f5bf16bb38a2e411dc6c21339e0), [`1809c5e`](https://github.com/cloudflare/workers-sdk/commit/1809c5edadfd4a93e6733dab77ca67305c8d6c97), [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46), [`b3fb2bf`](https://github.com/cloudflare/workers-sdk/commit/b3fb2bf0d9e43b126738a63ba168ba1e2807e7e8), [`707cb6f`](https://github.com/cloudflare/workers-sdk/commit/707cb6f22bd8685bce7d1dfa0b53853057200eee)]:
+  - wrangler@4.128.0
+  - miniflare@5.20260831.0-alpha
+
+## 1.1.2
+
+### Patch Changes
+
+- [#15106](https://github.com/cloudflare/workers-sdk/pull/15106) [`d5f3e56`](https://github.com/cloudflare/workers-sdk/commit/d5f3e56bce1622754388ad5d7543a71e5e028850) Thanks [@thinkter](https://github.com/thinkter)! - Fix slowdowns and crashes in tests that repeatedly recreate Durable Objects
+
+  Tests that construct the same Durable Object many times could get progressively slower and eventually fail with a stack overflow. Repeated constructions now behave the same as the first one.
+
+- Updated dependencies [[`eb01850`](https://github.com/cloudflare/workers-sdk/commit/eb018505fdd8f721d57da64cd3704e4af5cb7753), [`e1df91a`](https://github.com/cloudflare/workers-sdk/commit/e1df91a2135c97806152760930fcab0211417bda), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`015550a`](https://github.com/cloudflare/workers-sdk/commit/015550ac6763430db2132dbc1f412e820ea9f234), [`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3), [`b23de74`](https://github.com/cloudflare/workers-sdk/commit/b23de747f6a4e7c19655da3adb10a5da49b8e368)]:
+  - miniflare@5.20260828.0-alpha
+  - wrangler@4.127.1
+
 ## 1.1.1
 
 ### Patch Changes

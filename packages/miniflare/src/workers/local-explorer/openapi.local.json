@@ -1787,6 +1787,24 @@
 							],
 							"description": "Filter instances by status."
 						}
+					},
+					{
+						"in": "query",
+						"name": "date_start",
+						"schema": {
+							"type": "string",
+							"format": "date-time",
+							"description": "Only return instances created at or after this time. Accepts ISO 8601 with no timezone offsets and in UTC."
+						}
+					},
+					{
+						"in": "query",
+						"name": "date_end",
+						"schema": {
+							"type": "string",
+							"format": "date-time",
+							"description": "Only return instances created at or before this time. Accepts ISO 8601 with no timezone offsets and in UTC."
+						}
 					}
 				],
 				"responses": {
@@ -3932,25 +3950,7 @@
 					"attachments": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"filename": {
-									"type": "string"
-								},
-								"contentType": {
-									"type": "string"
-								},
-								"disposition": {
-									"type": "string",
-									"enum": ["inline", "attachment"]
-								},
-								"size": {
-									"type": "number"
-								}
-							},
-							"required": ["filename", "contentType", "disposition", "size"],
-							"additionalProperties": false,
-							"description": "Metadata describing an attachment on a captured email, without its content."
+							"$ref": "#/components/schemas/email_attachment"
 						},
 						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
 					}
@@ -3979,25 +3979,7 @@
 					"attachments": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"filename": {
-									"type": "string"
-								},
-								"contentType": {
-									"type": "string"
-								},
-								"disposition": {
-									"type": "string",
-									"enum": ["inline", "attachment"]
-								},
-								"size": {
-									"type": "number"
-								}
-							},
-							"required": ["filename", "contentType", "disposition", "size"],
-							"additionalProperties": false,
-							"description": "Metadata describing an attachment on a captured email, without its content."
+							"$ref": "#/components/schemas/email_attachment"
 						},
 						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
 					},
@@ -4017,6 +3999,25 @@
 							"type": "string"
 						}
 					},
+					"headerEntries": {
+						"type": "array",
+						"items": {
+							"type": "array",
+							"items": {
+								"anyOf": [
+									{
+										"type": "string"
+									},
+									{
+										"type": "string"
+									}
+								]
+							},
+							"minItems": 2,
+							"maxItems": 2
+						},
+						"description": "Email headers as ordered name/value pairs, including duplicates."
+					},
 					"receivedAt": {
 						"type": "string"
 					},
@@ -4035,104 +4036,19 @@
 					"forwards": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"messageId": {
-									"type": "string"
-								},
-								"recipient": {
-									"type": "string",
-									"description": "Envelope recipient the message was forwarded to."
-								},
-								"headers": {
-									"type": "array",
-									"items": {
-										"type": "array",
-										"items": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "string"
-												}
-											]
-										},
-										"minItems": 2,
-										"maxItems": 2
-									},
-									"description": "Headers added to the forwarded message."
-								}
-							},
-							"required": ["messageId", "recipient", "headers"],
-							"additionalProperties": false
+							"$ref": "#/components/schemas/email_handler-forward"
 						}
 					},
 					"replies": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"messageId": {
-									"type": "string"
-								},
-								"sender": {
-									"type": "string",
-									"description": "Address the reply was sent from."
-								},
-								"raw": {
-									"type": "string",
-									"description": "Raw MIME content of the reply. Omitted from the routing list; present on the detail response."
-								},
-								"rawBase64": {
-									"type": "string",
-									"description": "Lossless base64 representation of the reply MIME."
-								}
-							},
-							"required": ["messageId", "sender"],
-							"additionalProperties": false
+							"$ref": "#/components/schemas/email_handler-reply"
 						}
 					},
 					"events": {
 						"type": "array",
 						"items": {
-							"oneOf": [
-								{
-									"type": "object",
-									"properties": {
-										"type": {
-											"type": "string",
-											"enum": ["received", "reject", "unhandled"]
-										},
-										"timestamp": {
-											"type": "string",
-											"description": "ISO 8601 timestamp of when the event occurred."
-										}
-									},
-									"required": ["type", "timestamp"],
-									"additionalProperties": false
-								},
-								{
-									"type": "object",
-									"properties": {
-										"type": {
-											"type": "string",
-											"enum": ["forward", "reply"]
-										},
-										"timestamp": {
-											"type": "string",
-											"description": "ISO 8601 timestamp of when the event occurred."
-										},
-										"messageId": {
-											"type": "string",
-											"description": "Correlates with the matching `forwards`/`replies` entry."
-										}
-									},
-									"required": ["type", "timestamp", "messageId"],
-									"additionalProperties": false
-								}
-							],
-							"description": "One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry."
+							"$ref": "#/components/schemas/email_handler-event"
 						}
 					}
 				},
@@ -4172,25 +4088,7 @@
 					"attachments": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"filename": {
-									"type": "string"
-								},
-								"contentType": {
-									"type": "string"
-								},
-								"disposition": {
-									"type": "string",
-									"enum": ["inline", "attachment"]
-								},
-								"size": {
-									"type": "number"
-								}
-							},
-							"required": ["filename", "contentType", "disposition", "size"],
-							"additionalProperties": false,
-							"description": "Metadata describing an attachment on a captured email, without its content."
+							"$ref": "#/components/schemas/email_attachment"
 						},
 						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
 					},
@@ -4210,6 +4108,25 @@
 							"type": "string"
 						}
 					},
+					"headerEntries": {
+						"type": "array",
+						"items": {
+							"type": "array",
+							"items": {
+								"anyOf": [
+									{
+										"type": "string"
+									},
+									{
+										"type": "string"
+									}
+								]
+							},
+							"minItems": 2,
+							"maxItems": 2
+						},
+						"description": "Email headers as ordered name/value pairs, including duplicates."
+					},
 					"receivedAt": {
 						"type": "string"
 					},
@@ -4228,105 +4145,28 @@
 					"forwards": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"messageId": {
-									"type": "string"
-								},
-								"recipient": {
-									"type": "string",
-									"description": "Envelope recipient the message was forwarded to."
-								},
-								"headers": {
-									"type": "array",
-									"items": {
-										"type": "array",
-										"items": {
-											"anyOf": [
-												{
-													"type": "string"
-												},
-												{
-													"type": "string"
-												}
-											]
-										},
-										"minItems": 2,
-										"maxItems": 2
-									},
-									"description": "Headers added to the forwarded message."
-								}
-							},
-							"required": ["messageId", "recipient", "headers"],
-							"additionalProperties": false
+							"$ref": "#/components/schemas/email_handler-forward"
 						}
 					},
 					"replies": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"messageId": {
-									"type": "string"
-								},
-								"sender": {
-									"type": "string",
-									"description": "Address the reply was sent from."
-								},
-								"raw": {
-									"type": "string",
-									"description": "Raw MIME content of the reply. Omitted from the routing list; present on the detail response."
-								},
-								"rawBase64": {
-									"type": "string",
-									"description": "Lossless base64 representation of the reply MIME."
-								}
-							},
-							"required": ["messageId", "sender"],
-							"additionalProperties": false
+							"$ref": "#/components/schemas/email_handler-reply"
 						}
 					},
 					"events": {
 						"type": "array",
 						"items": {
-							"oneOf": [
-								{
-									"type": "object",
-									"properties": {
-										"type": {
-											"type": "string",
-											"enum": ["received", "reject", "unhandled"]
-										},
-										"timestamp": {
-											"type": "string",
-											"description": "ISO 8601 timestamp of when the event occurred."
-										}
-									},
-									"required": ["type", "timestamp"],
-									"additionalProperties": false
-								},
-								{
-									"type": "object",
-									"properties": {
-										"type": {
-											"type": "string",
-											"enum": ["forward", "reply"]
-										},
-										"timestamp": {
-											"type": "string",
-											"description": "ISO 8601 timestamp of when the event occurred."
-										},
-										"messageId": {
-											"type": "string",
-											"description": "Correlates with the matching `forwards`/`replies` entry."
-										}
-									},
-									"required": ["type", "timestamp", "messageId"],
-									"additionalProperties": false
-								}
-							],
-							"description": "One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry."
+							"$ref": "#/components/schemas/email_handler-event"
 						}
+					},
+					"text": {
+						"type": "string",
+						"description": "Parsed plain text body, when present."
+					},
+					"html": {
+						"type": "string",
+						"description": "Parsed HTML body, when present."
 					},
 					"raw": {
 						"type": "string",
@@ -4480,25 +4320,7 @@
 					"attachments": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"filename": {
-									"type": "string"
-								},
-								"contentType": {
-									"type": "string"
-								},
-								"disposition": {
-									"type": "string",
-									"enum": ["inline", "attachment"]
-								},
-								"size": {
-									"type": "number"
-								}
-							},
-							"required": ["filename", "contentType", "disposition", "size"],
-							"additionalProperties": false,
-							"description": "Metadata describing an attachment on a captured email, without its content."
+							"$ref": "#/components/schemas/email_attachment"
 						},
 						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
 					},
@@ -4564,25 +4386,7 @@
 					"attachments": {
 						"type": "array",
 						"items": {
-							"type": "object",
-							"properties": {
-								"filename": {
-									"type": "string"
-								},
-								"contentType": {
-									"type": "string"
-								},
-								"disposition": {
-									"type": "string",
-									"enum": ["inline", "attachment"]
-								},
-								"size": {
-									"type": "number"
-								}
-							},
-							"required": ["filename", "contentType", "disposition", "size"],
-							"additionalProperties": false,
-							"description": "Metadata describing an attachment on a captured email, without its content."
+							"$ref": "#/components/schemas/email_attachment"
 						},
 						"description": "Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME."
 					},

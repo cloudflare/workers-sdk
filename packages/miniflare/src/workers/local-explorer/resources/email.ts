@@ -1,5 +1,5 @@
 import { z } from "miniflare:zod";
-import { decodeWords } from "postal-mime";
+import PostalMime, { decodeWords } from "postal-mime";
 import { EMAIL_STORE_SERVICE_NAME } from "../../../plugins/core/constants";
 import { CoreBindings, CorePaths } from "../../core";
 import { handleEmail } from "../../core/email";
@@ -13,6 +13,8 @@ import {
 } from "../../email/contracts";
 import {
 	hasControlCharacters,
+	hasInvalidHeaderValueCharacters,
+	isHeaderName,
 	isMimeType,
 	normalizeBase64,
 } from "../../email/input-validation";
@@ -599,15 +601,12 @@ function validateEmailRequest(body: EmailSendRequest): string | undefined {
 		return "Email fields must not contain control characters.";
 	}
 
-	if (Object.values(body.headers ?? {}).some(hasControlCharacters)) {
+	if (
+		Object.keys(body.headers ?? {}).some((name) => !isHeaderName(name)) ||
+		Object.values(body.headers ?? {}).some(hasInvalidHeaderValueCharacters)
+	) {
 		return "Custom headers must use valid names and values.";
 	}
-	try {
-		new Headers(body.headers);
-	} catch {
-		return "Custom headers must use valid names and values.";
-	}
-
 	for (const attachment of body.attachments ?? []) {
 		if (
 			hasControlCharacters(attachment.filename) ||
@@ -803,11 +802,24 @@ export async function getReceivedEmail(
 	// Decode MIME "encoded-word" headers (e.g. `=?utf-8?B?...?=`) in each reply's
 	// display text so the explorer shows readable subjects.
 	const { captureTruncated, replies: storedReplies, ...storedEmail } = email;
+	let body: { text?: string; html?: string } = {};
+	if (email.rawBase64 !== undefined) {
+		try {
+			const parsed = await new PostalMime().parse(
+				base64ToBytes(email.rawBase64)
+			);
+			body = { text: parsed.text, html: parsed.html };
+		} catch {
+			// A truncated capture may end mid-MIME-part. Keep the raw message available
+			// even when a structured body cannot be recovered from it.
+		}
+	}
 	const replyCaptureTruncated = storedReplies.some(
 		(reply) => reply.captureTruncated
 	);
 	const decoded = {
 		...storedEmail,
+		...body,
 		replies: storedReplies.map(
 			({ captureTruncated: _captureTruncated, ...reply }) => ({
 				...reply,

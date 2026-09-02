@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
+import * as path from "node:path";
 import { OutputSettingsSchema, OutputWorkerSchema } from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
@@ -12,15 +13,33 @@ import {
 	getWorkersDir,
 } from "./paths";
 import type {
+	ModuleType,
 	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 
+type ManifestModules = NonNullable<
+	ParsedOutputWorkerConfig["manifest"]
+>["modules"];
+
+type CompleteManifest = Omit<
+	NonNullable<ParsedOutputWorkerConfig["manifest"]>,
+	"type"
+> & { type: "complete" };
+
+/** A schema-validated Worker config whose manifest has been fully resolved. */
+export type ResolvedOutputWorkerConfig = Omit<
+	ParsedOutputWorkerConfig,
+	"manifest"
+> & {
+	manifest?: CompleteManifest;
+};
+
 interface BuildOutputWorkerBase {
 	/** Absolute path to the Worker's `config.json`. */
 	configPath: string;
-	/** The parsed, schema-validated Worker config, including its `manifest`. */
-	config: ParsedOutputWorkerConfig;
+	/** The parsed Worker config, including its fully resolved `manifest`. */
+	config: ResolvedOutputWorkerConfig;
 }
 
 /**
@@ -81,7 +100,8 @@ export interface BuildOutput {
  *
  * Reads the optional top-level settings `config.json`, then reads and
  * schema-validates the Worker's `config.json` and resolves its
- * `bundle/` / `assets/` directories.
+ * `bundle/` / `assets/` directories. Partial manifests are resolved into
+ * complete manifests using the files in `bundle/`.
  *
  * @throws {BuildOutputError} if the top-level `config.json` is invalid, or if
  * the Worker config is missing, is not valid JSON, or fails schema validation.
@@ -155,18 +175,20 @@ async function readWorker(
 	}
 
 	if (hasBundleDir) {
+		const config = await resolveManifest(result.data, configPath, bundleDir);
 		return {
 			configPath,
-			config: result.data,
+			config,
 			bundleDir,
 			assetsDir: hasAssetsDir ? assetsDir : undefined,
 		};
 	}
 
 	if (hasAssetsDir) {
+		const { manifest: _manifest, ...config } = result.data;
 		return {
 			configPath,
-			config: result.data,
+			config,
 			bundleDir: undefined,
 			assetsDir,
 		};
@@ -175,6 +197,78 @@ async function readWorker(
 	throw new BuildOutputError(
 		`Worker config at ${configPath} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
 	);
+}
+
+/** Resolve the manifest against the bundle contents. */
+async function resolveManifest(
+	config: ParsedOutputWorkerConfig,
+	configPath: string,
+	bundleDir: string
+): Promise<ResolvedOutputWorkerConfig> {
+	const { manifest, ...workerConfig } = config;
+	if (manifest === undefined) {
+		return workerConfig;
+	}
+	if (manifest.type === "complete") {
+		return {
+			...workerConfig,
+			manifest: { ...manifest, type: "complete" },
+		};
+	}
+
+	const inferredModules = await scanModules(bundleDir);
+	if (inferredModules[manifest.mainModule]?.type !== "esm") {
+		throw new BuildOutputError(
+			`partial manifest at ${configPath} has main module "${manifest.mainModule}", but it was not found as an ES module in the bundle.`
+		);
+	}
+
+	const modules = {
+		...inferredModules,
+		...manifest.modules,
+	};
+
+	return {
+		...workerConfig,
+		manifest: {
+			type: "complete",
+			mainModule: manifest.mainModule,
+			modules,
+		},
+	};
+}
+
+/** Infer JavaScript modules and source maps from a bundle directory. */
+async function scanModules(bundleDir: string): Promise<ManifestModules> {
+	const modules: ManifestModules = {};
+	const entries = await fsp.readdir(bundleDir, {
+		recursive: true,
+		withFileTypes: true,
+	});
+
+	for (const entry of entries) {
+		const type = entry.isFile() ? inferModuleType(entry.name) : undefined;
+		if (type !== undefined) {
+			const modulePath = path
+				.relative(bundleDir, path.join(entry.parentPath, entry.name))
+				.split(path.sep)
+				.join("/");
+			modules[modulePath] = { type };
+		}
+	}
+
+	return modules;
+}
+
+/** Infer the module type for extensions supported by partial manifests. */
+function inferModuleType(modulePath: string): ModuleType | undefined {
+	switch (path.extname(modulePath)) {
+		case ".js":
+		case ".mjs":
+			return "esm";
+		case ".map":
+			return "sourcemap";
+	}
 }
 
 /**
