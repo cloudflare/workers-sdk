@@ -29,11 +29,8 @@ export async function previewSettingsGet(
 	config: Config
 ): Promise<void> {
 	const workerName = resolveWorkerName(args, config);
-	const previewDefaults = await getWorkerPreviewDefaults(
-		config,
-		accountId,
-		workerName
-	);
+	const previewDefaults =
+		(await getWorkerPreviewDefaults(config, accountId, workerName)) ?? {};
 
 	if (args.json) {
 		logger.log(JSON.stringify(previewDefaults, null, 2));
@@ -53,11 +50,8 @@ export async function previewSettingsUpdate(
 ): Promise<void> {
 	const workerName = resolveWorkerName(args, config);
 
-	const currentPreviewDefaults = await getWorkerPreviewDefaults(
-		config,
-		accountId,
-		workerName
-	);
+	const currentPreviewDefaults =
+		(await getWorkerPreviewDefaults(config, accountId, workerName)) ?? {};
 	const resolvedConfigFileSettings = assemblePreviewDefaults(config);
 	const requestPayloadPreviewDefaults = mergeDeep(
 		currentPreviewDefaults as Record<string, unknown>,
@@ -105,12 +99,13 @@ export async function previewSettingsUpdate(
 		}
 	}
 
-	const updatedPreviewDefaults = await editWorkerPreviewDefaults(
-		config,
-		accountId,
-		workerName,
-		requestPayloadPreviewDefaults
-	);
+	const updatedPreviewDefaults =
+		(await editWorkerPreviewDefaults(
+			config,
+			accountId,
+			workerName,
+			requestPayloadPreviewDefaults
+		)) ?? {};
 
 	logger.log(
 		`\n✨ Updated Previews settings for Worker ${chalk.bold.cyan(workerName)}.`

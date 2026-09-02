@@ -360,12 +360,12 @@ export async function getWorkerPreviewDefaults(
 	config: Config,
 	accountId: string,
 	workerName: string
-): Promise<PreviewDefaults> {
+): Promise<PreviewDefaults | undefined> {
 	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}`
 	);
-	return worker.preview_defaults ?? {};
+	return worker.preview_defaults;
 }
 
 export async function editWorkerPreviewDefaults(
@@ -373,7 +373,7 @@ export async function editWorkerPreviewDefaults(
 	accountId: string,
 	workerName: string,
 	previewDefaults: PreviewDefaultsPatch
-): Promise<PreviewDefaults> {
+): Promise<PreviewDefaults | undefined> {
 	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}`,
@@ -384,19 +384,19 @@ export async function editWorkerPreviewDefaults(
 		}
 	);
 
-	return worker.preview_defaults ?? {};
+	return worker.preview_defaults;
 }
 
 export async function getPreviewBaseConfig(
 	config: Config,
 	accountId: string,
 	workerName: string
-): Promise<PreviewBaseConfig> {
+): Promise<PreviewBaseConfig | undefined> {
 	const worker = await fetchResult<WorkerPreviewBaseConfigResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}`
 	);
-	return worker.previews_base_config ?? {};
+	return worker.previews_base_config;
 }
 
 export async function patchPreviewBaseConfig(
@@ -404,7 +404,7 @@ export async function patchPreviewBaseConfig(
 	accountId: string,
 	workerName: string,
 	previewBaseConfig: PreviewBaseConfigPatch
-): Promise<PreviewBaseConfig> {
+): Promise<PreviewBaseConfig | undefined> {
 	const worker = await fetchResult<WorkerPreviewBaseConfigResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}`,
@@ -415,5 +415,5 @@ export async function patchPreviewBaseConfig(
 		}
 	);
 
-	return worker.previews_base_config ?? {};
+	return worker.previews_base_config;
 }

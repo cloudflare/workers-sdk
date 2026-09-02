@@ -840,7 +840,7 @@ export async function preview(
 			);
 			logMissingPreviewsBindingsWarning(
 				topLevelBindings,
-				previewDefaults.env,
+				previewDefaults?.env,
 				extractConfigBindings(config)
 			);
 		}
