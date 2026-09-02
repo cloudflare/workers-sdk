@@ -268,6 +268,7 @@ describe("deploy", () => {
 				observability: {
 					enabled: true,
 					head_sampling_rate: 0.5,
+					redact_query_string: true,
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
@@ -276,6 +277,7 @@ describe("deploy", () => {
 				expectedObservability: {
 					enabled: true,
 					head_sampling_rate: 0.5,
+					redact_query_string: true,
 				},
 			});
 

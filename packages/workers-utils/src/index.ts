@@ -73,6 +73,7 @@ export const friendlyBindingNames = validation.friendlyBindingNames;
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
+	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
 
 export { validatePagesConfig } from "./config/validation-pages";
@@ -104,6 +105,15 @@ export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 export { constructWranglerConfig } from "./construct-wrangler-config";
+export {
+	convertConfigToBindings,
+	extractBindingsOfType,
+	getBindings,
+	isUnsafeBindingType,
+} from "./binding-utils";
+export type { ConvertBindingsOptions } from "./binding-utils";
+export { printBindings } from "./print-bindings";
+export type { PrintBindingsOptions } from "./print-bindings";
 
 export {
 	getBooleanEnvironmentVariableFactory,

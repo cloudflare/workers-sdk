@@ -42,7 +42,9 @@ async function fetchSingleRange(
 	const res = await fetcher.fetch(url, { headers });
 
 	// If we couldn't find the resource, return `null`
-	if (res.status === 404) return null;
+	if (res.status === 404) {
+		return null;
+	}
 
 	// Otherwise, make sure we have the expected response, and return the body
 	assert(res.ok && res.body !== null);
@@ -76,7 +78,9 @@ async function writeMultipleRanges(
 		const range = ranges[i];
 		const writer = writable.getWriter();
 		// If this isn't the first thing we've written, we'll need to prepend CRLF
-		if (i > 0) await writer.write(ENCODER.encode("\r\n"));
+		if (i > 0) {
+			await writer.write(ENCODER.encode("\r\n"));
+		}
 		// Write boundary and headers
 		await writer.write(ENCODER.encode(`--${boundary}\r\n`));
 		if (contentType !== undefined) {
@@ -98,12 +102,16 @@ async function writeMultipleRanges(
 		);
 		// If we specified a range, but received full content, make sure the range
 		// covered the full content
-		if (res.status !== 206) assertFullRangeRequest(range, contentLength);
+		if (res.status !== 206) {
+			assertFullRangeRequest(range, contentLength);
+		}
 		await res.body.pipeTo(writable, { preventClose: true });
 	}
 	// Finished writing all ranges, now write the trailer
 	const writer = writable.getWriter();
-	if (ranges.length > 0) await writer.write(ENCODER.encode("\r\n"));
+	if (ranges.length > 0) {
+		await writer.write(ENCODER.encode("\r\n"));
+	}
 	await writer.write(ENCODER.encode(`--${boundary}--`));
 	await writer.close();
 }
@@ -115,7 +123,9 @@ async function fetchMultipleRanges(
 ): Promise<MultipartReadableStream | null> {
 	// Check resource exists, and get content length
 	const res = await fetcher.fetch(url, { method: "HEAD" });
-	if (res.status === 404) return null;
+	if (res.status === 404) {
+		return null;
+	}
 	assert(res.ok);
 
 	const contentLength = parseInt(res.headers.get("Content-Length") ?? "NaN");
@@ -215,7 +225,9 @@ export class BlobStore {
 	): Promise<ReadableStream<Uint8Array> | MultipartReadableStream | null> {
 		// Get path for this ID, returning null if it's outside the root
 		const idURL = this.idURL(id);
-		if (idURL === null) return null;
+		if (idURL === null) {
+			return null;
+		}
 		// Get correct response for range, returning null if not found
 		return fetchRange(this.#fetcher, idURL, range, opts);
 	}
@@ -240,7 +252,9 @@ export class BlobStore {
 	async delete(id: BlobId): Promise<void> {
 		// Get path for this ID and delete, ignoring if outside root or not found
 		const idURL = this.idURL(id);
-		if (idURL === null) return;
+		if (idURL === null) {
+			return;
+		}
 		const res = await this.#fetcher.fetch(idURL, { method: "DELETE" });
 		assert(res.ok || res.status === 404);
 	}

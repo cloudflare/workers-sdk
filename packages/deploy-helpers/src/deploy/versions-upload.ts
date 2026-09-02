@@ -5,7 +5,9 @@ import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	APIError,
 	formatTime,
+	getBindings,
 	ParseError,
+	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
@@ -15,8 +17,11 @@ import { fetchResult, logger } from "../shared/context";
 import { getWorkersDevSubdomainIfAccessible } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
-import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
 	applyServiceAndEnvironmentTags,
@@ -29,7 +34,6 @@ import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-e
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
-import { printBindings } from "./helpers/print-bindings";
 import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
@@ -59,6 +63,7 @@ type VersionsUploadResult = {
 	assetUploadStats?: AssetUploadStats;
 	versionPreviewUrl?: string | undefined;
 	versionPreviewAliasUrl?: string | undefined;
+	bundleSize?: BundleSize;
 };
 
 export default async function versionsUpload(
@@ -86,6 +91,12 @@ export default async function versionsUpload(
 		preview_alias_url: result.versionPreviewAliasUrl,
 		wrangler_environment: props.env,
 		worker_name_overridden: props.workerNameOverridden ?? false,
+		bundle_size: result.bundleSize
+			? {
+					raw_bytes: result.bundleSize.size,
+					gzip_bytes: result.bundleSize.gzipSize,
+				}
+			: undefined,
 	});
 
 	return result;
@@ -232,10 +243,8 @@ async function uploadWorkerVersion(
 				: undefined,
 	};
 
-	await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	let workerBundle: FormData;
 
@@ -244,13 +253,12 @@ async function uploadWorkerVersion(
 			dryRun: true,
 			unsafe: config.unsafe,
 		});
-		printBindings(
-			bindings,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			undefined,
-			{ unsafeMetadata: config.unsafe?.metadata }
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: config.tail_consumers,
+			streamingTailConsumers: config.streaming_tail_consumers,
+			unsafeMetadata: config.unsafe?.metadata,
+		});
 	} else {
 		assert(accountId, "Missing accountId");
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
@@ -300,24 +308,22 @@ async function uploadWorkerVersion(
 
 			logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 			bindingsPrinted = true;
-			printBindings(
-				bindings,
-				config.tail_consumers,
-				config.streaming_tail_consumers,
-				undefined,
-				{ unsafeMetadata: config.unsafe?.metadata }
-			);
+			printBindings(bindings, {
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				unsafeMetadata: config.unsafe?.metadata,
+			});
 			versionId = result.id;
 			hasPreview = result.metadata.has_preview;
 		} catch (err) {
 			if (!bindingsPrinted) {
-				printBindings(
-					bindings,
-					config.tail_consumers,
-					config.streaming_tail_consumers,
-					undefined,
-					{ unsafeMetadata: config.unsafe?.metadata }
-				);
+				printBindings(bindings, {
+					log: logger.log,
+					tailConsumers: config.tail_consumers,
+					streamingTailConsumers: config.streaming_tail_consumers,
+					unsafeMetadata: config.unsafe?.metadata,
+				});
 			}
 
 			// A binding references a DO class declared in `exports` but not yet
@@ -415,7 +421,7 @@ async function uploadWorkerVersion(
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, bundleSize };
 	}
 	assert(accountId);
 
@@ -472,5 +478,6 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 		assetUploadStats: assetsUploadResult?.assetUploadStats,
 		versionPreviewUrl,
 		versionPreviewAliasUrl,
+		bundleSize,
 	};
 }

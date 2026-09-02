@@ -22,4 +22,5 @@ export type {
 	BuildOutput,
 	BuildOutputWorker,
 	BuildOutputWorkers,
+	ResolvedOutputWorkerConfig,
 } from "./read";

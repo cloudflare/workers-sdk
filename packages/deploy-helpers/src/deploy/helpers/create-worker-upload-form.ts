@@ -1,9 +1,13 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
+import {
+	extractBindingsOfType,
+	INHERIT_SYMBOL,
+	isUnsafeBindingType,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { FormData } from "undici";
-import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
 import { handleUnsafeCapnp } from "./capnp";
 import type {
 	AssetConfigMetadata,

@@ -310,12 +310,7 @@ export const getD1ExtraLocationChoices: () => string | undefined =
  *
  * By default it's `docker`.
  */
-export const getDockerPath = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_DOCKER_BIN",
-	defaultValue() {
-		return "docker";
-	},
-});
+export { getDockerPath } from "../docker-path";
 
 export const getSubdomainMixedStateCheckDisabled =
 	getBooleanEnvironmentVariableFactory({
