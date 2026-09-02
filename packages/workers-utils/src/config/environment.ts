@@ -1950,3 +1950,35 @@ export interface PreviewsConfig
 				"logpush" | "observability" | "limits" | "placement" | "cache"
 			>
 		> {}
+
+export const PREVIEW_BINDING_CONFIG_FIELDS = [
+	"vars",
+	"kv_namespaces",
+	"d1_databases",
+	"r2_buckets",
+	"services",
+	"durable_objects",
+	"workflows",
+	"send_email",
+	"queues",
+	"vectorize",
+	"hyperdrive",
+	"analytics_engine_datasets",
+	"dispatch_namespaces",
+	"mtls_certificates",
+	"pipelines",
+	"secrets_store_secrets",
+	"artifacts",
+	"flagship",
+	"ratelimits",
+	"worker_loaders",
+	"vpc_services",
+	"browser",
+	"ai",
+	"images",
+	"stream",
+	"media",
+	"version_metadata",
+	"unsafe",
+	"containers",
+] as const;

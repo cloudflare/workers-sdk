@@ -10,7 +10,10 @@ import { isRedirectedRawConfig } from "./config-helpers";
 import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
 import { getDurableObjectExports } from "./durable-object-exports";
-import { ARTIFACTS_EVENT_TYPES } from "./environment";
+import {
+	ARTIFACTS_EVENT_TYPES,
+	PREVIEW_BINDING_CONFIG_FIELDS,
+} from "./environment";
 import {
 	all,
 	appendEnvName,
@@ -5958,39 +5961,11 @@ const validatePreviewsConfig =
 
 		isValid =
 			validateAdditionalProperties(diagnostics, field, Object.keys(previews), [
-				"vars",
+				...PREVIEW_BINDING_CONFIG_FIELDS,
 				"define",
-				"durable_objects",
-				"workflows",
-				"kv_namespaces",
-				"send_email",
-				"queues",
-				"d1_databases",
-				"r2_buckets",
-				"vectorize",
-				"hyperdrive",
-				"services",
-				"analytics_engine_datasets",
-				"dispatch_namespaces",
-				"mtls_certificates",
 				"tail_consumers",
 				"streaming_tail_consumers",
-				"unsafe",
-				"browser",
-				"ai",
-				"images",
-				"stream",
-				"media",
-				"pipelines",
-				"secrets_store_secrets",
-				"artifacts",
 				"unsafe_hello_world",
-				"flagship",
-				"worker_loaders",
-				"ratelimits",
-				"vpc_services",
-				"version_metadata",
-				"containers",
 				"logpush",
 				"observability",
 				"limits",
