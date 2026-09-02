@@ -1,0 +1,19 @@
+turbo.json
+  s_7a19376b8536ab::t_5b0c9983e4cf26 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d9dbd95d02c336e97c484dc0881f616f7c46c27c",
+  "prompts": {},
+  "sessions": {
+    "s_7a19376b8536ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a04973-7248-77b1-bfa1-93565250fc86",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

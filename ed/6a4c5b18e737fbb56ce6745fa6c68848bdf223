@@ -1,0 +1,62 @@
+.changeset/email-local-explorer-ui.md
+  s_b702d30224ef81::t_947d7f791ecfe1 1-5
+  s_27cf40cb8ff5f3::t_046a96d4cc2dbe 1-4
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_b702d30224ef81::t_d7de39eef04acb 2-10,12,21-39,90,92,111,115-158,208-212,402-459
+  s_27cf40cb8ff5f3::t_cc5ab3d6e0568b 2-10,12,21-39,90,92,111,115-158,208-212,402-459
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_b702d30224ef81::t_cbe6a772d5ca28 10,12,34-35,37-49,60
+  s_27cf40cb8ff5f3::t_08e4a649a0b6fe 60
+  s_27cf40cb8ff5f3::t_f96e23324ddbd0 12
+  s_cfcda634814b92::t_41a67405698d9d 10,34-50
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_b702d30224ef81::t_7d24d7529593cf 2,19-20,23,55,72-97
+  s_27cf40cb8ff5f3::t_e80b2448e79ab1 2,72-97
+  s_27cf40cb8ff5f3::t_8feb785b7a2abb 19-20,23,55
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_b702d30224ef81::t_32d762f6529bdb 10,15,18-24,31,36,41,74-75,87-88,91,114,116-123,125,132,135-136,141-144,158,175-178,180-190,193,195
+  s_27cf40cb8ff5f3::t_43b1544c7cc219 10,20-24,87-88,91,135-136,141,143-144,158,176
+  s_cfcda634814b92::t_83b2073045f940 15,18-19,31,36,41,74-75,114,116-123,125,132,142,175,177-178,180-190,193,195
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_b702d30224ef81::t_85b4a13d880046 40
+  s_27cf40cb8ff5f3::t_48aefe1b18ecaa 40
+packages/local-explorer-ui/src/routes/email/shared/InfoLoading.tsx
+  s_b702d30224ef81::t_aa785e192df07b 1,8-27
+  s_27cf40cb8ff5f3::t_f269918be3d4ce 1,8-27
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_b702d30224ef81::t_510581a9350f0e 8-14,18-20,22-27,47-48
+  s_27cf40cb8ff5f3::t_5591923d4b1ee4 14,47-48
+  s_cfcda634814b92::t_3b6b80ec475367 8-13,18-20,22-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ed6a4c5b18e737fbb56ce6745fa6c68848bdf223",
+  "prompts": {},
+  "sessions": {
+    "s_27cf40cb8ff5f3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05b7a13f6ffewE11jNIdfs2beD",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_b702d30224ef81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028a275eaffew0r8igQ7mvuC0o",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_cfcda634814b92": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05662ba38ffeFAbzJynmgX0Ka6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

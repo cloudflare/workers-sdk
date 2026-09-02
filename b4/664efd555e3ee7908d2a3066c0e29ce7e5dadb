@@ -1,0 +1,147 @@
+packages/miniflare/src/workers/email/contracts.ts
+  s_2aedf88cdc76d8::t_cf5879f46cfc26 165-166
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_2aedf88cdc76d8::t_99f021ade5dc47 1050-1057
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_2aedf88cdc76d8::t_c8457306185215 677-678
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_2aedf88cdc76d8::t_5f848d0c07a9c3 4331-4338
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_2aedf88cdc76d8::t_d4c349a2a763a2 1,809,820,826
+  s_fac814dd42479b::t_b9cb307c61eff3 24,610-612
+  s_81a8094cd6d768::t_8a2d9c1098e1ae 810-819
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_2aedf88cdc76d8::t_5e02154bed0d56 1212
+  s_fac814dd42479b::t_5b7a93b752cb1d 1530-1559
+.changeset/email-local-explorer-ui.md
+  s_2aedf88cdc76d8::t_e33a58d32ce348 1,3-5
+  s_fac814dd42479b::t_8aaf0433a09f16 2,6-10
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_2aedf88cdc76d8::t_46b05b41300759 5-6,39-81,84,337-384,440-449,542-581
+  s_2aedf88cdc76d8::t_9c90423b992185 385-439
+  s_b8c315d6ee9c77::t_d8b121a3518e74 7-8,85,89-134,138-149,153-165,169-223,235-242
+  s_fac814dd42479b::t_58cd68ad5be7b6 135-137,150-152,166-168,224-234,243-336
+packages/local-explorer-ui/src/__tests__/utils/email-html.test.ts
+  s_2aedf88cdc76d8::t_4b74fd95170467 1-19
+packages/local-explorer-ui/src/__tests__/utils/sidebar-state.test.ts
+  s_2aedf88cdc76d8::t_f0d4f229ba515a 115,163,190
+packages/local-explorer-ui/src/__tests__/utils/worker-navigation.test.ts
+  s_2aedf88cdc76d8::t_ef158f8511ae9d 1-50
+packages/local-explorer-ui/src/assets/icons/email.svg
+  s_2aedf88cdc76d8::t_4c46aeeae38733 1-3
+packages/local-explorer-ui/src/components/Sidebar.tsx
+  s_2aedf88cdc76d8::t_e9502337e41655 18,212-241
+packages/local-explorer-ui/src/components/email/EmailHtmlPreview.tsx
+  s_2aedf88cdc76d8::t_8b0f672e979992 1-33
+packages/local-explorer-ui/src/components/email/EmailPagination.tsx
+  s_2aedf88cdc76d8::t_5d6e64350b082f 1-4,6-22,24-44
+  s_81a8094cd6d768::t_ae891f6abcee99 5,23
+packages/local-explorer-ui/src/components/email/EmailServiceEmptyState.tsx
+  s_2aedf88cdc76d8::t_94697f0b0d5a44 1-26
+packages/local-explorer-ui/src/components/email/EmailTruncationWarning.tsx
+  s_2aedf88cdc76d8::t_6338035bb55ebe 1-36
+packages/local-explorer-ui/src/components/email/ReceivedEmailContent.tsx
+  s_2aedf88cdc76d8::t_ece947511f4607 1-64
+packages/local-explorer-ui/src/components/email/SentEmailDetails.tsx
+  s_2aedf88cdc76d8::t_ff10791719aae9 1-173
+packages/local-explorer-ui/src/routeTree.gen.ts
+  s_2aedf88cdc76d8::t_3e968ebd22b859 18-19,24,27,61-70,92-96,108-112,128-129,136,139,147,152,155,165-166,173,176,187-188,195,198,206,211,214,223-224,231,234,244-245,297-310,339-345,360-366,398-411,445-446
+packages/local-explorer-ui/src/routes/__root.tsx
+  s_2aedf88cdc76d8::t_04ed39e3c2493b 8,26,80,82-85,87-89,91-93,95,100-105,107
+  s_b8c315d6ee9c77::t_796f5c2cd70f07 81,86,90,94
+  s_81a8094cd6d768::t_fd9d24c31b7e19 43-46,114,129-133
+packages/local-explorer-ui/src/routes/email/routing.tsx
+  s_2aedf88cdc76d8::t_2360dd0ba035c7 1-10
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_2aedf88cdc76d8::t_c783e6f24b36be 1,3-8,10-24,32,34-126
+  s_b8c315d6ee9c77::t_43a82f950bcead 2,9,25-27,31,33
+  s_fac814dd42479b::t_16cdc6e4f82cab 28-30
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_2aedf88cdc76d8::t_62961193bdab6e 1,6-7,11,13,14,16-22,30,32-35,37-45,49-50,52-54,59,62-64,88-89,91-96,112,141-142,151-152
+  s_2aedf88cdc76d8::t_599d25dabef369 10,48,100-109,143-145,147-149
+  s_b8c315d6ee9c77::t_8ece2d68a7f088 5,12,23-25,29,31,36,47
+  s_fac814dd42479b::t_f5fb9ffcc97cde 26-28,55
+  s_81a8094cd6d768::t_cf7767962e651a 2-4,8-9,15,46,51,56-58,60-61,65-87,90,97-99,110-111,113-140,146,150
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_2aedf88cdc76d8::t_f819749752e68e 1-13,15-16,19-24,25,27-33,41,43-46,48-63,65,66-69,71,72-83,84,85-88,90-92,93-97,99-101,103-105,110,113-116,149,154-161,163-167,169-189,191-216,218-223,227-228,248,251-268,270-271
+  s_b8c315d6ee9c77::t_0c0a369a59960a 14,34-36,40,42,47,64
+  s_fac814dd42479b::t_7100b976705d45 37-39,106
+  s_81a8094cd6d768::t_e690a872d2c9c7 17-18,26,70,89,98,102,107-109,111-112,117-148,150-153,162,168,190,217,224-226,229-247,249-250,269
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_2aedf88cdc76d8::t_d9d963d4b640f0 1-86
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_2aedf88cdc76d8::t_b9bab709a86b43 1-185
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_2aedf88cdc76d8::t_c2c7362f121351 1-50
+packages/local-explorer-ui/src/routes/email/shared/InfoLoading.tsx
+  s_2aedf88cdc76d8::t_51a5ffae84ccbd 1-28
+packages/local-explorer-ui/src/routes/email/shared/format.ts
+  s_2aedf88cdc76d8::t_27dd484e2e867f 1-21
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_2aedf88cdc76d8::t_dcc62cf981daa7 1-59
+packages/local-explorer-ui/src/utils/email-html.ts
+  s_2aedf88cdc76d8::t_1594ce1fe946d1 1-14
+packages/local-explorer-ui/src/utils/sidebar-state.ts
+  s_2aedf88cdc76d8::t_35436abdf89a81 11,25
+packages/local-explorer-ui/src/utils/worker-navigation.ts
+  s_2aedf88cdc76d8::t_fb8558a5dbee44 1-27
+packages/local-explorer-ui/tsconfig.e2e.json
+  s_2aedf88cdc76d8::t_1d8c9dcbfc1449 14-15
+packages/local-explorer-ui/vite.config.ts
+  s_2aedf88cdc76d8::t_d54bbb2ed50b32 16
+packages/local-explorer-ui/src/__e2e__/email-sending.spec.ts
+  s_2aedf88cdc76d8::t_8467051b1342e9 1-27,33-81,86-91,104-169,171-182,184-186,195-197,199-202
+  s_b8c315d6ee9c77::t_257c6f6704dc99 28-32,82-85
+  s_fac814dd42479b::t_510e73b17026b4 170,183,187-194,198
+  s_81a8094cd6d768::t_704a0508c2e235 92-103
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_2aedf88cdc76d8::t_d84a783542bff8 1-46,61-69,73-80,85-88,99-123,126-150,152-179,181-208,210-222,226-232,239-254,256-340,345-467,470-486,494,499-621,623-632
+  s_b8c315d6ee9c77::t_c968cdae59e0a3 151,180,209,223-225,235-238,622
+  s_fac814dd42479b::t_27fa320250acb0 47-60,70-72,81-84,89-98,124-125,233-234,255,341-344,468-469,487-493,495-498
+packages/miniflare/src/workers/email/mime.ts
+  s_fac814dd42479b::t_0d251e238ceb6b 32-58,82-84,86-91,229-230
+packages/local-explorer-ui/src/components/email/EmailList.tsx
+  s_81a8094cd6d768::t_c485da65a824a3 1-137
+packages/local-explorer-ui/src/routes/email/shared/useCursorPaginatedList.ts
+  s_81a8094cd6d768::t_efca3efc0f9fdc 1-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b4664efd555e3ee7908d2a3066c0e29ce7e5dadb",
+  "prompts": {},
+  "sessions": {
+    "s_2aedf88cdc76d8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0336c-1e6f-7863-8578-da23a2f61ef7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_81a8094cd6d768": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03457-c410-75f3-a783-6b489e3a9534",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_b8c315d6ee9c77": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03418-3e7c-7ba3-92f9-f5482549e92a",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_fac814dd42479b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03438-1082-7f11-a63e-51aaf4de84c0",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

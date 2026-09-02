@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_0c1c0f548a9889::t_5fb423aeaf71c8 14,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1b0b09b2046811460ed8fc038c82fdab4e50ef81",
+  "prompts": {},
+  "sessions": {
+    "s_0c1c0f548a9889": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01f55-0421-7540-b8d1-45facfd24561",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

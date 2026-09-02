@@ -1,0 +1,89 @@
+packages/miniflare/src/workers/email/contracts.ts
+  s_2aedf88cdc76d8::t_cf5879f46cfc26 165-166
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_2aedf88cdc76d8::t_99f021ade5dc47 1050-1057
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_2aedf88cdc76d8::t_c8457306185215 677-678
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_2aedf88cdc76d8::t_5f848d0c07a9c3 4331-4338
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_2aedf88cdc76d8::t_d4c349a2a763a2 1,806-807,809-813,819
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_2aedf88cdc76d8::t_5e02154bed0d56 1212
+.changeset/email-local-explorer-ui.md
+  s_2aedf88cdc76d8::t_e33a58d32ce348 1-5
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_2aedf88cdc76d8::t_46b05b41300759 5-6,37-79,82,86-143,236-275
+packages/local-explorer-ui/src/__tests__/utils/email-html.test.ts
+  s_2aedf88cdc76d8::t_4b74fd95170467 1-19
+packages/local-explorer-ui/src/__tests__/utils/sidebar-state.test.ts
+  s_2aedf88cdc76d8::t_f0d4f229ba515a 115,163,190
+packages/local-explorer-ui/src/__tests__/utils/worker-navigation.test.ts
+  s_2aedf88cdc76d8::t_ef158f8511ae9d 1-50
+packages/local-explorer-ui/src/assets/icons/email.svg
+  s_2aedf88cdc76d8::t_4c46aeeae38733 1-3
+packages/local-explorer-ui/src/components/Sidebar.tsx
+  s_2aedf88cdc76d8::t_e9502337e41655 18,212-241
+packages/local-explorer-ui/src/components/email/EmailHtmlPreview.tsx
+  s_2aedf88cdc76d8::t_8b0f672e979992 1-33
+packages/local-explorer-ui/src/components/email/EmailPagination.tsx
+  s_2aedf88cdc76d8::t_5d6e64350b082f 1-44
+packages/local-explorer-ui/src/components/email/EmailServiceEmptyState.tsx
+  s_2aedf88cdc76d8::t_94697f0b0d5a44 1-26
+packages/local-explorer-ui/src/components/email/EmailTruncationWarning.tsx
+  s_2aedf88cdc76d8::t_6338035bb55ebe 1-36
+packages/local-explorer-ui/src/components/email/ReceivedEmailContent.tsx
+  s_2aedf88cdc76d8::t_ece947511f4607 1-64
+packages/local-explorer-ui/src/components/email/SentEmailDetails.tsx
+  s_2aedf88cdc76d8::t_ff10791719aae9 1-173
+packages/local-explorer-ui/src/routeTree.gen.ts
+  s_2aedf88cdc76d8::t_3e968ebd22b859 18-19,24,27,61-70,92-96,108-112,128-129,136,139,147,152,155,165-166,173,176,187-188,195,198,206,211,214,223-224,231,234,244-245,297-310,339-345,360-366,398-411,445-446
+packages/local-explorer-ui/src/routes/__root.tsx
+  s_2aedf88cdc76d8::t_04ed39e3c2493b 8,26,76,78-81,83-85,87-89,91,96-101,103
+packages/local-explorer-ui/src/routes/email/routing.tsx
+  s_2aedf88cdc76d8::t_2360dd0ba035c7 1-10
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_2aedf88cdc76d8::t_c783e6f24b36be 1,3-8,10-24,30,32-124
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_2aedf88cdc76d8::t_62961193bdab6e 1-4,6-12,14-23,29,31-34,36-44,46-229
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_2aedf88cdc76d8::t_f819749752e68e 1-15,17-37,43,45-48,50-65,67-377
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_2aedf88cdc76d8::t_d9d963d4b640f0 1-86
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_2aedf88cdc76d8::t_b9bab709a86b43 1-185
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_2aedf88cdc76d8::t_c2c7362f121351 1-50
+packages/local-explorer-ui/src/routes/email/shared/InfoLoading.tsx
+  s_2aedf88cdc76d8::t_51a5ffae84ccbd 1-28
+packages/local-explorer-ui/src/routes/email/shared/format.ts
+  s_2aedf88cdc76d8::t_27dd484e2e867f 1-21
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_2aedf88cdc76d8::t_dcc62cf981daa7 1-59
+packages/local-explorer-ui/src/utils/email-html.ts
+  s_2aedf88cdc76d8::t_1594ce1fe946d1 1-14
+packages/local-explorer-ui/src/utils/sidebar-state.ts
+  s_2aedf88cdc76d8::t_35436abdf89a81 11,25
+packages/local-explorer-ui/src/utils/worker-navigation.ts
+  s_2aedf88cdc76d8::t_fb8558a5dbee44 1-27
+packages/local-explorer-ui/tsconfig.e2e.json
+  s_2aedf88cdc76d8::t_1d8c9dcbfc1449 14-15
+packages/local-explorer-ui/vite.config.ts
+  s_2aedf88cdc76d8::t_d54bbb2ed50b32 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7776b4c8e0956b28a90f64feec07c1ae159b59f9",
+  "prompts": {},
+  "sessions": {
+    "s_2aedf88cdc76d8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0336c-1e6f-7863-8578-da23a2f61ef7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

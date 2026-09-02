@@ -1,0 +1,19 @@
+packages/wrangler/e2e/createTestHarness.test.ts
+  s_ae91e42aa48337::t_b31047c9ea2bd9 1867,1925
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f72d376de3f5cf0b5fcca2cbd62edeae881461fb",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
