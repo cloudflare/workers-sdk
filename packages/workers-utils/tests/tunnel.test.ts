@@ -7,15 +7,21 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
+import { fetchResultBase } from "../src/cfetch";
 import { spawnCloudflared } from "../src/cloudflared";
 import { UserError } from "../src/errors";
-import { startTunnel } from "../src/tunnel";
+import { resolveNamedTunnel, startTunnel } from "../src/tunnel";
 
 vi.mock("../src/cloudflared", () => {
 	return {
 		spawnCloudflared: vi.fn(),
 	};
 });
+
+vi.mock("../src/cfetch", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/cfetch")>()),
+	fetchResultBase: vi.fn(),
+}));
 
 function createMockProcess() {
 	const proc = new EventEmitter() as EventEmitter & {
@@ -486,5 +492,116 @@ describe("startTunnel", () => {
 		await vi.advanceTimersByTimeAsync(3 * 60 * 60 * 1_000);
 		expect(logger.log).toHaveBeenCalledWith("Tunnel expired. Closing tunnel.");
 		expect(killSpy).toHaveBeenCalledWith("SIGTERM");
+	});
+});
+
+describe("resolveNamedTunnel", () => {
+	it("resolves matching ingress hostnames and the tunnel token", async ({
+		expect,
+	}) => {
+		vi.mocked(fetchResultBase)
+			.mockResolvedValueOnce([
+				{
+					id: "11111111-1111-4111-8111-111111111111",
+					name: "my-tunnel",
+				},
+			])
+			.mockResolvedValueOnce({
+				config: {
+					ingress: [
+						{
+							hostname: "dev.example.com",
+							service: "http://127.0.0.1:8787",
+						},
+						{
+							hostname: "other.example.com",
+							service: "http://localhost:3000",
+						},
+					],
+				},
+			})
+			.mockResolvedValueOnce("TOKEN");
+		const abortSignal = new AbortController().signal;
+		await expect(
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				abortSignal,
+				accountId: "account",
+				apiToken: { apiToken: "test-token" },
+				complianceRegion: undefined,
+				logger: console,
+				userAgent: "test",
+			})
+		).resolves.toEqual({
+			hostnames: ["dev.example.com"],
+			token: "TOKEN",
+		});
+		expect(
+			vi.mocked(fetchResultBase).mock.calls.map((call) => call[6])
+		).toEqual([abortSignal, abortSignal, abortSignal]);
+	});
+
+	it("throws when a named tunnel has no ingress for the local port", async ({
+		expect,
+	}) => {
+		vi.mocked(fetchResultBase)
+			.mockResolvedValueOnce([{ id: "test-tunnel-id", name: "my-tunnel" }])
+			.mockResolvedValueOnce({
+				config: {
+					ingress: [
+						{
+							hostname: "dev.example.com",
+							service: "http://localhost:3000",
+						},
+						{
+							hostname: "admin.example.com",
+							service: "http://localhost:4000",
+						},
+					],
+				},
+			});
+
+		await expect(
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				accountId: "test-account-id",
+				apiToken: { apiToken: "test-token" },
+				complianceRegion: undefined,
+				logger: console,
+				userAgent: "test",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Tunnel "my-tunnel" has no route for http://localhost:8787/
+
+			Resolved routes:
+			  - dev.example.com -> http://localhost:3000
+			  - admin.example.com -> http://localhost:4000
+
+			Update your local server settings or the tunnel routes in the Cloudflare dashboard:
+			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
+			]
+		`);
+	});
+
+	it("shows compact setup guidance when a named tunnel has no ingress rules", async ({
+		expect,
+	}) => {
+		vi.mocked(fetchResultBase)
+			.mockResolvedValueOnce([{ id: "test-tunnel-id", name: "my-tunnel" }])
+			.mockResolvedValueOnce({ config: { ingress: [] } });
+
+		await expect(
+			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
+				accountId: "test-account-id",
+				apiToken: { apiToken: "test-token" },
+				complianceRegion: undefined,
+				logger: console,
+				userAgent: "test",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Tunnel "my-tunnel" has no routes configured.
+
+			Add a route for http://localhost:8787/ in the Cloudflare dashboard:
+			https://dash.cloudflare.com/test-account-id/tunnels/test-tunnel-id
+			]
+		`);
 	});
 });
