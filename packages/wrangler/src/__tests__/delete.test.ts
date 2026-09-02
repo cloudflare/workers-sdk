@@ -224,6 +224,35 @@ describe("delete", () => {
 		`);
 	});
 
+	it("should succeed when the API token cannot clean up legacy Workers Sites namespaces", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/storage/kv/namespaces",
+				() =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 10000, message: "Authentication error" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 403 }
+					),
+				{ once: true }
+			)
+		);
+		mockDeleteWorkerRequest(expect, { name: "my-script", force: true });
+
+		await runWrangler("delete --name my-script --force");
+
+		expect(std.out).toContain("Successfully deleted my-script");
+		expect(std.warn).toContain(
+			"The Worker was deleted, but Wrangler could not clean up legacy Workers Sites asset namespaces because the API token does not have Workers KV permissions."
+		);
+	});
+
 	it("should delete a site namespace associated with a worker, including it's preview namespace", async ({
 		expect,
 	}) => {
