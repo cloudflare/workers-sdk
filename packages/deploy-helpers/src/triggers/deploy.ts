@@ -21,7 +21,10 @@ import {
 	ensureQueuesExistByConfig,
 	updateQueueConsumers,
 } from "./queue-consumers";
-import { getWorkersDevSubdomain } from "./subdomain";
+import {
+	getWorkersDevSubdomain,
+	getWorkersDevSubdomainIfAccessible,
+} from "./subdomain";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
 import type { RouteObject } from "./publish-routes";
@@ -76,15 +79,16 @@ export async function triggersDeploy(
 		isWorkflowDefinedInThisScript(workflow, scriptName)
 	);
 
-	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
-		props,
-		accountId,
-		scriptName,
-		workerUrl,
-		routes,
-		deployments,
-		props.firstDeploy
-	);
+	const { wantWorkersDev, workersDevHostnameUnavailable, workersDevInSync } =
+		await subdomainDeploy(
+			props,
+			accountId,
+			scriptName,
+			workerUrl,
+			routes,
+			deployments,
+			props.firstDeploy
+		);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
 		// TODO is this true? How does last subdomain status affect route confict??
@@ -490,6 +494,9 @@ export async function triggersDeploy(
 	} else {
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
+	if (workersDevHostnameUnavailable) {
+		logger.log("The workers.dev hostname is unavailable to this API token.");
+	}
 
 	const customDomainDeployment = completedDeployments.find(
 		(deployment) => deployment.category === "Custom domains"
@@ -725,14 +732,21 @@ async function subdomainDeploy(
 
 	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
 		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
+	let workersDevHostnameUnavailable = false;
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {
-		const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-			configPath: config.configPath,
-		});
-		const workersDevURL = `${scriptName}.${userSubdomain}`;
-		deployments.push(Promise.resolve({ targets: [workersDevURL] }));
+		const userSubdomain = await getWorkersDevSubdomainIfAccessible(
+			config,
+			accountId,
+			{ configPath: config.configPath }
+		);
+		workersDevHostnameUnavailable = !userSubdomain;
+		deployments.push(
+			Promise.resolve({
+				targets: userSubdomain ? [`${scriptName}.${userSubdomain}`] : [],
+			})
+		);
 	}
 
 	// Get current subdomain enablement status.
@@ -816,6 +830,7 @@ async function subdomainDeploy(
 
 	return {
 		wantWorkersDev,
+		workersDevHostnameUnavailable,
 		wantPreviews,
 		workersDevInSync: before.enabled === after.enabled,
 		previewsInSync: before.previews_enabled === after.previews_enabled,

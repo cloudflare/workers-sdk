@@ -1,4 +1,5 @@
 import {
+	APIError,
 	configFileName,
 	getComplianceRegionSubdomain,
 	UserError,
@@ -35,6 +36,32 @@ export async function getWorkersDevSubdomain(
 	accountId: string,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string> {
+	return getWorkersDevSubdomainInternal(
+		complianceConfig,
+		accountId,
+		options,
+		false
+	);
+}
+
+async function getWorkersDevSubdomainInternal(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions,
+	allowUnauthorizedLookup: false
+): Promise<string>;
+async function getWorkersDevSubdomainInternal(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions,
+	allowUnauthorizedLookup: true
+): Promise<string | undefined>;
+async function getWorkersDevSubdomainInternal(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions,
+	allowUnauthorizedLookup: boolean
+): Promise<string | undefined> {
 	const {
 		abortSignal,
 		autoRegisterSubdomain,
@@ -53,43 +80,67 @@ export async function getWorkersDevSubdomain(
 		);
 		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 	} catch (e) {
+		if (allowUnauthorizedLookup && e instanceof APIError && e.code === 10000) {
+			return undefined;
+		}
+
 		const error = e as { code?: number };
 		if (typeof error !== "object" || !error || error.code !== 10007) {
 			throw e;
 		}
+	}
 
-		// 10007 error code: not found
-		// https://api.cloudflare.com/#worker-subdomain-get-subdomain
-		logger.warn(getRegistrationWarning(registrationContext));
-		if (autoRegisterSubdomain) {
-			return await registerSubdomain(
-				complianceConfig,
-				accountId,
-				configPath,
-				registrationContext,
-				autoRegisterSubdomain
-			);
-		}
-
-		const wantsToRegister = await confirm(
-			"Would you like to register a workers.dev subdomain now?",
-			{ fallbackValue: false }
-		);
-		if (!wantsToRegister) {
-			throw getRegistrationDeclinedError(
-				registrationContext,
-				accountId,
-				configPath
-			);
-		}
-
+	// 10007 error code: not found
+	// https://api.cloudflare.com/#worker-subdomain-get-subdomain
+	logger.warn(getRegistrationWarning(registrationContext));
+	if (autoRegisterSubdomain) {
 		return await registerSubdomain(
 			complianceConfig,
 			accountId,
 			configPath,
-			registrationContext
+			registrationContext,
+			autoRegisterSubdomain
 		);
 	}
+
+	const wantsToRegister = await confirm(
+		"Would you like to register a workers.dev subdomain now?",
+		{ fallbackValue: false }
+	);
+	if (!wantsToRegister) {
+		throw getRegistrationDeclinedError(
+			registrationContext,
+			accountId,
+			configPath
+		);
+	}
+
+	return await registerSubdomain(
+		complianceConfig,
+		accountId,
+		configPath,
+		registrationContext
+	);
+}
+
+/**
+ * Gets the account's workers.dev hostname when the token can read it.
+ *
+ * Granular Worker tokens may manage a Worker without access to account-level
+ * subdomain metadata. Callers should use this helper only when the hostname is
+ * optional and the Worker-scoped API can validate the requested operation.
+ */
+export async function getWorkersDevSubdomainIfAccessible(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions = {}
+): Promise<string | undefined> {
+	return getWorkersDevSubdomainInternal(
+		complianceConfig,
+		accountId,
+		options,
+		true
+	);
 }
 
 function getRegistrationWarning(
