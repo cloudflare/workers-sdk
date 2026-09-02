@@ -1,0 +1,43 @@
+.changeset/d1-migrations-utils.md
+  s_9c967fa93d987a::t_68dd3802fbda08 1-5
+packages/workers-utils/AGENTS.md
+  s_9c967fa93d987a::t_05849bf07c28b3 14,26-27
+packages/workers-utils/package.json
+  s_9c967fa93d987a::t_4943b7403ed63c 46-49,85,95
+packages/workers-utils/src/d1-migrations.ts
+  s_9c967fa93d987a::t_3837f682278340 4-6,12-43,56-57,67,69-70,73-77,79-82,86,96-98,100-102,136-143,153,158,168,176,305,328-331,352-353,355,358-360,367,372
+packages/workers-utils/tests/d1-migrations.test.ts
+  s_9c967fa93d987a::t_b6ae4d21d7c829 1-73
+packages/workers-utils/tsup.config.ts
+  s_9c967fa93d987a::t_cf5398edf4d7cc 17
+packages/wrangler/src/__tests__/d1/migrations/helpers.test.ts
+  s_9c967fa93d987a::t_a7de243d9b15d8 11,13
+packages/wrangler/src/api/test-harness.ts
+  s_9c967fa93d987a::t_d890fdf985cea6 24
+packages/wrangler/src/d1/migrations/apply.ts
+  s_9c967fa93d987a::t_cc12aed70f4e95 15
+packages/wrangler/src/d1/migrations/create.ts
+  s_9c967fa93d987a::t_4b8b11590bf380 13
+packages/wrangler/src/d1/migrations/list.ts
+  s_9c967fa93d987a::t_e21129d78fa8bb 11
+packages/wrangler/src/d1/migrations/wrangler-helpers.ts
+  s_9c967fa93d987a::t_b82e52a69f6f16 1-246
+pnpm-lock.yaml
+  s_9c967fa93d987a::t_d6ce9cc12ee927 4451-4453,4481-4483
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ccc2fca0117ab209e1aeccd7f8e4b185633dca85",
+  "prompts": {},
+  "sessions": {
+    "s_9c967fa93d987a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05e6c-d5b2-70c2-a66c-a82eb297b604",
+        "model": "unknown"
+      },
+      "human_author": "Samuel Macleod <smacleod@cloudflare.com>"
+    }
+  }
+}

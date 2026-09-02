@@ -1,0 +1,33 @@
+packages/vite-plugin-cloudflare/src/context.ts
+  s_18822662e5e6a0::t_1be544306f82fc 3,33-39,50-53,155,167-175,178,239-257,281-311
+packages/vite-plugin-cloudflare/src/__tests__/output-config.spec.ts
+  s_18c7e5cb6a2433::t_fb4b75df632927 19-23,26-27,71,112,145,160-252
+packages/vite-plugin-cloudflare/src/plugins/config.ts
+  s_18822662e5e6a0::t_4b8861f237fee8 12,40-45,226,247-252
+packages/vite-plugin-cloudflare/src/plugins/output-config.ts
+  s_18c7e5cb6a2433::t_8a15de40254896 5,56,105-113,162,169,188-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d339584753f71ad5d7789349f27348603bf6081d",
+  "prompts": {},
+  "sessions": {
+    "s_18822662e5e6a0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01058-2d67-7d43-a5e4-9f5a0fe8a7a3",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

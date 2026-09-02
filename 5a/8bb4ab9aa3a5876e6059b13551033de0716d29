@@ -1,0 +1,30 @@
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_ae91e42aa48337::t_a2c49e1aff8846 844,856-860,863,865
+  s_ae91e42aa48337::t_30af03ed977883 842,861-862,864,866,882,960,971
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_ae91e42aa48337::t_8f83020351d323 3810,3827-3828,3831-3888,3892-3894,3896-3906,3908,4016-4018,4044,4052,4054,4060,4071-4075,4077,4079
+  s_ae91e42aa48337::t_154629c4a98bc3 3805,4020,4022-4043,4045-4051,4053,4059,4061,4063,4065-4070,4076,4078
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_ae91e42aa48337::t_3a5b000c3890aa 606-615,617-622,624-627
+  s_ae91e42aa48337::t_57983d33a1dcf8 596,604-605,628-642
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_ae91e42aa48337::t_213a56f262f89b 2267,2272,2284-2285,2288-2334,2338-2351,2353,2434-2436,2438-2447,2449,2454-2456,2458-2469
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_ae91e42aa48337::t_9f5322df9c32eb 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5a8bb4ab9aa3a5876e6059b13551033de0716d29",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

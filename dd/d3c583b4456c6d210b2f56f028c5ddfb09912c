@@ -1,0 +1,75 @@
+packages/workers-shared/asset-worker/src/configuration.ts
+  s_189ce31c91149d::t_fccaecce5a6cb3 1,5-21,32
+packages/workers-shared/asset-worker/tests/decode-path.test.ts
+  s_abf9c14d79df75::t_43399d782e3f1c 1-107
+packages/workers-shared/asset-worker/tests/base-path-handler.test.ts
+  s_abf9c14d79df75::t_0d423f9eaae291 1-469
+packages/workers-shared/utils/types.ts
+  s_18c7e5cb6a2433::t_20f0afcb41c5cd 86
+packages/workers-shared/asset-worker/tests/base-path.test.ts
+  s_2f8343d878c4fa::t_df57fc484421f0 1-71
+packages/workers-shared/utils/base-path.ts
+  s_d9951fe8e48e61::t_845bbd5dadf61c 1-106
+packages/workers-shared/utils/tests/base-path.test.ts
+  s_d9951fe8e48e61::t_831c963d30dc36 1-102
+packages/workers-shared/asset-worker/src/utils/decode-path.ts
+  s_f474ca80723658::t_09a4133510e701 1-82
+packages/workers-shared/index.ts
+  s_d9951fe8e48e61::t_d827f2a071146e 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ddd3c583b4456c6d210b2f56f028c5ddfb09912c",
+  "prompts": {},
+  "sessions": {
+    "s_189ce31c91149d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fffa659d3ffeIjS65GEqv91qyx",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_2f8343d878c4fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff532a9cffeujhyQPJ9FOV6BY",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_abf9c14d79df75": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0103b-285c-72d3-9f33-c80696917469",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_d9951fe8e48e61": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_feffa7d2affebqHe0S1Q1Wo7uE",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_f474ca80723658": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff170d0effeE7WgGuFM1on5jT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

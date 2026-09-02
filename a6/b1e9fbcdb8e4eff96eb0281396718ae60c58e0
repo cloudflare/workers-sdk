@@ -1,0 +1,39 @@
+packages/wrangler/e2e/createTestHarness.test.ts
+  s_ae91e42aa48337::t_b31047c9ea2bd9 1867,1925
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_ae91e42aa48337::t_1254c4a8cab64c 632,635,645-668,682-700,727,808-811,817,821,831,834,838,841,852,855-856,860,862-873,888-907,916,926,929,2184-2198,2200-2218,2220-2221,2233,2235-2240,2266,2271,2283-2284,2287-2333,2337-2350,2352,2433-2435,2437-2446,2448,2453-2455,2457-2468
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_ae91e42aa48337::t_960171f2ca25b7 31,388-389,391,393-398,402-403,409,411-416
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_ae91e42aa48337::t_d61724e0a9c13e 821,823-826,845,847,859-869,885,963,974,1683-1694,1714-1720,1774,1776-1778,1781,1783,1788,1790,1792,1794,1797,1807-1818,1838-1844
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_ae91e42aa48337::t_e5df307353e63d 550-555,601,609-620,622-627,629-647,1055-1057,1067-1077,1104,1106-1107,1111,1113,1121-1123,1133-1143
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_ae91e42aa48337::t_609874e0fae8a8 1287,1297-1323,1338-1365,1469-1472,1478,1482,1492,1495,1501,1513,1517-1518,1522,1526-1537,1552-1579,1588,1598,1601,3785,3787-3796,3823,3828,3845-3846,3849-3906,3910-3912,3914-3924,3926,4034-4036,4038,4040-4072,4077-4079,4081,4083-4097
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_590cc404d5239c::t_c45b989f10473c 934-944,991-1002,1026-1030,1112-1152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a6b1e9fbcdb8e4eff96eb0281396718ae60c58e0",
+  "prompts": {},
+  "sessions": {
+    "s_590cc404d5239c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_005b7d6f3ffe3oyOlUwu83fX7i",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

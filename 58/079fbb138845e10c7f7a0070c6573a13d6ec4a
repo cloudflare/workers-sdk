@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/preview.test.ts
+  s_4447962620fff9::t_f20819556e5958 8,168-171,430-479,4692,4697,4767
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "58079fbb138845e10c7f7a0070c6573a13d6ec4a",
+  "prompts": {},
+  "sessions": {
+    "s_4447962620fff9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_feb782335ffeOY40n7WZbgLzmy",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Matt Price <mattprice@cloudflare.com>"
+    }
+  }
+}
