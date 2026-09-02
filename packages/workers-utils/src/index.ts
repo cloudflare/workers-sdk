@@ -14,10 +14,14 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	CONTAINER_IMAGES_BINDING,
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDurableObjectContainerApps,
+	isDurableObjectContainerApp,
 	resolveContainerClassName,
 } from "./config/containers";
+export type { DurableObjectContainerApp } from "./config/containers";
 export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,

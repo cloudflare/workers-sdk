@@ -882,6 +882,7 @@ export function createWorkerUploadForm(
 				: worker.containers.map((c) => ({
 						...(c.name !== undefined && { name: c.name }),
 						...(c.class_name !== undefined && { class_name: c.class_name }),
+						...(c.images !== undefined && { images: c.images }),
 					})),
 
 		...(compatibility_date && { compatibility_date }),

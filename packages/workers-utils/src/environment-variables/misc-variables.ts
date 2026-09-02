@@ -177,6 +177,27 @@ export function getComplianceRegionSubdomain(
 }
 
 /**
+ * Returns the managed container registry for the configured API environment and compliance region.
+ *
+ * @param complianceConfig - Compliance configuration used to select the public or FedRAMP registry.
+ * @returns The managed registry hostname, respecting `CLOUDFLARE_CONTAINER_REGISTRY` and `WRANGLER_API_ENVIRONMENT`.
+ */
+export function getCloudflareContainerRegistry(
+	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
+): string {
+	if (process.env.CLOUDFLARE_CONTAINER_REGISTRY) {
+		return process.env.CLOUDFLARE_CONTAINER_REGISTRY;
+	}
+
+	const environmentPrefix =
+		process.env.WRANGLER_API_ENVIRONMENT === "staging" ? "staging." : "";
+	const complianceRegionSubdomain =
+		getComplianceRegionSubdomain(complianceConfig);
+
+	return `${environmentPrefix}registry${complianceRegionSubdomain}.cloudflare.com`;
+}
+
+/**
  * Compute the subdomain for the staging environment.
  */
 function getStagingSubdomain(): string {

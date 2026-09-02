@@ -14,6 +14,7 @@ import type { ApplicationStatus } from "../models/ApplicationStatus";
 import type { CreateApplicationJobRequest } from "../models/CreateApplicationJobRequest";
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
 import type { CreateApplicationRolloutRequest } from "../models/CreateApplicationRolloutRequest";
+import type { CreateDurableObjectApplicationRequest } from "../models/CreateDurableObjectApplicationRequest";
 import type { DashApplication } from "../models/DashApplication";
 import type { DashApplicationInstances } from "../models/DashApplicationInstances";
 import type { DeploymentID } from "../models/DeploymentID";
@@ -40,7 +41,9 @@ export class ApplicationsService {
 	 * @throws ApiError
 	 */
 	public static createApplication(
-		requestBody: CreateApplicationRequest
+		requestBody:
+			| CreateApplicationRequest
+			| CreateDurableObjectApplicationRequest
 	): CancelablePromise<Application> {
 		return __request(OpenAPI, {
 			method: "POST",
