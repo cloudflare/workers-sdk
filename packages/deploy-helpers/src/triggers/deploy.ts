@@ -76,15 +76,16 @@ export async function triggersDeploy(
 		isWorkflowDefinedInThisScript(workflow, scriptName)
 	);
 
-	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
-		props,
-		accountId,
-		scriptName,
-		workerUrl,
-		routes,
-		deployments,
-		props.firstDeploy
-	);
+	const { wantWorkersDev, workersDevHostnameUnavailable, workersDevInSync } =
+		await subdomainDeploy(
+			props,
+			accountId,
+			scriptName,
+			workerUrl,
+			routes,
+			deployments,
+			props.firstDeploy
+		);
 
 	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
 		// TODO is this true? How does last subdomain status affect route confict??
@@ -489,6 +490,9 @@ export async function triggersDeploy(
 	} else {
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
+	if (workersDevHostnameUnavailable) {
+		logger.log("The workers.dev hostname is unavailable to this API token.");
+	}
 
 	const failedDeployments = completedDeployments.filter(
 		(deployment): deployment is TriggerDeployment & { error: Error } =>
@@ -715,6 +719,7 @@ async function subdomainDeploy(
 
 	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
 		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
+	let workersDevHostnameUnavailable = false;
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {
@@ -723,10 +728,12 @@ async function subdomainDeploy(
 			accountId,
 			{ configPath: config.configPath }
 		);
-		const workersDevTarget = userSubdomain
-			? `${scriptName}.${userSubdomain}`
-			: "workers.dev (hostname unavailable to this API token)";
-		deployments.push(Promise.resolve({ targets: [workersDevTarget] }));
+		workersDevHostnameUnavailable = !userSubdomain;
+		deployments.push(
+			Promise.resolve({
+				targets: userSubdomain ? [`${scriptName}.${userSubdomain}`] : [],
+			})
+		);
 	}
 
 	// Get current subdomain enablement status.
@@ -810,6 +817,7 @@ async function subdomainDeploy(
 
 	return {
 		wantWorkersDev,
+		workersDevHostnameUnavailable,
 		wantPreviews,
 		workersDevInSync: before.enabled === after.enabled,
 		previewsInSync: before.previews_enabled === after.previews_enabled,

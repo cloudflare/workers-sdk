@@ -36,6 +36,32 @@ export async function getWorkersDevSubdomain(
 	accountId: string,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string> {
+	return getWorkersDevSubdomainInternal(
+		complianceConfig,
+		accountId,
+		options,
+		false
+	);
+}
+
+async function getWorkersDevSubdomainInternal(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions,
+	allowUnauthorizedLookup: false
+): Promise<string>;
+async function getWorkersDevSubdomainInternal(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions,
+	allowUnauthorizedLookup: true
+): Promise<string | undefined>;
+async function getWorkersDevSubdomainInternal(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	options: GetWorkersDevSubdomainOptions,
+	allowUnauthorizedLookup: boolean
+): Promise<string | undefined> {
 	const {
 		abortSignal,
 		autoRegisterSubdomain,
@@ -54,43 +80,47 @@ export async function getWorkersDevSubdomain(
 		);
 		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 	} catch (e) {
+		if (allowUnauthorizedLookup && e instanceof APIError && e.code === 10000) {
+			return undefined;
+		}
+
 		const error = e as { code?: number };
 		if (typeof error !== "object" || !error || error.code !== 10007) {
 			throw e;
 		}
+	}
 
-		// 10007 error code: not found
-		// https://api.cloudflare.com/#worker-subdomain-get-subdomain
-		logger.warn(getRegistrationWarning(registrationContext));
-		if (autoRegisterSubdomain) {
-			return await registerSubdomain(
-				complianceConfig,
-				accountId,
-				configPath,
-				registrationContext,
-				autoRegisterSubdomain
-			);
-		}
-
-		const wantsToRegister = await confirm(
-			"Would you like to register a workers.dev subdomain now?",
-			{ fallbackValue: false }
-		);
-		if (!wantsToRegister) {
-			throw getRegistrationDeclinedError(
-				registrationContext,
-				accountId,
-				configPath
-			);
-		}
-
+	// 10007 error code: not found
+	// https://api.cloudflare.com/#worker-subdomain-get-subdomain
+	logger.warn(getRegistrationWarning(registrationContext));
+	if (autoRegisterSubdomain) {
 		return await registerSubdomain(
 			complianceConfig,
 			accountId,
 			configPath,
-			registrationContext
+			registrationContext,
+			autoRegisterSubdomain
 		);
 	}
+
+	const wantsToRegister = await confirm(
+		"Would you like to register a workers.dev subdomain now?",
+		{ fallbackValue: false }
+	);
+	if (!wantsToRegister) {
+		throw getRegistrationDeclinedError(
+			registrationContext,
+			accountId,
+			configPath
+		);
+	}
+
+	return await registerSubdomain(
+		complianceConfig,
+		accountId,
+		configPath,
+		registrationContext
+	);
 }
 
 /**
@@ -105,14 +135,12 @@ export async function getWorkersDevSubdomainIfAccessible(
 	accountId: string,
 	options: GetWorkersDevSubdomainOptions = {}
 ): Promise<string | undefined> {
-	try {
-		return await getWorkersDevSubdomain(complianceConfig, accountId, options);
-	} catch (error) {
-		if (error instanceof APIError && error.code === 10000) {
-			return undefined;
-		}
-		throw error;
-	}
+	return getWorkersDevSubdomainInternal(
+		complianceConfig,
+		accountId,
+		options,
+		true
+	);
 }
 
 function getRegistrationWarning(

@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getSubdomainValues } from "@cloudflare/deploy-helpers";
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
@@ -869,6 +869,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		it("should sync workers.dev when granular auth prevents the account subdomain lookup", async ({
 			expect,
 		}) => {
+			vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "output.json");
 			writeWranglerConfig({ workers_dev: true });
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -889,10 +890,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 			expect(std.out).toContain("Uploaded test-name");
 			expect(std.out).toContain("Current Version ID");
-			expect(std.out).toContain("workers.dev");
-			expect(std.out).not.toContain("No targets deployed");
 			expect(std.out).not.toContain("test-sub-domain.workers.dev");
+			expect(std.out).toContain(
+				"The workers.dev hostname is unavailable to this API token."
+			);
 			expect(std.err).toBe("");
+
+			const outputEntries = readFileSync("output.json", "utf8")
+				.split("\n")
+				.filter(Boolean)
+				.map((line) => JSON.parse(line));
+			expect(
+				outputEntries.find((entry) => entry.type === "deploy")
+			).toMatchObject({
+				targets: [],
+			});
 		});
 
 		it("should fail to deploy to the workers.dev domain if email is unverified", async ({
@@ -1043,6 +1055,48 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 					"
 				`);
+			});
+
+			it("fails when workers.dev subdomain registration is unauthorized", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"package.json",
+					JSON.stringify({ name: "agent-project-name" })
+				);
+				writeWranglerConfig({ name: undefined as unknown as string });
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockSubDomainRequest("agent-project-name", false, false);
+				mockUploadWorkerRequest({
+					expectedScriptName: "agent-project-name",
+					useOldUploadApi: true,
+				});
+				vi.mocked(detectAgent).mockReturnValue({
+					isAgent: true,
+					id: "test-agent",
+				});
+				msw.use(
+					http.get("*/accounts/:accountId/workers/subdomains/:subdomain", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10032, message: "subdomain_unavailable" },
+							])
+						)
+					),
+					http.put("*/accounts/:accountId/workers/subdomain", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10000, message: "Authentication error" },
+							]),
+							{ status: 403 }
+						)
+					)
+				);
+
+				await expect(runWrangler("deploy ./index")).rejects.toThrow(
+					'Wrangler could not automatically register "agent-project-name" as your `workers.dev` subdomain.'
+				);
 			});
 
 			it("uses the project name without prompting when run by an agent", async ({
