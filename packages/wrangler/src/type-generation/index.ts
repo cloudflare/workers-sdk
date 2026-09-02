@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
-import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import {
+	basename,
+	dirname,
+	extname,
+	join,
+	relative,
+	resolve,
+	sep,
+} from "node:path";
 import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import {
 	CommandLineArgsError,
@@ -784,6 +792,86 @@ export function generateImportSpecifier(from: string, to: string) {
 }
 
 /**
+ * Returns true if `entrypointFile` sits inside a framework build output
+ * directory, relative to the directory holding the Wrangler config.
+ *
+ * Any directory segment beginning with `.` counts: frameworks consistently
+ * write generated output to a hidden directory (`.svelte-kit`, `.next`,
+ * `.nuxt`, `.output`). Only directories are considered — a hidden file name
+ * such as `.worker.js` says nothing about how the file was produced.
+ * An entrypoint that is merely outside the config directory is not build
+ * output, so a relative path that walks up out of it is excluded.
+ */
+function isEntrypointInBuildOutputDir(
+	configDir: string,
+	entrypointFile: string
+): boolean {
+	const segments = relative(configDir, dirname(entrypointFile)).split(sep);
+	if (segments.includes("..")) {
+		return false;
+	}
+
+	return segments.some((segment) => segment.startsWith("."));
+}
+
+/**
+ * Computes the `mainModule` import specifier for the entrypoint.
+ *
+ * Returns `undefined` when the entrypoint is a framework build artefact.
+ * `mainModule` is emitted as a `typeof import(...)`, so pointing it at
+ * generated code makes `tsc`/`svelte-check` follow the import and type-check
+ * output that was never meant to be checked. Omitting the declaration is
+ * preferable to breaking the whole generated file.
+ */
+function getEntrypointModule(
+	config: Config,
+	fullOutputPath: string,
+	entrypoint: Entry | undefined
+): string | undefined {
+	if (!entrypoint) {
+		return undefined;
+	}
+
+	const configDir = dirname(config.configPath ?? resolve("wrangler.json"));
+	if (isEntrypointInBuildOutputDir(configDir, entrypoint.file)) {
+		return undefined;
+	}
+
+	return generateImportSpecifier(fullOutputPath, entrypoint.file);
+}
+
+/**
+ * Builds the `Cloudflare.GlobalProps` declaration.
+ *
+ * Each member is independent: a build-output entrypoint yields no `mainModule`
+ * but must still declare `durableNamespaces`, so the interface is emitted
+ * whenever at least one member applies.
+ */
+function generateGlobalPropsContent(
+	entrypointModule: string | undefined,
+	configuredDurableObjects: string[]
+): string {
+	const members: string[] = [];
+
+	if (entrypointModule) {
+		members.push(`\t\tmainModule: typeof import("${entrypointModule}");`);
+	}
+
+	if (configuredDurableObjects.length > 0) {
+		const namespaces = configuredDurableObjects
+			.map((durableObject) => `"${durableObject}"`)
+			.join(" | ");
+		members.push(`\t\tdurableNamespaces: ${namespaces};`);
+	}
+
+	if (members.length === 0) {
+		return "";
+	}
+
+	return `\n\tinterface GlobalProps {\n${members.join("\n")}\n\t}`;
+}
+
+/**
  * Checks whether any config level (top-level or any named environment) declares
  * `secrets`. Used to determine if the project has opted into config-based
  * secret declarations, which replaces `.dev.vars`/`.env` inference for type generation.
@@ -1215,9 +1303,7 @@ async function generateSimpleEnvTypes(
 			stringKeys,
 			config.compatibility_date,
 			config.compatibility_flags,
-			entrypoint
-				? generateImportSpecifier(fullOutputPath, entrypoint.file)
-				: undefined,
+			getEntrypointModule(config, fullOutputPath, entrypoint),
 			[
 				...getDurableObjectClassNameToUseSQLiteMap(
 					config.migrations,
@@ -1673,9 +1759,7 @@ async function generatePerEnvironmentTypes(
 		stringKeys,
 		config.compatibility_date,
 		config.compatibility_flags,
-		entrypoint
-			? generateImportSpecifier(fullOutputPath, entrypoint.file)
-			: undefined,
+		getEntrypointModule(config, fullOutputPath, entrypoint),
 		[
 			...getDurableObjectClassNameToUseSQLiteMap(
 				config.migrations,
@@ -1763,9 +1847,10 @@ function generatePerEnvTypeStrings(
 			.map((b) => `\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
 			.join("\n");
 
-		const globalPropsContent = entrypointModule
-			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
-			: "";
+		const globalPropsContent = generateGlobalPropsContent(
+			entrypointModule,
+			configuredDurableObjects
+		);
 
 		const internalEnvInterface = prefixEnvInterface(envInterface);
 
@@ -1874,7 +1959,12 @@ function generateTypeStrings(
 
 		const internalEnvInterface = prefixEnvInterface(envInterface);
 
-		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
+		const globalPropsContent = generateGlobalPropsContent(
+			entrypointModule,
+			configuredDurableObjects
+		);
+
+		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		// For service worker format, type definitions still go at the top level since there's no namespace
 		const globalTypeDefsContent =
