@@ -121,6 +121,11 @@ abstract class ProvisionResourceHandler<
 		this.binding[this.idField] = id;
 	}
 
+	hasConfiguredResourceIdentifier(): boolean {
+		const id = this.binding[this.idField];
+		return (typeof id === "string" && id.length > 0) || this.name !== undefined;
+	}
+
 	abstract create(name: string): Promise<string>;
 
 	abstract get name(): string | undefined;
@@ -982,6 +987,14 @@ function warnSkippedProvisioning(
 	}
 }
 
+function inheritIfNoConfiguredResourceIdentifier(
+	handler: PendingResource["handler"]
+): void {
+	if (!handler.hasConfiguredResourceIdentifier()) {
+		handler.inherit();
+	}
+}
+
 function isProvisionableBinding(
 	binding: Binding
 ): binding is ProvisionableBinding {
@@ -1119,7 +1132,7 @@ async function collectPendingResources(
 				throw error;
 			}
 
-			handler.inherit();
+			inheritIfNoConfiguredResourceIdentifier(handler);
 			trackSkippedProvisioning(skippedProvisioning, binding.type, bindingName);
 			continue;
 		}
@@ -1192,7 +1205,7 @@ export async function provisionBindings(
 					throw error;
 				}
 
-				resource.handler.inherit();
+				inheritIfNoConfiguredResourceIdentifier(resource.handler);
 				trackSkippedProvisioning(
 					skippedProvisioning,
 					resource.resourceType,

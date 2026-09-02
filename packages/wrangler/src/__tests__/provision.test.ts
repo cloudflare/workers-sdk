@@ -255,6 +255,80 @@ describe("resource provisioning", () => {
 		);
 	});
 
+	it("does not inherit from an existing D1 binding when a permission error prevents checking the configured database name", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			d1_databases: [{ binding: "D1", database_name: "new-d1-name" }],
+		});
+		mockGetSettings({
+			result: {
+				bindings: [{ type: "d1", name: "D1", id: "old-d1-id" }],
+			},
+		});
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/d1/database/:databaseId",
+				({ params }) => {
+					expect(params.databaseId).toBe("old-d1-id");
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10000, message: "Authentication error" },
+						]),
+						{ status: 403 }
+					);
+				}
+			)
+		);
+
+		await expect(runWrangler("deploy")).rejects.toThrow(
+			'D1 bindings must have a "database_id" field'
+		);
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for D1 Database bindings (D1)"
+		);
+	});
+
+	it("preserves an explicitly configured resource name when the provisioning picker cannot load resources", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [{ binding: "R2", bucket_name: "existing-bucket" }],
+		});
+		mockGetSettings();
+		mockGetR2Bucket(expect, "existing-bucket", true);
+
+		let r2BucketCreated = false;
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			),
+			http.post("*/accounts/:accountId/r2/buckets", () => {
+				r2BucketCreated = true;
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "R2", type: "r2_bucket", bucket_name: "existing-bucket" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(r2BucketCreated).toBe(false);
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for R2 Bucket bindings (R2)"
+		);
+	});
+
 	it("provisions a Queue used by both a producer and consumer", async ({
 		expect,
 	}) => {
