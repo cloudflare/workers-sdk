@@ -1,0 +1,17 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b2006f389058c262e95b5b0e259308659e1cbdf1",
+  "prompts": {},
+  "sessions": {
+    "s_fb73438c5bfa7c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9d84bc2fffeP71J2Nl3pDlfyO",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}
