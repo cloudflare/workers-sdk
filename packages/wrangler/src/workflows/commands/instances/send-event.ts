@@ -60,13 +60,14 @@ export const workflowsInstancesSendEventCommand = createCommand({
 		}
 
 		let id: string;
+		let result: unknown;
 
 		if (args.local) {
 			id = await getLocalInstanceIdFromArgs(args.port, args, {
 				quiet: args.json,
 			});
 
-			await fetchLocalResult(
+			result = await fetchLocalResult(
 				args.port,
 				`/workflows/${encodeURIComponent(args.name)}/instances/${encodeURIComponent(id)}/events/${encodeURIComponent(args.type)}`,
 				{
@@ -80,7 +81,7 @@ export const workflowsInstancesSendEventCommand = createCommand({
 
 			id = await getInstanceIdFromArgs(accountId, args, config);
 
-			await fetchResult(
+			result = await fetchResult(
 				config,
 				`/accounts/${accountId}/workflows/${args.name}/instances/${id}/events/${args.type}`,
 				{
@@ -92,7 +93,7 @@ export const workflowsInstancesSendEventCommand = createCommand({
 		}
 
 		if (args.json) {
-			logger.json({ name: args.name, id, type: args.type, success: true });
+			logger.json(result);
 			return;
 		}
 

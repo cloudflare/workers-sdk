@@ -68,7 +68,7 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 		);
 
 		if (args.json) {
-			logger.json({ name: args.name, status: result.status });
+			logger.json(result);
 			return;
 		}
 

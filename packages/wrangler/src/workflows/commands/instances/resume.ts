@@ -41,20 +41,32 @@ export const workflowsInstancesResumeCommand = createCommand({
 
 	async handler(args, { config }) {
 		let id: string;
+		let result: unknown;
 
 		if (args.local) {
 			id = await getLocalInstanceIdFromArgs(args.port, args, {
 				quiet: args.json,
 			});
-			await updateLocalInstanceStatus(args.port, args.name, id, "resume");
+			result = await updateLocalInstanceStatus(
+				args.port,
+				args.name,
+				id,
+				"resume"
+			);
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(config, accountId, args.name, id, "resume");
+			result = await updateInstanceStatus(
+				config,
+				accountId,
+				args.name,
+				id,
+				"resume"
+			);
 		}
 
 		if (args.json) {
-			logger.json({ name: args.name, id, success: true });
+			logger.json(result);
 			return;
 		}
 

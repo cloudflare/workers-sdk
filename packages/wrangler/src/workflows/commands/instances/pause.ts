@@ -41,20 +41,32 @@ export const workflowsInstancesPauseCommand = createCommand({
 
 	async handler(args, { config }) {
 		let id: string;
+		let result: unknown;
 
 		if (args.local) {
 			id = await getLocalInstanceIdFromArgs(args.port, args, {
 				quiet: args.json,
 			});
-			await updateLocalInstanceStatus(args.port, args.name, id, "pause");
+			result = await updateLocalInstanceStatus(
+				args.port,
+				args.name,
+				id,
+				"pause"
+			);
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(config, accountId, args.name, id, "pause");
+			result = await updateInstanceStatus(
+				config,
+				accountId,
+				args.name,
+				id,
+				"pause"
+			);
 		}
 
 		if (args.json) {
-			logger.json({ name: args.name, id, success: true });
+			logger.json(result);
 			return;
 		}
 

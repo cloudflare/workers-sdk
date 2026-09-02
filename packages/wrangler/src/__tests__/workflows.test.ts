@@ -50,7 +50,8 @@ describe("wrangler workflows", () => {
 	const mockChangeStatusRequest = async (
 		expect: ExpectStatic,
 		expectedInstance: string,
-		expectedBody?: Record<string, unknown>
+		expectedBody?: Record<string, unknown>,
+		result: unknown = {}
 	) => {
 		msw.use(
 			http.patch(
@@ -64,7 +65,7 @@ describe("wrangler workflows", () => {
 						success: true,
 						errors: [],
 						messages: [],
-						result: {},
+						result,
 					});
 				},
 				{ once: true }
@@ -75,7 +76,8 @@ describe("wrangler workflows", () => {
 	const mockSendEventRequest = async (
 		expect: ExpectStatic,
 		expectedInstance: string,
-		event: string
+		event: string,
+		result: unknown = {}
 	) => {
 		msw.use(
 			http.post(
@@ -87,7 +89,7 @@ describe("wrangler workflows", () => {
 						success: true,
 						errors: [],
 						messages: [],
-						result: {},
+						result,
 					});
 				},
 				{ once: true }
@@ -97,7 +99,8 @@ describe("wrangler workflows", () => {
 
 	const mockDeleteWorkflowRequest = async (
 		expect: ExpectStatic,
-		workflowName: string
+		workflowName: string,
+		result: unknown = {}
 	) => {
 		msw.use(
 			http.delete(
@@ -108,7 +111,7 @@ describe("wrangler workflows", () => {
 						success: true,
 						errors: [],
 						messages: [],
-						result: {},
+						result,
 					});
 				},
 				{ once: true }
@@ -1098,6 +1101,20 @@ describe("wrangler workflows", () => {
 				`"📤 The event with type "my-event" and payload "{"key": "value"}" was sent to the instance "bar" from some-workflow"`
 			);
 		});
+
+		it("should output the API response as JSON with --json", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const response = { accepted: true, event_id: "event-123" };
+			await mockSendEventRequest(expect, "bar", "my-event", response);
+
+			await runWrangler(
+				"workflows instances send-event some-workflow bar --type my-event --json"
+			);
+
+			expect(JSON.parse(std.out)).toEqual(response);
+		});
 	});
 
 	describe("instances pause", () => {
@@ -1136,15 +1153,12 @@ describe("wrangler workflows", () => {
 		it("should output JSON with --json", async ({ expect }) => {
 			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
-			await mockChangeStatusRequest(expect, "bar");
+			const response = { id: "bar", status: "paused" };
+			await mockChangeStatusRequest(expect, "bar", undefined, response);
 
 			await runWrangler(`workflows instances pause some-workflow bar --json`);
 			expect(std.info).toMatchInlineSnapshot(`""`);
-			expect(JSON.parse(std.out)).toEqual({
-				name: "some-workflow",
-				id: "bar",
-				success: true,
-			});
+			expect(JSON.parse(std.out)).toEqual(response);
 		});
 	});
 
@@ -1179,6 +1193,18 @@ describe("wrangler workflows", () => {
 			expect(std.info).toMatchInlineSnapshot(
 				`"🔄 The instance "bar" from some-workflow was resumed successfully"`
 			);
+		});
+
+		it("should output the API response as JSON with --json", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const response = { id: "bar", status: "running" };
+			await mockChangeStatusRequest(expect, "bar", undefined, response);
+
+			await runWrangler(`workflows instances resume some-workflow bar --json`);
+
+			expect(JSON.parse(std.out)).toEqual(response);
 		});
 	});
 
@@ -1231,6 +1257,25 @@ describe("wrangler workflows", () => {
 			expect(std.info).toMatchInlineSnapshot(
 				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
 			);
+		});
+
+		it("should output the API response as JSON with --json", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const response = { id: "bar", status: "terminated" };
+			await mockChangeStatusRequest(
+				expect,
+				"bar",
+				{ status: "terminate" },
+				response
+			);
+
+			await runWrangler(
+				`workflows instances terminate some-workflow bar --json`
+			);
+
+			expect(JSON.parse(std.out)).toEqual(response);
 		});
 	});
 
@@ -1405,6 +1450,18 @@ describe("wrangler workflows", () => {
 			);
 		});
 
+		it("should output the API response as JSON with --json", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const response = { id: "bar", status: "queued" };
+			await mockChangeStatusRequest(expect, "bar", undefined, response);
+
+			await runWrangler(`workflows instances restart some-workflow bar --json`);
+
+			expect(JSON.parse(std.out)).toEqual(response);
+		});
+
 		it("should restart an instance from a specific step", async ({
 			expect,
 		}) => {
@@ -1496,7 +1553,6 @@ describe("wrangler workflows", () => {
 			);
 			expect(std.info).toMatchInlineSnapshot(`""`);
 			expect(JSON.parse(std.out)).toEqual({
-				name: "some-workflow",
 				status: "already_running",
 			});
 		});
@@ -1635,14 +1691,11 @@ describe("wrangler workflows", () => {
 
 		it("should output JSON with --json", async ({ expect }) => {
 			writeWranglerConfig();
-
-			await mockDeleteWorkflowRequest(expect, "some-workflow");
+			const response = { deleted: true, workflow_id: "workflow-123" };
+			await mockDeleteWorkflowRequest(expect, "some-workflow", response);
 
 			await runWrangler(`workflows delete some-workflow --json`);
-			expect(JSON.parse(std.out)).toEqual({
-				name: "some-workflow",
-				success: true,
-			});
+			expect(JSON.parse(std.out)).toEqual(response);
 		});
 	});
 
@@ -2531,6 +2584,26 @@ describe("wrangler workflows", () => {
 					'Workflow "my-workflow" instances removed successfully from local dev session.'
 				);
 			});
+
+			it("should output the local API response as JSON", async ({ expect }) => {
+				writeWranglerConfig();
+				const response = { status: "ok", success: true };
+
+				msw.use(
+					http.delete(`${LOCAL_BASE}/workflows/:workflowName`, () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: response,
+						});
+					})
+				);
+
+				await runWrangler("workflows delete my-workflow --local --json");
+
+				expect(JSON.parse(std.out)).toEqual(response);
+			});
 		});
 
 		describe("workflows instances list --local", () => {
@@ -3058,6 +3131,31 @@ describe("wrangler workflows", () => {
 					`"📤 The event with type "my-event" was sent to the instance "instance-123" from my-workflow"`
 				);
 			});
+
+			it("should output the local API response as JSON", async ({ expect }) => {
+				writeWranglerConfig();
+				const response = { accepted: true };
+
+				msw.use(
+					http.post(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/events/:eventType`,
+						() => {
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: response,
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances send-event my-workflow instance-123 --type my-event --local --json"
+				);
+
+				expect(JSON.parse(std.out)).toEqual(response);
+			});
 		});
 
 		describe("latest instance resolution --local", () => {
@@ -3112,7 +3210,7 @@ describe("wrangler workflows", () => {
 				expect(std.info).toContain("newest-instance");
 			});
 
-			it("should not emit the 'Latest instance is' notice with --json", async ({
+			it("should output the local API response without a latest notice", async ({
 				expect,
 			}) => {
 				writeWranglerConfig();
@@ -3150,14 +3248,8 @@ describe("wrangler workflows", () => {
 					"workflows instances pause my-workflow latest --local --json"
 				);
 
-				// The resolved id is reported through the payload rather than a
-				// human-readable notice, so stdout stays parseable.
 				expect(std.info).toMatchInlineSnapshot(`""`);
-				expect(JSON.parse(std.out)).toEqual({
-					name: "my-workflow",
-					id: "newest-instance",
-					success: true,
-				});
+				expect(JSON.parse(std.out)).toEqual({ success: true });
 			});
 		});
 	});

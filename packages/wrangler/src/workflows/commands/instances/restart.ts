@@ -96,13 +96,14 @@ export const workflowsInstancesRestartCommand = createCommand({
 
 	async handler(args, { config }) {
 		let id: string;
+		let result: unknown;
 		const from = getRestartFrom(args);
 
 		if (args.local) {
 			id = await getLocalInstanceIdFromArgs(args.port, args, {
 				quiet: args.json,
 			});
-			await updateLocalInstanceStatus(
+			result = await updateLocalInstanceStatus(
 				args.port,
 				args.name,
 				id,
@@ -112,7 +113,7 @@ export const workflowsInstancesRestartCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(
+			result = await updateInstanceStatus(
 				config,
 				accountId,
 				args.name,
@@ -123,7 +124,7 @@ export const workflowsInstancesRestartCommand = createCommand({
 		}
 
 		if (args.json) {
-			logger.json({ name: args.name, id, success: true });
+			logger.json(result);
 			return;
 		}
 

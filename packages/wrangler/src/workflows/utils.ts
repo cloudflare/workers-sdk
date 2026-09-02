@@ -214,14 +214,14 @@ export async function updateInstanceStatus(
 	status: "pause" | "resume" | "restart" | "terminate",
 	from?: WorkflowInstanceRestartFrom,
 	rollback?: boolean
-): Promise<void> {
+): Promise<unknown> {
 	const body = {
 		status,
 		...(from ? { from } : {}),
 		...(status === "terminate" && rollback === true ? { rollback: true } : {}),
 	};
 
-	await fetchResult(
+	return fetchResult<unknown>(
 		config,
 		`/accounts/${accountId}/workflows/${workflowName}/instances/${instanceId}/status`,
 		{

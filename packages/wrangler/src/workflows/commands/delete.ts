@@ -27,15 +27,17 @@ export const workflowsDeleteCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
+		let result: unknown;
+
 		if (args.local) {
-			await fetchLocalResult(
+			result = await fetchLocalResult(
 				args.port,
 				`/workflows/${encodeURIComponent(args.name)}`,
 				{ method: "DELETE" }
 			);
 
 			if (args.json) {
-				logger.json({ name: args.name, success: true });
+				logger.json(result);
 				return;
 			}
 
@@ -45,14 +47,14 @@ export const workflowsDeleteCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 
-			await fetchResult(
+			result = await fetchResult(
 				config,
 				`/accounts/${accountId}/workflows/${args.name}`,
 				{ method: "DELETE" }
 			);
 
 			if (args.json) {
-				logger.json({ name: args.name, success: true });
+				logger.json(result);
 				return;
 			}
 
