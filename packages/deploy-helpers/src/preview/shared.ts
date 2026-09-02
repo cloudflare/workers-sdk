@@ -780,8 +780,9 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 		previewDefaults.cache = previews?.cache ?? config.cache;
 	}
 
-	if (config.placement) {
-		previewDefaults.placement = parseConfigPlacement(config);
+	const placement = previews?.placement ?? config.placement;
+	if (placement) {
+		previewDefaults.placement = parseConfigPlacement(placement);
 	}
 
 	return previewDefaults;

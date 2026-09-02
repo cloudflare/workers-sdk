@@ -699,6 +699,7 @@ describe("wrangler preview", () => {
 							previews: {
 								vars: { STAGE_ONLY: "stage" },
 								limits: { cpu_ms: 50 },
+								placement: { mode: "targeted", region: "WEU" },
 							},
 						},
 					},
@@ -736,7 +737,8 @@ describe("wrangler preview", () => {
 				"preview settings update --env staging --worker-name override-worker --skip-confirmation"
 			);
 			expect(patchRequestBody?.preview_defaults?.placement).toEqual({
-				mode: "smart",
+				mode: "targeted",
+				region: "WEU",
 			});
 			expect(patchRequestBody?.preview_defaults?.limits).toEqual({
 				cpu_ms: 50,
@@ -786,5 +788,42 @@ describe("wrangler preview", () => {
 			).rejects.toThrow(/previews\.queues/);
 			expect(requested).toBe(false);
 		});
+
+		test.for([
+			{ placement: "smart", reason: "is not an object" },
+			{ placement: { mode: "invalid" }, reason: "has an invalid mode" },
+			{
+				placement: { mode: "targeted", region: "WEU", host: "example.com" },
+				reason: "has multiple targeted fields",
+			},
+		])(
+			"should fail before making API calls when previews.placement $reason",
+			async ({ placement }, { expect }) => {
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						previews: { placement },
+					})
+				);
+
+				let requested = false;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						requested = true;
+						return HttpResponse.json({ success: true, result: {} });
+					})
+				);
+
+				await expect(
+					runWrangler(
+						"preview settings update --worker-name override-worker --skip-confirmation"
+					)
+				).rejects.toThrow(/previews\.placement/);
+				expect(requested).toBe(false);
+			}
+		);
 	});
 });

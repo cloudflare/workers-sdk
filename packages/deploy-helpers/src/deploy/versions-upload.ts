@@ -189,7 +189,7 @@ async function uploadWorkerVersion(
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
 
-	const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config.placement);
 
 	const entryPointName = path.basename(resolvedEntryPointPath);
 	const main = {

@@ -48,7 +48,7 @@ function createWorkerBundleFormData(
 	let placement: CfPlacement | undefined;
 
 	if (config !== undefined) {
-		placement = parseConfigPlacement(config);
+		placement = parseConfigPlacement(config.placement);
 	} else {
 		placement = undefined;
 	}

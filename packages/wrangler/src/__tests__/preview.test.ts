@@ -4981,7 +4981,7 @@ describe("wrangler preview", () => {
 			vi.unstubAllEnvs();
 		});
 
-		test("should inherit top-level previews config into an environment when env.previews is absent", async ({
+		test("should disable placement when previews placement is off", async ({
 			expect,
 		}) => {
 			writeFileSync(
@@ -4992,6 +4992,7 @@ describe("wrangler preview", () => {
 					compatibility_date: "2025-01-01",
 					placement: { mode: "smart" },
 					previews: {
+						placement: { mode: "off" },
 						observability: {
 							enabled: true,
 							redact_query_string: true,
@@ -5016,7 +5017,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						compatibility_date?: string;
-						placement?: { mode?: string };
+						placement?: { mode?: string } | null;
 						env?: Record<
 							string,
 							{ type: string; text?: string; namespace_id?: string }
@@ -5091,7 +5092,7 @@ describe("wrangler preview", () => {
 				redact_query_string: true,
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
-			expect(deploymentRequestBody?.placement).toEqual({ mode: "smart" });
+			expect(deploymentRequestBody?.placement).toBeNull();
 			expect(deploymentRequestBody?.env).toMatchObject({
 				TOP_LEVEL_PREVIEW: { type: "plain_text", text: "top-value" },
 				TOP_KV: { type: "kv_namespace", namespace_id: "top-kv-id" },
