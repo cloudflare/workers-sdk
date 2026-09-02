@@ -37,12 +37,16 @@ export abstract class Router {
 	async fetch(req: Request<unknown, unknown>) {
 		const url = new URL(req.url);
 		const methodRoutes = this.#routes?.get(req.method);
-		if (methodRoutes === undefined) return new Response(null, { status: 405 });
+		if (methodRoutes === undefined) {
+			return new Response(null, { status: 405 });
+		}
 		const handlers = this as unknown as Record<PropertyKey, RouteHandler>;
 		try {
 			for (const [path, key] of methodRoutes) {
 				const match = path.exec(url.pathname);
-				if (match !== null) return await handlers[key](req, match.groups, url);
+				if (match !== null) {
+					return await handlers[key](req, match.groups, url);
+				}
 			}
 			return new Response(null, { status: 404 });
 		} catch (e) {
@@ -66,9 +70,13 @@ export type RouteHandler<Params = unknown, Cf = unknown> = (
 ) => Awaitable<Response>;
 
 function pathToRegexp(path?: string): RegExp {
-	if (path === undefined) return /^.*$/;
+	if (path === undefined) {
+		return /^.*$/;
+	}
 	// Optionally allow trailing slashes
-	if (!path.endsWith("/")) path += "/?";
+	if (!path.endsWith("/")) {
+		path += "/?";
+	}
 	// Escape forward slashes
 	path = path.replace(/\//g, "\\/");
 	// Replace `:key` with named capture groups
@@ -84,8 +92,11 @@ const createRouteDecorator =
 		const route = [pathToRegexp(path), key] as const;
 		const routes = (prototype[kRoutesTemplate] ??= new Map());
 		const methodRoutes = routes.get(method);
-		if (methodRoutes) methodRoutes.push(route);
-		else routes.set(method, [route]);
+		if (methodRoutes) {
+			methodRoutes.push(route);
+		} else {
+			routes.set(method, [route]);
+		}
 	};
 
 export const GET = createRouteDecorator("GET");

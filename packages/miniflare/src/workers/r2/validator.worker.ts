@@ -33,9 +33,13 @@ function includesEtag(
 ) {
 	// Adapted from internal R2 gateway implementation.
 	for (const condition of conditions) {
-		if (condition.type === "wildcard") return true;
+		if (condition.type === "wildcard") {
+			return true;
+		}
 		if (condition.value === etag) {
-			if (condition.type === "strong" || comparison === "weak") return true;
+			if (condition.type === "strong" || comparison === "weak") {
+				return true;
+			}
 		}
 	}
 	return false;
@@ -94,7 +98,9 @@ export type DigestAlgorithm = (typeof R2_HASH_ALGORITHMS)[number]["name"];
 function serialisedLength(x: string) {
 	//  Adapted from internal R2 gateway implementation
 	for (let i = 0; i < x.length; i++) {
-		if (x.charCodeAt(i) >= 256) return x.length * 2;
+		if (x.charCodeAt(i) >= 256) {
+			return x.length * 2;
+		}
 	}
 	return x.length;
 }
@@ -141,22 +147,36 @@ export class Validator {
 			// If the header contained a single range, use it. Otherwise, if the
 			// header was invalid, or contained multiple ranges, just return the full
 			// response (by returning undefined from this function).
-			if (ranges?.length === 1) return ranges[0];
+			if (ranges?.length === 1) {
+				return ranges[0];
+			}
 		} else if (options.range !== undefined) {
 			let { offset, length, suffix } = options.range;
 			// Eliminate suffix if specified
 			if (suffix !== undefined) {
-				if (suffix <= 0) throw new InvalidRange();
-				if (suffix > size) suffix = size;
+				if (suffix <= 0) {
+					throw new InvalidRange();
+				}
+				if (suffix > size) {
+					suffix = size;
+				}
 				offset = size - suffix;
 				length = suffix;
 			}
 			// Validate offset and length
-			if (offset === undefined) offset = 0;
-			if (length === undefined) length = size - offset;
-			if (offset < 0 || offset > size || length <= 0) throw new InvalidRange();
+			if (offset === undefined) {
+				offset = 0;
+			}
+			if (length === undefined) {
+				length = size - offset;
+			}
+			if (offset < 0 || offset > size || length <= 0) {
+				throw new InvalidRange();
+			}
 			// Clamp length to maximum
-			if (offset + length > size) length = size - offset;
+			if (offset + length > size) {
+				length = size - offset;
+			}
 			// Convert to inclusive range
 			return { start: offset, end: offset + length - 1 };
 		}
@@ -170,7 +190,9 @@ export class Validator {
 	}
 
 	metadataSize(customMetadata?: Record<string, string>): Validator {
-		if (customMetadata === undefined) return this;
+		if (customMetadata === undefined) {
+			return this;
+		}
 		let metadataLength = 0;
 		for (const [key, value] of Object.entries(customMetadata)) {
 			metadataLength += serialisedLength(key) + serialisedLength(value);

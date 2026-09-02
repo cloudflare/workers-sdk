@@ -15,9 +15,9 @@ import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import {
 	getTodaysCompatDate,
-	removeDirSync,
 	stripRedundantNodejsCompatFlags,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/compatibility-date";
+import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import SCRIPT_ACCESS_IDENTITY from "worker:access/access-identity";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
@@ -186,14 +186,14 @@ function getCustomServiceDesignator(
 			serviceName = `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`;
 			// Remote config travels via props to a generic proxy worker.
 			props = buildRemoteProxyProps(remoteProxyConnectionString, name);
-		} else if (service.workerName === kCurrentWorker) {
+		} else if (service.worker === kCurrentWorker) {
 			serviceName = getUserServiceName(refererName);
 			entrypoint = service.exportName;
 			if (service.props) {
 				props = { json: JSON.stringify(service.props) };
 			}
 		} else {
-			serviceName = getUserServiceName(service.workerName);
+			serviceName = getUserServiceName(service.worker);
 			entrypoint = service.exportName;
 			if (service.props) {
 				props = { json: JSON.stringify(service.props) };
@@ -333,12 +333,12 @@ function getGlobalOutbound(
 }
 
 function getTailServiceDesignator(consumer: {
-	workerName: string;
+	worker: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
 }): ServiceDesignator {
 	return {
-		name: getUserServiceName(consumer.workerName),
+		name: getUserServiceName(consumer.worker),
 		entrypoint: consumer.entrypoint,
 		props:
 			consumer.props !== undefined
@@ -573,7 +573,7 @@ export const CORE_PLUGIN: Plugin = {
 					// how the collector attributes each captured invocation to its worker
 					// (each worker streams to the collector with its own props).
 					{
-						workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 						streaming: true,
 						props: { worker: config.name },
 					},
@@ -656,7 +656,9 @@ export const CORE_PLUGIN: Plugin = {
 				service,
 				dev
 			);
-			if (maybeService !== undefined) services.push(maybeService);
+			if (maybeService !== undefined) {
+				services.push(maybeService);
+			}
 		}
 
 		if (dev?.outboundService !== undefined) {
@@ -667,7 +669,9 @@ export const CORE_PLUGIN: Plugin = {
 				dev.outboundService,
 				dev
 			);
-			if (maybeService !== undefined) services.push(maybeService);
+			if (maybeService !== undefined) {
+				services.push(maybeService);
+			}
 		}
 
 		{
@@ -975,11 +979,12 @@ export function getGlobalServices({
 				workflowOptions.set(binding.name, {
 					name: binding.name,
 					className: binding.exportName,
-					scriptName: binding.workerName,
+					scriptName: binding.worker,
 				});
 			}
 		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
 			workflowOptions
@@ -1000,6 +1005,7 @@ export function getGlobalServices({
 				explorerWorkerOpts,
 				telemetry: sharedOptions.telemetry,
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
+				sharedOptions,
 			})
 		);
 	}

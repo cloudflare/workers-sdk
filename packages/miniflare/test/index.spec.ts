@@ -1042,7 +1042,7 @@ test("Miniflare: service binding to current worker", async ({ expect }) => {
 					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
-					env: { SELF: { type: "worker", workerName: kCurrentWorker } },
+					env: { SELF: { type: "worker", worker: kCurrentWorker } },
 					manifest: singleModuleManifest(`export default {
 			async fetch(request, env) {
 				const { pathname } = new URL(request.url);
@@ -1154,17 +1154,17 @@ test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 					env: {
 						A_RPC_SERVICE: {
 							type: "worker",
-							workerName: kCurrentWorker,
+							worker: kCurrentWorker,
 							exportName: "RpcEntrypoint",
 						},
 						A_NAMED_SERVICE: {
 							type: "worker",
-							workerName: "a",
+							worker: "a",
 							exportName: "namedEntrypoint",
 						},
 						B_NAMED_SERVICE: {
 							type: "worker",
-							workerName: "b",
+							worker: "b",
 							exportName: "anotherNamedEntrypoint",
 						},
 					},
@@ -1227,7 +1227,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 					env: {
 						RPC_SERVICE: {
 							type: "worker",
-							workerName: "b",
+							worker: "b",
 							exportName: "RpcEntrypoint",
 						},
 					},
@@ -1283,7 +1283,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 					env: {
 						RPC_SERVICE: {
 							type: "worker",
-							workerName: "b",
+							worker: "b",
 							exportName: "RpcEntrypoint",
 						},
 					},
@@ -1343,10 +1343,10 @@ test("Miniflare: tail consumer called", async ({ expect }) => {
 				config: {
 					type: "worker",
 					name: "a",
-					tailConsumers: [{ workerName: "b" }],
+					tailConsumers: [{ worker: "b" }],
 					compatibilityDate: "2025-04-28",
 					env: {
-						B: { type: "worker", workerName: "b" },
+						B: { type: "worker", worker: "b" },
 					},
 					manifest: singleModuleManifest(`
 
@@ -1407,7 +1407,7 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 				}`),
 				},
 				dev: {
-					outboundService: { type: "worker", workerName: "b" },
+					outboundService: { type: "worker", worker: "b" },
 				},
 			},
 			{
@@ -2533,7 +2533,12 @@ This is a random email body.
 		outcome: "exception",
 		forwards: [],
 		replies: [],
-		events: [{ type: "unhandled", timestamp: expect.any(String) }],
+		events: [
+			{
+				type: "unhandled",
+				timestamp: expect.any(String),
+			},
+		],
 	});
 });
 
@@ -2990,11 +2995,11 @@ test("Miniflare: getBindings() returns all bindings", async ({
 					env: {
 						STRING: { type: "text", value: "hello" },
 						OBJECT: { type: "json", value: { a: 1, b: { c: 2 } } },
-						SELF: { type: "worker", workerName: "" },
+						SELF: { type: "worker", worker: "" },
 						DB: { type: "d1", id: "DB" },
 						DO: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "DurableObject",
 						},
 						KV: { type: "kv", id: "KV" },
@@ -3014,7 +3019,9 @@ test("Miniflare: getBindings() returns all bindings", async ({
 	});
 	let disposed = false;
 	onTestFinished(() => {
-		if (!disposed) return mf.dispose();
+		if (!disposed) {
+			return mf.dispose();
+		}
 	});
 
 	interface Env {
@@ -3235,7 +3242,7 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 						DB: { type: "d1", id: "DB" },
 						DO: {
 							type: "durable-object",
-							workerName: "a",
+							worker: "a",
 							exportName: "DurableObject",
 						},
 					},
@@ -3384,7 +3391,7 @@ test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves
 					env: {
 						COUNTER: {
 							type: "durable-object",
-							workerName: "do-worker",
+							worker: "do-worker",
 							exportName: "Counter",
 						},
 					},
@@ -3632,8 +3639,11 @@ unixSerialTest(
 		process.env.MINIFLARE_WORKERD_PATH = workerdPath;
 		onTestFinished(() => {
 			// Setting key/values pairs on `process.env` coerces values to strings
-			if (original === undefined) delete process.env.MINIFLARE_WORKERD_PATH;
-			else process.env.MINIFLARE_WORKERD_PATH = original;
+			if (original === undefined) {
+				delete process.env.MINIFLARE_WORKERD_PATH;
+			} else {
+				process.env.MINIFLARE_WORKERD_PATH = original;
+			}
 		});
 
 		const mf = new Miniflare({
@@ -4450,7 +4460,9 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 			const specifier = url.searchParams.get("specifier");
 			assert(specifier !== null);
 			const maybeModule = modules[specifier];
-			if (maybeModule === undefined) return new Response(null, { status: 404 });
+			if (maybeModule === undefined) {
+				return new Response(null, { status: 404 });
+			}
 			const name = path.posix.relative(modulesRoot, specifier);
 			return new Response(JSON.stringify({ name, ...maybeModule }));
 		},

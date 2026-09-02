@@ -132,6 +132,9 @@ function convertObservability(
 	if (observability.headSamplingRate !== undefined) {
 		out.head_sampling_rate = observability.headSamplingRate;
 	}
+	if (observability.redactQueryString !== undefined) {
+		out.redact_query_string = observability.redactQueryString;
+	}
 	if (observability.logs !== undefined) {
 		const logs: NonNullable<NonNullable<RawConfig["observability"]>["logs"]> =
 			{};
@@ -341,7 +344,7 @@ function convertBindingsAndAssets(
 				};
 				if (binding.outbound) {
 					entry.outbound = omitUndefined({
-						service: binding.outbound.workerName,
+						service: binding.outbound.worker,
 						parameters: binding.outbound.parameters,
 					});
 				}
@@ -355,7 +358,7 @@ function convertBindingsAndAssets(
 				durableObjectBindings.push({
 					name,
 					class_name: binding.exportName,
-					script_name: binding.workerName,
+					script_name: binding.worker,
 				});
 				break;
 			}
@@ -562,7 +565,7 @@ function convertBindingsAndAssets(
 				services.push(
 					omitUndefined({
 						binding: name,
-						service: binding.workerName,
+						service: binding.worker,
 						entrypoint: binding.exportName,
 						props: binding.props,
 						remote: binding.dev?.remote,
@@ -580,7 +583,7 @@ function convertBindingsAndAssets(
 			// 		omitUndefined({
 			// 			binding: name,
 			// 			class_name: binding.exportName,
-			// 			script_name: binding.workerName,
+			// 			script_name: binding.worker,
 			// 		})
 			// 	);
 			// 	break;
@@ -910,9 +913,9 @@ function convertTailConsumers(
 	const streaming: NonNullable<RawConfig["streaming_tail_consumers"]> = [];
 	for (const consumer of consumers) {
 		if (consumer.streaming) {
-			streaming.push({ service: consumer.workerName });
+			streaming.push({ service: consumer.worker });
 		} else {
-			tail.push({ service: consumer.workerName });
+			tail.push({ service: consumer.worker });
 		}
 	}
 	if (tail.length) {

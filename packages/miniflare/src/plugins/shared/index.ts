@@ -175,7 +175,9 @@ export function namespaceEntries<
 }
 
 export function maybeParseURL(url: string | undefined): URL | undefined {
-	if (typeof url !== "string" || path.isAbsolute(url)) return;
+	if (typeof url !== "string" || path.isAbsolute(url)) {
+		return;
+	}
 	try {
 		return new URL(url);
 	} catch {}

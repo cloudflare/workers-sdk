@@ -237,7 +237,7 @@ export interface WorkerConfig {
 	 */
 	tailConsumers?: Array<{
 		/** The name of the service tail events will be forwarded to. */
-		workerName: string;
+		worker: string;
 		/** Whether to stream tail events in real time. */
 		streaming?: boolean;
 	}>;
@@ -296,6 +296,12 @@ export interface WorkerConfig {
 		enabled?: boolean;
 		/** The sampling rate. */
 		headSamplingRate?: number;
+		/**
+		 * Whether query strings are removed from request URLs in logs and traces.
+		 *
+		 * @default false
+		 */
+		redactQueryString?: boolean;
 		logs?: {
 			enabled?: boolean;
 			/** The sampling rate. */

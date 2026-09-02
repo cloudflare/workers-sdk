@@ -1,5 +1,33 @@
 # @cloudflare/build-output-utils
 
+## 0.4.0
+
+### Minor Changes
+
+- [#15388](https://github.com/cloudflare/workers-sdk/pull/15388) [`10d6bfb`](https://github.com/cloudflare/workers-sdk/commit/10d6bfbaf0ab7466892f4d97af1301494ca71e37) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support partial manifests in the experimental Build Output Specification
+
+  Build output producers now declare whether their module inventory is complete. `readBuildOutput()` resolves partial manifests by discovering `.js`, `.mjs`, and `.map` files while preserving explicit module type overrides.
+
+### Patch Changes
+
+- Updated dependencies [[`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46), [`10d6bfb`](https://github.com/cloudflare/workers-sdk/commit/10d6bfbaf0ab7466892f4d97af1301494ca71e37)]:
+  - @cloudflare/config@0.10.0
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [[`3650d29`](https://github.com/cloudflare/workers-sdk/commit/3650d29f1cfcd6db103c25d22819e8fe41d592f3)]:
+  - @cloudflare/config@0.9.0
+
+## 0.3.0
+
+### Minor Changes
+
+- [#15371](https://github.com/cloudflare/workers-sdk/pull/15371) [`e9df120`](https://github.com/cloudflare/workers-sdk/commit/e9df1204238ba26ed0e065b5bf441cfa4b4e683a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support multiple named Workers in the experimental Build Output utilities
+
+  Build Output paths and config writing can now target any named Worker directory, and reading Build Output returns every Worker keyed by its directory name. `writeWorkerConfig` now accepts a single options object.
+
 ## 0.2.0
 
 ### Minor Changes

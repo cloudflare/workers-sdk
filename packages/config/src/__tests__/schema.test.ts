@@ -372,6 +372,7 @@ describe("InputWorkerSchema", () => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
 				manifest: {
+					type: "complete",
 					mainModule: "index.js",
 					modules: { "index.js": { type: "esm" } },
 				},
@@ -460,6 +461,34 @@ describe("InputWorkerSchema", () => {
 					"sampleRate"
 				);
 			}
+		});
+
+		it("accepts camelCase query string redaction configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					redactQueryString: true,
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects snake_case query string redaction configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					redact_query_string: true,
+				},
+			});
+
+			expect(result.success).toBe(false);
 		});
 
 		it("rejects unknown keys inside a trigger", ({ expect }) => {
@@ -680,10 +709,11 @@ describe("OutputWorkerSchema", () => {
 		}
 	});
 
-	it("accepts a config with a valid manifest", ({ expect }) => {
+	it("accepts a config with a valid complete manifest", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				mainModule: "index.js",
 				modules: {
 					"index.js": { type: "esm" },
@@ -696,6 +726,36 @@ describe("OutputWorkerSchema", () => {
 		if (result.success) {
 			expect(result.data.manifest?.mainModule).toBe("index.js");
 		}
+	});
+
+	it("accepts a partial manifest that omits its main module from modules.manifest", ({
+		expect,
+	}) => {
+		const result = OutputWorkerSchema.safeParse({
+			...baseConfig,
+			manifest: {
+				type: "partial",
+				mainModule: "index.js",
+				modules: { "other.js": { type: "cjs" } },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects a partial manifest that includes its main module in modules.manifest", ({
+		expect,
+	}) => {
+		const result = OutputWorkerSchema.safeParse({
+			...baseConfig,
+			manifest: {
+				type: "partial",
+				mainModule: "index.js",
+				modules: { "index.js": { type: "esm" } },
+			},
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("rejects an entrypoint field (included in input schema only)", ({
@@ -713,6 +773,7 @@ describe("OutputWorkerSchema", () => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				mainModule: "index.js",
 				modules: {
 					"index.js": { type: "bogus-type" },
@@ -727,7 +788,23 @@ describe("OutputWorkerSchema", () => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				modules: { "index.js": { type: "esm" } },
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a complete manifest that does not include its main module", ({
+		expect,
+	}) => {
+		const result = OutputWorkerSchema.safeParse({
+			...baseConfig,
+			manifest: {
+				type: "complete",
+				mainModule: "index.js",
+				modules: {},
 			},
 		});
 
@@ -738,6 +815,7 @@ describe("OutputWorkerSchema", () => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				mainModule: "index.js",
 				modules: {
 					"index.js": { type: "esm", extra: "field" },

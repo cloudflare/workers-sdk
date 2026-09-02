@@ -6,6 +6,7 @@ import {
 	INHERIT_SYMBOL,
 	isNonInteractiveOrCI,
 	PatchConfigError,
+	printBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
@@ -17,7 +18,6 @@ import {
 	prompt,
 	select,
 } from "../../shared/context";
-import { printBindings } from "./print-bindings";
 import type { QueueResponse } from "../../triggers/queue-consumers";
 import type {
 	Binding,
@@ -1129,10 +1129,13 @@ export async function provisionBindings(
 					{ type: resource.resourceType },
 				])
 			) as Record<string, Binding>,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			config.containers,
-			{ provisioning: true }
+			{
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				containers: config.containers,
+				provisioning: true,
+			}
 		);
 		logger.log();
 

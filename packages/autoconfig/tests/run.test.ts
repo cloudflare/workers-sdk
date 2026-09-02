@@ -90,7 +90,7 @@ describe("runAutoConfig()", () => {
 			observability: { enabled: true },
 		});
 		expect(summary.buildConfig).toEqual({ assetsDirectory: "public" });
-		expect(summary.buildCommand).toBe("npm run build");
+		expect(summary.buildCommand).toBe("npx framework build");
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
@@ -102,14 +102,14 @@ describe("runAutoConfig()", () => {
 		expect(existsSync("wrangler.jsonc")).toBe(false);
 		expect(installWrangler).toHaveBeenCalledWith("npm", false);
 		expect(context.runCommand).toHaveBeenCalledWith(
-			"npm run build",
+			"npx framework build",
 			process.cwd(),
 			"[build]"
 		);
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
 			scripts: {
 				build: "generate && vite build",
-				deploy: "npm run build && cf deploy --no-build",
+				deploy: "cf deploy",
 				preview: "cf dev",
 			},
 		});
@@ -150,6 +150,40 @@ describe("runAutoConfig()", () => {
 			isWorkspaceRoot: false,
 		});
 		expect(installWrangler).toHaveBeenCalledWith("npm", false);
+	});
+
+	it("does not reinstall an existing cf dependency", async ({ expect }) => {
+		const installPackages = vi
+			.spyOn(cliPackages, "installPackages")
+			.mockResolvedValue();
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+		const packageJson = {
+			name: "my-static-app",
+			devDependencies: { cf: "^0.8.0" },
+		};
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"public/index.html": "<h1>Hello World</h1>",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-static-app",
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: "public",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		expect(installPackages).not.toHaveBeenCalled();
 	});
 
 	it("does not install Wrangler when cf delegates to Vite", async ({

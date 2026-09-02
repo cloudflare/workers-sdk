@@ -306,7 +306,9 @@ function getSourceMapURL(
 	const ws = new NodeWebSocket(inspectorURL);
 
 	const finish = (error?: Error) => {
-		if (settled) return;
+		if (settled) {
+			return;
+		}
 		settled = true;
 		clearTimeout(timeout);
 		if (error) {
@@ -333,7 +335,9 @@ function getSourceMapURL(
 	}, 10_000);
 
 	ws.on("message", async (raw) => {
-		if (settled) return;
+		if (settled) {
+			return;
+		}
 		try {
 			const message = JSON.parse(raw.toString("utf8"));
 			if (message.method === "Debugger.scriptParsed") {

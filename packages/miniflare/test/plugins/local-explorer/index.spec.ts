@@ -175,13 +175,13 @@ describe("Local Explorer API validation", () => {
 			expect,
 		}) => {
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/non-existent-id/keys`
+				`${BASE_URL}/storage/kv/namespaces/non-existent-id/values/non-existent-key`
 			);
 
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [{ code: 10013, message: "list keys: 'namespace not found'" }],
+				errors: [{ code: 10009, message: "Not Found" }],
 			});
 		});
 	});
@@ -663,7 +663,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 							SEND_EMAIL_SECONDARY: { type: "send-email" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a1",
+								worker: "worker-a1",
 								exportName: "TestDO",
 							},
 						},

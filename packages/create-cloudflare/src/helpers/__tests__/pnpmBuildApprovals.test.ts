@@ -167,6 +167,22 @@ describe("writePnpmBuildApprovals", () => {
 		expect(written).toMatch(/^ {2}esbuild: true$/m);
 		expect(written).toMatch(/^ {2}workerd: true$/m);
 	});
+
+	test("preserves a framework's opt-in to all dependency builds", ({
+		expect,
+	}) => {
+		mockPackageManager("pnpm", "10.33.0");
+		vi.mocked(existsSync).mockImplementation(
+			(path) => path.toString() === yamlPath
+		);
+		vi.mocked(readFile).mockReturnValue(
+			["packages:", "  - .", "dangerouslyAllowAllBuilds: true", ""].join("\n")
+		);
+
+		writePnpmBuildApprovals(projectPath);
+
+		expect(vi.mocked(writeFile)).not.toHaveBeenCalled();
+	});
 });
 
 describe("mergeAllowBuilds", () => {
@@ -203,6 +219,19 @@ describe("mergeAllowBuilds", () => {
 			"  sharp: true",
 			"  '@parcel/watcher': set this to true or false",
 			"  '@swc/core': false",
+			"",
+		].join("\n");
+
+		expect(mergeAllowBuilds(input)).toBe(input);
+	});
+
+	test("does not combine allowBuilds with dangerouslyAllowAllBuilds", ({
+		expect,
+	}) => {
+		const input = [
+			"packages:",
+			"  - .",
+			"dangerouslyAllowAllBuilds: true",
 			"",
 		].join("\n");
 

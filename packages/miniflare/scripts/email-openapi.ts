@@ -12,23 +12,33 @@ import {
 	zEmailSendRequest,
 } from "../src/workers/email/contracts";
 
-function toOpenApiSchema(schema: z.ZodType): Record<string, unknown> {
-	const { $schema: _$schema, ...openApiSchema } = z.toJSONSchema(schema, {
-		target: "openapi-3.0",
-		unrepresentable: "any",
-	});
-	return openApiSchema;
+const EMAIL_SCHEMAS = {
+	"email_handler-event": zEmailHandlerEvent,
+	"email_handler-forward": zEmailHandlerForward,
+	"email_handler-reply": zEmailHandlerReplyApi,
+	email_base: zEmailBase,
+	"email_routing-item": zEmailRoutingItem,
+	"email_routing-detail": zEmailRoutingDetail,
+	"email_send-request": zEmailSendRequest,
+	email_attachment: zEmailAttachment,
+	"email_sending-item": zEmailSendingItem,
+	"email_sending-detail": zEmailSendingDetail,
+};
+
+const emailSchemaRegistry = z.registry<{ id: string }>();
+for (const [id, schema] of Object.entries(EMAIL_SCHEMAS)) {
+	emailSchemaRegistry.add(schema, { id });
 }
 
-export const EMAIL_OPENAPI_SCHEMAS = {
-	"email_handler-event": toOpenApiSchema(zEmailHandlerEvent),
-	"email_handler-forward": toOpenApiSchema(zEmailHandlerForward),
-	"email_handler-reply": toOpenApiSchema(zEmailHandlerReplyApi),
-	email_base: toOpenApiSchema(zEmailBase),
-	"email_routing-item": toOpenApiSchema(zEmailRoutingItem),
-	"email_routing-detail": toOpenApiSchema(zEmailRoutingDetail),
-	"email_send-request": toOpenApiSchema(zEmailSendRequest),
-	email_attachment: toOpenApiSchema(zEmailAttachment),
-	"email_sending-item": toOpenApiSchema(zEmailSendingItem),
-	"email_sending-detail": toOpenApiSchema(zEmailSendingDetail),
-};
+const { schemas: emailOpenApiSchemas } = z.toJSONSchema(emailSchemaRegistry, {
+	target: "openapi-3.0",
+	unrepresentable: "any",
+	uri: (id) => `#/components/schemas/${id}`,
+});
+
+export const EMAIL_OPENAPI_SCHEMAS = Object.fromEntries(
+	Object.entries(emailOpenApiSchemas).map(([id, schema]) => {
+		const { $id: _$id, $schema: _$schema, ...openApiSchema } = schema;
+		return [id, openApiSchema];
+	})
+);

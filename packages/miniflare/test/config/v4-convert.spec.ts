@@ -35,17 +35,17 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.env).toMatchObject({
 			LOCAL: {
 				type: "durable-object",
-				workerName: "worker",
+				worker: "worker",
 				exportName: "LocalObject",
 			},
 			EXTERNAL: {
 				type: "durable-object",
-				workerName: "external-worker",
+				worker: "external-worker",
 				exportName: "ExternalObject",
 			},
 			SELF_EXPLICIT: {
 				type: "durable-object",
-				workerName: "worker",
+				worker: "worker",
 				exportName: "SelfExplicitObject",
 			},
 		});
@@ -137,20 +137,20 @@ describe("convertV4MiniflareOptions", () => {
 					},
 				},
 				QUEUE: { type: "queue", name: "queue" },
-				SERVICE: { type: "worker", workerName: "other-worker" },
+				SERVICE: { type: "worker", worker: "other-worker" },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {
 					type: "workflow",
 					name: "workflow",
-					workerName: "worker",
+					worker: "worker",
 					exportName: "Workflow",
 					limits: { steps: 5 },
 				},
 				SELF_EXPLICIT_WORKFLOW: {
 					type: "workflow",
 					name: "self-explicit-workflow",
-					workerName: "worker",
+					worker: "worker",
 					exportName: "SelfExplicitWorkflow",
 				},
 			},

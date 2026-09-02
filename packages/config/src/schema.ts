@@ -28,7 +28,7 @@ export const BrowserBindingSchema = z.strictObject({
 
 export const WorkerBindingSchema = z.strictObject({
 	type: z.literal("worker"),
-	workerName: z.string(),
+	worker: z.string(),
 	exportName: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
 	dev: RemoteBindingDevSchema.optional(),
@@ -122,7 +122,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		namespace: z.string().optional(),
 		outbound: z
 			.strictObject({
-				workerName: z.string(),
+				worker: z.string(),
 				parameters: z.array(z.string()).optional(),
 			})
 			.optional(),
@@ -130,7 +130,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("durable-object"),
-		workerName: z.string(),
+		worker: z.string(),
 		exportName: z.string(),
 	}),
 	FlagshipBindingSchema,
@@ -236,7 +236,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	// TODO: support Workflows
 	// z.strictObject({
 	// 	type: z.literal("workflow"),
-	// 	workerName: z.string(),
+	// 	worker: z.string(),
 	// 	exportName: z.string(),
 	// }),
 ]);
@@ -426,6 +426,7 @@ const LimitsSchema = z.strictObject({
 const ObservabilitySchema = z.strictObject({
 	enabled: z.boolean().optional(),
 	headSamplingRate: z.number().optional(),
+	redactQueryString: z.boolean().optional(),
 	logs: z
 		.strictObject({
 			enabled: z.boolean().optional(),
@@ -465,7 +466,7 @@ const PlacementSchema = z.union([
 ]);
 
 export const TailConsumerSchema = z.strictObject({
-	workerName: z.string(),
+	worker: z.string(),
 	streaming: z.boolean().optional(),
 });
 
@@ -659,10 +660,34 @@ export const ModuleTypeSchema = z.enum([
 
 export type ModuleType = z.output<typeof ModuleTypeSchema>;
 
-const ManifestSchema = z.strictObject({
-	mainModule: z.string(),
-	modules: z.record(z.string(), z.strictObject({ type: ModuleTypeSchema })),
-});
+const ManifestModulesSchema = z.record(
+	z.string(),
+	z.strictObject({ type: ModuleTypeSchema })
+);
+
+const ManifestSchema = z
+	.strictObject({
+		type: z.enum(["partial", "complete"]),
+		mainModule: z.string(),
+		modules: ManifestModulesSchema,
+	})
+	.superRefine((manifest, ctx) => {
+		const mainModuleEntry = manifest.modules[manifest.mainModule];
+		if (manifest.type === "complete" && mainModuleEntry === undefined) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["modules", manifest.mainModule],
+				message: "A complete manifest must include its main module.",
+			});
+		}
+		if (manifest.type === "partial" && mainModuleEntry !== undefined) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["modules", manifest.mainModule],
+				message: "A partial manifest must not include its main module.",
+			});
+		}
+	});
 
 /**
  * Output Worker schema — the shape of the Worker's `config.json` in the
