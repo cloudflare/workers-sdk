@@ -184,6 +184,77 @@ describe("resource provisioning", () => {
 		expect(std.err).toBe("");
 	});
 
+	it("skips provisioning a resource type when Wrangler cannot check whether it exists", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			kv_namespaces: [{ binding: "KV" }],
+			r2_buckets: [{ binding: "R2" }],
+		});
+		mockGetSettings();
+		mockListKVNamespacesRequest(expect);
+		mockCreateKVNamespace(expect, {
+			resultId: "new-kv-id",
+			assertTitle: "test-name-kv",
+		});
+
+		let r2BucketCreated = false;
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			),
+			http.post("*/accounts/:accountId/r2/buckets", () => {
+				r2BucketCreated = true;
+				return HttpResponse.json(createFetchResult({}));
+			})
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
+				{ name: "R2", type: "inherit" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(r2BucketCreated).toBe(false);
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for R2 Bucket bindings (R2)"
+		);
+		expect(std.err).toBe("");
+	});
+
+	it("fails provisioning when a resource check fails with a non-permission error", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [{ binding: "R2" }],
+		});
+		mockGetSettings();
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Internal Server Error" },
+					]),
+					{ status: 500 }
+				)
+			)
+		);
+
+		await expect(runWrangler("deploy")).rejects.toThrow(
+			"A request to the Cloudflare API"
+		);
+	});
+
 	it("provisions a Queue used by both a producer and consumer", async ({
 		expect,
 	}) => {
