@@ -682,6 +682,43 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.secrets).toEqual({ required: ["A", "B"] });
 		});
+
+		it("splits secret bindings across secrets.required and secrets.optional", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: {
+					A: bindings.secret(),
+					B: bindings.secret({ optional: true }),
+					C: bindings.secret({ optional: false }),
+				},
+			});
+			expect(result.secrets).toEqual({
+				required: ["A", "C"],
+				optional: ["B"],
+			});
+		});
+
+		it("omits `required` when every secret is optional", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: {
+					A: bindings.secret({ optional: true }),
+				},
+			});
+			expect(result.secrets).toEqual({ optional: ["A"] });
+		});
+
+		it("omits `optional` when every secret is required", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				env: {
+					A: bindings.secret(),
+				},
+			});
+			expect(result.secrets).toEqual({ required: ["A"] });
+		});
 	});
 
 	describe("exports", () => {

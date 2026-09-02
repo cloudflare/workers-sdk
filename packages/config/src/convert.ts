@@ -250,6 +250,7 @@ function convertBindingsAndAssets(
 	> = [];
 	const vars: Record<string, string | Json> = {};
 	const secretsRequired: string[] = [];
+	const secretsOptional: string[] = [];
 
 	for (const [name, binding] of Object.entries(env)) {
 		if (isParsedUnsafeBinding(binding)) {
@@ -473,7 +474,15 @@ function convertBindingsAndAssets(
 				break;
 			}
 			case "secret": {
-				secretsRequired.push(name);
+				// Optional secrets go in `secrets.optional` rather than
+				// `secrets.required` — they are still loaded in local dev and
+				// included in type generation, but they do not trigger the
+				// missing-secret warning and do not fail a deploy when unset.
+				if (binding.optional) {
+					secretsOptional.push(name);
+				} else {
+					secretsRequired.push(name);
+				}
 				break;
 			}
 			case "secrets-store-secret": {
@@ -673,8 +682,11 @@ function convertBindingsAndAssets(
 	if (Object.keys(vars).length) {
 		result.vars = vars;
 	}
-	if (secretsRequired.length) {
-		result.secrets = { required: secretsRequired };
+	if (secretsRequired.length || secretsOptional.length) {
+		result.secrets = {
+			...(secretsRequired.length ? { required: secretsRequired } : {}),
+			...(secretsOptional.length ? { optional: secretsOptional } : {}),
+		};
 	}
 
 	// Merge top-level `assets` config with the assets binding name.

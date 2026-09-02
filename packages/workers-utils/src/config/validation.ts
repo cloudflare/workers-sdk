@@ -2629,6 +2629,7 @@ const validateSecrets =
 		// Warn about unexpected properties
 		validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
 			"required",
+			"optional",
 		]);
 
 		// Validate 'required' property if present
@@ -2637,6 +2638,15 @@ const validateSecrets =
 				diagnostics,
 				`${fieldPath}.required`,
 				(value as Record<string, unknown>).required,
+				"string"
+			) && isValid;
+
+		// Validate 'optional' property if present
+		isValid =
+			validateOptionalTypedArray(
+				diagnostics,
+				`${fieldPath}.optional`,
+				(value as Record<string, unknown>).optional,
 				"string"
 			) && isValid;
 
@@ -4911,7 +4921,10 @@ const validateBindingsHaveUniqueNames = (
 
 	// Add secrets to binding name validation (secrets is not a CfWorkerInit binding type,
 	// but we want to validate that secret names don't conflict with other bindings)
-	bindingsGroupedByType["Secret"] = config.secrets?.required ?? [];
+	bindingsGroupedByType["Secret"] = [
+		...(config.secrets?.required ?? []),
+		...(config.secrets?.optional ?? []),
+	];
 
 	const bindingsGroupedByName: Record<string, string[]> = {};
 

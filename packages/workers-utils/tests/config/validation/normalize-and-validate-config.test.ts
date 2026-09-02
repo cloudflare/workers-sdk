@@ -10324,6 +10324,103 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
+			it("should accept secrets.optional alongside secrets.required", ({
+				expect,
+			}) => {
+				const rawConfig: RawConfig = {
+					secrets: {
+						required: ["API_KEY"],
+						optional: ["ANALYTICS_TOKEN"],
+					},
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.secrets).toEqual({
+					required: ["API_KEY"],
+					optional: ["ANALYTICS_TOKEN"],
+				});
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should accept secrets.optional on its own", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					secrets: { optional: ["ANALYTICS_TOKEN"] },
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.secrets).toEqual({ optional: ["ANALYTICS_TOKEN"] });
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if secrets.optional is not an array", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: { optional: "API_KEY" },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.optional" to be an array of strings'
+				);
+			});
+
+			it("should error if secrets.optional contains non-strings", ({
+				expect,
+			}) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: { optional: ["VALID_KEY", 123] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.optional.[1]" to be of type string'
+				);
+			});
+
+			it("should error when a name appears in both required and optional", ({
+				expect,
+			}) => {
+				const rawConfig: RawConfig = {
+					secrets: { required: ["API_KEY"], optional: ["API_KEY"] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"API_KEY assigned to multiple Secret bindings"
+				);
+			});
+
 			it("should error if secrets.required is not an array", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					// @ts-expect-error purposely using an invalid value

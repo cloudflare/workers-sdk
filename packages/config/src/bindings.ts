@@ -420,6 +420,22 @@ export interface RateLimitBinding extends RateLimitBindingOptions {
 	type: "rate-limit";
 }
 
+interface SecretBindingOptions {
+	/**
+	 * Whether the secret may legitimately be absent at runtime.
+	 *
+	 * Defaults to `false` — the secret is required, is inferred as `string`, and
+	 * is enforced when deploying.
+	 *
+	 * When `true`, the secret is inferred as `string | undefined` and is not
+	 * enforced when deploying. Use this for secrets that are expected to be
+	 * unset in some deployments — for example a Worker that is deployed fresh
+	 * before its secrets are populated, or a rolled-back Worker that has lost
+	 * one.
+	 */
+	optional?: boolean;
+}
+
 /**
  * Declares a secret that is required by your Worker, exposed on `env` under
  * the binding name.
@@ -430,8 +446,23 @@ export interface RateLimitBinding extends RateLimitBindingOptions {
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
  */
-export interface SecretBinding {
+export interface SecretBinding extends SecretBindingOptions {
 	type: "secret";
+}
+
+/**
+ * Declares a secret that may legitimately be absent at runtime, exposed on
+ * `env` under the binding name as `string | undefined`.
+ *
+ * Produced by `bindings.secret({ optional: true })`. Unlike a required secret,
+ * an optional secret is emitted as `secrets.optional` rather than
+ * `secrets.required` in the generated Wrangler configuration: it is still
+ * loaded from `.dev.vars`/`.env` in local dev, but no warning is emitted when
+ * it is missing and deploying a Worker that does not have it set will not
+ * fail.
+ */
+export interface OptionalSecretBinding extends SecretBinding {
+	optional: true;
 }
 
 interface SecretsStoreSecretBindingOptions {
@@ -799,16 +830,32 @@ export interface Bindings {
 	/** Binding to a rate limiter. */
 	rateLimit(options: RateLimitBindingOptions): RateLimitBinding;
 	/**
+	 * Declares a secret that may legitimately be absent at runtime, exposed on
+	 * `env` under the binding name as `string | undefined`.
+	 *
+	 * Optional secrets are emitted as `secrets.optional` rather than
+	 * `secrets.required`, so they are still loaded in local dev but do not warn
+	 * when missing and do not fail a deploy when unset.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
+	 */
+	secret(
+		options: SecretBindingOptions & { optional: true }
+	): OptionalSecretBinding;
+	/**
 	 * Declares a secret that is required by your Worker, exposed on `env` under
-	 * the binding name.
+	 * the binding name as `string`.
 	 *
 	 * When defined, this binding:
 	 * - Replaces .dev.vars/.env/process.env inference for type generation
 	 * - Enables local dev validation with warnings for missing secrets
 	 *
+	 * Pass `{ optional: true }` for a secret that may legitimately be unset, to
+	 * infer it as `string | undefined`.
+	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#secrets-configuration-property
 	 */
-	secret(): SecretBinding;
+	secret(options?: SecretBindingOptions): SecretBinding;
 	/** Binding to a Secrets Store secret. */
 	secretsStoreSecret(
 		options: SecretsStoreSecretBindingOptions
@@ -897,7 +944,7 @@ export const bindings = {
 	queue: (options) => ({ type: "queue", ...options }),
 	rateLimit: (options) => ({ type: "rate-limit", ...options }),
 	r2: (options) => ({ type: "r2", ...options }),
-	secret: () => ({ type: "secret" }),
+	secret: (options) => ({ type: "secret", ...options }),
 	secretsStoreSecret: (options) => ({
 		type: "secrets-store-secret",
 		...options,
