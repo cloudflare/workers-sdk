@@ -234,7 +234,21 @@ export class ProxyWorker implements DurableObject {
 								attempt < 2
 							) {
 								setTimeout(
-									() => attemptUserWorkerFetch(attempt + 1),
+									() => {
+										// the UserWorker may have started reloading while this
+										// retry was queued (even at 0ms — setTimeout defers to a
+										// later task). `proxyData` carries the destination AND the
+										// headers, so retrying with the captured one could reach
+										// the pre-reload Worker or send a stale preview token.
+										// Requeue instead and let the current proxyData rebuild it.
+										if (this.proxyData !== proxyData) {
+											this.requestRetryQueue.set(request, deferredResponse);
+											this.processQueue();
+											return;
+										}
+
+										attemptUserWorkerFetch(attempt + 1);
+									},
 									attempt === 0 ? 0 : 250
 								);
 								return;
