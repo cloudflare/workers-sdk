@@ -1,5 +1,8 @@
+import { fetchResultBase } from "./cfetch";
 import { spawnCloudflared } from "./cloudflared";
-import { UserError } from "./errors";
+import { FatalError, UserError } from "./errors";
+import type { ApiCredentials } from "./cfetch";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { Logger } from "./logger";
 import type { ChildProcess } from "node:child_process";
 
@@ -17,6 +20,28 @@ const DEFAULT_TUNNEL_REMINDER_INTERVAL_MS = 10 * 60 * 1_000;
  * cloudflared logs the quick tunnel URL to stderr.
  */
 const QUICK_TUNNEL_URL_REGEX = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/;
+
+const LOCAL_TUNNEL_HOSTNAMES = new Set([
+	"localhost",
+	"127.0.0.1",
+	"::1",
+	"0.0.0.0",
+	"::",
+]);
+
+interface CloudflareTunnel {
+	id?: string;
+	name?: string;
+}
+
+interface TunnelIngress {
+	hostname?: string;
+	service: string;
+}
+
+interface TunnelConfiguration {
+	config?: { ingress?: TunnelIngress[] };
+}
 
 export interface QuickTunnelResult {
 	mode: "quick";
@@ -44,6 +69,172 @@ export interface TunnelOptions {
 	reminderIntervalMs?: number;
 	extendHint?: string;
 	logger?: Pick<Logger, "debug" | "log" | "warn">;
+}
+
+/**
+ * Resolves the named tunnel to hostnames whose ingress rules target the current
+ * local dev origin and the token needed to start `cloudflared tunnel run`.
+ */
+export async function resolveNamedTunnel(
+	name: string,
+	origin: URL,
+	options: {
+		accountId: string;
+		apiToken: ApiCredentials;
+		complianceRegion: ComplianceConfig["compliance_region"];
+		logger: Logger;
+		userAgent: string;
+		abortSignal?: AbortSignal;
+	}
+): Promise<{ hostnames: string[]; token: string }> {
+	const {
+		accountId,
+		apiToken,
+		complianceRegion,
+		logger,
+		userAgent,
+		abortSignal,
+	} = options;
+	const complianceConfig = { compliance_region: complianceRegion };
+	const resource = `/accounts/${accountId}/cfd_tunnel`;
+	const tunnels = await fetchResultBase<CloudflareTunnel[]>(
+		complianceConfig,
+		resource,
+		undefined,
+		userAgent,
+		logger,
+		new URLSearchParams({ name, is_deleted: "false" }),
+		abortSignal,
+		apiToken
+	);
+	const tunnel = tunnels.find((item) => item.name === name);
+
+	if (!tunnel) {
+		throw new UserError(
+			`No Cloudflare Tunnel named "${name}" was found in this account. Use "wrangler tunnel list" to see available tunnels.`,
+			{ telemetryMessage: "tunnel resolve named missing tunnel" }
+		);
+	}
+
+	const tunnelId = tunnel.id;
+	if (!tunnelId) {
+		throw new FatalError(
+			`Tunnel "${name}" was found but has no ID. This is unexpected.`,
+			{ telemetryMessage: "tunnel resolve named missing tunnel id" }
+		);
+	}
+
+	const configuration = await fetchResultBase<TunnelConfiguration>(
+		complianceConfig,
+		`${resource}/${tunnelId}/configurations`,
+		undefined,
+		userAgent,
+		logger,
+		undefined,
+		abortSignal,
+		apiToken
+	);
+	const ingress = configuration.config?.ingress ?? [];
+	const hostnames = getMatchingIngressHostnames(origin, ingress);
+
+	if (hostnames.length === 0) {
+		throw new UserError(
+			createMissingIngressMessage(
+				name,
+				origin,
+				`https://dash.cloudflare.com/${accountId}/tunnels/${tunnelId}`,
+				ingress
+			),
+			{ telemetryMessage: "tunnel resolve named ingress mismatch" }
+		);
+	}
+
+	const token = await fetchResultBase<string>(
+		complianceConfig,
+		`${resource}/${tunnelId}/token`,
+		undefined,
+		userAgent,
+		logger,
+		undefined,
+		abortSignal,
+		apiToken
+	);
+
+	return { hostnames, token: String(token) };
+}
+/** Return ingress hostnames whose configured service targets the local origin. */
+function getMatchingIngressHostnames(
+	origin: URL,
+	ingressConfig: TunnelIngress[]
+): string[] {
+	const hostnames = new Set<string>();
+	const originUrl = normalizeURL(origin);
+
+	for (const ingress of ingressConfig) {
+		try {
+			const serviceUrl = normalizeURL(ingress.service);
+
+			if (ingress.hostname && serviceUrl.toString() === originUrl.toString()) {
+				hostnames.add(ingress.hostname);
+			}
+		} catch {
+			// Ignore invalid service URLs in ingress rules.
+		}
+	}
+
+	return [...hostnames];
+}
+
+function normalizeURL(url: URL | string): URL {
+	const normalizedUrl = new URL(url);
+
+	if (LOCAL_TUNNEL_HOSTNAMES.has(normalizedUrl.hostname)) {
+		normalizedUrl.hostname = "localhost";
+	}
+
+	if (!normalizedUrl.port) {
+		switch (normalizedUrl.protocol) {
+			case "http:":
+				normalizedUrl.port = "80";
+				break;
+			case "https:":
+				normalizedUrl.port = "443";
+				break;
+		}
+	}
+
+	return normalizedUrl;
+}
+
+function createMissingIngressMessage(
+	name: string,
+	origin: URL,
+	dashboardUrl: string,
+	ingress: TunnelIngress[]
+): string {
+	if (ingress.length === 0) {
+		return [
+			`Tunnel "${name}" has no routes configured.`,
+			"",
+			`Add a route for ${origin} in the Cloudflare dashboard:`,
+			dashboardUrl,
+			"",
+		].join("\n");
+	}
+
+	return [
+		`Tunnel "${name}" has no route for ${origin}`,
+		"",
+		"Resolved routes:",
+		...ingress.map(
+			({ hostname, service }) =>
+				`  - ${hostname ?? "(no hostname)"} -> ${service}`
+		),
+		"",
+		"Update your local server settings or the tunnel routes in the Cloudflare dashboard:",
+		dashboardUrl,
+		"",
+	].join("\n");
 }
 
 /**
