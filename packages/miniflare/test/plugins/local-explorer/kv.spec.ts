@@ -10,10 +10,7 @@ import {
 	zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse,
 	zWorkersKvNamespaceWriteMultipleKeyValuePairsResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import {
-	executeKVBulkOperations,
-	KV_BULK_REQUEST_MAX_BYTES,
-} from "../../../src/workers/local-explorer/resources/kv-bulk";
+import { executeKVBulkOperations } from "../../../src/workers/local-explorer/resources/kv-bulk";
 import {
 	dispatchFetchWithRetry,
 	disposeWithRetry,
@@ -478,37 +475,6 @@ describe("KV API", () => {
 	});
 
 	describe("PUT /storage/kv/namespaces/:namespaceId/bulk", () => {
-		test("uses the production request-size limit", ({ expect }) => {
-			expect(KV_BULK_REQUEST_MAX_BYTES).toBe(100_000_000);
-		});
-
-		test("rejects a streamed request body over the production limit", async ({
-			expect,
-		}) => {
-			const body = new ReadableStream<Uint8Array>({
-				start(controller) {
-					controller.enqueue(new Uint8Array(KV_BULK_REQUEST_MAX_BYTES));
-					controller.enqueue(new Uint8Array(1));
-					controller.close();
-				},
-			});
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body,
-					duplex: "half",
-				}
-			);
-
-			expect(response.status).toBe(413);
-			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [{ code: 10001 }],
-			});
-		});
-
 		test("writes production value forms and reports the result", async ({
 			expect,
 		}) => {
@@ -674,27 +640,6 @@ describe("KV API", () => {
 			}
 		});
 
-		test("rejects requests containing more than 10,000 items", async ({
-			expect,
-		}) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(
-						Array.from({ length: 10_001 }, (_, index) => ({
-							key: `key-${index}`,
-							value: "value",
-						}))
-					),
-				}
-			);
-
-			expect(response.status).toBe(400);
-			expect(await response.json()).toMatchObject({ success: false });
-		});
-
 		test("writes to an unlisted namespace", async ({ expect }) => {
 			const namespaceUrl = `${BASE_URL}/storage/kv/namespaces/unlisted-bulk-write`;
 			const response = await mf.dispatchFetch(`${namespaceUrl}/bulk`, {
@@ -753,24 +698,6 @@ describe("KV API", () => {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify([{ name: "key" }]),
-				}
-			);
-
-			expect(response.status).toBe(400);
-			expect(await response.json()).toMatchObject({ success: false });
-		});
-
-		test("rejects requests containing more than 10,000 keys", async ({
-			expect,
-		}) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/delete`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(
-						Array.from({ length: 10_001 }, (_, index) => `key-${index}`)
-					),
 				}
 			);
 

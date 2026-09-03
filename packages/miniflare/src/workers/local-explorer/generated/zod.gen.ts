@@ -290,7 +290,7 @@ export const zWorkersKvBulkWrite = z.array(
 		expiration_ttl: zWorkersKvExpirationTtl.optional(),
 		key: zWorkersKvKeyNameBulk,
 		metadata: zWorkersKvListMetadata.optional(),
-		value: z.string(),
+		value: z.string().max(26214400),
 	})
 );
 

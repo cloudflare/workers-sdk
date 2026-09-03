@@ -1,7 +1,5 @@
 import type { WorkersKvBulkResult } from "../generated";
 
-export const KV_BULK_REQUEST_MAX_BYTES = 100_000_000;
-
 /**
  * Execute prepared KV mutations sequentially and report per-key failures.
  */

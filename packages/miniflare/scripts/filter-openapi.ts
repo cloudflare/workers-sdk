@@ -181,9 +181,6 @@ function filterOpenAPISpec(
 				// Apply response property ignores (if any)
 				applyResponsePropertyIgnores(operation, originalPath, method, ignores);
 
-				// Apply temporary patches for upstream OpenAPI operation schema bugs
-				applyTemporaryOperationPatches(operation);
-
 				// Remove security from operation since we implement that differently locally
 				delete operation.security;
 
@@ -253,61 +250,9 @@ function filterOpenAPISpec(
 // Track upstream issues at: https://github.com/cloudflare/api-schemas/issues
 
 /**
- * Apply temporary patches to fix known bugs in upstream OpenAPI operation schemas.
- */
-function applyTemporaryOperationPatches(operation: OpenAPIOperation): void {
-	if (
-		operation.operationId !==
-			"workers-kv-namespace-write-multiple-key-value-pairs" &&
-		operation.operationId !==
-			"workers-kv-namespace-delete-multiple-key-value-pairs"
-	) {
-		return;
-	}
-
-	const responses = operation.responses as
-		| Record<string, { content?: Record<string, { schema?: OpenAPISchema }> }>
-		| undefined;
-	const allOf =
-		responses?.["4XX"]?.content?.["application/json"]?.schema?.allOf;
-	if (!Array.isArray(allOf)) {
-		return;
-	}
-
-	// PATCH: these upstream 4XX schemas use the success-only envelope.
-	const [envelope, resultOverlay] = allOf as OpenAPISchema[];
-	if (
-		envelope?.$ref ===
-		"#/components/schemas/workers-kv_api-response-common-no-result"
-	) {
-		envelope.$ref =
-			"#/components/schemas/workers-kv_api-response-common-failure";
-	}
-
-	// Keep production partial-failure details while allowing local errors' null.
-	const result = resultOverlay?.properties?.result as OpenAPISchema | undefined;
-	if (result?.$ref === "#/components/schemas/workers-kv_bulk-result") {
-		delete result.$ref;
-		result.allOf = [{ $ref: "#/components/schemas/workers-kv_bulk-result" }];
-		result.nullable = true;
-	}
-}
-
-/**
  * Apply temporary patches to fix known bugs in the upstream OpenAPI schema.
  */
 function applyTemporarySchemaPatches(components: OpenAPIComponents): void {
-	const bulkWrite = components.schemas?.["workers-kv_bulk_write"];
-	if (bulkWrite) {
-		// PATCH: the upstream schema models the 25 MiB value limit as maxLength,
-		// which counts characters rather than UTF-8 or decoded base64 bytes.
-		const items = bulkWrite.items as OpenAPISchema | undefined;
-		const value = items?.properties?.value as OpenAPISchema | undefined;
-		if (value) {
-			delete value.maxLength;
-		}
-	}
-
 	// PATCH: workers-kv_bulk-get-result is missing nullable on additionalProperties
 	// The API returns null for non-existent keys, but the schema doesn't allow it.
 	// The similar schema workers-kv_bulk-get-result-with-metadata correctly has nullable: true.

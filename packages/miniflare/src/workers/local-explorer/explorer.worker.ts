@@ -5,12 +5,7 @@ import { Hono } from "hono/tiny";
 import mime from "mime";
 import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
-import {
-	errorResponse,
-	validateQuery,
-	validateRequestBody,
-	validateRequestBodySize,
-} from "./common";
+import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import {
 	zD1ListDatabasesData,
@@ -52,7 +47,6 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
-import { KV_BULK_REQUEST_MAX_BYTES } from "./resources/kv-bulk";
 import { clearTraces, runQuery } from "./resources/observability";
 import {
 	deleteR2Objects,
@@ -247,7 +241,6 @@ app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
 
 app.put(
 	"/api/storage/kv/namespaces/:namespace_id/bulk",
-	validateRequestBodySize(KV_BULK_REQUEST_MAX_BYTES),
 	validateRequestBody(
 		zWorkersKvNamespaceWriteMultipleKeyValuePairsData.shape.body,
 		{ malformedJsonAsValidationError: true }
@@ -257,7 +250,6 @@ app.put(
 
 app.post(
 	"/api/storage/kv/namespaces/:namespace_id/bulk/delete",
-	validateRequestBodySize(KV_BULK_REQUEST_MAX_BYTES),
 	validateRequestBody(
 		zWorkersKvNamespaceDeleteMultipleKeyValuePairsData.shape.body,
 		{ malformedJsonAsValidationError: true }

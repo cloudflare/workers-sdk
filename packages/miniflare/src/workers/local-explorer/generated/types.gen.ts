@@ -1356,8 +1356,8 @@ export type WorkersKvNamespaceWriteMultipleKeyValuePairsErrors = {
 	/**
 	 * Write multiple key-value pairs response failure.
 	 */
-	"4XX": WorkersKvApiResponseCommonFailure & {
-		result?: WorkersKvBulkResult | null;
+	"4XX": WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
 	};
 };
 
@@ -1389,8 +1389,8 @@ export type WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors = {
 	/**
 	 * Delete multiple key-value pairs response failure.
 	 */
-	"4XX": WorkersKvApiResponseCommonFailure & {
-		result?: WorkersKvBulkResult | null;
+	"4XX": WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
 	};
 };
 

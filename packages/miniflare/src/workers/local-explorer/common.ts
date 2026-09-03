@@ -5,7 +5,7 @@ import type {
 	WorkersKvApiResponseCommon,
 	WorkersKvMessages,
 } from "./generated/types.gen";
-import type { Context, MiddlewareHandler, Next } from "hono";
+import type { Context } from "hono";
 
 export type AppContext = Context<AppBindings>;
 
@@ -74,48 +74,6 @@ export function validateRequestBody<T extends z.ZodType>(
 		}
 	};
 	return malformedJsonMiddleware;
-}
-
-/**
- * Reject request bodies larger than the supplied byte limit before parsing.
- */
-export function validateRequestBodySize(
-	maxBytes: number
-): MiddlewareHandler<AppBindings> {
-	return async (c: Context<AppBindings>, next: Next) => {
-		const body = c.req.raw.body;
-		if (body === null) {
-			await next();
-			return;
-		}
-
-		let size = 0;
-		let bodyTooLarge = false;
-		const limitedBody = body.pipeThrough(
-			new TransformStream<Uint8Array, Uint8Array>({
-				transform(chunk, controller) {
-					size += chunk.byteLength;
-					if (size > maxBytes) {
-						bodyTooLarge = true;
-						controller.error(new Error("Request body is too large"));
-						return;
-					}
-					controller.enqueue(chunk);
-				},
-			})
-		);
-		const requestInit: RequestInit = { body: limitedBody };
-		c.req.raw = new Request(c.req.raw, requestInit);
-
-		await next();
-		if (bodyTooLarge) {
-			c.res = errorResponse(
-				413,
-				10001,
-				`Request body exceeds the limit of ${maxBytes} bytes`
-			);
-		}
-	};
 }
 
 /**

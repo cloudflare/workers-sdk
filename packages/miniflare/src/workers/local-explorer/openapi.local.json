@@ -394,17 +394,12 @@
 								"schema": {
 									"allOf": [
 										{
-											"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+											"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
 										},
 										{
 											"properties": {
 												"result": {
-													"allOf": [
-														{
-															"$ref": "#/components/schemas/workers-kv_bulk-result"
-														}
-													],
-													"nullable": true
+													"$ref": "#/components/schemas/workers-kv_bulk-result"
 												}
 											},
 											"type": "object"
@@ -473,17 +468,12 @@
 								"schema": {
 									"allOf": [
 										{
-											"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+											"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
 										},
 										{
 											"properties": {
 												"result": {
-													"allOf": [
-														{
-															"$ref": "#/components/schemas/workers-kv_bulk-result"
-														}
-													],
-													"nullable": true
+													"$ref": "#/components/schemas/workers-kv_bulk-result"
 												}
 											},
 											"type": "object"
@@ -3311,6 +3301,7 @@
 						"value": {
 							"description": "A UTF-8 encoded string to be stored, up to 25 MiB in length.",
 							"example": "Some string",
+							"maxLength": 26214400,
 							"type": "string"
 						}
 					},

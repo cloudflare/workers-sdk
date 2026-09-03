@@ -1,5 +1,5 @@
 import { HttpError } from "miniflare:shared";
-import { KVHeaders, KVLimits, KVParams } from "../../kv/constants";
+import { KVHeaders, KVParams } from "../../kv/constants";
 import { validateKey, validatePutOptions } from "../../kv/validator.worker";
 import { SharedHeaders } from "../../shared/constants";
 import { aggregateListResults } from "../aggregation";
@@ -23,10 +23,6 @@ import type z from "zod";
 
 /** Error code for key not found in KV namespace */
 const KV_ERROR_KEY_NOT_FOUND = 10009;
-
-const KV_BULK_MAX_ITEMS = 10_000;
-const BASE64_PATTERN =
-	/^(?:[A-Za-z\d+/]{4})*(?:[A-Za-z\d+/]{2}(?:==)?|[A-Za-z\d+/]{3}=?){0,1}$/;
 
 // ============================================================================
 // Helper Functions
@@ -104,27 +100,10 @@ interface PreparedKVWrite {
 }
 
 function decodeBase64(value: string): Uint8Array {
-	if (!BASE64_PATTERN.test(value)) {
-		throw new HttpError(400, "Invalid base64 value");
-	}
-
 	try {
 		return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
 	} catch {
 		throw new HttpError(400, "Invalid base64 value");
-	}
-}
-
-function validateValueSize(value: string | Uint8Array): void {
-	const length =
-		typeof value === "string"
-			? new TextEncoder().encode(value).byteLength
-			: value.byteLength;
-	if (length > KVLimits.MAX_VALUE_SIZE_BYTES) {
-		throw new HttpError(
-			413,
-			`Value length of ${length} exceeds limit of ${KVLimits.MAX_VALUE_SIZE_BYTES}.`
-		);
 	}
 }
 
@@ -142,7 +121,6 @@ function prepareKVWrites(body: BulkWriteBody): PreparedKVWrite[] {
 		});
 
 		const value = item.base64 ? decodeBase64(item.value) : item.value;
-		validateValueSize(value);
 
 		return {
 			key: item.key,
@@ -159,17 +137,6 @@ function bulkValidationError(error: unknown): Response {
 		return errorResponse(error.code, 10001, error.message);
 	}
 	throw error;
-}
-
-function validateBulkItemCount(body: unknown[]): Response | undefined {
-	if (body.length <= KV_BULK_MAX_ITEMS) {
-		return;
-	}
-	return errorResponse(
-		400,
-		10001,
-		`Bulk operations are limited to ${KV_BULK_MAX_ITEMS} items`
-	);
 }
 
 async function putPreparedKVValue(
@@ -199,7 +166,6 @@ async function putPreparedKVValue(
 	if (!response.ok) {
 		throw new Error(await response.text());
 	}
-	await response.arrayBuffer();
 }
 
 async function deletePreparedKVValue(
@@ -213,7 +179,6 @@ async function deletePreparedKVValue(
 	if (!response.ok) {
 		throw new Error(await response.text());
 	}
-	await response.arrayBuffer();
 }
 
 // ============================================================================
@@ -460,11 +425,6 @@ export async function bulkWriteKVValues(c: AppContext, body: BulkWriteBody) {
 	if (!namespaceId) {
 		return errorResponse(400, 10000, "Missing namespace_id parameter");
 	}
-	const itemCountError = validateBulkItemCount(body);
-	if (itemCountError) {
-		return itemCountError;
-	}
-
 	let operations: PreparedKVWrite[];
 	try {
 		operations = prepareKVWrites(body);
@@ -488,11 +448,6 @@ export async function bulkDeleteKVValues(c: AppContext, body: BulkDeleteBody) {
 	if (!namespaceId) {
 		return errorResponse(400, 10000, "Missing namespace_id parameter");
 	}
-	const itemCountError = validateBulkItemCount(body);
-	if (itemCountError) {
-		return itemCountError;
-	}
-
 	try {
 		for (const key of body) {
 			validateKey(key);
