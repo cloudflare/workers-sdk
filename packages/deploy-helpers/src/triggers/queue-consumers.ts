@@ -67,6 +67,10 @@ export interface PostTypedConsumerBody {
 	dead_letter_queue?: string;
 }
 
+export interface MechanismEntry {
+	id: string;
+}
+
 export interface ConsumerSettings {
 	batch_size?: number;
 	max_retries?: number;
@@ -74,6 +78,9 @@ export interface ConsumerSettings {
 	max_concurrency?: number | null;
 	visibility_timeout_ms?: number;
 	retry_delay?: number;
+	email?: MechanismEntry[];
+	webhooks?: MechanismEntry[];
+	pagerduty?: MechanismEntry[];
 }
 
 export interface PurgeQueueBody {
@@ -294,6 +301,29 @@ export async function deletePullConsumer(
 		throw new UserError(`No http_pull consumer exists for queue ${queueName}`, {
 			telemetryMessage: "queues http pull consumer missing",
 		});
+	}
+	return deleteConsumerById(
+		complianceConfig,
+		accountId,
+		queue.queue_id,
+		consumer.consumer_id
+	);
+}
+
+export async function deleteNotificationConsumer(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	queueName: string
+): Promise<void> {
+	const queue = await getQueue(complianceConfig, accountId, queueName);
+	const consumer = queue.consumers.find((c) => c.type === "notification");
+	if (consumer?.type !== "notification") {
+		throw new UserError(
+			`No notification consumer exists for queue ${queueName}`,
+			{
+				telemetryMessage: "queues notification consumer missing",
+			}
+		);
 	}
 	return deleteConsumerById(
 		complianceConfig,
