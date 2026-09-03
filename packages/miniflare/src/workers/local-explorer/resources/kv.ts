@@ -1,14 +1,19 @@
-import { KVHeaders, KVParams } from "../../kv/constants";
+import { HttpError } from "miniflare:shared";
+import { KVHeaders, KVLimits, KVParams } from "../../kv/constants";
+import { validateKey, validatePutOptions } from "../../kv/validator.worker";
 import { SharedHeaders } from "../../shared/constants";
 import { aggregateListResults } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
+import { executeKVBulkOperations } from "./kv-bulk";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkersKvNamespace } from "../generated";
 import type {
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 } from "../generated/zod.gen";
 import type z from "zod";
 
@@ -18,6 +23,11 @@ import type z from "zod";
 
 /** Error code for key not found in KV namespace */
 const KV_ERROR_KEY_NOT_FOUND = 10009;
+
+const KV_BULK_MAX_ITEMS = 10_000;
+const BASE64_PATTERN =
+	/^(?:[A-Za-z\d+/]{4})*(?:[A-Za-z\d+/]{2}(?:==)?|[A-Za-z\d+/]{3}=?){0,1}$/;
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -76,6 +86,134 @@ function getLocalKVNamespaces(env: Env): WorkersKvNamespace[] {
 			title,
 		};
 	});
+}
+
+type BulkWriteBody = NonNullable<
+	z.output<typeof zWorkersKvNamespaceWriteMultipleKeyValuePairsData>["body"]
+>;
+type BulkDeleteBody = NonNullable<
+	z.output<typeof zWorkersKvNamespaceDeleteMultipleKeyValuePairsData>["body"]
+>;
+
+interface PreparedKVWrite {
+	key: string;
+	value: string | Uint8Array;
+	expiration?: number;
+	expirationTtl?: number;
+	metadata?: unknown;
+}
+
+function decodeBase64(value: string): Uint8Array {
+	if (!BASE64_PATTERN.test(value)) {
+		throw new HttpError(400, "Invalid base64 value");
+	}
+
+	try {
+		return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+	} catch {
+		throw new HttpError(400, "Invalid base64 value");
+	}
+}
+
+function validateValueSize(value: string | Uint8Array): void {
+	const length =
+		typeof value === "string"
+			? new TextEncoder().encode(value).byteLength
+			: value.byteLength;
+	if (length > KVLimits.MAX_VALUE_SIZE_BYTES) {
+		throw new HttpError(
+			413,
+			`Value length of ${length} exceeds limit of ${KVLimits.MAX_VALUE_SIZE_BYTES}.`
+		);
+	}
+}
+
+function prepareKVWrites(body: BulkWriteBody): PreparedKVWrite[] {
+	const now = Math.floor(Date.now() / 1000);
+
+	return body.map((item) => {
+		const rawMetadata =
+			item.metadata === undefined ? null : JSON.stringify(item.metadata);
+		validatePutOptions(item.key, {
+			now,
+			rawExpiration: item.expiration?.toString() ?? null,
+			rawExpirationTtl: item.expiration_ttl?.toString() ?? null,
+			rawMetadata,
+		});
+
+		const value = item.base64 ? decodeBase64(item.value) : item.value;
+		validateValueSize(value);
+
+		return {
+			key: item.key,
+			value,
+			expiration: item.expiration,
+			expirationTtl: item.expiration_ttl,
+			metadata: item.metadata,
+		};
+	});
+}
+
+function bulkValidationError(error: unknown): Response {
+	if (error instanceof HttpError) {
+		return errorResponse(error.code, 10001, error.message);
+	}
+	throw error;
+}
+
+function validateBulkItemCount(body: unknown[]): Response | undefined {
+	if (body.length <= KV_BULK_MAX_ITEMS) {
+		return;
+	}
+	return errorResponse(
+		400,
+		10001,
+		`Bulk operations are limited to ${KV_BULK_MAX_ITEMS} items`
+	);
+}
+
+async function putPreparedKVValue(
+	c: AppContext,
+	namespaceId: string,
+	operation: PreparedKVWrite
+): Promise<void> {
+	const url = getKVKeyUrl(operation.key);
+	if (operation.expirationTtl !== undefined) {
+		url.searchParams.set(
+			KVParams.EXPIRATION_TTL,
+			operation.expirationTtl.toString()
+		);
+	} else if (operation.expiration !== undefined) {
+		url.searchParams.set(KVParams.EXPIRATION, operation.expiration.toString());
+	}
+
+	const headers = new Headers();
+	if (operation.metadata !== undefined) {
+		headers.set(KVHeaders.METADATA, JSON.stringify(operation.metadata));
+	}
+	const response = await sendKVRequest(c, namespaceId, url, {
+		method: "PUT",
+		headers,
+		body: operation.value,
+	});
+	if (!response.ok) {
+		throw new Error(await response.text());
+	}
+	await response.arrayBuffer();
+}
+
+async function deletePreparedKVValue(
+	c: AppContext,
+	namespaceId: string,
+	key: string
+): Promise<void> {
+	const response = await sendKVRequest(c, namespaceId, getKVKeyUrl(key), {
+		method: "DELETE",
+	});
+	if (!response.ok) {
+		throw new Error(await response.text());
+	}
+	await response.arrayBuffer();
 }
 
 // ============================================================================
@@ -310,4 +448,62 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 	}
 	const values = (await response.json()) as Record<string, string | null>;
 	return c.json(wrapResponse({ values }));
+}
+
+/**
+ * Write multiple key-value pairs.
+ *
+ * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_update/
+ */
+export async function bulkWriteKVValues(c: AppContext, body: BulkWriteBody) {
+	const namespaceId = c.req.param("namespace_id");
+	if (!namespaceId) {
+		return errorResponse(400, 10000, "Missing namespace_id parameter");
+	}
+	const itemCountError = validateBulkItemCount(body);
+	if (itemCountError) {
+		return itemCountError;
+	}
+
+	let operations: PreparedKVWrite[];
+	try {
+		operations = prepareKVWrites(body);
+	} catch (error) {
+		return bulkValidationError(error);
+	}
+
+	const result = await executeKVBulkOperations(operations, (operation) =>
+		putPreparedKVValue(c, namespaceId, operation)
+	);
+	return c.json(wrapResponse(result));
+}
+
+/**
+ * Delete multiple key-value pairs.
+ *
+ * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_delete/
+ */
+export async function bulkDeleteKVValues(c: AppContext, body: BulkDeleteBody) {
+	const namespaceId = c.req.param("namespace_id");
+	if (!namespaceId) {
+		return errorResponse(400, 10000, "Missing namespace_id parameter");
+	}
+	const itemCountError = validateBulkItemCount(body);
+	if (itemCountError) {
+		return itemCountError;
+	}
+
+	try {
+		for (const key of body) {
+			validateKey(key);
+		}
+	} catch (error) {
+		return bulkValidationError(error);
+	}
+
+	const operations = body.map((key) => ({ key }));
+	const result = await executeKVBulkOperations(operations, (operation) =>
+		deletePreparedKVValue(c, namespaceId, operation.key)
+	);
+	return c.json(wrapResponse(result));
 }

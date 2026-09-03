@@ -341,6 +341,164 @@
 				"tags": ["Workers KV Namespace"]
 			}
 		},
+		"/storage/kv/namespaces/{namespace_id}/bulk": {
+			"put": {
+				"description": "Write multiple keys and values at once. Body should be an array of up to 10,000 key-value pairs to be stored, along with optional expiration information. Existing values and expirations will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored. The entire request size must be 100 megabytes or less.",
+				"operationId": "workers-kv-namespace-write-multiple-key-value-pairs",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/workers-kv_bulk_write"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/workers-kv_bulk-result"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Write multiple key-value pairs response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+										},
+										{
+											"properties": {
+												"result": {
+													"allOf": [
+														{
+															"$ref": "#/components/schemas/workers-kv_bulk-result"
+														}
+													],
+													"nullable": true
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Write multiple key-value pairs response failure."
+					}
+				},
+				"summary": "Write multiple key-value pairs",
+				"tags": ["Workers KV Namespace"]
+			}
+		},
+		"/storage/kv/namespaces/{namespace_id}/bulk/delete": {
+			"post": {
+				"description": "Remove multiple KV pairs from the namespace. Body should be an array of up to 10,000 keys to be removed.",
+				"operationId": "workers-kv-namespace-delete-multiple-key-value-pairs",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/workers-kv_bulk_delete"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/workers-kv_bulk-result"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Delete multiple key-value pairs response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+										},
+										{
+											"properties": {
+												"result": {
+													"allOf": [
+														{
+															"$ref": "#/components/schemas/workers-kv_bulk-result"
+														}
+													],
+													"nullable": true
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Delete multiple key-value pairs response failure."
+					}
+				},
+				"summary": "Delete multiple key-value pairs",
+				"tags": ["Workers KV Namespace"]
+			}
+		},
 		"/storage/kv/namespaces/{namespace_id}/bulk/get": {
 			"post": {
 				"description": "Retrieve up to 100 KV pairs from the namespace. Keys must contain text-based values. JSON values can optionally be parsed instead of being returned as a string value. Metadata can be included if `withMetadata` is true.",
@@ -3107,6 +3265,79 @@
 				"maxLength": 512,
 				"type": "string"
 			},
+			"workers-kv_bulk_delete": {
+				"items": {
+					"$ref": "#/components/schemas/workers-kv_key_name_bulk"
+				},
+				"type": "array"
+			},
+			"workers-kv_bulk-result": {
+				"properties": {
+					"successful_key_count": {
+						"description": "Number of keys successfully updated.",
+						"example": 100,
+						"type": "number"
+					},
+					"unsuccessful_keys": {
+						"description": "Name of the keys that failed to be fully updated. They should be retried.",
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object"
+			},
+			"workers-kv_bulk_write": {
+				"items": {
+					"properties": {
+						"base64": {
+							"default": false,
+							"description": "Indicates whether or not the server should base64 decode the value before storing it. Useful for writing values that wouldn't otherwise be valid JSON strings, such as images.",
+							"type": "boolean"
+						},
+						"expiration": {
+							"$ref": "#/components/schemas/workers-kv_expiration"
+						},
+						"expiration_ttl": {
+							"$ref": "#/components/schemas/workers-kv_expiration_ttl"
+						},
+						"key": {
+							"$ref": "#/components/schemas/workers-kv_key_name_bulk"
+						},
+						"metadata": {
+							"$ref": "#/components/schemas/workers-kv_list_metadata"
+						},
+						"value": {
+							"description": "A UTF-8 encoded string to be stored, up to 25 MiB in length.",
+							"example": "Some string",
+							"type": "string"
+						}
+					},
+					"required": ["key", "value"],
+					"type": "object"
+				},
+				"type": "array"
+			},
+			"workers-kv_list_metadata": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/workers-kv_any"
+					},
+					{
+						"description": "Arbitrary JSON that is associated with a key.",
+						"example": {
+							"someMetadataKey": "someMetadataValue"
+						}
+					}
+				]
+			},
+			"workers-kv_expiration_ttl": {
+				"description": "Expires the key after a number of seconds. Must be at least 60.",
+				"example": 300,
+				"minimum": 60,
+				"type": "number"
+			},
 			"workers-kv_api-response-common-no-result": {
 				"allOf": [
 					{
@@ -3226,19 +3457,6 @@
 				},
 				"required": ["name"],
 				"type": "object"
-			},
-			"workers-kv_list_metadata": {
-				"allOf": [
-					{
-						"$ref": "#/components/schemas/workers-kv_any"
-					},
-					{
-						"description": "Arbitrary JSON that is associated with a key.",
-						"example": {
-							"someMetadataKey": "someMetadataValue"
-						}
-					}
-				]
 			},
 			"workers-kv_namespace_identifier": {
 				"description": "Namespace identifier tag.",

@@ -324,6 +324,41 @@ export type WorkersKvBulkGetResult = {
  */
 export type WorkersKvKeyNameBulk = string;
 
+export type WorkersKvBulkDelete = Array<WorkersKvKeyNameBulk>;
+
+export type WorkersKvBulkResult = {
+	/**
+	 * Number of keys successfully updated.
+	 */
+	successful_key_count?: number;
+	/**
+	 * Name of the keys that failed to be fully updated. They should be retried.
+	 */
+	unsuccessful_keys?: Array<string>;
+};
+
+export type WorkersKvBulkWrite = Array<{
+	/**
+	 * Indicates whether or not the server should base64 decode the value before storing it. Useful for writing values that wouldn't otherwise be valid JSON strings, such as images.
+	 */
+	base64?: boolean;
+	expiration?: WorkersKvExpiration;
+	expiration_ttl?: WorkersKvExpirationTtl;
+	key: WorkersKvKeyNameBulk;
+	metadata?: WorkersKvListMetadata;
+	/**
+	 * A UTF-8 encoded string to be stored, up to 25 MiB in length.
+	 */
+	value: string;
+}>;
+
+export type WorkersKvListMetadata = WorkersKvAny & unknown;
+
+/**
+ * Expires the key after a number of seconds. Must be at least 60.
+ */
+export type WorkersKvExpirationTtl = number;
+
 export type WorkersKvApiResponseCommonNoResult = WorkersKvApiResponseCommon & {
 	result?: {
 		[key: string]: unknown;
@@ -380,8 +415,6 @@ export type WorkersKvKey = {
 	metadata?: WorkersKvListMetadata;
 	name: WorkersKvKeyName;
 };
-
-export type WorkersKvListMetadata = WorkersKvAny & unknown;
 
 /**
  * Namespace identifier tag.
@@ -1127,9 +1160,11 @@ export type WorkersKvAnyWritable =
 	| null
 	| Array<WorkersKvAnyWritable>;
 
-export type WorkersKvMetadataWritable = WorkersKvAnyWritable & unknown;
+export type WorkersKvBulkDeleteWritable = Array<WorkersKvKeyNameBulk>;
 
 export type WorkersKvListMetadataWritable = WorkersKvAnyWritable & unknown;
+
+export type WorkersKvMetadataWritable = WorkersKvAnyWritable & unknown;
 
 export type WorkersKvNamespaceWritable = {
 	title: WorkersKvNamespaceTitle;
@@ -1307,6 +1342,72 @@ export type WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses = {
 
 export type WorkersKvNamespaceWriteKeyValuePairWithMetadataResponse =
 	WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses[keyof WorkersKvNamespaceWriteKeyValuePairWithMetadataResponses];
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsData = {
+	body: WorkersKvBulkWrite;
+	path: {
+		namespace_id: WorkersKvNamespaceIdentifier;
+	};
+	query?: never;
+	url: "/storage/kv/namespaces/{namespace_id}/bulk";
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsErrors = {
+	/**
+	 * Write multiple key-value pairs response failure.
+	 */
+	"4XX": WorkersKvApiResponseCommonFailure & {
+		result?: WorkersKvBulkResult | null;
+	};
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsError =
+	WorkersKvNamespaceWriteMultipleKeyValuePairsErrors[keyof WorkersKvNamespaceWriteMultipleKeyValuePairsErrors];
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsResponses = {
+	/**
+	 * Write multiple key-value pairs response.
+	 */
+	200: WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceWriteMultipleKeyValuePairsResponse =
+	WorkersKvNamespaceWriteMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceWriteMultipleKeyValuePairsResponses];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsData = {
+	body: WorkersKvBulkDeleteWritable;
+	path: {
+		namespace_id: WorkersKvNamespaceIdentifier;
+	};
+	query?: never;
+	url: "/storage/kv/namespaces/{namespace_id}/bulk/delete";
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors = {
+	/**
+	 * Delete multiple key-value pairs response failure.
+	 */
+	"4XX": WorkersKvApiResponseCommonFailure & {
+		result?: WorkersKvBulkResult | null;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsError =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsErrors];
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses = {
+	/**
+	 * Delete multiple key-value pairs response.
+	 */
+	200: WorkersKvApiResponseCommonNoResult & {
+		result?: WorkersKvBulkResult;
+	};
+};
+
+export type WorkersKvNamespaceDeleteMultipleKeyValuePairsResponse =
+	WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceDeleteMultipleKeyValuePairsResponses];
 
 export type WorkersKvNamespaceGetMultipleKeyValuePairsData = {
 	body: {
