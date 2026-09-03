@@ -3,8 +3,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import {
 	cleanBuildOutputDir,
-	getWorkerAssetsDir,
-	getWorkerBundleDir,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
@@ -17,17 +15,12 @@ import {
 import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
-import {
-	resolveDevOnly,
-	type AssetsOnlyResolvedConfig,
-	type WorkersResolvedConfig,
-} from "../plugin-config";
+import { resolveDevOnly } from "../plugin-config";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
-import type * as vite from "vite";
 import type { Unstable_RawConfig } from "wrangler";
 
 /**
@@ -103,7 +96,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			);
 
 			if (ctx.resolvedPluginConfig.experimental.newConfig?.cfBuildOutput) {
-				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
 				if (ctx.resolvedViteConfig.command === "build") {
 					await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
 				}
@@ -351,43 +343,6 @@ function getEnvironmentsConfig(
 			},
 		},
 	};
-}
-
-/**
- * When the Build Output Specification is enabled,
- * force every Worker environment's and the client environment's `build.outDir`
- * to the spec-mandated location.
- *
- * Runs after Vite's merge in `configResolved`, so it overrides any
- * user-supplied `build.outDir`
- */
-function forceBuildOutputDirs(
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	resolvedViteConfig: vite.ResolvedConfig
-): void {
-	const newConfig = resolvedPluginConfig.experimental.newConfig;
-	if (!newConfig?.cfBuildOutput) {
-		return;
-	}
-
-	const { root } = resolvedViteConfig;
-
-	// The Build Output Specification currently holds a single Worker in the
-	// `default` directory (the default export in `cloudflare.config.ts`). Only
-	// the entry Worker is emitted; auxiliary Worker environments keep their
-	// normal build output and are ignored by the spec.
-	if (resolvedPluginConfig.type === "workers") {
-		const entryName = resolvedPluginConfig.entryWorkerEnvironmentName;
-		const entryEnvironment = resolvedViteConfig.environments[entryName];
-		if (entryEnvironment) {
-			entryEnvironment.build.outDir = getWorkerBundleDir(root);
-		}
-	}
-
-	const clientEnvironment = resolvedViteConfig.environments.client;
-	if (clientEnvironment) {
-		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
-	}
 }
 
 function getAllowedHosts(

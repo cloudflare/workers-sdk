@@ -1,6 +1,9 @@
 import assert from "node:assert";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import {
+	getWorkerAssetsDir,
+	getWorkerBundleDir,
 	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
@@ -14,6 +17,39 @@ import type { ModuleType } from "@cloudflare/config";
  */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	return {
+		buildApp: {
+			order: "post",
+			async handler(builder) {
+				const clientEnvironment = builder.environments.client;
+				if (clientEnvironment?.isBuilt) {
+					linkBuildOutputDirectory(
+						getWorkerAssetsDir(builder.config.root),
+						path.resolve(
+							builder.config.root,
+							clientEnvironment.config.build.outDir
+						)
+					);
+				}
+
+				if (ctx.resolvedPluginConfig.type === "workers") {
+					const entryEnvironment =
+						builder.environments[
+							ctx.resolvedPluginConfig.entryWorkerEnvironmentName
+						];
+					assert(entryEnvironment, "Entry Worker environment not found");
+
+					if (entryEnvironment.isBuilt) {
+						linkBuildOutputDirectory(
+							getWorkerBundleDir(builder.config.root),
+							path.resolve(
+								builder.config.root,
+								entryEnvironment.config.build.outDir
+							)
+						);
+					}
+				}
+			},
+		},
 		async writeBundle(_, bundle) {
 			if (ctx.isChildEnvironment(this.environment.name)) {
 				return;
@@ -77,9 +113,9 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				if (fileName === ".vite/manifest.json") {
 					continue;
 				}
-				// Skip Vite-imported static assets — they will be moved out of
-				// `bundle/` into the client `assets/` directory by the
-				// asset move loop in `createBuildApp`.
+				// Skip Vite-imported static assets — they will be moved from the
+				// entry Worker output into the client output by the asset move loop
+				// in `createBuildApp`.
 				if (importedAssetPaths.has(fileName)) {
 					continue;
 				}
@@ -121,6 +157,93 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 		);
 	}
 });
+
+/**
+ * Expose a Vite environment's output directory at the conventional Build
+ * Output Specification path without relocating the completed build.
+ */
+export function linkBuildOutputDirectory(
+	buildOutputDirectory: string,
+	environmentOutputDirectory: string
+): void {
+	const linkPath = path.resolve(buildOutputDirectory);
+	const targetPath = path.resolve(environmentOutputDirectory);
+
+	if (linkPath === targetPath) {
+		return;
+	}
+
+	const targetStats = fs.statSync(targetPath, { throwIfNoEntry: false });
+	if (!targetStats?.isDirectory()) {
+		throw new Error(
+			`Cannot link Build Output Specification directory "${linkPath}" because environment output directory "${targetPath}" does not exist.`
+		);
+	}
+
+	const linkStats = fs.lstatSync(linkPath, { throwIfNoEntry: false });
+	if (linkStats) {
+		if (
+			linkStats.isSymbolicLink() &&
+			fs.realpathSync(linkPath) === fs.realpathSync(targetPath)
+		) {
+			return;
+		}
+
+		throw new Error(
+			`Cannot link Build Output Specification directory "${linkPath}" because it already exists.`
+		);
+	}
+
+	if (areDirectoriesOverlapping(linkPath, targetPath)) {
+		throw new Error(
+			`Cannot link Build Output Specification directory "${linkPath}" to overlapping environment output directory "${targetPath}".`
+		);
+	}
+
+	fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+	fs.symlinkSync(
+		process.platform === "win32"
+			? targetPath
+			: path.relative(path.dirname(linkPath), targetPath),
+		linkPath,
+		process.platform === "win32" ? "junction" : "dir"
+	);
+}
+
+function areDirectoriesOverlapping(first: string, second: string): boolean {
+	const resolvedFirst = resolveFromExistingAncestor(first);
+	const resolvedSecond = resolveFromExistingAncestor(second);
+	return (
+		isDirectoryWithin(resolvedFirst, resolvedSecond) ||
+		isDirectoryWithin(resolvedSecond, resolvedFirst)
+	);
+}
+
+function isDirectoryWithin(parent: string, candidate: string): boolean {
+	const relativePath = path.relative(parent, candidate);
+	return (
+		relativePath === "" ||
+		(!path.isAbsolute(relativePath) &&
+			relativePath !== ".." &&
+			!relativePath.startsWith(`..${path.sep}`))
+	);
+}
+
+function resolveFromExistingAncestor(directory: string): string {
+	let ancestor = path.resolve(directory);
+	const missingSegments: string[] = [];
+
+	while (!fs.existsSync(ancestor)) {
+		const parent = path.dirname(ancestor);
+		if (parent === ancestor) {
+			return path.resolve(directory);
+		}
+		missingSegments.unshift(path.basename(ancestor));
+		ancestor = parent;
+	}
+
+	return path.join(fs.realpathSync(ancestor), ...missingSegments);
+}
 
 /**
  * Map a bundle filename to its declared module type.

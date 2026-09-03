@@ -112,6 +112,55 @@ describe("readBuildOutput", () => {
 		expect(output.workers.default.config).not.toHaveProperty("entrypoint");
 	});
 
+	it("reads bundle and assets directories through symbolic links", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		const workerDirectory = path.dirname(getWorkerConfigPath(root));
+		const clientDirectory = path.join(workerDirectory, "client");
+		const serverDirectory = path.join(workerDirectory, "server");
+		const linkType = process.platform === "win32" ? "junction" : "dir";
+
+		await writeWorkerConfig({
+			root,
+			config: inputWorkerConfig("my-worker"),
+			manifest: {
+				type: "partial",
+				mainModule: "index.js",
+				modules: {},
+			},
+		});
+		await fsp.mkdir(clientDirectory, { recursive: true });
+		await fsp.mkdir(serverDirectory, { recursive: true });
+		await fsp.writeFile(path.join(clientDirectory, "index.html"), "hello");
+		await fsp.writeFile(path.join(serverDirectory, "index.js"), "export {};");
+		await fsp.symlink(
+			process.platform === "win32" ? clientDirectory : "client",
+			getWorkerAssetsDir(root),
+			linkType
+		);
+		await fsp.symlink(
+			process.platform === "win32" ? serverDirectory : "server",
+			getWorkerBundleDir(root),
+			linkType
+		);
+
+		const worker = (await readBuildOutput(root)).workers.default;
+
+		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
+		expect(worker.bundleDir).toBe(getWorkerBundleDir(root));
+		expect(worker.config.manifest?.modules).toEqual({
+			"index.js": { type: "esm" },
+		});
+		const assetsDirectory = worker.assetsDir;
+		if (!assetsDirectory) {
+			throw new Error("Expected an assets directory");
+		}
+		expect(
+			await fsp.readFile(path.join(assetsDirectory, "index.html"), "utf8")
+		).toBe("hello");
+	});
+
 	it("reads Workers keyed by directory name", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
