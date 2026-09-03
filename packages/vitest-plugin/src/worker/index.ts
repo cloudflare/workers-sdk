@@ -149,7 +149,6 @@ function isUserConsoleLogResponse(response: unknown): boolean {
 }
 
 let patchedFunction = false;
-const legacyDynamicImportNames = new Map<string, string>();
 function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	if (patchedFunction) {
 		return;
@@ -163,40 +162,6 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 			return unsafeEval.newFunction(script, "anonymous", ...args);
 		},
 	});
-	globalThis.__vitestLegacyDynamicImport = async (
-		specifier: string,
-		referrer: string,
-		options?: ImportCallOptions
-	) => {
-		let resolvedSpecifier = specifier;
-		if (specifier.startsWith("./") || specifier.startsWith("../")) {
-			const referrerUrl = referrer.startsWith("/")
-				? `file://${referrer.replaceAll("%", "%25")}`
-				: `file:///${referrer.replaceAll("%", "%25")}`;
-			const resolvedUrl = new URL(
-				specifier.replaceAll("%", "%25"),
-				referrerUrl
-			);
-			resolvedSpecifier =
-				decodeURIComponent(resolvedUrl.pathname) +
-				resolvedUrl.search +
-				resolvedUrl.hash;
-		}
-		const serializedOptions = JSON.stringify(options);
-		const key = `${resolvedSpecifier}\0${serializedOptions}`;
-		let moduleName = legacyDynamicImportNames.get(key);
-		if (moduleName === undefined) {
-			moduleName = `__vitestLegacyDynamicImport_${legacyDynamicImportNames.size}`;
-			legacyDynamicImportNames.set(key, moduleName);
-		}
-		const optionsArgument =
-			serializedOptions === undefined ? "" : `, ${serializedOptions}`;
-		const importModule = unsafeEval.newAsyncFunction(
-			`return import(${JSON.stringify(resolvedSpecifier)}${optionsArgument})`,
-			moduleName
-		) as () => Promise<unknown>;
-		return importModule();
-	};
 }
 
 interface CoverageRuntimeOptions {

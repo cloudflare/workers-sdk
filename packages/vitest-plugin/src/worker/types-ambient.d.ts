@@ -12,11 +12,6 @@ interface UnsafeEval {
 	): (...args: unknown[]) => unknown;
 }
 
-declare var __vitestLegacyDynamicImport: (
-	specifier: string,
-	referrer: string,
-	options?: ImportCallOptions
-) => Promise<unknown>;
 declare var __vitestWriteCoverageFile: (options: unknown) => Promise<string>;
 
 namespace Cloudflare {
