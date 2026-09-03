@@ -475,6 +475,12 @@ export class ProxyController extends Controller {
 
 				break;
 			case "error":
+				// Requests can still fail while the ProxyWorker is being disposed;
+				// don't surface those as errors on a normal shutdown.
+				if (this._torndown) {
+					return;
+				}
+
 				logger.error(
 					"Error proxying request to the local Worker:",
 					message.error.message
