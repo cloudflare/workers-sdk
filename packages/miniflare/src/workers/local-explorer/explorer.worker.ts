@@ -3,6 +3,7 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
+import { z } from "zod";
 import { CorePaths } from "../core";
 import { fetchFromPeer, getPeerUrlsIfAggregating } from "./aggregation";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
@@ -73,6 +74,23 @@ import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
 import type { EmailStoreService } from "../email/storage";
 import type { LocalExplorerWorker } from "./generated";
+
+// Generated object schemas strip unknown keys, so reject invalid rollback
+// combinations before parsing rather than silently dropping the option.
+const zWorkflowInstanceStatusBody = z.preprocess((value, ctx) => {
+	if (
+		typeof value === "object" &&
+		value !== null &&
+		Object.hasOwn(value, "rollback") &&
+		(value as { status?: unknown }).status !== "terminate"
+	) {
+		ctx.addIssue({
+			code: "custom",
+			message: "'rollback' is only valid when terminating.",
+		});
+	}
+	return value;
+}, zWorChangeStatusWorkflowInstanceData.shape.body);
 
 export type Env = {
 	[key: string]: unknown;
@@ -351,7 +369,7 @@ app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 
 app.patch(
 	"/api/workflows/:workflow_name/instances/:instance_id/status",
-	validateRequestBody(zWorChangeStatusWorkflowInstanceData.shape.body),
+	validateRequestBody(zWorkflowInstanceStatusBody),
 	(c) =>
 		changeWorkflowInstanceStatus(
 			c,

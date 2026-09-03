@@ -788,6 +788,42 @@ describe("Local Explorer workflow instance status endpoint", () => {
 		await waitForStatus(mf, id, "terminated");
 	});
 
+	test("rejects rollback for non-terminate statuses", async ({ expect }) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		for (const status of ["pause", "resume", "restart"] as const) {
+			const response = await updateLocalExplorerWorkflowInstanceStatus(
+				mf,
+				`rollback-${status}`,
+				{ status, rollback: true }
+			);
+			const body = (await response.json()) as {
+				errors: Array<{ code: number; message: string }>;
+				messages: string[];
+				result: null;
+				success: boolean;
+			};
+
+			expect(response.status).toBe(400);
+			expect(body).toEqual({
+				success: false,
+				errors: [
+					{
+						code: 10001,
+						message: "'rollback' is only valid when terminating.",
+					},
+				],
+				messages: [],
+				result: null,
+			});
+		}
+	});
+
 	test("rejects the legacy action request field", async ({ expect }) => {
 		const tmp = await useTmp();
 		const mf = new Miniflare({
