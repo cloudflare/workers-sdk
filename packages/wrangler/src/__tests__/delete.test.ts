@@ -25,10 +25,10 @@ describe("delete", () => {
 	});
 	const std = mockConsoleMethods();
 
-	it("should delete an entire service by name", async ({ expect }) => {
-		writeWranglerConfig({
-			observability: { metrics: { enabled: false } },
-		});
+	it("clears metrics export after deleting a service without local metrics config", async ({
+		expect,
+	}) => {
+		writeWranglerConfig();
 		const calls: string[] = [];
 		mockConfirm({
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
@@ -143,9 +143,12 @@ describe("delete", () => {
 		expect(cleanupCalled).toBe(false);
 	});
 
-	it("deletes without metrics cleanup when metrics are not configured", async ({
+	it("clears metrics export after deleting a service with local metrics config", async ({
 		expect,
 	}) => {
+		writeWranglerConfig({
+			observability: { metrics: { enabled: false } },
+		});
 		let cleanupCalled = false;
 		mockClearMetricsExportRequest(() => {
 			cleanupCalled = true;
@@ -159,7 +162,7 @@ describe("delete", () => {
 		mockListTailsByConsumerRequest(expect, "my-positional-worker");
 		mockDeleteWorkerRequest(expect, { name: "my-positional-worker" });
 		await runWrangler("delete my-positional-worker");
-		expect(cleanupCalled).toBe(false);
+		expect(cleanupCalled).toBe(true);
 
 		expect(std).toMatchInlineSnapshot(`
 			{

@@ -14,7 +14,12 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
+import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { clearCachedAccount } from "../../cloudchamber/locations";
+import { readConfig } from "../../config";
+import { containersScope } from "../../containers";
+import { getNormalizedContainerOptions } from "../../containers/config";
+import { apply, deployContainers } from "../../containers/deploy";
 import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockServiceScriptData } from "../deploy/helpers";
@@ -59,6 +64,254 @@ describe("wrangler deploy with containers", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 	});
+	it("returns the application ID when creating an application", async ({
+		expect,
+	}) => {
+		writeDefaultContainerConfig();
+		mockGetApplications([]);
+		mockCreateApplication(expect, undefined, "new-application-id");
+
+		await expect(applyDefaultContainer()).resolves.toBe("new-application-id");
+	});
+
+	it("returns the application ID when modifying an application", async ({
+		expect,
+	}) => {
+		writeDefaultContainerConfig();
+		mockGetApplications([defaultExistingApplication({ max_instances: 9 })]);
+		mockModifyApplication(expect);
+		mockCreateApplicationRollout(expect);
+
+		await expect(applyDefaultContainer()).resolves.toBe("abc");
+	});
+
+	it("returns the application ID when the application has no changes", async ({
+		expect,
+	}) => {
+		writeDefaultContainerConfig();
+		mockGetApplications([defaultExistingApplication()]);
+
+		await expect(applyDefaultContainer()).resolves.toBe("abc");
+	});
+
+	it("returns the application ID when the rollout is skipped", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{ ...DEFAULT_CONTAINER_FROM_REGISTRY, rollout_kind: "none" },
+			],
+		});
+		mockGetApplications([defaultExistingApplication({ max_instances: 9 })]);
+
+		await expect(applyDefaultContainer()).resolves.toBe("abc");
+	});
+
+	it("returns application IDs from container deployment", async ({
+		expect,
+	}) => {
+		writeDefaultContainerConfig();
+		mockGetVersion("version-id");
+		mockGetApplications([]);
+		mockCreateApplication(expect, undefined, "new-application-id");
+		const { config, containers } = await getDefaultContainerConfig();
+
+		await expect(
+			deployContainers(config, containers, {
+				versionId: "version-id",
+				accountId: "some-account-id",
+				scriptName: "test-name",
+			})
+		).resolves.toEqual(["new-application-id"]);
+	});
+
+	it("reconciles a complete snapshot with sorted Container Application IDs", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			durable_objects: {
+				bindings: [
+					{ name: "FIRST_DO", class_name: "ExampleDurableObject" },
+					{ name: "SECOND_DO", class_name: "AnotherDurableObject" },
+				],
+			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["ExampleDurableObject", "AnotherDurableObject"],
+				},
+			],
+			containers: [
+				{ ...DEFAULT_CONTAINER_FROM_REGISTRY, name: "second-container" },
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					name: "first-container",
+					class_name: "AnotherDurableObject",
+				},
+			],
+			d1_databases: [{ binding: "DB", database_id: "database-id" }],
+			r2_buckets: [{ binding: "BUCKET", bucket_name: "bucket-name" }],
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		fs.writeFileSync(
+			"index.js",
+			"export class ExampleDurableObject {}; export class AnotherDurableObject {}; export default {};"
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{
+					class_name: "ExampleDurableObject",
+					name: "FIRST_DO",
+					type: "durable_object_namespace",
+				},
+				{
+					class_name: "AnotherDurableObject",
+					name: "SECOND_DO",
+					type: "durable_object_namespace",
+				},
+				{ name: "DB", type: "d1", id: "database-id" },
+				{ name: "BUCKET", type: "r2_bucket", bucket_name: "bucket-name" },
+			],
+			useOldUploadApi: true,
+			expectedContainers: [
+				{ class_name: "ExampleDurableObject" },
+				{ class_name: "AnotherDurableObject" },
+			],
+		});
+		mockGetVersion("Galaxy-Class", [
+			{
+				type: "durable_object_namespace",
+				namespace_id: "1",
+				class_name: "ExampleDurableObject",
+			},
+			{
+				type: "durable_object_namespace",
+				namespace_id: "2",
+				class_name: "AnotherDurableObject",
+			},
+		]);
+		mockGetApplications([]);
+
+		let requestBody: unknown;
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/:bucketName", () =>
+				HttpResponse.json(
+					createFetchResult({
+						name: "bucket-name",
+						creation_date: "2026-01-01T00:00:00Z",
+					})
+				)
+			),
+			http.post("*/applications", async ({ request }) => {
+				const application = (await request.json()) as CreateApplicationRequest;
+				return HttpResponse.json({
+					success: true,
+					result: {
+						...application,
+						id: application.name === "first-container" ? "app-a" : "app-b",
+					},
+				});
+			}),
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy index.js");
+
+		expect(requestBody).toEqual({
+			requester: {
+				requesterType: "workers",
+				requesterId: "test-name",
+			},
+			resources: [
+				{
+					resourceType: "workers",
+					resourceId: "test-name",
+					destinations: ["destination"],
+				},
+				{
+					resourceType: "d1",
+					resourceId: "database-id",
+					destinations: ["destination"],
+				},
+				{
+					resourceType: "r2",
+					resourceId: "bucket-name",
+					destinations: ["destination"],
+				},
+				{
+					resourceType: "containers",
+					resourceId: "app-a",
+					destinations: ["destination"],
+				},
+				{
+					resourceType: "containers",
+					resourceId: "app-b",
+					destinations: ["destination"],
+				},
+			],
+		});
+	});
+
+	for (const deploymentPath of ["update", "no-op", "rollout skip"] as const) {
+		it(`reconciles the Container Application ID after ${deploymentPath}`, async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						...(deploymentPath === "rollout skip"
+							? { rollout_kind: "none" as const }
+							: {}),
+					},
+				],
+				observability: {
+					metrics: { enabled: true, destinations: ["destination"] },
+				},
+			});
+			mockGetVersion("Galaxy-Class");
+			mockGetApplications([
+				defaultExistingApplication(
+					deploymentPath === "no-op" ? {} : { max_instances: 9 }
+				),
+			]);
+			if (deploymentPath === "update") {
+				mockModifyApplication(expect);
+				mockCreateApplicationRollout(expect);
+			}
+
+			let requestBody: unknown;
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/workers/observability/metricsexport",
+					async ({ request }) => {
+						requestBody = await request.json();
+						return HttpResponse.json(createFetchResult({}));
+					}
+				)
+			);
+
+			await runWrangler("deploy index.js");
+
+			expect(requestBody).toMatchObject({
+				resources: [
+					{ resourceType: "workers", resourceId: "test-name" },
+					{ resourceType: "containers", resourceId: "abc" },
+				],
+			});
+		});
+	}
+
 	it("should fail early if no docker is detected when deploying a container from a dockerfile", async ({
 		expect,
 	}) => {
@@ -187,7 +440,7 @@ describe("wrangler deploy with containers", () => {
 			│   namespace_id = "1"
 			│
 			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│  SUCCESS  Created application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -329,7 +582,7 @@ describe("wrangler deploy with containers", () => {
 			│   namespace_id = "1"
 			│
 			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│  SUCCESS  Created application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -432,7 +685,7 @@ describe("wrangler deploy with containers", () => {
 			│   namespace_id = "1"
 			│
 			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│  SUCCESS  Created application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -529,7 +782,7 @@ describe("wrangler deploy with containers", () => {
 			│   namespace_id = "1"
 			│
 			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│  SUCCESS  Created application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -944,7 +1197,7 @@ describe("wrangler deploy with containers", () => {
 			│   namespace_id = "2"
 			│
 			│
-			│  SUCCESS  Created application my-container-app-2 (Application ID: undefined)
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -1213,13 +1466,30 @@ describe("wrangler deploy with containers", () => {
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
 			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
 		});
 
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
 
 		mockGetVersion("Galaxy-Class");
-		mockGetApplications([]);
 		mockCreateApplication(expect);
+		let applicationRequests = 0;
+		let metricsRequests = 0;
+		msw.use(
+			http.get("*/applications", () => {
+				applicationRequests += 1;
+				return HttpResponse.json({ success: true, result: [] });
+			}),
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					metricsRequests += 1;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
 
 		fs.writeFileSync(
 			"index.js",
@@ -1234,6 +1504,11 @@ describe("wrangler deploy with containers", () => {
 		await expect(
 			runWrangler("deploy index.js --containers-rollout=none")
 		).resolves.not.toThrow();
+		expect(applicationRequests).toBe(0);
+		expect(metricsRequests).toBe(0);
+		expect(std.warn).toContain(
+			"metrics export was not reconciled because Container Application IDs were intentionally not resolved"
+		);
 	});
 
 	describe("observability config resolution", () => {
@@ -1664,7 +1939,7 @@ describe("wrangler deploy with containers", () => {
 			│   namespace_id = "1"
 			│
 			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│  SUCCESS  Created application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -1721,7 +1996,7 @@ describe("wrangler deploy with containers", () => {
 				│   namespace_id = "1"
 				│
 				│
-				│  SUCCESS  Created application my-container (Application ID: undefined)
+				│  SUCCESS  Created application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -2125,7 +2400,7 @@ describe("wrangler deploy with containers", () => {
 			│   namespace_id = "1"
 			│
 			│
-			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│  SUCCESS  Created application my-container (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -2420,7 +2695,7 @@ describe("wrangler deploy with containers", () => {
 				│   namespace_id = "some-id"
 				│
 				│
-				│  SUCCESS  Created application my-container (Application ID: undefined)
+				│  SUCCESS  Created application my-container (Application ID: abc)
 				│
 				╰ Applied changes
 
@@ -3058,6 +3333,64 @@ const DEFAULT_CONTAINER_FROM_DOCKERFILE = {
 	image: "./Dockerfile",
 };
 
+function writeDefaultContainerConfig() {
+	writeWranglerConfig({
+		...DEFAULT_DURABLE_OBJECTS,
+		containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+	});
+}
+
+async function applyDefaultContainer(
+	args: { containersRollout?: "gradual" | "immediate" | "none" } = {}
+) {
+	const { config, containers } = await getDefaultContainerConfig(args);
+	const [container] = containers;
+	assert(container);
+	await fillOpenAPIConfiguration(config, containersScope);
+
+	return apply(
+		{
+			imageRef: {
+				newTag: "registry.cloudflare.com/some-account-id/hello:world",
+			},
+			durable_object_namespace_id: "1",
+		},
+		container,
+		config
+	);
+}
+
+async function getDefaultContainerConfig(
+	args: { containersRollout?: "gradual" | "immediate" | "none" } = {}
+) {
+	const config = readConfig({});
+	const containers = await getNormalizedContainerOptions(config, args);
+	return { config, containers };
+}
+
+function defaultExistingApplication(
+	overrides: Partial<Application> = {}
+): Application {
+	return {
+		id: "abc",
+		name: "my-container",
+		instances: 0,
+		max_instances: 10,
+		created_at: new Date().toString(),
+		version: 1,
+		account_id: "some-account-id",
+		scheduling_policy: SchedulingPolicy.DEFAULT,
+		configuration: {
+			image: "registry.cloudflare.com/some-account-id/hello:world",
+			instance_type: InstanceType.LITE,
+		},
+		constraints: { tiers: [1, 2] },
+		durable_objects: { namespace_id: "1" },
+		rollout_active_grace_period: 0,
+		...overrides,
+	};
+}
+
 const defaultDOBinding = {
 	type: "durable_object_namespace",
 	namespace_id: "1",
@@ -3138,16 +3471,20 @@ function defaultChildProcess() {
 
 function mockCreateApplication(
 	expect: ExpectStatic,
-	expected?: Partial<Application>
+	expected?: Partial<Application>,
+	applicationId = "abc"
 ) {
 	msw.use(
 		http.post("*/applications", async ({ request }) => {
-			const json = await request.json();
+			const json = (await request.json()) as CreateApplicationRequest;
 			if (expected !== undefined) {
 				expect(json).toMatchObject(expected);
 			}
 
-			return HttpResponse.json({ success: true, result: json });
+			return HttpResponse.json({
+				success: true,
+				result: { ...json, id: applicationId },
+			});
 		})
 	);
 }
@@ -3220,9 +3557,18 @@ function mockGenerateImageRegistryCredentials(expect: ExpectStatic) {
 		)
 	);
 }
-function mockGetApplications(applications: Application[]) {
+function mockGetApplications(
+	applications: Application[],
+	expectedName?: string
+) {
 	msw.use(
-		http.get("*/applications", async () => {
+		http.get("*/applications", async ({ request }) => {
+			if (expectedName !== undefined) {
+				assert.equal(
+					new URL(request.url).searchParams.get("name"),
+					expectedName
+				);
+			}
 			return HttpResponse.json({ success: true, result: applications });
 		})
 	);

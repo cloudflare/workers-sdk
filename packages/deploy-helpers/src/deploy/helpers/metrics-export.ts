@@ -28,7 +28,7 @@ export function withoutMetricsExportConfig(
 }
 
 type MetricExportResource = {
-	resourceType: "workers" | "d1" | "r2";
+	resourceType: "workers" | "d1" | "r2" | "containers";
 	resourceId: string;
 	destinations: string[];
 };
@@ -46,11 +46,17 @@ export async function reconcileMetricsExportConfig({
 	accountId,
 	scriptName,
 	bindings,
+	containerApplicationIds,
+	expectedContainerApplicationCount,
+	containersRollout,
 }: {
 	config: Config;
 	accountId: string;
 	scriptName: string;
 	bindings: Record<string, Binding>;
+	containerApplicationIds: string[] | undefined;
+	expectedContainerApplicationCount: number;
+	containersRollout?: "gradual" | "immediate" | "none";
 }): Promise<void> {
 	const metrics = config.observability?.metrics;
 
@@ -59,15 +65,30 @@ export async function reconcileMetricsExportConfig({
 	}
 
 	try {
-		const resources = metrics.enabled
-			? await discoverMetricsExportResources({
-					config,
-					accountId,
-					scriptName,
-					bindings,
-					destinations: metrics.destinations ?? [],
-				})
-			: [];
+		if (!metrics.enabled) {
+			await postMetricsExportRequester(config, accountId, scriptName, []);
+			return;
+		}
+
+		if (containersRollout === "none") {
+			logger.warn(
+				"Worker deployed with `--containers-rollout=none`, but metrics export was not reconciled because Container Application IDs were intentionally not resolved. Existing metrics-export resources were left unchanged. Re-run without `--containers-rollout=none` to reconcile metrics exports."
+			);
+			return;
+		}
+
+		const validatedContainerApplicationIds = validateContainerApplicationIds(
+			containerApplicationIds,
+			expectedContainerApplicationCount
+		);
+		const resources = await discoverMetricsExportResources({
+			config,
+			accountId,
+			scriptName,
+			bindings,
+			destinations: metrics.destinations ?? [],
+			containerApplicationIds: validatedContainerApplicationIds,
+		});
 
 		await postMetricsExportRequester(config, accountId, scriptName, resources);
 	} catch (error) {
@@ -111,12 +132,14 @@ async function discoverMetricsExportResources({
 	scriptName,
 	bindings,
 	destinations,
+	containerApplicationIds,
 }: {
 	config: Config;
 	accountId: string;
 	scriptName: string;
 	bindings: Record<string, Binding>;
 	destinations: string[];
+	containerApplicationIds: string[];
 }): Promise<MetricExportResource[]> {
 	const d1Bindings = extractBindingsOfType("d1", bindings);
 	const r2Bindings = extractBindingsOfType("r2_bucket", bindings);
@@ -163,7 +186,52 @@ async function discoverMetricsExportResources({
 			resourceId,
 			destinations,
 		})),
+		...[...containerApplicationIds].sort().map((resourceId) => ({
+			resourceType: "containers" as const,
+			resourceId,
+			destinations,
+		})),
 	];
+}
+
+export function validateContainerApplicationIds(
+	applicationIds: unknown[] | undefined,
+	expectedCount: number
+): string[] {
+	if (expectedCount === 0) {
+		if (applicationIds === undefined || applicationIds.length === 0) {
+			return [];
+		}
+		throw invalidContainerApplicationIdsError();
+	}
+
+	if (applicationIds === undefined || applicationIds.length !== expectedCount) {
+		throw invalidContainerApplicationIdsError();
+	}
+
+	const validatedIds: string[] = [];
+	for (const id of applicationIds) {
+		if (typeof id !== "string" || id.trim() === "" || id.trim() !== id) {
+			throw invalidContainerApplicationIdsError();
+		}
+		validatedIds.push(id);
+	}
+
+	if (new Set(validatedIds).size !== validatedIds.length) {
+		throw invalidContainerApplicationIdsError();
+	}
+
+	return validatedIds;
+}
+
+function invalidContainerApplicationIdsError(): UserError {
+	return new UserError(
+		"Wrangler did not resolve a complete, unique set of Container Application IDs. Existing metrics-export resources were left unchanged.",
+		{
+			telemetryMessage:
+				"metrics export container application id resolution failed",
+		}
+	);
 }
 
 function findRemoteD1Id(

@@ -130,7 +130,7 @@ export type DeployCallbacks = {
 				config: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
 				args: { versionId: string; accountId: string; scriptName: string }
-		  ) => Promise<void>)
+		  ) => Promise<string[]>)
 		| undefined;
 	analyseBundle:
 		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
@@ -148,6 +148,7 @@ export default async function deploy(
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
+	containerApplicationIds?: string[];
 }> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
@@ -195,6 +196,11 @@ export default async function deploy(
 
 	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
 		? await callbacks.getNormalizedContainerOptions(config, props)
+		: [];
+	// `undefined` means configured containers were not deployed or resolved;
+	// an empty array means there are no configured container applications.
+	let containerApplicationIds: string[] | undefined = config.containers?.length
+		? undefined
 		: [];
 	const {
 		modules,
@@ -726,7 +732,7 @@ export default async function deploy(
 
 	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, containerApplicationIds };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -739,17 +745,26 @@ export default async function deploy(
 		callbacks.deployContainers
 	) {
 		assert(versionId && accountId);
-		await callbacks.deployContainers(config, normalisedContainerConfig, {
-			versionId,
-			accountId,
-			scriptName,
-		});
+		containerApplicationIds = await callbacks.deployContainers(
+			config,
+			normalisedContainerConfig,
+			{
+				versionId,
+				accountId,
+				scriptName,
+			}
+		);
 	}
 
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats };
+		return {
+			versionId,
+			workerTag,
+			assetUploadStats,
+			containerApplicationIds,
+		};
 	}
 	assert(accountId);
 
@@ -770,6 +785,9 @@ export default async function deploy(
 		accountId,
 		scriptName,
 		bindings,
+		containerApplicationIds,
+		expectedContainerApplicationCount: normalisedContainerConfig.length,
+		containersRollout: props.containersRollout,
 	});
 
 	logger.log("Current Version ID:", versionId);
@@ -780,5 +798,6 @@ export default async function deploy(
 		workerTag,
 		assetUploadStats,
 		targets: targets ?? [],
+		containerApplicationIds,
 	};
 }

@@ -77,7 +77,7 @@ export async function deployContainers(
 	config: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	{ versionId, accountId, scriptName }: DeployContainersArgs
-) {
+): Promise<ApplicationID[]> {
 	await fillOpenAPIConfiguration(config, containersScope);
 
 	const pathToDocker = getDockerPath();
@@ -88,6 +88,7 @@ export async function deployContainers(
 	let imageRef: ImageRef;
 	let maybeVersionInfo: ApiVersion | undefined;
 	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
+	const applicationIds: ApplicationID[] = [];
 
 	for (const container of normalisedContainerConfig) {
 		if ("dockerfile" in container) {
@@ -136,7 +137,7 @@ export async function deployContainers(
 				targetDurableObject && targetDurableObject.namespace_id !== undefined
 			);
 
-			await apply(
+			const applicationId = await apply(
 				{
 					imageRef,
 					durable_object_namespace_id: targetDurableObject.namespace_id,
@@ -144,6 +145,7 @@ export async function deployContainers(
 				container,
 				config
 			);
+			applicationIds.push(applicationId);
 		} else {
 			// The DO is unbound, so we need to list all DO namespaces to find the right one
 			// TODO: use the list API with filters when it exists
@@ -155,7 +157,7 @@ export async function deployContainers(
 			);
 
 			assert(targetDurableObject, "Durable Object not returned from list API");
-			await apply(
+			const applicationId = await apply(
 				{
 					imageRef,
 					durable_object_namespace_id: targetDurableObject.id,
@@ -163,8 +165,11 @@ export async function deployContainers(
 				container,
 				config
 			);
+			applicationIds.push(applicationId);
 		}
 	}
+
+	return applicationIds;
 }
 
 async function fetchUploadedVersion(
@@ -387,9 +392,14 @@ export async function apply(
 	},
 	containerConfig: ContainerNormalizedConfig,
 	config: Config
-) {
+): Promise<ApplicationID> {
 	if (!config.containers || config.containers.length === 0) {
-		return;
+		throw new FatalError(
+			"Container deployment requires a matching container configuration",
+			{
+				telemetryMessage: "containers deploy configuration missing",
+			}
+		);
 	}
 	startSection(
 		"Deploy a container application",
@@ -428,6 +438,7 @@ export async function apply(
 		),
 		containerConfig.name
 	);
+	let applicationId: ApplicationID;
 
 	if (prevApp !== undefined && prevApp !== null) {
 		if (!prevApp.durable_objects?.namespace_id) {
@@ -438,6 +449,7 @@ export async function apply(
 				}
 			);
 		}
+		applicationId = prevApp.id;
 		if (
 			prevApp.durable_objects.namespace_id !== args.durable_object_namespace_id
 		) {
@@ -484,7 +496,7 @@ export async function apply(
 		if (diff.changes === 0) {
 			updateStatus(`no changes ${brandColor(prevApp.name)}`);
 			endSection("No changes to be made");
-			return;
+			return applicationId;
 		}
 
 		updateStatus(`${brandColor.underline("EDIT")} ${prevApp.name}`, false);
@@ -494,7 +506,7 @@ export async function apply(
 		newline();
 
 		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
+			applicationId = await doAction({
 				action: "modify",
 				application: modifyReq,
 				id: prevApp.id,
@@ -530,13 +542,14 @@ export async function apply(
 		newline();
 		// add to the actions array to create the app later
 
-		await doAction({
+		applicationId = await doAction({
 			action: "create",
 			application: appConfig,
 		});
 	}
 	newline();
 	endSection("Applied changes");
+	return applicationId;
 }
 
 /**
@@ -593,7 +606,7 @@ const doAction = async (
 				rollout_step_percentage: number | number[];
 				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
-) => {
+): Promise<ApplicationID> => {
 	if (action.action === "create") {
 		let application: Application;
 		try {
@@ -631,9 +644,8 @@ const doAction = async (
 				shape: shapes.bar,
 			}
 		);
-	}
-
-	if (action.action === "modify") {
+		return application.id;
+	} else {
 		try {
 			await promiseSpinner(
 				ApplicationsService.modifyApplication(action.id, action.application),
@@ -708,6 +720,7 @@ const doAction = async (
 				shape: shapes.bar,
 			}
 		);
+		return action.id;
 	}
 };
 

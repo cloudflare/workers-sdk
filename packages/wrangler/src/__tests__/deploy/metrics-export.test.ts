@@ -440,6 +440,34 @@ describe("deploy metrics export", () => {
 		});
 	});
 
+	it("preserves metrics export during skipped Container rollout with no local Containers", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		writeWorkerSource();
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+		let reconciliationCalled = false;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					reconciliationCalled = true;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy --containers-rollout=none");
+
+		expect(reconciliationCalled).toBe(false);
+		expect(std.warn).toContain("metrics export was not reconciled");
+	});
+
 	it("clears only the selected environment requester when metrics is disabled", async ({
 		expect,
 	}) => {
@@ -707,6 +735,60 @@ describe("deploy metrics export", () => {
 		expect(called).toBe(false);
 	});
 
+	it("does not post a partial resource set when an R2 binding is unresolved", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "./index.js",
+			r2_buckets: [{ binding: "BUCKET" }],
+			observability: {
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		});
+		writeWorkerSource();
+		let settingsRequests = 0;
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/settings",
+				() => {
+					settingsRequests += 1;
+					return HttpResponse.json(
+						createFetchResult({
+							bindings:
+								settingsRequests === 1
+									? [
+											{
+												type: "r2_bucket",
+												name: "BUCKET",
+												bucket_name: "bucket-name",
+											},
+										]
+									: [],
+						})
+					);
+				}
+			)
+		);
+		mockUploadWorkerRequest({ expectedObservability: undefined });
+
+		let called = false;
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/workers/observability/metricsexport",
+				() => {
+					called = true;
+					return HttpResponse.json(createFetchResult({}));
+				}
+			)
+		);
+
+		await runWrangler("deploy");
+		expect(std.warn).toContain(
+			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration: Wrangler could not resolve the R2 resource used by binding BUCKET."
+		);
+		expect(called).toBe(false);
+	});
+
 	it("removes requester resources when metrics export is disabled", async ({
 		expect,
 	}) => {
@@ -750,7 +832,7 @@ describe("deploy metrics export", () => {
 			)
 		);
 
-		await runWrangler("deploy");
+		await runWrangler("deploy --containers-rollout=none");
 
 		expect(requestBody).toEqual({
 			requester: {
@@ -780,9 +862,10 @@ describe("deploy metrics export", () => {
 			)
 		);
 
-		await runWrangler("deploy");
+		await runWrangler("deploy --containers-rollout=none");
 
 		expect(called).toBe(false);
+		expect(std.warn).not.toContain("metrics export was not reconciled");
 	});
 
 	it("retries transient metrics export reconciliation failures", async ({
