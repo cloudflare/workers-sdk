@@ -4708,6 +4708,9 @@ importers:
       am-i-vibing:
         specifier: ^0.5.0
         version: 0.5.0
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
       capnweb:
         specifier: catalog:default
         version: 0.5.0
