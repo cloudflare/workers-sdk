@@ -24,7 +24,7 @@ import {
 	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
-	zWorkflowsChangeInstanceStatusData,
+	zWorChangeStatusWorkflowInstanceData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
@@ -376,7 +376,7 @@ app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 
 app.patch(
 	"/api/workflows/:workflow_name/instances/:instance_id/status",
-	validateRequestBody(zWorkflowsChangeInstanceStatusData.shape.body),
+	validateRequestBody(zWorChangeStatusWorkflowInstanceData.shape.body),
 	(c) =>
 		changeWorkflowInstanceStatus(
 			c,

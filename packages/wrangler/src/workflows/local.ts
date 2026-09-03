@@ -143,7 +143,6 @@ export async function getLocalInstanceIdFromArgs(
 
 /**
  * Change the status of a local workflow instance (pause, resume, restart, terminate).
- * The local explorer API uses `action` instead of `status` in the request body.
  */
 export async function updateLocalInstanceStatus(
 	port: number,
@@ -154,7 +153,7 @@ export async function updateLocalInstanceStatus(
 	rollback?: boolean
 ): Promise<{ success: boolean }> {
 	const body = {
-		action,
+		status: action,
 		...(from ? { from } : {}),
 		...(action === "terminate" && rollback === true ? { rollback: true } : {}),
 	};
