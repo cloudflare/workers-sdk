@@ -63,6 +63,9 @@ async function createTestProject() {
 		[
 			"packages:",
 			'  - "."',
+			"minimumReleaseAgeExclude:",
+			'  - "vitest"',
+			'  - "@vitest/*"',
 			"allowBuilds:",
 			"  esbuild: true",
 			"  workerd: true",
@@ -73,9 +76,13 @@ async function createTestProject() {
 }
 
 /**
- * Get the version of `vitest` that is needed as a peer of vitest-plugin.
+ * Get the version of `vitest` to install with vitest-plugin. Tests default to
+ * the published peer range, but CI can override this to exercise each major.
  */
 async function getVitestPeerDep() {
+	if (process.env.VITEST_VERSION !== undefined) {
+		return process.env.VITEST_VERSION;
+	}
 	const poolPackageJsonPath = path.join(
 		packagesRoot,
 		"vitest-plugin/package.json"

@@ -3,13 +3,11 @@ import { existsSync } from "node:fs";
 import { expect } from "vitest";
 
 declare module "vitest" {
-	interface CustomMatchers<R = unknown> {
+	interface CustomMatchers<R> {
 		toExist(): R;
 	}
 	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
-	interface Assertion<T> extends CustomMatchers<T> {}
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
-	interface AsymmetricMatchersContaining extends CustomMatchers {}
+	interface Matchers<R, T> extends CustomMatchers<R> {}
 }
 
 expect.extend({

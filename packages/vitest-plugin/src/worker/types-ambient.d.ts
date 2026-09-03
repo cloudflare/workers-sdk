@@ -12,6 +12,13 @@ interface UnsafeEval {
 	): (...args: unknown[]) => unknown;
 }
 
+declare var __vitestLegacyDynamicImport: (
+	specifier: string,
+	referrer: string,
+	options?: ImportCallOptions
+) => Promise<unknown>;
+declare var __vitestWriteCoverageFile: (options: unknown) => Promise<string>;
+
 namespace Cloudflare {
 	interface Env extends Record<string, unknown> {
 		__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;

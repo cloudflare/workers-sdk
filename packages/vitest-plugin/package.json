@@ -66,8 +66,6 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
-		"@vitest/runner": "catalog:default",
-		"@vitest/snapshot": "catalog:default",
 		"birpc": "0.2.14",
 		"capnp-es": "catalog:default",
 		"devalue": "^5.6.3",
@@ -82,9 +80,7 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "^4.1.0",
-		"@vitest/snapshot": "^4.1.0",
-		"vitest": "^4.1.0"
+		"vitest": "^4.1.0 || ^5.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

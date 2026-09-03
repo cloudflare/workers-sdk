@@ -120,8 +120,12 @@ export function cloudflareTest(
 				}
 			}
 			// See https://vitest.dev/config/server.html#inline
-			// Without this Vitest delegates to native import() for external deps in node_modules
-			config.test.server.deps.inline = true;
+			// Without this Vitest delegates to native import() for external deps in node_modules.
+			// Vitest 4's Istanbul provider is the exception: it runs in Node and must
+			// retain Node's CommonJS interop when importing Babel.
+			config.test.server.deps.inline = [
+				/^(?!.*[/\\]@vitest[/\\]coverage-istanbul[/\\]dist[/\\]provider\.js(?:\?|$))/,
+			];
 
 			// Remove "node" condition added by the `vitest:project` plugin. We're
 			// running tests inside `workerd`, not Node.js, so "node" isn't needed.

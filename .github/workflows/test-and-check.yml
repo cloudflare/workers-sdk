@@ -187,6 +187,14 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
 
+      - name: Run Vitest 4 compatibility tests
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
+        run: pnpm test:ci --filter @cloudflare/vitest-plugin
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          VITEST_VERSION: "4.1.0"
+          CI_OS: ${{ matrix.description }}
+
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
         # Browser Run fixture is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu

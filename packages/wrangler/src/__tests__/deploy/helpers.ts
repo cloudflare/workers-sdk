@@ -845,17 +845,16 @@ expect.extend({
 	},
 });
 
-interface CustomMatchers {
+interface CustomMatchers<R> {
 	toBeAFileWhichMatches: (expected: {
 		fileBits: string[];
 		name: string;
 		type: string;
-	}) => unknown;
+	}) => R;
 }
 
 declare module "vitest" {
 	/* eslint-disable @typescript-eslint/no-empty-object-type -- Type augmentation interfaces intentionally left empty */
-	interface Assertion extends CustomMatchers {}
-	interface AsymmetricMatchersContaining extends CustomMatchers {}
+	interface Matchers<R, T> extends CustomMatchers<R> {}
 	/* eslint-enable @typescript-eslint/no-empty-object-type */
 }

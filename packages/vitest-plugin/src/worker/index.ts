@@ -149,6 +149,7 @@ function isUserConsoleLogResponse(response: unknown): boolean {
 }
 
 let patchedFunction = false;
+const legacyDynamicImportNames = new Map<string, string>();
 function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	if (patchedFunction) {
 		return;
@@ -162,6 +163,74 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 			return unsafeEval.newFunction(script, "anonymous", ...args);
 		},
 	});
+	globalThis.__vitestLegacyDynamicImport = async (
+		specifier: string,
+		referrer: string,
+		options?: ImportCallOptions
+	) => {
+		let resolvedSpecifier = specifier;
+		if (specifier.startsWith("./") || specifier.startsWith("../")) {
+			const referrerUrl = referrer.startsWith("/")
+				? `file://${referrer.replaceAll("%", "%25")}`
+				: `file:///${referrer.replaceAll("%", "%25")}`;
+			const resolvedUrl = new URL(
+				specifier.replaceAll("%", "%25"),
+				referrerUrl
+			);
+			resolvedSpecifier =
+				decodeURIComponent(resolvedUrl.pathname) +
+				resolvedUrl.search +
+				resolvedUrl.hash;
+		}
+		const serializedOptions = JSON.stringify(options);
+		const key = `${resolvedSpecifier}\0${serializedOptions}`;
+		let moduleName = legacyDynamicImportNames.get(key);
+		if (moduleName === undefined) {
+			moduleName = `__vitestLegacyDynamicImport_${legacyDynamicImportNames.size}`;
+			legacyDynamicImportNames.set(key, moduleName);
+		}
+		const optionsArgument =
+			serializedOptions === undefined ? "" : `, ${serializedOptions}`;
+		const importModule = unsafeEval.newAsyncFunction(
+			`return import(${JSON.stringify(resolvedSpecifier)}${optionsArgument})`,
+			moduleName
+		) as () => Promise<unknown>;
+		return importModule();
+	};
+}
+
+interface CoverageRuntimeOptions {
+	coverage: unknown;
+	coverageFilesDirectory: string;
+}
+
+function isCoverageRuntimeOptions(
+	value: unknown
+): value is CoverageRuntimeOptions {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"coverage" in value &&
+		"coverageFilesDirectory" in value &&
+		typeof value.coverageFilesDirectory === "string"
+	);
+}
+
+async function writeCoverageFile(
+	loopback: Fetcher,
+	options: unknown
+): Promise<string> {
+	assert(isCoverageRuntimeOptions(options), "Invalid coverage runtime options");
+	const url = new URL("http://placeholder/coverage");
+	url.searchParams.set("directory", options.coverageFilesDirectory);
+	const response = await loopback.fetch(url, {
+		method: "POST",
+		body: JSON.stringify(options.coverage),
+	});
+	if (!response.ok) {
+		throw new Error(`Failed to write coverage file: ${response.status}`);
+	}
+	return response.text();
 }
 
 function applyDefines() {
@@ -183,10 +252,15 @@ function applyDefines() {
 
 // `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton
 export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject {
+	readonly #loopback: Fetcher;
+
 	constructor(_state: DurableObjectState, doEnv: Cloudflare.Env) {
 		super(_state, doEnv);
+		this.#loopback = doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE;
 		vm._setUnsafeEval(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
+		globalThis.__vitestWriteCoverageFile = (options) =>
+			writeCoverageFile(this.#loopback, options);
 		applyDefines();
 	}
 
@@ -275,7 +349,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			// `import()` inside an entrypoint handler (which runs in a *different*
 			// DO context) fails with "Cannot perform I/O on behalf of a different
 			// Durable Object". See: https://github.com/cloudflare/workers-sdk/issues/12924
-			onModuleRunner(moduleRunner: unknown) {
+			onModuleRunner: (moduleRunner: unknown) => {
 				const runner = moduleRunner as {
 					evaluator?: { createRequire?: CreateRequire };
 					options?: {
@@ -321,7 +395,40 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				if (runner.transport?.invoke) {
 					const originalInvoke = runner.transport.invoke.bind(runner.transport);
 					runner.transport.invoke = (...args: unknown[]) => {
-						return runInRunnerObject(() => originalInvoke(...args));
+						return runInRunnerObject(() => originalInvoke(...args)).then(
+							(result) => {
+								const data = args[1];
+								const id = Array.isArray(data) ? data[0] : undefined;
+								if (
+									args[0] === "fetchModule" &&
+									typeof id === "string" &&
+									typeof result === "object" &&
+									result !== null &&
+									"externalize" in result
+								) {
+									const externalize = result.externalize;
+									const moduleId =
+										typeof externalize === "string" ? externalize : id;
+									if (
+										!/[/\\]vitest[/\\]dist[/\\]index\.js(?:\?|$)/.test(moduleId)
+									) {
+										return result;
+									}
+									// Vitest 5 always externalizes its public API because Node has
+									// already cached it. Legacy workerd exposes that native ESM
+									// namespace as default-only, so bridge to Vitest's initialized
+									// singleton instead.
+									return {
+										code: "Object.assign(__vite_ssr_exports__, globalThis.__vitest_index__);",
+										file: id,
+										id,
+										url: id,
+										invalidate: false,
+									};
+								}
+								return result;
+							}
+						);
 					};
 				} else {
 					__console.warn(

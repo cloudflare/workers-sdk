@@ -12,7 +12,7 @@ import type { ExpectStatic, MockInstance } from "vitest";
 
 const { unstable_startWorker: startWorker } = await importWrangler();
 
-describe("startWorker - auth options", { sequential: true }, () => {
+describe("startWorker - auth options", { concurrent: false }, () => {
 	let worker: Worker | undefined;
 	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("with remote bindings", () => {
 		let helper: WranglerE2ETestHelper;

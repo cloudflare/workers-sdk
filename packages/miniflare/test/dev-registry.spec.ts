@@ -16,7 +16,7 @@ import type {
 	WorkerRegistry,
 } from "miniflare";
 
-describe.sequential("DevRegistry", () => {
+describe("DevRegistry", { concurrent: false }, () => {
 	test("surfaces fresh legacy entries and removes them when stale", async ({
 		expect,
 	}) => {

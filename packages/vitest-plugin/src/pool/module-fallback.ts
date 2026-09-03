@@ -198,9 +198,90 @@ function withSourceUrl(contents: string, url: string | URL): string {
 	return contents + sourceURL;
 }
 
-function withImportMetaUrl(contents: string, url: string | URL): string {
+async function withImportMetaUrl(
+	contents: string,
+	url: string | URL
+): Promise<string> {
 	// TODO(soon): this isn't perfect, ideally need `workerd` support
-	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
+	await esModuleLexer.init;
+	const [imports] = esModuleLexer.parse(contents);
+	for (let i = imports.length - 1; i >= 0; i--) {
+		const imported = imports[i];
+		if (
+			imported.d === -2 &&
+			contents.slice(imported.se, imported.se + 4) === ".url"
+		) {
+			contents =
+				contents.slice(0, imported.ss) +
+				JSON.stringify(url.toString()) +
+				contents.slice(imported.se + 4);
+		}
+	}
+	return contents;
+}
+
+/**
+ * Workerd's legacy module registry only parses dynamic imports with literal
+ * specifiers. Vitest 5's native bootstrap graph contains computed imports, so
+ * route those through the runner's unsafe-eval binding, which compiles a
+ * literal import at runtime.
+ */
+async function withLegacyDynamicImports(
+	contents: string,
+	filePath: string
+): Promise<string> {
+	await esModuleLexer.init;
+	const [imports] = esModuleLexer.parse(contents);
+	let transformed = 0;
+	for (let i = imports.length - 1; i >= 0; i--) {
+		const imported = imports[i];
+		if (imported.d < 0 || imported.n !== undefined) {
+			continue;
+		}
+		const importFunction =
+			"((specifier, options) => " +
+			`globalThis.__vitestLegacyDynamicImport(specifier, ${JSON.stringify(filePath)}, options))`;
+		contents =
+			contents.slice(0, imported.ss) +
+			importFunction +
+			contents.slice(imported.d);
+		transformed++;
+	}
+	if (transformed > 0) {
+		debuglog(
+			"Rewrote %d computed dynamic import(s) in %s for the legacy module registry.",
+			transformed,
+			filePath
+		);
+	}
+	return contents;
+}
+
+async function withVitestCoverageWriter(
+	contents: string,
+	filePath: string
+): Promise<string> {
+	if (
+		!/[/\\]@vitest[/\\]coverage-istanbul[/\\]dist[/\\]index\.js$/.test(filePath)
+	) {
+		return contents;
+	}
+	await esModuleLexer.init;
+	const [imports] = esModuleLexer.parse(contents);
+	for (let i = imports.length - 1; i >= 0; i--) {
+		const imported = imports[i];
+		if (
+			imported.d === -1 &&
+			imported.n !== undefined &&
+			/^\.\/commands-.+\.js$/.test(imported.n)
+		) {
+			contents =
+				contents.slice(0, imported.s) +
+				"cloudflare:vitest-coverage" +
+				contents.slice(imported.e);
+		}
+	}
+	return contents;
 }
 
 // Extensions that Node's `require()` probes automatically but `workerd` won't.
@@ -337,6 +418,13 @@ async function resolve(
 	const referrerDir = posixPath.dirname(referrer);
 
 	const isRequire = method === "require";
+	const forcedTypeMatch = forceModuleTypeRegexp.exec(target);
+	if (
+		forcedTypeMatch !== null &&
+		isFile(trimSuffix(forcedTypeMatch[0], target))
+	) {
+		return target;
+	}
 	// The ?module suffix must be stripped to resolve to the actual wasm file.
 	// Only CommonJS `require()` needs to handle these imports dynamically.
 	if (isRequire && target.endsWith(wasmModuleSuffix)) {
@@ -615,6 +703,12 @@ async function load(
 	// If we're importing with a forced module type, load the file as that type
 	const maybeContents = maybeGetForceTypeModuleContents(filePath);
 	if (maybeContents !== undefined) {
+		if ("esModule" in maybeContents) {
+			maybeContents.esModule = await withLegacyDynamicImports(
+				maybeContents.esModule,
+				filePath
+			);
+		}
 		debuglog(logBase, "forced:", filePath);
 		return buildModuleResponse(rawTarget, maybeContents);
 	}
@@ -641,7 +735,9 @@ async function load(
 
 	if (module.kind === "esm") {
 		// Respond with ES module
-		contents = withImportMetaUrl(contents, targetUrl);
+		contents = await withImportMetaUrl(contents, targetUrl);
+		contents = await withLegacyDynamicImports(contents, filePath);
+		contents = await withVitestCoverageWriter(contents, filePath);
 		debuglog(logBase, "esm:", filePath);
 		return buildModuleResponse(rawTarget, { esModule: contents });
 	}
@@ -1026,7 +1122,11 @@ async function loadV2Module(
 
 	if (module.kind === "esm") {
 		debuglog(logBase, "esm:", filePath);
-		return { contents: { esModule: module.contents } };
+		return {
+			contents: {
+				esModule: await withVitestCoverageWriter(module.contents, filePath),
+			},
+		};
 	}
 
 	debuglog(logBase, "cjs:", filePath);
