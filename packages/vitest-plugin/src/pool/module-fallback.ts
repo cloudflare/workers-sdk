@@ -198,9 +198,30 @@ function withSourceUrl(contents: string, url: string | URL): string {
 	return contents + sourceURL;
 }
 
-function withImportMetaUrl(contents: string, url: string | URL): string {
-	// TODO(soon): this isn't perfect, ideally need `workerd` support
-	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
+async function withImportMetaUrl(
+	contents: string,
+	url: string | URL
+): Promise<string> {
+	// TODO(soon): ideally need `workerd` support
+	await esModuleLexer.init;
+	const [imports] = esModuleLexer.parse(contents);
+	const replacement = JSON.stringify(url.toString());
+	for (let i = imports.length - 1; i >= 0; i--) {
+		const imported = imports[i];
+		if (
+			imported.t !== esModuleLexer.ImportType.ImportMeta ||
+			!contents.startsWith(".url", imported.e)
+		) {
+			continue;
+		}
+		const end = imported.e + ".url".length;
+		if (/[$\p{ID_Continue}\u200C\u200D]/u.test(contents[end] ?? "")) {
+			continue;
+		}
+		contents =
+			contents.slice(0, imported.s) + replacement + contents.slice(end);
+	}
+	return contents;
 }
 
 // Extensions that Node's `require()` probes automatically but `workerd` won't.
@@ -641,7 +662,7 @@ async function load(
 
 	if (module.kind === "esm") {
 		// Respond with ES module
-		contents = withImportMetaUrl(contents, targetUrl);
+		contents = await withImportMetaUrl(contents, targetUrl);
 		debuglog(logBase, "esm:", filePath);
 		return buildModuleResponse(rawTarget, { esModule: contents });
 	}

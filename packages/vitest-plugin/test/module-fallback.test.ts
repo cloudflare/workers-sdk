@@ -325,6 +325,57 @@ describe("handleModuleFallbackRequest non-ASCII paths", () => {
 	});
 });
 
+describe("handleModuleFallbackRequest import.meta.url rewriting", () => {
+	let tmp: string;
+
+	beforeEach(() => {
+		tmp = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "mf-fallback-import-meta-"))
+		);
+	});
+
+	afterEach(() => {
+		removeDirSync(tmp);
+	});
+
+	it("only rewrites import.meta.url expressions", async ({ expect }) => {
+		const filePath = path.join(tmp, "module.mjs");
+		const contents = [
+			'const diagnostic = "createRequire(import.meta.url)";',
+			"// import.meta.url",
+			"/* import.meta.url */",
+			"const template = `import.meta.url ${import.meta.url}`;",
+			"export default import.meta.url;",
+		].join("\n");
+		fs.writeFileSync(filePath, contents);
+		const fileUrl = pathToFileURL(filePath).href;
+		const replacement = JSON.stringify(fileUrl);
+
+		const response = await handleModuleFallbackRequest(
+			fakeVite(),
+			moduleFallbackRequest({
+				method: "import",
+				specifier: toWorkerdSpecifier(filePath),
+				referrer: toWorkerdSpecifier(path.join(tmp, "entry.mjs")),
+			})
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			name: toWorkerdSpecifier(filePath).replace(/^\//, ""),
+			esModule: [
+				'const diagnostic = "createRequire(import.meta.url)";',
+				"// import.meta.url",
+				"/* import.meta.url */",
+				`const template = \`import.meta.url \${${replacement}}\`;`,
+				`export default ${replacement};`,
+				`//# sourceURL=${fileUrl}`,
+				"",
+			].join("\n"),
+		});
+	});
+});
+
 // `workerd` resolves `node:*`/`cloudflare:*`/`workerd:*` specifiers at the
 // modules root rather than relative to the referrer, and strips the leading `/`
 // before asking us about them. Answering with a redirect to `/${target}` names
