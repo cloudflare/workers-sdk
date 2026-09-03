@@ -4,9 +4,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [
 		cloudflare({
+			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
-			configPath: "wrangler.nodejs-compat.jsonc",
+			config: { compatibilityFlags: ["nodejs_compat"] },
 		}),
 	],
 });

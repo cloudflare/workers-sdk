@@ -14,8 +14,12 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-a/wrangler.jsonc",
-			auxiliaryWorkers: [{ configPath: "./worker-b/wrangler.jsonc" }],
+			types: { includeRuntime: false },
+			auxiliaryWorkers: {
+				auxiliaryWorker: {
+					viteEnvironment: { name: "worker_b" },
+				},
+			},
 			inspectorPort: false,
 			persistState: false,
 		}),

@@ -3,6 +3,8 @@
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
+		"allowImportingTsExtensions": true,
+		"module": "esnext",
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 		"target": "esnext",

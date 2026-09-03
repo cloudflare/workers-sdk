@@ -7,14 +7,58 @@ export default defineConfig({
 	publicDir: "./assets",
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.worker-entrypoint-with-assets.jsonc",
+			config: {
+				name: "worker-entrypoint-with-assets",
+				entrypoint: "./workers/worker-entrypoint.ts",
+				compatibilityDate: "2025-05-01",
+				env: {
+					SERVICE_WORKER: {
+						type: "worker",
+						worker: "service-worker",
+					},
+					EXPORTED_HANDLER: {
+						type: "worker",
+						worker: "exported-handler",
+					},
+					EXPORTED_HANDLER_WITH_ASSETS: {
+						type: "worker",
+						worker: "exported-handler-with-assets",
+					},
+					WORKER_ENTRYPOINT: {
+						type: "worker",
+						worker: "worker-entrypoint",
+					},
+					NAMED_ENTRYPOINT: {
+						type: "worker",
+						worker: "worker-entrypoint",
+						exportName: "NamedEntrypoint",
+					},
+				},
+			},
 			inspectorPort: false,
 			persistState: false,
-			auxiliaryWorkers: [
-				{
-					configPath: "./wrangler.internal-durable-object.jsonc",
+			auxiliaryWorkers: {
+				internalDurableObject: {
+					config: {
+						name: "internal-durable-object",
+						entrypoint: "./workers/durable-object.ts",
+						compatibilityDate: "2025-05-01",
+						env: {
+							DURABLE_OBJECT: {
+								type: "durable-object",
+								worker: "internal-durable-object",
+								exportName: "TestObject",
+							},
+						},
+						exports: {
+							TestObject: {
+								type: "durable-object",
+								storage: "sqlite",
+							},
+						},
+					},
 				},
-			],
+			},
 		}),
 	],
 });

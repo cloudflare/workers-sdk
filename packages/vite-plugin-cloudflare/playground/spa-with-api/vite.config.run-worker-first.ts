@@ -6,7 +6,8 @@ export default defineConfig({
 	plugins: [
 		react(),
 		cloudflare({
-			configPath: "./wrangler.run-worker-first.jsonc",
+			types: { includeRuntime: false },
+			config: { assets: { runWorkerFirst: true } },
 			inspectorPort: false,
 			persistState: false,
 		}),
