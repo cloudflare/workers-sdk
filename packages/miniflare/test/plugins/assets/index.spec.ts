@@ -32,6 +32,27 @@ function makeOptions(directory: string, rootPath?: string): MiniflareOptions {
 	};
 }
 
+test("omits Sentry from the embedded asset service Workers", async ({
+	expect,
+}) => {
+	for (const worker of ["assets", "router"]) {
+		for (const extension of ["js", "js.map"]) {
+			const artifact = await fs.readFile(
+				path.join(
+					"dist",
+					"src",
+					"workers",
+					"assets",
+					`${worker}.worker.${extension}`
+				),
+				"utf8"
+			);
+			expect(artifact).not.toContain("node_modules/toucan-js");
+			expect(artifact).not.toContain("node_modules/@sentry");
+		}
+	}
+});
+
 test("starts without error when assets directory does not exist", async ({
 	expect,
 }) => {
