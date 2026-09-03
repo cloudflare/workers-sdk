@@ -193,12 +193,6 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 			resolveId: {
 				filter: { id: nodeBuiltinsRE },
 				handler(source, importer) {
-					// Fallback for when filter is not applied
-					// TODO: remove when we drop support for Vite 6
-					if (!nodeBuiltinsRE.test(source)) {
-						return;
-					}
-
 					const workerConfig = ctx.getWorkerConfig(this.environment.name);
 					assert(workerConfig, `expected workerConfig to be defined`);
 
