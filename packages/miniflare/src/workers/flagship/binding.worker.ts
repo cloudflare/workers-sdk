@@ -19,8 +19,12 @@ import type { Flag, FlagInput } from "./flags";
 import type { FlagshipObject, WriteResult } from "./object.worker";
 
 interface Env {
-	config: { appId: string; accountTag: string };
 	store: DurableObjectNamespace<FlagshipObject>;
+}
+
+interface Props {
+	appId: string;
+	accountTag: string;
 }
 
 // Keep the default name: workerd prefixes custom error names during RPC serialization.
@@ -58,7 +62,7 @@ function warnIfBucketingUnseeded(flag: Flag): void {
 	}
 	warnedAboutUnseededRollout = true;
 	console.warn(
-		`Flagship: flag '${flag.key}' has a percentage rollout, but the local flag store has no account tag, so its buckets will not match your remote app. Run \`wrangler flagship flags pull\` to seed the store.`
+		`Flagship: flag '${flag.key}' has a percentage rollout, but the local flag store has no account tag, so its buckets will not match your remote app. Run \`flagship flags pull\` to seed the store.`
 	);
 }
 
@@ -72,10 +76,10 @@ function errorCodeFor(error: unknown): ErrorCode | undefined {
 	return undefined;
 }
 
-export class FlagshipBinding extends WorkerEntrypoint<Env> {
+export class FlagshipBinding extends WorkerEntrypoint<Env, Props> {
 	get #stub() {
 		const namespace = this.env.store;
-		return namespace.get(namespace.idFromName(this.env.config.appId));
+		return namespace.get(namespace.idFromName(this.ctx.props.appId));
 	}
 
 	async #evaluate(
@@ -95,7 +99,7 @@ export class FlagshipBinding extends WorkerEntrypoint<Env> {
 		const { value, variant, reason } = evaluateFlag(
 			flag,
 			context,
-			accountTag ?? this.env.config.accountTag
+			accountTag ?? this.ctx.props.accountTag
 		);
 		return { flagKey, value, variant, reason };
 	}

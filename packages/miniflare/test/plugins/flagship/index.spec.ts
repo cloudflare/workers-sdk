@@ -123,7 +123,9 @@ async function call(mf: Miniflare, method: string, ...args: unknown[]) {
 		method: "POST",
 		body: JSON.stringify({ method, args }),
 	});
-	if (!response.ok) throw new Error(await response.text());
+	if (!response.ok) {
+		throw new Error(await response.text());
+	}
 	return ((await response.json()) as { result: unknown }).result;
 }
 
@@ -137,6 +139,45 @@ async function rejection(call: () => Promise<unknown>): Promise<string> {
 }
 
 describe("flagship plugin", () => {
+	test("serializes writes through the shared storage owner", async ({
+		expect,
+	}) => {
+		const resourcePersistencePath = await useTmp();
+		const unsafeDevRegistryPath = await useTmp();
+		const sharedOptions: MiniflareOptions = {
+			...options(),
+			resourcePersistencePath,
+			unsafeDevRegistryPath,
+			unsafeEnableSharedStorage: true,
+		};
+		const owner = new Miniflare({
+			...sharedOptions,
+			isolatedResourcePersistencePath: await useTmp(),
+		});
+		await owner.ready;
+		const client = new Miniflare({
+			...sharedOptions,
+			isolatedResourcePersistencePath: await useTmp(),
+		});
+
+		try {
+			await client.ready;
+			const createFlag = async (mf: Miniflare) =>
+				(await getAdmin(mf)).createFlag(BOOL_FLAG);
+			const results = await Promise.allSettled([
+				createFlag(owner),
+				createFlag(client),
+			]);
+			expect(results.map(({ status }) => status).sort()).toEqual([
+				"fulfilled",
+				"rejected",
+			]);
+		} finally {
+			await client.dispose();
+			await owner.dispose();
+		}
+	});
+
 	test("keeps app service names separate from internal services", async ({
 		expect,
 	}) => {
@@ -498,7 +539,9 @@ describe("flagship plugin", () => {
 		const mf = new Miniflare({
 			...options(),
 			handleStructuredLogs(log) {
-				if (log.level === "warn") warnings.push(log.message);
+				if (log.level === "warn") {
+					warnings.push(log.message);
+				}
 			},
 		});
 		useDispose(mf);
@@ -520,7 +563,9 @@ describe("flagship plugin", () => {
 		const mf = new Miniflare({
 			...options(),
 			handleStructuredLogs(log) {
-				if (log.level === "warn") warnings.push(log.message);
+				if (log.level === "warn") {
+					warnings.push(log.message);
+				}
 			},
 		});
 		useDispose(mf);
@@ -543,7 +588,7 @@ describe("flagship plugin", () => {
 			});
 		}
 		expect(warnings).toEqual([
-			"Flagship: flag 'rollout_test' has a percentage rollout, but the local flag store has no account tag, so its buckets will not match your remote app. Run `wrangler flagship flags pull` to seed the store.",
+			"Flagship: flag 'rollout_test' has a percentage rollout, but the local flag store has no account tag, so its buckets will not match your remote app. Run `flagship flags pull` to seed the store.",
 		]);
 	});
 });
