@@ -60,7 +60,7 @@ export const allKnownFrameworks = [
 			// in https://github.com/cloudflare/workers-sdk/pull/12938
 			// earlier versions might also be supported but we haven't checked them
 			minimumVersion: "4.0.0",
-			maximumKnownMajorVersion: "6",
+			maximumKnownMajorVersion: "7",
 		},
 		supported: true,
 	},
