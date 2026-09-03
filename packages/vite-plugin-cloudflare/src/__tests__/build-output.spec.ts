@@ -69,53 +69,17 @@ describe("linkBuildOutputDirectory", () => {
 		}
 	});
 
-	it("is idempotent when the directory already links to the output", ({
+	it("does nothing when the environment already uses the Build Output path", ({
 		expect,
 	}) => {
-		const environmentOutputDirectory = path.resolve("dist/server");
 		const buildOutputDirectory = path.resolve(
 			".cloudflare/output/v0/workers/default/bundle"
 		);
-		fs.mkdirSync(environmentOutputDirectory, { recursive: true });
-
-		linkBuildOutputDirectory(buildOutputDirectory, environmentOutputDirectory);
-		expect(() =>
-			linkBuildOutputDirectory(buildOutputDirectory, environmentOutputDirectory)
-		).not.toThrow();
-	});
-
-	it("refuses to create an overlapping directory link", ({ expect }) => {
-		const environmentOutputDirectory = path.resolve(".");
-		const buildOutputDirectory = path.resolve(
-			".cloudflare/output/v0/workers/default/assets"
-		);
-
-		expect(() =>
-			linkBuildOutputDirectory(buildOutputDirectory, environmentOutputDirectory)
-		).toThrow(/overlapping environment output directory/);
-	});
-
-	it("does not replace an existing Build Output directory", ({ expect }) => {
-		const environmentOutputDirectory = path.resolve("dist/client");
-		const buildOutputDirectory = path.resolve(
-			".cloudflare/output/v0/workers/default/assets"
-		);
-		fs.mkdirSync(environmentOutputDirectory, { recursive: true });
 		fs.mkdirSync(buildOutputDirectory, { recursive: true });
 
 		expect(() =>
-			linkBuildOutputDirectory(buildOutputDirectory, environmentOutputDirectory)
-		).toThrow(/because it already exists/);
-	});
-
-	it("requires the environment output directory to exist", ({ expect }) => {
-		const environmentOutputDirectory = path.resolve("dist/client");
-		const buildOutputDirectory = path.resolve(
-			".cloudflare/output/v0/workers/default/assets"
-		);
-
-		expect(() =>
-			linkBuildOutputDirectory(buildOutputDirectory, environmentOutputDirectory)
-		).toThrow(/environment output directory .* does not exist/);
+			linkBuildOutputDirectory(buildOutputDirectory, buildOutputDirectory)
+		).not.toThrow();
+		expect(fs.lstatSync(buildOutputDirectory).isDirectory()).toBe(true);
 	});
 });

@@ -173,33 +173,6 @@ export function linkBuildOutputDirectory(
 		return;
 	}
 
-	const targetStats = fs.statSync(targetPath, { throwIfNoEntry: false });
-	if (!targetStats?.isDirectory()) {
-		throw new Error(
-			`Cannot link Build Output Specification directory "${linkPath}" because environment output directory "${targetPath}" does not exist.`
-		);
-	}
-
-	const linkStats = fs.lstatSync(linkPath, { throwIfNoEntry: false });
-	if (linkStats) {
-		if (
-			linkStats.isSymbolicLink() &&
-			fs.realpathSync(linkPath) === fs.realpathSync(targetPath)
-		) {
-			return;
-		}
-
-		throw new Error(
-			`Cannot link Build Output Specification directory "${linkPath}" because it already exists.`
-		);
-	}
-
-	if (areDirectoriesOverlapping(linkPath, targetPath)) {
-		throw new Error(
-			`Cannot link Build Output Specification directory "${linkPath}" to overlapping environment output directory "${targetPath}".`
-		);
-	}
-
 	fs.mkdirSync(path.dirname(linkPath), { recursive: true });
 	fs.symlinkSync(
 		process.platform === "win32"
@@ -208,41 +181,6 @@ export function linkBuildOutputDirectory(
 		linkPath,
 		process.platform === "win32" ? "junction" : "dir"
 	);
-}
-
-function areDirectoriesOverlapping(first: string, second: string): boolean {
-	const resolvedFirst = resolveFromExistingAncestor(first);
-	const resolvedSecond = resolveFromExistingAncestor(second);
-	return (
-		isDirectoryWithin(resolvedFirst, resolvedSecond) ||
-		isDirectoryWithin(resolvedSecond, resolvedFirst)
-	);
-}
-
-function isDirectoryWithin(parent: string, candidate: string): boolean {
-	const relativePath = path.relative(parent, candidate);
-	return (
-		relativePath === "" ||
-		(!path.isAbsolute(relativePath) &&
-			relativePath !== ".." &&
-			!relativePath.startsWith(`..${path.sep}`))
-	);
-}
-
-function resolveFromExistingAncestor(directory: string): string {
-	let ancestor = path.resolve(directory);
-	const missingSegments: string[] = [];
-
-	while (!fs.existsSync(ancestor)) {
-		const parent = path.dirname(ancestor);
-		if (parent === ancestor) {
-			return path.resolve(directory);
-		}
-		missingSegments.unshift(path.basename(ancestor));
-		ancestor = parent;
-	}
-
-	return path.join(fs.realpathSync(ancestor), ...missingSegments);
 }
 
 /**
