@@ -432,7 +432,7 @@ describe("RemoteRuntimeController", () => {
 		 */
 		function makeAuthError(code: number, noteText: string): APIError {
 			const error = new APIError({
-				text: "A request to the Cloudflare API (/accounts/test/workers/subdomain/edge-preview) failed.",
+				text: "A request to the Cloudflare API (/accounts/test/workers/scripts/test-worker/subdomain/edge-preview) failed.",
 				notes: [{ text: noteText }],
 				status: 400,
 				telemetryMessage: false,
