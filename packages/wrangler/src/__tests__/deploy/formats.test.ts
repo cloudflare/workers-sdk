@@ -359,6 +359,46 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should rebase absolute non-js imports to a relative preserved name (esm)", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				rules: [{ type: "Text", globs: ["**/*.txt"], fallthrough: true }],
+				preserve_file_names: true,
+			});
+			// Use forward-slash absolute paths so module-rule globs match on Windows too
+			// (glob-to-regexp does not treat `\` as a path separator).
+			const absoluteMessagePath = path
+				.resolve("./message.txt")
+				.split(path.sep)
+				.join("/");
+			fs.writeFileSync("./message.txt", "HELLO FROM ABSOLUTE IMPORT");
+			fs.writeFileSync(
+				"./index.js",
+				`import message from ${JSON.stringify(absoluteMessagePath)}; export default {};`
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./message.txt": "HELLO FROM ABSOLUTE IMPORT",
+				},
+				// Guard against the old bug of shipping the build-machine absolute path.
+				excludedModules: [absoluteMessagePath],
+			});
+			await runWrangler("deploy index.js --outdir some-dir");
+			expect(fs.existsSync("some-dir/message.txt")).toBe(true);
+			expect(fs.readFileSync("some-dir/index.js", "utf8")).toContain(
+				'from "./message.txt"'
+			);
+			expect(fs.readFileSync("some-dir/index.js", "utf8")).not.toContain(
+				absoluteMessagePath
+			);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should strip query string suffixes from module names (esm)", async ({
 			expect,
 		}) => {
