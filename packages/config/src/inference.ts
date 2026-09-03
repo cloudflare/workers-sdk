@@ -118,7 +118,6 @@ interface BindingTypeMap<TBinding> {
 	"version-metadata": WorkerVersionMetadata;
 	"vpc-service": Fetcher;
 	"vpc-network": Fetcher;
-	"web-search": WebSearch;
 	worker: Fetcher;
 	"worker-loader": WorkerLoader;
 	workflow: Workflow;

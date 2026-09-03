@@ -46,7 +46,6 @@ export type {
 	VersionMetadataBinding,
 	VpcNetworkBinding,
 	VpcServiceBinding,
-	WebSearchBinding,
 	WorkerBinding,
 	WorkerLoaderBinding,
 	WorkflowBinding,

@@ -84,7 +84,6 @@ export function printBindings(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
-	const websearch = extractBindingsOfType("websearch", bindings);
 	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
@@ -345,17 +344,6 @@ export function printBindings(
 				name: binding,
 				type: getBindingTypeFriendlyName("ai_search"),
 				value: instance_name ? String(instance_name) : undefined,
-				mode: getMode({ isSimulatedLocally: false }),
-			}))
-		);
-	}
-
-	if (websearch.length > 0) {
-		output.push(
-			...websearch.map(({ binding }) => ({
-				name: binding,
-				type: getBindingTypeFriendlyName("websearch"),
-				value: undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);

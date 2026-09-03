@@ -248,11 +248,6 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
-			case "websearch": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "websearch", ...x };
-				break;
-			}
 			case "agent_memory": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "agent_memory", ...x };
