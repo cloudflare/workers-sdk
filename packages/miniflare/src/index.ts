@@ -1955,7 +1955,15 @@ export class Miniflare {
 			return Promise.resolve();
 		}
 		return new Promise((resolve, reject) => {
-			loopbackServer.stop((err) => (err ? reject(err) : resolve()));
+			loopbackServer.stop((err) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+				this.#loopbackServer = undefined;
+				this.#loopbackHost = undefined;
+				resolve();
+			});
 		});
 	}
 
