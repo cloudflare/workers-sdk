@@ -256,6 +256,42 @@ describe("resource provisioning", () => {
 		);
 	});
 
+	it("warns after a successful deploy when every provisionable binding skipped provisioning", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.js",
+			r2_buckets: [{ binding: "R2", bucket_name: "existing-bucket" }],
+		});
+		mockGetSettings();
+		msw.use(
+			http.get("*/accounts/:accountId/r2/buckets/existing-bucket", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			)
+		);
+		mockUploadWorkerRequest({
+			expectedBindings: [
+				{ name: "R2", type: "r2_bucket", bucket_name: "existing-bucket" },
+			],
+		});
+
+		await runWrangler("deploy");
+
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.out).not.toContain(
+			"The following bindings need to be provisioned"
+		);
+		expect(std.warn).toContain(
+			"Skipping automatic provisioning for the following bindings"
+		);
+		expect(std.warn).toContain("R2 - R2");
+	});
+
 	it("does not inherit from an existing D1 binding when a permission error prevents checking the configured database name", async ({
 		expect,
 	}) => {

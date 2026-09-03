@@ -962,6 +962,10 @@ type PendingResource = {
 		| FlagshipHandler;
 };
 
+export type ProvisionBindingsResult = {
+	warnOnSkippedProvisioning: () => void;
+};
+
 function isPermissionDeniedAPIError(error: unknown): error is APIError {
 	return error instanceof APIError && error.status === 403;
 }
@@ -1197,7 +1201,7 @@ export async function provisionBindings(
 	options: {
 		skipConfigWriteback?: boolean;
 	}
-): Promise<void> {
+): Promise<ProvisionBindingsResult> {
 	const configPath = config.userConfigPath ?? config.configPath;
 	const { pendingResources, skippedProvisioning } =
 		await collectPendingResources(config, accountId, scriptName, bindings);
@@ -1336,8 +1340,12 @@ export async function provisionBindings(
 		}
 
 		logger.log(`🎉 Resources provisioned, continuing with deployment...\n`);
-		warnSkippedProvisioning(skippedProvisioning);
 	}
+
+	return {
+		warnOnSkippedProvisioning: () =>
+			warnSkippedProvisioning(skippedProvisioning),
+	};
 }
 
 export function getSettings(
