@@ -990,6 +990,9 @@ export async function changeWorkflowInstanceStatus(
 				`Workflow instance '${instanceId}' not found.`
 			);
 		}
+		if (message.includes("instance.cannot_restart")) {
+			return errorResponse(409, 10001, message);
+		}
 
 		return errorResponse(500, 10001, message);
 	}

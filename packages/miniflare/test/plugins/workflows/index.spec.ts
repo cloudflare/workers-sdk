@@ -709,6 +709,53 @@ describe("Local Explorer workflow instance status endpoint", () => {
 		await waitForStatus(mf, id, "complete");
 	});
 
+	test("returns a conflict when restarting from an unknown step", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+		const id = "explorer-restart-unknown-step";
+
+		const createResponse = await mf.dispatchFetch(
+			`http://localhost/create?id=${id}`
+		);
+		await createResponse.text();
+		await waitForStepOutput(mf, id, "step-1-done");
+		const pauseResponse = await mf.dispatchFetch(
+			`http://localhost/pause?id=${id}`
+		);
+		await pauseResponse.text();
+		await waitForStatus(mf, id, "paused");
+
+		const response = await updateLocalExplorerWorkflowInstanceStatus(mf, id, {
+			status: "restart",
+			from: { name: "unknown step", type: "do" },
+		});
+		const body = (await response.json()) as {
+			errors: Array<{ code: number; message: string }>;
+			messages: string[];
+			result: null;
+			success: boolean;
+		};
+
+		expect(response.status).toBe(409);
+		expect(body).toEqual({
+			success: false,
+			errors: [
+				{
+					code: 10001,
+					message: expect.stringContaining("(instance.cannot_restart)"),
+				},
+			],
+			messages: [],
+			result: null,
+		});
+	});
+
 	test("terminates an instance with rollback using the production request schema", async ({
 		expect,
 	}) => {
