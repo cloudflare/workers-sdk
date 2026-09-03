@@ -226,8 +226,9 @@ describe("resource provisioning", () => {
 		expect(r2BucketCreated).toBe(false);
 		expect(std.out).toContain("Uploaded test-name");
 		expect(std.warn).toContain(
-			"Skipping automatic provisioning for R2 Bucket bindings (R2)"
+			"Skipping automatic provisioning for the following bindings"
 		);
+		expect(std.warn).toContain("R2 - R2");
 		expect(std.err).toBe("");
 	});
 
@@ -285,9 +286,7 @@ describe("resource provisioning", () => {
 		await expect(runWrangler("deploy")).rejects.toThrow(
 			'D1 bindings must have a "database_id" field'
 		);
-		expect(std.warn).toContain(
-			"Skipping automatic provisioning for D1 Database bindings (D1)"
-		);
+		expect(std.warn).toBe("");
 	});
 
 	it("preserves an explicitly configured resource name when the provisioning picker cannot load resources", async ({
@@ -325,8 +324,9 @@ describe("resource provisioning", () => {
 
 		expect(r2BucketCreated).toBe(false);
 		expect(std.warn).toContain(
-			"Skipping automatic provisioning for R2 Bucket bindings (R2)"
+			"Skipping automatic provisioning for the following bindings"
 		);
+		expect(std.warn).toContain("R2 - R2");
 	});
 
 	it("preserves skipped binding array positions when a later binding of the same type provisions successfully", async ({
@@ -393,8 +393,9 @@ describe("resource provisioning", () => {
 			"
 		`);
 		expect(std.warn).toContain(
-			"Skipping automatic provisioning for R2 Bucket bindings (R2_ONE)"
+			"Skipping automatic provisioning for the following bindings"
 		);
+		expect(std.warn).toContain("R2 - R2_ONE");
 	});
 
 	it("provisions a Queue used by both a producer and consumer", async ({
@@ -742,7 +743,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -865,7 +866,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1001,7 +1002,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1164,7 +1165,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1319,7 +1320,7 @@ describe("resource provisioning", () => {
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1464,7 +1465,7 @@ describe("resource provisioning", () => {
 				✨ D1 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1597,7 +1598,7 @@ describe("resource provisioning", () => {
 				✨ D1 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1678,7 +1679,7 @@ describe("resource provisioning", () => {
 				✨ BUCKET provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1878,7 +1879,7 @@ describe("resource provisioning", () => {
 				✨ BUCKET provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
-				🎉 All resources provisioned, continuing with deployment...
+				🎉 Resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:

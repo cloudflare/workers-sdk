@@ -980,10 +980,44 @@ function trackSkippedProvisioning(
 function warnSkippedProvisioning(
 	skippedProvisioning: Map<keyof typeof HANDLERS, Set<string>>
 ): void {
-	for (const [resourceType, bindingNames] of skippedProvisioning) {
-		logger.warn(
-			`Skipping automatic provisioning for ${HANDLERS[resourceType].name} bindings (${Array.from(bindingNames).join(", ")}) because Wrangler does not have permission to check whether the resource exists. The deploy will continue, but may fail later if the resource does not exist.`
-		);
+	if (skippedProvisioning.size === 0) {
+		return;
+	}
+
+	const bindingsByResourceType = Array.from(
+		skippedProvisioning,
+		([type, names]) => {
+			return `${getSkippedProvisioningResourceName(type)} - ${Array.from(names).join(", ")}`;
+		}
+	).join("\n");
+
+	logger.warn(dedent`
+		Skipping automatic provisioning for the following bindings because Wrangler does not have permission to check whether the resource exists. The deploy will continue, but may fail later if the resource does not exist:
+
+		${bindingsByResourceType}
+	`);
+}
+
+function getSkippedProvisioningResourceName(
+	resourceType: keyof typeof HANDLERS
+): string {
+	switch (resourceType) {
+		case "kv_namespace":
+			return "KV";
+		case "d1":
+			return "D1";
+		case "r2_bucket":
+			return "R2";
+		case "ai_search_namespace":
+			return "AI Search";
+		case "agent_memory":
+			return "Agent Memory";
+		case "queue":
+			return "Queue";
+		case "dispatch_namespace":
+			return "Dispatch Namespace";
+		case "flagship":
+			return "Flagship";
 	}
 }
 
@@ -1301,14 +1335,9 @@ export async function provisionBindings(
 			}
 		}
 
-		logger.log(
-			skippedProvisioning.size === 0
-				? `🎉 All resources provisioned, continuing with deployment...\n`
-				: `🎉 Available resources provisioned, continuing with deployment...\n`
-		);
+		logger.log(`🎉 Resources provisioned, continuing with deployment...\n`);
+		warnSkippedProvisioning(skippedProvisioning);
 	}
-
-	warnSkippedProvisioning(skippedProvisioning);
 }
 
 export function getSettings(
