@@ -6,18 +6,24 @@ import {
 	getEnvBindingsOfType,
 	getPersistPath,
 	getRemoteProxyConnectionString,
+	getStorageService,
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
-import type { Plugin } from "../shared";
+import type { ParsedInstanceOptions, Plugin } from "../shared";
 
 export const FLAGSHIP_PLUGIN_NAME = "flagship";
 const FLAGSHIP_REMOTE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}-internal:remote`;
 const FLAGSHIP_OBJECT_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}-internal:object`;
 const FLAGSHIP_STORAGE_SERVICE_NAME = `${FLAGSHIP_PLUGIN_NAME}-internal:storage`;
 const FLAGSHIP_OBJECT_CLASS_NAME = "FlagshipObject";
+const FLAGSHIP_BINDING_SERVICE_NAME = getUserBindingServiceName(
+	FLAGSHIP_PLUGIN_NAME,
+	"service"
+);
+const FLAGSHIP_BINDING_ENTRYPOINT = "FlagshipBinding";
 
 // Rollout bucketing is seeded with the account tag. Local flag definitions are
 // their own source of truth and an account tag is not reliably available
@@ -25,9 +31,24 @@ const FLAGSHIP_OBJECT_CLASS_NAME = "FlagshipObject";
 // not reproduce production buckets.
 const LOCAL_ACCOUNT_TAG = "local";
 
+export function getFlagshipService(
+	appId: string,
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>
+) {
+	return getStorageService(
+		FLAGSHIP_BINDING_SERVICE_NAME,
+		{ appId, accountTag: LOCAL_ACCOUNT_TAG },
+		sharedOptions,
+		{ entrypoint: FLAGSHIP_BINDING_ENTRYPOINT }
+	);
+}
+
 export const FLAGSHIP_PLUGIN: Plugin = {
 	bindingTypeDescription: "Flagship",
-	async getBindings(options) {
+	async getBindings(options, sharedOptions) {
 		return getEnvBindingsOfType(options.config, "flagship").map<Worker_Binding>(
 			([name, binding]) => {
 				const remoteProxyConnectionString = getRemoteProxyConnectionString(
@@ -45,10 +66,7 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 				}
 				return {
 					name,
-					service: {
-						name: getUserBindingServiceName(FLAGSHIP_PLUGIN_NAME, binding.id),
-						entrypoint: "FlagshipBinding",
-					},
+					service: getFlagshipService(binding.id, sharedOptions),
 				};
 			}
 		);
@@ -63,10 +81,6 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 	},
 	async getServices({ options, tmpPath, sharedOptions }) {
 		const bindings = getEnvBindingsOfType(options.config, "flagship");
-		if (bindings.length === 0) {
-			return [];
-		}
-
 		const services: Service[] = [];
 		const hasRemote = bindings.some(([, binding]) =>
 			getRemoteProxyConnectionString(binding, options.dev)
@@ -78,15 +92,12 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 			});
 		}
 
-		const localAppIds = new Set(
-			bindings
-				.filter(
-					([, binding]) =>
-						getRemoteProxyConnectionString(binding, options.dev) === undefined
-				)
-				.map(([, binding]) => binding.id)
-		);
-		if (localAppIds.size === 0) {
+		const hasLocal =
+			bindings.some(
+				([, binding]) =>
+					getRemoteProxyConnectionString(binding, options.dev) === undefined
+			) || sharedOptions.unsafeEnableSharedStorage;
+		if (!hasLocal) {
 			return services;
 		}
 
@@ -116,23 +127,13 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 					],
 					durableObjectStorage: { localDisk: FLAGSHIP_STORAGE_SERVICE_NAME },
 				},
-			}
-		);
-
-		for (const appId of localAppIds) {
-			services.push({
-				name: getUserBindingServiceName(FLAGSHIP_PLUGIN_NAME, appId),
+			},
+			{
+				name: FLAGSHIP_BINDING_SERVICE_NAME,
 				worker: {
 					compatibilityDate: "2025-01-01",
 					modules: [{ name: "binding.worker.js", esModule: BINDING_SCRIPT() }],
 					bindings: [
-						{
-							name: "config",
-							json: JSON.stringify({
-								appId,
-								accountTag: LOCAL_ACCOUNT_TAG,
-							}),
-						},
 						{
 							name: "store",
 							durableObjectNamespace: {
@@ -142,8 +143,8 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 						},
 					],
 				},
-			});
-		}
+			}
+		);
 
 		return services;
 	},
