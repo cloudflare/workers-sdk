@@ -7,8 +7,8 @@ import { errorResponse, wrapResponse } from "../common";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
+	WorChangeStatusWorkflowInstanceData,
 	WorkflowsBatchDeleteInstancesData,
-	WorkflowsChangeInstanceStatusData,
 	WorkflowsWorkflow,
 } from "../generated";
 import type { zWorkflowsListInstancesData } from "../generated/zod.gen";
@@ -912,7 +912,7 @@ export async function changeWorkflowInstanceStatus(
 	c: AppContext,
 	workflowName: string,
 	instanceId: string,
-	body: WorkflowsChangeInstanceStatusData["body"]
+	body: WorChangeStatusWorkflowInstanceData["body"]
 ): Promise<Response> {
 	const workflow = getWorkflowBinding(c.env, workflowName);
 
@@ -941,27 +941,11 @@ export async function changeWorkflowInstanceStatus(
 	}
 
 	try {
-		const { action } = body;
-
-		if (!["pause", "resume", "restart", "terminate"].includes(action)) {
-			return errorResponse(
-				400,
-				10001,
-				`Invalid action '${action}'. Must be one of: pause, resume, restart, terminate.`
-			);
-		}
-
-		if (body.rollback !== undefined && action !== "terminate") {
-			return errorResponse(
-				400,
-				10001,
-				"'rollback' is only valid when terminating."
-			);
-		}
+		const { status } = body;
 
 		const handle = await workflow.get(instanceId);
 
-		switch (action) {
+		switch (status) {
 			case "pause":
 				await handle.pause();
 				break;
@@ -969,13 +953,6 @@ export async function changeWorkflowInstanceStatus(
 				await handle.resume();
 				break;
 			case "restart": {
-				if (body.from && !body.from.name) {
-					return errorResponse(
-						400,
-						10001,
-						"'from.name' is required when restarting from a specific step."
-					);
-				}
 				const opts = body.from ? { from: body.from } : undefined;
 				// TODO(vaish): remove cast once @cloudflare/workers-types ships restart options
 				await (handle as unknown as WorkflowHandle).restart(opts);
@@ -990,7 +967,18 @@ export async function changeWorkflowInstanceStatus(
 		}
 
 		statusCountsCache.delete(workflowName);
-		return c.json(wrapResponse({ success: true }));
+		const responseStatus = {
+			pause: "waitingForPause",
+			restart: "queued",
+			resume: "queued",
+			terminate: "terminated",
+		} as const;
+		return c.json(
+			wrapResponse({
+				status: responseStatus[status],
+				timestamp: new Date().toISOString(),
+			})
+		);
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Failed to change status";

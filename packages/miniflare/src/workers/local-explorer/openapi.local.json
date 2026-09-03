@@ -14,32 +14,34 @@
 	"paths": {
 		"/storage/kv/namespaces": {
 			"get": {
-				"description": "Returns the namespaces owned by an account.",
 				"operationId": "workers-kv-namespace-list-namespaces",
+				"summary": "List Namespaces",
+				"description": "Returns the namespaces owned by an account.",
 				"parameters": [
 					{
-						"in": "query",
 						"name": "order",
+						"in": "query",
 						"schema": {
 							"description": "Field to order results by.",
-							"enum": ["id", "title"],
+							"type": "string",
 							"example": "id",
-							"type": "string"
+							"enum": ["id", "title"]
 						}
 					},
 					{
-						"in": "query",
 						"name": "direction",
+						"in": "query",
 						"schema": {
 							"description": "Direction to order namespaces.",
-							"enum": ["asc", "desc"],
+							"type": "string",
 							"example": "asc",
-							"type": "string"
+							"enum": ["asc", "desc"]
 						}
 					}
 				],
 				"responses": {
 					"200": {
+						"description": "List Namespaces response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -50,10 +52,10 @@
 										{
 											"properties": {
 												"result": {
+													"type": "array",
 													"items": {
 														"$ref": "#/components/schemas/workers-kv_namespace"
-													},
-													"type": "array"
+													}
 												}
 											},
 											"type": "object"
@@ -61,69 +63,69 @@
 									]
 								}
 							}
-						},
-						"description": "List Namespaces response."
+						}
 					},
 					"4XX": {
+						"description": "List Namespaces response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
 								}
 							}
-						},
-						"description": "List Namespaces response failure."
+						}
 					}
 				},
-				"summary": "List Namespaces",
 				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/keys": {
 			"get": {
-				"description": "Lists a namespace's keys.",
 				"operationId": "workers-kv-namespace-list-a-namespace'-s-keys",
+				"summary": "List a Namespace's Keys",
+				"description": "Lists a namespace's keys.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "namespace_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
 						}
 					},
 					{
-						"in": "query",
 						"name": "limit",
+						"in": "query",
 						"schema": {
-							"default": 1000,
 							"description": "Limits the number of keys returned in the response. The cursor attribute may be used to iterate over the next batch of keys if there are more than the limit.",
+							"type": "number",
+							"default": 1000,
 							"maximum": 1000,
-							"minimum": 10,
-							"type": "number"
+							"minimum": 10
 						}
 					},
 					{
-						"in": "query",
 						"name": "prefix",
+						"in": "query",
 						"schema": {
 							"description": "Filters returned keys by a name prefix. Exact matches and any key names that begin with the prefix will be returned.",
-							"example": "My-Prefix",
-							"type": "string"
+							"type": "string",
+							"example": "My-Prefix"
 						}
 					},
 					{
-						"in": "query",
 						"name": "cursor",
+						"in": "query",
 						"schema": {
 							"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the `cursors` object in the `result_info` structure.",
-							"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw",
-							"type": "string"
+							"type": "string",
+							"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw"
 						}
 					}
 				],
 				"responses": {
 					"200": {
+						"description": "List a Namespace's Keys response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -134,10 +136,10 @@
 										{
 											"properties": {
 												"result": {
+													"type": "array",
 													"items": {
 														"$ref": "#/components/schemas/workers-kv_key"
-													},
-													"type": "array"
+													}
 												},
 												"result_info": {
 													"$ref": "#/components/schemas/workers-kv_cursor_result_info"
@@ -148,40 +150,39 @@
 									]
 								}
 							}
-						},
-						"description": "List a Namespace's Keys response."
+						}
 					},
 					"4XX": {
+						"description": "List a Namespace's Keys response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
 								}
 							}
-						},
-						"description": "List a Namespace's Keys response failure."
+						}
 					}
 				},
-				"summary": "List a Namespace's Keys",
 				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/values/{key_name}": {
 			"get": {
-				"description": "Returns the value associated with the given key in the given namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. If the KV-pair is set to expire at some point, the expiration time as measured in seconds since the UNIX epoch will be returned in the `expiration` response header.",
 				"operationId": "workers-kv-namespace-read-key-value-pair",
+				"summary": "Read key-value pair",
+				"description": "Returns the value associated with the given key in the given namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. If the KV-pair is set to expire at some point, the expiration time as measured in seconds since the UNIX epoch will be returned in the `expiration` response header.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "key_name",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_key_name"
 						}
 					},
 					{
-						"in": "path",
 						"name": "namespace_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
@@ -190,44 +191,44 @@
 				],
 				"responses": {
 					"200": {
+						"description": "Read key-value pair response.",
 						"content": {
 							"application/octet-stream": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_value"
 								}
 							}
-						},
-						"description": "Read key-value pair response."
+						}
 					},
 					"4XX": {
+						"description": "Read key-value pair response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
 								}
 							}
-						},
-						"description": "Read key-value pair response failure."
+						}
 					}
 				},
-				"summary": "Read key-value pair",
 				"tags": ["Workers KV Namespace"]
 			},
 			"put": {
-				"description": "Write a value identified by a key. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. Body should be the value to be stored. If JSON metadata to be associated with the key/value pair is needed, use `multipart/form-data` content type for your PUT request (see dropdown below in `REQUEST BODY SCHEMA`). Existing values, expirations, and metadata will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored.",
 				"operationId": "workers-kv-namespace-write-key-value-pair-with-metadata",
+				"summary": "Write key-value pair with optional metadata",
+				"description": "Write a value identified by a key. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. Body should be the value to be stored. If JSON metadata to be associated with the key/value pair is needed, use `multipart/form-data` content type for your PUT request (see dropdown below in `REQUEST BODY SCHEMA`). Existing values, expirations, and metadata will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "key_name",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_key_name"
 						}
 					},
 					{
-						"in": "path",
 						"name": "namespace_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
@@ -235,6 +236,7 @@
 					}
 				],
 				"requestBody": {
+					"required": true,
 					"content": {
 						"application/octet-stream": {
 							"schema": {
@@ -248,6 +250,7 @@
 								}
 							},
 							"schema": {
+								"type": "object",
 								"properties": {
 									"metadata": {
 										"$ref": "#/components/schemas/workers-kv_metadata"
@@ -256,53 +259,51 @@
 										"$ref": "#/components/schemas/workers-kv_value"
 									}
 								},
-								"required": ["value"],
-								"type": "object"
+								"required": ["value"]
 							}
 						}
-					},
-					"required": true
+					}
 				},
 				"responses": {
 					"200": {
+						"description": "Write key-value pair with metadata response.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
 								}
 							}
-						},
-						"description": "Write key-value pair with metadata response."
+						}
 					},
 					"4XX": {
+						"description": "Write key-value pair with metadata response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
 								}
 							}
-						},
-						"description": "Write key-value pair with metadata response failure."
+						}
 					}
 				},
-				"summary": "Write key-value pair with optional metadata",
 				"tags": ["Workers KV Namespace"]
 			},
 			"delete": {
-				"description": "Remove a KV pair from the namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name.",
 				"operationId": "workers-kv-namespace-delete-key-value-pair",
+				"summary": "Delete key-value pair",
+				"description": "Remove a KV pair from the namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "key_name",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_key_name"
 						}
 					},
 					{
-						"in": "path",
 						"name": "namespace_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
@@ -310,45 +311,45 @@
 					}
 				],
 				"requestBody": {
+					"required": true,
 					"content": {
 						"application/json": {}
-					},
-					"required": true
+					}
 				},
 				"responses": {
 					"200": {
+						"description": "Delete key-value pair response.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
 								}
 							}
-						},
-						"description": "Delete key-value pair response."
+						}
 					},
 					"4XX": {
+						"description": "Delete key-value pair response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
 								}
 							}
-						},
-						"description": "Delete key-value pair response failure."
+						}
 					}
 				},
-				"summary": "Delete key-value pair",
 				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/bulk/get": {
 			"post": {
-				"description": "Retrieve up to 100 KV pairs from the namespace. Keys must contain text-based values. JSON values can optionally be parsed instead of being returned as a string value. Metadata can be included if `withMetadata` is true.",
 				"operationId": "workers-kv-namespace-get-multiple-key-value-pairs",
+				"summary": "Get multiple key-value pairs",
+				"description": "Retrieve up to 100 KV pairs from the namespace. Keys must contain text-based values. JSON values can optionally be parsed instead of being returned as a string value. Metadata can be included if `withMetadata` is true.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "namespace_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
@@ -356,28 +357,29 @@
 					}
 				],
 				"requestBody": {
+					"required": true,
 					"content": {
 						"application/json": {
 							"schema": {
+								"type": "object",
 								"properties": {
 									"keys": {
 										"description": "Array of keys to retrieve (maximum of 100).",
+										"type": "array",
 										"items": {
 											"$ref": "#/components/schemas/workers-kv_key_name_bulk"
 										},
-										"maxItems": 100,
-										"type": "array"
+										"maxItems": 100
 									}
 								},
-								"required": ["keys"],
-								"type": "object"
+								"required": ["keys"]
 							}
 						}
-					},
-					"required": true
+					}
 				},
 				"responses": {
 					"200": {
+						"description": "Get multiple key-value pairs response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -403,32 +405,31 @@
 									]
 								}
 							}
-						},
-						"description": "Get multiple key-value pairs response."
+						}
 					},
 					"4XX": {
+						"description": "Get multiple key-value pairs response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
 								}
 							}
-						},
-						"description": "Get multiple key-value pairs response failure."
+						}
 					}
 				},
-				"summary": "Get multiple key-value pairs",
 				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/d1/database": {
 			"get": {
-				"description": "Returns a list of D1 databases.",
 				"operationId": "d1-list-databases",
+				"summary": "List D1 Databases",
+				"description": "Returns a list of D1 databases.",
 				"parameters": [
 					{
-						"in": "query",
 						"name": "name",
+						"in": "query",
 						"schema": {
 							"description": "a database name to search for.",
 							"type": "string"
@@ -437,6 +438,7 @@
 				],
 				"responses": {
 					"200": {
+						"description": "List D1 databases response",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -447,52 +449,51 @@
 										{
 											"properties": {
 												"result": {
+													"type": "array",
 													"items": {
 														"$ref": "#/components/schemas/d1_database-response"
-													},
-													"type": "array"
+													}
 												},
 												"result_info": {
+													"type": "object",
 													"properties": {
 														"count": {
 															"description": "Total number of results for the requested service",
-															"example": 1,
-															"type": "number"
+															"type": "number",
+															"example": 1
 														}
-													},
-													"type": "object"
+													}
 												}
 											}
 										}
 									]
 								}
 							}
-						},
-						"description": "List D1 databases response"
+						}
 					},
 					"4XX": {
+						"description": "List D1 databases response failure",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/d1_api-response-common-failure"
 								}
 							}
-						},
-						"description": "List D1 databases response failure"
+						}
 					}
 				},
-				"summary": "List D1 Databases",
 				"tags": ["D1"]
 			}
 		},
 		"/d1/database/{database_id}/raw": {
 			"post": {
-				"description": "Returns the query result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.",
 				"operationId": "d1-raw-database-query",
+				"summary": "Raw D1 Database query",
+				"description": "Returns the query result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "database_id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/d1_database-identifier"
@@ -500,17 +501,18 @@
 					}
 				],
 				"requestBody": {
+					"required": true,
 					"content": {
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/d1_batch-query"
 							}
 						}
-					},
-					"required": true
+					}
 				},
 				"responses": {
 					"200": {
+						"description": "Raw query response",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -521,41 +523,378 @@
 										{
 											"properties": {
 												"result": {
+													"type": "array",
 													"items": {
 														"$ref": "#/components/schemas/d1_raw-result-response"
-													},
-													"type": "array"
+													}
 												}
 											}
 										}
 									]
 								}
 							}
-						},
-						"description": "Raw query response"
+						}
 					},
 					"4XX": {
+						"description": "Query response failure",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/d1_api-response-common-failure"
 								}
 							}
-						},
-						"description": "Query response failure"
+						}
 					}
 				},
-				"summary": "Raw D1 Database query",
 				"tags": ["D1"]
+			}
+		},
+		"/workflows/{workflow_name}/instances/{instance_id}/status": {
+			"patch": {
+				"operationId": "wor-change-status-workflow-instance",
+				"summary": "Change status of instance",
+				"description": "Changes the execution status of a workflow instance (e.g., pause, resume, terminate).",
+				"parameters": [
+					{
+						"name": "workflow_name",
+						"in": "path",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 64,
+							"minLength": 1,
+							"pattern": "^[a-zA-Z0-9_][a-zA-Z0-9-_]*$"
+						}
+					},
+					{
+						"name": "instance_id",
+						"in": "path",
+						"description": "Instance identifier. User-created instances match `^[a-zA-Z0-9_][a-zA-Z0-9-_]*$` (max 100 characters); cron-triggered instances can use a longer, system-generated id derived from the cron expression.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 271,
+							"minLength": 1
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"oneOf": [
+									{
+										"properties": {
+											"status": {
+												"type": "string",
+												"enum": ["pause"]
+											}
+										},
+										"required": ["status"],
+										"type": "object"
+									},
+									{
+										"properties": {
+											"status": {
+												"type": "string",
+												"enum": ["resume"]
+											}
+										},
+										"required": ["status"],
+										"type": "object"
+									},
+									{
+										"properties": {
+											"rollback": {
+												"description": "Run rollback before terminating.",
+												"type": "boolean"
+											},
+											"status": {
+												"type": "string",
+												"enum": ["terminate"]
+											}
+										},
+										"required": ["status"],
+										"type": "object"
+									},
+									{
+										"properties": {
+											"from": {
+												"description": "Step to restart from.",
+												"type": "object",
+												"properties": {
+													"count": {
+														"type": "integer",
+														"exclusiveMinimum": true,
+														"maximum": 9007199254740991,
+														"minimum": 0
+													},
+													"name": {
+														"type": "string",
+														"maxLength": 256,
+														"minLength": 1
+													},
+													"type": {
+														"type": "string",
+														"enum": ["do", "sleep", "waitForEvent"]
+													}
+												},
+												"required": ["name"]
+											},
+											"status": {
+												"type": "string",
+												"enum": ["restart"]
+											}
+										},
+										"required": ["status"],
+										"type": "object"
+									}
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Change status of instance - it can be paused, resumed or terminated.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "number"
+													},
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"maxItems": 0
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "number"
+													},
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"status": {
+													"type": "string",
+													"enum": [
+														"queued",
+														"running",
+														"paused",
+														"errored",
+														"terminated",
+														"complete",
+														"waitingForPause",
+														"waiting",
+														"rollingBack"
+													]
+												},
+												"timestamp": {
+													"description": "Accepts ISO 8601 with no timezone offsets and in UTC.",
+													"type": "string",
+													"format": "date-time"
+												}
+											},
+											"required": ["status", "timestamp"]
+										},
+										"result_info": {
+											"type": "object",
+											"properties": {
+												"count": {
+													"type": "number"
+												},
+												"cursor": {
+													"type": "string"
+												},
+												"page": {
+													"type": "number"
+												},
+												"per_page": {
+													"type": "number"
+												},
+												"total_count": {
+													"type": "number"
+												},
+												"total_pages": {
+													"type": "number"
+												}
+											},
+											"required": ["per_page", "count", "total_count"]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["success", "errors", "result", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "number"
+													},
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"result": {
+											"type": "object",
+											"enum": [null],
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["success", "messages", "errors", "result"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Instance not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "number"
+													},
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"result": {
+											"type": "object",
+											"enum": [null],
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["success", "messages", "errors", "result"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Instance not in a restartable state.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "number"
+													},
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"result": {
+											"type": "object",
+											"enum": [null],
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["success", "messages", "errors", "result"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Workflows"]
 			}
 		},
 		"/workers/durable_objects/namespaces": {
 			"get": {
-				"description": "Returns the Durable Object namespaces owned by an account.",
 				"operationId": "durable-objects-namespace-list-namespaces",
+				"summary": "List Namespaces",
+				"description": "Returns the Durable Object namespaces owned by an account.",
 				"parameters": [],
 				"responses": {
 					"200": {
+						"description": "List Namespaces response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -566,10 +905,10 @@
 										{
 											"properties": {
 												"result": {
+													"type": "array",
 													"items": {
 														"$ref": "#/components/schemas/workers_namespace"
-													},
-													"type": "array"
+													}
 												}
 											},
 											"type": "object"
@@ -577,10 +916,10 @@
 									]
 								}
 							}
-						},
-						"description": "List Namespaces response."
+						}
 					},
 					"4XX": {
+						"description": "List Namespaces response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -593,10 +932,10 @@
 												{
 													"properties": {
 														"result": {
+															"type": "array",
 															"items": {
 																"$ref": "#/components/schemas/workers_namespace"
-															},
-															"type": "array"
+															}
 														}
 													},
 													"type": "object"
@@ -609,50 +948,50 @@
 									]
 								}
 							}
-						},
-						"description": "List Namespaces response failure."
+						}
 					}
 				},
-				"summary": "List Namespaces",
 				"tags": ["Durable Objects Namespace"]
 			}
 		},
 		"/workers/durable_objects/namespaces/{id}/objects": {
 			"get": {
-				"description": "Returns the Durable Objects in a given namespace.",
 				"operationId": "durable-objects-namespace-list-objects",
+				"summary": "List Objects",
+				"description": "Returns the Durable Objects in a given namespace.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "id",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/workers_schemas-id"
 						}
 					},
 					{
-						"in": "query",
 						"name": "limit",
+						"in": "query",
 						"schema": {
-							"default": 1000,
 							"description": "The number of objects to return. The cursor attribute may be used to iterate over the next batch of objects if there are more than the limit.",
+							"type": "number",
+							"default": 1000,
 							"maximum": 10000,
-							"minimum": 10,
-							"type": "number"
+							"minimum": 10
 						}
 					},
 					{
-						"in": "query",
 						"name": "cursor",
+						"in": "query",
 						"schema": {
 							"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
-							"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc",
-							"type": "string"
+							"type": "string",
+							"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc"
 						}
 					}
 				],
 				"responses": {
 					"200": {
+						"description": "List Objects response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -663,23 +1002,23 @@
 										{
 											"properties": {
 												"result": {
+													"type": "array",
 													"items": {
 														"$ref": "#/components/schemas/workers_object"
-													},
-													"type": "array"
+													}
 												},
 												"result_info": {
+													"type": "object",
 													"properties": {
 														"count": {
 															"description": "Total results returned based on your list parameters.",
-															"example": 1,
-															"type": "number"
+															"type": "number",
+															"example": 1
 														},
 														"cursor": {
 															"$ref": "#/components/schemas/workers_cursor"
 														}
-													},
-													"type": "object"
+													}
 												}
 											},
 											"type": "object"
@@ -687,10 +1026,10 @@
 									]
 								}
 							}
-						},
-						"description": "List Objects response."
+						}
 					},
 					"4XX": {
+						"description": "List Objects response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -703,23 +1042,23 @@
 												{
 													"properties": {
 														"result": {
+															"type": "array",
 															"items": {
 																"$ref": "#/components/schemas/workers_object"
-															},
-															"type": "array"
+															}
 														},
 														"result_info": {
+															"type": "object",
 															"properties": {
 																"count": {
 																	"description": "Total results returned based on your list parameters.",
-																	"example": 1,
-																	"type": "number"
+																	"type": "number",
+																	"example": 1
 																},
 																"cursor": {
 																	"$ref": "#/components/schemas/workers_cursor"
 																}
-															},
-															"type": "object"
+															}
 														}
 													},
 													"type": "object"
@@ -732,21 +1071,21 @@
 									]
 								}
 							}
-						},
-						"description": "List Objects response failure."
+						}
 					}
 				},
-				"summary": "List Objects",
 				"tags": ["Durable Objects Namespace"]
 			}
 		},
 		"/r2/buckets": {
 			"get": {
-				"description": "Lists all R2 buckets on your account.",
 				"operationId": "r2-list-buckets",
+				"summary": "List Buckets",
+				"description": "Lists all R2 buckets on your account.",
 				"parameters": [],
 				"responses": {
 					"200": {
+						"description": "List Buckets response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -757,15 +1096,15 @@
 										{
 											"properties": {
 												"result": {
+													"type": "object",
 													"properties": {
 														"buckets": {
+															"type": "array",
 															"items": {
 																"$ref": "#/components/schemas/r2_bucket"
-															},
-															"type": "array"
+															}
 														}
-													},
-													"type": "object"
+													}
 												}
 											},
 											"type": "object"
@@ -773,32 +1112,31 @@
 									]
 								}
 							}
-						},
-						"description": "List Buckets response."
+						}
 					},
 					"4XX": {
+						"description": "List Buckets response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/r2_v4_response_failure"
 								}
 							}
-						},
-						"description": "List Buckets response failure."
+						}
 					}
 				},
-				"summary": "List Buckets",
 				"tags": ["R2 Bucket"]
 			}
 		},
 		"/r2/buckets/{bucket_name}": {
 			"get": {
-				"description": "Gets properties of an existing R2 bucket.",
 				"operationId": "r2-get-bucket",
+				"summary": "Get Bucket",
+				"description": "Gets properties of an existing R2 bucket.",
 				"parameters": [
 					{
-						"in": "path",
 						"name": "bucket_name",
+						"in": "path",
 						"required": true,
 						"schema": {
 							"$ref": "#/components/schemas/r2_bucket_name"
@@ -807,6 +1145,7 @@
 				],
 				"responses": {
 					"200": {
+						"description": "Get Bucket response.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -825,21 +1164,19 @@
 									]
 								}
 							}
-						},
-						"description": "Get Bucket response."
+						}
 					},
 					"4XX": {
+						"description": "Get Bucket response failure.",
 						"content": {
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/r2_v4_response_failure"
 								}
 							}
-						},
-						"description": "Get Bucket response failure."
+						}
 					}
 				},
-				"summary": "Get Bucket",
 				"tags": ["R2 Bucket"]
 			}
 		},
@@ -2172,114 +2509,6 @@
 				"tags": ["Workflows"]
 			}
 		},
-		"/workflows/{workflow_name}/instances/{instance_id}/status": {
-			"patch": {
-				"description": "Changes the status of a workflow instance (pause, resume, restart, terminate).",
-				"operationId": "workflows-change-instance-status",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "workflow_name",
-						"required": true,
-						"schema": {
-							"$ref": "#/components/schemas/workflows_workflow-name"
-						}
-					},
-					{
-						"in": "path",
-						"name": "instance_id",
-						"required": true,
-						"schema": {
-							"$ref": "#/components/schemas/workflows_instance-id"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["action"],
-								"properties": {
-									"action": {
-										"type": "string",
-										"enum": ["pause", "resume", "restart", "terminate"],
-										"description": "The action to perform on the workflow instance."
-									},
-									"from": {
-										"type": "object",
-										"description": "The step to restart the instance from. Only valid when action is restart.",
-										"required": ["name"],
-										"properties": {
-											"name": {
-												"type": "string",
-												"description": "The name of the step."
-											},
-											"count": {
-												"type": "integer",
-												"minimum": 1,
-												"description": "The 1-based index of the step when multiple steps share the same name and type. Defaults to 1."
-											},
-											"type": {
-												"type": "string",
-												"enum": ["do", "sleep", "waitForEvent"],
-												"description": "The step type. Defaults to do."
-											}
-										}
-									},
-									"rollback": {
-										"type": "boolean",
-										"description": "The option to trigger rollbacks when terminating the workflow instance."
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"type": "object",
-													"properties": {
-														"success": {
-															"type": "boolean"
-														}
-													}
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Change Workflow Instance Status response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Change Workflow Instance Status response failure."
-					}
-				},
-				"summary": "Change Workflow Instance Status",
-				"tags": ["Workflows"]
-			}
-		},
 		"/workflows/{workflow_name}/instances/{instance_id}/events/{event_type}": {
 			"post": {
 				"description": "Sends an event to a workflow instance.",
@@ -2446,6 +2675,7 @@
 	"components": {
 		"schemas": {
 			"r2_v4_response": {
+				"type": "object",
 				"properties": {
 					"errors": {
 						"$ref": "#/components/schemas/r2_errors"
@@ -2458,25 +2688,25 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [true],
-						"type": "boolean"
+						"type": "boolean",
+						"enum": [true]
 					}
 				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
+				"required": ["success", "errors", "messages", "result"]
 			},
 			"r2_messages": {
+				"type": "array",
 				"items": {
 					"type": "string"
-				},
-				"type": "array"
+				}
 			},
 			"r2_errors": {
+				"type": "array",
 				"items": {
 					"properties": {
 						"code": {
-							"minimum": 1000,
-							"type": "integer"
+							"type": "integer",
+							"minimum": 1000
 						},
 						"message": {
 							"type": "string"
@@ -2485,18 +2715,18 @@
 					"required": ["code", "message"],
 					"type": "object",
 					"uniqueItems": true
-				},
-				"type": "array"
+				}
 			},
 			"r2_bucket_name": {
 				"description": "Name of the bucket.",
+				"type": "string",
 				"example": "example-bucket",
 				"maxLength": 64,
 				"minLength": 3,
-				"pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]",
-				"type": "string"
+				"pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]"
 			},
 			"r2_v4_response_failure": {
+				"type": "object",
 				"properties": {
 					"errors": {
 						"$ref": "#/components/schemas/r2_errors"
@@ -2505,22 +2735,22 @@
 						"$ref": "#/components/schemas/r2_messages"
 					},
 					"result": {
+						"type": "object",
 						"enum": [null],
-						"nullable": true,
-						"type": "object"
+						"nullable": true
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [false],
+						"type": "boolean",
 						"example": false,
-						"type": "boolean"
+						"enum": [false]
 					}
 				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
+				"required": ["success", "errors", "messages", "result"]
 			},
 			"r2_bucket": {
 				"description": "A single R2 bucket.",
+				"type": "object",
 				"properties": {
 					"creation_date": {
 						"description": "Creation timestamp.",
@@ -2529,8 +2759,7 @@
 					"name": {
 						"$ref": "#/components/schemas/r2_bucket_name"
 					}
-				},
-				"type": "object"
+				}
 			},
 			"r2_v4_response_list": {
 				"allOf": [
@@ -2548,87 +2777,87 @@
 				]
 			},
 			"r2_result_info": {
-				"properties": {},
-				"type": "object"
+				"type": "object",
+				"properties": {}
 			},
 			"workers_cursor": {
 				"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
-				"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc",
-				"type": "string"
+				"type": "string",
+				"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc"
 			},
 			"workers_object": {
+				"type": "object",
 				"properties": {
 					"hasStoredData": {
 						"description": "Whether the Durable Object has stored data.",
+						"type": "boolean",
 						"example": true,
-						"readOnly": true,
-						"type": "boolean"
+						"readOnly": true
 					},
 					"id": {
 						"description": "ID of the Durable Object.",
+						"type": "string",
 						"example": "fe7803fc55b964e09d94666545aab688d360c6bda69ba349ced1e5f28d2fc2c8",
-						"readOnly": true,
-						"type": "string"
+						"readOnly": true
 					},
 					"name": {
 						"type": "string",
 						"description": "Name of the Durable Object instance, if created via idFromName().",
 						"readOnly": true
 					}
-				},
-				"type": "object"
+				}
 			},
 			"workers_schemas-id": {
 				"description": "ID of the namespace.",
-				"example": "5fd1cafff895419c8bcc647fc64ab8f0",
-				"type": "string"
+				"type": "string",
+				"example": "5fd1cafff895419c8bcc647fc64ab8f0"
 			},
 			"workers_api-response-common-failure": {
+				"type": "object",
 				"properties": {
 					"errors": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/workers_messages"
-							}
-						],
 						"example": [
 							{
 								"code": 7003,
 								"message": "No route for the URI"
 							}
 						],
-						"minLength": 1
-					},
-					"messages": {
 						"allOf": [
 							{
 								"$ref": "#/components/schemas/workers_messages"
 							}
 						],
-						"example": []
+						"minLength": 1
+					},
+					"messages": {
+						"example": [],
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers_messages"
+							}
+						]
 					},
 					"result": {
+						"type": "object",
 						"enum": [null],
-						"nullable": true,
-						"type": "object"
+						"nullable": true
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [false],
+						"type": "boolean",
 						"example": false,
-						"type": "boolean"
+						"enum": [false]
 					}
 				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
+				"required": ["success", "errors", "messages", "result"]
 			},
 			"workers_messages": {
-				"example": [],
+				"type": "array",
 				"items": {
 					"properties": {
 						"code": {
-							"minimum": 1000,
-							"type": "integer"
+							"type": "integer",
+							"minimum": 1000
 						},
 						"documentation_url": {
 							"type": "string"
@@ -2637,28 +2866,29 @@
 							"type": "string"
 						},
 						"source": {
+							"type": "object",
 							"properties": {
 								"pointer": {
 									"type": "string"
 								}
-							},
-							"type": "object"
+							}
 						}
 					},
 					"required": ["code", "message"],
 					"type": "object",
 					"uniqueItems": true
 				},
-				"type": "array"
+				"example": []
 			},
 			"workers_namespace": {
+				"type": "object",
 				"properties": {
 					"class": {
 						"type": "string"
 					},
 					"id": {
-						"readOnly": true,
-						"type": "string"
+						"type": "string",
+						"readOnly": true
 					},
 					"name": {
 						"type": "string"
@@ -2669,10 +2899,10 @@
 					"use_sqlite": {
 						"type": "boolean"
 					}
-				},
-				"type": "object"
+				}
 			},
 			"workers_api-response-collection": {
+				"type": "object",
 				"allOf": [
 					{
 						"$ref": "#/components/schemas/workers_api-response-common"
@@ -2680,42 +2910,42 @@
 					{
 						"properties": {
 							"result_info": {
+								"type": "object",
 								"properties": {
 									"count": {
 										"description": "Total number of results for the requested service.",
-										"example": 1,
-										"type": "number"
+										"type": "number",
+										"example": 1
 									},
 									"page": {
 										"description": "Current page within paginated list of results.",
-										"example": 1,
-										"type": "number"
+										"type": "number",
+										"example": 1
 									},
 									"per_page": {
 										"description": "Number of results per page of results.",
-										"example": 20,
-										"type": "number"
+										"type": "number",
+										"example": 20
 									},
 									"total_count": {
 										"description": "Total results available without any search parameters.",
-										"example": 2000,
-										"type": "number"
+										"type": "number",
+										"example": 2000
 									},
 									"total_pages": {
 										"description": "The number of total pages in the entire result set.",
-										"example": 100,
-										"type": "number"
+										"type": "number",
+										"example": 100
 									}
-								},
-								"type": "object"
+								}
 							}
 						},
 						"type": "object"
 					}
-				],
-				"type": "object"
+				]
 			},
 			"workers_api-response-common": {
+				"type": "object",
 				"properties": {
 					"errors": {
 						"$ref": "#/components/schemas/workers_messages"
@@ -2725,28 +2955,30 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [true],
+						"type": "boolean",
 						"example": true,
-						"type": "boolean"
+						"enum": [true]
 					}
 				},
-				"required": ["success", "errors", "messages"],
-				"type": "object"
+				"required": ["success", "errors", "messages"]
 			},
 			"d1_raw-result-response": {
+				"type": "object",
 				"properties": {
 					"meta": {
 						"$ref": "#/components/schemas/d1_query-meta"
 					},
 					"results": {
+						"type": "object",
 						"properties": {
 							"columns": {
+								"type": "array",
 								"items": {
 									"type": "string"
-								},
-								"type": "array"
+								}
 							},
 							"rows": {
+								"type": "array",
 								"items": {
 									"items": {
 										"anyOf": [
@@ -2762,19 +2994,17 @@
 										]
 									},
 									"type": "array"
-								},
-								"type": "array"
+								}
 							}
-						},
-						"type": "object"
+						}
 					},
 					"success": {
 						"type": "boolean"
 					}
-				},
-				"type": "object"
+				}
 			},
 			"d1_query-meta": {
+				"type": "object",
 				"properties": {
 					"changed_db": {
 						"description": "Denotes if the database has been altered in some way, like deleting rows.",
@@ -2806,16 +3036,15 @@
 					},
 					"timings": {
 						"description": "Various durations for the query.",
+						"type": "object",
 						"properties": {
 							"sql_duration_ms": {
 								"description": "The duration of the SQL query execution inside the database. Does not include any network communication.",
 								"type": "number"
 							}
-						},
-						"type": "object"
+						}
 					}
-				},
-				"type": "object"
+				}
 			},
 			"d1_batch-query": {
 				"description": "A single query object or a batch query object",
@@ -2826,10 +3055,10 @@
 					{
 						"properties": {
 							"batch": {
+								"type": "array",
 								"items": {
 									"$ref": "#/components/schemas/d1_single-query"
-								},
-								"type": "array"
+								}
 							}
 						},
 						"required": ["batch"],
@@ -2840,6 +3069,7 @@
 			},
 			"d1_single-query": {
 				"description": "A single query with or without parameters",
+				"type": "object",
 				"properties": {
 					"params": {
 						"$ref": "#/components/schemas/d1_params"
@@ -2849,73 +3079,72 @@
 					}
 				},
 				"required": ["sql"],
-				"title": "single query",
-				"type": "object"
+				"title": "single query"
 			},
 			"d1_sql": {
 				"description": "Your SQL query. Supports multiple statements, joined by semicolons, which will be executed as a batch.",
-				"example": "SELECT * FROM myTable WHERE field = ? OR field = ?;",
-				"type": "string"
+				"type": "string",
+				"example": "SELECT * FROM myTable WHERE field = ? OR field = ?;"
 			},
 			"d1_params": {
-				"example": ["firstParam", "secondParam"],
+				"type": "array",
 				"items": {
 					"type": "string"
 				},
-				"type": "array"
+				"example": ["firstParam", "secondParam"]
 			},
 			"d1_database-identifier": {
 				"description": "D1 database identifier (UUID).",
+				"type": "string",
 				"example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-				"readOnly": true,
-				"type": "string"
+				"readOnly": true
 			},
 			"d1_api-response-common-failure": {
+				"type": "object",
 				"properties": {
 					"errors": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/d1_messages"
-							}
-						],
 						"example": [
 							{
 								"code": 7003,
 								"message": "No route for the URI"
 							}
 						],
-						"minLength": 1
-					},
-					"messages": {
 						"allOf": [
 							{
 								"$ref": "#/components/schemas/d1_messages"
 							}
 						],
-						"example": []
+						"minLength": 1
+					},
+					"messages": {
+						"example": [],
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/d1_messages"
+							}
+						]
 					},
 					"result": {
+						"type": "object",
 						"enum": [null],
-						"nullable": true,
-						"type": "object"
+						"nullable": true
 					},
 					"success": {
 						"description": "Whether the API call was successful",
-						"enum": [false],
+						"type": "boolean",
 						"example": false,
-						"type": "boolean"
+						"enum": [false]
 					}
 				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
+				"required": ["success", "errors", "messages", "result"]
 			},
 			"d1_messages": {
-				"example": [],
+				"type": "array",
 				"items": {
 					"properties": {
 						"code": {
-							"minimum": 1000,
-							"type": "integer"
+							"type": "integer",
+							"minimum": 1000
 						},
 						"message": {
 							"type": "string"
@@ -2925,9 +3154,10 @@
 					"type": "object",
 					"uniqueItems": true
 				},
-				"type": "array"
+				"example": []
 			},
 			"d1_database-response": {
+				"type": "object",
 				"properties": {
 					"jurisdiction": {
 						"$ref": "#/components/schemas/d1_jurisdiction-nullable"
@@ -2941,28 +3171,28 @@
 					"version": {
 						"$ref": "#/components/schemas/d1_database-version"
 					}
-				},
-				"type": "object"
+				}
 			},
 			"d1_database-version": {
+				"type": "string",
 				"example": "production",
-				"pattern": "^(alpha|beta|production)$",
-				"type": "string"
+				"pattern": "^(alpha|beta|production)$"
 			},
 			"d1_database-name": {
 				"description": "D1 database name.",
+				"type": "string",
 				"example": "my-database",
-				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
-				"type": "string"
+				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"
 			},
 			"d1_jurisdiction-nullable": {
 				"description": "Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.",
-				"enum": ["eu", "fedramp"],
+				"type": "string",
 				"example": "eu",
-				"nullable": true,
-				"type": "string"
+				"enum": ["eu", "fedramp", "us"],
+				"nullable": true
 			},
 			"d1_api-response-common": {
+				"type": "object",
 				"properties": {
 					"errors": {
 						"$ref": "#/components/schemas/d1_messages"
@@ -2975,17 +3205,34 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful",
-						"enum": [true],
+						"type": "boolean",
 						"example": true,
-						"type": "boolean"
+						"enum": [true]
 					}
 				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
+				"required": ["success", "errors", "messages", "result"]
 			},
 			"workers-kv_bulk-get-result-with-metadata": {
+				"type": "object",
 				"properties": {
 					"values": {
+						"description": "Requested keys are paired with their values and metadata in an object.",
+						"type": "object",
+						"example": {
+							"key1": {
+								"expiration": 1577836800,
+								"metadata": {
+									"someMetadataKey": "someMetadataValue"
+								},
+								"value": "value1"
+							},
+							"key2": {
+								"metadata": {
+									"anotherKey": "anotherValue"
+								},
+								"value": "value2"
+							}
+						},
 						"additionalProperties": {
 							"nullable": true,
 							"properties": {
@@ -3015,27 +3262,9 @@
 							},
 							"required": ["value", "metadata"],
 							"type": "object"
-						},
-						"description": "Requested keys are paired with their values and metadata in an object.",
-						"example": {
-							"key1": {
-								"expiration": 1577836800,
-								"metadata": {
-									"someMetadataKey": "someMetadataValue"
-								},
-								"value": "value1"
-							},
-							"key2": {
-								"metadata": {
-									"anotherKey": "anotherValue"
-								},
-								"value": "value2"
-							}
-						},
-						"type": "object"
+						}
 					}
-				},
-				"type": "object"
+				}
 			},
 			"workers-kv_any": {
 				"anyOf": [
@@ -3066,12 +3295,19 @@
 			},
 			"workers-kv_expiration": {
 				"description": "Expires the key at a certain time, measured in number of seconds since the UNIX epoch.",
-				"example": 1578435000,
-				"type": "number"
+				"type": "number",
+				"example": 1578435000
 			},
 			"workers-kv_bulk-get-result": {
+				"type": "object",
 				"properties": {
 					"values": {
+						"description": "Requested keys are paired with their values in an object.",
+						"type": "object",
+						"example": {
+							"key1": "value1",
+							"key2": "value2"
+						},
 						"additionalProperties": {
 							"description": "The value associated with the key.",
 							"oneOf": [
@@ -3090,22 +3326,15 @@
 								}
 							],
 							"nullable": true
-						},
-						"description": "Requested keys are paired with their values in an object.",
-						"example": {
-							"key1": "value1",
-							"key2": "value2"
-						},
-						"type": "object"
+						}
 					}
-				},
-				"type": "object"
+				}
 			},
 			"workers-kv_key_name_bulk": {
 				"description": "A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.",
+				"type": "string",
 				"example": "My-Key",
-				"maxLength": 512,
-				"type": "string"
+				"maxLength": 512
 			},
 			"workers-kv_api-response-common-no-result": {
 				"allOf": [
@@ -3115,8 +3344,8 @@
 					{
 						"properties": {
 							"result": {
-								"nullable": true,
-								"type": "object"
+								"type": "object",
+								"nullable": true
 							}
 						},
 						"type": "object"
@@ -3124,6 +3353,7 @@
 				]
 			},
 			"workers-kv_api-response-common": {
+				"type": "object",
 				"properties": {
 					"errors": {
 						"$ref": "#/components/schemas/workers-kv_messages"
@@ -3133,21 +3363,20 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [true],
+						"type": "boolean",
 						"example": true,
-						"type": "boolean"
+						"enum": [true]
 					}
 				},
-				"required": ["success", "errors", "messages"],
-				"type": "object"
+				"required": ["success", "errors", "messages"]
 			},
 			"workers-kv_messages": {
-				"example": [],
+				"type": "array",
 				"items": {
 					"properties": {
 						"code": {
-							"minimum": 1000,
-							"type": "integer"
+							"type": "integer",
+							"minimum": 1000
 						},
 						"message": {
 							"type": "string"
@@ -3156,7 +3385,7 @@
 					"required": ["code", "message"],
 					"type": "object"
 				},
-				"type": "array",
+				"example": [],
 				"uniqueItems": true
 			},
 			"workers-kv_metadata": {
@@ -3173,6 +3402,8 @@
 				]
 			},
 			"workers-kv_value": {
+				"description": "A byte sequence to be stored, up to 25 MiB in length.",
+				"example": "Some Value",
 				"anyOf": [
 					{
 						"type": "string"
@@ -3181,41 +3412,40 @@
 						"format": "binary",
 						"type": "string"
 					}
-				],
-				"description": "A byte sequence to be stored, up to 25 MiB in length.",
-				"example": "Some Value"
+				]
 			},
 			"workers-kv_key_name": {
 				"description": "A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid. Use percent-encoding to define key names as part of a URL.",
+				"type": "string",
 				"example": "My-Key",
-				"maxLength": 512,
-				"type": "string"
+				"maxLength": 512
 			},
 			"workers-kv_cursor_result_info": {
+				"type": "object",
 				"properties": {
 					"count": {
 						"description": "Total results returned based on your list parameters.",
-						"example": 1,
-						"type": "number"
+						"type": "number",
+						"example": 1
 					},
 					"cursor": {
 						"$ref": "#/components/schemas/workers-kv_cursor"
 					}
-				},
-				"type": "object"
+				}
 			},
 			"workers-kv_cursor": {
 				"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
-				"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw",
-				"type": "string"
+				"type": "string",
+				"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw"
 			},
 			"workers-kv_key": {
 				"description": "A name for a value. A value stored under a given key may be retrieved via the same key.",
+				"type": "object",
 				"properties": {
 					"expiration": {
 						"description": "The time, measured in number of seconds since the UNIX epoch, at which the key will expire. This property is omitted for keys that will not expire.",
-						"example": 1577836800,
-						"type": "number"
+						"type": "number",
+						"example": 1577836800
 					},
 					"metadata": {
 						"$ref": "#/components/schemas/workers-kv_list_metadata"
@@ -3224,8 +3454,7 @@
 						"$ref": "#/components/schemas/workers-kv_key_name"
 					}
 				},
-				"required": ["name"],
-				"type": "object"
+				"required": ["name"]
 			},
 			"workers-kv_list_metadata": {
 				"allOf": [
@@ -3242,50 +3471,51 @@
 			},
 			"workers-kv_namespace_identifier": {
 				"description": "Namespace identifier tag.",
+				"type": "string",
 				"example": "0f2ac74b498b48028cb68387c421e279",
 				"maxLength": 32,
-				"readOnly": true,
-				"type": "string"
+				"readOnly": true
 			},
 			"workers-kv_api-response-common-failure": {
+				"type": "object",
 				"properties": {
 					"errors": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/workers-kv_messages"
-							}
-						],
 						"example": [
 							{
 								"code": 7003,
 								"message": "No route for the URI"
 							}
 						],
-						"minLength": 1
-					},
-					"messages": {
 						"allOf": [
 							{
 								"$ref": "#/components/schemas/workers-kv_messages"
 							}
 						],
-						"example": []
+						"minLength": 1
+					},
+					"messages": {
+						"example": [],
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers-kv_messages"
+							}
+						]
 					},
 					"result": {
-						"nullable": true,
-						"type": "object"
+						"type": "object",
+						"nullable": true
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [false],
+						"type": "boolean",
 						"example": false,
-						"type": "boolean"
+						"enum": [false]
 					}
 				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
+				"required": ["success", "errors", "messages", "result"]
 			},
 			"workers-kv_namespace": {
+				"type": "object",
 				"properties": {
 					"id": {
 						"$ref": "#/components/schemas/workers-kv_namespace_identifier"
@@ -3294,16 +3524,16 @@
 						"$ref": "#/components/schemas/workers-kv_namespace_title"
 					}
 				},
-				"required": ["id", "title"],
-				"type": "object"
+				"required": ["id", "title"]
 			},
 			"workers-kv_namespace_title": {
 				"description": "A human-readable string name for a Namespace.",
+				"type": "string",
 				"example": "My Own Namespace",
-				"maxLength": 512,
-				"type": "string"
+				"maxLength": 512
 			},
 			"workers-kv_api-response-collection": {
+				"type": "object",
 				"allOf": [
 					{
 						"$ref": "#/components/schemas/workers-kv_api-response-common"
@@ -3316,18 +3546,17 @@
 						},
 						"type": "object"
 					}
-				],
-				"type": "object"
+				]
 			},
 			"workers-kv_result_info": {
+				"type": "object",
 				"properties": {
 					"count": {
 						"description": "Total number of results for the requested service.",
-						"example": 1,
-						"type": "number"
+						"type": "number",
+						"example": 1
 					}
-				},
-				"type": "object"
+				}
 			},
 			"r2_object": {
 				"type": "object",

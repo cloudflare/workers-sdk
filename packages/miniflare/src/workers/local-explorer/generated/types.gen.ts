@@ -263,7 +263,7 @@ export type D1DatabaseName = string;
 /**
  * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
  */
-export type D1JurisdictionNullable = "eu" | "fedramp";
+export type D1JurisdictionNullable = "eu" | "fedramp" | "us";
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -1415,6 +1415,129 @@ export type D1RawDatabaseQueryResponses = {
 export type D1RawDatabaseQueryResponse =
 	D1RawDatabaseQueryResponses[keyof D1RawDatabaseQueryResponses];
 
+export type WorChangeStatusWorkflowInstanceData = {
+	body:
+		| {
+				status: "pause";
+		  }
+		| {
+				status: "resume";
+		  }
+		| {
+				/**
+				 * Run rollback before terminating.
+				 */
+				rollback?: boolean;
+				status: "terminate";
+		  }
+		| {
+				/**
+				 * Step to restart from.
+				 */
+				from?: {
+					count?: number;
+					name: string;
+					type?: "do" | "sleep" | "waitForEvent";
+				};
+				status: "restart";
+		  };
+	path: {
+		workflow_name: string;
+		/**
+		 * Instance identifier. User-created instances match `^[a-zA-Z0-9_][a-zA-Z0-9-_]*$` (max 100 characters); cron-triggered instances can use a longer, system-generated id derived from the cron expression.
+		 */
+		instance_id: string;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/{instance_id}/status";
+};
+
+export type WorChangeStatusWorkflowInstanceErrors = {
+	/**
+	 * Bad Request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+	/**
+	 * Instance not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+	/**
+	 * Instance not in a restartable state.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<string>;
+		result: null;
+		success: false;
+	};
+};
+
+export type WorChangeStatusWorkflowInstanceError =
+	WorChangeStatusWorkflowInstanceErrors[keyof WorChangeStatusWorkflowInstanceErrors];
+
+export type WorChangeStatusWorkflowInstanceResponses = {
+	/**
+	 * Change status of instance - it can be paused, resumed or terminated.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			message: string;
+		}>;
+		messages: Array<{
+			code: number;
+			message: string;
+		}>;
+		result: {
+			status:
+				| "queued"
+				| "running"
+				| "paused"
+				| "errored"
+				| "terminated"
+				| "complete"
+				| "waitingForPause"
+				| "waiting"
+				| "rollingBack";
+			/**
+			 * Accepts ISO 8601 with no timezone offsets and in UTC.
+			 */
+			timestamp: string;
+		};
+		result_info?: {
+			count: number;
+			cursor?: string;
+			page?: number;
+			per_page: number;
+			total_count: number;
+			total_pages?: number;
+		};
+		success: true;
+	};
+};
+
+export type WorChangeStatusWorkflowInstanceResponse =
+	WorChangeStatusWorkflowInstanceResponses[keyof WorChangeStatusWorkflowInstanceResponses];
+
 export type DurableObjectsNamespaceListNamespacesData = {
 	body?: never;
 	path?: never;
@@ -2253,66 +2376,6 @@ export type WorkflowsGetInstanceDetailsResponses = {
 
 export type WorkflowsGetInstanceDetailsResponse =
 	WorkflowsGetInstanceDetailsResponses[keyof WorkflowsGetInstanceDetailsResponses];
-
-export type WorkflowsChangeInstanceStatusData = {
-	body: {
-		/**
-		 * The action to perform on the workflow instance.
-		 */
-		action: "pause" | "resume" | "restart" | "terminate";
-		/**
-		 * The step to restart the instance from. Only valid when action is restart.
-		 */
-		from?: {
-			/**
-			 * The name of the step.
-			 */
-			name: string;
-			/**
-			 * The 1-based index of the step when multiple steps share the same name and type. Defaults to 1.
-			 */
-			count?: number;
-			/**
-			 * The step type. Defaults to do.
-			 */
-			type?: "do" | "sleep" | "waitForEvent";
-		};
-		/**
-		 * The option to trigger rollbacks when terminating the workflow instance.
-		 */
-		rollback?: boolean;
-	};
-	path: {
-		workflow_name: WorkflowsWorkflowName;
-		instance_id: WorkflowsInstanceId;
-	};
-	query?: never;
-	url: "/workflows/{workflow_name}/instances/{instance_id}/status";
-};
-
-export type WorkflowsChangeInstanceStatusErrors = {
-	/**
-	 * Change Workflow Instance Status response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type WorkflowsChangeInstanceStatusError =
-	WorkflowsChangeInstanceStatusErrors[keyof WorkflowsChangeInstanceStatusErrors];
-
-export type WorkflowsChangeInstanceStatusResponses = {
-	/**
-	 * Change Workflow Instance Status response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: {
-			success?: boolean;
-		};
-	};
-};
-
-export type WorkflowsChangeInstanceStatusResponse =
-	WorkflowsChangeInstanceStatusResponses[keyof WorkflowsChangeInstanceStatusResponses];
 
 export type WorkflowsSendInstanceEventData = {
 	/**

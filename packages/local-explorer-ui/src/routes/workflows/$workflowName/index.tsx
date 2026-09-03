@@ -27,7 +27,7 @@ import {
 	type JSX,
 } from "react";
 import {
-	workflowsChangeInstanceStatus,
+	worChangeStatusWorkflowInstance,
 	workflowsDeleteInstance,
 	workflowsDeleteWorkflow,
 	workflowsListInstances,
@@ -217,12 +217,12 @@ const InstanceRow = memo(function InstanceRow({
 		e.stopPropagation(); // Don't navigate when clicking action buttons
 		setActionInProgress(action);
 		try {
-			await workflowsChangeInstanceStatus({
+			await worChangeStatusWorkflowInstance({
 				path: {
 					workflow_name: workflowName,
 					instance_id: instance.id ?? "",
 				},
-				body: { action },
+				body: { status: action },
 			});
 			onActionComplete();
 		} catch {
