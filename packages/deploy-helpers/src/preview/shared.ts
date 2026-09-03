@@ -6,9 +6,8 @@ import {
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { shortHash, truncateWithSuffix } from "../shared/names";
-import type { Binding, EnvBindings, PreviewDefaults } from "./api";
+import type { Binding, EnvBindings } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 const MAX_CONTAINER_APP_NAME_LENGTH = 253;
@@ -754,30 +753,4 @@ export function assemblePreviewScriptSettings(config: Config) {
 	}
 
 	return result;
-}
-
-export function assemblePreviewDefaults(config: Config): PreviewDefaults {
-	const previews = config.previews as PreviewsConfig | undefined;
-	const previewDefaults: PreviewDefaults = {
-		...assemblePreviewScriptSettings(config),
-	};
-
-	const previewEnv = extractConfigBindings(config);
-	if (Object.keys(previewEnv).length > 0) {
-		previewDefaults.env = previewEnv;
-	}
-
-	if (previews?.limits || config.limits) {
-		previewDefaults.limits = previews?.limits ?? config.limits;
-	}
-
-	if (previews?.cache !== undefined || config.cache !== undefined) {
-		previewDefaults.cache = previews?.cache ?? config.cache;
-	}
-
-	if (config.placement) {
-		previewDefaults.placement = parseConfigPlacement(config);
-	}
-
-	return previewDefaults;
 }

@@ -365,10 +365,10 @@ describe("wrangler preview", () => {
 			test("creates a new Preview deployment removing the secret", async ({
 				expect,
 			}) => {
-				let patchedPreviewDefaults = false;
+				let patchedBaseConfig = false;
 				msw.use(
 					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
-						patchedPreviewDefaults = true;
+						patchedBaseConfig = true;
 						return HttpResponse.json({ success: true, result: {} });
 					})
 				);
@@ -387,7 +387,7 @@ describe("wrangler preview", () => {
 					"/workers/workers/test-worker/previews/test-preview/deployments/latest"
 				);
 				expect(requestBody?.env).toEqual({ REMOVE_ME: null });
-				expect(patchedPreviewDefaults).toBe(false);
+				expect(patchedBaseConfig).toBe(false);
 				expect(std.out).toContain('Preview "test-preview"');
 				expect(std.out).toContain("test-worker");
 				expect(std.out).toContain("Preview deployment");

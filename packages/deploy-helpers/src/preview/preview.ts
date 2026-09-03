@@ -21,8 +21,8 @@ import {
 	deletePreview,
 	editPreview,
 	getPreview,
+	getPreviewBaseConfig,
 	getPreviewDeployment,
-	getWorkerPreviewDefaults,
 } from "./api";
 import {
 	assemblePreviewScriptSettings,
@@ -833,14 +833,14 @@ export async function preview(
 
 		const topLevelBindings = getBindings(config);
 		if (Object.keys(topLevelBindings).length > 0) {
-			const previewDefaults = await getWorkerPreviewDefaults(
+			const previewBaseConfig = await getPreviewBaseConfig(
 				config,
 				accountId,
 				workerName
 			);
 			logMissingPreviewsBindingsWarning(
 				topLevelBindings,
-				previewDefaults.env,
+				previewBaseConfig.env,
 				extractConfigBindings(config)
 			);
 		}

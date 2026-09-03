@@ -819,7 +819,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -1189,7 +1189,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -1282,7 +1282,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -1451,7 +1451,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: {},
+							previews_base_config: {},
 						},
 					})
 				)
@@ -2021,7 +2021,7 @@ describe("wrangler preview", () => {
 			);
 		});
 
-		test("should work without preview_defaults", async ({ expect }) => {
+		test("should work without previews_base_config", async ({ expect }) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
