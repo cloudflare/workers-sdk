@@ -6,6 +6,7 @@ import { WorkflowBinding } from "../src/binding";
 import { setTestWorkflowCallback } from "./test-entry";
 import type { WorkflowHandle } from "../src/binding";
 import type { Engine, EngineLogs } from "../src/engine";
+import type { WorkflowSubscription } from "../src/subscription";
 import type { WorkflowEvent } from "cloudflare:workers";
 
 let instanceCounter = 0;
@@ -627,6 +628,423 @@ describe("WorkflowHandle", () => {
 			const status = await newInstance.status();
 
 			expect(status.status).toBe("terminated");
+		});
+	});
+
+	describe("subscribe()", () => {
+		it("streams historical events in log order through a disposable RPC target", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.do(
+					"subscription step",
+					{
+						retries: {
+							limit: 3,
+							delay: () => "2 seconds",
+							backoff: "linear",
+						},
+						timeout: "30 seconds",
+					},
+					async () => "step output"
+				);
+				return "workflow output";
+			});
+
+			await binding.create({ id, params: { input: true } });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+			const instance = (await binding.get(id)) as WorkflowHandle;
+			using subscription = await instance.subscribe();
+			const events: Array<{
+				eventId: number;
+				type: string;
+				[key: string]: unknown;
+			}> = [];
+			while (true) {
+				const result = await subscription.next();
+				if (result.done) {
+					break;
+				}
+				events.push(result.value);
+			}
+
+			expect(events.map(({ type }) => type)).toEqual([
+				"workflow_queued",
+				"workflow_started",
+				"step_started",
+				"attempt_started",
+				"attempt_completed",
+				"step_completed",
+				"workflow_completed",
+			]);
+			const firstEvent = events[0];
+			if (firstEvent === undefined) {
+				throw new Error("Expected subscription events");
+			}
+			expect(events.map(({ eventId }) => eventId)).toEqual(
+				Array.from(
+					{ length: events.length },
+					(_, index) => firstEvent.eventId + index
+				)
+			);
+			expect(events).toContainEqual(
+				expect.objectContaining({
+					type: "workflow_started",
+					params: { input: true },
+				})
+			);
+			expect(events).toContainEqual(
+				expect.objectContaining({
+					type: "step_started",
+					stepName: "subscription step-1",
+					config: {
+						retries: {
+							limit: 3,
+							delay: "[dynamic]",
+							backoff: "linear",
+						},
+						timeout: "30 seconds",
+					},
+				})
+			);
+			expect(events).toContainEqual(
+				expect.objectContaining({
+					type: "step_completed",
+					stepName: "subscription step-1",
+					output: "step output",
+				})
+			);
+			expect(events.at(-1)).toMatchObject({
+				type: "workflow_completed",
+				output: "workflow output",
+			});
+			expect(await subscription.next()).toEqual({
+				done: true,
+				value: undefined,
+			});
+		});
+
+		it("includes the resolved rollback config in rollback step events", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				// @ts-expect-error -- rollback options are not in workers-types yet
+				await step.do("rollback subscription step", async () => "step output", {
+					rollback: async () => {},
+					rollbackConfig: {
+						retries: {
+							limit: 0,
+							delay: "1 second",
+							backoff: "constant",
+						},
+						timeout: "30 seconds",
+					},
+				});
+				throw new Error("trigger rollback");
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.ROLLBACK_COMPLETE);
+
+			const instance = (await binding.get(id)) as WorkflowHandle;
+			using subscription = await instance.subscribe({
+				filter: ["rollback_step_started", "workflow_failed"],
+			});
+			expect(await subscription.next()).toMatchObject({
+				done: false,
+				value: {
+					type: "rollback_step_started",
+					stepName: "rollback subscription step-1",
+					config: {
+						retries: {
+							limit: 0,
+							delay: "1 second",
+							backoff: "constant",
+						},
+						timeout: "30 seconds",
+					},
+				},
+			});
+		});
+
+		it("returns stored structured and streamed step outputs", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.do("structured output", async () => ({ total: 1n }));
+				const stream = await step.do("stream output", async () => {
+					return new ReadableStream<Uint8Array>({
+						start(controller) {
+							controller.enqueue(
+								new TextEncoder().encode("streamed step output")
+							);
+							controller.close();
+						},
+					});
+				});
+				await new Response(stream as ReadableStream<Uint8Array>).arrayBuffer();
+				await step.do(
+					"sensitive output",
+					{ sensitive: "output" },
+					async () => "secret"
+				);
+				await step.do("undefined output", async () => undefined);
+				await step.do("null output", async () => null);
+				return "done";
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+			const instance = (await binding.get(id)) as WorkflowHandle;
+			using subscription = await instance.subscribe({
+				filter: ["step_completed", "workflow_completed"],
+			});
+
+			const structuredResult = await subscription.next();
+			if (
+				structuredResult.done ||
+				structuredResult.value.type !== "step_completed"
+			) {
+				throw new Error("Expected a structured step output event");
+			}
+			const structuredEvent = structuredResult.value;
+			expect(structuredEvent).toMatchObject({
+				type: "step_completed",
+				stepName: "structured output-1",
+				output: { total: 1n },
+			});
+
+			const streamResult = await subscription.next();
+			if (streamResult.done || streamResult.value.type !== "step_completed") {
+				throw new Error("Expected a streamed step output event");
+			}
+			const streamEvent = streamResult.value;
+			expect(streamEvent).toMatchObject({
+				type: "step_completed",
+				stepName: "stream output-1",
+			});
+			expect(streamEvent.output).toBeInstanceOf(ReadableStream);
+			expect(
+				await new Response(
+					streamEvent.output as ReadableStream<Uint8Array>
+				).text()
+			).toBe("streamed step output");
+
+			expect(await subscription.next()).toMatchObject({
+				done: false,
+				value: {
+					type: "step_completed",
+					stepName: "sensitive output-1",
+					output: "[REDACTED]",
+				},
+			});
+			const undefinedResult = await subscription.next();
+			expect(undefinedResult).toMatchObject({
+				done: false,
+				value: {
+					type: "step_completed",
+					stepName: "undefined output-1",
+				},
+			});
+			if (!undefinedResult.done) {
+				expect("output" in undefinedResult.value).toBe(false);
+			}
+			expect(await subscription.next()).toMatchObject({
+				done: false,
+				value: {
+					type: "step_completed",
+					stepName: "null output-1",
+					output: null,
+				},
+			});
+			expect(await subscription.next()).toMatchObject({
+				done: false,
+				value: { type: "workflow_completed", output: "done" },
+			});
+		});
+
+		it("rejects when a stored streamed step output is corrupt", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				const stream = await step.do("stream output", async () => {
+					return new ReadableStream<Uint8Array>({
+						start(controller) {
+							controller.enqueue(new TextEncoder().encode("streamed output"));
+							controller.close();
+						},
+					});
+				});
+				await new Response(stream as ReadableStream<Uint8Array>).arrayBuffer();
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+			await runInDurableObject(engineStub, (_engine, state) => {
+				const step = state.storage.sql
+					.exec<{ groupKey: string }>(
+						"SELECT groupKey FROM states WHERE event = ? LIMIT 1",
+						InstanceEvent.STEP_SUCCESS
+					)
+					.one();
+				if (step === null) {
+					throw new Error("Expected a completed step");
+				}
+				state.storage.sql.exec(
+					"DELETE FROM streaming_step_chunks WHERE cache_key = ?",
+					step.groupKey
+				);
+			});
+
+			await runInDurableObject(engineStub, async (engine) => {
+				const subscription = await engine.subscribe({
+					filter: ["step_completed"],
+				});
+				await expect(subscription.next()).rejects.toThrow(
+					"Step has completed but its stored stream output is corrupt or incomplete"
+				);
+				expect(await subscription.next()).toEqual({
+					done: true,
+					value: undefined,
+				});
+			});
+		});
+
+		it("waits for live events and applies cursor and filter options", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.waitForEvent("subscription wait", {
+					type: "continue",
+					timeout: "10 seconds",
+				});
+				return "done";
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+
+			const logs = (await engineStub.readDetailedLogs()) as Array<{
+				id: number;
+				event: InstanceEvent;
+			}>;
+			const startEventId = logs.find(
+				({ event }) => event === InstanceEvent.WORKFLOW_START
+			)?.id;
+			if (startEventId === undefined) {
+				throw new Error("Expected a workflow start event");
+			}
+
+			const instance = (await binding.get(id)) as WorkflowHandle;
+			using subscription = await instance.subscribe({
+				cursor: startEventId,
+				filter: ["workflow_queued", "wait_started", "workflow_completed"],
+			});
+			expect(await subscription.next()).toMatchObject({
+				done: false,
+				value: {
+					type: "wait_started",
+					stepName: "subscription wait-1",
+					eventType: "continue",
+				},
+			});
+
+			const terminalEvent = subscription.next();
+			await instance.sendEvent({ type: "continue", payload: null });
+			expect(await terminalEvent).toMatchObject({
+				done: false,
+				value: { type: "workflow_completed", output: "done" },
+			});
+			expect(await subscription.next()).toEqual({
+				done: true,
+				value: undefined,
+			});
+		});
+
+		it("rejects invalid subscription options", async ({ expect }) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async () => undefined);
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
+
+			const instance = await binding.get(id);
+			const unsafeInstance = instance as unknown as {
+				subscribe(options: unknown): Promise<WorkflowSubscription>;
+			};
+			const invalidOptions: Array<[description: string, options: unknown]> = [
+				["null", null],
+				["an array", []],
+				["a negative cursor", { cursor: -1 }],
+				["a fractional cursor", { cursor: 1.5 }],
+				["an unsafe cursor", { cursor: Number.MAX_SAFE_INTEGER + 1 }],
+				["a non-array filter", { filter: "workflow_started" }],
+				["a non-string event filter", { filter: [42] }],
+				["an unknown event filter", { filter: ["does_not_exist"] }],
+				["the internal event filter", { filter: ["internal"] }],
+				["an unknown option", { unexpected: true }],
+			];
+
+			for (const [description, options] of invalidOptions) {
+				await expect(
+					unsafeInstance.subscribe(options),
+					description
+				).rejects.toThrow("Invalid Workflow subscription options");
+			}
+		});
+
+		it("streams a persisted termination event after the Engine aborts", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.waitForEvent("termination wait", {
+					type: "never",
+					timeout: "10 seconds",
+				});
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+			const instance = await binding.get(id);
+			await instance.terminate();
+
+			const terminatedInstance = (await binding.get(id)) as WorkflowHandle;
+			using subscription = await terminatedInstance.subscribe({
+				filter: ["workflow_terminated"],
+			});
+
+			expect(await subscription.next()).toMatchObject({
+				done: false,
+				value: { type: "workflow_terminated" },
+			});
 		});
 	});
 

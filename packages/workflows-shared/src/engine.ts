@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { Context } from "./context";
+import { Context, REDACTED_STEP_OUTPUT } from "./context";
 import {
 	INSTANCE_METADATA,
 	InstanceEvent,
@@ -40,10 +40,16 @@ import {
 	createReplayReadableStream,
 	getInvalidStoredStreamOutputError,
 	getStoredStreamOutputPreview,
+	getStreamOutputMetaKey,
 	StreamOutputState,
 } from "./lib/streams";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
 import { MODIFIER_KEYS, WorkflowInstanceModifier } from "./modifier";
+import {
+	isTerminalEvent,
+	parseResolvedStepConfig,
+	WorkflowSubscriptionTarget,
+} from "./subscription";
 import type {
 	RestartFromStep,
 	WorkflowInstanceTerminateOptions,
@@ -55,6 +61,11 @@ import type {
 	RollbackRegistryEntry,
 } from "./lib/rollback";
 import type { StreamOutputMeta } from "./lib/streams";
+import type {
+	WorkflowSubscriptionEvent,
+	WorkflowSubscriptionOptions,
+	WorkflowSubscriptionState,
+} from "./subscription";
 import type {
 	WorkflowEntrypoint,
 	WorkflowEvent,
@@ -125,21 +136,32 @@ const PAUSE_DATETIME = "PAUSE_DATETIME";
 export type RollbackPhase = "replay" | "rollback";
 
 /**
- * JSON.stringify replacer that converts TypedArrays and ArrayBuffers to a
- * human-readable description. Without this, JSON.stringify(Uint8Array) encodes
- * each byte as a numeric key ({"0":1,"1":2,...}), producing a string ~10x larger
- * than byteLength and causing SQLITE_TOOBIG for outputs above ~170 KB.
- * The replacer is called recursively by JSON.stringify, so nested binary values
- * inside objects or arrays are also handled.
+ * Creates a JSON replacer for persisted logs. Step outputs are stored separately
+ * using structured clone, so logs only need a compact, JSON-safe representation.
  */
-function binaryReplacer(_key: string, value: unknown): unknown {
-	if (value instanceof ArrayBuffer) {
-		return `[ArrayBuffer(${value.byteLength} bytes)]`;
-	}
-	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
-		return `[${value.constructor.name}(${(value as ArrayBufferView).byteLength} bytes)]`;
-	}
-	return value;
+function createLogMetadataReplacer() {
+	const ancestors: object[] = [];
+	return function (this: unknown, _key: string, value: unknown): unknown {
+		if (typeof value === "bigint") {
+			return `[BigInt(${value})]`;
+		}
+		if (value instanceof ArrayBuffer) {
+			return `[ArrayBuffer(${value.byteLength} bytes)]`;
+		}
+		if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+			return `[${value.constructor.name}(${(value as ArrayBufferView).byteLength} bytes)]`;
+		}
+		if (typeof value === "object" && value !== null) {
+			while (ancestors.length > 0 && ancestors[ancestors.length - 1] !== this) {
+				ancestors.pop();
+			}
+			if (ancestors.includes(value)) {
+				return "[Circular]";
+			}
+			ancestors.push(value);
+		}
+		return value;
+	};
 }
 
 function isStepSuccessEvent(event: InstanceEvent): boolean {
@@ -147,6 +169,256 @@ function isStepSuccessEvent(event: InstanceEvent): boolean {
 		event === InstanceEvent.STEP_SUCCESS ||
 		event === InstanceEvent.ROLLBACK_STEP_SUCCESS
 	);
+}
+
+type EngineWorkflowSubscriptionEvent =
+	| WorkflowSubscriptionEvent
+	| (Pick<WorkflowSubscriptionEvent, "instanceId" | "eventId" | "timestamp"> & {
+			type: "internal";
+	  });
+
+async function readStepConfig(
+	storage: DurableObjectStorage,
+	groupKey: string | null
+) {
+	if (groupKey === null) {
+		return undefined;
+	}
+	return parseResolvedStepConfig(await storage.get(`${groupKey}-config`));
+}
+
+async function readStepCompletedOutput(
+	storage: DurableObjectStorage,
+	groupKey: string | null
+) {
+	if (groupKey === null) {
+		return undefined;
+	}
+
+	const valueKey = `${groupKey}-value`;
+	const streamMetaKey = getStreamOutputMetaKey(groupKey);
+	const configKey = `${groupKey}-config`;
+	const stored = await storage.get([valueKey, streamMetaKey, configKey]);
+	const config = parseResolvedStepConfig(stored.get(configKey));
+	if (config === undefined) {
+		return undefined;
+	}
+	if (config.sensitive === "output") {
+		return REDACTED_STEP_OUTPUT;
+	}
+
+	const streamMeta = stored.get(streamMetaKey) as StreamOutputMeta | undefined;
+	if (streamMeta?.state === StreamOutputState.Complete) {
+		const integrityError = getInvalidStoredStreamOutputError(
+			storage,
+			groupKey,
+			streamMeta
+		);
+		if (integrityError !== undefined) {
+			throw createWorkflowError(
+				"Step has completed but its stored stream output is corrupt or incomplete",
+				"instance.step_output_corrupt"
+			);
+		}
+		return createReplayReadableStream({
+			storage,
+			cacheKey: groupKey,
+			meta: streamMeta,
+		});
+	}
+
+	return (stored.get(valueKey) as { value: unknown } | undefined)?.value;
+}
+
+async function buildWorkflowSubscriptionEvent(
+	storage: DurableObjectStorage,
+	log: RawInstanceLog,
+	instanceId: string,
+	params: unknown
+): Promise<EngineWorkflowSubscriptionEvent> {
+	const common = {
+		instanceId,
+		eventId: log.id,
+		timestamp: new Date(log.timestamp).valueOf(),
+	};
+	const parseMetadata = () =>
+		JSON.parse(log.metadata) as {
+			result?: unknown;
+			error: { name: string; message: string };
+			attempt: number;
+			retryDelayMs?: number;
+			durationMs: number;
+			event: string;
+		};
+	const stepEvent = (
+		createEvent: (
+			stepName: string
+		) => Extract<WorkflowSubscriptionEvent, { stepName: string }>
+	): EngineWorkflowSubscriptionEvent =>
+		log.target === null
+			? { ...common, type: "internal" }
+			: createEvent(log.target);
+
+	switch (log.event) {
+		case InstanceEvent.WORKFLOW_QUEUED:
+			return { ...common, type: "workflow_queued" };
+		case InstanceEvent.WORKFLOW_START:
+			return { ...common, type: "workflow_started", params };
+		case InstanceEvent.WORKFLOW_SUCCESS:
+			return {
+				...common,
+				type: "workflow_completed",
+				output: parseMetadata().result,
+			};
+		case InstanceEvent.WORKFLOW_FAILURE:
+			return {
+				...common,
+				type: "workflow_failed",
+				error: parseMetadata().error,
+			};
+		case InstanceEvent.WORKFLOW_TERMINATED:
+			return { ...common, type: "workflow_terminated" };
+		case InstanceEvent.STEP_START: {
+			const config = await readStepConfig(storage, log.groupKey);
+			return stepEvent((stepName) => ({
+				...common,
+				type: "step_started",
+				stepName,
+				...(config === undefined ? {} : { config }),
+			}));
+		}
+		case InstanceEvent.STEP_SUCCESS: {
+			const output = await readStepCompletedOutput(storage, log.groupKey);
+			return stepEvent((stepName) => ({
+				...common,
+				type: "step_completed",
+				stepName,
+				...(output === undefined ? {} : { output }),
+			}));
+		}
+		case InstanceEvent.STEP_FAILURE:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "step_failed",
+				stepName,
+			}));
+		case InstanceEvent.ATTEMPT_START:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "attempt_started",
+				stepName,
+				attempt: parseMetadata().attempt,
+			}));
+		case InstanceEvent.ATTEMPT_SUCCESS:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "attempt_completed",
+				stepName,
+				attempt: parseMetadata().attempt,
+			}));
+		case InstanceEvent.ATTEMPT_FAILURE: {
+			const metadata = parseMetadata();
+			return stepEvent((stepName) => ({
+				...common,
+				type: "attempt_failed",
+				stepName,
+				attempt: metadata.attempt,
+				error: metadata.error,
+				...(metadata.retryDelayMs === undefined
+					? {}
+					: { retryDelayMs: metadata.retryDelayMs }),
+			}));
+		}
+		case InstanceEvent.SLEEP_START:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "sleep_started",
+				stepName,
+				durationMs: parseMetadata().durationMs,
+			}));
+		case InstanceEvent.SLEEP_COMPLETE:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "sleep_completed",
+				stepName,
+			}));
+		case InstanceEvent.WAIT_START:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "wait_started",
+				stepName,
+				eventType: parseMetadata().event,
+			}));
+		case InstanceEvent.WAIT_COMPLETE:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "wait_completed",
+				stepName,
+			}));
+		case InstanceEvent.WAIT_TIMED_OUT:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "wait_timed_out",
+				stepName,
+			}));
+		case InstanceEvent.ROLLBACK_START:
+			return { ...common, type: "rollback_started" };
+		case InstanceEvent.ROLLBACK_STEP_START: {
+			const config = await readStepConfig(storage, log.groupKey);
+			return stepEvent((stepName) => ({
+				...common,
+				type: "rollback_step_started",
+				stepName,
+				...(config === undefined ? {} : { config }),
+			}));
+		}
+		case InstanceEvent.ROLLBACK_STEP_SUCCESS:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "rollback_step_completed",
+				stepName,
+			}));
+		case InstanceEvent.ROLLBACK_STEP_FAILURE:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "rollback_step_failed",
+				stepName,
+				error: parseMetadata().error,
+			}));
+		case InstanceEvent.ROLLBACK_ATTEMPT_START:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "rollback_attempt_started",
+				stepName,
+				attempt: parseMetadata().attempt,
+			}));
+		case InstanceEvent.ROLLBACK_ATTEMPT_SUCCESS:
+			return stepEvent((stepName) => ({
+				...common,
+				type: "rollback_attempt_completed",
+				stepName,
+				attempt: parseMetadata().attempt,
+			}));
+		case InstanceEvent.ROLLBACK_ATTEMPT_FAILURE: {
+			const metadata = parseMetadata();
+			return stepEvent((stepName) => ({
+				...common,
+				type: "rollback_attempt_failed",
+				stepName,
+				attempt: metadata.attempt,
+				error: metadata.error,
+				...(metadata.retryDelayMs === undefined
+					? {}
+					: { retryDelayMs: metadata.retryDelayMs }),
+			}));
+		}
+		case InstanceEvent.ROLLBACK_COMPLETE:
+			return { ...common, type: "rollback_completed" };
+		case InstanceEvent.ROLLBACK_FAILED:
+			return { ...common, type: "rollback_failed" };
+		case InstanceEvent.__INTERNAL_PROD:
+			return { ...common, type: "internal" };
+	}
 }
 
 export class Engine extends DurableObject<Env> {
@@ -174,6 +446,8 @@ export class Engine extends DurableObject<Env> {
 
 	// Not persisted: rollback fns are RPC stubs, dead across DO restarts.
 	rollbackRegistry: Map<string, RollbackRegistryEntry> = new Map();
+
+	subscribers = new Set<WorkflowSubscriptionState>();
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
@@ -236,8 +510,16 @@ export class Engine extends DurableObject<Env> {
 			event,
 			group,
 			target,
-			JSON.stringify(metadata, binaryReplacer)
+			JSON.stringify(metadata, createLogMetadataReplacer())
 		);
+
+		for (const subscriber of this.subscribers) {
+			const waiter = subscriber.waiter;
+			if (waiter !== undefined) {
+				subscriber.waiter = undefined;
+				waiter.resolve();
+			}
+		}
 
 		// Wake any waiters if this is a terminal step event
 		if (group) {
@@ -346,6 +628,79 @@ export class Engine extends DurableObject<Env> {
 
 	readLogsFromStep(_cacheKey: string): RawInstanceLog[] {
 		return [];
+	}
+
+	async subscribe(
+		options?: WorkflowSubscriptionOptions
+	): Promise<WorkflowSubscriptionTarget> {
+		const { cursor, filter } = options ?? {};
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+		if (metadata === undefined) {
+			throw createWorkflowError(
+				"Instance does not exist",
+				"instance.not_found"
+			);
+		}
+
+		const state: WorkflowSubscriptionState = {
+			instanceId: metadata.instance.id,
+			params: metadata.event.payload,
+			lastEventId: cursor ?? -1,
+			filter: filter === undefined ? undefined : new Set(filter),
+			waiter: undefined,
+			closed: false,
+		};
+		const subscription = new WorkflowSubscriptionTarget(
+			() => this.nextWorkflowEvent(state),
+			() => {
+				state.closed = true;
+				this.subscribers.delete(state);
+				state.waiter?.resolve();
+				state.waiter = undefined;
+			}
+		);
+		this.subscribers.add(state);
+		return subscription;
+	}
+
+	private async nextWorkflowEvent(
+		state: WorkflowSubscriptionState
+	): Promise<IteratorResult<WorkflowSubscriptionEvent, undefined>> {
+		while (!state.closed) {
+			const row = this.ctx.storage.sql
+				.exec<RawInstanceLog>(
+					"SELECT id, timestamp, event, groupKey, target, metadata FROM states WHERE id > ? ORDER BY id ASC LIMIT 1",
+					state.lastEventId
+				)
+				.toArray()[0];
+
+			if (row === undefined) {
+				await new Promise<void>((resolve) => {
+					state.waiter = { resolve };
+				});
+				continue;
+			}
+
+			state.lastEventId = row.id;
+			const event = await buildWorkflowSubscriptionEvent(
+				this.ctx.storage,
+				row,
+				state.instanceId,
+				state.params
+			);
+			if (event.type === "internal") {
+				continue;
+			}
+			if (state.filter === undefined || state.filter.has(event.type)) {
+				return { done: false, value: event };
+			}
+			if (isTerminalEvent(event)) {
+				return { done: true, value: undefined };
+			}
+		}
+
+		return { done: true, value: undefined };
 	}
 
 	readLogs(): EngineLogs {

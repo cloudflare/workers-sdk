@@ -3,6 +3,10 @@ import type {
 	WorkflowInstanceRestartOptions,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
+import type {
+	WorkflowSubscription,
+	WorkflowSubscriptionOptions,
+} from "@cloudflare/workflows-shared/src/subscription";
 import type { WorkflowIntrospectionOperation } from "@cloudflare/workflows-shared/src/types";
 
 class WorkflowImpl implements Workflow {
@@ -136,6 +140,14 @@ class InstanceImpl implements WorkflowInstance {
 		using instance = await this.getInstance();
 		using res = (await instance.status()) as InstanceStatus & Disposable;
 		return structuredClone(res);
+	}
+
+	public async subscribe(
+		options?: WorkflowSubscriptionOptions
+	): Promise<WorkflowSubscription> {
+		using instance = await this.getInstance();
+		// @ts-expect-error `subscribe` not yet included in workers-types.
+		return instance.subscribe(options);
 	}
 
 	public async sendEvent(args: {
