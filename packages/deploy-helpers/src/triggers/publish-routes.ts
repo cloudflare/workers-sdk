@@ -254,6 +254,7 @@ export async function publishCustomDomains(
 	complianceConfig: ComplianceConfig,
 	workerUrl: string,
 	accountId: string,
+	scriptName: string,
 	domains: Array<RouteObject>
 ): Promise<TriggerDeployment> {
 	const options = {
@@ -314,17 +315,22 @@ export async function publishCustomDomains(
 					)
 				)
 			);
-			const existingRendered = existing
-				.map(
-					(domain) =>
-						`\t• ${domain.hostname} (used as a domain for "${domain.service}")`
-				)
-				.join("\n");
-			const message = `Custom Domains already exist for these domains:
+			const existingForOtherWorkers = existing.filter(
+				(domain) => domain.service !== scriptName
+			);
+			if (existingForOtherWorkers.length > 0) {
+				const existingRendered = existingForOtherWorkers
+					.map(
+						(domain) =>
+							`\t• ${domain.hostname} (used as a domain for "${domain.service}")`
+					)
+					.join("\n");
+				const message = `Custom Domains already exist for these domains:
 ${existingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) {
-				return fail();
+				if (!(await confirm(message))) {
+					return fail();
+				}
 			}
 			options.override_existing_origin = true;
 		}
