@@ -220,7 +220,6 @@ export function createCloudflareEnvironmentOptions({
 	userConfig,
 	mode,
 	environmentName,
-	isEntryWorker,
 	isParentEnvironment,
 	hasNodeJsCompat,
 }: {
@@ -228,7 +227,6 @@ export function createCloudflareEnvironmentOptions({
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
-	isEntryWorker: boolean;
 	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
@@ -278,7 +276,7 @@ export function createCloudflareEnvironmentOptions({
 			},
 			target,
 			emitAssets: true,
-			manifest: isEntryWorker,
+			manifest: isParentEnvironment,
 			outDir: getOutputDirectory(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
