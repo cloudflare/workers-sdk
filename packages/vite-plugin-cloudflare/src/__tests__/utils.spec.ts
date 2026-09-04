@@ -7,6 +7,7 @@ import {
 	createRequestHandler,
 	getForwardedProto,
 	getOutputDirectory,
+	getRequestAuthority,
 } from "../utils";
 import type { AddressInfo } from "node:net";
 
@@ -45,6 +46,56 @@ describe("getOutputDirectory", () => {
 		expect(getOutputDirectory({}, "environment-name")).toBe(
 			path.join("dist", "environment-name")
 		);
+	});
+});
+
+describe("getRequestAuthority", () => {
+	test("returns undefined when neither header is present", ({ expect }) => {
+		expect(getRequestAuthority({ headers: {} })).toBeUndefined();
+	});
+
+	test("returns the `Host` header when present", ({ expect }) => {
+		expect(getRequestAuthority({ headers: { host: "localhost:5173" } })).toBe(
+			"localhost:5173"
+		);
+	});
+
+	test("falls back to `:authority` when `Host` is absent", ({ expect }) => {
+		// HTTP/2 carries the authority here, and the port must survive.
+		expect(
+			getRequestAuthority({ headers: { ":authority": "localhost:5173" } })
+		).toBe("localhost:5173");
+	});
+
+	test("prefers `Host` when both are present", ({ expect }) => {
+		expect(
+			getRequestAuthority({
+				headers: { host: "localhost:5173", ":authority": "example.com" },
+			})
+		).toBe("localhost:5173");
+	});
+
+	test("preserves a non-default port from `:authority`", ({ expect }) => {
+		const authority = getRequestAuthority({
+			headers: { ":authority": "192.168.1.10:5173" },
+		});
+		expect(authority).toBe("192.168.1.10:5173");
+		expect(new URL("/", `https://${authority}`).origin).toBe(
+			"https://192.168.1.10:5173"
+		);
+	});
+
+	test("returns the first value when the header is an array", ({ expect }) => {
+		expect(
+			getRequestAuthority({
+				headers: { ":authority": ["a.example:5173", "b.example"] },
+			})
+		).toBe("a.example:5173");
+	});
+
+	test("treats an empty or whitespace-only value as absent", ({ expect }) => {
+		expect(getRequestAuthority({ headers: { host: "" } })).toBeUndefined();
+		expect(getRequestAuthority({ headers: { host: "   " } })).toBeUndefined();
 	});
 });
 
