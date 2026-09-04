@@ -3,7 +3,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli-shared-helpers";
-import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import {
+	deployContainers,
+	initContainersSharedContext,
+	pushBuiltContainerImage,
+} from "@cloudflare/containers-shared";
 import {
 	APIError,
 	formatTime,
@@ -74,10 +78,7 @@ import type {
 	Percentage,
 	VersionId,
 } from "./helpers/versions-types";
-import type {
-	ContainerNormalizedConfig,
-	ImageURIConfig,
-} from "@cloudflare/containers-shared";
+import type { ResolvedContainerDeployment } from "@cloudflare/containers-shared";
 import type {
 	CfModule,
 	CfWorkerInit,
@@ -91,7 +92,7 @@ import type { FormData } from "undici";
 /**
  * Wrangler-specific functions injected into `deploy()`. These remain in
  * wrangler because they depend on wrangler-only systems (account selection,
- * metrics, the dev-mode worker registry, container orchestration, etc.).
+ * metrics, the dev-mode worker registry, etc.).
  */
 export type DeployCallbacks = {
 	syncWorkersSite:
@@ -107,31 +108,6 @@ export type DeployCallbacks = {
 				manifest: { [filePath: string]: string } | undefined;
 				namespace: string | undefined;
 		  }>)
-		| undefined;
-	getNormalizedContainerOptions:
-		| ((
-				config: Config,
-				args: {
-					containersRollout?: "gradual" | "immediate" | "none";
-					dryRun?: boolean;
-				}
-		  ) => Promise<ContainerNormalizedConfig[]>)
-		| undefined;
-	buildContainer:
-		| ((
-				containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
-				imageTag: string,
-				dryRun: boolean,
-				pathToDocker: string,
-				verifyDockerIsRunning: boolean
-		  ) => Promise<unknown>)
-		| undefined;
-	deployContainers:
-		| ((
-				config: Config,
-				normalisedContainerConfig: ContainerNormalizedConfig[],
-				args: { versionId: string; accountId: string; scriptName: string }
-		  ) => Promise<void>)
 		| undefined;
 	analyseBundle:
 		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
@@ -227,9 +203,10 @@ async function deployWorker(
 
 	const isDryRun = props.dryRun;
 
-	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
-		? await callbacks.getNormalizedContainerOptions(config, props)
-		: [];
+	const normalisedContainerConfig = props.normalisedContainerConfig;
+	const builtContainerDeployments = props.builtContainerDeployments;
+	const shouldDeployContainers =
+		normalisedContainerConfig.length > 0 && props.containersRollout !== "none";
 	const {
 		modules,
 		dependencies,
@@ -401,47 +378,7 @@ async function deployWorker(
 	let workerBundle: FormData;
 	const dockerPath = getDockerPath();
 
-	// lets fail earlier in the case where docker isn't installed
-	// and we have containers so that we don't get into a
-	// disjointed state where the worker updates but the container
-	// fails.
-	if (normalisedContainerConfig.length && props.containersRollout !== "none") {
-		// if you have a registry url specified, you don't need docker
-		const containersWithDockerfile = normalisedContainerConfig.filter(
-			(container) => "dockerfile" in container
-		);
-		if (containersWithDockerfile.length > 0) {
-			await verifyDockerInstalled({
-				dockerPath,
-				operation: `deploying${isDryRun ? " (even in dry-run mode)" : ""}`,
-				imageNoun:
-					containersWithDockerfile.length !== 1
-						? "the configured images"
-						: "the configured image",
-				hint: "If you cannot run Docker locally, you can still deploy your Worker by passing --containers-rollout=none. This will not deploy or update your Container.",
-			});
-		}
-	}
-
 	if (isDryRun) {
-		if (normalisedContainerConfig.length) {
-			for (const container of normalisedContainerConfig) {
-				if (
-					"dockerfile" in container &&
-					props.containersRollout !== "none" &&
-					callbacks.buildContainer
-				) {
-					await callbacks.buildContainer(
-						container,
-						workerTag ?? "worker-tag",
-						isDryRun,
-						dockerPath,
-						false
-					);
-				}
-			}
-		}
-
 		workerBundle = createWorkerUploadForm(
 			worker,
 			addWorkersSitesBindings(
@@ -767,13 +704,37 @@ async function deployWorker(
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
-	if (
-		normalisedContainerConfig.length &&
-		props.containersRollout !== "none" &&
-		callbacks.deployContainers
-	) {
+	if (shouldDeployContainers) {
 		assert(versionId && accountId);
-		await callbacks.deployContainers(config, normalisedContainerConfig, {
+		initContainersSharedContext({ logger, fetchResult });
+		const containerDeployments: ResolvedContainerDeployment[] = [];
+		for (const container of normalisedContainerConfig) {
+			if ("dockerfile" in container) {
+				const builtContainerDeployment = builtContainerDeployments.find(
+					(deployment) => deployment.container === container
+				);
+				assert(
+					builtContainerDeployment,
+					"Expected container image to be built before upload"
+				);
+				containerDeployments.push({
+					container,
+					imageRef: await pushBuiltContainerImage(
+						builtContainerDeployment.builtImage,
+						versionId,
+						dockerPath,
+						accountId,
+						config
+					),
+				});
+			} else {
+				containerDeployments.push({
+					container,
+					imageRef: { newTag: container.image_uri },
+				});
+			}
+		}
+		await deployContainers(config, containerDeployments, {
 			versionId,
 			accountId,
 			scriptName,

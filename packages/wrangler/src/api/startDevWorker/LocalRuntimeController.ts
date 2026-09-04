@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
 	cleanupContainers,
 	getDevContainerImageName,
+	initContainersSharedContext,
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
@@ -15,11 +16,12 @@ import {
 	Miniflare,
 	Mutex,
 } from "miniflare";
+import { fetchResult } from "../../cfetch";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { getBinaryFileContents } from "./utils";
+import { getBinaryFileContents, unwrapHook } from "./utils";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
@@ -234,6 +236,19 @@ export async function convertToConfigBundle(
 	};
 }
 
+export async function getContainerImagePullAccountId(
+	config: StartDevWorkerOptions,
+	containerDevOptions: ContainerDevOptions[]
+): Promise<string | undefined> {
+	// If you have a registry URL specified, you don't need Docker, but pulling
+	// containers still needs the API client configured with an account so it can
+	// request the correct image pull permissions from Cloudchamber.
+	if (!containerDevOptions.some((container) => "image_uri" in container)) {
+		return undefined;
+	}
+	return (await unwrapHook(config.dev.auth))?.accountId;
+}
+
 export class LocalRuntimeController extends RuntimeController {
 	#log = MF.buildLog();
 	#currentBundleId = 0;
@@ -373,6 +388,7 @@ export class LocalRuntimeController extends RuntimeController {
 					this.containerImageTagsSeen.add(container.image_tag);
 				}
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
+				initContainersSharedContext({ logger, fetchResult });
 				await prepareContainerImagesForDev({
 					dockerPath: this.dockerPath,
 					containerOptions: containerDevOptions,
@@ -386,6 +402,10 @@ export class LocalRuntimeController extends RuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
+					accountId: await getContainerImagePullAccountId(
+						data.config,
+						containerDevOptions
+					),
 					complianceConfig: {
 						compliance_region: data.config.complianceRegion,
 					},

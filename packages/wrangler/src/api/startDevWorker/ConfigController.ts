@@ -13,9 +13,7 @@ import {
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
-import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig, readNewConfig } from "../../config";
-import { containersScope } from "../../containers";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
@@ -495,16 +493,6 @@ async function resolveConfig(
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583"
 		);
-	}
-
-	// for pulling containers, we need to make sure the OpenAPI config for the
-	// container API client is properly set so that we can get the correct permissions
-	// from the cloudchamber API to pull from the repository.
-	const needsPulling = resolved.containers.some(
-		(c) => "image_uri" in c && c.image_uri
-	);
-	if (needsPulling && !resolved.dev.remote) {
-		await fillOpenAPIConfiguration(config, containersScope);
 	}
 
 	// TODO(queues) support remote wrangler dev

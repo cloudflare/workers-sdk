@@ -19,47 +19,31 @@ import {
 	dim,
 	green,
 } from "@cloudflare/cli-shared-helpers/colors";
+import { formatConfigSnippet } from "@cloudflare/workers-utils";
+import { FatalError, UserError } from "@cloudflare/workers-utils/errors";
 import {
 	ApiError,
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
-	resolveImageName,
 	RolloutsService,
-} from "@cloudflare/containers-shared";
-import {
-	APIError,
-	FatalError,
-	formatConfigSnippet,
-	getDockerPath,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
-import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
-import { buildContainer } from "../containers/build";
-import { getOrSelectAccountId } from "../user";
-import { Diff } from "../utils/diff";
-import {
-	sortObjectRecursive,
-	stripUndefined,
-} from "../utils/sortObjectRecursive";
-import { fetchVersion } from "../versions/api";
-import { containersScope } from ".";
-import type { ImageRef } from "../cloudchamber/build";
-import type { ApiVersion } from "../versions/types";
+} from "./client";
+import { fetchResult } from "./context";
+import { Diff } from "./diff";
+import { resolveImageName } from "./images";
+import { inferInstanceType } from "./limits";
+import { sortObjectRecursive, stripUndefined } from "./object";
+import { promiseSpinner } from "./spinner";
+import type { ImageRef } from "./build";
 import type {
 	Application,
 	ApplicationID,
 	ApplicationName,
-	ContainerNormalizedConfig,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 	Observability as ObservabilityConfiguration,
 	RolloutStepRequest,
-} from "@cloudflare/containers-shared";
+} from "./client";
+import type { ContainerNormalizedConfig } from "./types";
 import type {
 	ComplianceConfig,
 	Config,
@@ -73,36 +57,44 @@ type DeployContainersArgs = {
 	scriptName: string;
 };
 
+export type ResolvedContainerDeployment = {
+	container: ContainerNormalizedConfig;
+	imageRef: ImageRef;
+};
+
+type ApiVersion = {
+	resources: {
+		bindings: WorkerMetadataBinding[];
+	};
+};
+
+export type DurableObjectNamespace = {
+	id: string;
+	class: string;
+	name: string;
+	script: string;
+	useSqlite: boolean;
+	/**
+	 * Set when the namespace belongs to a Worker preview. For those, `script` is
+	 * the parent Worker's name, so `preview.id` is what distinguishes a
+	 * preview's namespace from the parent's and from other previews'.
+	 */
+	preview?: { id: string; slug: string; name: string };
+};
+
 export async function deployContainers(
 	config: Config,
-	normalisedContainerConfig: ContainerNormalizedConfig[],
+	containerDeployments: ResolvedContainerDeployment[],
 	{ versionId, accountId, scriptName }: DeployContainersArgs
 ) {
-	await fillOpenAPIConfiguration(config, containersScope);
-
-	const pathToDocker = getDockerPath();
 	const boundDOs = new Set(
 		config.durable_objects.bindings.map((b) => b.class_name)
 	);
 
-	let imageRef: ImageRef;
 	let maybeVersionInfo: ApiVersion | undefined;
 	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
 
-	for (const container of normalisedContainerConfig) {
-		if ("dockerfile" in container) {
-			imageRef = await buildContainer(
-				container,
-				versionId,
-				false, // dry runs will have already exited by this point
-				pathToDocker,
-				false,
-				config
-			);
-		} else {
-			imageRef = { newTag: container.image_uri };
-		}
-
+	for (const { container, imageRef } of containerDeployments) {
 		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
 		if (boundDOs.has(container.class_name)) {
 			maybeVersionInfo ??= await fetchUploadedVersion(
@@ -143,7 +135,8 @@ export async function deployContainers(
 					durable_object_namespace_id: targetDurableObject.namespace_id,
 				},
 				container,
-				config
+				config,
+				accountId
 			);
 		} else {
 			// The DO is unbound, so we need to list all DO namespaces to find the right one
@@ -162,7 +155,8 @@ export async function deployContainers(
 					durable_object_namespace_id: targetDurableObject.id,
 				},
 				container,
-				config
+				config,
+				accountId
 			);
 		}
 	}
@@ -176,13 +170,12 @@ async function fetchUploadedVersion(
 ): Promise<ApiVersion> {
 	for (let attempt = 0; attempt < 5; attempt++) {
 		try {
-			return await fetchVersion(config, accountId, scriptName, versionId);
+			return await fetchResult<ApiVersion>(
+				config,
+				`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
+			);
 		} catch (error) {
-			if (
-				!(error instanceof APIError) ||
-				error.code !== 100146 ||
-				attempt === 4
-			) {
+			if (!isUploadedVersionNotReadyError(error) || attempt === 4) {
 				throw error;
 			}
 			await setTimeout(500);
@@ -191,19 +184,14 @@ async function fetchUploadedVersion(
 	throw new Error("Unable to fetch uploaded Worker version");
 }
 
-export type DurableObjectNamespace = {
-	id: string;
-	class: string;
-	name: string;
-	script: string;
-	useSqlite: boolean;
-	/**
-	 * Set when the namespace belongs to a Worker preview. For those, `script` is
-	 * the parent Worker's name, so `preview.id` is what distinguishes a
-	 * preview's namespace from the parent's and from other previews'.
-	 */
-	preview?: { id: string; slug: string; name: string };
-};
+function isUploadedVersionNotReadyError(error: unknown): boolean {
+	return (
+		error instanceof Error &&
+		"code" in error &&
+		(error as { code?: unknown }).code === 100146
+	);
+}
+
 export async function listDurableObjects(
 	complianceConfig: ComplianceConfig,
 	accountId: string
@@ -375,17 +363,16 @@ function formatContainerSnippetForDisplay<
 					])
 				);
 
-	return formatConfigSnippet(
-		{
-			containers: [
-				{
-					...container,
-					configuration: configurationForDisplay,
-				} as unknown as ContainerApp,
-			],
-		},
-		configPath
-	);
+	const snippet = {
+		containers: [
+			{
+				...container,
+				configuration: configurationForDisplay,
+			} as unknown as ContainerApp,
+		],
+	};
+
+	return formatConfigSnippet(snippet, configPath);
 }
 
 export async function apply(
@@ -394,7 +381,8 @@ export async function apply(
 		durable_object_namespace_id: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
-	config: Config
+	config: Config,
+	accountId: string
 ) {
 	if (!config.containers || config.containers.length === 0) {
 		return;
@@ -420,8 +408,6 @@ export async function apply(
 			? args.imageRef.remoteDigest
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
-
-	const accountId = await getOrSelectAccountId(config);
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody

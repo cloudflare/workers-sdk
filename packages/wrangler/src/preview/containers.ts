@@ -1,14 +1,33 @@
 import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
-import { getDockerPath, UserError } from "@cloudflare/workers-utils";
+import {
+	buildContainerImages,
+	initContainersSharedContext,
+	verifyDockerInstalled,
+} from "@cloudflare/containers-shared";
+import {
+	getPreviewOwnedContainerClassNames,
+	previewContainerAppName,
+} from "@cloudflare/deploy-helpers";
+import {
+	configFileName,
+	getDockerPath,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
-import { buildContainer } from "../containers/build";
-import { apply, listDurableObjects } from "../containers/deploy";
-import { runWithLogLevel } from "../logger";
-import type { DurableObjectNamespace } from "../containers/deploy";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
-import type { DeploymentResource } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import { getNormalizedContainerOptions } from "../containers/config";
+import { logger, runWithLogLevel } from "../logger";
+import type {
+	BuiltContainerDeployment,
+	ContainerNormalizedConfig,
+} from "@cloudflare/containers-shared";
+import type { PreviewContainerPreparation } from "@cloudflare/deploy-helpers";
+import type {
+	Config,
+	ContainerApp,
+	PreviewsConfig,
+} from "@cloudflare/workers-utils";
 
 /**
  * Confirm the API token carries the `containers` scope. `applyPreviewContainers`
@@ -22,32 +41,197 @@ export async function verifyContainersScope(
 }
 
 /**
- * Build and apply the container applications validated by
- * `@cloudflare/deploy-helpers`'s `preview()` (via `getNormalizedContainerOptions`).
- * For each normalised container, register or update a Cloudchamber
- * application bound to the DO namespace_id resolved by the preview
- * deployment API.
+ * Validate and normalise container config, and confirm Docker is installed for
+ * any container built from a Dockerfile. Called before the preview deployment is
+ * created, so a bad config or a missing Docker install fails before the preview
+ * goes live, rather than leaving a preview running that advertises containers
+ * nothing ever built.
  *
- * The DO namespace for a preview is provisioned by the workers control plane.
- * For a bound Durable Object it comes back in the create-deployment response,
- * so we read it from `deployment.env` rather than re-fetching. A Durable Object
- * reached only through `ctx.exports` has no binding to carry it, so those fall
- * back to the namespaces list API.
+ * Returns an empty `normalisedContainerConfig` when there's nothing to deploy,
+ * whether because `previews.containers` is empty or every entry resolves to a
+ * cross-script DO binding owned by another Worker. Throws if an entry's
+ * `class_name` matches no DO binding in `previews.durable_objects`.
  */
-export async function deployPreviewContainers(
-	scopedConfig: Config,
-	normalisedContainerConfig: ContainerNormalizedConfig[],
-	deployment: DeploymentResource,
-	accountId: string,
+export async function preparePreviewContainers(
+	config: Config,
+	workerName: string,
+	previewSlug: string,
 	options: { quiet: boolean }
-): Promise<void> {
-	if (!options.quiet) {
-		return applyPreviewContainers(
-			scopedConfig,
-			normalisedContainerConfig,
-			deployment,
-			accountId
+): Promise<PreviewContainerPreparation> {
+	initContainersSharedContext({
+		logger,
+		fetchResult,
+	});
+
+	return runPreviewContainerOperation(options, async () => {
+		const previewContainers =
+			(config.previews as PreviewsConfig | undefined)?.containers ?? [];
+		if (previewContainers.length === 0) {
+			return emptyPreviewContainerPreparation();
+		}
+
+		const scopedContainerConfig = buildPreviewContainerConfig(
+			config,
+			workerName,
+			previewSlug,
+			previewContainers
 		);
+		if (!scopedContainerConfig) {
+			return emptyPreviewContainerPreparation();
+		}
+
+		const normalisedContainerConfig = await getNormalizedContainerOptions(
+			scopedContainerConfig,
+			{ dryRun: false }
+		);
+
+		const containersNeedingDocker = normalisedContainerConfig.filter(
+			(container) => "dockerfile" in container
+		);
+		if (containersNeedingDocker.length > 0) {
+			const dockerPath = getDockerPath();
+			await verifyDockerInstalled({
+				dockerPath,
+				operation: "creating a preview",
+				imageNoun:
+					containersNeedingDocker.length !== 1
+						? "the configured images"
+						: "the configured image",
+				hint: 'If you cannot run Docker locally, set "image" to a prebuilt registry image instead of a Dockerfile path for the affected entries in "previews.containers".',
+			});
+
+			// Applying containers checks the token's scope as well, but only after
+			// the deployment exists. Checking it here stops a badly scoped token from
+			// leaving a live preview that advertises containers nothing ever built.
+			await verifyContainersScope(scopedContainerConfig);
+
+			return {
+				scopedContainerConfig,
+				normalisedContainerConfig,
+				builtContainerDeployments: await buildContainerImages(
+					normalisedContainerConfig,
+					dockerPath,
+					false
+				),
+			};
+		}
+
+		await verifyContainersScope(scopedContainerConfig);
+		return {
+			scopedContainerConfig,
+			normalisedContainerConfig,
+			builtContainerDeployments: [],
+		};
+	});
+}
+
+function emptyPreviewContainerPreparation(): PreviewContainerPreparation {
+	return {
+		scopedContainerConfig: undefined,
+		normalisedContainerConfig: [],
+		builtContainerDeployments: [],
+	};
+}
+
+/**
+ * Construct a synthetic `Config` for the preview's containers, so we can reuse
+ * the standard Wrangler container config normalisation. Containers come from
+ * `previews.containers`, defaulting each unnamed entry to a generated
+ * application name, and DO bindings come from `previews.durable_objects`.
+ */
+function buildPreviewContainerConfig(
+	config: Config,
+	parentWorkerName: string,
+	previewSlug: string,
+	previewContainers: ContainerApp[]
+): Config | undefined {
+	const previews = config.previews as PreviewsConfig | undefined;
+	const previewDOBindings = previews?.durable_objects?.bindings ?? [];
+	const ownedDOClasses = getPreviewOwnedContainerClassNames(config, previews);
+
+	const linkedContainers = previewContainers.map((container) => {
+		const className = container.class_name;
+		if (className === undefined) {
+			// A preview container has to name its Durable Object class itself. The
+			// other direction of the link, a Durable Object naming its container
+			// through `exports[Class].container`, resolves against the top-level
+			// `containers` array, so it can only ever reach a container this preview
+			// does not own.
+			throw new UserError(
+				`A container entry in "previews.containers" is missing "class_name". A preview container must name the Durable Object class it backs, even where a Durable Object declared in "exports" names its container instead.`,
+				{
+					telemetryMessage: "preview container missing class_name",
+				}
+			);
+		}
+		return { container, className };
+	});
+
+	for (const { className } of linkedContainers) {
+		if (
+			ownedDOClasses.has(className) ||
+			previewDOBindings.some((b) => b.class_name === className)
+		) {
+			continue;
+		}
+		// A container whose class matches no Durable Object at all is a
+		// misconfiguration, almost always a typo, and silently dropping it would
+		// hand back a preview with no container and no explanation, so reject it
+		// here, before the preview deployment is created.
+		throw new UserError(
+			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
+			{
+				telemetryMessage: "no preview DO class matches container class_name",
+			}
+		);
+	}
+
+	// A class that matches only a binding carrying `script_name` is excluded
+	// rather than rejected: that DO is implemented by another Worker, which owns
+	// its own container application.
+	const filteredContainers = linkedContainers
+		.filter(({ className }) => ownedDOClasses.has(className))
+		.map(({ container, className }) => ({
+			...container,
+			name: previewContainerAppName(parentWorkerName, previewSlug, className),
+		}));
+
+	if (filteredContainers.length === 0) {
+		return undefined;
+	}
+
+	// `getNormalizedContainerOptions` resolves a container's Durable Object with
+	// `find()` on `class_name`, and rejects the container outright if that first
+	// match carries `script_name`. A class bound both locally and cross-script
+	// would then fail as though another Worker owned it, purely because of
+	// binding order. Put the locally implemented bindings first so the lookup
+	// lands on the one this preview owns.
+	const localBindingsFirst = [
+		...previewDOBindings.filter((b) => b.script_name === undefined),
+		...previewDOBindings.filter((b) => b.script_name !== undefined),
+	];
+
+	// `observability` is carried over because a container application has its own
+	// observability setting, which `getNormalizedContainerOptions` reads from the
+	// config it is given. The container path does not read `logpush`, `limits`, or
+	// `cache`, so overlaying those here would have no effect.
+	const observability = previews?.observability ?? config.observability;
+	return {
+		...config,
+		containers: filteredContainers,
+		durable_objects: {
+			bindings: localBindingsFirst,
+		},
+		observability,
+	};
+}
+
+async function runPreviewContainerOperation<T>(
+	options: { quiet: boolean },
+	operation: () => Promise<T>
+): Promise<T> {
+	if (!options.quiet) {
+		return operation();
 	}
 
 	// Two independent log levels gate stdout here. `logger` reads an
@@ -59,112 +243,8 @@ export async function deployPreviewContainers(
 	const previousLogLevel = getLogLevel();
 	setLogLevel("error");
 	try {
-		return await runWithLogLevel("warn", () =>
-			applyPreviewContainers(
-				scopedConfig,
-				normalisedContainerConfig,
-				deployment,
-				accountId
-			)
-		);
+		return await runWithLogLevel("warn", operation);
 	} finally {
 		setLogLevel(previousLogLevel);
-	}
-}
-
-/**
- * Resolve each normalised container's Durable Object namespace and build then
- * apply its Cloudchamber application.
- *
- * @param scopedConfig - Synthetic config scoped to the preview's containers.
- * @param normalisedContainerConfig - Containers to build and apply.
- * @param deployment - The preview deployment the containers belong to.
- * @param accountId - Account the preview belongs to.
- * @returns A promise that resolves once every container has been applied.
- */
-async function applyPreviewContainers(
-	scopedConfig: Config,
-	normalisedContainerConfig: ContainerNormalizedConfig[],
-	deployment: DeploymentResource,
-	accountId: string
-): Promise<void> {
-	await fillOpenAPIConfiguration(scopedConfig, containersScope);
-	const dockerPath = getDockerPath();
-
-	// Skip bindings carrying `script_name`. Those name a Durable Object
-	// implemented by another Worker, which owns its own container application,
-	// so their namespace belongs to that Worker. A preview may bind the same
-	// class name both locally and cross-script, and since this map is keyed on
-	// class name alone, an unfiltered cross-script entry could overwrite the
-	// preview's own namespace_id and attach the container to the wrong storage.
-	// `wrangler deploy` applies the same restriction (see containers/deploy.ts).
-	const classNameToNamespaceId = new Map<string, string>();
-	for (const binding of Object.values(deployment.env ?? {})) {
-		if (
-			binding.type === "durable_object_namespace" &&
-			binding.class_name &&
-			binding.namespace_id &&
-			binding.script_name === undefined
-		) {
-			classNameToNamespaceId.set(binding.class_name, binding.namespace_id);
-		}
-	}
-
-	// Only bound Durable Objects appear in `deployment.env`. A class reached
-	// solely through `ctx.exports` still has a namespace provisioned for the
-	// preview, so fall back to the namespaces list and match on it, the same way
-	// `wrangler deploy` resolves an unbound Durable Object.
-	let allNamespaces: DurableObjectNamespace[] | undefined;
-
-	for (const container of normalisedContainerConfig) {
-		let namespaceId = classNameToNamespaceId.get(container.class_name);
-		if (!namespaceId) {
-			allNamespaces ??= await listDurableObjects(scopedConfig, accountId);
-			// `script` is the parent Worker's name for every one of its previews,
-			// so match on the preview id to avoid attaching this container to the
-			// parent's namespace or to another preview's.
-			namespaceId = allNamespaces.find(
-				(namespace) =>
-					namespace.class === container.class_name &&
-					namespace.preview?.id === deployment.preview_id
-			)?.id;
-		}
-		if (!namespaceId) {
-			throw new UserError(
-				`Could not deploy preview container application "${container.name}": no Durable Object namespace was found for class "${container.class_name}" in preview "${deployment.preview_name}". This is likely a bug in Wrangler. Please file an issue.`,
-				{
-					telemetryMessage: "preview containers deploy missing do namespace id",
-				}
-			);
-		}
-
-		let imageRef;
-		if ("dockerfile" in container) {
-			// Docker rejects uppercase characters in an image repository name, and
-			// a preview application name embeds the Durable Object class name
-			// verbatim, which is conventionally PascalCase. Lowercase the name for
-			// the local image tag only. `apply` below needs the exact application
-			// name, which the control plane matches on when reconciling previews.
-			imageRef = await buildContainer(
-				{ ...container, name: container.name.toLowerCase() },
-				deployment.id,
-				false,
-				dockerPath,
-				// `preview()` already verified Docker before creating the
-				// deployment, so skip the redundant per-container check.
-				false,
-				// Selects the managed registry for the account's compliance
-				// region. Without it the push defaults to the public registry.
-				scopedConfig
-			);
-		} else {
-			imageRef = { newTag: container.image_uri };
-		}
-
-		await apply(
-			{ imageRef, durable_object_namespace_id: namespaceId },
-			container,
-			scopedConfig
-		);
 	}
 }

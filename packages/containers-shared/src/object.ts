@@ -1,5 +1,5 @@
 /**
- * Removes from the object every undefined property
+ * Removes from the object every undefined property.
  */
 export function stripUndefined<T = Record<string, unknown>>(r: T): T {
 	for (const k in r) {

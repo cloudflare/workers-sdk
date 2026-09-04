@@ -1,37 +1,57 @@
 import path from "node:path";
 import {
-	configureOpenAPIForContainerPull,
 	getDevContainerImageName,
+	initContainersSharedContext,
 } from "@cloudflare/containers-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getCloudflareApiBaseUrl,
+	fetchResultBase,
 	isDockerfile,
 	resolveContainerClassName,
 } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
 
 /**
- * Configures the Containers API client used to retrieve image pull credentials.
+ * Configures the Containers shared context used to retrieve image pull credentials.
  *
- * @param accountId - Cloudflare account ID that owns the managed registry.
  * @param apiToken - API token used to request registry credentials.
- * @param complianceConfig - Compliance configuration used to select the API endpoint.
+ * @param logger - Logger used for API request logging.
  * @returns No value.
  */
 export function configureContainerPull(
-	accountId: string,
 	apiToken: string,
-	complianceConfig?: ComplianceConfig
+	logger: Pick<Logger, "info" | "warn" | "error">
 ): void {
-	configureOpenAPIForContainerPull(
-		accountId,
-		apiToken,
-		getCloudflareApiBaseUrl(
-			complianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN
-		)
-	);
+	const containersLogger = {
+		debug: () => {},
+		debugWithSanitization: () => {},
+		log: logger.info.bind(logger),
+		info: logger.info.bind(logger),
+		warn: logger.warn.bind(logger),
+		error: logger.error.bind(logger),
+	} satisfies Logger;
+
+	const fetchResult: FetchResultFetcher = async (
+		requestComplianceConfig,
+		resource,
+		init,
+		queryParams,
+		abortSignal
+	) => {
+		return await fetchResultBase(
+			requestComplianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			resource,
+			init,
+			"@cloudflare/vite-plugin",
+			containersLogger,
+			queryParams,
+			abortSignal,
+			{ apiToken }
+		);
+	};
+
+	initContainersSharedContext({ logger: containersLogger, fetchResult });
 }
 
 /**
