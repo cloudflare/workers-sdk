@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { stripVTControlCharacters } from "node:util";
@@ -301,6 +302,10 @@ for (const source of imageSource) {
 		it.runIf(source === "build")(
 			"supports named Durable Object-managed Container images",
 			async ({ expect }) => {
+				const originalWorkerSource = readFileSync(
+					path.join(helper.tmpPath, "src/index.ts"),
+					"utf8"
+				);
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						name: workerName,
@@ -385,44 +390,47 @@ for (const source of imageSource) {
 				});
 
 				const worker = helper.runLongLived("wrangler dev");
-				// A cold Docker cache can require downloading the base image before
-				// Wrangler starts the local server.
-				const ready = await worker.waitForReady(90_000);
+				try {
+					// A cold Docker cache can require downloading the base image before
+					// Wrangler starts the local server.
+					const ready = await worker.waitForReady(90_000);
 
-				const oneStart = await fetch(`${ready.url}/start/one?instance=one`);
-				const oneImage = await oneStart.text();
-				expect(oneStart.status).toBe(200);
-				expect(oneImage).toMatch(
-					/^cloudflare-dev\/e2econtainer-one-[a-f0-9]{12}:/
-				);
+					const oneStart = await fetch(`${ready.url}/start/one?instance=one`);
+					const oneImage = await oneStart.text();
+					expect(oneStart.status).toBe(200);
+					expect(oneImage).toMatch(
+						/^cloudflare-dev\/e2econtainer-one-[a-f0-9]{12}:/
+					);
 
-				const twoStart = await fetch(`${ready.url}/start/two?instance=two`);
-				const twoImage = await twoStart.text();
-				expect(twoStart.status).toBe(200);
-				expect(twoImage).toMatch(
-					/^cloudflare-dev\/e2econtainer-two-[a-f0-9]{12}:/
-				);
-				expect(twoImage).not.toBe(oneImage);
+					const twoStart = await fetch(`${ready.url}/start/two?instance=two`);
+					const twoImage = await twoStart.text();
+					expect(twoStart.status).toBe(200);
+					expect(twoImage).toMatch(
+						/^cloudflare-dev\/e2econtainer-two-[a-f0-9]{12}:/
+					);
+					expect(twoImage).not.toBe(oneImage);
 
-				await waitForLong(async () => {
-					const response = await fetch(`${ready.url}/fetch?instance=one`, {
-						signal: AbortSignal.timeout(5_000),
-						headers: { "MF-Disable-Pretty-Error": "true" },
+					await waitForLong(async () => {
+						const response = await fetch(`${ready.url}/fetch?instance=one`, {
+							signal: AbortSignal.timeout(5_000),
+							headers: { "MF-Disable-Pretty-Error": "true" },
+						});
+						expect(response.status).toBe(200);
+						expect(await response.text()).toBe("one");
 					});
-					expect(response.status).toBe(200);
-					expect(await response.text()).toBe("one");
-				});
 
-				await waitForLong(async () => {
-					const response = await fetch(`${ready.url}/fetch?instance=two`, {
-						signal: AbortSignal.timeout(5_000),
-						headers: { "MF-Disable-Pretty-Error": "true" },
+					await waitForLong(async () => {
+						const response = await fetch(`${ready.url}/fetch?instance=two`, {
+							signal: AbortSignal.timeout(5_000),
+							headers: { "MF-Disable-Pretty-Error": "true" },
+						});
+						expect(response.status).toBe(200);
+						expect(await response.text()).toBe("two");
 					});
-					expect(response.status).toBe(200);
-					expect(await response.text()).toBe("two");
-				});
-
-				await worker.stop();
+				} finally {
+					await worker.stop();
+					await helper.seed({ "src/index.ts": originalWorkerSource });
+				}
 			}
 		);
 
