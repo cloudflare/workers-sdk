@@ -392,12 +392,16 @@ for (const source of imageSource) {
 				const oneStart = await fetch(`${ready.url}/start/one?instance=one`);
 				const oneImage = await oneStart.text();
 				expect(oneStart.status).toBe(200);
-				expect(oneImage).toMatch(/^cloudflare-dev\/e2econtainer-one:/);
+				expect(oneImage).toMatch(
+					/^cloudflare-dev\/e2econtainer-one-[a-f0-9]{12}:/
+				);
 
 				const twoStart = await fetch(`${ready.url}/start/two?instance=two`);
 				const twoImage = await twoStart.text();
 				expect(twoStart.status).toBe(200);
-				expect(twoImage).toMatch(/^cloudflare-dev\/e2econtainer-two:/);
+				expect(twoImage).toMatch(
+					/^cloudflare-dev\/e2econtainer-two-[a-f0-9]{12}:/
+				);
 				expect(twoImage).not.toBe(oneImage);
 
 				await waitForLong(async () => {

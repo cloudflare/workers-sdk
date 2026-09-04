@@ -1218,6 +1218,9 @@ describe("getNormalizedContainerOptions", () => {
 			},
 		];
 		const bindings = {};
+		const devOptions = getContainerDevOptions(containers, "build-id");
+		const minimalImage = devOptions[0].image_tag;
+		const toolboxImage = devOptions[1].image_tag;
 
 		addDurableObjectContainerImagesBinding(bindings, containers, "build-id");
 		expect(bindings).toEqual({
@@ -1225,17 +1228,23 @@ describe("getNormalizedContainerOptions", () => {
 				type: "json",
 				value: {
 					Sandbox: {
-						minimal: "cloudflare-dev/sandbox-minimal:build-id",
-						toolbox: "cloudflare-dev/sandbox-toolbox:build-id",
+						minimal: minimalImage,
+						toolbox: toolboxImage,
 					},
 				},
 			},
 		});
-		expect(getContainerDevOptions(containers, "build-id")).toEqual([
+		expect(minimalImage).toMatch(
+			/^cloudflare-dev\/sandbox-minimal-[a-f0-9]{12}:build-id$/
+		);
+		expect(toolboxImage).toMatch(
+			/^cloudflare-dev\/sandbox-toolbox-[a-f0-9]{12}:build-id$/
+		);
+		expect(devOptions).toEqual([
 			{
 				class_name: "Sandbox",
 				image_name: "minimal",
-				image_tag: "cloudflare-dev/sandbox-minimal:build-id",
+				image_tag: minimalImage,
 				dockerfile: "/minimal/Dockerfile",
 				image_build_context: "/minimal",
 				image_vars: undefined,
@@ -1243,14 +1252,43 @@ describe("getNormalizedContainerOptions", () => {
 			{
 				class_name: "Sandbox",
 				image_name: "toolbox",
-				image_tag: "cloudflare-dev/sandbox-toolbox:build-id",
+				image_tag: toolboxImage,
 				image_uri: "docker.io/library/alpine:latest",
 			},
 		]);
 		expect(
 			getDurableObjectContainerDefaultImageNames(containers, "build-id")
-		).toEqual(
-			new Map([["Sandbox", "cloudflare-dev/sandbox-minimal:build-id"]])
-		);
+		).toEqual(new Map([["Sandbox", minimalImage]]));
+	});
+
+	it("keeps local tags unique when named images have colliding slugs", ({
+		expect,
+	}) => {
+		const containers = ["Foo", "foo", "a/b", "a-b"].map((imageName) => ({
+			class_name: "Sandbox",
+			scheduling_policy: "durable_object" as const,
+			image_name: imageName,
+			image_uri: `example.com/${encodeURIComponent(imageName)}:latest`,
+		}));
+		const first = getContainerDevOptions(containers, "build-id");
+		const second = getContainerDevOptions(containers, "build-id");
+		const tags = first.map(({ image_tag }) => image_tag);
+
+		expect(new Set(tags).size).toBe(containers.length);
+		expect(second.map(({ image_tag }) => image_tag)).toEqual(tags);
+		expect(tags).toEqual([
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-foo-[a-f0-9]{12}:build-id$/
+			),
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-foo-[a-f0-9]{12}:build-id$/
+			),
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-a-b-[a-f0-9]{12}:build-id$/
+			),
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-a-b-[a-f0-9]{12}:build-id$/
+			),
+		]);
 	});
 });
