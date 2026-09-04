@@ -4,7 +4,15 @@ import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
-import { getNormalizedContainerOptions } from "../../containers/config";
+import {
+	getNormalizedContainerOptions,
+	getNormalizedContainerOptionsForDev,
+} from "../../containers/config";
+import {
+	addDurableObjectContainerImagesBinding,
+	getContainerDevOptions,
+	getDurableObjectContainerDefaultImageNames,
+} from "../../containers/dev";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -1110,5 +1118,139 @@ describe("getNormalizedContainerOptions", () => {
 					"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
 			},
 		]);
+	});
+
+	it("normalizes named Durable Object Container images for local development", async ({
+		expect,
+	}) => {
+		mkdirSync("containers/minimal", { recursive: true });
+		writeFileSync("containers/minimal/Dockerfile", "FROM scratch");
+		const config = {
+			name: "test-worker",
+			configPath: path.join(process.cwd(), "wrangler.jsonc"),
+			userConfigPath: path.join(process.cwd(), "wrangler.jsonc"),
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "Sandbox",
+					name: "sandbox",
+					scheduling_policy: "durable_object",
+					images: {
+						minimal: { dockerfile: "./containers/minimal/Dockerfile" },
+						toolbox: { image: "docker.io/library/alpine:latest" },
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [{ name: "SANDBOX", class_name: "Sandbox" }],
+			},
+			exports: {
+				Sandbox: { type: "durable-object", storage: "sqlite" },
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(getNormalizedContainerOptionsForDev(config)).resolves.toEqual([
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+				image_name: "minimal",
+				dockerfile: path.join(process.cwd(), "containers/minimal/Dockerfile"),
+				image_build_context: path.join(process.cwd(), "containers/minimal"),
+			},
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+				image_name: "toolbox",
+				image_uri: "docker.io/library/alpine:latest",
+			},
+		]);
+	});
+
+	it("keeps an image-less Durable Object Container attached in local development", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: path.join(process.cwd(), "wrangler.jsonc"),
+			userConfigPath: path.join(process.cwd(), "wrangler.jsonc"),
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "Sandbox",
+					name: "sandbox",
+					scheduling_policy: "durable_object",
+				},
+			],
+			durable_objects: {
+				bindings: [{ name: "SANDBOX", class_name: "Sandbox" }],
+			},
+			exports: {
+				Sandbox: { type: "durable-object", storage: "sqlite" },
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(getNormalizedContainerOptionsForDev(config)).resolves.toEqual([
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+			},
+		]);
+	});
+
+	it("builds distinct local tags and exposes the named image binding", ({
+		expect,
+	}) => {
+		const containers = [
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object" as const,
+				image_name: "minimal",
+				dockerfile: "/minimal/Dockerfile",
+				image_build_context: "/minimal",
+			},
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object" as const,
+				image_name: "toolbox",
+				image_uri: "docker.io/library/alpine:latest",
+			},
+		];
+		const bindings = {};
+
+		addDurableObjectContainerImagesBinding(bindings, containers, "build-id");
+		expect(bindings).toEqual({
+			EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: {
+				type: "json",
+				value: {
+					Sandbox: {
+						minimal: "cloudflare-dev/sandbox-minimal:build-id",
+						toolbox: "cloudflare-dev/sandbox-toolbox:build-id",
+					},
+				},
+			},
+		});
+		expect(getContainerDevOptions(containers, "build-id")).toEqual([
+			{
+				class_name: "Sandbox",
+				image_name: "minimal",
+				image_tag: "cloudflare-dev/sandbox-minimal:build-id",
+				dockerfile: "/minimal/Dockerfile",
+				image_build_context: "/minimal",
+				image_vars: undefined,
+			},
+			{
+				class_name: "Sandbox",
+				image_name: "toolbox",
+				image_tag: "cloudflare-dev/sandbox-toolbox:build-id",
+				image_uri: "docker.io/library/alpine:latest",
+			},
+		]);
+		expect(
+			getDurableObjectContainerDefaultImageNames(containers, "build-id")
+		).toEqual(
+			new Map([["Sandbox", "cloudflare-dev/sandbox-minimal:build-id"]])
+		);
 	});
 });

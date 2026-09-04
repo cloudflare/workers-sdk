@@ -17,6 +17,7 @@ import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
+	ContainerDevConfig,
 	ContainerNormalizedConfig,
 	InstanceTypeOrLimits,
 	SharedContainerConfig,
@@ -292,4 +293,61 @@ export const getNormalizedContainerOptions = async (
 	}
 
 	return normalizedContainers;
+};
+
+/**
+ * Normalize all images needed by local development.
+ *
+ * Deployment handles Durable Object-managed Container images separately. For
+ * local development we flatten their named image map so every image can be
+ * built or pulled and addressed by a deterministic local Docker tag.
+ */
+export const getNormalizedContainerOptionsForDev = async (
+	config: Config
+): Promise<ContainerDevConfig[]> => {
+	const normalized: ContainerDevConfig[] = await getNormalizedContainerOptions(
+		config,
+		{}
+	);
+	const baseDir = config.configPath
+		? path.dirname(config.configPath)
+		: process.cwd();
+
+	for (const container of getDurableObjectContainerApps(config.containers)) {
+		const images = Object.entries(container.images ?? {});
+		if (images.length === 0) {
+			normalized.push({
+				class_name: container.class_name,
+				scheduling_policy: "durable_object",
+			});
+			continue;
+		}
+
+		for (const [imageName, image] of images) {
+			const shared = {
+				class_name: container.class_name,
+				scheduling_policy: "durable_object" as const,
+				image_name: imageName,
+			};
+			if (image.dockerfile !== undefined) {
+				const dockerfile = path.resolve(baseDir, image.dockerfile);
+				normalized.push({
+					...shared,
+					dockerfile,
+					image_build_context: dirname(dockerfile),
+				});
+			} else {
+				normalized.push({
+					...shared,
+					image_uri: resolveImageName(
+						await getOrSelectAccountId(config),
+						image.image,
+						config
+					),
+				});
+			}
+		}
+	}
+
+	return normalized;
 };
