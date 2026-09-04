@@ -6,10 +6,9 @@ import {
 	openDebugPortClient,
 	resolveSharedStorageOwner,
 	resolveTarget,
-	tailEventsReplacer,
-	tailEventsReviver,
 	workerNotFoundMessage,
 } from "./dev-registry-proxy-shared.worker";
+import { tailEventsReplacer, tailEventsReviver } from "./tail-events";
 import type {
 	RegistryEntry,
 	WorkerdDebugPortConnector,
