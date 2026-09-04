@@ -3629,10 +3629,9 @@ test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 // with a shebang, directly as the replacement `workerd` binary, which won't
 // work on Windows.
 const isWindows = process.platform === "win32";
-const unixSerialTest = isWindows ? test.skip : test;
+const unixSerialTest = isWindows ? test.skip : test.sequential;
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
-	{ concurrent: false },
 	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
 
@@ -3673,7 +3672,6 @@ unixSerialTest(
 // See https://github.com/cloudflare/workers-sdk/issues/14077
 unixSerialTest(
 	"Miniflare: throws ERR_RUNTIME_FAILURE when workerd exits before all sockets are ready",
-	{ concurrent: false },
 	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "crashing-workerd.mjs");
 
@@ -3716,33 +3714,31 @@ const TIMEZONE_WORKER = `
 	}
 `;
 
-test(
-	"Miniflare: workerd subprocess defaults to TZ=UTC to match production",
-	{ concurrent: false },
-	async ({ expect }) => {
-		// Deliberately set the host TZ to a non-UTC value, otherwise the test
-		// would falsely pass: the test-runner's vitest globalSetup already sets
-		// `process.env.TZ = "UTC"`, which would propagate to workerd via the
-		// inherited `process.env`.
-		vi.stubEnv("TZ", "America/Chicago");
-		const mf = new Miniflare({
-			workers: [
-				{
-					config: {
-						type: "worker",
-						name: "",
-						compatibilityDate: "2025-05-01",
-						manifest: singleModuleManifest(TIMEZONE_WORKER),
-					},
+test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match production", async ({
+	expect,
+}) => {
+	// Deliberately set the host TZ to a non-UTC value, otherwise the test
+	// would falsely pass: the test-runner's vitest globalSetup already sets
+	// `process.env.TZ = "UTC"`, which would propagate to workerd via the
+	// inherited `process.env`.
+	vi.stubEnv("TZ", "America/Chicago");
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(TIMEZONE_WORKER),
 				},
-			],
-		});
-		useDispose(mf);
+			},
+		],
+	});
+	useDispose(mf);
 
-		const res = await mf.dispatchFetch("http://localhost");
-		expect(await res.json()).toEqual({ tz: "UTC" });
-	}
-);
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.json()).toEqual({ tz: "UTC" });
+});
 
 // Skipped on Windows because workerd-on-Windows always reports `UTC` from
 // `Intl.DateTimeFormat().resolvedOptions().timeZone` regardless of the `TZ`
@@ -3753,7 +3749,6 @@ test(
 // platform-independent and exercised on macOS/Linux.
 unixSerialTest(
 	"Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env",
-	{ concurrent: false },
 	async ({ expect }) => {
 		vi.stubEnv("TZ", "UTC");
 

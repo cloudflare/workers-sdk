@@ -369,10 +369,11 @@ expect.extend({
 	},
 });
 
-interface CustomMatchers<R> {
-	toContainEntries: (expected: OutputEntry[]) => R;
+interface CustomMatchers {
+	toContainEntries: (expected: OutputEntry[]) => unknown;
 }
 
 declare module "vitest" {
-	interface Matchers<R, T> extends CustomMatchers<R> {}
+	interface Assertion extends CustomMatchers {}
+	interface AsymmetricMatchersContaining extends CustomMatchers {}
 }

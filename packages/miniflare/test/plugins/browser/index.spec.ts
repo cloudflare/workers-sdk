@@ -137,7 +137,7 @@ async function warmChromeInstall(): Promise<void> {
 }
 
 // We need to run browser rendering tests in a serial manner to avoid a race condition installing the browser.
-describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
+describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 	beforeAll(warmChromeInstall, CHROME_INSTALL_TIMEOUT);
 
 	// The CLI spinner outputs to stdout, so we mute it during tests

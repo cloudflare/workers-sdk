@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Response } from "miniflare";
@@ -52,6 +52,7 @@ async function handleSnapshotRequest(
 	return new Response(null, { status: 405 });
 }
 
+// Based on https://github.com/vitest-dev/vitest/blob/v5.0.0/packages/coverage-istanbul/src/commands.ts
 async function handleCoverageRequest(
 	request: Request,
 	url: URL
@@ -64,8 +65,7 @@ async function handleCoverageRequest(
 		return new Response(null, { status: 400 });
 	}
 
-	await fs.mkdir(directory, { recursive: true });
-	const filePath = path.join(directory, `coverage-${crypto.randomUUID()}.json`);
+	const filePath = path.join(directory, `coverage-${randomUUID()}.json`);
 	await fs.writeFile(filePath, new Uint8Array(await request.arrayBuffer()));
 	return new Response(filePath);
 }

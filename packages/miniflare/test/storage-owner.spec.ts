@@ -12,7 +12,7 @@ async function withIsolatedStorage(
 	};
 }
 
-describe("owner presence integration", { concurrent: false }, () => {
+describe.sequential("owner presence integration", () => {
 	it("requires persistence and a dev registry", ({ expect }) => {
 		const worker = {
 			config: {

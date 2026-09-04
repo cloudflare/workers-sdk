@@ -134,7 +134,7 @@ async function expectedHostAndZone(
 	return config;
 }
 
-describe("wrangler dev", { concurrent: false }, () => {
+describe.sequential("wrangler dev", () => {
 	let spy: MockInstance;
 	let setSpy: MockInstance;
 	const { setIsTTY } = useMockIsTTY();

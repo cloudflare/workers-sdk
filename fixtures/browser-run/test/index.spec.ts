@@ -12,7 +12,7 @@ const BROWSER_RENDERING_RETRY = {
 	},
 } satisfies TestOptions;
 
-describe("Local Browser", { concurrent: false }, () => {
+describe.sequential("Local Browser", () => {
 	let ip: string,
 		port: number,
 		stop: (() => Promise<unknown>) | undefined,

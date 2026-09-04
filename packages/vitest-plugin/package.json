@@ -77,7 +77,7 @@
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:vitest5"
 	},
 	"peerDependencies": {
 		"vitest": "^4.1.11 || ^5.0.0"

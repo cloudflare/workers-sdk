@@ -206,7 +206,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		ensurePatchedFunction(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		globalThis.__vitest_browser_runner__ = {
 			commands: {
-				triggerCommand: (command, args = []) => {
+				triggerCommand: (command, args) => {
 					assert.strictEqual(command, "__vitest_writeCoverageFile");
 					assert.strictEqual(args.length, 1);
 					return writeCoverageFile(

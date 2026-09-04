@@ -82,7 +82,7 @@ function createProducer(unsafeDevRegistryPath: string): Miniflare {
 	});
 }
 
-describe("cross-process queues", { concurrent: false }, () => {
+describe.sequential("cross-process queues", () => {
 	test("delivers a message to a consumer in another process", async ({
 		expect,
 	}) => {

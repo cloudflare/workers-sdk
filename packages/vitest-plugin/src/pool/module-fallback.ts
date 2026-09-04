@@ -56,6 +56,8 @@ function trimSuffix(suffix: string, value: string) {
  */
 const versionHashRegExp = /\?v=[0-9a-f]+$/;
 
+const vitestModuleEvaluatorPathSuffix = "/vitest/dist/module-evaluator.js";
+
 function trimViteVersionHash(filePath: string) {
 	return filePath.replace(versionHashRegExp, "");
 }
@@ -643,7 +645,9 @@ async function load(
 		// Respond with ES module
 		// Vitest 5 includes `import.meta.url` in diagnostic prose. Rewriting it
 		// would insert an unescaped string literal into the surrounding string.
-		if (!/[/\\]vitest[/\\]dist[/\\]module-evaluator\.js$/.test(filePath)) {
+		if (
+			!ensurePosixLikePath(filePath).endsWith(vitestModuleEvaluatorPathSuffix)
+		) {
 			contents = withImportMetaUrl(contents, targetUrl);
 		}
 		debuglog(logBase, "esm:", filePath);

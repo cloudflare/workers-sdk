@@ -16,7 +16,7 @@ import type {
 	WorkerRegistry,
 } from "miniflare";
 
-describe("DevRegistry", { concurrent: false }, () => {
+describe.sequential("DevRegistry", () => {
 	test("waits for the filesystem watcher to be ready", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const registry = new DevRegistry(

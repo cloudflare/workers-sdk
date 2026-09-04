@@ -404,12 +404,15 @@ async function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
 
-	// The following compatibility flags enable features required for Vitest to work properly
+	// Vitest 5's spy package constructs a FinalizationRegistry when imported and
+	// a WeakRef for every mock. Workerd exposes both APIs behind this feature.
 	ensureFeature(
 		runnerWorker.compatibilityFlags,
 		"weak_ref",
 		runnerWorker.compatibilityDate >= "2025-05-05"
 	);
+	// The following Node.js compatibility flags enable features required for
+	// Vitest to work properly.
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_tty_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_fs_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_http_modules");

@@ -10,20 +10,16 @@ import { test } from "./helpers";
 // objects, losing data from earlier test files. This was fixed by the vitest v4
 // module runner architecture which correctly preserves counter objects across
 // module re-evaluations via hash-based reuse in istanbul-lib-instrument.
-for (const moduleRegistry of [
-	"legacy_module_registry",
-	"new_module_registry",
-] as const) {
-	test(
-		`istanbul coverage reports correctly with ${moduleRegistry} (#5825)`,
-		{ timeout: 60_000 },
-		async ({ expect, seed, vitestRun, tmpPath }) => {
-			await seed({
-				"wrangler.jsonc": JSON.stringify({
-					name: "coverage-test",
-					main: "src/index.ts",
-				}),
-				"vitest.config.mts": dedent /* javascript */ `
+test.for(["legacy_module_registry", "new_module_registry"] as const)(
+	"istanbul coverage reports correctly with %s (#5825)",
+	{ timeout: 60_000 },
+	async (moduleRegistry, { expect, seed, vitestRun, tmpPath }) => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "coverage-test",
+				main: "src/index.ts",
+			}),
+			"vitest.config.mts": dedent /* javascript */ `
 				import { cloudflareTest } from "@cloudflare/vitest-plugin"
 				import { BaseSequencer } from "vitest/node";
 
@@ -56,8 +52,8 @@ for (const moduleRegistry of [
 					},
 				};
 			`,
-				// Worker with two routes dispatching to separate source files
-				"src/index.ts": dedent /* javascript */ `
+			// Worker with two routes dispatching to separate source files
+			"src/index.ts": dedent /* javascript */ `
 				import { greetA } from "./a";
 				import { greetB } from "./b";
 
@@ -70,18 +66,18 @@ for (const moduleRegistry of [
 					},
 				} satisfies ExportedHandler;
 			`,
-				"src/a.ts": dedent /* javascript */ `
+			"src/a.ts": dedent /* javascript */ `
 				export function greetA(request: Request): string {
 					return "A: " + request.url;
 				}
 			`,
-				"src/b.ts": dedent /* javascript */ `
+			"src/b.ts": dedent /* javascript */ `
 				export function greetB(request: Request): string {
 					return "B: " + request.url;
 				}
 			`,
-				// Two test files exercising different routes — a.test.ts runs first
-				"a.test.ts": dedent /* javascript */ `
+			// Two test files exercising different routes — a.test.ts runs first
+			"a.test.ts": dedent /* javascript */ `
 				import { SELF } from "cloudflare:test";
 				import { it, expect } from "vitest";
 
@@ -90,7 +86,7 @@ for (const moduleRegistry of [
 					expect(await response.text()).toBe("A: http://example.com/a");
 				});
 			`,
-				"b.test.ts": dedent /* javascript */ `
+			"b.test.ts": dedent /* javascript */ `
 				import { SELF } from "cloudflare:test";
 				import { it, expect } from "vitest";
 
@@ -99,31 +95,26 @@ for (const moduleRegistry of [
 					expect(await response.text()).toBe("B: http://example.com/b");
 				});
 			`,
-			});
-			const result = await vitestRun({ flags: ["--coverage"] });
-			expect(await result.exitCode, result.stderr).toBe(0);
+		});
+		const result = await vitestRun({ flags: ["--coverage"] });
+		expect(await result.exitCode, result.stderr).toBe(0);
 
-			// Read the JSON coverage summary to verify actual coverage values
-			const summaryPath = path.join(
-				tmpPath,
-				"coverage",
-				"coverage-summary.json"
-			);
-			const summaryJson = JSON.parse(await fs.readFile(summaryPath, "utf8"));
+		// Read the JSON coverage summary to verify actual coverage values
+		const summaryPath = path.join(tmpPath, "coverage", "coverage-summary.json");
+		const summaryJson = JSON.parse(await fs.readFile(summaryPath, "utf8"));
 
-			// Find coverage for a.ts and b.ts (keys are absolute paths)
-			const entries = Object.entries(summaryJson) as [
-				string,
-				{ functions: { pct: number } },
-			][];
-			const aCoverage = entries.find(([k]) => k.endsWith("/src/a.ts"))?.[1];
-			const bCoverage = entries.find(([k]) => k.endsWith("/src/b.ts"))?.[1];
+		// Find coverage for a.ts and b.ts (keys are absolute paths)
+		const entries = Object.entries(summaryJson) as [
+			string,
+			{ functions: { pct: number } },
+		][];
+		const aCoverage = entries.find(([k]) => k.endsWith("/src/a.ts"))?.[1];
+		const bCoverage = entries.find(([k]) => k.endsWith("/src/b.ts"))?.[1];
 
-			// The bug: b.ts showed 0% coverage when both files ran together,
-			// because its counters were lost during module re-evaluation.
-			// Both files should now report non-zero function coverage.
-			expect(aCoverage?.functions.pct).toBeGreaterThan(0);
-			expect(bCoverage?.functions.pct).toBeGreaterThan(0);
-		}
-	);
-}
+		// The bug: b.ts showed 0% coverage when both files ran together,
+		// because its counters were lost during module re-evaluation.
+		// Both files should now report non-zero function coverage.
+		expect(aCoverage?.functions.pct).toBeGreaterThan(0);
+		expect(bCoverage?.functions.pct).toBeGreaterThan(0);
+	}
+);

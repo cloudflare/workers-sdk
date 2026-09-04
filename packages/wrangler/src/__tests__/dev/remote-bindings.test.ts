@@ -98,7 +98,7 @@ vi.mock("../../dev/miniflare/index.ts", async () => {
 	};
 });
 
-describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
+describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();

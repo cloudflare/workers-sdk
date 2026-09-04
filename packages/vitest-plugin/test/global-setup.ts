@@ -1,15 +1,12 @@
-import assert from "node:assert";
 import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
 import { removeDir } from "@cloudflare/workers-utils";
+import { version as installedVitestVersion } from "vitest/package.json";
 import { version } from "../package.json";
 import type { TestProject } from "vitest/node";
-
-const repoRoot = path.resolve(__dirname, "../../..");
-const packagesRoot = path.resolve(repoRoot, "packages");
 
 // Using a global setup means we can modify tests without having to re-install
 // packages into our temporary directory
@@ -42,7 +39,7 @@ async function createTestProject() {
 		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-plugin temp-"))
 	);
 	const packageJsonPath = path.join(projectPath, "package.json");
-	const vitestPeerDep = await getVitestPeerDep();
+	const vitestVersion = process.env.VITEST_VERSION ?? installedVitestVersion;
 	const packageJson = {
 		name: "vitest-plugin-e2e-tests",
 		private: true,
@@ -50,8 +47,8 @@ async function createTestProject() {
 		devDependencies: {
 			// Ensure we use the local version of vitest-plugin
 			"@cloudflare/vitest-plugin": version,
-			"@vitest/coverage-istanbul": vitestPeerDep,
-			vitest: vitestPeerDep,
+			"@vitest/coverage-istanbul": vitestVersion,
+			vitest: vitestVersion,
 		},
 	};
 	await fs.writeFile(packageJsonPath, JSON.stringify(packageJson));
@@ -63,6 +60,7 @@ async function createTestProject() {
 		[
 			"packages:",
 			'  - "."',
+			// TEMPORARY: Remove once Vitest 5 has passed the release-age cooldown.
 			"minimumReleaseAgeExclude:",
 			'  - "@cloudflare/*"',
 			'  - "miniflare"',
@@ -77,27 +75,4 @@ async function createTestProject() {
 		].join("\n")
 	);
 	return projectPath;
-}
-
-/**
- * Get the version of `vitest` to install with vitest-plugin. Tests default to
- * the published peer range, but CI can override this to exercise each major.
- */
-async function getVitestPeerDep() {
-	if (process.env.VITEST_VERSION !== undefined) {
-		return process.env.VITEST_VERSION;
-	}
-	const poolPackageJsonPath = path.join(
-		packagesRoot,
-		"vitest-plugin/package.json"
-	);
-	const poolPackageJson = JSON.parse(
-		await fs.readFile(poolPackageJsonPath, "utf8")
-	);
-	const poolVitestVersion = poolPackageJson.peerDependencies?.vitest;
-	assert(
-		typeof poolVitestVersion === "string",
-		"Expected to find `vitest` peer dependency version"
-	);
-	return poolVitestVersion;
 }

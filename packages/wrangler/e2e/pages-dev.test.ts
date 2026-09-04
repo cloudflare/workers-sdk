@@ -13,7 +13,7 @@ import { waitFor } from "./helpers/wait-for";
 const port = await getPort();
 const inspectorPort = await getPort();
 const cmd = "wrangler pages dev";
-describe("wrangler pages dev", { concurrent: false }, () => {
+describe.sequential("wrangler pages dev", () => {
 	it("should warn if no [--compatibility_date] command line arg was specified", async ({
 		expect,
 	}) => {
