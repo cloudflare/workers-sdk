@@ -1,5 +1,18 @@
 # miniflare
 
+## 5.20260904.0-alpha
+
+### Patch Changes
+
+- [#15502](https://github.com/cloudflare/workers-sdk/pull/15502) [`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260903.1 | ^5.20260904.1 |
+  | workerd                   | 1.20260903.1  | 1.20260904.1  |
+
 ## 5.20260903.0-alpha
 
 ### Minor Changes
