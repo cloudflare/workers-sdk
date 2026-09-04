@@ -21,9 +21,7 @@ export default defineWorker({
 		}),
 		IMAGES: bindings.images(),
 		WAE: bindings.analyticsEngineDataset({ name: "test" }),
-		// TODO: Reinstate when .env and .dev.vars files are supported with
-		// cloudflare.config.ts.
-		// HYPERDRIVE: bindings.hyperdrive({ id: "test-hyperdrive-id" }),
+		HYPERDRIVE: bindings.hyperdrive({ id: "test-hyperdrive-id" }),
 		RATE_LIMITER: bindings.rateLimit({
 			namespace: "1001",
 			simple: { limit: 1, period: 60 },

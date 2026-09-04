@@ -74,106 +74,112 @@ describe("basic e2e tests", () => {
 				}
 			);
 
-			// TODO: Reinstate when local Worker secrets are loaded with
-			// cloudflare.config.ts.
-			describe.skip("environment variables", () => {
-				test("can read vars from cloudflare.config.ts and .env", async ({
-					expect,
-				}) => {
-					await writeFile(
-						projectPath + "/.env",
-						"SECRET_A=dev-1\nSECRET_B=dev-2"
-					);
-					onTestFinished(async () => {
-						await rm(projectPath + "/.env");
+			describe.skipIf(isBuildAndPreviewOnWindows(command))(
+				"environment variables",
+				() => {
+					test("can read vars from cloudflare.config.ts and .env", async ({
+						expect,
+					}) => {
+						await writeFile(
+							projectPath + "/.env",
+							"SECRET_A=dev-1\nSECRET_B=dev-2"
+						);
+						onTestFinished(async () => {
+							await rm(projectPath + "/.env");
+						});
+						const proc = await runLongLived(pm, command, projectPath);
+						const url = await waitForReady(proc);
+						expect(await fetchJson(url + "/env/")).toMatchObject({
+							SECRET_A: "dev-1",
+							SECRET_B: "dev-2",
+							VAR_1: "var-1",
+						});
 					});
-					const proc = await runLongLived(pm, command, projectPath);
-					const url = await waitForReady(proc);
-					expect(await fetchJson(url + "/env/")).toMatchObject({
-						SECRET_A: "dev-1",
-						SECRET_B: "dev-2",
-						VAR_1: "var-1",
-					});
-				});
 
-				test("will not load local dev vars from .env if there is a .dev.vars file", async ({
-					expect,
-				}) => {
-					await writeFile(
-						projectPath + "/.env",
-						"SECRET_A=dot-env-1\nSECRET_B=dot-env-2"
-					);
-					await writeFile(
-						projectPath + "/.dev.vars",
-						"SECRET_A=dev-dot-vars-1"
-					);
-					onTestFinished(async () => {
-						await rm(projectPath + "/.env");
-						await rm(projectPath + "/.dev.vars");
+					test("will not load local dev vars from .env if there is a .dev.vars file", async ({
+						expect,
+					}) => {
+						await writeFile(
+							projectPath + "/.env",
+							"SECRET_A=dot-env-1\nSECRET_B=dot-env-2"
+						);
+						await writeFile(
+							projectPath + "/.dev.vars",
+							"SECRET_A=dev-dot-vars-1"
+						);
+						onTestFinished(async () => {
+							await rm(projectPath + "/.env");
+							await rm(projectPath + "/.dev.vars");
+						});
+						const proc = await runLongLived(pm, command, projectPath);
+						const url = await waitForReady(proc);
+						expect(await fetchJson(url + "/env/")).toMatchObject({
+							SECRET_A: "dev-dot-vars-1",
+							VAR_1: "var-1",
+						});
 					});
-					const proc = await runLongLived(pm, command, projectPath);
-					const url = await waitForReady(proc);
-					expect(await fetchJson(url + "/env/")).toMatchObject({
-						SECRET_A: "dev-dot-vars-1",
-						VAR_1: "var-1",
-					});
-				});
 
-				test("can merge vars from cloudflare.config.ts, .env, and .env.local", async ({
-					expect,
-				}) => {
-					await writeFile(
-						projectPath + "/.env",
-						"SECRET_A=dev-1\nSECRET_B=dev-2"
-					);
-					await writeFile(projectPath + "/.env.local", "SECRET_A=local-dev-1");
-					onTestFinished(async () => {
-						await rm(projectPath + "/.env");
-						await rm(projectPath + "/.env.local");
+					test("can merge vars from cloudflare.config.ts, .env, and .env.local", async ({
+						expect,
+					}) => {
+						await writeFile(
+							projectPath + "/.env",
+							"SECRET_A=dev-1\nSECRET_B=dev-2"
+						);
+						await writeFile(
+							projectPath + "/.env.local",
+							"SECRET_A=local-dev-1"
+						);
+						onTestFinished(async () => {
+							await rm(projectPath + "/.env");
+							await rm(projectPath + "/.env.local");
+						});
+						const proc = await runLongLived(pm, command, projectPath);
+						const url = await waitForReady(proc);
+						expect(await fetchJson(url + "/env/")).toMatchObject({
+							SECRET_A: "local-dev-1",
+							SECRET_B: "dev-2",
+							VAR_1: "var-1",
+						});
 					});
-					const proc = await runLongLived(pm, command, projectPath);
-					const url = await waitForReady(proc);
-					expect(await fetchJson(url + "/env/")).toMatchObject({
-						SECRET_A: "local-dev-1",
-						SECRET_B: "dev-2",
-						VAR_1: "var-1",
-					});
-				});
 
-				test("can merge vars from cloudflare.config.ts, .env, .env.local, and environment specific files", async ({
-					expect,
-				}) => {
-					await writeFile(
-						projectPath + "/.env",
-						"SECRET_A=dev-1\nSECRET_B=dev-2"
-					);
-					await writeFile(projectPath + "/.env.local", "SECRET_A=local-dev-1");
-					await writeFile(
-						projectPath + "/.env.staging",
-						"SECRET_B=staging-2\nSECRET_C=staging-3"
-					);
-					await writeFile(
-						projectPath + "/.env.staging.local",
-						"SECRET_C=local-staging-3"
-					);
-					onTestFinished(async () => {
-						await rm(projectPath + "/.env");
-						await rm(projectPath + "/.env.local");
-						await rm(projectPath + "/.env.staging");
-						await rm(projectPath + "/.env.staging.local");
+					test("can merge vars from cloudflare.config.ts, .env, .env.local, and mode-specific files", async ({
+						expect,
+					}) => {
+						const mode = command === "dev" ? "development" : "production";
+						await writeFile(
+							projectPath + "/.env",
+							"SECRET_A=dev-1\nSECRET_B=dev-2"
+						);
+						await writeFile(
+							projectPath + "/.env.local",
+							"SECRET_A=local-dev-1"
+						);
+						await writeFile(
+							projectPath + `/.env.${mode}`,
+							"SECRET_B=staging-2\nSECRET_C=staging-3"
+						);
+						await writeFile(
+							projectPath + `/.env.${mode}.local`,
+							"SECRET_C=local-staging-3"
+						);
+						onTestFinished(async () => {
+							await rm(projectPath + "/.env");
+							await rm(projectPath + "/.env.local");
+							await rm(projectPath + `/.env.${mode}`);
+							await rm(projectPath + `/.env.${mode}.local`);
+						});
+						const proc = await runLongLived(pm, command, projectPath);
+						const url = await waitForReady(proc);
+						expect(await fetchJson(url + "/env/")).toMatchObject({
+							SECRET_A: "local-dev-1",
+							SECRET_B: "staging-2",
+							SECRET_C: "local-staging-3",
+							VAR_1: "var-1",
+						});
 					});
-					const proc = await runLongLived(pm, command, projectPath, {
-						CLOUDFLARE_ENV: "staging",
-					});
-					const url = await waitForReady(proc);
-					expect(await fetchJson(url + "/env/")).toMatchObject({
-						SECRET_A: "local-dev-1",
-						SECRET_B: "staging-2",
-						SECRET_C: "local-staging-3",
-						VAR_1: "var-1",
-					});
-				});
-			});
+				}
+			);
 		});
 	});
 });
