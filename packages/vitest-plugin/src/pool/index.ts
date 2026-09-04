@@ -404,7 +404,15 @@ async function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
 
-	// The following nodejs compat flags enable features required for Vitest to work properly
+	// Vitest 5's spy package constructs a FinalizationRegistry when imported and
+	// a WeakRef for every mock. Workerd exposes both APIs behind this feature.
+	ensureFeature(
+		runnerWorker.compatibilityFlags,
+		"weak_ref",
+		runnerWorker.compatibilityDate >= "2025-05-05"
+	);
+	// The following Node.js compatibility flags enable features required for
+	// Vitest to work properly.
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_tty_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_fs_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_http_modules");
@@ -855,11 +863,16 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
  * Ensures that the specified compatibility feature is enabled for Vitest to work.
  * @param compatibilityFlags The list of current compatibility flags.
  * @param feature The name of the feature to enable.
+ * @param enabledByDefault Whether the compatibility date enables this feature.
  */
-function ensureFeature(compatibilityFlags: string[], feature: string) {
+function ensureFeature(
+	compatibilityFlags: string[],
+	feature: string,
+	enabledByDefault = false
+) {
 	const flagToEnable = `enable_${feature}`;
 	const flagToDisable = `disable_${feature}`;
-	if (!compatibilityFlags.includes(flagToEnable)) {
+	if (!enabledByDefault && !compatibilityFlags.includes(flagToEnable)) {
 		debug(
 			"Adding `%s` compatibility flag during tests as this feature is needed to support the Vitest runner.",
 			flagToEnable

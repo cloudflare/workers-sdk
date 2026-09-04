@@ -39,6 +39,9 @@ minimumReleaseAge: 1440
 # First-party Cloudflare packages are exempt from the cooldown so they can be
 # adopted same-day.
 minimumReleaseAgeExclude:
+  # TEMPORARY: Test compatibility with the newly released Vitest 5 packages.
+  - "vitest"
+  - "@vitest/*"
   # TEMPORARY: vite-plugin-cloudflare + vitest-plugin are pinned to the
   # published miniflare while the workspace miniflare is mid-migration. Revert
   # with the repoint.
@@ -114,8 +117,6 @@ catalog:
   "@hey-api/openapi-ts": "0.94.0"
   "@types/node": "22.15.17"
 
-  "@vitest/runner": 4.1.0
-  "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
   typescript: "5.8.3"
   undici: "7.29.0"
@@ -149,3 +150,7 @@ catalog:
   # dependency. They therefore depend on this older published 0.x release under the old name.
   # TODO: Repoint these to "@cloudflare/vitest-plugin" once v1.0.0 is published to npm.
   "@cloudflare/vitest-pool-workers": "0.13.3"
+
+catalogs:
+  vitest5:
+    vitest: "5.0.0"

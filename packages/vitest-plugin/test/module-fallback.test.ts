@@ -2,7 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -432,6 +432,27 @@ describe("built-ins unavailable at the Worker's compatibility settings", () => {
 			"/pool/dist/worker/lib/cloudflare/test-internal.mjs"
 		);
 	});
+});
+
+it("preserves Vitest 5's import.meta.url diagnostic", async ({ expect }) => {
+	const filePath = fileURLToPath(
+		new URL("module-evaluator.js", import.meta.resolve("vitest"))
+	);
+	const contents = fs.readFileSync(filePath, "utf8");
+	expect(contents).toContain("createRequire(import.meta.url)");
+
+	const response = await handleModuleFallbackRequest(
+		fakeVite(),
+		moduleFallbackRequest({
+			method: "import",
+			specifier: toWorkerdSpecifier(filePath),
+			referrer: toWorkerdSpecifier(import.meta.filename),
+		})
+	);
+
+	expect(response.status).toBe(200);
+	const body = (await response.json()) as { esModule?: string };
+	expect(body.esModule).toContain(contents);
 });
 
 describe("handleModuleFallbackRequest new module registry", () => {

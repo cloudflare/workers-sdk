@@ -10,10 +10,10 @@ import { test } from "./helpers";
 // objects, losing data from earlier test files. This was fixed by the vitest v4
 // module runner architecture which correctly preserves counter objects across
 // module re-evaluations via hash-based reuse in istanbul-lib-instrument.
-test(
-	"istanbul coverage reports correctly across multiple test files (#5825)",
+test.for(["legacy_module_registry", "new_module_registry"] as const)(
+	"istanbul coverage reports correctly with %s (#5825)",
 	{ timeout: 60_000 },
-	async ({ expect, seed, vitestRun, tmpPath }) => {
+	async (moduleRegistry, { expect, seed, vitestRun, tmpPath }) => {
 		await seed({
 			"wrangler.jsonc": JSON.stringify({
 				name: "coverage-test",
@@ -34,7 +34,7 @@ test(
 						cloudflareTest({
 							miniflare: {
 								compatibilityDate: "2025-12-02",
-								compatibilityFlags: ["nodejs_compat"],
+								compatibilityFlags: ["nodejs_compat", "${moduleRegistry}"],
 							},
 							wrangler: {
 								configPath: "./wrangler.jsonc",
@@ -97,7 +97,7 @@ test(
 			`,
 		});
 		const result = await vitestRun({ flags: ["--coverage"] });
-		expect(await result.exitCode).toBe(0);
+		expect(await result.exitCode, result.stderr).toBe(0);
 
 		// Read the JSON coverage summary to verify actual coverage values
 		const summaryPath = path.join(tmpPath, "coverage", "coverage-summary.json");

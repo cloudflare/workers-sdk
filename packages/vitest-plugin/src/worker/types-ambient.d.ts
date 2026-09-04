@@ -12,6 +12,12 @@ interface UnsafeEval {
 	): (...args: unknown[]) => unknown;
 }
 
+declare var __vitest_browser_runner__: {
+	commands: {
+		triggerCommand(command: string, args: unknown[]): Promise<string>;
+	};
+};
+
 namespace Cloudflare {
 	interface Env extends Record<string, unknown> {
 		__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;
