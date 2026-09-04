@@ -1,5 +1,29 @@
 # wrangler
 
+## 4.129.1
+
+### Patch Changes
+
+- [#15502](https://github.com/cloudflare/workers-sdk/pull/15502) [`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260903.1 | ^5.20260904.1 |
+  | workerd                   | 1.20260903.1  | 1.20260904.1  |
+
+- [#14001](https://github.com/cloudflare/workers-sdk/pull/14001) [`c0c6504`](https://github.com/cloudflare/workers-sdk/commit/c0c650424c983c02de8ed008d3de0eb90cdc2396) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Update bundle size warning thresholds to use uncompressed size instead of gzip size
+
+  The compressed script size limits (3 MiB free / 10 MiB paid) have been removed server-side in favor of a single 64 MiB uncompressed limit. The bundle size reporter now compares the uncompressed bundle size against this 64 MiB limit for its color-coded warnings, instead of comparing gzip size against the old 3 MiB compressed limit.
+
+- [#15499](https://github.com/cloudflare/workers-sdk/pull/15499) [`ffc7efd`](https://github.com/cloudflare/workers-sdk/commit/ffc7efdc93b09a6345ecb7073ed56731d439e6fc) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Honor Workers Builds name overrides in `wrangler preview`
+
+  Preview commands now target the Worker name supplied by Workers Builds instead of the name in local Wrangler configuration. This prevents preview builds from failing when the two names differ.
+
+- Updated dependencies [[`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84)]:
+  - miniflare@5.20260904.0-alpha
+
 ## 4.129.0
 
 ### Minor Changes
