@@ -83,6 +83,7 @@ export const AssetConfigSchema = z.object({
 	not_found_handling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	base_path: z.string().nullable().optional(),
 	redirects: RedirectsSchema,
 	headers: HeadersSchema,
 	has_static_routing: z.boolean().optional(),
