@@ -11636,6 +11636,78 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[observability]", () => {
+			it("should warn when environment observability shadows top-level metrics", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: { enabled: true },
+						},
+						env: {
+							staging: {
+								observability: {
+									logs: { enabled: true },
+								},
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(config.observability).toEqual({ logs: { enabled: true } });
+				expect(diagnostics.renderWarnings()).toContain(
+					'The environment-level "observability" configuration replaces the top-level "observability" configuration but does not define "observability.metrics". Metrics export will not be reconciled.'
+				);
+			});
+
+			it("should inherit top-level metrics when environment observability is absent", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: { enabled: true },
+						},
+						env: { staging: {} },
+					},
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(config.observability?.metrics).toEqual({ enabled: true });
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should not warn when environment metrics is explicit", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: { enabled: true },
+						},
+						env: {
+							staging: {
+								observability: {
+									logs: { enabled: true },
+									metrics: { enabled: false },
+								},
+							},
+						},
+					},
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(config.observability?.metrics).toEqual({ enabled: false });
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
 			it("should error on invalid observability", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -11659,9 +11731,29 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
+					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" or "observability.metrics.enabled" is required.
 					  - Expected "observability.head_sampling_rate" to be of type number but got true.
 					  - Expected "observability.redact_query_string" to be of type boolean but got "true"."
+				`);
+			});
+
+			it("should not report absent observability options as invalid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: "INVALID",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "observability.enabled" to be of type boolean but got "INVALID"."
 				`);
 			});
 
@@ -11700,6 +11792,10 @@ describe("normalizeAndValidateConfig()", () => {
 								head_sampling_rate: 1,
 								destinations: ["test"],
 								persist: true,
+							},
+							metrics: {
+								enabled: true,
+								destinations: ["test"],
 							},
 						},
 					} as unknown as RawConfig,
@@ -11814,6 +11910,163 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
+
+			it("should not error on nested [observability.metrics] config only", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: ["opentelemetry-metrics"],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should require metrics export to be explicitly enabled or disabled", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							metrics: {
+								destinations: ["opentelemetry-metrics"],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.metrics.enabled" is a required field."
+				`);
+			});
+
+			it("should report invalid null metrics configuration without throwing", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: null,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+			});
+
+			it("should trim metrics export destinations", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: ["  opentelemetry-metrics  "],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.observability?.metrics?.destinations).toEqual([
+					"opentelemetry-metrics",
+				]);
+			});
+
+			it("should error on blank or duplicate metrics export destinations", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: ["destination", "  ", " destination "],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.metrics.destinations" must not contain blank destinations.
+					  - "observability.metrics.destinations" must not contain duplicate destinations."
+				`);
+			});
+
+			it("should error when metrics export is enabled without destinations", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.metrics.destinations" is required when "observability.metrics.enabled" is true."
+				`);
+			});
+
+			it("should error when metrics export destinations are empty", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							metrics: {
+								enabled: true,
+								destinations: [],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "observability.metrics.destinations" must contain at least one destination when "observability.metrics.enabled" is true."
+				`);
+			});
+
 			it("should error on a sampling rate out of range", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{

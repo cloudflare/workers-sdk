@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { clearMetricsExportRequester } from "@cloudflare/deploy-helpers";
 import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
 import { createCommand } from "./core/create-command";
@@ -157,6 +158,14 @@ export const deleteCommand = createCommand({
 				{ method: "DELETE" },
 				new URLSearchParams({ force: needsForceDelete.toString() })
 			);
+
+			try {
+				await clearMetricsExportRequester({ config, accountId, scriptName });
+			} catch {
+				logger.warn(
+					"The Worker was deleted, but Wrangler could not clean up its metrics export configuration."
+				);
+			}
 
 			await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
 

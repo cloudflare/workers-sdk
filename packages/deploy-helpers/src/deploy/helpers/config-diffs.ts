@@ -91,8 +91,10 @@ export function getRemoteConfigDiff(
 	remoteConfig: RawConfig,
 	localResolvedConfig: Config
 ): ConfigDiff {
-	const normalizedLocalConfig =
-		normalizeLocalResolvedConfigAsRemote(localResolvedConfig);
+	const normalizedLocalConfig = normalizeLocalResolvedConfigAsRemote(
+		localResolvedConfig,
+		remoteConfig
+	);
 	const normalizedRemoteConfig = normalizeRemoteConfigAsResolvedLocal(
 		remoteConfig,
 		normalizedLocalConfig
@@ -118,18 +120,25 @@ export function getRemoteConfigDiff(
  * @returns The normalized config
  */
 function normalizeLocalResolvedConfigAsRemote(
-	localResolvedConfig: Config
+	localResolvedConfig: Config,
+	remoteConfig: RawConfig
 ): Config {
 	const subdomainValues = getSubdomainValuesAPIMock(
 		localResolvedConfig.workers_dev,
 		localResolvedConfig.preview_urls,
 		localResolvedConfig.routes ?? []
 	);
+	const { metrics, ...nativeObservability } =
+		localResolvedConfig.observability ?? {};
+	const observability =
+		metrics !== undefined && Object.keys(nativeObservability).length === 0
+			? remoteConfig.observability
+			: nativeObservability;
 	const normalizedConfig: Config = {
 		...structuredClone(localResolvedConfig),
 		workers_dev: subdomainValues.workers_dev,
 		preview_urls: subdomainValues.preview_urls,
-		observability: normalizeObservability(localResolvedConfig.observability),
+		observability: normalizeObservability(observability),
 	};
 
 	removeRemoteConfigFieldFromBindings(normalizedConfig);

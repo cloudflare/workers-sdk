@@ -421,8 +421,11 @@ export const validateAtLeastOnePropertyRequired = (
 	}[]
 ): boolean => {
 	const containerPath = container ? `${container}.` : "";
+	const providedProperties = properties.filter(
+		(property) => property.value !== undefined
+	);
 
-	if (properties.every((property) => property.value === undefined)) {
+	if (providedProperties.length === 0) {
 		diagnostics.errors.push(
 			`${properties.map(({ key }) => `"${containerPath}${key}"`).join(" or ")} is required.`
 		);
@@ -430,7 +433,7 @@ export const validateAtLeastOnePropertyRequired = (
 	}
 
 	const errors = [];
-	for (const prop of properties) {
+	for (const prop of providedProperties) {
 		if (typeof prop.value === prop.type) {
 			return true;
 		}

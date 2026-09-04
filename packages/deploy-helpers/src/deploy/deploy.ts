@@ -45,6 +45,10 @@ import {
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import {
+	reconcileMetricsExportConfig,
+	withoutMetricsExportConfig,
+} from "./helpers/metrics-export";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -131,7 +135,7 @@ export type DeployCallbacks = {
 				config: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
 				args: { versionId: string; accountId: string; scriptName: string }
-		  ) => Promise<void>)
+		  ) => Promise<string[]>)
 		| undefined;
 	analyseBundle:
 		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
@@ -144,6 +148,7 @@ type DeployResult = {
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
+	containerApplicationIds?: string[];
 	bundleSize?: BundleSize;
 };
 
@@ -229,6 +234,11 @@ async function deployWorker(
 
 	const normalisedContainerConfig = callbacks.getNormalizedContainerOptions
 		? await callbacks.getNormalizedContainerOptions(config, props)
+		: [];
+	// `undefined` means configured containers were not deployed or resolved;
+	// an empty array means there are no configured container applications.
+	let containerApplicationIds: string[] | undefined = config.containers?.length
+		? undefined
 		: [];
 	const {
 		modules,
@@ -362,7 +372,7 @@ async function deployWorker(
 						run_worker_first: assetsOptions.run_worker_first,
 					}
 				: undefined,
-		observability: config.observability,
+		observability: withoutMetricsExportConfig(config.observability),
 		cache: config.cache,
 		package_dependencies:
 			config.dependencies_instrumentation?.enabled !== false && projectRoot
@@ -551,10 +561,13 @@ async function deployWorker(
 					await patchNonVersionedScriptSettings(config, accountId, scriptName, {
 						tail_consumers: worker.tail_consumers,
 						logpush: worker.logpush,
-						// If the user hasn't specified observability assume that they want it disabled if they have it on.
-						// This is a no-op in the event that they don't have observability enabled, but will remove observability
-						// if it has been removed from their Wrangler configuration file
-						observability: worker.observability ?? { enabled: false },
+						// Keep the legacy disable fallback when observability is absent. A metrics-only
+						// block must stay omitted because metrics are reconciled separately.
+						observability:
+							worker.observability ??
+							(config.observability?.metrics === undefined
+								? { enabled: false }
+								: undefined),
 						tags: nextTags,
 					});
 				} catch {
@@ -760,7 +773,7 @@ async function deployWorker(
 
 	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag, bundleSize };
+		return { versionId, workerTag, containerApplicationIds, bundleSize };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -773,19 +786,30 @@ async function deployWorker(
 		callbacks.deployContainers
 	) {
 		assert(versionId && accountId);
-		await callbacks.deployContainers(config, normalisedContainerConfig, {
-			versionId,
-			accountId,
-			scriptName,
-		});
+		containerApplicationIds = await callbacks.deployContainers(
+			config,
+			normalisedContainerConfig,
+			{
+				versionId,
+				accountId,
+				scriptName,
+			}
+		);
 	}
 
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats, bundleSize };
+		return {
+			versionId,
+			workerTag,
+			assetUploadStats,
+			containerApplicationIds,
+			bundleSize,
+		};
 	}
 	assert(accountId);
+
 	// deploy triggers
 	const targets = await triggersDeploy({
 		config,
@@ -799,6 +823,16 @@ async function deployWorker(
 		dryRun: false,
 	});
 
+	await reconcileMetricsExportConfig({
+		config,
+		accountId,
+		scriptName,
+		bindings,
+		containerApplicationIds,
+		expectedContainerApplicationCount: normalisedContainerConfig.length,
+		containersRollout: props.containersRollout,
+	});
+
 	logger.log("Current Version ID:", versionId);
 
 	return {
@@ -807,6 +841,7 @@ async function deployWorker(
 		workerTag,
 		assetUploadStats,
 		targets: targets ?? [],
+		containerApplicationIds,
 		bundleSize,
 	};
 }

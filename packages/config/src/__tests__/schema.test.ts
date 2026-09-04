@@ -463,6 +463,27 @@ describe("InputWorkerSchema", () => {
 			}
 		});
 
+		it("requires `enabled` inside `observability.metrics`", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					metrics: {
+						destinations: ["opentelemetry-metrics"],
+					},
+				},
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]?.path).toEqual([
+					"observability",
+					"metrics",
+					"enabled",
+				]);
+			}
+		});
+
 		it("accepts camelCase query string redaction configuration", ({
 			expect,
 		}) => {
@@ -694,6 +715,82 @@ describe("InputWorkerSchema", () => {
 				expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
 					"unknownField"
 				);
+			}
+		});
+	});
+
+	describe("metrics observability", () => {
+		it("rejects missing or empty destinations when enabled", ({ expect }) => {
+			for (const destinations of [undefined, []]) {
+				const result = InputWorkerSchema.safeParse({
+					...baseConfig,
+					observability: { metrics: { enabled: true, destinations } },
+				});
+
+				expect(result.success).toBe(false);
+			}
+		});
+
+		it("rejects blank destinations", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					metrics: { enabled: true, destinations: ["destination", "  "] },
+				},
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects duplicate destinations after trimming", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					metrics: {
+						enabled: true,
+						destinations: ["destination", " destination "],
+					},
+				},
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("trims destinations", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					metrics: { enabled: true, destinations: [" destination "] },
+				},
+			});
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.observability?.metrics?.destinations).toEqual([
+					"destination",
+				]);
+			}
+		});
+
+		it("accepts missing or empty destinations when disabled", ({ expect }) => {
+			for (const destinations of [undefined, []]) {
+				const result = InputWorkerSchema.safeParse({
+					...baseConfig,
+					observability: { metrics: { enabled: false, destinations } },
+				});
+
+				expect(result.success).toBe(true);
+			}
+		});
+
+		it("validates destinations when disabled", ({ expect }) => {
+			for (const destinations of [[" "], ["destination", " destination "]]) {
+				const result = InputWorkerSchema.safeParse({
+					...baseConfig,
+					observability: { metrics: { enabled: false, destinations } },
+				});
+
+				expect(result.success).toBe(false);
 			}
 		});
 	});

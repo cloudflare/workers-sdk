@@ -71,6 +71,10 @@ describe("convertToWranglerConfig", () => {
 						persist: false,
 						destinations: ["d2"],
 					},
+					metrics: {
+						enabled: true,
+						destinations: ["d3"],
+					},
 				},
 			});
 			expect(result.observability).toEqual({
@@ -89,6 +93,10 @@ describe("convertToWranglerConfig", () => {
 					head_sampling_rate: 0.1,
 					persist: false,
 					destinations: ["d2"],
+				},
+				metrics: {
+					enabled: true,
+					destinations: ["d3"],
 				},
 			});
 		});

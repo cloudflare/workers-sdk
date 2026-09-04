@@ -6,6 +6,7 @@ import {
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { withoutMetricsExportConfig } from "../deploy/helpers/metrics-export";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, PreviewDefaults } from "./api";
@@ -739,7 +740,10 @@ export function assemblePreviewScriptSettings(config: Config) {
 
 	const observability = previews?.observability ?? config.observability;
 	if (observability !== undefined) {
-		result.observability = observability;
+		const uploadObservability = withoutMetricsExportConfig(observability);
+		if (uploadObservability !== undefined) {
+			result.observability = uploadObservability;
+		}
 	}
 
 	const logpush = previews?.logpush ?? config.logpush;

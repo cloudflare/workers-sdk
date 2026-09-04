@@ -215,6 +215,7 @@ describe("deployPreviewContainers", () => {
 		} as unknown as Config;
 		vi.mocked(apply).mockImplementation(async () => {
 			logger.warn("a container warning");
+			return "preview-application-id";
 		});
 
 		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {

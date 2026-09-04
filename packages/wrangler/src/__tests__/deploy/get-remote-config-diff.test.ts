@@ -638,6 +638,21 @@ describe("getRemoteConfigsDiff", () => {
 			expect(nonDestructive).toBe(true);
 		});
 
+		it("should preserve remote native observability for metrics-only config", ({
+			expect,
+		}) => {
+			const { diff, nonDestructive } = getObservabilityDiff(
+				{
+					enabled: true,
+					logs: { enabled: true },
+				},
+				{ metrics: { enabled: true, destinations: ["destination"] } }
+			);
+
+			expect(diff).toBe(null);
+			expect(nonDestructive).toBe(true);
+		});
+
 		it("should treat a remote undefined equal to a remote { enabled: false }", ({
 			expect,
 		}) => {

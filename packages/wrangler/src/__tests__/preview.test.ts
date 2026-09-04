@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
 import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
+	assemblePreviewScriptSettings,
 	extractConfigBindings,
 	getBranchName,
 	getCommitSha,
@@ -243,6 +244,20 @@ describe("wrangler preview", () => {
 		vi.restoreAllMocks();
 	});
 
+	test("strips metrics export from Preview script settings", ({ expect }) => {
+		const config = {
+			...defaultWranglerConfig,
+			observability: {
+				enabled: true,
+				metrics: { enabled: true, destinations: ["destination"] },
+			},
+		};
+
+		expect(assemblePreviewScriptSettings(config)).toEqual({
+			observability: { enabled: true },
+		});
+	});
+
 	describe("getBranchName", () => {
 		beforeEach(() => {
 			vi.unstubAllEnvs();
@@ -270,7 +285,7 @@ describe("wrangler preview", () => {
 			vi.stubEnv("GITHUB_HEAD_REF", "github-pr-branch");
 			expect(getBranchName()).toBe("github-pr-branch");
 
-			vi.stubEnv("GITHUB_HEAD_REF", undefined);
+			vi.stubEnv("GITHUB_HEAD_REF", "");
 			vi.stubEnv("GITHUB_REF_NAME", "github-push-branch");
 			expect(getBranchName()).toBe("github-push-branch");
 		});
@@ -842,10 +857,24 @@ describe("wrangler preview", () => {
 			);
 		});
 
-		test("should create a new preview with defaults applied", async ({
+		test("should ignore metrics export and create a new preview", async ({
 			expect,
 		}) => {
+			writeWranglerConfig({
+				name: "test-worker",
+				main: "src/index.ts",
+				compatibility_date: "2025-01-01",
+				observability: {
+					metrics: { enabled: true, destinations: ["destination"] },
+				},
+				previews: {
+					vars: { ENVIRONMENT: "preview" },
+					kv_namespaces: [{ binding: "MY_KV", id: "preview-kv-id" }],
+				},
+			});
 			let lookupPreviewUrl: string | undefined;
+			let previewRequestBody: unknown;
+			let metricsExportRequests = 0;
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -863,7 +892,8 @@ describe("wrangler preview", () => {
 				),
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews`,
-					() => {
+					async ({ request }) => {
+						previewRequestBody = await request.json();
 						return HttpResponse.json(
 							{
 								success: true,
@@ -879,6 +909,13 @@ describe("wrangler preview", () => {
 							},
 							{ status: 201 }
 						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/observability/metricsexport`,
+					() => {
+						metricsExportRequests++;
+						return HttpResponse.json({ success: true, result: null });
 					}
 				),
 				http.post(
@@ -916,6 +953,8 @@ describe("wrangler preview", () => {
 			expect(lookupPreviewUrl).toContain(
 				"/workers/workers/override-worker/previews/"
 			);
+			expect(previewRequestBody).toEqual({ name: "test-preview" });
+			expect(metricsExportRequests).toBe(0);
 			expect(std.out).toContain("Preview: test-preview (new)");
 			expect(std.out).toContain(
 				"Preview URL: https://test-preview.test-worker.cloudflare.app"

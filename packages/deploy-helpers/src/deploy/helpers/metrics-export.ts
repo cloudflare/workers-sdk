@@ -1,0 +1,316 @@
+import {
+	APIError,
+	extractBindingsOfType,
+	retryOnAPIFailure,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { fetchResult, logger } from "../../shared/context";
+import { getSettings } from "./provision-bindings";
+import type {
+	Binding,
+	ComplianceConfig,
+	Config,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
+
+/**
+ * Returns observability settings suitable for the Worker upload API by removing
+ * metrics export without mutating the input. Native observability settings are
+ * preserved, or `undefined` is returned when no settings remain.
+ */
+export function withoutMetricsExportConfig(
+	observability: Config["observability"]
+): Config["observability"] {
+	if (observability === undefined || observability.metrics === undefined) {
+		return observability;
+	}
+
+	const { metrics: _metrics, ...uploadObservability } = observability;
+
+	return Object.keys(uploadObservability).length > 0
+		? uploadObservability
+		: undefined;
+}
+
+type MetricExportResource = {
+	resourceType: "workers" | "d1" | "r2" | "containers";
+	resourceId: string;
+	destinations: string[];
+};
+
+type MetricExportRequesterPayload = {
+	requester: {
+		requesterType: "workers";
+		requesterId: string;
+	};
+	resources: MetricExportResource[];
+};
+
+/**
+ * Replaces a Worker's metrics export resource snapshot after a successful
+ * deployment. Disabled metrics clear the snapshot, unresolved Container
+ * resources leave it unchanged, and failures are reported as warnings because
+ * the Worker deployment has already succeeded.
+ */
+export async function reconcileMetricsExportConfig({
+	config,
+	accountId,
+	scriptName,
+	bindings,
+	containerApplicationIds,
+	expectedContainerApplicationCount,
+	containersRollout,
+}: {
+	config: Config;
+	accountId: string;
+	scriptName: string;
+	bindings: Record<string, Binding>;
+	containerApplicationIds: string[] | undefined;
+	expectedContainerApplicationCount: number;
+	containersRollout?: "gradual" | "immediate" | "none";
+}): Promise<void> {
+	const metrics = config.observability?.metrics;
+
+	if (metrics?.enabled === undefined) {
+		return;
+	}
+
+	try {
+		if (!metrics.enabled) {
+			await postMetricsExportRequester(config, accountId, scriptName, []);
+			return;
+		}
+
+		if (containersRollout === "none") {
+			logger.warn(
+				"Worker deployed with `--containers-rollout=none`, but metrics export was not reconciled because Container Application IDs were intentionally not resolved. Existing metrics-export resources were left unchanged. Re-run without `--containers-rollout=none` to reconcile metrics exports."
+			);
+			return;
+		}
+
+		const validatedContainerApplicationIds = validateContainerApplicationIds(
+			containerApplicationIds,
+			expectedContainerApplicationCount
+		);
+		const resources = await discoverMetricsExportResources({
+			config,
+			accountId,
+			scriptName,
+			bindings,
+			destinations: metrics.destinations ?? [],
+			containerApplicationIds: validatedContainerApplicationIds,
+		});
+
+		await postMetricsExportRequester(config, accountId, scriptName, resources);
+	} catch (error) {
+		if (error instanceof UserError && !(error instanceof APIError)) {
+			logger.warn(
+				`The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration: ${error.message}`
+			);
+			return;
+		}
+		logger.warn(
+			"The Worker deployment succeeded, but Wrangler could not reconcile its metrics export configuration. Retry the deployment to reconcile the configuration."
+		);
+	}
+}
+
+/**
+ * Clears all metrics export resources requested by a Worker. Cleanup failures
+ * are wrapped in a user-facing error so callers can report a post-deletion
+ * cleanup failure.
+ */
+export async function clearMetricsExportRequester({
+	config,
+	accountId,
+	scriptName,
+}: {
+	config: ComplianceConfig;
+	accountId: string;
+	scriptName: string;
+}): Promise<void> {
+	try {
+		await postMetricsExportRequester(config, accountId, scriptName, []);
+	} catch (error) {
+		throw new UserError(
+			"Wrangler could not clean up this Worker's metrics export configuration.",
+			{
+				cause: error,
+				telemetryMessage: "metrics export delete cleanup failure",
+			}
+		);
+	}
+}
+
+async function discoverMetricsExportResources({
+	config,
+	accountId,
+	scriptName,
+	bindings,
+	destinations,
+	containerApplicationIds,
+}: {
+	config: Config;
+	accountId: string;
+	scriptName: string;
+	bindings: Record<string, Binding>;
+	destinations: string[];
+	containerApplicationIds: string[];
+}): Promise<MetricExportResource[]> {
+	const d1Bindings = extractBindingsOfType("d1", bindings);
+	const r2Bindings = extractBindingsOfType("r2_bucket", bindings);
+	const needsSettings =
+		d1Bindings.some(({ database_id }) => typeof database_id !== "string") ||
+		r2Bindings.some(({ bucket_name }) => typeof bucket_name !== "string");
+	const remoteBindings = needsSettings
+		? (await getSettings(config, accountId, scriptName)).bindings
+		: [];
+	const d1Ids = new Set<string>();
+	const r2Names = new Set<string>();
+
+	for (const binding of d1Bindings) {
+		const resourceId =
+			typeof binding.database_id === "string"
+				? binding.database_id
+				: findRemoteD1Id(remoteBindings, binding.binding);
+		if (!resourceId) {
+			throw unresolvedBindingError("D1", binding.binding);
+		}
+		d1Ids.add(resourceId);
+	}
+
+	for (const binding of r2Bindings) {
+		const resourceId =
+			typeof binding.bucket_name === "string"
+				? binding.bucket_name
+				: findRemoteR2BucketName(remoteBindings, binding.binding);
+		if (!resourceId) {
+			throw unresolvedBindingError("R2", binding.binding);
+		}
+		r2Names.add(resourceId);
+	}
+
+	return [
+		{ resourceType: "workers", resourceId: scriptName, destinations },
+		...[...d1Ids].sort().map((resourceId) => ({
+			resourceType: "d1" as const,
+			resourceId,
+			destinations,
+		})),
+		...[...r2Names].sort().map((resourceId) => ({
+			resourceType: "r2" as const,
+			resourceId,
+			destinations,
+		})),
+		...[...containerApplicationIds].sort().map((resourceId) => ({
+			resourceType: "containers" as const,
+			resourceId,
+			destinations,
+		})),
+	];
+}
+
+/**
+ * Validates that resolved Container Application IDs are complete, unique, and
+ * free of surrounding whitespace while preserving their input order.
+ */
+export function validateContainerApplicationIds(
+	applicationIds: unknown[] | undefined,
+	expectedCount: number
+): string[] {
+	if (expectedCount === 0) {
+		if (applicationIds === undefined || applicationIds.length === 0) {
+			return [];
+		}
+		throw invalidContainerApplicationIdsError();
+	}
+
+	if (applicationIds === undefined || applicationIds.length !== expectedCount) {
+		throw invalidContainerApplicationIdsError();
+	}
+
+	const validatedIds: string[] = [];
+	for (const id of applicationIds) {
+		if (typeof id !== "string" || id.trim() === "" || id.trim() !== id) {
+			throw invalidContainerApplicationIdsError();
+		}
+		validatedIds.push(id);
+	}
+
+	if (new Set(validatedIds).size !== validatedIds.length) {
+		throw invalidContainerApplicationIdsError();
+	}
+
+	return validatedIds;
+}
+
+function invalidContainerApplicationIdsError(): UserError {
+	return new UserError(
+		"Wrangler did not resolve a complete, unique set of Container Application IDs. Existing metrics-export resources were left unchanged.",
+		{
+			telemetryMessage:
+				"metrics export container application id resolution failed",
+		}
+	);
+}
+
+function findRemoteD1Id(
+	bindings: WorkerMetadataBinding[],
+	bindingName: string
+): string | undefined {
+	const binding = bindings.find(
+		(candidate) => candidate.type === "d1" && candidate.name === bindingName
+	);
+	return binding?.type === "d1" ? binding.id : undefined;
+}
+
+function findRemoteR2BucketName(
+	bindings: WorkerMetadataBinding[],
+	bindingName: string
+): string | undefined {
+	const binding = bindings.find(
+		(candidate) =>
+			candidate.type === "r2_bucket" && candidate.name === bindingName
+	);
+	return binding?.type === "r2_bucket" ? binding.bucket_name : undefined;
+}
+
+function unresolvedBindingError(resourceType: "D1" | "R2", binding: string) {
+	return new UserError(
+		`Wrangler could not resolve the ${resourceType} resource used by binding ${binding}.`,
+		{
+			telemetryMessage: "metrics export binding resolution failed",
+		}
+	);
+}
+
+async function postMetricsExportRequester(
+	config: ComplianceConfig,
+	accountId: string,
+	scriptName: string,
+	resources: MetricExportResource[]
+): Promise<void> {
+	const payload: MetricExportRequesterPayload = {
+		requester: {
+			requesterType: "workers",
+			requesterId: scriptName,
+		},
+		resources,
+	};
+
+	await retryOnAPIFailure(
+		() =>
+			fetchResult(
+				config,
+				`/accounts/${accountId}/workers/observability/metricsexport`,
+				{
+					method: "POST",
+					body: JSON.stringify(payload),
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}
+			),
+		logger
+	);
+}

@@ -12,6 +12,7 @@ import {
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
 	printVersions,
 	renderInconsistentExportsAcrossVersionsError,
+	withoutMetricsExportConfig,
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
@@ -545,7 +546,7 @@ async function maybePatchSettings(
 		logpush: config.logpush,
 		tail_consumers: config.tail_consumers,
 		streaming_tail_consumers: config.streaming_tail_consumers,
-		observability: config.observability, // TODO reconcile with how regular deploy handles empty state
+		observability: withoutMetricsExportConfig(config.observability), // TODO reconcile with how regular deploy handles empty state
 	};
 	const definedSettings = Object.fromEntries(
 		Object.entries(maybeUndefinedSettings).filter(
