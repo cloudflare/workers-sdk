@@ -203,7 +203,8 @@ describe("MiniflareWorkerConfigSchema", () => {
 			expect(result.error.issues).toEqual([
 				expect.objectContaining({
 					path: ["env", "HYPERDRIVE", "dev", "connectionString"],
-					message: "Invalid input: expected string, received undefined",
+					message:
+						'A Hyperdrive binding requires a "dev.connectionString" unless it sets "dev.remote": true.',
 				}),
 			]);
 		}
@@ -258,6 +259,29 @@ describe("MiniflareWorkerConfigSchema", () => {
 				}),
 			]);
 		}
+	});
+
+	test("allows a remote Hyperdrive binding without dev.connectionString", ({
+		expect,
+	}) => {
+		expect(
+			MiniflareWorkerConfigSchema.parse({
+				type: "worker",
+				name: "api",
+				compatibilityDate: "2026-01-01",
+				env: {
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive",
+						dev: { remote: true },
+					},
+				},
+			}).env?.HYPERDRIVE
+		).toEqual({
+			type: "hyperdrive",
+			id: "hyperdrive",
+			dev: { remote: true },
+		});
 	});
 
 	test("strips tombstoned durable object exports", ({ expect }) => {

@@ -414,7 +414,8 @@ export async function getDevMiniflareOptions(
 										remoteProxyConnectionString:
 											remoteProxySessionData?.session
 												?.remoteProxyConnectionString,
-
+										hyperdriveConnectionStrings:
+											remoteProxySessionData?.hyperdriveConnectionStrings,
 										containerBuildId,
 									}
 								);
@@ -829,7 +830,8 @@ export async function getPreviewMiniflareOptions(
 					wrangler.unstable_getMiniflareWorkerOptions(workerConfig, undefined, {
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
-
+						hyperdriveConnectionStrings:
+							remoteProxySessionData?.hyperdriveConnectionStrings,
 						containerBuildId,
 					});
 

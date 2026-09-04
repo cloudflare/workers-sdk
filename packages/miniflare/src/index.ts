@@ -3142,7 +3142,10 @@ export class Miniflare {
 
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
-			const pluginBindings = await plugin.getNodeBindings(workerOpts);
+			const pluginBindings = await plugin.getNodeBindings(workerOpts, {
+				hyperdriveProxyController: this.#hyperdriveProxyController,
+				workerIndex,
+			});
 			for (const [name, binding] of Object.entries(pluginBindings)) {
 				if (binding instanceof ProxyNodeBinding) {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);

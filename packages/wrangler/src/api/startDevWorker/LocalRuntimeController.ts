@@ -20,8 +20,7 @@ import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { getBinaryFileContents } from "./utils";
-import type { CfAccount } from "../../dev/create-worker-preview";
-import type { RemoteProxySession } from "../remoteBindings";
+import type { RemoteProxySessionData } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -30,13 +29,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type {
-	AsyncHook,
-	Binding,
-	File,
-	StartDevWorkerOptions,
-	Trigger,
-} from "./types";
+import type { Binding, File, StartDevWorkerOptions, Trigger } from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getTextFileContents(file: File<string | Uint8Array>) {
@@ -257,11 +250,7 @@ export class LocalRuntimeController extends RuntimeController {
 		return this.#mf;
 	}
 
-	#remoteProxySessionData: {
-		session: RemoteProxySession;
-		remoteBindings: Record<string, Binding>;
-		auth?: AsyncHook<CfAccount> | undefined;
-	} | null = null;
+	#remoteProxySessionData: RemoteProxySessionData | null = null;
 
 	// Set of container images that have been seen in the current dev session.
 	// This is used to clean up containers at the end of the dev session.
@@ -417,7 +406,8 @@ export class LocalRuntimeController extends RuntimeController {
 						type: "devRegistryUpdate",
 						registry,
 					});
-				}
+				},
+				this.#remoteProxySessionData?.hyperdriveConnectionStrings
 			);
 			options.handleUncaughtError = this.dispatchRuntimeError;
 

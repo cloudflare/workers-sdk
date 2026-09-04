@@ -1,20 +1,68 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
+import {
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
+	ProxyNodeBinding,
+} from "../shared";
+import type { ParsedDevConfig } from "../../config/schema";
 import type { Worker_Binding } from "../../runtime";
 import type { ParsedMiniflareWorkerConfig } from "../shared";
-import type { Plugin } from "../shared";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
-/** Resolves `hyperdrive` env bindings, parsing each connection string. */
+/**
+ * Service (and proxy/bridge) name for a Hyperdrive binding.
+ *
+ * Namespaced by worker as well as binding name: in a multi-worker setup it is
+ * common for several workers to bind Hyperdrive under the same name (`DB`), and
+ * an unqualified name would make them collide on one service and one bridge.
+ */
+export function getHyperdriveServiceName(
+	workerIndex: number,
+	bindingName: string
+) {
+	return `${HYPERDRIVE_PLUGIN_NAME}:${workerIndex}:${bindingName}`;
+}
+
+// Placeholder connection string used to synthesise the local Hyperdrive binding
+// when a remote binding has no local connection string. workerd still needs a
+// scheme/database/user/password to build the magic `connectionString` it exposes
+// to the Worker; the real origin lives at the edge. In normal `wrangler dev`
+// usage the caller seeds `dev.connectionString` with the edge session's
+// credentials before this runs (so a database client authenticates through the
+// proxy), and this placeholder is only reached when no seeding has occurred.
+const REMOTE_PLACEHOLDER_URL = new URL(
+	"mysql://user:password@hyperdrive.local:3306/database"
+);
+
+/**
+ * Resolves `hyperdrive` env bindings, parsing each connection string.
+ *
+ * A binding with `dev.remote: true` (and a remote proxy session) is reached
+ * through a local TCP bridge relaying to the edge, so it may omit
+ * `dev.connectionString` — the placeholder above stands in when it does.
+ */
 function getHyperdrives(
-	config: ParsedMiniflareWorkerConfig
-): [name: string, url: URL][] {
-	return getEnvBindingsOfType(config, "hyperdrive").map(([name, binding]) => [
-		name,
-		HyperdriveSchema.parse(binding.dev.connectionString),
-	]);
+	config: ParsedMiniflareWorkerConfig,
+	dev: ParsedDevConfig | undefined
+): [
+	name: string,
+	url: URL,
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+][] {
+	return getEnvBindingsOfType(config, "hyperdrive").map(([name, binding]) => {
+		const remoteProxyConnectionString = getRemoteProxyConnectionString(
+			binding,
+			dev
+		);
+		const url =
+			remoteProxyConnectionString && binding.dev.connectionString === undefined
+				? REMOTE_PLACEHOLDER_URL
+				: HyperdriveSchema.parse(binding.dev.connectionString);
+		return [name, url, remoteProxyConnectionString];
+	});
 }
 
 function hasPostgresProtocol(url: URL) {
@@ -93,46 +141,101 @@ export const HyperdriveSchema = z
 
 export const HYPERDRIVE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Hyperdrive",
-	getBindings(options) {
-		return getHyperdrives(options.config).map<Worker_Binding>(([name, url]) => {
-			const database = url.pathname.replace("/", "");
-			const scheme = url.protocol.replace(":", "");
-			return {
-				name,
-				hyperdrive: {
-					designator: {
-						name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
+	getBindings(options, _sharedOptions, workerIndex) {
+		return getHyperdrives(options.config, options.dev).map<Worker_Binding>(
+			([name, url]) => {
+				const database = url.pathname.replace("/", "");
+				const scheme = url.protocol.replace(":", "");
+				return {
+					name,
+					hyperdrive: {
+						// Both local and remote bindings use the per-binding
+						// `hyperdrive:<name>` external.tcp designator. For remote bindings
+						// that service points at the local TCP bridge (see `getServices`),
+						// which relays to the edge. workerd is unmodified either way —
+						// pointing a Hyperdrive designator at a Worker service SIGSEGVs.
+						designator: {
+							name: getHyperdriveServiceName(workerIndex, name),
+						},
+						database: decodeURIComponent(database),
+						user: decodeURIComponent(url.username),
+						password: decodeURIComponent(url.password),
+						scheme,
 					},
-					database: decodeURIComponent(database),
-					user: decodeURIComponent(url.username),
-					password: decodeURIComponent(url.password),
-					scheme,
-				},
-			};
-		});
-	},
-	getNodeBindings(options) {
-		return Object.fromEntries(
-			getHyperdrives(options.config).map(([name, url]) => {
-				const connectionOverrides: Record<string | symbol, string | number> = {
-					connectionString: `${url}`,
-					port: Number.parseInt(url.port),
-					host: url.hostname,
 				};
-				const proxyNodeBinding = new ProxyNodeBinding({
-					get(target, prop) {
-						return prop in connectionOverrides
-							? connectionOverrides[prop]
-							: target[prop];
-					},
-				});
-				return [name, proxyNodeBinding];
-			})
+			}
 		);
 	},
-	async getServices({ options, hyperdriveProxyController }) {
+	getNodeBindings(options, { hyperdriveProxyController, workerIndex }) {
+		return Object.fromEntries(
+			getHyperdrives(options.config, options.dev).map(
+				([name, url, remoteProxyConnectionString]) => {
+					// A remote binding's connection string points at a
+					// `*.hyperdrive.local` host, which only resolves inside workerd via
+					// the binding's designator. Node has no such resolver, so hand it the
+					// local TCP bridge instead — same credentials, an address it can dial.
+					const bridgePort = remoteProxyConnectionString
+						? hyperdriveProxyController.getRemoteBridgePort(
+								getHyperdriveServiceName(workerIndex, name)
+							)
+						: undefined;
+					const nodeUrl = new URL(url);
+					if (bridgePort !== undefined) {
+						nodeUrl.hostname = "127.0.0.1";
+						nodeUrl.port = String(bridgePort);
+					}
+					// Every credential field has to come from the same source as the
+					// address. workerd's binding carries the values for its own
+					// connection, so leaving any of them un-overridden mixes two sets
+					// of credentials and Hyperdrive rejects the login.
+					const connectionOverrides: Record<string | symbol, string | number> =
+						{
+							connectionString: `${nodeUrl}`,
+							port: Number.parseInt(nodeUrl.port),
+							host: nodeUrl.hostname,
+							user: decodeURIComponent(nodeUrl.username),
+							password: decodeURIComponent(nodeUrl.password),
+							database: decodeURIComponent(nodeUrl.pathname.replace("/", "")),
+						};
+					const proxyNodeBinding = new ProxyNodeBinding({
+						get(target, prop) {
+							return prop in connectionOverrides
+								? connectionOverrides[prop]
+								: target[prop];
+						},
+					});
+					return [name, proxyNodeBinding];
+				}
+			)
+		);
+	},
+	async getServices({ options, workerIndex, hyperdriveProxyController }) {
 		const services = [];
-		for (const [name, url] of getHyperdrives(options.config)) {
+		for (const [name, url, remoteProxyConnectionString] of getHyperdrives(
+			options.config,
+			options.dev
+		)) {
+			// Remote bindings: stand up a local TCP bridge that relays `connect()`
+			// bytes to the edge Hyperdrive binding over a WebSocket, and point the
+			// `hyperdrive:<name>` external.tcp designator at it. This keeps workerd
+			// unmodified (the Worker-service designator path SIGSEGVs).
+			if (remoteProxyConnectionString) {
+				const bridgePort =
+					await hyperdriveProxyController.createRemoteTcpBridge({
+						name: getHyperdriveServiceName(workerIndex, name),
+						bindingName: name,
+						remoteProxyConnectionString,
+					});
+				services.push({
+					name: getHyperdriveServiceName(workerIndex, name),
+					external: {
+						address: `127.0.0.1:${bridgePort}`,
+						tcp: {},
+					},
+				});
+				continue;
+			}
+
 			const scheme = url.protocol.replace(":", "");
 			const sslmode = parseSslMode(url, scheme);
 			const targetPort = getPort(url);
@@ -147,7 +250,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 				// SSL modes (require, prefer) need the proxy to handle
 				// TLS negotiation with the target database
 				const proxyPort = await hyperdriveProxyController.createProxyServer({
-					name,
+					name: getHyperdriveServiceName(workerIndex, name),
 					targetHost: url.hostname,
 					targetPort,
 					scheme,
@@ -158,7 +261,7 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 			}
 
 			services.push({
-				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
+				name: getHyperdriveServiceName(workerIndex, name),
 				external: {
 					address,
 					tcp: {},

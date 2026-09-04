@@ -374,12 +374,14 @@ export function printBindings(
 
 	if (hyperdrive.length > 0) {
 		output.push(
-			...hyperdrive.map(({ binding, id }) => {
+			...hyperdrive.map(({ binding, id, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("hyperdrive"),
 					value: id,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);

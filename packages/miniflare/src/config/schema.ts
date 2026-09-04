@@ -179,8 +179,24 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
+// `dev.connectionString` is required for a local Hyperdrive binding — there is
+// nothing else to connect to. A `dev.remote: true` binding is reached through
+// the edge instead, and its credentials are seeded from the remote proxy
+// session, so it may legitimately arrive without one.
 const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
-	dev: z.strictObject({ connectionString: z.string() }),
+	dev: z.strictObject({
+		connectionString: z.string().optional(),
+		remote: z.boolean().optional(),
+	}),
+}).superRefine((value, ctx) => {
+	if (!value.dev.remote && value.dev.connectionString === undefined) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["dev", "connectionString"],
+			message:
+				'A Hyperdrive binding requires a "dev.connectionString" unless it sets "dev.remote": true.',
+		});
+	}
 });
 
 /**
