@@ -128,6 +128,17 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
+	it("should handle bracket-quoted identifiers", ({ expect }) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TABLE metrics ([value;unit] TEXT);
+    SELECT [value;unit] FROM metrics;`)
+		).toEqual([
+			"CREATE TABLE metrics ([value;unit] TEXT)",
+			"SELECT [value;unit] FROM metrics",
+		]);
+	});
+
 	it("should handle inline comments", ({ expect }) => {
 		expect(
 			splitSqlQuery(
@@ -275,6 +286,114 @@ describe("splitSqlQuery()", () => {
 			  "$SomeTag$Dianne's horse$SomeTag$",
 			]
 		`);
+	});
+
+	it("should end a compound statement when END follows a semicolon", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER audit_trigger AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);END;
+    INSERT INTO items (id) VALUES (1);
+    SELECT * FROM items;`)
+		).toEqual([
+			`CREATE TRIGGER audit_trigger AFTER INSERT ON items
+    BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);END`,
+			"INSERT INTO items (id) VALUES (1)",
+			"SELECT * FROM items",
+		]);
+	});
+
+	it("should start a compound statement when BEGIN follows a parenthesis", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER audit_trigger AFTER INSERT ON items FOR EACH ROW WHEN (1=1)BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);
+    END;
+    SELECT * FROM items;`)
+		).toEqual([
+			`CREATE TRIGGER audit_trigger AFTER INSERT ON items FOR EACH ROW WHEN (1=1)BEGIN
+        INSERT INTO audit (item_id) VALUES (new.id);
+    END`,
+			"SELECT * FROM items",
+		]);
+	});
+
+	it("should end a CASE expression closed by a parenthesis or comma", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    SELECT SUM(CASE WHEN a THEN 1 ELSE 0 END) FROM t;
+    SELECT CASE WHEN a THEN 1 ELSE 0 END, b FROM t;
+    SELECT * FROM t;`)
+		).toEqual([
+			"SELECT SUM(CASE WHEN a THEN 1 ELSE 0 END) FROM t",
+			"SELECT CASE WHEN a THEN 1 ELSE 0 END, b FROM t",
+			"SELECT * FROM t",
+		]);
+	});
+
+	it("should not treat an identifier ending in END as a compound statement end", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TABLE weekend (id INTEGER PRIMARY KEY);
+    INSERT INTO weekend (id) VALUES (1);
+    SELECT * FROM weekend;`)
+		).toEqual([
+			"CREATE TABLE weekend (id INTEGER PRIMARY KEY)",
+			"INSERT INTO weekend (id) VALUES (1)",
+			"SELECT * FROM weekend",
+		]);
+	});
+
+	it("should not treat an accented identifier ending in END as a compound statement end", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER t AFTER INSERT ON x
+    BEGIN
+        UPDATE y SET a = 1 WHERE b = néend;
+        UPDATE z SET c = 2;
+    END;
+    SELECT 1;`)
+		).toEqual([
+			`CREATE TRIGGER t AFTER INSERT ON x
+    BEGIN
+        UPDATE y SET a = 1 WHERE b = néend;
+        UPDATE z SET c = 2;
+    END`,
+			"SELECT 1",
+		]);
+	});
+
+	it("should not treat a bracket-quoted identifier as a compound statement marker", ({
+		expect,
+	}) => {
+		expect(
+			splitSqlQuery(`
+    CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        UPDATE x SET [end] = 1;
+        UPDATE y SET z = 2;
+    END;
+    SELECT 1;`)
+		).toEqual([
+			`CREATE TRIGGER t AFTER INSERT ON items
+    BEGIN
+        UPDATE x SET [end] = 1;
+        UPDATE y SET z = 2;
+    END`,
+			"SELECT 1",
+		]);
 	});
 
 	it("should handle compound statements for BEGINs", ({ expect }) => {
