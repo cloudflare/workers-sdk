@@ -367,6 +367,8 @@ describe("wrangler preview", () => {
 				},
 			});
 			let lookupPreviewUrl: string | undefined;
+			let previewRequestBody: unknown;
+			let metricsExportRequests = 0;
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -384,7 +386,8 @@ describe("wrangler preview", () => {
 				),
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews`,
-					() => {
+					async ({ request }) => {
+						previewRequestBody = await request.json();
 						return HttpResponse.json(
 							{
 								success: true,
@@ -400,6 +403,13 @@ describe("wrangler preview", () => {
 							},
 							{ status: 201 }
 						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/observability/metricsexport`,
+					() => {
+						metricsExportRequests++;
+						return HttpResponse.json({ success: true, result: null });
 					}
 				),
 				http.post(
@@ -437,6 +447,8 @@ describe("wrangler preview", () => {
 			expect(lookupPreviewUrl).toContain(
 				"/workers/workers/override-worker/previews/"
 			);
+			expect(previewRequestBody).toEqual({ name: "test-preview" });
+			expect(metricsExportRequests).toBe(0);
 			expect(std.out).toContain("Preview: test-preview (new)");
 			expect(std.out).toContain("Deployment:");
 			expect(std.out).toContain("DEFAULT_VAR");

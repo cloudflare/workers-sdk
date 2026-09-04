@@ -13,6 +13,11 @@ import type {
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
+/**
+ * Returns observability settings suitable for the Worker upload API by removing
+ * metrics export without mutating the input. Native observability settings are
+ * preserved, or `undefined` is returned when no settings remain.
+ */
 export function withoutMetricsExportConfig(
 	observability: Config["observability"]
 ): Config["observability"] {
@@ -41,6 +46,12 @@ type MetricExportRequesterPayload = {
 	resources: MetricExportResource[];
 };
 
+/**
+ * Replaces a Worker's metrics export resource snapshot after a successful
+ * deployment. Disabled metrics clear the snapshot, unresolved Container
+ * resources leave it unchanged, and failures are reported as warnings because
+ * the Worker deployment has already succeeded.
+ */
 export async function reconcileMetricsExportConfig({
 	config,
 	accountId,
@@ -104,6 +115,11 @@ export async function reconcileMetricsExportConfig({
 	}
 }
 
+/**
+ * Clears all metrics export resources requested by a Worker. Cleanup failures
+ * are wrapped in a user-facing error so callers can report a post-deletion
+ * cleanup failure.
+ */
 export async function clearMetricsExportRequester({
 	config,
 	accountId,
@@ -194,6 +210,10 @@ async function discoverMetricsExportResources({
 	];
 }
 
+/**
+ * Validates that resolved Container Application IDs are complete, unique, and
+ * free of surrounding whitespace while preserving their input order.
+ */
 export function validateContainerApplicationIds(
 	applicationIds: unknown[] | undefined,
 	expectedCount: number

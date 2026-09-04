@@ -334,6 +334,42 @@ const LimitsSchema = z.strictObject({
 	subrequests: z.number().optional(),
 });
 
+const MetricsSchema = z
+	.strictObject({
+		enabled: z.boolean(),
+		destinations: z.array(z.string().trim().min(1)).optional(),
+	})
+	.superRefine(({ enabled, destinations }, ctx) => {
+		if (enabled) {
+			if (destinations === undefined) {
+				ctx.addIssue({
+					code: "custom",
+					message:
+						"Metrics destinations are required when metrics are enabled.",
+					path: ["destinations"],
+				});
+			} else if (destinations.length === 0) {
+				ctx.addIssue({
+					code: "custom",
+					message:
+						"Metrics destinations must contain at least one destination when metrics are enabled.",
+					path: ["destinations"],
+				});
+			}
+		}
+
+		if (
+			destinations !== undefined &&
+			new Set(destinations).size !== destinations.length
+		) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Metrics destinations must not contain duplicates.",
+				path: ["destinations"],
+			});
+		}
+	});
+
 const ObservabilitySchema = z.strictObject({
 	enabled: z.boolean().optional(),
 	headSamplingRate: z.number().optional(),
@@ -354,12 +390,7 @@ const ObservabilitySchema = z.strictObject({
 			destinations: z.array(z.string()).optional(),
 		})
 		.optional(),
-	metrics: z
-		.strictObject({
-			enabled: z.boolean(),
-			destinations: z.array(z.string()).optional(),
-		})
-		.optional(),
+	metrics: MetricsSchema.optional(),
 });
 
 const PlacementSchema = z.union([
