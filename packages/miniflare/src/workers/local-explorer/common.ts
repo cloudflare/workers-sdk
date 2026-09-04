@@ -44,14 +44,36 @@ export function validateQuery<T extends z.ZodType>(schema: T) {
 /**
  * validates request body according to openapi schema
  */
-export function validateRequestBody<T extends z.ZodType>(schema: T) {
-	return validator("json", async (value, c) => {
+export function validateRequestBody<T extends z.ZodType>(
+	schema: T,
+	options?: { malformedJsonAsValidationError?: boolean }
+) {
+	const middleware = validator("json", async (value, c) => {
 		const result = await schema.safeParseAsync(value);
 		if (!result.success) {
 			return validationHook(result, c);
 		}
 		return result.data as z.output<T>;
 	});
+	if (!options?.malformedJsonAsValidationError) {
+		return middleware;
+	}
+
+	const malformedJsonMiddleware: typeof middleware = async (c, next) => {
+		try {
+			return await middleware(c, next);
+		} catch (error) {
+			if (
+				error instanceof SyntaxError ||
+				(error instanceof Error &&
+					error.message === "Malformed JSON in request body")
+			) {
+				return errorResponse(400, 10001, "Invalid JSON request body");
+			}
+			throw error;
+		}
+	};
+	return malformedJsonMiddleware;
 }
 
 /**
@@ -175,13 +197,18 @@ export function wrapResponse<T>(
 /**
  * Create an error response in the Cloudflare API format
  */
-export function errorResponse(status: number, code: number, message: string) {
+export function errorResponse(
+	status: number,
+	code: number,
+	message: string,
+	result: unknown = null
+): Response {
 	return Response.json(
 		{
 			success: false,
 			errors: [{ code, message }],
 			messages: [],
-			result: null,
+			result,
 		},
 		{ status }
 	);

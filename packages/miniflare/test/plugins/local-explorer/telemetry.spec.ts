@@ -30,6 +30,16 @@ describe("getRouteName", () => {
 		expect(
 			getRouteName(`/cdn-cgi/local/explorer/api/storage/kv/namespaces`)
 		).toBe("kv.namespaces");
+		expect(
+			getRouteName(
+				`/cdn-cgi/local/explorer/api/storage/kv/namespaces/test-id/bulk`
+			)
+		).toBe("kv.bulk_write");
+		expect(
+			getRouteName(
+				`/cdn-cgi/local/explorer/api/storage/kv/namespaces/test-id/bulk/delete`
+			)
+		).toBe("kv.bulk_delete");
 	});
 
 	test("returns unknown for unrecognized paths", ({ expect }) => {

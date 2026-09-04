@@ -17,9 +17,11 @@ import {
 	zEmailSendRoutingData,
 	zR2BucketDeleteObjectsData,
 	zR2BucketListObjectsData,
+	zWorkersKvNamespaceDeleteMultipleKeyValuePairsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
 	zWorkflowsChangeInstanceStatusData,
@@ -36,7 +38,9 @@ import {
 	sendTestEmail,
 } from "./resources/email";
 import {
+	bulkDeleteKVValues,
 	bulkGetKVValues,
+	bulkWriteKVValues,
 	deleteKVValue,
 	getKVValue,
 	listKVKeys,
@@ -233,6 +237,24 @@ app.put("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
 
 app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
 	deleteKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
+);
+
+app.put(
+	"/api/storage/kv/namespaces/:namespace_id/bulk",
+	validateRequestBody(
+		zWorkersKvNamespaceWriteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkWriteKVValues(c, c.req.valid("json"))
+);
+
+app.post(
+	"/api/storage/kv/namespaces/:namespace_id/bulk/delete",
+	validateRequestBody(
+		zWorkersKvNamespaceDeleteMultipleKeyValuePairsData.shape.body,
+		{ malformedJsonAsValidationError: true }
+	),
+	(c) => bulkDeleteKVValues(c, c.req.valid("json"))
 );
 
 app.post(
