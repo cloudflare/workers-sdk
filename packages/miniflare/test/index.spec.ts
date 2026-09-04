@@ -429,6 +429,99 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 	expect(await res.text()).toBe("body");
 });
 
+test("Miniflare: removes loopback startup error handler after listening", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const createServer = vi.spyOn(http, "createServer");
+	onTestFinished(() => createServer.mockRestore());
+
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await mf.ready;
+
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	expect(server.listenerCount("error")).toBe(0);
+});
+
+test("Miniflare: rejects ready when loopback server cannot bind", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const createServer = vi.spyOn(http, "createServer");
+	const close = vi.spyOn(http.Server.prototype, "close");
+	onTestFinished(() => {
+		createServer.mockRestore();
+		close.mockRestore();
+	});
+
+	const mf = new Miniflare({
+		host: "192.0.2.1",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+
+	await expect(mf.ready).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	expect(close.mock.instances).toContain(server);
+	expect(server.listening).toBe(false);
+	await expect(mf.dispose()).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+});
+
+test("Miniflare: setOptions: recovers after loopback bind failure", async ({
+	expect,
+}) => {
+	const worker = {
+		config: {
+			type: "worker" as const,
+			name: "",
+			compatibilityDate: "2025-05-01",
+			manifest: singleModuleManifest(
+				`export default { fetch() { return new Response("ok"); } }`
+			),
+		},
+	};
+	const mf = new Miniflare({ host: "127.0.0.1", workers: [worker] });
+	useDispose(mf);
+
+	await mf.ready;
+
+	await expect(
+		mf.setOptions({ host: "192.0.2.1", workers: [worker] })
+	).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+
+	await mf.setOptions({ host: "127.0.0.1", workers: [worker] });
+
+	const res = await mf.dispatchFetch("https://example.com");
+	expect(await res.text()).toBe("ok");
+});
+
 test("Miniflare: can use IPv6 loopback as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "::1",

@@ -1930,7 +1930,7 @@ export class Miniflare {
 			hostname = "::";
 		}
 
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
 			const server = stoppable(
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
@@ -1944,14 +1944,33 @@ export class Miniflare {
 			// already disable their timeouts.
 			server.keepAliveTimeout = 0;
 			server.on("upgrade", this.#handleLoopbackUpgrade);
-			server.listen(0, hostname, () => resolve(server));
+			const onError = (error: Error) => {
+				server.close();
+				reject(error);
+			};
+			server.once("error", onError);
+			server.listen(0, hostname, () => {
+				server.off("error", onError);
+				resolve(server);
+			});
 		});
 	}
 
 	#stopLoopbackServer(): Promise<void> {
+		const loopbackServer = this.#loopbackServer;
+		if (loopbackServer === undefined) {
+			return Promise.resolve();
+		}
 		return new Promise((resolve, reject) => {
-			assert(this.#loopbackServer !== undefined);
-			this.#loopbackServer.stop((err) => (err ? reject(err) : resolve()));
+			loopbackServer.stop((err) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+				this.#loopbackServer = undefined;
+				this.#loopbackHost = undefined;
+				resolve();
+			});
 		});
 	}
 
