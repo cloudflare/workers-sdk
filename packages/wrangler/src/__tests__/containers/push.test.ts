@@ -1,7 +1,7 @@
 import {
-	dockerImageInspect,
-	getCloudflareContainerRegistry,
-	runDockerCmd,
+	checkImagePlatform,
+	initContainersSharedContext,
+	pushContainerImage,
 } from "@cloudflare/containers-shared";
 import { beforeEach, describe, it, vi } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
@@ -13,9 +13,12 @@ import { runWrangler } from "../helpers/run-wrangler";
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const actual = await importOriginal();
 	return Object.assign({}, actual, {
-		dockerLoginImageRegistry: vi.fn(),
-		runDockerCmd: vi.fn(),
-		dockerImageInspect: vi.fn(),
+		checkImagePlatform: vi.fn(),
+		initContainersSharedContext: vi.fn(),
+		pushContainerImage: vi.fn(async () => ({
+			remoteDigest:
+				"registry.cloudflare.com/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		})),
 	});
 });
 
@@ -28,9 +31,9 @@ describe("containers push", () => {
 	beforeEach(mockAccount);
 
 	beforeEach(() => {
+		vi.clearAllMocks();
 		setIsTTY(false);
 		setWranglerConfig({});
-		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
 	});
 
 	it("should help", async ({ expect }) => {
@@ -59,97 +62,40 @@ describe("containers push", () => {
 		`);
 	});
 
-	it("should push image with valid platform", async ({ expect }) => {
-		await runWrangler("containers push test-app:tag");
-
-		expect(runDockerCmd).toHaveBeenCalledTimes(2);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
-			"tag",
-			`test-app:tag`,
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
-			"push",
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-	});
-
-	it("should reject pushing image if platform is not linux/amd64", async ({
+	it("initializes containers shared with the containers API family", async ({
 		expect,
 	}) => {
-		vi.mocked(dockerImageInspect).mockResolvedValue("linux/arm64");
-		await expect(runWrangler("containers push test-app:tag")).rejects.toThrow(
-			"Unsupported platform"
+		await runWrangler("containers push test-app:tag");
+
+		expect(initContainersSharedContext).toHaveBeenCalledWith(
+			expect.objectContaining({
+				accountId: "some-account-id",
+				apiFamily: "containers",
+			})
+		);
+		expect(checkImagePlatform).toHaveBeenCalledWith("docker", "test-app:tag");
+		expect(pushContainerImage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				imageTag: "test-app:tag",
+				pathToDocker: "docker",
+			})
 		);
 	});
 
-	it("should tag image with the correct uri if given an <image>:<tag> argument", async ({
-		expect,
-	}) => {
-		await runWrangler("containers push test-app:tag");
-
-		expect(runDockerCmd).toHaveBeenCalledTimes(2);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
-			"tag",
-			`test-app:tag`,
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
-			"push",
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-	});
-
-	it("should tag image with the correct uri if given an <namespace>/<image>:<tag> argument", async ({
-		expect,
-	}) => {
-		await runWrangler("containers push test-namespace/app:tag");
-
-		expect(runDockerCmd).toHaveBeenCalledTimes(2);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
-			"tag",
-			`test-namespace/app:tag`,
-			`${getCloudflareContainerRegistry()}/some-account-id/test-namespace/app:tag`,
-		]);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
-			"push",
-			`${getCloudflareContainerRegistry()}/some-account-id/test-namespace/app:tag`,
-		]);
-	});
-
-	it("should tag image with the correct uri if given an registry.cloudflare.com/<image>:<tag> argument", async ({
-		expect,
-	}) => {
-		await runWrangler("containers push registry.cloudflare.com/test-app:tag");
-
-		expect(runDockerCmd).toHaveBeenCalledTimes(2);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
-			"tag",
-			`registry.cloudflare.com/test-app:tag`,
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
-			"push",
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-	});
-
-	it("should tag image with the correct uri if given an registry.cloudflare.com/some-account-id/<image>:<tag> argument", async ({
-		expect,
-	}) => {
+	it("uses a custom Docker path when provided", async ({ expect }) => {
 		await runWrangler(
-			"containers push registry.cloudflare.com/some-account-id/test-app:tag"
+			"containers push test-app:tag --path-to-docker /custom/docker"
 		);
 
-		expect(runDockerCmd).toHaveBeenCalledTimes(2);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(1, "docker", [
-			"tag",
-			`registry.cloudflare.com/some-account-id/test-app:tag`,
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
-		expect(runDockerCmd).toHaveBeenNthCalledWith(2, "docker", [
-			"push",
-			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
-		]);
+		expect(checkImagePlatform).toHaveBeenCalledWith(
+			"/custom/docker",
+			"test-app:tag"
+		);
+		expect(pushContainerImage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				imageTag: "test-app:tag",
+				pathToDocker: "/custom/docker",
+			})
+		);
 	});
 });

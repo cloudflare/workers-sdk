@@ -1,5 +1,5 @@
-export * from "./src/client";
 export * from "./src/build";
+export * from "./src/context";
 export * from "./src/login";
 export * from "./src/knobs";
 export * from "./src/utils";
@@ -7,3 +7,4 @@ export * from "./src/types";
 export * from "./src/inspect";
 export * from "./src/registry";
 export * from "./src/images";
+export * from "./src/push";

@@ -3,11 +3,11 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import {
+	ApplicationAffinityHardwareGeneration,
 	getCloudflareContainerRegistry,
 	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -36,7 +36,7 @@ import type {
 	Application,
 	CreateApplicationRequest,
 	ImageRegistryCredentialsConfiguration,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { ChildProcess } from "node:child_process";
 import type { ExpectStatic } from "vitest";
 
@@ -1828,12 +1828,12 @@ describe("wrangler deploy with containers", () => {
 				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
-			)
-			.mockImplementationOnce(
 				mockDockerImageInspectSize(expect, containerName, tag)
 			)
 			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
+			.mockImplementationOnce(
+				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
+			)
 			// Mock docker image rm call since we skip the push
 			.mockImplementationOnce(
 				mockDockerImageDelete(expect, containerName, tag)
@@ -1941,12 +1941,12 @@ describe("wrangler deploy with containers", () => {
 				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
-			)
-			.mockImplementationOnce(
 				mockDockerImageInspectSize(expect, containerName, tag)
 			)
 			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
+			.mockImplementationOnce(
+				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
+			)
 			.mockImplementationOnce(
 				mockDockerImageDelete(expect, containerName, tag)
 			);
@@ -3019,9 +3019,9 @@ function createDockerMockChain(
 			dockerfilePath || "FROM scratch",
 			buildContext || process.cwd()
 		),
-		mockDockerImageInspectDigests(expect, containerName, tag),
 		mockDockerImageInspectSize(expect, containerName, tag),
 		mockDockerLogin(expect, "mockpassword"),
+		mockDockerImageInspectDigests(expect, containerName, tag),
 		// Default manifest inspect output is invalid JSON, so Dockerfile deploy tests exercise
 		// the push path before using the post-push RepoDigests lookup.
 		mockDockerTag(

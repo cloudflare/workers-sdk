@@ -4,7 +4,7 @@ import {
 	startSection,
 } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
-import { DeploymentsService } from "@cloudflare/containers-shared";
+import { DeploymentsService } from "@cloudflare/containers-api";
 import { UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";

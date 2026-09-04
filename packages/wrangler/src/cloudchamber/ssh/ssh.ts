@@ -15,7 +15,7 @@ import {
 	inputPrompt,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
-import { SshPublicKeysService } from "@cloudflare/containers-shared";
+import { SshPublicKeysService } from "@cloudflare/containers-api";
 import { UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../../core/create-command";
@@ -37,7 +37,7 @@ import type {
 	ListSSHPublicKeys,
 	SSHPublicKeyID,
 	SSHPublicKeyItem,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { Config } from "@cloudflare/workers-utils";
 
 function _createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgv) {

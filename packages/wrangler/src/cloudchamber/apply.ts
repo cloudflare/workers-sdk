@@ -23,9 +23,11 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	RolloutsService,
+} from "@cloudflare/containers-api";
+import {
 	InstanceType,
 	resolveImageName,
-	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
@@ -55,6 +57,7 @@ import type {
 	Application,
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
+	ApplicationAffinityHardwareGeneration,
 	ApplicationID,
 	ApplicationName,
 	CreateApplicationRequest,
@@ -62,8 +65,7 @@ import type {
 	ModifyDeploymentV2RequestBody,
 	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
-} from "@cloudflare/containers-shared";
-import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+} from "@cloudflare/containers-api";
 import type {
 	Config,
 	ContainerApp,

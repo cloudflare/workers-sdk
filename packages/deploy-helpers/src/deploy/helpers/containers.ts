@@ -1,7 +1,3 @@
-/**
- * Note! Much of this is copied and modified from cloudchamber/apply.ts
- * However this code is only used for containers interactions, not cloudchamber ones!
- */
 import assert from "node:assert";
 import { setTimeout } from "node:timers/promises";
 import {
@@ -20,12 +16,11 @@ import {
 	green,
 } from "@cloudflare/cli-shared-helpers/colors";
 import {
-	ApiError,
-	ApplicationsService,
-	CreateApplicationRolloutRequest,
-	RolloutsService,
-} from "@cloudflare/containers-api";
-import { resolveImageName } from "@cloudflare/containers-shared";
+	buildContainerImage,
+	initContainersSharedContext,
+	pushContainerImage,
+	resolveImageName,
+} from "@cloudflare/containers-shared";
 import {
 	APIError,
 	FatalError,
@@ -33,34 +28,15 @@ import {
 	getDockerPath,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
-import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
-import { buildContainer } from "../containers/build";
-import { getOrSelectAccountId } from "../user";
-import { Diff } from "../utils/diff";
-import {
-	sortObjectRecursive,
-	stripUndefined,
-} from "../utils/sortObjectRecursive";
-import { fetchVersion } from "../versions/api";
-import { containersScope } from ".";
-import type { ApiVersion } from "../versions/types";
-import type {
-	Application,
-	ApplicationID,
-	ApplicationName,
-	CreateApplicationRequest,
-	ModifyApplicationRequestBody,
-	Observability as ObservabilityConfiguration,
-	RolloutStepRequest,
-} from "@cloudflare/containers-api";
+import { fetchResult, logger } from "../../shared/context";
+import { Diff } from "./line-diff";
+import { fetchVersion } from "./versions-api";
+import type { DockerfileContainerConfig } from "../../shared/types";
+import type { ApiVersion } from "./versions-types";
 import type {
 	ContainerNormalizedConfig,
 	ImageRef,
+	InstanceType,
 } from "@cloudflare/containers-shared";
 import type {
 	ComplianceConfig,
@@ -75,12 +51,144 @@ type DeployContainersArgs = {
 	scriptName: string;
 };
 
+type ApplicationID = string;
+type ApplicationName = string;
+
+type ObservabilityConfiguration = {
+	logs?: {
+		enabled?: boolean;
+	};
+};
+
+type UserDeploymentConfiguration = {
+	image: string;
+	wrangler_ssh?: unknown;
+	authorized_keys?: unknown;
+	trusted_user_ca_keys?: unknown;
+	ssh_public_key_ids?: unknown;
+	secrets?: unknown;
+	instance_type?: InstanceType;
+	vcpu?: number;
+	/**
+	 * @deprecated intentionally retained for API compatibility.
+	 */
+	memory?: unknown;
+	memory_mib?: number;
+	disk?: { size_mb?: number };
+	environment_variables?: unknown;
+	labels?: unknown;
+	network?: unknown;
+	command?: unknown;
+	entrypoint?: unknown;
+	dns?: unknown;
+	ports?: unknown;
+	checks?: unknown;
+	provisioner?: unknown;
+	observability?: ObservabilityConfiguration;
+	experimental_flags?: unknown;
+};
+
+type ModifyUserDeploymentConfiguration = Partial<UserDeploymentConfiguration>;
+
+type ApplicationConstraints = ContainerNormalizedConfig["constraints"] & {
+	region?: string;
+	tier?: number;
+	pops?: string[];
+};
+
+type CreateApplicationRequest = {
+	name: string;
+	scheduling_policy: ContainerNormalizedConfig["scheduling_policy"];
+	instances: number;
+	max_instances?: number;
+	constraints?: ApplicationConstraints;
+	configuration: UserDeploymentConfiguration;
+	durable_objects?: { namespace_id: string };
+	affinities?: ContainerNormalizedConfig["affinities"];
+	rollout_active_grace_period?: number;
+};
+
+type ModifyApplicationRequestBody = {
+	scheduling_policy?: ContainerNormalizedConfig["scheduling_policy"];
+	max_instances?: number;
+	constraints?: ApplicationConstraints;
+	configuration?: ModifyUserDeploymentConfiguration;
+	durable_objects?: { namespace_id: string };
+	affinities?: ContainerNormalizedConfig["affinities"];
+	rollout_active_grace_period?: number;
+};
+
+type Application = CreateApplicationRequest & {
+	id: ApplicationID;
+	configuration: UserDeploymentConfiguration;
+	durable_objects?: { namespace_id?: string };
+};
+
+type RolloutStepRequest = {
+	step_size: { percentage: number };
+	description: string;
+};
+
+type CreateApplicationRolloutRequest = {
+	target_configuration: ModifyUserDeploymentConfiguration;
+	strategy: "rolling";
+	step_percentage?: number;
+	steps?: RolloutStepRequest[];
+	description: string;
+	kind?: "full_auto" | "full_manual";
+};
+
+export async function buildContainerForDeploy(
+	containerConfig: DockerfileContainerConfig,
+	imageTag: string,
+	dryRun: boolean,
+	pathToDocker: string,
+	verifyDockerIsRunning?: boolean,
+	complianceConfig?: Config
+): Promise<ImageRef> {
+	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
+	logger.log("Building image", imageFullName);
+
+	const imageRef = await buildContainerImage({
+		args: {
+			tag: imageFullName,
+			pathToDockerfile: containerConfig.dockerfile,
+			buildContext: containerConfig.image_build_context,
+			args: containerConfig.image_vars,
+		},
+		pathToDocker,
+		verifyDockerIsRunning,
+		logger: getContainersLogger(),
+	});
+
+	if (dryRun) {
+		return imageRef;
+	}
+
+	if (complianceConfig === undefined) {
+		throw new Error("Container image push requires Wrangler config");
+	}
+
+	return await pushContainerImage({
+		imageTag: imageRef.newTag,
+		pathToDocker,
+		containerConfig,
+		skipIfRemoteExists: true,
+		complianceConfig,
+		logger: getContainersLogger(),
+	});
+}
+
 export async function deployContainers(
 	config: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	{ versionId, accountId, scriptName }: DeployContainersArgs
 ) {
-	await fillOpenAPIConfiguration(config, containersScope);
+	initContainersSharedContext({
+		accountId,
+		apiFamily: "containers",
+		fetchResult,
+	});
 
 	const pathToDocker = getDockerPath();
 	const boundDOs = new Set(
@@ -93,10 +201,10 @@ export async function deployContainers(
 
 	for (const container of normalisedContainerConfig) {
 		if ("dockerfile" in container) {
-			imageRef = await buildContainer(
+			imageRef = await buildContainerForDeploy(
 				container,
 				versionId,
-				false, // dry runs will have already exited by this point
+				false,
 				pathToDocker,
 				false,
 				config
@@ -105,7 +213,6 @@ export async function deployContainers(
 			imageRef = { newTag: container.image_uri };
 		}
 
-		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
 		if (boundDOs.has(container.class_name)) {
 			maybeVersionInfo ??= await fetchUploadedVersion(
 				config,
@@ -121,7 +228,6 @@ export async function deployContainers(
 				(binding): binding is DurableObjectBinding =>
 					binding.type === "durable_object_namespace" &&
 					binding.class_name === container.class_name &&
-					// DO cannot be defined in a different script to the container
 					(binding.script_name === undefined ||
 						binding.script_name === scriptName) &&
 					binding.namespace_id !== undefined
@@ -145,11 +251,10 @@ export async function deployContainers(
 					durable_object_namespace_id: targetDurableObject.namespace_id,
 				},
 				container,
-				config
+				config,
+				accountId
 			);
 		} else {
-			// The DO is unbound, so we need to list all DO namespaces to find the right one
-			// TODO: use the list API with filters when it exists
 			maybeAllDurableObjects ??= await listDurableObjects(config, accountId);
 			const targetDurableObject = maybeAllDurableObjects.find(
 				(durableObject) =>
@@ -164,7 +269,8 @@ export async function deployContainers(
 					durable_object_namespace_id: targetDurableObject.id,
 				},
 				container,
-				config
+				config,
+				accountId
 			);
 		}
 	}
@@ -178,7 +284,7 @@ async function fetchUploadedVersion(
 ): Promise<ApiVersion> {
 	for (let attempt = 0; attempt < 5; attempt++) {
 		try {
-			return await fetchVersion(config, accountId, scriptName, versionId);
+			return await fetchVersion(config, accountId, scriptName, versionId, undefined);
 		} catch (error) {
 			if (
 				!(error instanceof APIError) ||
@@ -199,13 +305,9 @@ export type DurableObjectNamespace = {
 	name: string;
 	script: string;
 	useSqlite: boolean;
-	/**
-	 * Set when the namespace belongs to a Worker preview. For those, `script` is
-	 * the parent Worker's name, so `preview.id` is what distinguishes a
-	 * preview's namespace from the parent's and from other previews'.
-	 */
 	preview?: { id: string; slug: string; name: string };
 };
+
 export async function listDurableObjects(
 	complianceConfig: ComplianceConfig,
 	accountId: string
@@ -217,9 +319,7 @@ export async function listDurableObjects(
 		new URLSearchParams({ per_page: "1000" })
 	);
 }
-/**
- * Source overwrites target
- */
+
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
 		return source as T;
@@ -262,44 +362,10 @@ function createApplicationToModifyApplication(
 	};
 }
 
-/**
- * Resolves current configuration based on previous deployment.
- */
 function observabilityToConfiguration(
-	/** Taken from current wrangler config */
 	observabilityFromConfig: boolean,
-	/** From previous deployment */
 	existingObservabilityConfig: ObservabilityConfiguration | undefined
 ): ObservabilityConfiguration | undefined {
-	// Let's use logs for the sake of simplicity of explanation.
-	//
-	// The first column specifies if logs are enabled in the current Wrangler config.
-	// The second column specifies if logs are currently enabled for the application.
-	// The third column specifies what the expected function result should be so that
-	// diff is minimal.
-	//
-	// | Wrangler  | Existing  | Result    |
-	// | --------- | --------- | --------- |
-	// | undefined | undefined | undefined |
-	// | undefined | false     | false     |
-	// | undefined | true      | false     |
-	// | false     | undefined | undefined |
-	// | false     | false     | false     |
-	// | false     | true      | false     |
-	// | true      | undefined | true      |
-	// | true      | false     | true      |
-	// | true      | true      | true      |
-	//
-	// Because the result is the same for Wrangler undefined and false, the table may be
-	// compressed as follows:
-
-	//
-	// | Wrangler          | Existing                 | Result    |
-	// | ----------------- | ------------------------ | --------- |
-	// | false / undefined | undefined                | undefined |
-	// | false / undefined | false / true             | false     |
-	// | true              | undefined / false / true | true      |
-
 	const logsAlreadyEnabled = existingObservabilityConfig?.logs?.enabled;
 
 	if (observabilityFromConfig) {
@@ -311,13 +377,6 @@ function observabilityToConfiguration(
 	}
 }
 
-/**
- *
- * Turns the normalised container config from wrangler config into
- * a CreateApplicationRequest that can be sent to the API.
- * If we want to modify instead, the ModifyRequestBody is a subset of this
- *
- */
 function containerConfigToCreateRequest(
 	accountId: string,
 	containerApp: ContainerNormalizedConfig,
@@ -330,9 +389,7 @@ function containerConfigToCreateRequest(
 		name: containerApp.name,
 		scheduling_policy: containerApp.scheduling_policy,
 		configuration: {
-			// De-sugar image name
 			image: resolveImageName(accountId, imageRef, complianceConfig),
-			// if disk/memory/vcpu is not defined in config, AND instance_type is also not defined, this will already have been defaulted to 'dev'
 			...("instance_type" in containerApp
 				? { instance_type: containerApp.instance_type }
 				: {
@@ -348,7 +405,6 @@ function containerConfigToCreateRequest(
 			authorized_keys: containerApp.authorized_keys,
 			trusted_user_ca_keys: containerApp.trusted_user_ca_keys,
 		},
-		// deprecated in favour of max_instances
 		instances: 0,
 		max_instances: containerApp.max_instances,
 		constraints: containerApp.constraints,
@@ -365,8 +421,6 @@ function formatContainerSnippetForDisplay<
 		configuration?: ModifyApplicationRequestBody["configuration"];
 	},
 >(container: T, configPath: Config["configPath"]) {
-	// Normalize field names from the API into the Wrangler specific format
-	// Example: `container.configuration.wrangler_ssh` (API) => `container.configuration.ssh` (Wrangler)
 	const configurationForDisplay =
 		container.configuration === undefined
 			? undefined
@@ -390,13 +444,14 @@ function formatContainerSnippetForDisplay<
 	);
 }
 
-export async function apply(
+async function apply(
 	args: {
 		imageRef: ImageRef;
 		durable_object_namespace_id: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
-	config: Config
+	config: Config,
+	accountId: string
 ) {
 	if (!config.containers || config.containers.length === 0) {
 		return;
@@ -406,13 +461,10 @@ export async function apply(
 		"deploy changes to your application"
 	);
 
-	const existingApplications = await promiseSpinner(
-		ApplicationsService.listApplications(),
-		{ message: "Loading applications" }
+	const existingApplications = await fetchResult<Application[]>(
+		config,
+		`/accounts/${accountId}/containers/applications`
 	);
-	// TODO: this is not correct right now as there can be multiple applications
-	// with the same name.
-	/** Previous deployment of this app, if this exists  */
 	const prevApp = existingApplications.find(
 		(app) => app.name === containerConfig.name
 	);
@@ -423,10 +475,6 @@ export async function apply(
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
-	const accountId = await getOrSelectAccountId(config);
-
-	// let's always convert normalised container config -> CreateApplicationRequest
-	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
 	const appConfig = mergeIfUnsafe(
 		config,
 		containerConfigToCreateRequest(
@@ -461,23 +509,22 @@ export async function apply(
 			);
 		}
 
-		// we need to sort the objects (by key) because the diff algorithm works with lines
 		const normalisedPrevApp = sortObjectRecursive<ModifyApplicationRequestBody>(
 			stripUndefined(
 				cleanApplicationFromAPI(prevApp, containerConfig, accountId, config)
 			)
 		);
 
-		// this will have removed the unsafe fields, so we need to add them back in after
 		const modifyReq = mergeIfUnsafe(
 			config,
 			createApplicationToModifyApplication(appConfig),
 			appConfig.name
 		);
-		/** only used for diffing */
-		const nowContainer = mergeDeep(
-			normalisedPrevApp,
-			sortObjectRecursive<ModifyApplicationRequestBody>(modifyReq)
+		const nowContainer = stripUndefined(
+			mergeDeep(
+				normalisedPrevApp,
+				sortObjectRecursive<ModifyApplicationRequestBody>(modifyReq)
+			)
 		);
 
 		const prev = formatContainerSnippetForDisplay(
@@ -489,7 +536,7 @@ export async function apply(
 			nowContainer,
 			config.configPath
 		);
-		// eslint-disable-next-line @typescript-eslint/no-deprecated -- Diff is used here for formatted config string diffing, not JSON objects
+
 		const diff = new Diff(prev, now);
 
 		if (diff.changes === 0) {
@@ -505,27 +552,26 @@ export async function apply(
 		newline();
 
 		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
-				action: "modify",
-				application: modifyReq,
-				id: prevApp.id,
-				name: prevApp.name,
-				rollout_step_percentage: containerConfig.rollout_step_percentage,
-				rollout_kind:
-					containerConfig.rollout_kind == "full_manual"
-						? CreateApplicationRolloutRequest.kind.FULL_MANUAL
-						: CreateApplicationRolloutRequest.kind.FULL_AUTO,
-			});
+			await doAction(
+				{
+					action: "modify",
+					application: modifyReq,
+					id: prevApp.id,
+					name: prevApp.name,
+					rollout_step_percentage: containerConfig.rollout_step_percentage,
+					rollout_kind:
+						containerConfig.rollout_kind === "full_manual"
+							? "full_manual"
+							: "full_auto",
+				},
+				config,
+				accountId
+			);
 		} else {
 			log("Skipping application rollout");
 			newline();
 		}
 	} else {
-		// **************
-		// *** CREATE ***
-		// **************
-
-		// print the header of the app
 		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
 
 		const configStr = formatContainerSnippetForDisplay(
@@ -533,27 +579,25 @@ export async function apply(
 			config.configPath
 		);
 
-		// go line by line and pretty print it
 		configStr
 			.trimEnd()
 			.split("\n")
 			.forEach((el) => log(`  ${el}`));
 		newline();
-		// add to the actions array to create the app later
 
-		await doAction({
-			action: "create",
-			application: appConfig,
-		});
+		await doAction(
+			{
+				action: "create",
+				application: appConfig,
+			},
+			config,
+			accountId
+		);
 	}
 	newline();
 	endSection("Applied changes");
 }
 
-/**
- * If there is an unsafe container config that matches this container by class_name,
- * merge the unsafe config into the Create/Modify request.
- */
 function mergeIfUnsafe<
 	T extends CreateApplicationRequest | ModifyApplicationRequestBody,
 >(fullConfig: Config, containerConfig: T, name: string) {
@@ -571,26 +615,11 @@ function mergeIfUnsafe<
 	}
 }
 
-export function formatError(err: ApiError): string {
-	try {
-		const maybeError = JSON.parse(err.body.error);
-
-		if (maybeError.error !== undefined) {
-			const message = [];
-			message.push(`${maybeError.error}`);
-			if (
-				maybeError.details !== undefined &&
-				typeof maybeError.details === "object"
-			) {
-				for (const key in maybeError.details) {
-					message.push(`${brandColor(key)} ${maybeError.details[key]}`);
-				}
-			}
-			return message.join("\n");
-		}
-	} catch {}
-	// if we can't make it pretty, just dump out the error body
-	return JSON.stringify(err.body);
+export function formatError(err: APIError): string {
+	if (err.notes.length > 0) {
+		return err.notes.map((note) => note.text).join("\n");
+	}
+	return err.message;
 }
 
 const doAction = async (
@@ -602,22 +631,29 @@ const doAction = async (
 				id: ApplicationID;
 				name: ApplicationName;
 				rollout_step_percentage: number | number[];
-				rollout_kind: CreateApplicationRolloutRequest.kind;
-		  }
+				rollout_kind: CreateApplicationRolloutRequest["kind"];
+		  },
+	config: Config,
+	accountId: string
 ) => {
 	if (action.action === "create") {
 		let application: Application;
 		try {
-			application = await promiseSpinner(
-				ApplicationsService.createApplication(action.application),
-				{ message: `Creating "${action.application.name}"` }
+			application = await fetchResult<Application>(
+				config,
+				`/accounts/${accountId}/containers/applications`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(action.application),
+				}
 			);
 		} catch (err) {
 			if (!(err instanceof Error)) {
 				throw err;
 			}
 
-			if (!(err instanceof ApiError)) {
+			if (!(err instanceof APIError)) {
 				throw new FatalError(
 					`Unexpected error creating application: ${err.message}`,
 					{ telemetryMessage: "containers deploy create unexpected error" }
@@ -646,16 +682,21 @@ const doAction = async (
 
 	if (action.action === "modify") {
 		try {
-			await promiseSpinner(
-				ApplicationsService.modifyApplication(action.id, action.application),
-				{ message: `Modifying ${action.application.name}` }
+			await fetchResult<Application>(
+				config,
+				`/accounts/${accountId}/containers/applications/${action.id}`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(action.application),
+				}
 			);
 		} catch (err) {
 			if (!(err instanceof Error)) {
 				throw err;
 			}
 
-			if (!(err instanceof ApiError)) {
+			if (!(err instanceof APIError)) {
 				throw new UserError(
 					`Unexpected error modifying application "${action.name}": ${err.message}`,
 					{ telemetryMessage: "containers deploy modify unexpected error" }
@@ -676,16 +717,19 @@ const doAction = async (
 		}
 
 		try {
-			await promiseSpinner(
-				RolloutsService.createApplicationRollout(action.id, {
-					description: "Progressive update",
-					strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
-					target_configuration: action.application.configuration ?? {},
-					...configRolloutStepsToAPI(action.rollout_step_percentage),
-					kind: action.rollout_kind,
-				}),
+			await fetchResult(
+				config,
+				`/accounts/${accountId}/containers/applications/${action.id}/rollouts`,
 				{
-					message: `rolling out container version ${action.name}`,
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						description: "Progressive update",
+						strategy: "rolling",
+						target_configuration: action.application.configuration ?? {},
+						...configRolloutStepsToAPI(action.rollout_step_percentage),
+						kind: action.rollout_kind,
+					} satisfies CreateApplicationRolloutRequest),
 				}
 			);
 		} catch (err) {
@@ -693,7 +737,7 @@ const doAction = async (
 				throw err;
 			}
 
-			if (!(err instanceof ApiError)) {
+			if (!(err instanceof APIError)) {
 				throw new UserError(
 					`Unexpected error rolling out application "${action.name}":\n${err.message}`,
 					{ telemetryMessage: "containers deploy rollout unexpected error" }
@@ -722,23 +766,15 @@ const doAction = async (
 	}
 };
 
-/**
- * clean up application object received from API so that we get a nicer diff when comparing it to the current config.
- *
- * @param prev - Previously deployed application returned by the API.
- * @param currentConfig - Current normalized container configuration.
- * @param accountId - Cloudflare account ID that owns managed-registry images.
- * @param complianceConfig - Compliance configuration used to normalize managed-registry image references.
- * @returns The cleaned application fields used to generate the deployment diff.
- */
 export function cleanApplicationFromAPI(
 	prev: Application,
 	currentConfig: ContainerNormalizedConfig,
 	accountId: string,
 	complianceConfig?: ComplianceConfig
-): Partial<ModifyApplicationRequestBody> & Pick<Application, "configuration"> {
+): Partial<ModifyApplicationRequestBody> &
+	Pick<Application, "configuration" | "name"> {
 	const cleanedPreviousApp: Partial<ModifyApplicationRequestBody> &
-		Pick<Application, "configuration"> = {
+		Pick<Application, "configuration" | "name"> = {
 		configuration: {
 			...prev.configuration,
 			image: resolveImageName(
@@ -756,16 +792,13 @@ export function cleanApplicationFromAPI(
 	};
 
 	if ("instance_type" in currentConfig) {
-		// returns undefined if we can't infer it.
 		const instance_type = inferInstanceType(cleanedPreviousApp.configuration);
 		if (!instance_type) {
-			// just leave as is if we can't infer the instance type
 			return prev;
 		}
 		cleanedPreviousApp.configuration.instance_type = instance_type;
 
 		delete cleanedPreviousApp.configuration.disk;
-		// eslint-disable-next-line @typescript-eslint/no-deprecated -- intentionally cleaning up deprecated `memory` field
 		delete cleanedPreviousApp.configuration.memory;
 		delete cleanedPreviousApp.configuration.memory_mib;
 		delete cleanedPreviousApp.configuration.vcpu;
@@ -790,3 +823,116 @@ export const configRolloutStepsToAPI = (rolloutSteps: number | number[]) => {
 		return { steps: output };
 	}
 };
+
+const instanceTypes = {
+	lite: {
+		vcpu: 0.0625,
+		memory_mib: 256,
+		disk_mb: 2000,
+	},
+	dev: {
+		vcpu: 0.0625,
+		memory_mib: 256,
+		disk_mb: 2000,
+	},
+	basic: {
+		vcpu: 0.25,
+		memory_mib: 1024,
+		disk_mb: 4000,
+	},
+	standard: {
+		vcpu: 0.5,
+		memory_mib: 4096,
+		disk_mb: 8000,
+	},
+	"standard-1": {
+		vcpu: 0.5,
+		memory_mib: 4096,
+		disk_mb: 8000,
+	},
+	"standard-2": {
+		vcpu: 1,
+		memory_mib: 6144,
+		disk_mb: 12000,
+	},
+	"standard-3": {
+		vcpu: 2,
+		memory_mib: 8192,
+		disk_mb: 16000,
+	},
+	"standard-4": {
+		vcpu: 4,
+		memory_mib: 12_288,
+		disk_mb: 20000,
+	},
+} as const;
+
+const LEGACY_TO_CANONICAL: Record<"dev" | "standard", InstanceType> = {
+	dev: "lite" as InstanceType,
+	standard: "standard-1" as InstanceType,
+};
+
+function inferInstanceType(
+	config: UserDeploymentConfiguration
+): InstanceType | undefined {
+	for (const [instanceType, configuration] of Object.entries(instanceTypes)) {
+		if (
+			config.vcpu === configuration.vcpu &&
+			config.memory_mib === configuration.memory_mib &&
+			config.disk?.size_mb === configuration.disk_mb
+		) {
+			const canonical =
+				instanceType in LEGACY_TO_CANONICAL
+					? LEGACY_TO_CANONICAL[
+							instanceType as keyof typeof LEGACY_TO_CANONICAL
+						]
+					: undefined;
+			return (canonical ?? instanceType) as InstanceType;
+		}
+	}
+}
+
+function stripUndefined<T>(value: T): T {
+	if (Array.isArray(value)) {
+		return value.map((item) => stripUndefined(item)) as T;
+	}
+
+	if (!isObject(value)) {
+		return value;
+	}
+
+	return Object.fromEntries(
+		Object.entries(value)
+			.filter(([, entryValue]) => entryValue !== undefined)
+			.map(([key, entryValue]) => [key, stripUndefined(entryValue)])
+	) as T;
+}
+
+function sortObjectRecursive<T>(value: T): T {
+	if (Array.isArray(value)) {
+		return value.map((item) => sortObjectRecursive(item)) as T;
+	}
+
+	if (!isObject(value)) {
+		return value;
+	}
+
+	return Object.fromEntries(
+		Object.entries(value)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([key, entryValue]) => [key, sortObjectRecursive(entryValue)])
+	) as T;
+}
+
+function getContainersLogger() {
+	return {
+		debug: logger.debug,
+		debugWithSanitization:
+			logger.debugWithSanitization ??
+			((label: string, ...args: unknown[]) => logger.debug(label, ...args)),
+		log: logger.log,
+		info: logger.info,
+		warn: logger.warn,
+		error: logger.error,
+	};
+}

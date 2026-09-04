@@ -268,7 +268,12 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							);
 						}
 
-						configureContainerPull(accountId, apiToken, ctx.entryWorkerConfig);
+						configureContainerPull(
+							accountId,
+							apiToken,
+							viteDevServer.config.logger,
+							ctx.entryWorkerConfig
+						);
 					}
 
 					await prepareContainerImagesForDev({

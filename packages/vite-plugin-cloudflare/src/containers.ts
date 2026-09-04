@@ -1,37 +1,74 @@
 import path from "node:path";
 import {
-	configureOpenAPIForContainerPull,
 	getDevContainerImageName,
+	initContainersSharedContext,
 } from "@cloudflare/containers-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getCloudflareApiBaseUrl,
+	fetchResultBase,
 	isDockerfile,
 	resolveContainerClassName,
 } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ApiCredentials,
+	ComplianceConfig,
+	FetchResultFetcher,
+	Logger,
+} from "@cloudflare/workers-utils";
 
 /**
- * Configures the Containers API client used to retrieve image pull credentials.
+ * Configures the Containers shared helpers used to retrieve image pull credentials.
  *
  * @param accountId - Cloudflare account ID that owns the managed registry.
  * @param apiToken - API token used to request registry credentials.
+ * @param logger - Vite logger used for API debug output.
  * @param complianceConfig - Compliance configuration used to select the API endpoint.
  * @returns No value.
  */
 export function configureContainerPull(
 	accountId: string,
 	apiToken: string,
+	logger: Pick<Logger, "info" | "warn" | "error">,
 	complianceConfig?: ComplianceConfig
 ): void {
-	configureOpenAPIForContainerPull(
+	const credentials: ApiCredentials = { apiToken };
+	const fetchResult: FetchResultFetcher = async (
+		requestComplianceConfig,
+		resource,
+		init,
+		queryParams,
+		abortSignal
+	) => {
+		return fetchResultBase(
+			requestComplianceConfig,
+			resource,
+			init,
+			"@cloudflare/vite-plugin",
+			{
+				debug: () => {},
+				log: logger.info,
+				info: logger.info,
+				warn: logger.warn,
+				error: logger.error,
+			},
+			queryParams,
+			abortSignal,
+			credentials
+		);
+	};
+
+	initContainersSharedContext({
 		accountId,
-		apiToken,
-		getCloudflareApiBaseUrl(
-			complianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN
-		)
-	);
+		apiFamily: "containers",
+		fetchResult: async (requestComplianceConfig, ...args) =>
+			fetchResult(
+				requestComplianceConfig ??
+					complianceConfig ??
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+				...args
+			),
+	});
 }
 
 /**

@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { ApiError } from "@cloudflare/containers-shared";
+import { ApiError } from "@cloudflare/containers-api";
 import {
 	APIError,
 	CommandLineArgsError,

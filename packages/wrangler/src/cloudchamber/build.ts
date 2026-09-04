@@ -1,34 +1,30 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
-	constructBuildCommand,
-	dockerBuild,
-	dockerImageInspect,
-	dockerLoginImageRegistry,
-	getCloudflareContainerRegistry,
+	buildAndMaybePushContainerImage,
+	checkImagePlatform,
+	initContainersSharedContext,
 	resolveImageName,
-	runDockerCmd,
-	runDockerCmdWithOutput,
+	pushContainerImage,
 } from "@cloudflare/containers-shared";
 import {
-	getCIOverrideNetworkModeHost,
 	getDockerPath,
 	isDirectory,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { getOrSelectAccountId } from "../user";
-import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
-import { ensureContainerLimits } from "./limits";
-import { loadAccount } from "./locations";
+import { cloudchamberScope, ensureCloudchamberApiAuth } from "./common";
+import type { containersScope } from "../containers";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
-	BuildArgs,
 	ContainerNormalizedConfig,
+	ContainersApiFamily,
+	ImageRef,
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
@@ -81,103 +77,6 @@ export function pushYargs(yargs: CommonYargsArgv) {
 }
 
 /**
- *
- * `{ remoteDigest: string }` implies the image was pushed to, or already exists in,
- * the managed registry. Deployments should use this digest-pinned reference.
- *
- * `{ newTag: string }` implies the image was built locally without pushing.
- */
-export type ImageRef = { remoteDigest: string } | { newTag: string };
-
-// Based on the Docker reference grammar used by containers/image. These only
-// strip suffixes from refs that have already been normalized by resolveImageName().
-const DIGEST_SUFFIX_REGEXP =
-	/@[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*:[a-fA-F0-9]{32,}$/;
-const DIGEST_VALUE_REGEXP =
-	/^[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*:[a-fA-F0-9]{32,}$/;
-const TAG_SUFFIX_REGEXP = /:[\w][\w.-]{0,127}$/;
-
-function getRepositoryOnly(
-	externalAccountId: string,
-	imageTag: string,
-	complianceConfig?: ComplianceConfig
-): string {
-	return resolveImageName(externalAccountId, imageTag, complianceConfig)
-		.replace(DIGEST_SUFFIX_REGEXP, "")
-		.replace(TAG_SUFFIX_REGEXP, "");
-}
-
-function imageRefWithDigest(
-	externalAccountId: string,
-	imageTag: string,
-	digest: string,
-	complianceConfig?: ComplianceConfig
-): string {
-	if (!DIGEST_VALUE_REGEXP.test(digest)) {
-		throw new Error(
-			`Expected image digest to match algorithm:hex format, got ${digest}`
-		);
-	}
-	return `${getRepositoryOnly(externalAccountId, imageTag, complianceConfig)}@${digest}`;
-}
-
-function findManifestDigest(manifestOutput: string): string {
-	const parsedManifest = JSON.parse(manifestOutput);
-	const digest = parsedManifest?.Descriptor?.digest;
-	if (typeof digest !== "string" || digest.length === 0) {
-		throw new Error(
-			`Expected docker manifest inspect output to include Descriptor.digest, got ${manifestOutput}`
-		);
-	}
-	return digest;
-}
-
-function findRemoteDigest(
-	repoDigestsJson: string,
-	externalAccountId: string,
-	imageTag: string,
-	complianceConfig?: ComplianceConfig
-): string {
-	const parsedDigests = JSON.parse(repoDigestsJson);
-	if (!Array.isArray(parsedDigests)) {
-		throw new Error(
-			`Expected RepoDigests from docker inspect to be an array but got ${JSON.stringify(parsedDigests)}`
-		);
-	}
-
-	const repositoryOnly = getRepositoryOnly(
-		externalAccountId,
-		imageTag,
-		complianceConfig
-	);
-	logger.debug("respositoryOnly:", repositoryOnly);
-
-	// make sure the repository + name provided in wrangler config
-	// matches the repository + name from the digests
-	const digest = parsedDigests.find((d): d is string => {
-		if (typeof d !== "string" || !d.includes("@")) {
-			return false;
-		}
-		const resolved = resolveImageName(externalAccountId, d, complianceConfig);
-		logger.debug(`Comparing ${resolved.split("@")[0]} to ${repositoryOnly}`);
-		return typeof d === "string" && resolved.split("@")[0] === repositoryOnly;
-	});
-	if (!digest) {
-		throw new Error(
-			`Could not find a digest for the image ${repositoryOnly}. Found digests: ${parsedDigests.join(", ")}`
-		);
-	}
-
-	const [, hash] = digest.split("@");
-	return imageRefWithDigest(
-		externalAccountId,
-		imageTag,
-		hash,
-		complianceConfig
-	);
-}
-
-/**
  * Builds a Docker image and optionally pushes it to the Cloudflare managed registry.
  *
  * @param args - Build arguments including tag, Dockerfile path, build context, and platform.
@@ -191,7 +90,7 @@ function findRemoteDigest(
  * @returns An {@link ImageRef} describing the built/pushed image.
  */
 export async function buildAndMaybePush(
-	args: BuildArgs,
+	args: Parameters<typeof buildAndMaybePushContainerImage>[0]["args"],
 	pathToDocker: string,
 	push: boolean,
 	containerConfig?: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
@@ -199,156 +98,15 @@ export async function buildAndMaybePush(
 	complianceConfig?: ComplianceConfig
 ): Promise<ImageRef> {
 	try {
-		const imageTag = args.tag;
-		const { buildCmd, dockerfile } = await constructBuildCommand(
-			{
-				tag: imageTag,
-				pathToDockerfile: args.pathToDockerfile,
-				buildContext: args.buildContext,
-				args: args.args,
-				platform: args.platform,
-				setNetworkToHost: Boolean(getCIOverrideNetworkModeHost()),
-			},
-			logger
-		);
-
-		const build = await dockerBuild(pathToDocker, {
-			buildCmd,
-			dockerfile,
+		return await buildAndMaybePushContainerImage({
+			args,
+			pathToDocker,
+			push,
+			containerConfig,
 			verifyDockerIsRunning,
+			complianceConfig,
+			logger,
 		});
-		await build.ready;
-
-		if (push) {
-			/**
-			 * Get `RepoDigests` and `Id`:
-			 * A Docker image digest (RepoDigest) is a unique, cryptographic identifier (SHA-256 hash)
-			 * representing the content of a Docker image. Unlike tags, which can be reused		or changed, a digest is immutable and ensures that the exact same image is
-			 * pulled every time. This guarantees consistency across different environments
-			 * and deployments. Crucially this is *not* affected by metadata changes (dockerfile only changes).
-			 * From: https://docs.docker.com/dhi/core-concepts/digests/
-			 * The image Id is a sha hash of the image's configuration, so it *does* capture metadata changes.
-			 * We need both to know when to push the image to the managed registry.
-			 */
-			const imageInfo = await dockerImageInspect(pathToDocker, {
-				imageTag,
-				formatString: "{{ json .RepoDigests }}",
-			});
-			logger.debug(`'docker image inspect ${imageTag}':`, imageInfo);
-
-			const account = await loadAccount();
-
-			await ensureContainerLimits({
-				pathToDocker,
-				imageTag,
-				account,
-				containerConfig,
-			});
-
-			await dockerLoginImageRegistry(
-				pathToDocker,
-				// Won't be an external registry since this is building from a Dockerfile
-				// rather than specifying an image uri.
-				getCloudflareContainerRegistry(complianceConfig)
-			);
-			try {
-				// We don't try to parse until this point because we don't want to fail on
-				// parse errors if we won't be pushing the image anyways.
-				const remoteDigest = findRemoteDigest(
-					imageInfo,
-					account.external_account_id,
-					imageTag,
-					complianceConfig
-				);
-				const [, hash] = remoteDigest.split("@");
-
-				// NOTE: this is an experimental docker command so the API may change
-				// and break this flow. Hopefully not!
-				// http://docs.docker.com/reference/cli/docker/manifest/inspect/
-				// Checks if this image already exists in the managed registry -
-				// if this succeeds it means this image already exists remotely.
-				// If this errors, it probably doesn't exist and we should push,
-				// which we will do in the catch block.
-				logger.debug(
-					`'docker manifest inspect -v ${resolveImageName(account.external_account_id, remoteDigest, complianceConfig)}:`
-				);
-				const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
-					"manifest",
-					"inspect",
-					"-v",
-					resolveImageName(
-						account.external_account_id,
-						remoteDigest,
-						complianceConfig
-					),
-				]);
-				const parsedRemoteManifest = JSON.parse(remoteManifest);
-
-				if (parsedRemoteManifest.Descriptor.digest === hash) {
-					logger.log("Image already exists remotely, skipping push");
-					logger.debug(
-						`Untagging built image: ${args.tag} since there was no change.`
-					);
-
-					await runDockerCmd(pathToDocker, ["image", "rm", imageTag]);
-
-					return { remoteDigest };
-				}
-			} catch (error) {
-				if (error instanceof Error) {
-					logger.debug(
-						`Checking for local image ${args.tag} failed with error: ${error.message}`
-					);
-				}
-			}
-			// Re-tag the image to include the account ID
-			const namespacedImageTag = resolveImageName(
-				account.external_account_id,
-				args.tag,
-				complianceConfig
-			);
-			logger.log(
-				`Image does not exist remotely, pushing: ${namespacedImageTag}`
-			);
-			await runDockerCmd(pathToDocker, ["tag", imageTag, namespacedImageTag]);
-			await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
-
-			let remoteDigest: string;
-			try {
-				const pushedImageInfo = await dockerImageInspect(pathToDocker, {
-					imageTag: namespacedImageTag,
-					formatString: "{{ json .RepoDigests }}",
-				});
-				remoteDigest = findRemoteDigest(
-					pushedImageInfo,
-					account.external_account_id,
-					namespacedImageTag,
-					complianceConfig
-				);
-			} catch (error) {
-				if (error instanceof Error) {
-					logger.debug(
-						`Inspecting pushed image ${namespacedImageTag} failed with error: ${error.message}`
-					);
-				}
-				const remoteManifest = runDockerCmdWithOutput(pathToDocker, [
-					"manifest",
-					"inspect",
-					"-v",
-					namespacedImageTag,
-				]);
-				remoteDigest = imageRefWithDigest(
-					account.external_account_id,
-					namespacedImageTag,
-					findManifestDigest(remoteManifest),
-					complianceConfig
-				);
-			}
-
-			return { remoteDigest };
-		}
-
-		return { newTag: imageTag };
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, {
@@ -371,7 +129,9 @@ export async function buildAndMaybePush(
  */
 export async function buildCommand(
 	args: StrictYargsOptionsToInterface<typeof buildYargs>,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: Config,
+	apiFamily: ContainersApiFamily = "cloudchamber",
+	scope: typeof containersScope | typeof cloudchamberScope = cloudchamberScope
 ) {
 	// TODO: merge args with Wrangler config if available
 	if (existsSync(args.PATH) && !isDirectory(args.PATH)) {
@@ -389,6 +149,13 @@ export async function buildCommand(
 
 	const pathToDockerfile = join(args.PATH, "Dockerfile");
 
+	if (args.push && complianceConfig !== undefined) {
+		initContainersSharedContext({
+			accountId: await ensureCloudchamberApiAuth(complianceConfig, scope),
+			apiFamily,
+			fetchResult,
+		});
+	}
 	await buildAndMaybePush(
 		{
 			tag: args.tag,
@@ -409,20 +176,27 @@ export async function buildCommand(
 
 export async function pushCommand(
 	args: StrictYargsOptionsToInterface<typeof pushYargs>,
-	config: Config
+	config: Config,
+	apiFamily: ContainersApiFamily = "cloudchamber",
+	scope: typeof containersScope | typeof cloudchamberScope = cloudchamberScope
 ) {
 	try {
-		await dockerLoginImageRegistry(
-			args.pathToDocker,
-			getCloudflareContainerRegistry(config)
-		);
+		const accountId = await ensureCloudchamberApiAuth(config, scope);
+		initContainersSharedContext({
+			accountId,
+			apiFamily,
+			fetchResult,
+		});
 
-		const accountId = await getOrSelectAccountId(config);
 		const newTag = resolveImageName(accountId, args.TAG, config);
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await checkImagePlatform(dockerPath, args.TAG);
-		await runDockerCmd(dockerPath, ["tag", args.TAG, newTag]);
-		await runDockerCmd(dockerPath, ["push", newTag]);
+		await pushContainerImage({
+			imageTag: args.TAG,
+			pathToDocker: dockerPath,
+			complianceConfig: config,
+			logger,
+		});
 		logger.log(`Pushed image: ${newTag}`);
 	} catch (error) {
 		if (error instanceof Error) {
@@ -434,23 +208,6 @@ export async function pushCommand(
 		throw new UserError("An unknown error occurred", {
 			telemetryMessage: "cloudchamber push unknown error",
 		});
-	}
-}
-
-async function checkImagePlatform(
-	pathToDocker: string,
-	imageTag: string,
-	expectedPlatform: string = "linux/amd64"
-) {
-	const platform = await dockerImageInspect(pathToDocker, {
-		imageTag,
-		formatString: "{{ .Os }}/{{ .Architecture }}",
-	});
-
-	if (platform !== expectedPlatform) {
-		throw new Error(
-			`Unsupported platform: Image platform (${platform}) does not match the expected platform (${expectedPlatform})`
-		);
 	}
 }
 
@@ -499,7 +256,6 @@ export const cloudchamberBuildCommand = createCommand({
 	},
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
-		await fillOpenAPIConfiguration(config, cloudchamberScope);
 		await buildCommand(args, config);
 	},
 });
@@ -526,7 +282,6 @@ export const cloudchamberPushCommand = createCommand({
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
-		await fillOpenAPIConfiguration(config, cloudchamberScope);
 		await pushCommand(args, config);
 	},
 });

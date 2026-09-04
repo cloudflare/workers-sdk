@@ -1,7 +1,18 @@
-import { OpenAPI } from "@cloudflare/containers-shared";
+import { fetchResult as containersFetchResult } from "@cloudflare/containers-shared/src/context";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { configureContainerPull, getContainerOptions } from "../containers";
 import type { ResolvedWorkerConfig } from "../plugin-config";
+
+const fetchResultBase = vi.hoisted(() => vi.fn(async () => ({})));
+
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	return {
+		...actual,
+		fetchResultBase,
+	};
+});
 
 type Containers = ResolvedWorkerConfig["containers"];
 type Exports = ResolvedWorkerConfig["exports"];
@@ -130,46 +141,70 @@ describe("configureContainerPull", () => {
 
 	afterEach(() => {
 		vi.unstubAllEnvs();
-		OpenAPI.BASE = "";
-		OpenAPI.HEADERS = undefined;
-		OpenAPI.CREDENTIALS = "include";
+		fetchResultBase.mockClear();
 	});
 
-	test("uses the FedRAMP High API for managed registry credentials", ({
+	test("uses the FedRAMP High API config for managed registry credentials", async ({
 		expect,
 	}) => {
-		configureContainerPull("abc123", "my-token", {
-			compliance_region: "fedramp_high",
-		});
+		const complianceConfig = { compliance_region: "fedramp_high" } as const;
+		configureContainerPull("abc123", "my-token", console, complianceConfig);
 
-		expect(OpenAPI.BASE).toBe(
-			"https://api.fed.cloudflare.com/client/v4/accounts/abc123/containers"
+		await containersFetchResult(complianceConfig, "/test");
+
+		expect(fetchResultBase).toHaveBeenCalledWith(
+			complianceConfig,
+			"/test",
+			undefined,
+			"@cloudflare/vite-plugin",
+			expect.objectContaining({
+				info: console.info,
+				warn: console.warn,
+				error: console.error,
+			}),
+			undefined,
+			undefined,
+			{ apiToken: "my-token" }
 		);
 	});
 
-	test("uses the staging FedRAMP High API for managed registry credentials", ({
-		expect,
-	}) => {
+	test("preserves staging through the injected fetcher", async ({ expect }) => {
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+		const complianceConfig = { compliance_region: "fedramp_high" } as const;
 
-		configureContainerPull("abc123", "my-token", {
-			compliance_region: "fedramp_high",
-		});
+		configureContainerPull("abc123", "my-token", console, complianceConfig);
+		await containersFetchResult(complianceConfig, "/test");
 
-		expect(OpenAPI.BASE).toBe(
-			"https://api.fed.staging.cloudflare.com/client/v4/accounts/abc123/containers"
+		expect(fetchResultBase).toHaveBeenCalledWith(
+			complianceConfig,
+			"/test",
+			undefined,
+			"@cloudflare/vite-plugin",
+			expect.any(Object),
+			undefined,
+			undefined,
+			{ apiToken: "my-token" }
 		);
 	});
 
-	test("preserves the explicit API base override", ({ expect }) => {
+	test("preserves the explicit API base override through workers-utils", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CLOUDFLARE_API_BASE_URL", "https://api.example.com/client/v4");
+		const complianceConfig = { compliance_region: "fedramp_high" } as const;
 
-		configureContainerPull("abc123", "my-token", {
-			compliance_region: "fedramp_high",
-		});
+		configureContainerPull("abc123", "my-token", console, complianceConfig);
+		await containersFetchResult(complianceConfig, "/test");
 
-		expect(OpenAPI.BASE).toBe(
-			"https://api.example.com/client/v4/accounts/abc123/containers"
+		expect(fetchResultBase).toHaveBeenCalledWith(
+			complianceConfig,
+			"/test",
+			undefined,
+			"@cloudflare/vite-plugin",
+			expect.any(Object),
+			undefined,
+			undefined,
+			{ apiToken: "my-token" }
 		);
 	});
 });

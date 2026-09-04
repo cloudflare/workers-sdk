@@ -15,7 +15,7 @@ import {
 	AssignIPv4,
 	AssignIPv6,
 	DeploymentsService,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import { parseByteSize } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
@@ -53,7 +53,7 @@ import type {
 	EnvironmentVariable,
 	Label,
 	SSHPublicKeyID,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { Config } from "@cloudflare/workers-utils";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
