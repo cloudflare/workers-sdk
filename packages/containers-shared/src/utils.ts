@@ -8,12 +8,14 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { release } from "node:os";
 import { UserError } from "@cloudflare/workers-utils/errors";
+import { getDockerCommandArgs } from "./docker-command";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
 	dockerPath: string,
 	args: string[],
-	stdio?: StdioOptions
+	stdio?: StdioOptions,
+	dockerHost?: string
 ): {
 	abort: () => void;
 	ready: Promise<{ aborted: boolean }>;
@@ -27,7 +29,8 @@ export const runDockerCmd = (
 		resolve = res;
 		reject = rej;
 	});
-	const child = spawn(dockerPath, args, {
+	const dockerArgs = getDockerCommandArgs(args, dockerHost);
+	const child = spawn(dockerPath, dockerArgs, {
 		stdio: stdio ?? "inherit",
 		// We need to set detached to true so that the child process
 		// will control all of its child processes and we can kill
@@ -84,9 +87,14 @@ export const runDockerCmd = (
 	};
 };
 
-export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
+export const runDockerCmdWithOutput = (
+	dockerPath: string,
+	args: string[],
+	dockerHost?: string
+) => {
+	const dockerArgs = getDockerCommandArgs(args, dockerHost);
 	try {
-		const stdout = execFileSync(dockerPath, args, {
+		const stdout = execFileSync(dockerPath, dockerArgs, {
 			encoding: "utf8",
 			// Without an explicit `stdio`, Node echoes the child's stderr to ours.
 			// A failure still carries that stderr in the thrown error message.
@@ -95,7 +103,7 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 		return stdout.trim();
 	} catch (error) {
 		throw new UserError(
-			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${args.join(" ")}`,
+			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${dockerArgs.join(" ")}`,
 			{ telemetryMessage: false }
 		);
 	}
@@ -184,9 +192,17 @@ function detectWsl(): boolean {
 }
 
 /** Checks whether docker is running on the system */
-export const isDockerRunning = async (dockerPath: string) => {
+export const isDockerRunning = async (
+	dockerPath: string,
+	dockerHost?: string
+) => {
 	try {
-		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
+		await runDockerCmd(
+			dockerPath,
+			["info"],
+			["inherit", "pipe", "pipe"],
+			dockerHost
+		);
 	} catch {
 		// We assume this command is unlikely to fail for reasons other than the Docker daemon not running, or the Docker CLI not being installed or in the PATH.
 		return false;
@@ -198,6 +214,8 @@ export const isDockerRunning = async (dockerPath: string) => {
 export type VerifyDockerInstalledOptions = {
 	/** Path to the Docker CLI executable. */
 	dockerPath: string;
+	/** Docker daemon endpoint selected for the runtime. */
+	dockerHost?: string;
 	/**
 	 * Human-readable description of the operation that requires Docker,
 	 * e.g. `"running dev"`, `"deploying"`.
@@ -231,11 +249,12 @@ export type VerifyDockerInstalledOptions = {
  */
 export const verifyDockerInstalled = async ({
 	dockerPath,
+	dockerHost,
 	operation,
 	imageNoun,
 	hint,
 }: VerifyDockerInstalledOptions) => {
-	const dockerIsRunning = await isDockerRunning(dockerPath);
+	const dockerIsRunning = await isDockerRunning(dockerPath, dockerHost);
 	if (!dockerIsRunning) {
 		throw new UserError(
 			getFailedToRunDockerErrorMessage({
@@ -264,7 +283,7 @@ function getFailedToRunDockerErrorMessage({
 	operation,
 	imageNoun,
 	hint,
-}: Omit<VerifyDockerInstalledOptions, "dockerPath">): string {
+}: Omit<VerifyDockerInstalledOptions, "dockerPath" | "dockerHost">): string {
 	const beforeOperation = operation ? ` before ${operation}` : "";
 	const headline = `The Docker CLI is needed to build ${imageNoun}${beforeOperation} but could not be launched.`;
 

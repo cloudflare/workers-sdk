@@ -1,14 +1,25 @@
 import { spawn } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils/errors";
+import { getDockerCommandArgs } from "./docker-command";
 
 export async function dockerImageInspect(
 	dockerPath: string,
-	options: { imageTag: string; formatString: string }
+	options: { imageTag: string; formatString: string },
+	dockerHost?: string
 ): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const proc = spawn(
 			dockerPath,
-			["image", "inspect", options.imageTag, "--format", options.formatString],
+			getDockerCommandArgs(
+				[
+					"image",
+					"inspect",
+					options.imageTag,
+					"--format",
+					options.formatString,
+				],
+				dockerHost
+			),
 			{
 				stdio: ["ignore", "pipe", "pipe"],
 			}

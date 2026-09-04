@@ -1,5 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
+import { getDockerHostFromContainerEngine } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils/errors";
 import chalk from "chalk";
 import { convertV4MiniflareOptions, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
@@ -171,6 +173,27 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				return;
 			}
 
+			if (
+				data.config.dev.enableContainers &&
+				data.config.containerDevPlan !== undefined
+			) {
+				assert(data.config.dev.containerEngine);
+				const host = getDockerHostFromContainerEngine(
+					data.config.dev.containerEngine
+				);
+				for (const [name, state] of this.#containerImagePreparationState) {
+					if (
+						name !== workerName &&
+						state.hasContainers &&
+						state.dockerHost !== host
+					) {
+						throw new UserError(
+							`All Workers with containers in a multiworker session must use the same dev.container_engine. Worker "${workerName}" resolves to "${host}", but "${name}" uses "${state.dockerHost}". Configure every Worker with the same endpoint and restart the session.`,
+							{ telemetryMessage: false }
+						);
+					}
+				}
+			}
 			const containerImagePreparationState = await this.prepareContainerImages(
 				data,
 				this.#containerImagePreparationState.get(workerName)

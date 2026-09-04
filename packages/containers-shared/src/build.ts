@@ -6,6 +6,7 @@ import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { isDirectory } from "@cloudflare/workers-utils/fs-helpers";
 import { logger } from "./context";
+import { getDockerCommandArgs } from "./docker-command";
 import { resolveImageName } from "./images";
 import { dockerImageInspect } from "./inspect";
 import { getCloudflareContainerRegistry } from "./knobs";
@@ -131,17 +132,19 @@ export async function startContainerBuild({
 	build,
 	pathToDocker,
 	verifyDockerIsRunning,
+	dockerHost,
 }: {
 	build: BuildArgs;
 	pathToDocker: string;
 	verifyDockerIsRunning?: boolean;
+	dockerHost?: string;
 }): Promise<StartedContainerBuild> {
 	if (process.env.WRANGLER_CONTAINER_IMAGE_COMPRESSION === "zstd") {
-		const driverStatus = runDockerCmdWithOutput(pathToDocker, [
-			"info",
-			"--format",
-			"{{json .DriverStatus}}",
-		]);
+		const driverStatus = runDockerCmdWithOutput(
+			pathToDocker,
+			["info", "--format", "{{json .DriverStatus}}"],
+			dockerHost
+		);
 		if (!driverStatus.includes("io.containerd.snapshotter.v1")) {
 			throw new UserError(
 				"Zstd compression requires Docker's containerd image store. Enable the containerd image store or unset WRANGLER_CONTAINER_IMAGE_COMPRESSION.",
@@ -154,6 +157,7 @@ export async function startContainerBuild({
 		buildCmd,
 		dockerfile,
 		verifyDockerIsRunning,
+		dockerHost,
 	});
 }
 
@@ -797,11 +801,13 @@ export async function dockerBuild(
 		buildCmd: string[];
 		dockerfile: string;
 		verifyDockerIsRunning?: boolean;
+		dockerHost?: string;
 	}
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	if (options.verifyDockerIsRunning !== false) {
 		await verifyDockerInstalled({
 			dockerPath,
+			dockerHost: options.dockerHost,
 			imageNoun: "the image",
 		});
 	}
@@ -814,18 +820,22 @@ export async function dockerBuild(
 		reject = rej;
 	});
 
-	const child = spawn(dockerPath, options.buildCmd, {
-		stdio: ["pipe", "inherit", "inherit"],
-		// We need to set detached to true so that the child process
-		// will control all of its child processes and we can kill
-		// all of them in case we need to abort the build process.
-		// On Windows, detached: true opens a new console window per child
-		// process, so we only set it on non-Windows platforms.
-		detached: process.platform !== "win32",
-		// Prevent child processes from opening visible console windows on Windows.
-		// This is a no-op on non-Windows platforms.
-		windowsHide: true,
-	});
+	const child = spawn(
+		dockerPath,
+		getDockerCommandArgs(options.buildCmd, options.dockerHost),
+		{
+			stdio: ["pipe", "inherit", "inherit"],
+			// We need to set detached to true so that the child process
+			// will control all of its child processes and we can kill
+			// all of them in case we need to abort the build process.
+			// On Windows, detached: true opens a new console window per child
+			// process, so we only set it on non-Windows platforms.
+			detached: process.platform !== "win32",
+			// Prevent child processes from opening visible console windows on Windows.
+			// This is a no-op on non-Windows platforms.
+			windowsHide: true,
+		}
+	);
 	if (child.stdin !== null) {
 		child.stdin.write(options.dockerfile);
 		child.stdin.end();

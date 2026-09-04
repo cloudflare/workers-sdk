@@ -71,10 +71,12 @@ describe("pullEgressInterceptorImage", () => {
 
 		await pullEgressInterceptorImage("docker");
 
-		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
-			"pull",
-			"proxy-everything:test",
-		]);
+		expect(runDockerCmd).toHaveBeenCalledWith(
+			"docker",
+			["pull", "proxy-everything:test"],
+			undefined,
+			undefined
+		);
 	});
 
 	it("pulls the egress interceptor image for the configured platform", async ({
@@ -85,12 +87,12 @@ describe("pullEgressInterceptorImage", () => {
 
 		await pullEgressInterceptorImage("docker");
 
-		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
-			"pull",
-			"proxy-everything:test",
-			"--platform",
-			"linux/arm64",
-		]);
+		expect(runDockerCmd).toHaveBeenCalledWith(
+			"docker",
+			["pull", "proxy-everything:test", "--platform", "linux/arm64"],
+			undefined,
+			undefined
+		);
 	});
 });
 
@@ -114,12 +116,12 @@ describe("pullImage", () => {
 		);
 		await pull.ready;
 
-		expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("docker", [
-			"pull",
-			image,
-			"--platform",
-			"linux/amd64",
-		]);
+		expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith(
+			"docker",
+			["pull", image, "--platform", "linux/amd64"],
+			undefined,
+			undefined
+		);
 	});
 });
 
@@ -389,10 +391,12 @@ describe("prepareContainerImagesForDev", () => {
 				})
 			);
 			expect(startContainerBuild).not.toHaveBeenCalled();
-			expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("test-docker", [
-				"pull",
-				"proxy-everything:test",
-			]);
+			expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith(
+				"test-docker",
+				["pull", "proxy-everything:test"],
+				undefined,
+				undefined
+			);
 			expect(onStart).not.toHaveBeenCalled();
 			expect(onEnd).not.toHaveBeenCalled();
 			expect(result).toEqual({ aborted: false });
@@ -442,4 +446,44 @@ describe("prepareContainerImagesForDev", () => {
 			);
 		}
 	);
+});
+
+describe("selected Docker endpoint", () => {
+	it("uses the runtime endpoint to prepare images and the egress sidecar", async ({
+		expect,
+	}) => {
+		const dockerHost = "unix:///custom/docker.sock";
+		vi.mocked(runDockerCmd).mockClear();
+		vi.mocked(startContainerBuild).mockClear();
+		vi.mocked(startContainerBuild).mockResolvedValue({
+			abort: vi.fn(),
+			ready: Promise.resolve(),
+		});
+		await prepareContainerImagesForDev({
+			dockerPath: "docker",
+			dockerHost,
+			containerOptions: [
+				{
+					dockerfile: "Dockerfile",
+					image_build_context: ".",
+					image_tag: "cloudflare-dev/test:build",
+					class_name: "Container",
+				},
+			],
+			registryConfigureCommand: "test registry configure",
+			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			onContainerImagePreparationStart: vi.fn(),
+			onContainerImagePreparationEnd: vi.fn(),
+		});
+		expect(verifyDockerInstalled).toHaveBeenCalledWith(
+			expect.objectContaining({ dockerHost })
+		);
+		expect(startContainerBuild).toHaveBeenCalledWith(
+			expect.objectContaining({ dockerHost })
+		);
+		expect(
+			vi.mocked(runDockerCmd).mock.calls.every((call) => call[3] === dockerHost)
+		).toBe(true);
+		expect(runDockerCmd).toHaveBeenCalled();
+	});
 });
