@@ -1,6 +1,9 @@
-import { DEFINITION } from "./definition";
+import { createConfigDefiner } from "./definition";
 import type { ConfigInput } from "./definition";
 import type { SettingsConfig } from "./types";
+
+export type SettingsConfigExport<T extends SettingsConfig = SettingsConfig> =
+	ConfigInput<T>;
 
 /**
  * Authored settings config shape — {@link SettingsConfig} without the `type`
@@ -9,21 +12,10 @@ import type { SettingsConfig } from "./types";
 export type SettingsConfigInput = Omit<SettingsConfig, "type">;
 
 /**
- * A settings definition created by {@link defineSettings}.
- */
-export interface SettingsDefinition {
-	[DEFINITION]: {
-		config: ConfigInput<SettingsConfigInput>;
-		type: "settings";
-	};
-}
-
-/**
  * Declare shared settings.
  * Authored as a named `settings` export.
  */
-export function defineSettings(
-	config: ConfigInput<SettingsConfigInput>
-): SettingsDefinition {
-	return { [DEFINITION]: { config, type: "settings" } };
-}
+export const defineSettings = createConfigDefiner<
+	SettingsConfigInput,
+	"settings"
+>("settings");
