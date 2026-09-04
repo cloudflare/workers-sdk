@@ -11,8 +11,10 @@ import {
 	ExternalRegistryKind,
 	getAndValidateRegistryType,
 	getCloudflareContainerRegistry,
+	formatError,
 	validateAndEncodeGarKey,
 	ImageRegistriesService,
+	promiseSpinner,
 } from "@cloudflare/containers-shared";
 import {
 	APIError,
@@ -21,10 +23,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
@@ -38,7 +37,6 @@ import {
 import { validateSecretName } from "../secrets-store/commands";
 import { getOrSelectAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import { formatError } from "./deploy";
 import { containersScope } from ".";
 import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
 import type {

@@ -2,13 +2,11 @@ import { cancel } from "@cloudflare/cli-shared-helpers";
 import {
 	getCloudflareContainerRegistry,
 	ImageRegistriesService,
+	promiseSpinner,
 } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -284,6 +282,11 @@ async function deleteTag(
 	return digest;
 }
 
+/**
+ * Configures the Containers API client used to retrieve image pull credentials.
+ *
+ * @param complianceConfig - Compliance configuration used to select the API endpoint.
+ */
 async function getCreds(complianceConfig?: ComplianceConfig): Promise<string> {
 	const credentials =
 		await ImageRegistriesService.generateImageRegistryCredentials(

@@ -1,18 +1,14 @@
 import {
-	buildAndMaybePush,
 	buildCommand,
+	initContainersSharedContext,
 	pushCommand,
-} from "../cloudchamber/build";
+} from "@cloudflare/containers-shared";
+import { fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
+import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";
-import type { ImageRef } from "../cloudchamber/build";
-import type {
-	ContainerNormalizedConfig,
-	ImageURIConfig,
-} from "@cloudflare/containers-shared";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 // --- Command definitions ---
 
@@ -58,6 +54,7 @@ export const containersBuildCommand = createCommand({
 	},
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
+		initContainersSharedContext({ logger, fetchResult });
 		await fillOpenAPIConfiguration(config, containersScope);
 		await buildCommand(args, config);
 	},
@@ -84,46 +81,8 @@ export const containersPushCommand = createCommand({
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
+		initContainersSharedContext({ logger, fetchResult });
 		await fillOpenAPIConfiguration(config, containersScope);
-		await pushCommand(args, config);
+		await pushCommand(args, await getOrSelectAccountId(config), config);
 	},
 });
-
-// --- Helper functions ---
-
-/**
- * Builds a configured container image and optionally pushes it to the managed registry.
- *
- * @param containerConfig - Normalized Dockerfile-based container configuration.
- * @param imageTag - Tag component that will be prefixed with the container name.
- * @param dryRun - Whether to build without pushing the image.
- * @param pathToDocker - Path to the Docker CLI executable.
- * @param verifyDockerIsRunning - Whether to verify Docker before building.
- * @param complianceConfig - Compliance configuration used to select the managed registry.
- * @returns An {@link ImageRef} describing the built or pushed image.
- */
-export async function buildContainer(
-	containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
-	imageTag: string,
-	dryRun: boolean,
-	pathToDocker: string,
-	verifyDockerIsRunning?: boolean,
-	complianceConfig?: ComplianceConfig
-): Promise<ImageRef> {
-	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
-	logger.log("Building image", imageFullName);
-
-	return await buildAndMaybePush(
-		{
-			tag: imageFullName,
-			pathToDockerfile: containerConfig.dockerfile,
-			buildContext: containerConfig.image_build_context,
-			args: containerConfig.image_vars,
-		},
-		pathToDocker,
-		!dryRun,
-		containerConfig,
-		verifyDockerIsRunning,
-		complianceConfig
-	);
-}

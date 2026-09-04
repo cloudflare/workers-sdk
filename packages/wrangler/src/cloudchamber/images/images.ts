@@ -264,6 +264,11 @@ async function deleteTag(
 	return digest;
 }
 
+/**
+ * Configures the Containers API client used to retrieve image pull credentials.
+ *
+ * @param complianceConfig - Compliance configuration used to select the API endpoint.
+ */
 async function getCreds(complianceConfig?: ComplianceConfig): Promise<string> {
 	const credentials =
 		await ImageRegistriesService.generateImageRegistryCredentials(
