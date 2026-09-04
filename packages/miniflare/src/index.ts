@@ -1944,8 +1944,15 @@ export class Miniflare {
 			// already disable their timeouts.
 			server.keepAliveTimeout = 0;
 			server.on("upgrade", this.#handleLoopbackUpgrade);
-			server.once("error", reject);
-			server.listen(0, hostname, () => resolve(server));
+			const onError = (error: Error) => {
+				server.close();
+				reject(error);
+			};
+			server.once("error", onError);
+			server.listen(0, hostname, () => {
+				server.off("error", onError);
+				resolve(server);
+			});
 		});
 	}
 

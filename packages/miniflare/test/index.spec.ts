@@ -429,9 +429,47 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 	expect(await res.text()).toBe("body");
 });
 
+test("Miniflare: removes loopback startup error handler after listening", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const createServer = vi.spyOn(http, "createServer");
+	onTestFinished(() => createServer.mockRestore());
+
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await mf.ready;
+
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	expect(server.listenerCount("error")).toBe(0);
+});
+
 test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	expect,
+	onTestFinished,
 }) => {
+	const createServer = vi.spyOn(http, "createServer");
+	const close = vi.spyOn(http.Server.prototype, "close");
+	onTestFinished(() => {
+		createServer.mockRestore();
+		close.mockRestore();
+	});
+
 	const mf = new Miniflare({
 		host: "192.0.2.1",
 		workers: [
@@ -449,6 +487,10 @@ test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	});
 
 	await expect(mf.ready).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	expect(close.mock.instances).toContain(server);
+	expect(server.listening).toBe(false);
 	await expect(mf.dispose()).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
 });
 

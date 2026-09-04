@@ -61,9 +61,8 @@ export class InspectorProxyController {
 			res.end(null);
 		});
 
-		this.#initializeWebSocketServer(server);
-
 		await this.#startListening(server);
+		this.#initializeWebSocketServer(server);
 
 		return server;
 	}
@@ -84,12 +83,15 @@ export class InspectorProxyController {
 			`Trying to listen on ${this.inspectorHostOption}:${this.inspectorPortOption}`
 		);
 		return new Promise<void>((resolve, reject) => {
-			server.once("error", reject);
-			server.listen(
-				this.inspectorPortOption,
-				this.inspectorHostOption,
-				resolve
-			);
+			const onError = (error: Error) => {
+				server.close();
+				reject(error);
+			};
+			server.prependOnceListener("error", onError);
+			server.listen(this.inspectorPortOption, this.inspectorHostOption, () => {
+				server.off("error", onError);
+				resolve();
+			});
 		});
 	}
 
@@ -108,6 +110,7 @@ export class InspectorProxyController {
 
 	#initializeWebSocketServer(server: Server) {
 		const devtoolsWebSocketServer = new WebSocketServer({ server });
+		devtoolsWebSocketServer.on("error", (error) => this.log.error(error));
 
 		devtoolsWebSocketServer.on("connection", (devtoolsWs, upgradeRequest) => {
 			const validationError =
