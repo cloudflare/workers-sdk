@@ -239,7 +239,7 @@ async function generateAssetsFetch(
 					lstatSync(filepath, { throwIfNoEntry: false })?.isFile() &&
 					!ignoredFiles.includes(filepath)
 				) {
-					const hash = hashFile(filepath);
+					const hash = await hashFile(filepath);
 					assetKeyEntryMap.set(hash, filepath);
 					return hash;
 				}
