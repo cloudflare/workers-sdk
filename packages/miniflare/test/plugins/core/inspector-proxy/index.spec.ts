@@ -1,10 +1,16 @@
 import events from "node:events";
+import http from "node:http";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
 import { beforeAll, test, vi } from "vitest";
 import WebSocket from "ws";
-import { singleModuleManifest, useDispose } from "../../../test-shared";
+import { InspectorProxyController } from "../../../../src/plugins/core/inspector-proxy";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+} from "../../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 const nullScript =
@@ -15,6 +21,58 @@ beforeAll(() => {
 	// test the debugging/inspector behavior), so we need to skip the bodies check by
 	// setting process.env.MINIFLARE_ASSERT_BODIES_CONSUMED to undefined
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
+});
+
+test("InspectorProxy: removes startup error handler after listening", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const off = vi.spyOn(http.Server.prototype, "off");
+	const log = new TestLog();
+	const logError = vi.spyOn(log, "error").mockImplementation(() => {});
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		log,
+		new Set()
+	);
+	onTestFinished(async () => {
+		await controller.dispose();
+		off.mockRestore();
+		logError.mockRestore();
+	});
+
+	await controller.getInspectorURL();
+
+	expect(off).toHaveBeenCalledWith("error", expect.any(Function));
+	const errorListenerRemovalIndex = off.mock.calls.findIndex(
+		([event]) => event === "error"
+	);
+	const server = off.mock.instances[errorListenerRemovalIndex] as http.Server;
+	expect(server.listenerCount("error")).toBe(1);
+
+	const error = new Error("test error");
+	server.emit("error", error);
+	expect(logError).toHaveBeenCalledWith(error);
+});
+
+test("InspectorProxy: closes server after bind failure", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const close = vi.spyOn(http.Server.prototype, "close");
+	onTestFinished(() => close.mockRestore());
+	const controller = new InspectorProxyController(
+		0,
+		"192.0.2.1",
+		new TestLog(),
+		new Set()
+	);
+
+	await expect(controller.getInspectorURL()).rejects.toMatchObject({
+		code: "EADDRNOTAVAIL",
+	});
+	expect(close).toHaveBeenCalledOnce();
 });
 
 test("InspectorProxy: /json/version should provide details about the inspector version", async ({
