@@ -42,6 +42,7 @@ import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand, aiModelsListCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
 import { aiModelsSchemaCommand } from "./ai/modelSchema";
+import { apiCommand } from "./api-command";
 import {
 	artifactsNamespace,
 	artifactsNamespacesGetCommand,
@@ -887,6 +888,15 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("complete");
+
+	// api
+	registry.define([
+		{
+			command: "wrangler api",
+			definition: apiCommand,
+		},
+	]);
+	registry.registerNamespace("api");
 
 	/******************** CMD GROUP ***********************/
 
