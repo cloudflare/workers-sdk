@@ -591,7 +591,7 @@ function invalidConfigExportMessage(exportName: string): string {
 	return `The \`${exportName}\` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.`;
 }
 
-const ConfigExportsTypeSchema = z
+export const ConfigExportsTypeSchema = z
 	.record(z.string(), z.unknown())
 	.check((ctx) => {
 		for (const [key, value] of Object.entries(ctx.value)) {
@@ -626,25 +626,6 @@ const ConfigExportsTypeSchema = z
 			}
 		}
 	});
-
-const ConfigExportsObjectSchema = z
-	.object({
-		settings: InputSettingsSchema.optional(),
-	})
-	.catchall(InputWorkerSchema);
-
-/**
- * Schema for the resolved config exports, keyed by export
- * name. Each value is discriminated on its `type` field. Reserves the
- * `settings` export name exclusively for settings configs: a `settings`
- * config must live on the `settings` export, and the `settings` export
- * may only hold a `settings` config.
- */
-export const ConfigExportsSchema = ConfigExportsTypeSchema.pipe(
-	ConfigExportsObjectSchema
-);
-
-export type ParsedConfigExports = z.output<typeof ConfigExportsSchema>;
 
 export const ModuleTypeSchema = z.enum([
 	"esm",
@@ -726,23 +707,34 @@ const _assertSchemaMatchesWorkerConfig: _AssertSchemaMatchesWorkerConfig = [
 ];
 void _assertSchemaMatchesWorkerConfig;
 
+type _ResolvedBinding<TBinding> = TBinding extends {
+	type: "durable-object" | "worker" | "workflow";
+	worker: unknown;
+}
+	? Omit<TBinding, "worker"> & { worker: string }
+	: TBinding;
+
+type _ResolvedWorkerConfigEnv =
+	| Record<string, _ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>>
+	| undefined;
+
 /**
- * Drift checks between the schema and public `env` types. Schema input is
- * intentionally broader for bindings with cross-field validation, so only
- * assert that every public binding is accepted as input. After parsing, the
- * schema output and public types should match bidirectionally.
+ * Drift checks between the schema and resolved public `env` types. Authored
+ * cross-Worker bindings may contain a Worker config reference; the config
+ * loader replaces those references with names before parsing. Schema input is
+ * otherwise intentionally broader for bindings with cross-field validation.
  *
  * These checks catch fields or bindings that are missing, renamed, or typed
  * differently between the public definitions and the schema.
  */
 type _AssertSchemaEnvMatchesWorkerConfig = [
-	WorkerConfig["env"] extends z.input<typeof InputWorkerSchema>["env"]
+	_ResolvedWorkerConfigEnv extends z.input<typeof InputWorkerSchema>["env"]
 		? true
 		: false,
-	z.output<typeof InputWorkerSchema>["env"] extends WorkerConfig["env"]
+	z.output<typeof InputWorkerSchema>["env"] extends _ResolvedWorkerConfigEnv
 		? true
 		: false,
-	WorkerConfig["env"] extends z.output<typeof InputWorkerSchema>["env"]
+	_ResolvedWorkerConfigEnv extends z.output<typeof InputWorkerSchema>["env"]
 		? true
 		: false,
 ];

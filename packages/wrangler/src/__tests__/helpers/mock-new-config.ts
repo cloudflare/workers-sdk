@@ -40,12 +40,8 @@ export async function createConfigMock(importOriginal: () => Promise<unknown>) {
 
 	async function loadAndValidateConfig(configPath: string, ctx: unknown) {
 		const { exports } = await loadConfig(configPath);
-		const resolved: Record<string, unknown> = {};
-		for (const [name, value] of Object.entries(exports)) {
-			resolved[name] = await actual.resolveExportDefinition(value, ctx);
-		}
 		return {
-			result: actual.ConfigExportsSchema.safeParse(resolved),
+			result: await actual.resolveAndValidateConfigExports(exports, ctx),
 			dependencies: new Set<string>([path.resolve(configPath)]),
 		};
 	}

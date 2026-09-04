@@ -8,10 +8,6 @@ export interface ConfigContext {
 	mode: string | undefined;
 }
 
-// We currently use Symbol.for rather than Symbol so that the symbol matches if duplicated across bundles
-// This wouldn't be necessary if @cloudflare/config was published and included as a dependency
-export const DEFINITION = Symbol.for("@cloudflare/config:definition");
-
 /**
  * The authored config in any of its supported shapes: a plain value, a promise,
  * or a function of {@link ConfigContext}.
@@ -21,36 +17,63 @@ export type ConfigInput<T> =
 	| Promise<T>
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
-/**
- * Unwrap an authored config from its value / promise / function shape, awaiting
- * the result. A function config is invoked with {@link ConfigContext}.
- */
-async function unwrap(config: unknown, ctx: ConfigContext): Promise<unknown> {
-	return typeof config === "function"
-		? await (config as (ctx: ConfigContext) => unknown)(ctx)
-		: await config;
-}
+type ConfigObject = Record<string, unknown>;
 
-/**
- * Resolve any `cloudflare.config.ts` export to its plain config value.
- *
- * A `define*` helper stores its authored config plus `type` under the
- * {@link DEFINITION} symbol; here we unwrap the config and stamp `type` back on.
- * Every other export — a raw object/promise/function — is unwrapped as-is and
- * already carries its own `type`. Discrimination happens afterwards via `type`.
- */
-export async function resolveExportDefinition(
-	def: unknown,
-	ctx: ConfigContext
-): Promise<unknown> {
-	if (typeof def === "object" && def !== null && DEFINITION in def) {
-		const { config, type } = (def as Record<symbol, unknown>)[DEFINITION] as {
-			config: unknown;
-			type: string;
-		};
-		const resolved = await unwrap(config, ctx);
-		return { ...(resolved as object), type };
+export type ConfigWithType<T extends ConfigObject, TType extends string> = T & {
+	type: TType;
+};
+
+/** Add a config type while preserving its value, promise, or function shape. */
+function addConfigType<
+	TConfig extends ConfigObject,
+	const TType extends string,
+>(
+	config: ConfigInput<TConfig>,
+	type: TType
+): ConfigInput<ConfigWithType<TConfig, TType>> {
+	function addType(value: TConfig): ConfigWithType<TConfig, TType> {
+		return { ...value, type };
 	}
 
-	return await unwrap(def, ctx);
+	if (typeof config === "function") {
+		return (ctx) => {
+			const result = config(ctx);
+			return result instanceof Promise ? result.then(addType) : addType(result);
+		};
+	}
+
+	return config instanceof Promise ? config.then(addType) : addType(config);
+}
+
+/** Create a type-safe config helper for a particular export type. */
+export function createConfigDefiner<
+	TConfigInput extends ConfigObject,
+	const TType extends string,
+>(type: TType) {
+	type DefinedConfig<T extends TConfigInput> = ConfigWithType<T, TType>;
+
+	function define<const T extends TConfigInput>(
+		config: (ctx: ConfigContext) => Promise<TConfigInput & T>
+	): (ctx: ConfigContext) => Promise<DefinedConfig<T>>;
+	function define<const T extends TConfigInput>(
+		config: (ctx: ConfigContext) => TConfigInput & T
+	): (ctx: ConfigContext) => DefinedConfig<T>;
+	function define<const T extends TConfigInput>(
+		config: (
+			ctx: ConfigContext
+		) => (TConfigInput & T) | Promise<TConfigInput & T>
+	): (ctx: ConfigContext) => DefinedConfig<T> | Promise<DefinedConfig<T>>;
+	function define<const T extends TConfigInput>(
+		config: Promise<TConfigInput & T>
+	): Promise<DefinedConfig<T>>;
+	function define<const T extends TConfigInput>(
+		config: TConfigInput & T
+	): DefinedConfig<T>;
+	function define(
+		config: ConfigInput<TConfigInput>
+	): ConfigInput<ConfigWithType<TConfigInput, TType>> {
+		return addConfigType(config, type);
+	}
+
+	return define;
 }
