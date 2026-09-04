@@ -2,6 +2,7 @@ import assert from "node:assert";
 import {
 	configFileName,
 	getDurableObjectExports,
+	isContainerInstanceGroupConfig,
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
@@ -102,6 +103,7 @@ export async function resolveDoLifecyclePayload(props: {
 	accountId: string | undefined;
 	config: Config;
 	dispatchNamespace: string | undefined;
+	preparedContainerImages?: Record<string, Record<string, string>>;
 }): Promise<{
 	migrations: CfWorkerInit["migrations"];
 	exports: CfWorkerInit["exports"];
@@ -109,9 +111,35 @@ export async function resolveDoLifecyclePayload(props: {
 	const durableObjectExports = getDurableObjectExports(props.config.exports);
 	const hasDurableObjectExports = Object.keys(durableObjectExports).length > 0;
 	if (hasDurableObjectExports) {
+		const uploadExports = Object.fromEntries(
+			Object.entries(durableObjectExports).map(([className, entry]) => {
+				if (
+					"container" in entry &&
+					isContainerInstanceGroupConfig(entry.container)
+				) {
+					const configuredImages = Object.keys(entry.container.images ?? {});
+					const preparedImages = props.preparedContainerImages?.[className];
+					if (configuredImages.length > 0 && preparedImages === undefined) {
+						throw new Error(
+							`Container images for Durable Object export "${className}" were not prepared before upload.`
+						);
+					}
+					return [
+						className,
+						{
+							...entry,
+							container: {
+								images: preparedImages ?? {},
+							},
+						},
+					];
+				}
+				return [className, entry];
+			})
+		);
 		return {
 			migrations: undefined,
-			exports: durableObjectExports,
+			exports: uploadExports,
 		};
 	}
 

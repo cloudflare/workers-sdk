@@ -10,8 +10,32 @@ type WranglerSchema = {
 		};
 		DurableObjectExport: {
 			anyOf: {
-				properties: Record<string, unknown>;
+				properties: Record<string, unknown> & {
+					container?: {
+						anyOf?: {
+							type?: string;
+							$ref?: string;
+						}[];
+					};
+				};
 				required?: string[];
+			}[];
+		};
+		ContainerInstanceGroupConfig: {
+			properties: Record<string, unknown> & {
+				images: {
+					type: string;
+					additionalProperties: {
+						$ref: string;
+					};
+				};
+			};
+			required?: string[];
+		};
+		ContainerInstanceGroupImage: {
+			anyOf: {
+				properties: Record<string, unknown>;
+				required: string[];
 			}[];
 		};
 		RawConfig: {
@@ -64,6 +88,48 @@ describe("config schema", () => {
 			["type", "storage"],
 			["type", "state", "storage", "transfer_from"],
 		]);
+	});
+
+	it("documents Container Instance Groups on Durable Object exports", ({
+		expect,
+	}) => {
+		const schema = readSchema();
+		const instanceGroup = schema.definitions.ContainerInstanceGroupConfig;
+
+		expect(instanceGroup.required).toBeUndefined();
+		expect(Object.keys(instanceGroup.properties)).toEqual(["images"]);
+		expect(instanceGroup.properties.images).toEqual(
+			expect.objectContaining({
+				type: "object",
+				additionalProperties: {
+					$ref: "#/definitions/ContainerInstanceGroupImage",
+				},
+			})
+		);
+
+		const image = schema.definitions.ContainerInstanceGroupImage;
+		expect(image.anyOf).toEqual([
+			expect.objectContaining({
+				required: ["dockerfile"],
+				properties: expect.objectContaining({ dockerfile: expect.any(Object) }),
+			}),
+			expect.objectContaining({
+				required: ["image"],
+				properties: expect.objectContaining({ image: expect.any(Object) }),
+			}),
+		]);
+
+		const containerSchema = schema.definitions.DurableObjectExport.anyOf.find(
+			(branch) => branch.properties.container !== undefined
+		)?.properties.container;
+		expect(containerSchema?.anyOf).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ type: "string" }),
+				expect.objectContaining({
+					$ref: "#/definitions/ContainerInstanceGroupConfig",
+				}),
+			])
+		);
 	});
 
 	it("emits markdownDescription for rich editor hovers", ({ expect }) => {

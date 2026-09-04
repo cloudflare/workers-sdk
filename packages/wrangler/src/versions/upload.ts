@@ -3,6 +3,7 @@ import {
 	type AssetUploadStats,
 } from "@cloudflare/deploy-helpers";
 import { analyseBundle } from "../check/commands";
+import { prepareContainerInstanceApplications } from "../containers/instance-applications";
 import { createCommand } from "../core/create-command";
 import {
 	sharedDeployVersionsArgs,
@@ -69,6 +70,7 @@ export const versionsUploadCommand = createCommand({
 				buildResult,
 				{
 					analyseBundle: analyseBundle,
+					prepareContainerInstanceApplications,
 				}
 			);
 			assetUploadStats = uploadStats;

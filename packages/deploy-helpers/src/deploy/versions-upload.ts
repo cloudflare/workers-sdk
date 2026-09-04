@@ -22,6 +22,7 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
+import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
 	applyServiceAndEnvironmentTags,
@@ -55,7 +56,8 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
+export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle"> &
+	Partial<Pick<DeployCallbacks, "prepareContainerInstanceApplications">>;
 
 type VersionsUploadResult = {
 	versionId: string | null;
@@ -152,6 +154,12 @@ async function uploadWorkerVersion(
 		};
 	}
 
+	const preparedContainerImages =
+		await callbacks.prepareContainerInstanceApplications?.(config, {
+			dryRun: Boolean(props.dryRun),
+			scriptName,
+		});
+
 	// Resolve which Durable Object lifecycle payload to forward — either
 	// the legacy `migrations` steps or the declarative `exports` map. The
 	// server's versions POST controller persists `exports` on the new
@@ -164,6 +172,7 @@ async function uploadWorkerVersion(
 		accountId,
 		config,
 		dispatchNamespace: undefined,
+		preparedContainerImages,
 	});
 
 	// Upload assets if assets is being used
@@ -204,7 +213,7 @@ async function uploadWorkerVersion(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: getContainerMetadata(config),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,

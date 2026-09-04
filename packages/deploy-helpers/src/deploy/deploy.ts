@@ -9,6 +9,7 @@ import {
 	formatTime,
 	getBindings,
 	getDockerPath,
+	getContainerInstanceGroupExports,
 	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	printBindings,
@@ -30,6 +31,7 @@ import {
 	type BundleSize,
 } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
+import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
 import {
@@ -130,6 +132,18 @@ export type DeployCallbacks = {
 		| ((
 				config: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
+				args: { versionId: string; accountId: string; scriptName: string }
+		  ) => Promise<void>)
+		| undefined;
+	prepareContainerInstanceApplications:
+		| ((
+				config: Config,
+				args: { dryRun: boolean; scriptName: string }
+		  ) => Promise<Record<string, Record<string, string>>>)
+		| undefined;
+	deployContainerInstanceApplications:
+		| ((
+				config: Config,
 				args: { versionId: string; accountId: string; scriptName: string }
 		  ) => Promise<void>)
 		| undefined;
@@ -238,6 +252,11 @@ async function deployWorker(
 		content,
 		sourceMaps,
 	} = buildResult;
+	const preparedContainerImages =
+		await callbacks.prepareContainerInstanceApplications?.(config, {
+			dryRun: Boolean(isDryRun),
+			scriptName,
+		});
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
 	const { migrations, exports } = await resolveExportsUploadPayload({
@@ -246,6 +265,7 @@ async function deployWorker(
 		accountId,
 		config,
 		dispatchNamespace: props.dispatchNamespace,
+		preparedContainerImages,
 	});
 
 	// Upload assets if assets is being used
@@ -333,7 +353,7 @@ async function deployWorker(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: getContainerMetadata(config),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -774,6 +794,17 @@ async function deployWorker(
 	) {
 		assert(versionId && accountId);
 		await callbacks.deployContainers(config, normalisedContainerConfig, {
+			versionId,
+			accountId,
+			scriptName,
+		});
+	}
+	if (
+		getContainerInstanceGroupExports(config.exports).length > 0 &&
+		callbacks.deployContainerInstanceApplications
+	) {
+		assert(versionId && accountId);
+		await callbacks.deployContainerInstanceApplications(config, {
 			versionId,
 			accountId,
 			scriptName,
