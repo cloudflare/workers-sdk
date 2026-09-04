@@ -463,6 +463,8 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated service environments
+			environment: service.environment,
 			entrypoint: service.entrypoint,
 			...(crossAccountGrant !== undefined && {
 				cross_account_grant: crossAccountGrant,
@@ -780,8 +782,9 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 		previewDefaults.cache = previews?.cache ?? config.cache;
 	}
 
-	if (config.placement) {
-		previewDefaults.placement = parseConfigPlacement(config);
+	const placement = previews?.placement ?? config.placement;
+	if (placement) {
+		previewDefaults.placement = parseConfigPlacement(placement);
 	}
 
 	return previewDefaults;

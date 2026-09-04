@@ -103,13 +103,13 @@ export const previewBaseConfigSecretListCommand = createCommand({
 			accountId,
 			workerName
 		);
-		const secrets = extractSecretSummaries(baseConfig.env);
+		const secrets = extractSecretSummaries(baseConfig?.env);
 
 		if (args.json) {
 			logger.log(JSON.stringify(secrets, null, 2));
 			return;
 		}
 
-		logger.log(formatBaseConfigSecrets(workerName, baseConfig.env));
+		logger.log(formatBaseConfigSecrets(workerName, baseConfig?.env));
 	},
 });

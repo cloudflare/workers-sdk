@@ -507,8 +507,16 @@ async function assemblePreviewDeploymentSettings(
 	} else if (config.cache !== undefined) {
 		request.cache = config.cache;
 	}
-	if (config.placement) {
-		request.placement = parseConfigPlacement(config);
+	if (previews?.placement !== undefined) {
+		request.placement =
+			previews.placement.mode === "off"
+				? null
+				: parseConfigPlacement(previews.placement);
+	} else if (config.placement !== undefined) {
+		request.placement =
+			config.placement.mode === "off"
+				? null
+				: parseConfigPlacement(config.placement);
 	}
 
 	// Declare which DO classes are container-backed so the runtime populates
@@ -840,7 +848,7 @@ export async function preview(
 			);
 			logMissingPreviewsBindingsWarning(
 				topLevelBindings,
-				previewDefaults.env,
+				previewDefaults?.env,
 				extractConfigBindings(config)
 			);
 		}
