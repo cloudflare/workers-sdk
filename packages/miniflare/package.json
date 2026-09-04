@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "5.20260801.1-alpha",
+	"version": "5.20260903.0-alpha",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -57,6 +57,7 @@
 		"@aws-sdk/client-s3": "^3.721.0",
 		"@aws-sdk/s3-request-presigner": "^3.721.0",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/local-explorer-ui": "workspace:*",

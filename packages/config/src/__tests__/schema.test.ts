@@ -1,10 +1,14 @@
 import { describe, it } from "vitest";
+import { exports as exportConfig } from "../exports";
 import {
+	BindingSchema,
 	ConfigExportsSchema,
+	InputSettingsSchema,
 	InputWorkerSchema,
+	OutputSettingsSchema,
 	OutputWorkerSchema,
-	SettingsSchema,
 } from "../schema";
+import type { ParsedInputWorkerConfig } from "../schema";
 
 const baseConfig = {
 	type: "worker",
@@ -69,6 +73,41 @@ describe("InputWorkerSchema", () => {
 			});
 
 			expect(result.success).toBe(true);
+		});
+
+		it("accepts binding options nested under dev", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: {
+					KV: { type: "kv", dev: { remote: true } },
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive-id",
+						dev: { connectionString: "postgres://localhost/database" },
+					},
+					R2: {
+						type: "r2",
+						dev: {
+							remote: false,
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects remote at the binding root", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: { KV: { type: "kv", remote: true } },
+			});
+
+			expect(result.success).toBe(false);
 		});
 
 		it.for([
@@ -187,6 +226,66 @@ describe("InputWorkerSchema", () => {
 		});
 	});
 
+	describe("send-email bindings", () => {
+		it.for([
+			["no address restrictions", { type: "send-email" }],
+			[
+				"a destination address",
+				{
+					type: "send-email",
+					destinationAddress: "destination@example.com",
+				},
+			],
+			[
+				"allowed destination addresses",
+				{
+					type: "send-email",
+					allowedDestinationAddresses: ["destination@example.com"],
+				},
+			],
+			[
+				"sender restrictions without destination restrictions",
+				{
+					type: "send-email",
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+			[
+				"a destination address and sender restrictions",
+				{
+					type: "send-email",
+					destinationAddress: "destination@example.com",
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+			[
+				"allowed destination addresses and sender restrictions",
+				{
+					type: "send-email",
+					allowedDestinationAddresses: ["destination@example.com"],
+					allowedSenderAddresses: ["sender@example.com"],
+				},
+			],
+		] as const)("accepts %s", ([, binding], { expect }) => {
+			expect(BindingSchema.safeParse(binding).success).toBe(true);
+		});
+
+		it("rejects both destination restriction forms", ({ expect }) => {
+			const result = BindingSchema.safeParse({
+				type: "send-email",
+				destinationAddress: "destination@example.com",
+				allowedDestinationAddresses: ["destination@example.com"],
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]?.message).toBe(
+					'"send-email" bindings cannot specify both "destinationAddress" and "allowedDestinationAddresses"'
+				);
+			}
+		});
+	});
+
 	describe("entrypoint", () => {
 		it("accepts a string entrypoint and passes it through unchanged", ({
 			expect,
@@ -273,6 +372,7 @@ describe("InputWorkerSchema", () => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
 				manifest: {
+					type: "complete",
 					mainModule: "index.js",
 					modules: { "index.js": { type: "esm" } },
 				},
@@ -384,6 +484,34 @@ describe("InputWorkerSchema", () => {
 			}
 		});
 
+		it("accepts camelCase query string redaction configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					redactQueryString: true,
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects snake_case query string redaction configuration", ({
+			expect,
+		}) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				observability: {
+					enabled: true,
+					redact_query_string: true,
+				},
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it("rejects unknown keys inside a trigger", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
@@ -406,6 +534,57 @@ describe("InputWorkerSchema", () => {
 				expect(issue?.path).toEqual(["triggers", 0]);
 				expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
 					"cronz"
+				);
+			}
+		});
+
+		it("accepts a connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						address: "127.0.0.1",
+					},
+				],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "ftp", port: 5432 }],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects unknown keys inside a connect trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						hostname: "127.0.0.1",
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				const issue = result.error.issues.find(
+					(i) => i.code === "unrecognized_keys"
+				);
+				expect(issue).toBeDefined();
+				expect(issue?.path).toEqual(["triggers", 0]);
+				expect((issue as { keys?: string[] } | undefined)?.keys).toContain(
+					"hostname"
 				);
 			}
 		});
@@ -627,10 +806,11 @@ describe("OutputWorkerSchema", () => {
 		}
 	});
 
-	it("accepts a config with a valid manifest", ({ expect }) => {
+	it("accepts a config with a valid complete manifest", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				mainModule: "index.js",
 				modules: {
 					"index.js": { type: "esm" },
@@ -643,6 +823,36 @@ describe("OutputWorkerSchema", () => {
 		if (result.success) {
 			expect(result.data.manifest?.mainModule).toBe("index.js");
 		}
+	});
+
+	it("accepts a partial manifest that omits its main module from modules.manifest", ({
+		expect,
+	}) => {
+		const result = OutputWorkerSchema.safeParse({
+			...baseConfig,
+			manifest: {
+				type: "partial",
+				mainModule: "index.js",
+				modules: { "other.js": { type: "cjs" } },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects a partial manifest that includes its main module in modules.manifest", ({
+		expect,
+	}) => {
+		const result = OutputWorkerSchema.safeParse({
+			...baseConfig,
+			manifest: {
+				type: "partial",
+				mainModule: "index.js",
+				modules: { "index.js": { type: "esm" } },
+			},
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("rejects an entrypoint field (included in input schema only)", ({
@@ -660,6 +870,7 @@ describe("OutputWorkerSchema", () => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				mainModule: "index.js",
 				modules: {
 					"index.js": { type: "bogus-type" },
@@ -674,7 +885,23 @@ describe("OutputWorkerSchema", () => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				modules: { "index.js": { type: "esm" } },
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a complete manifest that does not include its main module", ({
+		expect,
+	}) => {
+		const result = OutputWorkerSchema.safeParse({
+			...baseConfig,
+			manifest: {
+				type: "complete",
+				mainModule: "index.js",
+				modules: {},
 			},
 		});
 
@@ -685,6 +912,7 @@ describe("OutputWorkerSchema", () => {
 		const result = OutputWorkerSchema.safeParse({
 			...baseConfig,
 			manifest: {
+				type: "complete",
 				mainModule: "index.js",
 				modules: {
 					"index.js": { type: "esm", extra: "field" },
@@ -705,15 +933,15 @@ describe("InputWorkerSchema type discriminant", () => {
 	});
 });
 
-describe("SettingsSchema", () => {
+describe("InputSettingsSchema", () => {
 	it("accepts a minimal settings config", ({ expect }) => {
-		const result = SettingsSchema.safeParse({ type: "settings" });
+		const result = InputSettingsSchema.safeParse({ type: "settings" });
 
 		expect(result.success).toBe(true);
 	});
 
 	it("accepts accountId and complianceRegion", ({ expect }) => {
-		const result = SettingsSchema.safeParse({
+		const result = InputSettingsSchema.safeParse({
 			type: "settings",
 			accountId: "acc-123",
 			complianceRegion: "fedramp-high",
@@ -723,8 +951,57 @@ describe("SettingsSchema", () => {
 	});
 
 	it("rejects unknown fields", ({ expect }) => {
-		const result = SettingsSchema.safeParse({
+		const result = InputSettingsSchema.safeParse({
 			type: "settings",
+			name: "my-worker",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `mode`, which is supplied at build time rather than declared", ({
+		expect,
+	}) => {
+		const result = InputSettingsSchema.safeParse({
+			type: "settings",
+			mode: "staging",
+		});
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("OutputSettingsSchema", () => {
+	it("accepts a mode alongside the settings fields", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			accountId: "acc-123",
+			complianceRegion: "public",
+			mode: "staging",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts a config without a mode", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({ type: "settings" });
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects a non-string mode", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			mode: 123,
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown fields", ({ expect }) => {
+		const result = OutputSettingsSchema.safeParse({
+			type: "settings",
+			mode: "staging",
 			name: "my-worker",
 		});
 
@@ -741,8 +1018,8 @@ describe("ConfigExportsSchema", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.default?.type).toBe("worker");
-			expect(result.data.settings?.type).toBe("settings");
+			expect(result.data.default?.name).toBe("my-worker");
+			expect(result.data.settings?.accountId).toBe("acc-123");
 		}
 	});
 
@@ -758,6 +1035,36 @@ describe("ConfigExportsSchema", () => {
 			expect(result.error.issues[0]?.path).toEqual(["default", "type"]);
 		}
 	});
+
+	it.for([
+		{
+			description: "object",
+			value: { staging: "staging-worker", production: "production-worker" },
+			path: ["WORKER_NAMES", "type"],
+		},
+		{
+			description: "primitive",
+			value: 42,
+			path: ["WORKER_NAMES"],
+		},
+	])(
+		"reports an actionable error for an unknown $description export",
+		({ value, path }, { expect }) => {
+			const result = ConfigExportsSchema.safeParse({
+				default: baseConfig,
+				WORKER_NAMES: value,
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0]).toMatchObject({
+					path,
+					message:
+						"The `WORKER_NAMES` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.",
+				});
+			}
+		}
+	);
 
 	it("rejects a settings config on a non-`settings` export", ({ expect }) => {
 		const result = ConfigExportsSchema.safeParse({
@@ -819,5 +1126,144 @@ describe("ConfigExportsSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+});
+
+describe("ExportSchema", () => {
+	function parseExports(exports: unknown) {
+		return InputWorkerSchema.safeParse({ ...baseConfig, exports });
+	}
+
+	it("accepts `container` on a live durable-object export", ({ expect }) => {
+		const result = parseExports({
+			MyDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts `container` on an expecting-transfer export", ({ expect }) => {
+		const result = parseExports({
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "source-worker",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects `container` on a tombstone", ({ expect }) => {
+		const result = parseExports({
+			OldDO: {
+				type: "durable-object",
+				state: "deleted",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a non-string `container`", ({ expect }) => {
+		const result = parseExports({
+			MyDO: { type: "durable-object", storage: "sqlite", container: 1 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `container` on a legacy-kv export", ({ expect }) => {
+		const result = parseExports({
+			MyDO: {
+				type: "durable-object",
+				storage: "legacy-kv",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects `container` on a legacy-kv expecting-transfer export", ({
+		expect,
+	}) => {
+		const result = parseExports({
+			Incoming: {
+				type: "durable-object",
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+				container: "my-container",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("still accepts a legacy-kv export without a container", ({ expect }) => {
+		const result = parseExports({
+			MyDO: { type: "durable-object", storage: "legacy-kv" },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	// Containers require the SQLite storage engine. The check below is the type
+	// half of that rule: `tsc` checks this body (it is never called), so a missing
+	// error fails `check:type` via the unused `@ts-expect-error` directives.
+	it("forbids `container` on a legacy-kv export at the type level", ({
+		expect,
+	}) => {
+		function typeAssertions() {
+			exportConfig.durableObject({
+				storage: "legacy-kv",
+				// @ts-expect-error `container` requires `storage: "sqlite"`
+				container: "my-container",
+			});
+
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+				// @ts-expect-error `container` requires `storage: "sqlite"`
+				container: "my-container",
+			});
+
+			const _exports: NonNullable<ParsedInputWorkerConfig["exports"]> = {
+				MyDO: {
+					type: "durable-object",
+					storage: "legacy-kv",
+					// @ts-expect-error `container` requires `storage: "sqlite"`
+					container: "my-container",
+				},
+			};
+
+			// The permitted combinations must still compile.
+			exportConfig.durableObject({ storage: "sqlite", container: "my-do" });
+			exportConfig.durableObject({ storage: "legacy-kv" });
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "sqlite",
+				transferFrom: "source-worker",
+				container: "my-do",
+			});
+			exportConfig.durableObject({
+				state: "expecting-transfer",
+				storage: "legacy-kv",
+				transferFrom: "source-worker",
+			});
+
+			return _exports;
+		}
+
+		expect(typeAssertions).toBeTypeOf("function");
 	});
 });

@@ -222,6 +222,10 @@ import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
 import { hyperdriveGetCommand } from "./hyperdrive/get";
 import { hyperdriveNamespace } from "./hyperdrive/index";
 import { hyperdriveListCommand } from "./hyperdrive/list";
+import {
+	hyperdrivePlanetscaleNamespace,
+	hyperdrivePlanetscaleSignatureCommand,
+} from "./hyperdrive/planetscale";
 import { hyperdriveUpdateCommand } from "./hyperdrive/update";
 import { init } from "./init";
 import {
@@ -311,17 +315,23 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
+import { previewBaseConfigNamespace } from "./preview/base-config";
+import { previewBaseConfigSecretNamespace } from "./preview/base-config/secrets";
+import { previewBaseConfigSecretBulkCommand } from "./preview/base-config/secrets/bulk";
+import { previewBaseConfigSecretDeleteCommand } from "./preview/base-config/secrets/delete";
+import { previewBaseConfigSecretListCommand } from "./preview/base-config/secrets/list";
+import { previewBaseConfigSecretPutCommand } from "./preview/base-config/secrets/put";
+import { previewDeleteCommand } from "./preview/delete";
+import { previewCommand } from "./preview/preview";
+import { previewSecretNamespace } from "./preview/secrets";
+import { previewSecretBulkCommand } from "./preview/secrets/bulk";
+import { previewSecretDeleteCommand } from "./preview/secrets/delete";
+import { previewSecretListCommand } from "./preview/secrets/list";
+import { previewSecretPutCommand } from "./preview/secrets/put";
 import {
-	previewCommand,
-	previewDeleteCommand,
-	previewSecretBulkCommand,
-	previewSecretDeleteCommand,
-	previewSecretListCommand,
-	previewSecretNamespace,
-	previewSecretPutCommand,
 	previewSettingsCommand,
 	previewSettingsUpdateCommand,
-} from "./preview";
+} from "./preview/settings";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -536,6 +546,7 @@ import { websearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
+import { workflowsInstancesDeleteCommand } from "./workflows/commands/instances/delete";
 import { workflowsInstancesDescribeCommand } from "./workflows/commands/instances/describe";
 import { workflowsInstancesListCommand } from "./workflows/commands/instances/list";
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
@@ -930,6 +941,30 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler preview secret bulk",
 			definition: previewSecretBulkCommand,
+		},
+		{
+			command: "wrangler preview base-config",
+			definition: previewBaseConfigNamespace,
+		},
+		{
+			command: "wrangler preview base-config secret",
+			definition: previewBaseConfigSecretNamespace,
+		},
+		{
+			command: "wrangler preview base-config secret put",
+			definition: previewBaseConfigSecretPutCommand,
+		},
+		{
+			command: "wrangler preview base-config secret delete",
+			definition: previewBaseConfigSecretDeleteCommand,
+		},
+		{
+			command: "wrangler preview base-config secret list",
+			definition: previewBaseConfigSecretListCommand,
+		},
+		{
+			command: "wrangler preview base-config secret bulk",
+			definition: previewBaseConfigSecretBulkCommand,
 		},
 	]);
 	registry.registerNamespace("preview");
@@ -1558,6 +1593,14 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
 		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
+		{
+			command: "wrangler hyperdrive planetscale",
+			definition: hyperdrivePlanetscaleNamespace,
+		},
+		{
+			command: "wrangler hyperdrive planetscale signature",
+			definition: hyperdrivePlanetscaleSignatureCommand,
+		},
 		{
 			command: "wrangler hyperdrive update",
 			definition: hyperdriveUpdateCommand,
@@ -2268,6 +2311,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances resume",
 			definition: workflowsInstancesResumeCommand,
+		},
+		{
+			command: "wrangler workflows instances delete",
+			definition: workflowsInstancesDeleteCommand,
 		},
 	]);
 	registry.registerNamespace("workflows");

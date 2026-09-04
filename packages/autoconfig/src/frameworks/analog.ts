@@ -2,8 +2,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
 import type {
@@ -21,13 +24,14 @@ export class Analog extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./dist/analog/server/index.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "./dist/analog/public",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./dist/analog/server/index.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./dist/analog/public" },
 		};
 	}
 }
@@ -46,7 +50,7 @@ async function updateViteConfig(projectPath: string) {
 		throw new Error("Could not find Vite config file to modify");
 	}
 
-	const compatDate = getTodaysCompatDate();
+	const compatDate = DEFAULT_COMPAT_DATE;
 
 	updateStatus(`Updating configuration in ${blue(viteConfigPath)}`);
 

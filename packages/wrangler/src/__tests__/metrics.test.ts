@@ -6,6 +6,7 @@ import {
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import * as agentsSkillsInstall from "../agents-skills-install";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import {
@@ -30,7 +31,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { ExpectStatic } from "vitest";
+import type { ExpectStatic, MockInstance } from "vitest";
 
 vi.mock("../utils/detect-agent");
 const mockDetectAgent = vi.mocked(detectAgent);
@@ -228,6 +229,83 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"agent":null');
+			});
+		});
+
+		describe("agent skills install status fetch", () => {
+			let telemetrySpy: MockInstance<
+				typeof agentsSkillsInstall.telemetryCurrentAgentSkillsInstalled
+			>;
+
+			beforeEach(() => {
+				// vitest.setup.ts replaces telemetryCurrentAgentSkillsInstalled with
+				// a stub that resolves to null. Restore the real implementation so
+				// that the requests it makes to the GitHub skills API are observable
+				// via msw, then re-spy on it so calls can still be asserted.
+				vi.mocked(
+					agentsSkillsInstall.telemetryCurrentAgentSkillsInstalled
+				).mockRestore();
+				telemetrySpy = vi.spyOn(
+					agentsSkillsInstall,
+					"telemetryCurrentAgentSkillsInstalled"
+				);
+				// Report an agent with a known skills install path so the real
+				// implementation gets as far as querying the GitHub API.
+				mockDetectAgent.mockReturnValue({
+					isAgent: true,
+					id: "claude-code",
+				});
+			});
+
+			afterEach(() => {
+				// Put the stub from vitest.setup.ts back for the remaining tests.
+				telemetrySpy.mockReturnValue(Promise.resolve(null));
+			});
+
+			it("should not query the GitHub skills API if the dispatcher is disabled", async ({
+				expect,
+			}) => {
+				const skillsRequests = mockSkillsApiRequest();
+				const metricsRequests = mockMetricRequest();
+
+				const dispatcher = getMetricsDispatcher({
+					sendMetrics: false,
+				});
+				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
+				dispatcher.sendCommandEvent("wrangler command started", {
+					sanitizedCommand: "docs",
+					sanitizedArgs: {},
+					argsUsed: [],
+				});
+				await allMetricsDispatchesCompleted();
+
+				expect(telemetrySpy).not.toHaveBeenCalled();
+				expect(skillsRequests.count).toBe(0);
+				expect(metricsRequests.count).toBe(0);
+			});
+
+			it("should query the GitHub skills API once if the dispatcher is enabled", async ({
+				expect,
+			}) => {
+				const skillsRequests = mockSkillsApiRequest();
+				const metricsRequests = mockMetricRequest();
+
+				const dispatcher = getMetricsDispatcher({
+					sendMetrics: true,
+				});
+				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
+				dispatcher.sendCommandEvent("wrangler command started", {
+					sanitizedCommand: "docs",
+					sanitizedArgs: {},
+					argsUsed: [],
+				});
+				await allMetricsDispatchesCompleted();
+
+				expect(telemetrySpy).toHaveBeenCalled();
+				// The result is memoised, so even with two events dispatched the
+				// GitHub skills API is only queried once.
+				expect(skillsRequests.count).toBe(1);
+				expect(metricsRequests.count).toBe(2);
 			});
 		});
 
@@ -679,6 +757,34 @@ describe("metrics", () => {
 				});
 			});
 
+			it("should return enabled false if the DO_NOT_TRACK environment variable is set", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "1");
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
+					enabled: false,
+				});
+			});
+
+			it("should let DO_NOT_TRACK override the WRANGLER_SEND_METRICS environment variable", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "1");
+				vi.stubEnv("WRANGLER_SEND_METRICS", "true");
+				expect(await getMetricsConfig({})).toMatchObject({
+					enabled: false,
+				});
+			});
+
+			it("should ignore DO_NOT_TRACK if it is not set to an opt-out value", async ({
+				expect,
+			}) => {
+				vi.stubEnv("DO_NOT_TRACK", "0");
+				expect(await getMetricsConfig({ sendMetrics: true })).toMatchObject({
+					enabled: true,
+				});
+			});
+
 			it("should return the sendMetrics argument for enabled if it is defined", async ({
 				expect,
 			}) => {
@@ -817,7 +923,7 @@ describe("metrics", () => {
 				expect(std.out).toContain("Status: Disabled");
 			});
 
-			it("shows wrangler.toml as the source with send_metrics is present", async ({
+			it("shows the wrangler config as the source when send_metrics is present", async ({
 				expect,
 			}) => {
 				writeMetricsConfig({
@@ -828,10 +934,10 @@ describe("metrics", () => {
 				});
 				writeWranglerConfig({ send_metrics: false });
 				await runWrangler(`${cmd} status`);
-				expect(std.out).toContain("Status: Disabled (set by wrangler.toml)");
+				expect(std.out).toContain("Status: Disabled (set by wrangler config)");
 			});
 
-			it("shows environment variable as the source if used", async ({
+			it("shows WRANGLER_SEND_METRICS as the source if used", async ({
 				expect,
 			}) => {
 				writeMetricsConfig({
@@ -843,7 +949,7 @@ describe("metrics", () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
 				await runWrangler(`${cmd} status`);
 				expect(std.out).toContain(
-					"Status: Disabled (set by environment variable)"
+					"Status: Disabled (set by WRANGLER_SEND_METRICS)"
 				);
 			});
 
@@ -868,7 +974,7 @@ describe("metrics", () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");
 				await runWrangler(`${cmd} status`);
 				expect(std.out).toContain(
-					"Status: Disabled (set by environment variable)"
+					"Status: Disabled (set by WRANGLER_SEND_METRICS)"
 				);
 			});
 		});
@@ -945,6 +1051,31 @@ Wrangler is now collecting telemetry about your usage. Thank you for helping mak
 			});
 		});
 
+		it(`persists enabled but reports disabled when "wrangler ${cmd} enable" is run with DO_NOT_TRACK`, async ({
+			expect,
+		}) => {
+			vi.stubEnv("DO_NOT_TRACK", "1");
+			writeMetricsConfig({
+				permission: {
+					enabled: false,
+					date: new Date(2022, 6, 4),
+				},
+			});
+
+			await runWrangler(`${cmd} enable`);
+
+			expect(std.out).toContain(`Status: Disabled (set by DO_NOT_TRACK)
+
+Telemetry has been enabled in Wrangler's global configuration, but remains disabled because it is overridden by DO_NOT_TRACK.`);
+			expect(std.out).not.toContain("Wrangler is now collecting telemetry");
+			expect(readMetricsConfig()).toMatchObject({
+				permission: {
+					enabled: true,
+					date: new Date(2024, 11, 12),
+				},
+			});
+		});
+
 		it("doesn't overwrite c3 telemetry config", async ({ expect }) => {
 			writeMetricsConfig({
 				c3permission: {
@@ -977,6 +1108,30 @@ function mockMetricRequest() {
 		http.post(`*/event`, async () => {
 			requests.count++;
 			return HttpResponse.json({}, { status: 200 });
+		})
+	);
+
+	return requests;
+}
+
+/**
+ * Mocks the GitHub Contents API used to look up the available Cloudflare
+ * skills, counting the requests made to the skill listing endpoint.
+ */
+function mockSkillsApiRequest() {
+	const requests = { count: 0 };
+	msw.use(
+		http.get(
+			"https://api.github.com/repos/cloudflare/skills/contents/skills",
+			async () => {
+				requests.count++;
+				return HttpResponse.json([{ name: "cloudflare", type: "dir" }]);
+			}
+		),
+		http.get("https://api.github.com/repos/cloudflare/skills/contents/", () => {
+			return HttpResponse.json([
+				{ name: "skills", type: "dir", sha: "mock-tree-sha" },
+			]);
 		})
 	);
 

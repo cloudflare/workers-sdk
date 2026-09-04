@@ -238,7 +238,7 @@ Map the issue to a package based on labels, title, and body content:
 | `package:wrangler` label, wrangler CLI commands, `wrangler.toml`/`wrangler.json` | `packages/wrangler`                             |
 | `package:miniflare` label, local dev simulation                                  | `packages/miniflare`                            |
 | `product:d1` label, D1 database, `d1 execute`, migrations                        | `packages/wrangler` (D1 code is in wrangler)    |
-| `package:vitest` label, worker tests, `vitest-pool-workers`                      | `packages/vitest-pool-workers`                  |
+| `package:vitest` label, worker tests, `vitest-plugin`                            | `packages/vitest-plugin`                        |
 | `package:vite-plugin` label, vite dev, `@cloudflare/vite-plugin`                 | `packages/vite-plugin-cloudflare`               |
 | `package:c3` label, `create-cloudflare`, project scaffolding                     | `packages/create-cloudflare`                    |
 | `product:pages` label, Pages deployment, `_routes.json`, `_headers`              | `packages/wrangler` (Pages code is in wrangler) |

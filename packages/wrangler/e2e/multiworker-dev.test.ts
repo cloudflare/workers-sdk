@@ -28,6 +28,10 @@ describe("multiworker", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
+
+					[[migrations]]
+					tag = "v1"
+					new_classes = ["MyDurableObject"]
 			`,
 			"src/index.ts": dedent /* javascript */ `
 				import { DurableObject } from "cloudflare:workers";
@@ -183,6 +187,10 @@ describe("multiworker", () => {
 						service = '${workerName2}'
 						entrypoint = 'CounterService'
 						props = { foo = 123, bar = { baz = "hello from props" } }
+
+						[[migrations]]
+						tag = "v1"
+						new_classes = ["MyDurableObject"]
 				`,
 			});
 		});
@@ -252,6 +260,10 @@ describe("multiworker", () => {
 						[[services]]
 						binding = "BEE"
 						service = '${service}'
+
+						[[migrations]]
+						tag = "v1"
+						new_classes = ["MyDurableObject"]
 				`,
 			});
 
@@ -521,6 +533,14 @@ describe("multiworker", () => {
 				}`,
 				"public/index.html": `<h1>hello pages assets</h1>`,
 			});
+
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+					name = "${workerName2}"
+					main = "src/index.ts"
+					compatibility_date = "2024-11-01"
+				`,
+			});
 		});
 
 		it("pages project assets", async ({ expect }) => {
@@ -648,5 +668,84 @@ describe("multiworker", () => {
 				expect(worker.currentOutput).not.toContain("undefined");
 			});
 		});
+	});
+});
+
+describe("multiworker email local dev", () => {
+	it("filters captured emails by the selected worker", async ({ expect }) => {
+		const helper = new WranglerE2ETestHelper();
+		const workerAName = generateResourceName("worker");
+		const workerBName = generateResourceName("worker");
+		const script = dedent /* javascript */ `
+			export default {
+				async email(message) {
+					await message.forward("forwarded@example.com");
+				},
+			};
+		`;
+		const rootA = await makeRoot();
+		await baseSeed(rootA, {
+			"wrangler.toml": dedent`
+					name = "${workerAName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+			`,
+			"src/index.ts": script,
+		});
+
+		const rootB = await makeRoot();
+		await baseSeed(rootB, {
+			"wrangler.toml": dedent`
+					name = "${workerBName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+			`,
+			"src/index.ts": script,
+		});
+
+		const worker = helper.runLongLived(
+			`wrangler dev -c wrangler.toml -c ${rootB}/wrangler.toml`,
+			{ cwd: rootA }
+		);
+		const { url } = await worker.waitForReady(30_000);
+		const messageId = "<multiworker-received@example.com>";
+		const response = await fetch(
+			`${url}/cdn-cgi/local/explorer/api/local/email/routing/send?worker=${workerBName}`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: ["recipient@example.com"],
+					subject: "Multi-worker email",
+					text: "Captured by worker B",
+					headers: { "Message-ID": messageId },
+				}),
+			}
+		);
+		expect(response.status).toBe(200);
+
+		const apiUrl = `${url}/cdn-cgi/local/explorer/api`;
+		const workerAEmails = await fetchJson<{
+			result: Array<{ messageId: string }>;
+		}>(`${apiUrl}/local/email/routing?worker=${workerAName}`);
+		const workerBEmails = await fetchJson<{
+			result: Array<{ messageId: string; worker: string }>;
+		}>(`${apiUrl}/local/email/routing?worker=${workerBName}`);
+
+		expect(
+			workerAEmails.result.some((email) => email.messageId === messageId)
+		).toBe(false);
+		expect(workerBEmails.result).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					messageId: expect.stringMatching(/^<[A-Za-z0-9]{36}@example\.com>$/),
+					worker: workerBName,
+				}),
+			])
+		);
+		expect(
+			workerBEmails.result.some((email) => email.messageId === messageId)
+		).toBe(false);
 	});
 });

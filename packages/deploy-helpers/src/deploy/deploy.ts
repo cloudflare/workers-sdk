@@ -7,11 +7,14 @@ import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
 	formatTime,
+	getBindings,
 	getDockerPath,
 	hasDurableObjectExports,
 	parseNonHyphenedUuid,
+	printBindings,
 	retryOnAPIFailure,
 	UserError,
+	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
@@ -21,8 +24,11 @@ import {
 	resolveAssetOptions,
 	syncAssets,
 } from "./helpers/assets";
-import { getBindings } from "./helpers/binding-utils";
-import { printBundleSize } from "./helpers/bundle-reporter";
+import {
+	getSize,
+	printBundleSize,
+	type BundleSize,
+} from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
@@ -46,7 +52,6 @@ import {
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
-import { printBindings } from "./helpers/print-bindings";
 import { provisionBindings } from "./helpers/provision-bindings";
 import {
 	addRequiredSecretsInheritBindings,
@@ -137,19 +142,52 @@ export type DeployCallbacks = {
 		| undefined;
 };
 
-export default async function deploy(
-	props: DeployProps,
-	config: Config,
-	buildResult: WorkerBuildResult,
-	callbacks: DeployCallbacks
-): Promise<{
+type DeployResult = {
 	sourceMapSize?: number;
 	versionId: string | null;
 	workerTag: string | null;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
 	containerApplicationIds?: string[];
-}> {
+	bundleSize?: BundleSize;
+};
+
+export default async function deploy(
+	props: DeployProps,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	callbacks: DeployCallbacks
+): Promise<DeployResult> {
+	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
+
+	const result = await deployWorker(props, config, buildResult, callbacks);
+
+	writeOutput({
+		type: "deploy",
+		version: 1,
+		worker_name: props.name ?? null,
+		worker_tag: result.workerTag,
+		version_id: result.versionId,
+		targets: result.targets,
+		wrangler_environment: props.env,
+		worker_name_overridden: props.workerNameOverridden ?? false,
+		bundle_size: result.bundleSize
+			? {
+					raw_bytes: result.bundleSize.size,
+					gzip_bytes: result.bundleSize.gzipSize,
+				}
+			: undefined,
+	});
+
+	return result;
+}
+
+async function deployWorker(
+	props: DeployProps,
+	config: Config,
+	buildResult: WorkerBuildResult,
+	callbacks: DeployCallbacks
+): Promise<DeployResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
 
@@ -350,10 +388,8 @@ export default async function deploy(
 		0
 	);
 
-	await printBundleSize(
-		{ name: path.basename(resolvedEntryPointPath), content: content },
-		modules
-	);
+	const bundleSize = await getSize([...modules, { content }]);
+	printBundleSize(bundleSize);
 
 	// We can use the new versions/deployments APIs if we:
 	// * are uploading a worker that already exists
@@ -430,20 +466,24 @@ export default async function deploy(
 			}
 		);
 
-		printBindings(
-			bindings,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			config.containers,
-			{ warnIfNoBindings: true, unsafeMetadata: config.unsafe?.metadata }
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: config.tail_consumers,
+			streamingTailConsumers: config.streaming_tail_consumers,
+			containers: config.containers,
+			warnIfNoBindings: true,
+			unsafeMetadata: config.unsafe?.metadata,
+		});
 	} else {
 		assert(accountId, "Missing accountId");
+		let provisionBindingsResult:
+			| Awaited<ReturnType<typeof provisionBindings>>
+			| undefined;
 
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
 		} else if (props.resourcesProvision) {
-			await provisionBindings(
+			provisionBindingsResult = await provisionBindings(
 				bindings ?? {},
 				accountId,
 				scriptName,
@@ -602,13 +642,14 @@ export default async function deploy(
 			}
 			bindingsPrinted = true;
 
-			printBindings(
-				bindings,
-				config.tail_consumers,
-				config.streaming_tail_consumers,
-				config.containers,
-				{ unsafeMetadata: config.unsafe?.metadata }
-			);
+			printBindings(bindings, {
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				containers: config.containers,
+				unsafeMetadata: config.unsafe?.metadata,
+			});
+			provisionBindingsResult?.warnOnSkippedProvisioning();
 
 			versionId = parseNonHyphenedUuid(result.deployment_id);
 
@@ -634,13 +675,13 @@ export default async function deploy(
 			}
 		} catch (err) {
 			if (!bindingsPrinted) {
-				printBindings(
-					bindings,
-					config.tail_consumers,
-					config.streaming_tail_consumers,
-					config.containers,
-					{ unsafeMetadata: config.unsafe?.metadata }
-				);
+				printBindings(bindings, {
+					log: logger.log,
+					tailConsumers: config.tail_consumers,
+					streamingTailConsumers: config.streaming_tail_consumers,
+					containers: config.containers,
+					unsafeMetadata: config.unsafe?.metadata,
+				});
 			}
 
 			// Reconciliation errors include structured per-class details.
@@ -732,7 +773,7 @@ export default async function deploy(
 
 	if (isDryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag, containerApplicationIds };
+		return { versionId, workerTag, containerApplicationIds, bundleSize };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -764,6 +805,7 @@ export default async function deploy(
 			workerTag,
 			assetUploadStats,
 			containerApplicationIds,
+			bundleSize,
 		};
 	}
 	assert(accountId);
@@ -774,10 +816,11 @@ export default async function deploy(
 		accountId,
 		scriptName,
 		workerTag,
-		env: props.env,
 		crons: props.triggers,
 		firstDeploy: !workerExists,
 		routes: props.routes,
+		validated: true,
+		dryRun: false,
 	});
 
 	await reconcileMetricsExportConfig({
@@ -799,5 +842,6 @@ export default async function deploy(
 		assetUploadStats,
 		targets: targets ?? [],
 		containerApplicationIds,
+		bundleSize,
 	};
 }

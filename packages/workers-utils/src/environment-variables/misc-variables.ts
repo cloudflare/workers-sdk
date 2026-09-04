@@ -37,12 +37,42 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => "create cloudflare",
 });
 
-/**
- * `WRANGLER_SEND_METRICS` can override whether we attempt to send metrics information to Sparrow.
- */
-export const getWranglerSendMetricsFromEnv =
+const getDoNotTrackFromEnv = getEnvironmentVariableFactory({
+	variableName: "DO_NOT_TRACK",
+});
+
+/** Whether `DO_NOT_TRACK` is set to a supported telemetry opt-out value. */
+export function isDoNotTrackEnabled(): boolean {
+	const value = getDoNotTrackFromEnv()?.toLowerCase();
+	return value === "1" || value === "true";
+}
+
+const getWranglerSendMetricsVariableFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "WRANGLER_SEND_METRICS",
+	});
+
+/**
+ * `WRANGLER_SEND_METRICS` controls whether we attempt to send metrics information to Sparrow.
+ * `DO_NOT_TRACK` takes precedence when it is set to an opt-out value.
+ */
+export function getWranglerSendMetricsFromEnv(): boolean | undefined {
+	if (isDoNotTrackEnabled()) {
+		return false;
+	}
+
+	return getWranglerSendMetricsVariableFromEnv();
+}
+
+/**
+ * `WRANGLER_NO_SKILLS_UPDATE_PROMPTS` suppresses the prompt that offers to
+ * update Cloudflare agent skills when they are out of date.
+ *
+ * Set to `"true"` to never be prompted for skills updates.
+ */
+export const getNoSkillsUpdatePromptsFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "WRANGLER_NO_SKILLS_UPDATE_PROMPTS",
 	});
 
 /**
@@ -280,12 +310,7 @@ export const getD1ExtraLocationChoices: () => string | undefined =
  *
  * By default it's `docker`.
  */
-export const getDockerPath = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_DOCKER_BIN",
-	defaultValue() {
-		return "docker";
-	},
-});
+export { getDockerPath } from "../docker-path";
 
 export const getSubdomainMixedStateCheckDisabled =
 	getBooleanEnvironmentVariableFactory({

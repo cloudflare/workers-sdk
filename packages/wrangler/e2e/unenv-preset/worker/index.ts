@@ -99,10 +99,22 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 				timeLog: "function",
 				trace: "function",
 				warn: "function",
-				// These undocumented APIs are supported in Node.js, unenv, and workerd natively.
+				// This undocumented API is supported in Node.js, unenv, and workerd natively.
 				context: "function",
-				createTask: "function",
 			});
+
+			// Unlike the rest of the console API, `createTask()` is installed by the V8
+			// *inspector* rather than by V8 itself, so it is only present while a debugger is
+			// attached to the isolate: a function under `wrangler dev`, absent in a deployed
+			// Worker. It is deliberately left unpolyfilled, because React's development build
+			// feature detects it (`console.createTask ? console.createTask : () => null`) and
+			// calls it at module scope - a stub that throws would break every React app.
+			const createTaskType = typeof (target as { createTask?: unknown })
+				.createTask;
+			assert.ok(
+				createTaskType === "function" || createTaskType === "undefined",
+				`createTask should be of type function or undefined, got ${createTaskType}`
+			);
 		}
 
 		// These undocumented APIs are only on the global object not the import.

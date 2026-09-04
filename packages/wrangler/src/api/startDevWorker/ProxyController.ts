@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
 import { assertNever } from "@cloudflare/workers-utils";
-import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
+import {
+	convertV4MiniflareOptions,
+	LogLevel,
+	Miniflare,
+	Mutex,
+	Response,
+} from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
@@ -41,7 +47,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
-import type { LogOptions, MiniflareOptions } from "miniflare";
+import type { LogOptions, V4MiniflareOptions } from "miniflare";
 
 export class ProxyController extends Controller {
 	public ready = createDeferred<ReadyEvent>();
@@ -49,7 +55,7 @@ export class ProxyController extends Controller {
 	public localServerReady = createDeferred<void>();
 
 	public proxyWorker?: Miniflare;
-	proxyWorkerOptions?: MiniflareOptions;
+	proxyWorkerOptions?: V4MiniflareOptions;
 	private inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
 
 	protected latestConfig?: StartDevWorkerOptions;
@@ -74,7 +80,7 @@ export class ProxyController extends Controller {
 					)
 				: undefined;
 
-		const proxyWorkerOptions: MiniflareOptions = {
+		const proxyWorkerOptions: V4MiniflareOptions = {
 			host: this.latestConfig.dev?.server?.hostname,
 			port: this.latestConfig.dev?.server?.port,
 			https: this.latestConfig.dev?.server?.secure,
@@ -184,15 +190,19 @@ export class ProxyController extends Controller {
 
 		const willInstantiateMiniflareInstance =
 			!this.proxyWorker || proxyWorkerOptionsChanged;
-		this.proxyWorker ??= new Miniflare(proxyWorkerOptions);
+		this.proxyWorker ??= new Miniflare(
+			convertV4MiniflareOptions(proxyWorkerOptions)
+		);
 		this.proxyWorkerOptions = proxyWorkerOptions;
 
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
 
-			void this.proxyWorker.setOptions(proxyWorkerOptions).catch((error) => {
-				this.emitErrorEvent("Failed to start ProxyWorker", error);
-			});
+			void this.proxyWorker
+				.setOptions(convertV4MiniflareOptions(proxyWorkerOptions))
+				.catch((error) => {
+					this.emitErrorEvent("Failed to start ProxyWorker", error);
+				});
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
@@ -682,8 +692,8 @@ function deepEquality(a: unknown, b: unknown): boolean {
 }
 
 function didMiniflareOptionsChange(
-	prev: MiniflareOptions | undefined,
-	next: MiniflareOptions
+	prev: V4MiniflareOptions | undefined,
+	next: V4MiniflareOptions
 ) {
 	if (prev === undefined) {
 		return false;

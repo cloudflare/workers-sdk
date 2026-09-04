@@ -4,9 +4,9 @@ import * as autoconfig from "@cloudflare/autoconfig";
 import { Framework, getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
+	DEFAULT_COMPAT_DATE,
 	FatalError,
 	readFileSync,
-	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import { NpmPackageManager } from "@cloudflare/workers-utils";
 import {
@@ -44,9 +44,8 @@ import type { MockInstance } from "vitest";
 class MockStaticFramework extends Framework {
 	configure({ outputDir }: ConfigurationOptions): ConfigurationResults {
 		return {
-			wranglerConfig: {
-				assets: { directory: outputDir },
-			},
+			workerConfig: {},
+			buildConfig: { assetsDirectory: outputDir },
 		};
 	}
 }
@@ -58,7 +57,7 @@ class MockStaticFramework extends Framework {
  */
 class MockAstroFramework extends Framework {
 	async configure(): Promise<ConfigurationResults> {
-		return { wranglerConfig: { assets: { directory: "dist" } } };
+		return { workerConfig: {}, buildConfig: { assetsDirectory: "dist" } };
 	}
 }
 
@@ -214,7 +213,7 @@ describe("autoconfig (deploy)", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					configure: async () => ({ wranglerConfig: {} }),
+					configure: async () => ({ workerConfig: {} }),
 					isConfigured: () => false,
 				} as unknown as Framework,
 				outputDir: "public",
@@ -270,9 +269,8 @@ describe("autoconfig (deploy)", () => {
 			const configureSpy = vi.fn(
 				async ({ outputDir }) =>
 					({
-						wranglerConfig: {
-							assets: { directory: outputDir },
-						},
+						workerConfig: {},
+						buildConfig: { assetsDirectory: outputDir },
 					}) satisfies ReturnType<Framework["configure"]>
 			);
 			await autoconfig.runAutoConfig(
@@ -298,66 +296,61 @@ describe("autoconfig (deploy)", () => {
 					},
 					packageManager: NpmPackageManager,
 				},
-				{ context, enableWranglerInstallation: false }
+				{
+					target: "wrangler",
+					context,
+					enableTargetCliInstallation: false,
+				}
 			);
 
-			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
+			expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 				.toMatchInlineSnapshot(`
-				"
-				Detected Project Settings:
-				 - Worker Name: my-worker
-				 - Framework: Static
-				 - Build Command: echo 'built' > build.txt
-				 - Output Directory: dist
+					"
+					Detected Project Settings:
+					 - Worker Name: my-worker
+					 - Framework: Static
+					 - Build Command: echo 'built' > build.txt
+					 - Output Directory: dist
 
 
-				📦 Install packages:
-				 - wrangler (devDependency)
+					📝 Update package.json scripts:
+					 - "deploy": "echo 'built' > build.txt && wrangler deploy"
+					 - "preview": "echo 'built' > build.txt && wrangler dev"
 
-				📝 Update package.json scripts:
-				 - "deploy": "echo 'built' > build.txt && wrangler deploy"
-				 - "preview": "echo 'built' > build.txt && wrangler dev"
+					📄 Create wrangler.jsonc:
+					  {
+					    "$schema": "node_modules/wrangler/config-schema.json",
+					    "name": "my-worker",
+					    "compatibility_date": "<default-date>",
+					    "observability": {
+					      "enabled": true
+					    },
+					    "assets": {
+					      "directory": "dist"
+					    }
+					  }
 
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "my-worker",
-				    "compatibility_date": "<current-date>",
-				    "observability": {
-				      "enabled": true
-				    },
-				    "assets": {
-				      "directory": "dist"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
-				  }
+					🛠️  Configuring project for Static
 
-				🛠️  Configuring project for Static
-
-				[build] Running: echo 'built' > build.txt"
-			`);
+					[build] Running: echo 'built' > build.txt"
+				`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
-					getTodaysCompatDate(),
-					"<current-date>"
+					DEFAULT_COMPAT_DATE,
+					"<default-date>"
 				)
 			).toMatchInlineSnapshot(`
 				"{
 				  "$schema": "node_modules/wrangler/config-schema.json",
 				  "name": "my-worker",
-				  "compatibility_date": "<current-date>",
+				  "compatibility_date": "<default-date>",
 				  "observability": {
 				    "enabled": true
 				  },
 				  "assets": {
 				    "directory": "dist"
-				  },
-				  "compatibility_flags": [
-				    "nodejs_compat"
-				  ]
+				  }
 				}
 				"
 			`);
@@ -374,9 +367,7 @@ describe("autoconfig (deploy)", () => {
 				"
 			`);
 
-			// Wrangler installation was disabled (enableWranglerInstallation: false) to avoid
-			// running the real installer in tests. The "📦 Install packages:" output in the
-			// snapshot above confirms the intent is recorded in the autoconfig summary.
+			// CLI installation was disabled to avoid running the real installer in tests.
 			expect(installSpy).not.toHaveBeenCalled();
 
 			// The framework's configuration command should have been run
@@ -413,7 +404,7 @@ describe("autoconfig (deploy)", () => {
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				{ context }
+				{ target: "wrangler", context }
 			);
 
 			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
@@ -450,7 +441,7 @@ describe("autoconfig (deploy)", () => {
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				{ context }
+				{ target: "wrangler", context }
 			);
 
 			// When gitignore pre-existed with trailing newline, one empty line is added as separator
@@ -499,61 +490,55 @@ describe("autoconfig (deploy)", () => {
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
 				},
-				{ context }
+				{ target: "wrangler", context }
 			);
 
-			expect(std.out.replaceAll(getTodaysCompatDate(), "<current-date>"))
+			expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 				.toMatchInlineSnapshot(`
-				"
-				Detected Project Settings:
-				 - Worker Name: my-worker
-				 - Framework: Static
-				 - Output Directory: dist
+					"
+					Detected Project Settings:
+					 - Worker Name: my-worker
+					 - Framework: Static
+					 - Output Directory: dist
 
 
-				Updated Project Settings:
-				 - Worker Name: edited-worker-name
-				 - Framework: Static
-				 - Output Directory: dist
+					Updated Project Settings:
+					 - Worker Name: edited-worker-name
+					 - Framework: Static
+					 - Output Directory: dist
 
 
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "edited-worker-name",
-				    "compatibility_date": "<current-date>",
-				    "observability": {
-				      "enabled": true
-				    },
-				    "assets": {
-				      "directory": "dist"
-				    },
-				    "compatibility_flags": [
-				      "nodejs_compat"
-				    ]
-				  }
-				"
-			`);
+					📄 Create wrangler.jsonc:
+					  {
+					    "$schema": "node_modules/wrangler/config-schema.json",
+					    "name": "edited-worker-name",
+					    "compatibility_date": "<default-date>",
+					    "observability": {
+					      "enabled": true
+					    },
+					    "assets": {
+					      "directory": "dist"
+					    }
+					  }
+					"
+				`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(
-					getTodaysCompatDate(),
-					"<current-date>"
+					DEFAULT_COMPAT_DATE,
+					"<default-date>"
 				)
 			).toMatchInlineSnapshot(`
 				"{
 				  "$schema": "node_modules/wrangler/config-schema.json",
 				  "name": "edited-worker-name",
-				  "compatibility_date": "<current-date>",
+				  "compatibility_date": "<default-date>",
 				  "observability": {
 				    "enabled": true
 				  },
 				  "assets": {
 				    "directory": "dist"
-				  },
-				  "compatibility_flags": [
-				    "nodejs_compat"
-				  ]
+				  }
 				}
 				"
 			`);
@@ -580,7 +565,7 @@ describe("autoconfig (deploy)", () => {
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				{ context }
+				{ target: "wrangler", context }
 			);
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
@@ -616,7 +601,7 @@ describe("autoconfig (deploy)", () => {
 					framework: new MockStaticFramework({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				{ context }
+				{ target: "wrangler", context }
 			);
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
@@ -653,7 +638,7 @@ describe("autoconfig (deploy)", () => {
 						outputDir: "",
 						packageManager: NpmPackageManager,
 					},
-					{ context }
+					{ target: "wrangler", context }
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[AssertionError: The Output Directory is unexpectedly missing]`
@@ -676,14 +661,14 @@ describe("autoconfig (deploy)", () => {
 						framework: {
 							id: "cloudflare-pages",
 							name: "Cloudflare Pages",
-							configure: async () => ({ wranglerConfig: {} }),
+							configure: async () => ({ workerConfig: {} }),
 							isConfigured: () => false,
 						} as unknown as Framework,
 						workerName: "my-worker",
 						outputDir: "dist",
 						packageManager: NpmPackageManager,
 					},
-					{ context }
+					{ target: "wrangler", context }
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.]`
@@ -706,22 +691,26 @@ describe("autoconfig (deploy)", () => {
 						framework: {
 							id: "hono",
 							name: "Hono",
-							configure: async () => ({ wranglerConfig: {} }),
+							configure: async () => ({ workerConfig: {} }),
 							isConfigured: () => false,
 						} as unknown as Framework,
 						workerName: "my-worker",
 						outputDir: "dist",
 						packageManager: NpmPackageManager,
 					},
-					{ context }
+					{ target: "wrangler", context }
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The detected framework ("Hono") cannot be automatically configured.]`
 			);
 		});
 
+		// Autoconfig always writes today's compatibility date, which is on or after
+		// the date `nodejs_compat` became enabled by default in workerd. Specifying
+		// the flag as well would be a validation error, so it must not be added, and
+		// any framework-provided Node.js compatibility flag must be removed.
 		describe("nodejs_compat compatibility flag", () => {
-			it("should add nodejs_compat when framework specifies no compatibility flags", async ({
+			it("should not add nodejs_compat when framework specifies no compatibility flags", async ({
 				expect,
 			}) => {
 				mockConfirm({
@@ -746,25 +735,21 @@ describe("autoconfig (deploy)", () => {
 							id: "static",
 							name: "Static",
 							configure: async () => ({
-								wranglerConfig: {
-									// No compatibility_flags specified
-									assets: { directory: "dist" },
-								},
+								workerConfig: {},
+								buildConfig: { assetsDirectory: "dist" },
 							}),
 							isConfigured: () => false,
 						} as unknown as Framework,
 						packageManager: NpmPackageManager,
 					},
-					{ context }
+					{ target: "wrangler", context }
 				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
-				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
+				expect(wranglerConfig.compatibility_flags).toBeUndefined();
 			});
 
-			it("should preserve other compatibility flags while adding nodejs_compat", async ({
-				expect,
-			}) => {
+			it("should preserve other compatibility flags", async ({ expect }) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -787,26 +772,25 @@ describe("autoconfig (deploy)", () => {
 							id: "static",
 							name: "Static",
 							configure: async () => ({
-								wranglerConfig: {
-									compatibility_flags: ["global_fetch_strictly_public"],
-									assets: { directory: "dist" },
+								workerConfig: {
+									compatibilityFlags: ["global_fetch_strictly_public"],
 								},
+								buildConfig: { assetsDirectory: "dist" },
 							}),
 							isConfigured: () => false,
 						} as unknown as Framework,
 						packageManager: NpmPackageManager,
 					},
-					{ context }
+					{ target: "wrangler", context }
 				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
 				expect(wranglerConfig.compatibility_flags).toEqual([
 					"global_fetch_strictly_public",
-					"nodejs_compat",
 				]);
 			});
 
-			it("should not duplicate nodejs_compat if already present", async ({
+			it("should remove a redundant nodejs_compat provided by the framework", async ({
 				expect,
 			}) => {
 				mockConfirm({
@@ -831,23 +815,25 @@ describe("autoconfig (deploy)", () => {
 							id: "static",
 							name: "Static",
 							configure: async () => ({
-								wranglerConfig: {
-									compatibility_flags: ["nodejs_compat"],
-									assets: { directory: "dist" },
+								workerConfig: {
+									compatibilityFlags: ["nodejs_compat"],
 								},
+								buildConfig: { assetsDirectory: "dist" },
 							}),
 							isConfigured: () => false,
 						} as unknown as Framework,
 						packageManager: NpmPackageManager,
 					},
-					{ context }
+					{ target: "wrangler", context }
 				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
-				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
+				expect(wranglerConfig.compatibility_flags).toBeUndefined();
 			});
 
-			it("should replace nodejs_als with nodejs_compat", async ({ expect }) => {
+			it("should remove nodejs_als while preserving other flags", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -867,25 +853,21 @@ describe("autoconfig (deploy)", () => {
 							id: "static",
 							name: "Nodejs Als Framework",
 							configure: async () => ({
-								wranglerConfig: {
-									compatibility_flags: ["nodejs_als", "some_other_flag"],
-									assets: { directory: "dist" },
+								workerConfig: {
+									compatibilityFlags: ["nodejs_als", "some_other_flag"],
 								},
+								buildConfig: { assetsDirectory: "dist" },
 							}),
 							isConfigured: () => false,
 						} as unknown as Framework,
 						packageManager: NpmPackageManager,
 					},
-					{ context }
+					{ target: "wrangler", context }
 				);
 
 				const wranglerConfig = JSON.parse(readFileSync("wrangler.jsonc"));
-				// nodejs_als should be removed, nodejs_compat should be added, some_other_flag preserved
-				expect(wranglerConfig.compatibility_flags).toEqual([
-					"some_other_flag",
-					"nodejs_compat",
-				]);
-				expect(wranglerConfig.compatibility_flags).not.toContain("nodejs_als");
+				// nodejs_als should be removed and some_other_flag preserved
+				expect(wranglerConfig.compatibility_flags).toEqual(["some_other_flag"]);
 			});
 		});
 
@@ -913,7 +895,10 @@ describe("autoconfig (deploy)", () => {
 			});
 			vi.spyOn(framework, "configure").mockImplementation(async () => {
 				callOrder.push("configure");
-				return { wranglerConfig: { assets: { directory: "dist" } } };
+				return {
+					workerConfig: {},
+					buildConfig: { assetsDirectory: "dist" },
+				};
 			});
 
 			await autoconfig.runAutoConfig(
@@ -925,7 +910,7 @@ describe("autoconfig (deploy)", () => {
 					framework,
 					packageManager: NpmPackageManager,
 				},
-				{ context }
+				{ target: "wrangler", context }
 			);
 
 			// configure is called twice: once as a dry-run (to build the summary) and

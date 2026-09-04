@@ -1,10 +1,14 @@
 import assert from "node:assert";
 import { clearMetricsExportRequester } from "@cloudflare/deploy-helpers";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
 import { createCommand } from "./core/create-command";
 import { confirm } from "./dialogs";
-import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
+import {
+	deleteKVNamespace,
+	listKVNamespaces,
+	type KVNamespaceInfo,
+} from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
@@ -177,14 +181,39 @@ async function deleteSiteNamespaceIfExisting(
 ): Promise<void> {
 	const title = `__${scriptName}-workers_sites_assets`;
 	const previewTitle = `__${scriptName}-workers_sites_assets_preview`;
-	const allNamespaces = await listKVNamespaces(complianceConfig, accountId);
+	let allNamespaces: KVNamespaceInfo[];
+	try {
+		allNamespaces = await listKVNamespaces(complianceConfig, accountId);
+	} catch (error) {
+		if (isPermissionDeniedAPIError(error)) {
+			logger.warn(
+				`Skipping cleanup of legacy Workers Sites asset namespaces for "${scriptName}" because Wrangler does not have permission to list KV namespaces.`
+			);
+			return;
+		}
+		throw error;
+	}
 	const namespacesToDelete = allNamespaces.filter(
 		(ns) => ns.title === title || ns.title === previewTitle
 	);
 	for (const ns of namespacesToDelete) {
-		await deleteKVNamespace(complianceConfig, accountId, ns.id);
+		try {
+			await deleteKVNamespace(complianceConfig, accountId, ns.id);
+		} catch (error) {
+			if (isPermissionDeniedAPIError(error)) {
+				logger.warn(
+					`Skipping cleanup of legacy Workers Sites asset namespace "${ns.title}" because Wrangler does not have permission to delete KV namespaces.`
+				);
+				continue;
+			}
+			throw error;
+		}
 		logger.log(`🌀 Deleted asset namespace for Workers Site "${ns.title}"`);
 	}
+}
+
+function isPermissionDeniedAPIError(error: unknown): error is APIError {
+	return error instanceof APIError && error.status === 403;
 }
 
 type ScriptDetails =
@@ -239,14 +268,26 @@ async function checkAndConfirmForceDeleteIfNecessary(
 	scriptName: string,
 	accountId: string
 ): Promise<boolean | null> {
-	const references = await fetchResult<ServiceReferenceResponse>(
-		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${scriptName}/references`
-	);
-	const tailProducers = await fetchResult<Tail[]>(
-		complianceConfig,
-		`/accounts/${accountId}/workers/tails/by-consumer/${scriptName}`
-	);
+	let references: ServiceReferenceResponse;
+	let tailProducers: Tail[];
+	try {
+		references = await fetchResult<ServiceReferenceResponse>(
+			complianceConfig,
+			`/accounts/${accountId}/workers/scripts/${scriptName}/references`
+		);
+		tailProducers = await fetchResult<Tail[]>(
+			complianceConfig,
+			`/accounts/${accountId}/workers/tails/by-consumer/${scriptName}`
+		);
+	} catch (error) {
+		if (isPermissionDeniedAPIError(error)) {
+			logger.warn(
+				`Skipping dependency checks before deleting "${scriptName}" because Wrangler does not have permission to inspect Worker dependencies. The delete will continue, but may fail later if this Worker is still in use.`
+			);
+			return false;
+		}
+		throw error;
+	}
 	const isDependentService =
 		isUsedAsServiceBinding(references) ||
 		isUsedByPagesFunction(references) ||

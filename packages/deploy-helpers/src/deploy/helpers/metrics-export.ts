@@ -1,10 +1,10 @@
 import {
 	APIError,
+	extractBindingsOfType,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetchResult, logger } from "../../shared/context";
-import { extractBindingsOfType } from "./binding-utils";
 import { getSettings } from "./provision-bindings";
 import type {
 	Binding,

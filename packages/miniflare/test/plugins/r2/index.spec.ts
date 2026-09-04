@@ -11,6 +11,7 @@ import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
+	singleModuleManifest,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
@@ -58,8 +59,16 @@ interface Context extends MiniflareTestContext {
 }
 
 const opts: Partial<MiniflareOptions> = {
-	r2Buckets: { BUCKET: "bucket" },
-	compatibilityFlags: ["r2_list_honor_include"],
+	workers: [
+		{
+			config: {
+				type: "worker",
+				name: "",
+				compatibilityDate: "2025-05-01",
+				env: { BUCKET: { type: "r2", name: "bucket" } },
+			},
+		},
+	],
 };
 const ctx = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 	opts,
@@ -540,9 +549,14 @@ test("put: validates metadata size", async ({ expect }) => {
 });
 test("put: can copy values", async ({ expect }) => {
 	const mf = new Miniflare({
-		r2Buckets: ["BUCKET"],
-		modules: true,
-		script: `export default {
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					manifest: singleModuleManifest(`export default {
       async fetch(request, env, ctx) {
         await env.BUCKET.put("key", "0123456789");
 
@@ -570,7 +584,10 @@ test("put: can copy values", async ({ expect }) => {
 
         return Response.json({ copy, copyRange1, copyRange2, copyRange3, copyRange4 });
       }
-    }`,
+    }`),
+				},
+			},
+		],
 	});
 	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
@@ -634,8 +651,9 @@ async function testList(
 	const { r2, ns } = ctx;
 
 	// Seed bucket
-	for (let i = 0; i < opts.keys.length; i++)
+	for (let i = 0; i < opts.keys.length; i++) {
 		await r2.put(opts.keys[i], `value${i}`);
+	}
 
 	let lastCursor: string | undefined;
 	for (let pageIndex = 0; pageIndex < opts.pages.length; pageIndex++) {
@@ -912,7 +930,9 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 		file9: "value9",
 	};
 	const allKeys = Object.keys(values);
-	for (const [key, value] of Object.entries(values)) await r2.put(key, value);
+	for (const [key, value] of Object.entries(values)) {
+		await r2.put(key, value);
+	}
 
 	const keys = (result: Awaited<ReturnType<typeof r2.list>>) =>
 		result.objects.map(({ key }) => key.substring(ns.length));
@@ -996,10 +1016,18 @@ test("operations permit empty key", async ({ expect }) => {
 test("operations persist stored data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = {
-		modules: true,
-		script: "",
-		r2Buckets: { BUCKET: "bucket" },
 		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(""),
+					env: { BUCKET: { type: "r2", name: "bucket" } },
+				},
+			},
+		],
 	};
 	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
@@ -1051,7 +1079,18 @@ test("operations permit strange bucket names", async ({ expect }) => {
 
 	// Set option, then reset after test
 	const id = "my/ Bucket";
-	await ctx.setOptions({ ...opts, r2Buckets: { BUCKET: id } });
+	await ctx.setOptions({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { BUCKET: { type: "r2", name: id } },
+				},
+			},
+		],
+	});
 	onTestFinished(() => ctx.setOptions(opts));
 	const r2 = namespace(ns, await mf.getR2Bucket("BUCKET"));
 
@@ -1158,8 +1197,9 @@ test("abortMultipartUpload", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
 	// Check blobs deleted
 	await object.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await object.getBlob(part.blob_id)).toBe(null);
+	}
 
 	// Check cannot upload after abort
 	await expect(upload1.uploadPart(4, "value4")).rejects.toThrow(
@@ -1246,8 +1286,9 @@ test("completeMultipartUpload", async ({ expect }) => {
 	expect(object.etag).toBe("46d1741e8075da4ac72c71d8130fcb71-1");
 	// Check previous multipart uploads blobs deleted
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 
 	// Check completing multiple uploads overrides existing, deleting all parts
 	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
@@ -1518,8 +1559,9 @@ test("put: is multipart aware", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
 	// Check deletes all previous blobs
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("delete: is multipart aware", async ({ expect }) => {
 	const { r2, object: objectStub } = ctx;
@@ -1541,8 +1583,9 @@ test("delete: is multipart aware", async ({ expect }) => {
 	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
 	// Check deletes all previous blobs
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("delete: waits for in-progress multipart gets before deleting part blobs", async ({
 	expect,
@@ -1569,8 +1612,9 @@ test("delete: waits for in-progress multipart gets before deleting part blobs", 
 	);
 
 	await objectStub.waitForFakeTasks();
-	for (const part of parts)
+	for (const part of parts) {
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
+	}
 });
 test("list: is multipart aware", async ({ expect }) => {
 	const { r2, ns } = ctx;

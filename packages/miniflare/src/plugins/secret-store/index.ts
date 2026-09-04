@@ -1,13 +1,14 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
-import { z } from "zod";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
 	buildObjectEntryProps,
+	getEnvBindingsOfType,
 	getMiniflareObjectBindings,
 	getPersistPath,
+	getStorageService,
 	getUserBindingServiceName,
 	objectEntryWorker,
 	ProxyNodeBinding,
@@ -16,73 +17,51 @@ import {
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
-const SecretsStoreSecretsSchema = z.record(
-	z.string(),
-	z.object({
-		store_id: z.string(),
-		secret_name: z.string(),
-	})
-);
-
-export const SecretsStoreSecretsOptionsSchema = z.object({
-	secretsStoreSecrets: SecretsStoreSecretsSchema.optional(),
-});
-
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
 // A single entry service shared by every secret store. Each store_id is supplied
 // per-binding via `ctx.props`, so one service serves all of them.
 const SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME = `${SECRET_STORE_PLUGIN_NAME}:ns:entry`;
 
-export const SECRET_STORE_PLUGIN: Plugin<
-	typeof SecretsStoreSecretsOptionsSchema
-> = {
-	options: SecretsStoreSecretsOptionsSchema,
+export const SECRET_STORE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Secrets Store secret",
 	async getBindings(options) {
-		if (!options.secretsStoreSecrets) {
-			return [];
-		}
-
-		const bindings = Object.entries(
-			options.secretsStoreSecrets
-		).map<Worker_Binding>(([name, config]) => {
+		return getEnvBindingsOfType(
+			options.config,
+			"secrets-store-secret"
+		).map<Worker_Binding>(([name, binding]) => {
 			return {
 				name,
 				service: {
 					name: getUserBindingServiceName(
 						SECRET_STORE_PLUGIN_NAME,
-						`${config.store_id}:${config.secret_name}`
+						`${binding.storeId}:${binding.secretName}`
 					),
 					entrypoint: "SecretsStoreSecret",
 				},
 			};
 		});
-		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof SecretsStoreSecretsOptionsSchema>) {
-		if (!options.secretsStoreSecrets) {
-			return {};
-		}
+	getNodeBindings(options) {
 		return Object.fromEntries(
-			Object.keys(options.secretsStoreSecrets).map((name) => [
-				name,
-				new ProxyNodeBinding(),
-			])
+			getEnvBindingsOfType(options.config, "secrets-store-secret").map(
+				([name]) => [name, new ProxyNodeBinding()]
+			)
 		);
 	},
-	async getServices({ options, tmpPath, resourcePersistencePath }) {
-		const configs = options.secretsStoreSecrets
-			? Object.values(options.secretsStoreSecrets)
-			: [];
+	async getServices({ options, tmpPath, sharedOptions }) {
+		const configs = getEnvBindingsOfType(
+			options.config,
+			"secrets-store-secret"
+		).map(([, binding]) => binding);
 
-		if (configs.length === 0) {
+		if (configs.length === 0 && !sharedOptions.unsafeEnableSharedStorage) {
 			return [];
 		}
 
 		const persistPath = getPersistPath(
 			SECRET_STORE_PLUGIN_NAME,
 			tmpPath,
-			resourcePersistencePath
+			sharedOptions.resourcePersistencePath
 		);
 
 		await fs.mkdir(persistPath, { recursive: true });
@@ -135,7 +114,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		const secretServices = configs.map<Service>((config) => ({
 			name: getUserBindingServiceName(
 				SECRET_STORE_PLUGIN_NAME,
-				`${config.store_id}:${config.secret_name}`
+				`${config.storeId}:${config.secretName}`
 			),
 			worker: {
 				compatibilityDate: "2025-01-01",
@@ -148,14 +127,15 @@ export const SECRET_STORE_PLUGIN: Plugin<
 				bindings: [
 					{
 						name: "store",
-						kvNamespace: {
-							name: SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME,
-							props: buildObjectEntryProps(config.store_id),
-						},
+						kvNamespace: getStorageService(
+							SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME,
+							buildObjectEntryProps(config.storeId),
+							sharedOptions
+						),
 					},
 					{
 						name: "secret_name",
-						json: JSON.stringify(config.secret_name),
+						json: JSON.stringify(config.secretName),
 					},
 				],
 			},

@@ -1,55 +1,38 @@
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
-import { z } from "zod";
+import { CoreBindings } from "../../workers";
+import { EMAIL_STORE_SERVICE_NAME } from "../core/constants";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
-	remoteProxyClientWorker,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service, Worker_Binding } from "../../runtime";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-
-// Define the mutually exclusive schema
-const EmailBindingOptionsSchema = z
-	.object({
-		name: z.string(),
-		remoteProxyConnectionString: z
-			.custom<RemoteProxyConnectionString>()
-			.optional(),
-		allowed_sender_addresses: z.array(z.string()).optional(),
-	})
-	.and(
-		z.union([
-			z.object({
-				destination_address: z.string().optional(),
-				allowed_destination_addresses: z.never().optional(),
-			}),
-			z.object({
-				allowed_destination_addresses: z.array(z.string()).optional(),
-				destination_address: z.never().optional(),
-			}),
-		])
-	);
-
-export const EmailOptionsSchema = z.object({
-	email: z
-		.object({
-			send_email: z.array(EmailBindingOptionsSchema).optional(),
-		})
-		.optional(),
-});
+import type { Plugin } from "../shared";
 
 export const EMAIL_PLUGIN_NAME = "email";
 const SERVICE_SEND_EMAIL_WORKER_PREFIX = `SEND-EMAIL-WORKER`;
 const EMAIL_REMOTE_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:remote`;
-// Disk service name and binding name for writing temporary files to system temp directory
-const EMAIL_DISK_SERVICE_NAME = `${EMAIL_PLUGIN_NAME}:disk`;
-const EMAIL_DISK_BINDING_NAME = "MINIFLARE_EMAIL_DISK";
 
-function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
+function getSendEmailServiceName(
+	workerName: string | undefined,
+	bindingName: string
+): string {
+	const scope =
+		workerName === undefined
+			? SERVICE_SEND_EMAIL_WORKER_PREFIX
+			: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${workerName}`;
+	return getUserBindingServiceName(scope, bindingName);
+}
+
+function buildJsonBindings(
+	bindings: Record<string, unknown>
+): Worker_Binding[] {
 	return Object.entries(bindings).map(([name, value]) => ({
 		name,
 		json: JSON.stringify(value),
@@ -99,100 +82,84 @@ export function getEmailPathsToClean(
 	return { sessionDir, parentDir };
 }
 
-export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
-	options: EmailOptionsSchema,
+export const EMAIL_PLUGIN: Plugin = {
 	bindingTypeDescription: "Email",
 	getBindings(options): Worker_Binding[] {
-		if (!options.email?.send_email) {
-			return [];
-		}
-
-		const sendEmailBindings = options.email.send_email;
-
-		return sendEmailBindings.map(({ name, remoteProxyConnectionString }) => ({
-			name,
-			service: remoteProxyConnectionString
-				? {
-						name: EMAIL_REMOTE_SERVICE_NAME,
-						props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-					}
-				: {
-						entrypoint: "SendEmailBinding",
-						name: getUserBindingServiceName(
-							SERVICE_SEND_EMAIL_WORKER_PREFIX,
-							name
-						),
-					},
-		}));
+		return getEnvBindingsOfType(options.config, "send-email").map(
+			([name, binding]) => {
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					binding,
+					options.dev
+				);
+				return {
+					name,
+					service: remoteProxyConnectionString
+						? {
+								name: EMAIL_REMOTE_SERVICE_NAME,
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+							}
+						: {
+								entrypoint: "SendEmailBinding",
+								name: getSendEmailServiceName(options.config.name, name),
+							},
+				};
+			}
+		);
 	},
 	getNodeBindings(options) {
-		if (!options.email?.send_email) {
-			return {};
-		}
-
 		return Object.fromEntries(
-			options.email.send_email.map(({ name }) => [name, new ProxyNodeBinding()])
+			getEnvBindingsOfType(options.config, "send-email").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
 		);
 	},
 	async getServices(args) {
-		if (!args.options.email?.send_email) {
+		const sendEmailBindings = getEnvBindingsOfType(
+			args.options.config,
+			"send-email"
+		);
+		if (sendEmailBindings.length === 0) {
 			return [];
 		}
 
-		// Root directories for disk services - must exist before service creation
-		// Subdirectories (e.g., email-text/, email-html/) are created lazily on first write
-		const emailSystemDirectory = path.join(args.tmpPath, EMAIL_PLUGIN_NAME);
-		await mkdir(emailSystemDirectory, { recursive: true });
+		const emailStoreBinding: Worker_Binding = {
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		};
 
-		// Map binding disk services to names and paths, for concise access when storing emails as files.
-		// When resourceTmpPath is unset, only create system service to avoid duplicates
-		const diskServices: Array<{
-			location: "system" | "project";
-			bindingName: string;
-			serviceName: string;
-			path: string;
-		}> = [
-			{
-				location: "system",
-				bindingName: `${EMAIL_DISK_BINDING_NAME}_SYSTEM`,
-				serviceName: `${EMAIL_DISK_SERVICE_NAME}:system`,
-				path: emailSystemDirectory,
-			},
-		];
+		// The worker that owns these send_email bindings. `getServices` is called
+		// once per worker, so this identifies which worker sent a message and lets
+		// the local explorer filter the "Sending" inbox by the selected worker.
+		const ownerWorkerBinding: Worker_Binding = {
+			name: "SEND_EMAIL_OWNER_WORKER",
+			json: JSON.stringify(args.workerNames[args.workerIndex]),
+		};
 
-		if (args.resourceTmpPath) {
-			const emailProjectSessionDirectory = getEmailProjectSessionDirectory(
-				args.resourceTmpPath,
-				args.tmpPath
-			);
-			if (emailProjectSessionDirectory !== undefined) {
-				await mkdir(emailProjectSessionDirectory, { recursive: true });
-				diskServices.push({
-					location: "project",
-					bindingName: `${EMAIL_DISK_BINDING_NAME}_PROJECT`,
-					serviceName: `${EMAIL_DISK_SERVICE_NAME}:project`,
-					path: emailProjectSessionDirectory,
-				});
-			}
-		}
-
-		const services: Service[] = diskServices.map(({ serviceName, path }) => ({
-			name: serviceName,
-			disk: {
-				path,
-				writable: true,
-			},
-		}));
-
+		const services: Service[] = [];
 		let hasRemote = false;
-		for (const { name, remoteProxyConnectionString, ...config } of args.options
-			.email?.send_email ?? []) {
-			if (remoteProxyConnectionString) {
+		for (const [name, binding] of sendEmailBindings) {
+			if (getRemoteProxyConnectionString(binding, args.options.dev)) {
 				hasRemote = true;
 				continue;
 			}
+
+			// The local send-email worker reads these config values from env
+			// directly, so pass through only the ones that are present.
+			const config: Record<string, unknown> = {};
+			if (binding.destinationAddress !== undefined) {
+				config.destinationAddress = binding.destinationAddress;
+			}
+			if (binding.allowedDestinationAddresses !== undefined) {
+				config.allowedDestinationAddresses =
+					binding.allowedDestinationAddresses;
+			}
+			if (binding.allowedSenderAddresses !== undefined) {
+				config.allowedSenderAddresses = binding.allowedSenderAddresses;
+			}
+
 			services.push({
-				name: getUserBindingServiceName(SERVICE_SEND_EMAIL_WORKER_PREFIX, name),
+				name: getSendEmailServiceName(args.workerNames[args.workerIndex], name),
 				worker: {
 					compatibilityDate: "2025-03-17",
 					modules: [
@@ -203,14 +170,9 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 					],
 					bindings: [
 						...buildJsonBindings(config),
-						...diskServices.map(({ bindingName, serviceName }) => ({
-							name: bindingName,
-							service: { name: serviceName },
-						})),
-						{
-							name: "email_disk_services",
-							json: JSON.stringify(diskServices),
-						},
+						WORKER_BINDING_SERVICE_LOOPBACK,
+						emailStoreBinding,
+						ownerWorkerBinding,
 					],
 				},
 			});

@@ -1,9 +1,13 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
+import {
+	extractBindingsOfType,
+	INHERIT_SYMBOL,
+	isUnsafeBindingType,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { FormData } from "undici";
-import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
 import { handleUnsafeCapnp } from "./capnp";
 import type {
 	AssetConfigMetadata,
@@ -219,25 +223,25 @@ export function createWorkerUploadForm(
 	});
 
 	send_email.forEach((emailBinding: CfSendEmailBindings) => {
-		const destination_address =
-			"destination_address" in emailBinding
-				? emailBinding.destination_address
-				: undefined;
-		const allowed_destination_addresses =
-			"allowed_destination_addresses" in emailBinding
-				? emailBinding.allowed_destination_addresses
-				: undefined;
-		const allowed_sender_addresses =
-			"allowed_sender_addresses" in emailBinding
-				? emailBinding.allowed_sender_addresses
-				: undefined;
-		metadataBindings.push({
+		const shared = {
 			name: emailBinding.name,
-			type: "send_email",
-			destination_address,
-			allowed_destination_addresses,
-			allowed_sender_addresses,
-		});
+			type: "send_email" as const,
+			allowed_sender_addresses: emailBinding.allowed_sender_addresses,
+		};
+		if (emailBinding.destination_address !== undefined) {
+			metadataBindings.push({
+				...shared,
+				destination_address: emailBinding.destination_address,
+			});
+		} else if (emailBinding.allowed_destination_addresses !== undefined) {
+			metadataBindings.push({
+				...shared,
+				allowed_destination_addresses:
+					emailBinding.allowed_destination_addresses,
+			});
+		} else {
+			metadataBindings.push(shared);
+		}
 	});
 
 	durable_objects.forEach(({ name, class_name, script_name, environment }) => {
@@ -869,10 +873,16 @@ export function createWorkerUploadForm(
 			? { main_module: main.name }
 			: { body_part: main.name }),
 		bindings: metadataBindings,
+		// Both directions of the container/Durable Object link are sent as
+		// configured: the API resolves a container's Durable Object from either this
+		// `class_name` or an `exports` entry naming the container by `name`.
 		containers:
 			worker.containers === undefined
 				? undefined
-				: worker.containers.map((c) => ({ class_name: c.class_name })),
+				: worker.containers.map((c) => ({
+						...(c.name !== undefined && { name: c.name }),
+						...(c.class_name !== undefined && { class_name: c.class_name }),
+					})),
 
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {

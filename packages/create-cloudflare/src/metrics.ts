@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { setTimeout } from "node:timers/promises";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { CancelError } from "@cloudflare/cli-shared-helpers/error";
+import { isDoNotTrackEnabled } from "@cloudflare/workers-utils";
 import {
 	getDeviceId,
 	readMetricsConfig,
@@ -58,6 +59,23 @@ export function getPlatform() {
 	}
 }
 
+function resolveTelemetryStatus():
+	| { enabled: boolean; source: string }
+	| undefined {
+	if (isDoNotTrackEnabled()) {
+		return { enabled: false, source: "DO_NOT_TRACK" };
+	}
+
+	if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DISABLED === "1") {
+		return {
+			enabled: false,
+			source: "CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
+		};
+	}
+
+	return undefined;
+}
+
 export function createReporter() {
 	const events: Array<Promise<void>> = [];
 	const als = new AsyncLocalStorage<{
@@ -66,7 +84,9 @@ export function createReporter() {
 
 	const config = readMetricsConfig() ?? {};
 	const isFirstUsage = config.c3permission === undefined;
-	const isEnabled = isTelemetryEnabled();
+	const isEnabled =
+		resolveTelemetryStatus()?.enabled ??
+		(sparrow.hasSparrowSourceKey() && getC3Permission(config).enabled);
 	const deviceId = getDeviceId(config);
 	const packageManager = detectPackageManager();
 	const platform = getPlatform();
@@ -107,14 +127,6 @@ export function createReporter() {
 		// TODO(consider): add a timeout to avoid the process staying alive for too long
 
 		events.push(request);
-	}
-
-	function isTelemetryEnabled() {
-		if (process.env.CREATE_CLOUDFLARE_TELEMETRY_DISABLED === "1") {
-			return false;
-		}
-
-		return sparrow.hasSparrowSourceKey() && getC3Permission(config).enabled;
 	}
 
 	async function waitForAllEventsSettled(): Promise<void> {
@@ -292,8 +304,9 @@ function updateC3Permission(enabled: boolean) {
 	writeMetricsConfig(config);
 }
 
-function logTelemetryStatus(enabled: boolean) {
-	logRaw(`Status: ${enabled ? "Enabled" : "Disabled"}`);
+function logTelemetryStatus(enabled: boolean, source?: string) {
+	const sourceMessage = source === undefined ? "" : ` (set by ${source})`;
+	logRaw(`Status: ${enabled ? "Enabled" : "Disabled"}${sourceMessage}`);
 	logRaw("");
 }
 
@@ -303,10 +316,19 @@ export const runTelemetryCommand = (
 	switch (action) {
 		case "enable": {
 			updateC3Permission(true);
-			logTelemetryStatus(true);
-			logRaw(
-				"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!"
-			);
+
+			const telemetry = resolveTelemetryStatus();
+			if (telemetry === undefined) {
+				logTelemetryStatus(true);
+				logRaw(
+					"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!"
+				);
+			} else {
+				logTelemetryStatus(telemetry.enabled, telemetry.source);
+				logRaw(
+					`Telemetry has been enabled in Create-Cloudflare's global configuration, but remains disabled while ${telemetry.source} is set.`
+				);
+			}
 			break;
 		}
 		case "disable": {
@@ -316,9 +338,10 @@ export const runTelemetryCommand = (
 			break;
 		}
 		case "status": {
-			const telemetry = getC3Permission();
+			const telemetry = resolveTelemetryStatus();
+			const enabled = telemetry?.enabled ?? getC3Permission().enabled;
 
-			logTelemetryStatus(telemetry.enabled);
+			logTelemetryStatus(enabled, telemetry?.source);
 			break;
 		}
 	}

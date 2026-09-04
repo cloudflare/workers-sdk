@@ -368,6 +368,7 @@ export const defaultWranglerConfig: Config = {
 		producers: [],
 		consumers: [], // WORKERS SUPPORT ONLY!!
 	},
+	connect: [],
 	r2_buckets: [],
 	d1_databases: [],
 	vectorize: [],
@@ -433,6 +434,7 @@ export const defaultWranglerConfig: Config = {
 	upload_source_maps: undefined,
 	assets: undefined,
 	observability: { enabled: true },
+	access: undefined,
 	cache: undefined,
 	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
 	compliance_region: undefined,

@@ -8,8 +8,16 @@ import {
 	zWorkersKvNamespaceListNamespacesResponse,
 	zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
-import { disposeWithRetry } from "../../test-shared";
-import { expectValidResponse } from "./helpers";
+import {
+	dispatchFetchWithRetry,
+	disposeWithRetry,
+	singleModuleManifest,
+} from "../../test-shared";
+import {
+	createSharedStorageExplorerPair,
+	createUnboundStorageExplorer,
+	expectValidResponse,
+} from "./helpers";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
@@ -19,15 +27,24 @@ describe("KV API", () => {
 	beforeAll(async () => {
 		mf = new Miniflare({
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
-			modules: true,
-			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
-			kvNamespaces: {
-				TEST_KV: "test-kv-id",
-				ANOTHER_KV: "another-kv-id",
-				ZEBRA_KV: "zebra-kv-id",
-			},
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+						env: {
+							TEST_KV: { type: "kv", id: "test-kv-id" },
+							ANOTHER_KV: { type: "kv", id: "another-kv-id" },
+							ZEBRA_KV: { type: "kv", id: "zebra-kv-id" },
+						},
+					},
+				},
+			],
 		});
 	});
 
@@ -142,15 +159,15 @@ describe("KV API", () => {
 			});
 		});
 
-		test("returns 404 for non-existent namespace", async ({ expect }) => {
+		test("addresses an unlisted namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/keys`
 			);
 
-			expect(response.status).toBe(404);
+			expect(response.status).toBe(200);
 			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [expect.objectContaining({ code: 10013 })],
+				success: true,
+				result: [],
 			});
 		});
 
@@ -234,7 +251,9 @@ describe("KV API", () => {
 			});
 		});
 
-		test("returns 404 for non-existent namespace", async ({ expect }) => {
+		test("returns key-not-found for an unlisted namespace", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/values/some-key`
 			);
@@ -242,7 +261,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ code: 10013 })],
+				errors: [expect.objectContaining({ code: 10009 })],
 			});
 		});
 
@@ -314,7 +333,7 @@ describe("KV API", () => {
 			expect(await kv.get("overwrite-key")).toBe("updated-value");
 		});
 
-		test("returns 404 for non-existent namespace", async ({ expect }) => {
+		test("writes to an unlisted namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/values/some-key`,
 				{
@@ -323,11 +342,14 @@ describe("KV API", () => {
 				}
 			);
 
-			expect(response.status).toBe(404);
+			expect(response.status).toBe(200);
 			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [expect.objectContaining({ code: 10013 })],
+				success: true,
 			});
+			const getResponse = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/values/some-key`
+			);
+			expect(await getResponse.text()).toBe("value");
 		});
 
 		test("writes streamed binary values", async ({ expect }) => {
@@ -394,7 +416,7 @@ describe("KV API", () => {
 			expect(await response.json()).toMatchObject({ success: true });
 		});
 
-		test("returns 404 for non-existent namespace", async ({ expect }) => {
+		test("deletes from an unlisted namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/values/some-key`,
 				{
@@ -402,11 +424,8 @@ describe("KV API", () => {
 				}
 			);
 
-			expect(response.status).toBe(404);
-			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [expect.objectContaining({ code: 10013 })],
-			});
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
 		});
 
 		test("handles URL-encoded key names", async ({ expect }) => {
@@ -496,7 +515,7 @@ describe("KV API", () => {
 			});
 		});
 
-		test("returns 404 for non-existent namespace", async ({ expect }) => {
+		test("reads from an unlisted namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/bulk/get`,
 				{
@@ -506,11 +525,57 @@ describe("KV API", () => {
 				}
 			);
 
-			expect(response.status).toBe(404);
+			expect(response.status).toBe(200);
 			expect(await response.json()).toMatchObject({
-				success: false,
-				errors: [expect.objectContaining({ code: 10013 })],
+				success: true,
+				result: { values: { key1: null } },
 			});
 		});
 	});
+});
+
+test("addresses arbitrary namespace IDs without a KV binding", async ({
+	expect,
+}) => {
+	const mf = createUnboundStorageExplorer();
+
+	try {
+		await mf.ready;
+		const valueUrl = `${BASE_URL}/storage/kv/namespaces/arbitrary-namespace/values/unbound-key`;
+		const putResponse = await dispatchFetchWithRetry(mf, valueUrl, {
+			method: "PUT",
+			body: "unbound-content",
+		});
+		expect(putResponse.status).toBe(200);
+		expect(await putResponse.json()).toMatchObject({ success: true });
+
+		const getResponse = await dispatchFetchWithRetry(mf, valueUrl);
+		expect(getResponse.status).toBe(200);
+		expect(await getResponse.text()).toBe("unbound-content");
+	} finally {
+		await disposeWithRetry(mf);
+	}
+});
+
+test("routes arbitrary namespace IDs through the shared-storage owner", async ({
+	expect,
+}) => {
+	const { owner, client } = await createSharedStorageExplorerPair();
+
+	try {
+		await client.ready;
+		const valueUrl = `${BASE_URL}/storage/kv/namespaces/arbitrary-namespace/values/shared-key`;
+		const putResponse = await dispatchFetchWithRetry(client, valueUrl, {
+			method: "PUT",
+			body: "written-through-client",
+		});
+		expect(putResponse.status).toBe(200);
+		expect(await putResponse.json()).toMatchObject({ success: true });
+
+		const getResponse = await dispatchFetchWithRetry(owner, valueUrl);
+		expect(getResponse.status).toBe(200);
+		expect(await getResponse.text()).toBe("written-through-client");
+	} finally {
+		await Promise.all([disposeWithRetry(client), disposeWithRetry(owner)]);
+	}
 });

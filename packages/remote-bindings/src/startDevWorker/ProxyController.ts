@@ -1,7 +1,14 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { assertNever } from "@cloudflare/workers-utils";
-import { Log, LogLevel, Miniflare, Mutex, Response } from "miniflare";
+import {
+	convertV4MiniflareOptions,
+	Log,
+	LogLevel,
+	Miniflare,
+	Mutex,
+	Response,
+} from "miniflare";
 import proxyWorkerSource from "worker:startDevWorker/ProxyWorker";
 import { logger } from "../logger";
 import { castLogLevel, handleStructuredLogs } from "../utils/miniflare";
@@ -16,7 +23,7 @@ import type {
 	SerializedError,
 } from "./events";
 import type { Bundle, StartDevWorkerOptions } from "./types";
-import type { LogOptions, MiniflareOptions } from "miniflare";
+import type { LogOptions, V4MiniflareOptions } from "miniflare";
 
 export class ProxyController {
 	public ready = createDeferred<ReadyEvent>();
@@ -41,7 +48,7 @@ export class ProxyController {
 		}
 		assert(this.latestConfig !== undefined);
 
-		const proxyWorkerOptions: MiniflareOptions = {
+		const proxyWorkerOptions: V4MiniflareOptions = {
 			host: this.latestConfig.server.hostname,
 			port: this.latestConfig.server.port,
 			https: this.latestConfig.server.secure,
@@ -105,7 +112,9 @@ export class ProxyController {
 			handleStructuredLogs,
 		};
 
-		const proxyWorker = new Miniflare(proxyWorkerOptions);
+		const proxyWorker = new Miniflare(
+			convertV4MiniflareOptions(proxyWorkerOptions)
+		);
 		this.proxyWorker = proxyWorker;
 
 		void proxyWorker.ready

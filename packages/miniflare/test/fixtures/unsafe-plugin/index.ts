@@ -5,8 +5,13 @@ import {
 	SERVICE_LOOPBACK,
 	SharedBindings,
 } from "miniflare";
-import { z } from "miniflare:zod";
-import type { Plugin, Service, Worker_Binding } from "miniflare";
+import type {
+	MiniflareBinding,
+	ParsedWorkerOptions,
+	Plugin,
+	Service,
+	Worker_Binding,
+} from "miniflare";
 
 const MODULE_SCRIPTS = {
 	DO_CLASS: "UnsafeBindingObject",
@@ -60,51 +65,53 @@ export class UnsafeBindingServiceEntrypoint extends WorkerEntrypoint {
 	},
 };
 
-export const UnsafeServiceBindingOptionSchema = z.array(
-	z.object({
-		name: z.string(),
-		type: z.string(),
-		plugin: z.object({
-			package: z.string(),
-			name: z.string(),
-		}),
-		options: z.object({ emitLogs: z.boolean() }),
-	})
-);
+const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
+
+function isUnsafeBinding(
+	binding: MiniflareBinding
+): binding is Extract<MiniflareBinding, { type: `unsafe:${string}` }> {
+	return binding.type.startsWith("unsafe:");
+}
+
+// Unsafe bindings live in `config.env` with an `unsafe:*` type and carry the
+// plugin reference under `dev.plugin`. Select the ones targeting this plugin.
+function getUnsafeBindings(config: ParsedWorkerOptions["config"]) {
+	return Object.entries(config.env ?? {}).filter(
+		([, binding]) =>
+			isUnsafeBinding(binding) &&
+			binding.dev?.plugin?.name === UNSAFE_PLUGIN_NAME
+	);
+}
 
 export const plugins = {
 	"unsafe-plugin": {
-		options: UnsafeServiceBindingOptionSchema,
 		getBindings(options) {
-			return options.map<Worker_Binding>((binding) => {
-				return {
-					name: binding.name,
+			return getUnsafeBindings(options.config).map<Worker_Binding>(
+				([name]) => ({
+					name,
 					service: {
-						name: `unsafe-plugin:${binding.name}`,
+						name: `unsafe-plugin:${name}`,
 						entrypoint: "UnsafeBindingServiceEntrypoint",
 					},
-				};
-			});
+				})
+			);
 		},
 		getNodeBindings(options) {
-			const configOptions = Object.entries(options);
-
-			// If the user hasn't specified pre-determined mappings, we will skip adding any services
-			if (!configOptions.length) {
-				return {};
-			}
-
 			return Object.fromEntries(
-				Object.keys(options).map((name) => [name, new ProxyNodeBinding()])
+				getUnsafeBindings(options.config).map(([name]) => [
+					name,
+					new ProxyNodeBinding(),
+				])
 			);
 		},
 		getServices({ options }) {
-			if (options.length === 0) {
+			const bindings = getUnsafeBindings(options.config);
+			if (bindings.length === 0) {
 				return [];
 			}
 
-			const bindingWorkers = options.map<Service>((config) => ({
-				name: `unsafe-plugin:${config.name}`,
+			const bindingWorkers = bindings.map<Service>(([name, binding]) => ({
+				name: `unsafe-plugin:${name}`,
 				worker: {
 					compatibilityDate: "2025-07-09",
 					modules: [
@@ -116,7 +123,7 @@ export const plugins = {
 					bindings: [
 						{
 							name: "config",
-							json: JSON.stringify(config),
+							json: JSON.stringify({ name, ...binding }),
 						},
 						{
 							name: "store",
@@ -161,5 +168,5 @@ export const plugins = {
 				},
 			];
 		},
-	} satisfies Plugin<typeof UnsafeServiceBindingOptionSchema>,
+	} satisfies Plugin,
 };

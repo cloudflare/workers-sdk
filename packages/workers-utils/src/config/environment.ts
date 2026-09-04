@@ -104,8 +104,14 @@ export type ContainerApp = {
 	// TODO: fill out the entire type
 
 	/**
-	 * Name of the application
-	 * @optional Defaults to `worker_name-class_name` if not specified.
+	 * Name of the application.
+	 *
+	 * This is also the identifier used to reference the container from a Durable
+	 * Object's `exports` entry via its `container` field.
+	 *
+	 * @optional Defaults to `worker_name-class_name` if not specified. A name is
+	 * required when `class_name` is not set, since there is no class name to
+	 * derive the default from.
 	 */
 	name?: string;
 
@@ -143,8 +149,12 @@ export type ContainerApp = {
 
 	/**
 	 * The class name of the Durable Object the container is connected to.
+	 *
+	 * @optional Instead of naming the Durable Object here, you can reference this
+	 * container from the Durable Object's `exports` entry via its `container`
+	 * field. Exactly one of the two directions must be configured.
 	 */
-	class_name: string;
+	class_name?: string;
 
 	/**
 	 * The scheduling policy of the application
@@ -382,12 +392,23 @@ export type DurableObjectExportStorage = "sqlite" | "legacy-kv";
  *    script via `transfer_from`.
  *  - `expecting-transfer` (live): receiving side of a two-phase transfer;
  *    `storage` and `transfer_from` are both required.
+ *
+ * The live states may additionally attach a container via `container`, which
+ * names an entry in the top-level `containers` array. Tombstones cannot.
  */
 export type DurableObjectExport =
 	| {
 			type: "durable-object";
 			state?: "created";
 			storage: DurableObjectExportStorage;
+			/**
+			 * Attach a container to this Durable Object. Must match the `name` of an
+			 * entry in the top-level `containers` array, and requires
+			 * `storage: "sqlite"`.
+			 *
+			 * @optional
+			 */
+			container?: string;
 	  }
 	| { type: "durable-object"; state: "deleted" }
 	| { type: "durable-object"; state: "renamed"; renamed_to: string }
@@ -401,6 +422,14 @@ export type DurableObjectExport =
 			state: "expecting-transfer";
 			storage: DurableObjectExportStorage;
 			transfer_from: string;
+			/**
+			 * Attach a container to this Durable Object. Must match the `name` of an
+			 * entry in the top-level `containers` array, and requires
+			 * `storage: "sqlite"`.
+			 *
+			 * @optional
+			 */
+			container?: string;
 	  };
 
 export interface WorkerEntrypointExport {
@@ -747,6 +776,13 @@ interface EnvironmentInheritable {
 	observability: Observability | undefined;
 
 	/**
+	 * Specify the Cloudflare Access authentication behavior of the Worker.
+	 *
+	 * @inheritable
+	 */
+	access: Access | undefined;
+
+	/**
 	 * Specify the cache behavior of the Worker.
 	 *
 	 * @inheritable
@@ -837,15 +873,29 @@ export type WorkflowBinding = {
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */
 	script_name?: string;
-	/** Whether the Workflow should be remote or not in local development */
-	remote?: boolean;
 	/** Optional limits for the Workflow */
 	limits?: {
 		/** Maximum number of steps a Workflow instance can execute */
 		steps?: number;
 	};
+	/** Optional concurrency configuration for the Workflow */
+	concurrency?: {
+		/** Maximum number of Workflow instances that can run concurrently */
+		limit?: number;
+	};
 	/** Optional cron schedule(s) for automatically triggering workflow instances */
 	schedules?: string | string[];
+	/**
+	 * Optional default retention for instances of this Workflow, applied when an instance does not
+	 * set its own retention. Accepts milliseconds or a duration string such as `"3 days"`, and is
+	 * validated by the Workflows API at deploy time.
+	 */
+	default_retention?: {
+		/** How long to retain instances that completed successfully or were terminated */
+		success_retention?: number | string;
+		/** How long to retain errored instances */
+		error_retention?: number | string;
+	};
 };
 
 /**
@@ -1057,6 +1107,29 @@ export interface EnvironmentNonInheritable {
 			retry_delay?: number;
 		}[];
 	};
+
+	/**
+	 * Specifies raw sockets that this Worker should listen on.
+	 * Each entry opens a listening socket on the
+	 * given port that delivers incoming connections directly to the Worker's
+	 * `connect(socket, env, ctx)` handler.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	connect: {
+		/** The transport protocol to listen for. */
+		protocol: "tcp";
+
+		/** The port to listen on. */
+		port: number;
+
+		/** The address to bind to. Defaults to `127.0.0.1`. */
+		address?: string;
+	}[];
 
 	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.
@@ -1781,6 +1854,12 @@ export interface Observability {
 	enabled?: boolean;
 	/** The sampling rate */
 	head_sampling_rate?: number;
+	/**
+	 * Whether query strings are removed from request URLs in logs and traces.
+	 *
+	 * @default false
+	 */
+	redact_query_string?: boolean;
 	logs?: {
 		enabled?: boolean;
 		/** The sampling rate */
@@ -1822,6 +1901,16 @@ export interface Observability {
 		enabled: boolean;
 		/** What destinations metrics emitted from the Worker should be sent to. */
 		destinations?: string[];
+	};
+}
+
+export interface Access {
+	/** Local dev simulation of Cloudflare Access authentication */
+	dev?: {
+		/** The Access application audience tag (aud) */
+		aud: string;
+		/** Mock identity object returned by ctx.access.getIdentity() */
+		identity?: Record<string, unknown>;
 	};
 }
 

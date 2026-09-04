@@ -6,6 +6,7 @@ import {
 	INHERIT_SYMBOL,
 	isNonInteractiveOrCI,
 	PatchConfigError,
+	printBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
@@ -17,7 +18,6 @@ import {
 	prompt,
 	select,
 } from "../../shared/context";
-import { printBindings } from "./print-bindings";
 import type { QueueResponse } from "../../triggers/queue-consumers";
 import type {
 	Binding,
@@ -119,6 +119,11 @@ abstract class ProvisionResourceHandler<
 	connect(id: string): void {
 		// @ts-expect-error idField is a key of this.binding
 		this.binding[this.idField] = id;
+	}
+
+	hasConfiguredResourceIdentifier(): boolean {
+		const id = this.binding[this.idField];
+		return (typeof id === "string" && id.length > 0) || this.name !== undefined;
 	}
 
 	abstract create(name: string): Promise<string>;
@@ -957,6 +962,77 @@ type PendingResource = {
 		| FlagshipHandler;
 };
 
+export type ProvisionBindingsResult = {
+	warnOnSkippedProvisioning: () => void;
+};
+
+function isPermissionDeniedAPIError(error: unknown): error is APIError {
+	return error instanceof APIError && error.status === 403;
+}
+
+function trackSkippedProvisioning(
+	skippedProvisioning: Map<keyof typeof HANDLERS, Set<string>>,
+	resourceType: keyof typeof HANDLERS,
+	bindingName: string
+): void {
+	const skippedBindingNames =
+		skippedProvisioning.get(resourceType) ?? new Set<string>();
+	skippedBindingNames.add(bindingName);
+	skippedProvisioning.set(resourceType, skippedBindingNames);
+}
+
+function warnSkippedProvisioning(
+	skippedProvisioning: Map<keyof typeof HANDLERS, Set<string>>
+): void {
+	if (skippedProvisioning.size === 0) {
+		return;
+	}
+
+	const bindingsByResourceType = Array.from(
+		skippedProvisioning,
+		([type, names]) => {
+			return `${getSkippedProvisioningResourceName(type)} - ${Array.from(names).join(", ")}`;
+		}
+	).join("\n");
+
+	logger.warn(dedent`
+		Skipping automatic provisioning for the following bindings because Wrangler does not have permission to check whether the resource exists. The deploy will continue, but may fail later if the resource does not exist:
+
+		${bindingsByResourceType}
+	`);
+}
+
+function getSkippedProvisioningResourceName(
+	resourceType: keyof typeof HANDLERS
+): string {
+	switch (resourceType) {
+		case "kv_namespace":
+			return "KV";
+		case "d1":
+			return "D1";
+		case "r2_bucket":
+			return "R2";
+		case "ai_search_namespace":
+			return "AI Search";
+		case "agent_memory":
+			return "Agent Memory";
+		case "queue":
+			return "Queue";
+		case "dispatch_namespace":
+			return "Dispatch Namespace";
+		case "flagship":
+			return "Flagship";
+	}
+}
+
+function inheritIfNoConfiguredResourceIdentifier(
+	handler: PendingResource["handler"]
+): void {
+	if (!handler.hasConfiguredResourceIdentifier()) {
+		handler.inherit();
+	}
+}
+
 function isProvisionableBinding(
 	binding: Binding
 ): binding is ProvisionableBinding {
@@ -1059,7 +1135,10 @@ async function collectPendingResources(
 	accountId: string,
 	scriptName: string,
 	bindings: StartDevWorkerInput["bindings"]
-): Promise<PendingResource[]> {
+): Promise<{
+	pendingResources: PendingResource[];
+	skippedProvisioning: Map<keyof typeof HANDLERS, Set<string>>;
+}> {
 	let settings: Settings | undefined;
 
 	try {
@@ -1069,6 +1148,7 @@ async function collectPendingResources(
 	}
 
 	const pendingResources: PendingResource[] = [];
+	const skippedProvisioning = new Map<keyof typeof HANDLERS, Set<string>>();
 
 	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
 		if (!isProvisionableBinding(binding)) {
@@ -1082,7 +1162,20 @@ async function collectPendingResources(
 			accountId
 		);
 
-		if (await handler.shouldProvision(settings)) {
+		let shouldProvision;
+		try {
+			shouldProvision = await handler.shouldProvision(settings);
+		} catch (error) {
+			if (!isPermissionDeniedAPIError(error)) {
+				throw error;
+			}
+
+			inheritIfNoConfiguredResourceIdentifier(handler);
+			trackSkippedProvisioning(skippedProvisioning, binding.type, bindingName);
+			continue;
+		}
+
+		if (shouldProvision) {
 			pendingResources.push({
 				binding: bindingName,
 				resourceType: binding.type,
@@ -1091,9 +1184,12 @@ async function collectPendingResources(
 		}
 	}
 
-	return pendingResources.sort(
-		(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
-	);
+	return {
+		pendingResources: pendingResources.sort(
+			(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
+		),
+		skippedProvisioning,
+	};
 }
 
 export async function provisionBindings(
@@ -1105,14 +1201,10 @@ export async function provisionBindings(
 	options: {
 		skipConfigWriteback?: boolean;
 	}
-): Promise<void> {
+): Promise<ProvisionBindingsResult> {
 	const configPath = config.userConfigPath ?? config.configPath;
-	const pendingResources = await collectPendingResources(
-		config,
-		accountId,
-		scriptName,
-		bindings
-	);
+	const { pendingResources, skippedProvisioning } =
+		await collectPendingResources(config, accountId, scriptName, bindings);
 
 	if (pendingResources.length > 0) {
 		assert(
@@ -1129,19 +1221,36 @@ export async function provisionBindings(
 					{ type: resource.resourceType },
 				])
 			) as Record<string, Binding>,
-			config.tail_consumers,
-			config.streaming_tail_consumers,
-			config.containers,
-			{ provisioning: true }
+			{
+				log: logger.log,
+				tailConsumers: config.tail_consumers,
+				streamingTailConsumers: config.streaming_tail_consumers,
+				containers: config.containers,
+				provisioning: true,
+			}
 		);
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
 
 		for (const resource of pendingResources) {
-			existingResources[resource.resourceType] ??= await HANDLERS[
-				resource.resourceType
-			].load(config, accountId);
+			try {
+				existingResources[resource.resourceType] ??= await HANDLERS[
+					resource.resourceType
+				].load(config, accountId);
+			} catch (error) {
+				if (!isPermissionDeniedAPIError(error)) {
+					throw error;
+				}
+
+				inheritIfNoConfiguredResourceIdentifier(resource.handler);
+				trackSkippedProvisioning(
+					skippedProvisioning,
+					resource.resourceType,
+					resource.binding
+				);
+				continue;
+			}
 
 			await runProvisioningFlow(
 				resource,
@@ -1205,7 +1314,6 @@ export async function provisionBindings(
 			) {
 				continue;
 			}
-
 			const bindingToWrite = toConfigBinding(bindingName, binding);
 			addBindingToPatch(patch, binding.type, bindingToWrite);
 		}
@@ -1231,8 +1339,13 @@ export async function provisionBindings(
 			}
 		}
 
-		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
+		logger.log(`🎉 Resources provisioned, continuing with deployment...\n`);
 	}
+
+	return {
+		warnOnSkippedProvisioning: () =>
+			warnSkippedProvisioning(skippedProvisioning),
+	};
 }
 
 export function getSettings(

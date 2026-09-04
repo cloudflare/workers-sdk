@@ -40,6 +40,8 @@ Each `workerd` process exposes a debug port (`--debug-port`) that provides nativ
 - **Durable Object access**: Full DO lifecycle including RPC methods
 - **Tail event forwarding**: Trace events forwarded via RPC
 
+The binding exposes two ways to reach a debug port. `connect(address)` dials another process over TCP, while `current()` hands back the same interface for the calling process without touching the network. `openDebugPortClient()` chooses between them by comparing the registry entry's `instanceId` against the proxy worker's `DEV_REGISTRY_INSTANCE_ID` binding, so a target that turns out to be ourselves is reached in-process.
+
 ## Components
 
 ### Filesystem Registry (`dev-registry.ts`)
@@ -54,9 +56,9 @@ type WorkerDefinition = {
 };
 ```
 
-- **Heartbeat**: Every 30s, the file's mtime is touched to signal that the Worker is still running.
+- **Heartbeat**: Every 10s, the owning process touches its file's mtime. If the entry is missing, the owner recreates it; if another instance owns the name, the heartbeat stops.
 - **Registration**: Named workers are advertised by default. Workers with `unsafeRegisterWorker: false` are not advertised.
-- **Stale cleanup**: On every read, files older than 5 minutes are deleted (5 minutes is much longer than 30s just to provide a safe buffer)
+- **Stale cleanup**: Workers heartbeat every 10 seconds and entries older than 90 seconds are deleted.
 - **Change detection**: Chokidar watches the registry directory. When a file changes, `refresh()` compares the new state against the previous JSON snapshot and fires `onUpdate` only if a watched external service actually changed.
 
 ### Proxy Worker (`dev-registry-proxy.worker.ts`)
@@ -77,6 +79,18 @@ Contains the registry `Map`, `resolveTarget()`, `connectToActor()`, `createProxy
 When the filesystem watcher detects a change to an external service, Miniflare pushes the updated registry to the proxy worker via HTTP POST on a dedicated socket (`SOCKET_DEV_REGISTRY`). This avoids routing through the entry worker, which can break on Windows (WSARecv error 64).
 
 The push always reads the latest registry state (not a captured snapshot) and retries up to 3 times with 500ms delays.
+
+### Shared Storage Candidates
+
+When `unsafeEnableSharedStorage` is enabled, each Miniflare instance registers a storage candidate in addition to its user Workers. Candidates are scoped by the canonical physical persistence root, so one registry may safely coordinate unrelated projects. The oldest live candidate for a scope receives storage traffic; every candidate hosts the generic simulators required for handoff.
+
+Storage candidates heartbeat every 2 seconds and expire after 10 seconds. Registry watchers also refresh on a timer so a dead candidate expires without requiring another filesystem event. Graceful disposal stops the runtime before withdrawing its candidate, preventing overlap with the replacement owner.
+
+KV, D1, R2, Rate Limits, Secrets Store, Images data, and Streams route through the elected candidate. Cache, user Durable Objects, Workflows, observability, and Hello World storage remain instance-local while shared mode is active and use the configured `isolatedResourcePersistencePath`, allowing that state to persist across restarts without mounting the shared owner root concurrently.
+
+Every instance -- including the elected owner -- routes these bindings through the proxy worker, so the owner would otherwise connect back to its own debug port over TCP. Because the registry entry carries the owner's `instanceId`, the proxy recognises that case and uses the in-process debug port instead.
+
+Shared mode requires `resourcePersistencePath`, `isolatedResourcePersistencePath`, and `unsafeDevRegistryPath`. The shared persistence root is created and resolved through the filesystem before it is used as an ownership scope.
 
 ## Request Flow
 
@@ -113,7 +127,7 @@ sequenceDiagram
     B-->>S: result
     S-->>A: result
 
-    Note over S: Fetcher cached per instance.<br/>Invalidated when debugPortAddress changes.
+	Note over S: Fetcher cached per instance.<br/>Invalidated when address or instance ID changes.
 ```
 
 ### Scheduled Event

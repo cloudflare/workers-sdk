@@ -449,6 +449,55 @@ describe("delete", () => {
 		`);
 	});
 
+	it("should skip Workers Sites namespace cleanup when listing KV namespaces is not permitted", async ({
+		expect,
+	}) => {
+		mockConfirm({
+			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+			result: true,
+		});
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		mockDeleteWorkerRequest(expect, { name: "my-script" });
+		mockListKVNamespacesPermissionDeniedRequest(expect);
+
+		await runWrangler("delete --name my-script");
+
+		expect(std.out).toContain("Successfully deleted my-script");
+		expect(std.warn).toContain(
+			'Skipping cleanup of legacy Workers Sites asset namespaces for "my-script" because Wrangler does not have permission to list KV namespaces.'
+		);
+		expect(std.err).toBe("");
+	});
+
+	it("should skip Workers Sites namespace cleanup when deleting a KV namespace is not permitted", async ({
+		expect,
+	}) => {
+		mockConfirm({
+			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+			result: true,
+		});
+		mockListReferencesRequest(expect, "my-script");
+		mockListTailsByConsumerRequest(expect, "my-script");
+		mockDeleteWorkerRequest(expect, { name: "my-script" });
+		mockListKVNamespacesRequest(expect, {
+			title: "__my-script-workers_sites_assets",
+			id: "id-for-my-script-site-ns",
+		});
+		mockDeleteKVNamespacePermissionDeniedRequest(
+			expect,
+			"id-for-my-script-site-ns"
+		);
+
+		await runWrangler("delete --name my-script");
+
+		expect(std.out).toContain("Successfully deleted my-script");
+		expect(std.warn).toContain(
+			'Skipping cleanup of legacy Workers Sites asset namespace "__my-script-workers_sites_assets" because Wrangler does not have permission to delete KV namespaces.'
+		);
+		expect(std.err).toBe("");
+	});
+
 	it("should error helpfully if pages_build_output_dir is set", async ({
 		expect,
 	}) => {
@@ -463,6 +512,49 @@ describe("delete", () => {
 		);
 	});
 	describe("force deletes", () => {
+		it("should skip dependency checks when listing Worker references is not permitted", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
+				result: true,
+			});
+			writeWranglerConfig();
+			mockListReferencesPermissionDeniedRequest(expect, "test-name");
+			mockDeleteWorkerRequest(expect);
+			mockListKVNamespacesRequest(expect);
+
+			await runWrangler("delete");
+
+			expect(std.out).toContain("Successfully deleted test-name");
+			expect(std.warn).toContain(
+				'Skipping dependency checks before deleting "test-name" because Wrangler does not have permission to inspect Worker dependencies. The delete will continue, but may fail later if this Worker is still in use.'
+			);
+			expect(std.err).toBe("");
+		});
+
+		it("should skip dependency checks when listing tail consumers is not permitted", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
+				result: true,
+			});
+			writeWranglerConfig();
+			mockListReferencesRequest(expect, "test-name");
+			mockListTailsByConsumerPermissionDeniedRequest(expect, "test-name");
+			mockDeleteWorkerRequest(expect);
+			mockListKVNamespacesRequest(expect);
+
+			await runWrangler("delete");
+
+			expect(std.out).toContain("Successfully deleted test-name");
+			expect(std.warn).toContain(
+				'Skipping dependency checks before deleting "test-name" because Wrangler does not have permission to inspect Worker dependencies. The delete will continue, but may fail later if this Worker is still in use.'
+			);
+			expect(std.err).toBe("");
+		});
+
 		it("should prompt for extra confirmation when service is depended on and use force", async ({
 			expect,
 		}) => {
@@ -812,6 +904,52 @@ function mockListKVNamespacesRequest(
 	);
 }
 
+function mockListKVNamespacesPermissionDeniedRequest(expect: ExpectStatic) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/storage/kv/namespaces",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 10000, message: "Authentication error" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 403 }
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockDeleteKVNamespacePermissionDeniedRequest(
+	expect: ExpectStatic,
+	namespaceId: string
+) {
+	msw.use(
+		http.delete(
+			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(namespaceId);
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 10000, message: "Authentication error" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 403 }
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
 function mockListReferencesRequest(
 	expect: ExpectStatic,
 	forScript: string,
@@ -838,6 +976,31 @@ function mockListReferencesRequest(
 	);
 }
 
+function mockListReferencesPermissionDeniedRequest(
+	expect: ExpectStatic,
+	forScript: string
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/workers/scripts/:scriptName/references",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(forScript);
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 10000, message: "Authentication error" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 403 }
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
 function mockListTailsByConsumerRequest(
 	expect: ExpectStatic,
 	forScript: string,
@@ -857,6 +1020,31 @@ function mockListTailsByConsumerRequest(
 						result: tails,
 					},
 					{ status: 200 }
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockListTailsByConsumerPermissionDeniedRequest(
+	expect: ExpectStatic,
+	forScript: string
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/workers/tails/by-consumer/:scriptName",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(forScript);
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 10000, message: "Authentication error" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 403 }
 				);
 			},
 			{ once: true }

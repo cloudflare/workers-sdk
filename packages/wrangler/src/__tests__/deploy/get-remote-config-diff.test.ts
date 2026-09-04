@@ -509,7 +509,6 @@ describe("getRemoteConfigsDiff", () => {
 						binding: "MY_WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						remote: false,
 					},
 				],
 				vpc_services: [
@@ -624,6 +623,7 @@ describe("getRemoteConfigsDiff", () => {
 				{
 					enabled: true,
 					head_sampling_rate: 1,
+					redact_query_string: false,
 					logs: {
 						enabled: true,
 						head_sampling_rate: 1,
@@ -634,6 +634,21 @@ describe("getRemoteConfigsDiff", () => {
 				},
 				{ enabled: true }
 			);
+			expect(diff).toBe(null);
+			expect(nonDestructive).toBe(true);
+		});
+
+		it("should preserve remote native observability for metrics-only config", ({
+			expect,
+		}) => {
+			const { diff, nonDestructive } = getObservabilityDiff(
+				{
+					enabled: true,
+					logs: { enabled: true },
+				},
+				{ metrics: { enabled: true, destinations: ["destination"] } }
+			);
+
 			expect(diff).toBe(null);
 			expect(nonDestructive).toBe(true);
 		});

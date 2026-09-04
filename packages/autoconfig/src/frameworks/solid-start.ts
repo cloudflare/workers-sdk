@@ -1,7 +1,10 @@
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { usesTypescript } from "../uses-typescript";
@@ -27,13 +30,14 @@ export class SolidStart extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./.output/server/index.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "./.output/public",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./.output/server/index.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./.output/public" },
 		};
 	}
 }
@@ -89,7 +93,7 @@ function updateViteConfigFile(projectPath: string): void {
 function updateAppConfigFile(projectPath: string): void {
 	const filePath = `app.config.${usesTypescript(projectPath) ? "ts" : "js"}`;
 
-	const compatDate = getTodaysCompatDate();
+	const compatDate = DEFAULT_COMPAT_DATE;
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 

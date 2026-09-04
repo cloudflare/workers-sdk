@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { parseFile, transformFile } from "@cloudflare/codemod";
+import { parseFile, transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
@@ -469,6 +469,10 @@ function writeEntryServerTsx(
 }
 
 export class ReactRouter extends Framework {
+	readonly env = {
+		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
+	} as const;
+
 	async configure({
 		dryRun,
 		projectPath,
@@ -514,8 +518,9 @@ export class ReactRouter extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./workers/app.ts",
+			buildTool: "vite",
+			workerConfig: {
+				entrypoint: "./workers/app.ts",
 			},
 		};
 	}

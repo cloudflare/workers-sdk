@@ -1,4 +1,5 @@
 import { stripAnsi } from "@cloudflare/cli-shared-helpers";
+import { overrideConfigEnv } from "@cloudflare/mock-npm-registry/config-env";
 import { spawn } from "cross-spawn";
 import treeKill from "tree-kill";
 import type {
@@ -24,6 +25,12 @@ export const spawnWithLogging = (
 	logStream: Writable
 ) => {
 	const [cmd, ...argv] = args;
+
+	if (overriddenConfigEnv.length > 0) {
+		logStream.write(
+			`\nInherited package manager config overridden: ${overriddenConfigEnv.join(", ")}\n`
+		);
+	}
 
 	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
 
@@ -111,8 +118,23 @@ export const waitForExit = async (
 	};
 };
 
+// Settings that would otherwise be inherited from the workers-sdk workspace,
+// where they are wrong for the throwaway projects these tests scaffold.
+// `overrideConfigEnv` is used rather than assignment because an inherited
+// variable spelled differently to the override would still win, unpredictably,
+// on Windows.
+const configEnv = overrideConfigEnv(process.env, {
+	// Scaffolded projects intentionally test the latest framework releases.
+	"minimum-release-age": "0",
+	// Give each project its own cache, so parallel installs don't race.
+	cache: "./.npm/cache",
+});
+
+/** Inherited variables dropped above, logged with each test as a breadcrumb. */
+const overriddenConfigEnv = configEnv.removed;
+
 export const testEnv = {
-	...process.env,
+	...configEnv.env,
 	// Strip secrets that should never be accessible to spawned processes.
 	// These tests scaffold third-party framework projects and run their code
 	// (npm install, postinstall scripts, dev servers, etc.) which we do not control.
@@ -128,10 +150,6 @@ export const testEnv = {
 	YARN_CACHE_FOLDER: "./.yarn/cache",
 	YARN_ENABLE_GLOBAL_CACHE: "false",
 	PNPM_HOME: "./.pnpm",
-	npm_config_cache: "./.npm/cache",
-	// Scaffolded projects intentionally test the latest framework releases.
-	npm_config_minimum_release_age: "0",
-	pnpm_config_minimum_release_age: "0",
 	// unset the VITEST env variable as this causes e2e issues with some frameworks
 	VITEST: undefined,
 };

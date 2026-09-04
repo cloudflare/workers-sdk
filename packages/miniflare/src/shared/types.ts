@@ -7,9 +7,6 @@ export function zAwaitable<T extends z.ZodType>(
 	return type.or(z.promise(type));
 }
 
-export type OptionalZodTypeOf<T extends z.ZodType | undefined> =
-	T extends z.ZodType ? z.output<T> : undefined;
-
 // https://github.com/colinhacks/zod/blob/59768246aa57133184b2cf3f7c2a1ba5c3ab08c3/README.md?plain=1#L1302-L1317
 export const LiteralSchema = z.union([
 	z.string(),
@@ -58,11 +55,17 @@ export const PathSchema = z.string().transform((p) => {
 
 /** @internal */
 export function _isCyclic(value: unknown, seen = new Set<unknown>()) {
-	if (typeof value !== "object" || value === null) return false;
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
 	for (const child of Object.values(value)) {
-		if (seen.has(child)) return true;
+		if (seen.has(child)) {
+			return true;
+		}
 		seen.add(child);
-		if (_isCyclic(child, seen)) return true;
+		if (_isCyclic(child, seen)) {
+			return true;
+		}
 		seen.delete(child);
 	}
 	return false;

@@ -157,6 +157,10 @@ describe.each(
 					name = "${regularWorkerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
+
+					[[migrations]]
+					tag = "v1"
+					new_classes = ["MyDurableObject"]
 			`,
 				"src/index.ts": dedent /* javascript */ `
 					import { DurableObject, WorkerEntrypoint, RpcTarget } from "cloudflare:workers";

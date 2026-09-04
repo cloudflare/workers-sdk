@@ -98,7 +98,9 @@ function getExpiration(timers: Timers, req: Request, res: Response) {
 // headers in KV once this has been determined.
 function normaliseHeaders(headers: Headers): Record<string, string> {
 	const result: Record<string, string> = {};
-	for (const [key, value] of headers) result[key.toLowerCase()] = value;
+	for (const [key, value] of headers) {
+		result[key.toLowerCase()] = value;
+	}
 	return result;
 }
 
@@ -174,7 +176,9 @@ function getMatchResponse(reqHeaders: Headers, res: CachedResponse): Response {
 		}
 	}
 
-	if (!(res.body instanceof ReadableStream)) res.body = res.body.body;
+	if (!(res.body instanceof ReadableStream)) {
+		res.body = res.body.body;
+	}
 	return new Response(res.body, { status: res.status, headers: res.headers });
 }
 
@@ -200,7 +204,9 @@ export async function parseHttpResponse(
 				buffer[index + 2] === CR &&
 				buffer[index + 3] === LF
 		);
-		if (blankLineIndex !== -1) break;
+		if (blankLineIndex !== -1) {
+			break;
+		}
 	}
 	assert(blankLineIndex !== -1, "Expected to find blank line in HTTP message");
 
@@ -274,7 +280,9 @@ export class CacheObject extends MiniflareDurableObject {
 		const cacheKey = getCacheKey(req);
 
 		// Never cache Workers Sites requests, so we always return on-disk files
-		if (isSitesRequest(req)) throw new CacheMiss();
+		if (isSitesRequest(req)) {
+			throw new CacheMiss();
+		}
 
 		let resHeaders: Headers | undefined;
 		let resRanges: InclusiveRange[] | undefined;
@@ -287,7 +295,9 @@ export class CacheObject extends MiniflareDurableObject {
 			const rangeHeader = req.headers.get("Range");
 			if (rangeHeader !== null) {
 				resRanges = parseRanges(rangeHeader, size);
-				if (resRanges === undefined) throw new RangeNotSatisfiable(size);
+				if (resRanges === undefined) {
+					throw new RangeNotSatisfiable(size);
+				}
 			}
 
 			return {
@@ -296,7 +306,9 @@ export class CacheObject extends MiniflareDurableObject {
 				contentType: contentType ?? undefined,
 			};
 		});
-		if (cached?.metadata === undefined) throw new CacheMiss();
+		if (cached?.metadata === undefined) {
+			throw new CacheMiss();
+		}
 
 		// Should've constructed headers when we extracted range options (the only
 		// time we don't do this is when the entry isn't found, or expired, in which
@@ -319,7 +331,9 @@ export class CacheObject extends MiniflareDurableObject {
 		const cacheKey = getCacheKey(req);
 
 		// Never cache Workers Sites requests, so we always return on-disk files
-		if (isSitesRequest(req)) throw new CacheMiss();
+		if (isSitesRequest(req)) {
+			throw new CacheMiss();
+		}
 
 		assert(req.body !== null);
 		const res = await parseHttpResponse(req.body);
@@ -373,7 +387,9 @@ export class CacheObject extends MiniflareDurableObject {
 
 		const deleted = await this.storage.delete(cacheKey);
 		// This is an extremely vague error, but it fits with what the cache API in workerd expects
-		if (!deleted) throw new PurgeFailure();
+		if (!deleted) {
+			throw new PurgeFailure();
+		}
 		return new Response(null);
 	};
 

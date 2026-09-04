@@ -12,7 +12,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import md5File from "md5-file";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
@@ -21,7 +21,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { splitSqlQuery } from "./splitter";
+import { normalizeSqlLineEndings, splitSqlQuery } from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,
@@ -329,12 +329,14 @@ async function executeLocally({
 		"🌀 To execute on your remote database, add a --remote flag to your wrangler command."
 	);
 
-	const mf = new Miniflare({
-		modules: true,
-		script: "",
-		resourcePersistencePath,
-		d1Databases: { DATABASE: id },
-	});
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			modules: true,
+			script: "",
+			resourcePersistencePath,
+			d1Databases: { DATABASE: id },
+		})
+	);
 	const db = await mf.getD1Database("DATABASE");
 
 	const sql = input.file ? readFileSync(input.file) : input.command;
@@ -503,14 +505,17 @@ async function executeRemotely({
 			},
 		];
 	} else {
+		// The D1 query API splits multi-statement SQL on `;` server-side, and
+		// mishandles CRLF line endings inside compound statements such as a
+		// `CREATE TRIGGER ... BEGIN ... END;` body (issue #14991). Normalize
+		// structural line endings while preserving quoted SQL values.
+		const sql = input.command && normalizeSqlLineEndings(input.command);
 		const result = await d1ApiPost<QueryResult[]>(
 			config,
 			accountId,
 			db,
 			"query",
-			{
-				sql: input.command,
-			}
+			{ sql }
 		);
 		logResult(result);
 		return result;

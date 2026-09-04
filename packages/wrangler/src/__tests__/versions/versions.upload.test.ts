@@ -7,6 +7,7 @@ import {
 	generatePreviewAlias,
 } from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -46,7 +47,14 @@ describe("versions upload", () => {
 	const temporaryPreviewAccountUrl =
 		"https://api.cloudflare.com/client/v4/provisioning/previews";
 
-	function mockGetScript(result?: unknown) {
+	/**
+	 * Mocks service metadata for a Worker.
+	 *
+	 * @param result - The service metadata result.
+	 * @param options - Controls whether the handler can respond more than once.
+	 * @returns Nothing.
+	 */
+	function mockGetScript(result?: unknown, options: { once?: boolean } = {}) {
 		msw.use(
 			http.get(
 				`*/accounts/:accountId/workers/services/:scriptName`,
@@ -65,7 +73,7 @@ describe("versions upload", () => {
 						)
 					);
 				},
-				{ once: true }
+				{ once: options.once ?? true }
 			)
 		);
 	}
@@ -1156,19 +1164,23 @@ describe("versions upload", () => {
 		});
 
 		test("should preserve containers config in metadata", async () => {
+			// Override the beforeEach mockGetScript() with a handler that also
+			// includes migration_tag, so both preUploadApiChecks and
+			// getMigrationsToUpload get valid responses from the same endpoint.
 			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/scripts",
-					() => {
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: [{ id: "test-name", migration_tag: "v1" }],
-						});
-					},
-					{ once: true }
-				)
+				http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult({
+							default_environment: {
+								script: {
+									id: "test-name",
+									last_deployed_from: "wrangler",
+									migration_tag: "v1",
+								},
+							},
+						})
+					);
+				})
 			);
 
 			const mockUploadVersionCapture = captureRequestsFrom(
@@ -1224,7 +1236,12 @@ describe("versions upload", () => {
 				await toString(formBody.get("metadata"))
 			) as WorkerMetadata;
 
-			expect(metadata.containers).toEqual([{ class_name: "MyDurableObject" }]);
+			// The container has no explicit `name`, so validation derives
+			// `<worker>-<class>`. Both directions of the container/Durable Object link
+			// are sent so that the API can resolve it from either side.
+			expect(metadata.containers).toEqual([
+				{ name: "test-name-mydurableobject", class_name: "MyDurableObject" },
+			]);
 
 			expect(std.warn).toContain(
 				"Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions"
@@ -2041,7 +2058,7 @@ describe("versions upload", () => {
 			await runWrangler("versions upload --latest");
 
 			expect(std.warn).toContain(
-				"Using the latest version of the Workers runtime"
+				`Using the latest compatibility date supported by this version of Wrangler (${DEFAULT_COMPAT_DATE})`
 			);
 			expect(std.out).toContain("Uploaded test-name");
 		});
@@ -2285,22 +2302,16 @@ describe("versions upload", () => {
 		});
 
 		test("should include migrations in upload metadata", async ({ expect }) => {
-			mockGetScript();
-
-			// Mock the scripts list for migration tag lookup
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/scripts",
-					() => {
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: [{ id: "test-name", migration_tag: "" }],
-						});
+			mockGetScript(
+				{
+					default_environment: {
+						script: {
+							last_deployed_from: "wrangler",
+							migration_tag: "",
+						},
 					},
-					{ once: true }
-				)
+				},
+				{ once: false }
 			);
 
 			const requests = mockUploadVersion(false, 0);
@@ -2716,12 +2727,16 @@ describe("versions upload", () => {
 
 const mockExecSync = vi.fn();
 
+// At the top level because `vi.mock` is hoisted to module scope regardless of
+// where it is written, so nesting it in the `describe` misrepresented its
+// scope: it mocks `child_process` for the whole file, not just these tests.
+vi.mock("child_process", () => ({
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
+	execSync: (...args: any[]) => mockExecSync(...args),
+}));
+
 describe("generatePreviewAlias", () => {
 	mockConsoleMethods();
-	vi.mock("child_process", () => ({
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- vi.mock callback needs untyped rest args to forward to mock
-		execSync: (...args: any[]) => mockExecSync(...args),
-	}));
 
 	beforeEach(() => {
 		mockExecSync.mockReset();

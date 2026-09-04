@@ -292,7 +292,9 @@ type WorkerMetadataPut = {
 		config?: AssetConfigMetadata;
 	};
 	observability?: Observability | undefined;
-	containers?: { class_name: string }[];
+	// `class_name` is omitted when the container is instead referenced from the
+	// Durable Object's `exports` entry via its `container` field.
+	containers?: { name?: string; class_name?: string }[];
 	package_dependencies?: Array<{
 		name: string;
 		packageJsonVersion: string;
@@ -430,10 +432,19 @@ export type Trigger =
 	| ({ type: "route" } & ZoneNameRoute)
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
-	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">);
+	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">)
+	| {
+			type: "connect";
+			protocol: "tcp";
+			port: number;
+			address?: string;
+	  };
 
-type BindingOmit<T> = Omit<T, "binding">;
-type NameOmit<T> = Omit<T, "name">;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+	? Omit<T, K>
+	: never;
+type BindingOmit<T> = DistributiveOmit<T, "binding">;
+type NameOmit<T> = DistributiveOmit<T, "name">;
 export type Binding =
 	| {
 			type: "plain_text";
@@ -564,6 +575,9 @@ export interface StartDevWorkerInput {
 
 	tailConsumers?: CfTailConsumer[];
 	streamingTailConsumers?: CfTailConsumer[];
+
+	/** Cloudflare Access authentication configuration */
+	access?: Config["access"];
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.

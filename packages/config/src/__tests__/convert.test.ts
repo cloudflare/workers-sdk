@@ -57,6 +57,7 @@ describe("convertToWranglerConfig", () => {
 				observability: {
 					enabled: true,
 					headSamplingRate: 0.5,
+					redactQueryString: true,
 					logs: {
 						enabled: true,
 						headSamplingRate: 0.25,
@@ -79,6 +80,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.observability).toEqual({
 				enabled: true,
 				head_sampling_rate: 0.5,
+				redact_query_string: true,
 				logs: {
 					enabled: true,
 					head_sampling_rate: 0.25,
@@ -184,7 +186,7 @@ describe("convertToWranglerConfig", () => {
 		}) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				env: { MY_AI: { type: "ai", remote: true } },
+				env: { MY_AI: { type: "ai", dev: { remote: true } } },
 			});
 			expect(result.ai).toEqual({ binding: "MY_AI", remote: true });
 		});
@@ -192,7 +194,7 @@ describe("convertToWranglerConfig", () => {
 		it("includes the remote flag on web-search", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				env: { MY_WS: { type: "web-search", remote: true } },
+				env: { MY_WS: { type: "web-search", dev: { remote: true } } },
 			});
 			expect(result.websearch).toEqual({
 				binding: "MY_WS",
@@ -222,7 +224,9 @@ describe("convertToWranglerConfig", () => {
 		it("maps kv with id", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				env: { MY_KV: { type: "kv", id: "abc", remote: true } },
+				env: {
+					MY_KV: { type: "kv", id: "abc", dev: { remote: true } },
+				},
 			});
 			expect(result.kv_namespaces).toEqual([
 				{ binding: "MY_KV", id: "abc", remote: true },
@@ -255,15 +259,37 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps r2 with name and jurisdiction", ({ expect }) => {
+		it("maps r2 with name, jurisdiction, and dev S3 credentials", ({
+			expect,
+		}) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					MY_R2: { type: "r2", name: "my-bucket", jurisdiction: "eu" },
+					MY_R2: {
+						type: "r2",
+						name: "my-bucket",
+						jurisdiction: "eu",
+						dev: {
+							experimentalS3Credentials: {
+								accessKeyId: "access-key",
+								secretAccessKey: "secret-key",
+							},
+						},
+					},
 				},
 			});
 			expect(result.r2_buckets).toEqual([
-				{ binding: "MY_R2", bucket_name: "my-bucket", jurisdiction: "eu" },
+				{
+					binding: "MY_R2",
+					bucket_name: "my-bucket",
+					jurisdiction: "eu",
+					local_dev: {
+						experimental_s3_credentials: {
+							accessKeyId: "access-key",
+							secretAccessKey: "secret-key",
+						},
+					},
+				},
 			]);
 		});
 
@@ -287,16 +313,14 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps hyperdrive with localConnectionString (camelCase)", ({
-			expect,
-		}) => {
+		it("maps hyperdrive dev.connectionString", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
 					HD: {
 						type: "hyperdrive",
 						id: "h-1",
-						localConnectionString: "postgres://...",
+						dev: { connectionString: "postgres://..." },
 					},
 				},
 			});
@@ -359,7 +383,11 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					MEM: { type: "agent-memory", namespace: "ns-1", remote: true },
+					MEM: {
+						type: "agent-memory",
+						namespace: "ns-1",
+						dev: { remote: true },
+					},
 				},
 			});
 			expect(result.agent_memory).toEqual([
@@ -406,7 +434,7 @@ describe("convertToWranglerConfig", () => {
 					DN: {
 						type: "dispatch-namespace",
 						namespace: "ns-1",
-						outbound: { workerName: "out-worker", parameters: ["p1", "p2"] },
+						outbound: { worker: "out-worker", parameters: ["p1", "p2"] },
 					},
 				},
 			});
@@ -443,13 +471,17 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps send-email with all address fields", ({ expect }) => {
+		it("maps send-email address restrictions", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					EM: {
+					EM_DESTINATION: {
 						type: "send-email",
 						destinationAddress: "dest@example.com",
+						allowedSenderAddresses: ["sender@x.com"],
+					},
+					EM_ALLOWLIST: {
+						type: "send-email",
 						allowedDestinationAddresses: ["a@x.com", "b@x.com"],
 						allowedSenderAddresses: ["sender@x.com"],
 					},
@@ -457,8 +489,12 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.send_email).toEqual([
 				{
-					name: "EM",
+					name: "EM_DESTINATION",
 					destination_address: "dest@example.com",
+					allowed_sender_addresses: ["sender@x.com"],
+				},
+				{
+					name: "EM_ALLOWLIST",
 					allowed_destination_addresses: ["a@x.com", "b@x.com"],
 					allowed_sender_addresses: ["sender@x.com"],
 				},
@@ -531,10 +567,10 @@ describe("convertToWranglerConfig", () => {
 				env: {
 					W: {
 						type: "worker",
-						workerName: "other-worker",
+						worker: "other-worker",
 						exportName: "MyEntry",
 						props: { foo: "bar" },
-						remote: true,
+						dev: { remote: true },
 					},
 				},
 			});
@@ -577,7 +613,7 @@ describe("convertToWranglerConfig", () => {
 				env: {
 					DO: {
 						type: "durable-object",
-						workerName: "other-worker",
+						worker: "other-worker",
 						exportName: "MyDO",
 					},
 				},
@@ -682,6 +718,54 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect((result as { exports?: unknown }).exports).toEqual({
 				LegacyDO: { type: "durable-object", storage: "legacy-kv" },
+			});
+		});
+
+		it("converts an attached container on a live durable-object export", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					MyDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				MyDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			});
+		});
+
+		it("converts an attached container on an expecting-transfer export", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				exports: {
+					Incoming: {
+						type: "durable-object",
+						state: "expecting-transfer",
+						storage: "sqlite",
+						transferFrom: "source-worker",
+						container: "my-container",
+					},
+				},
+			});
+			expect((result as { exports?: unknown }).exports).toEqual({
+				Incoming: {
+					type: "durable-object",
+					state: "expecting-transfer",
+					storage: "sqlite",
+					transfer_from: "source-worker",
+					container: "my-container",
+				},
 			});
 		});
 
@@ -959,6 +1043,52 @@ describe("convertToWranglerConfig", () => {
 				consumers: [{ queue: "c-queue" }],
 			});
 		});
+
+		it("maps connect trigger to connect", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						address: "127.0.0.1",
+					},
+				],
+			});
+			expect(result.connect).toEqual([
+				{ protocol: "tcp", port: 5432, address: "127.0.0.1" },
+			]);
+		});
+
+		it("maps connect trigger without an address", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [{ type: "connect", protocol: "tcp", port: 5432 }],
+			});
+			expect(result.connect).toEqual([{ protocol: "tcp", port: 5432 }]);
+		});
+
+		it("collects multiple connect triggers into a single connect array", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				...baseConfig,
+				triggers: [
+					{ type: "connect", protocol: "tcp", port: 5432 },
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 6379,
+						address: "0.0.0.0",
+					},
+				],
+			});
+			expect(result.connect).toEqual([
+				{ protocol: "tcp", port: 5432 },
+				{ protocol: "tcp", port: 6379, address: "0.0.0.0" },
+			]);
+		});
 	});
 
 	describe("domains", () => {
@@ -1032,7 +1162,7 @@ describe("convertToWranglerConfig", () => {
 		it("maps non-streaming consumers to tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				tailConsumers: [{ workerName: "tail-worker" }],
+				tailConsumers: [{ worker: "tail-worker" }],
 			});
 			expect(result.tail_consumers).toEqual([{ service: "tail-worker" }]);
 			expect(result.streaming_tail_consumers).toBeUndefined();
@@ -1041,7 +1171,7 @@ describe("convertToWranglerConfig", () => {
 		it("maps streaming consumers to streaming_tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
-				tailConsumers: [{ workerName: "stream-worker", streaming: true }],
+				tailConsumers: [{ worker: "stream-worker", streaming: true }],
 			});
 			expect(result.streaming_tail_consumers).toEqual([
 				{ service: "stream-worker" },
@@ -1053,9 +1183,9 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				tailConsumers: [
-					{ workerName: "a" },
-					{ workerName: "b", streaming: true },
-					{ workerName: "c", streaming: false },
+					{ worker: "a" },
+					{ worker: "b", streaming: true },
+					{ worker: "c", streaming: false },
 				],
 			});
 			expect(result.tail_consumers).toEqual([

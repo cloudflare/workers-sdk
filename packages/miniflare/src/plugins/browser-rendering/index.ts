@@ -2,101 +2,80 @@ import fs from "node:fs";
 import path from "node:path";
 import { brandColor, dim, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import {
-	getGlobalWranglerCachePath,
-	removeDir,
-} from "@cloudflare/workers-utils";
-import {
-	Browser,
-	CDP_WEBSOCKET_ENDPOINT_REGEX,
-	detectBrowserPlatform,
-	install,
-	launch,
-	resolveBuildId,
-} from "@puppeteer/browsers";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
+import { CDP_WEBSOCKET_ENDPOINT_REGEX, launch } from "@puppeteer/browsers";
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
-import { z } from "zod";
 import { kVoid } from "../../runtime";
 import {
 	buildRemoteProxyProps,
+	getEnvBindingsOfType,
+	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { ensureBrowserInstalled } from "./install";
+import { BrowserStartupError, waitForExit } from "./process";
+import type { Service } from "../../runtime";
 import type { Log } from "../../shared";
-import type { Plugin, RemoteProxyConnectionString } from "../shared";
-import type { InstalledBrowser, InstallOptions } from "@puppeteer/browsers";
-
-const BrowserRenderingSchema = z.object({
-	binding: z.string(),
-	remoteProxyConnectionString: z
-		.custom<RemoteProxyConnectionString>()
-		.optional(),
-	headful: z.boolean().optional(),
-});
-
-export const BrowserRenderingOptionsSchema = z.object({
-	browserRendering: BrowserRenderingSchema.optional(),
-});
+import type { Plugin } from "../shared";
 
 export const BROWSER_RENDERING_PLUGIN_NAME = "browser-rendering";
 const BROWSER_RENDERING_REMOTE_SERVICE_NAME = `${BROWSER_RENDERING_PLUGIN_NAME}:remote`;
 
-export const BROWSER_RENDERING_PLUGIN: Plugin<
-	typeof BrowserRenderingOptionsSchema
-> = {
-	options: BrowserRenderingOptionsSchema,
+export const BROWSER_RENDERING_PLUGIN: Plugin = {
 	bindingTypeDescription: "Browser Rendering",
 	async getBindings(options) {
-		if (!options.browserRendering) {
-			return [];
-		}
-
-		return [
-			{
-				name: options.browserRendering.binding,
-				service: options.browserRendering.remoteProxyConnectionString
-					? {
-							name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
-							props: buildRemoteProxyProps(
-								options.browserRendering.remoteProxyConnectionString,
-								options.browserRendering.binding
-							),
-						}
-					: {
-							name: getUserBindingServiceName(
-								BROWSER_RENDERING_PLUGIN_NAME,
-								"service"
-							),
-						},
-			},
-		];
+		return getEnvBindingsOfType(options.config, "browser").map(
+			([name, binding]) => {
+				const remoteProxyConnectionString = getRemoteProxyConnectionString(
+					binding,
+					options.dev
+				);
+				return {
+					name,
+					service: remoteProxyConnectionString
+						? {
+								name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
+								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+							}
+						: {
+								name: getUserBindingServiceName(
+									BROWSER_RENDERING_PLUGIN_NAME,
+									"service"
+								),
+							},
+				};
+			}
+		);
 	},
-	getNodeBindings(options: z.infer<typeof BrowserRenderingOptionsSchema>) {
-		if (!options.browserRendering) {
-			return {};
-		}
-		return {
-			[options.browserRendering.binding]: new ProxyNodeBinding(),
-		};
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			getEnvBindingsOfType(options.config, "browser").map(([name]) => [
+				name,
+				new ProxyNodeBinding(),
+			])
+		);
 	},
 	async getServices({ options }) {
-		if (!options.browserRendering) {
-			return [];
-		}
+		const services: Service[] = [];
 
-		if (options.browserRendering.remoteProxyConnectionString) {
-			return [
-				{
+		for (const [, binding] of getEnvBindingsOfType(options.config, "browser")) {
+			const remoteProxyConnectionString = getRemoteProxyConnectionString(
+				binding,
+				options.dev
+			);
+
+			if (remoteProxyConnectionString) {
+				services.push({
 					name: BROWSER_RENDERING_REMOTE_SERVICE_NAME,
 					worker: remoteProxyClientWorker(),
-				},
-			];
-		}
+				});
+				continue;
+			}
 
-		return [
-			{
+			services.push({
 				name: getUserBindingServiceName(
 					BROWSER_RENDERING_PLUGIN_NAME,
 					"service"
@@ -127,8 +106,10 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 					],
 					durableObjectStorage: { inMemory: kVoid },
 				},
-			},
-		];
+			});
+		}
+
+		return services;
 	},
 };
 
@@ -143,55 +124,43 @@ export async function launchBrowser({
 	log: Log;
 	tmpPath: string;
 }) {
-	const platform = detectBrowserPlatform();
-	if (!platform) {
-		throw new Error("The current platform is not supported.");
-	}
-	const browser = Browser.CHROME;
 	const sessionId = crypto.randomUUID();
 
 	const s = spinner();
 	let startedDownloading = false;
 
-	const installOptions = {
-		browser,
-		platform,
-		cacheDir: getGlobalWranglerCachePath(),
-		buildId: await resolveBuildId(browser, platform, browserVersion),
-		downloadProgressCallback: (downloadedBytes: number, totalBytes: number) => {
-			if (!startedDownloading) {
-				s.start(`Downloading browser...`);
-				startedDownloading = true;
+	const install = async () => {
+		try {
+			return await ensureBrowserInstalled({
+				browserVersion,
+				log,
+				onProgress: (downloadedBytes, totalBytes) => {
+					if (!startedDownloading) {
+						s.start(`Downloading browser...`);
+						startedDownloading = true;
+					}
+					const progress = Math.round((downloadedBytes / totalBytes) * 100);
+					s.update(`Downloading browser... ${progress}%`);
+				},
+			});
+		} catch (e) {
+			if (startedDownloading) {
+				s.stop(`${red("failed")} ${dim(`browser download`)}`);
+				startedDownloading = false;
 			}
-			const progress = Math.round((downloadedBytes / totalBytes) * 100);
-			s.update(`Downloading browser... ${progress}%`);
-		},
+			throw e;
+		} finally {
+			if (startedDownloading) {
+				s.stop(`${brandColor("downloaded")} ${dim(`browser`)}`);
+				startedDownloading = false;
+			}
+		}
 	};
 
-	let executablePath: string;
-	try {
-		({ executablePath } = await installWithCorruptedCacheRecovery(
-			installOptions,
-			log
-		));
-	} catch (e) {
-		if (startedDownloading) {
-			s.stop(`${red("failed")} ${dim(`browser download`)}`);
-		}
-		throw e;
-	}
-
-	if (startedDownloading) {
-		s.stop(`${brandColor("downloaded")} ${dim(`browser`)}`);
-		log.debug(`${browser} ${browserVersion} available at ${executablePath}`);
-	}
-
-	const tempUserData = path.join(
-		tmpPath,
-		"browser-rendering",
-		`profile-${sessionId}`
+	let installed = await install();
+	log.debug(
+		`Chrome ${browserVersion} available at ${installed.executablePath}`
 	);
-	await fs.promises.mkdir(tempUserData, { recursive: true });
 
 	// https://github.com/puppeteer/puppeteer/blob/44516936ad4a878f9a89e835a9fa7b04360d6fb9/packages/puppeteer-core/src/node/ChromeLauncher.ts#L156
 	const disabledFeatures = [
@@ -235,98 +204,127 @@ export async function launchBrowser({
 		"--disable-extensions",
 		"about:blank",
 		"--remote-debugging-port=0",
-		`--user-data-dir=${tempUserData}`,
 	];
 
-	const browserProcess = launch({
-		executablePath,
-		args: process.env.CI ? [...args, "--no-sandbox"] : args,
-		handleSIGTERM: false,
-		dumpio: false,
-		pipe: false,
-		onExit: async () => {
+	// Each attempt gets its own profile directory. `@puppeteer/browsers` fires
+	// `onExit` without awaiting it, and `waitForExit` only waits for the process
+	// to go, not for that cleanup — so a retry sharing the path could have its
+	// freshly written profile deleted by the previous attempt's `removeDir`.
+	let attempt = 0;
+
+	const launchOnce = async () => {
+		const tempUserData = path.join(
+			tmpPath,
+			"browser-rendering",
+			`profile-${sessionId}-${attempt++}`
+		);
+		await fs.promises.mkdir(tempUserData, { recursive: true });
+
+		// Whether Chrome got far enough to announce its DevTools endpoint, which
+		// is the line between "this install might be broken" and "something else
+		// went wrong". See `BrowserStartupError`.
+		let started = false;
+
+		const launchArgs = [...args, `--user-data-dir=${tempUserData}`];
+		const browserProcess = launch({
+			executablePath: installed.executablePath,
+			args: process.env.CI ? [...launchArgs, "--no-sandbox"] : launchArgs,
+			handleSIGTERM: false,
+			dumpio: false,
+			pipe: false,
+			onExit: async () => {
+				try {
+					await removeDir(tempUserData);
+				} catch (e) {
+					log.debug(`Unable to remove Chrome user data directory: ${e}`);
+				}
+			},
+		});
+		try {
+			const wsEndpoint = await browserProcess.waitForLineOutput(
+				CDP_WEBSOCKET_ENDPOINT_REGEX,
+				// Note: we pass an explicit timeout so the promise rejects instead of hanging forever
+				//       when Chrome fails to start or crashes before printing the DevTools URL.
+				//       Five minutes is generous enough to cover on-demand browser downloads on slow
+				//       connections while still failing within a reasonable window.
+				5 * 60 * 1_000
+			);
+			// Chrome announced itself, so it is running and its resources loaded.
+			started = true;
+			// On Windows in particular, Chrome may print the DevTools URL slightly
+			// before its listening socket is fully ready to accept connections.
+			// Probe the HTTP /json/version endpoint (served on the same port as the
+			// WS endpoint) with retry/backoff before declaring the browser ready, so
+			// that subsequent fetches from workerd don't race the OS and surface as
+			// `ConnectEx (#1225) connection refused` errors.
+			await waitForBrowserReady(wsEndpoint, log);
+			return { browserProcess, wsEndpoint };
+		} catch (e) {
+			// Leave nothing behind for the retry (or the caller) to trip over.
 			try {
-				await removeDir(tempUserData);
-			} catch (e) {
-				log.debug(`Unable to remove Chrome user data directory: ${e}`);
+				browserProcess.kill();
+			} catch {
+				// Already gone — which is the common case here, since Chrome
+				// exiting early is what makes `waitForLineOutput` reject.
 			}
-		},
-	});
-	const wsEndpoint = await browserProcess.waitForLineOutput(
-		CDP_WEBSOCKET_ENDPOINT_REGEX,
-		// Note: we pass an explicit timeout so the promise rejects instead of hanging forever
-		//       when Chrome fails to start or crashes before printing the DevTools URL.
-		//       Five minutes is generous enough to cover on-demand browser downloads on slow
-		//       connections while still failing within a reasonable window.
-		5 * 60 * 1_000
-	);
-	// On Windows in particular, Chrome may print the DevTools URL slightly
-	// before its listening socket is fully ready to accept connections.
-	// Probe the HTTP /json/version endpoint (served on the same port as the
-	// WS endpoint) with retry/backoff before declaring the browser ready, so
-	// that subsequent fetches from workerd don't race the OS and surface as
-	// `ConnectEx (#1225) connection refused` errors.
-	await waitForBrowserReady(wsEndpoint, log);
-	const startTime = Date.now();
-	return { sessionId, browserProcess, startTime, wsEndpoint };
-}
+			// Wait for it to actually go. On Windows a dying Chrome keeps
+			// handles open on files inside the install directory, which makes
+			// clearing a bad install fail.
+			await waitForExit(browserProcess);
+			throw started ? e : new BrowserStartupError(e);
+		}
+	};
 
-/**
- * Regex matching the `@puppeteer/browsers` error thrown when its cache
- * directory exists but the executable inside it is missing — typically
- * because a previous `install()` was interrupted mid-extraction (test
- * timeout, process kill) or because an external agent (Windows Defender,
- * antivirus, disk cleanup) removed the executable from a previously-good
- * install.
- *
- * @puppeteer/browsers source:
- * https://github.com/puppeteer/puppeteer/blob/main/packages/browsers/src/install.ts
- */
-const CORRUPTED_CACHE_ERROR_PATTERN =
-	/The browser folder \((.+?)\) exists but the executable .+? is missing/;
-
-/**
- * Run `@puppeteer/browsers` `install()`, but if it fails with the
- * "folder exists but executable is missing" error, clear the corrupted
- * cache directory and retry once.
- *
- * Recovers from a known intermittent failure on CI runners (especially
- * Windows) where the cache state can become partially populated and stay
- * that way for the rest of the run, breaking every subsequent test until
- * the runner is recycled.
- */
-async function installWithCorruptedCacheRecovery(
-	installOptions: InstallOptions & { unpack?: true },
-	log: Log
-): Promise<InstalledBrowser> {
+	let launched: Awaited<ReturnType<typeof launchOnce>>;
 	try {
-		return await install(installOptions);
+		launched = await launchOnce();
 	} catch (e) {
-		const match = (e as Error)?.message?.match(CORRUPTED_CACHE_ERROR_PATTERN);
-		if (!match) {
+		// A Chrome that never starts may be a Chrome that was never fully
+		// downloaded: `@puppeteer/browsers` considers an install present once
+		// the directory and executable exist, but the Chrome-for-Testing
+		// archives extract alphabetically, so an interrupted install leaves
+		// `chrome.exe` in place while `resources.pak` and friends are still
+		// missing. Clear such an install and try once more, rather than
+		// failing every launch until the cache is manually deleted.
+		//
+		// Anything that fails once Chrome is up is out of scope: it has already
+		// loaded the resources a partial download would lack, so deleting it
+		// would cost a needless re-download without fixing anything.
+		if (!(e instanceof BrowserStartupError)) {
 			throw e;
 		}
-		const corruptedPath = match[1];
-		log.warn(
-			`Detected corrupted Chrome cache at ${corruptedPath}; clearing and retrying install.`
-		);
-		try {
-			await removeDir(corruptedPath);
-		} catch (cleanupError) {
+		const discarded = await installed.discard();
+		if (discarded.outcome === "cleanup-failed") {
+			// Miniflare logs to a no-op by default and the loopback sends only
+			// an error's `stack`, so both halves of the story have to be in the
+			// message: what stopped Chrome starting, and what stopped us
+			// clearing the install it failed from.
 			throw new Error(
-				`Failed to clear corrupted Chrome cache at ${corruptedPath} after detecting "${(e as Error).message}". Manual cleanup may be required.`,
-				{ cause: cleanupError }
+				`Chrome failed to launch from ${installed.installDir}, and the directory could not be removed to re-download it (${discarded.cause}). Delete it manually and try again. Chrome failed with: ${e.message}`,
+				{ cause: discarded.cause }
 			);
 		}
-		try {
-			return await install(installOptions);
-		} catch (retryError) {
-			throw new Error(
-				`Chrome install failed after clearing corrupted cache at ${corruptedPath}: ${(retryError as Error).message}`,
-				{ cause: retryError }
-			);
+		if (discarded.outcome === "verified") {
+			throw e;
 		}
+		// Either we cleared the install or a concurrent launch replaced it;
+		// either way there is a fresh one to try.
+		log.debug(`Retrying Chrome launch after re-installing: ${e}`);
+		installed = await install();
+		launched = await launchOnce();
 	}
+
+	// Chrome started, so this install is known-good. Recording that is what
+	// lets a *future* launch failure be attributed to a bad download.
+	await installed.markVerified();
+
+	const startTime = Date.now();
+	return {
+		sessionId,
+		browserProcess: launched.browserProcess,
+		startTime,
+		wsEndpoint: launched.wsEndpoint,
+	};
 }
 
 /**

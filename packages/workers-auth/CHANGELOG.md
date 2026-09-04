@@ -1,5 +1,71 @@
 # @cloudflare/workers-auth
 
+## 0.6.8
+
+### Patch Changes
+
+- [#15477](https://github.com/cloudflare/workers-sdk/pull/15477) [`fca8abd`](https://github.com/cloudflare/workers-sdk/commit/fca8abdfddda2e42562f64766781b1a8b038392b) Thanks [@Skye-31](https://github.com/Skye-31)! - Add missing email_routing and email_sending auth scopes to CF cli
+
+- Updated dependencies [[`fd17fc5`](https://github.com/cloudflare/workers-sdk/commit/fd17fc5c5fb86423e37ff5b142391e03cd7dbf59)]:
+  - @cloudflare/workers-utils@0.36.0
+
+## 0.6.7
+
+### Patch Changes
+
+- Updated dependencies [[`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45), [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71), [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46)]:
+  - @cloudflare/workers-utils@0.35.0
+
+## 0.6.6
+
+### Patch Changes
+
+- [#15320](https://github.com/cloudflare/workers-sdk/pull/15320) [`c809851`](https://github.com/cloudflare/workers-sdk/commit/c809851f38f0fe4805e876b6c8bfcd6556f49afb) Thanks [@Om-singhaI](https://github.com/Om-singhaI)! - Fix `wrangler login --use-keyring` incorrectly reporting that `secret-tool` is missing on Linux
+
+  Libsecret's `secret-tool` does not support `--version`; it prints usage and exits 2, which Wrangler previously interpreted as unavailable. Wrangler now reports it missing only when launching the executable fails.
+
+## 0.6.5
+
+### Patch Changes
+
+- [#15223](https://github.com/cloudflare/workers-sdk/pull/15223) [`8a04946`](https://github.com/cloudflare/workers-sdk/commit/8a04946b4b1ac41d1fbde7badc2615130b9c1544) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover from a partially installed keyring backend on Windows
+
+  Choosing to keep your credentials in the OS keyring on Windows installs a native backend the first time you opt in. An install interrupted part-way through — by a dropped connection, a full disk, or an npm told to skip optional packages — could leave a broken backend behind that was nonetheless treated as working. Every login, token refresh, and credential read from then on failed with an internal error, and because the broken state was never re-examined, no amount of retrying would clear it.
+
+  A broken backend is now spotted and reinstalled automatically. If the reinstall still cannot produce a working one, you get a single explanation of how to install it by hand and fall back to the plaintext credentials file for the rest of the session, rather than sitting through a fresh install attempt on every credential access.
+
+- [#15278](https://github.com/cloudflare/workers-sdk/pull/15278) [`f2437e6`](https://github.com/cloudflare/workers-sdk/commit/f2437e606fc69891009285831d94b49bf44f6aff) Thanks [@Sosokker](https://github.com/Sosokker)! - Fix the `--temporary` error on commands that authenticate more than one time
+
+  `wrangler d1 migrations apply --remote --temporary` failed with this error: `You're already authenticated with Cloudflare, so --temporary can't be used`. The failure occurred with no login and with no `CLOUDFLARE_API_TOKEN`. This command authenticates one time for each statement that it runs. The first authentication makes a temporary preview account. The second authentication read the token of this new account as an earlier login.
+
+  Wrangler now uses again the temporary account from the same command run. Commands that authenticate more than one time now work as `wrangler deploy --temporary` works. If real credentials are available, `--temporary` is still an error.
+
+- Updated dependencies [[`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae), [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a), [`5c10e39`](https://github.com/cloudflare/workers-sdk/commit/5c10e398979c0a054f58dcf2751012cc99e977d2), [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b)]:
+  - @cloudflare/workers-utils@0.34.0
+
+## 0.6.4
+
+### Patch Changes
+
+- [#15080](https://github.com/cloudflare/workers-sdk/pull/15080) [`b6d00ed`](https://github.com/cloudflare/workers-sdk/commit/b6d00edc459a7ca2dda817d8263a33b326f083b8) Thanks [@teamleaderleo](https://github.com/teamleaderleo)! - Use the current Cloudflare Access service-token credentials after environment variables change. Interactive Access cookie caching is unchanged.
+
+- Updated dependencies [[`fb6b51b`](https://github.com/cloudflare/workers-sdk/commit/fb6b51b87bf73edca9866bdf2d0810d7bf491108), [`1b73c87`](https://github.com/cloudflare/workers-sdk/commit/1b73c879c168dcc78b0f2657d04bc784b8af7da3)]:
+  - @cloudflare/workers-utils@0.33.1
+
+## 0.6.3
+
+### Patch Changes
+
+- Updated dependencies [[`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e)]:
+  - @cloudflare/workers-utils@0.33.0
+
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357)]:
+  - @cloudflare/workers-utils@0.32.0
+
 ## 0.6.1
 
 ### Patch Changes

@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
+	convertConfigToBindings,
 	normalizeAndValidateConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -13,6 +13,7 @@ import {
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
 import { CorePaths, Headers, Request } from "miniflare";
+import { readConfig } from "../config";
 import {
 	buildMigrationQuery,
 	getCreateMigrationsTableQuery,
@@ -25,6 +26,7 @@ import { splitSqlQuery } from "../d1/splitter";
 import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
+import { runWithLogLevel } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
@@ -54,6 +56,7 @@ import type {
 	DurableObjectStorageHandle,
 	DurableObjectStorageOptions,
 	DispatchFetch,
+	EmailHandlerResult,
 	Json,
 	Miniflare,
 	RequestInfo,
@@ -104,31 +107,7 @@ export type FetcherEmailOptions = {
 	raw: string | ReadableStream<Uint8Array>;
 };
 
-export type FetcherEmailResult = {
-	outcome: "ok" | "exception";
-	rejectReason?: string;
-	forwards: Array<{
-		messageId: string;
-		recipient: string;
-		headers: [string, string][];
-	}>;
-	replies: Array<{
-		messageId: string;
-		sender: string;
-		raw: string;
-	}>;
-	events: Array<
-		| {
-				type: "forward" | "reply";
-				timestamp: string;
-				messageId: string;
-		  }
-		| {
-				type: "reject";
-				timestamp: string;
-		  }
-	>;
-};
+export type FetcherEmailResult = EmailHandlerResult;
 
 export type WorkerDefaultExport =
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match workers-types Service<T> constructor constraint.
@@ -403,6 +382,24 @@ type WorkerInput =
 			 */
 			env?: string;
 			/**
+			 * Avoids rebuilding a Worker in a Wrangler project each time the test
+			 * harness starts or resets. Build the Worker once with
+			 * `wrangler deploy --dry-run --outdir`, then specify the same output
+			 * directory here.
+			 *
+			 * When using a named Wrangler environment, `env` must match the environment
+			 * used to build the output. Relative paths resolve from server `root`.
+			 *
+			 * @example
+			 * ```sh
+			 * wrangler deploy --dry-run --env test --outdir ./worker-output
+			 * ```
+			 * ```ts
+			 * { configPath: "./wrangler.jsonc", env: "test", prebuiltWorkerDir: "./worker-output" }
+			 * ```
+			 */
+			prebuiltWorkerDir?: string | URL;
+			/**
 			 * Test-only vars that override vars from the Wrangler config.
 			 */
 			vars?: Record<string, Json>;
@@ -517,6 +514,75 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return normalizedConfig;
 	}
 
+	function resolveWorkerConfig(
+		input: WorkerInput,
+		root: string
+	): string | Config {
+		if ("config" in input) {
+			return normalizeInlineWorkerConfig(input.config, root);
+		}
+
+		const configPath = resolvePath(root, input.configPath);
+		if (input.prebuiltWorkerDir === undefined) {
+			return configPath;
+		}
+
+		const config = runWithLogLevel("none", () =>
+			readConfig({ config: configPath, env: input.env })
+		);
+		if (config.main === undefined) {
+			throw new UserError(
+				"The `prebuiltWorkerDir` option only loads a prebuilt Worker script. This Wrangler config is assets-only, so the test harness loads its assets from `assets.directory` instead. Remove `prebuiltWorkerDir` from the test harness configuration.",
+				{
+					telemetryMessage:
+						"test harness prebuilt assets only worker unsupported",
+				}
+			);
+		}
+
+		const prebuiltWorkerDir = resolvePath(root, input.prebuiltWorkerDir);
+		const envOption = input.env ? ` --env ${JSON.stringify(input.env)}` : "";
+		const commandConfigPath =
+			typeof input.configPath === "string"
+				? input.configPath
+				: path.relative(root, configPath) || ".";
+		const commandOutDir =
+			typeof input.prebuiltWorkerDir === "string"
+				? input.prebuiltWorkerDir
+				: path.relative(root, prebuiltWorkerDir) || ".";
+		const buildCommand = `wrangler deploy --dry-run --config ${JSON.stringify(commandConfigPath)}${envOption} --outdir ${JSON.stringify(commandOutDir)}`;
+		if (!fs.existsSync(prebuiltWorkerDir)) {
+			throw new UserError(
+				`The \`prebuiltWorkerDir\` directory "${commandOutDir}" does not exist. Build the Worker first by running \`${buildCommand}\`.`,
+				{ telemetryMessage: "test harness prebuilt directory missing" }
+			);
+		}
+
+		let main = config.main;
+		if (main !== undefined) {
+			const outputFileName = config.no_bundle
+				? path.basename(main)
+				: `${path.parse(main).name}.js`;
+			main = path.join(prebuiltWorkerDir, outputFileName);
+			if (!fs.existsSync(main)) {
+				const commandEntrypoint = path.join(commandOutDir, outputFileName);
+				throw new UserError(
+					`Could not find the prebuilt Worker entrypoint at "${commandEntrypoint}". Run \`${buildCommand}\` before starting the test harness.`,
+					{ telemetryMessage: "test harness prebuilt entrypoint missing" }
+				);
+			}
+		}
+
+		return {
+			...config,
+			main,
+			base_dir: prebuiltWorkerDir,
+			no_bundle: true,
+			find_additional_modules: true,
+			build: { ...config.build, command: undefined },
+		};
+	}
+
 	function resolveWorkerInputs(
 		serverOptions: TestHarnessOptions
 	): WranglerStartDevWorkerInput[] {
@@ -544,10 +610,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			}
 
 			return {
-				config:
-					"config" in input
-						? normalizeInlineWorkerConfig(input.config, root)
-						: resolvePath(root, input.configPath),
+				config: resolveWorkerConfig(input, root),
 				env: "env" in input ? input.env : undefined,
 				bindings,
 				dev: {

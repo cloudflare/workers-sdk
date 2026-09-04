@@ -1,5 +1,107 @@
 # @cloudflare/workers-utils
 
+## 0.36.0
+
+### Minor Changes
+
+- [#15390](https://github.com/cloudflare/workers-sdk/pull/15390) [`fd17fc5`](https://github.com/cloudflare/workers-sdk/commit/fd17fc5c5fb86423e37ff5b142391e03cd7dbf59) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add shared local env loading helpers with Vite-compatible `.env` file resolution and Wrangler-compatible parsing and expansion. Mode-specific `.dev.vars` files are selected exclusively and are not merged with `.env` files or process values.
+
+## 0.35.0
+
+### Minor Changes
+
+- [#15454](https://github.com/cloudflare/workers-sdk/pull/15454) [`dbbb795`](https://github.com/cloudflare/workers-sdk/commit/dbbb795c47ff663857b605b484c63730e1e3ff45) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move binding utilities into `@cloudflare/workers-utils`
+
+  Binding conversion, printing, and local-development validation are now exported from `@cloudflare/workers-utils` so they can be shared by Wrangler, the Cloudflare Vite plugin, and other consumers.
+
+  The corresponding exports have been removed from `@cloudflare/deploy-helpers`. Consumers should import them directly from `@cloudflare/workers-utils` instead.
+
+  Wrangler's `unstable_printBindings` API now accepts the bindings and an options object instead of five positional parameters.
+
+- [#15379](https://github.com/cloudflare/workers-sdk/pull/15379) [`ea28cc3`](https://github.com/cloudflare/workers-sdk/commit/ea28cc33e5d39031e9bf512e17f3a57cccbd3f46) Thanks [@ibbykhazanchi](https://github.com/ibbykhazanchi)! - Add query string redaction to Workers observability configuration
+
+  Set `observability.redact_query_string` in `wrangler.json` or `observability.redactQueryString` in the experimental `cloudflare.config.ts` format to remove query strings from request URLs in logs and traces.
+
+### Patch Changes
+
+- [#15406](https://github.com/cloudflare/workers-sdk/pull/15406) [`b3f2628`](https://github.com/cloudflare/workers-sdk/commit/b3f26289a735279e463fb4802d4a4481cfaaac71) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce the installed bundle sizes of Wrangler and Miniflare
+
+  Wrangler now resolves bundled workspace dependencies from source during monorepo builds so unused exports can be removed. Miniflare, its shared CLI and container dependencies now use granular `@cloudflare/workers-utils` entry points instead of loading the package barrel, reducing the raw Wrangler and Miniflare artifacts by 6.16 MiB (31.4%) and 1.06 MiB (22.9%) respectively without changing runtime behavior or installed dependencies.
+
+## 0.34.0
+
+### Minor Changes
+
+- [#14995](https://github.com/cloudflare/workers-sdk/pull/14995) [`59872c4`](https://github.com/cloudflare/workers-sdk/commit/59872c41d4417d9b8c2efddb4b35662453efcaae) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Add `connect` trigger for raw sockets
+
+  You can now configure a Worker to receive raw socket connections during `wrangler dev`, delivered directly to the Worker's `connect(socket, env, ctx)` handler:
+
+  ```jsonc
+  {
+    "connect": [{ "protocol": "tcp", "port": 5432 }]
+  }
+  ```
+
+  Each entry opens a listening socket on `127.0.0.1` (or the given `address`) that forwards incoming connections straight to the Worker, bypassing the local dev HTTP entry point. This requires the `experimental` compatibility flag. Only `"tcp"` is supported at the moment.
+
+  `@cloudflare/config` also supports declaring this trigger via `triggers.connect(...)`, which lowers to the `connect` field above:
+
+  ```ts
+  import { defineWorker, triggers } from "@cloudflare/config";
+
+  export default defineWorker({
+    triggers: [
+      triggers.connect({ protocol: "tcp", port: 5432, address: "127.0.0.1" }),
+    ],
+  });
+  ```
+
+- [#15172](https://github.com/cloudflare/workers-sdk/pull/15172) [`c68f9cb`](https://github.com/cloudflare/workers-sdk/commit/c68f9cb866a2eae4416d20f584f733527189f18a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add container support to worker previews
+
+  Worker previews now support containers through a new `previews.containers` configuration block. Container configuration doesn't inherit, so declare containers explicitly in the `previews` block to enable them for previews. This mirrors how `previews.durable_objects` works today. Wrangler names each preview container application `{worker_name}_{preview_slug}_{class_name}`, normalising and shortening the result to what the API accepts. Either change appends a short digest of the composed name, so two names that would otherwise land on one stay distinct. An entry cannot set its own `name`, because application names are unique to an account and a fixed name would collide between two previews of the same Worker. A Durable Object class is backed by at most one container application, so the validator rejects two entries that share a `class_name`. Wrangler skips container applications bound to Durable Object classes that another Worker implements through `script_name`, because the implementing Worker owns its own container application. A binding is not required: a Durable Object declared through `migrations` or `exports` and reached only over `ctx.exports` can still back a container. Every entry must set `class_name`. A `previews.containers` entry whose `class_name` matches no Durable Object class at all is rejected before the preview deployment is created, so a typo fails loudly instead of producing a preview with no container.
+
+  Wrangler creates the container applications on `wrangler preview`. Deleting a preview tears them down server side, so `wrangler preview delete` doesn't remove them.
+
+  Container build and deploy progress prints to stdout. `wrangler preview --json` suppresses wrangler's own output so it doesn't interleave with the payload, and warnings and errors still go to stderr. Docker's build output and the progress spinner write to stdout directly and bypass that suppression, so parse `--json` from a non interactive shell, where the spinner is skipped, and prefer a prebuilt `image` over a Dockerfile.
+
+### Patch Changes
+
+- [#15251](https://github.com/cloudflare/workers-sdk/pull/15251) [`5c10e39`](https://github.com/cloudflare/workers-sdk/commit/5c10e398979c0a054f58dcf2751012cc99e977d2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix ESM-only packages missing from deploy metadata
+
+  ESM-only package dependencies (such as `@cloudflare/think`) were silently omitted from the package dependency metadata reported during `wrangler deploy` and `wrangler versions upload`. These packages are now correctly detected and included.
+
+- [#15284](https://github.com/cloudflare/workers-sdk/pull/15284) [`39dcea6`](https://github.com/cloudflare/workers-sdk/commit/39dcea6c9362e2d651e3108fa769dbbc32db5a7b) Thanks [@emily-shen](https://github.com/emily-shen)! - Move deploy output writing into shared deploy helpers
+
+## 0.33.1
+
+### Patch Changes
+
+- [#15088](https://github.com/cloudflare/workers-sdk/pull/15088) [`fb6b51b`](https://github.com/cloudflare/workers-sdk/commit/fb6b51b87bf73edca9866bdf2d0810d7bf491108) Thanks [@Neal006](https://github.com/Neal006)! - Report malformed container SSH keys and a non-object `containers.configuration` as config errors instead of crashing
+
+  Previously, a `containers` entry with a malformed `authorized_keys` or `trusted_user_ca_keys` entry (a missing or non-string `public_key`, or an entry that is not an object), or a `containers.configuration` set to `null`, made Wrangler exit with a stack trace and "If you think this is a bug, please open an issue" rather than pointing at the field.
+
+  These configurations now produce an ordinary configuration error naming the offending field and array index, such as `containers.authorized_keys[0].public_key must be a string`. A `public_key` that is not an ED25519 key is also now reported with correct grammar.
+
+- [#15010](https://github.com/cloudflare/workers-sdk/pull/15010) [`1b73c87`](https://github.com/cloudflare/workers-sdk/commit/1b73c879c168dcc78b0f2657d04bc784b8af7da3) Thanks [@LeSingh1](https://github.com/LeSingh1)! - Report an invalid `queues.consumers` value as a configuration error instead of crashing
+
+  Previously, setting `queues.consumers` to something other than an array (for example `null` or a string) could crash Wrangler or produce a flood of confusing extra errors. You now get a single clear message telling you the field must be an array.
+
+## 0.33.0
+
+### Minor Changes
+
+- [#15123](https://github.com/cloudflare/workers-sdk/pull/15123) [`d0c976c`](https://github.com/cloudflare/workers-sdk/commit/d0c976c04ad890fcef56305ded11f1405e89273e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Add `NODEJS_COMPAT_DEFAULT_ON_DATE`, `NODEJS_COMPAT_V2_SWITCH_OVER_DATE`, `isNodejsCompatDefaultOn()` and `resolveNodejsCompat()`
+
+  These expose the compatibility dates on which workerd started enabling `nodejs_compat` by default and on which `nodejs_compat` started implying `nodejs_compat_v2`, along with the resolution of both flags from a compatibility date and a set of compatibility flags, so that the tools which generate or interpret Wrangler configurations do not each reimplement it.
+
+## 0.32.0
+
+### Minor Changes
+
+- [#14924](https://github.com/cloudflare/workers-sdk/pull/14924) [`0aa8fa5`](https://github.com/cloudflare/workers-sdk/commit/0aa8fa5e12bc64facb4e9fece321a762269d0357) Thanks [@ariesclark](https://github.com/ariesclark)! - Add shared support for the `DO_NOT_TRACK` environment variable
+
+  Add utilities for recognizing `DO_NOT_TRACK=1` and incorporating it when resolving Wrangler's telemetry preference.
+
 ## 0.31.2
 
 ### Patch Changes

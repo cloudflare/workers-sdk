@@ -9,8 +9,16 @@ import treeKill from "tree-kill";
 import { dedent } from "ts-dedent";
 import { ConfigBuilder } from "verdaccio";
 
+export { overrideConfigEnv } from "./config-env.js";
+
 const debugLog = util.debuglog("mock-npm-registry");
 const repoRoot = path.resolve(__dirname, "../../..");
+
+/**
+ * How long to wait for Verdaccio to actually exit after it has been killed,
+ * before giving up and letting teardown continue regardless.
+ */
+const EXIT_TIMEOUT = 10_000;
 
 /**
  * Start a mock local npm registry (using verdaccio) to host local copies of packages under test.
@@ -59,17 +67,17 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	`
 	);
 
-	// pnpm reads array settings such as `minimumReleaseAgeExclude` only from a
-	// config *file* (never from an env var), and the file differs by pnpm major:
-	// pnpm 10 reads the global `<configDir>/rc` (npmrc/INI), while pnpm 11 reads
-	// the global `<configDir>/config.yaml`. `<configDir>` resolves to
-	// `$XDG_CONFIG_HOME/pnpm` on all platforms when XDG_CONFIG_HOME is set, so we
-	// write both files into an isolated config dir and point pnpm at it below.
 	// Freshly-published first-party packages carry a "now" timestamp, so the
-	// inherited `minimumReleaseAge` cooldown (leaked from the workspace via the
-	// `npm_config_minimum_release_age` env var) would otherwise reject them.
-	// Excluding them by name installs their local versions while the cooldown
-	// still applies to third-party deps pulled via the npm uplink.
+	// `minimumReleaseAge` cooldown that `pnpm run` exports from the workspace
+	// would reject them. Excluding them by name installs their local versions
+	// while the cooldown still applies to third-party deps pulled via the npm
+	// uplink. (To change the cooldown itself, use `overrideConfigEnv`.)
+	//
+	// The exclusion is an array, and pnpm only reads those from a config file,
+	// which differs by pnpm major: pnpm 10 reads the global `<configDir>/rc`
+	// (npmrc/INI), pnpm 11 the global `<configDir>/config.yaml`. `<configDir>`
+	// is `$XDG_CONFIG_HOME/pnpm` on all platforms when that is set, so we write
+	// both files into an isolated config dir and point pnpm at it.
 	const configHome = path.join(registryPath, "config");
 	const pnpmConfigDir = path.join(configHome, "pnpm");
 	await fs.mkdir(pnpmConfigDir, { recursive: true });
@@ -120,8 +128,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	// `minimumReleaseAgeExclude` list is honored. The scalar
 	// `npm_config_minimum_release_age` inherited from the parent `pnpm run`
 	// still applies to third-party deps; the two settings merge because they are
-	// different keys. (An array cannot be passed via a single env var, and pnpm
-	// only reads this setting from config files — hence the redirect.)
+	// different keys.
 	const revert_XDG_CONFIG_HOME = overrideProcessEnv(
 		"XDG_CONFIG_HOME",
 		configHome
@@ -288,6 +295,13 @@ async function startVerdaccioServer(configPath: string) {
 			require.resolve("verdaccio/bin/verdaccio"),
 			["-c", configPath]
 		);
+
+		// Attached before anything can stop the server, so the event can never
+		// be missed by a listener registered too late to see it.
+		const exited = new Promise<void>((res) => {
+			server.once("exit", () => res());
+		});
+
 		server.on("error", reject);
 		server.on("disconnect", reject);
 
@@ -301,14 +315,46 @@ async function startVerdaccioServer(configPath: string) {
 			}
 		});
 
-		function stop() {
-			return new Promise<void>((res) => {
-				if (server?.pid) {
-					treeKill(server.pid, () => res());
-				} else {
-					res();
-				}
+		/**
+		 * Stop the server, resolving only once it has really exited.
+		 *
+		 * `treeKill`'s callback fires once the signals have been *delivered*,
+		 * not once the process tree has finished exiting. Callers remove the
+		 * registry's storage directory immediately afterwards and may restart
+		 * on the same port, both of which race a Verdaccio that is still
+		 * shutting down — producing `ENOTEMPTY`/`EBUSY` on directory removal
+		 * (particularly on Windows, where an open file blocks deletion) and
+		 * `EADDRINUSE` on restart. So wait for the real `exit` event.
+		 *
+		 * Bounded, because a process wedged in an uninterruptible state must
+		 * not hang test teardown forever: after `EXIT_TIMEOUT` we proceed and
+		 * let the caller's own error handling deal with the consequences,
+		 * which is still strictly better than not waiting at all.
+		 */
+		async function stop() {
+			const pid = server.pid;
+			if (pid === undefined) {
+				return;
+			}
+			await new Promise<void>((res) => {
+				// Errors are ignored: the usual one is "no such process",
+				// meaning it has already exited, which is what we want anyway.
+				treeKill(pid, () => res());
 			});
+			let timer: NodeJS.Timeout | undefined;
+			try {
+				await Promise.race([
+					exited,
+					new Promise<void>((res) => {
+						timer = setTimeout(res, EXIT_TIMEOUT);
+						// Don't hold the event loop open just to await a
+						// timeout we may never need.
+						timer.unref();
+					}),
+				]);
+			} finally {
+				clearTimeout(timer);
+			}
 		}
 	});
 }

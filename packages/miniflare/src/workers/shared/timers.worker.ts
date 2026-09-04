@@ -45,12 +45,17 @@ export class Timers {
 	}
 
 	clearTimeout(handle: TimerHandle): void {
-		if (typeof handle === "number") return clearTimeout(handle);
-		else this.#fakePendingTimeouts.delete(handle[kFakeTimerHandle]);
+		if (typeof handle === "number") {
+			return clearTimeout(handle);
+		} else {
+			this.#fakePendingTimeouts.delete(handle[kFakeTimerHandle]);
+		}
 	}
 
 	queueMicrotask(closure: () => Awaitable<unknown>): void {
-		if (this.#fakeTimestamp === undefined) return queueMicrotask(closure);
+		if (this.#fakeTimestamp === undefined) {
+			return queueMicrotask(closure);
+		}
 
 		const result = closure();
 		if (result instanceof Promise) {
@@ -62,7 +67,9 @@ export class Timers {
 	// Fake Timers Control API
 
 	#runPendingTimeouts() {
-		if (this.#fakeTimestamp === undefined) return;
+		if (this.#fakeTimestamp === undefined) {
+			return;
+		}
 		for (const [handle, timeout] of this.#fakePendingTimeouts) {
 			if (timeout.triggerTimestamp <= this.#fakeTimestamp) {
 				this.#fakePendingTimeouts.delete(handle);

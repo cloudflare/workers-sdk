@@ -116,6 +116,7 @@ export const d1CreateCommand = createCommand({
 				The location to restrict the D1 database to run and store data within to comply with local regulations. Note that if jurisdictions are set, the location hint is ignored. Options:
 					eu: The European Union
 					fedramp: FedRAMP-compliant data centers
+					us: The United States
 			`,
 		},
 		...sharedResourceCreationArgs,

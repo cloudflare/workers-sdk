@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	UserError,
@@ -42,7 +43,11 @@ export const pagesProjectListCommand = createCommand({
 			PAGES_CONFIG_CACHE_FILENAME
 		);
 
-		const accountId = await requireAuth(config);
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		const projects: Array<Project> = await listProjects({ accountId });
 
@@ -148,7 +153,11 @@ export const pagesProjectCreateCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		// When run by an AI agent, delegate new static Pages projects to a Workers
 		// static-assets deploy of the current directory. Accounts that already
@@ -303,7 +312,11 @@ export const pagesProjectDeleteCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId = await requireAuth(config);
+		const envAccountId = getCloudflareAccountIdFromEnv();
+		const accountId = await requireAuth({
+			...config,
+			...(envAccountId ? { account_id: envAccountId } : {}),
+		});
 
 		const confirmed =
 			args.yes ||
