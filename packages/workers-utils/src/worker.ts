@@ -521,6 +521,7 @@ export interface CfWorkerInit {
 				routerConfig: RouterConfig;
 				assetConfig: AssetConfig;
 				run_worker_first?: string[] | boolean;
+				retention?: { enabled: boolean };
 				_redirects?: string;
 				_headers?: string;
 		  }

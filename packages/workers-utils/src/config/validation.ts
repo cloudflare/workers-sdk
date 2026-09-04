@@ -3277,6 +3277,34 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			isValid = false;
 		}
 	}
+
+	if ((value as Assets).retention !== undefined) {
+		const retention = (value as Assets).retention;
+		if (typeof retention !== "object" || retention === null) {
+			diagnostics.errors.push(
+				`Expected "assets.retention" to be an object but got ${JSON.stringify(retention)}.`
+			);
+			isValid = false;
+		} else {
+			isValid =
+				validateRequiredProperty(
+					diagnostics,
+					`${field}.retention`,
+					"enabled",
+					(retention as { enabled: unknown }).enabled,
+					"boolean"
+				) && isValid;
+
+			isValid =
+				validateAdditionalProperties(
+					diagnostics,
+					`${field}.retention`,
+					Object.keys(retention),
+					["enabled"]
+				) && isValid;
+		}
+	}
+
 	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
@@ -3284,6 +3312,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"html_handling",
 			"not_found_handling",
 			"run_worker_first",
+			"retention",
 		]) && isValid;
 
 	return isValid;
