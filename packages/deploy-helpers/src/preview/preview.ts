@@ -1,5 +1,11 @@
 import path from "node:path";
-import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
+import {
+	apply,
+	initContainersSharedContext,
+	listDurableObjects,
+	pushBuiltContainerImage,
+} from "@cloudflare/containers-shared";
 import {
 	configFileName,
 	getBindings,
@@ -12,7 +18,7 @@ import { syncAssets } from "../deploy/helpers/assets";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
-import { confirm, logger } from "../shared/context";
+import { confirm, fetchResult, logger } from "../shared/context";
 import { getSubdomainValues } from "../triggers/deploy";
 import {
 	createPreview,
@@ -34,11 +40,9 @@ import {
 	getPreviewOwnedContainerClassNames,
 	getPullRequestMetadata,
 	getRepositoryUrl,
-	previewContainerAppName,
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
-import type { DeployCallbacks } from "../deploy/deploy";
 import type { WorkerBuildResult } from "../shared/types";
 import type {
 	Binding,
@@ -48,12 +52,12 @@ import type {
 	PreviewResource,
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
-	Config,
-	ContainerApp,
-	PreviewsConfig,
-} from "@cloudflare/workers-utils";
+	BuiltContainerDeployment,
+	ContainerNormalizedConfig,
+	DurableObjectNamespace,
+} from "@cloudflare/containers-shared";
+import type { Config, Logger, PreviewsConfig } from "@cloudflare/workers-utils";
 
 export type PreviewArgs = {
 	script?: string;
@@ -90,207 +94,26 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-// Building and applying a container to Cloudchamber requires wrangler-only
-// dependencies (Docker, the containers API client) that deploy-helpers has
-// no direct dependency on. As with `DeployCallbacks` (see ../deploy/deploy.ts),
-// the wrangler-specific implementation is injected by the caller.
-//
-// `getNormalizedContainerOptions` validates and normalises container config
-// without needing the preview deployment to exist yet, so `preview()` runs it
-// before creating the deployment. A bad config or a missing Docker install
-// then fails before the preview goes live, rather than leaving a preview
-// running that advertises containers nothing ever built. `deployPreviewContainers`
-// does need the deployment, since that's what resolves each container's DO
-// namespace_id, so it still runs after.
-export type PreviewCallbacks = Pick<
-	DeployCallbacks,
-	"getNormalizedContainerOptions"
-> & {
-	deployPreviewContainers:
-		| ((
-				scopedConfig: Config,
-				normalisedContainerConfig: ContainerNormalizedConfig[],
-				deployment: DeploymentResource,
-				accountId: string,
-				// Building and applying containers prints progress to stdout, the
-				// same stream that carries the `--json` payload. Set this when
-				// stdout has to stay machine readable.
-				options: { quiet: boolean }
-		  ) => Promise<void>)
-		| undefined;
-	// Confirms the API token carries the scope needed to apply containers.
-	verifyContainersScope?: (scopedConfig: Config) => Promise<void>;
-};
-
-/**
- * Construct a synthetic `Config` for the preview's containers, so we can reuse
- * `getNormalizedContainerOptions` and `apply` from the standard `wrangler
- * deploy` container path without forking either. Containers come from
- * `previews.containers`, defaulting each unnamed entry to a generated
- * application name, and DO bindings come from `previews.durable_objects`.
- *
- * `observability` is carried over because a container application has its own
- * observability setting, which `getNormalizedContainerOptions` reads from the
- * config it is given. The container path does not read `logpush`, `limits`, or
- * `cache`, so overlaying those here would have no effect.
- *
- * Throws if a container names no Durable Object class, or if the class it names
- * is not one this script implements. Returns `undefined` if every container
- * resolves only to a cross-script binding, since those are owned by another
- * Worker.
- */
-function buildPreviewContainerConfig(
-	config: Config,
-	parentWorkerName: string,
-	previewSlug: string,
-	previewContainers: ContainerApp[]
-): Config | undefined {
-	const previews = config.previews as PreviewsConfig | undefined;
-	const previewDOBindings = previews?.durable_objects?.bindings ?? [];
-	const ownedDOClasses = getPreviewOwnedContainerClassNames(config, previews);
-
-	// A preview container has to name its Durable Object class itself. The other
-	// direction of the link, a Durable Object naming its container through
-	// `exports[Class].container`, resolves against the top level `containers`
-	// array, so it can only ever reach a container this preview does not own.
-	const linkedContainers = previewContainers.map((container) => {
-		const className = container.class_name;
-		if (className === undefined) {
-			throw new UserError(
-				`A container entry in "previews.containers" is missing "class_name". A preview container must name the Durable Object class it backs, even where a Durable Object declared in "exports" names its container instead.`,
-				{
-					telemetryMessage: "preview container missing class_name",
-				}
-			);
-		}
-		return { container, className };
-	});
-
-	// A container whose class matches no Durable Object at all is a
-	// misconfiguration, almost always a typo, and silently dropping it would
-	// hand back a preview with no container and no explanation, so reject it
-	// here, before the preview deployment is created.
-	//
-	// A class that does match a binding carrying `script_name` is excluded
-	// rather than rejected: that DO is implemented by another Worker, which owns
-	// its own container application.
-	for (const { className } of linkedContainers) {
-		if (
-			ownedDOClasses.has(className) ||
-			previewDOBindings.some((b) => b.class_name === className)
-		) {
-			continue;
-		}
-		throw new UserError(
-			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
-			{
-				telemetryMessage: "no preview DO class matches container class_name",
-			}
-		);
-	}
-
-	const filteredContainers = linkedContainers
-		.filter(({ className }) => ownedDOClasses.has(className))
-		.map(({ container, className }) => ({
-			...container,
-			name: previewContainerAppName(parentWorkerName, previewSlug, className),
-		}));
-
-	if (filteredContainers.length === 0) {
-		return undefined;
-	}
-
-	// `getNormalizedContainerOptions` resolves a container's Durable Object with
-	// `find()` on `class_name`, and rejects the container outright if that first
-	// match carries `script_name`. A class bound both locally and cross-script
-	// would then fail as though another Worker owned it, purely because of
-	// binding order. Put the locally implemented bindings first so the lookup
-	// lands on the one this preview owns.
-	const localBindingsFirst = [
-		...previewDOBindings.filter((b) => b.script_name === undefined),
-		...previewDOBindings.filter((b) => b.script_name !== undefined),
-	];
-
-	const observability = previews?.observability ?? config.observability;
-	return {
-		...config,
-		containers: filteredContainers,
-		durable_objects: {
-			bindings: localBindingsFirst,
-		},
-		observability,
-	};
-}
-
-/**
- * Validate and normalise container config, and confirm Docker is installed
- * for any container built from a Dockerfile. Called before the preview
- * deployment is created, so a bad config or a missing Docker install fails
- * before the preview goes live, rather than leaving a preview running that
- * advertises containers nothing ever built.
- *
- * Returns an empty `normalisedContainerConfig` when there's nothing to
- * deploy, whether because `previews.containers` is empty or every entry
- * resolves to a cross-script DO binding owned by another Worker. Throws if an
- * entry's `class_name` matches no DO binding in `previews.durable_objects`.
- */
-async function prepareContainersForPreview(
-	config: Config,
-	workerName: string,
-	previewSlug: string,
-	callbacks: PreviewCallbacks
-): Promise<{
+export type PreviewContainerPreparation = {
 	scopedContainerConfig: Config | undefined;
 	normalisedContainerConfig: ContainerNormalizedConfig[];
-}> {
-	const previewContainers =
-		(config.previews as PreviewsConfig | undefined)?.containers ?? [];
-	if (
-		previewContainers.length === 0 ||
-		!callbacks.getNormalizedContainerOptions
-	) {
-		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
-	}
+	builtContainerDeployments: BuiltContainerDeployment[];
+};
 
-	const scopedContainerConfig = buildPreviewContainerConfig(
-		config,
-		workerName,
-		previewSlug,
-		previewContainers
-	);
-	if (!scopedContainerConfig) {
-		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
-	}
-
-	const normalisedContainerConfig =
-		await callbacks.getNormalizedContainerOptions(scopedContainerConfig, {
-			dryRun: false,
-		});
-
-	const containersNeedingDocker = normalisedContainerConfig.filter(
-		(container) => "dockerfile" in container
-	);
-	if (containersNeedingDocker.length > 0) {
-		await verifyDockerInstalled({
-			dockerPath: getDockerPath(),
-			operation: "creating a preview",
-			imageNoun:
-				containersNeedingDocker.length !== 1
-					? "the configured images"
-					: "the configured image",
-			hint: 'If you cannot run Docker locally, set "image" to a prebuilt registry image instead of a Dockerfile path for the affected entries in "previews.containers".',
-		});
-	}
-
-	// Applying containers checks the token's scope as well, but only after the
-	// deployment exists. Checking it here stops a badly scoped token from
-	// leaving a live preview that advertises containers nothing ever built.
-	if (callbacks.verifyContainersScope) {
-		await callbacks.verifyContainersScope(scopedContainerConfig);
-	}
-
-	return { scopedContainerConfig, normalisedContainerConfig };
-}
+// Building and applying a container to Cloudchamber requires wrangler-only
+// dependencies (Docker, the containers API client) that deploy-helpers has no
+// direct dependency on. As with `DeployCallbacks` (see ../deploy/deploy.ts),
+// the wrangler-specific preparation implementation is injected by the caller.
+export type PreviewCallbacks = {
+	preparePreviewContainers:
+		| ((
+				config: Config,
+				workerName: string,
+				previewSlug: string,
+				options: { quiet: boolean }
+		  ) => Promise<PreviewContainerPreparation>)
+		| undefined;
+};
 
 export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
 	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
@@ -762,13 +585,22 @@ export async function preview(
 		}
 	}
 
-	const { scopedContainerConfig, normalisedContainerConfig } =
-		await prepareContainersForPreview(
-			config,
-			workerName,
-			previewResource.slug,
-			callbacks
-		);
+	const {
+		scopedContainerConfig,
+		normalisedContainerConfig,
+		builtContainerDeployments,
+	} = callbacks.preparePreviewContainers
+		? await callbacks.preparePreviewContainers(
+				config,
+				workerName,
+				previewResource.slug,
+				{ quiet: args.json === true }
+			)
+		: {
+				scopedContainerConfig: undefined,
+				normalisedContainerConfig: [],
+				builtContainerDeployments: [],
+			};
 
 	const deploymentRequest = await assemblePreviewDeploymentSettings(
 		config,
@@ -793,21 +625,18 @@ export async function preview(
 		deploymentRequest
 	);
 
-	if (
-		normalisedContainerConfig.length > 0 &&
-		scopedContainerConfig &&
-		callbacks.deployPreviewContainers
-	) {
+	if (normalisedContainerConfig.length > 0 && scopedContainerConfig) {
 		try {
-			await callbacks.deployPreviewContainers(
+			await deployPreviewContainers(
 				scopedContainerConfig,
 				normalisedContainerConfig,
+				builtContainerDeployments,
 				deployment,
 				accountId,
 				{ quiet: args.json === true }
 			);
 		} catch (error) {
-			// The deployment is live by this point, so say so before the build or
+			// The deployment is live by this point, so say so before the push or
 			// apply error surfaces on its own. Written to stderr so it cannot
 			// corrupt a `--json` payload.
 			logger.warn(
@@ -848,6 +677,167 @@ export async function preview(
 
 	return { preview: previewResource, deployment, isNewPreview };
 }
+
+/**
+ * Resolve each normalised preview container's Durable Object namespace, then
+ * push and apply its Cloudchamber application.
+ *
+ * The DO namespace for a preview is provisioned by the workers control plane.
+ * For a bound Durable Object it comes back in the create-deployment response,
+ * so we read it from `deployment.env` rather than re-fetching. A Durable Object
+ * reached only through `ctx.exports` has no binding to carry it, so those fall
+ * back to the namespaces list API.
+ */
+async function deployPreviewContainers(
+	scopedConfig: Config,
+	normalisedContainerConfig: ContainerNormalizedConfig[],
+	builtContainerDeployments: BuiltContainerDeployment[],
+	deployment: DeploymentResource,
+	accountId: string,
+	options: { quiet: boolean }
+): Promise<void> {
+	await runPreviewContainerOperation(options, async () => {
+		const dockerPath = getDockerPath();
+		const classNameToNamespaceId = new Map<string, string>();
+
+		// Skip bindings carrying `script_name`. Those name a Durable Object
+		// implemented by another Worker, which owns its own container application,
+		// so their namespace belongs to that Worker. A preview may bind the same
+		// class name both locally and cross-script, and since this map is keyed on
+		// class name alone, an unfiltered cross-script entry could overwrite the
+		// preview's own namespace_id and attach the container to the wrong storage.
+		// `wrangler deploy` applies the same restriction.
+		for (const binding of Object.values(deployment.env ?? {})) {
+			if (
+				binding.type === "durable_object_namespace" &&
+				binding.class_name &&
+				binding.namespace_id &&
+				binding.script_name === undefined
+			) {
+				classNameToNamespaceId.set(binding.class_name, binding.namespace_id);
+			}
+		}
+
+		// Only bound Durable Objects appear in `deployment.env`. A class reached
+		// solely through `ctx.exports` still has a namespace provisioned for the
+		// preview, so fall back to the namespaces list and match on it, the same way
+		// `wrangler deploy` resolves an unbound Durable Object.
+		let allNamespaces: DurableObjectNamespace[] | undefined;
+
+		for (const container of normalisedContainerConfig) {
+			let namespaceId = classNameToNamespaceId.get(container.class_name);
+			if (!namespaceId) {
+				allNamespaces ??= await listDurableObjects(scopedConfig, accountId);
+				// `script` is the parent Worker's name for every one of its previews,
+				// so match on the preview id to avoid attaching this container to the
+				// parent's namespace or to another preview's.
+				namespaceId = allNamespaces.find(
+					(namespace) =>
+						namespace.class === container.class_name &&
+						namespace.preview?.id === deployment.preview_id
+				)?.id;
+			}
+			if (!namespaceId) {
+				throw new UserError(
+					`Could not deploy preview container application "${container.name}": no Durable Object namespace was found for class "${container.class_name}" in preview "${deployment.preview_name}". This is likely a bug in Wrangler. Please file an issue.`,
+					{
+						telemetryMessage:
+							"preview containers deploy missing do namespace id",
+					}
+				);
+			}
+
+			const imageRef =
+				"dockerfile" in container
+					? await pushBuiltPreviewContainerImage({
+							container,
+							builtContainerDeployments,
+							deployment,
+							dockerPath,
+							accountId,
+							scopedConfig,
+						})
+					: { newTag: container.image_uri };
+
+			await apply(
+				{ imageRef, durable_object_namespace_id: namespaceId },
+				container,
+				scopedConfig,
+				accountId
+			);
+		}
+	});
+}
+
+async function pushBuiltPreviewContainerImage({
+	container,
+	builtContainerDeployments,
+	deployment,
+	dockerPath,
+	accountId,
+	scopedConfig,
+}: {
+	container: ContainerNormalizedConfig;
+	builtContainerDeployments: BuiltContainerDeployment[];
+	deployment: DeploymentResource;
+	dockerPath: string;
+	accountId: string;
+	scopedConfig: Config;
+}) {
+	const builtContainerDeployment = builtContainerDeployments.find(
+		(deployment) => deployment.container === container
+	);
+	if (!builtContainerDeployment) {
+		throw new UserError(
+			`Could not deploy preview container application "${container.name}": no built image was found for class "${container.class_name}". This is likely a bug in Wrangler. Please file an issue.`,
+			{
+				telemetryMessage: "preview containers deploy missing built image",
+			}
+		);
+	}
+
+	return await pushBuiltContainerImage(
+		builtContainerDeployment.builtImage,
+		deployment.id,
+		dockerPath,
+		accountId,
+		scopedConfig
+	);
+}
+
+async function runPreviewContainerOperation<T>(
+	options: { quiet: boolean },
+	operation: () => Promise<T>
+): Promise<T> {
+	initContainersSharedContext({
+		logger: options.quiet ? quietLogger : logger,
+		fetchResult,
+	});
+
+	if (!options.quiet) {
+		return operation();
+	}
+
+	// Building and applying containers prints progress to stdout, the same stream
+	// that carries the `--json` payload. Keep both logging surfaces quiet while
+	// stdout has to stay machine-readable.
+	const previousLogLevel = getLogLevel();
+	setLogLevel("error");
+	try {
+		return await operation();
+	} finally {
+		setLogLevel(previousLogLevel);
+		initContainersSharedContext({ logger, fetchResult });
+	}
+}
+
+const quietLogger: Logger = {
+	debug() {},
+	log() {},
+	info() {},
+	warn: (...args: unknown[]) => logger.warn(...args),
+	error: (...args: unknown[]) => logger.error(...args),
+};
 
 /**
  * Delete a preview and all its deployments.

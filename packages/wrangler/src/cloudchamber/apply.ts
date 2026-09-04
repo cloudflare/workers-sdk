@@ -23,24 +23,24 @@ import {
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	Diff,
 	InstanceType,
+	configRolloutStepsToAPI,
 	resolveImageName,
 	RolloutsService,
 	SchedulingPolicy,
+} from "@cloudflare/containers-shared";
+import {
+	sortObjectRecursive,
+	stripUndefined,
 } from "@cloudflare/containers-shared";
 import {
 	FatalError,
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { configRolloutStepsToAPI } from "../containers/deploy";
 import { createCommand } from "../core/create-command";
 import { getOrSelectAccountId } from "../user";
-import { Diff } from "../utils/diff";
-import {
-	sortObjectRecursive,
-	stripUndefined,
-} from "../utils/sortObjectRecursive";
 import {
 	cloudchamberScope,
 	fillOpenAPIConfiguration,

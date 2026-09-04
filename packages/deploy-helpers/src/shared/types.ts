@@ -1,4 +1,8 @@
 import type {
+	BuiltContainerDeployment,
+	ContainerNormalizedConfig,
+} from "@cloudflare/containers-shared";
+import type {
 	ValidatedAssetsOptions,
 	LegacyAssetPaths,
 	CfModule,
@@ -127,6 +131,10 @@ export type DeployProps = SharedDeployVersionsProps & {
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/** Normalized Wrangler container configuration, resolved before calling deploy-helpers. */
+	normalisedContainerConfig: ContainerNormalizedConfig[];
+	/** Dockerfile container images built by the caller before invoking deploy-helpers. */
+	builtContainerDeployments: BuiltContainerDeployment[];
 	/**
 	 * When true, an existing Worker with the same name aborts the deploy instead
 	 * of updating it, because this run cannot confirm the local project owns the

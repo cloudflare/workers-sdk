@@ -1857,13 +1857,17 @@ importers:
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/containers-shared:
+    dependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
-      '@cloudflare/workers-utils':
-        specifier: workspace:*
-        version: link:../workers-utils
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
@@ -2032,6 +2036,9 @@ importers:
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
@@ -2060,9 +2067,6 @@ importers:
         specifier: catalog:default
         version: 7.29.0
     devDependencies:
-      '@cloudflare/containers-shared':
-        specifier: workspace:*
-        version: link:../containers-shared
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared

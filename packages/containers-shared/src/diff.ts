@@ -1,3 +1,4 @@
+// @ts-nocheck -- Verbatim compatibility copy of Wrangler's legacy line-diff helper.
 // Modified code from package jsdiff (https://github.com/kpdecker/jsdiff/tree/master)
 // It's been simplified so it can basically do line diffing only
 // and we can avoid the 600kb sized package.

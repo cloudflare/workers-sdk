@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils/errors";
-import { buildImage } from "./build";
+import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
@@ -50,6 +50,7 @@ export async function pullEgressInterceptorImage(
  * @param dockerPath - Path to the Docker CLI executable.
  * @param options - Container image and local development tag configuration.
  * @param logger - Logger used for recoverable registry credential warnings.
+ * @param accountId - Optional Cloudflare account ID used to request registry credentials.
  * @param complianceConfig - Compliance configuration used to identify the managed registry.
  * @returns An object with an `abort` function and a `ready` promise.
  */
@@ -57,6 +58,7 @@ export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
 	logger: WranglerLogger | ViteLogger,
+	accountId?: string,
 	complianceConfig?: ComplianceConfig
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
@@ -64,7 +66,15 @@ export async function pullImage(
 	const isExternalRegistry =
 		domain !== getCloudflareContainerRegistry(complianceConfig);
 	try {
-		await dockerLoginImageRegistry(dockerPath, domain);
+		if (accountId === undefined) {
+			throw new Error("An account ID is required to get registry credentials");
+		}
+		await dockerLoginImageRegistry(
+			dockerPath,
+			domain,
+			accountId,
+			complianceConfig
+		);
 	} catch (e) {
 		if (!isExternalRegistry) {
 			throw e;
@@ -126,6 +136,7 @@ export async function prepareContainerImagesForDev(args: {
 		containerOptions: ContainerDevOptions;
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
+	accountId?: string;
 	complianceConfig?: ComplianceConfig;
 }): Promise<void> {
 	const {
@@ -152,7 +163,17 @@ export async function prepareContainerImagesForDev(args: {
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
-			const build = await buildImage(dockerPath, options, false);
+			const build = await startContainerBuild({
+				pathToDocker: dockerPath,
+				verifyDockerIsRunning: false,
+				build: {
+					tag: options.image_tag,
+					pathToDockerfile: options.dockerfile,
+					buildContext: options.image_build_context,
+					args: options.image_vars,
+					platform: "linux/amd64",
+				},
+			});
 			onContainerImagePreparationStart({
 				containerOptions: options,
 				abort: () => {
@@ -170,6 +191,7 @@ export async function prepareContainerImagesForDev(args: {
 				dockerPath,
 				options,
 				args.logger,
+				args.accountId,
 				args.complianceConfig
 			);
 			onContainerImagePreparationStart({

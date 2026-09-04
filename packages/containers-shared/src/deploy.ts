@@ -19,48 +19,32 @@ import {
 	dim,
 	green,
 } from "@cloudflare/cli-shared-helpers/colors";
+import { formatConfigSnippet } from "@cloudflare/workers-utils";
+import { FatalError, UserError } from "@cloudflare/workers-utils/errors";
 import {
 	ApiError,
 	ApplicationsService,
 	CreateApplicationRolloutRequest,
-	resolveImageName,
 	RolloutsService,
-} from "@cloudflare/containers-shared";
-import {
-	APIError,
-	FatalError,
-	formatConfigSnippet,
-	getDockerPath,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { fetchPagedListResult } from "../cfetch";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
-import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
-import { buildContainer } from "../containers/build";
-import { getOrSelectAccountId } from "../user";
-import { Diff } from "../utils/diff";
-import {
-	sortObjectRecursive,
-	stripUndefined,
-} from "../utils/sortObjectRecursive";
-import { fetchVersion } from "../versions/api";
-import { containersScope } from ".";
-import type { ImageRef } from "../cloudchamber/build";
-import type { ApiVersion } from "../versions/types";
+} from "./client";
+import { fetchResult } from "./context";
+import { Diff } from "./diff";
+import { resolveImageName } from "./images";
+import { inferInstanceType } from "./limits";
+import { sortObjectRecursive, stripUndefined } from "./object";
+import { promiseSpinner } from "./spinner";
+import type { ImageRef } from "./build";
 import type {
 	Application,
 	ApplicationObservability as ApplicationObservabilityConfiguration,
 	ApplicationID,
 	ApplicationName,
-	ContainerNormalizedConfig,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 	Observability as DeploymentObservabilityConfiguration,
 	RolloutStepRequest,
-} from "@cloudflare/containers-shared";
+} from "./client";
+import type { ContainerNormalizedConfig } from "./types";
 import type {
 	ComplianceConfig,
 	Config,
@@ -76,6 +60,32 @@ type DeployContainersArgs = {
 };
 
 type ObservabilityWriteTarget = "top-level" | "configuration";
+
+export type ResolvedContainerDeployment = {
+	container: ContainerNormalizedConfig;
+	imageRef: ImageRef;
+};
+
+type ApiVersion = {
+	resources: {
+		bindings: WorkerMetadataBinding[];
+	};
+};
+
+export type DurableObjectNamespace = {
+	id: string;
+	class: string;
+	name: string;
+	script: string;
+	use_sqlite: boolean;
+	dispatch_namespace?: string;
+	/**
+	 * Set when the namespace belongs to a Worker preview. For those, `script` is
+	 * the parent Worker's name, so `preview.id` is what distinguishes a
+	 * preview's namespace from the parent's and from other previews'.
+	 */
+	preview?: { id: string; slug: string; name: string };
+};
 
 export function createDurableObjectNamespaceResolver(
 	config: Config,
@@ -144,12 +154,9 @@ export function createDurableObjectNamespaceResolver(
 
 export async function deployContainers(
 	config: Config,
-	normalisedContainerConfig: ContainerNormalizedConfig[],
+	containerDeployments: ResolvedContainerDeployment[],
 	{ versionId, accountId, scriptName, dispatchNamespace }: DeployContainersArgs
 ) {
-	await fillOpenAPIConfiguration(config, containersScope);
-
-	const pathToDocker = getDockerPath();
 	const resolveNamespaceId = createDurableObjectNamespaceResolver(config, {
 		versionId,
 		accountId,
@@ -157,22 +164,7 @@ export async function deployContainers(
 		dispatchNamespace,
 	});
 
-	let imageRef: ImageRef;
-
-	for (const container of normalisedContainerConfig) {
-		if ("dockerfile" in container) {
-			imageRef = await buildContainer(
-				container,
-				versionId,
-				false, // dry runs will have already exited by this point
-				pathToDocker,
-				false,
-				config
-			);
-		} else {
-			imageRef = { newTag: container.image_uri };
-		}
-
+	for (const { container, imageRef } of containerDeployments) {
 		const namespaceId = await resolveNamespaceId(container.class_name);
 		await apply(
 			{
@@ -180,7 +172,8 @@ export async function deployContainers(
 				durable_object_namespace_id: namespaceId,
 			},
 			container,
-			config
+			config,
+			accountId
 		);
 	}
 }
@@ -193,13 +186,12 @@ async function fetchUploadedVersion(
 ): Promise<ApiVersion> {
 	for (let attempt = 0; attempt < 5; attempt++) {
 		try {
-			return await fetchVersion(config, accountId, scriptName, versionId);
+			return await fetchResult<ApiVersion>(
+				config,
+				`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
+			);
 		} catch (error) {
-			if (
-				!(error instanceof APIError) ||
-				error.code !== 100146 ||
-				attempt === 4
-			) {
+			if (!isUploadedVersionNotReadyError(error) || attempt === 4) {
 				throw error;
 			}
 			await setTimeout(500);
@@ -208,25 +200,19 @@ async function fetchUploadedVersion(
 	throw new Error("Unable to fetch uploaded Worker version");
 }
 
-export type DurableObjectNamespace = {
-	id: string;
-	class: string;
-	name: string;
-	script: string;
-	use_sqlite: boolean;
-	dispatch_namespace?: string;
-	/**
-	 * Set when the namespace belongs to a Worker preview. For those, `script` is
-	 * the parent Worker's name, so `preview.id` is what distinguishes a
-	 * preview's namespace from the parent's and from other previews'.
-	 */
-	preview?: { id: string; slug: string; name: string };
-};
+function isUploadedVersionNotReadyError(error: unknown): boolean {
+	return (
+		error instanceof Error &&
+		"code" in error &&
+		(error as { code?: unknown }).code === 100146
+	);
+}
+
 export async function listDurableObjects(
 	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<DurableObjectNamespace[]> {
-	return await fetchPagedListResult<DurableObjectNamespace>(
+	return await fetchResult<DurableObjectNamespace[]>(
 		complianceConfig,
 		`/accounts/${accountId}/workers/durable_objects/namespaces`,
 		{},
@@ -605,17 +591,16 @@ function formatContainerSnippetForDisplay<
 					])
 				);
 
-	return formatConfigSnippet(
-		{
-			containers: [
-				{
-					...container,
-					configuration: configurationForDisplay,
-				} as unknown as ContainerApp,
-			],
-		},
-		configPath
-	);
+	const snippet = {
+		containers: [
+			{
+				...container,
+				configuration: configurationForDisplay,
+			} as unknown as ContainerApp,
+		],
+	};
+
+	return formatConfigSnippet(snippet, configPath);
 }
 
 export async function apply(
@@ -624,7 +609,8 @@ export async function apply(
 		durable_object_namespace_id: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
-	config: Config
+	config: Config,
+	accountId: string
 ) {
 	if (!config.containers || config.containers.length === 0) {
 		return;
@@ -651,7 +637,6 @@ export async function apply(
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
-	const accountId = await getOrSelectAccountId(config);
 	let migratedLegacyObservability = false;
 
 	if (prevApp !== undefined) {

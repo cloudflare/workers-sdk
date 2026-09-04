@@ -1,4 +1,5 @@
 import { execFileSync, spawn } from "node:child_process";
+import crypto from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
@@ -47,6 +48,9 @@ import type { ExpectStatic } from "vitest";
 
 vi.mock("node:child_process");
 
+const TEST_CONTAINER_BUILD_TAG =
+	"wrangler-11111111-1111-4111-8111-111111111111";
+
 describe("wrangler deploy with containers", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
@@ -55,6 +59,9 @@ describe("wrangler deploy with containers", () => {
 	mockApiToken();
 	beforeEach(() => {
 		setupCommonMocks();
+		vi.spyOn(crypto, "randomUUID").mockReturnValue(
+			"11111111-1111-4111-8111-111111111111"
+		);
 		fs.writeFileSync(
 			"index.js",
 			`export class ExampleDurableObject {}; export default{};`
@@ -1024,6 +1031,7 @@ describe("wrangler deploy with containers", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
+			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -1034,7 +1042,6 @@ describe("wrangler deploy with containers", () => {
 			- my-container (<cwd>/Dockerfile)
 
 			Uploaded test-name (TIMINGS)
-			Building image my-container:Galaxy
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -1473,6 +1480,7 @@ describe("wrangler deploy with containers", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
+				Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1483,7 +1491,6 @@ describe("wrangler deploy with containers", () => {
 				- my-container (<test-cwd>/Dockerfile)
 
 				Uploaded test-name (TIMINGS)
-				Building image my-container:Galaxy
 				Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -1542,6 +1549,7 @@ describe("wrangler deploy with containers", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
+			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -1552,7 +1560,6 @@ describe("wrangler deploy with containers", () => {
 			- my-container (<cwd>/Dockerfile)
 
 			Uploaded test-name (TIMINGS)
-			Building image my-container:Galaxy
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -3320,6 +3327,7 @@ describe("wrangler deploy with containers", () => {
 		mockGetVersion("Galaxy-Class");
 		const containerName = "my-container";
 		const tag = "Galaxy";
+		const localTag = TEST_CONTAINER_BUILD_TAG;
 		vi.mocked(spawn).mockReset();
 		vi.mocked(spawn)
 			.mockImplementationOnce(mockDockerInfo(expect))
@@ -3327,21 +3335,26 @@ describe("wrangler deploy with containers", () => {
 				mockDockerBuild(
 					expect,
 					containerName,
-					tag,
+					localTag,
 					"FROM scratch",
 					process.cwd()
 				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
+				mockDockerImageInspectDigestsWithRepoDigest(
+					expect,
+					containerName,
+					localTag,
+					tag
+				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectSize(expect, containerName, tag)
+				mockDockerImageInspectSize(expect, containerName, localTag)
 			)
 			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
 			// Mock docker image rm call since we skip the push
 			.mockImplementationOnce(
-				mockDockerImageDelete(expect, containerName, tag)
+				mockDockerImageDelete(expect, containerName, localTag)
 			);
 		// // Add fallback mocks in case we fall through to push (for debugging)
 		// .mockImplementationOnce(
@@ -3433,6 +3446,7 @@ describe("wrangler deploy with containers", () => {
 		mockGetVersion("Galaxy-Class");
 		const containerName = "my-container";
 		const tag = "Galaxy";
+		const localTag = TEST_CONTAINER_BUILD_TAG;
 		vi.mocked(spawn).mockReset();
 		vi.mocked(spawn)
 			.mockImplementationOnce(mockDockerInfo(expect))
@@ -3440,20 +3454,25 @@ describe("wrangler deploy with containers", () => {
 				mockDockerBuild(
 					expect,
 					containerName,
-					tag,
+					localTag,
 					"FROM scratch",
 					process.cwd()
 				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectDigestsWithRepoDigest(expect, containerName, tag)
+				mockDockerImageInspectDigestsWithRepoDigest(
+					expect,
+					containerName,
+					localTag,
+					tag
+				)
 			)
 			.mockImplementationOnce(
-				mockDockerImageInspectSize(expect, containerName, tag)
+				mockDockerImageInspectSize(expect, containerName, localTag)
 			)
 			.mockImplementationOnce(mockDockerLogin(expect, "mockpassword"))
 			.mockImplementationOnce(
-				mockDockerImageDelete(expect, containerName, tag)
+				mockDockerImageDelete(expect, containerName, localTag)
 			);
 		vi.mocked(execFileSync).mockImplementation(
 			(_file: string, args?: readonly string[]) => {
@@ -4275,7 +4294,7 @@ describe("wrangler deploy with containers dry run", () => {
 				mockDockerBuild(
 					expect,
 					"my-container",
-					"worker",
+					TEST_CONTAINER_BUILD_TAG,
 					"FROM scratch",
 					process.cwd()
 				)
@@ -4296,8 +4315,8 @@ describe("wrangler deploy with containers dry run", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
+			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
 			Total Upload: xx KiB / gzip: xx KiB
-			Building image my-container:worker
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
@@ -4795,17 +4814,18 @@ function createDockerMockChain(
 	dockerfilePath?: string,
 	buildContext?: string
 ) {
+	const localTag = TEST_CONTAINER_BUILD_TAG;
 	const mocks = [
 		mockDockerInfo(expect),
 		mockDockerBuild(
 			expect,
 			containerName,
-			tag,
+			localTag,
 			dockerfilePath || "FROM scratch",
 			buildContext || process.cwd()
 		),
-		mockDockerImageInspectDigests(expect, containerName, tag),
-		mockDockerImageInspectSize(expect, containerName, tag),
+		mockDockerImageInspectDigests(expect, containerName, localTag),
+		mockDockerImageInspectSize(expect, containerName, localTag),
 		mockDockerLogin(expect, "mockpassword"),
 		// Default manifest inspect output is invalid JSON, so Dockerfile deploy tests exercise
 		// the push path before using the post-push RepoDigests lookup.
@@ -4813,8 +4833,10 @@ function createDockerMockChain(
 			expect,
 			containerName,
 			"some-account-id/" + containerName,
+			localTag,
 			tag
 		),
+		mockDockerImageDelete(expect, containerName, localTag),
 		mockDockerPush(expect, "some-account-id/" + containerName, tag),
 		mockDockerImageInspectDigestsForImage(
 			expect,
@@ -4852,7 +4874,8 @@ function setupDockerMocks(
 		.mockImplementationOnce(mocks[4])
 		.mockImplementationOnce(mocks[5])
 		.mockImplementationOnce(mocks[6])
-		.mockImplementationOnce(mocks[7]);
+		.mockImplementationOnce(mocks[7])
+		.mockImplementationOnce(mocks[8]);
 	// Default mock for execFileSync to handle docker verification and other calls
 	vi.mocked(execFileSync).mockImplementation(
 		(_file: string, args?: readonly string[]) => {
@@ -5276,7 +5299,8 @@ function mockDockerImageInspectDigestsForImage(
 function mockDockerImageInspectDigestsWithRepoDigest(
 	expect: ExpectStatic,
 	containerName: string,
-	tag: string
+	tag: string,
+	_repoTag = tag
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
@@ -5406,14 +5430,15 @@ function mockDockerTag(
 	expect: ExpectStatic,
 	from: string,
 	to: string,
-	tag: string
+	fromTag: string,
+	toTag: string = fromTag
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"tag",
-			`${from}:${tag}`,
-			`${getCloudflareContainerRegistry()}/${to}:${tag}`,
+			`${from}:${fromTag}`,
+			`${getCloudflareContainerRegistry()}/${to}:${toTag}`,
 		]);
 		return defaultChildProcess();
 	};

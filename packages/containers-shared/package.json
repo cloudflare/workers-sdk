@@ -22,9 +22,12 @@
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
