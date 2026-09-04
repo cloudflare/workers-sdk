@@ -21,7 +21,7 @@ import {
 } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
-	workflowsChangeInstanceStatus,
+	worChangeStatusWorkflowInstance,
 	workflowsDeleteInstance,
 	workflowsGetInstanceDetails,
 	workflowsSendInstanceEvent,
@@ -462,12 +462,12 @@ function InstanceDetailView() {
 			setActionInProgress(action);
 			setError(null);
 			try {
-				await workflowsChangeInstanceStatus({
+				await worChangeStatusWorkflowInstance({
 					path: {
 						workflow_name: params.workflowName,
 						instance_id: instanceId,
 					},
-					body: { action },
+					body: { status: action },
 				});
 				await fetchDetails();
 			} catch (err) {
@@ -490,13 +490,13 @@ function InstanceDetailView() {
 		setRestartingFromStep(true);
 		setError(null);
 		try {
-			await workflowsChangeInstanceStatus({
+			await worChangeStatusWorkflowInstance({
 				path: {
 					workflow_name: params.workflowName,
 					instance_id: instanceId,
 				},
 				body: {
-					action: "restart",
+					status: "restart",
 					from: getRestartFromStepParam(restartFromStepTarget),
 				},
 			});
