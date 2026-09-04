@@ -388,12 +388,10 @@ describe("resolvePluginConfig", () => {
 		writeSource("src/prerender.ts");
 		const result = (await resolvePluginConfig(
 			{
-				experimental: {
-					prerenderWorker: {
-						config: (config, { entryWorkerConfig }) => ({
-							name: `${config.name}-${entryWorkerConfig.compatibilityDate}`,
-						}),
-					},
+				prerenderWorker: {
+					config: (config, { entryWorkerConfig }) => ({
+						name: `${config.name}-${entryWorkerConfig.compatibilityDate}`,
+					}),
 				},
 			},
 			{ root },
@@ -414,15 +412,13 @@ describe("resolvePluginConfig", () => {
 		writeSource("src/prerender.ts");
 		const result = (await resolvePluginConfig(
 			{
-				experimental: {
-					prerenderWorker: {
-						config(_, { entryWorkerConfig }) {
-							return {
-								...entryWorkerConfig,
-								name: "prerender-worker",
-								entrypoint: "./src/prerender.ts",
-							};
-						},
+				prerenderWorker: {
+					config(_, { entryWorkerConfig }) {
+						return {
+							...entryWorkerConfig,
+							name: "prerender-worker",
+							entrypoint: "./src/prerender.ts",
+						};
 					},
 				},
 			},
