@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils/errors";
+import { getDockerCommandArgs } from "./docker-command";
 import { verifyDockerInstalled } from "./utils";
 import type {
 	BuildArgs,
@@ -54,6 +55,7 @@ export async function constructBuildCommand(
  * @param options.dockerfile - The Dockerfile content to pipe into stdin.
  * @param options.verifyDockerIsRunning - When `true` (the default), verifies Docker is installed
  *   and the daemon is running before spawning the build. Set to `false` to skip the check.
+ * @param options.dockerHost - Optional Docker daemon endpoint for verification and the build.
  *
  * @returns An object with an `abort` function and a `ready` promise.
  */
@@ -63,11 +65,13 @@ export async function dockerBuild(
 		buildCmd: string[];
 		dockerfile: string;
 		verifyDockerIsRunning?: boolean;
+		dockerHost?: string;
 	}
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	if (options.verifyDockerIsRunning !== false) {
 		await verifyDockerInstalled({
 			dockerPath,
+			dockerHost: options.dockerHost,
 			imageNoun: "the image",
 		});
 	}
@@ -80,18 +84,22 @@ export async function dockerBuild(
 		reject = rej;
 	});
 
-	const child = spawn(dockerPath, options.buildCmd, {
-		stdio: ["pipe", "inherit", "inherit"],
-		// We need to set detached to true so that the child process
-		// will control all of its child processes and we can kill
-		// all of them in case we need to abort the build process.
-		// On Windows, detached: true opens a new console window per child
-		// process, so we only set it on non-Windows platforms.
-		detached: process.platform !== "win32",
-		// Prevent child processes from opening visible console windows on Windows.
-		// This is a no-op on non-Windows platforms.
-		windowsHide: true,
-	});
+	const child = spawn(
+		dockerPath,
+		getDockerCommandArgs(options.buildCmd, options.dockerHost),
+		{
+			stdio: ["pipe", "inherit", "inherit"],
+			// We need to set detached to true so that the child process
+			// will control all of its child processes and we can kill
+			// all of them in case we need to abort the build process.
+			// On Windows, detached: true opens a new console window per child
+			// process, so we only set it on non-Windows platforms.
+			detached: process.platform !== "win32",
+			// Prevent child processes from opening visible console windows on Windows.
+			// This is a no-op on non-Windows platforms.
+			windowsHide: true,
+		}
+	);
 	if (child.stdin !== null) {
 		child.stdin.write(options.dockerfile);
 		child.stdin.end();
@@ -142,13 +150,15 @@ export async function dockerBuild(
  * @param verifyDockerIsRunning - When `true` (the default), verifies Docker is installed
  *   and the daemon is running before building. Set to `false` when the caller has already
  *   performed this check.
+ * @param dockerHost - Optional Docker daemon endpoint for the build.
  *
  * @returns An object with an `abort` function and a `ready` promise.
  */
 export async function buildImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, ImageURIConfig>,
-	verifyDockerIsRunning?: boolean
+	verifyDockerIsRunning?: boolean,
+	dockerHost?: string
 ) {
 	const { buildCmd, dockerfile } = await constructBuildCommand({
 		tag: options.image_tag,
@@ -162,5 +172,6 @@ export async function buildImage(
 		buildCmd,
 		dockerfile,
 		verifyDockerIsRunning,
+		dockerHost,
 	});
 }

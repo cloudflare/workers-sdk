@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils";
-import { afterEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { resolveDockerHost } from "../src/utils";
 
 vi.mock("node:child_process");
@@ -9,6 +9,12 @@ vi.mock("node:child_process");
 describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 	"resolveDockerHost",
 	() => {
+		beforeEach(() => {
+			vi.stubEnv("WRANGLER_DOCKER_HOST", undefined);
+			vi.stubEnv("DOCKER_HOST", undefined);
+			vi.mocked(execFileSync).mockReset();
+		});
+
 		afterEach(() => {
 			vi.unstubAllEnvs();
 		});
@@ -42,6 +48,11 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 {"Current":false,"Description":"Docker Desktop","DockerEndpoint":"unix:///FROM/OTHER/CONTEXT/run/docker.sock","Error":"","Name":"desktop-linux"}`);
 			const result = resolveDockerHost("/no/op/docker");
 			expect(result).toBe("unix:///FROM/CURRENT/CONTEXT/run/docker.sock");
+			expect(execFileSync).toHaveBeenCalledWith(
+				"/no/op/docker",
+				["context", "ls", "--format", "json"],
+				{ encoding: "utf8" }
+			);
 		});
 
 		it("should fall back to platform default when context fails", ({

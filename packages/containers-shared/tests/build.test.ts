@@ -68,6 +68,7 @@ describe("dockerBuild", () => {
 			buildCmd: ["build", "-t", "test"],
 			dockerfile: "FROM node:18",
 			verifyDockerIsRunning: false,
+			dockerHost: "unix:///custom/docker.sock",
 		});
 
 		// The promise should resolve without calling docker info first.
@@ -75,7 +76,7 @@ describe("dockerBuild", () => {
 		expect(spawn).toHaveBeenCalledTimes(1);
 		expect(spawn).toHaveBeenCalledWith(
 			"docker",
-			["build", "-t", "test"],
+			["--host", "unix:///custom/docker.sock", "build", "-t", "test"],
 			expect.any(Object)
 		);
 

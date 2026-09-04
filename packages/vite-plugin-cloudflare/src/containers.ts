@@ -2,15 +2,74 @@ import path from "node:path";
 import {
 	configureOpenAPIForContainerPull,
 	getDevContainerImageName,
+	getDockerHostFromContainerEngine,
+	resolveDockerHost,
 } from "@cloudflare/containers-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCloudflareApiBaseUrl,
 	isDockerfile,
 	resolveContainerClassName,
+	UserError,
 } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	ContainerEngine,
+} from "@cloudflare/workers-utils";
+
+type WorkerWithContainerEngineConfig = {
+	config: Pick<ResolvedWorkerConfig, "containers"> & {
+		name?: string;
+		dev: Pick<
+			ResolvedWorkerConfig["dev"],
+			"container_engine" | "enable_containers"
+		>;
+	};
+};
+
+/**
+ * Selects Vite's single Miniflare container engine and rejects conflicting
+ * per-Worker endpoints.
+ *
+ * @param workers - Workers whose active container engines should be combined.
+ * @param dockerPath - Docker CLI executable used for context discovery.
+ * @returns The first active container engine, or `undefined` without containers.
+ */
+export function selectViteContainerEngine(
+	workers: Iterable<WorkerWithContainerEngineConfig>,
+	dockerPath: string
+): ContainerEngine | undefined {
+	let selected: ContainerEngine | undefined;
+	for (const { config } of workers) {
+		if (!config.dev.enable_containers || !config.containers?.length) {
+			continue;
+		}
+
+		const current =
+			config.dev.container_engine ?? resolveDockerHost(dockerPath);
+		const currentDockerHost = getDockerHostFromContainerEngine(current);
+		const selectedDockerHost =
+			selected === undefined
+				? undefined
+				: getDockerHostFromContainerEngine(selected);
+		if (
+			selectedDockerHost !== undefined &&
+			selectedDockerHost !== currentDockerHost
+		) {
+			throw new UserError(
+				`All Workers with containers in a Vite project must use the same dev.container_engine. ` +
+					`Worker "${config.name ?? "<unnamed Worker>"}" resolves to "${currentDockerHost}", but another Worker resolves to "${selectedDockerHost}". ` +
+					"Configure every Worker with the same endpoint and restart the Vite server.",
+				{ telemetryMessage: false }
+			);
+		}
+
+		selected ??= current;
+	}
+
+	return selected;
+}
 
 /**
  * Configures the Containers API client used to retrieve image pull credentials.

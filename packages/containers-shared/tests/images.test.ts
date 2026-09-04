@@ -1,14 +1,32 @@
 import { beforeEach, describe, it, vi } from "vitest";
+import { buildImage } from "../src/build";
 import { ExternalRegistryKind } from "../src/client/models/ExternalRegistryKind";
 import {
 	getEgressInterceptorPlatform,
 	pullEgressInterceptorImage,
 	getAndValidateRegistryType,
+	prepareContainerImagesForDev,
 	validateAndEncodeGarKey,
 } from "../src/images";
-import { runDockerCmd } from "../src/utils";
+import { dockerLoginImageRegistry } from "../src/login";
+import {
+	checkExposedPorts,
+	cleanupDuplicateImageTags,
+	runDockerCmd,
+	verifyDockerInstalled,
+} from "../src/utils";
+
+vi.mock("../src/build", () => ({
+	buildImage: vi.fn(() => ({ abort: vi.fn(), ready: Promise.resolve() })),
+}));
+
+vi.mock("../src/login", () => ({
+	dockerLoginImageRegistry: vi.fn(),
+}));
 
 vi.mock("../src/utils", () => ({
+	checkExposedPorts: vi.fn(),
+	cleanupDuplicateImageTags: vi.fn(),
 	runDockerCmd: vi.fn(() => ({
 		abort: vi.fn(),
 		ready: Promise.resolve({ aborted: false }),
@@ -16,6 +34,7 @@ vi.mock("../src/utils", () => ({
 			resolve();
 		},
 	})),
+	verifyDockerInstalled: vi.fn(),
 }));
 
 describe("getEgressInterceptorPlatform", () => {
@@ -40,19 +59,6 @@ describe("pullEgressInterceptorImage", () => {
 		vi.mocked(runDockerCmd).mockClear();
 	});
 
-	it("pulls the egress interceptor image without forcing a platform by default", async ({
-		expect,
-	}) => {
-		vi.stubEnv("MINIFLARE_CONTAINER_EGRESS_IMAGE", "proxy-everything:test");
-
-		await pullEgressInterceptorImage("docker");
-
-		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
-			"pull",
-			"proxy-everything:test",
-		]);
-	});
-
 	it("pulls the egress interceptor image for the configured platform", async ({
 		expect,
 	}) => {
@@ -61,11 +67,83 @@ describe("pullEgressInterceptorImage", () => {
 
 		await pullEgressInterceptorImage("docker");
 
-		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
-			"pull",
-			"proxy-everything:test",
-			"--platform",
-			"linux/arm64",
+		expect(runDockerCmd).toHaveBeenCalledWith(
+			"docker",
+			["pull", "proxy-everything:test", "--platform", "linux/arm64"],
+			undefined,
+			undefined
+		);
+	});
+});
+
+describe("prepareContainerImagesForDev", () => {
+	beforeEach(() => {
+		vi.unstubAllEnvs();
+		vi.mocked(buildImage).mockClear();
+		vi.mocked(checkExposedPorts).mockClear();
+		vi.mocked(cleanupDuplicateImageTags).mockClear();
+		vi.mocked(dockerLoginImageRegistry).mockReset();
+		vi.mocked(runDockerCmd).mockClear();
+		vi.mocked(verifyDockerInstalled).mockClear();
+	});
+
+	it("uses the selected Docker host for every preparation step", async ({
+		expect,
+	}) => {
+		const dockerHost = "unix:///custom/docker.sock";
+		const builtImage = {
+			dockerfile: "Dockerfile",
+			image_build_context: ".",
+			image_tag: "cloudflare-dev/built:build-123",
+			class_name: "BuiltContainer",
+		} as const;
+		const pulledImage = {
+			image_uri: "docker.io/example/image:latest",
+			image_tag: "cloudflare-dev/container:build-123",
+			class_name: "Container",
+		} as const;
+
+		await prepareContainerImagesForDev({
+			dockerPath: "docker",
+			dockerHost,
+			containerOptions: [builtImage, pulledImage],
+			onContainerImagePreparationStart: vi.fn(),
+			onContainerImagePreparationEnd: vi.fn(),
+			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+		});
+
+		expect(verifyDockerInstalled).toHaveBeenCalledWith(
+			expect.objectContaining({ dockerHost })
+		);
+		expect({
+			build: vi.mocked(buildImage).mock.calls[0]?.[3],
+			login: vi.mocked(dockerLoginImageRegistry).mock.calls[0]?.[2],
+			duplicateTagCleanup: vi
+				.mocked(cleanupDuplicateImageTags)
+				.mock.calls.map((call) => call[2]),
+			portInspection: vi
+				.mocked(checkExposedPorts)
+				.mock.calls.map((call) => call[2]),
+		}).toEqual({
+			build: dockerHost,
+			login: dockerHost,
+			duplicateTagCleanup: [dockerHost, dockerHost],
+			portInspection: [dockerHost, dockerHost],
+		});
+		expect(vi.mocked(runDockerCmd).mock.calls).toEqual([
+			[
+				"docker",
+				["pull", pulledImage.image_uri, "--platform", "linux/amd64"],
+				undefined,
+				dockerHost,
+			],
+			[
+				"docker",
+				["tag", pulledImage.image_uri, pulledImage.image_tag],
+				undefined,
+				dockerHost,
+			],
+			["docker", ["pull", expect.any(String)], undefined, dockerHost],
 		]);
 	});
 });

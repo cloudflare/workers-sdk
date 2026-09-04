@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
 	cleanupContainers,
 	getDevContainerImageName,
+	getDockerHostFromContainerEngine,
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
@@ -268,6 +269,8 @@ export class LocalRuntimeController extends RuntimeController {
 	containerImageTagsSeen: Set<string> = new Set();
 	// Stored here, so it can be used in `cleanupContainers()`
 	dockerPath: string | undefined;
+	// Docker endpoint paired with the Miniflare container engine.
+	dockerHost: string | undefined;
 	// If this doesn't match what is in config, trigger a rebuild.
 	// Used for the rebuild hotkey
 	#currentContainerBuildId: string | undefined;
@@ -343,17 +346,27 @@ export class LocalRuntimeController extends RuntimeController {
 			}
 
 			// Assemble container options and build if necessary
+			const hasEnabledContainers = Boolean(
+				data.config.containers?.length && data.config.dev.enableContainers
+			);
 
 			if (
-				data.config.containers?.length &&
-				data.config.dev.enableContainers &&
+				hasEnabledContainers &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
 				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
 				assert(
+					data.config.dev.containerEngine,
+					"Container engine should be set if containers are enabled and defined"
+				);
+				this.dockerHost = getDockerHostFromContainerEngine(
+					data.config.dev.containerEngine
+				);
+				assert(
 					data.config.dev.containerBuildId,
 					"Build ID should be set if containers are enabled and defined"
 				);
+				assert(data.config.containers);
 				const containerDevOptions = await getContainerDevOptions(
 					data.config.containers,
 					data.config.dev.containerBuildId
@@ -362,19 +375,24 @@ export class LocalRuntimeController extends RuntimeController {
 				for (const container of containerDevOptions) {
 					// if this was triggered by the rebuild hotkey, delete the old image
 					if (this.#currentContainerBuildId !== undefined) {
-						runDockerCmdWithOutput(this.dockerPath, [
-							"rmi",
-							getDevContainerImageName(
-								container.class_name,
-								this.#currentContainerBuildId
-							),
-						]);
+						runDockerCmdWithOutput(
+							this.dockerPath,
+							[
+								"rmi",
+								getDevContainerImageName(
+									container.class_name,
+									this.#currentContainerBuildId
+								),
+							],
+							this.dockerHost
+						);
 					}
 					this.containerImageTagsSeen.add(container.image_tag);
 				}
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 				await prepareContainerImagesForDev({
 					dockerPath: this.dockerPath,
+					dockerHost: this.dockerHost,
 					containerOptions: containerDevOptions,
 					onContainerImagePreparationStart: (buildStartEvent) => {
 						this.containerBeingBuilt = {
@@ -540,7 +558,15 @@ export class LocalRuntimeController extends RuntimeController {
 			this.dockerPath,
 			"Docker path should have been set if containers are enabled"
 		);
-		cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
+		assert(
+			this.dockerHost,
+			"Docker host should have been set if containers are enabled"
+		);
+		cleanupContainers(
+			this.dockerPath,
+			this.containerImageTagsSeen,
+			this.dockerHost
+		);
 	};
 
 	#teardown = async (): Promise<void> => {

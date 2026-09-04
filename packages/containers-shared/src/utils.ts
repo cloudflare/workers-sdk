@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { release } from "node:os";
 import { UserError } from "@cloudflare/workers-utils/errors";
+import { getDockerCommandArgs } from "./docker-command";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
 
@@ -15,7 +16,8 @@ import type { ContainerDevOptions } from "./types";
 export const runDockerCmd = (
 	dockerPath: string,
 	args: string[],
-	stdio?: StdioOptions
+	stdio?: StdioOptions,
+	dockerHost?: string
 ): {
 	abort: () => void;
 	ready: Promise<{ aborted: boolean }>;
@@ -29,7 +31,8 @@ export const runDockerCmd = (
 		resolve = res;
 		reject = rej;
 	});
-	const child = spawn(dockerPath, args, {
+	const dockerArgs = getDockerCommandArgs(args, dockerHost);
+	const child = spawn(dockerPath, dockerArgs, {
 		stdio: stdio ?? "inherit",
 		// We need to set detached to true so that the child process
 		// will control all of its child processes and we can kill
@@ -86,13 +89,18 @@ export const runDockerCmd = (
 	};
 };
 
-export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
+export const runDockerCmdWithOutput = (
+	dockerPath: string,
+	args: string[],
+	dockerHost?: string
+) => {
+	const dockerArgs = getDockerCommandArgs(args, dockerHost);
 	try {
-		const stdout = execFileSync(dockerPath, args, { encoding: "utf8" });
+		const stdout = execFileSync(dockerPath, dockerArgs, { encoding: "utf8" });
 		return stdout.trim();
 	} catch (error) {
 		throw new UserError(
-			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${args.join(" ")}`,
+			`Failed running docker command: ${(error as Error).message}. Command: ${dockerPath} ${dockerArgs.join(" ")}`,
 			{ telemetryMessage: false }
 		);
 	}
@@ -181,9 +189,17 @@ function detectWsl(): boolean {
 }
 
 /** Checks whether docker is running on the system */
-export const isDockerRunning = async (dockerPath: string) => {
+export const isDockerRunning = async (
+	dockerPath: string,
+	dockerHost?: string
+) => {
 	try {
-		await runDockerCmd(dockerPath, ["info"], ["inherit", "pipe", "pipe"]);
+		await runDockerCmd(
+			dockerPath,
+			["info"],
+			["inherit", "pipe", "pipe"],
+			dockerHost
+		);
 	} catch {
 		// We assume this command is unlikely to fail for reasons other than the Docker daemon not running, or the Docker CLI not being installed or in the PATH.
 		return false;
@@ -195,6 +211,8 @@ export const isDockerRunning = async (dockerPath: string) => {
 export type VerifyDockerInstalledOptions = {
 	/** Path to the Docker CLI executable. */
 	dockerPath: string;
+	/** Docker daemon endpoint selected for the runtime. */
+	dockerHost?: string;
 	/**
 	 * Human-readable description of the operation that requires Docker,
 	 * e.g. `"running dev"`, `"deploying"`.
@@ -228,11 +246,12 @@ export type VerifyDockerInstalledOptions = {
  */
 export const verifyDockerInstalled = async ({
 	dockerPath,
+	dockerHost,
 	operation,
 	imageNoun,
 	hint,
 }: VerifyDockerInstalledOptions) => {
-	const dockerIsRunning = await isDockerRunning(dockerPath);
+	const dockerIsRunning = await isDockerRunning(dockerPath, dockerHost);
 	if (!dockerIsRunning) {
 		throw new UserError(
 			getFailedToRunDockerErrorMessage({
@@ -261,7 +280,7 @@ function getFailedToRunDockerErrorMessage({
 	operation,
 	imageNoun,
 	hint,
-}: Omit<VerifyDockerInstalledOptions, "dockerPath">): string {
+}: Omit<VerifyDockerInstalledOptions, "dockerPath" | "dockerHost">): string {
 	const beforeOperation = operation ? ` before ${operation}` : "";
 	const headline = `The Docker CLI is needed to build ${imageNoun}${beforeOperation} but could not be launched.`;
 
@@ -296,18 +315,27 @@ function getFailedToRunDockerErrorMessage({
  */
 export const cleanupContainers = (
 	dockerPath: string,
-	imageTags: Set<string>
+	imageTags: Set<string>,
+	dockerHost: string
 ) => {
 	try {
 		// Find all containers (stopped and running) for each built image
-		const containerIds = getContainerIdsByImageTags(dockerPath, imageTags);
+		const containerIds = getContainerIdsByImageTags(
+			dockerPath,
+			imageTags,
+			dockerHost
+		);
 
 		if (containerIds.length === 0) {
 			return true;
 		}
 
 		// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
-		runDockerCmdWithOutput(dockerPath, ["rm", "--force", ...containerIds]);
+		runDockerCmdWithOutput(
+			dockerPath,
+			["rm", "--force", ...containerIds],
+			dockerHost
+		);
 		return true;
 	} catch {
 		return false;
@@ -323,14 +351,16 @@ export const cleanupContainers = (
  */
 export function getContainerIdsByImageTags(
 	dockerPath: string,
-	imageTags: Set<string>
+	imageTags: Set<string>,
+	dockerHost?: string
 ): string[] {
 	const ids = new Set<string>();
 
 	for (const imageTag of imageTags) {
 		const containerIdsFromImage = getContainerIdsFromImage(
 			dockerPath,
-			imageTag
+			imageTag,
+			dockerHost
 		);
 		containerIdsFromImage.forEach((id) => ids.add(id));
 	}
@@ -340,16 +370,21 @@ export function getContainerIdsByImageTags(
 
 export const getContainerIdsFromImage = (
 	dockerPath: string,
-	ancestorImage: string
+	ancestorImage: string,
+	dockerHost?: string
 ) => {
-	const output = runDockerCmdWithOutput(dockerPath, [
-		"ps",
-		"-a",
-		"--filter",
-		`ancestor=${ancestorImage}`,
-		"--format",
-		"{{.ID}}",
-	]);
+	const output = runDockerCmdWithOutput(
+		dockerPath,
+		[
+			"ps",
+			"-a",
+			"--filter",
+			`ancestor=${ancestorImage}`,
+			"--format",
+			"{{.ID}}",
+		],
+		dockerHost
+	);
 	return output.split("\n").filter((line) => line.trim());
 };
 
@@ -363,12 +398,17 @@ export const getContainerIdsFromImage = (
  */
 export async function checkExposedPorts(
 	dockerPath: string,
-	options: ContainerDevOptions
+	options: ContainerDevOptions,
+	dockerHost?: string
 ) {
-	const output = await dockerImageInspect(dockerPath, {
-		imageTag: options.image_tag,
-		formatString: "{{ len .Config.ExposedPorts }}",
-	});
+	const output = await dockerImageInspect(
+		dockerPath,
+		{
+			imageTag: options.image_tag,
+			formatString: "{{ len .Config.ExposedPorts }}",
+		},
+		dockerHost
+	);
 	if (output === "0") {
 		throw new UserError(
 			`The container "${options.class_name}" does not expose any ports. In your Dockerfile, please expose any ports you intend to connect to.\n` +
@@ -472,13 +512,18 @@ export const getDockerHostFromEnv = (): string => {
  */
 export async function getImageRepoTags(
 	dockerPath: string,
-	imageTag: string
+	imageTag: string,
+	dockerHost?: string
 ): Promise<string[]> {
 	try {
-		const output = await dockerImageInspect(dockerPath, {
-			imageTag,
-			formatString: "{{ range .RepoTags }}{{ . }}\n{{ end }}",
-		});
+		const output = await dockerImageInspect(
+			dockerPath,
+			{
+				imageTag,
+				formatString: "{{ range .RepoTags }}{{ . }}\n{{ end }}",
+			},
+			dockerHost
+		);
 		return output.split("\n").filter((tag) => tag.trim() !== "");
 	} catch {
 		return [];
@@ -491,10 +536,11 @@ export async function getImageRepoTags(
  */
 export async function cleanupDuplicateImageTags(
 	dockerPath: string,
-	imageTag: string
+	imageTag: string,
+	dockerHost?: string
 ): Promise<void> {
 	try {
-		const repoTags = await getImageRepoTags(dockerPath, imageTag);
+		const repoTags = await getImageRepoTags(dockerPath, imageTag, dockerHost);
 		const currentBuildId = getImageTag(imageTag);
 		// Remove all cloudflare-dev tags from previous sessions except the current dev session.
 		const tagsToRemove = repoTags.filter(
@@ -502,7 +548,7 @@ export async function cleanupDuplicateImageTags(
 				tag.startsWith("cloudflare-dev") && getImageTag(tag) !== currentBuildId
 		);
 		if (tagsToRemove.length > 0) {
-			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove]);
+			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove], dockerHost);
 		}
 	} catch {}
 }
