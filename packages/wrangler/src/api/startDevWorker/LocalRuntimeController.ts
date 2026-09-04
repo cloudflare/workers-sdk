@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
 	cleanupContainers,
-	getDevContainerImageName,
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
@@ -15,6 +14,12 @@ import {
 	Miniflare,
 	Mutex,
 } from "miniflare";
+import {
+	addDurableObjectContainerImagesBinding,
+	getContainerDevImageName,
+	getContainerDevOptions,
+	getDurableObjectContainerDefaultImageNames,
+} from "../../containers/dev";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
@@ -115,6 +120,13 @@ export async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
 	const bindings: Record<string, Binding> = { ...event.config.bindings };
+	if (event.config.dev.enableContainers ?? true) {
+		addDurableObjectContainerImagesBinding(
+			bindings,
+			event.config.containers,
+			event.config.dev.containerBuildId
+		);
+	}
 
 	const crons = [];
 	const routes = [];
@@ -216,6 +228,10 @@ export async function convertToConfigBundle(
 		streamingTails: event.config.streamingTailConsumers,
 		containerDOClassNames: new Set(
 			event.config.containers?.map((c) => c.class_name)
+		),
+		containerDefaultImageNames: getDurableObjectContainerDefaultImageNames(
+			event.config.containers,
+			event.config.dev.containerBuildId
 		),
 		containerBuildId: event.config.dev?.containerBuildId,
 		containerEngine: event.config.dev.containerEngine,
@@ -364,8 +380,8 @@ export class LocalRuntimeController extends RuntimeController {
 					if (this.#currentContainerBuildId !== undefined) {
 						runDockerCmdWithOutput(this.dockerPath, [
 							"rmi",
-							getDevContainerImageName(
-								container.class_name,
+							getContainerDevImageName(
+								container,
 								this.#currentContainerBuildId
 							),
 						]);
@@ -582,40 +598,4 @@ export class LocalRuntimeController extends RuntimeController {
 	emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
 		this.bus.dispatch(data);
 	}
-}
-
-/**
- * @returns Container options suitable for building or pulling images,
- * with image tag set to well-known dev format.
- * Undefined if containers are not enabled or not configured.
- */
-export async function getContainerDevOptions(
-	containersConfig: NonNullable<BundleCompleteEvent["config"]["containers"]>,
-	containerBuildId: string
-) {
-	const containers: ContainerDevOptions[] = [];
-	for (const container of containersConfig) {
-		if ("image_uri" in container) {
-			containers.push({
-				image_uri: container.image_uri,
-				class_name: container.class_name,
-				image_tag: getDevContainerImageName(
-					container.class_name,
-					containerBuildId
-				),
-			});
-		} else {
-			containers.push({
-				dockerfile: container.dockerfile,
-				image_build_context: container.image_build_context,
-				image_vars: container.image_vars,
-				class_name: container.class_name,
-				image_tag: getDevContainerImageName(
-					container.class_name,
-					containerBuildId
-				),
-			});
-		}
-	}
-	return containers;
 }

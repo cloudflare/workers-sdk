@@ -4,7 +4,15 @@ import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
-import { getNormalizedContainerOptions } from "../../containers/config";
+import {
+	getNormalizedContainerOptions,
+	getNormalizedContainerOptionsForDev,
+} from "../../containers/config";
+import {
+	addDurableObjectContainerImagesBinding,
+	getContainerDevOptions,
+	getDurableObjectContainerDefaultImageNames,
+} from "../../containers/dev";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -1109,6 +1117,178 @@ describe("getNormalizedContainerOptions", () => {
 				public_key:
 					"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
 			},
+		]);
+	});
+
+	it("normalizes named Durable Object Container images for local development", async ({
+		expect,
+	}) => {
+		mkdirSync("containers/minimal", { recursive: true });
+		writeFileSync("containers/minimal/Dockerfile", "FROM scratch");
+		const config = {
+			name: "test-worker",
+			configPath: path.join(process.cwd(), "wrangler.jsonc"),
+			userConfigPath: path.join(process.cwd(), "wrangler.jsonc"),
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "Sandbox",
+					name: "sandbox",
+					scheduling_policy: "durable_object",
+					images: {
+						minimal: { dockerfile: "./containers/minimal/Dockerfile" },
+						toolbox: { image: "docker.io/library/alpine:latest" },
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [{ name: "SANDBOX", class_name: "Sandbox" }],
+			},
+			exports: {
+				Sandbox: { type: "durable-object", storage: "sqlite" },
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(getNormalizedContainerOptionsForDev(config)).resolves.toEqual([
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+				image_name: "minimal",
+				dockerfile: path.join(process.cwd(), "containers/minimal/Dockerfile"),
+				image_build_context: path.join(process.cwd(), "containers/minimal"),
+			},
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+				image_name: "toolbox",
+				image_uri: "docker.io/library/alpine:latest",
+			},
+		]);
+	});
+
+	it("keeps an image-less Durable Object Container attached in local development", async ({
+		expect,
+	}) => {
+		const config = {
+			name: "test-worker",
+			configPath: path.join(process.cwd(), "wrangler.jsonc"),
+			userConfigPath: path.join(process.cwd(), "wrangler.jsonc"),
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "Sandbox",
+					name: "sandbox",
+					scheduling_policy: "durable_object",
+				},
+			],
+			durable_objects: {
+				bindings: [{ name: "SANDBOX", class_name: "Sandbox" }],
+			},
+			exports: {
+				Sandbox: { type: "durable-object", storage: "sqlite" },
+			},
+			migrations: [],
+		} as Partial<Config> as Config;
+
+		await expect(getNormalizedContainerOptionsForDev(config)).resolves.toEqual([
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+			},
+		]);
+	});
+
+	it("builds distinct local tags and exposes the named image binding", ({
+		expect,
+	}) => {
+		const containers = [
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object" as const,
+				image_name: "minimal",
+				dockerfile: "/minimal/Dockerfile",
+				image_build_context: "/minimal",
+			},
+			{
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object" as const,
+				image_name: "toolbox",
+				image_uri: "docker.io/library/alpine:latest",
+			},
+		];
+		const bindings = {};
+		const devOptions = getContainerDevOptions(containers, "build-id");
+		const minimalImage = devOptions[0].image_tag;
+		const toolboxImage = devOptions[1].image_tag;
+
+		addDurableObjectContainerImagesBinding(bindings, containers, "build-id");
+		expect(bindings).toEqual({
+			EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: {
+				type: "json",
+				value: {
+					Sandbox: {
+						minimal: minimalImage,
+						toolbox: toolboxImage,
+					},
+				},
+			},
+		});
+		expect(minimalImage).toMatch(
+			/^cloudflare-dev\/sandbox-minimal-[a-f0-9]{12}:build-id$/
+		);
+		expect(toolboxImage).toMatch(
+			/^cloudflare-dev\/sandbox-toolbox-[a-f0-9]{12}:build-id$/
+		);
+		expect(devOptions).toEqual([
+			{
+				class_name: "Sandbox",
+				image_name: "minimal",
+				image_tag: minimalImage,
+				dockerfile: "/minimal/Dockerfile",
+				image_build_context: "/minimal",
+				image_vars: undefined,
+			},
+			{
+				class_name: "Sandbox",
+				image_name: "toolbox",
+				image_tag: toolboxImage,
+				image_uri: "docker.io/library/alpine:latest",
+			},
+		]);
+		expect(
+			getDurableObjectContainerDefaultImageNames(containers, "build-id")
+		).toEqual(new Map([["Sandbox", minimalImage]]));
+	});
+
+	it("keeps local tags unique when named images have colliding slugs", ({
+		expect,
+	}) => {
+		const containers = ["Foo", "foo", "a/b", "a-b"].map((imageName) => ({
+			class_name: "Sandbox",
+			scheduling_policy: "durable_object" as const,
+			image_name: imageName,
+			image_uri: `example.com/${encodeURIComponent(imageName)}:latest`,
+		}));
+		const first = getContainerDevOptions(containers, "build-id");
+		const second = getContainerDevOptions(containers, "build-id");
+		const tags = first.map(({ image_tag }) => image_tag);
+
+		expect(new Set(tags).size).toBe(containers.length);
+		expect(second.map(({ image_tag }) => image_tag)).toEqual(tags);
+		expect(tags).toEqual([
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-foo-[a-f0-9]{12}:build-id$/
+			),
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-foo-[a-f0-9]{12}:build-id$/
+			),
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-a-b-[a-f0-9]{12}:build-id$/
+			),
+			expect.stringMatching(
+				/^cloudflare-dev\/sandbox-a-b-[a-f0-9]{12}:build-id$/
+			),
 		]);
 	});
 });

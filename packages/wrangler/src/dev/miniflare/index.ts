@@ -100,6 +100,7 @@ export interface ConfigBundle {
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
 	containerDOClassNames: Set<string> | undefined;
+	containerDefaultImageNames?: Map<string, string>;
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
@@ -484,6 +485,7 @@ type MiniflareBindingsConfig = Pick<
 	| "streamingTails"
 	| "complianceRegion"
 	| "containerDOClassNames"
+	| "containerDefaultImageNames"
 	| "containerBuildId"
 	| "enableContainers"
 > &
@@ -765,6 +767,7 @@ export function buildMiniflareBindingOptions(
 						? getImageNameFromDOClassName({
 								doClassName: className,
 								containerDOClassNames: config.containerDOClassNames,
+								containerDefaultImageNames: config.containerDefaultImageNames,
 								containerBuildId: config.containerBuildId,
 							})
 						: undefined,
@@ -1049,6 +1052,8 @@ export function buildMiniflareBindingOptions(
 									? getImageNameFromDOClassName({
 											doClassName: className,
 											containerDOClassNames: config.containerDOClassNames,
+											containerDefaultImageNames:
+												config.containerDefaultImageNames,
 											containerBuildId: config.containerBuildId,
 										})
 									: undefined,
@@ -1221,6 +1226,7 @@ export async function buildMiniflareOptions(
 export function getImageNameFromDOClassName(options: {
 	doClassName: string;
 	containerDOClassNames: Set<string>;
+	containerDefaultImageNames?: Map<string, string>;
 	containerBuildId: string | undefined;
 }): DOContainerOptions | undefined {
 	assert(
@@ -1230,10 +1236,9 @@ export function getImageNameFromDOClassName(options: {
 
 	if (options.containerDOClassNames.has(options.doClassName)) {
 		return {
-			imageName: getDevContainerImageName(
-				options.doClassName,
-				options.containerBuildId
-			),
+			imageName:
+				options.containerDefaultImageNames?.get(options.doClassName) ??
+				getDevContainerImageName(options.doClassName, options.containerBuildId),
 		};
 	}
 }

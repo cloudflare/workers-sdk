@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { stripVTControlCharacters } from "node:util";
@@ -297,6 +298,141 @@ for (const source of imageSource) {
 			expect(ids.length).toBe(1);
 			await worker.stop();
 		});
+
+		it.runIf(source === "build")(
+			"supports named Durable Object-managed Container images",
+			async ({ expect }) => {
+				const originalWorkerSource = readFileSync(
+					path.join(helper.tmpPath, "src/index.ts"),
+					"utf8"
+				);
+				await helper.seed({
+					"wrangler.json": JSON.stringify({
+						name: workerName,
+						main: "src/index.ts",
+						compatibility_date: "2025-04-03",
+						compatibility_flags: ["enable_ctx_exports"],
+						containers: [
+							{
+								name: `${workerName}-container`,
+								class_name: "E2EContainer",
+								scheduling_policy: "durable_object",
+								images: {
+									one: { dockerfile: "./container/one/Dockerfile" },
+									two: { dockerfile: "./container/two/Dockerfile" },
+								},
+							},
+						],
+						durable_objects: {
+							bindings: [{ class_name: "E2EContainer", name: "CONTAINER" }],
+						},
+						exports: {
+							E2EContainer: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: `${workerName}-container`,
+							},
+						},
+					}),
+					"src/index.ts": dedent`
+						import { DurableObject } from "cloudflare:workers";
+
+						export class E2EContainer extends DurableObject<Env> {
+							async fetch(request: Request) {
+								const url = new URL(request.url);
+								if (url.pathname.startsWith("/start/")) {
+									const imageName = url.pathname.slice("/start/".length);
+									const image = this.env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES
+										.E2EContainer[imageName];
+									if (image === undefined) {
+										return new Response("Unknown image", { status: 404 });
+									}
+									this.ctx.container!.start({
+										image,
+										entrypoint: ["node", "app.js"],
+										enableInternet: false,
+									});
+									return new Response(image);
+								}
+
+								if (url.pathname === "/fetch") {
+									return this.ctx.container!.getTcpPort(8080).fetch(request);
+								}
+
+								return new Response("Not found", { status: 404 });
+							}
+						}
+
+						export default {
+							async fetch(request, env): Promise<Response> {
+								const url = new URL(request.url);
+								const id = env.CONTAINER.idFromName(
+									url.searchParams.get("instance") ?? "default"
+								);
+								return env.CONTAINER.get(id).fetch(request);
+							},
+						} satisfies ExportedHandler<Env>;
+					`,
+					"container/one/Dockerfile": dedent`
+						FROM node:22-alpine
+						WORKDIR /usr/src/app
+						COPY app.js app.js
+						EXPOSE 8080
+					`,
+					"container/one/app.js": createImageServer("one"),
+					"container/two/Dockerfile": dedent`
+						FROM node:22-alpine
+						WORKDIR /usr/src/app
+						COPY app.js app.js
+						EXPOSE 8080
+					`,
+					"container/two/app.js": createImageServer("two"),
+				});
+
+				const worker = helper.runLongLived("wrangler dev");
+				try {
+					// A cold Docker cache can require downloading the base image before
+					// Wrangler starts the local server.
+					const ready = await worker.waitForReady(90_000);
+
+					const oneStart = await fetch(`${ready.url}/start/one?instance=one`);
+					const oneImage = await oneStart.text();
+					expect(oneStart.status).toBe(200);
+					expect(oneImage).toMatch(
+						/^cloudflare-dev\/e2econtainer-one-[a-f0-9]{12}:/
+					);
+
+					const twoStart = await fetch(`${ready.url}/start/two?instance=two`);
+					const twoImage = await twoStart.text();
+					expect(twoStart.status).toBe(200);
+					expect(twoImage).toMatch(
+						/^cloudflare-dev\/e2econtainer-two-[a-f0-9]{12}:/
+					);
+					expect(twoImage).not.toBe(oneImage);
+
+					await waitForLong(async () => {
+						const response = await fetch(`${ready.url}/fetch?instance=one`, {
+							signal: AbortSignal.timeout(5_000),
+							headers: { "MF-Disable-Pretty-Error": "true" },
+						});
+						expect(response.status).toBe(200);
+						expect(await response.text()).toBe("one");
+					});
+
+					await waitForLong(async () => {
+						const response = await fetch(`${ready.url}/fetch?instance=two`, {
+							signal: AbortSignal.timeout(5_000),
+							headers: { "MF-Disable-Pretty-Error": "true" },
+						});
+						expect(response.status).toBe(200);
+						expect(await response.text()).toBe("two");
+					});
+				} finally {
+					await worker.stop();
+					await helper.seed({ "src/index.ts": originalWorkerSource });
+				}
+			}
+		);
 
 		it("should clean up duplicate image tags after build", async ({
 			expect,
@@ -601,3 +737,12 @@ const getContainerBuildIds = (dockerPath: string, className: string) => {
 	);
 	return new Set(output.split("\n").filter((line) => line.trim()));
 };
+
+const createImageServer = (imageName: string) => dedent`
+	const { createServer } = require("http");
+
+	createServer(function (_req, res) {
+		res.writeHead(200, { "Content-Type": "text/plain" });
+		res.end(${JSON.stringify(imageName)});
+	}).listen(8080);
+`;

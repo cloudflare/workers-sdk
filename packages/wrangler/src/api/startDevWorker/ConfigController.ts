@@ -16,7 +16,7 @@ import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig, readNewConfig } from "../../config";
 import { containersScope } from "../../containers";
-import { getNormalizedContainerOptions } from "../../containers/config";
+import { getNormalizedContainerOptionsForDev } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { getBindings, getHostAndRoutes, getInferredHost } from "../../dev";
@@ -447,7 +447,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
-		containers: await getNormalizedContainerOptions(config, {}),
+		containers: await getNormalizedContainerOptionsForDev(config),
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,

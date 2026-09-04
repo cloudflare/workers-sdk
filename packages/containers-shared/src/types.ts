@@ -37,6 +37,34 @@ export type BuildArgs = {
 
 export type ContainerNormalizedConfig = SharedContainerConfig &
 	(ImageURIConfig | DockerfileConfig);
+
+/**
+ * A named image belonging to a Durable Object-managed Container application.
+ *
+ * Unlike a legacy Container application, the image is selected when
+ * `ctx.container.start()` is called. Local development still needs each image
+ * normalized into something Docker can build or pull, so Wrangler flattens the
+ * configured image map into one of these entries.
+ */
+export type DurableObjectContainerDevImageConfig = {
+	class_name: string;
+	scheduling_policy: "durable_object";
+	image_name: string;
+} & (ImageURIConfig | DockerfileConfig);
+
+/**
+ * An image-less marker keeps the Container attached to its Durable Object in
+ * local development when no named images are configured.
+ */
+export type DurableObjectContainerDevMarker = {
+	class_name: string;
+	scheduling_policy: "durable_object";
+};
+
+export type ContainerDevConfig =
+	| ContainerNormalizedConfig
+	| DurableObjectContainerDevImageConfig
+	| DurableObjectContainerDevMarker;
 export type DockerfileConfig = {
 	/** absolute path, resolved relative to the wrangler config file */
 	dockerfile: string;
@@ -100,4 +128,6 @@ export type ContainerDevOptions = {
 	image_tag: string;
 	/** container's DO class name */
 	class_name: string;
+	/** configured image key for Durable Object-managed Containers */
+	image_name?: string;
 } & (DockerfileConfig | ImageURIConfig);
