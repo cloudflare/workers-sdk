@@ -21,8 +21,8 @@ import { hasEmailTruncationWarning } from "../../components/email/EmailTruncatio
 import { SentEmailDetails } from "../../components/email/SentEmailDetails";
 import { ResourceError } from "../../components/ResourceError";
 import { getSelectedWorker } from "../../components/WorkerSelector";
-import { timeAgo } from "../../components/workflows/helpers";
 import { formatEmailAddress } from "../../utils/format";
+import { timeAgo } from "../../utils/time";
 import { toEmailId } from "./shared/types";
 import { useCursorPaginatedList } from "./shared/useCursorPaginatedList";
 import type { EmailSendingDetail, EmailSendingItem } from "../../api";

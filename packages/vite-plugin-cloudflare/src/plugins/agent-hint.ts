@@ -85,6 +85,7 @@ function printLocalExplorerAgentHint(
 			`  GET ${explorerApiUrl}/r2/buckets - R2 buckets`,
 			`  GET ${explorerApiUrl}/workers/durable_objects/namespaces - Durable Object namespaces`,
 			`  GET ${explorerApiUrl}/workflows - Workflows`,
+			`  GET ${explorerApiUrl}/flagship/apps - Flagship apps`,
 			`  POST ${explorerApiUrl}/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:`,
 			`    curl -X POST ${explorerApiUrl}/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'`,
 			`If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):`,

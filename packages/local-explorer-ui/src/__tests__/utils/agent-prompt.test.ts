@@ -21,6 +21,9 @@ describe("llm-prompt utils", () => {
 
 		expect(prompt).toContain(`API endpoint: ${TEST_API_ENDPOINT}`);
 		expect(prompt).toContain(
+			"You have access to local Cloudflare services (KV, R2, D1, Durable Objects, Workflows, and Flagship)"
+		);
+		expect(prompt).toContain(
 			`Fetch the OpenAPI schema from ${TEST_API_ENDPOINT}`
 		);
 	});

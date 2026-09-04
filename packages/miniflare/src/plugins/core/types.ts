@@ -8,6 +8,13 @@ export type BindingIdMap = {
 	do: Record<string, DONamespaceInfo & { binding: string }>; // uniqueKey -> namespace info
 	r2: Record<string, string>; // bucketName -> bindingName
 	workflows: Record<string, WorkflowBindingInfo>; // workflowName -> binding info
+	flagship: Record<string, FlagshipBindingInfo>; // appId -> binding info
+};
+
+export type FlagshipBindingInfo = {
+	appId: string; // Flagship app id
+	binding: string; // service binding name in the explorer's env
+	bindings: string[]; // user-facing binding names using this app
 };
 
 type DONamespaceInfo = {
@@ -52,6 +59,11 @@ export type WorkerResourceBindings = {
 		scriptName: string;
 	}[];
 	sendEmail: {
+		bindingName: string;
+	}[];
+	flagship: {
+		/** id = Flagship app id */
+		id: string;
 		bindingName: string;
 	}[];
 };
