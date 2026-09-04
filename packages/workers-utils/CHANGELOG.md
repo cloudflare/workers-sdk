@@ -1,5 +1,11 @@
 # @cloudflare/workers-utils
 
+## 0.36.0
+
+### Minor Changes
+
+- [#15390](https://github.com/cloudflare/workers-sdk/pull/15390) [`fd17fc5`](https://github.com/cloudflare/workers-sdk/commit/fd17fc5c5fb86423e37ff5b142391e03cd7dbf59) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add shared local env loading helpers with Vite-compatible `.env` file resolution and Wrangler-compatible parsing and expansion. Mode-specific `.dev.vars` files are selected exclusively and are not merged with `.env` files or process values.
+
 ## 0.35.0
 
 ### Minor Changes
