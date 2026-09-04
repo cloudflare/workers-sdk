@@ -125,6 +125,7 @@ export type StreamJsonFormat = {
 // Format types
 export type JsonFormat = {
 	type: "json";
+	compression?: "uncompressed" | "gzip";
 };
 
 export type ParquetFormat = {

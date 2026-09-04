@@ -192,7 +192,7 @@ jobs:
         run: pnpm test:ci --filter @cloudflare/vitest-plugin
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
-          VITEST_VERSION: "4.1.0"
+          VITEST_VERSION: "4.1.11"
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (fixtures)

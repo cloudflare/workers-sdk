@@ -17,6 +17,29 @@ import type {
 } from "miniflare";
 
 describe("DevRegistry", { concurrent: false }, () => {
+	test("waits for the filesystem watcher to be ready", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+
+		try {
+			const watching = registry.watch(
+				new Map([["worker", { classNames: new Set(), entrypoints: new Set() }]])
+			);
+			expect(watching).toBeInstanceOf(Promise);
+			await watching;
+
+			// Subsequent calls must reuse the settled readiness promise rather than
+			// waiting for another `ready` event that will never be emitted.
+			await registry.watch(new Map(), true);
+		} finally {
+			await registry.dispose();
+		}
+	});
+
 	test("surfaces fresh legacy entries and removes them when stale", async ({
 		expect,
 	}) => {

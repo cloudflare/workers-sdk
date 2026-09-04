@@ -198,53 +198,9 @@ function withSourceUrl(contents: string, url: string | URL): string {
 	return contents + sourceURL;
 }
 
-async function withImportMetaUrl(
-	contents: string,
-	url: string | URL
-): Promise<string> {
+function withImportMetaUrl(contents: string, url: string | URL): string {
 	// TODO(soon): this isn't perfect, ideally need `workerd` support
-	await esModuleLexer.init;
-	const [imports] = esModuleLexer.parse(contents);
-	for (let i = imports.length - 1; i >= 0; i--) {
-		const imported = imports[i];
-		if (
-			imported.d === -2 &&
-			contents.slice(imported.se, imported.se + 4) === ".url"
-		) {
-			contents =
-				contents.slice(0, imported.ss) +
-				JSON.stringify(url.toString()) +
-				contents.slice(imported.se + 4);
-		}
-	}
-	return contents;
-}
-
-async function withVitestCoverageWriter(
-	contents: string,
-	filePath: string
-): Promise<string> {
-	if (
-		!/[/\\]@vitest[/\\]coverage-istanbul[/\\]dist[/\\]index\.js$/.test(filePath)
-	) {
-		return contents;
-	}
-	await esModuleLexer.init;
-	const [imports] = esModuleLexer.parse(contents);
-	for (let i = imports.length - 1; i >= 0; i--) {
-		const imported = imports[i];
-		if (
-			imported.d === -1 &&
-			imported.n !== undefined &&
-			/^\.\/commands-.+\.js$/.test(imported.n)
-		) {
-			contents =
-				contents.slice(0, imported.s) +
-				"cloudflare:vitest-coverage" +
-				contents.slice(imported.e);
-		}
-	}
-	return contents;
+	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
 }
 
 // Extensions that Node's `require()` probes automatically but `workerd` won't.
@@ -685,8 +641,11 @@ async function load(
 
 	if (module.kind === "esm") {
 		// Respond with ES module
-		contents = await withImportMetaUrl(contents, targetUrl);
-		contents = await withVitestCoverageWriter(contents, filePath);
+		// Vitest 5 includes `import.meta.url` in diagnostic prose. Rewriting it
+		// would insert an unescaped string literal into the surrounding string.
+		if (!/[/\\]vitest[/\\]dist[/\\]module-evaluator\.js$/.test(filePath)) {
+			contents = withImportMetaUrl(contents, targetUrl);
+		}
 		debuglog(logBase, "esm:", filePath);
 		return buildModuleResponse(rawTarget, { esModule: contents });
 	}
@@ -1071,11 +1030,7 @@ async function loadV2Module(
 
 	if (module.kind === "esm") {
 		debuglog(logBase, "esm:", filePath);
-		return {
-			contents: {
-				esModule: await withVitestCoverageWriter(module.contents, filePath),
-			},
-		};
+		return { contents: { esModule: module.contents } };
 	}
 
 	debuglog(logBase, "cjs:", filePath);

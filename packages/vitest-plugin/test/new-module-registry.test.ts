@@ -30,13 +30,11 @@ test("uses the new module registry fallback protocol", async ({
 			`,
 		"node_modules/nmr-test-dependency/value.mjs": "export const value = 42;",
 		"index.test.ts": dedent`
-				import { createExecutionContext } from "cloudflare:test";
 				import dependency, { named } from "./dependency.cjs";
 				import { it } from "vitest";
 				import { load } from "nmr-test-dependency";
 
 				it("uses native module registry semantics", async ({ expect }) => {
-					expect(createExecutionContext()).toBeDefined();
 					expect(dependency.defaultValue).toBe("commonjs");
 					expect(named).toBe(42);
 					expect(import.meta.resolve("./helper.ts")).toBe(
@@ -68,30 +66,13 @@ test("keeps using the legacy fallback protocol when explicitly requested", async
 			},
 		}),
 		"dependency.cjs": "exports.value = 42;",
-		"node_modules/legacy-test-dependency/package.json": JSON.stringify({
-			name: "legacy-test-dependency",
-			type: "module",
-			exports: "./index.mjs",
-		}),
-		"node_modules/legacy-test-dependency/index.mjs": dedent`
-				export function load(name) {
-					return import(\`./\${name}.mjs\`);
-				}
-			`,
-		"node_modules/legacy-test-dependency/value.mjs": "export const value = 42;",
 		"index.test.ts": dedent`
-				import { createExecutionContext } from "cloudflare:test";
 				import dependency, { value } from "./dependency.cjs";
 				import { it } from "vitest";
-				import { load } from "legacy-test-dependency";
 
-				it("uses legacy module registry semantics", async ({ expect }) => {
-					expect(createExecutionContext()).toBeDefined();
+				it("uses legacy module registry semantics", ({ expect }) => {
 					expect(dependency.value).toBe(42);
 					expect(value).toBe(42);
-
-					const computed = await load("value");
-					expect(computed.value).toBe(42);
 				});
 			`,
 	});

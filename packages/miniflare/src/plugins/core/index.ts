@@ -984,6 +984,7 @@ export function getGlobalServices({
 			}
 		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
 			workflowOptions
@@ -1004,6 +1005,7 @@ export function getGlobalServices({
 				explorerWorkerOpts,
 				telemetry: sharedOptions.telemetry,
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
+				sharedOptions,
 			})
 		);
 	}

@@ -12,7 +12,11 @@ interface UnsafeEval {
 	): (...args: unknown[]) => unknown;
 }
 
-declare var __vitestWriteCoverageFile: (options: unknown) => Promise<string>;
+declare var __vitest_browser_runner__: {
+	commands: {
+		triggerCommand(command: string, args?: unknown[]): Promise<string>;
+	};
+};
 
 namespace Cloudflare {
 	interface Env extends Record<string, unknown> {

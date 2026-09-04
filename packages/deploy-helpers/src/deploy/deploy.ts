@@ -466,11 +466,14 @@ async function deployWorker(
 		});
 	} else {
 		assert(accountId, "Missing accountId");
+		let provisionBindingsResult:
+			| Awaited<ReturnType<typeof provisionBindings>>
+			| undefined;
 
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
 		} else if (props.resourcesProvision) {
-			await provisionBindings(
+			provisionBindingsResult = await provisionBindings(
 				bindings ?? {},
 				accountId,
 				scriptName,
@@ -633,6 +636,7 @@ async function deployWorker(
 				containers: config.containers,
 				unsafeMetadata: config.unsafe?.metadata,
 			});
+			provisionBindingsResult?.warnOnSkippedProvisioning();
 
 			versionId = parseNonHyphenedUuid(result.deployment_id);
 

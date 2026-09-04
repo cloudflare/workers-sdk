@@ -3,6 +3,7 @@ import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { fetchLocalResult, localWorkflowArgs } from "../local";
+import { jsonWorkflowArgs } from "../utils";
 
 export const workflowsDeleteCommand = createCommand({
 	metadata: {
@@ -13,6 +14,7 @@ export const workflowsDeleteCommand = createCommand({
 	},
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -20,14 +22,24 @@ export const workflowsDeleteCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name"],
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 
 	async handler(args, { config }) {
+		let result: unknown;
+
 		if (args.local) {
-			await fetchLocalResult(
+			result = await fetchLocalResult(
 				args.port,
 				`/workflows/${encodeURIComponent(args.name)}`,
 				{ method: "DELETE" }
 			);
+
+			if (args.json) {
+				logger.json(result);
+				return;
+			}
 
 			logger.log(
 				`✅ Workflow "${args.name}" instances removed successfully from local dev session.`
@@ -35,11 +47,16 @@ export const workflowsDeleteCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 
-			await fetchResult(
+			result = await fetchResult(
 				config,
 				`/accounts/${accountId}/workflows/${args.name}`,
 				{ method: "DELETE" }
 			);
+
+			if (args.json) {
+				logger.json(result);
+				return;
+			}
 
 			logger.log(
 				`✅ Workflow "${args.name}" removed successfully. \n Note that running instances might take a few minutes to be properly terminated.`

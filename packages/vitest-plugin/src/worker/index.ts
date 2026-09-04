@@ -164,33 +164,16 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	});
 }
 
-interface CoverageRuntimeOptions {
-	coverage: unknown;
-	coverageFilesDirectory: string;
-}
-
-function isCoverageRuntimeOptions(
-	value: unknown
-): value is CoverageRuntimeOptions {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"coverage" in value &&
-		"coverageFilesDirectory" in value &&
-		typeof value.coverageFilesDirectory === "string"
-	);
-}
-
 async function writeCoverageFile(
 	loopback: Fetcher,
-	options: unknown
+	coverageFilesDirectory: string,
+	coverage: unknown
 ): Promise<string> {
-	assert(isCoverageRuntimeOptions(options), "Invalid coverage runtime options");
 	const url = new URL("http://placeholder/coverage");
-	url.searchParams.set("directory", options.coverageFilesDirectory);
+	url.searchParams.set("directory", coverageFilesDirectory);
 	const response = await loopback.fetch(url, {
 		method: "POST",
-		body: JSON.stringify(options.coverage),
+		body: JSON.stringify(coverage),
 	});
 	if (!response.ok) {
 		throw new Error(`Failed to write coverage file: ${response.status}`);
@@ -217,15 +200,23 @@ function applyDefines() {
 
 // `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton
 export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject {
-	readonly #loopback: Fetcher;
-
 	constructor(_state: DurableObjectState, doEnv: Cloudflare.Env) {
 		super(_state, doEnv);
-		this.#loopback = doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE;
 		vm._setUnsafeEval(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
-		globalThis.__vitestWriteCoverageFile = (options) =>
-			writeCoverageFile(this.#loopback, options);
+		globalThis.__vitest_browser_runner__ = {
+			commands: {
+				triggerCommand: (command, args = []) => {
+					assert.strictEqual(command, "__vitest_writeCoverageFile");
+					assert.strictEqual(args.length, 1);
+					return writeCoverageFile(
+						doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
+						__vitest_worker__.config.coverage.coverageFilesDirectory,
+						args[0]
+					);
+				},
+			},
+		};
 		applyDefines();
 	}
 
@@ -314,8 +305,9 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			// `import()` inside an entrypoint handler (which runs in a *different*
 			// DO context) fails with "Cannot perform I/O on behalf of a different
 			// Durable Object". See: https://github.com/cloudflare/workers-sdk/issues/12924
-			onModuleRunner: (moduleRunner: unknown) => {
+			onModuleRunner(moduleRunner: unknown) {
 				const runner = moduleRunner as {
+					isBrowser?: boolean;
 					evaluator?: { createRequire?: CreateRequire };
 					options?: {
 						createImportMeta?: (
@@ -326,6 +318,9 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					};
 					transport?: { invoke?: (...args: unknown[]) => unknown };
 				};
+				// Vitest's browser coverage provider delegates filesystem writes to
+				// its host, which is also required when running inside workerd.
+				runner.isBrowser = true;
 				if (runner.evaluator?.createRequire) {
 					const originalCreateRequire = runner.evaluator.createRequire.bind(
 						runner.evaluator
@@ -360,40 +355,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				if (runner.transport?.invoke) {
 					const originalInvoke = runner.transport.invoke.bind(runner.transport);
 					runner.transport.invoke = (...args: unknown[]) => {
-						return runInRunnerObject(() => originalInvoke(...args)).then(
-							(result) => {
-								const data = args[1];
-								const id = Array.isArray(data) ? data[0] : undefined;
-								if (
-									args[0] === "fetchModule" &&
-									typeof id === "string" &&
-									typeof result === "object" &&
-									result !== null &&
-									"externalize" in result
-								) {
-									const externalize = result.externalize;
-									const moduleId =
-										typeof externalize === "string" ? externalize : id;
-									if (
-										!/[/\\]vitest[/\\]dist[/\\]index\.js(?:\?|$)/.test(moduleId)
-									) {
-										return result;
-									}
-									// Vitest 5 always externalizes its public API because Node has
-									// already cached it. Legacy workerd exposes that native ESM
-									// namespace as default-only, so bridge to Vitest's initialized
-									// singleton instead.
-									return {
-										code: "Object.assign(__vite_ssr_exports__, globalThis.__vitest_index__);",
-										file: id,
-										id,
-										url: id,
-										invalidate: false,
-									};
-								}
-								return result;
-							}
-						);
+						return runInRunnerObject(() => originalInvoke(...args));
 					};
 				} else {
 					__console.warn(

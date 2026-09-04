@@ -434,6 +434,45 @@ describe("built-ins unavailable at the Worker's compatibility settings", () => {
 	});
 });
 
+describe("legacy import.meta.url rewriting", () => {
+	let tmp: string;
+
+	beforeEach(() => {
+		tmp = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "mf-fallback-import-meta-"))
+		);
+	});
+
+	afterEach(() => {
+		removeDirSync(tmp);
+	});
+
+	it("preserves Vitest 5's import.meta.url diagnostic", async ({ expect }) => {
+		const distPath = path.join(tmp, "node_modules", "vitest", "dist");
+		fs.mkdirSync(distPath, { recursive: true });
+		fs.writeFileSync(
+			path.join(tmp, "node_modules", "vitest", "package.json"),
+			JSON.stringify({ type: "module" })
+		);
+		const filePath = path.join(distPath, "module-evaluator.js");
+		const contents = String.raw`export const message = "use \"import\" declarations or \"createRequire(import.meta.url)\" instead of \"require\"";`;
+		fs.writeFileSync(filePath, contents);
+
+		const response = await handleModuleFallbackRequest(
+			fakeVite(),
+			moduleFallbackRequest({
+				method: "import",
+				specifier: toWorkerdSpecifier(filePath),
+				referrer: toWorkerdSpecifier(path.join(tmp, "entry.mjs")),
+			})
+		);
+		const body = (await response.json()) as { esModule?: string };
+
+		expect(response.status).toBe(200);
+		expect(body.esModule).toContain(contents);
+	});
+});
+
 describe("handleModuleFallbackRequest new module registry", () => {
 	let tmp: string;
 

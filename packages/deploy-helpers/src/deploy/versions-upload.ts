@@ -261,10 +261,13 @@ async function uploadWorkerVersion(
 		});
 	} else {
 		assert(accountId, "Missing accountId");
+		let provisionBindingsResult:
+			| Awaited<ReturnType<typeof provisionBindings>>
+			| undefined;
 		if (assetsOptions?.routerConfig.has_user_worker === false) {
 			logger.debug("skipping provisioning on assets-only project");
 		} else if (props.resourcesProvision) {
-			await provisionBindings(
+			provisionBindingsResult = await provisionBindings(
 				bindings,
 				accountId,
 				scriptName,
@@ -314,6 +317,7 @@ async function uploadWorkerVersion(
 				streamingTailConsumers: config.streaming_tail_consumers,
 				unsafeMetadata: config.unsafe?.metadata,
 			});
+			provisionBindingsResult?.warnOnSkippedProvisioning();
 			versionId = result.id;
 			hasPreview = result.metadata.has_preview;
 		} catch (err) {
