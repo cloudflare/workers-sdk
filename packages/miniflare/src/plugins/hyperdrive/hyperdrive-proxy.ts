@@ -121,12 +121,50 @@ const EDGE_CLOSE_GRACE_MS = 1_000;
 export class HyperdriveProxyController {
 	// Map hyperdrive binding name to proxy server
 	#servers = new Map<string, net.Server>();
+	// Sockets currently accepted by each server, keyed the same way as
+	// `#servers`. `net.Server#close()` only stops new connections — it leaves
+	// already-accepted sockets running until they end on their own — so a
+	// server torn down on a dev reload (see `createRemoteTcpBridge`) would
+	// otherwise leak every connection that was live at that moment for the
+	// rest of the process's life. Tracked here so teardown can destroy them.
+	#connections = new Map<string, Set<net.Socket>>();
 	// Port of the local TCP bridge standing in for each remote binding, so that
 	// Node-side bindings can expose an address Node can actually dial (the
 	// `*.hyperdrive.local` host in the connection string only resolves inside
 	// workerd).
 	#remoteBridgePorts = new Map<string, number>();
 	log?: Log;
+
+	/**
+	 * Tracks a server's accepted socket so it can be forced closed on
+	 * teardown, and stops tracking it once the socket ends on its own.
+	 */
+	#trackConnection(key: string, socket: net.Socket): void {
+		let sockets = this.#connections.get(key);
+		if (!sockets) {
+			sockets = new Set();
+			this.#connections.set(key, sockets);
+		}
+		sockets.add(socket);
+		socket.once("close", () => sockets.delete(socket));
+	}
+
+	/**
+	 * Stops a server from accepting new connections and destroys every
+	 * connection it already accepted, so nothing from a torn-down round
+	 * survives it. Safe to call for a key with no server registered.
+	 */
+	#teardownServer(key: string): void {
+		this.#servers.get(key)?.close();
+		this.#servers.delete(key);
+		const sockets = this.#connections.get(key);
+		if (sockets) {
+			for (const socket of sockets) {
+				socket.destroy();
+			}
+			this.#connections.delete(key);
+		}
+	}
 
 	/**
 	 * Creates a proxy server for a Hyperdrive binding.
@@ -138,6 +176,7 @@ export class HyperdriveProxyController {
 		const { name, targetHost, targetPort, scheme, sslmode, sslrootcert } =
 			config;
 		const server = net.createServer((clientSocket) => {
+			this.#trackConnection(name, clientSocket);
 			this.#handleConnection(
 				clientSocket,
 				targetHost,
@@ -274,6 +313,7 @@ export class HyperdriveProxyController {
 		const wsHref = wsUrl.href;
 
 		const server = net.createServer((clientSocket) => {
+			this.#trackConnection(`remote:${name}`, clientSocket);
 			this.#handleRemoteBridgeConnection(clientSocket, wsHref, bindingName);
 		});
 		server.on("error", (err) => {
@@ -296,9 +336,14 @@ export class HyperdriveProxyController {
 			});
 		});
 		// `getServices` re-runs on every `setOptions` (i.e. every dev reload), so
-		// close the bridge from the previous round before replacing it — otherwise
-		// the old listener and its live edge relays leak for the session's lifetime.
-		this.#servers.get(`remote:${name}`)?.close();
+		// tear down the bridge from the previous round before replacing it —
+		// otherwise its listener keeps running, and any connections it had open
+		// at reload time (a query in flight, or a pooled connection a driver is
+		// holding onto) leak for the rest of the process's life. A plain
+		// `server.close()` only stops new connections; already-accepted sockets
+		// are left alone until they end on their own, which for a live DB
+		// connection may be never.
+		this.#teardownServer(`remote:${name}`);
 		this.#servers.set(`remote:${name}`, server);
 		this.#remoteBridgePorts.set(name, port);
 		return port;
@@ -399,14 +444,16 @@ export class HyperdriveProxyController {
 
 	/** Disposes of the proxy servers when shutting down the worker.*/
 	dispose(): void {
-		// Stop accepting new connections on each proxy server. We don't await
-		// server.close() because net.Server waits for all existing connections
-		// to end before calling the callback, and lingering TCP sockets (e.g.
-		// from in-progress TLS negotiation) could block dispose indefinitely.
-		for (const server of this.#servers.values()) {
-			server.close();
+		// Destroying every tracked connection (rather than only closing the
+		// listener) is what makes this safe to call synchronously: a
+		// `server.close()` alone waits for existing connections to end before
+		// its callback fires, and a lingering one (e.g. from in-progress TLS
+		// negotiation, or a live DB connection) could block dispose forever.
+		// Snapshot the keys before iterating: `#teardownServer` deletes from
+		// `#servers` as it goes.
+		for (const key of [...this.#servers.keys()]) {
+			this.#teardownServer(key);
 		}
-		this.#servers.clear();
 	}
 }
 
