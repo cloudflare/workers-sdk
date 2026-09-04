@@ -200,14 +200,15 @@ export function wrapResponse<T>(
 export function errorResponse(
 	status: number,
 	code: number,
-	message: string
+	message: string,
+	result: unknown = null
 ): Response {
 	return Response.json(
 		{
 			success: false,
 			errors: [{ code, message }],
 			messages: [],
-			result: null,
+			result,
 		},
 		{ status }
 	);

@@ -1,6 +1,7 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
+import { KVLimits } from "../../../src/workers/kv/constants";
 import {
 	zWorkersKvNamespaceDeleteKeyValuePairResponse,
 	zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse,
@@ -452,25 +453,35 @@ describe("KV API", () => {
 	});
 
 	describe("bulk operation execution", () => {
-		test("continues after failures and preserves request order", async ({
+		test("runs concurrently and reports sorted failures", async ({
 			expect,
 		}) => {
-			const calls: string[] = [];
-			const result = await executeKVBulkOperations(
-				[{ key: "first" }, { key: "fails" }, { key: "last" }],
+			let activeOperations = 0;
+			let maxActiveOperations = 0;
+			const execution = await executeKVBulkOperations(
+				[
+					{ key: "z-fails" },
+					{ key: "first" },
+					{ key: "a-fails" },
+					{ key: "last" },
+				],
 				async ({ key }) => {
-					calls.push(key);
-					if (key === "fails") {
+					activeOperations++;
+					maxActiveOperations = Math.max(maxActiveOperations, activeOperations);
+					await new Promise((resolve) => setTimeout(resolve, 1));
+					activeOperations--;
+					if (key.endsWith("fails")) {
 						throw new Error("storage failure");
 					}
 				}
 			);
 
-			expect(calls).toEqual(["first", "fails", "last"]);
-			expect(result).toEqual({
+			expect(maxActiveOperations).toBe(4);
+			expect(execution.result).toEqual({
 				successful_key_count: 2,
-				unsuccessful_keys: ["fails"],
+				unsuccessful_keys: ["a-fails", "z-fails"],
 			});
+			expect(execution.error).toEqual(expect.any(Error));
 		});
 	});
 
@@ -504,8 +515,6 @@ describe("KV API", () => {
 							expiration: 1,
 							expiration_ttl: 120,
 						},
-						{ key: "bulk-duplicate", value: "first" },
-						{ key: "bulk-duplicate", value: "last" },
 					]),
 				}
 			);
@@ -516,13 +525,12 @@ describe("KV API", () => {
 				expect
 			);
 			expect(data.result).toEqual({
-				successful_key_count: 8,
+				successful_key_count: 6,
 				unsuccessful_keys: [],
 			});
 
 			const kv = await mf.getKVNamespace("TEST_KV");
 			expect(await kv.get("bulk-text")).toBe("hello");
-			expect(await kv.get("bulk-duplicate")).toBe("last");
 			const binary = await kv.get("bulk-binary", { type: "arrayBuffer" });
 			expect(new Uint8Array(binary ?? new ArrayBuffer(0))).toEqual(
 				Uint8Array.from([0, 1, 2, 127, 128, 254, 255])
@@ -543,6 +551,115 @@ describe("KV API", () => {
 				listed.keys.find(({ name }) => name === "bulk-ttl-precedence")
 					?.expiration
 			).toBeGreaterThan(Math.floor(Date.now() / 1000) + 50);
+		});
+
+		test("returns a failure envelope containing the partial result", async ({
+			expect,
+		}) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			const oversizedValue = "é".repeat(KVLimits.MAX_VALUE_SIZE_BYTES / 2 + 1);
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "partial-success-one", value: "one" },
+						{ key: "partial-too-large", value: oversizedValue },
+						{ key: "partial-success-two", value: "two" },
+					]),
+				}
+			);
+
+			const status = response.status;
+			const data = await response.json();
+			expect(status).toBe(413);
+			expect(data).toMatchObject({
+				success: false,
+				errors: [{ code: 10001 }],
+				result: {
+					successful_key_count: 2,
+					unsuccessful_keys: ["partial-too-large"],
+				},
+			});
+			expect(await kv.get("partial-success-one")).toBe("one");
+			expect(await kv.get("partial-success-two")).toBe("two");
+			expect(await kv.get("partial-too-large")).toBeNull();
+		});
+
+		test("collapses equivalent duplicate writes after decoding", async ({
+			expect,
+		}) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{
+							key: "equivalent-duplicate",
+							value: "hello",
+							metadata: { first: 1, second: 2 },
+						},
+						{
+							key: "equivalent-duplicate",
+							value: "aGVsbG8=",
+							base64: true,
+							metadata: { second: 2, first: 1 },
+						},
+					]),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: { successful_key_count: 1, unsuccessful_keys: [] },
+			});
+			const kv = await mf.getKVNamespace("TEST_KV");
+			expect(await kv.get("equivalent-duplicate")).toBe("hello");
+		});
+
+		test("rejects duplicate keys with different values", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "conflicting-duplicate", value: "first" },
+						{ key: "conflicting-duplicate", value: "second" },
+					]),
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({ success: false });
+			const kv = await mf.getKVNamespace("TEST_KV");
+			expect(await kv.get("conflicting-duplicate")).toBeNull();
+		});
+
+		test("preserves explicit null metadata", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify([
+						{ key: "bulk-null-metadata", value: "value", metadata: null },
+					]),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
+
+			const listResponse = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=bulk-null-metadata`
+			);
+			expect(await listResponse.json()).toMatchObject({
+				result: [{ name: "bulk-null-metadata", metadata: null }],
+			});
 		});
 
 		test("preflights every item before writing", async ({ expect }) => {
@@ -671,6 +788,7 @@ describe("KV API", () => {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify([
+						"bulk-delete-one",
 						"bulk-delete-one",
 						"bulk-delete-missing",
 						"bulk-delete-two",

@@ -1,26 +1,32 @@
 import type { WorkersKvBulkResult } from "../generated";
 
+export interface KVBulkExecutionResult {
+	result: WorkersKvBulkResult;
+	error: unknown | undefined;
+}
+
 /**
- * Execute prepared KV mutations sequentially and report per-key failures.
+ * Execute prepared KV mutations concurrently and report per-key failures.
  */
 export async function executeKVBulkOperations<T extends { key: string }>(
 	operations: T[],
 	mutate: (operation: T) => Promise<void>
-): Promise<WorkersKvBulkResult> {
-	let successfulKeyCount = 0;
-	const unsuccessfulKeys: string[] = [];
-
-	for (const operation of operations) {
-		try {
-			await mutate(operation);
-			successfulKeyCount++;
-		} catch {
-			unsuccessfulKeys.push(operation.key);
-		}
-	}
+): Promise<KVBulkExecutionResult> {
+	const failures: Array<{ key: string; error: unknown }> = [];
+	await Promise.all(
+		operations.map((operation) =>
+			mutate(operation).catch((error: unknown) => {
+				failures.push({ key: operation.key, error });
+			})
+		)
+	);
+	const unsuccessfulKeys = failures.map(({ key }) => key).sort();
 
 	return {
-		successful_key_count: successfulKeyCount,
-		unsuccessful_keys: unsuccessfulKeys,
+		result: {
+			successful_key_count: operations.length - unsuccessfulKeys.length,
+			unsuccessful_keys: unsuccessfulKeys,
+		},
+		error: failures[0]?.error,
 	};
 }

@@ -4,7 +4,7 @@ import { validateKey, validatePutOptions } from "../../kv/validator.worker";
 import { SharedHeaders } from "../../shared/constants";
 import { aggregateListResults } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import { executeKVBulkOperations } from "./kv-bulk";
+import { executeKVBulkOperations, type KVBulkExecutionResult } from "./kv-bulk";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkersKvNamespace } from "../generated";
@@ -59,12 +59,20 @@ async function toKVErrorResponse(
 	response: Response,
 	code = 10000
 ): Promise<Response> {
-	const message = await response.text();
 	return errorResponse(
 		response.status,
 		code,
-		message || response.statusText || "Internal KV request failed"
+		await getKVErrorMessage(response)
 	);
+}
+
+async function getKVErrorMessage(response: Response): Promise<string> {
+	const fallback = response.statusText || "Internal KV request failed";
+	try {
+		return (await response.text()) || fallback;
+	} catch {
+		return fallback;
+	}
 }
 
 /**
@@ -99,6 +107,8 @@ interface PreparedKVWrite {
 	metadata?: unknown;
 }
 
+const textEncoder = new TextEncoder();
+
 function decodeBase64(value: string): Uint8Array {
 	try {
 		return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
@@ -107,12 +117,69 @@ function decodeBase64(value: string): Uint8Array {
 	}
 }
 
+/* Safely serialise values for comparison in de-duplication */
+function stableStringify(value: unknown): string | undefined {
+	if (Array.isArray(value)) {
+		return `[${value.map(stableStringify).join(",")}]`;
+	}
+	if (value !== null && typeof value === "object") {
+		const record = value as Record<string, unknown>;
+		return `{${Object.keys(record)
+			.sort()
+			.map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+			.join(",")}}`;
+	}
+	return JSON.stringify(value);
+}
+
+function valuesEqual(
+	left: string | Uint8Array,
+	right: string | Uint8Array
+): boolean {
+	const leftBytes = typeof left === "string" ? textEncoder.encode(left) : left;
+	const rightBytes =
+		typeof right === "string" ? textEncoder.encode(right) : right;
+	return (
+		leftBytes.byteLength === rightBytes.byteLength &&
+		leftBytes.every((byte, index) => byte === rightBytes[index])
+	);
+}
+
+function preparedKVWritesEqual(
+	left: PreparedKVWrite,
+	right: PreparedKVWrite
+): boolean {
+	return (
+		valuesEqual(left.value, right.value) &&
+		left.expiration === right.expiration &&
+		left.expirationTtl === right.expirationTtl &&
+		stableStringify(left.metadata) === stableStringify(right.metadata)
+	);
+}
+
+function deduplicateKVWrites(operations: PreparedKVWrite[]): PreparedKVWrite[] {
+	const uniqueOperations = new Map<string, PreparedKVWrite>();
+	for (const operation of operations) {
+		const existing = uniqueOperations.get(operation.key);
+		if (existing === undefined) {
+			uniqueOperations.set(operation.key, operation);
+		} else if (!preparedKVWritesEqual(existing, operation)) {
+			throw new HttpError(
+				400,
+				`received duplicate key with different values or expiration parameters: "${operation.key}"`
+			);
+		}
+	}
+	return [...uniqueOperations.values()];
+}
+
 function prepareKVWrites(body: BulkWriteBody): PreparedKVWrite[] {
 	const now = Math.floor(Date.now() / 1000);
 
-	return body.map((item) => {
+	const operations = body.map((item) => {
+		const metadata = item.metadata;
 		const rawMetadata =
-			item.metadata === undefined ? null : JSON.stringify(item.metadata);
+			metadata === undefined ? null : JSON.stringify(metadata);
 		validatePutOptions(item.key, {
 			now,
 			rawExpiration: item.expiration?.toString() ?? null,
@@ -127,9 +194,10 @@ function prepareKVWrites(body: BulkWriteBody): PreparedKVWrite[] {
 			value,
 			expiration: item.expiration,
 			expirationTtl: item.expiration_ttl,
-			metadata: item.metadata,
+			metadata,
 		};
 	});
+	return deduplicateKVWrites(operations);
 }
 
 function bulkValidationError(error: unknown): Response {
@@ -137,6 +205,24 @@ function bulkValidationError(error: unknown): Response {
 		return errorResponse(error.code, 10001, error.message);
 	}
 	throw error;
+}
+
+function bulkExecutionResponse(
+	c: AppContext,
+	execution: KVBulkExecutionResult
+): Response {
+	if (execution.result.unsuccessful_keys?.length === 0) {
+		return c.json(wrapResponse(execution.result));
+	}
+
+	const status =
+		execution.error instanceof HttpError ? execution.error.code : 500;
+	const code = execution.error instanceof HttpError ? 10001 : 10000;
+	const message =
+		execution.error instanceof Error
+			? execution.error.message
+			: "Internal KV request failed";
+	return errorResponse(status, code, message, execution.result);
 }
 
 async function putPreparedKVValue(
@@ -164,7 +250,7 @@ async function putPreparedKVValue(
 		body: operation.value,
 	});
 	if (!response.ok) {
-		throw new Error(await response.text());
+		throw new HttpError(response.status, await getKVErrorMessage(response));
 	}
 }
 
@@ -177,7 +263,7 @@ async function deletePreparedKVValue(
 		method: "DELETE",
 	});
 	if (!response.ok) {
-		throw new Error(await response.text());
+		throw new HttpError(response.status, await getKVErrorMessage(response));
 	}
 }
 
@@ -432,10 +518,10 @@ export async function bulkWriteKVValues(c: AppContext, body: BulkWriteBody) {
 		return bulkValidationError(error);
 	}
 
-	const result = await executeKVBulkOperations(operations, (operation) =>
+	const execution = await executeKVBulkOperations(operations, (operation) =>
 		putPreparedKVValue(c, namespaceId, operation)
 	);
-	return c.json(wrapResponse(result));
+	return bulkExecutionResponse(c, execution);
 }
 
 /**
@@ -456,9 +542,9 @@ export async function bulkDeleteKVValues(c: AppContext, body: BulkDeleteBody) {
 		return bulkValidationError(error);
 	}
 
-	const operations = body.map((key) => ({ key }));
-	const result = await executeKVBulkOperations(operations, (operation) =>
+	const operations = [...new Set(body)].map((key) => ({ key }));
+	const execution = await executeKVBulkOperations(operations, (operation) =>
 		deletePreparedKVValue(c, namespaceId, operation.key)
 	);
-	return c.json(wrapResponse(result));
+	return bulkExecutionResponse(c, execution);
 }
