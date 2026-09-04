@@ -8,8 +8,8 @@ export default defineConfig({
 	},
 	builder: {
 		async buildApp(builder) {
-			const workerAEnvironment = builder.environments.worker_a;
-			assert(workerAEnvironment, `No "worker_a" environment`);
+			const workerAEnvironment = builder.environments.ssr;
+			assert(workerAEnvironment, `No "ssr" environment`);
 
 			// We deliberately build just the entry Worker environment to test that the plugin builds any remaining Worker environments
 			await builder.build(workerAEnvironment);
