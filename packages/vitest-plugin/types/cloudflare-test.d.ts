@@ -151,7 +151,7 @@ declare module "cloudflare:test" {
 	 * modules-format `scheduled()` exported handlers.
 	 */
 	export interface ScheduledControllerOptions {
-		scheduledTime?: Date;
+		scheduledTime?: Date | number;
 		cron?: string;
 	}
 	export function createScheduledController(
@@ -160,7 +160,7 @@ declare module "cloudflare:test" {
 	/** A message used to construct a `MessageBatch` for a queue handler. */
 	export type MessageBatchMessage<Body = unknown> = {
 		id: string;
-		timestamp: Date;
+		timestamp: Date | number;
 		attempts: number;
 		body: Body;
 	};

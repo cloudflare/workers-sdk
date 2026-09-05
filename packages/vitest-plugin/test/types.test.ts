@@ -81,10 +81,17 @@ void createScheduledController({
 	scheduledTime: new Date(),
 	cron: "* * * * *",
 });
+void createScheduledController({ scheduledTime: Date.now() });
 const batch = createMessageBatch("test", [
 	{
 		id: "message",
 		timestamp: new Date(),
+		attempts: 1,
+		body: { value: "test" },
+	},
+	{
+		id: "numeric-timestamp-message",
+		timestamp: Date.now(),
 		attempts: 1,
 		body: { value: "test" },
 	},
