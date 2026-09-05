@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import {
 	configFileName,
+	getCIOverrideName,
 	getDurableObjectExports,
 	getWorkersCIBranchName,
 	UserError,
@@ -340,7 +341,11 @@ export function resolveWorkerName(
 	args: { workerName?: string; "worker-name"?: string },
 	config: Config
 ): string {
-	const workerName = args.workerName ?? args["worker-name"] ?? config.name;
+	const workerName =
+		getCIOverrideName() ??
+		args.workerName ??
+		args["worker-name"] ??
+		config.name;
 	if (!workerName) {
 		throw new UserError(
 			`Required Worker name missing. Please specify the Worker name in your ${configFileName(
