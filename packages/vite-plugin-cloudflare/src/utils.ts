@@ -130,7 +130,7 @@ export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 
-function createRequestForIncomingMessage(
+export function createRequestForIncomingMessage(
 	req: vite.Connect.IncomingMessage,
 	res: http.ServerResponse,
 	options?: { protocol?: "http:" | "https:"; host?: string }
@@ -144,8 +144,13 @@ function createRequestForIncomingMessage(
 	const headers = createHeaders(req);
 	const protocol =
 		options?.protocol ??
+		getScheme(req) ??
 		("encrypted" in req.socket && req.socket.encrypted ? "https:" : "http:");
-	const host = options?.host ?? headers.get("Host") ?? "localhost";
+	const host =
+		options?.host ?? headers.get("Host") ?? getAuthority(req) ?? "localhost";
+	if (!headers.has("Host")) {
+		headers.set("Host", host);
+	}
 	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
 	const init: RequestInit & { duplex?: "half" } = {
 		method,
@@ -212,8 +217,8 @@ function createCancellableRequestBody(
 	});
 }
 
-function toMiniflareRequest(request: Request): MiniflareRequest {
-	const host = request.headers.get("Host");
+export function toMiniflareRequest(request: Request): MiniflareRequest {
+	const host = request.headers.get("Host") ?? new URL(request.url).host;
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
 	if (host && !xForwardedHost) {
@@ -261,6 +266,62 @@ export function getForwardedProto(req: {
 	const first = value.split(",")[0]?.trim().toLowerCase();
 	if (first === "http" || first === "https") {
 		return `${first}:`;
+	}
+	return undefined;
+}
+
+/**
+ * Extracts the authority (host and port) from an incoming Node.js request.
+ *
+ * In HTTP/2, browsers pass the host and port in the `:authority` pseudo-header
+ * rather than the HTTP/1.1 `Host` header. This helper inspects `:authority`
+ * (or the `authority` property on `http2.Http2ServerRequest`) so that ports
+ * are preserved when converting Node requests to standard Fetch requests.
+ *
+ * @param req Incoming request containing HTTP headers and optional authority property
+ * @returns The authority string (e.g. "localhost:5173"), or undefined if not present
+ */
+export function getAuthority(req: {
+	headers: http.IncomingHttpHeaders;
+	authority?: string;
+}): string | undefined {
+	const raw = req.headers[":authority"];
+	const value = Array.isArray(raw) ? raw[0] : raw;
+	if (value) {
+		return value;
+	}
+	if (typeof req.authority === "string" && req.authority) {
+		return req.authority;
+	}
+	return undefined;
+}
+
+/**
+ * Extracts the scheme from an incoming Node.js request.
+ *
+ * Checks the `:scheme` pseudo-header in HTTP/2 requests or the `scheme`
+ * property on `http2.Http2ServerRequest`.
+ *
+ * @param req Incoming request containing HTTP headers and optional scheme property
+ * @returns The normalized scheme ("http:" or "https:"), or undefined if not present or unsupported
+ */
+export function getScheme(req: {
+	headers: http.IncomingHttpHeaders;
+	scheme?: string;
+}): "http:" | "https:" | undefined {
+	const raw = req.headers[":scheme"];
+	const value = Array.isArray(raw) ? raw[0] : raw;
+	if (value) {
+		const lower = value.toLowerCase();
+		if (lower === "http" || lower === "https") {
+			return `${lower}:`;
+		}
+	}
+	if (typeof req.scheme === "string" && req.scheme) {
+		const lower = req.scheme.toLowerCase();
+		if (lower === "http" || lower === "https") {
+			return `${lower}:`;
+		}
 	}
 	return undefined;
 }
