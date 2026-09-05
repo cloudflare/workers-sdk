@@ -72,25 +72,50 @@ export default class Client extends WorkerEntrypoint<
 	) {
 		super(ctx, env);
 
-		const stub = ctx.props.remoteProxyConnectionString
-			? makeRemoteProxyStub(
-					ctx.props.remoteProxyConnectionString,
-					ctx.props.binding,
-					undefined,
-					ctx.props.cfTraceId,
-					env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
-				)
-			: undefined;
+		let stub: Fetcher | undefined;
+		function getStub() {
+			if (!ctx.props.remoteProxyConnectionString) {
+				throwRemoteRequired(ctx.props.binding);
+			}
+			return (stub ??= makeRemoteProxyStub(
+				ctx.props.remoteProxyConnectionString,
+				ctx.props.binding,
+				undefined,
+				ctx.props.cfTraceId,
+				env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+			));
+		}
 
 		return new Proxy(this, {
 			get: (target, prop) => {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
-				if (!stub) {
-					throwRemoteRequired(ctx.props.binding);
+				// workerd probes optional WorkerEntrypoint handlers during startup. Return
+				// a deferred RPC property so these probes and fetch-only bindings don't
+				// create an unused WebSocket RPC session. Cap'n Web properties are both
+				// callable and thenable, so forward invocation and property resolution.
+				let rpcProperty: unknown;
+				let isRpcPropertyResolved = false;
+				function getRpcProperty() {
+					if (!isRpcPropertyResolved) {
+						rpcProperty = Reflect.get(getStub(), prop);
+						isRpcPropertyResolved = true;
+					}
+					return rpcProperty;
 				}
-				return Reflect.get(stub, prop);
+				return new Proxy(
+					(...args: unknown[]) => {
+						const rpcMethod = getRpcProperty() as (
+							...args: unknown[]
+						) => unknown;
+						return Reflect.apply(rpcMethod, undefined, args);
+					},
+					{
+						get: (_target, rpcProp) =>
+							Reflect.get(getRpcProperty() as object, rpcProp),
+					}
+				);
 			},
 		});
 	}
