@@ -1076,15 +1076,21 @@ describe("resource provisioning", () => {
 			`);
 		});
 
-		it("can provision KV, R2 and D1 bindings with new resources w/ redirected config", async ({
+		it("preserves D1 migrations_dir when provisioning with a redirected config", async ({
 			expect,
 		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				kv_namespaces: [{ binding: "KV" }],
+				r2_buckets: [{ binding: "R2" }],
+				d1_databases: [{ binding: "D1", migrations_dir: "migrations" }],
+			});
 			writeRedirectedWranglerConfig({
 				main: "../index.js",
 				compatibility_flags: ["nodejs_compat"],
 				kv_namespaces: [{ binding: "KV" }],
 				r2_buckets: [{ binding: "R2" }],
-				d1_databases: [{ binding: "D1" }],
+				d1_databases: [{ binding: "D1", migrations_dir: "../../migrations" }],
 			});
 			mockGetSettings();
 			mockListKVNamespacesRequest(expect, {
@@ -1234,6 +1240,7 @@ describe("resource provisioning", () => {
 
 				[[d1_databases]]
 				binding = "D1"
+				migrations_dir = "migrations"
 				database_id = "new-d1-id"
 				"
 			`);

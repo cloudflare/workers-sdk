@@ -903,22 +903,54 @@ const HANDLERS = {
 	},
 };
 
+type RawConfigBinding = { binding: string } & Record<string, unknown>;
+
 function getRawConfigBindings(
 	config: RawConfig,
 	resourceType: keyof typeof HANDLERS
-): Array<{ binding: string }> {
+): RawConfigBinding[] {
 	if (resourceType === "queue") {
-		return config.queues?.producers ?? [];
+		return (config.queues?.producers ?? []) as RawConfigBinding[];
 	}
 
 	const configField = HANDLERS[resourceType].configField;
-	return (config[configField] ?? []) as Array<{ binding: string }>;
+	return (config[configField] ?? []) as RawConfigBinding[];
+}
+
+function addProvisionedIdentifier(
+	originalBinding: RawConfigBinding,
+	binding: ProvisionableBinding
+): RawConfigBinding {
+	switch (binding.type) {
+		case "kv_namespace":
+			return { ...originalBinding, id: binding.id };
+		case "d1":
+			return { ...originalBinding, database_id: binding.database_id };
+		case "r2_bucket":
+			return { ...originalBinding, bucket_name: binding.bucket_name };
+		case "ai_search_namespace":
+			return { ...originalBinding, namespace: binding.namespace };
+		case "agent_memory":
+			return { ...originalBinding, namespace: binding.namespace };
+		case "queue":
+			return {
+				...originalBinding,
+				queue:
+					typeof binding.queue_name === "string"
+						? binding.queue_name
+						: undefined,
+			};
+		case "dispatch_namespace":
+			return { ...originalBinding, namespace: binding.namespace };
+		case "flagship":
+			return { ...originalBinding, app_id: binding.app_id };
+	}
 }
 
 function addBindingToPatch(
 	patch: RawConfig,
 	resourceType: ProvisionableBinding["type"],
-	binding: ReturnType<typeof toConfigBinding>
+	binding: ReturnType<typeof toConfigBinding> | RawConfigBinding
 ): void {
 	const serialisableBinding = Object.fromEntries(
 		Object.entries(binding).filter(
@@ -1274,7 +1306,10 @@ export async function provisionBindings(
 
 		const patch: RawConfig = {};
 
-		const existingBindingNames = new Map<keyof typeof HANDLERS, Set<string>>();
+		const originalBindings = new Map<
+			keyof typeof HANDLERS,
+			Map<string, RawConfigBinding>
+		>();
 
 		const isUsingRedirectedConfig =
 			config.userConfigPath && config.userConfigPath !== config.configPath;
@@ -1291,14 +1326,14 @@ export async function provisionBindings(
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
-				const bindingNames = new Set<string>();
+				const bindingsByName = new Map<string, RawConfigBinding>();
 				for (const binding of getRawConfigBindings(
 					unredirectedConfig,
 					resourceType
 				)) {
-					bindingNames.add(binding.binding);
+					bindingsByName.set(binding.binding, binding);
 				}
-				existingBindingNames.set(resourceType, bindingNames);
+				originalBindings.set(resourceType, bindingsByName);
 			}
 		}
 
@@ -1308,13 +1343,15 @@ export async function provisionBindings(
 			}
 
 			// See above for why we skip writing back some bindings to the config file.
-			if (
-				isUsingRedirectedConfig &&
-				!existingBindingNames.get(binding.type)?.has(bindingName)
-			) {
+			const originalBinding = originalBindings
+				.get(binding.type)
+				?.get(bindingName);
+			if (isUsingRedirectedConfig && !originalBinding) {
 				continue;
 			}
-			const bindingToWrite = toConfigBinding(bindingName, binding);
+			const bindingToWrite = originalBinding
+				? addProvisionedIdentifier(originalBinding, binding)
+				: toConfigBinding(bindingName, binding);
 			addBindingToPatch(patch, binding.type, bindingToWrite);
 		}
 
