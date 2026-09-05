@@ -4724,8 +4724,8 @@ importers:
         specifier: ^0.6.3
         version: 0.6.3
       cloudflare:
-        specifier: ^5.2.0
-        version: 5.2.0(encoding@0.1.13)
+        specifier: ^6.5.0
+        version: 6.5.0(encoding@0.1.13)
       cmd-shim:
         specifier: ^4.1.0
         version: 4.1.0
@@ -11111,6 +11111,9 @@ packages:
 
   cloudflare@5.2.0:
     resolution: {integrity: sha512-dVzqDpPFYR9ApEC9e+JJshFJZXcw4HzM8W+3DHzO5oy9+8rLC53G7x6fEf9A7/gSuSCxuvndzui5qJKftfIM9A==}
+
+  cloudflare@6.5.0:
+    resolution: {integrity: sha512-PS3rQM9AZrYK/nuoQ3q1Je9kpQ1FIC6aUiNuRGybDGHJ21W7zfqXG6ubVhkD8xDpeFFdWQXEBFh92raVfkIGXg==}
 
   clsx@1.2.1:
     resolution: {integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==}
@@ -23484,6 +23487,18 @@ snapshots:
   clone@2.1.2: {}
 
   cloudflare@5.2.0(encoding@0.1.13):
+    dependencies:
+      '@types/node': 22.15.17
+      '@types/node-fetch': 2.6.11
+      abort-controller: 3.0.0
+      agentkeepalive: 4.6.0
+      form-data-encoder: 1.7.2
+      formdata-node: 4.4.1
+      node-fetch: 2.7.0(encoding@0.1.13)
+    transitivePeerDependencies:
+      - encoding
+
+  cloudflare@6.5.0(encoding@0.1.13):
     dependencies:
       '@types/node': 22.15.17
       '@types/node-fetch': 2.6.11
