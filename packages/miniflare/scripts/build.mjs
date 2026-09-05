@@ -147,6 +147,35 @@ const aliasZodToMiniflareExtensionPlugin = {
 };
 
 /**
+ * esbuild plugin that omits Zod's unused collection of locale modules.
+ *
+ * Zod configures its default English locale with a separate direct import, so
+ * replacing the aggregate locale index only makes the unused `locales`
+ * namespace empty without changing default validation messages.
+ *
+ * @type {esbuild.Plugin}
+ */
+const omitZodLocalesPlugin = {
+	name: "omit-zod-locales",
+	setup(build) {
+		const namespace = "empty-zod-locales";
+		build.onResolve({ filter: /^\.\.\/locales\/index\.js$/ }, (args) => {
+			if (
+				!/[\\/]zod[\\/]v4[\\/](?:(?:classic|mini)[\\/]external|core[\\/]index)\.js$/.test(
+					args.importer
+				)
+			) {
+				return;
+			}
+			return { namespace, path: "zod-locales" };
+		});
+		build.onLoad({ filter: /.*/, namespace }, () => ({
+			contents: "export {};",
+		}));
+	},
+};
+
+/**
  * Cache of esbuild build contexts for worker sub-builds. In watch mode,
  * these are reused across rebuilds for incremental compilation.
  * @type {Map<string, esbuild.BuildContext>}
@@ -218,6 +247,7 @@ const embedWorkersPlugin = {
 					outdir: build.initialOptions.outdir,
 					outbase: pkgRoot,
 					plugins: [
+						omitZodLocalesPlugin,
 						// Shared extension workers need node:* → node-internal:*
 						...(args.path === miniflareSharedExtensionPath ||
 						args.path === miniflareZodExtensionPath
@@ -401,7 +431,7 @@ async function buildPackage() {
 			// esbuild is used by test fixtures at runtime
 			"esbuild",
 		],
-		plugins: [embedWorkersPlugin],
+		plugins: [omitZodLocalesPlugin, embedWorkersPlugin],
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,

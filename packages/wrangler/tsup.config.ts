@@ -30,6 +30,32 @@ const MONOREPO_PACKAGE_ALIASES = {
 	"@cloudflare/workers-utils": path.join(__dirname, "../workers-utils/src"),
 };
 const workersContexts = new Map<string, esbuild.BuildContext>();
+
+/**
+ * Omits Zod's unused collection of locale modules from the Wrangler bundle.
+ * Zod's separately imported English locale remains available for default
+ * validation messages.
+ */
+const omitZodLocalesPlugin: Exclude<Options["esbuildPlugins"], undefined>[0] = {
+	name: "omit-zod-locales",
+	setup(build) {
+		const namespace = "empty-zod-locales";
+		build.onResolve({ filter: /^\.\.\/locales\/index\.js$/ }, (args) => {
+			if (
+				!/[\\/]zod[\\/]v4[\\/](?:(?:classic|mini)[\\/]external|core[\\/]index)\.js$/.test(
+					args.importer
+				)
+			) {
+				return;
+			}
+			return { namespace, path: "zod-locales" };
+		});
+		build.onLoad({ filter: /.*/, namespace }, () => ({
+			contents: "export {};",
+		}));
+	},
+};
+
 function embedWorkersPlugin({
 	isWatch,
 }: {
@@ -134,7 +160,10 @@ export default defineConfig((options) => [
 					}
 				: {}),
 		},
-		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
+		esbuildPlugins: [
+			omitZodLocalesPlugin,
+			embedWorkersPlugin({ isWatch: !!options.watch }),
+		],
 		esbuildOptions(esbuildOptions) {
 			// These workspace packages publish bundles for npm consumers. Resolving
 			// their sources here gives Wrangler's monorepo build enough module
