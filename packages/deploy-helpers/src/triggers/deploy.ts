@@ -487,6 +487,22 @@ export async function triggersDeploy(
 		logger.log("No targets deployed for", workerName, formatTime(deployMs));
 	}
 
+	const customDomainDeployment = completedDeployments.find(
+		(deployment) => deployment.category === "Custom domains"
+	);
+	if (
+		customDomainsOnly.some(
+			(domain) =>
+				"previews_enabled" in domain && domain.previews_enabled === true
+		) &&
+		customDomainDeployment !== undefined &&
+		customDomainDeployment.error === undefined
+	) {
+		logger.log(
+			"Note: DNS and TLS certificate provisioning for Preview domains may continue after this deploy. If a new Preview URL does not work immediately, wait a few minutes and retry."
+		);
+	}
+
 	const failedDeployments = completedDeployments.filter(
 		(deployment): deployment is TriggerDeployment & { error: Error } =>
 			deployment.error !== undefined
