@@ -10,6 +10,7 @@ import {
 	DeferredPromise,
 	fetch,
 	Miniflare,
+	Request,
 	Response,
 	WebSocketPair,
 } from "miniflare";
@@ -480,6 +481,70 @@ describe("ProxyClient", () => {
 			uploaded: object.uploaded.toISOString(),
 			storageClass: "",
 			version: object.version,
+		});
+	});
+
+	test("Durable Object stub.fetch accepts Node global Request", async ({
+		expect,
+	}) => {
+		// Regression for https://github.com/cloudflare/workers-sdk/issues/15086
+		// getPlatformProxy / ProxyClient special-cases Fetcher/DurableObject#fetch
+		// through undici's Request. Node's global Request fails undici's brand
+		// check unless Miniflare converts it first.
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						type: "worker",
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`export class TestObject {
+  fetch(request) {
+    return new Response(JSON.stringify({
+      url: request.url,
+      method: request.method,
+      header: request.headers.get("X-Test"),
+    }));
+  }
+}
+export default {
+  fetch() { return new Response(null, { status: 404 }); }
+}`),
+						env: {
+							OBJECT: {
+								type: "durable-object",
+								worker: "",
+								exportName: "TestObject",
+							},
+						},
+						exports: {
+							TestObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const ns = await mf.getDurableObjectNamespace("OBJECT");
+		const stub = ns.get(ns.idFromName("test"));
+
+		const globalRequest = new globalThis.Request(
+			"https://example.com/from-global",
+			{
+				method: "POST",
+				headers: { "X-Test": "global-request" },
+			}
+		);
+		expect(globalRequest).not.toBeInstanceOf(Request);
+
+		// Runtime accepts Node's global Request; Workers types require `cf`.
+		const res = await stub.fetch(globalRequest as unknown as Request);
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({
+			url: "https://example.com/from-global",
+			method: "POST",
+			header: "global-request",
 		});
 	});
 
