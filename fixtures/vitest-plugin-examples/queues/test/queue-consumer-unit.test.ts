@@ -3,6 +3,7 @@ import {
 	createExecutionContext,
 	createMessageBatch,
 	getQueueResult,
+	type MessageBatchMessage,
 } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { it } from "vitest";
@@ -11,7 +12,7 @@ import type { QueueJob } from "../src/index";
 
 it("consumes queue messages", async ({ expect }) => {
 	// Call `queue()` handler directly
-	const messages: ServiceBindingQueueMessage<QueueJob>[] = [
+	const messages: MessageBatchMessage<QueueJob>[] = [
 		{
 			id: randomBytes(16).toString("hex"),
 			timestamp: new Date(1000),
