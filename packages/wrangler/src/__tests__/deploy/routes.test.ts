@@ -502,7 +502,7 @@ describe("deploy", () => {
 				});
 				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
-				expect(std.out).toContain("[enabled, previews: enabled]");
+				expect(std.out).toContain("[production: enabled, previews: enabled]");
 			});
 
 			it("should confirm override if custom domain deploy would override an existing domain", async ({
