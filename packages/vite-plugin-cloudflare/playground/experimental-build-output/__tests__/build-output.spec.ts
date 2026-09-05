@@ -52,6 +52,22 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(fs.existsSync(assetsDir)).toBe(true);
 	});
 
+	test("links assets/ and bundle/ to the Vite environment outputs", ({
+		expect,
+	}) => {
+		const assetsDirectory = path.join(getBuildOutputDir(), "assets");
+		const bundleDirectory = path.join(getBuildOutputDir(), "bundle");
+
+		expect(fs.lstatSync(assetsDirectory).isSymbolicLink()).toBe(true);
+		expect(fs.realpathSync(assetsDirectory)).toBe(
+			fs.realpathSync(path.join(rootDir, "dist/client"))
+		);
+		expect(fs.lstatSync(bundleDirectory).isSymbolicLink()).toBe(true);
+		expect(fs.realpathSync(bundleDirectory)).toBe(
+			fs.realpathSync(path.join(rootDir, "dist/build_output_worker"))
+		);
+	});
+
 	test("strips `entrypoint` in config.json and adds `manifest`", ({
 		expect,
 	}) => {
