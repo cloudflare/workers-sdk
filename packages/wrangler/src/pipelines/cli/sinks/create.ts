@@ -12,7 +12,30 @@ import { applyDefaultsToSink, SINK_DEFAULTS } from "../../defaults";
 import { authorizeR2Bucket } from "../../index";
 import { validateEntityName } from "../../validate";
 import { displaySinkConfiguration } from "./utils";
-import type { CreateSinkRequest, SinkFormat } from "../../types";
+import type {
+	CreateSinkRequest,
+	JsonFormat,
+	ParquetFormat,
+	SinkFormat,
+} from "../../types";
+
+function isJsonCompression(
+	compression: string | undefined
+): compression is NonNullable<JsonFormat["compression"]> {
+	return compression === "uncompressed" || compression === "gzip";
+}
+
+function isParquetCompression(
+	compression: string | undefined
+): compression is NonNullable<ParquetFormat["compression"]> {
+	return (
+		compression === "uncompressed" ||
+		compression === "snappy" ||
+		compression === "gzip" ||
+		compression === "zstd" ||
+		compression === "lz4"
+	);
+}
 
 function parseSinkType(type: string): "r2" | "r2_data_catalog" {
 	if (type === "r2" || type === "r2-data-catalog") {
@@ -55,10 +78,10 @@ export const pipelinesSinksCreateCommand = createCommand({
 			default: SINK_DEFAULTS.format.type,
 		},
 		compression: {
-			describe: "Compression method (parquet only)",
+			describe:
+				"Compression method (JSON supports uncompressed and gzip; Parquet defaults to zstd)",
 			type: "string",
 			choices: ["uncompressed", "snappy", "gzip", "zstd", "lz4"],
-			default: SINK_DEFAULTS.format.compression,
 		},
 		"target-row-group-size": {
 			describe: "Target row group size for parquet format",
@@ -158,6 +181,27 @@ export const pipelinesSinksCreateCommand = createCommand({
 				);
 			}
 		}
+
+		if (args.format === "json") {
+			if (args.compression && !isJsonCompression(args.compression)) {
+				throw new CommandLineArgsError(
+					"JSON sinks only support 'uncompressed' or 'gzip' compression",
+					{
+						telemetryMessage: "pipelines sinks create invalid json compression",
+					}
+				);
+			}
+
+			if (args.targetRowGroupSize) {
+				throw new CommandLineArgsError(
+					"--target-row-group-size is only supported for Parquet sinks",
+					{
+						telemetryMessage:
+							"pipelines sinks create invalid json row group size",
+					}
+				);
+			}
+		}
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
@@ -175,18 +219,18 @@ export const pipelinesSinksCreateCommand = createCommand({
 		if (args.format || args.compression || args.targetRowGroupSize) {
 			let formatConfig: SinkFormat;
 			if (args.format === "json") {
-				formatConfig = { type: "json" };
+				formatConfig = {
+					type: "json",
+					...(isJsonCompression(args.compression) && {
+						compression: args.compression,
+					}),
+				};
 			} else {
 				formatConfig = {
 					type: "parquet",
-					...(args.compression && {
-						compression: args.compression as
-							| "uncompressed"
-							| "snappy"
-							| "gzip"
-							| "zstd"
-							| "lz4",
-					}),
+					compression: isParquetCompression(args.compression)
+						? args.compression
+						: SINK_DEFAULTS.format.compression,
 					...(args.targetRowGroupSize && {
 						row_group_bytes:
 							parseInt(args.targetRowGroupSize.replace(/MB$/i, "")) *

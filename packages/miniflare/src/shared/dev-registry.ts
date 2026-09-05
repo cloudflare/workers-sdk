@@ -47,6 +47,7 @@ export class DevRegistry {
 		}
 	> = new Map();
 	private watcher: FSWatcher | undefined;
+	private watcherReadyPromise: Promise<void> | undefined;
 
 	// UUID to let us tell whether a dev registry entry was added by _this_ Miniflare process
 	public instanceId: string;
@@ -62,7 +63,7 @@ export class DevRegistry {
 	/**
 	 * Watch files inside the registry directory for changes.
 	 */
-	public watch(
+	public async watch(
 		services: Map<
 			string,
 			{
@@ -72,7 +73,7 @@ export class DevRegistry {
 		>,
 		watchQueueConsumers = false,
 		watchStorageCandidates = false
-	): void {
+	): Promise<void> {
 		if (
 			(services.size === 0 &&
 				!watchQueueConsumers &&
@@ -95,7 +96,7 @@ export class DevRegistry {
 		mkdirSync(this.registryPath, { recursive: true });
 
 		if (!this.watcher) {
-			this.watcher = watch(this.registryPath, {
+			const watcher = watch(this.registryPath, {
 				// On Windows, chokidar's default `fs.watch` backend
 				// (`ReadDirectoryChangesW`) frequently drops or delays create
 				// events for files added shortly after the watcher attaches —
@@ -108,7 +109,16 @@ export class DevRegistry {
 			}).on("all", () => {
 				this.refresh();
 			});
+			this.watcher = watcher;
+			// Chokidar installs native watchers asynchronously during its initial
+			// scan. Wait until their closers are registered before allowing disposal.
+			this.watcherReadyPromise = new Promise((resolve) => {
+				watcher.once("ready", resolve);
+			});
 		}
+
+		assert(this.watcherReadyPromise !== undefined);
+		await this.watcherReadyPromise;
 	}
 
 	/**
@@ -126,6 +136,7 @@ export class DevRegistry {
 		// Only this step is async and could be awaited
 		return this.watcher?.close().finally(() => {
 			this.watcher = undefined;
+			this.watcherReadyPromise = undefined;
 		});
 	}
 
