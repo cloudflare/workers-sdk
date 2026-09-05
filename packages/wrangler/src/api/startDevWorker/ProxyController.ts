@@ -485,6 +485,10 @@ export class ProxyController extends Controller {
 					"Error proxying request to the local Worker:",
 					message.error.message
 				);
+				// The stack and cause are only useful when debugging, but they're
+				// the only clue to *why* the connection was lost, so keep them
+				// reachable via `--log-level debug`.
+				logger.debug("ProxyWorker request error details:", message.error);
 
 				break;
 			case "debug-log":
