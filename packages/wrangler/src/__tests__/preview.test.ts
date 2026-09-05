@@ -30,6 +30,13 @@ import {
 import type { OutputEntry } from "../output";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
+const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
+	"Note: This Preview deployment has no active URLs. " +
+	"For Workers.dev previews, set the top-level `preview_urls` setting to `true`. " +
+	"For custom-domain previews, set `previews_enabled` to `true` on a custom-domain route. " +
+	"After changing either setting, run `wrangler deploy`, then `wrangler preview` again. " +
+	"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.";
+
 vi.mock("node:child_process", async () => {
 	const actual =
 		await vi.importActual<typeof childProcess>("node:child_process");
@@ -1893,77 +1900,107 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment URLs:");
 			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
-			expect(std.out).not.toContain("no active URLs");
+			expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 		});
 
-		test("should note when URL arrays are empty", async ({ expect }) => {
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
-					() =>
-						HttpResponse.json(
-							{
-								success: false,
-								result: null,
-								errors: [{ code: 10025, message: "Preview not found" }],
-							},
-							{ status: 404 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews`,
-					() =>
-						HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "preview-id-empty-urls",
-									name: "empty-urls-preview",
-									slug: "empty-urls-preview",
-									urls: [],
-									worker_name: "test-worker",
-									created_on: new Date().toISOString(),
+		test.for([
+			{
+				name: "both URL arrays are empty",
+				previewUrls: [] as string[],
+				deploymentUrls: [] as string[],
+				shouldShowGuidance: true,
+			},
+			{
+				name: "the Preview URL array is active",
+				previewUrls: ["https://empty-urls-preview.test-worker.workers.dev"],
+				deploymentUrls: [] as string[],
+				shouldShowGuidance: false,
+			},
+			{
+				name: "the deployment URL array is active",
+				previewUrls: [] as string[],
+				deploymentUrls: [
+					"https://deployment-id-empty-urls.test-worker.workers.dev",
+				],
+				shouldShowGuidance: false,
+			},
+		])(
+			"handles URL guidance when $name",
+			async (
+				{ previewUrls, deploymentUrls, shouldShowGuidance },
+				{ expect }
+			) => {
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
 								},
-							},
-							{ status: 201 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					() =>
-						HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "deployment-id-empty-urls",
-									preview_id: "preview-id-empty-urls",
-									preview_name: "empty-urls-preview",
-									urls: [],
-									compatibility_date: "2025-01-01",
-									env: {},
-									created_on: new Date().toISOString(),
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "preview-id-empty-urls",
+										name: "empty-urls-preview",
+										slug: "empty-urls-preview",
+										urls: previewUrls,
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
 								},
-							},
-							{ status: 201 }
-						)
-				)
-			);
-
-			await runWrangler("preview --name empty-urls-preview");
-
-			const summaryLines = stripVTControlCharacters(std.out)
-				.split("\n")
-				.filter(
-					(line) => line.startsWith("Preview") || line.startsWith("Deployment")
+								{ status: 201 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "deployment-id-empty-urls",
+										preview_id: "preview-id-empty-urls",
+										preview_name: "empty-urls-preview",
+										urls: deploymentUrls,
+										compatibility_date: "2025-01-01",
+										env: {},
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					)
 				);
-			expect(summaryLines).toEqual([
-				"Preview: empty-urls-preview (new)",
-				"Deployment ID: deployment-id-empty-urls",
-			]);
-			expect(std.out).toContain(
-				"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information"
-			);
-		});
+
+				await runWrangler("preview --name empty-urls-preview");
+
+				if (shouldShowGuidance) {
+					const summaryLines = stripVTControlCharacters(std.out)
+						.split("\n")
+						.filter(
+							(line) =>
+								line.startsWith("Preview") || line.startsWith("Deployment")
+						);
+					expect(summaryLines).toEqual([
+						"Preview: empty-urls-preview (new)",
+						"Deployment ID: deployment-id-empty-urls",
+					]);
+					expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				} else {
+					expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				}
+			}
+		);
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
 			expect,
