@@ -1,6 +1,7 @@
 import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { AutoConfigFrameworkConfigurationError } from "../../src/errors";
+import { getFrameworkPackageInfo } from "../../src/frameworks/all-frameworks";
 import { Framework } from "../../src/frameworks/framework-class";
 import { getInstalledPackageVersion } from "../../src/frameworks/utils/packages";
 import { createMockContext } from "../helpers/mock-context";
@@ -135,6 +136,21 @@ describe("Framework.validateFrameworkVersion()", () => {
 		expect(std.warn).toContain('"5.0.0"');
 		expect(std.warn).toContain("Test");
 		expect(std.warn).toContain("is not officially supported");
+	});
+
+	it("does not warn for Astro 7", ({ expect }) => {
+		vi.mocked(getInstalledPackageVersion).mockReturnValue("7.3.0");
+		const framework = new TestFramework({ id: "astro", name: "Astro" });
+		const packageInfo = getFrameworkPackageInfo("astro");
+
+		expect(packageInfo).toBeDefined();
+		if (packageInfo === undefined) {
+			throw new Error("Expected Astro to have package information");
+		}
+		framework.validateFrameworkVersion("/project", packageInfo, context);
+
+		expect(framework.frameworkVersion).toBe("7.3.0");
+		expect(std.warn).toBe("");
 	});
 
 	it("throws an AssertionError when frameworkVersion getter is accessed before validateFrameworkVersion is called", ({
