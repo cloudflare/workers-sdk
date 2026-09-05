@@ -276,6 +276,39 @@ describe("createRequestForIncomingMessage and toMiniflareRequest", () => {
 			"external-proxy.com:8443"
 		);
 	});
+
+	test("prioritizes `:authority` over a stale or port-less `Host` header", ({
+		expect,
+	}) => {
+		const res = new EventEmitter() as unknown as http.ServerResponse;
+		const req = {
+			method: "GET",
+			url: "/path",
+			headers: {
+				":authority": "localhost:5173",
+				":scheme": "https",
+				host: "localhost",
+			},
+			rawHeaders: [
+				":authority",
+				"localhost:5173",
+				":scheme",
+				"https",
+				"host",
+				"localhost",
+			],
+			socket: {},
+		} as unknown as vite.Connect.IncomingMessage;
+
+		const request = createRequestForIncomingMessage(req, res);
+		expect(request.url).toBe("https://localhost:5173/path");
+		expect(request.headers.get("Host")).toBe("localhost:5173");
+
+		const miniflareRequest = toMiniflareRequest(request);
+		expect(miniflareRequest.headers.get("X-Forwarded-Host")).toBe(
+			"localhost:5173"
+		);
+	});
 });
 
 describe("createRequestHandler", () => {

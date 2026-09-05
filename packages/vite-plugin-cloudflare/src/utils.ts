@@ -147,8 +147,8 @@ export function createRequestForIncomingMessage(
 		getScheme(req) ??
 		("encrypted" in req.socket && req.socket.encrypted ? "https:" : "http:");
 	const host =
-		options?.host ?? headers.get("Host") ?? getAuthority(req) ?? "localhost";
-	if (!headers.has("Host")) {
+		options?.host ?? getAuthority(req) ?? headers.get("Host") ?? "localhost";
+	if (headers.get("Host") !== host) {
 		headers.set("Host", host);
 	}
 	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
