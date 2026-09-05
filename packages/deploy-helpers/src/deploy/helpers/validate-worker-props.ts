@@ -4,6 +4,7 @@ import {
 	DEFAULT_COMPAT_DATE,
 	experimental_patchConfig,
 	formatConfigSnippet,
+	isDurableObjectContainerApp,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -117,7 +118,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 	} else {
-		if (config.containers && config.containers.length > 0) {
+		if (
+			config.containers?.some(
+				(container) => !isDurableObjectContainerApp(container)
+			)
+		) {
 			logger.warn(
 				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`deploy\`.`
 			);
@@ -165,12 +170,25 @@ export async function preUploadApiChecks(
 	let tags: string[] = []; // arbitrary metadata tags, not to be confused with script tag or annotations
 	let workerExists = true;
 
-	// Skip the service metadata fetch for dispatch namespace deploys (Workers for Platforms).
-	// Dispatch namespace scripts don't have standard service metadata.
-	const skipMetadataFetch =
-		props.command === "deploy" && !!props.dispatchNamespace;
-
-	if (!skipMetadataFetch) {
+	if (props.command === "deploy" && props.dispatchNamespace) {
+		try {
+			await fetchResult(
+				config,
+				`/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${name}`
+			);
+		} catch (e) {
+			if (
+				typeof e === "object" &&
+				e !== null &&
+				"code" in e &&
+				e.code === 10092
+			) {
+				workerExists = false;
+			} else {
+				throw e;
+			}
+		}
+	} else {
 		try {
 			const serviceMetaData = await fetchResult<{
 				default_environment: {
@@ -318,6 +336,7 @@ export async function preUploadApiChecks(
 	// defaults to true only when there are no routes.
 	const wantsWorkersDev =
 		props.command === "deploy" &&
+		props.dispatchNamespace === undefined &&
 		getSubdomainValues(config.workers_dev, config.preview_urls, props.routes)
 			.workers_dev;
 
@@ -327,8 +346,7 @@ export async function preUploadApiChecks(
 	// new Worker that targets workers.dev, so the user gets a clear prompt
 	// instead of a cryptic API failure. We skip it for:
 	//   - existing Workers (their account already has a subdomain),
-	//   - dispatch namespace deploys (which skip the metadata fetch, so
-	//     `workerExists` stays true), and
+	//   - dispatch namespace deploys, and
 	//   - routes-only / `workers_dev: false` deploys, which don't publish to
 	//     workers.dev and previously never required a subdomain (workflows on
 	//     such deploys still get a correctly-worded prompt in the triggers phase).

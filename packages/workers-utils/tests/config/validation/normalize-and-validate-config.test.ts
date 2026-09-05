@@ -4619,6 +4619,497 @@ describe("normalizeAndValidateConfig()", () => {
 				}
 			});
 
+			it("should accept a Durable Object-managed container alongside migrations", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						durable_objects: {
+							bindings: [
+								{
+									name: "SANDBOX",
+									class_name: "Sandbox",
+								},
+							],
+						},
+						migrations: [
+							{
+								tag: "v1",
+								new_sqlite_classes: ["Sandbox"],
+							},
+						],
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									sandbox: {
+										dockerfile: "./Dockerfile",
+									},
+									tools: {
+										image:
+											"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.migrations).toEqual([
+					{
+						tag: "v1",
+						new_sqlite_classes: ["Sandbox"],
+					},
+				]);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox",
+						scheduling_policy: "durable_object",
+						images: {
+							sandbox: {
+								dockerfile: "./Dockerfile",
+							},
+							tools: {
+								image:
+									"registry.cloudflare.com/account/tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+							},
+						},
+					},
+				]);
+			});
+
+			it("should preserve an explicit Durable Object-managed container name without named images", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								name: "sandbox-app",
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it("should reserve the Durable Object-managed image binding name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								name: "sandbox-app",
+								scheduling_policy: "durable_object",
+							},
+						],
+						vars: {
+							EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES: "user value",
+						},
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES assigned to Environment Variable and Container images bindings"
+				);
+			});
+
+			it("reserves the generated metadata marker only for managed Containers", ({
+				expect,
+			}) => {
+				const vars = {
+					EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES_METADATA: "user value",
+				};
+				const ordinary = normalizeAndValidateConfig(
+					{ vars },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				expect(ordinary.diagnostics.hasErrors()).toBe(false);
+				const managed = normalizeAndValidateConfig(
+					{
+						vars,
+						containers: [
+							{
+								name: "sandbox",
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				expect(managed.diagnostics.renderErrors()).toContain(
+					"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES_METADATA assigned to Environment Variable and Container images metadata bindings"
+				);
+			});
+
+			it("should append the environment to a generated Durable Object-managed container name", ({
+				expect,
+			}) => {
+				const { diagnostics, config } = normalizeAndValidateConfig(
+					{
+						name: "test-worker-name",
+						env: {
+							staging: {
+								containers: [
+									{
+										class_name: "Sandbox",
+										scheduling_policy: "durable_object",
+									},
+								],
+							},
+						},
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.containers).toEqual([
+					{
+						class_name: "Sandbox",
+						name: "test-worker-name-sandbox-staging",
+						scheduling_policy: "durable_object",
+					},
+				]);
+			});
+
+			it("should reject scheduler fields on a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								name: "sandboxes",
+								image: "./Dockerfile",
+								max_instances: 5,
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in containers field: "image","max_instances"'
+				);
+			});
+
+			it("should require a class name for a Durable Object-managed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								scheduling_policy: "durable_object",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.class_name" must be a non-empty string when "containers.scheduling_policy" is "durable_object".'
+				);
+			});
+
+			it("should reject malformed Durable Object-managed container images", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						containers: [
+							{
+								class_name: "Sandbox",
+								scheduling_policy: "durable_object",
+								images: {
+									missing: {},
+									docker: { dockerfile: "" },
+									remote: { image: "" },
+									both: {
+										dockerfile: "./Dockerfile",
+										image:
+											"registry.cloudflare.com/account/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+									},
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				const errors = diagnostics.renderErrors();
+				expect(errors).toContain(
+					'"containers.images.missing" must specify exactly one of "dockerfile" or "image".'
+				);
+				expect(errors).toContain(
+					'"containers.images.docker.dockerfile" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.remote.image" must be a non-empty string.'
+				);
+				expect(errors).toContain(
+					'"containers.images.both" must specify exactly one of "dockerfile" or "image".'
+				);
+			});
+
+			describe("Durable Object-managed image references", () => {
+				const digest = "a".repeat(64);
+				function containers(image: string): RawConfig["containers"] {
+					return [
+						{
+							name: "sandbox",
+							class_name: "Sandbox",
+							scheduling_policy: "durable_object",
+							images: { app: { image } },
+						},
+					];
+				}
+
+				it.for([
+					"registry.cloudflare.com/account/app:latest",
+					"registry.cloudflare.com/account/app",
+					`registry.cloudflare.com/account/app:latest@sha256:${digest}`,
+					"registry.cloudflare.com/account/app@sha256:abc",
+					`registry.cloudflare.com/account/app@sha256:${"g".repeat(64)}`,
+					`registry.cloudflare.com/account/app@sha256:${"A".repeat(64)}`,
+					`registry.cloudflare.com/account/app@sha256:${digest}a`,
+					`registry.cloudflare.com/account/app@sha512:${digest}`,
+					`docker.io/account/app@sha256:${digest}`,
+					`registry.cloudflare.com.evil.com/account/app@sha256:${digest}`,
+					`https://registry.cloudflare.com/account/app@sha256:${digest}`,
+					`registry.cloudflare.com/app@sha256:${digest}`,
+					`registry.cloudflare.com/account//app@sha256:${digest}`,
+					`registry.cloudflare.com/account/app@sha256:${digest}\n`,
+				])("rejects invalid image %s", (image, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ containers: containers(image) },
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.renderErrors()).toContain(
+						'"containers.images.app.image" must be a digest-pinned image in the managed registry'
+					);
+				});
+
+				it.for([
+					{ registry: "registry.cloudflare.com", staging: false, fed: false },
+					{
+						registry: "staging.registry.cloudflare.com",
+						staging: true,
+						fed: false,
+					},
+					{
+						registry: "registry.fed.cloudflare.com",
+						staging: false,
+						fed: true,
+					},
+					{
+						registry: "staging.registry.fed.cloudflare.com",
+						staging: true,
+						fed: true,
+					},
+				])(
+					"accepts a digest in $registry",
+					({ registry, staging, fed }, { expect }) => {
+						vi.stubEnv(
+							"WRANGLER_API_ENVIRONMENT",
+							staging ? "staging" : "production"
+						);
+						const { diagnostics } = normalizeAndValidateConfig(
+							{
+								compliance_region: fed ? "fedramp_high" : "public",
+								containers: containers(
+									`${registry}/account/nested/app__tools-1.0@sha256:${digest}`
+								),
+							},
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+						expect(diagnostics.hasErrors()).toBe(false);
+					}
+				);
+
+				it("inherits the compliance region in a named environment", ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "fedramp_high",
+							env: {
+								production: {
+									containers: containers(
+										`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+									),
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("uses a named environment's compliance region override", ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "public",
+							env: {
+								production: {
+									compliance_region: "fedramp_high",
+									containers: containers(
+										`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+									),
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("honors the compliance region environment variable", ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registry.fed.cloudflare.com/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("honors an explicit registry override without interpreting it as a pattern", ({
+					expect,
+				}) => {
+					vi.stubEnv(
+						"CLOUDFLARE_CONTAINER_REGISTRY",
+						"registry.example.com:5000"
+					);
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registry.example.com:5000/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.hasErrors()).toBe(false);
+					const invalid = normalizeAndValidateConfig(
+						{
+							containers: containers(
+								`registryXexample.com:5000/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(invalid.diagnostics.hasErrors()).toBe(true);
+				});
+
+				it("rejects images from a different managed registry", ({ expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							compliance_region: "fedramp_high",
+							containers: containers(
+								`registry.cloudflare.com/account/app@sha256:${digest}`
+							),
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.renderErrors()).toContain(
+						"registry.fed.cloudflare.com/<account-id>"
+					);
+				});
+			});
+
+			it("should reject named images on a scheduler-backed container", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "Sandbox",
+								image: "./Dockerfile",
+								images: {
+									sandbox: { dockerfile: "./Dockerfile" },
+								},
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain(
+					'Unexpected fields found in containers field: "images"'
+				);
+			});
+
 			it("should provide a name in a named environment that inherits the top level worker name", ({
 				expect,
 			}) => {

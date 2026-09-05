@@ -3,10 +3,12 @@ import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import {
+	CONTAINER_IMAGES_BINDING,
 	CommandLineArgsError,
 	configFileName,
 	experimental_readRawConfig,
 	FatalError,
+	getDurableObjectContainerApps,
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -39,6 +41,9 @@ import type {
 	RawConfig,
 	RawEnvironment,
 } from "@cloudflare/workers-utils";
+
+const CONTAINER_IMAGES_BINDING_TYPE =
+	"Readonly<Record<string, Readonly<Record<string, string>>>>";
 
 export interface GenerateTypesOptions {
 	/**
@@ -2566,6 +2571,15 @@ function collectCoreBindings(
 		if (env.assets?.binding) {
 			addBinding(env.assets.binding, "Fetcher", "assets", envName);
 		}
+
+		if (getDurableObjectContainerApps(env.containers).length > 0) {
+			addBinding(
+				CONTAINER_IMAGES_BINDING,
+				CONTAINER_IMAGES_BINDING_TYPE,
+				"container_images",
+				envName
+			);
+		}
 	}
 
 	const { rawConfig } = experimental_readRawConfig(args);
@@ -3571,6 +3585,14 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "assets",
 				name: env.assets.binding,
 				type: "Fetcher",
+			});
+		}
+
+		if (getDurableObjectContainerApps(env.containers).length > 0) {
+			bindings.push({
+				bindingCategory: "container_images",
+				name: CONTAINER_IMAGES_BINDING,
+				type: CONTAINER_IMAGES_BINDING_TYPE,
 			});
 		}
 

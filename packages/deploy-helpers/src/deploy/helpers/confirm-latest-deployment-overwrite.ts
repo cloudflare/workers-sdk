@@ -19,7 +19,10 @@ export async function confirmLatestDeploymentOverwrite(
 	config: Config,
 	accountId: string,
 	scriptName: string
-) {
+): Promise<{
+	confirmed: boolean;
+	latestDeployment: ApiDeployment | undefined;
+}> {
 	try {
 		const latest = await fetchLatestDeployment(config, accountId, scriptName);
 		if (latest && latest.versions.length >= 2) {
@@ -39,20 +42,22 @@ export async function confirmLatestDeploymentOverwrite(
 				versionCache
 			);
 
-			return inputPrompt<boolean>({
+			const confirmed = await inputPrompt<boolean>({
 				type: "confirm",
 				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
 				label: "",
 				defaultValue: isNonInteractiveOrCI(),
 				acceptDefault: isNonInteractiveOrCI(),
 			});
+			return { confirmed, latestDeployment: latest };
 		}
+		return { confirmed: true, latestDeployment: latest };
 	} catch (e) {
 		if (!isWorkerNotFoundError(e)) {
 			throw e;
 		}
 	}
-	return true;
+	return { confirmed: true, latestDeployment: undefined };
 }
 
 async function printDeployment(

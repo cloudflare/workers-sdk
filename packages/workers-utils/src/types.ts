@@ -294,7 +294,11 @@ type WorkerMetadataPut = {
 	observability?: Observability | undefined;
 	// `class_name` is omitted when the container is instead referenced from the
 	// Durable Object's `exports` entry via its `container` field.
-	containers?: { name?: string; class_name?: string }[];
+	containers?: {
+		name?: string;
+		class_name?: string;
+		images?: Record<string, string>;
+	}[];
 	package_dependencies?: Array<{
 		name: string;
 		packageJsonVersion: string;

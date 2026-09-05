@@ -1,5 +1,46 @@
 import { getDurableObjectExports } from "./durable-object-exports";
+import type { WorkerMetadataBinding } from "../types";
 import type { ContainerApp, Exports } from "./environment";
+
+export const CONTAINER_IMAGES_BINDING =
+	"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES";
+
+export const CONTAINER_IMAGES_METADATA_BINDING =
+	"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES_METADATA";
+export const CONTAINER_IMAGES_METADATA_VERSION =
+	"wrangler/durable-object-container-images@1";
+
+/** Identify Wrangler's generated image map without claiming an ordinary user binding. */
+export function hasContainerImagesMetadata(
+	bindings: WorkerMetadataBinding[]
+): boolean {
+	return bindings.some(
+		(binding) =>
+			binding.name === CONTAINER_IMAGES_METADATA_BINDING &&
+			binding.type === "json" &&
+			binding.json === CONTAINER_IMAGES_METADATA_VERSION
+	);
+}
+
+export type DurableObjectContainerApp = ContainerApp & {
+	class_name: string;
+	name: string;
+	scheduling_policy: "durable_object";
+};
+
+export function isDurableObjectContainerApp(
+	container: ContainerApp
+): container is DurableObjectContainerApp {
+	return container.scheduling_policy === "durable_object";
+}
+
+export function getDurableObjectContainerApps(
+	containers: ContainerApp[] | undefined
+): DurableObjectContainerApp[] {
+	return Array.isArray(containers)
+		? containers.filter(isDurableObjectContainerApp)
+		: [];
+}
 
 /**
  * A container can be linked to a Durable Object from either direction:

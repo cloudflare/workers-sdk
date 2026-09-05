@@ -98,7 +98,26 @@ type UnsafeBinding = {
 };
 
 /**
- * Configuration for a container application
+ * An image Wrangler prepares for a Durable Object-managed container.
+ */
+export type DurableObjectContainerImage =
+	| {
+			/**
+			 * Path to the Dockerfile Wrangler builds and pushes.
+			 */
+			dockerfile: string;
+			image?: never;
+	  }
+	| {
+			/**
+			 * Digest-pinned image in the account's managed registry.
+			 */
+			image: string;
+			dockerfile?: never;
+	  };
+
+/**
+ * Configuration for a container application.
  */
 export type ContainerApp = {
 	// TODO: fill out the entire type
@@ -132,7 +151,16 @@ export type ContainerApp = {
 	/**
 	 * The path to a Dockerfile, or an image URI for the Cloudflare registry.
 	 */
-	image: string;
+	image?: string;
+
+	/**
+	 * Named images available to a Durable Object-managed container through
+	 * `ctx.container.images` and
+	 * `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES[className]`.
+	 *
+	 * Only supported when `scheduling_policy` is `"durable_object"`.
+	 */
+	images?: Record<string, DurableObjectContainerImage>;
 
 	/**
 	 * Build context of the application.
@@ -159,9 +187,13 @@ export type ContainerApp = {
 	/**
 	 * The scheduling policy of the application
 	 * @optional
+	 * `"durable_object"` makes each Durable Object instance own its Container.
+	 * In that mode, only `name`, `class_name`, `scheduling_policy`, and `images` are
+	 * supported on this entry.
+	 *
 	 * @default "default"
 	 */
-	scheduling_policy?: "default" | "moon" | "regional";
+	scheduling_policy?: "default" | "durable_object" | "moon" | "regional";
 
 	/**
 	 * The instance type to be used for the container.
