@@ -6,11 +6,17 @@
 // the parent uses to feature-detect support.
 const {
 	ArgParseError,
+	handleBrokenPipe,
 	parseCfWranglerBuildArgs,
 	parseCfWranglerArgs,
 	runCfWranglerBuild,
 	runCfWranglerDev,
 } = require("../wrangler-dist/cli.js");
+
+// This binary runs delegate verbs in-process rather than re-spawning, so the
+// guard installed by `cli.ts` for the `wrangler` binary does not apply here.
+// Install it before writing anything.
+handleBrokenPipe();
 
 const argv = process.argv.slice(2);
 const verb = argv[0];
