@@ -8,8 +8,11 @@ import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
 import colors from "picocolors";
 import { configureContainerPull, getDockerPath } from "../containers";
 import { assertIsPreview } from "../context";
-import { getPreviewMiniflareOptions } from "../miniflare-options";
-import { createPlugin, createRequestHandler } from "../utils";
+import {
+	disposeRemoteProxySessions,
+	getPreviewMiniflareOptions,
+} from "../miniflare-options";
+import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
 import { rewriteLegacyMiniflarePath } from "./trigger-handlers";
 
@@ -27,11 +30,18 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 		async configurePreviewServer(vitePreviewServer) {
 			assertIsPreview(ctx);
 
-			// Ensure Miniflare is disposed when the preview server is closed during prerendering
+			// Ensure Miniflare and any remote proxy sessions are disposed when the
+			// preview server is closed during prerendering
 			const closePreviewServer =
 				vitePreviewServer.close.bind(vitePreviewServer);
 			vitePreviewServer.close = async () => {
-				await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
+				await Promise.all([
+					ctx.disposeMiniflare(),
+					disposeRemoteProxySessions().catch((error) => {
+						debuglog("Failed to dispose remote proxy sessions:", error);
+					}),
+					closePreviewServer(),
+				]);
 			};
 
 			const { miniflareOptions, containerTagToOptionsMap } =
