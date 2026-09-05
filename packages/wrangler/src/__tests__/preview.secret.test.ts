@@ -21,7 +21,11 @@ const BRANCH_ENV_VARS = [
 	"CI_COMMIT_REF_NAME",
 ] as const;
 const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
+	"Note: This Preview deployment has no active URLs. " +
+	"For Workers.dev previews, set the top-level `preview_urls` setting to `true`. " +
+	"For custom-domain previews, set `previews_enabled` to `true` on a custom-domain route. " +
+	"After changing either setting, run `wrangler deploy`, then `wrangler preview` again. " +
+	"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.";
 
 async function withoutBranchEnvVars<T>(callback: () => Promise<T>): Promise<T> {
 	const originalBranchEnv = Object.fromEntries(
@@ -188,6 +192,7 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain(
 					"is now live at https://test-preview.example.workers.dev"
 				);
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 				expect(std.out).not.toContain("preview-secret");
 			});
 
@@ -394,6 +399,7 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain(
 					"is now live at https://test-preview.example.workers.dev"
 				);
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 			});
 
 			test("notes when the new Preview deployment has no active URLs", async ({
@@ -631,6 +637,7 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain(
 					"is now live at https://test-preview.example.workers.dev"
 				);
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 				expect(std.out).not.toContain("one");
 				expect(std.out).not.toContain("two");
 			});

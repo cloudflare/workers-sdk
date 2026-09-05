@@ -293,7 +293,11 @@ async function prepareContainersForPreview(
 }
 
 export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
+	"Note: This Preview deployment has no active URLs. " +
+	"For Workers.dev previews, set the top-level `preview_urls` setting to `true`. " +
+	"For custom-domain previews, set `previews_enabled` to `true` on a custom-domain route. " +
+	"After changing either setting, run `wrangler deploy`, then `wrangler preview` again. " +
+	"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.";
 
 function getPreviewMigrationsToUpload(
 	workerName: string,
