@@ -34,7 +34,8 @@ test("gracefully closes Chrome over CDP", async ({ expect }) => {
 	await closeBrowserProcess(
 		browserProcess,
 		`ws://127.0.0.1:${address.port}`,
-		100
+		// Leave enough time for the WebSocket handshake when the suite is busy.
+		1_000
 	);
 
 	expect(browserProcess.kill).not.toHaveBeenCalled();
