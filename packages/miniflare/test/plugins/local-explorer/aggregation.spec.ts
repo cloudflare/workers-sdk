@@ -54,9 +54,13 @@ describe("Cross-process aggregation", () => {
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
 				export class MyDO {
 					constructor(state) { this.state = state; }
 					async fetch() { return new Response("DO A"); }
+				}
+				export class WorkflowA extends WorkflowEntrypoint {
+					async run() { return "Workflow A"; }
 				}
 				export default { fetch() { return new Response("Worker A"); } }
 			`),
@@ -70,6 +74,12 @@ describe("Cross-process aggregation", () => {
 								exportName: "MyDO",
 							},
 							BUCKET_A: { type: "r2", name: "bucket-a" },
+							WF_A: {
+								type: "workflow",
+								name: "workflow-a",
+								worker: "worker-a",
+								exportName: "WorkflowA",
+							},
 						},
 						exports: {
 							MyDO: { type: "durable-object", storage: "legacy-kv" },
@@ -91,9 +101,13 @@ describe("Cross-process aggregation", () => {
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
 				export class OtherDO {
 					constructor(state) { this.state = state; }
 					async fetch() { return new Response("DO B"); }
+				}
+				export class WorkflowB extends WorkflowEntrypoint {
+					async run() { return "Workflow B"; }
 				}
 				export default { fetch() { return new Response("Worker B"); } }
 			`),
@@ -106,6 +120,12 @@ describe("Cross-process aggregation", () => {
 								exportName: "OtherDO",
 							},
 							BUCKET_B: { type: "r2", name: "bucket-b" },
+							WF_B: {
+								type: "workflow",
+								name: "workflow-b",
+								worker: "worker-b",
+								exportName: "WorkflowB",
+							},
 						},
 						exports: {
 							OtherDO: { type: "durable-object", storage: "legacy-kv" },
@@ -325,7 +345,9 @@ describe("Cross-process aggregation", () => {
 	});
 
 	describe("DO namespace aggregation", () => {
-		test("lists DO namespaces from both instances", async ({ expect }) => {
+		test("only lists local DO namespaces without shared storage", async ({
+			expect,
+		}) => {
 			const response = await instanceA.dispatchFetch(
 				`${BASE_URL}/workers/durable_objects/namespaces`
 			);
@@ -340,17 +362,27 @@ describe("Cross-process aggregation", () => {
 				    "id": "worker-a-MyDO",
 				    "name": "worker-a_MyDO",
 				  },
-				  {
-				    "id": "worker-b-OtherDO",
-				    "name": "worker-b_OtherDO",
-				  },
 				]
 			`);
 			expect(normalized.result_info).toMatchInlineSnapshot(`
 				{
-				  "count": 2,
+				  "count": 1,
 				}
 			`);
+		});
+	});
+
+	describe("workflow aggregation", () => {
+		test("only lists local workflows without shared storage", async ({
+			expect,
+		}) => {
+			const response = await instanceA.dispatchFetch(`${BASE_URL}/workflows`);
+			const data = (await response.json()) as {
+				result?: Array<{ name: string }>;
+				result_info?: { count?: number };
+			};
+			expect(data.result).toMatchObject([{ name: "workflow-a" }]);
+			expect(data.result_info?.count).toBe(1);
 		});
 	});
 
@@ -416,11 +448,33 @@ describe("Multi-worker peer deduplication", () => {
 						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(
-							`export default { fetch() { return new Response("Worker A"); } }`
-						),
+						manifest: singleModuleManifest(`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
+				export class MyDO {
+					constructor(state) { this.state = state; }
+					async fetch() { return new Response("DO A"); }
+				}
+				export class MyWorkflowA extends WorkflowEntrypoint {
+					async run() { return "Workflow A"; }
+				}
+				export default { fetch() { return new Response("Worker A"); } }
+			`),
 						env: {
 							KV_A: { type: "kv", id: "kv-a" },
+							DO_A: {
+								type: "durable-object",
+								worker: "worker-a",
+								exportName: "MyDO",
+							},
+							WF_A: {
+								type: "workflow",
+								name: "workflow-a",
+								worker: "worker-a",
+								exportName: "MyWorkflowA",
+							},
+						},
+						exports: {
+							MyDO: { type: "durable-object", storage: "legacy-kv" },
 						},
 					},
 				},
@@ -444,11 +498,33 @@ describe("Multi-worker peer deduplication", () => {
 						type: "worker",
 						name: "worker-b1",
 						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(
-							`export default { fetch() { return new Response("Worker B1"); } }`
-						),
+						manifest: singleModuleManifest(`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
+				export class OtherDO {
+					constructor(state) { this.state = state; }
+					async fetch() { return new Response("DO B1"); }
+				}
+				export class MyWorkflowB extends WorkflowEntrypoint {
+					async run() { return "Workflow B"; }
+				}
+				export default { fetch() { return new Response("Worker B1"); } }
+			`),
 						env: {
 							KV_B1: { type: "kv", id: "kv-b1" },
+							DO_B: {
+								type: "durable-object",
+								worker: "worker-b1",
+								exportName: "OtherDO",
+							},
+							WF_B: {
+								type: "workflow",
+								name: "workflow-b",
+								worker: "worker-b1",
+								exportName: "MyWorkflowB",
+							},
+						},
+						exports: {
+							OtherDO: { type: "durable-object", storage: "legacy-kv" },
 						},
 					},
 				},
@@ -512,11 +588,33 @@ describe("Multi-worker peer deduplication", () => {
 						type: "worker",
 						name: "worker-c",
 						compatibilityDate: "2025-01-01",
-						manifest: singleModuleManifest(
-							`export default { fetch() { return new Response("Worker C"); } }`
-						),
+						manifest: singleModuleManifest(`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
+				export class ScopedDO {
+					constructor(state) { this.state = state; }
+					async fetch() { return new Response("DO C"); }
+				}
+				export class MyWorkflowC extends WorkflowEntrypoint {
+					async run() { return "Workflow C"; }
+				}
+				export default { fetch() { return new Response("Worker C"); } }
+			`),
 						env: {
 							KV_C: { type: "kv", id: "kv-c" },
+							DO_C: {
+								type: "durable-object",
+								worker: "worker-c",
+								exportName: "ScopedDO",
+							},
+							WF_C: {
+								type: "workflow",
+								name: "workflow-c",
+								worker: "worker-c",
+								exportName: "MyWorkflowC",
+							},
+						},
+						exports: {
+							ScopedDO: { type: "durable-object", storage: "legacy-kv" },
 						},
 					},
 				},
@@ -575,6 +673,69 @@ describe("Multi-worker peer deduplication", () => {
 			  },
 			}
 		`);
+	});
+
+	test("only lists DO namespaces from peers in the same shared-storage scope", async ({
+		expect,
+	}) => {
+		const response = await instanceA.dispatchFetch(
+			`${BASE_URL}/workers/durable_objects/namespaces`
+		);
+		const data = (await response.json()) as ListResponse;
+		expect(normalizeListResponse(data)).toMatchObject({
+			result: [
+				{ id: "worker-a-MyDO", name: "worker-a_MyDO" },
+				{ id: "worker-b1-OtherDO", name: "worker-b1_OtherDO" },
+			],
+			result_info: { count: 2 },
+		});
+	});
+
+	test("only lists workflows from peers in the same shared-storage scope", async ({
+		expect,
+	}) => {
+		const response = await instanceA.dispatchFetch(`${BASE_URL}/workflows`);
+		const data = (await response.json()) as {
+			result?: Array<{ name: string }>;
+			result_info?: { count?: number };
+		};
+		expect(data.result).toMatchObject([
+			{ name: "workflow-a" },
+			{ name: "workflow-b" },
+		]);
+		expect(data.result_info?.count).toBe(2);
+	});
+
+	test("resolves DO namespace owner only within the same shared-storage scope", async ({
+		expect,
+	}) => {
+		const responseSameScope = await instanceA.dispatchFetch(
+			`${BASE_URL}/workers/durable_objects/namespaces/worker-b1-OtherDO/objects`
+		);
+		expect(responseSameScope.status).toBe(200);
+		await responseSameScope.text();
+
+		const responseDiffScope = await instanceA.dispatchFetch(
+			`${BASE_URL}/workers/durable_objects/namespaces/worker-c-ScopedDO/objects`
+		);
+		expect(responseDiffScope.status).toBe(404);
+		await responseDiffScope.text();
+	});
+
+	test("resolves workflow owner only within the same shared-storage scope", async ({
+		expect,
+	}) => {
+		const responseSameScope = await instanceA.dispatchFetch(
+			`${BASE_URL}/workflows/workflow-b`
+		);
+		expect(responseSameScope.status).toBe(200);
+		await responseSameScope.text();
+
+		const responseDiffScope = await instanceA.dispatchFetch(
+			`${BASE_URL}/workflows/workflow-c`
+		);
+		expect(responseDiffScope.status).toBe(404);
+		await responseDiffScope.text();
 	});
 });
 

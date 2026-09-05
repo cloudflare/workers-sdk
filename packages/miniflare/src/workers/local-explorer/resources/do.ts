@@ -79,7 +79,9 @@ async function findDONamespaceOwner(
 	c: AppContext,
 	namespaceId: string
 ): Promise<string | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
+	const peerUrls = await getPeerUrlsIfAggregating(c, {
+		sharedStorageOnly: true,
+	});
 	if (peerUrls.length === 0) {
 		return null;
 	}
@@ -124,7 +126,8 @@ export async function listDONamespaces(c: AppContext) {
 	const allNamespaces = await aggregateListResults(
 		c,
 		localNamespaces,
-		"/workers/durable_objects/namespaces"
+		"/workers/durable_objects/namespaces",
+		{ sharedStorageOnly: true }
 	);
 
 	return c.json({
