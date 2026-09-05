@@ -35,6 +35,9 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// workerd contains a native binary, so must be external. Wrangler depends on a pinned version.
 	"workerd",
+
+	// node-hid contains native bindings used by the branch-only Codex Micro daemon.
+	"node-hid",
 ];
 
 /**
