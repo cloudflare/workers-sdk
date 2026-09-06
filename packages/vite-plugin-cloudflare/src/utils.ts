@@ -97,26 +97,11 @@ export function createRequestHandler(
 			// If the header is absent or invalid, `createRequest` falls back to the
 			// connection protocol (`req.socket.encrypted`).
 			const protocol = getForwardedProto(req);
-			// Prefer Node host/:authority so HTTPS/HTTP2 keeps non-default ports (e.g. :5173).
-			// createRequest only applies `options.host` to request.url; Host still comes from
-			// rawHeaders (and createHeaders skips :authority), so we must set Host ourselves
-			// for toMiniflareRequest to populate X-Forwarded-Host with the same origin.
-			const nodeHost =
-				typeof req.headers.host === "string" ? req.headers.host : undefined;
-			const authority =
-				typeof req.headers[":authority"] === "string"
-					? req.headers[":authority"]
-					: undefined;
-			const host = nodeHost ?? authority;
-
-			request = createRequestForIncomingMessage(req, res, {
-				...(protocol ? { protocol } : {}),
-				...(host ? { host } : {}),
-			});
-
-			if (host) {
-				request.headers.set("Host", host);
-			}
+			request = createRequestForIncomingMessage(
+				req,
+				res,
+				protocol ? { protocol } : undefined
+			);
 
 			let response = await handler(toMiniflareRequest(request), req);
 
@@ -160,7 +145,7 @@ function createRequestForIncomingMessage(
 	const protocol =
 		options?.protocol ??
 		("encrypted" in req.socket && req.socket.encrypted ? "https:" : "http:");
-	const host = options?.host ?? headers.get("Host") ?? "localhost";
+	const host = options?.host ?? getRequestHost(req) ?? "localhost";
 	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
 	const init: RequestInit & { duplex?: "half" } = {
 		method,
@@ -228,7 +213,9 @@ function createCancellableRequestBody(
 }
 
 function toMiniflareRequest(request: Request): MiniflareRequest {
-	const host = request.headers.get("Host");
+	// Under HTTP/2 there is no `Host` header, but the request URL was built from
+	// the resolved authority, so it still carries the host and port.
+	const host = request.headers.get("Host") ?? new URL(request.url).host;
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
 	if (host && !xForwardedHost) {
@@ -257,6 +244,26 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 }
 
 export const isRolldown = "rolldownVersion" in vite;
+
+/**
+ * Resolves the authority (host and port) of an incoming Node.js request.
+ *
+ * HTTP/1.1 carries it in the `Host` header, but HTTP/2 — which browsers use
+ * whenever `server.https` is enabled — carries it in the `:authority`
+ * pseudo-header instead. `createHeaders()` skips pseudo-headers, so `Host` is
+ * absent from the parsed headers under HTTP/2 and the authority has to be read
+ * from `req.headers` directly.
+ *
+ * Returns `undefined` if neither is present, so callers can apply their own
+ * fallback.
+ */
+export function getRequestHost(req: {
+	headers: http.IncomingHttpHeaders;
+}): string | undefined {
+	const raw = req.headers.host ?? req.headers[":authority"];
+	const value = Array.isArray(raw) ? raw[0] : raw;
+	return value?.trim() || undefined;
+}
 
 /**
  * Parses the `X-Forwarded-Proto` header from an incoming Node.js request.
