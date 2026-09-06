@@ -154,7 +154,7 @@ async function registryConfigureCommand(
 ) {
 	startSection("Configure a container registry");
 
-	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
+	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN, config);
 
 	if (registryType.type === "cloudflare") {
 		log(
@@ -675,15 +675,18 @@ async function registryDeleteCommand(
 	}
 }
 
-async function registryCredentialsCommand(credentialsArgs: {
-	DOMAIN?: string;
-	expirationMinutes: number;
-	push?: boolean;
-	pull?: boolean;
-	libraryPush?: boolean;
-	json?: boolean;
-}) {
-	const cloudflareRegistry = getCloudflareContainerRegistry();
+async function registryCredentialsCommand(
+	credentialsArgs: {
+		DOMAIN?: string;
+		expirationMinutes: number;
+		push?: boolean;
+		pull?: boolean;
+		libraryPush?: boolean;
+		json?: boolean;
+	},
+	config: Config
+) {
+	const cloudflareRegistry = getCloudflareContainerRegistry(config);
 	const domain = credentialsArgs.DOMAIN || cloudflareRegistry;
 	if (domain !== cloudflareRegistry) {
 		throw new UserError(
@@ -835,6 +838,6 @@ export const containersRegistriesCredentialsCommand = createCommand({
 	positionalArgs: ["DOMAIN"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
-		await registryCredentialsCommand(args);
+		await registryCredentialsCommand(args, config);
 	},
 });

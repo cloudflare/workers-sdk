@@ -19,30 +19,41 @@ const config: StartDevWorkerOptions = {
 };
 
 describe("DevEnv", () => {
-	it("changes the uploaded source on every update", ({ expect }) => {
+	it("changes the uploaded source for every update", ({ expect }) => {
+		function captureUpdates(devEnv: DevEnv) {
+			const onBundleComplete =
+				vi.fn<RemoteRuntimeController["onBundleComplete"]>();
+			devEnv.proxy = { pause: vi.fn() } as unknown as ProxyController;
+			devEnv.runtime = {
+				onUpdateStart: vi.fn(),
+				onBundleComplete,
+			} as unknown as RemoteRuntimeController;
+			return onBundleComplete;
+		}
+
 		const devEnv = new DevEnv(config);
-		const onBundleComplete =
-			vi.fn<RemoteRuntimeController["onBundleComplete"]>();
-		devEnv.proxy = { pause: vi.fn() } as unknown as ProxyController;
-		devEnv.runtime = {
-			onUpdateStart: vi.fn(),
-			onBundleComplete,
-		} as unknown as RemoteRuntimeController;
-
+		const firstDevEnvUpdates = captureUpdates(devEnv);
 		devEnv.update(config);
 		devEnv.update(config);
 
-		const [firstCall, secondCall] = onBundleComplete.mock.calls;
-		if (!firstCall || !secondCall) {
+		const otherDevEnv = new DevEnv(config);
+		const otherDevEnvUpdates = captureUpdates(otherDevEnv);
+		otherDevEnv.update(config);
+
+		const [firstCall, secondCall] = firstDevEnvUpdates.mock.calls;
+		const [otherCall] = otherDevEnvUpdates.mock.calls;
+		if (!firstCall || !secondCall || !otherCall) {
 			throw new Error("Expected two bundle updates");
 		}
-		const firstBundle = firstCall[0].bundle;
-		const secondBundle = secondCall[0].bundle;
-		expect(firstBundle.entrypointSource).toBe(
-			"export default {};\n// remote-bindings-update:1"
-		);
-		expect(secondBundle.entrypointSource).toBe(
-			"export default {};\n// remote-bindings-update:2"
-		);
+		const firstSource = firstCall[0].bundle.entrypointSource;
+		const secondSource = secondCall[0].bundle.entrypointSource;
+		const otherSource = otherCall[0].bundle.entrypointSource;
+
+		for (const source of [firstSource, secondSource, otherSource]) {
+			expect(source).toMatch(
+				/^export default \{\};\n\/\/ remote-bindings-update:[0-9a-f-]+$/
+			);
+		}
+		expect(new Set([firstSource, secondSource, otherSource]).size).toBe(3);
 	});
 });

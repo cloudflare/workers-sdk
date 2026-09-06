@@ -80,8 +80,9 @@ const reducers: ReducersRevivers = {
 	...structuredSerializableReducers,
 	...createHTTPReducers(NODE_PLATFORM_IMPL),
 	Native(value) {
-		if (isNativeTarget(value))
+		if (isNativeTarget(value)) {
 			return [value[kAddress], value[kName], value[kIsFunction]];
+		}
 	},
 };
 const revivers: ReducersRevivers = {
@@ -197,10 +198,14 @@ class ProxyClientBridge {
 			// Sanity check: make sure the proxy hasn't been poisoned. We should
 			// unregister all proxies from the finalisation registry when poisoning,
 			// but it doesn't hurt to be careful.
-			if (held.version === this.#version) addresses.push(held.address);
+			if (held.version === this.#version) {
+				addresses.push(held.address);
+			}
 		}
 		// If there are no addresses to free, we don't need to send a request
-		if (addresses.length === 0) return;
+		if (addresses.length === 0) {
+			return;
+		}
 		try {
 			await this.dispatchFetch(this.url, {
 				method: "DELETE",
@@ -419,7 +424,9 @@ class ProxyStubHandler<T extends object>
 		assert(!isClientError(res.status));
 
 		const typeHeader = res.headers.get(CoreHeaders.OP_RESULT_TYPE);
-		if (typeHeader === "Promise, ReadableStream") return res.body;
+		if (typeHeader === "Promise, ReadableStream") {
+			return res.body;
+		}
 		assert(typeHeader === "Promise"); // Must be async
 
 		let stringifiedResult: string;
@@ -460,7 +467,9 @@ class ProxyStubHandler<T extends object>
 		assert(syncRes.body !== null);
 		// Unbuffered streams should only be sent as part of async responses
 		assert(syncRes.headers.get(CoreHeaders.OP_STRINGIFIED_SIZE) === null);
-		if (syncRes.body instanceof ReadableStream) return syncRes.body;
+		if (syncRes.body instanceof ReadableStream) {
+			return syncRes.body;
+		}
 
 		const stringifiedResult = DECODER.decode(syncRes.body);
 		const result = parseWithReadableStreams(
@@ -491,17 +500,27 @@ class ProxyStubHandler<T extends object>
 
 		// When `devalue` `stringify`ing `Proxy`, treat it as a `NativeTarget`
 		// (allows native proxies to be used as arguments, e.g. `DurableObjectId`s)
-		if (key === kAddress) return this.target[kAddress];
-		if (key === kName) return this.target[kName];
-		if (key === kIsFunction) return this.target[kIsFunction];
+		if (key === kAddress) {
+			return this.target[kAddress];
+		}
+		if (key === kName) {
+			return this.target[kName];
+		}
+		if (key === kIsFunction) {
+			return this.target[kIsFunction];
+		}
 		// Ignore all other symbol properties, or `then()`s. We should never return
 		// `Promise`s or thenables as native targets, and want to avoid the extra
 		// network call when `await`ing the proxy.
-		if (typeof key === "symbol" || key === "then") return undefined;
+		if (typeof key === "symbol" || key === "then") {
+			return undefined;
+		}
 
 		// See optimisation comments below for cases where this will be set
 		const maybeKnown = this.#knownValues.get(key);
-		if (maybeKnown !== undefined) return maybeKnown;
+		if (maybeKnown !== undefined) {
+			return maybeKnown;
+		}
 
 		// Always perform a synchronous GET, if this returns a `Promise`, we'll
 		// do an asynchronous GET in the reviver
@@ -548,12 +567,16 @@ class ProxyStubHandler<T extends object>
 	getOwnPropertyDescriptor(target: T, key: string | symbol) {
 		this.#assertSafe();
 
-		if (typeof key === "symbol") return undefined;
+		if (typeof key === "symbol") {
+			return undefined;
+		}
 
 		// Optimisation: assume constant prototypes of proxied objects, descriptors
 		// should never change after we've fetched them
 		const maybeKnown = this.#knownDescriptors.get(key);
-		if (maybeKnown !== undefined) return maybeKnown;
+		if (maybeKnown !== undefined) {
+			return maybeKnown;
+		}
 
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
@@ -578,7 +601,9 @@ class ProxyStubHandler<T extends object>
 
 		// Optimisation: assume constant prototypes of proxied objects, own keys
 		// should never change after we've fetched them
-		if (this.#knownOwnKeys !== undefined) return this.#knownOwnKeys;
+		if (this.#knownOwnKeys !== undefined) {
+			return this.#knownOwnKeys;
+		}
 
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
@@ -616,7 +641,9 @@ class ProxyStubHandler<T extends object>
 		const func = {
 			[key]: (...args: unknown[]) => {
 				const result = this.#call(key, knownAsync, args, func);
-				if (!knownAsync && result instanceof Promise) knownAsync = true;
+				if (!knownAsync && result instanceof Promise) {
+					knownAsync = true;
+				}
 				return result;
 			},
 		}[key];
@@ -632,7 +659,9 @@ class ProxyStubHandler<T extends object>
 
 		const targetName = this.target[kName];
 		// See `isFetcherFetch()` comment for why this is special
-		if (isFetcherFetch(targetName, key)) return this.#fetcherFetchCall(args);
+		if (isFetcherFetch(targetName, key)) {
+			return this.#fetcherFetchCall(args);
+		}
 
 		const stringified = stringifyWithStreams(
 			NODE_PLATFORM_IMPL,
@@ -663,7 +692,9 @@ class ProxyStubHandler<T extends object>
 				const arg = args[0];
 				assert(arg instanceof Headers);
 				assert(result instanceof Headers);
-				for (const [key, value] of result) arg.set(key, value);
+				for (const [key, value] of result) {
+					arg.set(key, value);
+				}
 				return; // void
 			}
 			return result;

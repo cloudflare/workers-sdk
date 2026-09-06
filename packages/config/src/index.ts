@@ -1,5 +1,6 @@
 export * from "./public";
 export {
+	AnalyticsEngineDatasetBindingSchema,
 	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,
@@ -11,16 +12,17 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	InputSettingsSchema,
 	InputWorkerSchema,
 	KnownBindingSchema,
 	KVBindingSchema,
+	OutputSettingsSchema,
 	OutputWorkerSchema,
 	ModuleTypeSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
-	SettingsSchema,
 	TailConsumerSchema,
 	UnsafeBindingSchema,
 	validateSingletonBindings,
@@ -36,8 +38,9 @@ export type { LoadConfigResult } from "./load";
 export type { LoadAndValidateConfigResult } from "./config-loader";
 export type {
 	ParsedConfigExports,
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
+	ParsedOutputSettingsConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 	ModuleType,
 } from "./schema";

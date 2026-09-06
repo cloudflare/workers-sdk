@@ -18,8 +18,8 @@ export function rejectUnsupportedPreviewArgs(args: Record<string, unknown>) {
 			});
 		}
 	}
-	if (args.ignoreDefaults === true) {
-		throw new CommandLineArgsError("Unknown argument: ignore-defaults", {
+	if (args.ignoreBaseConfig === true) {
+		throw new CommandLineArgsError("Unknown argument: ignore-base-config", {
 			telemetryMessage: "preview base-config unsupported flag",
 		});
 	}

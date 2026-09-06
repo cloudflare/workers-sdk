@@ -67,9 +67,23 @@ jobs:
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: node .github/changeset-version.js
-          publish: pnpm exec changeset publish
+          # Replaces `changeset publish` with an orchestrator that publishes in
+          # dependency-tier order and waits for each tier to become resolvable
+          # on the registry before starting the next one. Packages pin their
+          # siblings at an exact version, so publishing a dependent before its
+          # dependency has propagated produces an installable-but-broken
+          # release. It still ends with `changeset tag`, so the `New tag:` lines
+          # this action parses into `publishedPackages` are unchanged.
+          publish: node -r esbuild-register tools/deployments/publish-packages.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          # Once every version in a tier reads back OK, wait this long before
+          # starting the next tier. A successful read only proves this runner's
+          # CDN edge is up to date, not everyone else's.
+          PUBLISH_PROPAGATION_MIN_SECONDS: "60"
+          # Fail the release rather than publish a broken dependent if a version
+          # never becomes resolvable.
+          PUBLISH_PROPAGATION_TIMEOUT_SECONDS: "600"
 
       # Switch to Node 22 for non-npm package deployments because quick-edit
       # builds native modules (tree-sitter) that are not compatible with

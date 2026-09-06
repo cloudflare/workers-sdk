@@ -1,6 +1,6 @@
 import { test as base, expect } from "@playwright/test";
 import { http, HttpResponse } from "msw";
-import { setupServer, type SetupServerApi } from "msw/node";
+import { setupServer } from "msw/node";
 import { createTestHarness, type TestHarness } from "wrangler";
 
 type TestFixtures = {
@@ -8,7 +8,7 @@ type TestFixtures = {
 };
 
 type WorkerFixtures = {
-	network: SetupServerApi;
+	network: ReturnType<typeof setupServer>;
 	server: TestHarness;
 };
 

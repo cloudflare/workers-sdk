@@ -1,6 +1,6 @@
 import { lstatSync, readdirSync } from "node:fs";
 import { extname, join } from "node:path";
-import { parseFile } from "@cloudflare/codemod";
+import { parseFile } from "@cloudflare/shared-ast-primitives";
 import { getTemplatePath } from "../templates";
 import type * as recast from "recast";
 import type { C3Context } from "types";

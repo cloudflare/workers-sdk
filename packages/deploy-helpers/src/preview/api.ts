@@ -1,3 +1,4 @@
+import { FormData } from "undici";
 import { fetchResult } from "../shared/context";
 import type {
 	CfWorkerInit,
@@ -79,17 +80,28 @@ export interface DeploymentResource {
 	limits?: CfUserLimits;
 	placement?: CfPlacement;
 	cache?: CacheOptions;
+	annotations?: {
+		"workers/commit_sha"?: string;
+		"workers/message"?: string;
+		"workers/pull_request_number"?: string;
+		"workers/pull_request_title"?: string;
+		"workers/pull_request_url"?: string;
+		"workers/repository_url"?: string;
+		"workers/tag"?: string;
+	};
 	env?: EnvBindings;
 	created_on: string;
 }
 
+export type PreviewDeploymentModule = {
+	name: string;
+	content_type: string;
+	content: string | Uint8Array;
+};
+
 export type CreatePreviewDeploymentRequestParams = {
 	main_module?: string;
-	modules?: Array<{
-		name: string;
-		content_type: string;
-		content_base64: string;
-	}>;
+	modules?: PreviewDeploymentModule[];
 	assets?: {
 		jwt: string;
 		config: {
@@ -101,7 +113,12 @@ export type CreatePreviewDeploymentRequestParams = {
 	compatibility_date?: string;
 	compatibility_flags?: string[];
 	annotations?: {
+		"workers/commit_sha"?: string;
 		"workers/message"?: string;
+		"workers/pull_request_number"?: string;
+		"workers/pull_request_title"?: string;
+		"workers/pull_request_url"?: string;
+		"workers/repository_url"?: string;
 		"workers/tag"?: string;
 	};
 	migrations?: CfWorkerInit["migrations"];
@@ -109,6 +126,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	placement?: CfPlacement;
 	cache?: CacheOptions;
 	env?: EnvBindings;
+	containers?: Array<{ class_name: string }>;
 };
 
 export type CreatePreviewRequestParams = {
@@ -124,7 +142,7 @@ export type UpdatePreviewRequestParams = Omit<
 >;
 
 export type PreviewRequestOptions = {
-	ignoreDefaults?: boolean;
+	ignoreBaseConfig?: boolean;
 };
 
 export type PreviewDefaults = {
@@ -163,6 +181,27 @@ type WorkerPreviewBaseConfigResource = {
 	previews_base_config?: PreviewBaseConfig;
 };
 
+/** Create an undeployed Worker that can own Preview resources. */
+export async function createPreviewParentWorker(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	workersDevEnabled: boolean,
+	previewsEnabled: boolean
+): Promise<void> {
+	await fetchResult(config, `/accounts/${accountId}/workers/workers`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			name: workerName,
+			subdomain: {
+				enabled: workersDevEnabled,
+				previews_enabled: previewsEnabled,
+			},
+		}),
+	});
+}
+
 export async function getPreview(
 	config: Config,
 	accountId: string,
@@ -184,8 +223,8 @@ export async function createPreview(
 	request: CreatePreviewRequestParams,
 	options?: PreviewRequestOptions
 ): Promise<PreviewResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
+	const queryParams = options?.ignoreBaseConfig
+		? new URLSearchParams({ ignore_base_config: "true" })
 		: undefined;
 
 	return fetchResult<PreviewResource>(
@@ -205,13 +244,8 @@ export async function editPreview(
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	request: UpdatePreviewRequestParams,
-	options?: PreviewRequestOptions
+	request: UpdatePreviewRequestParams
 ): Promise<PreviewResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
-		: undefined;
-
 	return fetchResult<PreviewResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
@@ -221,8 +255,7 @@ export async function editPreview(
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(request),
-		},
-		queryParams
+		}
 	);
 }
 
@@ -258,18 +291,33 @@ export async function getPreviewDeployment(
 	);
 }
 
+/**
+ * Encode preview deployment metadata and raw module files as multipart form data.
+ */
+export function createPreviewDeploymentForm(
+	request: Partial<CreatePreviewDeploymentRequestParams>
+): FormData {
+	const { modules, ...metadata } = request;
+	const formData = new FormData();
+	formData.set("metadata", JSON.stringify(metadata));
+
+	for (const module of modules ?? []) {
+		formData.append(
+			"files",
+			new File([module.content], module.name, { type: module.content_type })
+		);
+	}
+
+	return formData;
+}
+
 export async function createPreviewDeployment(
 	config: Config,
 	accountId: string,
 	workerName: string,
 	previewIdentifier: string,
-	request: Partial<CreatePreviewDeploymentRequestParams>,
-	options?: PreviewRequestOptions
+	request: Partial<CreatePreviewDeploymentRequestParams>
 ): Promise<DeploymentResource> {
-	const queryParams = options?.ignoreDefaults
-		? new URLSearchParams({ ignore_defaults: "true" })
-		: undefined;
-
 	return fetchResult<DeploymentResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
@@ -277,10 +325,9 @@ export async function createPreviewDeployment(
 		)}/deployments`,
 		{
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(request),
-		},
-		queryParams
+			// Let undici set Content-Type with the generated multipart boundary.
+			body: createPreviewDeploymentForm(request),
+		}
 	);
 }
 

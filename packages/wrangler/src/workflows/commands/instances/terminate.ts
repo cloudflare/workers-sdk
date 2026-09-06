@@ -6,7 +6,11 @@ import {
 	localWorkflowArgs,
 	updateLocalInstanceStatus,
 } from "../../local";
-import { getInstanceIdFromArgs, updateInstanceStatus } from "../../utils";
+import {
+	getInstanceIdFromArgs,
+	jsonWorkflowArgs,
+	updateInstanceStatus,
+} from "../../utils";
 
 export const workflowsInstancesTerminateCommand = createCommand({
 	metadata: {
@@ -17,6 +21,7 @@ export const workflowsInstancesTerminateCommand = createCommand({
 	positionalArgs: ["name", "id"],
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -35,12 +40,19 @@ export const workflowsInstancesTerminateCommand = createCommand({
 		},
 	},
 
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+
 	async handler(args, { config }) {
 		let id: string;
+		let result: unknown;
 
 		if (args.local) {
-			id = await getLocalInstanceIdFromArgs(args.port, args);
-			await updateLocalInstanceStatus(
+			id = await getLocalInstanceIdFromArgs(args.port, args, {
+				quiet: args.json,
+			});
+			result = await updateLocalInstanceStatus(
 				args.port,
 				args.name,
 				id,
@@ -51,7 +63,7 @@ export const workflowsInstancesTerminateCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(
+			result = await updateInstanceStatus(
 				config,
 				accountId,
 				args.name,
@@ -60,6 +72,11 @@ export const workflowsInstancesTerminateCommand = createCommand({
 				undefined,
 				args.rollback
 			);
+		}
+
+		if (args.json) {
+			logger.json(result);
+			return;
 		}
 
 		logger.info(

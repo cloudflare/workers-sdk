@@ -37,7 +37,9 @@ function maybeGetDiskFile(filePath: string): Required<SourceFile> | undefined {
 		return { path: filePath, contents };
 	} catch (e: any) {
 		// Ignore not-found errors, but throw everything else
-		if (e.code !== "ENOENT") throw e;
+		if (e.code !== "ENOENT") {
+			throw e;
+		}
 	}
 }
 
@@ -73,7 +75,9 @@ function maybeGetFile(
 			}
 
 			const manifest = config.manifest;
-			if (manifest === undefined) continue;
+			if (manifest === undefined) {
+				continue;
+			}
 			const modules = manifest.modules;
 			for (const [modulePath, module] of Object.entries(modules)) {
 				const resolvedModulePath = path.resolve(
@@ -136,13 +140,17 @@ function getSourceMappedStack(
 	// option from the "source-map-support" package.
 	function retrieveSourceMap(fileSpecifier: string): UrlAndMap | null {
 		const sourceFile = maybeGetFile(workerSrcOpts, fileSpecifier);
-		if (sourceFile?.path === undefined) return null;
+		if (sourceFile?.path === undefined) {
+			return null;
+		}
 
 		// Find the last source mapping URL if any
 		const sourceMapRegexp = /# sourceMappingURL=(.+)/g;
 		const matches = [...sourceFile.contents.matchAll(sourceMapRegexp)];
 		// If we couldn't find a source mapping URL, there's nothing we can do
-		if (matches.length === 0) return null;
+		if (matches.length === 0) {
+			return null;
+		}
 		const sourceMapMatch = matches[matches.length - 1];
 
 		// Get the source map. `maybeGetFile` first checks inline sources (e.g.
@@ -153,7 +161,9 @@ function getSourceMappedStack(
 			workerSrcOpts,
 			pathToFileURL(sourceMapPath).href
 		);
-		if (sourceMapFile?.path === undefined) return null;
+		if (sourceMapFile?.path === undefined) {
+			return null;
+		}
 
 		if (onSourceMap) {
 			try {
@@ -255,7 +265,9 @@ export function reviveError(
 	// construction, we override the stack trace to the one from the Worker in the
 	// JSON-serialised error.
 	const error = new ctor(jsonError.message, { cause });
-	if (jsonError.name !== undefined) error.name = jsonError.name;
+	if (jsonError.name !== undefined) {
+		error.name = jsonError.name;
+	}
 	error.stack = jsonError.stack;
 
 	// Try to apply source-mapping to the stack trace

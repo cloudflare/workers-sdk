@@ -1,12 +1,14 @@
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../../config-cache";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runWrangler } from "./../helpers/run-wrangler";
-import type { Project } from "./../../pages/types";
+import type { PagesConfigCache, Project } from "./../../pages/types";
 import type { ExpectStatic } from "vitest";
 
 describe("pages project list", () => {
@@ -83,11 +85,9 @@ describe("pages project list", () => {
 	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({
 		expect,
 	}) => {
-		vi.mock("getConfigCache", () => {
-			return {
-				account_id: "original-account-id",
-				project_name: "an-existing-project",
-			};
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "original-account-id",
+			project_name: "an-existing-project",
 		});
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
 		const requests = mockProjectListRequest(expect, [], "new-account-id");

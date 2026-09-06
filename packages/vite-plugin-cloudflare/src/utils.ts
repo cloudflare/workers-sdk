@@ -1,6 +1,6 @@
 import * as nodePath from "node:path";
 import * as util from "node:util";
-import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
+import { createHeaders, sendResponse } from "@remix-run/node-fetch-server";
 import {
 	CoreHeaders,
 	Request as MiniflareRequest,
@@ -97,7 +97,11 @@ export function createRequestHandler(
 			// If the header is absent or invalid, `createRequest` falls back to the
 			// connection protocol (`req.socket.encrypted`).
 			const protocol = getForwardedProto(req);
-			request = createRequest(req, res, protocol ? { protocol } : undefined);
+			request = createRequestForIncomingMessage(
+				req,
+				res,
+				protocol ? { protocol } : undefined
+			);
 
 			let response = await handler(toMiniflareRequest(request), req);
 
@@ -124,6 +128,88 @@ export function createRequestHandler(
 
 export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
+}
+
+function createRequestForIncomingMessage(
+	req: vite.Connect.IncomingMessage,
+	res: http.ServerResponse,
+	options?: { protocol?: "http:" | "https:"; host?: string }
+): Request {
+	const controller = new AbortController();
+	res.on("close", () => {
+		controller.abort();
+	});
+
+	const method = req.method ?? "GET";
+	const headers = createHeaders(req);
+	const protocol =
+		options?.protocol ??
+		("encrypted" in req.socket && req.socket.encrypted ? "https:" : "http:");
+	const host = options?.host ?? headers.get("Host") ?? "localhost";
+	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
+	const init: RequestInit & { duplex?: "half" } = {
+		method,
+		headers,
+		signal: controller.signal,
+	};
+
+	if (method !== "GET" && method !== "HEAD") {
+		init.body = createCancellableRequestBody(req);
+		init.duplex = "half";
+	}
+
+	return new Request(url, init);
+}
+
+function createCancellableRequestBody(
+	req: vite.Connect.IncomingMessage
+): ReadableStream<Uint8Array> {
+	let cleanup: (() => void) | undefined;
+
+	return new ReadableStream<Uint8Array>({
+		start(controller) {
+			const onData = (chunk: Buffer) => {
+				try {
+					controller.enqueue(
+						new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+					);
+				} catch (error) {
+					if (
+						error instanceof TypeError &&
+						error.message.includes("Controller is already closed")
+					) {
+						cleanup?.();
+						req.resume();
+						return;
+					}
+					throw error;
+				}
+			};
+			const onEnd = () => {
+				cleanup?.();
+				controller.close();
+			};
+			const onError = (error: Error) => {
+				cleanup?.();
+				controller.error(error);
+			};
+
+			cleanup = () => {
+				req.off("data", onData);
+				req.off("end", onEnd);
+				req.off("error", onError);
+				cleanup = undefined;
+			};
+
+			req.on("data", onData);
+			req.on("end", onEnd);
+			req.on("error", onError);
+		},
+		cancel() {
+			cleanup?.();
+			req.resume();
+		},
+	});
 }
 
 function toMiniflareRequest(request: Request): MiniflareRequest {

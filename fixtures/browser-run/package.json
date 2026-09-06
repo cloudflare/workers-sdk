@@ -12,7 +12,7 @@
 	"devDependencies": {
 		"@cloudflare/playwright": "^1.0.0",
 		"@cloudflare/puppeteer": "^1.0.4",
-		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/vitest-plugin": "workspace:*",
 		"@types/node": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",

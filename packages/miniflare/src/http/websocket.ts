@@ -110,11 +110,15 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 			);
 		}
 
-		if (this[kAccepted]) return; // Permit double `accept()`
+		if (this[kAccepted]) {
+			return;
+		} // Permit double `accept()`
 		this[kAccepted] = true;
 
 		if (this.#dispatchQueue !== undefined) {
-			for (const event of this.#dispatchQueue) this.dispatchEvent(event);
+			for (const event of this.#dispatchQueue) {
+				this.dispatchEvent(event);
+			}
 			this.#dispatchQueue = undefined;
 		}
 	}
@@ -149,7 +153,9 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 				code !== 1005 &&
 				code !== 1006 &&
 				code !== 1015;
-			if (!validCode) throw new TypeError("Invalid WebSocket close code.");
+			if (!validCode) {
+				throw new TypeError("Invalid WebSocket close code.");
+			}
 		}
 		if (reason !== undefined && code === undefined) {
 			throw new TypeError(
@@ -167,7 +173,9 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 	[kClose](code?: number, reason?: string): void {
 		// Split from close() so we can queue closes before accept() is called, and
 		// skip close code checks when forwarding close events from the client.
-		if (this[kClosedOutgoing]) throw new TypeError("WebSocket already closed");
+		if (this[kClosedOutgoing]) {
+			throw new TypeError("WebSocket already closed");
+		}
 
 		// Send close event to pair, it should then eventually call `close()` on
 		// itself which will dispatch a close event to us, completing the closing

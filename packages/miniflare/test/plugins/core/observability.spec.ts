@@ -215,12 +215,12 @@ function storeWorker(): WorkerOptions {
 			env: {
 				TRACE_STORE: {
 					type: "durable-object",
-					workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+					worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 					exportName: "TraceStore",
 				},
 				WOBS: {
 					type: "worker",
-					workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+					worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 				},
 			},
 		},
@@ -474,7 +474,7 @@ function captureWorker(): WorkerOptions {
 				CACHE: { type: "kv", id: "cache-namespace" },
 				WOBS: {
 					type: "worker",
-					workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+					worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 				},
 			},
 		},
@@ -612,10 +612,10 @@ function multiWorkerSetup(): WorkerOptions[] {
 				compatibilityDate: "2026-06-01",
 				manifest: singleModuleManifest(UPSTREAM_WORKER),
 				env: {
-					DOWNSTREAM: { type: "worker", workerName: "downstream" },
+					DOWNSTREAM: { type: "worker", worker: "downstream" },
 					WOBS: {
 						type: "worker",
-						workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 					},
 				},
 			},
@@ -688,12 +688,12 @@ describe("unsafeObservability (workflows)", () => {
 							CAPTURE_WORKFLOW: {
 								type: "workflow",
 								name: "capture-workflow",
-								workerName: "wf-user",
+								worker: "wf-user",
 								exportName: "CaptureWorkflow",
 							},
 							WOBS: {
 								type: "worker",
-								workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+								worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 							},
 						},
 					},

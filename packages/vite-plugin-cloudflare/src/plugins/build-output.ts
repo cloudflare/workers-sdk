@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import {
-	writeRootConfig,
+	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
@@ -30,8 +30,11 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					workerNewConfig,
 					"Expected a default worker export on assets-only resolved config"
 				);
-				await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig);
-				await writeSettingsConfig();
+				await writeWorkerConfig({
+					root: ctx.resolvedViteConfig.root,
+					config: workerNewConfig,
+				});
+				await writeSettings();
 				return;
 			}
 
@@ -83,25 +86,39 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				modules[fileName] = { type: detectModuleType(fileName) };
 			}
 
-			await writeWorkerConfig(ctx.resolvedViteConfig.root, workerNewConfig, {
-				mainModule: entryChunk.fileName,
-				modules,
+			await writeWorkerConfig({
+				root: ctx.resolvedViteConfig.root,
+				config: workerNewConfig,
+				manifest: {
+					type: "complete",
+					mainModule: entryChunk.fileName,
+					modules,
+				},
 			});
-			await writeSettingsConfig();
+			await writeSettings();
 		},
 	};
 
-	async function writeSettingsConfig(): Promise<void> {
+	/**
+	 * Write the top-level `config.json`, recording the settings shared by every
+	 * Worker, including the Vite mode the build ran in.
+	 *
+	 * Written even when there is no `settings` export, so the mode is always
+	 * captured.
+	 */
+	async function writeSettings(): Promise<void> {
 		if (ctx.resolvedPluginConfig.type === "preview") {
 			return;
 		}
 		const settingsExport = ctx.resolvedPluginConfig.parsedNewConfig?.settings;
 		const settings =
 			settingsExport?.type === "settings" ? settingsExport : undefined;
-		if (!settings) {
-			return;
-		}
-		await writeRootConfig(ctx.resolvedViteConfig.root, settings);
+
+		await writeSettingsConfig(
+			ctx.resolvedViteConfig.root,
+			settings,
+			ctx.resolvedViteConfig.mode
+		);
 	}
 });
 

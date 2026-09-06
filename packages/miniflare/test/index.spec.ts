@@ -11,7 +11,11 @@ import os from "node:os";
 import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
-import { _forceColour } from "@cloudflare/workers-utils";
+import {
+	_forceColour,
+	NODEJS_COMPAT_DEFAULT_ON_DATE,
+} from "@cloudflare/workers-utils";
+import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
@@ -26,6 +30,7 @@ import {
 import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { assertIsV2ModuleFallbackProtocol } from "../src/plugins/core/module-fallback";
+import { MAX_EMAIL_BODY_BYTES } from "../src/workers/email/capture";
 import {
 	FIXTURES_PATH,
 	singleModuleManifest,
@@ -770,6 +775,36 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	expect(await res.text()).toBe(testBody);
 });
 
+test("Miniflare: ignores nodejs_compat flags the compatibility date enables", async ({
+	expect,
+}) => {
+	// workerd rejects a compatibility flag that its compatibility date already
+	// enables, which `nodejs_compat` is as of `NODEJS_COMPAT_DEFAULT_ON_DATE`
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: NODEJS_COMPAT_DEFAULT_ON_DATE,
+					compatibilityFlags: ["nodejs_compat", "nodejs_compat_v2"],
+					manifest: singleModuleManifest(`
+					import path from "node:path";
+
+					export default {
+						fetch() { return new Response(path.join("a", "b")); },
+					};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	expect(await res.text()).toBe(path.posix.join("a", "b"));
+});
+
 test("Miniflare: custom service using Set-Cookie header", async ({
 	expect,
 }) => {
@@ -1007,7 +1042,7 @@ test("Miniflare: service binding to current worker", async ({ expect }) => {
 					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
-					env: { SELF: { type: "worker", workerName: kCurrentWorker } },
+					env: { SELF: { type: "worker", worker: kCurrentWorker } },
 					manifest: singleModuleManifest(`export default {
 			async fetch(request, env) {
 				const { pathname } = new URL(request.url);
@@ -1119,17 +1154,17 @@ test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 					env: {
 						A_RPC_SERVICE: {
 							type: "worker",
-							workerName: kCurrentWorker,
+							worker: kCurrentWorker,
 							exportName: "RpcEntrypoint",
 						},
 						A_NAMED_SERVICE: {
 							type: "worker",
-							workerName: "a",
+							worker: "a",
 							exportName: "namedEntrypoint",
 						},
 						B_NAMED_SERVICE: {
 							type: "worker",
-							workerName: "b",
+							worker: "b",
 							exportName: "anotherNamedEntrypoint",
 						},
 					},
@@ -1192,7 +1227,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 					env: {
 						RPC_SERVICE: {
 							type: "worker",
-							workerName: "b",
+							worker: "b",
 							exportName: "RpcEntrypoint",
 						},
 					},
@@ -1248,7 +1283,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 					env: {
 						RPC_SERVICE: {
 							type: "worker",
-							workerName: "b",
+							worker: "b",
 							exportName: "RpcEntrypoint",
 						},
 					},
@@ -1308,10 +1343,10 @@ test("Miniflare: tail consumer called", async ({ expect }) => {
 				config: {
 					type: "worker",
 					name: "a",
-					tailConsumers: [{ workerName: "b" }],
+					tailConsumers: [{ worker: "b" }],
 					compatibilityDate: "2025-04-28",
 					env: {
-						B: { type: "worker", workerName: "b" },
+						B: { type: "worker", worker: "b" },
 					},
 					manifest: singleModuleManifest(`
 
@@ -1372,7 +1407,7 @@ test("Miniflare: custom outbound service", async ({ expect }) => {
 				}`),
 				},
 				dev: {
-					outboundService: { type: "worker", workerName: "b" },
+					outboundService: { type: "worker", worker: "b" },
 				},
 			},
 			{
@@ -2442,6 +2477,71 @@ This is a random email body.
 	expect(await res.text()).toBe("false");
 });
 
+test("Miniflare: manually triggered email handler - missing email() handler", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+
+	const mf = new Miniflare({
+		log,
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			export default {
+				fetch() {
+					return new Response("ok");
+				}
+			}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const raw = `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`;
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: raw,
+			method: "POST",
+		}
+	);
+	const body = await res.text();
+	expect(res.status).toBe(500);
+	expect(body).toBe(
+		"Worker does not export an email() handler; message stored without delivery."
+	);
+
+	const jsonRes = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?format=json&from=someone@example.com&to=someone-else@example.com",
+		{ body: raw, method: "POST" }
+	);
+	expect(jsonRes.status).toBe(500);
+	expect(await jsonRes.json()).toEqual({
+		outcome: "exception",
+		forwards: [],
+		replies: [],
+		events: [
+			{
+				type: "unhandled",
+				timestamp: expect.any(String),
+			},
+		],
+	});
+});
+
 test("Miniflare: manually triggered email handler - reply handler works", async ({
 	expect,
 }) => {
@@ -2515,7 +2615,9 @@ This is a random email body.
 test("Miniflare: manually triggered email handler - structured result", async ({
 	expect,
 }) => {
+	const log = new TestLog();
 	const mf = new Miniflare({
+		log,
 		unsafeTriggerHandlers: true,
 		workers: [
 			{
@@ -2538,15 +2640,29 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						"archive@example.com",
 						new Headers({ "X-Test": mode })
 					);
+					const replyPrefix =
+						\`From: reply-\${mode}@example.com\\r\\n\` +
+						\`To: \${message.from}\\r\\n\` +
+						\`In-Reply-To: <\${mode}@example.com>\\r\\n\` +
+						\`References: <\${mode}@example.com>\\r\\n\` +
+						\`Message-ID: <reply-\${mode}@example.com>\\r\\n\` +
+						"Content-Type: text/plain\\r\\n\\r\\n";
+					const replyBody = mode === "large"
+						? "x".repeat(
+								${MAX_EMAIL_BODY_BYTES} -
+								new TextEncoder().encode(replyPrefix).byteLength -
+								1
+							) + "€complete reply"
+						: \`Reply for \${mode}\\r\\n\`;
 					await message.reply(new EmailMessage(
 						\`reply-\${mode}@example.com\`,
 						message.from,
-						\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+						replyPrefix + replyBody
 					));
 
 					if (mode === "exception") {
 						message.setReject("triggered exception");
-						throw new Error("sensitive handler error");
+						throw new Error("email handler failed");
 					}
 				}
 			}`),
@@ -2583,7 +2699,10 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 						timestamp: string;
 						messageId: string;
 				  }
-				| { type: "reject"; timestamp: string }
+				| {
+						type: "received" | "reject" | "unhandled";
+						timestamp: string;
+				  }
 			)[];
 		};
 	}
@@ -2608,6 +2727,10 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 	});
 	expect(okResult.events).toEqual([
 		{
+			type: "received",
+			timestamp: expect.any(String),
+		},
+		{
 			type: "forward",
 			timestamp: expect.any(String),
 			messageId: okResult.forwards[0]?.messageId,
@@ -2619,6 +2742,14 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		},
 	]);
 
+	const largeResult = await dispatchEmail("large");
+	const largeReply = largeResult.replies[0]?.raw ?? "";
+	expect(new TextEncoder().encode(largeReply).byteLength).toBeGreaterThan(
+		MAX_EMAIL_BODY_BYTES
+	);
+	expect(largeReply).toContain("€complete reply");
+	expect(largeReply).not.toContain("\uFFFD");
+
 	const rejectedResult = await dispatchEmail("rejected");
 	expect(rejectedResult).toMatchObject({
 		outcome: "ok",
@@ -2627,6 +2758,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		replies: [],
 	});
 	expect(rejectedResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{ type: "reject", timestamp: expect.any(String) },
 	]);
 
@@ -2649,6 +2781,7 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		],
 	});
 	expect(exceptionResult.events).toEqual([
+		{ type: "received", timestamp: expect.any(String) },
 		{
 			type: "forward",
 			timestamp: expect.any(String),
@@ -2661,6 +2794,9 @@ test("Miniflare: manually triggered email handler - structured result", async ({
 		},
 		{ type: "reject", timestamp: expect.any(String) },
 	]);
+	expect(log.logsAtLevel(LogLevel.ERROR)).toContainEqual(
+		expect.stringContaining("Error: email handler failed")
+	);
 });
 
 test("Miniflare: unrecognised /cdn-cgi/local/ routes fall through to user worker", async ({
@@ -2859,11 +2995,11 @@ test("Miniflare: getBindings() returns all bindings", async ({
 					env: {
 						STRING: { type: "text", value: "hello" },
 						OBJECT: { type: "json", value: { a: 1, b: { c: 2 } } },
-						SELF: { type: "worker", workerName: "" },
+						SELF: { type: "worker", worker: "" },
 						DB: { type: "d1", id: "DB" },
 						DO: {
 							type: "durable-object",
-							workerName: "",
+							worker: "",
 							exportName: "DurableObject",
 						},
 						KV: { type: "kv", id: "KV" },
@@ -2883,7 +3019,9 @@ test("Miniflare: getBindings() returns all bindings", async ({
 	});
 	let disposed = false;
 	onTestFinished(() => {
-		if (!disposed) return mf.dispose();
+		if (!disposed) {
+			return mf.dispose();
+		}
 	});
 
 	interface Env {
@@ -3104,7 +3242,7 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 						DB: { type: "d1", id: "DB" },
 						DO: {
 							type: "durable-object",
-							workerName: "a",
+							worker: "a",
 							exportName: "DurableObject",
 						},
 					},
@@ -3253,7 +3391,7 @@ test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves
 					env: {
 						COUNTER: {
 							type: "durable-object",
-							workerName: "do-worker",
+							worker: "do-worker",
 							exportName: "Counter",
 						},
 					},
@@ -3382,6 +3520,52 @@ test("Miniflare: allows direct access to workers", async ({ expect }) => {
 		new TypeError('Direct access disabled in "d" worker for "three" entrypoint')
 	);
 });
+
+test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's connect() handler", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const port = await getPort();
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const reader = socket.readable.getReader();
+								const writer = socket.writable.getWriter();
+								const { value } = await reader.read();
+								await writer.write(value);
+								await writer.close();
+							},
+						};
+					`),
+					triggers: [{ type: "connect", protocol: "tcp", port }],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+	await mf.ready;
+
+	const received = await new Promise<Buffer>((resolve, reject) => {
+		const socket = net.connect(port, "127.0.0.1", () => {
+			socket.write("hello");
+		});
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+		socket.on("end", () => resolve(Buffer.concat(chunks)));
+		socket.on("error", reject);
+	});
+
+	expect(received.toString()).toBe("hello");
+});
+
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 	const mf1 = new Miniflare({
 		workers: [
@@ -3455,8 +3639,11 @@ unixSerialTest(
 		process.env.MINIFLARE_WORKERD_PATH = workerdPath;
 		onTestFinished(() => {
 			// Setting key/values pairs on `process.env` coerces values to strings
-			if (original === undefined) delete process.env.MINIFLARE_WORKERD_PATH;
-			else process.env.MINIFLARE_WORKERD_PATH = original;
+			if (original === undefined) {
+				delete process.env.MINIFLARE_WORKERD_PATH;
+			} else {
+				process.env.MINIFLARE_WORKERD_PATH = original;
+			}
 		});
 
 		const mf = new Miniflare({
@@ -4273,7 +4460,9 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 			const specifier = url.searchParams.get("specifier");
 			assert(specifier !== null);
 			const maybeModule = modules[specifier];
-			if (maybeModule === undefined) return new Response(null, { status: 404 });
+			if (maybeModule === undefined) {
+				return new Response(null, { status: 404 });
+			}
 			const name = path.posix.relative(modulesRoot, specifier);
 			return new Response(JSON.stringify({ name, ...maybeModule }));
 		},

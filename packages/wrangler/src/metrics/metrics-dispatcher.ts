@@ -87,8 +87,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		 */
 		sendAdhocEvent(name: string, properties: Properties = {}) {
 			trackDispatch(
-				telemetryCurrentAgentSkillsInstalled()
-					.catch(() => null)
+				currentAgentSkillsInstalledForTelemetry()
 					.then((currentAgentSkillsInstalled) => {
 						const baseProperties = {
 							...getCommonEventProperties(),
@@ -151,8 +150,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				};
 
 				trackDispatch(
-					telemetryCurrentAgentSkillsInstalled()
-						.catch(() => null)
+					currentAgentSkillsInstalledForTelemetry()
 						.then((currentAgentSkillsInstalled) => {
 							return dispatch({
 								name,
@@ -172,6 +170,19 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			}
 		},
 	};
+
+	/**
+	 * Resolves the `currentAgentSkillsInstalled` telemetry property, but only
+	 * when telemetry is enabled. The underlying lookup can hit the GitHub API,
+	 * so it must be skipped entirely for users who have opted out of telemetry
+	 * rather than being resolved and then discarded in {@link dispatch}.
+	 */
+	function currentAgentSkillsInstalledForTelemetry() {
+		if (!getMetricsConfig(options).enabled) {
+			return Promise.resolve(null);
+		}
+		return telemetryCurrentAgentSkillsInstalled().catch(() => null);
+	}
 
 	function dispatch(event: {
 		name: string;

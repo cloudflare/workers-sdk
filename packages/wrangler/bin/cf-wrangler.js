@@ -61,9 +61,8 @@ function runCfWranglerDevFromArgs(parsedArgs) {
 
 function createDevOptions(parsedArgs) {
 	// Build wrangler dev's full (yargs-derived) options object. Every field
-	// must be present; we set the four accepted flags plus `wrangler dev`'s
-	// defaults and leave everything else `undefined`, which makes wrangler's
-	// ConfigController resolve those exactly as `wrangler dev` would.
+	// must be present; we set the four accepted flags, force cf's new config
+	// format, and otherwise use `wrangler dev`'s defaults.
 	return {
 		_: [],
 		$0: "",
@@ -77,6 +76,7 @@ function createDevOptions(parsedArgs) {
 		testScheduled: false,
 		processEntrypoint: false,
 		experimentalAutoCreate: false,
+		experimentalNewConfig: true,
 		types: false,
 		disableDevRegistry: false,
 		config: undefined,

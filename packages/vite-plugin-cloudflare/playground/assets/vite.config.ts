@@ -7,7 +7,7 @@ export default defineConfig({
 		client: {
 			build: {
 				rollupOptions: {
-					input: path.resolve(__dirname, "html-page.html"),
+					input: path.resolve(import.meta.dirname, "html-page.html"),
 				},
 			},
 		},

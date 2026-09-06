@@ -519,6 +519,127 @@ Your database may not be available to serve requests during the migration, conti
 				]
 			`);
 		});
+
+		describe("with a temporary preview account", () => {
+			mockAccountId({ accountId: null });
+			mockApiToken({ apiToken: null });
+
+			const temporaryPreviewAccountUrl =
+				"https://api.cloudflare.com/client/v4/provisioning/previews";
+
+			function mockTemporaryPreviewAccount() {
+				let mintRequests = 0;
+				msw.use(
+					http.post(`${temporaryPreviewAccountUrl}/challenge`, () =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								challengeToken: "challenge-token",
+								seed: Buffer.alloc(32, 1).toString("base64url"),
+								k: 2,
+								g: 2,
+								s: 16,
+								expiresAt: 9999999999,
+							},
+							errors: [],
+							messages: [],
+						})
+					),
+					http.post(temporaryPreviewAccountUrl, () => {
+						mintRequests += 1;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								account: {
+									id: "preview-account-id",
+									name: "Preview Account Alpha",
+									type: "standard",
+									apiToken: "preview-account-token",
+									tokenId: "preview-token-id",
+									expiresAt: "2027-01-01T00:00:00.000Z",
+								},
+								claim: {
+									token: "claim-token",
+									url: "https://dash.cloudflare.com/claim-preview?claimToken=claim-token",
+									expiresAt: "2027-01-02T00:00:00.000Z",
+								},
+							},
+							errors: [],
+							messages: [],
+						});
+					})
+				);
+				return () => mintRequests;
+			}
+
+			// `d1 migrations apply --remote` calls `requireAuth` one time for
+			// each statement. The account from the first call must also satisfy
+			// the later calls.
+			it("should apply migrations against the account it minted", async ({
+				expect,
+			}) => {
+				setIsTTY(false);
+				const std = mockConsoleMethods();
+				const migrationsDir = path.join(process.cwd(), "migrations");
+				writeWranglerConfig({
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							migrations_dir: migrationsDir,
+						},
+					],
+				});
+				let queryRequests = 0;
+				msw.use(
+					http.get("*/accounts/:accountId/d1/database", () =>
+						HttpResponse.json({
+							success: true,
+							result: [
+								{ uuid: "xxxx", name: "db", created_at: "", version: "alpha" },
+							],
+							errors: [],
+							messages: [],
+						})
+					),
+					http.post(
+						"*/accounts/:accountId/d1/database/:databaseId/query",
+						() => {
+							queryRequests += 1;
+							return HttpResponse.json({
+								success: true,
+								result: [{ results: [], success: true, meta: {} }],
+								errors: [],
+								messages: [],
+							});
+						}
+					)
+				);
+				const mintRequests = mockTemporaryPreviewAccount();
+
+				mockConfirm({
+					text: `No migrations folder found.
+Ok to create ${migrationsDir}?`,
+					result: true,
+				});
+				await runWrangler("d1 migrations create db test");
+				mockConfirm({
+					text: `About to apply 1 migration(s)
+Your database may not be available to serve requests during the migration, continue?`,
+					result: true,
+				});
+
+				await runWrangler("d1 migrations apply db --remote --temporary");
+
+				expect(std.err).toBe("");
+				expect(std.out).toContain("0001_test.sql");
+				// More than one query proves that the command authenticated more
+				// than one time and did not stop at the first authentication.
+				expect(queryRequests).toBeGreaterThan(1);
+				expect(mintRequests()).toBe(1);
+			});
+		});
 	});
 
 	describe("list", () => {

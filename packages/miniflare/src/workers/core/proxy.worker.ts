@@ -154,7 +154,9 @@ export class ProxyServer implements DurableObject {
 			// Rather than worrying about cleaning up `Promise`s some other way, we
 			// just remove them from the heap immediately, since we should never make
 			// a request to resolve them again.
-			if (heapValue instanceof Promise) this.heap.delete(address);
+			if (heapValue instanceof Promise) {
+				this.heap.delete(address);
+			}
 			return heapValue;
 		},
 	};
@@ -183,7 +185,9 @@ export class ProxyServer implements DurableObject {
 	async #fetch(request: Request) {
 		// Validate `Host` header
 		const hostHeader = request.headers.get("Host");
-		if (hostHeader == null) return new Response(null, { status: 400 });
+		if (hostHeader == null) {
+			return new Response(null, { status: 400 });
+		}
 		try {
 			const host = new URL(`http://${hostHeader}`);
 			if (!ALLOWED_HOSTNAMES.includes(host.hostname)) {
@@ -195,7 +199,9 @@ export class ProxyServer implements DurableObject {
 
 		// Validate secret header to prevent unauthorised access to proxy
 		const secretHex = request.headers.get(CoreHeaders.OP_SECRET);
-		if (secretHex == null) return new Response(null, { status: 401 });
+		if (secretHex == null) {
+			return new Response(null, { status: 401 });
+		}
 		const expectedSecret = this.env[CoreBindings.DATA_PROXY_SECRET];
 		const secretBuffer = Buffer.from(secretHex, "hex");
 		if (
@@ -213,7 +219,9 @@ export class ProxyServer implements DurableObject {
 		const contentLengthHeader = request.headers.get("Content-Length");
 
 		// Get target to perform operations on
-		if (targetHeader === null) return new Response(null, { status: 400 });
+		if (targetHeader === null) {
+			return new Response(null, { status: 400 });
+		}
 
 		// If this is a FREE operation, remove the target(s) from the heap
 		if (opHeader === ProxyOps.FREE) {
@@ -241,7 +249,9 @@ export class ProxyServer implements DurableObject {
 			result = keyHeader === null ? target : target[keyHeader];
 
 			// Immediately resolve all RpcProperties
-			if (result?.constructor.name === "RpcProperty") result = await result;
+			if (result?.constructor.name === "RpcProperty") {
+				result = await result;
+			}
 
 			if (typeof result === "function") {
 				// Calling functions-which-return-functions not yet supported
@@ -251,7 +261,9 @@ export class ProxyServer implements DurableObject {
 				});
 			}
 		} else if (opHeader === ProxyOps.GET_OWN_DESCRIPTOR) {
-			if (keyHeader === null) return new Response(null, { status: 400 });
+			if (keyHeader === null) {
+				return new Response(null, { status: 400 });
+			}
 			const descriptor = Object.getOwnPropertyDescriptor(target, keyHeader);
 			if (descriptor !== undefined) {
 				result = <PropertyDescriptor>{

@@ -1,7 +1,10 @@
 import { once } from "node:events";
 import { onTestFinished, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
-import { closeBrowserProcess } from "../../../src/plugins/browser-rendering/process";
+import {
+	BrowserStartupError,
+	closeBrowserProcess,
+} from "../../../src/plugins/browser-rendering/process";
 
 test("gracefully closes Chrome over CDP", async ({ expect }) => {
 	const closed = Promise.withResolvers<void>();
@@ -60,4 +63,17 @@ test("force kills Chrome when graceful close times out", async ({ expect }) => {
 	);
 
 	expect(browserProcess.kill).toHaveBeenCalledOnce();
+});
+
+test("BrowserStartupError preserves the underlying message", ({ expect }) => {
+	// The install-recovery path keys off this error type, and both the CI retry
+	// condition and the loopback response match on the message text, so
+	// wrapping must not obscure it.
+	const cause = new Error("Failed to launch the browser process! undefined");
+
+	const wrapped = new BrowserStartupError(cause);
+
+	expect(wrapped.message).toBe(cause.message);
+	expect(wrapped.cause).toBe(cause);
+	expect(wrapped.name).toBe("BrowserStartupError");
 });

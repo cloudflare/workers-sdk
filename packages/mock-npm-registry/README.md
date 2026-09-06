@@ -4,11 +4,11 @@ This internal package can be used in tests by othe packages to set up a mock loc
 
 ## Usage
 
-A good example is the vitest-pool-workers e2e tests. See packages/vitest-pool-workers/test/global-setup.ts
+A good example is the vitest-plugin e2e tests. See packages/vitest-plugin/test/global-setup.ts
 
 ```ts
 export default async function ({ provide }: GlobalSetupContext) {
-	const stop = await startMockNpmRegistry("@cloudflare/vitest-pool-workers");
+	const stop = await startMockNpmRegistry("@cloudflare/vitest-plugin");
 
 	// Create temporary directory
 	const projectPath = await createTestProject();
@@ -18,10 +18,10 @@ export default async function ({ provide }: GlobalSetupContext) {
 ```
 
 Here you can see that in Vitest global setup file, we are calling `startMockNpmRegistry()`.
-We pass in the `@cloudflare/vitest-pool-workers` package name, which will ensure that this package
+We pass in the `@cloudflare/vitest-plugin` package name, which will ensure that this package
 (and all its local dependencies, such as Wrangler, Miniflare, etc) is built and published to the mock registry.
 
-We then create a temporary test project that has a dependency on `@cloudflare/vitest-pool-workers`
+We then create a temporary test project that has a dependency on `@cloudflare/vitest-plugin`
 and then run `pnpm install`, which will install the locally published packages.
 
 The path to this temporary test project is provided to tests.

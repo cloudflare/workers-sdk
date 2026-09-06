@@ -13,7 +13,12 @@ import path from "node:path";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { getTodaysCompatDate, removeDirSync } from "@cloudflare/workers-utils";
+import {
+	getTodaysCompatDate,
+	stripRedundantNodejsCompatFlags,
+} from "@cloudflare/workers-utils/compatibility-date";
+import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
+import SCRIPT_ACCESS_IDENTITY from "worker:access/access-identity";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import OUTBOUND_WORKER from "worker:core/outbound";
@@ -24,11 +29,10 @@ import { MiniflareCoreError, type Log } from "../../shared";
 import { getDevControlDurableObjectBindingName } from "../../shared/dev-control";
 import { CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { getCacheServiceName } from "../cache";
-import {
-	DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
-	getDurableObjectUniqueKey,
-} from "../do";
-import { IMAGES_PLUGIN_NAME } from "../images";
+import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
+import { getDurableObjectNamespaces } from "../do/namespaces";
+import { getEmailStoreServices } from "../email/store";
+import { getImagesBindingServiceName } from "../images";
 import {
 	getR2PublicService,
 	getR2S3Service,
@@ -37,7 +41,6 @@ import {
 } from "../r2";
 import {
 	buildRemoteProxyProps,
-	getUserBindingServiceName,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -49,10 +52,11 @@ import {
 	getExportsOfType,
 	getRemoteProxyConnectionString,
 } from "../shared";
-import { STREAM_PLUGIN_NAME } from "../stream";
+import { getStreamService } from "../stream";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	EMAIL_STORE_SERVICE_NAME,
 	getBuiltinServiceName,
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
@@ -81,7 +85,6 @@ import type {
 	ServiceDesignator,
 	Worker_Binding,
 	Worker_ContainerEngine,
-	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "../../runtime";
 import type { Awaitable } from "../../workers";
@@ -183,14 +186,14 @@ function getCustomServiceDesignator(
 			serviceName = `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`;
 			// Remote config travels via props to a generic proxy worker.
 			props = buildRemoteProxyProps(remoteProxyConnectionString, name);
-		} else if (service.workerName === kCurrentWorker) {
+		} else if (service.worker === kCurrentWorker) {
 			serviceName = getUserServiceName(refererName);
 			entrypoint = service.exportName;
 			if (service.props) {
 				props = { json: JSON.stringify(service.props) };
 			}
 		} else {
-			serviceName = getUserServiceName(service.workerName);
+			serviceName = getUserServiceName(service.worker);
 			entrypoint = service.exportName;
 			if (service.props) {
 				props = { json: JSON.stringify(service.props) };
@@ -304,6 +307,10 @@ function getDevControlBindings(
 	return Array.from(bindings.values());
 }
 
+function getAccessIdentityServiceName(workerIndex: number) {
+	return `access-identity:${workerIndex}`;
+}
+
 function getOutboundInterceptorName(workerIndex: number) {
 	return `outbound:${workerIndex}`;
 }
@@ -326,12 +333,12 @@ function getGlobalOutbound(
 }
 
 function getTailServiceDesignator(consumer: {
-	workerName: string;
+	worker: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
 }): ServiceDesignator {
 	return {
-		name: getUserServiceName(consumer.workerName),
+		name: getUserServiceName(consumer.worker),
 		entrypoint: consumer.entrypoint,
 		props:
 			consumer.props !== undefined
@@ -354,7 +361,7 @@ function getServiceBindings(
 }
 
 export const CORE_PLUGIN: Plugin = {
-	getBindings(options, workerIndex) {
+	getBindings(options, _sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
@@ -474,6 +481,7 @@ export const CORE_PLUGIN: Plugin = {
 		workerBindings,
 		workerIndex,
 		durableObjectClassNames,
+		containerPrivilegesCache,
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
@@ -514,6 +522,14 @@ export const CORE_PLUGIN: Plugin = {
 		const serviceName = getUserServiceName(config.name);
 		const classNames = durableObjectClassNames.get(serviceName);
 		const classNamesEntries = Array.from(classNames ?? []);
+		const containerEngine = getContainerEngine(sharedOptions.containerEngine);
+		containerPrivilegesCache.setEngine(containerEngine);
+		const hasContainers = classNamesEntries.some(
+			([, { container }]) => container !== undefined
+		);
+		const containerPrivileges = hasContainers
+			? await containerPrivilegesCache.get(containerEngine)
+			: undefined;
 
 		// Wrap Durable Object classes for the local explorer
 		// This injects a method onto user defined DO classes to allow
@@ -557,16 +573,28 @@ export const CORE_PLUGIN: Plugin = {
 					// how the collector attributes each captured invocation to its worker
 					// (each worker streams to the collector with its own props).
 					{
-						workerName: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
+						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 						streaming: true,
 						props: { worker: config.name },
 					},
 				]
 			: (config.tailConsumers ?? []);
+		// workerd rejects a compatibility flag that the compatibility date already
+		// enables by default ("does not need to be specified anymore"), which
+		// would stop the worker starting up. Strip them per service rather than on
+		// the shared worker config: the Workflows plugin copies these flags into
+		// its engine worker, which pairs them with an older hardcoded compatibility
+		// date that still needs the flag.
+		const userFlags = config.compatibilityFlags
+			? stripRedundantNodejsCompatFlags(
+					compatibilityDate,
+					config.compatibilityFlags
+				)
+			: undefined;
 		// Only add the flags the worker doesn't already declare. A worker that sets
 		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it
 		// listed twice, which workerd rejects ("specified multiple times").
-		const existingFlags = config.compatibilityFlags ?? [];
+		const existingFlags = userFlags ?? [];
 		const compatibilityFlags = observabilityEnabled
 			? [
 					...existingFlags,
@@ -574,7 +602,7 @@ export const CORE_PLUGIN: Plugin = {
 						(flag) => !existingFlags.includes(flag)
 					),
 				]
-			: config.compatibilityFlags;
+			: userFlags;
 
 		services.push({
 			name: serviceName,
@@ -583,40 +611,11 @@ export const CORE_PLUGIN: Plugin = {
 				compatibilityDate,
 				compatibilityFlags,
 				bindings: workerBindings,
-				durableObjectNamespaces:
-					classNamesEntries.map<Worker_DurableObjectNamespace>(
-						([
-							className,
-							{
-								enableSql,
-								unsafeUniqueKey,
-								unsafePreventEviction: preventEviction,
-								container,
-							},
-						]) => {
-							const uniqueKey = getDurableObjectUniqueKey(
-								className,
-								config.name,
-								unsafeUniqueKey
-							);
-
-							return uniqueKey === undefined
-								? {
-										className,
-										enableSql,
-										ephemeralLocal: kVoid,
-										preventEviction,
-										container,
-									}
-								: {
-										className,
-										enableSql,
-										uniqueKey,
-										preventEviction,
-										container,
-									};
-						}
-					),
+				durableObjectNamespaces: getDurableObjectNamespaces(
+					classNames,
+					config.name,
+					containerPrivileges
+				),
 				durableObjectStorage:
 					classNamesEntries.length === 0
 						? undefined
@@ -636,7 +635,15 @@ export const CORE_PLUGIN: Plugin = {
 				streamingTails: tailConsumers
 					.filter((consumer) => consumer.streaming)
 					.map<ServiceDesignator>(getTailServiceDesignator),
-				containerEngine: getContainerEngine(sharedOptions.containerEngine),
+				containerEngine,
+				...(dev?.access
+					? {
+							accessBlobHeader: CoreHeaders.ACCESS_BLOB,
+							accessBindingService: {
+								name: getAccessIdentityServiceName(workerIndex),
+							},
+						}
+					: {}),
 			},
 		});
 
@@ -649,7 +656,9 @@ export const CORE_PLUGIN: Plugin = {
 				service,
 				dev
 			);
-			if (maybeService !== undefined) services.push(maybeService);
+			if (maybeService !== undefined) {
+				services.push(maybeService);
+			}
 		}
 
 		if (dev?.outboundService !== undefined) {
@@ -660,7 +669,9 @@ export const CORE_PLUGIN: Plugin = {
 				dev.outboundService,
 				dev
 			);
-			if (maybeService !== undefined) services.push(maybeService);
+			if (maybeService !== undefined) {
+				services.push(maybeService);
+			}
 		}
 
 		{
@@ -690,6 +701,26 @@ export const CORE_PLUGIN: Plugin = {
 						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					globalOutbound: getGlobalOutbound(workerIndex, config, dev),
+				},
+			});
+		}
+
+		// Access identity binding worker for ctx.access.getIdentity()
+		if (dev?.access) {
+			services.push({
+				name: getAccessIdentityServiceName(workerIndex),
+				worker: {
+					modules: [
+						{
+							name: "index.js",
+							esModule: SCRIPT_ACCESS_IDENTITY(),
+						},
+					],
+					compatibilityDate: "2025-01-01",
+					compatibilityFlags: [
+						"experimental",
+						"service_binding_extra_handlers",
+					],
 				},
 			});
 		}
@@ -770,6 +801,10 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_DEV_CONTROL,
 			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
 		},
+		{
+			name: CoreBindings.SERVICE_EMAIL_STORE,
+			service: { name: EMAIL_STORE_SERVICE_NAME },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -788,20 +823,20 @@ export function getGlobalServices({
 	if (streamServiceEnabled) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_STREAM,
-			service: {
-				name: getUserBindingServiceName(STREAM_PLUGIN_NAME, "service"),
-				entrypoint: "StreamBinding",
-			},
+			service: getStreamService(sharedOptions),
 		});
 	}
-	const r2PublicService = getR2PublicService(allWorkerOpts ?? []);
+	const r2PublicService = getR2PublicService(
+		allWorkerOpts ?? [],
+		sharedOptions
+	);
 	if (r2PublicService !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_PUBLIC,
 			service: { name: R2_PUBLIC_SERVICE_NAME },
 		});
 	}
-	const r2S3Service = getR2S3Service(allWorkerOpts ?? []);
+	const r2S3Service = getR2S3Service(allWorkerOpts ?? [], sharedOptions);
 	if (r2S3Service !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_R2_S3,
@@ -815,7 +850,7 @@ export function getGlobalServices({
 			"images"
 		)) {
 			if (getRemoteProxyConnectionString(binding, worker.dev) === undefined) {
-				imagesServiceName = getUserBindingServiceName(IMAGES_PLUGIN_NAME, name);
+				imagesServiceName = getImagesBindingServiceName(name);
 				break;
 			}
 		}
@@ -841,6 +876,31 @@ export function getGlobalServices({
 			data: encoder.encode(sharedOptions.unsafeProxySharedSecret),
 		});
 	}
+	// Inject per-worker Cloudflare Access blob bindings into the entry worker.
+	// Each worker with dev.access gets its own blob keyed by worker name so the
+	// entry worker can pick the correct one after routing.
+	for (const workerOpt of allWorkerOpts ?? []) {
+		const accessOpts = workerOpt.dev?.access;
+		if (accessOpts) {
+			const accessBlob: {
+				app_aud: string;
+				jwt_claims?: Record<string, unknown>;
+			} = { app_aud: accessOpts.aud };
+			if (accessOpts.identity) {
+				accessBlob.jwt_claims = accessOpts.identity;
+			}
+			serviceEntryBindings.push({
+				name: CoreBindings.JSON_ACCESS_BLOB_PREFIX + workerOpt.config.name,
+				json: JSON.stringify(accessBlob),
+			});
+		}
+	}
+	// Pass the first worker's raw name so the entry worker can look up its
+	// access blob when no route matches (the fallback is always the first worker).
+	serviceEntryBindings.push({
+		name: CoreBindings.TEXT_FALLBACK_WORKER_NAME,
+		text: workerNames[0] ?? "",
+	});
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
@@ -906,6 +966,8 @@ export function getGlobalServices({
 		services.push(r2S3Service);
 	}
 
+	services.push(...getEmailStoreServices(tmpPath));
+
 	if (sharedOptions.unsafeLocalExplorer) {
 		const localExplorerUiPath = resolveLocalExplorerUi(tmpPath);
 		const workflowOptions = new Map<string, WorkflowOption>();
@@ -917,11 +979,12 @@ export function getGlobalServices({
 				workflowOptions.set(binding.name, {
 					name: binding.name,
 					className: binding.exportName,
-					scriptName: binding.workerName,
+					scriptName: binding.worker,
 				});
 			}
 		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			allWorkerOpts ?? [],
 			proxyBindings,
 			durableObjectClassNames,
 			workflowOptions
@@ -942,6 +1005,7 @@ export function getGlobalServices({
 				explorerWorkerOpts,
 				telemetry: sharedOptions.telemetry,
 				observabilityEnabled: sharedOptions.unsafeObservability === true,
+				sharedOptions,
 			})
 		);
 	}
@@ -952,7 +1016,7 @@ export function getGlobalServices({
 		services.push(
 			...getObservabilityServices(
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath
 			)
 		);
 	}

@@ -11,12 +11,15 @@ import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
 import { matchRoutes } from "./routing";
 import { handleScheduled } from "./scheduled";
+import type { EmailStoreService } from "../email/storage";
 import type { WorkerRoute } from "./routing";
 import type { Colorize } from "kleur/colors";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
+	[CoreBindings.TEXT_FALLBACK_WORKER_NAME]: string;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.SERVICE_STREAM]?: Fetcher;
 	[CoreBindings.SERVICE_IMAGES_DELIVERY]?: Fetcher;
@@ -25,6 +28,7 @@ type Env = {
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
+	[CoreBindings.TEXT_FALLBACK_WORKER_NAME]: string;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
@@ -36,6 +40,10 @@ type Env = {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
 		| undefined; // Won't have a `Fetcher` for every possible `string`
+} & {
+	[K in `${typeof CoreBindings.JSON_ACCESS_BLOB_PREFIX}${string}`]:
+		| { app_aud: string; jwt_claims?: Record<string, unknown> }
+		| undefined;
 };
 
 const encoder = new TextEncoder();
@@ -85,7 +93,9 @@ function getUserRequest(
 		// If a custom `upstream` was specified, make sure the URL starts with it
 		let path = url.pathname + url.search;
 		// Remove leading slash, so we resolve relative to `upstream`'s path
-		if (path.startsWith("/")) path = `./${path.substring(1)}`;
+		if (path.startsWith("/")) {
+			path = `./${path.substring(1)}`;
+		}
 		url = new URL(path, upstreamUrl);
 		rewriteHeadersFromOriginalUrl = true;
 	}
@@ -140,23 +150,33 @@ function getUserRequest(
 	return request;
 }
 
-function getTargetService(request: Request, url: URL, env: Env) {
-	let service: Fetcher | undefined = env[CoreBindings.SERVICE_USER_FALLBACK];
-
+function getTargetService(
+	request: Request,
+	url: URL,
+	env: Env
+): { service: Fetcher | undefined; routeTarget: string } {
 	const override = request.headers.get(CoreHeaders.ROUTE_OVERRIDE);
 	request.headers.delete(CoreHeaders.ROUTE_OVERRIDE);
 
 	const route = override ?? matchRoutes(env[CoreBindings.JSON_ROUTES], url);
 	if (route !== null) {
-		service = env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${route}`];
+		return {
+			service: env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${route}`],
+			routeTarget: route,
+		};
 	}
-	return service;
+	return {
+		service: env[CoreBindings.SERVICE_USER_FALLBACK],
+		routeTarget: env[CoreBindings.TEXT_FALLBACK_WORKER_NAME],
+	};
 }
 
 const LOCALHOST_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
 
 function isCdnCgiRequest(url: string | null): boolean {
-	if (url === null) return false;
+	if (url === null) {
+		return false;
+	}
 
 	try {
 		return new URL(url).pathname.startsWith("/cdn-cgi/");
@@ -304,7 +324,9 @@ function maybeParseAcceptEncodingElement(
 	element: string
 ): AcceptedEncoding | undefined {
 	const match = acceptEncodingElement.exec(element);
-	if (match?.groups == null) return;
+	if (match?.groups == null) {
+		return;
+	}
 	return {
 		coding: match.groups.coding,
 		weight:
@@ -315,7 +337,9 @@ function parseAcceptEncoding(header: string): AcceptedEncoding[] {
 	const encodings: AcceptedEncoding[] = [];
 	for (const element of header.split(",")) {
 		const maybeEncoding = maybeParseAcceptEncodingElement(element.trim());
-		if (maybeEncoding !== undefined) encodings.push(maybeEncoding);
+		if (maybeEncoding !== undefined) {
+			encodings.push(maybeEncoding);
+		}
 	}
 	// `Array#sort()` is stable, so original ordering preserved for same weights
 	return encodings.sort((a, b) => b.weight - a.weight);
@@ -327,9 +351,13 @@ function ensureAcceptableEncoding(
 	// https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3
 
 	// If the client hasn't specified any acceptable encodings, assume anything is
-	if (clientAcceptEncoding === null) return response;
+	if (clientAcceptEncoding === null) {
+		return response;
+	}
 	const encodings = parseAcceptEncoding(clientAcceptEncoding);
-	if (encodings.length === 0) return response;
+	if (encodings.length === 0) {
+		return response;
+	}
 
 	const contentEncoding = response.headers.get("Content-Encoding");
 	const contentType = response.headers.get("Content-Type");
@@ -374,12 +402,16 @@ function ensureAcceptableEncoding(
 				headers: { "Accept-Encoding": "br, gzip" },
 			});
 		}
-		if (contentEncoding === null) return response;
+		if (contentEncoding === null) {
+			return response;
+		}
 		response = new Response(response.body, response); // Ensure mutable headers
 		response.headers.delete("Content-Encoding"); // Use identity
 		return response;
 	} else {
-		if (contentEncoding === desiredEncoding) return response;
+		if (contentEncoding === desiredEncoding) {
+			return response;
+		}
 		response = new Response(response.body, response); // Ensure mutable headers
 		response.headers.set("Content-Encoding", desiredEncoding); // Use desired
 		return response;
@@ -387,9 +419,15 @@ function ensureAcceptableEncoding(
 }
 
 function colourFromHTTPStatus(status: number): Colorize {
-	if (200 <= status && status < 300) return green;
-	if (400 <= status && status < 500) return yellow;
-	if (500 <= status) return red;
+	if (200 <= status && status < 300) {
+		return green;
+	}
+	if (400 <= status && status < 500) {
+		return yellow;
+	}
+	if (500 <= status) {
+		return red;
+	}
 	return blue;
 }
 
@@ -408,7 +446,9 @@ function maybeLogRequest(
 	);
 	res.headers.delete(ADDITIONAL_RESPONSE_LOG_HEADER_NAME);
 
-	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return res;
+	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) {
+		return res;
+	}
 
 	const url = new URL(req.url);
 	const statusText = (res.statusText.trim() || STATUS_CODES[res.status]) ?? "";
@@ -465,6 +505,11 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
+		// Strip any client-supplied Access blob header early, before branches
+		// that return without calling getUserRequest() (e.g. the magic proxy).
+		// The correct per-worker blob is injected later after routing.
+		request.headers.delete(CoreHeaders.ACCESS_BLOB);
+
 		// Restrict /cdn-cgi/* requests to allowed hostnames.
 		// These endpoints should be served only when the browser-sent Host and
 		// Origin headers match localhost, a configured route, or the configured upstream.
@@ -510,7 +555,7 @@ export default <ExportedHandler<Env>>{
 			throw e;
 		}
 		const url = new URL(request.url);
-		const service = getTargetService(request, url, env);
+		const { service, routeTarget } = getTargetService(request, url, env);
 		if (service === undefined) {
 			return new Response("No entrypoint worker found", { status: 404 });
 		}
@@ -527,7 +572,9 @@ export default <ExportedHandler<Env>>{
 			const imagesDelivery = env[CoreBindings.SERVICE_IMAGES_DELIVERY];
 			if (
 				(url.pathname === CorePaths.IMAGE_DELIVERY ||
-					url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`)) &&
+					url.pathname.startsWith(`${CorePaths.IMAGE_DELIVERY}/`) ||
+					url.pathname === CorePaths.IMAGE_UPLOAD ||
+					url.pathname.startsWith(`${CorePaths.IMAGE_UPLOAD}/`)) &&
 				imagesDelivery
 			) {
 				return await imagesDelivery.fetch(request);
@@ -542,6 +589,7 @@ export default <ExportedHandler<Env>>{
 						url.searchParams,
 						request,
 						service,
+						routeTarget,
 						env,
 						ctx
 					);
@@ -586,6 +634,15 @@ export default <ExportedHandler<Env>>{
 					s3Request.headers.set("Host", originalHostname);
 				}
 				return await r2S3Service.fetch(s3Request);
+			}
+
+			// Inject per-worker Cloudflare Access blob header so workerd populates ctx.access
+			const accessBlob =
+				env[`${CoreBindings.JSON_ACCESS_BLOB_PREFIX}${routeTarget}`];
+			if (accessBlob) {
+				const headers = new Headers(request.headers);
+				headers.set(CoreHeaders.ACCESS_BLOB, JSON.stringify(accessBlob));
+				request = new Request(request, { headers });
 			}
 
 			let response = await service.fetch(request);

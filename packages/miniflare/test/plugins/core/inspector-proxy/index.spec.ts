@@ -503,7 +503,7 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 						}
 					`),
 					env: {
-						WORKER_B: { type: "worker", workerName: "worker-b" },
+						WORKER_B: { type: "worker", worker: "worker-b" },
 					},
 				},
 				dev: { unsafeInspectorProxy: true },
@@ -663,7 +663,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 						}
 					`),
 					env: {
-						WORKER_B: { type: "worker", workerName: "worker-b" },
+						WORKER_B: { type: "worker", worker: "worker-b" },
 					},
 				},
 				dev: { unsafeInspectorProxy: true },

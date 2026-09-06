@@ -58,6 +58,13 @@ const ALLOW_BUILDS_ENTRY = /^( {2})(['"]?)([^'":]+)\2:\s*(.*)$/;
 
 /** Exported for unit testing. */
 export const mergeAllowBuilds = (original: string): string => {
+	// A framework generator may explicitly opt into running all dependency
+	// build scripts. Adding `allowBuilds` would be redundant and pnpm rejects
+	// the combination as conflicting build policies.
+	if (/^dangerouslyAllowAllBuilds:[ \t]*true[ \t]*$/m.test(original)) {
+		return original;
+	}
+
 	const eol = detectEol(original);
 	const lines = original.split(/\r?\n/);
 

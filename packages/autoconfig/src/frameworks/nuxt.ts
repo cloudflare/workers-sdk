@@ -1,7 +1,10 @@
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
-import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
 import type {
@@ -72,16 +75,17 @@ export class Nuxt extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./.output/server/index.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "./.output/public/",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./.output/server/index.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 				observability: {
 					enabled: true,
 				},
 			},
+			buildConfig: { assetsDirectory: "./.output/public/" },
 		};
 	}
 

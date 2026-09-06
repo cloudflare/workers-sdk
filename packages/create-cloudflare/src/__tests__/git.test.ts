@@ -315,6 +315,24 @@ describe("git helpers", () => {
 			expect(ctx.commitMessage).toBeDefined();
 		});
 
+		test("omits framework CLI metadata when the framework CLI was not used", async ({
+			expect,
+		}) => {
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
+			ctx.template.frameworkCli = "create-vinext-app";
+			ctx.template.frameworkCliUsed = false;
+
+			await gitCommit(ctx);
+
+			expect(ctx.template.frameworkCli).toBe("create-vinext-app");
+			expect(ctx.commitMessage).toContain(
+				"Initialize web application via create-cloudflare CLI"
+			);
+			expect(ctx.commitMessage).toContain("framework = test");
+			expect(ctx.commitMessage).not.toContain("framework cli =");
+		});
+
 		test("runs `git commit` without a silent/piped stdio or an active spinner", async ({
 			expect,
 		}) => {

@@ -183,12 +183,6 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
-	if (normalizedConfig.workflows?.length) {
-		normalizedConfig.workflows = normalizedConfig.workflows.map(
-			({ remote: _, ...binding }) => binding
-		);
-	}
-
 	if (normalizedConfig.dispatch_namespaces?.length) {
 		normalizedConfig.dispatch_namespaces =
 			normalizedConfig.dispatch_namespaces.map(
@@ -292,6 +286,7 @@ function normalizeObservability(
 	const fullObservabilityDefaults = {
 		enabled,
 		head_sampling_rate: 1,
+		redact_query_string: false,
 		logs: {
 			enabled,
 			head_sampling_rate: 1,

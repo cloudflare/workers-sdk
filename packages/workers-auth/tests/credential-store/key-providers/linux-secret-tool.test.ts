@@ -14,10 +14,12 @@ function mockResult({
 	status = 0,
 	stdout = "",
 	stderr = "",
+	error,
 }: {
 	status?: number | null;
 	stdout?: string;
 	stderr?: string;
+	error?: Error;
 } = {}): SpawnSyncReturns<string> {
 	return {
 		status,
@@ -26,7 +28,20 @@ function mockResult({
 		signal: null,
 		output: [null, stdout, stderr],
 		pid: 1,
+		error,
 	} as SpawnSyncReturns<string>;
+}
+
+/**
+ * What `spawnSync` returns when `secret-tool` cannot be spawned at all (for
+ * example because it is not on `PATH`): it does not throw, it reports the
+ * failure via `error` and leaves `status` as `null`.
+ */
+function spawnErrorResult(code = "ENOENT"): SpawnSyncReturns<string> {
+	return mockResult({
+		status: null,
+		error: Object.assign(new Error(`spawn secret-tool ${code}`), { code }),
+	});
 }
 
 const SAMPLE_KEY = new Uint8Array(32).fill(0xab);
@@ -59,10 +74,40 @@ describe("LinuxSecretToolKeyProvider", () => {
 			expect(probeSecretTool()).toBe(false);
 		});
 
-		it("returns false when secret-tool --version exits non-zero", ({
+		it("returns true when secret-tool prints its usage and exits 2 (libsecret has no --version flag)", ({
+			expect,
+		}) => {
+			setLinuxSecretToolRunner(() =>
+				mockResult({
+					status: 2,
+					stderr:
+						"usage: secret-tool store --label='label' attribute value ...",
+				})
+			);
+			expect(probeSecretTool()).toBe(true);
+		});
+
+		it("returns true on any other non-zero exit status, since the process ran", ({
 			expect,
 		}) => {
 			setLinuxSecretToolRunner(() => mockResult({ status: 127 }));
+			expect(probeSecretTool()).toBe(true);
+		});
+
+		it("returns true when secret-tool was launched but terminated by a signal", ({
+			expect,
+		}) => {
+			setLinuxSecretToolRunner(() => ({
+				...mockResult({ status: null }),
+				signal: "SIGTERM",
+			}));
+			expect(probeSecretTool()).toBe(true);
+		});
+
+		it("returns false when spawnSync reports ENOENT instead of throwing", ({
+			expect,
+		}) => {
+			setLinuxSecretToolRunner(() => spawnErrorResult());
 			expect(probeSecretTool()).toBe(false);
 		});
 
@@ -91,7 +136,7 @@ describe("LinuxSecretToolKeyProvider", () => {
 			setLinuxSecretToolRunner(() => mockResult({ status: 0 }));
 			expect(probeSecretTool()).toBe(true);
 
-			setLinuxSecretToolRunner(() => mockResult({ status: 127 }));
+			setLinuxSecretToolRunner(() => spawnErrorResult());
 			expect(probeSecretTool()).toBe(false);
 		});
 	});

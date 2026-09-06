@@ -6,10 +6,15 @@ import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
 } from "@cloudflare/cli-shared-helpers/gitignore";
-import { installWrangler } from "@cloudflare/cli-shared-helpers/packages";
 import {
+	installPackages,
+	installWrangler,
+} from "@cloudflare/cli-shared-helpers/packages";
+import { convertToWranglerConfig, InputWorkerSchema } from "@cloudflare/config";
+import {
+	DEFAULT_COMPAT_DATE,
 	FatalError,
-	getTodaysCompatDate,
+	isNodejsCompatDefaultOn,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
 import {
@@ -25,18 +30,23 @@ import {
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
 import { usesTypescript } from "./uses-typescript";
-import type { AutoConfigContext } from "./context";
+import type { AutoConfigContext, AutoConfigTarget } from "./context";
+import type {
+	BuildConfig,
+	ConfigurationResults,
+} from "./frameworks/framework-class";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
 	AutoConfigOptions,
 	AutoConfigSummary,
 } from "./types";
+import type { WorkerConfigInput } from "@cloudflare/config";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Runs the full autoconfig flow: displays detected settings, confirms with the user,
- * validates the framework version, runs framework configuration, writes wrangler config,
+ * validates the framework version, runs framework configuration, writes configuration,
  * updates package.json scripts, and optionally runs the build command.
  *
  * @param autoConfigDetails - The detected project details from `getDetailsForAutoConfig()`.
@@ -48,13 +58,14 @@ export async function runAutoConfig(
 	autoConfigOptions: AutoConfigOptions
 ): Promise<AutoConfigSummary> {
 	const { context } = autoConfigOptions;
+	const target = autoConfigOptions.target ?? "cf";
 	const { logger } = context;
 	const dryRun = autoConfigOptions.dryRun === true;
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
-	const enableWranglerInstallation =
-		autoConfigOptions.enableWranglerInstallation ?? true;
+	const enableTargetCliInstallation =
+		autoConfigOptions.enableTargetCliInstallation ?? true;
 
 	assertNonConfigured(autoConfigDetails);
 
@@ -92,19 +103,17 @@ export async function runAutoConfig(
 		"The Output Directory is unexpectedly missing"
 	);
 
-	const compatibilityDate = getTodaysCompatDate();
+	const compatibilityDate = DEFAULT_COMPAT_DATE;
 
-	const wranglerConfig: RawConfig = {
-		$schema: "node_modules/wrangler/config-schema.json",
+	const defaultWorkerConfig: WorkerConfigInput = {
 		name: autoConfigDetails.workerName,
-		compatibility_date: compatibilityDate,
+		compatibilityDate,
 		observability: {
 			enabled: true,
 		},
-	} satisfies RawConfig;
+	};
 
 	const { packageManager } = autoConfigDetails;
-
 	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
 
 	const frameworkPackageInfo = getFrameworkPackageInfo(
@@ -120,6 +129,7 @@ export async function runAutoConfig(
 
 	const dryRunConfigurationResults =
 		await autoConfigDetails.framework.configure({
+			target,
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
@@ -128,28 +138,42 @@ export async function runAutoConfig(
 			packageManager,
 			context,
 		});
+	const dryRunWorkerConfig = mergeWorkerConfig(
+		defaultWorkerConfig,
+		dryRunConfigurationResults.workerConfig
+	);
+	if (
+		target === "cf" &&
+		dryRunConfigurationResults.buildTool === "wrangler" &&
+		dryRunConfigurationResults.buildConfig &&
+		existsSync(resolve(autoConfigDetails.projectPath, "wrangler.config.ts"))
+	) {
+		throw new FatalError(
+			"Cannot generate wrangler.config.ts because the file already exists. Remove or rename the existing file, then run autoconfig again.",
+			{ telemetryMessage: "autoconfig wrangler config conflict" }
+		);
+	}
 
 	const { npx } = packageManager;
+	const buildCommand =
+		dryRunConfigurationResults.buildCommandOverride ??
+		autoConfigDetails.buildCommand;
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
-		dryRunConfigurationResults.wranglerConfig === null
-			? null
-			: ensureNodejsCompatIsInConfig({
-					...wranglerConfig,
-					...dryRunConfigurationResults.wranglerConfig,
-				}),
+		dryRunWorkerConfig,
+		dryRunConfigurationResults,
 		{
-			build:
-				dryRunConfigurationResults.buildCommandOverride ??
-				autoConfigDetails.buildCommand,
+			build: buildCommand,
 			deploy:
 				dryRunConfigurationResults.deployCommandOverride ??
-				`${npx} wrangler deploy`,
+				`${npx} ${target} deploy`,
 			version:
-				dryRunConfigurationResults?.versionCommandOverride ??
-				`${npx} wrangler versions upload`,
+				dryRunConfigurationResults.versionCommandOverride ??
+				`${npx} ${target} versions upload`,
 		},
+		enableTargetCliInstallation,
+		target,
 		context,
 		dryRunConfigurationResults.packageJsonScriptsOverrides
 	);
@@ -178,11 +202,32 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
+	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
+		if (target === "cf") {
+			const hasCfDependency =
+				autoConfigDetails.packageJson.dependencies?.cf !== undefined ||
+				autoConfigDetails.packageJson.devDependencies?.cf !== undefined;
+			if (!hasCfDependency) {
+				await installPackages(packageManager.type, ["cf@latest"], {
+					dev: true,
+					isWorkspaceRoot,
+				});
+			}
+		} else {
+			await installWrangler(packageManager.type, isWorkspaceRoot);
+		}
+	}
+
+	if (
+		autoConfigDetails.packageJson &&
+		target === "cf" &&
+		dryRunConfigurationResults.buildTool === "wrangler"
+	) {
 		await installWrangler(packageManager.type, isWorkspaceRoot);
 	}
 
 	const configurationResults = await autoConfigDetails.framework.configure({
+		target,
 		outputDir: autoConfigDetails.outputDir,
 		projectPath: autoConfigDetails.projectPath,
 		workerName: autoConfigDetails.workerName,
@@ -191,6 +236,10 @@ export async function runAutoConfig(
 		packageManager,
 		context,
 	});
+	const workerConfig = mergeWorkerConfig(
+		defaultWorkerConfig,
+		configurationResults.workerConfig
+	);
 
 	if (autoConfigDetails.packageJson) {
 		const packageJsonPath = resolve(
@@ -217,14 +266,31 @@ export async function runAutoConfig(
 		);
 	}
 
-	if (configurationResults.wranglerConfig !== null) {
-		await saveWranglerJsonc(
-			autoConfigDetails.projectPath,
-			ensureNodejsCompatIsInConfig({
-				...wranglerConfig,
-				...configurationResults.wranglerConfig,
-			})
+	if (target === "wrangler") {
+		const wranglerConfig = getWranglerConfig(
+			workerConfig,
+			configurationResults
 		);
+		if (wranglerConfig !== null) {
+			// `saveWranglerJsonc()` reconciles the Node.js compatibility flags itself,
+			// once it has merged this with any config already on disk.
+			await saveWranglerJsonc(autoConfigDetails.projectPath, wranglerConfig);
+		}
+	}
+
+	if (target === "cf") {
+		if (workerConfig !== null) {
+			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
+		}
+		if (
+			configurationResults.buildTool === "wrangler" &&
+			configurationResults.buildConfig
+		) {
+			await saveWranglerConfigTs(
+				autoConfigDetails.projectPath,
+				configurationResults.buildConfig
+			);
+		}
 	}
 
 	maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
@@ -235,9 +301,6 @@ export async function runAutoConfig(
 			`${autoConfigDetails.projectPath}/.assetsignore`
 		);
 	}
-
-	const buildCommand =
-		configurationResults.buildCommandOverride ?? autoConfigDetails.buildCommand;
 
 	if (buildCommand && runBuild) {
 		await context.runCommand(
@@ -251,28 +314,85 @@ export async function runAutoConfig(
 }
 
 /**
- * Given a wrangler config object this function makes sure that the `nodejs_compat` flag is present
- * in its `compatibility_flags` setting.
+ * Applies the common Worker defaults to framework-provided configuration.
  *
- * Just to be sure the function also filters out any compatibility flag already present starting with `nodejs_` (e.g. `nodejs_als`)
- *
- * @param wranglerConfig The target wrangler config object
- * @returns A copy of the config object where the `compatibility_flags` settings is assured to contain `nodejs_compat`
+ * @param defaultWorkerConfig The common Worker configuration defaults
+ * @param workerConfig The framework-provided Worker configuration
+ * @returns The merged Worker configuration, or `null` when an external tool owns it
  */
-function ensureNodejsCompatIsInConfig(wranglerConfig: RawConfig): RawConfig {
-	if (wranglerConfig.compatibility_flags?.includes("nodejs_compat")) {
-		return wranglerConfig;
+function mergeWorkerConfig(
+	defaultWorkerConfig: WorkerConfigInput,
+	workerConfig: Partial<WorkerConfigInput> | null
+): WorkerConfigInput | null {
+	return workerConfig === null
+		? null
+		: { ...defaultWorkerConfig, ...workerConfig };
+}
+
+/**
+ * Converts framework configuration results into the legacy Wrangler format.
+ *
+ * @param workerConfig The resolved Worker configuration
+ * @param configurationResults The framework configuration results
+ * @returns The Wrangler configuration, or `null` when an external tool owns it
+ */
+function getWranglerConfig(
+	workerConfig: WorkerConfigInput | null,
+	configurationResults: ConfigurationResults
+): RawConfig | null {
+	if (workerConfig === null) {
+		return null;
 	}
 
-	return {
-		...wranglerConfig,
-		compatibility_flags: [
-			...(wranglerConfig.compatibility_flags?.filter(
-				(flag) => !flag.startsWith("nodejs_")
-			) ?? []),
-			"nodejs_compat",
-		],
-	};
+	const parsedWorkerConfig = InputWorkerSchema.parse({
+		type: "worker",
+		...workerConfig,
+	});
+	const convertedWranglerConfig = convertToWranglerConfig(parsedWorkerConfig);
+	const wranglerConfig = ensureNodejsCompatIsEnabled({
+		$schema: "node_modules/wrangler/config-schema.json",
+		...convertedWranglerConfig,
+		...(configurationResults.buildConfig?.assetsDirectory
+			? {
+					assets: {
+						...convertedWranglerConfig.assets,
+						directory: configurationResults.buildConfig.assetsDirectory,
+					},
+				}
+			: {}),
+	});
+
+	return wranglerConfig;
+}
+
+/**
+ * Given a wrangler config object this function makes sure that Node.js compatibility is enabled.
+ *
+ * From `NODEJS_COMPAT_DEFAULT_ON_DATE` the config's compatibility date is enough to enable it, and
+ * specifying `nodejs_compat` as well is a workerd validation error, so the flag is only added for
+ * earlier dates.
+ *
+ * Either way the function filters out any compatibility flag already present starting with
+ * `nodejs_` (e.g. `nodejs_als`), so that a framework-provided flag cannot conflict with this.
+ *
+ * @param wranglerConfig The target wrangler config object
+ * @returns A copy of the config object where Node.js compatibility is assured to be enabled
+ */
+function ensureNodejsCompatIsEnabled(wranglerConfig: RawConfig): RawConfig {
+	const flags = (wranglerConfig.compatibility_flags ?? []).filter(
+		(flag) => !flag.startsWith("nodejs_")
+	);
+
+	if (!isNodejsCompatDefaultOn(wranglerConfig.compatibility_date)) {
+		flags.push("nodejs_compat");
+	}
+
+	if (flags.length === 0) {
+		const { compatibility_flags: _removed, ...rest } = wranglerConfig;
+		return rest;
+	}
+
+	return { ...wranglerConfig, compatibility_flags: flags };
 }
 
 /**
@@ -282,7 +402,7 @@ function ensureNodejsCompatIsInConfig(wranglerConfig: RawConfig): RawConfig {
  * @param projectPath The project's path
  * @param baseWranglerConfig The wrangler config to use
  */
-async function saveWranglerJsonc(
+export async function saveWranglerJsonc(
 	projectPath: string,
 	wranglerConfig: RawConfig
 ): Promise<void> {
@@ -297,27 +417,94 @@ async function saveWranglerJsonc(
 		) as RawConfig;
 	}
 
+	// Reconcile the flags against the config that actually gets written. The
+	// merge only overrides the keys we generate, so a `nodejs_compat` written by
+	// the framework's own scaffolder would otherwise survive next to the
+	// compatibility date we write over it — the combination workerd rejects.
+	const mergedWranglerConfig = ensureNodejsCompatIsEnabled({
+		...existingWranglerConfig,
+		...wranglerConfig,
+	});
+
 	await writeFile(
 		resolve(projectPath, "wrangler.jsonc"),
-		JSON.stringify(
-			{
-				...existingWranglerConfig,
-				...wranglerConfig,
-			},
-			null,
-			2
-		) + "\n"
+		JSON.stringify(mergedWranglerConfig, null, 2) + "\n"
 	);
 }
 
 /**
+ * Writes the Worker configuration used by `cf`.
+ *
+ * @param projectPath The project directory
+ * @param workerConfig The Worker configuration to write
+ */
+async function saveCloudflareConfig(
+	projectPath: string,
+	workerConfig: WorkerConfigInput
+): Promise<void> {
+	await writeFile(
+		resolve(projectPath, "cloudflare.config.ts"),
+		renderCloudflareConfig(workerConfig)
+	);
+}
+
+/**
+ * Writes the Wrangler build-tool configuration used by `cf`.
+ *
+ * @param projectPath The project directory
+ * @param buildConfig The build-tool configuration to write
+ */
+async function saveWranglerConfigTs(
+	projectPath: string,
+	buildConfig: BuildConfig
+): Promise<void> {
+	await writeFile(
+		resolve(projectPath, "wrangler.config.ts"),
+		renderWranglerConfigTs(buildConfig)
+	);
+}
+
+/**
+ * Renders a Worker configuration as a `cloudflare.config.ts` module.
+ *
+ * @param workerConfig The Worker configuration to render
+ * @returns The configuration module source
+ */
+function renderCloudflareConfig(workerConfig: WorkerConfigInput): string {
+	return `import { defineWorker } from "cf/config";\n\nexport default defineWorker(${JSON.stringify(workerConfig, null, 2)});\n`;
+}
+
+/**
+ * Renders build-tool configuration as a `wrangler.config.ts` module.
+ *
+ * @param buildConfig The build-tool configuration to render
+ * @returns The configuration module source
+ */
+function renderWranglerConfigTs(buildConfig: BuildConfig): string {
+	return `import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig(${JSON.stringify(buildConfig, null, 2)});\n`;
+}
+
+/**
+ * Indents rendered file content for display in the operation summary.
+ *
+ * @param content The file content to indent
+ * @returns The indented content
+ */
+function indentFileContent(content: string): string {
+	return "  " + content.trimEnd().replace(/\n/g, "\n  ");
+}
+
+/**
  * Builds a summary of all operations that autoconfig will (or did) perform,
- * including package installation, package.json script updates, wrangler config
+ * including package installation, package.json script updates, configuration
  * creation, and framework-specific configuration.
  *
  * @param autoConfigDetails - The detected project details.
- * @param wranglerConfigToWrite - The wrangler config object to write, or `null` if not applicable.
+ * @param workerConfig - The resolved Worker configuration.
+ * @param configurationResults - The framework configuration results.
  * @param projectCommands - The build, deploy, and version commands for the project.
+ * @param enableTargetCliInstallation - Whether to install the selected target CLI package.
+ * @param target - The configuration target.
  * @param context - The autoconfig context providing logger and other dependencies.
  * @param packageJsonScriptsOverrides - Optional overrides for package.json script entries.
  * @returns A summary object describing all planned operations.
@@ -326,26 +513,33 @@ export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
 	},
-	wranglerConfigToWrite: RawConfig | null,
+	workerConfig: WorkerConfigInput | null,
+	configurationResults: ConfigurationResults,
 	projectCommands: {
 		build?: string;
 		deploy: string;
 		version?: string;
 	},
+	enableTargetCliInstallation: boolean,
+	target: AutoConfigTarget,
 	context: AutoConfigContext,
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
 	const { logger } = context;
 	logger.log("");
+	const wranglerConfig =
+		target === "wrangler"
+			? getWranglerConfig(workerConfig, configurationResults)
+			: null;
 
 	const summary: AutoConfigSummary = {
-		wranglerInstall: false,
 		scripts: {},
-		...(wranglerConfigToWrite !== null
-			? {
-					wranglerConfig: wranglerConfigToWrite,
-				}
-			: {}),
+		...(target === "wrangler"
+			? { wranglerConfig: wranglerConfig ?? undefined }
+			: {
+					workerConfig: workerConfig ?? undefined,
+					buildConfig: configurationResults.buildConfig,
+				}),
 		outputDir: autoConfigDetails.outputDir,
 		frameworkId: autoConfigDetails.framework.id,
 		buildCommand: projectCommands.build,
@@ -353,30 +547,45 @@ export async function buildOperationsSummary(
 		versionCommand: projectCommands.version,
 	};
 
+	const packagesToInstall = new Set<string>();
 	if (autoConfigDetails.packageJson) {
-		// If there is a package.json file we will want to install wrangler
-		summary.wranglerInstall = true;
+		if (enableTargetCliInstallation) {
+			packagesToInstall.add(target);
+		}
+		if (configurationResults.buildTool === "vite") {
+			packagesToInstall.add("@cloudflare/vite-plugin");
+		} else if (
+			target === "cf" &&
+			configurationResults.buildTool === "wrangler"
+		) {
+			packagesToInstall.add("wrangler");
+		}
+	}
 
+	if (packagesToInstall.size > 0) {
 		logger.log("📦 Install packages:");
-		logger.log(` - wrangler (devDependency)`);
+		for (const packageName of packagesToInstall) {
+			logger.log(` - ${packageName} (devDependency)`);
+		}
 		logger.log("");
+	}
 
+	if (autoConfigDetails.packageJson) {
+		const scriptOverrides =
+			target === "wrangler" ? packageJsonScriptsOverrides : undefined;
+		const buildCommandPrefix =
+			target === "wrangler" && autoConfigDetails.buildCommand
+				? `${autoConfigDetails.buildCommand} && `
+				: "";
 		summary.scripts = {
 			deploy:
-				packageJsonScriptsOverrides?.deploy ??
-				(autoConfigDetails.buildCommand
-					? `${autoConfigDetails.buildCommand} && wrangler deploy`
-					: `wrangler deploy`),
-			preview:
-				packageJsonScriptsOverrides?.preview ??
-				(autoConfigDetails.buildCommand
-					? `${autoConfigDetails.buildCommand} && wrangler dev`
-					: `wrangler dev`),
+				scriptOverrides?.deploy ?? `${buildCommandPrefix}${target} deploy`,
+			preview: scriptOverrides?.preview ?? `${buildCommandPrefix}${target} dev`,
 		};
 
 		const containsServerSideCode =
 			// If there is an entrypoint then we know that there is server side code
-			!!wranglerConfigToWrite?.main;
+			!!workerConfig?.entrypoint;
 
 		if (
 			// If there is no server side code, then there is no need to add the cf-typegen script
@@ -385,7 +594,7 @@ export async function buildOperationsSummary(
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
 			summary.scripts["cf-typegen"] =
-				packageJsonScriptsOverrides?.typegen ?? "wrangler types";
+				scriptOverrides?.typegen ?? `${target} types`;
 		}
 
 		logger.log("📝 Update package.json scripts:");
@@ -395,7 +604,27 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	if (wranglerConfigToWrite) {
+	if (target === "cf" && workerConfig) {
+		logger.log("📄 Create cloudflare.config.ts:");
+		logger.log(indentFileContent(renderCloudflareConfig(workerConfig)));
+		logger.log("");
+	}
+
+	if (
+		target === "cf" &&
+		configurationResults.buildTool === "wrangler" &&
+		configurationResults.buildConfig
+	) {
+		logger.log("📄 Create wrangler.config.ts:");
+		logger.log(
+			indentFileContent(
+				renderWranglerConfigTs(configurationResults.buildConfig)
+			)
+		);
+		logger.log("");
+	}
+
+	if (target === "wrangler" && wranglerConfig) {
 		const wranglerConfigPath = resolve(
 			autoConfigDetails.projectPath,
 			"wrangler.jsonc"
@@ -405,8 +634,7 @@ export async function buildOperationsSummary(
 			configExists ? "📄 Update wrangler.jsonc:" : "📄 Create wrangler.jsonc:"
 		);
 		logger.log(
-			"  " +
-				JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
+			"  " + JSON.stringify(wranglerConfig, null, 2).replace(/\n/g, "\n  ")
 		);
 		logger.log("");
 	}
@@ -414,7 +642,9 @@ export async function buildOperationsSummary(
 	if (
 		autoConfigDetails.framework &&
 		!(autoConfigDetails.framework instanceof Static) &&
-		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath)
+		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath, {
+			target,
+		})
 	) {
 		summary.frameworkConfiguration =
 			autoConfigDetails.framework.configurationDescription ??

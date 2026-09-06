@@ -112,19 +112,19 @@ describe("wrangler preview", () => {
 			{ command: "put API_KEY", flag: "--name my-preview" },
 			{ command: "put API_KEY", flag: '--message "add secret"' },
 			{ command: "put API_KEY", flag: "--tag v1" },
-			{ command: "put API_KEY", flag: "--ignore-defaults" },
+			{ command: "put API_KEY", flag: "--ignore-base-config" },
 			{ command: "delete REMOVE_ME", flag: "--name my-preview" },
 			{ command: "delete REMOVE_ME", flag: '--message "delete secret"' },
 			{ command: "delete REMOVE_ME", flag: "--tag v1" },
-			{ command: "delete REMOVE_ME", flag: "--ignore-defaults" },
+			{ command: "delete REMOVE_ME", flag: "--ignore-base-config" },
 			{ command: "list", flag: "--name my-preview" },
 			{ command: "list", flag: '--message "list secrets"' },
 			{ command: "list", flag: "--tag v1" },
-			{ command: "list", flag: "--ignore-defaults" },
+			{ command: "list", flag: "--ignore-base-config" },
 			{ command: "bulk", flag: "--name my-preview" },
 			{ command: "bulk", flag: '--message "bulk secrets"' },
 			{ command: "bulk", flag: "--tag v1" },
-			{ command: "bulk", flag: "--ignore-defaults" },
+			{ command: "bulk", flag: "--ignore-base-config" },
 		])(
 			"rejects Preview deployment flag $flag for $command",
 			async ({ command, flag }, { expect }) => {
@@ -142,6 +142,20 @@ describe("wrangler preview", () => {
 				expect(requested).toBe(false);
 			}
 		);
+
+		test("does not inherit the preview script positional", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler("preview base-config secret put")
+			).rejects.toThrow(/Not enough non-option arguments/);
+			expect(std.out).toContain(
+				"wrangler preview base-config secret put <key>"
+			);
+			expect(std.out).not.toContain(
+				"script  The path to an entry point for your Worker"
+			);
+		});
 
 		describe("put", () => {
 			const mockStdIn = useMockStdin({ isTTY: false });

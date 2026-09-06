@@ -10,11 +10,15 @@ function routeSpecificity(url: URL) {
 	// Adapted from internal config service routing table implementation
 	const hostParts = url.host.split(".");
 	let hostScore = hostParts.length;
-	if (hostParts[0] === "*") hostScore -= 2;
+	if (hostParts[0] === "*") {
+		hostScore -= 2;
+	}
 
 	const pathParts = url.pathname.split("/");
 	let pathScore = pathParts.length;
-	if (pathParts[pathParts.length - 1] === "*") pathScore -= 2;
+	if (pathParts[pathParts.length - 1] === "*") {
+		pathScore -= 2;
+	}
 
 	return hostScore * 26 + pathScore;
 }
@@ -27,7 +31,9 @@ export function parseRoutes(allRoutes: Map<string, string[]>): WorkerRoute[] {
 
 			let urlInput = route;
 			// If route is missing a protocol, give it one so it parses
-			if (!hasProtocol) urlInput = `https://${urlInput}`;
+			if (!hasProtocol) {
+				urlInput = `https://${urlInput}`;
+			}
 			const url = new URL(urlInput);
 			const specificity = routeSpecificity(url);
 

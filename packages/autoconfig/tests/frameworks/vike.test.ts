@@ -19,6 +19,7 @@ const context = createMockContext();
 
 function getBaseOptions() {
 	return {
+		target: "cf" as const,
 		projectPath: process.cwd(),
 		workerName: "my-vike-app",
 		outputDir: "",
@@ -285,12 +286,12 @@ export default {
 			);
 		});
 
-		it("returns correct wranglerConfig", async ({ expect }) => {
+		it("returns the Worker config", async ({ expect }) => {
 			const framework = new Vike({ id: "vike", name: "Vike" });
 			const result = await framework.configure(getBaseOptions());
 
-			expect(result.wranglerConfig).toEqual({
-				main: "virtual:photon:cloudflare:server-entry",
+			expect(result.workerConfig).toEqual({
+				entrypoint: "virtual:photon:cloudflare:server-entry",
 			});
 		});
 

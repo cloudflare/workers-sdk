@@ -40,6 +40,11 @@ export type {
 } from "./environment";
 export { partitionExports } from "./exports";
 export type { ExportType, PartitionedExports } from "./exports";
+export {
+	getContainerDurableObjectClassNames,
+	getContainerNameToClassNameMap,
+	resolveContainerClassName,
+} from "./containers";
 
 export function configFormat(
 	configPath: string | undefined

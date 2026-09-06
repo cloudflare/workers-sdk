@@ -5,7 +5,7 @@ export default defineConfig({
 		reporters: ["default"],
 		include: ["**/*.test.ts"],
 		cache: false,
-		root: __dirname,
+		root: import.meta.dirname,
 		testTimeout: 1000 * 60 * 10, // 10 min for lengthy installs
 		fileParallelism: false,
 		globalSetup: ["global-setup.ts"],

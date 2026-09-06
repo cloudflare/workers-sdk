@@ -1,0 +1,30 @@
+import {
+	createExecutionContext,
+	waitOnExecutionContext,
+} from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
+import { describe, test } from "vitest";
+
+describe("Vitest pool workers remote bindings", () => {
+	test(
+		"fetching unit-style from a remote service binding",
+		{ timeout: 50_000 },
+		async ({ expect }) => {
+			const response = await env.MY_WORKER.fetch("http://example.com");
+			const ctx = createExecutionContext();
+			await waitOnExecutionContext(ctx);
+			expect(await response.text()).toMatchInlineSnapshot(
+				`"Hello from a remote Worker part of the vitest-plugin remote bindings fixture!"`
+			);
+		}
+	);
+
+	test("fetching integration-style from the local worker (which uses remote bindings)", async ({
+		expect,
+	}) => {
+		const response = await exports.default.fetch("https://example.com");
+		expect(await response.text()).toMatchInlineSnapshot(
+			`"Response from remote worker: Hello from a remote Worker part of the vitest-plugin remote bindings fixture!"`
+		);
+	});
+});

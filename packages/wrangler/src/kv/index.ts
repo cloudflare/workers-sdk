@@ -1064,7 +1064,9 @@ export const kvBulkPutCommand = createCommand({
 					for (const value of content) {
 						let data = value.value;
 						if (value.base64) {
-							data = Buffer.from(data, "base64").toString();
+							// Put the raw bytes in, not a string. The value has to stay
+							// binary here so nothing decodes it on the way to the store.
+							data = Buffer.from(data, "base64");
 						}
 						await namespace.put(value.key, data, {
 							expiration: value.expiration,

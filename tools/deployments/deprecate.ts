@@ -363,17 +363,17 @@ Examples:
   pnpm deprecate-packages --reason "Deploy regression" \\
     wrangler@latest \\
     @cloudflare/vite-plugin@latest \\
-    @cloudflare/vitest-pool-workers@latest
+    @cloudflare/vitest-plugin@latest
 
   pnpm deprecate-packages --reason "Broken scheduled handlers" \\
     miniflare@4.20260706.0 \\
     wrangler@4.108.0>4.106.0 \\
     @cloudflare/vite-plugin@1.43.2 \\
-    @cloudflare/vitest-pool-workers@0.18.2
+    @cloudflare/vitest-plugin@0.18.2
 
 Dependency rules are derived from local package.json files and enforced automatically.
 For example, deprecating wrangler also requires deprecating @cloudflare/vite-plugin
-and @cloudflare/vitest-pool-workers because they depend on it.
+and @cloudflare/vitest-plugin because they depend on it.
 `.trim();
 
 export async function main(argv: string[] = process.argv.slice(2)) {

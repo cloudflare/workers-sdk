@@ -2,6 +2,15 @@
 	"name": "worker",
 	"main": "./src/index.ts",
 	// compatibility date omitted to test fallback
+	"access": {
+		"dev": {
+			"aud": "vite-plugin-test-audience",
+			"identity": {
+				"email": "vite-plugin@example.com",
+				"name": "Vite Plugin Test User",
+			},
+		},
+	},
 	"services": [
 		{
 			"binding": "TEST_IF_VITE_CRASH_WITH_UNKNOWN_NAMED_ENTRYPOINT",

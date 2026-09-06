@@ -76,7 +76,7 @@ export const CACHE_PLUGIN: Plugin = {
 			const persistPath = getPersistPath(
 				CACHE_PLUGIN_NAME,
 				tmpPath,
-				sharedOptions.resourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath
 			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
