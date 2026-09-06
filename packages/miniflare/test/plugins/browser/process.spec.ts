@@ -34,7 +34,7 @@ test("gracefully closes Chrome over CDP", async ({ expect }) => {
 	await closeBrowserProcess(
 		browserProcess,
 		`ws://127.0.0.1:${address.port}`,
-		// Leave enough time for the WebSocket handshake when the suite is busy.
+		// Leave enough time for the WebSocket handshake when the suite is busy under macOS load
 		1_000
 	);
 

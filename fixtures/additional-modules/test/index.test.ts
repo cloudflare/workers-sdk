@@ -20,6 +20,7 @@ function get(worker: WranglerDev, pathname: string) {
 }
 
 function waitForReload(callback: () => Promise<void>) {
+	// File watching and Wrangler reloads can exceed `waitFor`'s one-second default under Windows load
 	return vi.waitFor(callback, { timeout: 5_000 });
 }
 
