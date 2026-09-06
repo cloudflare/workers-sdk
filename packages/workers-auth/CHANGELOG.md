@@ -1,5 +1,14 @@
 # @cloudflare/workers-auth
 
+## 0.6.8
+
+### Patch Changes
+
+- [#15477](https://github.com/cloudflare/workers-sdk/pull/15477) [`fca8abd`](https://github.com/cloudflare/workers-sdk/commit/fca8abdfddda2e42562f64766781b1a8b038392b) Thanks [@Skye-31](https://github.com/Skye-31)! - Add missing email_routing and email_sending auth scopes to CF cli
+
+- Updated dependencies [[`fd17fc5`](https://github.com/cloudflare/workers-sdk/commit/fd17fc5c5fb86423e37ff5b142391e03cd7dbf59)]:
+  - @cloudflare/workers-utils@0.36.0
+
 ## 0.6.7
 
 ### Patch Changes

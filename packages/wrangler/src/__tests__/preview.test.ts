@@ -9,6 +9,7 @@ import {
 	getPullRequestMetadata,
 	getRepositoryUrl,
 	previewContainerAppName,
+	resolveWorkerName,
 } from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -241,6 +242,21 @@ describe("wrangler preview", () => {
 		// restore that stub would outlive its test and silently grant the scope
 		// to every later test in the file.
 		vi.restoreAllMocks();
+	});
+
+	describe("resolveWorkerName", () => {
+		test("should prefer WRANGLER_CI_OVERRIDE_NAME over arguments and config", ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "ci-worker");
+
+			expect(
+				resolveWorkerName(
+					{ workerName: "argument-worker" },
+					{ ...defaultWranglerConfig, name: "config-worker" }
+				)
+			).toBe("ci-worker");
+		});
 	});
 
 	describe("getBranchName", () => {

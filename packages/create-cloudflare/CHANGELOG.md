@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.72.5
+
+### Patch Changes
+
+- [#15426](https://github.com/cloudflare/workers-sdk/pull/15426) [`8b4eeaa`](https://github.com/cloudflare/workers-sdk/commit/8b4eeaab1ee570042c2c49fc432687e47d976863) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.7.0 | 2.7.1 |
+
 ## 2.72.4
 
 ### Patch Changes
