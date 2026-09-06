@@ -80,6 +80,8 @@ export type TemplateConfig = {
 	platform: "workers" | "pages";
 	/** The name of the framework cli tool that is used to generate this project or undefined if none */
 	frameworkCli?: string;
+	/** Whether the framework CLI was used for this project. Defaults to true when frameworkCli is set. */
+	frameworkCliUsed?: boolean;
 	/**
 	 * A specific version of the framework cli tool to use instead of the standard one taken from the src/frameworks/package.json
 	 * (which gets managed and bumped by dependabot)

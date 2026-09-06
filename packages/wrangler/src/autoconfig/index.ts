@@ -52,6 +52,7 @@ export async function runAutoConfigDetection({
 	try {
 		const details = await getDetailsForAutoConfig({
 			wranglerConfig,
+			target: "wrangler",
 			context,
 		});
 
@@ -114,7 +115,10 @@ export async function runAutoConfigLogic(
 	);
 
 	try {
-		const summary = await runAutoConfig(details, options);
+		const summary = await runAutoConfig(details, {
+			...options,
+			target: "wrangler",
+		});
 
 		sendMetricsEvent(
 			"autoconfig_configuration_completed",

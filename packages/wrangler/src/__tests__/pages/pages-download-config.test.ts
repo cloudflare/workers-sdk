@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { getTodaysCompatDate } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -23,7 +23,7 @@ async function readNormalizedWranglerToml() {
 		.split("\n")
 		.slice(1)
 		.join("\n")
-		.replace(getTodaysCompatDate(), "LATEST-SUPPORTED");
+		.replace(DEFAULT_COMPAT_DATE, "LATEST-SUPPORTED");
 }
 function makePagesProject(
 	previewOverride: Record<string, unknown> = {},

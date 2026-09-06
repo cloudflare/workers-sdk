@@ -1,5 +1,5 @@
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import { assertWranglerVersion } from "./assert-wrangler-version";
-import { DEFAULT_COMPAT_DATE } from "./build-constants";
 import { isForcedBuildOutput } from "./build-output-env";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
@@ -33,7 +33,7 @@ import type * as vite from "vite";
 
 // TODO: simplify this function in the next major release (DEVX-2533)
 /**
- * @deprecated Use today's date instead (as `YYYY-MM-DD`)
+ * @deprecated Set a compatibility date explicitly instead (as `YYYY-MM-DD`)
  *
  * Gets the compatibility date to use with the local workerd version.
  *

@@ -1,1 +1,1 @@
-export { printBundleSize } from "@cloudflare/deploy-helpers";
+export { getSize, printBundleSize } from "@cloudflare/deploy-helpers";

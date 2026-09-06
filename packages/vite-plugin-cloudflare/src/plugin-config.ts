@@ -11,11 +11,13 @@ import {
 	RUNTIME_TYPES_MARKER,
 } from "@cloudflare/runtime-types";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
-import { getWorkerNameFromProject } from "@cloudflare/workers-utils";
+import {
+	DEFAULT_COMPAT_DATE,
+	getWorkerNameFromProject,
+} from "@cloudflare/workers-utils";
 import { defu } from "defu";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
-import { DEFAULT_COMPAT_DATE } from "./build-constants";
 import { isForcedBuildOutput } from "./build-output-env";
 import { readBuildOutputWorkers } from "./build-output-preview";
 import { getWorkerConfigs } from "./deploy-config";

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils/errors";
 import { verifyDockerInstalled } from "./utils";
 import type {
 	BuildArgs,

@@ -2608,11 +2608,149 @@ export class Worker_Binding extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Which;
 	}
 }
+export class Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device
+	extends $.Struct
+{
+	static readonly _capnp = {
+		displayName: "Device",
+		id: "83f9125afacda809",
+		size: new $.ObjectSize(0, 3),
+	};
+	get pathOnHost(): string {
+		return $.utils.getText(0, this);
+	}
+	set pathOnHost(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	get pathInContainer(): string {
+		return $.utils.getText(1, this);
+	}
+	set pathInContainer(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	get cgroupPermissions(): string {
+		return $.utils.getText(2, this);
+	}
+	set cgroupPermissions(value: string) {
+		$.utils.setText(2, value, this);
+	}
+	toString(): string {
+		return (
+			"Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device_" +
+			super.toString()
+		);
+	}
+}
+export class Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges
+	extends $.Struct
+{
+	static readonly Device =
+		Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device;
+	static readonly _capnp = {
+		displayName: "ContainerPrivileges",
+		id: "ca910fa0c4c988bf",
+		size: new $.ObjectSize(0, 3),
+	};
+	static _Devices: $.ListCtor<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device>;
+	_adoptCapabilities(value: $.Orphan<$.List<string>>): void {
+		$.utils.adopt(value, $.utils.getPointer(0, this));
+	}
+	_disownCapabilities(): $.Orphan<$.List<string>> {
+		return $.utils.disown(this.capabilities);
+	}
+	/**
+	 * Docker HostConfig.CapAdd values.
+	 *
+	 */
+	get capabilities(): $.List<string> {
+		return $.utils.getList(0, $.TextList, this);
+	}
+	_hasCapabilities(): boolean {
+		return !$.utils.isNull($.utils.getPointer(0, this));
+	}
+	_initCapabilities(length: number): $.List<string> {
+		return $.utils.initList(0, $.TextList, length, this);
+	}
+	set capabilities(value: $.List<string>) {
+		$.utils.copyFrom(value, $.utils.getPointer(0, this));
+	}
+	_adoptDevices(
+		value: $.Orphan<
+			$.List<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device>
+		>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownDevices(): $.Orphan<
+		$.List<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device>
+	> {
+		return $.utils.disown(this.devices);
+	}
+	/**
+	 * Docker HostConfig.Devices values.
+	 *
+	 */
+	get devices(): $.List<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device> {
+		return $.utils.getList(
+			1,
+			Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges._Devices,
+			this
+		);
+	}
+	_hasDevices(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initDevices(
+		length: number
+	): $.List<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device> {
+		return $.utils.initList(
+			1,
+			Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges._Devices,
+			length,
+			this
+		);
+	}
+	set devices(
+		value: $.List<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device>
+	) {
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	_adoptSecurityOpt(value: $.Orphan<$.List<string>>): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownSecurityOpt(): $.Orphan<$.List<string>> {
+		return $.utils.disown(this.securityOpt);
+	}
+	/**
+	 * Docker HostConfig.SecurityOpt values.
+	 *
+	 */
+	get securityOpt(): $.List<string> {
+		return $.utils.getList(2, $.TextList, this);
+	}
+	_hasSecurityOpt(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initSecurityOpt(length: number): $.List<string> {
+		return $.utils.initList(2, $.TextList, length, this);
+	}
+	set securityOpt(value: $.List<string>) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
+	toString(): string {
+		return (
+			"Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_" +
+			super.toString()
+		);
+	}
+}
 export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
+	static readonly ContainerPrivileges =
+		Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges;
 	static readonly _capnp = {
 		displayName: "ContainerOptions",
 		id: "a609621a4d236cd7",
-		size: new $.ObjectSize(0, 1),
+		size: new $.ObjectSize(0, 2),
 	};
 	/**
 	 * Image name to be used to create the container using supported provider.
@@ -2624,6 +2762,44 @@ export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
 	}
 	set imageName(value: string) {
 		$.utils.setText(0, value, this);
+	}
+	_adoptPrivileges(
+		value: $.Orphan<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownPrivileges(): $.Orphan<Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges> {
+		return $.utils.disown(this.privileges);
+	}
+	/**
+	 * Extra Docker HostConfig privileges applied when creating the container.
+	 * These fields are passed through to Docker as-is and are empty by default.
+	 * They are not validated or allow-listed. Depending on the values and Docker daemon mode,
+	 * they can expose arbitrary host devices, disable security profiles, or grant capabilities
+	 * such as CAP_SYS_ADMIN that may provide host-level access. Only use trusted configuration.
+	 *
+	 */
+	get privileges(): Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges {
+		return $.utils.getStruct(
+			1,
+			Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges,
+			this
+		);
+	}
+	_hasPrivileges(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initPrivileges(): Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges {
+		return $.utils.initStructAt(
+			1,
+			Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges,
+			this
+		);
+	}
+	set privileges(
+		value: Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges
+	) {
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
 	}
 	toString(): string {
 		return "Worker_DurableObjectNamespace_ContainerOptions_" + super.toString();
@@ -2875,7 +3051,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 13),
+		size: new $.ObjectSize(8, 15),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -2940,7 +3116,7 @@ export class Worker_ContainerEngine extends $.Struct {
 	static readonly _capnp = {
 		displayName: "containerEngine",
 		id: "82de68f58dc2eb24",
-		size: new $.ObjectSize(8, 13),
+		size: new $.ObjectSize(8, 15),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(4, this) === 0;
@@ -3037,7 +3213,7 @@ export class Worker extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 13),
+		size: new $.ObjectSize(8, 15),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
 				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
@@ -3354,6 +3530,54 @@ export class Worker extends $.Struct {
 	}
 	_initContainerEngine(): Worker_ContainerEngine {
 		return $.utils.getAs(Worker_ContainerEngine, this);
+	}
+	/**
+	 * Name of the HTTP header carrying per-request Cloudflare Access metadata for local dev.
+	 * When set, the worker reads this header from every incoming request to populate `ctx.access`.
+	 * The header value is a JSON object matching the production Access struct:
+	 *   { "app_aud": "<audience>", "jwt_claims": { ... } }
+	 * `app_aud` (string, required) populates `ctx.access.aud`.
+	 * `jwt_claims` (object, optional) is passed as `ctx.props.jwtClaims` to the access binding
+	 * worker (if configured via `accessBindingService`) when `ctx.access.getIdentity()` is called.
+	 * Requests that carry the header get `ctx.access` populated; requests without it get
+	 * `ctx.access === undefined`.
+	 *
+	 */
+	get accessBlobHeader(): string {
+		return $.utils.getText(13, this);
+	}
+	set accessBlobHeader(value: string) {
+		$.utils.setText(13, value, this);
+	}
+	_adoptAccessBindingService(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(14, this));
+	}
+	_disownAccessBindingService(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.accessBindingService);
+	}
+	/**
+	 * Names a service that acts as the Cloudflare Access identity binding worker for local dev.
+	 * When `ctx.access.getIdentity()` is called, workerd dispatches a `getIdentity` JS-RPC method
+	 * on this service with per-request `props` set to `{ aud }` or `{ aud, jwtClaims }` (extracted
+	 * from the `accessBlobHeader` HTTP header; `jwtClaims` is included only when the optional
+	 * `jwt_claims` field is present in the header). This mimics the production path where an
+	 * Access binding worker resolves the identity from JWT claims.
+	 *
+	 * If not set, `ctx.access.getIdentity()` resolves to `undefined` (even when `accessBlobHeader`
+	 * is configured and `ctx.access.aud` is available).
+	 *
+	 */
+	get accessBindingService(): ServiceDesignator {
+		return $.utils.getStruct(14, ServiceDesignator, this);
+	}
+	_hasAccessBindingService(): boolean {
+		return !$.utils.isNull($.utils.getPointer(14, this));
+	}
+	_initAccessBindingService(): ServiceDesignator {
+		return $.utils.initStructAt(14, ServiceDesignator, this);
+	}
+	set accessBindingService(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(14, this));
 	}
 	toString(): string {
 		return "Worker_" + super.toString();
@@ -4174,7 +4398,11 @@ export class Extension_Module extends $.Struct {
 		defaultInternal: $.getBitMask(false, 0),
 	};
 	/**
-	 * Full js module name.
+	 * Full js module name. Must be a fully-qualified URL with a non-file: scheme,
+	 * e.g. "my-extension:module". Workers using the new_module_registry
+	 * compatibility flag reject extensions whose module names are not valid URLs;
+	 * the original module registry tolerates any path-like name, but new
+	 * extensions should always use the URL form.
 	 *
 	 */
 	get name(): string {
@@ -4334,6 +4562,10 @@ Config._Services = $.CompositeList(Service);
 Config._Sockets = $.CompositeList(Socket);
 Config._Extensions = $.CompositeList(Extension);
 Worker_Binding_WrappedBinding._InnerBindings = $.CompositeList(Worker_Binding);
+Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges._Devices =
+	$.CompositeList(
+		Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges_Device
+	);
 Worker._Modules = $.CompositeList(Worker_Module);
 Worker._Bindings = $.CompositeList(Worker_Binding);
 Worker._DurableObjectNamespaces = $.CompositeList(

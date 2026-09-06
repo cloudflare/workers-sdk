@@ -78,8 +78,12 @@ export function createJunkStream(length: number): ReadableStream<Uint8Array> {
 			const byobRequest = unwrapBYOBRequest(controller);
 			const v = byobRequest.view;
 			const chunkLength = Math.min(v.byteLength, length - position);
-			for (let i = 0; i < chunkLength; i++) v[i] = 120; // 'x'
-			if (chunkLength === 0) controller.close();
+			for (let i = 0; i < chunkLength; i++) {
+				v[i] = 120;
+			} // 'x'
+			if (chunkLength === 0) {
+				controller.close();
+			}
 			position += chunkLength;
 			byobRequest.respond(chunkLength);
 		},

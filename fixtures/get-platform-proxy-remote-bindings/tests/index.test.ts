@@ -336,6 +336,6 @@ function getAuthenticatedEnv() {
 		};
 	}
 	console.warn(
-		"Skipping vitest-pool-workers remote bindings tests because the environment is not authenticated with Cloudflare."
+		"Skipping vitest-plugin remote bindings tests because the environment is not authenticated with Cloudflare."
 	);
 }

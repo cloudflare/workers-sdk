@@ -7,7 +7,11 @@ import {
 	localWorkflowArgs,
 	updateLocalInstanceStatus,
 } from "../../local";
-import { getInstanceIdFromArgs, updateInstanceStatus } from "../../utils";
+import {
+	getInstanceIdFromArgs,
+	jsonWorkflowArgs,
+	updateInstanceStatus,
+} from "../../utils";
 import type { WorkflowInstanceRestartFrom } from "../../types";
 
 function getRestartFrom(args: {
@@ -54,6 +58,7 @@ export const workflowsInstancesRestartCommand = createCommand({
 	positionalArgs: ["name", "id"],
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -85,13 +90,20 @@ export const workflowsInstancesRestartCommand = createCommand({
 		},
 	},
 
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+
 	async handler(args, { config }) {
 		let id: string;
+		let result: unknown;
 		const from = getRestartFrom(args);
 
 		if (args.local) {
-			id = await getLocalInstanceIdFromArgs(args.port, args);
-			await updateLocalInstanceStatus(
+			id = await getLocalInstanceIdFromArgs(args.port, args, {
+				quiet: args.json,
+			});
+			result = await updateLocalInstanceStatus(
 				args.port,
 				args.name,
 				id,
@@ -101,7 +113,7 @@ export const workflowsInstancesRestartCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 			id = await getInstanceIdFromArgs(accountId, args, config);
-			await updateInstanceStatus(
+			result = await updateInstanceStatus(
 				config,
 				accountId,
 				args.name,
@@ -109,6 +121,11 @@ export const workflowsInstancesRestartCommand = createCommand({
 				"restart",
 				from
 			);
+		}
+
+		if (args.json) {
+			logger.json(result);
+			return;
 		}
 
 		logger.info(

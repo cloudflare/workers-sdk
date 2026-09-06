@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/edge-preview-authenticated-proxy",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
@@ -10,7 +10,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@types/cookie": "^0.6.0",

@@ -4,15 +4,15 @@ import {
 	cleanBuildOutputDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeRootConfig,
+	writeSettingsConfig,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
@@ -20,7 +20,9 @@ import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 interface WriteBuildOutputArgs {
 	root: string;
 	parsedWorkerConfig: ParsedInputWorkerConfig;
-	parsedSettingsConfig: ParsedSettingsConfig | undefined;
+	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/** The mode the build was produced in, recorded in the top-level config. */
+	mode: string | undefined;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
@@ -33,6 +35,7 @@ export async function writeBuildOutput({
 	root,
 	parsedWorkerConfig,
 	parsedSettingsConfig,
+	mode,
 	buildResult,
 	assetsOptions,
 }: WriteBuildOutputArgs): Promise<void> {
@@ -51,11 +54,8 @@ export async function writeBuildOutput({
 		assetsOptions ? writeAssets({ root, assetsOptions }) : Promise.resolve(),
 	]);
 
-	await writeWorkerConfig(root, parsedWorkerConfig, manifest);
-
-	if (parsedSettingsConfig !== undefined) {
-		await writeRootConfig(root, parsedSettingsConfig);
-	}
+	await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
+	await writeSettingsConfig(root, parsedSettingsConfig, mode);
 }
 
 async function writeBundle({
@@ -97,7 +97,7 @@ async function writeBundle({
 		modules[key] = { type: "sourcemap" };
 	}
 
-	return { mainModule: entryKey, modules };
+	return { type: "complete", mainModule: entryKey, modules };
 }
 
 async function writeAssets({

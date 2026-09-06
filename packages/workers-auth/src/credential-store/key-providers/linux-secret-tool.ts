@@ -53,7 +53,11 @@ export function setLinuxSecretToolRunner(
 /**
  * Probe whether `secret-tool` is callable in the current environment.
  *
- * Returns `true` when `secret-tool --version` exits 0. The probe does not
+ * Returns `true` when `secret-tool` could be spawned at all, whatever its
+ * exit status. libsecret's `secret-tool` has no `--version` flag: it prints
+ * its usage and exits 2, so the exit status says nothing about whether the
+ * tool is installed. Only a failure to spawn the process (e.g. `ENOENT`
+ * when it is not on `PATH`) means it is missing. The probe does not
  * exercise the keyring backend itself — a missing D-Bus session surfaces
  * on the first real read/write rather than every consumer invocation, so
  * we avoid the extra latency on every command for users whose desktop
@@ -72,7 +76,10 @@ export function probeSecretTool(): boolean {
 	let result: boolean;
 	try {
 		const r = runner(["--version"]);
-		result = r.status === 0;
+		// `spawnSync` does not throw when the executable is missing: it
+		// reports the failure via `error`. A result without an error proves
+		// the executable was launched, even if a signal terminated it.
+		result = r.error === undefined;
 	} catch {
 		result = false;
 	}

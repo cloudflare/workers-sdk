@@ -175,13 +175,13 @@ describe("Local Explorer API validation", () => {
 			expect,
 		}) => {
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/non-existent-id/keys`
+				`${BASE_URL}/storage/kv/namespaces/non-existent-id/values/non-existent-key`
 			);
 
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [{ code: 10013, message: "list keys: 'namespace not found'" }],
+				errors: [{ code: 10009, message: "Not Found" }],
 			});
 		});
 	});
@@ -659,9 +659,11 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 							MY_KV: { type: "kv", id: "kv-namespace-id" },
 							MY_DB: { type: "d1", id: "d1-database-id" },
 							MY_BUCKET: { type: "r2", name: "r2-bucket-name" },
+							SEND_EMAIL_PRIMARY: { type: "send-email" },
+							SEND_EMAIL_SECONDARY: { type: "send-email" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a1",
+								worker: "worker-a1",
 								exportName: "TestDO",
 							},
 						},
@@ -768,6 +770,14 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			            "id": "r2-bucket-name",
 			          },
 			        ],
+			        "sendEmail": [
+			          {
+			            "bindingName": "SEND_EMAIL_PRIMARY",
+			          },
+			          {
+			            "bindingName": "SEND_EMAIL_SECONDARY",
+			          },
+			        ],
 			        "workflows": [],
 			      },
 			      "isSelf": true,
@@ -784,6 +794,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			          },
 			        ],
 			        "r2": [],
+			        "sendEmail": [],
 			        "workflows": [],
 			      },
 			      "isSelf": true,
@@ -800,6 +811,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			        "do": [],
 			        "kv": [],
 			        "r2": [],
+			        "sendEmail": [],
 			        "workflows": [],
 			      },
 			      "isSelf": false,

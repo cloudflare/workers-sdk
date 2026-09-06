@@ -67,6 +67,7 @@ const msw = setupServer();
 
 beforeAll(() => msw.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
+	vi.unstubAllEnvs();
 	msw.restoreHandlers();
 	msw.resetHandlers();
 });
@@ -84,6 +85,7 @@ const isNonInteractiveOrCI = () => true;
 
 describe("access", () => {
 	beforeEach(() => {
+		vi.unstubAllEnvs();
 		clearAccessCaches();
 		silentLogger.warn = vi.fn();
 		msw.use(...mswAccessHandlers);
@@ -168,6 +170,77 @@ describe("access", () => {
 					"CF-Access-Client-Secret": "test-client-secret",
 				});
 				expect(silentLogger.warn).not.toHaveBeenCalled();
+			});
+
+			it("should not reuse service token headers after the env vars are unset", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_ID", "first-client-id.access");
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_SECRET", "first-client-secret");
+				await getAccessHeaders("access-protected.com", {
+					logger: silentLogger,
+					isNonInteractiveOrCI,
+				});
+
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_ID", undefined);
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_SECRET", undefined);
+
+				await expect(
+					getAccessHeaders("access-protected.com", {
+						logger: silentLogger,
+						isNonInteractiveOrCI,
+					})
+				).rejects.toThrow("no Access Service Token credentials were found");
+			});
+
+			it("should not reuse service token headers when only CLOUDFLARE_ACCESS_CLIENT_ID remains", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_ID", "first-client-id.access");
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_SECRET", "first-client-secret");
+				await getAccessHeaders("access-protected.com", {
+					logger: silentLogger,
+					isNonInteractiveOrCI,
+				});
+
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_ID", "second-client-id.access");
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_SECRET", undefined);
+
+				await expect(
+					getAccessHeaders("access-protected.com", {
+						logger: silentLogger,
+						isNonInteractiveOrCI,
+					})
+				).rejects.toThrow("no Access Service Token credentials were found");
+				expect(silentLogger.warn).toHaveBeenCalledWith(
+					expect.stringContaining("Only CLOUDFLARE_ACCESS_CLIENT_ID was found")
+				);
+			});
+
+			it("should not reuse service token headers when only CLOUDFLARE_ACCESS_CLIENT_SECRET remains", async ({
+				expect,
+			}) => {
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_ID", "first-client-id.access");
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_SECRET", "first-client-secret");
+				await getAccessHeaders("access-protected.com", {
+					logger: silentLogger,
+					isNonInteractiveOrCI,
+				});
+
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_ID", undefined);
+				vi.stubEnv("CLOUDFLARE_ACCESS_CLIENT_SECRET", "second-client-secret");
+
+				await expect(
+					getAccessHeaders("access-protected.com", {
+						logger: silentLogger,
+						isNonInteractiveOrCI,
+					})
+				).rejects.toThrow("no Access Service Token credentials were found");
+				expect(silentLogger.warn).toHaveBeenCalledWith(
+					expect.stringContaining(
+						"Only CLOUDFLARE_ACCESS_CLIENT_SECRET was found"
+					)
+				);
 			});
 
 			it("should warn when only CLOUDFLARE_ACCESS_CLIENT_ID is set", async ({
@@ -295,6 +368,35 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 					["access", "login", "access-protected.com"],
 					{ signal: undefined }
 				);
+			});
+
+			it("should reuse the cached CF_Authorization cookie header", async ({
+				expect,
+			}) => {
+				const fake = createFakeProcess();
+				vi.mocked(spawn).mockReturnValueOnce(fake.child);
+
+				const firstHeaders = getAccessHeaders("access-protected.com", {
+					logger: silentLogger,
+					isNonInteractiveOrCI: () => false,
+				});
+				await vi.waitFor(() => {
+					expect(spawn).toHaveBeenCalledOnce();
+				});
+				fake.complete("fetched your token:\n\ntest-access-token\n");
+
+				await expect(firstHeaders).resolves.toEqual({
+					Cookie: "CF_Authorization=test-access-token",
+				});
+				await expect(
+					getAccessHeaders("access-protected.com", {
+						logger: silentLogger,
+						isNonInteractiveOrCI: () => false,
+					})
+				).resolves.toEqual({
+					Cookie: "CF_Authorization=test-access-token",
+				});
+				expect(spawn).toHaveBeenCalledOnce();
 			});
 
 			it("should kill a still-pending cloudflared when the process exits", async ({

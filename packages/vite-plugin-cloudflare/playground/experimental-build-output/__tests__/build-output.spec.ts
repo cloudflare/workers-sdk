@@ -7,6 +7,10 @@ function getBuildOutputDir() {
 	return path.join(rootDir, ".cloudflare/output/v0/workers", "default");
 }
 
+function getSettingsConfigPath() {
+	return path.join(rootDir, ".cloudflare/output/v0", "config.json");
+}
+
 describe("Build Output Specification", () => {
 	test("serves the worker", async ({ expect }) => {
 		const response = await getTextResponse("/");
@@ -59,6 +63,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(config).not.toHaveProperty("entrypoint");
 		expect(typeof config.manifest).toBe("object");
 		const manifest = config.manifest as Record<string, unknown>;
+		expect(manifest.type).toBe("complete");
 		expect(typeof manifest.mainModule).toBe("string");
 		expect(typeof manifest.modules).toBe("object");
 	});
@@ -103,6 +108,18 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 	test("does not emit wrangler.json", ({ expect }) => {
 		const wranglerJson = path.join(getBuildOutputDir(), "wrangler.json");
 		expect(fs.existsSync(wranglerJson)).toBe(false);
+	});
+
+	test("emits a top-level settings config.json recording the build mode", ({
+		expect,
+	}) => {
+		// This project has no `settings` export, so the settings config carries
+		// nothing but the discriminant and the mode `vite build` resolved.
+		const contents = JSON.parse(
+			fs.readFileSync(getSettingsConfigPath(), "utf-8")
+		) as Record<string, unknown>;
+
+		expect(contents).toEqual({ type: "settings", mode: "production" });
 	});
 
 	test("does not write .wrangler/deploy/config.json", ({ expect }) => {

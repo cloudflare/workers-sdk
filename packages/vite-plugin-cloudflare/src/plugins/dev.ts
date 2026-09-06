@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import {
-	configureOpenAPIForContainerPull,
 	getCloudflareContainerRegistry,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
@@ -15,7 +14,7 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { getDockerPath } from "../containers";
+import { configureContainerPull, getDockerPath } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
 	compareExportTypes,
@@ -250,7 +249,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						(opts) =>
 							"image_uri" in opts &&
 							new URL(`http://${opts.image_uri}`).hostname ===
-								getCloudflareContainerRegistry()
+								getCloudflareContainerRegistry(ctx.entryWorkerConfig)
 					);
 
 					if (hasCFRegistryImages) {
@@ -269,7 +268,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							);
 						}
 
-						configureOpenAPIForContainerPull(accountId, apiToken);
+						configureContainerPull(accountId, apiToken, ctx.entryWorkerConfig);
 					}
 
 					await prepareContainerImagesForDev({
@@ -278,6 +277,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
 						logger: viteDevServer.config.logger,
+						complianceConfig: ctx.entryWorkerConfig,
 					});
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());

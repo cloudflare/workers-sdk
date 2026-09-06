@@ -1,4 +1,4 @@
-import { getTodaysCompatDate } from "./compatibility-date";
+import { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 import type { RawConfig } from "./config";
 import type {
@@ -87,7 +87,7 @@ export function constructWranglerConfig(config: APIWorkerConfig): RawConfig {
 		main: config.entrypoint,
 		workers_dev: config.subdomain.enabled,
 		preview_urls: config.subdomain.previews_enabled,
-		compatibility_date: config.compatibility_date ?? getTodaysCompatDate(),
+		compatibility_date: config.compatibility_date ?? DEFAULT_COMPAT_DATE,
 		compatibility_flags: config.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		placement:

@@ -15,8 +15,8 @@ import {
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
 import type {
+	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
-	ParsedSettingsConfig,
 } from "@cloudflare/config";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -34,7 +34,12 @@ export interface LoadNewConfigResult {
 	/**  The validated `cloudflare.config.ts` worker shape (default export). */
 	parsedWorkerConfig: ParsedInputWorkerConfig;
 	/** The validated `settings` export, if present. */
-	parsedSettingsConfig: ParsedSettingsConfig | undefined;
+	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/**
+	 * The mode the config was resolved in, from `--mode`/`--env` or
+	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
+	 */
+	mode: string | undefined;
 	/** Resolved absolute path to `cloudflare.config.ts`. */
 	cloudflareConfigPath: string;
 	/** Resolved absolute path to `wrangler.config.ts`, if present. */
@@ -155,6 +160,7 @@ export async function loadNewConfig(options: {
 		rawConfig,
 		parsedWorkerConfig: worker,
 		parsedSettingsConfig: settings,
+		mode,
 		cloudflareConfigPath,
 		wranglerConfigPath,
 		dependencies,

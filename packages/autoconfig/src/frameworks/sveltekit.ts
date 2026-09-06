@@ -44,13 +44,14 @@ export class SvelteKit extends Framework {
 			});
 		}
 		return {
-			wranglerConfig: {
-				main: ".svelte-kit/cloudflare/_worker.js",
-				assets: {
-					binding: "ASSETS",
-					directory: ".svelte-kit/cloudflare",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: ".svelte-kit/cloudflare/_worker.js",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: ".svelte-kit/cloudflare" },
 		};
 	}
 

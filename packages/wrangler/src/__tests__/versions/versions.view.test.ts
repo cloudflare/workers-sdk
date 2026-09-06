@@ -616,7 +616,6 @@ describe("versions view", () => {
 							{
 								type: "send_email",
 								name: "MAIL_3",
-								destination_address: "dest@example.com",
 								allowed_destination_addresses: ["1@a.com", "2@a.com"],
 								allowed_sender_addresses: ["3@a.com", "4@a.com"],
 							},
@@ -675,7 +674,7 @@ describe("versions view", () => {
 				env.KV (kv-id)                                                           KV Namespace
 				env.MAIL (unrestricted)                                                  Send Email
 				env.MAIL_2 (dest@example.com)                                            Send Email
-				env.MAIL_3 (dest@example.com - senders: 3@a.com, 4@a.com)                Send Email
+				env.MAIL_3 (1@a.com, 2@a.com - senders: 3@a.com, 4@a.com)                Send Email
 				env.QUEUE (queue)                                                        Queue
 				env.QUEUE_2 (queue)                                                      Queue
 				env.D1 (d1-id)                                                           D1 Database

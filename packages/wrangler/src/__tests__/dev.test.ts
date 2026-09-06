@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	DEFAULT_COMPAT_DATE,
 	FatalError,
-	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
@@ -362,14 +362,12 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev");
 
-			const currentDate = getTodaysCompatDate();
-
-			expect(std.warn.replaceAll(currentDate, "<current-date>"))
+			expect(std.warn.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 				.toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the default compatibility date: <default-date>.[0m
 
-					  ❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or
-					  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<current-date>
+					  ❯❯ Add one to your wrangler.toml file: compatibility_date = "<default-date>", or
+					  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<default-date>
 
 					  See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
 
@@ -1841,6 +1839,38 @@ describe.sequential("wrangler dev", () => {
 
 				const config = await runWranglerUntilConfig("dev");
 				expect(config.name).toBe("test-do-exports-dev");
+			});
+
+			it("resolves a container referenced from a durable object export", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					name: "test-container-exports-dev",
+					main: "index.js",
+					containers: [
+						{
+							name: "my-container",
+							max_instances: 1,
+							image: "registry.cloudflare.com/hello:world",
+						},
+					],
+					exports: {
+						MyContainerDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "my-container",
+						},
+					},
+				});
+				fs.writeFileSync("index.js", `export default {};`);
+
+				const config = await runWranglerUntilConfig("dev");
+				expect(config.containers).toEqual([
+					expect.objectContaining({
+						name: "my-container",
+						class_name: "MyContainerDO",
+					}),
+				]);
 			});
 		});
 	});

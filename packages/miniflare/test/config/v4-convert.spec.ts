@@ -35,17 +35,17 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.env).toMatchObject({
 			LOCAL: {
 				type: "durable-object",
-				workerName: "worker",
+				worker: "worker",
 				exportName: "LocalObject",
 			},
 			EXTERNAL: {
 				type: "durable-object",
-				workerName: "external-worker",
+				worker: "external-worker",
 				exportName: "ExternalObject",
 			},
 			SELF_EXPLICIT: {
 				type: "durable-object",
-				workerName: "worker",
+				worker: "worker",
 				exportName: "SelfExplicitObject",
 			},
 		});
@@ -129,31 +129,54 @@ describe("convertV4MiniflareOptions", () => {
 				R2: {
 					type: "r2",
 					name: "bucket",
-					s3Credentials: {
-						accessKeyId: "access-key",
-						secretAccessKey: "secret-key",
+					dev: {
+						experimentalS3Credentials: {
+							accessKeyId: "access-key",
+							secretAccessKey: "secret-key",
+						},
 					},
 				},
 				QUEUE: { type: "queue", name: "queue" },
-				SERVICE: { type: "worker", workerName: "other-worker" },
+				SERVICE: { type: "worker", worker: "other-worker" },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {
 					type: "workflow",
 					name: "workflow",
-					workerName: "worker",
+					worker: "worker",
 					exportName: "Workflow",
 					limits: { steps: 5 },
 				},
 				SELF_EXPLICIT_WORKFLOW: {
 					type: "workflow",
 					name: "self-explicit-workflow",
-					workerName: "worker",
+					worker: "worker",
 					exportName: "SelfExplicitWorkflow",
 				},
 			},
 			triggers: [{ type: "queue", name: "queue", maxBatchSize: 10 }],
 		});
+	});
+
+	test("nests remote binding configuration under dev", ({ expect }) => {
+		const remoteProxyConnectionString = new URL(
+			"http://localhost:1234"
+		) as unknown as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			kvNamespaces: {
+				KV: { id: "namespace", remoteProxyConnectionString },
+			},
+		});
+
+		expect(converted.workers[0].config.env?.KV).toEqual({
+			type: "kv",
+			id: "namespace",
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toBe(
+			remoteProxyConnectionString
+		);
 	});
 
 	test("treats empty versionMetadata binding as absent", ({ expect }) => {

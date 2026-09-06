@@ -24,7 +24,7 @@ const OBSERVABILITY_STORAGE_SERVICE_NAME = "obs:storage";
 
 export function getObservabilityServices(
 	tmpPath: string,
-	resourcePersistencePath: string | undefined
+	isolatedResourcePersistencePath: string | undefined
 ): Service[] {
 	// The TraceStore DO is SQLite-backed, so it needs disk-backed storage (the
 	// in-memory option doesn't support SQL). Persist under `.wrangler/state` when
@@ -33,7 +33,7 @@ export function getObservabilityServices(
 	const storagePath = getPersistPath(
 		"observability",
 		tmpPath,
-		resourcePersistencePath
+		isolatedResourcePersistencePath
 	);
 	mkdirSync(storagePath, { recursive: true });
 

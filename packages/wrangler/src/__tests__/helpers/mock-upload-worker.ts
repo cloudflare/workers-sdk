@@ -66,7 +66,7 @@ export function mockUploadWorkerRequest(
 		useOldUploadApi?: boolean;
 		expectedObservability?: CfWorkerInit["observability"];
 		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
-		expectedContainers?: { class_name: string }[];
+		expectedContainers?: { name?: string; class_name?: string }[];
 		expectedAnnotations?: Record<string, string | undefined>;
 		expectedDeploymentMessage?: string;
 	} = {}

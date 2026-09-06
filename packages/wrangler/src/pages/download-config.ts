@@ -3,8 +3,8 @@ import { writeFile } from "node:fs/promises";
 import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	DEFAULT_COMPAT_DATE,
 	FatalError,
-	getTodaysCompatDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -75,11 +75,13 @@ async function toEnvironment(
 ): Promise<RawEnvironment> {
 	const configObj = {} as RawEnvironment;
 	configObj.compatibility_date =
-		deploymentConfig.compatibility_date ?? getTodaysCompatDate();
+		deploymentConfig.compatibility_date ?? DEFAULT_COMPAT_DATE;
 
-	// Find the latest supported compatibility date and use that
+	// The project is set to always use the latest compatibility date, so use the
+	// latest date supported by the runtime this Wrangler ships with. Using the
+	// current date instead would produce a config that the local runtime rejects.
 	if (deploymentConfig.always_use_latest_compatibility_date) {
-		configObj.compatibility_date = getTodaysCompatDate();
+		configObj.compatibility_date = DEFAULT_COMPAT_DATE;
 	}
 
 	if (deploymentConfig.compatibility_flags?.length) {

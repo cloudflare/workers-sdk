@@ -113,6 +113,10 @@ export type {
 	GlobalServicesOptions,
 	NodeJSCompatMode,
 } from "./core";
+export type {
+	ContainerPrivileges,
+	ContainerPrivilegesCache,
+} from "./core/container";
 export type * from "./core/proxy/types";
 export * from "./d1";
 export * from "./do";

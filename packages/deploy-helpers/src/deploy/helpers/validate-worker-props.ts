@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import {
 	configFileName,
+	DEFAULT_COMPAT_DATE,
 	experimental_patchConfig,
 	formatConfigSnippet,
-	getTodaysCompatDate,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -61,7 +61,7 @@ export function validateWorkerProps<T extends ValidateWorkerPropsInput>(
 	}
 
 	if (!compatibilityDate) {
-		const compatibilityDateStr = getTodaysCompatDate();
+		const compatibilityDateStr = DEFAULT_COMPAT_DATE;
 		throw new UserError(
 			`A compatibility_date is required when uploading a Worker. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`

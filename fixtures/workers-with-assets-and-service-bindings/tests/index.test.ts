@@ -61,25 +61,30 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return Asset Worker response for routes that serve static content", async ({
 				expect,
 			}) => {
-				await vi.waitFor(async () => {
-					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
-					let text = await response.text();
-					expect({ status: response.status, text }).toMatchObject({
-						status: 200,
-						text: expect.stringContaining(
-							`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
-						),
-					});
+				await vi.waitFor(
+					async () => {
+						let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+						let text = await response.text();
+						expect({ status: response.status, text }).toMatchObject({
+							status: 200,
+							text: expect.stringContaining(
+								`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
+							),
+						});
 
-					response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
-					text = await response.text();
-					expect({ status: response.status, text }).toMatchObject({
-						status: 200,
-						text: expect.stringContaining(
-							`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
-						),
-					});
-				});
+						response = await fetch(
+							`http://${ipWorkerA}:${portWorkerA}/busy-bee`
+						);
+						text = await response.text();
+						expect({ status: response.status, text }).toMatchObject({
+							status: 200,
+							text: expect.stringContaining(
+								`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
+							),
+						});
+					},
+					{ timeout: 10_000 }
+				);
 			});
 
 			it("should return User Worker response for routes that don't serve static content", async ({

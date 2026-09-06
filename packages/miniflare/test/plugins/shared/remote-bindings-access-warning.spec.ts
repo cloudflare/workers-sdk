@@ -62,8 +62,8 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},
@@ -124,8 +124,8 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},
@@ -183,8 +183,8 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},
@@ -233,8 +233,8 @@ describe("remote-bindings proxy client: Cloudflare Access warning", () => {
 						env: {
 							SERVICE: {
 								type: "worker",
-								workerName: "some-remote-service",
-								remote: true,
+								worker: "some-remote-service",
+								dev: { remote: true },
 							},
 						},
 					},

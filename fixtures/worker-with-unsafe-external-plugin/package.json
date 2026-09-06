@@ -8,7 +8,7 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@fixture/unsafe-external-plugin": "workspace:*",
 		"turbo": "^2.2.3",

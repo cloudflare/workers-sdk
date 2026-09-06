@@ -12,6 +12,7 @@ import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 // --- Command definitions ---
 
@@ -58,7 +59,7 @@ export const containersBuildCommand = createCommand({
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
-		await buildCommand(args);
+		await buildCommand(args, config);
 	},
 });
 
@@ -90,13 +91,24 @@ export const containersPushCommand = createCommand({
 
 // --- Helper functions ---
 
+/**
+ * Builds a configured container image and optionally pushes it to the managed registry.
+ *
+ * @param containerConfig - Normalized Dockerfile-based container configuration.
+ * @param imageTag - Tag component that will be prefixed with the container name.
+ * @param dryRun - Whether to build without pushing the image.
+ * @param pathToDocker - Path to the Docker CLI executable.
+ * @param verifyDockerIsRunning - Whether to verify Docker before building.
+ * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @returns An {@link ImageRef} describing the built or pushed image.
+ */
 export async function buildContainer(
 	containerConfig: Exclude<ContainerNormalizedConfig, ImageURIConfig>,
-	/** just the tag component. will be prefixed with the container name */
 	imageTag: string,
 	dryRun: boolean,
 	pathToDocker: string,
-	verifyDockerIsRunning?: boolean
+	verifyDockerIsRunning?: boolean,
+	complianceConfig?: ComplianceConfig
 ): Promise<ImageRef> {
 	const imageFullName = containerConfig.name + ":" + imageTag.split("-")[0];
 	logger.log("Building image", imageFullName);
@@ -111,6 +123,7 @@ export async function buildContainer(
 		pathToDocker,
 		!dryRun,
 		containerConfig,
-		verifyDockerIsRunning
+		verifyDockerIsRunning,
+		complianceConfig
 	);
 }

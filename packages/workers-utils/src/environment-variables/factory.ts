@@ -129,6 +129,8 @@ type VariableNames =
 	| "WRANGLER_SEND_METRICS"
 	/** Enable/disable error reporting to Sentry. */
 	| "WRANGLER_SEND_ERROR_REPORTS"
+	/** Suppress the prompt that offers to update Cloudflare agent skills. */
+	| "WRANGLER_NO_SKILLS_UPDATE_PROMPTS"
 	/** CI branch name (internal use). */
 	| "WORKERS_CI_BRANCH"
 	/** CI tag matching configuration (internal use). */

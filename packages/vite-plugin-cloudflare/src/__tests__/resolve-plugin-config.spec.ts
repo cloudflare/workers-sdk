@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { removeDirSync } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE, removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
@@ -563,8 +563,9 @@ describe("resolvePluginConfig - zero-config mode", () => {
 
 		expect(result.type).toBe("assets-only");
 		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		// The compatibility date is mocked for the tests
-		expect(assetsOnlyResult.config.compatibility_date).toBe("2024-01-01");
+		expect(assetsOnlyResult.config.compatibility_date).toBe(
+			DEFAULT_COMPAT_DATE
+		);
 	});
 
 	test("should allow config() to add main in zero-config mode", async ({
@@ -817,9 +818,9 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		expect(result.type).toBe("assets-only");
 		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
 		expect(assetsOnlyResult.config.name).toBe("my-worker");
-		// compatibility_date should be filled from defaults (matches date format)
-		expect(assetsOnlyResult.config.compatibility_date).toMatch(
-			/^\d{4}-\d{2}-\d{2}$/
+		// compatibility_date should be filled from defaults
+		expect(assetsOnlyResult.config.compatibility_date).toBe(
+			DEFAULT_COMPAT_DATE
 		);
 	});
 

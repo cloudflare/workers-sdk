@@ -1,7 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
-import { findWranglerConfig } from "@cloudflare/workers-utils";
+import {
+	DEFAULT_COMPAT_DATE,
+	findWranglerConfig,
+} from "@cloudflare/workers-utils";
 import {
 	normalizeString,
 	runInTempDir,
@@ -854,9 +857,6 @@ addEventListener('fetch', event => {});`
 			beforeEach(() => {
 				setIsTTY(true);
 
-				// Mock the date to ensure consistent compatibility_date
-				vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
-
 				// so that we can test that the name prompt defaults to the directory name
 				fs.mkdirSync("my-site");
 				process.chdir("my-site");
@@ -876,7 +876,6 @@ addEventListener('fetch', event => {});`
 			});
 			afterEach(() => {
 				setIsTTY(false);
-				vi.useRealTimers();
 			});
 
 			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig", async ({
@@ -893,7 +892,7 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 					result: true,
 				});
 				mockConfirm({
@@ -914,17 +913,21 @@ addEventListener('fetch', event => {});`
 						},
 					},
 				});
-				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
-					.toMatchInlineSnapshot(`
+				expect(
+					fs
+						.readFileSync("wrangler.jsonc", "utf-8")
+						.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>")
+				).toMatchInlineSnapshot(`
 						"{
 						  "name": "test-name",
-						  "compatibility_date": "2024-01-01",
+						  "compatibility_date": "<default-date>",
 						  "assets": {
 						    "directory": "./assets"
 						  }
 						}"
 					`);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
+					.toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -933,7 +936,7 @@ addEventListener('fetch', event => {});`
 					Wrote
 					{
 					  "name": "test-name",
-					  "compatibility_date": "2024-01-01",
+					  "compatibility_date": "<default-date>",
 					  "assets": {
 					    "directory": "./assets"
 					  }
@@ -970,7 +973,7 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 					result: true,
 				});
 				mockConfirm({
@@ -991,17 +994,21 @@ addEventListener('fetch', event => {});`
 						},
 					},
 				});
-				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
-					.toMatchInlineSnapshot(`
+				expect(
+					fs
+						.readFileSync("wrangler.jsonc", "utf-8")
+						.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>")
+				).toMatchInlineSnapshot(`
 						"{
 						  "name": "test-name",
-						  "compatibility_date": "2024-01-01",
+						  "compatibility_date": "<default-date>",
 						  "assets": {
 						    "directory": "./assets"
 						  }
 						}"
 					`);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
+					.toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -1010,7 +1017,7 @@ addEventListener('fetch', event => {});`
 					Wrote
 					{
 					  "name": "test-name",
-					  "compatibility_date": "2024-01-01",
+					  "compatibility_date": "<default-date>",
 					  "assets": {
 					    "directory": "./assets"
 					  }
@@ -1046,7 +1053,7 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 					result: true,
 				});
 				mockConfirm({
@@ -1067,11 +1074,14 @@ addEventListener('fetch', event => {});`
 						},
 					},
 				});
-				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
-					.toMatchInlineSnapshot(`
+				expect(
+					fs
+						.readFileSync("wrangler.jsonc", "utf-8")
+						.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>")
+				).toMatchInlineSnapshot(`
 						"{
 						  "name": "test-name",
-						  "compatibility_date": "2024-01-01",
+						  "compatibility_date": "<default-date>",
 						  "assets": {
 						    "directory": "./assets"
 						  }
@@ -1126,7 +1136,7 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 					result: true,
 				});
 				mockConfirm({
@@ -1148,14 +1158,15 @@ addEventListener('fetch', event => {});`
 					},
 				});
 				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
+					.toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
 
 
-					You should run wrangler deploy --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
+					You should run wrangler deploy --name test-name --compatibility-date <default-date> --assets ./assets next time to deploy this Worker without going through this flow again.
 
 					Proceeding with deployment...
 
@@ -1187,7 +1198,7 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 					result: true,
 				});
 				mockConfirm({
@@ -1201,14 +1212,15 @@ addEventListener('fetch', event => {});`
 				await runWrangler("deploy --script ./index.js --assets ./assets");
 				expect(bodies.length).toBe(1);
 				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
+					.toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
 
 
-					You should run wrangler deploy ./index.js --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
+					You should run wrangler deploy ./index.js --name test-name --compatibility-date <default-date> --assets ./assets next time to deploy this Worker without going through this flow again.
 
 					Proceeding with deployment...
 
@@ -1240,7 +1252,7 @@ addEventListener('fetch', event => {});`
 					result: "test-name",
 				});
 				mockConfirm({
-					text: "No compatibility date is set. Would you like to use today's date (2024-01-01)?",
+					text: `No compatibility date is set. Would you like to use the default (${DEFAULT_COMPAT_DATE})?`,
 					result: true,
 				});
 				mockConfirm({
@@ -1254,14 +1266,15 @@ addEventListener('fetch', event => {});`
 				await runWrangler("deploy ./index.js --assets ./assets");
 				expect(bodies.length).toBe(1);
 				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
+					.toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
 
 
-					You should run wrangler deploy ./index.js --name test-name --compatibility-date 2024-01-01 --assets ./assets next time to deploy this Worker without going through this flow again.
+					You should run wrangler deploy ./index.js --name test-name --compatibility-date <default-date> --assets ./assets next time to deploy this Worker without going through this flow again.
 
 					Proceeding with deployment...
 

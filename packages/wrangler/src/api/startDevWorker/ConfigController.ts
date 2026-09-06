@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
+	DEFAULT_COMPAT_DATE,
+	extractBindingsOfType,
 	formatConfigSnippet,
-	getTodaysCompatDate,
 	getDisableConfigWatching,
 	getDockerPath,
 	UserError,
@@ -257,19 +257,18 @@ async function resolveBindings(
 
 	// Create a print function that captures the current bindings context
 	const printCurrentBindings = (registry: WorkerRegistry | null) => {
-		printBindings(
-			bindings,
-			input.tailConsumers ?? config.tail_consumers,
-			input.streamingTailConsumers ?? config.streaming_tail_consumers,
-			config.containers,
-			{
-				registry,
-				local: !input.dev?.remote,
-				isMultiWorker: getFlag("MULTIWORKER"),
-				remoteBindingsDisabled: input.dev?.remote === false,
-				name: config.name,
-			}
-		);
+		printBindings(bindings, {
+			log: logger.log,
+			tailConsumers: input.tailConsumers ?? config.tail_consumers,
+			streamingTailConsumers:
+				input.streamingTailConsumers ?? config.streaming_tail_consumers,
+			containers: config.containers,
+			registry,
+			local: !input.dev?.remote,
+			isMultiWorker: getFlag("MULTIWORKER"),
+			remoteBindingsDisabled: input.dev?.remote === false,
+			name: config.name,
+		});
 	};
 
 	// Print the initial bindings table
@@ -329,7 +328,13 @@ async function resolveTriggers(
 			type: "cron",
 		})) ?? [];
 
-	return [...devRoutes, ...queueConsumers, ...crons];
+	const connectHandlers =
+		config.connect?.map<Extract<Trigger, { type: "connect" }>>((c) => ({
+			...c,
+			type: "connect",
+		})) ?? [];
+
+	return [...devRoutes, ...queueConsumers, ...crons, ...connectHandlers];
 }
 
 async function resolveConfig(
@@ -401,11 +406,7 @@ async function resolveConfig(
 			previousName ??
 			crypto.randomUUID(),
 		config: config.configPath,
-		compatibilityDate: getDevCompatibilityDate(
-			entry.projectRoot,
-			config,
-			input.compatibilityDate
-		),
+		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		pythonModules: {
@@ -459,6 +460,7 @@ async function resolveConfig(
 		tailConsumers: config.tail_consumers ?? [],
 		experimental: {},
 		streamingTailConsumers: config.streaming_tail_consumers ?? [],
+		access: input.access ?? config.access,
 	} satisfies StartDevWorkerOptions;
 
 	if (
@@ -559,28 +561,26 @@ async function resolveConfig(
 /**
  * Returns the compatibility date to use in development.
  *
- * When no compatibility date is configured, uses today's date.
+ * When no compatibility date is configured, uses the default compatibility date
+ * for this version of Wrangler.
  *
  * @param config wrangler configuration
  * @param compatibilityDate configured compatibility date
  * @returns the compatibility date to use in development
  */
 function getDevCompatibilityDate(
-	projectPath: string,
 	config: Config | undefined,
 	compatibilityDate = config?.compatibility_date
 ): string {
-	const todaysDate = getTodaysCompatDate();
-
 	if (config?.configPath && compatibilityDate === undefined) {
 		logger.warn(
-			`No compatibility_date was specified. Using today's date: ${todaysDate}.\n` +
-				`❯❯ Add one to your ${configFileName(config.configPath)} file: ${formatConfigSnippet({ compatibility_date: todaysDate }, config.configPath, false).trim()}, or\n` +
-				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${todaysDate}\n\n` +
+			`No compatibility_date was specified. Using the default compatibility date: ${DEFAULT_COMPAT_DATE}.\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: ${formatConfigSnippet({ compatibility_date: DEFAULT_COMPAT_DATE }, config.configPath, false).trim()}, or\n` +
+				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${DEFAULT_COMPAT_DATE}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
 	}
-	return compatibilityDate ?? todaysDate;
+	return compatibilityDate ?? DEFAULT_COMPAT_DATE;
 }
 
 export class ConfigController extends Controller {

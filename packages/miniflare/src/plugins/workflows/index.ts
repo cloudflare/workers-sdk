@@ -9,10 +9,10 @@ import {
 import {
 	getEnvBindingsOfType,
 	getPersistPath,
-	getRemoteProxyConnectionString,
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	SERVICE_DEV_REGISTRY_PROXY,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service } from "../../runtime";
 import type { Plugin } from "../shared";
@@ -34,8 +34,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							service: {
 								name: getUserBindingServiceName(
 									WORKFLOWS_PLUGIN_NAME,
-									binding.name,
-									getRemoteProxyConnectionString(binding, options.dev)
+									binding.name
 								),
 								entrypoint: "WorkflowBinding",
 							},
@@ -78,7 +77,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
-			sharedOptions.resourcePersistencePath
+			sharedOptions.isolatedResourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
 		// each workflow should get its own storage service
@@ -96,11 +95,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = workflows.map<Service>(([bindingName, binding]) => {
-			const remoteProxyConnectionString = getRemoteProxyConnectionString(
-				binding,
-				options.dev
-			);
-			const external = !workerNames.includes(binding.workerName);
+			const external = !workerNames.includes(binding.worker);
 			const stepLimit = binding.limits?.steps;
 			// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
 			// otherwise workerd will crash because there's two equal DO namespaces
@@ -129,11 +124,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 			}
 
 			const workflowsBinding: Service = {
-				name: getUserBindingServiceName(
-					WORKFLOWS_PLUGIN_NAME,
-					binding.name,
-					remoteProxyConnectionString
-				),
+				name: getUserBindingServiceName(WORKFLOWS_PLUGIN_NAME, binding.name),
 				worker: {
 					compatibilityDate: "2024-10-22",
 					compatibilityFlags: Array.from(new Set(engineCompatibilityFlags)),
@@ -168,7 +159,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 										entrypoint: "ExternalServiceProxy",
 										props: {
 											json: JSON.stringify({
-												service: binding.workerName,
+												service: binding.worker,
 												entrypoint: binding.exportName,
 											}),
 										},
@@ -177,7 +168,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							: {
 									name: "USER_WORKFLOW",
 									service: {
-										name: getUserServiceName(binding.workerName),
+										name: getUserServiceName(binding.worker),
 										entrypoint: binding.exportName,
 									},
 								},
@@ -189,6 +180,8 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							name: "WORKFLOW_NAME",
 							json: JSON.stringify(binding.name),
 						},
+						// Workflow deletion needs the Node.js host to remove its SQLite files.
+						WORKER_BINDING_SERVICE_LOOPBACK,
 						...(stepLimit !== undefined
 							? [
 									{

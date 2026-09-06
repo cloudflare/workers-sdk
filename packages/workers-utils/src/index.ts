@@ -14,6 +14,11 @@ export {
 	hasDurableObjectExports,
 } from "./config/durable-object-exports";
 export {
+	getContainerDurableObjectClassNames,
+	getContainerNameToClassNameMap,
+	resolveContainerClassName,
+} from "./config/containers";
+export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,
 } from "./config/config";
@@ -68,6 +73,7 @@ export const friendlyBindingNames = validation.friendlyBindingNames;
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
+	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
 
 export { validatePagesConfig } from "./config/validation-pages";
@@ -99,6 +105,15 @@ export * from "./constants";
 
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 export { constructWranglerConfig } from "./construct-wrangler-config";
+export {
+	convertConfigToBindings,
+	extractBindingsOfType,
+	getBindings,
+	isUnsafeBindingType,
+} from "./binding-utils";
+export type { ConvertBindingsOptions } from "./binding-utils";
+export { printBindings } from "./print-bindings";
+export type { PrintBindingsOptions } from "./print-bindings";
 
 export {
 	getBooleanEnvironmentVariableFactory,
@@ -113,8 +128,17 @@ export {
 } from "./global-wrangler-config-path";
 export type { GetGlobalConfigPathOptions } from "./global-wrangler-config-path";
 
-export { isCompatDate, getTodaysCompatDate } from "./compatibility-date";
+export {
+	isCompatDate,
+	getTodaysCompatDate,
+	isNodejsCompatDefaultOn,
+	NODEJS_COMPAT_DEFAULT_ON_DATE,
+	NODEJS_COMPAT_V2_SWITCH_OVER_DATE,
+	resolveNodejsCompat,
+	stripRedundantNodejsCompatFlags,
+} from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+export { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 
 export { isDockerfile } from "./config/validation";
 
@@ -147,6 +171,8 @@ export type { Logger, LoggerLevel } from "./logger";
 
 export { isCI, isInteractive, isNonInteractiveOrCI } from "./is-interactive";
 export { openInBrowser } from "./open-in-browser";
+export { clearOutputFilePath, writeOutput } from "./output";
+export type { OutputEntry } from "./output";
 
 export { retryOnAPIFailure } from "./retry";
 export { formatTime } from "./format-time";

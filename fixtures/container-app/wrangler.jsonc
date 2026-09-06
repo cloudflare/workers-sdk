@@ -6,15 +6,18 @@
 	"containers": [
 		{
 			"image": "./Dockerfile",
-			"class_name": "FixtureTestContainer",
 			"name": "container",
 			"max_instances": 2,
 		},
 	],
-	"migrations": [
-		{
-			"tag": "v1",
-			"new_sqlite_classes": ["FixtureTestContainer"],
+	// The container has no `class_name`; the Durable Object attaches it by name
+	// instead. See `wrangler.registry.jsonc` for the `class_name` + `migrations`
+	// equivalent.
+	"exports": {
+		"FixtureTestContainer": {
+			"type": "durable-object",
+			"storage": "sqlite",
+			"container": "container",
 		},
-	],
+	},
 }

@@ -1,8 +1,11 @@
+import { assertNever } from "../assert-never";
+import { UserError } from "../errors";
+import { getBindingTypeFriendlyName } from "./validation";
 import type { Binding } from "../types";
 
 /**
  * Local-dev capability of each binding type. Source of truth for
- * `pickRemoteBindings()` and `warnOrError()`.
+ * `pickRemoteBindings()` and `validateBindingRemoteSetting()`.
  *
  * - `local-and-remote`: local simulator; `remote: true` opts into proxying.
  * - `local-only`: local simulator only; `remote: true` is a config error.
@@ -45,7 +48,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	kv_namespace: "local-and-remote",
 	r2_bucket: "local-and-remote",
 	d1: "local-and-remote",
-	workflow: "local-and-remote",
+	workflow: "local-only",
 	browser: "local-and-remote",
 	images: "local-and-remote",
 	stream: "local-and-remote",
@@ -80,4 +83,65 @@ export function getBindingLocalSupport(
 		return BINDING_LOCAL_SUPPORT[type as keyof typeof BINDING_LOCAL_SUPPORT];
 	}
 	return "local-only";
+}
+
+/**
+ * Validates the user's `remote` setting for a given binding against the
+ * binding type's local-development capabilities. Throws `UserError` for
+ * invalid combinations and uses the caller-provided logger for
+ * valid-but-noteworthy ones.
+ */
+export function validateBindingRemoteSetting(
+	type: Binding["type"],
+	remote: boolean | undefined,
+	warn: (message: string) => void
+) {
+	const support = getBindingLocalSupport(type);
+	switch (support) {
+		case "local-and-remote":
+			return;
+		case "local-only":
+			if (remote === true) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support accessing remote resources.`,
+					{
+						telemetryMessage: "utils bindings unsupported remote resources",
+					}
+				);
+			}
+			return;
+		case "remote":
+			if (remote === false) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
+					{
+						telemetryMessage: "utils bindings unsupported local development",
+					}
+				);
+			}
+			if (remote === undefined) {
+				warn(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development, and so parts of your Worker may not work correctly. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+				);
+			}
+			return;
+		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
+			if (remote === false) {
+				throw new UserError(
+					`${getBindingTypeFriendlyName(type)} bindings do not support local development. You can set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`,
+					{
+						telemetryMessage:
+							"utils bindings unsupported local development always remote",
+					}
+				);
+			}
+			if (remote === undefined) {
+				warn(
+					`${getBindingTypeFriendlyName(type)} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+				);
+			}
+			return;
+		default:
+			assertNever(support);
+	}
 }

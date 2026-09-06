@@ -1,12 +1,14 @@
 import { preview } from "@cloudflare/deploy-helpers";
 import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
+import { getNormalizedContainerOptions } from "../containers/config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import { cleanupDestination } from "../deployment-bundle/merge-config-args";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
+import { deployPreviewContainers, verifyContainersScope } from "./containers";
 
 export const previewCommand = createCommand({
 	metadata: {
@@ -42,9 +44,9 @@ export const previewCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		"ignore-defaults": {
+		"ignore-base-config": {
 			describe:
-				"Only use settings from your config file, ignoring any Previews settings configured in the Cloudflare dashboard",
+				"Only use settings from your config file, ignoring the Preview base config configured in the Cloudflare dashboard",
 			type: "boolean",
 			default: false,
 		},
@@ -98,7 +100,12 @@ export const previewCommand = createCommand({
 			args,
 			config,
 			buildResult,
-			assetsOptions
+			assetsOptions,
+			{
+				getNormalizedContainerOptions,
+				deployPreviewContainers,
+				verifyContainersScope,
+			}
 		);
 		cleanupDestination(destination);
 
