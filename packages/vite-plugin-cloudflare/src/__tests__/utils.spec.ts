@@ -1,4 +1,5 @@
 import http from "node:http";
+import http2 from "node:http2";
 import net from "node:net";
 import * as path from "node:path";
 import { Response as MiniflareResponse } from "miniflare";
@@ -366,5 +367,80 @@ describe("createRequestHandler", () => {
 		} finally {
 			socket.destroy();
 		}
+	});
+});
+
+describe("createRequestHandler over HTTP/2", () => {
+	// Browsers use HTTP/2 whenever `server.https` is enabled, and HTTP/2 carries
+	// the authority in the `:authority` pseudo-header rather than in `Host`.
+	// A cleartext (h2c) server exercises the same code path without needing TLS.
+	let h2Server: http2.Http2Server;
+	let h2Port: number;
+	let capturedUrls: string[];
+	let capturedForwardedHosts: (string | null)[];
+
+	afterEach(async () => {
+		await new Promise<void>((resolve, reject) =>
+			h2Server?.close((e) => (e ? reject(e) : resolve()))
+		);
+	});
+
+	function startH2Server() {
+		capturedUrls = [];
+		capturedForwardedHosts = [];
+		const handler = createRequestHandler(async (request) => {
+			capturedUrls.push(request.url);
+			capturedForwardedHosts.push(request.headers.get("X-Forwarded-Host"));
+			return new MiniflareResponse("OK");
+		});
+
+		h2Server = http2.createServer((req, res) => {
+			void handler(
+				req as unknown as Parameters<typeof handler>[0],
+				res as unknown as Parameters<typeof handler>[1],
+				(error: unknown) => {
+					res.statusCode = 500;
+					res.end(error instanceof Error ? error.message : String(error));
+				}
+			);
+		});
+
+		return new Promise<void>((r) =>
+			h2Server.listen(0, "127.0.0.1", () => {
+				h2Port = (h2Server.address() as AddressInfo).port;
+				r();
+			})
+		);
+	}
+
+	async function h2Get(pathname: string) {
+		const client = http2.connect(`http://127.0.0.1:${h2Port}`);
+		try {
+			await new Promise<void>((resolve, reject) => {
+				const req = client.request({ ":path": pathname, ":method": "GET" });
+				req.on("response", () => req.resume());
+				req.on("end", () => resolve());
+				req.on("error", reject);
+				req.end();
+			});
+		} finally {
+			client.close();
+		}
+	}
+
+	test("keeps the authority, including the port, in `request.url`", async ({
+		expect,
+	}) => {
+		await startH2Server();
+		await h2Get("/path");
+		expect(capturedUrls[0]).toBe(`http://127.0.0.1:${h2Port}/path`);
+	});
+
+	test("sets `X-Forwarded-Host` from the `:authority` pseudo-header", async ({
+		expect,
+	}) => {
+		await startH2Server();
+		await h2Get("/path");
+		expect(capturedForwardedHosts[0]).toBe(`127.0.0.1:${h2Port}`);
 	});
 });
