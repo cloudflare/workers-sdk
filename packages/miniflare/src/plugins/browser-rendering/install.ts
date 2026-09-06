@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {
-	getGlobalWranglerCachePath,
-	removeDir,
-} from "@cloudflare/workers-utils";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
+import { getGlobalWranglerCachePath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 import {
 	Browser,
 	detectBrowserPlatform,

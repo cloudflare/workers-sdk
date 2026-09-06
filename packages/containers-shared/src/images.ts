@@ -1,4 +1,4 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils/errors";
 import { buildImage } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
@@ -16,7 +16,7 @@ import type {
 	ViteLogger,
 	WranglerLogger,
 } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
 
 export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
 	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";

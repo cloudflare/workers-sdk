@@ -878,8 +878,24 @@ export type WorkflowBinding = {
 		/** Maximum number of steps a Workflow instance can execute */
 		steps?: number;
 	};
+	/** Optional concurrency configuration for the Workflow */
+	concurrency?: {
+		/** Maximum number of Workflow instances that can run concurrently */
+		limit?: number;
+	};
 	/** Optional cron schedule(s) for automatically triggering workflow instances */
 	schedules?: string | string[];
+	/**
+	 * Optional default retention for instances of this Workflow, applied when an instance does not
+	 * set its own retention. Accepts milliseconds or a duration string such as `"3 days"`, and is
+	 * validated by the Workflows API at deploy time.
+	 */
+	default_retention?: {
+		/** How long to retain instances that completed successfully or were terminated */
+		success_retention?: number | string;
+		/** How long to retain errored instances */
+		error_retention?: number | string;
+	};
 };
 
 /**
@@ -1838,6 +1854,12 @@ export interface Observability {
 	enabled?: boolean;
 	/** The sampling rate */
 	head_sampling_rate?: number;
+	/**
+	 * Whether query strings are removed from request URLs in logs and traces.
+	 *
+	 * @default false
+	 */
+	redact_query_string?: boolean;
 	logs?: {
 		enabled?: boolean;
 		/** The sampling rate */

@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import events from "node:events";
-import { convertConfigToBindings } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
+	convertConfigToBindings,
 	formatConfigSnippet,
 	getLocalExplorerEnabledFromEnv,
 	isInteractive,

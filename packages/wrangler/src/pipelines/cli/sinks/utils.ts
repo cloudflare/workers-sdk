@@ -65,8 +65,11 @@ export function displaySinkConfiguration(
 		Type: sink.format.type,
 	};
 
-	// Only show compression and row group size for parquet (JSON doesn't support these)
-	if (sink.format.type === "parquet") {
+	if (sink.format.type === "json") {
+		if (sink.format.compression) {
+			format.Compression = sink.format.compression;
+		}
+	} else {
 		const defaultParquet =
 			SINK_DEFAULTS.format.type === "parquet" ? SINK_DEFAULTS.format : null;
 		if (defaultParquet) {

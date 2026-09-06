@@ -4,7 +4,7 @@ import type { ConfigurationResults } from "./framework-class";
 export class NoOpFramework extends Framework {
 	async configure(): Promise<ConfigurationResults> {
 		return {
-			wranglerConfig: {},
+			workerConfig: {},
 		};
 	}
 }

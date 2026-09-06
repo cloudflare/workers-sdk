@@ -288,7 +288,7 @@ describe("the real workspace", () => {
 			    "@cloudflare/autoconfig",
 			    "@cloudflare/deploy-helpers",
 			    "@cloudflare/vite-plugin",
-			    "@cloudflare/vitest-pool-workers",
+			    "@cloudflare/vitest-plugin",
 			  ],
 			]
 		`);
@@ -306,7 +306,7 @@ describe("the real workspace", () => {
 		expect(tierOf("@cloudflare/vite-plugin")).toBeGreaterThan(
 			tierOf("wrangler")
 		);
-		expect(tierOf("@cloudflare/vitest-pool-workers")).toBeGreaterThan(
+		expect(tierOf("@cloudflare/vitest-plugin")).toBeGreaterThan(
 			tierOf("wrangler")
 		);
 	});

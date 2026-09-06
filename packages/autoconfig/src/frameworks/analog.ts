@@ -24,13 +24,14 @@ export class Analog extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./dist/analog/server/index.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: "./dist/analog/public",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./dist/analog/server/index.mjs",
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./dist/analog/public" },
 		};
 	}
 }

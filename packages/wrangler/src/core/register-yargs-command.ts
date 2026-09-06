@@ -359,15 +359,20 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						shouldSuggestSkills === true ||
 						(typeof shouldSuggestSkills === "function" &&
 							shouldSuggestSkills(args) === true);
+					// We are currently not sure whether the automatic skills installation is beneficial
+					// so we are skipping it for the time being (we might potentially re-enable it later on)
+					const shouldInstall = false;
 
 					if (suggestSkillsEnabled) {
 						try {
-							const justInstalled = await runSkillsInstallFlow({
-								force: false,
-								command: sanitizedCommand,
-								promptMessage:
-									skillInstallPromptMessageAfterWranglerCommandHandler,
-							});
+							const justInstalled = shouldInstall
+								? await runSkillsInstallFlow({
+										force: false,
+										command: sanitizedCommand,
+										promptMessage:
+											skillInstallPromptMessageAfterWranglerCommandHandler,
+									})
+								: false;
 
 							// Only check for updates when the install flow did not
 							// just perform a fresh install — a brand-new install

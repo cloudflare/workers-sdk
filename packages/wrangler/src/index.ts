@@ -222,6 +222,10 @@ import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
 import { hyperdriveGetCommand } from "./hyperdrive/get";
 import { hyperdriveNamespace } from "./hyperdrive/index";
 import { hyperdriveListCommand } from "./hyperdrive/list";
+import {
+	hyperdrivePlanetscaleNamespace,
+	hyperdrivePlanetscaleSignatureCommand,
+} from "./hyperdrive/planetscale";
 import { hyperdriveUpdateCommand } from "./hyperdrive/update";
 import { init } from "./init";
 import {
@@ -542,6 +546,7 @@ import { websearchSearchCommand } from "./websearch/search";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
 import { workflowsDescribeCommand } from "./workflows/commands/describe";
+import { workflowsInstancesDeleteCommand } from "./workflows/commands/instances/delete";
 import { workflowsInstancesDescribeCommand } from "./workflows/commands/instances/describe";
 import { workflowsInstancesListCommand } from "./workflows/commands/instances/list";
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
@@ -1589,6 +1594,14 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
 		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
 		{
+			command: "wrangler hyperdrive planetscale",
+			definition: hyperdrivePlanetscaleNamespace,
+		},
+		{
+			command: "wrangler hyperdrive planetscale signature",
+			definition: hyperdrivePlanetscaleSignatureCommand,
+		},
+		{
 			command: "wrangler hyperdrive update",
 			definition: hyperdriveUpdateCommand,
 		},
@@ -2298,6 +2311,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances resume",
 			definition: workflowsInstancesResumeCommand,
+		},
+		{
+			command: "wrangler workflows instances delete",
+			definition: workflowsInstancesDeleteCommand,
 		},
 	]);
 	registry.registerNamespace("workflows");

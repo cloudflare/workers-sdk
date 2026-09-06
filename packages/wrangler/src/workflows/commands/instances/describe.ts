@@ -22,6 +22,7 @@ import {
 	emojifyInstanceTriggerName,
 	emojifyStepType,
 	getInstanceIdFromArgs,
+	jsonWorkflowArgs,
 } from "../../utils";
 import type {
 	InstanceSleepLog,
@@ -41,6 +42,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 	positionalArgs: ["name", "id"],
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -65,13 +67,18 @@ export const workflowsInstancesDescribeCommand = createCommand({
 			default: 5000,
 		},
 	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 
 	async handler(args, { config }) {
 		let id: string;
 		let instance: InstanceStatusAndLogs;
 
 		if (args.local) {
-			id = await getLocalInstanceIdFromArgs(args.port, args);
+			id = await getLocalInstanceIdFromArgs(args.port, args, {
+				quiet: args.json,
+			});
 			instance = await fetchLocalResult<InstanceStatusAndLogs>(
 				args.port,
 				`/workflows/${encodeURIComponent(args.name)}/instances/${encodeURIComponent(id)}`
@@ -83,6 +90,15 @@ export const workflowsInstancesDescribeCommand = createCommand({
 				config,
 				`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
 			);
+		}
+
+		if (args.json) {
+			// The API payload omits `id`, leaving `--id latest` callers no way to
+			// learn which instance was resolved. `--step-output` and
+			// `--truncate-output-limit` are ignored here because truncating would
+			// hand invalid step output to a machine-readable consumer.
+			logger.json({ id, ...instance });
+			return;
 		}
 
 		renderInstanceDetails(args, id, instance);

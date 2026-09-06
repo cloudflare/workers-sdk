@@ -18,6 +18,8 @@ export const CorePaths = {
 	STREAM_VIDEO: "/__cf_local/stream",
 	/** Local image delivery endpoint (outside /cdn-cgi/ for tunnel access) */
 	IMAGE_DELIVERY: "/__cf_local/imagedelivery",
+	/** Local Direct Creator Upload completion endpoint (outside /cdn-cgi/ for tunnel access) */
+	IMAGE_UPLOAD: "/__cf_local/imageupload",
 	/** Public R2 bucket object serving endpoint */
 	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 	/** S3-compatible API endpoint for local R2 buckets */
@@ -91,13 +93,21 @@ export const CoreBindings = {
 	SERVICE_DEV_REGISTRY_PROXY: "MINIFLARE_DEV_REGISTRY_PROXY",
 	JSON_TELEMETRY_CONFIG: "MINIFLARE_TELEMETRY_CONFIG",
 	DEV_REGISTRY_DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
+	DEV_REGISTRY_INSTANCE_ID: "DEV_REGISTRY_INSTANCE_ID",
 	SERVICE_STREAM: "MINIFLARE_STREAM",
 	SERVICE_IMAGES_DELIVERY: "MINIFLARE_IMAGES_DELIVERY",
+	SERVICE_D1: "MINIFLARE_D1",
+	SERVICE_KV: "MINIFLARE_KV",
+	SERVICE_R2: "MINIFLARE_R2",
 	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
 	SERVICE_R2_S3: "MINIFLARE_R2_S3",
 	SERVICE_OBSERVABILITY_COLLECTOR: "MINIFLARE_OBSERVABILITY_COLLECTOR",
 	JSON_ACCESS_BLOB_PREFIX: "MINIFLARE_ACCESS_BLOB_",
 	TEXT_FALLBACK_WORKER_NAME: "MINIFLARE_FALLBACK_WORKER_NAME",
+	SERVICE_EMAIL_STORE: "MINIFLARE_EMAIL_STORE",
+	// Prefix for the local explorer's direct service bindings to each user
+	// worker in this instance to invoke handlers (e.g email()).
+	SERVICE_EXPLORER_USER_WORKER_PREFIX: "MINIFLARE_EXPLORER_USER_WORKER_",
 } as const;
 
 export const ProxyOps = {

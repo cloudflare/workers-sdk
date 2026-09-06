@@ -80,7 +80,9 @@ function validateContentType(headers: Headers): QueueContentType {
 
 function validateMessageDelay(headers: Headers): QueueMessageDelay {
 	const format = headers.get("X-Msg-Delay-Secs");
-	if (!format) return undefined;
+	if (!format) {
+		return undefined;
+	}
 	const result = QueueMessageDelaySchema.safeParse(Number(format));
 	if (!result.success) {
 		throw new HttpError(
@@ -199,12 +201,18 @@ function formatQueueResponse(
 	time?: number
 ) {
 	let colour: Colorize;
-	if (acked === total) colour = green;
-	else if (acked > 0) colour = yellow;
-	else colour = red;
+	if (acked === total) {
+		colour = green;
+	} else if (acked > 0) {
+		colour = yellow;
+	} else {
+		colour = red;
+	}
 
 	let message = `${bold("QUEUE")} ${queueName} ${colour(`${acked}/${total}`)}`;
-	if (time !== undefined) message += grey(` (${time}ms)`);
+	if (time !== undefined) {
+		message += grey(` (${time}ms)`);
+	}
 	return reset(message);
 }
 
@@ -236,12 +244,18 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		super(state, env);
 
 		const maybeProducers = env[QueueBindings.MAYBE_JSON_QUEUE_PRODUCERS];
-		if (maybeProducers === undefined) this.#producers = {};
-		else this.#producers = QueueProducersSchema.parse(maybeProducers);
+		if (maybeProducers === undefined) {
+			this.#producers = {};
+		} else {
+			this.#producers = QueueProducersSchema.parse(maybeProducers);
+		}
 
 		const maybeConsumers = env[QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS];
-		if (maybeConsumers === undefined) this.#consumers = {};
-		else this.#consumers = QueueConsumersSchema.parse(maybeConsumers);
+		if (maybeConsumers === undefined) {
+			this.#consumers = {};
+		} else {
+			this.#consumers = QueueConsumersSchema.parse(maybeConsumers);
+		}
 	}
 
 	get #maybeProducer() {
@@ -362,7 +376,9 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 		// Ensure we flush again if we still have messages.
 		this.#pendingFlush = undefined;
-		if (this.#messages.length > 0) this.#ensurePendingFlush();
+		if (this.#messages.length > 0) {
+			this.#ensurePendingFlush();
+		}
 
 		if (toDeadLetterQueue.length > 0) {
 			// If we have messages to move to a dead letter queue, do so
@@ -395,7 +411,9 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		if (this.#pendingFlush !== undefined) {
 			// If we have a pending immediate flush, or a delayed flush we haven't
 			// filled the batch for yet, just wait for it
-			if (this.#pendingFlush.immediate || batchHasSpace) return;
+			if (this.#pendingFlush.immediate || batchHasSpace) {
+				return;
+			}
 			// Otherwise, the batch is full, so clear the existing timeout, and
 			// register an immediate flush
 			this.timers.clearTimeout(this.#pendingFlush.timeout);
@@ -447,7 +465,9 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		req: Request<unknown, unknown>
 	): Promise<Response | null> {
 		const proxy = this.env[QueueBindings.MAYBE_SERVICE_QUEUE_PROXY];
-		if (proxy === undefined) return null;
+		if (proxy === undefined) {
+			return null;
+		}
 
 		const headers = new Headers(req.headers);
 		headers.set(HEADER_QUEUE_NAME, this.name);

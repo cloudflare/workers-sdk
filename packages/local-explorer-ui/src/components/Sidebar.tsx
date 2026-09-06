@@ -6,6 +6,7 @@ import {
 	useSidebar,
 } from "@cloudflare/kumo";
 import {
+	EnvelopeSimpleIcon,
 	MonitorIcon,
 	MoonIcon,
 	PulseIcon,
@@ -208,6 +209,36 @@ export function AppSidebar({
 			})),
 			title: "Workflows",
 		},
+		{
+			emptyLabel: "No email",
+			groupId: "email" as const,
+			icon: EnvelopeSimpleIcon,
+			items: [
+				{
+					id: "sending",
+					isActive: currentPath === "/email/sending",
+					label: "Sending",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/email/sending",
+					},
+				},
+				{
+					id: "routing",
+					isActive:
+						currentPath === "/email/routing" ||
+						currentPath.startsWith("/email/routing/"),
+					label: "Routing",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/email/routing",
+					},
+				},
+			],
+			title: "Email",
+		},
 	] satisfies Array<{
 		emptyLabel: string;
 		groupId: SidebarGroupId;
@@ -362,7 +393,15 @@ export function AppSidebar({
 						{sidebarItemGroups.map((group) => (
 							<SidebarGroupPopup
 								emptyLabel={group.emptyLabel}
-								icon={<group.icon width={20} height={20} />}
+								icon={
+									<group.icon
+										aria-label={
+											group.groupId === "email" ? group.title : undefined
+										}
+										height={20}
+										width={20}
+									/>
+								}
 								items={group.items}
 								key={group.groupId}
 								title={group.title}

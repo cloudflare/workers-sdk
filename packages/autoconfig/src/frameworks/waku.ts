@@ -45,14 +45,17 @@ export class Waku extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				main: "./src/waku.server",
+			buildTool: "wrangler",
+			workerConfig: {
+				entrypoint: "./src/waku.server",
 				assets: {
-					binding: "ASSETS",
-					directory: "./dist/public",
-					html_handling: "drop-trailing-slash",
+					htmlHandling: "drop-trailing-slash",
+				},
+				env: {
+					ASSETS: { type: "assets" },
 				},
 			},
+			buildConfig: { assetsDirectory: "./dist/public" },
 		};
 	}
 }

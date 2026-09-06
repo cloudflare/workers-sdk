@@ -1357,12 +1357,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect,
 			}) => {
 				writeWranglerConfig({
-					observability: { enabled: true },
+					observability: {
+						enabled: true,
+						redact_query_string: true,
+					},
 				});
 				writeWorkerSource();
 				mockUploadWorkerRequest({
 					expectedSettingsPatch: expect.objectContaining({
-						observability: { enabled: true },
+						observability: {
+							enabled: true,
+							redact_query_string: true,
+						},
 					}),
 				});
 				mockSubDomainRequest();

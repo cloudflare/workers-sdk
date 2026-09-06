@@ -1,7 +1,7 @@
 import path from "node:path";
-import { extractBindingsOfType } from "@cloudflare/deploy-helpers";
 import {
 	DEFAULT_COMPAT_DATE,
+	extractBindingsOfType,
 	getContainerDurableObjectClassNames,
 	getRegistryPath,
 } from "@cloudflare/workers-utils";
@@ -66,7 +66,7 @@ export function unstable_getDevCompatibilityDate() {
  *
  * `dev.host` is intentionally NOT consulted here: the `dev` config block is
  * specific to `wrangler dev` and should not influence behaviour under
- * `@cloudflare/vite-plugin`, `@cloudflare/vitest-pool-workers`, or
+ * `@cloudflare/vite-plugin`, `@cloudflare/vitest-plugin`, or
  * `getPlatformProxy`. Users who need a custom `CF-Worker` host in those
  * environments should configure a `route` instead.
  */

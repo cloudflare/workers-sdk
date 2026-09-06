@@ -1,15 +1,22 @@
 import * as childProcess from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stripVTControlCharacters } from "node:util";
+import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	extractConfigBindings,
 	getBranchName,
+	getCommitSha,
+	getPullRequestMetadata,
+	getRepositoryUrl,
+	previewContainerAppName,
+	resolveWorkerName,
 } from "@cloudflare/deploy-helpers";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
 import { clearOutputFilePath } from "../output";
+import * as user from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -39,6 +46,190 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 	};
 }
 
+type PreviewDeploymentModulePart = {
+	name: string;
+	content_type: string;
+	content: Uint8Array;
+};
+
+function decodeModuleContent(
+	module: PreviewDeploymentModulePart | undefined
+): string {
+	return module ? new TextDecoder().decode(module.content) : "";
+}
+
+async function readPreviewDeploymentRequest(
+	request: Request
+): Promise<
+	Record<string, unknown> & { modules: PreviewDeploymentModulePart[] }
+> {
+	// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API for parsing multipart bodies; only deprecated on undici's server-side types
+	const form = await request.formData();
+
+	const metadataPart = form.get("metadata");
+	if (typeof metadataPart !== "string") {
+		throw new Error(
+			"Preview deployment request is missing its `metadata` form part"
+		);
+	}
+	const metadata = JSON.parse(metadataPart) as Record<string, unknown>;
+	if ("modules" in metadata) {
+		throw new Error(
+			"Preview deployment `metadata` must not carry `modules`; modules belong in their own form parts"
+		);
+	}
+
+	const moduleParts = form.getAll("files");
+	if (moduleParts.length === 0) {
+		throw new Error("Preview deployment request has no module file parts");
+	}
+
+	const modules = await Promise.all(
+		moduleParts.map(async (part) => {
+			if (!(part instanceof File)) {
+				throw new Error(
+					"Preview deployment module part is a plain field, not a file"
+				);
+			}
+			return {
+				name: part.name,
+				content_type: part.type,
+				content: new Uint8Array(await part.arrayBuffer()),
+			};
+		})
+	);
+
+	return { ...metadata, modules };
+}
+
+/**
+ * Write a Worker entrypoint and a `wrangler.json` whose `previews` block binds
+ * one Durable Object and attaches a registry-image container to it.
+ */
+function writeContainerPreviewConfig() {
+	writeFileSync(
+		"src/index.ts",
+		"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+	);
+	writeFileSync(
+		"wrangler.json",
+		JSON.stringify({
+			name: "test-worker",
+			main: "src/index.ts",
+			compatibility_date: "2025-01-01",
+			previews: {
+				durable_objects: {
+					bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+				},
+				containers: [
+					{
+						class_name: "MyContainer",
+						image: "registry.cloudflare.com/some-account-id/test:latest",
+					},
+				],
+			},
+		})
+	);
+}
+
+/**
+ * Install msw handlers for the three requests a container preview makes: a
+ * lookup that misses, the preview creation, then the deployment creation.
+ *
+ * @param options - Preview id to report, bindings the deployment response
+ * carries back, and an optional hook fired when the deployment is created.
+ */
+function mockContainerPreview({
+	previewId,
+	deploymentEnv = {},
+	onCreateDeployment,
+}: {
+	previewId: string;
+	deploymentEnv?: Record<string, unknown>;
+	onCreateDeployment?: () => void;
+}) {
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+			() =>
+				HttpResponse.json(
+					{
+						success: false,
+						result: null,
+						errors: [{ code: 10025, message: "Preview not found" }],
+					},
+					{ status: 404 }
+				)
+		),
+		http.post(`*/accounts/:accountId/workers/workers/:workerId/previews`, () =>
+			HttpResponse.json(
+				{
+					success: true,
+					result: {
+						id: previewId,
+						name: "test-preview",
+						slug: "test-preview",
+						urls: ["https://test-preview.test-worker.cloudflare.app"],
+						worker_name: "test-worker",
+						created_on: new Date().toISOString(),
+					},
+				},
+				{ status: 201 }
+			)
+		),
+		http.post(
+			`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+			() => {
+				onCreateDeployment?.();
+				return HttpResponse.json(
+					{
+						success: true,
+						result: {
+							id: `deployment-${previewId}`,
+							preview_id: previewId,
+							preview_name: "test-preview",
+							urls: ["https://test-preview.test-worker.cloudflare.app"],
+							compatibility_date: "2025-01-01",
+							env: deploymentEnv,
+							created_on: new Date().toISOString(),
+						},
+					},
+					{ status: 201 }
+				);
+			}
+		)
+	);
+}
+
+function clearPreviewMetadataEnvs() {
+	vi.stubEnv("GITHUB_REPOSITORY", "");
+	vi.stubEnv("GITHUB_SERVER_URL", "");
+	vi.stubEnv("GITHUB_EVENT_PATH", "");
+	vi.stubEnv("GITHUB_REF", "");
+	vi.stubEnv("CI_PROJECT_URL", "");
+	vi.stubEnv("CI_REPOSITORY_URL", "");
+	vi.stubEnv("CI_MERGE_REQUEST_IID", "");
+	vi.stubEnv("CI_MERGE_REQUEST_PROJECT_URL", "");
+	vi.stubEnv("CIRCLE_REPOSITORY_URL", "");
+	vi.stubEnv("CIRCLE_PULL_REQUEST", "");
+	vi.stubEnv("BUILDKITE_REPO", "");
+	vi.stubEnv("BITBUCKET_GIT_HTTP_ORIGIN", "");
+	vi.stubEnv("BITBUCKET_GIT_SSH_ORIGIN", "");
+	vi.stubEnv("REPOSITORY_URL", "");
+	vi.stubEnv("PULL_REQUEST_URL", "");
+	vi.stubEnv("PULL_REQUEST_NUMBER", "");
+	vi.stubEnv("PR_URL", "");
+	vi.stubEnv("PR_NUMBER", "");
+	vi.stubEnv("CHANGE_URL", "");
+	vi.stubEnv("CHANGE_ID", "");
+	vi.stubEnv("GITHUB_SHA", "");
+	vi.stubEnv("CI_COMMIT_SHA", "");
+	vi.stubEnv("CIRCLE_SHA1", "");
+	vi.stubEnv("COMMIT_SHA", "");
+	vi.stubEnv("CI_MERGE_REQUEST_TITLE", "");
+	vi.stubEnv("PULL_REQUEST_TITLE", "");
+}
+
 describe("wrangler preview", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
@@ -46,6 +237,26 @@ describe("wrangler preview", () => {
 	mockAccountId();
 	afterEach(() => {
 		clearOutputFilePath();
+		// Several container tests stub `getScopes` to grant `containers:write`.
+		// `vitest.setup.ts` only clears mock calls, so without an explicit
+		// restore that stub would outlive its test and silently grant the scope
+		// to every later test in the file.
+		vi.restoreAllMocks();
+	});
+
+	describe("resolveWorkerName", () => {
+		test("should prefer WRANGLER_CI_OVERRIDE_NAME over arguments and config", ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "ci-worker");
+
+			expect(
+				resolveWorkerName(
+					{ workerName: "argument-worker" },
+					{ ...defaultWranglerConfig, name: "config-worker" }
+				)
+			).toBe("ci-worker");
+		});
 	});
 
 	describe("getBranchName", () => {
@@ -55,6 +266,7 @@ describe("wrangler preview", () => {
 			vi.stubEnv("GITHUB_REF_NAME", undefined);
 			vi.stubEnv("GITHUB_HEAD_REF", undefined);
 			vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
+			clearPreviewMetadataEnvs();
 		});
 
 		afterAll(() => {
@@ -83,6 +295,313 @@ describe("wrangler preview", () => {
 			vi.stubEnv("CI_COMMIT_REF_NAME", "gitlab-branch");
 
 			expect(getBranchName()).toBe("gitlab-branch");
+		});
+	});
+
+	describe("previewContainerAppName", () => {
+		const DIGEST_SUFFIX = /_[0-9a-z]{7}$/;
+
+		test("should join worker name, preview slug, and class name with underscores", ({
+			expect,
+		}) => {
+			expect(
+				previewContainerAppName("test-worker", "feature-branch", "MyContainer")
+			).toBe("test-worker_feature-branch_MyContainer");
+		});
+
+		// Worker and class names can produce values the containers API rejects.
+		test.for([
+			{
+				reason: "a worker name that starts with a digit",
+				workerName: "9-my-worker",
+				className: "MyContainer",
+				body: "w9-my-worker_feature-branch_MyContainer",
+			},
+			{
+				reason: "consecutive dashes in a worker name",
+				workerName: "my--worker",
+				className: "MyContainer",
+				body: "my-worker_feature-branch_MyContainer",
+			},
+			{
+				reason: "a character that no application name may contain",
+				workerName: "test-worker",
+				className: "My$Class",
+				body: "test-worker_feature-branch_My-Class",
+			},
+		])(
+			"should normalise $reason and mark it with a digest",
+			({ workerName, className, body }, { expect }) => {
+				const name = previewContainerAppName(
+					workerName,
+					"feature-branch",
+					className
+				);
+
+				expect(name).toMatch(DIGEST_SUFFIX);
+				expect(name.replace(DIGEST_SUFFIX, "")).toBe(body);
+			}
+		);
+
+		test("should keep apart worker names that normalise onto one another", ({
+			expect,
+		}) => {
+			expect(
+				previewContainerAppName("my--worker", "feature-branch", "MyContainer")
+			).not.toBe(
+				previewContainerAppName("my-worker", "feature-branch", "MyContainer")
+			);
+		});
+
+		test("should cap the name at the length the API allows", ({ expect }) => {
+			const name = previewContainerAppName(
+				"w".repeat(300),
+				"feature-branch",
+				"MyContainer"
+			);
+
+			expect(name).toHaveLength(253);
+			expect(name).toMatch(DIGEST_SUFFIX);
+		});
+
+		test("should keep apart worker names that differ only past that length", ({
+			expect,
+		}) => {
+			expect(
+				previewContainerAppName(
+					`${"w".repeat(300)}a`,
+					"feature-branch",
+					"MyContainer"
+				)
+			).not.toBe(
+				previewContainerAppName(
+					`${"w".repeat(300)}b`,
+					"feature-branch",
+					"MyContainer"
+				)
+			);
+		});
+	});
+
+	describe("getRepositoryUrl", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use GitHub Actions repository env vars", ({ expect }) => {
+			vi.stubEnv("GITHUB_REPOSITORY", "cloudflare/workers-sdk");
+
+			expect(getRepositoryUrl()).toBe(
+				"https://github.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use GitHub Enterprise server URL", ({ expect }) => {
+			vi.stubEnv("GITHUB_SERVER_URL", "https://github.example.com/");
+			vi.stubEnv("GITHUB_REPOSITORY", "cloudflare/workers-sdk");
+
+			expect(getRepositoryUrl()).toBe(
+				"https://github.example.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use GitLab project URL", ({ expect }) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/cloudflare/workers-sdk.git"
+			);
+
+			expect(getRepositoryUrl()).toBe(
+				"https://gitlab.example.com/cloudflare/workers-sdk"
+			);
+		});
+
+		test("should use and normalize git remote origin URL when in CI", ({
+			expect,
+		}) => {
+			vi.stubEnv("CI", "true");
+			vi.mocked(childProcess.execSync)
+				.mockImplementationOnce(() => Buffer.from("true"))
+				.mockImplementationOnce(() =>
+					Buffer.from("git@git.example.com:acme/worker-project.git\n")
+				);
+
+			expect(getRepositoryUrl()).toBe(
+				"https://git.example.com/acme/worker-project"
+			);
+		});
+
+		test("should not shell out to the local git remote outside CI", ({
+			expect,
+		}) => {
+			vi.stubEnv("CI", undefined);
+
+			expect(getRepositoryUrl()).toBeUndefined();
+			expect(childProcess.execSync).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("getPullRequestMetadata", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use direct pull request URL env vars", ({ expect }) => {
+			vi.stubEnv(
+				"PULL_REQUEST_URL",
+				"https://git.example.com/acme/worker-project/pulls/13"
+			);
+			vi.stubEnv("PULL_REQUEST_NUMBER", "13");
+			vi.stubEnv("PULL_REQUEST_TITLE", "Add a cool new feature");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://git.example.com/acme/worker-project/pulls/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should use GitHub event pull request metadata", ({ expect }) => {
+			writeFileSync(
+				"github-event.json",
+				JSON.stringify({
+					pull_request: {
+						number: 13,
+						html_url: "https://github.com/acme/worker-project/pull/13",
+						title: "Add a cool new feature",
+					},
+				})
+			);
+			vi.stubEnv("GITHUB_EVENT_PATH", "github-event.json");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should not fail when the GitHub event pull request has no title", ({
+			expect,
+		}) => {
+			writeFileSync(
+				"github-event.json",
+				JSON.stringify({
+					pull_request: {
+						number: 13,
+						html_url: "https://github.com/acme/worker-project/pull/13",
+					},
+				})
+			);
+			vi.stubEnv("GITHUB_EVENT_PATH", "github-event.json");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+			});
+		});
+
+		test("should not recover a title from the GITHUB_REF fallback", ({
+			expect,
+		}) => {
+			vi.stubEnv("GITHUB_REF", "refs/pull/13/merge");
+			vi.stubEnv("GITHUB_REPOSITORY", "acme/worker-project");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://github.com/acme/worker-project/pull/13",
+			});
+		});
+
+		test("should use GitLab merge request metadata", ({ expect }) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "Add a cool new feature");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+				title: "Add a cool new feature",
+			});
+		});
+
+		test("should treat a blank title the same as a missing one", ({
+			expect,
+		}) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "   ");
+
+			expect(getPullRequestMetadata()).toEqual({
+				number: "13",
+				url: "https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+			});
+		});
+	});
+
+	describe("getCommitSha", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+			clearPreviewMetadataEnvs();
+		});
+
+		afterAll(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should use the GitHub Actions commit SHA", ({ expect }) => {
+			vi.stubEnv("GITHUB_SHA", "abc123def456");
+
+			expect(getCommitSha()).toBe("abc123def456");
+		});
+
+		test("should use the GitLab CI commit SHA", ({ expect }) => {
+			vi.stubEnv("CI_COMMIT_SHA", "def456abc123");
+
+			expect(getCommitSha()).toBe("def456abc123");
+		});
+
+		test("should use the CircleCI commit SHA", ({ expect }) => {
+			vi.stubEnv("CIRCLE_SHA1", "123abc456def");
+
+			expect(getCommitSha()).toBe("123abc456def");
+		});
+
+		test("should use the generic COMMIT_SHA fallback", ({ expect }) => {
+			vi.stubEnv("COMMIT_SHA", "789fed321cba");
+
+			expect(getCommitSha()).toBe("789fed321cba");
+		});
+
+		test("should prefer GitHub Actions over other providers", ({ expect }) => {
+			vi.stubEnv("GITHUB_SHA", "github-sha");
+			vi.stubEnv("CI_COMMIT_SHA", "gitlab-sha");
+			vi.stubEnv("CIRCLE_SHA1", "circleci-sha");
+			vi.stubEnv("COMMIT_SHA", "generic-sha");
+
+			expect(getCommitSha()).toBe("github-sha");
+		});
+
+		test("should return undefined when no commit SHA env var is set", ({
+			expect,
+		}) => {
+			expect(getCommitSha()).toBeUndefined();
 		});
 	});
 
@@ -292,6 +811,7 @@ describe("wrangler preview", () => {
 	describe("preview command", () => {
 		beforeEach(() => {
 			vi.stubEnv("CI", undefined);
+			clearPreviewMetadataEnvs();
 			mkdirSync("src", { recursive: true });
 			writeFileSync(
 				"src/index.ts",
@@ -842,8 +1362,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1087,10 +1608,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -1125,8 +1643,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1148,10 +1667,7 @@ describe("wrangler preview", () => {
 			const mainModule = deploymentRequestBody?.modules?.find(
 				(module) => module.name === deploymentRequestBody?.main_module
 			);
-			const code = Buffer.from(
-				mainModule?.content_base64 ?? "",
-				"base64"
-			).toString("utf8");
+			const code = decodeModuleContent(mainModule);
 
 			expect(code).toContain("redirected-message");
 		});
@@ -1244,10 +1760,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -1293,8 +1806,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -1379,11 +1893,10 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment URLs:");
 			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
+			expect(std.out).not.toContain("no active URLs");
 		});
 
-		test("should show compact success output when URL arrays are empty", async ({
-			expect,
-		}) => {
+		test("should note when URL arrays are empty", async ({ expect }) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1447,6 +1960,9 @@ describe("wrangler preview", () => {
 				"Preview: empty-urls-preview (new)",
 				"Deployment ID: deployment-id-empty-urls",
 			]);
+			expect(std.out).toContain(
+				"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information"
+			);
 		});
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
@@ -1785,8 +2301,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 
 						return HttpResponse.json(
 							{
@@ -1940,10 +2457,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2039,10 +2555,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as Record<
-							string,
-							unknown
-						>;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2068,6 +2583,1633 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.env).not.toHaveProperty("ASSETS");
 		});
 
+		test("should include containers in deployment metadata and create a preview-scoped container application", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			let createdApplication: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-containers",
+									name: "feature/my-branch",
+									slug: "feature-my-branch",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-containers",
+									preview_id: "preview-id-containers",
+									preview_name: "feature/my-branch",
+									urls: ["https://containers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) => {
+					createdApplication = (await request.json()) as Record<
+						string,
+						unknown
+					>;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...createdApplication },
+					});
+				})
+			);
+			await runWrangler("preview --name feature/my-branch");
+			expect(deploymentRequestBody?.containers).toEqual([
+				{ class_name: "MyContainer" },
+			]);
+			expect(createdApplication).toMatchObject({
+				name: "test-worker_feature-my-branch_MyContainer",
+				durable_objects: { namespace_id: "preview-do-ns-id" },
+			});
+		});
+
+		test("should name applications from the resolved worker name", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export class OtherContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			// No top-level `name`: the worker name arrives via --worker-name, and
+			// the generated application name must use it.
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [
+								{ name: "MY_CONTAINER", class_name: "MyContainer" },
+								{ name: "OTHER_CONTAINER", class_name: "OtherContainer" },
+							],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+							{
+								class_name: "OtherContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			const createdApplications: Record<string, unknown>[] = [];
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-containers",
+									name: "feature/my-branch",
+									slug: "feature-my-branch",
+									urls: ["https://test-preview.cli-worker.cloudflare.app"],
+									worker_name: "cli-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-containers",
+									preview_id: "preview-id-containers",
+									preview_name: "feature/my-branch",
+									urls: ["https://containers.cli-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+										OTHER_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "OtherContainer",
+											namespace_id: "other-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) => {
+					const application = (await request.json()) as Record<string, unknown>;
+					createdApplications.push(application);
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...application },
+					});
+				})
+			);
+			await runWrangler(
+				"preview --name feature/my-branch --worker-name cli-worker"
+			);
+			expect(createdApplications.map((a) => a.name)).toEqual([
+				"cli-worker_feature-my-branch_MyContainer",
+				"cli-worker_feature-my-branch_OtherContainer",
+			]);
+		});
+
+		test.for([
+			{
+				label: "the top-level config when the preview sets none",
+				previewOverrides: {},
+				expected: { logs: { enabled: true } },
+			},
+			{
+				label: "the preview config, which wins over the top-level one",
+				previewOverrides: { observability: { enabled: false } },
+				expected: undefined,
+			},
+		])(
+			"should take container observability from $label",
+			async ({ previewOverrides, expected }, { expect }) => {
+				writeFileSync(
+					"src/index.ts",
+					"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+				);
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "cli-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						observability: { enabled: true },
+						previews: {
+							...previewOverrides,
+							durable_objects: {
+								bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+							},
+							containers: [
+								{
+									class_name: "MyContainer",
+									image: "registry.cloudflare.com/some-account-id/test:latest",
+								},
+							],
+						},
+					})
+				);
+				vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+				const createdApplications: Record<string, unknown>[] = [];
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
+								},
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "preview-id-containers",
+										name: "feature/my-branch",
+										slug: "feature-my-branch",
+										urls: ["https://test-preview.cli-worker.cloudflare.app"],
+										worker_name: "cli-worker",
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "deployment-id-containers",
+										preview_id: "preview-id-containers",
+										preview_name: "feature/my-branch",
+										urls: ["https://containers.cli-worker.cloudflare.app"],
+										compatibility_date: "2025-01-01",
+										env: {
+											MY_CONTAINER: {
+												type: "durable_object_namespace",
+												class_name: "MyContainer",
+												namespace_id: "preview-do-ns-id",
+											},
+										},
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					),
+					http.get("*/me", () =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								external_account_id: "some-account-id",
+								limits: { disk_mb_per_deployment: 2000 },
+							},
+						})
+					),
+					http.get("*/applications", () =>
+						HttpResponse.json({ success: true, result: [] })
+					),
+					http.post("*/applications", async ({ request }) => {
+						const application = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						createdApplications.push(application);
+						return HttpResponse.json({
+							success: true,
+							result: { id: "app-id", ...application },
+						});
+					})
+				);
+				await runWrangler("preview --name feature/my-branch");
+				expect(createdApplications).toHaveLength(1);
+				const configuration = createdApplications[0]?.configuration as
+					| { observability?: unknown }
+					| undefined;
+				expect(configuration?.observability).toEqual(expected);
+			}
+		);
+
+		// `migrations` and `exports` are mutually exclusive, so each declaration
+		// path needs its own config.
+		test.for([
+			{
+				label: "migrations",
+				declaration: {
+					migrations: [{ tag: "v1", new_sqlite_classes: ["MyContainer"] }],
+				},
+			},
+			{
+				label: "exports",
+				declaration: {
+					exports: {
+						MyContainer: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		])(
+			"should deploy containers for a Durable Object declared by $label with no preview binding",
+			async ({ declaration }, { expect }) => {
+				writeFileSync(
+					"src/index.ts",
+					"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+				);
+				// `MyContainer` is not bound under `previews.durable_objects`. It is
+				// still implemented by this script and reachable over `ctx.exports`,
+				// so it owns a container application.
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						...declaration,
+						previews: {
+							containers: [
+								{
+									class_name: "MyContainer",
+									image: "registry.cloudflare.com/some-account-id/test:latest",
+								},
+							],
+						},
+					})
+				);
+				vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+				const createdApplications: Record<string, unknown>[] = [];
+				let deploymentRequest: Record<string, unknown> = {};
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
+								},
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "preview-id-ctx-exports",
+										name: "test-preview",
+										slug: "test-preview",
+										urls: ["https://test-preview.test-worker.cloudflare.app"],
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						async ({ request }) => {
+							deploymentRequest = (await readPreviewDeploymentRequest(
+								request
+							)) as Record<string, unknown>;
+							return HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "deployment-id-ctx-exports",
+										preview_id: "preview-id-ctx-exports",
+										preview_name: "test-preview",
+										urls: ["https://test-preview.test-worker.cloudflare.app"],
+										compatibility_date: "2025-01-01",
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							);
+						}
+					),
+					http.get("*/me", () =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								external_account_id: "some-account-id",
+								limits: { disk_mb_per_deployment: 2000 },
+							},
+						})
+					),
+					http.get("*/applications", () =>
+						HttpResponse.json({ success: true, result: [] })
+					),
+					http.post("*/applications", async ({ request }) => {
+						const application = (await request.json()) as Record<
+							string,
+							unknown
+						>;
+						createdApplications.push(application);
+						return HttpResponse.json({
+							success: true,
+							result: { id: "app-id", ...application },
+						});
+					}),
+					// The class is unbound, so its namespace is not in the deployment
+					// response and has to be resolved from the namespaces list. The
+					// parent Worker's own namespace shares both the class name and the
+					// `script`, so only the preview id tells them apart.
+					http.get(
+						"*/accounts/:accountId/workers/durable_objects/namespaces",
+						() =>
+							HttpResponse.json({
+								success: true,
+								result: [
+									{
+										id: "parent-do-ns-id",
+										class: "MyContainer",
+										name: "test-worker_MyContainer",
+										script: "test-worker",
+										useSqlite: true,
+									},
+									{
+										id: "preview-do-ns-id",
+										class: "MyContainer",
+										name: "test-worker_test-preview_MyContainer",
+										script: "test-worker",
+										useSqlite: true,
+										preview: {
+											id: "preview-id-ctx-exports",
+											slug: "test-preview",
+											name: "test-preview",
+										},
+									},
+								],
+							})
+					)
+				);
+				await runWrangler("preview --name test-preview");
+				expect(createdApplications.map((a) => a.name)).toEqual([
+					"test-worker_test-preview_MyContainer",
+				]);
+				// The deployment must also declare the class as container-backed, or
+				// the runtime will not populate `ctx.container` on it.
+				expect(deploymentRequest.containers).toEqual([
+					{ class_name: "MyContainer" },
+				]);
+			}
+		);
+
+		test("should keep --json output parseable while deploying containers", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let createdApplication: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-json-containers",
+									name: "feature/my-branch",
+									slug: "feature-my-branch",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-json-containers",
+									preview_id: "preview-id-json-containers",
+									preview_name: "feature/my-branch",
+									urls: ["https://containers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) => {
+					createdApplication = (await request.json()) as Record<
+						string,
+						unknown
+					>;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...createdApplication },
+					});
+				})
+			);
+			// The container progress output reaches stdout through logRaw rather
+			// than console.log, so it has to be captured from the stream.
+			const stdoutWrite = vi
+				.spyOn(streams.stdout, "write")
+				.mockImplementation(() => true);
+			await runWrangler("preview --name feature/my-branch --json");
+
+			// The container application is still created, so the quiet path
+			// suppresses output without skipping work.
+			expect(createdApplication).toMatchObject({
+				name: "test-worker_feature-my-branch_MyContainer",
+			});
+			expect(stdoutWrite).not.toHaveBeenCalled();
+			const parsed = JSON.parse(std.out) as {
+				preview: { id: string };
+				deployment: { id: string };
+			};
+			expect(parsed.preview.id).toBe("preview-id-json-containers");
+			expect(parsed.deployment.id).toBe("deployment-id-json-containers");
+		});
+
+		// A class may be bound both locally and cross-script. Container options are
+		// resolved by finding the first binding with a matching class name, so a
+		// cross-script binding listed first used to make the container fail as
+		// though another Worker owned it.
+		test("should resolve a container whose class is also bound cross-script earlier in the config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [
+								{
+									name: "FOREIGN_CONTAINER",
+									class_name: "MyContainer",
+									script_name: "owner-worker",
+								},
+								{ name: "MY_CONTAINER", class_name: "MyContainer" },
+							],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let createdApplication: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-containers",
+									name: "feature/my-branch",
+									slug: "feature-my-branch",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-containers",
+									preview_id: "preview-id-containers",
+									preview_name: "feature/my-branch",
+									urls: ["https://containers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										FOREIGN_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "other-worker-do-ns-id",
+											script_name: "owner-worker",
+										},
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", async ({ request }) => {
+					createdApplication = (await request.json()) as Record<
+						string,
+						unknown
+					>;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id", ...createdApplication },
+					});
+				})
+			);
+
+			await runWrangler("preview --name feature/my-branch");
+
+			expect(createdApplication).toMatchObject({
+				name: "test-worker_feature-my-branch_MyContainer",
+				durable_objects: { namespace_id: "preview-do-ns-id" },
+			});
+		});
+
+		test("should not propagate top-level containers into the preview deployment", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					durable_objects: {
+						bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+					},
+					migrations: [{ tag: "v1", new_sqlite_classes: ["MyContainer"] }],
+					containers: [
+						{
+							class_name: "MyContainer",
+							image: "registry.cloudflare.com/some-account-id/test:latest",
+						},
+					],
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+					},
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			let listApplicationsCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-no-inherit",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-no-inherit",
+									preview_id: "preview-id-no-inherit",
+									preview_name: "test-preview",
+									urls: ["https://noinherit.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {
+										MY_CONTAINER: {
+											type: "durable_object_namespace",
+											class_name: "MyContainer",
+											namespace_id: "preview-do-ns-id",
+										},
+									},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.get("*/applications", () => {
+					listApplicationsCalls++;
+					return HttpResponse.json({ success: true, result: [] });
+				})
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody).not.toHaveProperty("containers");
+			expect(listApplicationsCalls).toBe(0);
+		});
+
+		test("should omit containers from deployment when none are configured", async ({
+			expect,
+		}) => {
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-no-containers",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-no-containers",
+									preview_id: "preview-id-no-containers",
+									preview_name: "test-preview",
+									urls: ["https://nocontainers.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody).toBeDefined();
+			expect(deploymentRequestBody).not.toHaveProperty("containers");
+		});
+
+		test("should exclude containers whose DO binding has script_name set", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [
+								{
+									name: "EXTERNAL_CONTAINER",
+									class_name: "ExternalContainer",
+									script_name: "owner-worker",
+								},
+							],
+						},
+						containers: [
+							{
+								class_name: "ExternalContainer",
+								image:
+									"registry.cloudflare.com/some-account-id/external:latest",
+							},
+						],
+					},
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			let createApplicationCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-cross-script",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as Record<string, unknown>;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-cross-script",
+									preview_id: "preview-id-cross-script",
+									preview_name: "test-preview",
+									urls: ["https://crossscript.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post("*/applications", () => {
+					createApplicationCalls++;
+					return HttpResponse.json({
+						success: true,
+						result: { id: "app-id" },
+					});
+				})
+			);
+			await runWrangler("preview --name test-preview");
+			expect(deploymentRequestBody).not.toHaveProperty("containers");
+			expect(createApplicationCalls).toBe(0);
+		});
+
+		test("should fail before creating the preview deployment when a container's class_name matches no Durable Object class", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						// Typo: no migration, export, or preview binding declares
+						// "MyContainerTypo", so this entry resolves to nothing.
+						containers: [
+							{
+								class_name: "MyContainerTypo",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			let createDeploymentCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-unmatched-class",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() => {
+						createDeploymentCalls++;
+						return HttpResponse.json(
+							{ success: true, result: {} },
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			let errorMessage = "";
+			try {
+				await runWrangler("preview --name test-preview");
+			} catch (e) {
+				errorMessage = (e as Error).message;
+			}
+			expect(errorMessage).toContain(
+				'The container class_name "MyContainerTypo" in "previews.containers" does not match any Durable Object class in your wrangler.json file.'
+			);
+			expect(errorMessage).toContain(
+				'Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".'
+			);
+			expect(createDeploymentCalls).toBe(0);
+		});
+
+		test("should fail before creating the preview deployment when a container omits class_name", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			// A Durable Object may name its container instead of the other way
+			// around, but that reference resolves against the top level
+			// `containers` array, so it cannot reach a preview container.
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					containers: [
+						{
+							name: "my-container",
+							image: "registry.cloudflare.com/some-account-id/test:latest",
+						},
+					],
+					exports: {
+						MyContainer: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "my-container",
+						},
+					},
+					previews: {
+						containers: [
+							{
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			let createDeploymentCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-missing-class-name",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() => {
+						createDeploymentCalls++;
+						return HttpResponse.json(
+							{ success: true, result: {} },
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			let errorMessage = "";
+			try {
+				await runWrangler("preview --name test-preview");
+			} catch (e) {
+				errorMessage = (e as Error).message;
+			}
+			expect(errorMessage).toContain(
+				'A container entry in "previews.containers" is missing "class_name".'
+			);
+			expect(createDeploymentCalls).toBe(0);
+		});
+
+		test("should throw a UserError when no Durable Object namespace can be found for a container's class", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/some-account-id/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-missing-ns",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-missing-ns",
+									preview_id: "preview-id-missing-ns",
+									preview_name: "test-preview",
+									urls: ["https://missingns.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				// The only namespace for this class belongs to a different preview,
+				// so the fallback must reject it rather than attach the container to
+				// another preview's storage.
+				http.get(
+					"*/accounts/:accountId/workers/durable_objects/namespaces",
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: [
+								{
+									id: "other-preview-do-ns-id",
+									class: "MyContainer",
+									name: "test-worker_other-preview_MyContainer",
+									script: "test-worker",
+									useSqlite: true,
+									preview: {
+										id: "some-other-preview-id",
+										slug: "other-preview",
+										name: "other-preview",
+									},
+								},
+							],
+						})
+				)
+			);
+			await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
+				/no Durable Object namespace was found for class "MyContainer" in preview "test-preview"/
+			);
+		});
+
+		test("should fail before creating the preview deployment when a container's image belongs to a different account", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image:
+									"registry.cloudflare.com/ffffffffffffffffffffffffffffffff/test:latest",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let createDeploymentCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-bad-account",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: [],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() => {
+						createDeploymentCalls++;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-bad-account",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
+				/does not belong to your account/
+			);
+			// Creating the (empty) Preview resource itself is harmless. The
+			// deployment is what actually goes live and would advertise
+			// container-backed DO classes, so it must never be created for a
+			// config that fails container validation.
+			expect(createDeploymentCalls).toBe(0);
+		});
+
+		test("should fail before creating the preview deployment when Docker cannot be launched for a container built from a Dockerfile", async ({
+			expect,
+		}) => {
+			vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/bad-docker-path");
+			writeFileSync(
+				"src/index.ts",
+				"export class MyContainer { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync("Dockerfile", "FROM scratch");
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "MY_CONTAINER", class_name: "MyContainer" }],
+						},
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "./Dockerfile",
+							},
+						],
+					},
+				})
+			);
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			let createDeploymentCalls = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-no-docker",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: [],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() => {
+						createDeploymentCalls++;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-no-docker",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+			let errorMessage = "";
+			try {
+				await runWrangler("preview --name test-preview");
+			} catch (e) {
+				errorMessage = (e as Error).message;
+			}
+			expect(errorMessage).not.toBe("");
+			expect(errorMessage).toContain(
+				"The Docker CLI is needed to build the configured image before creating a preview but could not be launched."
+			);
+			expect(errorMessage).toContain(
+				'set "image" to a prebuilt registry image instead of a Dockerfile path'
+			);
+			expect(createDeploymentCalls).toBe(0);
+		});
+
+		test("should fail before creating the preview deployment when the API token lacks the containers scope", async ({
+			expect,
+		}) => {
+			writeContainerPreviewConfig();
+			// The other container tests grant `containers:write`. Withholding it is
+			// the point of this one: applying containers checks the scope too, but
+			// not until the deployment is already live.
+			vi.spyOn(user, "getScopes").mockReturnValue(["workers:write"]);
+			const onCreateDeployment = vi.fn();
+			mockContainerPreview({
+				previewId: "preview-id-no-scope",
+				onCreateDeployment,
+			});
+			await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
+				/You need 'containers:write'/
+			);
+			expect(onCreateDeployment).not.toHaveBeenCalled();
+		});
+
+		test("should warn that the preview is live when its containers fail to deploy, and still surface the error", async ({
+			expect,
+		}) => {
+			writeContainerPreviewConfig();
+			vi.spyOn(user, "getScopes").mockReturnValue(["containers:write"]);
+			mockContainerPreview({
+				previewId: "preview-id-app-fails",
+				deploymentEnv: {
+					MY_CONTAINER: {
+						type: "durable_object_namespace",
+						class_name: "MyContainer",
+						namespace_id: "preview-do-ns-id",
+					},
+				},
+			});
+			msw.use(
+				http.get("*/me", () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							external_account_id: "some-account-id",
+							limits: { disk_mb_per_deployment: 2000 },
+						},
+					})
+				),
+				http.get("*/applications", () =>
+					HttpResponse.json({ success: true, result: [] })
+				),
+				http.post("*/applications", () =>
+					HttpResponse.json(
+						{
+							success: false,
+							result: null,
+							errors: [{ code: 2000, message: "internal" }],
+						},
+						{ status: 500 }
+					)
+				)
+			);
+			// The deployment is already live once the container apply fails, so the
+			// warning has to say so. The underlying error must still propagate, or
+			// the command would exit 0 on a half-built preview.
+			await expect(runWrangler("preview --name test-preview")).rejects.toThrow(
+				/Error creating application/
+			);
+			// `logger.warn` wraps at 100 columns, so compare on collapsed
+			// whitespace rather than the wrapped form.
+			expect(std.warn.replace(/\s+/g, " ")).toContain(
+				'The preview "test-preview" was created, but its containers did not come up.'
+			);
+		});
+
 		test("should include source maps in deployment modules when upload_source_maps is enabled", async ({
 			expect,
 		}) => {
@@ -2083,11 +4225,7 @@ describe("wrangler preview", () => {
 
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
-						modules?: Array<{
-							name: string;
-							content_type: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  })
 				| undefined;
 
@@ -2125,8 +4263,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2148,13 +4287,13 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --name test-preview");
 
-			expect(deploymentRequestBody?.modules).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({
-						name: expect.stringMatching(/\.map$/),
-						content_type: "application/source-map",
-					}),
-				])
+			const sourceMap = deploymentRequestBody?.modules?.find((module) =>
+				module.name.endsWith(".map")
+			);
+
+			expect(sourceMap?.content_type).toBe("application/source-map");
+			expect(JSON.parse(decodeModuleContent(sourceMap))).toEqual(
+				expect.objectContaining({ version: 3 })
 			);
 		});
 
@@ -2181,10 +4320,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						main_module?: string;
-						modules?: Array<{
-							name: string;
-							content_base64: string;
-						}>;
+						modules?: PreviewDeploymentModulePart[];
 				  }
 				| undefined;
 
@@ -2219,8 +4355,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -2242,10 +4379,7 @@ describe("wrangler preview", () => {
 			const mainModule = deploymentRequestBody?.modules?.find(
 				(module) => module.name === deploymentRequestBody?.main_module
 			);
-			const code = Buffer.from(
-				mainModule?.content_base64 ?? "",
-				"base64"
-			).toString("utf8");
+			const code = decodeModuleContent(mainModule);
 			expect(code).toContain("preview-value");
 			expect(code).not.toContain("top-level");
 		});
@@ -2314,8 +4448,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -2407,8 +4542,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json({
 							success: true,
 							result: {
@@ -2519,8 +4655,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2627,8 +4764,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2657,12 +4795,28 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.migrations?.old_tag).toBeUndefined();
 		});
 
-		test("should include deployment annotations from message and tag args", async ({
+		test("should include deployment annotations from metadata and args", async ({
 			expect,
 		}) => {
+			vi.stubEnv(
+				"CI_PROJECT_URL",
+				"https://gitlab.example.com/acme/worker-project.git"
+			);
+			vi.stubEnv("CI_MERGE_REQUEST_IID", "13");
+			vi.stubEnv("CI_MERGE_REQUEST_TITLE", "Add a cool new feature");
+			vi.stubEnv("CI_COMMIT_SHA", "abc123def456");
+
 			let deploymentRequestBody:
 				| (Record<string, unknown> & {
-						annotations?: Record<string, string>;
+						annotations?: {
+							"workers/commit_sha"?: string;
+							"workers/message"?: string;
+							"workers/pull_request_number"?: string;
+							"workers/pull_request_title"?: string;
+							"workers/pull_request_url"?: string;
+							"workers/repository_url"?: string;
+							"workers/tag"?: string;
+						};
 				  })
 				| undefined;
 
@@ -2700,8 +4854,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2726,9 +4881,23 @@ describe("wrangler preview", () => {
 			);
 
 			expect(deploymentRequestBody?.annotations).toEqual({
+				"workers/commit_sha": "abc123def456",
 				"workers/message": "preview note",
+				"workers/pull_request_number": "13",
+				"workers/pull_request_title": "Add a cool new feature",
+				"workers/pull_request_url":
+					"https://gitlab.example.com/acme/worker-project/-/merge_requests/13",
+				"workers/repository_url":
+					"https://gitlab.example.com/acme/worker-project",
 				"workers/tag": "v1.2.3",
 			});
+			expect(std.out).toContain("Pull Request:");
+			expect(std.out).toContain(
+				"https://gitlab.example.com/acme/worker-project/-/merge_requests/13"
+			);
+			expect(std.out).not.toContain("repository_url");
+			expect(std.out).not.toContain("pull_request_title");
+			expect(std.out).not.toContain("Add a cool new feature");
 		});
 
 		test("should fall back to HEAD commit metadata for annotations in CI", async ({
@@ -2781,8 +4950,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2822,7 +4992,10 @@ describe("wrangler preview", () => {
 					compatibility_date: "2025-01-01",
 					placement: { mode: "smart" },
 					previews: {
-						observability: { enabled: true },
+						observability: {
+							enabled: true,
+							redact_query_string: true,
+						},
 						vars: { TOP_LEVEL_PREVIEW: "top-value" },
 						kv_namespaces: [{ binding: "TOP_KV", id: "top-kv-id" }],
 					},
@@ -2834,7 +5007,10 @@ describe("wrangler preview", () => {
 
 			let createPreviewRequestBody:
 				| {
-						observability?: { enabled?: boolean };
+						observability?: {
+							enabled?: boolean;
+							redact_query_string?: boolean;
+						};
 				  }
 				| undefined;
 			let deploymentRequestBody:
@@ -2886,8 +5062,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -2911,6 +5088,7 @@ describe("wrangler preview", () => {
 
 			expect(createPreviewRequestBody?.observability).toEqual({
 				enabled: true,
+				redact_query_string: true,
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
 			expect(deploymentRequestBody?.placement).toEqual({ mode: "smart" });
@@ -3010,8 +5188,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3105,8 +5284,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -3189,8 +5369,9 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody =
-							(await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,

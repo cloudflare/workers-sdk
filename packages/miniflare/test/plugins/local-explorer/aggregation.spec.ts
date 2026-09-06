@@ -8,6 +8,7 @@ import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	disposeWithRetry,
 	singleModuleManifest,
+	useTmp,
 	waitForWorkersInRegistry,
 } from "../../test-shared";
 
@@ -65,7 +66,7 @@ describe("Cross-process aggregation", () => {
 							DB_A: { type: "d1", id: "db-a" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDO",
 							},
 							BUCKET_A: { type: "r2", name: "bucket-a" },
@@ -101,7 +102,7 @@ describe("Cross-process aggregation", () => {
 							DB_B: { type: "d1", id: "db-b" },
 							OTHER_DO: {
 								type: "durable-object",
-								workerName: "worker-b",
+								worker: "worker-b",
 								exportName: "OtherDO",
 							},
 							BUCKET_B: { type: "r2", name: "bucket-b" },
@@ -129,7 +130,7 @@ describe("Cross-process aggregation", () => {
 	});
 
 	describe("KV namespace aggregation", () => {
-		test("lists KV namespaces from both instances when queried from instance A", async ({
+		test("only lists local KV namespaces without shared storage", async ({
 			expect,
 		}) => {
 			const response = await instanceA.dispatchFetch(
@@ -148,19 +149,15 @@ describe("Cross-process aggregation", () => {
 				      "id": "kv-a-2",
 				      "title": "KV_A_2",
 				    },
-				    {
-				      "id": "kv-b-1",
-				      "title": "KV_B_1",
-				    },
 				  ],
 				  "result_info": {
-				    "count": 3,
+				    "count": 2,
 				  },
 				}
 			`);
 		});
 
-		test("lists KV namespaces from both instances when queried from instance B", async ({
+		test("only lists its local KV namespaces from instance B", async ({
 			expect,
 		}) => {
 			const response = await instanceB.dispatchFetch(
@@ -172,28 +169,18 @@ describe("Cross-process aggregation", () => {
 				{
 				  "result": [
 				    {
-				      "id": "kv-a-1",
-				      "title": "KV_A_1",
-				    },
-				    {
-				      "id": "kv-a-2",
-				      "title": "KV_A_2",
-				    },
-				    {
 				      "id": "kv-b-1",
 				      "title": "KV_B_1",
 				    },
 				  ],
 				  "result_info": {
-				    "count": 3,
+				    "count": 1,
 				  },
 				}
 			`);
 		});
 
-		test("proxies KV key list to peer instance when namespace not found locally", async ({
-			expect,
-		}) => {
+		test("resolves arbitrary KV namespace IDs locally", async ({ expect }) => {
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
 			await kvB.put("peer-key-1", "value1");
 
@@ -204,13 +191,11 @@ describe("Cross-process aggregation", () => {
 
 			expect(data).toMatchObject({
 				success: true,
-				result: expect.arrayContaining([
-					expect.objectContaining({ name: "peer-key-1" }),
-				]),
+				result: [],
 			});
 		});
 
-		test("proxies KV value get to peer instance when namespace not found locally", async ({
+		test("does not read an arbitrary KV namespace ID from a peer", async ({
 			expect,
 		}) => {
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
@@ -220,15 +205,14 @@ describe("Cross-process aggregation", () => {
 				`${BASE_URL}/storage/kv/namespaces/kv-b-1/values/peer-value-key`
 			);
 
-			expect(response.status).toBe(200);
-			expect(await response.text()).toMatchInlineSnapshot(
-				`"peer-value-content"`
-			);
+			expect(response.status).toBe(404);
+			expect(await response.json()).toMatchObject({
+				errors: [expect.objectContaining({ code: 10009 })],
+				success: false,
+			});
 		});
 
-		test("proxies KV value put to peer instance when namespace not found locally", async ({
-			expect,
-		}) => {
+		test("writes an arbitrary KV namespace ID locally", async ({ expect }) => {
 			const response = await instanceA.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/kv-b-1/values/cross-write-key`,
 				{
@@ -241,12 +225,14 @@ describe("Cross-process aggregation", () => {
 			await response.json(); // Consume body
 
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
-			expect(await kvB.get("cross-write-key")).toMatchInlineSnapshot(
-				`"cross-written-value"`
+			expect(await kvB.get("cross-write-key")).toBeNull();
+			const localResponse = await instanceA.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/kv-b-1/values/cross-write-key`
 			);
+			expect(await localResponse.text()).toBe("cross-written-value");
 		});
 
-		test("proxies KV value delete to peer instance when namespace not found locally", async ({
+		test("does not delete from an arbitrary KV namespace ID on a peer", async ({
 			expect,
 		}) => {
 			const kvB = await instanceB.getKVNamespace("KV_B_1");
@@ -260,35 +246,28 @@ describe("Cross-process aggregation", () => {
 			expect(response.status).toBe(200);
 			await response.json(); // Consume body
 
-			expect(await kvB.get("to-delete-key")).toBeNull();
+			expect(await kvB.get("to-delete-key")).toBe("value");
 		});
 
-		test("returns 404 when resource not found locally or on peers", async ({
+		test("returns an empty list for an arbitrary KV namespace ID", async ({
 			expect,
 		}) => {
 			const response = await instanceA.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/non-existent/keys`
 			);
 
-			expect(response.status).toBe(404);
-			expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "errors": [
-			    {
-			      "code": 10013,
-			      "message": "list keys: 'namespace not found'",
-			    },
-			  ],
-			  "messages": [],
-			  "result": null,
-			  "success": false,
-			}
-		`);
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				result: [],
+				success: true,
+			});
 		});
 	});
 
 	describe("D1 database aggregation", () => {
-		test("lists D1 databases from both instances", async ({ expect }) => {
+		test("only lists local D1 databases without shared storage", async ({
+			expect,
+		}) => {
 			const response = await instanceA.dispatchFetch(`${BASE_URL}/d1/database`);
 			const data = (await response.json()) as ListResponse;
 
@@ -300,22 +279,15 @@ describe("Cross-process aggregation", () => {
 				      "uuid": "db-a",
 				      "version": "production",
 				    },
-				    {
-				      "name": "DB_B",
-				      "uuid": "db-b",
-				      "version": "production",
-				    },
 				  ],
 				  "result_info": {
-				    "count": 2,
+				    "count": 1,
 				  },
 				}
 			`);
 		});
 
-		test("proxies D1 raw query to peer instance when database not found locally", async ({
-			expect,
-		}) => {
+		test("resolves arbitrary D1 database IDs locally", async ({ expect }) => {
 			const dbB = await instanceB.getD1Database("DB_B");
 			await dbB.exec(
 				"CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY, name TEXT)"
@@ -329,7 +301,7 @@ describe("Cross-process aggregation", () => {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						sql: "SELECT name FROM test_table",
+						sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'test_table'",
 						params: [],
 					}),
 				}
@@ -346,11 +318,7 @@ describe("Cross-process aggregation", () => {
 				  "columns": [
 				    "name",
 				  ],
-				  "rows": [
-				    [
-				      "peer-row",
-				    ],
-				  ],
+				  "rows": [],
 				}
 			`);
 		});
@@ -387,7 +355,9 @@ describe("Cross-process aggregation", () => {
 	});
 
 	describe("r2 bucket aggregation", () => {
-		test("lists r2 buckets from both instances", async ({ expect }) => {
+		test("only lists local R2 buckets without shared storage", async ({
+			expect,
+		}) => {
 			const response = await instanceA.dispatchFetch(`${BASE_URL}/r2/buckets`);
 			const data = (await response.json()) as ListResponse;
 
@@ -397,21 +367,26 @@ describe("Cross-process aggregation", () => {
 				    {
 				      "name": "bucket-a",
 				    },
+				  ],
+				}
+			`);
+			expect(data.result_info).toMatchInlineSnapshot(`
+				{
+				  "count": 1,
+				}
+			`);
+
+			const responseB = await instanceB.dispatchFetch(`${BASE_URL}/r2/buckets`);
+			const dataB = (await responseB.json()) as ListResponse;
+			expect(dataB.result).toMatchInlineSnapshot(`
+				{
+				  "buckets": [
 				    {
 				      "name": "bucket-b",
 				    },
 				  ],
 				}
 			`);
-			expect(data.result_info).toMatchInlineSnapshot(`
-				{
-				  "count": 2,
-				}
-			`);
-
-			const responseB = await instanceB.dispatchFetch(`${BASE_URL}/r2/buckets`);
-			const dataB = (await responseB.json()) as ListResponse;
-			expect(dataB).toEqual(data);
 		});
 	});
 });
@@ -420,13 +395,19 @@ describe("Multi-worker peer deduplication", () => {
 	let registryPath: string;
 	let instanceA: Miniflare;
 	let instanceB: Miniflare;
+	let instanceC: Miniflare;
+	let instanceD: Miniflare;
 
 	beforeAll(async () => {
 		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-multiworker-"));
+		const persistencePath = await useTmp();
 
 		instanceA = new Miniflare({
 			inspectorPort: 0,
 			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistencePath,
+			isolatedResourcePersistencePath: await useTmp(),
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
@@ -452,6 +433,9 @@ describe("Multi-worker peer deduplication", () => {
 		instanceB = new Miniflare({
 			inspectorPort: 0,
 			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistencePath,
+			isolatedResourcePersistencePath: await useTmp(),
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
@@ -486,11 +470,67 @@ describe("Multi-worker peer deduplication", () => {
 		});
 		await instanceB.ready;
 
+		// A separate peer advertises the same namespace as worker-b1. Since both
+		// peers share storage, the namespace should only appear once.
+		instanceD = new Miniflare({
+			inspectorPort: 0,
+			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: persistencePath,
+			isolatedResourcePersistencePath: await useTmp(),
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-d",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker D"); } }`
+						),
+						env: {
+							KV_B1: { type: "kv", id: "kv-b1" },
+						},
+					},
+				},
+			],
+		});
+		await instanceD.ready;
+
+		instanceC = new Miniflare({
+			inspectorPort: 0,
+			unsafeLocalExplorer: true,
+			unsafeEnableSharedStorage: true,
+			resourcePersistencePath: await useTmp(),
+			isolatedResourcePersistencePath: await useTmp(),
+			unsafeDevRegistryPath: registryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						type: "worker",
+						name: "worker-c",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("Worker C"); } }`
+						),
+						env: {
+							KV_C: { type: "kv", id: "kv-c" },
+						},
+					},
+				},
+			],
+		});
+		await instanceC.ready;
+
 		// Wait for all workers to register in the dev registry
 		await waitForWorkersInRegistry(registryPath, [
 			"worker-a",
 			"worker-b1",
 			"worker-b2",
+			"worker-c",
+			"worker-d",
 		]);
 	});
 
@@ -498,11 +538,13 @@ describe("Multi-worker peer deduplication", () => {
 		await Promise.all([
 			disposeWithRetry(instanceA),
 			disposeWithRetry(instanceB),
+			disposeWithRetry(instanceC),
+			disposeWithRetry(instanceD),
 		]);
 		removeDirSync(registryPath);
 	});
 
-	test("does not duplicate results when peer has multiple workers", async ({
+	test("only lists resources from peers in the same shared-storage scope", async ({
 		expect,
 	}) => {
 		const response = await instanceA.dispatchFetch(
@@ -510,8 +552,8 @@ describe("Multi-worker peer deduplication", () => {
 		);
 		const data = (await response.json()) as ListResponse;
 
-		// Should have exactly 3 namespaces (kv-a, kv-b1, kv-b2)
-		// NOT 5 which would happen without URL deduplication
+		// The multi-worker process is fetched once, the duplicate kv-b1 advertised
+		// by worker-d is collapsed, and kv-c's different storage scope is excluded.
 		expect(normalizeListResponse(data)).toMatchInlineSnapshot(`
 			{
 			  "result": [
@@ -567,7 +609,7 @@ describe("Same ID across multiple instances with different persistence directori
 							MY_DB: { type: "d1", id: "shared-db-id" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDO",
 							},
 						},
@@ -598,7 +640,7 @@ describe("Same ID across multiple instances with different persistence directori
 							MY_DB: { type: "d1", id: "shared-db-id" },
 							MY_DO: {
 								type: "durable-object",
-								workerName: "worker-a",
+								worker: "worker-a",
 								exportName: "MyDO",
 							},
 						},

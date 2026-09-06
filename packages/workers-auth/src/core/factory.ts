@@ -570,6 +570,15 @@ ${accounts
 				);
 			}
 
+			// This command run made this temporary account. It is not an earlier
+			// login, so use it again. Some commands call `requireAuth` more than
+			// one time, for example `d1 migrations apply --remote`. Without this
+			// check, the second call fails at the test below.
+			const latchedTemporaryAccount = oauthFlow.getActiveTemporaryAccount();
+			if (latchedTemporaryAccount) {
+				return latchedTemporaryAccount.account.id;
+			}
+
 			// `--temporary` is only for unauthenticated use. If any credentials are
 			// already available (env, global key, or a stored OAuth token), refuse
 			// rather than silently provisioning a throwaway account alongside them.

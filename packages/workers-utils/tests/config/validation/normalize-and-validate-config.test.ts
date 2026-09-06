@@ -8146,6 +8146,163 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should accept valid default_retention values", ({ expect }) => {
+				const validRetentions = [
+					{ success_retention: "3 days" },
+					{ error_retention: "1 hour" },
+					{ success_retention: 86400000 },
+					{ success_retention: "7 days", error_retention: 3600000 },
+				];
+
+				for (const default_retention of validRetentions) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							workflows: [
+								{
+									binding: "MY_WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									default_retention,
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(
+						diagnostics.hasErrors(),
+						`expected ${JSON.stringify(default_retention)} to be valid, got: ${diagnostics.renderErrors()}`
+					).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+				}
+			});
+
+			it("should error if default_retention is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: "3 days",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings should, optionally, have an object "default_retention" field but got {"binding":"MY_WORKFLOW","name":"my-workflow","class_name":"MyWorkflow","default_retention":"3 days"}."
+				`);
+			});
+
+			// The duration grammar belongs to the Workflows API, which rejects unknown units at deploy
+			// time. Validating it here too would reject values that a newer API version accepts.
+			it("should not police the duration grammar", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "3 bananas" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if a default_retention value is an empty string", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { success_retention: "" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.success_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ""."
+				`);
+			});
+
+			it("should error if a default_retention value is negative", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { error_retention: -1 },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("should warn on unexpected default_retention fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								default_retention: { retention: "3 days" },
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in workflows[0].default_retention field: "retention""
+				`);
+			});
+
 			it("should warn on unexpected fields", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -11485,6 +11642,7 @@ describe("normalizeAndValidateConfig()", () => {
 						observability: {
 							notEnabled: "true",
 							head_sampling_rate: true,
+							redact_query_string: "true",
 						},
 					} as unknown as RawConfig,
 					undefined,
@@ -11502,7 +11660,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "observability.enabled" or "observability.logs.enabled" or "observability.traces.enabled" is required.
-					  - Expected "observability.head_sampling_rate" to be of type number but got true."
+					  - Expected "observability.head_sampling_rate" to be of type number but got true.
+					  - Expected "observability.redact_query_string" to be of type boolean but got "true"."
 				`);
 			});
 
@@ -11528,6 +11687,7 @@ describe("normalizeAndValidateConfig()", () => {
 						observability: {
 							enabled: true,
 							head_sampling_rate: 1,
+							redact_query_string: true,
 							logs: {
 								enabled: true,
 								head_sampling_rate: 1,
@@ -12720,6 +12880,173 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderErrors()).toContain(
 					'The field "previews.browser" should be an object'
+				);
+			});
+
+			it("should accept previews.containers without a name", ({ expect }) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.containers in a named environment that relies on the inherited top-level name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					env: {
+						staging: {
+							previews: {
+								containers: [
+									{
+										class_name: "MyContainer",
+										image: "registry.cloudflare.com/test:latest",
+									},
+								],
+							},
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.containers when the worker name is omitted", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).not.toContain(
+					'Must have either a top level "name"'
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject a previews.containers entry that sets a name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+							{
+								class_name: "OtherContainer",
+								image: "registry.cloudflare.com/other:latest",
+								name: "custom-name",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.containers[1].name" cannot be set'
+				);
+			});
+
+			it("should reject two previews.containers entries sharing a class_name", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/test:latest",
+							},
+							{
+								class_name: "MyContainer",
+								image: "registry.cloudflare.com/other:latest",
+							},
+						],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.containers" declares more than one container for the Durable Object class "MyContainer"'
+				);
+			});
+
+			it("should reject previews.containers entries missing image", ({
+				expect,
+			}) => {
+				const rawConfig = {
+					name: "test-worker",
+					previews: {
+						containers: [{ class_name: "MyContainer" }],
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'"containers.image" field must be defined'
 				);
 			});
 		});

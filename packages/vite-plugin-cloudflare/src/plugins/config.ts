@@ -223,7 +223,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 							entryWorkerNewConfig,
 							`No config found for "${entryWorkerEnvironmentName}" environment`
 						);
-						await writeWorkerConfig(builder.config.root, entryWorkerNewConfig);
+						await writeWorkerConfig({
+							root: builder.config.root,
+							config: entryWorkerNewConfig,
+						});
 					} else {
 						const entryWorkerConfig = ctx.getWorkerConfig(
 							entryWorkerEnvironmentName

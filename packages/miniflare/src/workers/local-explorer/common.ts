@@ -71,7 +71,9 @@ export function coerceValue(
 ): unknown {
 	// Unwrap optional/default to get inner type
 	if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
-		if (value === undefined) return value;
+		if (value === undefined) {
+			return value;
+		}
 		return coerceValue(schema._zod.def.innerType as z.ZodType, value, path);
 	}
 
@@ -91,8 +93,12 @@ export function coerceValue(
 	}
 
 	if (schema instanceof z.ZodBoolean && typeof value === "string") {
-		if (value === "true") return true;
-		if (value === "false") return false;
+		if (value === "true") {
+			return true;
+		}
+		if (value === "false") {
+			return false;
+		}
 		throw new z.ZodError([
 			{
 				code: "invalid_type",

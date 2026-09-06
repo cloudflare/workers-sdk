@@ -72,7 +72,9 @@ export type SourceMapper = (
 
 let sourceMapper: SourceMapper;
 export function getSourceMapper(): SourceMapper {
-	if (sourceMapper !== undefined) return sourceMapper;
+	if (sourceMapper !== undefined) {
+		return sourceMapper;
+	}
 
 	const support = getFreshSourceMapSupport();
 	const originalPrepareStackTrace = Error.prepareStackTrace;

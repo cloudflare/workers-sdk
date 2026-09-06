@@ -191,14 +191,20 @@ async function fetchUploadedVersion(
 	throw new Error("Unable to fetch uploaded Worker version");
 }
 
-type DurableObjectNamespace = {
+export type DurableObjectNamespace = {
 	id: string;
 	class: string;
 	name: string;
 	script: string;
 	useSqlite: boolean;
+	/**
+	 * Set when the namespace belongs to a Worker preview. For those, `script` is
+	 * the parent Worker's name, so `preview.id` is what distinguishes a
+	 * preview's namespace from the parent's and from other previews'.
+	 */
+	preview?: { id: string; slug: string; name: string };
 };
-async function listDurableObjects(
+export async function listDurableObjects(
 	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<DurableObjectNamespace[]> {

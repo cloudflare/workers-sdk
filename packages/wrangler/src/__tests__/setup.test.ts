@@ -166,7 +166,7 @@ describe("wrangler setup", () => {
 		assert(autoconfigOutputEntry);
 
 		if (autoconfigOutputEntry.summary?.wranglerConfig) {
-			// Let's normalize the wrangler config values that are
+			// Let's normalize the Wrangler config values that are
 			// randomly generated or change over time
 			autoconfigOutputEntry.summary.wranglerConfig.name = "test-name";
 			autoconfigOutputEntry.summary.wranglerConfig.compatibility_date =
@@ -194,7 +194,6 @@ describe("wrangler setup", () => {
 			      "enabled": true,
 			    },
 			  },
-			  "wranglerInstall": true,
 			}
 		`);
 	});

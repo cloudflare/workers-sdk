@@ -53,7 +53,9 @@ async function waitForPorts(
 	stream: Readable,
 	options: Abortable & Pick<RuntimeOptions, "requiredSockets">
 ): Promise<SocketPorts | undefined> {
-	if (options?.signal?.aborted) return;
+	if (options?.signal?.aborted) {
+		return;
+	}
 	const lines = rl.createInterface(stream);
 	// Calling `close()` will end the async iterator below and return undefined
 	const abortListener = () => lines.close();
@@ -65,18 +67,24 @@ async function waitForPorts(
 		for await (const line of lines) {
 			const message = ControlMessageSchema.safeParse(JSON.parse(line));
 			// If this was an unrecognised control message, ignore it
-			if (!message.success) continue;
+			if (!message.success) {
+				continue;
+			}
 			const data = message.data;
 			const socket: SocketIdentifier =
 				data.event === "listen-inspector" ? kInspectorSocket : data.socket;
 			const index = requiredSockets.indexOf(socket);
 			// If this wasn't a required socket, ignore it
-			if (index === -1) continue;
+			if (index === -1) {
+				continue;
+			}
 			// Record the port of this socket
 			socketPorts.set(socket, data.port);
 			// Satisfy the requirement, if there are no more, return the ports map
 			requiredSockets.splice(index, 1);
-			if (requiredSockets.length === 0) return socketPorts;
+			if (requiredSockets.length === 0) {
+				return socketPorts;
+			}
 		}
 	} finally {
 		options?.signal?.removeEventListener("abort", abortListener);

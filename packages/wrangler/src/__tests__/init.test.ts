@@ -358,7 +358,6 @@ describe("init", () => {
 				{
 					type: "send_email",
 					name: "EMAIL_BINDING",
-					destination_address: "some@address.com",
 					allowed_destination_addresses: ["some2@address.com"],
 					allowed_sender_addresses: ["some2@address.com"],
 				},
@@ -543,7 +542,6 @@ describe("init", () => {
 				{
 					allowed_sender_addresses: ["some2@address.com"],
 					allowed_destination_addresses: ["some2@address.com"],
-					destination_address: "some@address.com",
 					name: "EMAIL_BINDING",
 				},
 			],
@@ -1131,7 +1129,6 @@ describe("init", () => {
 					  "send_email": [
 					    {
 					      "name": "EMAIL_BINDING",
-					      "destination_address": "some@address.com",
 					      "allowed_destination_addresses": [
 					        "some2@address.com"
 					      ],

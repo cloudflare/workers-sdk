@@ -139,7 +139,9 @@ export class InspectorProxyController {
 	#validateDevToolsWebSocketUpgradeRequest(req: IncomingMessage) {
 		// Validate `Host` header
 		const hostHeader = req.headers.host;
-		if (hostHeader == null) return { statusText: null, status: 400 };
+		if (hostHeader == null) {
+			return { statusText: null, status: 400 };
+		}
 		try {
 			const host = new URL(`http://${hostHeader}`);
 			// Allow the configured inspector host in addition to the default allowed hostnames
@@ -166,8 +168,11 @@ export class InspectorProxyController {
 		try {
 			const origin = new URL(originHeader);
 			const allowed = ALLOWED_ORIGIN_HOSTNAMES.some((rule) => {
-				if (typeof rule === "string") return origin.hostname === rule;
-				else return rule.test(origin.hostname);
+				if (typeof rule === "string") {
+					return origin.hostname === rule;
+				} else {
+					return rule.test(origin.hostname);
+				}
 			});
 			if (!allowed) {
 				return { statusText: "Disallowed `Origin` header", status: 401 };

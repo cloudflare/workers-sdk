@@ -18,8 +18,7 @@ export function normaliseServiceDesignator(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
 } {
 	return {
-		serviceName:
-			binding.workerName !== kCurrentWorker ? binding.workerName : undefined,
+		serviceName: binding.worker !== kCurrentWorker ? binding.worker : undefined,
 		entrypoint: binding.exportName,
 		props: binding.props,
 		remoteProxyConnectionString: getRemoteProxyConnectionString(binding, dev),

@@ -1,5 +1,5 @@
 import { getCloudflareContainerRegistry } from "./knobs";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
 
 /**
  * Adds the Cloudflare account namespace to an image tag in the managed registry.

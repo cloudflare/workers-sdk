@@ -66,20 +66,21 @@ export class Astro extends Framework {
 		if (semiver(astroVersion, "6.0.0") < 0) {
 			// Before version 6 Astro required a wrangler config file
 			return {
-				wranglerConfig: {
-					main: `${outputDir}/_worker.js/index.js`,
-					compatibility_flags: ["global_fetch_strictly_public"],
-					assets: {
-						binding: "ASSETS",
-						directory: outputDir,
+				buildTool: "wrangler",
+				workerConfig: {
+					entrypoint: `${outputDir}/_worker.js/index.js`,
+					compatibilityFlags: ["global_fetch_strictly_public"],
+					env: {
+						ASSETS: { type: "assets" },
 					},
 				},
+				buildConfig: { assetsDirectory: outputDir },
 			};
 		}
 
 		// From version 6 Astro doesn't need a wrangler config file but generates a redirected config on build
 		return {
-			wranglerConfig: null,
+			workerConfig: null,
 		};
 	}
 

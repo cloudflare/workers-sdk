@@ -26,6 +26,7 @@ import {
 	E2E_ACCOUNT_WORKERS_DEV_DOMAIN,
 } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { fetchJson } from "./helpers/fetch-json";
 import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -63,6 +64,8 @@ const HYPERDRIVE_DATABASES = [
  * when multiple PRs have jobs running at the same time (or the same PR has the tests run across multiple OSes).
  */
 const workerName = generateResourceName();
+const GENERATED_MESSAGE_ID_HEADER =
+	/^Message-ID: <[A-Za-z0-9]{36}@example\.com>$/m;
 
 describe.each([
 	{ cmd: "wrangler dev --port=0 --inspector-port=0" },
@@ -2444,12 +2447,22 @@ This is a random email body.
 			{ interval: 100, timeout: 5000 }
 		);
 
-		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
+		const reply = await readFile(maybeReplyPath, "utf-8");
+		expect(reply).toMatch(GENERATED_MESSAGE_ID_HEADER);
+		expect(reply).not.toContain(
+			"Message-ID: <im-another-random-message-id@example.com>"
+		);
+		expect(
+			reply.replace(
+				GENERATED_MESSAGE_ID_HEADER,
+				"Message-ID: <generated@example.com>"
+			)
+		).toMatchInlineSnapshot(`
 			"References: <im-a-random-message-id@example.com>
 			From: someone else <someone-else@example.com>
 			To: someone <someone@example.com>
 			In-Reply-To: <im-a-random-message-id@example.com>
-			Message-ID: <im-another-random-message-id@example.com>
+			Message-ID: <generated@example.com>
 			MIME-Version: 1.0
 			Content-Type: text/plain
 
@@ -2620,16 +2633,249 @@ This is a random email body.
 			{ interval: 100, timeout: 5000 }
 		);
 
-		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
+		const capturedEmail = await readFile(maybeReplyPath, "utf-8");
+		expect(capturedEmail).toMatch(GENERATED_MESSAGE_ID_HEADER);
+		expect(capturedEmail).not.toContain(
+			"Message-ID: <im-a-random-message-id@example.com>"
+		);
+		expect(
+			capturedEmail.replace(
+				GENERATED_MESSAGE_ID_HEADER,
+				"Message-ID: <generated@example.com>"
+			)
+		).toMatchInlineSnapshot(`
 			"From: someone <someone@example.com>
 			To: someone else <someone-else@example.com>
-			Message-ID: <im-a-random-message-id@example.com>
+			Message-ID: <generated@example.com>
 			MIME-Version: 1.0
 			Content-Type: text/plain
 
 			This is a random email body.
 			"
 		`);
+	});
+
+	it("should expose captured emails through the local explorer API", async ({
+		expect,
+	}) => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+					send_email = [{ name = "SEND_EMAIL" }]
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.pathname === "/send") {
+							return Response.json(
+								await env.SEND_EMAIL.send(await request.json())
+							);
+						}
+						return new Response("ok");
+					},
+					async email(message) {
+						if (message.headers.get("x-test-mode") === "forward") {
+							await message.forward(
+								"forwarded@example.com",
+								new Headers({ "X-Forwarded-Test": "ok" })
+							);
+						}
+					},
+				};
+			`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+		const { url } = await worker.waitForReady();
+		const apiUrl = `${url}/cdn-cgi/local/explorer/api`;
+		const sentText = "x".repeat(2 * 1024 * 1024);
+
+		const sentResponse = await fetch(`${url}/send`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				from: "sender@example.com",
+				to: "recipient@example.com",
+				subject: "Explorer sent email",
+				text: sentText,
+			}),
+		});
+		expect(sentResponse.status).toBe(200);
+		const sentResult = (await sentResponse.json()) as { messageId: string };
+		expect(sentResult).toEqual({
+			messageId: expect.stringMatching(/^<[A-Za-z0-9]+@example\.com>$/),
+		});
+
+		const sentList = await fetchJson<{
+			result: Array<{
+				worker: string;
+				messageId: string;
+				subject: string;
+				text?: string;
+			}>;
+			result_info: {
+				count: number;
+				per_page: number;
+				has_more: boolean;
+				cursor?: string;
+			};
+		}>(`${apiUrl}/local/email/sending?worker=${workerName}`);
+		expect(sentList.result).toEqual([
+			expect.objectContaining({
+				worker: workerName,
+				messageId: sentResult.messageId,
+				subject: "Explorer sent email",
+			}),
+		]);
+		expect(sentList.result[0]).not.toHaveProperty("text");
+		expect(sentList.result_info).toMatchObject({
+			count: 1,
+			per_page: 25,
+			has_more: false,
+		});
+		expect(sentList.result_info).not.toHaveProperty("cursor");
+
+		const sentDetail = await fetchJson<{
+			result: {
+				worker: string;
+				messageId: string;
+				subject: string;
+				text?: string;
+			};
+			messages: Array<{ code: number; message: string }>;
+		}>(
+			`${apiUrl}/local/email/sending?email_id=${encodeURIComponent(sentResult.messageId)}`
+		);
+		expect(sentDetail.result).toMatchObject({
+			worker: workerName,
+			messageId: sentResult.messageId,
+			subject: "Explorer sent email",
+		});
+		expect(sentDetail.result.text).not.toBe(sentText);
+		expect(sentDetail.messages).toEqual([
+			{
+				code: 10604,
+				message:
+					"Displayed sent email content was truncated during local capture. The complete email is available in the local filesystem; see the development log for its path.",
+			},
+		]);
+
+		const receivedRaw = dedent`
+			From: sender@example.com
+			To: recipient@example.com
+			Message-ID: <e2e-received@example.com>
+			X-Test-Mode: forward
+			Subject: Explorer received email
+			MIME-Version: 1.0
+			Content-Type: text/plain
+
+			Received through Wrangler dev.
+		`;
+		const receivedResponse = await fetch(
+			`${url}/cdn-cgi/local/email?` +
+				new URLSearchParams({
+					from: "sender@example.com",
+					to: "recipient@example.com",
+					format: "json",
+				}).toString(),
+			{
+				method: "POST",
+				body: receivedRaw,
+			}
+		);
+		expect(receivedResponse.status).toBe(200);
+		expect(await receivedResponse.json()).toMatchObject({
+			outcome: "ok",
+			forwards: [
+				{
+					recipient: "forwarded@example.com",
+					headers: [["x-forwarded-test", "ok"]],
+				},
+			],
+			events: [{ type: "received" }, { type: "forward" }],
+		});
+
+		const receivedList = await fetchJson<{
+			result: Array<{
+				worker: string;
+				messageId: string;
+				subject: string;
+				raw?: string;
+				forwards: Array<{
+					recipient: string;
+					headers: Array<[string, string]>;
+				}>;
+				events: Array<{ type: string }>;
+			}>;
+			result_info: {
+				count: number;
+				per_page: number;
+				has_more: boolean;
+				cursor?: string;
+			};
+		}>(`${apiUrl}/local/email/routing?worker=${workerName}`);
+		expect(receivedList.result).toEqual([
+			expect.objectContaining({
+				worker: workerName,
+				messageId: "<e2e-received@example.com>",
+				subject: "Explorer received email",
+				forwards: [
+					expect.objectContaining({
+						recipient: "forwarded@example.com",
+						headers: [["x-forwarded-test", "ok"]],
+					}),
+				],
+				events: [
+					expect.objectContaining({ type: "received" }),
+					expect.objectContaining({ type: "forward" }),
+				],
+			}),
+		]);
+		expect(receivedList.result[0]).not.toHaveProperty("raw");
+		expect(receivedList.result_info).toMatchObject({
+			count: 1,
+			per_page: 25,
+			has_more: false,
+		});
+		expect(receivedList.result_info).not.toHaveProperty("cursor");
+
+		const receivedDetail = await fetchJson<{
+			result: {
+				worker: string;
+				messageId: string;
+				raw: string;
+				rawBase64?: string;
+				forwards: Array<{
+					recipient: string;
+					headers: Array<[string, string]>;
+				}>;
+				events: Array<{ type: string }>;
+			};
+			messages: Array<{ code: number; message: string }>;
+		}>(
+			`${apiUrl}/local/email/routing?email_id=${encodeURIComponent("<e2e-received@example.com>")}`
+		);
+		expect(receivedDetail.result).toMatchObject({
+			worker: workerName,
+			messageId: "<e2e-received@example.com>",
+			raw: receivedRaw,
+			rawBase64: Buffer.from(receivedRaw).toString("base64"),
+			forwards: [
+				expect.objectContaining({
+					recipient: "forwarded@example.com",
+					headers: [["x-forwarded-test", "ok"]],
+				}),
+			],
+			events: [
+				expect.objectContaining({ type: "received" }),
+				expect.objectContaining({ type: "forward" }),
+			],
+		});
+		expect(receivedDetail.messages).toEqual([]);
 	});
 });
 

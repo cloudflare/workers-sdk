@@ -44,7 +44,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",
 				"@cloudflare/vite-plugin",
-				"@cloudflare/vitest-pool-workers",
+				"@cloudflare/vitest-plugin",
 				"@cloudflare/workers-auth",
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
@@ -197,11 +197,10 @@ describe("validateChangesets()", () => {
 		expect(errors).toMatchInlineSnapshot(`[]`);
 	});
 
-	it("should report errors for major bumps except Miniflare prereleases", ({
-		expect,
-	}) => {
+	it("should report errors for disallowed major bumps", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
+				["@cloudflare/vitest-plugin", { name: "@cloudflare/vitest-plugin" }],
 				[
 					"miniflare",
 					{
@@ -213,6 +212,15 @@ describe("validateChangesets()", () => {
 				["package-c", { name: "package-c" }],
 			]),
 			[
+				{
+					file: "major-vitest-plugin.md",
+					contents: dedent`
+						---
+						"@cloudflare/vitest-plugin": major
+						---
+
+						Release v1`,
+				},
 				{
 					file: "major-one.md",
 					contents: dedent`

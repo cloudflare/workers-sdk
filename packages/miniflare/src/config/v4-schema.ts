@@ -457,8 +457,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 				className: z.string(),
 				scriptName: z.string().optional(),
 				external: z.boolean().optional(),
-				remoteProxyConnectionString:
-					RemoteProxyConnectionStringSchema.optional(),
 				stepLimit: z.number().int().min(1).optional(),
 			})
 		)
@@ -654,6 +652,8 @@ export const V4SharedOptionsSchema = z.object({
 	logRequests: z.boolean().default(true),
 	/** Root directory for persisted local resource state; relative to cwd if not absolute. */
 	resourcePersistencePath: z.string().optional(),
+	/** Per-instance root for resources that cannot participate in shared storage. */
+	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
 	stripDisablePrettyError: z.boolean().default(true),
@@ -849,7 +849,6 @@ export type V4WorkerOptionsShape = {
 			className: string;
 			scriptName?: string;
 			external?: boolean;
-			remoteProxyConnectionString?: RemoteProxyConnectionString;
 			stepLimit?: number;
 		}
 	>;
@@ -946,6 +945,7 @@ export type V4SharedOptions = {
 	unsafeInspectDurableObjects?: boolean;
 	logRequests?: boolean;
 	resourcePersistencePath?: string;
+	isolatedResourcePersistencePath?: string;
 	resourceTmpPath?: string;
 	stripDisablePrettyError?: boolean;
 	telemetry?: { enabled?: boolean; deviceId?: string };

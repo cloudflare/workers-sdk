@@ -15,7 +15,6 @@ import {
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
-import { writeOutput } from "../output";
 import { getScriptName } from "../utils/getScriptName";
 
 export const versionsUploadCommand = createCommand({
@@ -59,33 +58,20 @@ export const versionsUploadCommand = createCommand({
 		try {
 			// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 			const preMergeName = getScriptName(args, config);
-			const workerNameOverridden =
+			props.workerNameOverridden =
 				props.name !== undefined && props.name !== preMergeName;
 
 			const buildResult = await buildWorker(buildProps, config);
 
-			const {
-				versionId,
-				workerTag,
-				assetUploadStats: uploadStats,
-				versionPreviewUrl,
-				versionPreviewAliasUrl,
-			} = await versionsUpload(props, config, buildResult, {
-				analyseBundle: analyseBundle,
-			});
+			const { assetUploadStats: uploadStats } = await versionsUpload(
+				props,
+				config,
+				buildResult,
+				{
+					analyseBundle: analyseBundle,
+				}
+			);
 			assetUploadStats = uploadStats;
-
-			writeOutput({
-				type: "version-upload",
-				version: 1,
-				worker_name: props.name ?? null,
-				worker_tag: workerTag,
-				version_id: versionId,
-				preview_url: versionPreviewUrl,
-				preview_alias_url: versionPreviewAliasUrl,
-				wrangler_environment: args.env,
-				worker_name_overridden: workerNameOverridden,
-			});
 		} finally {
 			metrics.sendMetricsEvent(
 				"upload worker version",
