@@ -542,6 +542,23 @@ describe("Multi-worker peer deduplication", () => {
 						},
 					},
 				},
+				{
+					config: {
+						type: "worker",
+						name: "worker-shared",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(`
+							export class SharedDO {
+								constructor(state) { this.state = state; }
+								async fetch() { return new Response("Shared DO"); }
+							}
+							export default { fetch() { return new Response("Shared Worker"); } }
+						`),
+						exports: {
+							SharedDO: { type: "durable-object", storage: "legacy-kv" },
+						},
+					},
+				},
 			],
 		});
 		await instanceB.ready;
@@ -567,6 +584,29 @@ describe("Multi-worker peer deduplication", () => {
 						),
 						env: {
 							KV_B1: { type: "kv", id: "kv-b1" },
+							WF_B: {
+								type: "workflow",
+								name: "workflow-b",
+								worker: "worker-b1",
+								exportName: "MyWorkflowB",
+							},
+						},
+					},
+				},
+				{
+					config: {
+						type: "worker",
+						name: "worker-shared",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(`
+							export class SharedDO {
+								constructor(state) { this.state = state; }
+								async fetch() { return new Response("Shared DO"); }
+							}
+							export default { fetch() { return new Response("Shared Worker"); } }
+						`),
+						exports: {
+							SharedDO: { type: "durable-object", storage: "legacy-kv" },
 						},
 					},
 				},
@@ -686,8 +726,9 @@ describe("Multi-worker peer deduplication", () => {
 			result: [
 				{ id: "worker-a-MyDO", name: "worker-a_MyDO" },
 				{ id: "worker-b1-OtherDO", name: "worker-b1_OtherDO" },
+				{ id: "worker-shared-SharedDO", name: "worker-shared_SharedDO" },
 			],
-			result_info: { count: 2 },
+			result_info: { count: 3 },
 		});
 	});
 

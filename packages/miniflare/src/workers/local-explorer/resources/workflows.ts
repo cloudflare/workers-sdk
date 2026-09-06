@@ -250,7 +250,7 @@ export async function listWorkflows(c: AppContext): Promise<Response> {
 		c,
 		localWorkflows,
 		"/workflows",
-		{ sharedStorageOnly: true }
+		{ getKey: (wf) => wf.name, sharedStorageOnly: true }
 	);
 
 	// Deduplicate by name — first occurrence wins (local takes priority)
