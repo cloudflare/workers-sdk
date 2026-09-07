@@ -342,6 +342,7 @@ describe("whoami", () => {
 			  - workers_routes:write
 			  - workers_scripts:write
 			  - workers_tail:read
+			  - workers_observability:read
 			  - d1:write
 			  - pages:write
 			  - zone:read
@@ -420,6 +421,7 @@ describe("whoami", () => {
 			  - workers_routes:write
 			  - workers_scripts:write
 			  - workers_tail:read
+			  - workers_observability:read
 			  - d1:write
 			  - pages:write
 			  - zone:read
@@ -552,6 +554,7 @@ describe("whoami", () => {
 			  - workers_routes:write
 			  - workers_scripts:write
 			  - workers_tail:read
+			  - workers_observability:read
 			  - d1:write
 			  - pages:write
 			  - zone:read

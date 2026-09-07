@@ -135,7 +135,7 @@
 		"chokidar": "^4.0.1",
 		"ci-info": "catalog:default",
 		"cli-table3": "^0.6.3",
-		"cloudflare": "^5.2.0",
+		"cloudflare": "^6.5.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "catalog:default",
 		"concurrently": "^8.2.2",
