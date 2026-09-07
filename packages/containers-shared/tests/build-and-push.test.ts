@@ -1,10 +1,11 @@
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import crypto from "node:crypto";
 import { EventEmitter } from "node:events";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
@@ -202,7 +203,7 @@ describe("buildCommand", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
 		for (const dir of tempDirs) {
-			rmSync(dir, { force: true, recursive: true });
+			removeDirSync(dir);
 		}
 	});
 
@@ -559,7 +560,7 @@ describe("buildCommand arguments", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
 		for (const dir of tempDirs) {
-			rmSync(dir, { force: true, recursive: true });
+			removeDirSync(dir);
 		}
 	});
 

@@ -1,4 +1,3 @@
-// @ts-nocheck -- Verbatim compatibility copy of Wrangler's legacy line-diff helper.
 // Modified code from package jsdiff (https://github.com/kpdecker/jsdiff/tree/master)
 // It's been simplified so it can basically do line diffing only
 // and we can avoid the 600kb sized package.
@@ -74,17 +73,18 @@ export class Diff {
 		const bestPath: (BestPath | undefined)[] = [
 			{ oldPos: -1, lastComponent: undefined },
 		];
+		const initialPath = bestPath[0];
 
-		if (bestPath[0] === undefined) {
+		if (initialPath === undefined) {
 			throw new Error("unreachable");
 		}
 
 		// Seed editLength = 0, i.e. the content starts with the same values
-		let newPos = this.#extractCommon(bestPath[0], newString, oldString, 0);
-		if (bestPath[0].oldPos + 1 >= oldLen && newPos + 1 >= newLen) {
+		let newPos = this.#extractCommon(initialPath, newString, oldString, 0);
+		if (initialPath.oldPos + 1 >= oldLen && newPos + 1 >= newLen) {
 			// Identity per the equality and tokenizer
 			this.#results = this.#buildValues(
-				bestPath[0].lastComponent,
+				initialPath.lastComponent,
 				newString,
 				oldString,
 				false
@@ -231,9 +231,13 @@ export class Diff {
 		];
 
 		const swapLines = (i: number, j: number) => {
-			const tmp = results[i];
-			results[i] = results[j];
-			results[j] = tmp;
+			const current = results[i];
+			const adjacent = results[j];
+			if (current === undefined || adjacent === undefined) {
+				return;
+			}
+			results[i] = adjacent;
+			results[j] = current;
 		};
 
 		const numOfLines = (str: string) => str.split("\n").length;
@@ -244,17 +248,20 @@ export class Diff {
 			const nextIdx = currentIdx + target + target;
 
 			// If any of the results we need to analize is not present we return false
-			if (!results[adjacentIdx] || !results[nextIdx] || !results[nextIdx]) {
+			const current = results[currentIdx];
+			const adjacent = results[adjacentIdx];
+			const next = results[nextIdx];
+			if (!current || !adjacent || !next) {
 				return false;
 			}
 
 			const previousIdx = index - target;
 
 			const isAlternation = (type: "added" | "removed") =>
-				results[currentIdx][type] === true &&
-				results[previousIdx]?.[type] !== results[currentIdx][type] &&
-				results[adjacentIdx][type === "added" ? "removed" : "added"] === true &&
-				results[nextIdx][type] === true;
+				current[type] === true &&
+				results[previousIdx]?.[type] !== current[type] &&
+				adjacent[type === "added" ? "removed" : "added"] === true &&
+				next[type] === true;
 
 			// If there isn't an alternation between added and removed results then we return false
 			if (!isAlternation("added") && !isAlternation("removed")) {
@@ -264,9 +271,9 @@ export class Diff {
 			// We might have found a lone result but to make sure we need to check that the next index
 			// contains multiple lines while the current and adjacent ones both only contain one
 			return (
-				numOfLines(results[currentIdx].value ?? "") === 1 &&
-				numOfLines(results[adjacentIdx].value ?? "") === 1 &&
-				numOfLines(results[nextIdx].value ?? "") > 1
+				numOfLines(current.value ?? "") === 1 &&
+				numOfLines(adjacent.value ?? "") === 1 &&
+				numOfLines(next.value ?? "") > 1
 			);
 		};
 
@@ -323,7 +330,7 @@ export class Diff {
 
 				// If we haven't printed anything yet then omit leading empty lines
 				if (state === "init") {
-					while (context.length > 0 && context[0].trim() === "") {
+					while (context[0]?.trim() === "") {
 						context.shift();
 					}
 				}
@@ -351,7 +358,7 @@ export class Diff {
 		if (state === "diff") {
 			// Trim trailing whitespace from the final context chunk
 			context.splice(options.contextLines);
-			while (context.length > 0 && context[context.length - 1].trim() === "") {
+			while (context[context.length - 1]?.trim() === "") {
 				context.pop();
 			}
 
@@ -446,8 +453,8 @@ export class Diff {
 	): Result[] {
 		// First we convert our linked list of components in reverse order to an
 		// array in the right order:
-		const components = [];
-		let nextComponent;
+		const components: Result[] = [];
+		let nextComponent: Result | undefined;
 		while (lastComponent) {
 			components.push(lastComponent);
 			nextComponent = lastComponent.previousComponent;
@@ -463,12 +470,18 @@ export class Diff {
 
 		for (; componentPos < componentLen; componentPos++) {
 			const component = components[componentPos];
+			if (component === undefined) {
+				throw new Error("unreachable");
+			}
 			if (!component.removed) {
 				if (!component.added && useLongestToken) {
 					let value = newString.slice(newPos, newPos + component.count);
 					value = value.map((el, i) => {
 						const oldValue = oldString[oldPos + i];
-						return oldValue.length > el.length ? oldValue : el;
+						if (oldValue !== undefined && oldValue.length > el.length) {
+							return oldValue;
+						}
+						return el;
 					});
 
 					component.value = value.join("");
@@ -495,8 +508,8 @@ export class Diff {
 	}
 }
 
-function tokenize(value: string) {
-	const retLines = [];
+function tokenize(value: string): string[] {
+	const retLines: string[] = [];
 	const linesAndNewlines = value.split(/(\n|\r\n)/);
 
 	// Ignore the final empty token that occurs if the string ends with a new line
@@ -507,7 +520,9 @@ function tokenize(value: string) {
 	// Merge the content and line separators into single tokens
 	for (let i = 0; i < linesAndNewlines.length; i++) {
 		const line = linesAndNewlines[i];
-		retLines.push(line);
+		if (line !== undefined) {
+			retLines.push(line);
+		}
 	}
 
 	return retLines.filter((s) => s !== "");

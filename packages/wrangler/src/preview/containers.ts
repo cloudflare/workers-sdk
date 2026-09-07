@@ -18,10 +18,6 @@ import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { logger, runWithLogLevel } from "../logger";
-import type {
-	BuiltContainerDeployment,
-	ContainerNormalizedConfig,
-} from "@cloudflare/containers-shared";
 import type { PreviewContainerPreparation } from "@cloudflare/deploy-helpers";
 import type {
 	Config,

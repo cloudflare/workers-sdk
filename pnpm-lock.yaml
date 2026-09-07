@@ -1871,6 +1871,9 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      tsup:
+        specifier: 8.3.0
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.23)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.9.0)
       typescript:
         specifier: catalog:default
         version: 5.8.3

@@ -4,12 +4,12 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import {
+	ApplicationAffinityHardwareGeneration,
 	ContainerImagePreparationStatus,
 	getCloudflareContainerRegistry,
 	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import { CONTAINER_IMAGES_BINDING } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,

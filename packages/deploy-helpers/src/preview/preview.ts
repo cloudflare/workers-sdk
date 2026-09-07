@@ -785,7 +785,7 @@ async function pushBuiltPreviewContainerImage({
 	scopedConfig: Config;
 }) {
 	const builtContainerDeployment = builtContainerDeployments.find(
-		(deployment) => deployment.container === container
+		(d) => d.container === container
 	);
 	if (!builtContainerDeployment) {
 		throw new UserError(
