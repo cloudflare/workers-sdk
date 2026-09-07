@@ -409,6 +409,72 @@ describe("RemoteRuntimeController", () => {
 			const reloadEvent = await reloadPromise;
 			expect(reloadEvent.type).toBe("reloadComplete");
 		});
+
+		it("should not retry a refresh that a concurrent rebuild aborted", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// Simulate the proactive refresh being in flight when a rebuild
+			// starts: `createWorkerPreview` hangs until its abort signal fires,
+			// exactly like the real network call would once `onBundleStart()`
+			// aborts it. `#currentBundleId` only advances once that rebuild
+			// *completes* (`onBundleComplete`), so at the moment of the abort it
+			// still matches this refresh's captured `bundleId` — the fix must
+			// tell an aborted attempt apart from a genuine failure some other
+			// way.
+			vi.mocked(createPreviewSession).mockClear();
+			vi.mocked(createWorkerPreview).mockImplementation(
+				(..._args: unknown[]) =>
+					new Promise((_resolve, reject) => {
+						const signal = _args[5] as AbortSignal;
+						signal.addEventListener("abort", () => {
+							const err = new Error("aborted");
+							err.name = "AbortError";
+							reject(err);
+						});
+					})
+			);
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			controller.onBundleStart({ type: "bundleStart", config });
+			await vi.advanceTimersByTimeAsync(0);
+
+			// The abort must not be reported as an error, nor scheduled for
+			// retry. `createPreviewSession` was already called once by this
+			// point, for this refresh's own (unaborted) session step — the
+			// assertion is that it does *not* climb further.
+			expect(createPreviewSession).toHaveBeenCalledTimes(1);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
+			);
+			expect(createPreviewSession).toHaveBeenCalledTimes(1);
+
+			// The rebuild itself completes normally afterwards, unaffected.
+			vi.mocked(createWorkerPreview).mockResolvedValue({
+				value: "test-preview-token",
+				host: "test.workers.dev",
+			});
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: { ...bundle, path: "/virtual/index2.mjs" },
+			});
+			await reloadPromise;
+		});
 	});
 
 	describe("preview token refresh", () => {
