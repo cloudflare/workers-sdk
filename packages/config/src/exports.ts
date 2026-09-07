@@ -14,8 +14,6 @@
 
 import type { ContainerConfigExport } from "./container-definition";
 
-export type ContainerReference = string | ContainerConfigExport;
-
 /**
  * Storage backend for the Durable Object.
  *
@@ -23,8 +21,8 @@ export type ContainerReference = string | ContainerConfigExport;
  * only offered alongside `storage: "sqlite"`.
  */
 export type DurableObjectStorageOptions<
-	TContainer extends ContainerReference | undefined =
-		| ContainerReference
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
 		| undefined,
 > =
 	| {
@@ -34,8 +32,7 @@ export type DurableObjectStorageOptions<
 			 */
 			storage: "sqlite";
 			/**
-			 * Attach a Container application to this Durable Object, by config
-			 * reference or name.
+			 * Attach a Container application to this Durable Object by config reference.
 			 */
 			container?: TContainer;
 	  }
@@ -53,8 +50,8 @@ export type DurableObjectStorageOptions<
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
  */
 export type DurableObjectCreatedExportOptions<
-	TContainer extends ContainerReference | undefined =
-		| ContainerReference
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
 		| undefined,
 > = {
 	state?: "created";
@@ -103,8 +100,8 @@ export interface DurableObjectTransferredExportOptions {
  * Once the source Worker's `transferred` export is deployed, this entry becomes a normal live `durable-object` export.
  */
 export type DurableObjectExpectingTransferExportOptions<
-	TContainer extends ContainerReference | undefined =
-		| ContainerReference
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
 		| undefined,
 > = {
 	state: "expecting-transfer";
@@ -117,8 +114,8 @@ export type DurableObjectExpectingTransferExportOptions<
 // A type intersection rather than an `interface ... extends`, because the
 // options are a union over `storage` and an interface cannot extend a union.
 export type DurableObjectCreatedExport<
-	TContainer extends ContainerReference | undefined =
-		| ContainerReference
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
 		| undefined,
 > = DurableObjectCreatedExportOptions<TContainer> & { type: "durable-object" };
 export interface DurableObjectDeletedExport extends DurableObjectDeletedExportOptions {
@@ -132,8 +129,8 @@ export interface DurableObjectTransferredExport extends DurableObjectTransferred
 }
 
 export type DurableObjectExpectingTransferExport<
-	TContainer extends ContainerReference | undefined =
-		| ContainerReference
+	TContainer extends ContainerConfigExport | undefined =
+		| ContainerConfigExport
 		| undefined,
 > = DurableObjectExpectingTransferExportOptions<TContainer> & {
 	type: "durable-object";
@@ -177,7 +174,9 @@ export interface Exports {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 */
-	durableObject<TContainer extends ContainerReference | undefined = undefined>(
+	durableObject<
+		TContainer extends ContainerConfigExport | undefined = undefined,
+	>(
 		options: DurableObjectCreatedExportOptions<TContainer>
 	): DurableObjectCreatedExport<TContainer>;
 	/**
@@ -202,7 +201,9 @@ export interface Exports {
 	 * Prepare to receive cross-Worker Durable Object transfer.
 	 * The source Worker must follow up with a deployment containing a `transferred` export to commit the transfer.
 	 */
-	durableObject<TContainer extends ContainerReference | undefined = undefined>(
+	durableObject<
+		TContainer extends ContainerConfigExport | undefined = undefined,
+	>(
 		options: DurableObjectExpectingTransferExportOptions<TContainer>
 	): DurableObjectExpectingTransferExport<TContainer>;
 	// Fallback overload. TypeScript only reaches this when none of the precise
@@ -221,7 +222,7 @@ export interface Exports {
 }
 
 function durableObject<
-	TContainer extends ContainerReference | undefined = undefined,
+	TContainer extends ContainerConfigExport | undefined = undefined,
 >(
 	options: DurableObjectCreatedExportOptions<TContainer>
 ): DurableObjectCreatedExport<TContainer>;
@@ -235,7 +236,7 @@ function durableObject(
 	options: DurableObjectTransferredExportOptions
 ): DurableObjectTransferredExport;
 function durableObject<
-	TContainer extends ContainerReference | undefined = undefined,
+	TContainer extends ContainerConfigExport | undefined = undefined,
 >(
 	options: DurableObjectExpectingTransferExportOptions<TContainer>
 ): DurableObjectExpectingTransferExport<TContainer>;

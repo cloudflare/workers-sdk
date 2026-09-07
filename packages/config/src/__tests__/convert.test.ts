@@ -1,7 +1,5 @@
 import { describe, it } from "vitest";
-import { bindings } from "../bindings";
 import { convertToWranglerConfig } from "../convert";
-import { exports as exportConfig } from "../exports";
 
 const baseConfig = {
 	type: "worker",
@@ -195,15 +193,13 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 
-	it("creates draft provisionable bindings with the binding factories", ({
-		expect,
-	}) => {
+	it("creates draft provisionable bindings", ({ expect }) => {
 		const result = convertToWranglerConfig({
 			...baseConfig,
 			env: {
-				QUEUE: bindings.queue(),
-				DISPATCH: bindings.dispatchNamespace(),
-				FLAGS: bindings.flagship(),
+				QUEUE: { type: "queue" },
+				DISPATCH: { type: "dispatch-namespace" },
+				FLAGS: { type: "flagship" },
 			},
 		});
 
@@ -865,8 +861,11 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				exports: {
-					default: exportConfig.worker({ cache: { enabled: false } }),
-					Admin: exportConfig.worker({ cache: { enabled: true } }),
+					default: {
+						type: "worker",
+						cache: { enabled: false },
+					},
+					Admin: { type: "worker", cache: { enabled: true } },
 				},
 			});
 
@@ -882,8 +881,8 @@ describe("convertToWranglerConfig", () => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				exports: {
-					Counter: exportConfig.durableObject({ storage: "sqlite" }),
-					Admin: exportConfig.worker({ cache: { enabled: true } }),
+					Counter: { type: "durable-object", storage: "sqlite" },
+					Admin: { type: "worker", cache: { enabled: true } },
 				},
 			});
 
@@ -1125,7 +1124,7 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
-		it("attaches the assets binding name when bindings.assets() is present", ({
+		it("attaches the assets binding name when an assets binding is present", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({

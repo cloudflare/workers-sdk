@@ -6,7 +6,7 @@ import type {
 	ContainerConfigExport,
 	ContainerConfigInput,
 } from "../container-definition";
-import type { ContainerReference } from "../exports";
+import type { DurableObjectStorageOptions } from "../exports";
 import type { UnwrapConfig } from "../inference";
 import type { ParsedInputWorkerConfig } from "../schema";
 
@@ -76,8 +76,19 @@ export type ObjectContainerTypeTest = Assert<
 export type FactoryContainerExportTest = Assert<
 	typeof factoryContainer extends ContainerConfigExport ? true : false
 >;
-export type PromisedContainerReferenceTest = Assert<
-	typeof promisedContainer extends ContainerReference ? true : false
+export type PromisedContainerExportTest = Assert<
+	typeof promisedContainer extends ContainerConfigExport ? true : false
+>;
+export type StringContainerReferenceTest = Assert<
+	Equal<
+		string extends Extract<
+			DurableObjectStorageOptions,
+			{ storage: "sqlite" }
+		>["container"]
+			? true
+			: false,
+		false
+	>
 >;
 export type DefaultExportTypeTest = Assert<
 	Equal<ParsedConfigExports["default"], ParsedInputWorkerConfig | undefined>

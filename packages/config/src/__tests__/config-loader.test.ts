@@ -158,7 +158,7 @@ describe("resolveAndValidateConfigExports", () => {
 		}
 	});
 
-	it("accepts a string reference to an exported Container", async ({
+	it("rejects a string reference to an exported Container", async ({
 		expect,
 	}) => {
 		const container = defineContainer({
@@ -166,57 +166,69 @@ describe("resolveAndValidateConfigExports", () => {
 			compatibilityDate,
 			image: { reference: "registry.example.com/container:latest" },
 		});
-		const worker = defineWorker({
+		const worker = {
+			type: "worker",
 			name: "my-worker",
 			compatibilityDate,
 			exports: {
-				ContainerDO: workerExports.durableObject({
+				ContainerDO: {
+					type: "durable-object",
 					storage: "sqlite",
 					container: "my-container",
-				}),
+				},
 			},
-		});
+		};
 
 		const result = await resolveAndValidateConfigExports(
 			{ default: worker, container },
 			{ mode: undefined }
 		);
 
-		expect(result.success).toBe(true);
-		if (result.success) {
-			const parsedWorker = result.data.default;
-			assert(parsedWorker?.type === "worker");
-			expect(parsedWorker.exports?.ContainerDO).toMatchObject({
-				container: "my-container",
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]).toMatchObject({
+				path: ["default", "exports", "ContainerDO", "container"],
+				message:
+					"Container provided as a string. Reference an exported Container definition instead.",
 			});
 		}
 	});
 
-	it("rejects a Container name that is not exported", async ({ expect }) => {
+	it("rejects an unexported Container reference with an exported Container's name", async ({
+		expect,
+	}) => {
+		const referencedContainer = defineContainer({
+			name: "my-container",
+			compatibilityDate,
+			image: { reference: "registry.example.com/referenced:latest" },
+		});
+		const exportedContainer = defineContainer({
+			name: "my-container",
+			compatibilityDate,
+			image: { reference: "registry.example.com/exported:latest" },
+		});
 		const worker = defineWorker({
 			name: "my-worker",
 			compatibilityDate,
 			exports: {
 				ContainerDO: workerExports.durableObject({
 					storage: "sqlite",
-					container: "missing-container",
+					container: referencedContainer,
 				}),
 			},
 		});
 
 		const result = await resolveAndValidateConfigExports(
-			{ default: worker },
+			{ default: worker, container: exportedContainer },
 			{ mode: undefined }
 		);
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
-			expect(result.error.issues[0]?.path).toEqual([
-				"default",
-				"exports",
-				"ContainerDO",
-				"container",
-			]);
+			expect(result.error.issues[0]).toMatchObject({
+				path: ["default", "exports", "ContainerDO", "container"],
+				message: 'The referenced Container "my-container" is not exported.',
+			});
 		}
 	});
 

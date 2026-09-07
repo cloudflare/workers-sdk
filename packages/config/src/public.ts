@@ -61,7 +61,6 @@ export type {
 export { triggers } from "./triggers";
 export type {
 	Exports,
-	ContainerReference,
 	DurableObjectCreatedExport,
 	DurableObjectDeletedExport,
 	DurableObjectRenamedExport,

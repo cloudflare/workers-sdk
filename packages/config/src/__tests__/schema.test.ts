@@ -1341,7 +1341,7 @@ describe("ExportSchema", () => {
 			exportConfig.durableObject({
 				storage: "legacy-kv",
 				// @ts-expect-error `container` requires `storage: "sqlite"`
-				container: "my-container",
+				container: baseContainer,
 			});
 
 			exportConfig.durableObject({
@@ -1349,7 +1349,7 @@ describe("ExportSchema", () => {
 				storage: "legacy-kv",
 				transferFrom: "source-worker",
 				// @ts-expect-error `container` requires `storage: "sqlite"`
-				container: "my-container",
+				container: baseContainer,
 			});
 
 			const _exports: NonNullable<ParsedInputWorkerConfig["exports"]> = {
@@ -1362,13 +1362,16 @@ describe("ExportSchema", () => {
 			};
 
 			// The permitted combinations must still compile.
-			exportConfig.durableObject({ storage: "sqlite", container: "my-do" });
+			exportConfig.durableObject({
+				storage: "sqlite",
+				container: baseContainer,
+			});
 			exportConfig.durableObject({ storage: "legacy-kv" });
 			exportConfig.durableObject({
 				state: "expecting-transfer",
 				storage: "sqlite",
 				transferFrom: "source-worker",
-				container: "my-do",
+				container: baseContainer,
 			});
 			exportConfig.durableObject({
 				state: "expecting-transfer",

@@ -21,6 +21,11 @@ const CROSS_WORKER_BINDING_TYPES = new Set([
 
 type ResolveDefinition = (input: unknown) => Promise<unknown>;
 
+interface NormalizeConfigReferencesResult {
+	value: unknown;
+	issues: z.core.$ZodIssue[];
+}
+
 export type ParsedConfigExports = {
 	default?: ParsedInputWorkerConfig;
 	settings?: ParsedInputSettingsConfig;
@@ -112,10 +117,12 @@ async function normalizeWorkerReferences(
 
 async function normalizeContainerReferences(
 	resolved: unknown,
-	resolveDefinition: ResolveDefinition
-): Promise<unknown> {
+	resolveDefinition: ResolveDefinition,
+	resolvedExports: Record<string, unknown>
+): Promise<NormalizeConfigReferencesResult> {
+	const issues: z.core.$ZodIssue[] = [];
 	if (!isRecord(resolved) || !isRecord(resolved.exports)) {
-		return resolved;
+		return { value: resolved, issues };
 	}
 
 	const workerExports = { ...resolved.exports };
@@ -123,31 +130,64 @@ async function normalizeContainerReferences(
 		if (
 			!isRecord(workerExport) ||
 			workerExport.type !== "durable-object" ||
-			!isConfigReference(workerExport.container)
+			workerExport.container === undefined
 		) {
 			continue;
 		}
 
 		const reference = workerExport.container;
+		if (typeof reference === "string") {
+			issues.push({
+				code: "custom",
+				input: reference,
+				path: ["exports", exportName, "container"],
+				message:
+					"Container provided as a string. Reference an exported Container definition instead.",
+			});
+			workerExports[exportName] = { ...workerExport, container: undefined };
+			continue;
+		}
+
 		const target = await resolveDefinition(reference);
+		if (
+			isRecord(target) &&
+			target.type === "container" &&
+			typeof target.name === "string" &&
+			!Object.values(resolvedExports).includes(target)
+		) {
+			issues.push({
+				code: "custom",
+				input: reference,
+				path: ["exports", exportName, "container"],
+				message: `The referenced Container "${target.name}" is not exported.`,
+			});
+			workerExports[exportName] = { ...workerExport, container: undefined };
+			continue;
+		}
+
 		workerExports[exportName] = {
 			...workerExport,
 			container: normalizeConfigReference(reference, target, "container"),
 		};
 	}
 
-	return { ...resolved, exports: workerExports };
+	return { value: { ...resolved, exports: workerExports }, issues };
 }
 
 async function normalizeConfigReferences(
 	resolved: unknown,
-	resolveDefinition: ResolveDefinition
-): Promise<unknown> {
+	resolveDefinition: ResolveDefinition,
+	resolvedExports: Record<string, unknown>
+): Promise<NormalizeConfigReferencesResult> {
 	const workerReferences = await normalizeWorkerReferences(
 		resolved,
 		resolveDefinition
 	);
-	return normalizeContainerReferences(workerReferences, resolveDefinition);
+	return normalizeContainerReferences(
+		workerReferences,
+		resolveDefinition,
+		resolvedExports
+	);
 }
 
 function prefixIssues(
@@ -320,12 +360,17 @@ export async function resolveAndValidateConfigExports(
 
 		let result = parsedResources.get(input);
 		if (!result) {
-			result =
-				resolved.type === "worker"
-					? InputWorkerSchema.safeParse(
-							await normalizeConfigReferences(resolved, resolveDefinition)
-						)
-					: InputContainerSchema.safeParse(resolved);
+			if (resolved.type === "worker") {
+				const normalized = await normalizeConfigReferences(
+					resolved,
+					resolveDefinition,
+					resolvedExports
+				);
+				issues.push(...prefixIssues(normalized.issues, name));
+				result = InputWorkerSchema.safeParse(normalized.value);
+			} else {
+				result = InputContainerSchema.safeParse(resolved);
+			}
 			parsedResources.set(input, result);
 			if (!result.success) {
 				issues.push(...prefixIssues(result.error.issues, name));
