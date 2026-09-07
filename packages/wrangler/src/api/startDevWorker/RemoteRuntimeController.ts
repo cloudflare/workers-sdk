@@ -429,6 +429,12 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 
 		const bundleId = this.#currentBundleId;
+		// Captured before anything async: `onBundleStart()` aborts this exact
+		// signal (before replacing `#abortController`) if a rebuild starts
+		// while this refresh is in flight, but doesn't bump `#currentBundleId`
+		// until that rebuild *completes* — so a bundle-ID match alone can't
+		// tell an aborted-by-rebuild refresh apart from a genuine failure.
+		const abortSignal = this.#abortController.signal;
 		try {
 			assert(this.#latestConfig.dev.auth);
 			const auth = await unwrapHook(this.#latestConfig.dev.auth);
@@ -449,13 +455,18 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			if (refreshed) {
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
-			} else if (bundleId === this.#currentBundleId && !this.tearingDown) {
+			} else if (
+				bundleId === this.#currentBundleId &&
+				!abortSignal.aborted &&
+				!this.tearingDown
+			) {
 				// `#updatePreviewToken` (via `#previewToken`) already reported a
 				// non-restart upload failure and returned `false` without
 				// throwing — that failure needs the same retry as a thrown one.
-				// A bundle-ID mismatch instead means a newer bundle has since
-				// superseded this refresh; that bundle's own success path
-				// reschedules normally, so retrying here too would double up.
+				// A bundle-ID mismatch, or this refresh's own signal having been
+				// aborted, instead means a newer bundle has since superseded it;
+				// that bundle's own success path reschedules normally, so
+				// retrying a stale one here would revive outdated worker code.
 				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		} catch (error) {
