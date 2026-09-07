@@ -131,6 +131,210 @@ type Export =
 // TODO: support Workflows
 
 /**
+ * Container application configuration. This is the input shape passed to
+ * `defineContainer`.
+ *
+ * Fields are validated at runtime by `InputContainerSchema`.
+ */
+export interface ContainerConfig {
+	/**
+	 * Discriminates this config as a Container config.
+	 *
+	 * Injected automatically by `defineContainer`; only needs to be written by
+	 * hand when authoring a raw config object without the helper.
+	 */
+	type: "container";
+
+	/**
+	 * Name of the application.
+	 *
+	 * This is also the identifier used to reference the Container from a Durable
+	 * Object's `exports` entry via its `container` field.
+	 */
+	name: string;
+
+	/**
+	 * A date in the form yyyy-mm-dd that determines which compatibility behavior
+	 * changes apply to the Container application.
+	 */
+	compatibilityDate: string;
+
+	/**
+	 * The image to build or deploy. Specify either a Dockerfile to build or a
+	 * reference to an existing image.
+	 */
+	image:
+		| {
+				/** The path to a Dockerfile. */
+				dockerfile: string;
+				/**
+				 * Build context of the application.
+				 *
+				 * @default The directory containing `dockerfile`.
+				 */
+				buildContext?: string;
+				/**
+				 * Image variables available to the image at build time only.
+				 * For runtime environment variables, see
+				 * https://developers.cloudflare.com/containers/examples/env-vars-and-secrets/
+				 */
+				buildVars?: Record<string, string>;
+		  }
+		| {
+				/** Reference to an existing image. */
+				reference: string;
+		  };
+
+	/** Number of maximum application instances. */
+	maxInstances?: number;
+
+	/**
+	 * The instance type to be used for the Container.
+	 * Select from one of the following named instance types:
+	 *
+	 * - lite: 1/16 vCPU, 256 MiB memory, and 2 GB disk
+	 * - basic: 1/4 vCPU, 1 GiB memory, and 4 GB disk
+	 * - standard-1: 1/2 vCPU, 4 GiB memory, and 8 GB disk
+	 * - standard-2: 1 vCPU, 6 GiB memory, and 12 GB disk
+	 * - standard-3: 2 vCPU, 8 GiB memory, and 16 GB disk
+	 * - standard-4: 4 vCPU, 12 GiB memory, and 20 GB disk
+	 *
+	 * Customers on an enterprise plan have the additional option to set custom
+	 * limits.
+	 *
+	 * @default "lite"
+	 */
+	instanceType?:
+		| "basic"
+		| "lite"
+		| "standard-1"
+		| "standard-2"
+		| "standard-3"
+		| "standard-4"
+		| {
+				/** @default 0.0625 (1/16 vCPU) */
+				vcpu?: number;
+				/** @default 256 MiB */
+				memoryMib?: number;
+				/** @default 2 GB */
+				diskMb?: number;
+		  };
+
+	/**
+	 * The scheduling policy of the application.
+	 *
+	 * @default "default"
+	 */
+	schedulingPolicy?: "default" | "moon" | "regional";
+
+	ssh?: {
+		/**
+		 * If enabled, users with write access to the Container application can
+		 * connect to it over SSH.
+		 *
+		 * @default false
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on.
+		 *
+		 * @default 22
+		 */
+		port?: number;
+	};
+
+	/** SSH public keys to put in the Container's authorized_keys file. */
+	authorizedKeys?: Array<{ name: string; publicKey: string }>;
+
+	/**
+	 * Trusted user CA keys to put in the Container's trusted_user_ca_keys file.
+	 */
+	trustedUserCaKeys?: Array<{ name?: string; publicKey: string }>;
+
+	/** Scheduling constraints for Container placement. */
+	constraints?: {
+		/** Limit Container placement to specific geographic regions. */
+		regions?: Array<
+			"ENAM" | "WNAM" | "EEUR" | "WEUR" | "APAC" | "SAM" | "ME" | "OC" | "AFR"
+		>;
+		/** Restrict Containers to compliance boundaries. */
+		jurisdiction?: "eu" | "fedramp";
+		/** @hidden */
+		cities?: string[];
+		/** @hidden */
+		tiers?: number[];
+	};
+
+	/**
+	 * Scheduling affinities.
+	 *
+	 * @hidden
+	 */
+	affinities?: {
+		colocation?: "datacenter";
+		hardwareGeneration?: "highest-overall-performance";
+	};
+
+	rollout?: {
+		/**
+		 * How a rollout should be created. It supports the following modes:
+		 *
+		 * - full-auto: The Container application will be rolled out fully
+		 *   automatically.
+		 * - none: The Container application will not have a rollout or update.
+		 * - full-manual: The Container application will be rolled out by manually
+		 *   progressing through the rollout steps.
+		 *
+		 * @default "full-auto"
+		 * @hidden
+		 */
+		kind?: "full-auto" | "none" | "full-manual";
+		/**
+		 * Configures what percentage of instances should be updated at each step of
+		 * a rollout. You can specify this as a single number or an array of numbers.
+		 *
+		 * If this is a single number, each step will progress by that percentage.
+		 * The options are 5, 10, 20, 25, 50, or 100.
+		 *
+		 * If this is an array, each step specifies the cumulative rollout progress.
+		 * The final step must be 100.
+		 *
+		 * @default [10, 100]
+		 */
+		stepPercentage?: number | number[];
+		/**
+		 * Configures the grace period, in seconds, for active instances before they
+		 * are shut down during a rollout.
+		 *
+		 * @default 0
+		 */
+		activeGracePeriod?: number;
+	};
+
+	/** Configures observability for Container instances. */
+	observability?: {
+		/** Whether observability is enabled. */
+		enabled?: boolean;
+		logs?: {
+			/** Whether log collection is enabled. */
+			enabled?: boolean;
+		};
+		/** Percentage of Container instances targeted for observability (0–100). */
+		targetInstancePercentage?: number;
+		/** Non-negative integer number of Container instances targeted. */
+		targetInstanceCount?: number;
+	};
+
+	/**
+	 * Directly passed to the API without client-side validation or
+	 * transformation.
+	 *
+	 * @hidden
+	 */
+	unsafe?: Record<string, unknown>;
+}
+
+/**
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *

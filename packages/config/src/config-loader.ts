@@ -2,11 +2,13 @@ import * as z from "zod";
 import { loadConfig } from "./load";
 import {
 	ConfigExportsTypeSchema,
+	InputContainerSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
 } from "./schema";
 import type { ConfigContext } from "./definition";
 import type {
+	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 } from "./schema";
@@ -20,8 +22,9 @@ const CROSS_WORKER_BINDING_TYPES = new Set([
 type ResolveDefinition = (input: unknown) => Promise<unknown>;
 
 export type ParsedConfigExports = {
+	default?: ParsedInputWorkerConfig;
 	settings?: ParsedInputSettingsConfig;
-} & Record<string, ParsedInputWorkerConfig>;
+} & Record<string, ParsedInputContainerConfig | ParsedInputWorkerConfig>;
 
 export type ConfigParseResult =
 	| z.ZodSafeParseSuccess<ParsedConfigExports>
@@ -43,6 +46,18 @@ function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
 
 function isConfigReference(value: unknown): boolean {
 	return typeof value === "function" || isRecord(value);
+}
+
+function normalizeConfigReference(
+	reference: unknown,
+	resolved: unknown,
+	expectedType: "container" | "worker"
+): unknown {
+	return isRecord(resolved) &&
+		resolved.type === expectedType &&
+		typeof resolved.name === "string"
+		? resolved.name
+		: reference;
 }
 
 function createDefinitionResolver(ctx: ConfigContext): ResolveDefinition {
@@ -88,11 +103,51 @@ async function normalizeWorkerReferences(
 		const target = await resolveDefinition(binding.worker);
 		env[bindingName] = {
 			...binding,
-			worker: isRecord(target) ? target.name : undefined,
+			worker: normalizeConfigReference(binding.worker, target, "worker"),
 		};
 	}
 
 	return { ...resolved, env };
+}
+
+async function normalizeContainerReferences(
+	resolved: unknown,
+	resolveDefinition: ResolveDefinition
+): Promise<unknown> {
+	if (!isRecord(resolved) || !isRecord(resolved.exports)) {
+		return resolved;
+	}
+
+	const workerExports = { ...resolved.exports };
+	for (const [exportName, workerExport] of Object.entries(workerExports)) {
+		if (
+			!isRecord(workerExport) ||
+			workerExport.type !== "durable-object" ||
+			!isConfigReference(workerExport.container)
+		) {
+			continue;
+		}
+
+		const reference = workerExport.container;
+		const target = await resolveDefinition(reference);
+		workerExports[exportName] = {
+			...workerExport,
+			container: normalizeConfigReference(reference, target, "container"),
+		};
+	}
+
+	return { ...resolved, exports: workerExports };
+}
+
+async function normalizeConfigReferences(
+	resolved: unknown,
+	resolveDefinition: ResolveDefinition
+): Promise<unknown> {
+	const workerReferences = await normalizeWorkerReferences(
+		resolved,
+		resolveDefinition
+	);
+	return normalizeContainerReferences(workerReferences, resolveDefinition);
 }
 
 function prefixIssues(
@@ -105,21 +160,127 @@ function prefixIssues(
 	}));
 }
 
+function validateUniqueResourceNames(
+	configExports: ParsedConfigExports
+): z.core.$ZodIssue[] {
+	const issues: z.core.$ZodIssue[] = [];
+	const exportNameByResourceName = {
+		container: new Map<string, string>(),
+		worker: new Map<string, string>(),
+	};
+
+	for (const [exportName, config] of Object.entries(configExports)) {
+		if (config.type !== "container" && config.type !== "worker") {
+			continue;
+		}
+
+		const resourceType = config.type === "container" ? "Container" : "Worker";
+		const exportNames = exportNameByResourceName[config.type];
+		const previousExportName = exportNames.get(config.name);
+		if (previousExportName !== undefined) {
+			issues.push({
+				code: "custom",
+				input: config.name,
+				path: [exportName, "name"],
+				message: `The ${resourceType} name "${config.name}" is also used by the "${previousExportName}" export. ${resourceType} names must be unique.`,
+			});
+			continue;
+		}
+
+		exportNames.set(config.name, exportName);
+	}
+
+	return issues;
+}
+
+function validateContainerExportLinks(
+	configExports: ParsedConfigExports
+): z.core.$ZodIssue[] {
+	const issues: z.core.$ZodIssue[] = [];
+	const containerNames = new Set<string>();
+
+	for (const config of Object.values(configExports)) {
+		if (config.type === "container") {
+			containerNames.add(config.name);
+		}
+	}
+
+	const firstReferenceByContainerName = new Map<
+		string,
+		{ workerExportName: string; durableObjectExportName: string }
+	>();
+
+	for (const [workerExportName, config] of Object.entries(configExports)) {
+		if (config.type !== "worker") {
+			continue;
+		}
+
+		for (const [durableObjectExportName, workerExport] of Object.entries(
+			config.exports ?? {}
+		)) {
+			if (
+				workerExport.type !== "durable-object" ||
+				!("container" in workerExport) ||
+				workerExport.container === undefined
+			) {
+				continue;
+			}
+
+			const containerName = workerExport.container;
+			const path = [
+				workerExportName,
+				"exports",
+				durableObjectExportName,
+				"container",
+			];
+
+			if (!containerNames.has(containerName)) {
+				issues.push({
+					code: "custom",
+					input: containerName,
+					path,
+					message: `The Container "${containerName}" is not exported from this configuration.`,
+				});
+				continue;
+			}
+
+			const firstReference = firstReferenceByContainerName.get(containerName);
+			if (firstReference !== undefined) {
+				issues.push({
+					code: "custom",
+					input: containerName,
+					path,
+					message: `The Container "${containerName}" is already referenced by "${firstReference.workerExportName}.exports.${firstReference.durableObjectExportName}". A Container can only be linked to one Durable Object.`,
+				});
+				continue;
+			}
+
+			firstReferenceByContainerName.set(containerName, {
+				workerExportName,
+				durableObjectExportName,
+			});
+		}
+	}
+
+	return issues;
+}
+
 /**
  * Resolve and validate loaded `cloudflare.config.ts` exports.
  *
- * Config inputs are resolved once by identity. Top-level Worker exports are
- * also parsed once by identity; unexported references are resolved only far
- * enough to replace the reference with the Worker's name.
+ * Config inputs are resolved once by identity. Top-level Worker and Container
+ * exports are also parsed once by identity. References are resolved only far
+ * enough to replace them with resource names, then Container links are
+ * validated across the exported resources.
  */
 export async function resolveAndValidateConfigExports(
 	exports: Record<string, unknown>,
 	ctx: ConfigContext
 ): Promise<ConfigParseResult> {
 	const resolveDefinition = createDefinitionResolver(ctx);
-	const parsedWorkers = new Map<
+	const parsedResources = new Map<
 		unknown,
-		z.ZodSafeParseResult<ParsedInputWorkerConfig>
+		z.ZodSafeParseResult<ParsedInputContainerConfig | ParsedInputWorkerConfig>
 	>();
 	const resolvedExports: Record<string, unknown> = {};
 
@@ -153,24 +314,33 @@ export async function resolveAndValidateConfigExports(
 			continue;
 		}
 
-		if (resolved.type === "worker") {
-			let result = parsedWorkers.get(input);
-			if (!result) {
-				result = InputWorkerSchema.safeParse(
-					await normalizeWorkerReferences(resolved, resolveDefinition)
-				);
-				parsedWorkers.set(input, result);
-				if (!result.success) {
-					issues.push(...prefixIssues(result.error.issues, name));
-				}
-			}
-
-			if (result.success) {
-				data[name] = result.data;
-			}
+		if (resolved.type !== "worker" && resolved.type !== "container") {
 			continue;
 		}
+
+		let result = parsedResources.get(input);
+		if (!result) {
+			result =
+				resolved.type === "worker"
+					? InputWorkerSchema.safeParse(
+							await normalizeConfigReferences(resolved, resolveDefinition)
+						)
+					: InputContainerSchema.safeParse(resolved);
+			parsedResources.set(input, result);
+			if (!result.success) {
+				issues.push(...prefixIssues(result.error.issues, name));
+			}
+		}
+
+		if (result.success) {
+			data[name] = result.data;
+		}
 	}
+
+	issues.push(
+		...validateUniqueResourceNames(data),
+		...validateContainerExportLinks(data)
+	);
 
 	return issues.length > 0
 		? {
