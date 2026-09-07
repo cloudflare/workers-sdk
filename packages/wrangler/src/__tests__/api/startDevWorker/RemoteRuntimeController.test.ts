@@ -348,6 +348,67 @@ describe("RemoteRuntimeController", () => {
 			const reloadEvent = await reloadPromise;
 			expect(reloadEvent.type).toBe("reloadComplete");
 		});
+
+		it("should also retry when only the token upload fails, since that failure never throws", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// `createPreviewSession` (the session step) keeps succeeding, but
+			// `createWorkerPreview` (the token upload step) fails. `#previewToken`
+			// handles this itself — reporting the error and returning `undefined`
+			// rather than throwing — so `#updatePreviewToken` returns `false`
+			// without an exception for `#refreshPreviewToken` to catch.
+			// `handlePreviewSessionUploadError` is mocked to its default
+			// `undefined` return, i.e. "don't restart the session".
+			vi.mocked(createWorkerPreview).mockRejectedValue(
+				new Error("upload failed")
+			);
+
+			const errorPromise = bus.waitFor("error", undefined, 60 * 60 * 1000);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			const errorEvent = await errorPromise;
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Failed to obtain a preview token",
+			});
+
+			// It must still keep retrying on the short interval rather than
+			// silently giving up just because nothing threw.
+			const secondErrorPromise = bus.waitFor(
+				"error",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL + 1
+			);
+			await secondErrorPromise;
+
+			// Recovers once the upload succeeds again.
+			vi.mocked(createWorkerPreview).mockResolvedValue({
+				value: "test-preview-token",
+				host: "test.workers.dev",
+			});
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL + 1
+			);
+			const reloadEvent = await reloadPromise;
+			expect(reloadEvent.type).toBe("reloadComplete");
+		});
 	});
 
 	describe("preview token refresh", () => {
