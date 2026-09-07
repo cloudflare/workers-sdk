@@ -1,0 +1,27 @@
+packages/wrangler/src/__tests__/pages/delegate-to-workers.test.ts
+  s_da4850dcde74ad::t_8c1bb107500ace 65-76,168,202,224,253,278,300,327
+packages/wrangler/src/__tests__/pages/deploy.test.ts
+  s_da4850dcde74ad::t_1ef7b146c3aa1e 28,51-52,68,132-147
+packages/wrangler/src/__tests__/pages/project-create.test.ts
+  s_da4850dcde74ad::t_d6804461a51c20 3,6,14-15,23-26,82-130
+packages/wrangler/src/pages/delegate-to-workers.ts
+  s_da4850dcde74ad::t_f459d83a5fcb38 50-52,221-243
+packages/wrangler/src/pages/deploy.ts
+  s_da4850dcde74ad::t_7de13866473ea6 226-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5fdd809866883aa9c67169d0f31b65f32ce04db6",
+  "prompts": {},
+  "sessions": {
+    "s_da4850dcde74ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06836-3f2c-71d2-b7b1-b00a14ae1f67",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
