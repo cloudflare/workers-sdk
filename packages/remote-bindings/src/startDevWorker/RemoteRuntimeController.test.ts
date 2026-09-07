@@ -216,4 +216,60 @@ describe("RemoteRuntimeController preview token refresh", () => {
 
 		await controller.teardown();
 	});
+
+	it("does not recreate the refresh timer when a thrown error surfaces after a concurrent rebuild aborted it", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+
+		const onError = vi.fn<(event: ErrorEvent) => void>();
+		const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+		const controller = new RemoteRuntimeController(onError, onReloadComplete);
+
+		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		// The session step hangs so it's still in flight when `onUpdateStart()`
+		// aborts the controller. Rather than the abort itself rejecting this
+		// call (already covered above), a *different*, unrelated error surfaces
+		// afterwards — e.g. a concurrent auth-hook failure — while the signal
+		// happens to already be aborted. `onUpdateStart()` also clears the
+		// pending refresh timer; a thrown, non-`AbortError` failure must not
+		// recreate it for this now-superseded bundle.
+		let rejectSession!: (err: unknown) => void;
+		createPreviewSession.mockImplementation(
+			() =>
+				new Promise((_resolve, reject) => {
+					rejectSession = reject;
+				})
+		);
+
+		await vi.advanceTimersByTimeAsync(50 * 60 * 1000);
+		controller.onUpdateStart();
+		rejectSession(new Error("auth hook failed"));
+		await vi.advanceTimersByTimeAsync(0);
+
+		// The error is still reported...
+		expect(onError).toHaveBeenCalledTimes(1);
+		// ...but must not resurrect a retry timer for the superseded bundle.
+		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2);
+		expect(createPreviewSession).toHaveBeenCalledTimes(2);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		// The rebuild itself completes normally afterwards, unaffected.
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const newBundle: Bundle = { ...bundle, path: "/tmp/worker-3.js" };
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config,
+			bundle: newBundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+
+		await controller.teardown();
+	});
 });
