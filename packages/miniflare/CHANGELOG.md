@@ -1,10 +1,6 @@
 # miniflare
 
-## 5.20260907.0
-
-### Minor Changes
-
-- [#15509](https://github.com/cloudflare/workers-sdk/pull/15509) [`0111106`](https://github.com/cloudflare/workers-sdk/commit/0111106e69547ea4f718557925d715bd1a549302) Thanks [@emily-shen](https://github.com/emily-shen)! - Stabilise miniflare v5 alpha
+## 5.20260907.0-alpha
 
 ### Patch Changes
 
