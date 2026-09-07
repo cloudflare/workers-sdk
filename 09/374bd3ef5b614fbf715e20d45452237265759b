@@ -1,0 +1,23 @@
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_ae91e42aa48337::t_10e4041b51a98f 15-17,30-37,73,93-95,384-418
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_ae91e42aa48337::t_1e9a6bd4f97fde 1-6,8-17,18-21,23-29,30,32-87,89-119,148-156,158-159,161-252,256-269,273,275-278,279-291,295-298,304-326,330-339,340-343,357-358,375,379-393,395-552,586,588-591,593-594,600,601-844,847-909,943,945-948,950-951,957,958-992
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_ae91e42aa48337::t_edbbc7da125866 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "09374bd3ef5b614fbf715e20d45452237265759b",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

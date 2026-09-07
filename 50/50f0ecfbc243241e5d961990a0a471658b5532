@@ -45,6 +45,14 @@ packages/miniflare/test/plugins/local-explorer/email.spec.ts
       },
       "human_author": "tmo <tennyson@cloudflare.com>"
     },
+    "s_6839e8c88e235c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019fae0f-212d-7ffd-93e0-046ef22fa694",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "avenceslau <avenceslau@cloudflare.com>"
+    },
     "s_c1da0c64966116": {
       "agent_id": {
         "tool": "opencode",
@@ -52,6 +60,14 @@ packages/miniflare/test/plugins/local-explorer/email.spec.ts
         "model": "claude-opus-4-8"
       },
       "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_dbbc503753dcd7": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019faea6-ae1d-7768-952d-5a3188583cce",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "avenceslau <avenceslau@cloudflare.com>"
     }
   }
 }

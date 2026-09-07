@@ -1,0 +1,43 @@
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_98f21ca7847f28 49-50,56,188,222
+packages/containers-shared/src/client/models/ContainerImagePreparation.ts
+  s_3725c7a238f252::t_d088585db1c181 1-12
+packages/containers-shared/src/client/models/ContainerImagePreparationStatus.ts
+  s_3725c7a238f252::t_36e7baccb1054a 1-9
+packages/containers-shared/src/client/models/CreateDurableObjectApplicationRequest.ts
+  s_3725c7a238f252::t_bed1dbcdb8a61e 1-21
+packages/containers-shared/src/client/models/PrepareContainerImageRequestBody.ts
+  s_3725c7a238f252::t_91b26f7c547ee9 1-7
+packages/containers-shared/src/client/models/SchedulingPolicy.ts
+  s_3725c7a238f252::t_d6641a99709716 9
+packages/containers-shared/src/client/services/ApplicationsService.ts
+  s_3725c7a238f252::t_a34559f4a06dfd 17,44-46
+packages/containers-shared/src/client/services/ContainerImagePreparationsService.ts
+  s_3725c7a238f252::t_da41b0149af5e5 1-30
+packages/deploy-helpers/src/deploy/helpers/container-image-bindings.ts
+  s_3725c7a238f252::t_83891e9ded921d 1-45
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_3725c7a238f252::t_54ff5a601c2ef2 9-26,47-65
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_311f90e5d7332f 6,12,40,117-343,3373-3384
+packages/wrangler/src/containers/config.ts
+  s_3725c7a238f252::t_3fb96d9f5fe5a5 10,66-69,72-75,77-79
+packages/wrangler/src/containers/deploy.ts
+  s_3725c7a238f252::t_32b8ccf277bff1 75,78,80,85-86,100,105,107,114-115,117-124,126-128,130-133,135-153,155-158,161-162,164-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ef3f99c28766b557a7d933c603ea7c52e4ed0806",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

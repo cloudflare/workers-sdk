@@ -1,0 +1,30 @@
+packages/wrangler/src/__tests__/assets.test.ts
+  s_e4a84890485ace::t_bb59565b4ee488 18,120-140
+  s_e4a84890485ace::t_f79f6dda171ecb 141-142
+packages/wrangler/src/experimental-config/load.ts
+  s_2f8343d878c4fa::t_d531a2c6e90ce8 173-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "870472286c4bc3798807aa14267bd0299730cecd",
+  "prompts": {},
+  "sessions": {
+    "s_2f8343d878c4fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff532a9cffeujhyQPJ9FOV6BY",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_e4a84890485ace": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01057-eea4-7d13-8231-6a796198cef7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

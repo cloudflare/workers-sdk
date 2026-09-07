@@ -1,0 +1,35 @@
+packages/miniflare/src/workers/email/contracts.ts
+  s_dabb4773aed416::t_7e7ed8eb7ed43c 33,149-150
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_dabb4773aed416::t_13a378f3d8a703 149-155,1286-1287,1327-1339,1468,1508-1510,1614-1615,1650,1670-1683,1685,1734,1737,1751,1753,1755-1759
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_dabb4773aed416::t_08c402093fd266 793,886-888,892,931-933,937
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_dabb4773aed416::t_b46cc19e597d58 1068-1069,1074-1077,1082-1088
+packages/miniflare/test/index.spec.ts
+  s_dabb4773aed416::t_20d82c30ab3ac6 2795
+packages/miniflare/src/workers/email/email-store.ts
+  s_dabb4773aed416::t_f714ebc2daca7f 157-158
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_dabb4773aed416::t_f505b4f79f1cb3 537,616-617,635-636
+packages/miniflare/src/workers/core/email.ts
+  s_dabb4773aed416::t_b03e6dc9706d9b 191-194,419
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_dabb4773aed416::t_37b3d27debb995 3857,3979-3984,4088-4093
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b0fe079e4b6275682a1a676b2dbf60facab0d3e7",
+  "prompts": {},
+  "sessions": {
+    "s_dabb4773aed416": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03f05-a9b9-7673-8100-25804b5737f1",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

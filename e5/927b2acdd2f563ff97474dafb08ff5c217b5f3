@@ -1,0 +1,31 @@
+packages/workers-utils/src/types.ts
+  s_2f8343d878c4fa::t_3467b1b03443e6 216
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_afb1359b250186::t_81c59d4f17caf6 3478-3777
+packages/workers-utils/src/config/validation.ts
+  s_afb1359b250186::t_6d72356b46699f 4,566-570,856-870,872-974,3265-3274,3308
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e5927b2acdd2f563ff97474dafb08ff5c217b5f3",
+  "prompts": {},
+  "sessions": {
+    "s_2f8343d878c4fa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fff532a9cffeujhyQPJ9FOV6BY",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_afb1359b250186": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0103b-3ade-7090-ac22-3dff035f6828",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

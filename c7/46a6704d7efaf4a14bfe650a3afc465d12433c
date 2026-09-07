@@ -1,0 +1,27 @@
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_fac814dd42479b::t_58cd68ad5be7b6 135-137,150-152,166-168,224-234,243-336
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_fac814dd42479b::t_27fa320250acb0 47-60,70-72,81-84,89-98,124-125,233-234,255,341-344,468-469,487-493,495-498
+packages/miniflare/src/workers/email/mime.ts
+  s_fac814dd42479b::t_0d251e238ceb6b 32-58,82-84,86-91,229-230
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_fac814dd42479b::t_b9cb307c61eff3 24,610-612
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_fac814dd42479b::t_5b7a93b752cb1d 1530-1559
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c746a6704d7efaf4a14bfe650a3afc465d12433c",
+  "prompts": {},
+  "sessions": {
+    "s_fac814dd42479b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03438-1082-7f11-a63e-51aaf4de84c0",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

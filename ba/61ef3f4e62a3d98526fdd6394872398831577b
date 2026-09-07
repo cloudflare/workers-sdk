@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/email/storage.ts
+  s_ae91e42aa48337::t_53ac1f7f659dbf 19-20,103-104,106-107,114,126-131,139,143,147-151,154,158-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ba61ef3f4e62a3d98526fdd6394872398831577b",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

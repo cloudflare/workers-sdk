@@ -1,0 +1,19 @@
+packages/miniflare/src/workers/email/loopback.ts
+  s_25bfcebbf400a5::t_05e42e15042a32 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c9e005705ec9d9f25bf1a441daa9680c2080e35c",
+  "prompts": {},
+  "sessions": {
+    "s_25bfcebbf400a5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01f32-9295-73f2-9212-62bf5bdde259",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_ae91e42aa48337::t_5281b7e801f253 33-37
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_ae91e42aa48337::t_7ed08e42be490c 2187-2201,2203-2221,2223
+  s_ae91e42aa48337::t_02c4cb4a534728 632,687
+  s_ae91e42aa48337::t_f99aaa2143b62d 2224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "669c6e42161b211a7528c595348f9865cb05ea9f",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

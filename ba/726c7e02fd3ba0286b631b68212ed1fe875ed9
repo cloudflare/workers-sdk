@@ -1,0 +1,23 @@
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_ae91e42aa48337::t_10e4041b51a98f 15-17,30-37,73,93-95,384-418
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_ae91e42aa48337::t_1e9a6bd4f97fde 1-2,4-5,11,13-16,22-26,27-30,32-38,39,41-59,90-126,135-140,143-150,156-159,167-168,215-221,230-231,233-237,263-305,307-315,317-319,330,332-338,341-347,365,367-368,399,401-402,404,405-417,421-424,447-449,459-477,484-492,493-496,510-511,528,532-546,548-705,737,739-742,744-745,751,752-803,805-995,998-1036,1058,1066-1088,1120,1122-1125,1127-1128,1134,1135-1149,1151-1169
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_ae91e42aa48337::t_edbbc7da125866 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ba726c7e02fd3ba0286b631b68212ed1fe875ed9",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

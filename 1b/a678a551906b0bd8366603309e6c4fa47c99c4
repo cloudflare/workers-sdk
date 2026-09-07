@@ -1,0 +1,33 @@
+packages/workers-utils/src/config/validation.ts
+  s_168d6f73e9e63d::t_32f69b72080a5d 13-16,5964
+packages/workers-utils/src/config/environment.ts
+  s_168d6f73e9e63d::t_978f10a82bd00a 1953-1984
+.changeset/polite-rings-make.md
+  s_168d6f73e9e63d::t_85bc341403f2d4 1-7
+packages/wrangler/src/__tests__/preview.test.ts
+  s_3fe88a80ac76fb::t_3a17f3bcb862f3 2,18,22,238,246,798-855,906-1422,1718,2270
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1ba678a551906b0bd8366603309e6c4fa47c99c4",
+  "prompts": {},
+  "sessions": {
+    "s_168d6f73e9e63d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98ad0f66ffenvYuXJpfs1NEGt",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    },
+    "s_3fe88a80ac76fb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98419adeffe0CohIZ5w8HSyG0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

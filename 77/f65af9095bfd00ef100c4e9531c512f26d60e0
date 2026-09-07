@@ -1,0 +1,71 @@
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_0af0e8d26e8295::t_099bd4746bc39c 537,543,549-554,571-606,612,620,623,628-630,638,641,646-648,660,674
+packages/miniflare/src/workers/email/email-store.ts
+  s_ff9e97aa7f7ce5::t_a71ae21d451a32 28,157,164
+  s_ff9e97aa7f7ce5::t_1f97da5aa68995 27
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_ff9e97aa7f7ce5::t_c8bdfed87b51fa 16-18,27,605-608,611,1073-1075,1080-1084
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_0af0e8d26e8295::t_1ca6314f2385d0 3832-3835,3855-3858,3863-3881,3884,3962,3991,4006-4022,4042,4048,4054,4094,4109-4125,4145,4151,4157,4320,4386
+packages/miniflare/scripts/email-openapi.ts
+  s_0af0e8d26e8295::t_807be29a29165e 15-30,33-44
+packages/miniflare/src/workers/email/mime.ts
+  s_ff9e97aa7f7ce5::t_00057cfb3e7892 4,6,63,68,202-209
+packages/miniflare/test/index.spec.ts
+  s_ff9e97aa7f7ce5::t_fa673fb119166a 2536-2542,2796-2800
+packages/miniflare/src/workers/email/input-validation.ts
+  s_ff9e97aa7f7ce5::t_3d45fc671242b4 3-15,21-74
+packages/miniflare/src/workers/core/email.ts
+  s_26b06ef24f9c34::t_c80789f7da47b9 61-99,204-210,237,449,459,462,465,475-477,487,498-501
+  s_719ff7c6ab9093::t_bbe13204fa5700 11-14
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_0af0e8d26e8295::t_cdce419d5ddc1b 793,802-805,817-831,879,899,905-908,919-921,941,947-950,961-963,1066,1094
+packages/miniflare/src/workers/email/contracts.ts
+  s_ff9e97aa7f7ce5::t_ef27d8feeea784 7-8,14-21,24-28,36,46
+  s_ff9e97aa7f7ce5::t_ff18281fc0287d 47-49
+  s_719ff7c6ab9093::t_304fdc02d88795 50-55,59,62-65,175
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_26b06ef24f9c34::t_f566caaacae3a9 26,46-49,153-159,329-338,991-993,1465,1476-1478,1485-1530,1533,1537,1542-1552,1583-1691,1768,1771,1785,1787,1789-1791,1808-1814
+packages/miniflare/src/workers/email/capture-metadata.ts
+  s_719ff7c6ab9093::t_34356ea7bf131b 35,46-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "77f65af9095bfd00ef100c4e9531c512f26d60e0",
+  "prompts": {},
+  "sessions": {
+    "s_0af0e8d26e8295": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03db1-876e-78c0-869f-e18475c99905",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_26b06ef24f9c34": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03db1-6608-78f1-b5b3-7af6fdcaca61",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_719ff7c6ab9093": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03e7b-abcf-72b1-b33c-84183497c87b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_ff9e97aa7f7ce5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a038f2-4760-7423-8b42-1eb8942b028b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

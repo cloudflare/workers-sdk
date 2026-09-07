@@ -1,0 +1,27 @@
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_d33e8b2cd5474e::t_aa1948890c0005 1,636,1943,1949-1958,2161
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_d33e8b2cd5474e::t_74f8c6b60886c2 80
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_d33e8b2cd5474e::t_8e8341c146389c 613-620,824,860-865,868-890,909-1049,1127-1149,1160-1190
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_d33e8b2cd5474e::t_be716ed6cb6ce7 414-417,447,554,564-680,717,722-735,738-761
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_d33e8b2cd5474e::t_ae962d3e83f679 1287,3462,3468-3477,3718,3725-3726,3733,3744-3745,3748,3763-3772,3774-3777,3780-3781,3802-3803,3826-3844,3849-3850,3853-3857,3859-3875,3877-3878,3880-3886,3889-3955,3958-3980,3983-4023,4025-4027,4029-4043,4046-4050,4052-4080,4082-4084,4086-4228,4230-4245,4255,4322-4325,4328-4330,4349-4351,4354-4358,4360-4376,4378-4379,4381-4387,4390-4392,4394-4424,4426-4435,4438-4442,4444-4472,4474-4507,4509-4522,4524-4533
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "36358ea0c6bc4f8422b4b4a8a93f3fc4d955394e",
+  "prompts": {},
+  "sessions": {
+    "s_d33e8b2cd5474e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02014-3f16-7711-8c72-737d2e17d92c",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
