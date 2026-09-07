@@ -1,14 +1,20 @@
+import { EventEmitter } from "node:events";
 import http from "node:http";
 import net from "node:net";
 import * as path from "node:path";
 import { Response as MiniflareResponse } from "miniflare";
 import { afterEach, beforeEach, describe, test } from "vitest";
 import {
+	createRequestForIncomingMessage,
 	createRequestHandler,
+	getAuthority,
 	getForwardedProto,
 	getOutputDirectory,
+	getScheme,
+	toMiniflareRequest,
 } from "../utils";
 import type { AddressInfo } from "node:net";
+import type * as vite from "vite";
 
 describe("getOutputDirectory", () => {
 	test("returns the correct output if `environments[environmentName].build.outDir` is defined", ({
@@ -97,6 +103,211 @@ describe("getForwardedProto", () => {
 		expect(
 			getForwardedProto({ headers: { "x-forwarded-proto": "" } })
 		).toBeUndefined();
+	});
+});
+
+describe("getAuthority", () => {
+	test("returns undefined when header and authority property are missing", ({
+		expect,
+	}) => {
+		expect(getAuthority({ headers: {} })).toBeUndefined();
+	});
+
+	test("extracts authority from `:authority` header", ({ expect }) => {
+		expect(getAuthority({ headers: { ":authority": "localhost:5173" } })).toBe(
+			"localhost:5173"
+		);
+	});
+
+	test("handles string array for `:authority` header", ({ expect }) => {
+		expect(
+			getAuthority({ headers: { ":authority": ["localhost:5173"] } })
+		).toBe("localhost:5173");
+	});
+
+	test("extracts authority from `authority` property on request", ({
+		expect,
+	}) => {
+		expect(getAuthority({ headers: {}, authority: "localhost:5173" })).toBe(
+			"localhost:5173"
+		);
+	});
+
+	test("prioritizes `:authority` header over `authority` property", ({
+		expect,
+	}) => {
+		expect(
+			getAuthority({
+				headers: { ":authority": "header-host:5173" },
+				authority: "prop-host:5173",
+			})
+		).toBe("header-host:5173");
+	});
+
+	test("returns undefined when `:authority` is an empty string", ({
+		expect,
+	}) => {
+		expect(getAuthority({ headers: { ":authority": "" } })).toBeUndefined();
+	});
+});
+
+describe("getScheme", () => {
+	test("returns undefined when header and scheme property are missing", ({
+		expect,
+	}) => {
+		expect(getScheme({ headers: {} })).toBeUndefined();
+	});
+
+	test("returns https: when `:scheme` header is `https`", ({ expect }) => {
+		expect(getScheme({ headers: { ":scheme": "https" } })).toBe("https:");
+	});
+
+	test("returns http: when `:scheme` header is `http`", ({ expect }) => {
+		expect(getScheme({ headers: { ":scheme": "http" } })).toBe("http:");
+	});
+
+	test("is case-insensitive", ({ expect }) => {
+		expect(getScheme({ headers: { ":scheme": "HTTPS" } })).toBe("https:");
+	});
+
+	test("handles string array for `:scheme` header", ({ expect }) => {
+		expect(getScheme({ headers: { ":scheme": ["https"] } })).toBe("https:");
+	});
+
+	test("extracts scheme from `scheme` property on request", ({ expect }) => {
+		expect(getScheme({ headers: {}, scheme: "https" })).toBe("https:");
+	});
+
+	test("returns undefined for unsupported schemes", ({ expect }) => {
+		expect(getScheme({ headers: { ":scheme": "ws" } })).toBeUndefined();
+		expect(getScheme({ headers: { ":scheme": "" } })).toBeUndefined();
+	});
+});
+
+describe("createRequestForIncomingMessage and toMiniflareRequest", () => {
+	test("preserves non-default port and hostname from `:authority` in request.url", ({
+		expect,
+	}) => {
+		const res = new EventEmitter() as unknown as http.ServerResponse;
+		const req = {
+			method: "GET",
+			url: "/path?query=1",
+			headers: {
+				":authority": "localhost:5173",
+				":scheme": "https",
+			},
+			rawHeaders: [":authority", "localhost:5173", ":scheme", "https"],
+			socket: {},
+		} as unknown as vite.Connect.IncomingMessage;
+
+		const request = createRequestForIncomingMessage(req, res);
+		expect(request.url).toBe("https://localhost:5173/path?query=1");
+		expect(request.headers.get("Host")).toBe("localhost:5173");
+	});
+
+	test("preserves non-default port with IPv6 authority", ({ expect }) => {
+		const res = new EventEmitter() as unknown as http.ServerResponse;
+		const req = {
+			method: "GET",
+			url: "/path",
+			headers: {
+				":authority": "[::1]:5173",
+				":scheme": "https",
+			},
+			rawHeaders: [":authority", "[::1]:5173", ":scheme", "https"],
+			socket: {},
+		} as unknown as vite.Connect.IncomingMessage;
+
+		const request = createRequestForIncomingMessage(req, res);
+		expect(request.url).toBe("https://[::1]:5173/path");
+		expect(request.headers.get("Host")).toBe("[::1]:5173");
+	});
+
+	test("toMiniflareRequest sets X-Forwarded-Host including port when missing", ({
+		expect,
+	}) => {
+		const res = new EventEmitter() as unknown as http.ServerResponse;
+		const req = {
+			method: "GET",
+			url: "/",
+			headers: {
+				":authority": "localhost:5173",
+				":scheme": "https",
+			},
+			rawHeaders: [":authority", "localhost:5173", ":scheme", "https"],
+			socket: {},
+		} as unknown as vite.Connect.IncomingMessage;
+
+		const request = createRequestForIncomingMessage(req, res);
+		const miniflareRequest = toMiniflareRequest(request);
+
+		expect(miniflareRequest.headers.get("X-Forwarded-Host")).toBe(
+			"localhost:5173"
+		);
+	});
+
+	test("toMiniflareRequest preserves existing X-Forwarded-Host if already set", ({
+		expect,
+	}) => {
+		const res = new EventEmitter() as unknown as http.ServerResponse;
+		const req = {
+			method: "GET",
+			url: "/",
+			headers: {
+				":authority": "localhost:5173",
+				":scheme": "https",
+				"x-forwarded-host": "external-proxy.com:8443",
+			},
+			rawHeaders: [
+				":authority",
+				"localhost:5173",
+				":scheme",
+				"https",
+				"x-forwarded-host",
+				"external-proxy.com:8443",
+			],
+			socket: {},
+		} as unknown as vite.Connect.IncomingMessage;
+
+		const request = createRequestForIncomingMessage(req, res);
+		const miniflareRequest = toMiniflareRequest(request);
+
+		expect(miniflareRequest.headers.get("X-Forwarded-Host")).toBe(
+			"external-proxy.com:8443"
+		);
+	});
+
+	test("prioritizes `:authority` over a stale or port-less `Host` header", ({
+		expect,
+	}) => {
+		const res = new EventEmitter() as unknown as http.ServerResponse;
+		const req = {
+			method: "GET",
+			url: "/path",
+			headers: {
+				":authority": "localhost:5173",
+				":scheme": "https",
+				host: "localhost",
+			},
+			rawHeaders: [
+				":authority",
+				"localhost:5173",
+				":scheme",
+				"https",
+				"host",
+				"localhost",
+			],
+			socket: {},
+		} as unknown as vite.Connect.IncomingMessage;
+
+		const request = createRequestForIncomingMessage(req, res);
+		expect(request.url).toBe("https://localhost:5173/path");
+		expect(request.headers.get("Host")).toBe("localhost:5173");
+
+		const miniflareRequest = toMiniflareRequest(request);
+		expect(miniflareRequest.headers.get("X-Forwarded-Host")).toBe(
+			"localhost:5173"
+		);
 	});
 });
 
