@@ -85,3 +85,18 @@ test("serialize Headers instance from a different `Headers` implementation", ({
 	expect(deserialized).toBeInstanceOf(impl.Headers);
 	expect(deserialized.get("x-key")).toBe("value");
 });
+
+test("does not treat an object with a forged Headers tag as Headers", ({
+	expect,
+}) => {
+	// `Symbol.toStringTag` alone isn't a reliable brand, since any object can
+	// set it. The reducer must also check for the shape a real `Headers` has,
+	// so a forged tag doesn't get its (possibly side-effecting) methods
+	// invoked.
+	const impl = NODE_PLATFORM_IMPL;
+	const fake = { [Symbol.toStringTag]: "Headers" };
+
+	expect(() => stringify(fake, createHTTPReducers(impl))).toThrow(
+		/symbolic keys/
+	);
+});

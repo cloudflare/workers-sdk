@@ -177,14 +177,31 @@ function hasStringTag(value: unknown, tag: string): boolean {
 		(value as { [Symbol.toStringTag]?: unknown })[Symbol.toStringTag] === tag
 	);
 }
+// Beyond the tag, also check for a couple of members the real class always
+// has: `Symbol.toStringTag` is otherwise just an own/inherited property, so
+// an unrelated object could set it to force its way through these reducers,
+// and then have devalue invoke its (possibly side-effecting) getters/methods
+// while walking the "entries"/"headers"/"body" shape below.
 export function isHeadersLike(value: unknown): value is WorkerHeaders {
-	return hasStringTag(value, "Headers");
+	return (
+		hasStringTag(value, "Headers") &&
+		typeof (value as WorkerHeaders).entries === "function" &&
+		typeof (value as WorkerHeaders).get === "function"
+	);
 }
 function isRequestLike(value: unknown): value is WorkerRequest {
-	return hasStringTag(value, "Request");
+	return (
+		hasStringTag(value, "Request") &&
+		typeof (value as WorkerRequest).method === "string" &&
+		isHeadersLike((value as WorkerRequest).headers)
+	);
 }
 function isResponseLike(value: unknown): value is WorkerResponse {
-	return hasStringTag(value, "Response");
+	return (
+		hasStringTag(value, "Response") &&
+		typeof (value as WorkerResponse).status === "number" &&
+		isHeadersLike((value as WorkerResponse).headers)
+	);
 }
 
 export function createHTTPReducers(
