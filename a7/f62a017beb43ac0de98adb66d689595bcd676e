@@ -1,0 +1,39 @@
+packages/workers-utils/src/config/environment.ts
+  s_78769e78586072::t_7cea5b4feaec08 830-831,834-838,840,844,846-851,861-862
+packages/workers-utils/src/map-worker-metadata-bindings.ts
+  s_e6ef9db3485b14::t_93cff59f5017eb 59-61
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_e6ef9db3485b14::t_3b13323843a3b9 1933-1939,1941,1944-1976,1981,1983-2010
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_e6ef9db3485b14::t_45e270519c44bd 9-16,37-43,45-50,52-54
+packages/config/src/convert.ts
+  s_e6ef9db3485b14::t_2590435d84da5d 358-366,368-371
+packages/miniflare/test/config/v4-convert.spec.ts
+  s_e6ef9db3485b14::t_03384e40efb797 73-80,82-83,85-88,90-103,105-109,111-115,117-121
+packages/miniflare/test/runtime/config.spec.ts
+  s_e6ef9db3485b14::t_ec3fa76163030c 39,41-72,74-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a7f62a017beb43ac0de98adb66d689595bcd676e",
+  "prompts": {},
+  "sessions": {
+    "s_78769e78586072": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbc9ebe86ffeC6UD7t8jfQyh7x",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_e6ef9db3485b14": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f940fb7bdffeOOke2jjtQ9MxFI",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}
