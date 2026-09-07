@@ -115,7 +115,6 @@
 		"extends": "../../package.json"
 	},
 	"workers-sdk": {
-		"prerelease": true,
-		"npmPrereleaseIdentifier": "alpha"
+		"prerelease": true
 	}
 }
