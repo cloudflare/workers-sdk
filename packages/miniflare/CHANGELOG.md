@@ -1,31 +1,5 @@
 # miniflare
 
-## 5.20260907.0
-
-### Minor Changes
-
-- [#15509](https://github.com/cloudflare/workers-sdk/pull/15509) [`0111106`](https://github.com/cloudflare/workers-sdk/commit/0111106e69547ea4f718557925d715bd1a549302) Thanks [@emily-shen](https://github.com/emily-shen)! - Stabilise miniflare v5 alpha
-
-### Patch Changes
-
-- [#15502](https://github.com/cloudflare/workers-sdk/pull/15502) [`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
-
-  The following dependency versions have been updated:
-
-  | Dependency                | From          | To            |
-  | ------------------------- | ------------- | ------------- |
-  | @cloudflare/workers-types | ^5.20260903.1 | ^5.20260904.1 |
-  | workerd                   | 1.20260903.1  | 1.20260904.1  |
-
-- [#15543](https://github.com/cloudflare/workers-sdk/pull/15543) [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
-
-  The following dependency versions have been updated:
-
-  | Dependency                | From          | To            |
-  | ------------------------- | ------------- | ------------- |
-  | @cloudflare/workers-types | ^5.20260904.1 | ^5.20260907.1 |
-  | workerd                   | 1.20260904.1  | 1.20260907.1  |
-
 ## 5.20260903.0-alpha
 
 ### Minor Changes

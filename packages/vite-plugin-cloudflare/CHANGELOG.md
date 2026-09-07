@@ -1,17 +1,5 @@
 # @cloudflare/vite-plugin
 
-## 1.54.5
-
-### Patch Changes
-
-- [#15519](https://github.com/cloudflare/workers-sdk/pull/15519) [`e004845`](https://github.com/cloudflare/workers-sdk/commit/e004845157fd9a65f67e1c52118116599a5ae0ef) Thanks [@devaniketh](https://github.com/devaniketh)! - Preserve HTTP/2 `:authority` header and non-default port in dev server requests
-
-  When Vite runs over HTTPS with HTTP/2 enabled, browsers send authority via the `:authority` pseudo-header rather than `Host`. Previously, pseudo-headers were omitted when creating Fetch requests, causing non-default ports to be dropped from `request.url` and `X-Forwarded-Host`. Authority and scheme are now preserved from HTTP/2 pseudo-headers and request properties.
-
-- Updated dependencies [[`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84), [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a), [`ea5634e`](https://github.com/cloudflare/workers-sdk/commit/ea5634ee165ae54fbb07dcbd77b50a44b40c71d6), [`c0c6504`](https://github.com/cloudflare/workers-sdk/commit/c0c650424c983c02de8ed008d3de0eb90cdc2396), [`0111106`](https://github.com/cloudflare/workers-sdk/commit/0111106e69547ea4f718557925d715bd1a549302), [`ffc7efd`](https://github.com/cloudflare/workers-sdk/commit/ffc7efdc93b09a6345ecb7073ed56731d439e6fc), [`682cd44`](https://github.com/cloudflare/workers-sdk/commit/682cd44fcd18940e143b2c63bb7ebf17f3254531)]:
-  - miniflare@5.20260907.0
-  - wrangler@4.129.1
-
 ## 1.54.4
 
 ### Patch Changes

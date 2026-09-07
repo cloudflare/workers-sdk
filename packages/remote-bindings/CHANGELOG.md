@@ -1,14 +1,5 @@
 # @cloudflare/remote-bindings
 
-## 0.0.20
-
-### Patch Changes
-
-- Updated dependencies [[`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84), [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a), [`e3f2baf`](https://github.com/cloudflare/workers-sdk/commit/e3f2baf9929e15f0ab7a900d220f1a4e81544910), [`0111106`](https://github.com/cloudflare/workers-sdk/commit/0111106e69547ea4f718557925d715bd1a549302)]:
-  - miniflare@5.20260907.0
-  - @cloudflare/workers-auth@0.6.9
-  - @cloudflare/deploy-helpers@0.10.2
-
 ## 0.0.19
 
 ### Patch Changes

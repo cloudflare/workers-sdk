@@ -1,13 +1,5 @@
 # @cloudflare/workers-auth
 
-## 0.6.9
-
-### Patch Changes
-
-- [#15547](https://github.com/cloudflare/workers-sdk/pull/15547) [`e3f2baf`](https://github.com/cloudflare/workers-sdk/commit/e3f2baf9929e15f0ab7a900d220f1a4e81544910) Thanks [@penalosa](https://github.com/penalosa)! - Fix `cf auth login` requesting unsupported email read scopes
-
-  The Cloudflare OAuth server does not define `email_routing:read` or `email_sending:read`. The `cf` CLI now requests only the registered write scopes for those products, preventing login from failing with an unknown OAuth scope error.
-
 ## 0.6.8
 
 ### Patch Changes

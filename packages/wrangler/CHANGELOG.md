@@ -1,48 +1,5 @@
 # wrangler
 
-## 4.129.1
-
-### Patch Changes
-
-- [#15502](https://github.com/cloudflare/workers-sdk/pull/15502) [`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
-
-  The following dependency versions have been updated:
-
-  | Dependency                | From          | To            |
-  | ------------------------- | ------------- | ------------- |
-  | @cloudflare/workers-types | ^5.20260903.1 | ^5.20260904.1 |
-  | workerd                   | 1.20260903.1  | 1.20260904.1  |
-
-- [#15543](https://github.com/cloudflare/workers-sdk/pull/15543) [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
-
-  The following dependency versions have been updated:
-
-  | Dependency                | From          | To            |
-  | ------------------------- | ------------- | ------------- |
-  | @cloudflare/workers-types | ^5.20260904.1 | ^5.20260907.1 |
-  | workerd                   | 1.20260904.1  | 1.20260907.1  |
-
-- [#15323](https://github.com/cloudflare/workers-sdk/pull/15323) [`ea5634e`](https://github.com/cloudflare/workers-sdk/commit/ea5634ee165ae54fbb07dcbd77b50a44b40c71d6) Thanks [@Sakshamm-Goyal](https://github.com/Sakshamm-Goyal)! - Prevent Wrangler from exiting when a process capturing its output closes the pipe.
-
-  Wrangler now ignores broken-pipe errors from stdout and stderr while preserving the existing failure behavior for other output errors.
-
-- [#14001](https://github.com/cloudflare/workers-sdk/pull/14001) [`c0c6504`](https://github.com/cloudflare/workers-sdk/commit/c0c650424c983c02de8ed008d3de0eb90cdc2396) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Update bundle size warning thresholds to use uncompressed size instead of gzip size
-
-  The compressed script size limits (3 MiB free / 10 MiB paid) have been removed server-side in favor of a single 64 MiB uncompressed limit. The bundle size reporter now compares the uncompressed bundle size against this 64 MiB limit for its color-coded warnings, instead of comparing gzip size against the old 3 MiB compressed limit.
-
-- [#15499](https://github.com/cloudflare/workers-sdk/pull/15499) [`ffc7efd`](https://github.com/cloudflare/workers-sdk/commit/ffc7efdc93b09a6345ecb7073ed56731d439e6fc) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Honor Workers Builds name overrides in `wrangler preview`
-
-  Preview commands now target the Worker name supplied by Workers Builds instead of the name in local Wrangler configuration. This prevents preview builds from failing when the two names differ.
-
-- [#15252](https://github.com/cloudflare/workers-sdk/pull/15252) [`682cd44`](https://github.com/cloudflare/workers-sdk/commit/682cd44fcd18940e143b2c63bb7ebf17f3254531) Thanks [@GregoryCollett](https://github.com/GregoryCollett)! - `wrangler dev` no longer exits when a request to your Worker fails transiently
-
-  Previously, a transient network failure on a single request — most commonly a request arriving just as an idle internal connection was closed, after roughly five seconds without traffic — could take down the whole dev server with an empty `✘ [ERROR]`, leaving the port unbound until restarted. In CI test suites, one such failure caused every remaining test to fail with connection errors.
-
-  `wrangler dev` now automatically retries the affected request if it is safe to repeat (GET and HEAD requests). If a request still fails, it fails individually — the error is logged with the request method and URL — and the dev server keeps serving.
-
-- Updated dependencies [[`8bbcb9f`](https://github.com/cloudflare/workers-sdk/commit/8bbcb9f08bcfaa291c7d28b6884fc88c1264bb84), [`2b42d6f`](https://github.com/cloudflare/workers-sdk/commit/2b42d6f2b971fa54de0648e8e9bea03cbf6f702a), [`0111106`](https://github.com/cloudflare/workers-sdk/commit/0111106e69547ea4f718557925d715bd1a549302)]:
-  - miniflare@5.20260907.0
-
 ## 4.129.0
 
 ### Minor Changes
