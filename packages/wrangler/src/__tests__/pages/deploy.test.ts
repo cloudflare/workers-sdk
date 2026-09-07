@@ -129,13 +129,34 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("does not delegate an agent deploy when the project name is unresolved", async ({
+	it("does not delegate an unnamed agent deploy when autoconfig would infer an existing Pages project name", async ({
 		expect,
 	}) => {
 		vi.mocked(detectAgent).mockReturnValue({
 			isAgent: true,
 			id: "test-agent",
 		});
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		writeFileSync(
+			"package.json",
+			JSON.stringify({ name: "existing-pages-project" })
+		);
+		// Model an account where the package name that Workers autoconfiguration
+		// would infer is already in use by Pages. Because Pages has no resolved
+		// project name, delegation must stop before autoconfiguration can select it.
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pages/projects/existing-pages-project",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { name: "existing-pages-project" },
+					})
+			)
+		);
 
 		await expect(
 			runWrangler("pages deploy public")
