@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "5.20260903.0-alpha",
+	"version": "5.20260907.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -115,7 +115,6 @@
 		"extends": "../../package.json"
 	},
 	"workers-sdk": {
-		"prerelease": true,
-		"npmPrereleaseIdentifier": "alpha"
+		"prerelease": true
 	}
 }
