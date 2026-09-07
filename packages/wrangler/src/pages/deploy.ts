@@ -229,9 +229,14 @@ export const pagesDeployCommand = createCommand({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
-			// An unresolved name is not proof that the eventual autoconfigured name is
-			// new, so leave it unknown and keep the command on Pages.
-			projectExists: projectName ? isExistingProject : undefined,
+			// An account-scoped cached name records an established Pages target. Keep
+			// that target on Pages even if it is currently missing from the account;
+			// the direct Pages flow can report or recreate it without reinterpreting the
+			// deployment as a new Workers project. An unresolved name is likewise not
+			// proof that the eventual autoconfigured name is new.
+			projectExists: projectName
+				? isExistingProject || projectName === cachedProjectName
+				: undefined,
 			force: args.force,
 			projectName,
 			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),

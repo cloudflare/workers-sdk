@@ -231,6 +231,66 @@ describe("pages deploy", () => {
 		expect(std.out).not.toContain("Delegating to");
 	});
 
+	it("keeps an account-matching cached project on Pages when it is missing remotely", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "old-account-id",
+			project_name: "stale-project",
+		});
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
+
+		let projectListRequestCount = 0;
+		let staleProjectLookupCount = 0;
+		msw.use(
+			http.get("*/accounts/new-account-id/pages/projects", () => {
+				projectListRequestCount++;
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [
+						{
+							name: "another-project",
+							domains: ["another-project.pages.dev"],
+							source: null,
+							created_on: "2026-09-08T00:00:00.000Z",
+						},
+					],
+				});
+			}),
+			http.get("*/accounts/new-account-id/pages/projects/stale-project", () => {
+				staleProjectLookupCount++;
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 8000007, message: "Project not found" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				);
+			})
+		);
+
+		// This account-only cache write deliberately reproduces the merge that
+		// retains the previous project name while changing its account ID.
+		await runWrangler("pages project list --json");
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+
+		await expect(runWrangler("pages deploy public")).rejects.toThrow(
+			'The Pages project "stale-project" does not exist.'
+		);
+		expect(projectListRequestCount).toBe(1);
+		expect(staleProjectLookupCount).toBe(1);
+		expect(std.out).not.toContain("Delegating to");
+	});
+
 	it("should error if the specified project does not exist in non-interactive mode", async ({
 		expect,
 	}) => {

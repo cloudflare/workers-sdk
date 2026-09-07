@@ -33,23 +33,24 @@ export interface MaybeDelegatePagesToWorkersOptions {
 	/** The static-assets directory the user asked to deploy (pages deploy only) */
 	assetsDirectory?: string;
 	/**
-	 * Whether the specific Pages project this command targets already exists.
-	 * When it resolves true we never delegate: the command is updating an
-	 * existing Pages project (or, for `pages project create`, clashing with an
-	 * existing name), not creating a new one, so we leave it on Pages.
+	 * Whether the specific project should be treated as an established Pages
+	 * target. When it resolves true we never delegate: the command is updating an
+	 * existing Pages project, targets a project recorded in the account-scoped
+	 * Pages cache, or (for `pages project create`) clashes with an existing name.
 	 *
 	 * This is deliberately per-project, not per-account: an account that already
 	 * has other Pages projects is still delegated when the targeted project is
 	 * new.
 	 *
-	 * A boolean when the caller already knows (e.g. `pages deploy` looks the
-	 * project up for its own reasons), or a lazy resolver when it does not (e.g.
-	 * `pages project create`), so the lookup only runs for agent sessions that
-	 * have passed every cheaper, local skip check — humans and opted-out agents
-	 * never pay for it. If the resolver throws we leave the command on Pages
-	 * rather than risk delegating a project that may already exist. When omitted,
-	 * the target's existence is unknown, so we also leave the command on Pages:
-	 * delegation requires positive confirmation that the project is new.
+	 * A boolean when the caller already knows (e.g. `pages deploy` combines its
+	 * remote lookup with its account-scoped cache), or a lazy resolver when it
+	 * does not (e.g. `pages project create`), so the lookup only runs for agent
+	 * sessions that have passed every cheaper, local skip check — humans and
+	 * opted-out agents never pay for it. If the resolver throws we leave the
+	 * command on Pages rather than risk delegating a project that may already
+	 * exist. When omitted, the target's status is unknown, so we also leave the
+	 * command on Pages: delegation requires positive confirmation that the project
+	 * is new.
 	 */
 	projectExists?: boolean | (() => Promise<boolean>);
 	/** When true, the user explicitly forced a direct Pages deployment (`--force`), so we never delegate. */
@@ -211,13 +212,14 @@ export async function maybeDelegatePagesToWorkers(
 		return { delegate: false };
 	}
 
-	// A Pages project that already exists is an update (or, for `pages project
-	// create`, a clash with an existing name), not a new project, so we leave it
-	// on Pages. This is per-project, not per-account: an account with other Pages
-	// projects is still delegated when this project is new. Resolved last because
-	// the resolver may make a network call: every cheaper, local skip reason above
-	// avoids it. If the lookup fails we skip delegation rather than risk
-	// delegating a project that may already exist.
+	// An established Pages target is not a new project, so we leave it on Pages.
+	// This includes a project recorded in the account-scoped Pages cache even when
+	// it is missing remotely: the cache records Pages intent, and the direct Pages
+	// flow owns reporting or recreating it. This is per-project, not per-account:
+	// an account with other Pages projects is still delegated when this project is
+	// new. Resolved last because the resolver may make a network call: every
+	// cheaper, local skip reason above avoids it. If the lookup fails we skip
+	// delegation rather than risk delegating a project that may already exist.
 	if (options.projectExists === undefined) {
 		skipDelegate("target project existence is unknown");
 		return { delegate: false };
@@ -239,7 +241,7 @@ export async function maybeDelegatePagesToWorkers(
 		return { delegate: false };
 	}
 	if (projectExists) {
-		skipDelegate("target pages project already exists");
+		skipDelegate("target is an established pages project");
 		return { delegate: false };
 	}
 
