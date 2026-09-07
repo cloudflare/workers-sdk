@@ -25,6 +25,7 @@ import {
 import { getUnsupportedDeployDelegateArgs } from "../../pages/deploy";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
+import { detectAgent } from "../../utils/detect-agent";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -47,6 +48,8 @@ import type {
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
 
+vi.mock("../../utils/detect-agent");
+
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -62,6 +65,7 @@ describe("pages deploy", () => {
 	//TODO Abstract MSW handlers that repeat to this level - JACOB
 	beforeEach(() => {
 		vi.mocked(ci).isCI = true;
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 		setIsTTY(false);
 	});
 
@@ -123,6 +127,22 @@ describe("pages deploy", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
 		);
+	});
+
+	it("does not delegate an agent deploy when the project name is unresolved", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
+		);
+		expect(std.out).not.toContain("Delegating to");
 	});
 
 	it("should error if the specified project does not exist in non-interactive mode", async ({

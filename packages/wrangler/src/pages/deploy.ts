@@ -223,7 +223,9 @@ export const pagesDeployCommand = createCommand({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
-			projectExists: Boolean(projectName) && isExistingProject,
+			// An unresolved name is not proof that the eventual autoconfigured name is
+			// new, so leave it unknown and keep the command on Pages.
+			projectExists: projectName ? isExistingProject : undefined,
 			force: args.force,
 			projectName,
 			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),

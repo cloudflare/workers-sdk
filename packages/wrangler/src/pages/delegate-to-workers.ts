@@ -47,7 +47,9 @@ export interface MaybeDelegatePagesToWorkersOptions {
 	 * `pages project create`), so the lookup only runs for agent sessions that
 	 * have passed every cheaper, local skip check — humans and opted-out agents
 	 * never pay for it. If the resolver throws we leave the command on Pages
-	 * rather than risk delegating a project that may already exist.
+	 * rather than risk delegating a project that may already exist. When omitted,
+	 * the target's existence is unknown, so we also leave the command on Pages:
+	 * delegation requires positive confirmation that the project is new.
 	 */
 	projectExists?: boolean | (() => Promise<boolean>);
 	/** When true, the user explicitly forced a direct Pages deployment (`--force`), so we never delegate. */
@@ -216,26 +218,29 @@ export async function maybeDelegatePagesToWorkers(
 	// the resolver may make a network call: every cheaper, local skip reason above
 	// avoids it. If the lookup fails we skip delegation rather than risk
 	// delegating a project that may already exist.
-	if (options.projectExists !== undefined) {
-		let projectExists: boolean;
-		try {
-			projectExists =
-				typeof options.projectExists === "function"
-					? await options.projectExists()
-					: options.projectExists;
-		} catch (e) {
-			logger.debug(
-				`Pages-to-Workers delegation: could not determine whether the target Pages project exists (${
-					e instanceof Error ? e.message : String(e)
-				})`
-			);
-			skipDelegate("target project existence lookup failed");
-			return { delegate: false };
-		}
-		if (projectExists) {
-			skipDelegate("target pages project already exists");
-			return { delegate: false };
-		}
+	if (options.projectExists === undefined) {
+		skipDelegate("target project existence is unknown");
+		return { delegate: false };
+	}
+
+	let projectExists: boolean;
+	try {
+		projectExists =
+			typeof options.projectExists === "function"
+				? await options.projectExists()
+				: options.projectExists;
+	} catch (e) {
+		logger.debug(
+			`Pages-to-Workers delegation: could not determine whether the target Pages project exists (${
+				e instanceof Error ? e.message : String(e)
+			})`
+		);
+		skipDelegate("target project existence lookup failed");
+		return { delegate: false };
+	}
+	if (projectExists) {
+		skipDelegate("target pages project already exists");
+		return { delegate: false };
 	}
 
 	// Eligible: commit to the Workers deploy. From here the caller owns the

@@ -62,6 +62,18 @@ describe("maybeDelegatePagesToWorkers", () => {
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
+	it("does not delegate when the target project's existence is unknown", async ({
+		expect,
+	}) => {
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+		});
+
+		expect(result).toEqual({ delegate: false });
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
+	});
+
 	it("delegates a new project even when the account already has other Pages projects", async ({
 		expect,
 	}) => {
@@ -153,6 +165,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			const result = await maybeDelegatePagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
+				projectExists: false,
 			});
 
 			expect(result).toEqual({ delegate: false });
@@ -186,6 +199,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			const result = await maybeDelegatePagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
+				projectExists: false,
 			});
 
 			expect(result).toEqual({
@@ -207,6 +221,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 				command: "deploy",
 				projectPath: process.cwd(),
 				assetsDirectory,
+				projectExists: false,
 			});
 
 			expect(result).toEqual({
@@ -235,6 +250,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
+			projectExists: false,
 		});
 
 		expect(result).toEqual({
@@ -259,6 +275,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
+			projectExists: false,
 			projectName: "my-app",
 		});
 
@@ -280,6 +297,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory,
+			projectExists: false,
 			projectName: "my-app",
 		});
 
@@ -306,6 +324,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
+			projectExists: false,
 			projectName: "my-proj",
 			compatibilityDate: "2024-01-01",
 			compatibilityFlags: ["nodejs_compat"],
