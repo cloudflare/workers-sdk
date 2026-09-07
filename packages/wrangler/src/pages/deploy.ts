@@ -655,21 +655,21 @@ export const pagesDeployCommand = createCommand({
  *
  * @param args The parsed `pages deploy` command arguments.
  * @returns The names of any set flags that cannot be represented by a Workers
- * static-assets deploy — git-integration metadata (`--commit-*`) and a Pages
- * build option (`--skip-caching`). Empty when none are set.
+ * static-assets deploy — a Pages preview target (`--branch`), git-integration
+ * metadata (`--commit-*`), and a Pages build option (`--skip-caching`). Empty
+ * when none are set.
  *
- * `--branch` is deliberately absent. It exists to target a Pages preview
- * deployment, which only has meaning relative to an existing project's
- * production. Delegation only ever fires for a brand-new project (the
- * `projectExists` gate in `maybeDelegatePagesToWorkers`), and on a new project
- * `--branch` merely names the production branch — exactly what a Workers deploy
- * targets — so there are no preview semantics to preserve. If delegation is ever
- * widened to existing projects, re-examine this omission.
+ * `--branch` is deliberately included because it selects the branch for this
+ * deployment. When Pages creates a new project interactively, it prompts for a
+ * separate production branch, so `--branch` may still represent a preview even
+ * though the project itself is new. A Workers static-assets deploy would publish
+ * it to production instead.
  */
 export function getUnsupportedDeployDelegateArgs(
 	args: (typeof pagesDeployCommand)["args"]
 ): string[] {
 	return [
+		["--branch", args.branch],
 		["--commit-hash", args.commitHash],
 		["--commit-message", args.commitMessage],
 		["--commit-dirty", args.commitDirty],

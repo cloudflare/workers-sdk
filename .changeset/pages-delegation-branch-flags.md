@@ -2,8 +2,8 @@
 "wrangler": minor
 ---
 
-Delegate agent Pages deploys that target a production branch to Workers
+Delegate agent Pages project creation with a production branch to Workers
 
-When run by an AI agent, `wrangler pages deploy --branch <name>` and `wrangler pages project create --production-branch <name>` are now eligible for delegation to a Workers static-assets deploy. Previously any `--branch` or `--production-branch` flag disqualified the command, which meant the most common agent invocation — deploying the main branch of a brand-new static project — fell through to a direct Pages deploy instead of being delegated.
+When run by an AI agent, `wrangler pages project create --production-branch <name>` is now eligible for delegation to a Workers static-assets deploy. The production branch names the target that a Workers deploy would publish to, so it does not need to disqualify a brand-new project from delegation.
 
-Delegation only ever fires for a brand-new project, and on a new project a branch flag simply names the production branch, which is exactly what a Workers deploy targets, so there are no preview-deployment semantics to preserve. Genuinely Pages-only flags (`--commit-hash`, `--commit-message`, `--commit-dirty`, `--skip-caching`) still disqualify a deploy from delegation.
+`wrangler pages deploy --branch <name>` remains on Pages because an interactive new-project flow separately prompts for its production branch. The deployment branch may therefore represent a preview and cannot safely be converted into a production Workers deployment.

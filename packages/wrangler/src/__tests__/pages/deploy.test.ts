@@ -29,7 +29,7 @@ import { detectAgent } from "../../utils/detect-agent";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { mockPrompt } from "../helpers/mock-dialogs";
+import { mockPrompt, mockSelect } from "../helpers/mock-dialogs";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
@@ -2007,6 +2007,137 @@ describe("pages deploy", () => {
 
 		expect(getProjectRequestCount).toEqual(2);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("preserves preview semantics for an interactive agent creating a new project with --branch", async ({
+		expect,
+	}) => {
+		vi.mocked(ci).isCI = false;
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		setIsTTY(true);
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		mockGetUploadTokenRequest(
+			expect,
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let projectLookupCount = 0;
+		msw.use(
+			http.get("*/accounts/:accountId/pages/projects/foo", () => {
+				projectLookupCount++;
+				if (projectLookupCount === 1) {
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 8000007, message: "Project not found" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 404 }
+					);
+				}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						production_branch: "main",
+						deployment_configs: { production: {}, preview: {} },
+					},
+				});
+			}),
+			http.post(
+				"*/accounts/:accountId/pages/projects",
+				async ({ request }) => {
+					expect(await request.json()).toEqual({
+						name: "foo",
+						production_branch: "main",
+					});
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { name: "foo", production_branch: "main" },
+					});
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/check-missing", async ({ request }) => {
+				const body = (await request.json()) as { hashes: string[] };
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: body.hashes,
+				});
+			}),
+			http.post("*/pages/assets/upload", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				})
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request }) => {
+					expect(await formDataToObject(await request.formData())).toEqual(
+						expect.arrayContaining([
+							{ name: "branch", value: "preview-feature" },
+						])
+					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "123-456-789",
+							url: "https://abcxyz.foo.pages.dev/",
+						},
+					});
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "123-456-789",
+							latest_stage: { name: "deploy", status: "success" },
+						},
+					}),
+				{ once: true }
+			)
+		);
+		mockSelect({
+			text: 'The project you specified does not exist: "foo". Would you like to create it?',
+			options: {
+				choices: [{ title: "Create a new project", value: "new" }],
+			},
+			result: "new",
+		});
+		mockPrompt({
+			text: "Enter the production branch name:",
+			result: "main",
+		});
+
+		await runWrangler(
+			"pages deploy public --project-name=foo --branch=preview-feature"
+		);
+
+		expect(projectLookupCount).toBe(2);
+		expect(std.out).not.toContain("Delegating to");
 	});
 
 	// regression test for issue #3629
@@ -6696,12 +6827,12 @@ function mockGetProjectHandler(
 describe("getUnsupportedDeployDelegateArgs", () => {
 	type DeployArgs = Parameters<typeof getUnsupportedDeployDelegateArgs>[0];
 
-	it("does not treat --branch as unsupported, so a branch deploy stays eligible for delegation", ({
+	it("treats --branch as unsupported so preview deploys stay on Pages", ({
 		expect,
 	}) => {
 		const args = { branch: "main" } as DeployArgs;
 
-		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([]);
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual(["--branch"]);
 	});
 
 	it("still reports git-integration metadata and --skip-caching as unsupported", ({
@@ -6733,6 +6864,9 @@ describe("getUnsupportedDeployDelegateArgs", () => {
 	}) => {
 		const args = { branch: "main", commitHash: "abc123" } as DeployArgs;
 
-		expect(getUnsupportedDeployDelegateArgs(args)).toEqual(["--commit-hash"]);
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([
+			"--branch",
+			"--commit-hash",
+		]);
 	});
 });
