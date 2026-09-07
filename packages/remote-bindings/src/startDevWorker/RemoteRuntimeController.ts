@@ -312,6 +312,7 @@ export class RemoteRuntimeController {
 			return;
 		}
 
+		const bundleId = this.#currentBundleId;
 		try {
 			const auth = await unwrapHook(this.#latestConfig.auth);
 
@@ -321,11 +322,19 @@ export class RemoteRuntimeController {
 				this.#latestConfig,
 				this.#latestBundle,
 				auth,
-				this.#currentBundleId
+				bundleId
 			);
 
 			if (refreshed) {
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			} else if (bundleId === this.#currentBundleId && !this.#tearingDown) {
+				// `#updatePreviewToken` (via `#previewToken`) already reported a
+				// non-restart upload failure and returned `false` without
+				// throwing — that failure needs the same retry as a thrown one.
+				// A bundle-ID mismatch instead means a newer bundle has since
+				// superseded this refresh; that bundle's own success path
+				// reschedules normally, so retrying here too would double up.
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {

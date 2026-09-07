@@ -117,4 +117,42 @@ describe("RemoteRuntimeController preview token refresh", () => {
 
 		await controller.teardown();
 	});
+
+	it("also retries when only the token upload fails, since that failure never throws", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+
+		const onError = vi.fn<(event: ErrorEvent) => void>();
+		const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+		const controller = new RemoteRuntimeController(onError, onReloadComplete);
+
+		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		// `createPreviewSession` (the session step) keeps succeeding, but
+		// `createWorkerPreview` (the token upload step) fails. `#previewToken`
+		// handles this itself — it reports the error and returns `undefined`
+		// rather than throwing — so `#updatePreviewToken` returns `false`
+		// without an exception for `#refreshPreviewToken` to catch.
+		createWorkerPreview.mockRejectedValue(new Error("upload failed"));
+		await vi.advanceTimersByTimeAsync(50 * 60 * 1000);
+		expect(onError).toHaveBeenCalledTimes(1);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		// It must still keep retrying on the short interval rather than
+		// silently giving up just because nothing threw.
+		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2);
+		expect(onError).toHaveBeenCalledTimes(3);
+		expect(onReloadComplete).toHaveBeenCalledTimes(1);
+
+		// Recovers once the upload succeeds again.
+		createWorkerPreview.mockResolvedValue(token);
+		await vi.advanceTimersByTimeAsync(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+
+		await controller.teardown();
+	});
 });
