@@ -433,8 +433,20 @@ export class RemoteRuntimeController extends RuntimeController {
 		// signal (before replacing `#abortController`) if a rebuild starts
 		// while this refresh is in flight, but doesn't bump `#currentBundleId`
 		// until that rebuild *completes* — so a bundle-ID match alone can't
-		// tell an aborted-by-rebuild refresh apart from a genuine failure.
+		// tell an aborted-by-rebuild refresh apart from a genuine failure,
+		// whether that failure surfaces as a thrown error or (from
+		// `#previewToken`'s non-restart upload-error path) a `false` return.
 		const abortSignal = this.#abortController.signal;
+		// A newer bundle superseding this refresh, or this refresh's own
+		// signal having been aborted, means a rebuild is already handling
+		// things — that rebuild's own success path reschedules normally, so
+		// retrying a stale attempt here would revive outdated worker code (or,
+		// for a thrown error, recreate the timer `onBundleStart()` just
+		// cleared).
+		const shouldRetry = () =>
+			bundleId === this.#currentBundleId &&
+			!abortSignal.aborted &&
+			!this.tearingDown;
 		try {
 			assert(this.#latestConfig.dev.auth);
 			const auth = await unwrapHook(this.#latestConfig.dev.auth);
@@ -455,18 +467,10 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			if (refreshed) {
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
-			} else if (
-				bundleId === this.#currentBundleId &&
-				!abortSignal.aborted &&
-				!this.tearingDown
-			) {
+			} else if (shouldRetry()) {
 				// `#updatePreviewToken` (via `#previewToken`) already reported a
 				// non-restart upload failure and returned `false` without
 				// throwing — that failure needs the same retry as a thrown one.
-				// A bundle-ID mismatch, or this refresh's own signal having been
-				// aborted, instead means a newer bundle has since superseded it;
-				// that bundle's own success path reschedules normally, so
-				// retrying a stale one here would revive outdated worker code.
 				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		} catch (error) {
@@ -488,7 +492,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			// for a session that isn't otherwise reloading — so a transient
 			// failure (e.g. the machine is offline) would otherwise strand the
 			// session even after connectivity returns.
-			if (!this.tearingDown) {
+			if (shouldRetry()) {
 				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		}

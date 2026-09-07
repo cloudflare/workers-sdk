@@ -475,6 +475,80 @@ describe("RemoteRuntimeController", () => {
 			});
 			await reloadPromise;
 		});
+
+		it("should not recreate the refresh timer when a thrown error surfaces after a concurrent rebuild aborted it", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// The session step hangs so it's still in flight when
+			// `onBundleStart()` aborts the controller. Rather than the abort
+			// itself rejecting this call (already covered above), a *different*,
+			// unrelated error surfaces afterwards — e.g. a concurrent
+			// account/context lookup failure — while the signal happens to
+			// already be aborted. `onBundleStart()` also clears the pending
+			// refresh timer; a thrown, non-`AbortError` failure must not
+			// recreate it for this now-superseded bundle.
+			let rejectAccountContext!: (err: unknown) => void;
+			vi.mocked(getWorkerAccountAndContext).mockImplementation(
+				() =>
+					new Promise((_resolve, reject) => {
+						rejectAccountContext = reject;
+					})
+			);
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			controller.onBundleStart({ type: "bundleStart", config });
+			rejectAccountContext(new Error("account lookup failed"));
+
+			const errorEvent = await bus.waitFor("error", undefined, 60 * 60 * 1000);
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Error refreshing preview token",
+			});
+
+			// The error is still reported, but must not resurrect a retry timer
+			// for the superseded bundle.
+			vi.mocked(getWorkerAccountAndContext).mockResolvedValue({
+				workerAccount: {
+					accountId: "test-account-id",
+					apiToken: { apiToken: "test-token" },
+				},
+				workerContext: {
+					env: undefined,
+					zone: undefined,
+					host: undefined,
+					routes: undefined,
+					sendMetrics: undefined,
+				},
+			});
+			vi.mocked(createPreviewSession).mockClear();
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
+			);
+			expect(createPreviewSession).not.toHaveBeenCalled();
+
+			// The rebuild itself completes normally afterwards, unaffected.
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: { ...bundle, path: "/virtual/index3.mjs" },
+			});
+			await reloadPromise;
+		});
 	});
 
 	describe("preview token refresh", () => {
