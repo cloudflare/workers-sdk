@@ -331,6 +331,17 @@ async function buildProjectWorkerOptions(
 	// of the libraries it depends on expect `require()` to return
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
+	// The runner relies on the new registry's native module semantics and V2
+	// fallback protocol, so override an explicitly configured legacy registry.
+	const legacyModuleRegistryFlagIndex = runnerWorker.compatibilityFlags.indexOf(
+		"legacy_module_registry"
+	);
+	if (legacyModuleRegistryFlagIndex !== -1) {
+		runnerWorker.compatibilityFlags.splice(legacyModuleRegistryFlagIndex, 1);
+	}
+	if (!runnerWorker.compatibilityFlags.includes("new_module_registry")) {
+		runnerWorker.compatibilityFlags.push("new_module_registry");
+	}
 
 	// By default, workerd tracks which request context a promise was created in
 	// and rejects promises that resolve in a different request context. This is a
