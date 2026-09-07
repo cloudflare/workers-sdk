@@ -783,6 +783,15 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
+	it("rejects an empty name", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			name: "",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	it("requires type: 'container'", ({ expect }) => {
 		const { type: _type, ...container } = baseContainer;
 
