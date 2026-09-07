@@ -499,6 +499,8 @@ describe("resolveNamedTunnel", () => {
 	it("resolves matching ingress hostnames and the tunnel token", async ({
 		expect,
 	}) => {
+		const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+		onTestFinished(() => timeoutSpy.mockRestore());
 		vi.mocked(fetchResultBase)
 			.mockResolvedValueOnce([
 				{
@@ -521,10 +523,10 @@ describe("resolveNamedTunnel", () => {
 				},
 			})
 			.mockResolvedValueOnce("TOKEN");
-		const abortSignal = new AbortController().signal;
+		const abortController = new AbortController();
 		await expect(
 			resolveNamedTunnel("my-tunnel", new URL("http://localhost:8787"), {
-				abortSignal,
+				abortSignal: abortController.signal,
 				accountId: "account",
 				apiToken: { apiToken: "test-token" },
 				complianceRegion: undefined,
@@ -535,9 +537,14 @@ describe("resolveNamedTunnel", () => {
 			hostnames: ["dev.example.com"],
 			token: "TOKEN",
 		});
-		expect(
-			vi.mocked(fetchResultBase).mock.calls.map((call) => call[6])
-		).toEqual([abortSignal, abortSignal, abortSignal]);
+		const abortSignals = vi
+			.mocked(fetchResultBase)
+			.mock.calls.map((call) => call[6]);
+		expect(timeoutSpy).toHaveBeenCalledTimes(3);
+		expect(timeoutSpy).toHaveBeenCalledWith(60_000);
+		abortController.abort();
+		expect(abortSignals).toHaveLength(3);
+		expect(abortSignals.every((signal) => signal?.aborted)).toBe(true);
 	});
 
 	it("throws when a named tunnel has no ingress for the local port", async ({

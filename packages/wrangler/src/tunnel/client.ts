@@ -66,10 +66,7 @@ async function withTunnelErrorHandling<T>(
 				telemetryMessage: "tunnel api permission error",
 			});
 		}
-		if (
-			error instanceof CloudflareSDK.APIError ||
-			error instanceof WorkersAPIError
-		) {
+		if (error instanceof CloudflareSDK.APIError) {
 			throw new UserError(error.message, {
 				cause: error,
 				telemetryMessage: "tunnel api error",

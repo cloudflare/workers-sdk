@@ -10,6 +10,7 @@ import type { ChildProcess } from "node:child_process";
  * Quick tunnels typically start in 5-15s, but we allow up to 30s for slow networks.
  */
 const TUNNEL_STARTUP_TIMEOUT_MS = 30_000;
+const TUNNEL_API_TIMEOUT_MS = 60_000;
 const TUNNEL_FORCE_KILL_TIMEOUT_MS = 5_000;
 const DEFAULT_TUNNEL_EXPIRY_MS = 60 * 60 * 1_000;
 const DEFAULT_TUNNEL_EXTENSION_MS = 60 * 60 * 1_000;
@@ -104,7 +105,7 @@ export async function resolveNamedTunnel(
 		userAgent,
 		logger,
 		new URLSearchParams({ name, is_deleted: "false" }),
-		abortSignal,
+		createApiAbortSignal(TUNNEL_API_TIMEOUT_MS, abortSignal),
 		apiToken
 	);
 	const tunnel = tunnels.find((item) => item.name === name);
@@ -131,7 +132,7 @@ export async function resolveNamedTunnel(
 		userAgent,
 		logger,
 		undefined,
-		abortSignal,
+		createApiAbortSignal(TUNNEL_API_TIMEOUT_MS, abortSignal),
 		apiToken
 	);
 	const ingress = configuration.config?.ingress ?? [];
@@ -139,12 +140,10 @@ export async function resolveNamedTunnel(
 
 	if (hostnames.length === 0) {
 		throw new UserError(
-			createMissingIngressMessage(
-				name,
-				origin,
-				`https://dash.cloudflare.com/${accountId}/tunnels/${tunnelId}`,
-				ingress
-			),
+			createMissingIngressMessage(name, origin, {
+				dashboardUrl: `https://dash.cloudflare.com/${accountId}/tunnels/${tunnelId}`,
+				ingress,
+			}),
 			{ telemetryMessage: "tunnel resolve named ingress mismatch" }
 		);
 	}
@@ -156,7 +155,7 @@ export async function resolveNamedTunnel(
 		userAgent,
 		logger,
 		undefined,
-		abortSignal,
+		createApiAbortSignal(TUNNEL_API_TIMEOUT_MS, abortSignal),
 		apiToken
 	);
 
@@ -206,11 +205,26 @@ function normalizeURL(url: URL | string): URL {
 	return normalizedUrl;
 }
 
+function createApiAbortSignal(
+	timeoutMs: number,
+	abortSignal?: AbortSignal
+): AbortSignal {
+	const timeoutSignal = AbortSignal.timeout(timeoutMs);
+	return abortSignal
+		? AbortSignal.any([abortSignal, timeoutSignal])
+		: timeoutSignal;
+}
+
 function createMissingIngressMessage(
 	name: string,
 	origin: URL,
-	dashboardUrl: string,
-	ingress: TunnelIngress[]
+	{
+		dashboardUrl,
+		ingress,
+	}: {
+		dashboardUrl: string;
+		ingress: TunnelIngress[];
+	}
 ): string {
 	if (ingress.length === 0) {
 		return [
