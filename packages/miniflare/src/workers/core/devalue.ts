@@ -160,22 +160,49 @@ export interface PlatformImpl<RS> {
 	unbufferReadableStream(buffer: ArrayBuffer): RS;
 }
 
+// `instanceof` checks against a specific `Headers`/`Request`/`Response`
+// implementation fail for values created against a *different* copy of that
+// class. This happens more often than you'd expect: for example, Node's
+// built-in global `Headers` is backed by an internal copy of `undici` that
+// isn't `instanceof` the `undici` package Miniflare imports, so a `Headers`
+// instance created with `new Headers()` in user code (e.g. inside Next.js,
+// Astro, or SvelteKit) would previously fail to serialise across the proxy
+// with a confusing `DevalueError: Cannot stringify arbitrary non-POJOs`.
+// All spec-compliant implementations set `Symbol.toStringTag` though, so use
+// that as a realm-independent fallback discriminator.
+function hasStringTag(value: unknown, tag: string): boolean {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		(value as { [Symbol.toStringTag]?: unknown })[Symbol.toStringTag] === tag
+	);
+}
+export function isHeadersLike(value: unknown): value is WorkerHeaders {
+	return hasStringTag(value, "Headers");
+}
+function isRequestLike(value: unknown): value is WorkerRequest {
+	return hasStringTag(value, "Request");
+}
+function isResponseLike(value: unknown): value is WorkerResponse {
+	return hasStringTag(value, "Response");
+}
+
 export function createHTTPReducers(
 	impl: PlatformImpl<unknown>
 ): ReducersRevivers {
 	return {
 		Headers(val) {
-			if (val instanceof impl.Headers) {
+			if (val instanceof impl.Headers || isHeadersLike(val)) {
 				return [...val.entries()];
 			}
 		},
 		Request(val) {
-			if (val instanceof impl.Request) {
+			if (val instanceof impl.Request || isRequestLike(val)) {
 				return [val.method, val.url, val.headers, val.cf, val.body];
 			}
 		},
 		Response(val) {
-			if (val instanceof impl.Response) {
+			if (val instanceof impl.Response || isResponseLike(val)) {
 				return [val.status, val.statusText, val.headers, val.cf, val.body];
 			}
 		},
