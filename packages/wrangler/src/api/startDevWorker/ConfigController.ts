@@ -358,11 +358,18 @@ async function resolveConfig(
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
+	// A programmatic `input.build.custom` override takes precedence over the
+	// config file, same as the `build.custom` merge below.
+	const customBuildCommand =
+		input.build?.custom?.command ?? config.build?.command;
+	const customWatchDir = input.build?.custom?.watch ?? config.build?.watch_dir;
+	const customWorkingDirectory =
+		input.build?.custom?.workingDirectory ?? config.build?.cwd;
+
 	// `getEntry()` runs the custom build command once, before `BundlerController`
-	// ever sees this config; it must run the *effective* command (a programmatic
-	// `input.build.custom` override takes precedence over the file config, same
-	// as the `build.custom` merge below), not just what's in the config file.
-	// Otherwise a purely-programmatic custom build would never run on startup.
+	// ever sees this config; it must run the *effective* command above, not just
+	// what's in the config file. Otherwise a purely-programmatic custom build
+	// would never run on startup.
 	const entry = await getEntry(
 		{
 			script: input.entrypoint,
@@ -376,9 +383,9 @@ async function resolveConfig(
 			...config,
 			build: {
 				...config.build,
-				command: input.build?.custom?.command ?? config.build?.command,
-				watch_dir: input.build?.custom?.watch ?? config.build?.watch_dir,
-				cwd: input.build?.custom?.workingDirectory ?? config.build?.cwd,
+				command: customBuildCommand,
+				watch_dir: customWatchDir,
+				cwd: customWorkingDirectory,
 			},
 		},
 		"dev"
@@ -448,10 +455,9 @@ async function resolveConfig(
 			keepNames: input.build?.keepNames ?? config.keep_names,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
-				command: input.build?.custom?.command ?? config.build?.command,
-				watch: input.build?.custom?.watch ?? config.build?.watch_dir,
-				workingDirectory:
-					input.build?.custom?.workingDirectory ?? config.build?.cwd,
+				command: customBuildCommand,
+				watch: customWatchDir,
+				workingDirectory: customWorkingDirectory,
 			},
 			format: entry.format,
 			nodejsCompatMode: nodejsCompatMode ?? null,
