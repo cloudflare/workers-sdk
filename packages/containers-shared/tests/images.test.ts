@@ -3,12 +3,22 @@ import { ExternalRegistryKind } from "../src/client/models/ExternalRegistryKind"
 import {
 	getEgressInterceptorPlatform,
 	pullEgressInterceptorImage,
+	prepareContainerImagesForDev,
 	getAndValidateRegistryType,
 	validateAndEncodeGarKey,
 } from "../src/images";
-import { runDockerCmd } from "../src/utils";
+import { dockerLoginImageRegistry } from "../src/login";
+import {
+	checkExposedPorts,
+	cleanupDuplicateImageTags,
+	runDockerCmd,
+} from "../src/utils";
+
+vi.mock("../src/login", () => ({ dockerLoginImageRegistry: vi.fn() }));
 
 vi.mock("../src/utils", () => ({
+	checkExposedPorts: vi.fn(),
+	cleanupDuplicateImageTags: vi.fn(),
 	runDockerCmd: vi.fn(() => ({
 		abort: vi.fn(),
 		ready: Promise.resolve({ aborted: false }),
@@ -16,7 +26,49 @@ vi.mock("../src/utils", () => ({
 			resolve();
 		},
 	})),
+	verifyDockerInstalled: vi.fn(),
 }));
+
+it.skipIf(process.platform === "win32")(
+	"stops preparing images after cancelling a pull",
+	async ({ expect }) => {
+		vi.clearAllMocks();
+		vi.mocked(dockerLoginImageRegistry).mockResolvedValue();
+		let finishPull = () => {};
+		const ready = new Promise<{ aborted: boolean }>((resolve) => {
+			finishPull = () => resolve({ aborted: true });
+		});
+		vi.mocked(runDockerCmd).mockReturnValueOnce({
+			abort: finishPull,
+			ready,
+			then: (resolve, reject) => void ready.then(resolve).catch(reject),
+		});
+
+		await prepareContainerImagesForDev({
+			dockerPath: "docker",
+			containerOptions: [
+				{
+					class_name: "First",
+					image_tag: "cloudflare-dev/first:build-id",
+					image_uri: "docker.io/example/first:latest",
+				},
+				{
+					class_name: "Second",
+					image_tag: "cloudflare-dev/second:build-id",
+					image_uri: "docker.io/example/second:latest",
+				},
+			],
+			onContainerImagePreparationStart: ({ abort }) => abort(),
+			onContainerImagePreparationEnd: () => {},
+			logger: console,
+		});
+
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
+		expect(runDockerCmd).toHaveBeenCalledOnce();
+		expect(cleanupDuplicateImageTags).not.toHaveBeenCalled();
+		expect(checkExposedPorts).not.toHaveBeenCalled();
+	}
+);
 
 describe("getEgressInterceptorPlatform", () => {
 	beforeEach(() => {

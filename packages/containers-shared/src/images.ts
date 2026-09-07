@@ -184,19 +184,18 @@ export async function prepareContainerImagesForDev(args: {
 				containerOptions: options,
 			});
 		}
-		if (!aborted) {
-			// Clean up duplicate image tags. This is scoped to cloudflare-dev only
-			await cleanupDuplicateImageTags(dockerPath, options.image_tag);
-
-			await checkExposedPorts(dockerPath, options);
+		if (aborted) {
+			return;
 		}
+		// Clean up duplicate image tags. This is scoped to cloudflare-dev only
+		await cleanupDuplicateImageTags(dockerPath, options.image_tag);
+
+		await checkExposedPorts(dockerPath, options);
 	}
 
 	// Pull the egress interceptor image used to intercept outbound HTTP from
 	// containers and route it back to workerd (e.g. for interceptOutboundHttp).
-	if (!aborted) {
-		await pullEgressInterceptorImage(dockerPath);
-	}
+	await pullEgressInterceptorImage(dockerPath);
 }
 
 /**
