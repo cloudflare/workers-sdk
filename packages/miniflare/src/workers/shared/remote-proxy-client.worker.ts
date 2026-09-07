@@ -77,13 +77,14 @@ export default class Client extends WorkerEntrypoint<
 			if (!ctx.props.remoteProxyConnectionString) {
 				throwRemoteRequired(ctx.props.binding);
 			}
-			return (stub ??= makeRemoteProxyStub(
+			stub ??= makeRemoteProxyStub(
 				ctx.props.remoteProxyConnectionString,
 				ctx.props.binding,
 				undefined,
 				ctx.props.cfTraceId,
 				env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
-			));
+			);
+			return stub;
 		}
 
 		return new Proxy(this, {
