@@ -233,7 +233,11 @@ function consumeWhile(
  * Pulls characters from the string iterator until the `endMarker` is found.
  */
 function consumeUntilMarker(iterator: Iterator<string>, endMarker: string) {
-	return consumeWhile(iterator, (str) => !str.endsWith(endMarker), endMarker.length);
+	return consumeWhile(
+		iterator,
+		(str) => !str.endsWith(endMarker),
+		endMarker.length
+	);
 }
 
 /**
