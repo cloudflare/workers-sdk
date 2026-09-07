@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { SharedBindings } from "../../workers";
+import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
@@ -29,9 +30,6 @@ import type { ParsedWorkerOptions, Plugin } from "../shared";
 import type { SitesOptions } from "./sites";
 
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
-// A single entry service shared by every *local* namespace. Each namespace's id
-// is supplied per-binding via `ctx.props`, so one service serves all of them.
-const KV_LOCAL_ENTRY_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:entry`;
 // One shared remote-proxy service for all remote namespaces (config via props).
 const KV_REMOTE_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:remote`;
 const KV_STORAGE_SERVICE_NAME = `${KV_PLUGIN_NAME}:storage`;
@@ -114,7 +112,9 @@ export const KV_PLUGIN: Plugin = {
 		const hasLocalNamespace =
 			namespaces.some(
 				([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
-			) || sharedOptions.unsafeEnableSharedStorage;
+			) ||
+			sharedOptions.unsafeEnableSharedStorage ||
+			sharedOptions.unsafeLocalExplorer;
 		if (hasLocalNamespace) {
 			services.push({
 				name: KV_LOCAL_ENTRY_SERVICE_NAME,

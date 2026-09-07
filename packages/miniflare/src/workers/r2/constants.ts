@@ -21,6 +21,10 @@ export const R2S3Bindings = {
 	BUCKET_PREFIX: "MINIFLARE_R2_S3_BUCKET_",
 } as const;
 
+// A single entry service shared by every local bucket. The bucket ID is
+// supplied when resolving the entrypoint via `ctx.props`.
+export const R2_LOCAL_ENTRY_SERVICE_NAME = "r2:bucket:entry";
+
 export const R2Headers = {
 	ERROR: "cf-r2-error",
 	REQUEST: "cf-r2-request",

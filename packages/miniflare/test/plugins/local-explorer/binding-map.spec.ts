@@ -11,17 +11,14 @@ import type { RemoteProxyConnectionString } from "miniflare";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
-// A dummy remote-proxy endpoint. Listing resources reads only the binding map,
-// so this is never actually contacted.
+// A dummy remote-proxy endpoint. Listing resources reads only the local
+// resource map, so this is never actually contacted.
 const remoteProxyConnectionString = new URL(
 	"http://127.0.0.1:9999/"
 ) as unknown as RemoteProxyConnectionString;
 
-// Remote KV/R2/D1 bindings all share one proxy service (`kv:ns:remote`,
-// `r2:bucket:remote`, `d1:db:remote`). Remote resources aren't supported in the
-// local explorer, so they must be skipped rather than collapse to the literal id
-// "remote" (a collision that would also leak a bogus "remote" entry). Local
-// resources alongside them must still be surfaced.
+// Remote KV/R2/D1 resources aren't supported in the local explorer, so they
+// must be skipped while local resources alongside them are still surfaced.
 describe("Local Explorer remote binding skipping", () => {
 	let mf: Miniflare;
 

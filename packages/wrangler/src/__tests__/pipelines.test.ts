@@ -8,7 +8,13 @@ import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Pipeline, SchemaField, Sink, Stream } from "../pipelines/types";
+import type {
+	Pipeline,
+	SchemaField,
+	Sink,
+	SinkFormat,
+	Stream,
+} from "../pipelines/types";
 import type { ExpectStatic } from "vitest";
 
 describe("wrangler pipelines", () => {
@@ -2094,6 +2100,7 @@ describe("wrangler pipelines", () => {
 			expectedRequest: {
 				name: string;
 				type: string;
+				format: SinkFormat;
 				isDataCatalog?: boolean;
 			}
 		) {
@@ -2106,10 +2113,12 @@ describe("wrangler pipelines", () => {
 						const body = (await request.json()) as {
 							name: string;
 							type: string;
+							format?: SinkFormat;
 							config?: Record<string, unknown>;
 						};
 						expect(body.name).toBe(expectedRequest.name);
 						expect(body.type).toBe(expectedRequest.type);
+						expect(body.format).toEqual(expectedRequest.format);
 
 						const config = expectedRequest.isDataCatalog
 							? {
@@ -2134,7 +2143,7 @@ describe("wrangler pipelines", () => {
 								id: "sink_123",
 								name: expectedRequest.name,
 								type: expectedRequest.type,
-								format: { type: "json" },
+								format: body.format ?? expectedRequest.format,
 								schema: null,
 								config,
 								created_at: "2024-01-01T00:00:00Z",
@@ -2184,6 +2193,7 @@ describe("wrangler pipelines", () => {
 			const createRequest = mockCreateSinkRequest(expect, {
 				name: "my_sink",
 				type: "r2",
+				format: { type: "parquet", compression: "zstd" },
 			});
 
 			await runWrangler(
@@ -2213,14 +2223,87 @@ describe("wrangler pipelines", () => {
 				  Time Interval:  300s
 
 				Format:
-				  Type:  json"
+				  Type:                   parquet
+				  Compression:            zstd
+				  Target Row Group Size:  1024MB"
 			`);
+		});
+
+		it("should create R2 JSON sink with gzip compression", async ({
+			expect,
+		}) => {
+			const createRequest = mockCreateSinkRequest(expect, {
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json", compression: "gzip" },
+			});
+
+			await runWrangler(
+				"pipelines sinks create my_sink --type r2 --bucket my-bucket --format json --compression gzip --access-key-id mykey --secret-access-key mysecret"
+			);
+
+			expect(createRequest.count).toBe(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("Compression:  gzip");
+		});
+
+		it("should create uncompressed JSON sink when compression is omitted", async ({
+			expect,
+		}) => {
+			const createRequest = mockCreateSinkRequest(expect, {
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json" },
+			});
+
+			await runWrangler(
+				"pipelines sinks create my_sink --type r2 --bucket my-bucket --format json --access-key-id mykey --secret-access-key mysecret"
+			);
+
+			expect(createRequest.count).toBe(1);
+		});
+
+		it("should create JSON sink with explicit uncompressed output", async ({
+			expect,
+		}) => {
+			const createRequest = mockCreateSinkRequest(expect, {
+				name: "my_sink",
+				type: "r2",
+				format: { type: "json", compression: "uncompressed" },
+			});
+
+			await runWrangler(
+				"pipelines sinks create my_sink --type r2 --bucket my-bucket --format json --compression uncompressed --access-key-id mykey --secret-access-key mysecret"
+			);
+
+			expect(createRequest.count).toBe(1);
+		});
+
+		it("should reject unsupported JSON compression", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					"pipelines sinks create my_sink --type r2 --bucket my-bucket --format json --compression zstd"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: JSON sinks only support 'uncompressed' or 'gzip' compression]`
+			);
+		});
+
+		it("should reject row group size for JSON sinks", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					"pipelines sinks create my_sink --type r2 --bucket my-bucket --format json --target-row-group-size 10MB"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --target-row-group-size is only supported for Parquet sinks]`
+			);
 		});
 
 		it("should create R2 Data Catalog sink", async ({ expect }) => {
 			const createRequest = mockCreateSinkRequest(expect, {
 				name: "my_sink",
 				type: "r2_data_catalog",
+				format: { type: "parquet", compression: "zstd" },
 				isDataCatalog: true,
 			});
 
@@ -2250,7 +2333,9 @@ describe("wrangler pipelines", () => {
 				  Time Interval:  300s
 
 				Format:
-				  Type:  json"
+				  Type:                   parquet
+				  Compression:            zstd
+				  Target Row Group Size:  1024MB"
 			`);
 		});
 
@@ -2284,6 +2369,7 @@ describe("wrangler pipelines", () => {
 			const createRequest = mockCreateSinkRequest(expect, {
 				name: "my_sink",
 				type: "r2",
+				format: { type: "parquet", compression: "zstd" },
 			});
 
 			await runWrangler(

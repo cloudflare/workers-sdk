@@ -18,6 +18,7 @@ export default defineConfig(() => [
 			"src/errors.ts",
 			"src/fs-helpers.ts",
 			"src/global-wrangler-config-path.ts",
+			"src/local-env.ts",
 			"src/zod-format.ts",
 		],
 		platform: "node",

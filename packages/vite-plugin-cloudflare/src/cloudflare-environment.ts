@@ -156,6 +156,14 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 				},
 			}
 		);
+		if (!response.ok) {
+			const status = [response.status, response.statusText]
+				.filter(Boolean)
+				.join(" ");
+			throw new Error(
+				`Failed to fetch export types for Worker "${workerConfig.name}" (${status}): ${await response.text()}`
+			);
+		}
 		const json = await response.json();
 
 		return json as ExportTypes;

@@ -8,6 +8,25 @@ import type {
 } from "./types";
 import type { Config } from "@cloudflare/workers-utils";
 
+/**
+ * Shared `--json` CLI arg for Workflows commands.
+ *
+ * Workflows commands render human-readable output by default. Passing `--json`
+ * opts in to machine-readable output carrying the raw API payload: ISO
+ * timestamps rather than locale-formatted dates, plain status strings rather
+ * than emojified labels, and no derived presentation-only fields.
+ *
+ * Under `--local` the payload keeps the deployed key names but omits the fields
+ * a local dev session does not track, such as ids, timestamps and versions.
+ */
+export const jsonWorkflowArgs = {
+	json: {
+		describe: "Output the raw API response as JSON",
+		type: "boolean" as const,
+		default: false,
+	},
+};
+
 export const emojifyInstanceStatus = (status: InstanceStatus) => {
 	switch (status) {
 		case "complete":
@@ -195,14 +214,14 @@ export async function updateInstanceStatus(
 	status: "pause" | "resume" | "restart" | "terminate",
 	from?: WorkflowInstanceRestartFrom,
 	rollback?: boolean
-): Promise<void> {
+): Promise<unknown> {
 	const body = {
 		status,
 		...(from ? { from } : {}),
 		...(status === "terminate" && rollback === true ? { rollback: true } : {}),
 	};
 
-	await fetchResult(
+	return fetchResult<unknown>(
 		config,
 		`/accounts/${accountId}/workflows/${workflowName}/instances/${instanceId}/status`,
 		{

@@ -3,6 +3,7 @@ import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";
 import { fetchLocalResult, localWorkflowArgs } from "../local";
+import { jsonWorkflowArgs } from "../utils";
 import type { InstanceWithoutDates } from "../types";
 
 export const workflowsTriggerCommand = createCommand({
@@ -14,6 +15,7 @@ export const workflowsTriggerCommand = createCommand({
 	},
 	args: {
 		...localWorkflowArgs,
+		...jsonWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -32,6 +34,9 @@ export const workflowsTriggerCommand = createCommand({
 		},
 	},
 	positionalArgs: ["name", "params"],
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
 
 	async handler(args, { config, logger }) {
 		if (args.params.length != 0) {
@@ -65,6 +70,11 @@ export const workflowsTriggerCommand = createCommand({
 			);
 			instanceId = response.id;
 
+			if (args.json) {
+				logger.json(response);
+				return;
+			}
+
 			logger.info(
 				`🚀 Workflow instance "${instanceId}" has been triggered successfully`
 			);
@@ -84,6 +94,11 @@ export const workflowsTriggerCommand = createCommand({
 				}
 			);
 			instanceId = response.id;
+
+			if (args.json) {
+				logger.json(response);
+				return;
+			}
 
 			logger.info(
 				`🚀 Workflow instance "${instanceId}" has been queued successfully`
