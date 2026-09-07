@@ -416,7 +416,7 @@ function validateContainerRelationships(
 
 const BaseContainerSchema = z.strictObject({
 	type: z.literal("container"),
-	name: z.string(),
+	name: z.string().min(1),
 	compatibilityDate: z.string(),
 	maxInstances: z.number().int().nonnegative().optional(),
 	instanceType: z
