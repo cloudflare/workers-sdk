@@ -88,7 +88,8 @@ port.addEventListener("message", async (event) => {
       port.postMessage({ id, error: new Error(String(error)) });
     }
   } finally {
-    Atomics.store(notifyHandle, /* index */ 0, /* value */ 1);
+    // Publish THIS request's generation (never 0), not a bare flag: see fetch()
+    Atomics.store(notifyHandle, /* index */ 0, /* generation */ (id + 1) | 0);
     Atomics.notify(notifyHandle, /* index */ 0);
   }
 });
@@ -97,9 +98,10 @@ port.start();
 `;
 
 /**
- * Blocks until the worker signals a reply, then receives and returns it.
+ * Blocks until the worker publishes the requested reply generation, then
+ * receives and returns that reply.
  *
- * @param notifyHandle Shared notification flag set by the worker.
+ * @param notifyHandle Shared generation published by the worker.
  * @param port Port containing worker replies.
  * @param id Request identifier whose reply should be received.
  * @returns The matching worker reply.
@@ -109,8 +111,25 @@ export function receiveReply(
 	port: MessagePort,
 	id: number
 ): WorkerResponse {
-	// If index 0 contains value 0, block until wake-up notification
-	Atomics.wait(notifyHandle, /* index */ 0, /* value */ 0);
+	// Each request owns a generation (`id + 1`, never 0) that the worker stores
+	// once its reply is in the port's queue. A shared 0/1 flag raced: a reply's
+	// `store(1)` could land before our `Atomics.wait` (which then returned
+	// "not-equal" at once) while its `Atomics.notify` landed after the NEXT
+	// request had armed its wait. That wait woke to an empty queue, the
+	// `assert` below threw, and every later call received the previous
+	// call's reply (a preempted worker thread under a contended CI runner).
+	const generation = (id + 1) | 0;
+	// Block until the worker has published THIS request's generation. A stale
+	// notify from the previous reply wakes us early, so re-check and wait
+	// again; the store follows the reply's `postMessage`, so once the
+	// generation is seen the reply is already in the port's queue.
+	for (
+		let seen = Atomics.load(notifyHandle, /* index */ 0);
+		seen !== generation;
+		seen = Atomics.load(notifyHandle, /* index */ 0)
+	) {
+		Atomics.wait(notifyHandle, /* index */ 0, seen);
+	}
 	// Never yielded to the event loop here, and the caller is the only one with
 	// access to this port, so know this message is for this request
 	const message: WorkerResponse | undefined = receiveMessageOnPort(port)?.message;
@@ -153,7 +172,6 @@ export class SynchronousFetcher {
 
 	fetch(url: URL | string, init: SynchronousRequestInit): SynchronousResponse {
 		this.#ensureWorker();
-		Atomics.store(this.#notifyHandle, /* index */ 0, /* value */ 0);
 		const id = this.#nextId++;
 		this.#channel.port1.postMessage({
 			id,
