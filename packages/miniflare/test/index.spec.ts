@@ -442,7 +442,7 @@ test("Miniflare: removes loopback startup error handler after listening", async 
 				config: {
 					type: "worker",
 					name: "",
-					compatibilityDate: "2025-05-01",
+					compatibilityDate: "2026-09-04",
 					manifest: singleModuleManifest(
 						`export default { fetch() { return new Response("ok"); } }`
 					),
@@ -477,7 +477,7 @@ test("Miniflare: rejects ready when loopback server cannot bind", async ({
 				config: {
 					type: "worker",
 					name: "",
-					compatibilityDate: "2025-05-01",
+					compatibilityDate: "2026-09-04",
 					manifest: singleModuleManifest(
 						`export default { fetch() { return new Response("ok"); } }`
 					),
@@ -501,7 +501,7 @@ test("Miniflare: setOptions: recovers after loopback bind failure", async ({
 		config: {
 			type: "worker" as const,
 			name: "",
-			compatibilityDate: "2025-05-01",
+			compatibilityDate: "2026-09-04",
 			manifest: singleModuleManifest(
 				`export default { fetch() { return new Response("ok"); } }`
 			),
