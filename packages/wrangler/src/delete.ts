@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
 import { createCommand } from "./core/create-command";
-import { isAuthenticationError } from "./core/handle-errors";
 import { confirm } from "./dialogs";
 import {
 	deleteKVNamespace,
@@ -159,16 +158,7 @@ export const deleteCommand = createCommand({
 				new URLSearchParams({ force: needsForceDelete.toString() })
 			);
 
-			try {
-				await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
-			} catch (error) {
-				if (!isAuthenticationError(error)) {
-					throw error;
-				}
-				logger.warn(
-					"The Worker was deleted, but Wrangler could not clean up legacy Workers Sites asset namespaces because the API token does not have Workers KV permissions."
-				);
-			}
+			await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
 
 			logger.log("Successfully deleted", scriptName);
 		}
