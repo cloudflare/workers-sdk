@@ -1,5 +1,6 @@
 import { describe, test } from "vitest";
 import { DevEnv } from "../../../api/startDevWorker/DevEnv";
+import { castErrorCause } from "../../../api/startDevWorker/events";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 
 describe("DevEnv", () => {
@@ -92,6 +93,44 @@ describe("DevEnv", () => {
 			});
 
 			expect(std.err).toContain("Custom build command failed");
+
+			void devEnv.teardown();
+		});
+
+		test("should log ProxyWorker request errors without tearing down the dev session", ({
+			expect,
+		}) => {
+			const devEnv = new DevEnv();
+
+			const fatalEvents: unknown[] = [];
+			devEnv.on("error", (event) => fatalEvents.push(event));
+
+			// the ProxyWorker posts its error to the ProxyController as JSON, so
+			// what reaches handleErrorEvent is a plain object wrapped by
+			// castErrorCause — an Error with NO message, carrying the real detail
+			// on `.cause`. Build the cause the same way so this test cannot pass
+			// with a message the production path never has.
+			const reportedByProxyWorker = JSON.parse(
+				JSON.stringify({
+					name: "Error",
+					message:
+						"GET http://127.0.0.1:8787/ (failed after 3 attempts): Network connection lost.",
+					stack: "Error: Network connection lost.\n    at <anonymous>",
+				})
+			) as unknown;
+
+			devEnv.dispatch({
+				type: "error",
+				reason: "Error inside ProxyWorker",
+				cause: castErrorCause(reportedByProxyWorker),
+				source: "ProxyController",
+				data: {},
+			});
+
+			expect(std.err).toContain("Error inside ProxyWorker");
+			expect(std.err).toContain("Network connection lost.");
+			// one failed proxied request must not become a fatal dev-session error
+			expect(fatalEvents).toHaveLength(0);
 
 			void devEnv.teardown();
 		});
