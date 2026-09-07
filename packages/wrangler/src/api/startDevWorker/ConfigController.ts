@@ -358,6 +358,11 @@ async function resolveConfig(
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
+	// `getEntry()` runs the custom build command once, before `BundlerController`
+	// ever sees this config; it must run the *effective* command (a programmatic
+	// `input.build.custom` override takes precedence over the file config, same
+	// as the `build.custom` merge below), not just what's in the config file.
+	// Otherwise a purely-programmatic custom build would never run on startup.
 	const entry = await getEntry(
 		{
 			script: input.entrypoint,
@@ -367,7 +372,15 @@ async function resolveConfig(
 			// the entire Assets object is fine.
 			assets: input?.assets,
 		},
-		config,
+		{
+			...config,
+			build: {
+				...config.build,
+				command: input.build?.custom?.command ?? config.build?.command,
+				watch_dir: input.build?.custom?.watch ?? config.build?.watch_dir,
+				cwd: input.build?.custom?.workingDirectory ?? config.build?.cwd,
+			},
+		},
 		"dev"
 	);
 

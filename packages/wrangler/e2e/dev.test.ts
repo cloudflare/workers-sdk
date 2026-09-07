@@ -1455,16 +1455,14 @@ describe("custom builds", () => {
 		});
 		const worker = helper.runLongLived("wrangler dev");
 
-		// first build on startup
-		await worker.readUntil(/\[custom build\] Running/, 5_000);
-		// second build for first watcher notification (can be optimised away, leaving as-is for now)
+		// build on startup
 		await worker.readUntil(/\[custom build\] Running/, 5_000);
 
 		// Need to get the url in this order because waitForReady calls readUntil
 		// which keeps track of where it's read up to so far,
 		// so the expect(waitUntil).reject assertion below
 		// will eat up the "Ready on http://localhost:8787" message if called before.
-		// This could cause a flake if eg the 2nd custom build starts after ready.
+		// This could cause a flake if eg another custom build starts after ready.
 		const { url } = await worker.waitForReady();
 
 		// assert no more custom builds happen

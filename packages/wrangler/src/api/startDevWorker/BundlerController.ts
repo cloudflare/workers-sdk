@@ -329,7 +329,16 @@ export class BundlerController extends Controller {
 			// reported as changes.
 			ignoreInitial: true,
 		});
+		// A real change can be detected (and start a real rebuild) before the
+		// watcher's initial scan finishes: `ignoreInitial` only suppresses `add`
+		// events for pre-existing files, not `change` events picked up mid-scan.
+		// Track that so `ready`'s bundle-only pass below doesn't supersede (and
+		// discard the result of) a rebuild that's already reflecting a real edit.
+		let realChangeSeenBeforeReady = false;
 		this.#customBuildWatcher.on("ready", () => {
+			if (realChangeSeenBeforeReady) {
+				return;
+			}
 			// Bundle the output `getEntry()` already produced; don't re-run the
 			// build command a second time (see `#scheduleCustomBuild()`'s
 			// `runBuildCommand`).
@@ -351,6 +360,7 @@ export class BundlerController extends Controller {
 		this.#debouncedCustomBuild = debouncedCustomBuild;
 
 		this.#customBuildWatcher.on("all", (_event, filePath) => {
+			realChangeSeenBeforeReady = true;
 			lastChangedPath = filePath;
 			debouncedCustomBuild();
 		});
