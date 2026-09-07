@@ -193,8 +193,14 @@ export const pagesDeployCommand = createCommand({
 			...(envAccountId ? { account_id: envAccountId } : {}),
 		});
 
-		let projectName =
-			args.projectName ?? config?.name ?? configCache.project_name;
+		// A cached project name is only meaningful for the account it was saved
+		// against. Explicit CLI and Wrangler config names remain authoritative when
+		// authentication selects a different account.
+		const cachedProjectName =
+			configCache.account_id === accountId
+				? configCache.project_name
+				: undefined;
+		let projectName = args.projectName ?? config?.name ?? cachedProjectName;
 		let isExistingProject = true;
 
 		if (projectName) {

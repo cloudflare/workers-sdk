@@ -166,6 +166,71 @@ describe("pages deploy", () => {
 		expect(std.out).not.toContain("Delegating to");
 	});
 
+	it("does not delegate using a stale cached project name after an agent switches accounts", async ({
+		expect,
+	}) => {
+		vi.mocked(ci).isCI = false;
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		setIsTTY(true);
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "old-account-id",
+			project_name: "stale-project",
+		});
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
+
+		let staleProjectLookupCount = 0;
+		let projectListRequestCount = 0;
+		msw.use(
+			http.get("*/accounts/new-account-id/pages/projects/stale-project", () => {
+				staleProjectLookupCount++;
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 8000007, message: "Project not found" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				);
+			}),
+			http.get(
+				"*/accounts/new-account-id/pages/projects",
+				() => {
+					projectListRequestCount++;
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: [{ name: "another-project", source: null }],
+					});
+				},
+				{ once: true }
+			)
+		);
+		mockSelect({
+			text: "No project specified. Would you like to create one or use an existing project?",
+			result: "new",
+		});
+		mockPrompt({
+			text: "Enter the name of your new project:",
+			result: "",
+		});
+
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
+		);
+		expect(staleProjectLookupCount).toBe(0);
+		expect(projectListRequestCount).toBe(1);
+		expect(std.out).not.toContain("Delegating to");
+	});
+
 	it("should error if the specified project does not exist in non-interactive mode", async ({
 		expect,
 	}) => {
