@@ -262,6 +262,21 @@ describe("WorkflowBinding", () => {
 			}
 		});
 
+		it("should delete an instance immediately after creation", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+
+			setTestWorkflowCallback(async () => "done");
+			await binding.create({ id });
+
+			await expect(binding.deleteBatch({ instances: [id] })).resolves.toEqual({
+				deleted: [{ id }],
+				errors: [],
+			});
+		});
+
 		it("should report each duplicate missing cron-generated ID", async ({
 			expect,
 		}) => {
