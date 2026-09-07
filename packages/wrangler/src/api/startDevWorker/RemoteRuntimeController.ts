@@ -23,7 +23,11 @@ import { realishPrintLogs } from "../../tail/printing";
 import { getAccessHeaders } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
+import {
+	PREVIEW_TOKEN_REFRESH_INTERVAL,
+	PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL,
+	unwrapHook,
+} from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -457,6 +461,16 @@ export class RemoteRuntimeController extends RuntimeController {
 				source: "RemoteRuntimeController",
 				data: undefined,
 			});
+
+			// A failed refresh must not give up the retry cycle for good: unlike
+			// a successful refresh (which reschedules itself via
+			// `#updatePreviewToken`), nothing else will trigger another attempt
+			// for a session that isn't otherwise reloading — so a transient
+			// failure (e.g. the machine is offline) would otherwise strand the
+			// session even after connectivity returns.
+			if (!this.tearingDown) {
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+			}
 		}
 	}
 

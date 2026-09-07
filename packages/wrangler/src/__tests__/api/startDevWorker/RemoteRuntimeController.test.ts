@@ -1,6 +1,7 @@
 import { APIError } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
+import { PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL } from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior
 import {
 	createPreviewSession,
@@ -292,6 +293,60 @@ describe("RemoteRuntimeController", () => {
 			// Advance past where the timer would have fired
 			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
 			expect(createWorkerPreview).not.toHaveBeenCalled();
+		});
+
+		it("should keep retrying the proactive refresh after a transient failure, and recover once it succeeds", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// The next proactive refresh fails outright (e.g. the machine is
+			// offline) — a non-retryable status keeps `retryOnAPIFailure` from
+			// needing a real-time backoff wait fake timers wouldn't advance.
+			vi.mocked(createPreviewSession).mockRejectedValueOnce(
+				new APIError({
+					text: "network unreachable",
+					notes: [],
+					status: 400,
+					telemetryMessage: false,
+				})
+			);
+
+			// Register both waiters before advancing, with a timeout larger than
+			// the advance window, so neither races the refresh timers.
+			const errorPromise = bus.waitFor("error", undefined, 60 * 60 * 1000);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			const errorEvent = await errorPromise;
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Error refreshing preview token",
+			});
+
+			// Connectivity returns before the next short-interval retry: it must
+			// succeed and refresh the session with no restart required.
+			vi.mocked(createPreviewSession).mockResolvedValue({
+				value: "test-session-value",
+				host: "test.workers.dev",
+				name: "test",
+			});
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL + 1
+			);
+			const reloadEvent = await reloadPromise;
+			expect(reloadEvent.type).toBe("reloadComplete");
 		});
 	});
 
