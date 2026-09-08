@@ -242,7 +242,9 @@ async function publishRoutesFallback(
 		logger.warn(
 			"Previously deployed routes:\n" +
 				"The following routes were already associated with this worker, and have not been deleted:\n" +
-				[...alreadyDeployedRoutes.values()].map((route) => ` - "${route}"\n`) +
+				[...alreadyDeployedRoutes.values()]
+					.map((route) => ` - "${route}"\n`)
+					.join("") +
 				"If these routes are not wanted then you can remove them in the dashboard."
 		);
 	}
