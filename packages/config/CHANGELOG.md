@@ -1,5 +1,13 @@
 # @cloudflare/config
 
+## 0.11.0
+
+### Minor Changes
+
+- [#15511](https://github.com/cloudflare/workers-sdk/pull/15511) [`9c60d14`](https://github.com/cloudflare/workers-sdk/commit/9c60d14c0e4cd9306a58c830023f5b43fe6ed054) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Enable referencing Worker configs directly in cross-Worker bindings
+
+  `defineWorker` and `defineSettings` now return ordinary config objects, functions, or promises. Cross-Worker bindings can use a `defineWorker` result as their `worker`, preserving type inference while resolving and parsing the referenced config only once.
+
 ## 0.10.0
 
 ### Minor Changes
