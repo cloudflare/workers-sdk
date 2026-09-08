@@ -1,4 +1,5 @@
 import path from "node:path";
+import { quoteShellArgs } from "@cloudflare/cli-shared-helpers/command";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	configFileName,
@@ -9,6 +10,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
+import { fetchSecrets } from "../deploy/helpers/check-remote-secrets-override";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
@@ -22,7 +24,6 @@ import {
 	editPreview,
 	getPreview,
 	getPreviewDeployment,
-	getWorkerPreviewDefaults,
 } from "./api";
 import {
 	assemblePreviewScriptSettings,
@@ -609,11 +610,11 @@ function formatPreviewDeploymentSummary(
 
 function logMissingPreviewsBindingsWarning(
 	topLevelBindings: Record<string, { type: string }>,
-	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
+	effectivePreviewBindings: Record<string, Binding> | undefined,
 	localPreviewBindings: Record<string, Binding>
 ) {
 	const availableBindingNames = new Set([
-		...Object.keys(remotePreviewDefaultBindings ?? {}),
+		...Object.keys(effectivePreviewBindings ?? {}),
 		...Object.keys(localPreviewBindings),
 	]);
 	const missingBindings = Object.fromEntries(
@@ -627,7 +628,7 @@ function logMissingPreviewsBindingsWarning(
 	}
 
 	logger.warn(`Your configuration has diverged.
-The following bindings are configured at the top level of your Wrangler config file, but are missing from the Previews settings of your Worker.
+The following bindings are configured at the top level of your Wrangler config file, but are missing from the latest Preview deployment.
 
 ${Object.entries(missingBindings)
 	.map(
@@ -636,7 +637,98 @@ ${Object.entries(missingBindings)
 	)
 	.join("\n")}
 
-Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update the Previews settings of your Worker in the Cloudflare dashboard.`);
+Either include these bindings in the ${chalk.cyan(`"previews"`)} field of your Wrangler config or update Preview Base in the Cloudflare dashboard and create a new Preview.`);
+}
+
+async function logMissingPreviewSecretsWarning(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	previewName: string,
+	deploymentBindings: Record<string, Binding> | undefined,
+	ignoreBaseConfig: boolean
+) {
+	let productionSecrets: { name: string; type: string }[];
+	try {
+		productionSecrets = await fetchSecrets(config, workerName, accountId);
+	} catch {
+		// Secret metadata may require permissions the caller does not have. This
+		// check is advisory and must not block an otherwise valid Preview.
+		return;
+	}
+
+	const missingSecrets = productionSecrets
+		.filter(
+			({ name, type }) =>
+				(type === "secret_text" || type === "secret_key") &&
+				!Object.hasOwn(deploymentBindings ?? {}, name)
+		)
+		.sort(({ name: left }, { name: right }) => left.localeCompare(right));
+	if (missingSecrets.length === 0) {
+		return;
+	}
+
+	const configurableSecrets = missingSecrets.filter(
+		({ type }) => type === "secret_text"
+	);
+	const commands = configurableSecrets.map(
+		({ name }) =>
+			`  ${quoteShellCommand(
+				ignoreBaseConfig
+					? [
+							"wrangler",
+							"preview",
+							"secret",
+							"put",
+							name,
+							"--name",
+							previewName,
+							"--worker-name",
+							workerName,
+						]
+					: [
+							"wrangler",
+							"preview",
+							"base-config",
+							"secret",
+							"put",
+							name,
+							"--worker-name",
+							workerName,
+						]
+			)}`
+	);
+	const followUp = ignoreBaseConfig
+		? "Redeploy this Preview after configuring the secrets."
+		: "Create a new Preview, or delete and recreate this one, after configuring Preview Base.";
+	const commandGuidance =
+		commands.length > 0
+			? `\n\nConfigure separate Preview values with:\n${commands.join("\n")}\n\n${followUp}`
+			: "";
+	const secretKeyNames = missingSecrets
+		.filter(({ type }) => type === "secret_key")
+		.map(({ name }) => name);
+	const secretKeyGuidance =
+		secretKeyNames.length > 0
+			? `\n\nThese bindings use the \`secret_key\` type, which Preview secret commands cannot create:\n${secretKeyNames.map((name) => `  - ${name}`).join("\n")}\nConfigure Preview-safe replacements manually.`
+			: "";
+
+	logger.warn(
+		`The production Worker uses secrets that are missing from this Preview deployment:\n${missingSecrets.map(({ name }) => `  - ${name}`).join("\n")}${commandGuidance}${secretKeyGuidance}\nWrangler read secret names and types only. It did not read or copy secret values.`
+	);
+}
+
+function quoteShellCommand(args: string[]): string {
+	if (process.platform === "win32") {
+		return quoteShellArgs(args);
+	}
+	return args
+		.map((arg) =>
+			/^[A-Za-z0-9_./:@%+=,-]+$/.test(arg)
+				? arg
+				: `'${arg.replaceAll("'", `'"'"'`)}'`
+		)
+		.join(" ");
 }
 
 /**
@@ -801,6 +893,15 @@ export async function preview(
 		deploymentRequest
 	);
 
+	await logMissingPreviewSecretsWarning(
+		config,
+		accountId,
+		workerName,
+		previewResource.name,
+		deployment.env,
+		ignoreBaseConfig
+	);
+
 	if (
 		normalisedContainerConfig.length > 0 &&
 		scopedContainerConfig &&
@@ -841,14 +942,9 @@ export async function preview(
 
 		const topLevelBindings = getBindings(config);
 		if (Object.keys(topLevelBindings).length > 0) {
-			const previewDefaults = await getWorkerPreviewDefaults(
-				config,
-				accountId,
-				workerName
-			);
 			logMissingPreviewsBindingsWarning(
 				topLevelBindings,
-				previewDefaults?.env,
+				deployment.env,
 				extractConfigBindings(config)
 			);
 		}

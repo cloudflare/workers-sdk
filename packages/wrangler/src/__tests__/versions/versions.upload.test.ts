@@ -1947,7 +1947,7 @@ describe("versions upload", () => {
 					expect.objectContaining({
 						type: "d1",
 						name: "MY_DB",
-						id: "d1-db-id-1",
+						database_id: "d1-db-id-1",
 					}),
 					expect.objectContaining({
 						type: "service",

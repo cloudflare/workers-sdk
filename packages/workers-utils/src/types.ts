@@ -138,6 +138,15 @@ export type WorkerMetadataBinding =
 			raw?: boolean;
 	  }
 	| {
+			type: "d1";
+			name: string;
+			database_name?: string;
+			/** @deprecated The API may return this for legacy D1 bindings. Use `database_id` instead. */
+			id: string;
+			internalEnv?: string;
+			raw?: boolean;
+	  }
+	| {
 			type: "vectorize";
 			name: string;
 			index_name: string;

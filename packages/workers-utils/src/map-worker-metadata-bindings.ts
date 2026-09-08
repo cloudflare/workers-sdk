@@ -63,8 +63,9 @@ export function mapWorkerMetadataBindings(
 						break;
 					case "d1":
 						{
-							// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
-							const databaseId = binding.database_id ?? binding.id;
+							const databaseId =
+								// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
+								"database_id" in binding ? binding.database_id : binding.id;
 							configObj.d1_databases = [
 								...(configObj.d1_databases ?? []),
 								{
