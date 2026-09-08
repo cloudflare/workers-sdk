@@ -64,9 +64,9 @@ export class InspectorProxyController {
 			res.statusCode = 404;
 			res.end(null);
 		});
+		this.#initializeWebSocketServer(server);
 
 		await this.#startListening(server);
-		this.#initializeWebSocketServer(server);
 
 		return server;
 	}
