@@ -39,6 +39,7 @@ describe("writePnpmBuildApprovals", () => {
 		expect(calledPath).toBe(yamlPath);
 		expect(calledContent).toMatch(/^allowBuilds:$/m);
 		expect(calledContent).toMatch(/^ {2}esbuild: true$/m);
+		expect(calledContent).toMatch(/^ {2}node-hid: true$/m);
 		expect(calledContent).toMatch(/^ {2}workerd: true$/m);
 	});
 
@@ -112,6 +113,7 @@ describe("writePnpmBuildApprovals", () => {
 		const written = vi.mocked(writeFile).mock.calls[0][1] as string;
 		// Our keys: placeholders → `true`; missing keys are added.
 		expect(written).toMatch(/^ {2}esbuild: true$/m);
+		expect(written).toMatch(/^ {2}node-hid: true$/m);
 		expect(written).toMatch(/^ {2}workerd: true$/m);
 		// Framework keys (incl. `sharp`, no longer pre-approved): untouched.
 		expect(written).toMatch(
@@ -126,7 +128,13 @@ describe("writePnpmBuildApprovals", () => {
 			(path) => path.toString() === yamlPath
 		);
 		vi.mocked(readFile).mockReturnValue(
-			["allowBuilds:", "  esbuild: false", "  workerd: true", ""].join("\n")
+			[
+				"allowBuilds:",
+				"  esbuild: false",
+				"  node-hid: true",
+				"  workerd: true",
+				"",
+			].join("\n")
 		);
 
 		writePnpmBuildApprovals(projectPath);
@@ -140,7 +148,13 @@ describe("writePnpmBuildApprovals", () => {
 			(path) => path.toString() === yamlPath
 		);
 		vi.mocked(readFile).mockReturnValue(
-			["allowBuilds:", "  esbuild: true", "  workerd: true", ""].join("\n")
+			[
+				"allowBuilds:",
+				"  esbuild: true",
+				"  node-hid: true",
+				"  workerd: true",
+				"",
+			].join("\n")
 		);
 
 		writePnpmBuildApprovals(projectPath);
@@ -165,6 +179,7 @@ describe("writePnpmBuildApprovals", () => {
 		expect(written).toMatch(/^ {2}- 'packages\/\*'$/m);
 		expect(written).toMatch(/^allowBuilds:$/m);
 		expect(written).toMatch(/^ {2}esbuild: true$/m);
+		expect(written).toMatch(/^ {2}node-hid: true$/m);
 		expect(written).toMatch(/^ {2}workerd: true$/m);
 	});
 
@@ -204,6 +219,7 @@ describe("mergeAllowBuilds", () => {
 		const input = [
 			"allowBuilds:",
 			"  esbuild: false",
+			"  node-hid: true",
 			"  workerd: true",
 			"",
 		].join("\n");
@@ -215,6 +231,7 @@ describe("mergeAllowBuilds", () => {
 		const input = [
 			"allowBuilds:",
 			"  esbuild: true",
+			"  node-hid: true",
 			"  workerd: true",
 			"  sharp: true",
 			"  '@parcel/watcher': set this to true or false",
