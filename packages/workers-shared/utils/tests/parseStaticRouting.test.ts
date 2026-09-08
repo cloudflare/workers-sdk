@@ -1,4 +1,5 @@
 import { describe, it } from "vitest";
+import { MAX_ROUTES_RULES } from "../configuration/constants";
 import { parseStaticRouting } from "../configuration/parseStaticRouting";
 
 describe("parseStaticRouting", () => {
@@ -28,6 +29,50 @@ describe("parseStaticRouting", () => {
 			parseStaticRouting([...userWorkerRules, ...assetRules])
 		).toThrowErrorMatchingInlineSnapshot(
 			`[Error: Too many \`run_worker_first\` rules were provided; 120 rules provided exceeds max of 100.]`
+		);
+
+		const rulesWithRemovableDuplicates = [
+			...Array.from({ length: 99 }, (_, i) => `/rule/${i}`),
+			...Array.from({ length: 5 }, () => "/rule/0"),
+		];
+		expect(() => parseStaticRouting(rulesWithRemovableDuplicates))
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Too many \`run_worker_first\` rules were provided; 104 rules provided (99 distinct, 5 duplicate entries) exceeds max of 100. Duplicate entries count toward the limit.
+
+			Duplicated rules:
+			- "/rule/0"]
+		`);
+
+		const rulesWithRemainingExcess = [
+			...Array.from({ length: 100 }, (_, i) => `/rule/${i}`),
+			"/api/*",
+			"!/assets/*",
+			"!/assets/*",
+			"/api/*",
+		];
+		expect(() => parseStaticRouting(rulesWithRemainingExcess))
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Too many \`run_worker_first\` rules were provided; 104 rules provided (102 distinct, 2 duplicate entries) exceeds max of 100. Duplicate entries count toward the limit.
+
+			Duplicated rules:
+			- "/api/*"
+			- "!/assets/*"]
+		`);
+
+		const duplicatedRules = Array.from(
+			{ length: MAX_ROUTES_RULES + 1 },
+			(_, i) => `/duplicated/${i}`
+		);
+		const reportedDuplicatedRules = duplicatedRules
+			.slice(0, 5)
+			.map((rule) => `- ${JSON.stringify(rule)}`)
+			.join("\n");
+		expect(() =>
+			parseStaticRouting([...duplicatedRules, ...duplicatedRules])
+		).toThrow(
+			new Error(
+				`Too many \`run_worker_first\` rules were provided; 202 rules provided (101 distinct, 101 duplicate entries) exceeds max of 100. Duplicate entries count toward the limit.\n\nDuplicated rules:\n${reportedDuplicatedRules}\n...and 96 more duplicated rules.`
+			)
 		);
 	});
 

@@ -1,6 +1,8 @@
 import { MAX_ROUTES_RULE_LENGTH, MAX_ROUTES_RULES } from "./constants";
 import type { StaticRouting } from "../types";
 
+const MAX_REPORTED_DUPLICATED_RULES = 5;
+
 // copy of what EWC does. Wrangler uploads the rules in one array (so the API is consistent with Wrangler config),
 // but router Worker expects the rules to be split into two arrays, which we do here.
 // This logic is translated from assets/staticrouting.go.
@@ -12,6 +14,33 @@ export function parseStaticRouting(input: string[]): StaticRouting {
 		);
 	}
 	if (input.length > MAX_ROUTES_RULES) {
+		const seenRules = new Set<string>();
+		const duplicatedRules = new Set<string>();
+
+		for (const rule of input) {
+			if (seenRules.has(rule)) {
+				duplicatedRules.add(rule);
+			}
+			seenRules.add(rule);
+		}
+
+		if (duplicatedRules.size > 0) {
+			const duplicateEntryCount = input.length - seenRules.size;
+			const reportedDuplicatedRules = [...seenRules]
+				.filter((rule) => duplicatedRules.has(rule))
+				.slice(0, MAX_REPORTED_DUPLICATED_RULES);
+			const unreportedDuplicatedRuleCount =
+				duplicatedRules.size - reportedDuplicatedRules.length;
+			const unreportedDuplicatedRulesMessage =
+				unreportedDuplicatedRuleCount > 0
+					? `\n...and ${unreportedDuplicatedRuleCount} more duplicated ${unreportedDuplicatedRuleCount === 1 ? "rule" : "rules"}.`
+					: "";
+
+			throw new Error(
+				`Too many \`run_worker_first\` rules were provided; ${input.length} rules provided (${seenRules.size} distinct, ${duplicateEntryCount} duplicate ${duplicateEntryCount === 1 ? "entry" : "entries"}) exceeds max of ${MAX_ROUTES_RULES}. Duplicate entries count toward the limit.\n\nDuplicated rules:\n${reportedDuplicatedRules.map((rule) => `- ${JSON.stringify(rule)}`).join("\n")}${unreportedDuplicatedRulesMessage}`
+			);
+		}
+
 		throw new Error(
 			`Too many \`run_worker_first\` rules were provided; ${input.length} rules provided exceeds max of ${MAX_ROUTES_RULES}.`
 		);
