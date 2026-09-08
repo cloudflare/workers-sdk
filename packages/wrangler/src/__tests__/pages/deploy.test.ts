@@ -22,12 +22,14 @@ import {
 	PAGES_CONFIG_CACHE_FILENAME,
 	ROUTES_SPEC_VERSION,
 } from "../../pages/constants";
+import { getUnsupportedDeployDelegateArgs } from "../../pages/deploy";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
+import { detectAgent } from "../../utils/detect-agent";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { mockPrompt } from "../helpers/mock-dialogs";
+import { mockPrompt, mockSelect } from "../helpers/mock-dialogs";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
@@ -46,6 +48,8 @@ import type {
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
 
+vi.mock("../../utils/detect-agent");
+
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -61,6 +65,7 @@ describe("pages deploy", () => {
 	//TODO Abstract MSW handlers that repeat to this level - JACOB
 	beforeEach(() => {
 		vi.mocked(ci).isCI = true;
+		vi.mocked(detectAgent).mockReturnValue({ isAgent: false, id: null });
 		setIsTTY(false);
 	});
 
@@ -122,6 +127,169 @@ describe("pages deploy", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
 		);
+	});
+
+	it("does not delegate an unnamed agent deploy when autoconfig would infer an existing Pages project name", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		writeFileSync(
+			"package.json",
+			JSON.stringify({ name: "existing-pages-project" })
+		);
+		// Model an account where the package name that Workers autoconfiguration
+		// would infer is already in use by Pages. Because Pages has no resolved
+		// project name, delegation must stop before autoconfiguration can select it.
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pages/projects/existing-pages-project",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { name: "existing-pages-project" },
+					})
+			)
+		);
+
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
+		);
+		expect(std.out).not.toContain("Delegating to");
+	});
+
+	it("ignores a cached project name from a different account and does not delegate", async ({
+		expect,
+	}) => {
+		vi.mocked(ci).isCI = false;
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		setIsTTY(true);
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "old-account-id",
+			project_name: "stale-project",
+		});
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
+
+		let staleProjectLookupCount = 0;
+		let projectListRequestCount = 0;
+		msw.use(
+			http.get("*/accounts/new-account-id/pages/projects/stale-project", () => {
+				staleProjectLookupCount++;
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 8000007, message: "Project not found" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				);
+			}),
+			http.get(
+				"*/accounts/new-account-id/pages/projects",
+				() => {
+					projectListRequestCount++;
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: [{ name: "another-project", source: null }],
+					});
+				},
+				{ once: true }
+			)
+		);
+		mockSelect({
+			text: "No project specified. Would you like to create one or use an existing project?",
+			result: "new",
+		});
+		mockPrompt({
+			text: "Enter the name of your new project:",
+			result: "",
+		});
+
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing Pages project name. Use --project-name <name> or set the name in your Wrangler configuration file.]`
+		);
+		expect(staleProjectLookupCount).toBe(0);
+		expect(projectListRequestCount).toBe(1);
+		expect(std.out).not.toContain("Delegating to");
+	});
+
+	it("keeps a cache-revived project on Pages after an account-only cache update", async ({
+		expect,
+	}) => {
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "old-account-id",
+			project_name: "stale-project",
+		});
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "new-account-id");
+
+		let projectListRequestCount = 0;
+		let staleProjectLookupCount = 0;
+		msw.use(
+			http.get("*/accounts/new-account-id/pages/projects", () => {
+				projectListRequestCount++;
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [
+						{
+							name: "another-project",
+							domains: ["another-project.pages.dev"],
+							source: null,
+							created_on: "2026-09-08T00:00:00.000Z",
+						},
+					],
+				});
+			}),
+			http.get("*/accounts/new-account-id/pages/projects/stale-project", () => {
+				staleProjectLookupCount++;
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 8000007, message: "Project not found" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				);
+			})
+		);
+
+		// `pages project list` saves only the selected account ID. Since cache writes
+		// merge, this reproduces the edge case where the old project name is retained
+		// and appears to belong to the new account.
+		await runWrangler("pages project list --json");
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+
+		await expect(runWrangler("pages deploy public")).rejects.toThrow(
+			'The Pages project "stale-project" does not exist.'
+		);
+		expect(projectListRequestCount).toBe(1);
+		expect(staleProjectLookupCount).toBe(1);
+		expect(std.out).not.toContain("Delegating to");
 	});
 
 	it("should error if the specified project does not exist in non-interactive mode", async ({
@@ -1965,6 +2133,137 @@ describe("pages deploy", () => {
 
 		expect(getProjectRequestCount).toEqual(2);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("preserves preview semantics for an interactive agent creating a new project with --branch", async ({
+		expect,
+	}) => {
+		vi.mocked(ci).isCI = false;
+		vi.mocked(detectAgent).mockReturnValue({
+			isAgent: true,
+			id: "test-agent",
+		});
+		setIsTTY(true);
+		mkdirSync("public");
+		writeFileSync("public/index.html", "hello");
+		mockGetUploadTokenRequest(
+			expect,
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let projectLookupCount = 0;
+		msw.use(
+			http.get("*/accounts/:accountId/pages/projects/foo", () => {
+				projectLookupCount++;
+				if (projectLookupCount === 1) {
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 8000007, message: "Project not found" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 404 }
+					);
+				}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						production_branch: "main",
+						deployment_configs: { production: {}, preview: {} },
+					},
+				});
+			}),
+			http.post(
+				"*/accounts/:accountId/pages/projects",
+				async ({ request }) => {
+					expect(await request.json()).toEqual({
+						name: "foo",
+						production_branch: "main",
+					});
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { name: "foo", production_branch: "main" },
+					});
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/check-missing", async ({ request }) => {
+				const body = (await request.json()) as { hashes: string[] };
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: body.hashes,
+				});
+			}),
+			http.post("*/pages/assets/upload", () =>
+				HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				})
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request }) => {
+					expect(await formDataToObject(await request.formData())).toEqual(
+						expect.arrayContaining([
+							{ name: "branch", value: "preview-feature" },
+						])
+					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "123-456-789",
+							url: "https://abcxyz.foo.pages.dev/",
+						},
+					});
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				() =>
+					HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "123-456-789",
+							latest_stage: { name: "deploy", status: "success" },
+						},
+					}),
+				{ once: true }
+			)
+		);
+		mockSelect({
+			text: 'The project you specified does not exist: "foo". Would you like to create it?',
+			options: {
+				choices: [{ title: "Create a new project", value: "new" }],
+			},
+			result: "new",
+		});
+		mockPrompt({
+			text: "Enter the production branch name:",
+			result: "main",
+		});
+
+		await runWrangler(
+			"pages deploy public --project-name=foo --branch=preview-feature"
+		);
+
+		expect(projectLookupCount).toBe(2);
+		expect(std.out).not.toContain("Delegating to");
 	});
 
 	// regression test for issue #3629
@@ -6650,3 +6949,39 @@ function mockGetProjectHandler(
 		{ once: true }
 	);
 }
+
+describe("getUnsupportedDeployDelegateArgs", () => {
+	type DeployArgs = Parameters<typeof getUnsupportedDeployDelegateArgs>[0];
+
+	it("treats --branch as unsupported so preview deploys stay on Pages", ({
+		expect,
+	}) => {
+		const args = { branch: "main" } as DeployArgs;
+
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual(["--branch"]);
+	});
+
+	it("still reports git-integration metadata and --skip-caching as unsupported", ({
+		expect,
+	}) => {
+		const args = {
+			commitHash: "abc123",
+			commitMessage: "a message",
+			commitDirty: true,
+			skipCaching: true,
+		} as DeployArgs;
+
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([
+			"--commit-hash",
+			"--commit-message",
+			"--commit-dirty",
+			"--skip-caching",
+		]);
+	});
+
+	it("ignores boolean flags left at false", ({ expect }) => {
+		const args = { commitDirty: false, skipCaching: false } as DeployArgs;
+
+		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([]);
+	});
+});
