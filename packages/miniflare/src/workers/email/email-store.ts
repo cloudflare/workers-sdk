@@ -16,21 +16,18 @@
  * directory).
  */
 import { DurableObject } from "cloudflare:workers";
-import { z } from "zod";
 import {
 	base64ToBytes,
 	bytesToBase64,
 	MAX_EMAIL_ROW_VALUE_BYTES,
 } from "./capture";
-import {
-	zEmailBase,
-	zEmailHeaders,
-	zEmailHandlerEvent,
-	zEmailHandlerForward,
-	zEmailHandlerReplyApi,
-	zEmailSendingDetail,
-} from "./contracts";
 import { messageIdToStorageId } from "./message-id";
+import {
+	zStoredRoutingEmailMetadata,
+	zStoredRoutingEmail,
+	zStoredRoutingEmailSummary,
+	zStoredSendingEmail,
+} from "./storage";
 import type {
 	EmailListPage,
 	StoredRoutingEmail,
@@ -143,42 +140,6 @@ const SCHEMA = [
 			PRIMARY KEY (capture_id, part)
 		)`,
 ];
-
-const zStoredEmailReply = zEmailHandlerReplyApi.omit({
-	raw: true,
-	rawBase64: true,
-});
-const zStoredEmailReplyMetadata = zStoredEmailReply.extend({
-	captureTruncated: z.boolean().optional(),
-});
-export const zStoredRoutingEmailSummary = zEmailBase.extend({
-	to: z.string(),
-	cc: z.array(z.string()).optional(),
-	headers: z.record(z.string(), z.string()).optional(),
-	headerEntries: zEmailHeaders.optional(),
-	receivedAt: z.string(),
-	rawSize: z.number(),
-	outcome: z.enum(["ok", "exception"]),
-	rejectReason: z.string().optional(),
-	forwards: z.array(zEmailHandlerForward),
-	replies: z.array(zStoredEmailReply),
-	events: z.array(zEmailHandlerEvent),
-});
-const zStoredRoutingEmailMetadata = zStoredRoutingEmailSummary.extend({
-	captureTruncated: z.boolean().optional(),
-	replies: z.array(zStoredEmailReplyMetadata),
-});
-export const zStoredRoutingEmail = zStoredRoutingEmailMetadata.extend({
-	raw: z.string(),
-	rawBase64: z.string(),
-	replies: z.array(
-		zEmailHandlerReplyApi.extend({
-			raw: z.string(),
-			rawBase64: z.string(),
-			captureTruncated: z.boolean().optional(),
-		})
-	),
-});
 
 type EmailTable = "received" | "sent";
 type EmailCursor = { createdAt: string; seq: number };
@@ -535,7 +496,7 @@ export class EmailStore extends DurableObject {
 	): EmailListPage<StoredSendingEmailSummary> {
 		return this.#list(
 			"sent",
-			(data) => getSentSummary(zEmailSendingDetail.parse(JSON.parse(data))),
+			(data) => getSentSummary(zStoredSendingEmail.parse(JSON.parse(data))),
 			cursor,
 			limit,
 			worker

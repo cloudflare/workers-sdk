@@ -1,4 +1,3 @@
-import { EMAIL_OPENAPI_SCHEMAS } from "./email-openapi";
 import type { FilterConfig } from "./filter-openapi";
 
 /**
@@ -2279,7 +2278,640 @@ const config = {
 				},
 				required: ["columns", "rows"],
 			},
-			...EMAIL_OPENAPI_SCHEMAS,
+			"email_handler-event": {
+				oneOf: [
+					{
+						type: "object",
+						properties: {
+							type: {
+								type: "string",
+								enum: ["received", "reject", "unhandled"],
+							},
+							timestamp: {
+								type: "string",
+								description: "ISO 8601 timestamp of when the event occurred.",
+							},
+						},
+						required: ["type", "timestamp"],
+						additionalProperties: false,
+					},
+					{
+						type: "object",
+						properties: {
+							type: {
+								type: "string",
+								enum: ["forward", "reply"],
+							},
+							timestamp: {
+								type: "string",
+								description: "ISO 8601 timestamp of when the event occurred.",
+							},
+							messageId: {
+								type: "string",
+								description:
+									"Correlates with the matching `forwards`/`replies` entry.",
+							},
+						},
+						required: ["type", "timestamp", "messageId"],
+						additionalProperties: false,
+					},
+				],
+				description:
+					"One entry in the ordered lifecycle of what the handler did to the message. `received` is first for any message actually delivered to an `email()` handler. The exception is `unhandled`: when the Worker exports no `email()` handler the message never reaches one, so the timeline is a single `unhandled` event with no preceding `received`. `forward`/`reply` events carry a `messageId` correlating with the matching `forwards`/`replies` entry.",
+			},
+			"email_handler-forward": {
+				type: "object",
+				properties: {
+					messageId: {
+						type: "string",
+					},
+					recipient: {
+						type: "string",
+						description: "Envelope recipient the message was forwarded to.",
+					},
+					headers: {
+						type: "array",
+						items: {
+							type: "array",
+							items: {
+								anyOf: [
+									{
+										type: "string",
+									},
+									{
+										type: "string",
+									},
+								],
+							},
+							minItems: 2,
+							maxItems: 2,
+						},
+						description: "Headers added to the forwarded message.",
+					},
+				},
+				required: ["messageId", "recipient", "headers"],
+				additionalProperties: false,
+			},
+			"email_handler-reply": {
+				type: "object",
+				properties: {
+					messageId: {
+						type: "string",
+					},
+					sender: {
+						type: "string",
+						description: "Address the reply was sent from.",
+					},
+					raw: {
+						type: "string",
+						description:
+							"Raw MIME content of the reply. Omitted from the routing list; present on the detail response.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of the reply MIME.",
+					},
+				},
+				required: ["messageId", "sender"],
+				additionalProperties: false,
+			},
+			email_base: {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+				},
+				required: ["from", "subject", "messageId", "attachments"],
+				additionalProperties: false,
+			},
+			"email_routing-item": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					to: {
+						type: "string",
+						description: "Envelope RCPT TO address.",
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+					headerEntries: {
+						type: "array",
+						items: {
+							type: "array",
+							items: {
+								anyOf: [
+									{
+										type: "string",
+									},
+									{
+										type: "string",
+									},
+								],
+							},
+							minItems: 2,
+							maxItems: 2,
+						},
+						description:
+							"Email headers as ordered name/value pairs, including duplicates.",
+					},
+					receivedAt: {
+						type: "string",
+					},
+					rawSize: {
+						type: "number",
+					},
+					outcome: {
+						type: "string",
+						enum: ["ok", "exception"],
+						description: "Whether the handler ran to completion or threw.",
+					},
+					rejectReason: {
+						type: "string",
+						description:
+							"Reason passed to setReject(), if the handler rejected the message.",
+					},
+					forwards: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-forward",
+						},
+					},
+					replies: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-reply",
+						},
+					},
+					events: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-event",
+						},
+					},
+				},
+				required: [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"receivedAt",
+					"rawSize",
+					"outcome",
+					"forwards",
+					"replies",
+					"events",
+				],
+				additionalProperties: false,
+			},
+			"email_routing-detail": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					to: {
+						type: "string",
+						description: "Envelope RCPT TO address.",
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+					headerEntries: {
+						type: "array",
+						items: {
+							type: "array",
+							items: {
+								anyOf: [
+									{
+										type: "string",
+									},
+									{
+										type: "string",
+									},
+								],
+							},
+							minItems: 2,
+							maxItems: 2,
+						},
+						description:
+							"Email headers as ordered name/value pairs, including duplicates.",
+					},
+					receivedAt: {
+						type: "string",
+					},
+					rawSize: {
+						type: "number",
+					},
+					outcome: {
+						type: "string",
+						enum: ["ok", "exception"],
+						description: "Whether the handler ran to completion or threw.",
+					},
+					rejectReason: {
+						type: "string",
+						description:
+							"Reason passed to setReject(), if the handler rejected the message.",
+					},
+					forwards: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-forward",
+						},
+					},
+					replies: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-reply",
+						},
+					},
+					events: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_handler-event",
+						},
+					},
+					text: {
+						type: "string",
+						description: "Parsed plain text body, when present.",
+					},
+					html: {
+						type: "string",
+						description: "Parsed HTML body, when present.",
+					},
+					raw: {
+						type: "string",
+						description: "Raw MIME content of the received email.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of the received MIME.",
+					},
+				},
+				required: [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"receivedAt",
+					"rawSize",
+					"outcome",
+					"forwards",
+					"replies",
+					"events",
+					"raw",
+				],
+				additionalProperties: false,
+			},
+			"email_send-request": {
+				type: "object",
+				properties: {
+					from: {
+						type: "string",
+						description: "Sender address.",
+					},
+					to: {
+						minItems: 1,
+						type: "array",
+						items: {
+							type: "string",
+						},
+						description: "Recipient addresses.",
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					bcc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					replyTo: {
+						type: "string",
+					},
+					subject: {
+						type: "string",
+					},
+					text: {
+						type: "string",
+						description: "Plain text body.",
+					},
+					html: {
+						type: "string",
+						description: "HTML body.",
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+						description: "Custom headers to include on the message.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								filename: {
+									type: "string",
+									description: "Name the attachment is presented under.",
+								},
+								type: {
+									type: "string",
+									description:
+										"MIME type of the attachment, e.g. 'application/pdf'.",
+								},
+								content: {
+									type: "string",
+									description:
+										"Attachment content, base64-encoded. MessageBuilder takes raw bytes here, but this endpoint accepts JSON so the bytes must be base64-encoded.",
+								},
+								contentId: {
+									type: "string",
+									description: "Content-ID for an inline attachment.",
+								},
+								disposition: {
+									type: "string",
+									enum: ["inline", "attachment"],
+									description:
+										"How the attachment is presented. Defaults to 'attachment'.",
+								},
+							},
+							required: ["filename", "type", "content"],
+							additionalProperties: false,
+						},
+						description:
+							"Attachments to include on the message, mirroring the MessageBuilder `attachments` entries accepted by a send_email binding. Adding any attachment composes the message as multipart/mixed.",
+					},
+				},
+				required: ["from", "to", "subject"],
+				additionalProperties: false,
+				description:
+					"Fields for composing a test email, mirroring MessageBuilder.",
+			},
+			email_attachment: {
+				type: "object",
+				properties: {
+					filename: {
+						type: "string",
+					},
+					contentType: {
+						type: "string",
+					},
+					disposition: {
+						type: "string",
+						enum: ["inline", "attachment"],
+					},
+					size: {
+						type: "number",
+					},
+				},
+				required: ["filename", "contentType", "disposition", "size"],
+				additionalProperties: false,
+				description:
+					"Metadata describing an attachment on a captured email, without its content.",
+			},
+			"email_sending-item": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					to: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					bcc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					replyTo: {
+						type: "string",
+					},
+					sentAt: {
+						type: "string",
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+				},
+				required: [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"sentAt",
+				],
+				additionalProperties: false,
+			},
+			"email_sending-detail": {
+				type: "object",
+				properties: {
+					worker: {
+						type: "string",
+						description: "Worker associated with the email, if known.",
+					},
+					from: {
+						type: "string",
+						description: "Envelope MAIL FROM address.",
+					},
+					subject: {
+						type: "string",
+					},
+					messageId: {
+						type: "string",
+						description:
+							"RFC Message-ID header value. Identifies the email in the store.",
+					},
+					attachments: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/email_attachment",
+						},
+						description:
+							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					to: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					cc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					bcc: {
+						type: "array",
+						items: {
+							type: "string",
+						},
+					},
+					replyTo: {
+						type: "string",
+					},
+					sentAt: {
+						type: "string",
+					},
+					headers: {
+						type: "object",
+						additionalProperties: {
+							type: "string",
+						},
+					},
+					text: {
+						type: "string",
+					},
+					html: {
+						type: "string",
+					},
+					raw: {
+						type: "string",
+						description:
+							"Raw MIME content, present when sent via the EmailMessage API.",
+					},
+					rawBase64: {
+						type: "string",
+						description: "Lossless base64 representation of sent MIME.",
+					},
+				},
+				required: [
+					"from",
+					"subject",
+					"messageId",
+					"attachments",
+					"to",
+					"sentAt",
+				],
+				additionalProperties: false,
+			},
 		},
 	},
 } satisfies FilterConfig;
