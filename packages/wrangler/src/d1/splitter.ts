@@ -132,22 +132,82 @@ export function normalizeSqlLineEndings(sql: string): string {
 function splitSqlIntoStatements(sql: string): string[] {
 	const statements: string[] = [];
 	let str = "";
-	const compoundStatementStack: ((s: string) => boolean)[] = [];
+	let word = "";
+	let previousTokenWasSemicolon = false;
+	let statementPrefix: string[] = [];
+	let isTriggerStatement = false;
+	let inTriggerBody = false;
+	let blockCommentNeedsWhitespace = false;
+
+	/**
+	 * Processes the identifier token that has just ended and updates trigger state.
+	 * SQLite requires every command in a trigger body to end with a semicolon, so
+	 * only an `END` after a semicolon closes the trigger. CASE expressions and
+	 * identifiers named BEGIN or END therefore need no special handling.
+	 */
+	function finishWord() {
+		if (word.length === 0) {
+			return;
+		}
+
+		const keyword = word.toUpperCase();
+		if (!isTriggerStatement && statementPrefix.length < 3) {
+			statementPrefix.push(keyword);
+			isTriggerStatement =
+				statementPrefix[0] === "CREATE" &&
+				(statementPrefix[1] === "TRIGGER" ||
+					((statementPrefix[1] === "TEMP" ||
+						statementPrefix[1] === "TEMPORARY") &&
+						statementPrefix[2] === "TRIGGER"));
+		}
+
+		if (isTriggerStatement && keyword === "BEGIN") {
+			inTriggerBody = true;
+		} else if (
+			inTriggerBody &&
+			keyword === "END" &&
+			previousTokenWasSemicolon
+		) {
+			inTriggerBody = false;
+		}
+
+		previousTokenWasSemicolon = false;
+		word = "";
+	}
+
+	/** Resets the parser state that is scoped to a single SQL statement. */
+	function startNextStatement() {
+		statementPrefix = [];
+		isTriggerStatement = false;
+		previousTokenWasSemicolon = false;
+	}
 
 	const iterator = sql[Symbol.iterator]();
 	let next = iterator.next();
 	while (!next.done) {
 		const char = next.value;
-
-		if (compoundStatementStack[0]?.(str + char)) {
-			compoundStatementStack.shift();
+		if (blockCommentNeedsWhitespace) {
+			if (!/\s/.test(char)) {
+				str += " ";
+			}
+			blockCommentNeedsWhitespace = false;
 		}
+
+		if (isIdentifierCharacter(char)) {
+			str += char;
+			word += char;
+			next = iterator.next();
+			continue;
+		}
+
+		finishWord();
 
 		switch (char) {
 			case `'`:
 			case `"`:
 			case "`":
 				str += char + consumeUntilMarker(iterator, char);
+				previousTokenWasSemicolon = false;
 				break;
 			case `$`: {
 				const dollarQuote =
@@ -156,6 +216,7 @@ function splitSqlIntoStatements(sql: string): string[] {
 				if (dollarQuote.endsWith("$")) {
 					str += consumeUntilMarker(iterator, dollarQuote);
 				}
+				previousTokenWasSemicolon = false;
 				break;
 			}
 			case `-`:
@@ -168,6 +229,7 @@ function splitSqlIntoStatements(sql: string): string[] {
 					break;
 				} else {
 					str += char;
+					previousTokenWasSemicolon = false;
 					continue;
 				}
 			case `/`:
@@ -175,35 +237,49 @@ function splitSqlIntoStatements(sql: string): string[] {
 				if (!next.done && next.value === "*") {
 					// Skip to the end of the comment
 					consumeUntilMarker(iterator, "*/");
+					blockCommentNeedsWhitespace = str.length > 0 && !/\s$/.test(str);
 					break;
 				} else {
 					str += char;
+					previousTokenWasSemicolon = false;
 					continue;
 				}
 			case `;`:
-				if (compoundStatementStack.length === 0) {
+				if (inTriggerBody) {
+					str += char;
+					previousTokenWasSemicolon = true;
+				} else {
 					statements.push(str);
 					str = "";
-				} else {
-					str += char;
+					startNextStatement();
 				}
 				break;
 			default:
 				str += char;
+				if (!/\s/.test(char)) {
+					previousTokenWasSemicolon = false;
+				}
 				break;
-		}
-
-		if (isCompoundStatementStart(str)) {
-			compoundStatementStack.unshift(isCompoundStatementEnd);
 		}
 
 		next = iterator.next();
 	}
+	finishWord();
 	statements.push(str);
 
 	return statements
 		.map((statement) => statement.trim())
 		.filter((statement) => statement.length > 0);
+}
+
+/**
+ * Checks whether a character can be part of an unquoted SQLite identifier.
+ *
+ * @param char The character to check.
+ * @returns Whether the character is an identifier character.
+ */
+function isIdentifierCharacter(char: string) {
+	return /[0-9_]/.test(char) || char.toLowerCase() !== char.toUpperCase();
 }
 
 /**
@@ -245,18 +321,4 @@ function isDollarQuoteIdentifier(str: string) {
 		(/[0-9_]/i.test(lastChar) ||
 			lastChar.toLowerCase() !== lastChar.toUpperCase())
 	);
-}
-
-/**
- * Returns true if the `str` ends with a compound statement `BEGIN` or `CASE` marker.
- */
-function isCompoundStatementStart(str: string) {
-	return /\s(BEGIN|CASE)\s$/i.test(str);
-}
-
-/**
- * Returns true if the `str` ends with a compound statement `END` marker.
- */
-function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/i.test(str);
 }
