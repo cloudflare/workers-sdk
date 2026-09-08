@@ -154,11 +154,11 @@ export function mockCustomDomainLookup(origin: CustomDomain) {
 }
 
 export function mockCustomDomainsChangesetRequest({
-	originConflicts = [],
+	updatedDomains = [],
 	dnsRecordConflicts = [],
 	env = undefined,
 }: {
-	originConflicts?: Array<CustomDomain>;
+	updatedDomains?: Array<CustomDomain>;
 	dnsRecordConflicts?: Array<CustomDomain>;
 	env?: string | undefined;
 }) {
@@ -190,7 +190,7 @@ export function mockCustomDomainsChangesetRequest({
 					}),
 					removed: [],
 					updated:
-						originConflicts?.map((domain) => {
+						updatedDomains.map((domain) => {
 							return {
 								...domain,
 								modified: true,
