@@ -11,7 +11,7 @@ import {
 	ImageRegistriesService,
 	ImageRegistryAlreadyExistsError,
 	ImageRegistryNotAllowedError,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import { UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../../core/create-command";
@@ -29,7 +29,7 @@ import type {
 	CommonYargsArgvSanitized,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-api";
 import type { Config } from "@cloudflare/workers-utils";
 
 function _configureImageRegistryOptionalYargs(yargs: CommonYargsArgv) {

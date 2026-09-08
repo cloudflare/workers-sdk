@@ -1,9 +1,10 @@
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils/compliance";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { buildImage } from "./build";
-import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
+import { ExternalRegistryKind } from "./types";
 import {
 	checkExposedPorts,
 	cleanupDuplicateImageTags,
@@ -64,7 +65,11 @@ export async function pullImage(
 	const isExternalRegistry =
 		domain !== getCloudflareContainerRegistry(complianceConfig);
 	try {
-		await dockerLoginImageRegistry(dockerPath, domain);
+		await dockerLoginImageRegistry(
+			dockerPath,
+			domain,
+			complianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN
+		);
 	} catch (e) {
 		if (!isExternalRegistry) {
 			throw e;

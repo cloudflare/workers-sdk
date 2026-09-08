@@ -1,10 +1,10 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
-import { InstanceType } from "@cloudflare/containers-shared";
+import { InstanceType } from "@cloudflare/containers-api";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	CreateApplicationRequest,
 	UserDeploymentConfiguration,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type {
 	CloudchamberConfig,
 	ContainerApp,

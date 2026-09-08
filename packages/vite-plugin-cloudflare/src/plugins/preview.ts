@@ -93,7 +93,12 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 						);
 					}
 
-					configureContainerPull(accountId, apiToken, ctx.allWorkerConfigs[0]);
+					configureContainerPull(
+						accountId,
+						apiToken,
+						vitePreviewServer.config.logger,
+						ctx.allWorkerConfigs[0]
+					);
 				}
 
 				await prepareContainerImagesForDev({

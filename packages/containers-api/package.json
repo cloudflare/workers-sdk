@@ -1,0 +1,37 @@
+{
+	"name": "@cloudflare/containers-api",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Internal, temporary package that is liable to change at any point without notice.",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/containers-api#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/containers-api"
+	},
+	"scripts": {
+		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
+		"deploy": "echo 'no deploy'",
+		"test": "vitest",
+		"test:ci": "pnpm run test run",
+		"test:watch": "pnpm run test --testTimeout=50000 --watch",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@types/node": "catalog:default",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

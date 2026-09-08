@@ -1,7 +1,5 @@
-import {
-	getCloudflareContainerRegistry,
-	ImageRegistriesService,
-} from "@cloudflare/containers-shared";
+import { ImageRegistriesService } from "@cloudflare/containers-api";
+import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { createCommand, createNamespace } from "../../core/create-command";
@@ -19,7 +17,7 @@ import type {
 	CommonYargsArgvSanitized,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-api";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 interface CatalogWithTagsResponse {

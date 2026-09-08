@@ -1,8 +1,8 @@
+import { SecretAccessType } from "@cloudflare/containers-api";
 import {
 	ApplicationAffinityColocation,
 	getCloudflareContainerRegistry,
 	SchedulingPolicy,
-	SecretAccessType,
 } from "@cloudflare/containers-shared";
 import {
 	runInTempDir,
@@ -21,7 +21,7 @@ import type {
 	Application,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { ExpectStatic } from "vitest";
 
 function mockGetApplications(applications: Application[]) {

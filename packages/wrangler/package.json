@@ -94,6 +94,7 @@
 		"@cloudflare/build-output-utils": "workspace:*",
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/config": "workspace:*",
+		"@cloudflare/containers-api": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/pages-functions": "workspace:*",

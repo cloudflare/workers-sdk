@@ -6,13 +6,12 @@ import {
 	startSection,
 	updateStatus,
 } from "@cloudflare/cli-shared-helpers";
+import { ApiError, ImageRegistriesService } from "@cloudflare/containers-api";
 import {
-	ApiError,
 	ExternalRegistryKind,
 	getAndValidateRegistryType,
 	getCloudflareContainerRegistry,
 	validateAndEncodeGarKey,
-	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import {
 	APIError,
@@ -45,7 +44,7 @@ import type {
 	DeleteImageRegistryResponse,
 	ImageRegistryAuth,
 	ImageRegistryPermissions,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { Config } from "@cloudflare/workers-utils";
 
 const providerSpecificCredentialFlags = [

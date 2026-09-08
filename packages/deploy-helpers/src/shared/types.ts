@@ -1,4 +1,8 @@
 import type {
+	ContainerNormalizedConfig,
+	ImageURIConfig,
+} from "@cloudflare/containers-shared";
+import type {
 	ValidatedAssetsOptions,
 	LegacyAssetPaths,
 	CfModule,
@@ -127,6 +131,8 @@ export type DeployProps = SharedDeployVersionsProps & {
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/** Normalized container config, produced by the caller before deploy. */
+	normalisedContainerConfig?: ContainerNormalizedConfig[];
 	/**
 	 * When true, an existing Worker with the same name aborts the deploy instead
 	 * of updating it, because this run cannot confirm the local project owns the
@@ -139,6 +145,11 @@ export type DeployProps = SharedDeployVersionsProps & {
 	 */
 	failIfWorkerNameTaken?: boolean;
 };
+
+export type DockerfileContainerConfig = Exclude<
+	ContainerNormalizedConfig,
+	ImageURIConfig
+>;
 
 export type VersionsUploadProps = SharedDeployVersionsProps & {
 	/** Discriminant for DeployProps vs VersionsUploadProps */

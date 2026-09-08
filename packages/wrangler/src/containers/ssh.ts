@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { showCursor } from "@cloudflare/cli-shared-helpers";
 import { bold } from "@cloudflare/cli-shared-helpers/colors";
-import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
+import { ApiError, DeploymentsService } from "@cloudflare/containers-api";
 import { WebSocket } from "ws";
 import {
 	fillOpenAPIConfiguration,
@@ -12,7 +12,7 @@ import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { containersScope } from "./index";
 import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
-import type { WranglerSSHResponse } from "@cloudflare/containers-shared";
+import type { WranglerSSHResponse } from "@cloudflare/containers-api";
 import type { Config } from "@cloudflare/workers-utils";
 import type { Server } from "node:net";
 import type { RawData } from "ws";

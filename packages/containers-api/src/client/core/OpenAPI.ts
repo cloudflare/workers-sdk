@@ -1,10 +1,17 @@
 /* istanbul ignore file */
 /* tslint:disable */
-import type { WranglerLogger } from "../../types";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 
 type Resolver<T> = (options: ApiRequestOptions) => Promise<T>;
 type Headers = Record<string, string>;
+type WranglerLogger = {
+	debug: (...args: unknown[]) => void;
+	debugWithSanitization: (label: string, ...args: unknown[]) => void;
+	log: (...args: unknown[]) => void;
+	info: (...args: unknown[]) => void;
+	warn: (...args: unknown[]) => void;
+	error: (...args: unknown[]) => void;
+};
 
 export type OpenAPIConfig = {
 	BASE: string;

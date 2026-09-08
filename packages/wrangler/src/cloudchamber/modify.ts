@@ -4,7 +4,7 @@ import {
 	inputPrompt,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
-import { DeploymentsService } from "@cloudflare/containers-shared";
+import { DeploymentsService } from "@cloudflare/containers-api";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
@@ -38,7 +38,7 @@ import type {
 	DeploymentV2,
 	ModifyDeploymentV2RequestBody,
 	SSHPublicKeyID,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { Config } from "@cloudflare/workers-utils";
 
 export function modifyCommandOptionalYargs(yargs: CommonYargsArgv) {

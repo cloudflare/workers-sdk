@@ -16,7 +16,7 @@ import {
 import {
 	DeploymentsService,
 	PlacementsService,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
@@ -37,7 +37,7 @@ import type {
 	DeploymentPlacementState,
 	PlacementEvent,
 	PlacementWithEvents,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import type { Config } from "@cloudflare/workers-utils";
 
 export function listDeploymentsYargs(args: CommonYargsArgv) {

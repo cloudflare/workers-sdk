@@ -1,8 +1,6 @@
 import { cancel } from "@cloudflare/cli-shared-helpers";
-import {
-	getCloudflareContainerRegistry,
-	ImageRegistriesService,
-} from "@cloudflare/containers-shared";
+import { ImageRegistriesService } from "@cloudflare/containers-api";
+import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import {
@@ -14,7 +12,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";
-import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-api";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 interface Repository {

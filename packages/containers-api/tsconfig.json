@@ -1,0 +1,15 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"target": "ES2022",
+		"allowSyntheticDefaultImports": true,
+		"experimentalDecorators": true,
+		"skipLibCheck": true,
+		"types": ["node"],
+		"noUncheckedIndexedAccess": true
+	},
+	"include": ["src/**/*", "index.ts"],
+	"exclude": ["dist", "node_modules"]
+}

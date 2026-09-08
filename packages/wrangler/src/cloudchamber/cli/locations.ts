@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { getLocations } from "../locations";
-import type { Location, LocationID } from "@cloudflare/containers-shared";
+import type { Location, LocationID } from "@cloudflare/containers-api";
 
 const whichLocationQuestion = "Choose where you want to deploy your container";
 const whichRegionQuestion =

@@ -13,7 +13,7 @@ import {
 	ImageRegistriesService,
 	PlacementsService,
 	SshPublicKeysService,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 import { UserError } from "@cloudflare/workers-utils";
 import { capitalize } from "../../utils/strings";
 import { wrap } from "../helpers/wrap";
@@ -26,7 +26,7 @@ import type {
 	PlacementEvent,
 	PlacementStatusHealth,
 	PlacementWithEvents,
-} from "@cloudflare/containers-shared";
+} from "@cloudflare/containers-api";
 
 export function pollRegistriesUntilCondition(
 	onRegistries: (registries: Array<CustomerImageRegistry>) => boolean

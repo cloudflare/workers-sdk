@@ -1,11 +1,11 @@
 import { beforeEach, describe, it, vi } from "vitest";
-import { ExternalRegistryKind } from "../src/client/models/ExternalRegistryKind";
 import {
 	getEgressInterceptorPlatform,
 	pullEgressInterceptorImage,
 	getAndValidateRegistryType,
 	validateAndEncodeGarKey,
 } from "../src/images";
+import { ExternalRegistryKind } from "../src/types";
 import { runDockerCmd } from "../src/utils";
 
 vi.mock("../src/utils", () => ({
