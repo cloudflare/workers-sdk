@@ -31,11 +31,7 @@ import type { OutputEntry } from "../output";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. " +
-	"For Workers.dev previews, set the top-level `preview_urls` setting to `true`. " +
-	"For custom-domain previews, set `previews_enabled` to `true` on a custom-domain route. " +
-	"After changing either setting, run `wrangler deploy`, then `wrangler preview` again. " +
-	"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.";
+	"Note: This Preview deployment has no active URLs.";
 
 vi.mock("node:child_process", async () => {
 	const actual =
@@ -1909,12 +1905,14 @@ describe("wrangler preview", () => {
 				previewUrls: [] as string[],
 				deploymentUrls: [] as string[],
 				shouldShowGuidance: true,
+				customDomain: "previews.example.com",
 			},
 			{
 				name: "the Preview URL array is active",
 				previewUrls: ["https://empty-urls-preview.test-worker.workers.dev"],
 				deploymentUrls: [] as string[],
 				shouldShowGuidance: false,
+				customDomain: undefined,
 			},
 			{
 				name: "the deployment URL array is active",
@@ -1923,13 +1921,30 @@ describe("wrangler preview", () => {
 					"https://deployment-id-empty-urls.test-worker.workers.dev",
 				],
 				shouldShowGuidance: false,
+				customDomain: undefined,
 			},
 		])(
 			"handles URL guidance when $name",
 			async (
-				{ previewUrls, deploymentUrls, shouldShowGuidance },
+				{ previewUrls, deploymentUrls, shouldShowGuidance, customDomain },
 				{ expect }
 			) => {
+				if (customDomain) {
+					writeWranglerConfig(
+						{
+							main: "src/index.ts",
+							routes: [
+								{
+									pattern: customDomain,
+									custom_domain: true,
+									enabled: false,
+									previews_enabled: true,
+								},
+							],
+						},
+						"wrangler.json"
+					);
+				}
 				msw.use(
 					http.get(
 						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1996,6 +2011,21 @@ describe("wrangler preview", () => {
 						"Deployment ID: deployment-id-empty-urls",
 					]);
 					expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+					expect(std.out).toContain(
+						"https://<preview-name>-<worker>.<subdomain>.workers.dev"
+					);
+					expect(std.out).toContain(
+						"https://<preview-name>.previews.example.com"
+					);
+					expect(std.out).toContain(
+						"`previews_enabled` is already `true` on the `previews.example.com` custom-domain route"
+					);
+					expect(std.out).toContain(
+						"run `wrangler deploy` from a clean checkout of your production branch"
+					);
+					expect(std.out).toContain(
+						"return to your feature branch and run `wrangler preview` again"
+					);
 				} else {
 					expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 				}

@@ -21,11 +21,7 @@ const BRANCH_ENV_VARS = [
 	"CI_COMMIT_REF_NAME",
 ] as const;
 const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. " +
-	"For Workers.dev previews, set the top-level `preview_urls` setting to `true`. " +
-	"For custom-domain previews, set `previews_enabled` to `true` on a custom-domain route. " +
-	"After changing either setting, run `wrangler deploy`, then `wrangler preview` again. " +
-	"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.";
+	"Note: This Preview deployment has no active URLs.";
 
 async function withoutBranchEnvVars<T>(callback: () => Promise<T>): Promise<T> {
 	const originalBranchEnv = Object.fromEntries(
@@ -208,6 +204,12 @@ describe("wrangler preview", () => {
 
 				expect(std.out).toContain("Created Preview deployment deployment-1");
 				expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				expect(std.out).toContain(
+					"https://<preview-name>.previews.example.com"
+				);
+				expect(std.out).toContain(
+					"run `wrangler deploy` from a clean checkout of your production branch"
+				);
 				expect(std.out).not.toContain("is now live at");
 			});
 

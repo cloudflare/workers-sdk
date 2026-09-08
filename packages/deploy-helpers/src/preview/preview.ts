@@ -52,7 +52,9 @@ import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	ContainerApp,
+	CustomDomainRoute,
 	PreviewsConfig,
+	Route,
 } from "@cloudflare/workers-utils";
 
 export type PreviewArgs = {
@@ -293,11 +295,48 @@ async function prepareContainersForPreview(
 }
 
 export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
-	"Note: This Preview deployment has no active URLs. " +
-	"For Workers.dev previews, set the top-level `preview_urls` setting to `true`. " +
-	"For custom-domain previews, set `previews_enabled` to `true` on a custom-domain route. " +
-	"After changing either setting, run `wrangler deploy`, then `wrangler preview` again. " +
-	"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.";
+	"Note: This Preview deployment has no active URLs.";
+
+function isCustomDomainRoute(route: Route): route is CustomDomainRoute {
+	return typeof route === "object" && route.custom_domain === true;
+}
+
+export function formatNoActivePreviewUrlsMessage(config: Config): string {
+	const customDomainRoutes = [
+		...(config.routes ?? []),
+		...(config.route ? [config.route] : []),
+	].filter(isCustomDomainRoute);
+	const customDomainRoute =
+		customDomainRoutes.find(
+			(route) => "previews_enabled" in route && route.previews_enabled === true
+		) ?? customDomainRoutes[0];
+	const customDomain = customDomainRoute?.pattern ?? "previews.example.com";
+	const workersDevAction =
+		config.preview_urls === true
+			? "`preview_urls` is already `true` in your local configuration."
+			: "set the top-level `preview_urls` setting to `true`.";
+	const customDomainAction = customDomainRoute?.previews_enabled
+		? `\`previews_enabled\` is already \`true\` on the \`${customDomain}\` custom-domain route in your local configuration.`
+		: customDomainRoute
+			? `set \`previews_enabled\` to \`true\` on the \`${customDomain}\` custom-domain route.`
+			: "add a custom-domain route for `previews.example.com` with `enabled` set to `false` and `previews_enabled` set to `true`.";
+
+	return [
+		NO_ACTIVE_PREVIEW_URLS_MESSAGE,
+		"",
+		"For a Workers.dev URL such as:",
+		"  https://<preview-name>-<worker>.<subdomain>.workers.dev",
+		workersDevAction,
+		"",
+		"For a custom-domain URL such as:",
+		`  https://<preview-name>.${customDomain}`,
+		customDomainAction,
+		"",
+		"Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again.",
+		"",
+		"See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information.",
+	].join("\n");
+}
 
 function getPreviewMigrationsToUpload(
 	workerName: string,
@@ -571,6 +610,7 @@ function formatUrlLines(label: string, urls: string[] | undefined): string[] {
 }
 
 function formatPreviewDeploymentSummary(
+	config: Config,
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	isNew: boolean,
@@ -599,7 +639,7 @@ function formatPreviewDeploymentSummary(
 					}`,
 				]
 			: []),
-		...(hasActiveUrls ? [] : [NO_ACTIVE_PREVIEW_URLS_MESSAGE]),
+		...(hasActiveUrls ? [] : [formatNoActivePreviewUrlsMessage(config)]),
 	].join("\n");
 }
 
@@ -828,6 +868,7 @@ export async function preview(
 	} else {
 		logger.log(
 			formatPreviewDeploymentSummary(
+				config,
 				previewResource,
 				deployment,
 				isNewPreview,
