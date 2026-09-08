@@ -443,6 +443,11 @@ export interface CfDurableObjectMigrations {
 			from: string;
 			to: string;
 		}[];
+		transferred_classes?: {
+			from: string;
+			from_script: string;
+			to: string;
+		}[];
 		deleted_classes?: string[];
 	}[];
 }

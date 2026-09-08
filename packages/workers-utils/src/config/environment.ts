@@ -387,6 +387,12 @@ export type DurableObjectMigration = {
 		from: string;
 		to: string;
 	}[];
+	/** The Durable Objects being transferred from another Worker. */
+	transferred_classes?: {
+		from: string;
+		from_script: string;
+		to: string;
+	}[];
 	/** The Durable Objects being removed. */
 	deleted_classes?: string[];
 };
