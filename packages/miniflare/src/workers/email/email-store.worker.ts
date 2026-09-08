@@ -6,11 +6,8 @@
  * loopback server (see email-store.ts for why that matters).
  */
 import { WorkerEntrypoint } from "cloudflare:workers";
-import {
-	EmailStore,
-	zStoredRoutingEmail,
-	zStoredRoutingEmailSummary,
-} from "./email-store";
+import { EmailStore } from "./email-store";
+import { zStoredRoutingEmail, zStoredRoutingEmailSummary } from "./storage";
 import type {
 	EmailListPage,
 	StoredRoutingEmail,

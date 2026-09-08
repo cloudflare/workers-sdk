@@ -13,15 +13,12 @@
 // `forward`/`reply` event (correlated by `messageId`). This lets consumers
 // render a timeline while still having the details on hand.
 
-import type {
-	EmailAttachment,
-	EmailHandlerForward,
-	EmailHandlerReply,
-	EmailHandlerResult,
-	EmailRoutingDetail,
-	EmailRoutingItem,
-	EmailSendingDetail,
-	EmailSendingItem,
+import { z } from "zod";
+import {
+	zEmailHeaders,
+	zEmailHandlerEvent,
+	zEmailHandlerForward,
+	zEmailHandlerReplyApi,
 } from "./contracts";
 
 export type {
@@ -31,45 +28,82 @@ export type {
 	EmailHandlerResult,
 } from "./contracts";
 
-interface StoredCaptureMetadata {
-	captureTruncated?: boolean;
-}
+const zStoredEmailReply = zEmailHandlerReplyApi.omit({
+	raw: true,
+	rawBase64: true,
+});
+const zStoredEmailReplyMetadata = zStoredEmailReply.extend({
+	captureTruncated: z.boolean().optional(),
+});
+const zStoredEmailAttachment = z.object({
+	filename: z.string(),
+	contentType: z.string(),
+	disposition: z.enum(["inline", "attachment"]),
+	size: z.number(),
+});
+const zStoredEmailBase = z.object({
+	worker: z.string().optional(),
+	from: z.string(),
+	subject: z.string(),
+	messageId: z.string(),
+	attachments: z.array(zStoredEmailAttachment),
+});
+export const zStoredRoutingEmailSummary = zStoredEmailBase.extend({
+	to: z.string(),
+	cc: z.array(z.string()).optional(),
+	headers: z.record(z.string(), z.string()).optional(),
+	headerEntries: zEmailHeaders.optional(),
+	receivedAt: z.string(),
+	rawSize: z.number(),
+	outcome: z.enum(["ok", "exception"]),
+	rejectReason: z.string().optional(),
+	forwards: z.array(zEmailHandlerForward),
+	replies: z.array(zStoredEmailReply),
+	events: z.array(zEmailHandlerEvent),
+});
+export const zStoredRoutingEmailMetadata = zStoredRoutingEmailSummary.extend({
+	captureTruncated: z.boolean().optional(),
+	replies: z.array(zStoredEmailReplyMetadata),
+});
+export const zStoredRoutingEmail = zStoredRoutingEmailMetadata.extend({
+	raw: z.string(),
+	rawBase64: z.string(),
+	replies: z.array(
+		zEmailHandlerReplyApi.extend({
+			raw: z.string(),
+			rawBase64: z.string(),
+			captureTruncated: z.boolean().optional(),
+		})
+	),
+});
+export const zStoredSendingEmailSummary = zStoredEmailBase.extend({
+	to: z.array(z.string()),
+	cc: z.array(z.string()).optional(),
+	bcc: z.array(z.string()).optional(),
+	replyTo: z.string().optional(),
+	sentAt: z.string(),
+	headers: z.record(z.string(), z.string()).optional(),
+});
+export const zStoredSendingEmail = zStoredSendingEmailSummary.extend({
+	text: z.string().optional(),
+	html: z.string().optional(),
+	raw: z.string().optional(),
+	rawBase64: z.string().optional(),
+	captureTruncated: z.boolean().optional(),
+});
 
-type StoredEmailHandlerReply = EmailHandlerReply & StoredCaptureMetadata;
-
-export type StoredRoutingEmail = Omit<
-	EmailRoutingDetail,
-	"forwards" | "replies"
-> &
-	Omit<EmailHandlerResult, "replies"> &
-	StoredCaptureMetadata & {
-		replies: StoredEmailHandlerReply[];
-	};
-
-export type StoredRoutingEmailMetadata = Omit<
-	StoredRoutingEmail,
-	"raw" | "rawBase64" | "replies"
-> & {
-	// Raw bodies are stored in separate rows, so the metadata record carries
-	// only reply envelope fields.
-	replies: Array<
-		Omit<StoredRoutingEmail["replies"][number], "raw" | "rawBase64">
-	>;
-};
-
-export type StoredRoutingEmailSummary = Omit<
-	EmailRoutingItem,
-	"forwards" | "replies"
-> & {
-	forwards: EmailHandlerForward[];
-	replies: Array<Omit<EmailHandlerReply, "raw" | "rawBase64">>;
-};
-
-export type StoredEmailAttachment = EmailAttachment;
-
-export type StoredSendingEmail = EmailSendingDetail & StoredCaptureMetadata;
-
-export type StoredSendingEmailSummary = EmailSendingItem;
+export type StoredEmailAttachment = z.infer<typeof zStoredEmailAttachment>;
+export type StoredRoutingEmailSummary = z.infer<
+	typeof zStoredRoutingEmailSummary
+>;
+export type StoredRoutingEmailMetadata = z.infer<
+	typeof zStoredRoutingEmailMetadata
+>;
+export type StoredRoutingEmail = z.infer<typeof zStoredRoutingEmail>;
+export type StoredSendingEmailSummary = z.infer<
+	typeof zStoredSendingEmailSummary
+>;
+export type StoredSendingEmail = z.infer<typeof zStoredSendingEmail>;
 
 export interface EmailListPage<T> {
 	items: T[];

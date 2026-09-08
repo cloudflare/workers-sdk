@@ -4,13 +4,7 @@ import { EMAIL_STORE_SERVICE_NAME } from "../../../plugins/core/constants";
 import { CoreBindings, CorePaths } from "../../core";
 import { handleEmail } from "../../core/email";
 import { base64ToBytes, bytesToBase64 } from "../../email/capture";
-import {
-	zEmailHandlerResult,
-	zEmailRoutingDetail,
-	zEmailRoutingItem,
-	zEmailSendingDetail,
-	zEmailSendingItem,
-} from "../../email/contracts";
+import { zEmailHandlerResult } from "../../email/contracts";
 import {
 	hasControlCharacters,
 	hasInvalidHeaderValueCharacters,
@@ -30,18 +24,24 @@ import {
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import { zLocalExplorerListWorkersResponse } from "../generated/zod.gen";
-import type {
-	EmailRoutingItem,
-	EmailSendingItem,
-	EmailSendRequest,
-} from "../../email/contracts";
+import {
+	zEmailRoutingDetail,
+	zEmailRoutingItem,
+	zEmailSendingDetail,
+	zEmailSendingItem,
+	zLocalExplorerListWorkersResponse,
+} from "../generated/zod.gen";
 import type {
 	EmailListPage,
 	EmailStoreService,
 	StoredRoutingEmail,
 } from "../../email/storage";
 import type { AppContext } from "../common";
+import type {
+	EmailRoutingItem,
+	EmailSendingItem,
+	EmailSendRequest,
+} from "../generated";
 import type { zEmailListRoutingData } from "../generated/zod.gen";
 
 const EMAIL_ERROR_NOT_FOUND = 10601;
