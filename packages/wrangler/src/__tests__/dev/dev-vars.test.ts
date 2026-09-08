@@ -152,4 +152,134 @@ describe("getVarsForDev", () => {
 			MY_VARIABLE_A: { type: "plain_text", value: "100900" },
 		});
 	});
+
+	describe("optional secrets", () => {
+		it("loads both required and optional secrets when both are present", ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				".dev.vars",
+				"REQUIRED_SECRET=rainbow\nOPTIONAL_SECRET=moon\nEXTRA=ignored"
+			);
+
+			const secrets = {
+				required: ["REQUIRED_SECRET"],
+				optional: ["OPTIONAL_SECRET"],
+			};
+
+			const result = getVarsForDev(
+				path.resolve("wrangler.jsonc"),
+				undefined,
+				{},
+				undefined,
+				false,
+				secrets
+			);
+
+			expect(result).toEqual({
+				REQUIRED_SECRET: { type: "secret_text", value: "rainbow" },
+				OPTIONAL_SECRET: { type: "secret_text", value: "moon" },
+			});
+			expect(std.warn).toBe("");
+		});
+
+		it("does not warn when an optional secret is missing", ({ expect }) => {
+			fs.writeFileSync(".dev.vars", "REQUIRED_SECRET=rainbow");
+
+			const secrets = {
+				required: ["REQUIRED_SECRET"],
+				optional: ["OPTIONAL_SECRET"],
+			};
+
+			const result = getVarsForDev(
+				path.resolve("wrangler.jsonc"),
+				undefined,
+				{},
+				undefined,
+				false,
+				secrets
+			);
+
+			expect(result).toEqual({
+				REQUIRED_SECRET: { type: "secret_text", value: "rainbow" },
+			});
+			expect(result).not.toHaveProperty("OPTIONAL_SECRET");
+			expect(std.warn).toBe("");
+		});
+
+		it("still warns about a missing required secret alongside optional ones", ({
+			expect,
+		}) => {
+			fs.writeFileSync(".dev.vars", "OPTIONAL_SECRET=moon");
+
+			const secrets = {
+				required: ["MY_MISSING_SECRET"],
+				optional: ["OPTIONAL_SECRET"],
+			};
+
+			const result = getVarsForDev(
+				path.resolve("wrangler.jsonc"),
+				undefined,
+				{},
+				undefined,
+				false,
+				secrets
+			);
+
+			expect(result).toEqual({
+				OPTIONAL_SECRET: { type: "secret_text", value: "moon" },
+			});
+			expect(std.warn).toContain("Missing required secrets: MY_MISSING_SECRET");
+			expect(std.warn).not.toContain("OPTIONAL_SECRET");
+		});
+
+		it("loads optional secrets from .env files", ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV", "true");
+			try {
+				fs.writeFileSync(".env", "OPTIONAL_SECRET=moon");
+
+				const secrets = {
+					required: ["REQUIRED_SECRET"],
+					optional: ["OPTIONAL_SECRET"],
+				};
+
+				const result = getVarsForDev(
+					path.resolve("wrangler.jsonc"),
+					undefined,
+					{},
+					undefined,
+					true,
+					secrets
+				);
+
+				expect(result).toEqual({
+					OPTIONAL_SECRET: { type: "secret_text", value: "moon" },
+				});
+			} finally {
+				vi.unstubAllEnvs();
+			}
+		});
+
+		it("excludes undeclared keys when only optional secrets are declared", ({
+			expect,
+		}) => {
+			fs.writeFileSync(".dev.vars", "OPTIONAL_SECRET=moon\nEXTRA=ignored");
+
+			const secrets = { optional: ["OPTIONAL_SECRET"] };
+
+			const result = getVarsForDev(
+				path.resolve("wrangler.jsonc"),
+				undefined,
+				{},
+				undefined,
+				false,
+				secrets
+			);
+
+			expect(result).toEqual({
+				OPTIONAL_SECRET: { type: "secret_text", value: "moon" },
+			});
+			expect(std.warn).toBe("");
+		});
+	});
 });

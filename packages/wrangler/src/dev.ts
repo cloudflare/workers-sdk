@@ -536,11 +536,15 @@ export function getBindings(
 	});
 
 	// createTestHarness() can override secrets through inputBindings.
-	// This filters out those required secrets so the logic doesn't consider them missing
+	// This filters out those declared secrets so the logic doesn't consider them
+	// missing, and doesn't reload them from .dev.vars over the harness value.
 	const secrets = configParam.secrets
 		? {
 				...configParam.secrets,
 				required: configParam.secrets?.required?.filter(
+					(secret) => inputBindings?.[secret]?.type !== "secret_text"
+				),
+				optional: configParam.secrets?.optional?.filter(
 					(secret) => inputBindings?.[secret]?.type !== "secret_text"
 				),
 			}

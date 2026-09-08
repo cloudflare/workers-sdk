@@ -1977,6 +1977,45 @@ describe("generate types - CLI", () => {
 		`);
 	});
 
+	it("should generate types from config `secrets.optional` as `string | undefined`", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				secrets: {
+					required: ["API_KEY"],
+					optional: ["ANALYTICS_TOKEN"],
+				},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			interface __BaseEnv_Env {
+				API_KEY: string;
+				ANALYTICS_TOKEN: string | undefined;
+			}
+			declare namespace Cloudflare {
+				interface Env extends __BaseEnv_Env {}
+			}
+			interface Env extends __BaseEnv_Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
 	it("should ignore .dev.vars when config `secrets` is defined", async ({
 		expect,
 	}) => {

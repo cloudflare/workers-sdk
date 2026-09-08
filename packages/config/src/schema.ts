@@ -166,7 +166,10 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		}),
 	}),
 	R2BindingSchema,
-	z.strictObject({ type: z.literal("secret") }),
+	z.strictObject({
+		type: z.literal("secret"),
+		optional: z.boolean().optional(),
+	}),
 	z.strictObject({
 		type: z.literal("secrets-store-secret"),
 		storeId: z.string(),
