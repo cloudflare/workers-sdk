@@ -2301,7 +2301,9 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("should include migrations in upload metadata", async ({ expect }) => {
+		test("fails before uploading a version with pending migrations", async ({
+			expect,
+		}) => {
 			mockGetScript(
 				{
 					default_environment: {
@@ -2331,11 +2333,12 @@ describe("versions upload", () => {
 			});
 			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
 
-			await runWrangler("versions upload");
-
-			const metadata = await getMetadata(requests[requests.length - 1]);
-			expect(metadata.migrations).toBeDefined();
-			expect(metadata.migrations?.new_tag).toEqual("v1");
+			const rejection = runWrangler("versions upload");
+			await expect(rejection).rejects.toThrow(
+				/pending Durable Object migration/
+			);
+			await expect(rejection).rejects.toThrow(/Run `wrangler deploy`/);
+			expect(requests).toHaveLength(0);
 		});
 
 		test("should skip migrations in dry-run", async ({ expect }) => {
