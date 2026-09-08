@@ -1284,6 +1284,52 @@ describe("wrangler preview", () => {
 			}
 		);
 
+		test("imports a Preview Base containing only empty JSON values", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{ name: "test-worker", main: "src/index.ts" },
+				"wrangler.json"
+			);
+			setIsTTY(true);
+			mockConfirm({
+				text: "Would you like Wrangler to add the Preview Base configuration to your config file?",
+				options: { defaultValue: true },
+				result: true,
+			});
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							previews_base_config: {
+								env: {
+									EMPTY_OBJECT: { type: "json", json: {} },
+									EMPTY_ARRAY: { type: "json", json: [] },
+								},
+							},
+						},
+					})
+				)
+			);
+			mockContainerPreview({
+				previewId: "empty-json-values",
+				onCreateDeployment: async (request) => {
+					const deployment = await readPreviewDeploymentRequest(request);
+					expect(deployment.env).toEqual({
+						EMPTY_OBJECT: { type: "json", json: {} },
+						EMPTY_ARRAY: { type: "json", json: [] },
+					});
+				},
+			});
+
+			await runWrangler("preview --name test-preview");
+
+			expect(readWranglerConfig("wrangler.json").previews).toEqual({
+				vars: { EMPTY_OBJECT: {}, EMPTY_ARRAY: [] },
+			});
+		});
+
 		test("does not let Preview Base suppress unsupported production bindings", async ({
 			expect,
 		}) => {
@@ -2746,6 +2792,73 @@ compatibility_date = "2025-01-01"
 			});
 		});
 
+		test("retains generated previews when Preview Base contains only remote bindings", async ({
+			expect,
+		}) => {
+			mkdirSync("dist", { recursive: true });
+			rmSync("wrangler.json");
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./src/index.ts",
+				},
+				"./wrangler.jsonc"
+			);
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-worker",
+					main: "../src/index.ts",
+					userConfigPath: "./wrangler.jsonc",
+					previews: {
+						kv_namespaces: [{ binding: "GENERATED_KV", id: "generated-kv-id" }],
+					},
+				},
+				"./dist/wrangler.json"
+			);
+			setIsTTY(false);
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							previews_base_config: {
+								env: {
+									PREVIEW_SECRET: { type: "secret_text" },
+								},
+							},
+						},
+					})
+				)
+			);
+			mockContainerPreview({
+				previewId: "remote-only-redirected",
+				deploymentEnv: {
+					GENERATED_KV: {
+						type: "kv_namespace",
+						namespace_id: "generated-kv-id",
+					},
+					PREVIEW_SECRET: { type: "secret_text" },
+				},
+				onCreateDeployment: async (request) => {
+					const deployment = await readPreviewDeploymentRequest(request);
+					expect(deployment.env).toEqual({
+						GENERATED_KV: {
+							type: "kv_namespace",
+							namespace_id: "generated-kv-id",
+						},
+					});
+				},
+			});
+
+			await runWrangler("preview --name test-preview");
+
+			expect(readWranglerConfig("./wrangler.jsonc").previews).toBeUndefined();
+			expect(readWranglerConfig("./dist/wrangler.json").previews).toEqual({
+				kv_namespaces: [{ binding: "GENERATED_KV", id: "generated-kv-id" }],
+			});
+			expect(std.info).toContain("PREVIEW_SECRET (secret_text)");
+		});
+
 		test("writes redirected onboarding only to the user config", async ({
 			expect,
 		}) => {
@@ -2829,6 +2942,94 @@ compatibility_date = "2025-01-01"
 					{ binding: "GENERATED_KV", id: "generated-kv-id" },
 					{ binding: "SESSION", id: "stale-generated-id" },
 				],
+			});
+		});
+
+		test("treats an empty user previews block as an override of generated previews", async ({
+			expect,
+		}) => {
+			mkdirSync("dist", { recursive: true });
+			rmSync("wrangler.json");
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./src/index.ts",
+					previews: {},
+				},
+				"./wrangler.jsonc"
+			);
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-worker",
+					main: "../src/index.ts",
+					userConfigPath: "./wrangler.jsonc",
+					previews: {
+						vars: { GENERATED_ONLY: true },
+						kv_namespaces: [{ binding: "GENERATED_KV", id: "generated-kv-id" }],
+					},
+				},
+				"./dist/wrangler.json"
+			);
+			mockContainerPreview({
+				previewId: "empty-user-preview",
+				onCreateDeployment: async (request) => {
+					const deployment = await readPreviewDeploymentRequest(request);
+					expect(deployment.env ?? {}).toEqual({});
+				},
+			});
+
+			await runWrangler("preview --name test-preview");
+
+			expect(readWranglerConfig("./wrangler.jsonc").previews).toEqual({});
+			expect(readWranglerConfig("./dist/wrangler.json").previews).toEqual({
+				vars: { GENERATED_ONLY: true },
+				kv_namespaces: [{ binding: "GENERATED_KV", id: "generated-kv-id" }],
+			});
+		});
+
+		test("treats an empty user binding array as an override of generated bindings", async ({
+			expect,
+		}) => {
+			mkdirSync("dist", { recursive: true });
+			rmSync("wrangler.json");
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./src/index.ts",
+					previews: { kv_namespaces: [] },
+				},
+				"./wrangler.jsonc"
+			);
+			writeRedirectedWranglerConfig(
+				{
+					name: "test-worker",
+					main: "../src/index.ts",
+					userConfigPath: "./wrangler.jsonc",
+					previews: {
+						vars: { GENERATED_ONLY: true },
+						kv_namespaces: [{ binding: "GENERATED_KV", id: "generated-kv-id" }],
+					},
+				},
+				"./dist/wrangler.json"
+			);
+			mockContainerPreview({
+				previewId: "empty-user-binding-array",
+				onCreateDeployment: async (request) => {
+					const deployment = await readPreviewDeploymentRequest(request);
+					expect(deployment.env).toEqual({
+						GENERATED_ONLY: { type: "json", json: true },
+					});
+				},
+			});
+
+			await runWrangler("preview --name test-preview");
+
+			expect(readWranglerConfig("./wrangler.jsonc").previews).toEqual({
+				kv_namespaces: [],
+			});
+			expect(readWranglerConfig("./dist/wrangler.json").previews).toEqual({
+				vars: { GENERATED_ONLY: true },
+				kv_namespaces: [{ binding: "GENERATED_KV", id: "generated-kv-id" }],
 			});
 		});
 

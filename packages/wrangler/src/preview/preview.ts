@@ -482,7 +482,9 @@ async function ensurePreviewsConfig(
 	const isRedirectedConfig = config.userConfigPath !== config.configPath;
 	if (isPreviewsConfigComplete(userPreviews)) {
 		const effectivePreviews = isRedirectedConfig
-			? mergePreviewsConfig(config.previews, userPreviews)
+			? userPreviews !== undefined && Object.keys(userPreviews).length === 0
+				? userPreviews
+				: mergePreviewsConfig(config.previews, userPreviews)
 			: config.previews;
 		if (!containsReplaceMe(effectivePreviews)) {
 			return { ...config, previews: effectivePreviews };
