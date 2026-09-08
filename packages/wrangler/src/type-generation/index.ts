@@ -809,6 +809,25 @@ function generateModuleTypeDeclarations(
 }
 
 /**
+ * Generate script-level declarations for service-worker bindings and types.
+ * Keeping this output as a script allows ambient wildcard modules to be
+ * visible to consuming source files.
+ *
+ * @param typeDefinitions - Named type definitions used by bindings
+ * @param envTypeStructure - Environment binding declarations without `declare const`
+ * @returns Global service-worker declarations
+ */
+function generateServiceWorkerTypes(
+	typeDefinitions: string[],
+	envTypeStructure: string[]
+): string {
+	return [
+		...typeDefinitions,
+		...envTypeStructure.map((value) => `declare const ${value}`),
+	].join("\n");
+}
+
+/**
  * Generate a import specifier from one module to another
  */
 export function generateImportSpecifier(from: string, to: string) {
@@ -1760,6 +1779,7 @@ function generatePerEnvTypeStrings(
 	typeDefinitions: string[] = []
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
+	let fileBaseContent: string | undefined;
 	let processEnv = "";
 
 	// Named type definitions go inside the Cloudflare namespace
@@ -1790,13 +1810,16 @@ function generatePerEnvTypeStrings(
 
 		baseContent = `interface ${internalEnvInterface} {\n${envBindingLines}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
-		// Service worker syntax - type definitions go at the top level since there's no namespace
 		const globalTypeDefsContent =
 			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
 		const envBindingLines = aggregatedEnvBindings
 			.map(({ key, type }) => `\tconst ${key}: ${type};`)
 			.join("\n");
 		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envBindingLines}\n}`;
+		fileBaseContent = generateServiceWorkerTypes(
+			typeDefinitions,
+			aggregatedEnvBindings.map(({ key, type }) => `${key}: ${type};`)
+		);
 	}
 
 	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
@@ -1804,7 +1827,9 @@ function generatePerEnvTypeStrings(
 
 	return {
 		consoleOutput: `${baseContent}\n${consoleModulesContent}`,
-		fileContent: `${baseContent}\n${fileModulesContent}`,
+		fileContent: [fileBaseContent ?? baseContent, fileModulesContent]
+			.filter((content) => content.length > 0)
+			.join("\n"),
 	};
 }
 
@@ -1877,6 +1902,7 @@ function generateTypeStrings(
 	fileContent: string;
 } {
 	let baseContent = "";
+	let fileBaseContent: string | undefined;
 	let processEnv = "";
 
 	// Type definitions (e.g., pipeline record types) go inside the Cloudflare namespace
@@ -1898,17 +1924,22 @@ function generateTypeStrings(
 
 		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
-		// For service worker format, type definitions still go at the top level since there's no namespace
 		const globalTypeDefsContent =
 			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
 		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
+		fileBaseContent = generateServiceWorkerTypes(
+			typeDefinitions,
+			envTypeStructure
+		);
 	}
 
 	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
 	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		fileContent: `${baseContent}\n${fileModulesContent}`,
+		fileContent: [fileBaseContent ?? baseContent, fileModulesContent]
+			.filter((content) => content.length > 0)
+			.join("\n"),
 		consoleOutput: `${baseContent}\n${consoleModulesContent}`,
 	};
 }
