@@ -119,6 +119,28 @@ describe("inner entrypoint unit tests", () => {
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
+	it("passes the unchanged public URL to the user worker when run_worker_first is true", async ({
+		expect,
+	}) => {
+		const request = new Request("https://example.com/subpath/foo?query=value");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				invoke_user_worker_ahead_of_assets: true,
+				has_user_worker: true,
+			},
+			USER_WORKER: {
+				async fetch(userWorkerRequest: Request): Promise<Response> {
+					return new Response(userWorkerRequest.url);
+				},
+			},
+		} as Env;
+
+		const response = await fetchFromInnerEntrypoint(request, env, ctx);
+		expect(await response.text()).toBe(request.url);
+	});
+
 	it("returns fetch from asset worker when matching existing asset path", async ({
 		expect,
 	}) => {
