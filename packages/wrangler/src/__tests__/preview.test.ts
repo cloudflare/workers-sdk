@@ -2074,8 +2074,6 @@ compatibility_date = "2025-01-01"
 		});
 
 		describe("when the parent Worker does not exist", () => {
-			const { setIsTTY } = useMockIsTTY();
-
 			function mockParentWorkerNotFound() {
 				const createWorkerRequests: unknown[] = [];
 				msw.use(
