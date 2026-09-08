@@ -21,6 +21,7 @@ import {
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
+	Log,
 	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
@@ -429,14 +430,18 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 	expect(await res.text()).toBe("body");
 });
 
-test("Miniflare: removes loopback startup error handler after listening", async ({
+test("Miniflare: replaces loopback startup error handler with persistent error logging", async ({
 	expect,
 	onTestFinished,
 }) => {
 	const createServer = vi.spyOn(http, "createServer");
 	onTestFinished(() => createServer.mockRestore());
+	const log = new Log(LogLevel.ERROR);
+	const logWithLevel = vi.spyOn(log, "logWithLevel").mockImplementation(() => {});
+	onTestFinished(() => logWithLevel.mockRestore());
 
 	const mf = new Miniflare({
+		log,
 		workers: [
 			{
 				config: {
@@ -452,11 +457,22 @@ test("Miniflare: removes loopback startup error handler after listening", async 
 	});
 	useDispose(mf);
 
-	await mf.ready;
+	const ready = await mf.ready;
+	logWithLevel.mockClear();
 
 	expect(createServer).toHaveBeenCalledOnce();
 	const server = createServer.mock.results[0].value;
-	expect(server.listenerCount("error")).toBe(0);
+	for (const message of ["First loopback error", "Second loopback error"]) {
+		expect(() => server.emit("error", new Error(message))).not.toThrow();
+		expect(logWithLevel).toHaveBeenLastCalledWith(
+			LogLevel.ERROR,
+			expect.stringContaining(message)
+		);
+		expect(server.listenerCount("error")).toBe(1);
+	}
+	expect(logWithLevel).toHaveBeenCalledTimes(2);
+	expect(await mf.ready).toEqual(ready);
+	expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("ok");
 });
 
 test("Miniflare: rejects ready when loopback server cannot bind", async ({

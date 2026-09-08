@@ -1955,6 +1955,8 @@ export class Miniflare {
 			server.once("error", onError);
 			server.listen(0, hostname, () => {
 				server.off("error", onError);
+				// Startup has settled, so report operational errors through the logger
+				server.on("error", (error) => this.#log.error(error));
 				resolve(server);
 			});
 		});
