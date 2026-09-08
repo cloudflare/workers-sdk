@@ -35,6 +35,12 @@ const config = {
 			methods: ["post"],
 		},
 
+		// Workflows endpoints
+		{
+			path: "/accounts/{account_id}/workflows/{workflow_name}/instances/{instance_id}/status",
+			methods: ["patch"],
+		},
+
 		// Durable Objects endpoints
 		{
 			path: "/accounts/{account_id}/workers/durable_objects/namespaces",
@@ -162,8 +168,8 @@ const config = {
 
 		// Schema properties not returned by local implementation
 		schemaProperties: {
-			// Namespace response doesn't include supports_url_encoding locally
-			"workers-kv_namespace": ["supports_url_encoding"],
+			// Namespace response doesn't include jurisdiction or supports_url_encoding locally
+			"workers-kv_namespace": ["jurisdiction", "supports_url_encoding"],
 			// D1 database response doesn't include created_at locally
 			"d1_database-response": ["created_at"],
 			// D1 query meta doesn't include served_by fields locally
@@ -1501,119 +1507,6 @@ const config = {
 						},
 					},
 					summary: "Delete Workflow Instance",
-					tags: ["Workflows"],
-				},
-			},
-			"/workflows/{workflow_name}/instances/{instance_id}/status": {
-				patch: {
-					description:
-						"Changes the status of a workflow instance (pause, resume, restart, terminate).",
-					operationId: "workflows-change-instance-status",
-					parameters: [
-						{
-							in: "path",
-							name: "workflow_name",
-							required: true,
-							schema: {
-								$ref: "#/components/schemas/workflows_workflow-name",
-							},
-						},
-						{
-							in: "path",
-							name: "instance_id",
-							required: true,
-							schema: {
-								$ref: "#/components/schemas/workflows_instance-id",
-							},
-						},
-					],
-					requestBody: {
-						required: true,
-						content: {
-							"application/json": {
-								schema: {
-									type: "object",
-									required: ["action"],
-									properties: {
-										action: {
-											type: "string",
-											enum: ["pause", "resume", "restart", "terminate"],
-											description:
-												"The action to perform on the workflow instance.",
-										},
-										from: {
-											type: "object",
-											description:
-												"The step to restart the instance from. Only valid when action is restart.",
-											required: ["name"],
-											properties: {
-												name: {
-													type: "string",
-													description: "The name of the step.",
-												},
-												count: {
-													type: "integer",
-													minimum: 1,
-													description:
-														"The 1-based index of the step when multiple steps share the same name and type. Defaults to 1.",
-												},
-												type: {
-													type: "string",
-													enum: ["do", "sleep", "waitForEvent"],
-													description: "The step type. Defaults to do.",
-												},
-											},
-										},
-										rollback: {
-											type: "boolean",
-											description:
-												"The option to trigger rollbacks when terminating the workflow instance.",
-										},
-									},
-								},
-							},
-						},
-					},
-					responses: {
-						"200": {
-							content: {
-								"application/json": {
-									schema: {
-										allOf: [
-											{
-												$ref: "#/components/schemas/workers_api-response-common",
-											},
-											{
-												properties: {
-													result: {
-														type: "object",
-														properties: {
-															success: {
-																type: "boolean",
-															},
-														},
-													},
-												},
-												type: "object",
-											},
-										],
-									},
-								},
-							},
-							description: "Change Workflow Instance Status response.",
-						},
-						"4XX": {
-							content: {
-								"application/json": {
-									schema: {
-										$ref: "#/components/schemas/workers_api-response-common-failure",
-									},
-								},
-							},
-							description: "Change Workflow Instance Status response failure.",
-						},
-					},
-					summary: "Change Workflow Instance Status",
 					tags: ["Workflows"],
 				},
 			},

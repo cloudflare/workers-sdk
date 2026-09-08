@@ -202,7 +202,7 @@ export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
 /**
  * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
  */
-export const zD1JurisdictionNullable = z.enum(["eu", "fedramp"]);
+export const zD1JurisdictionNullable = z.enum(["eu", "fedramp", "us"]);
 
 export const zD1DatabaseResponse = z.object({
 	jurisdiction: zD1JurisdictionNullable.optional(),
@@ -870,6 +870,85 @@ export const zD1RawDatabaseQueryResponse = zD1ApiResponseCommon.and(
 	})
 );
 
+export const zWorChangeStatusWorkflowInstanceData = z.object({
+	body: z.union([
+		z.object({
+			status: z.enum(["pause"]),
+		}),
+		z.object({
+			status: z.enum(["resume"]),
+		}),
+		z.object({
+			rollback: z.boolean().optional(),
+			status: z.enum(["terminate"]),
+		}),
+		z.object({
+			from: z
+				.object({
+					count: z.int().gt(0).lte(9007199254740991).optional(),
+					name: z.string().min(1).max(256),
+					type: z.enum(["do", "sleep", "waitForEvent"]).optional(),
+				})
+				.optional(),
+			status: z.enum(["restart"]),
+		}),
+	]),
+	path: z.object({
+		workflow_name: z
+			.string()
+			.min(1)
+			.max(64)
+			.regex(/^[a-zA-Z0-9_][a-zA-Z0-9-_]*$/),
+		instance_id: z.string().min(1).max(271),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Change status of instance - it can be paused, resumed or terminated.
+ */
+export const zWorChangeStatusWorkflowInstanceResponse = z.object({
+	errors: z
+		.array(
+			z.object({
+				code: z.number(),
+				message: z.string(),
+			})
+		)
+		.max(0),
+	messages: z.array(
+		z.object({
+			code: z.number(),
+			message: z.string(),
+		})
+	),
+	result: z.object({
+		status: z.enum([
+			"queued",
+			"running",
+			"paused",
+			"errored",
+			"terminated",
+			"complete",
+			"waitingForPause",
+			"waiting",
+			"rollingBack",
+		]),
+		timestamp: z.iso.datetime(),
+	}),
+	result_info: z
+		.object({
+			count: z.number(),
+			cursor: z.string().optional(),
+			page: z.number().optional(),
+			per_page: z.number(),
+			total_count: z.number(),
+			total_pages: z.number().optional(),
+		})
+		.optional(),
+	success: z.literal(true),
+});
+
 export const zDurableObjectsNamespaceListNamespacesData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
@@ -1378,39 +1457,6 @@ export const zWorkflowsGetInstanceDetailsResponse =
 	zWorkersApiResponseCommon.and(
 		z.object({
 			result: zWorkflowsInstanceDetails.optional(),
-		})
-	);
-
-export const zWorkflowsChangeInstanceStatusData = z.object({
-	body: z.object({
-		action: z.enum(["pause", "resume", "restart", "terminate"]),
-		from: z
-			.object({
-				name: z.string(),
-				count: z.int().gte(1).optional(),
-				type: z.enum(["do", "sleep", "waitForEvent"]).optional(),
-			})
-			.optional(),
-		rollback: z.boolean().optional(),
-	}),
-	path: z.object({
-		workflow_name: zWorkflowsWorkflowName,
-		instance_id: zWorkflowsInstanceId,
-	}),
-	query: z.never().optional(),
-});
-
-/**
- * Change Workflow Instance Status response.
- */
-export const zWorkflowsChangeInstanceStatusResponse =
-	zWorkersApiResponseCommon.and(
-		z.object({
-			result: z
-				.object({
-					success: z.boolean().optional(),
-				})
-				.optional(),
 		})
 	);
 
