@@ -55,7 +55,7 @@ export function validateRequestBody<T extends z.ZodType>(
 		}
 		return result.data as z.output<T>;
 	});
-	if (!options?.malformedJsonAsValidationError) {
+	if (options?.malformedJsonAsValidationError === false) {
 		return middleware;
 	}
 
