@@ -227,7 +227,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "gatsby:workers",
 			argv: ["--platform", "workers"],
-			unsupportedPms: ["bun", "pnpm", "yarn"],
+			unsupportedPms: ["bun", "yarn"],
 			promptHandlers: [
 				{
 					matcher: /Would you like to use a template\?/,
