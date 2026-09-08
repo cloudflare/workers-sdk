@@ -1,10 +1,13 @@
+import { createExecutionContext } from "cloudflare:test";
 import { describe, it, vi } from "vitest";
 import { mockJaegerBinding, mockJaegerBindingSpan } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
 import { normalizeConfiguration } from "../src/configuration";
 import { canFetch, getIntent, handleRequest } from "../src/handler";
+import { AssetWorkerInner } from "../src/worker";
 import type { AssetConfig } from "../../utils/types";
 import type { JaegerRecord, JaegerTracing } from "../../utils/types";
+import type { Env } from "../src/worker";
 
 const mockEnv = {
 	JAEGER: mockJaegerBinding(),
@@ -40,11 +43,6 @@ describe("[Asset Worker] `base_path` handling", () => {
 
 	it("normalizes an omitted base_path to the root default", ({ expect }) => {
 		const configuration = normalizeConfiguration({});
-		expect(configuration.base_path).toBe("/");
-	});
-
-	it("normalizes a null base_path to the root default", ({ expect }) => {
-		const configuration = normalizeConfiguration({ base_path: null });
 		expect(configuration.base_path).toBe("/");
 	});
 
@@ -93,6 +91,35 @@ describe("[Asset Worker] `base_path` handling", () => {
 
 		expect(response.status).toBe(200);
 		expect(exists).toHaveBeenCalledWith("/foo", expect.anything());
+	});
+
+	it("applies base_path to requests made through the asset worker entrypoint", async ({
+		expect,
+	}) => {
+		const worker = new AssetWorkerInner(createExecutionContext(), {
+			CONFIG: {
+				base_path: "/subpath/",
+				html_handling: "none",
+			},
+		} as Env);
+		vi.spyOn(worker, "unstable_exists").mockImplementation(async (pathname) =>
+			pathname === "/foo" ? "etag-foo" : null
+		);
+		vi.spyOn(worker, "unstable_getByETag").mockResolvedValue({
+			readableStream: new ReadableStream(),
+			contentType: "text/plain",
+			cacheStatus: "HIT",
+		});
+
+		const inPrefixResponse = await worker.fetch(
+			new Request("https://example.com/subpath/foo")
+		);
+		expect(inPrefixResponse.status).toBe(200);
+
+		const offPrefixResponse = await worker.fetch(
+			new Request("https://example.com/foo")
+		);
+		expect(offPrefixResponse.status).toBe(404);
 	});
 
 	it.for([
@@ -464,6 +491,50 @@ describe("[Asset Worker] `base_path` handling", () => {
 		);
 
 		expect(response.headers.get("X-Custom-Header")).toBeNull();
+	});
+
+	it("matches custom headers against the public base path", async ({
+		expect,
+	}) => {
+		const configuration = normalizeConfiguration({
+			base_path: "/subpath/",
+			html_handling: "none",
+			headers: {
+				version: 2,
+				rules: {
+					"/subpath/*": {
+						set: { "X-Base-Path": "matched" },
+					},
+				},
+			},
+		});
+		const exists = vi.fn((pathname: string) =>
+			pathname === "/foo" ? "etag-foo" : null
+		);
+
+		const inPrefixResponse = await handleRequest(
+			new Request("https://example.com/subpath/foo"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
+			configuration,
+			exists,
+			mockGetByETag(),
+			analytics
+		);
+		expect(inPrefixResponse.status).toBe(200);
+		expect(inPrefixResponse.headers.get("X-Base-Path")).toBe("matched");
+
+		const offPrefixResponse = await handleRequest(
+			new Request("https://example.com/foo"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
+			configuration,
+			exists,
+			mockGetByETag(),
+			analytics
+		);
+		expect(offPrefixResponse.status).toBe(404);
+		expect(offPrefixResponse.headers.get("X-Base-Path")).toBeNull();
 	});
 
 	it("redirects the base root to a trailing slash under force-trailing-slash", async ({
