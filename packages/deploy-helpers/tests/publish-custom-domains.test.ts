@@ -99,7 +99,7 @@ describe("publishCustomDomains", () => {
 		throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${path}`);
 	}
 
-	it("updates a domain already attached to this Worker without prompting", async ({
+	it("changes previews_enabled from false to true without prompting for a same-Worker domain", async ({
 		expect,
 	}) => {
 		const result = await publishCustomDomains(

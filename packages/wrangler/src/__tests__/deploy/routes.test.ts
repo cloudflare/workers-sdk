@@ -520,7 +520,7 @@ describe("deploy", () => {
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -561,7 +561,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should not confirm override if custom domain already belongs to this Worker", async ({
+			it("should change previews_enabled from false to true without prompting for a same-Worker domain", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -579,7 +579,7 @@ Update them to point to this script instead?`,
 				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				mockCustomDomainsChangesetRequest({
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -624,7 +624,7 @@ Update them to point to this script instead?`,
 				expect(std.out).not.toContain("Custom Domains already exist");
 			});
 
-			it("should not confirm override if custom domain already belongs to this Worker environment", async ({
+			it("should change previews_enabled from false to true without prompting for a same-Worker environment domain", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -647,7 +647,7 @@ Update them to point to this script instead?`,
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				mockCustomDomainsChangesetRequest({
 					env: "dev",
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -754,7 +754,7 @@ Update them to point to this script instead?`,
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -861,7 +861,7 @@ Update them to point to this script instead?`,
 				mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 				// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 				mockCustomDomainsChangesetRequest({
-					originConflicts: [
+					updatedDomains: [
 						{
 							id: "101",
 							zone_id: "",
@@ -1562,7 +1562,7 @@ Update them to point to this script instead?`,
 			mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
 			mockGetZoneWorkerRoutes(expect, "api-example-com-id", []);
 			mockCustomDomainsChangesetRequest({
-				originConflicts: [
+				updatedDomains: [
 					{
 						id: "101",
 						zone_id: "",
