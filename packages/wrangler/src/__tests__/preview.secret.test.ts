@@ -207,6 +207,9 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain(
 					"https://<preview-name>.previews.example.com"
 				);
+				expect(std.out).toContain('"preview_urls": true');
+				expect(std.out).toContain('"enabled": false');
+				expect(std.out).toContain('"previews_enabled": true');
 				expect(std.out).toContain(
 					"run `wrangler deploy` from a clean checkout of your production branch"
 				);

@@ -4,6 +4,7 @@ import { stripVTControlCharacters } from "node:util";
 import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	extractConfigBindings,
+	formatNoActivePreviewUrlsMessage,
 	getBranchName,
 	getCommitSha,
 	getPullRequestMetadata,
@@ -46,6 +47,14 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 	return {
 		...defaultWranglerConfig,
 		previews,
+	};
+}
+
+function configForUrlGuidance(config: Partial<Config>): Config {
+	return {
+		...defaultWranglerConfig,
+		configPath: "/test/wrangler.json",
+		...config,
 	};
 }
 
@@ -260,6 +269,80 @@ describe("wrangler preview", () => {
 				)
 			).toBe("ci-worker");
 		});
+	});
+
+	describe("formatNoActivePreviewUrlsMessage", () => {
+		test.for([
+			{
+				name: "a new Preview-only custom domain",
+				config: configForUrlGuidance({}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							enabled: false,
+							previews_enabled: true,
+						},
+					],
+				},
+			},
+			{
+				name: "an existing implicitly enabled production domain",
+				config: configForUrlGuidance({
+					routes: [
+						{
+							pattern: "implicit.example.com",
+							custom_domain: true,
+						},
+					],
+				}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{
+							pattern: "implicit.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				},
+			},
+			{
+				name: "an existing explicitly enabled production domain",
+				config: configForUrlGuidance({
+					routes: [
+						{
+							pattern: "explicit.example.com",
+							custom_domain: true,
+							enabled: true,
+							previews_enabled: true,
+						},
+					],
+				}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{
+							pattern: "explicit.example.com",
+							custom_domain: true,
+							enabled: true,
+							previews_enabled: true,
+						},
+					],
+				},
+			},
+		])(
+			"shows exact configuration for $name",
+			({ config, expectedCustomDomainConfig }, { expect }) => {
+				const message = formatNoActivePreviewUrlsMessage(config);
+
+				expect(message).toContain(
+					JSON.stringify({ preview_urls: true }, null, 2)
+				);
+				expect(message).toContain(
+					JSON.stringify(expectedCustomDomainConfig, null, 2)
+				);
+			}
+		);
 	});
 
 	describe("getBranchName", () => {
@@ -2017,9 +2100,8 @@ describe("wrangler preview", () => {
 					expect(std.out).toContain(
 						"https://<preview-name>.previews.example.com"
 					);
-					expect(std.out).toContain(
-						"`previews_enabled` is already `true` on the `previews.example.com` custom-domain route"
-					);
+					expect(std.out).toContain('"pattern": "previews.example.com"');
+					expect(std.out).toContain('"previews_enabled": true');
 					expect(std.out).toContain(
 						"run `wrangler deploy` from a clean checkout of your production branch"
 					);

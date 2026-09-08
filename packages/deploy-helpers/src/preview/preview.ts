@@ -2,6 +2,7 @@ import path from "node:path";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	formatConfigSnippet,
 	getBindings,
 	getBindingTypeFriendlyName,
 	getDockerPath,
@@ -302,35 +303,58 @@ function isCustomDomainRoute(route: Route): route is CustomDomainRoute {
 }
 
 export function formatNoActivePreviewUrlsMessage(config: Config): string {
-	const customDomainRoutes = [
-		...(config.routes ?? []),
-		...(config.route ? [config.route] : []),
-	].filter(isCustomDomainRoute);
-	const customDomainRoute =
-		customDomainRoutes.find(
-			(route) => "previews_enabled" in route && route.previews_enabled === true
-		) ?? customDomainRoutes[0];
+	const customDomainRouteEntries = [
+		...(config.routes ?? [])
+			.filter(isCustomDomainRoute)
+			.map((route) => ({ route, singular: false })),
+		...(config.route && isCustomDomainRoute(config.route)
+			? [{ route: config.route, singular: true }]
+			: []),
+	];
+	const customDomainRouteEntry =
+		customDomainRouteEntries.find(
+			({ route }) => route.previews_enabled === true
+		) ?? customDomainRouteEntries[0];
+	const customDomainRoute = customDomainRouteEntry?.route;
 	const customDomain = customDomainRoute?.pattern ?? "previews.example.com";
-	const workersDevAction =
-		config.preview_urls === true
-			? "`preview_urls` is already `true` in your local configuration."
-			: "set the top-level `preview_urls` setting to `true`.";
-	const customDomainAction = customDomainRoute?.previews_enabled
-		? `\`previews_enabled\` is already \`true\` on the \`${customDomain}\` custom-domain route in your local configuration.`
-		: customDomainRoute
-			? `set \`previews_enabled\` to \`true\` on the \`${customDomain}\` custom-domain route.`
-			: "add a custom-domain route for `previews.example.com` with `enabled` set to `false` and `previews_enabled` set to `true`.";
+	const configName = configFileName(config.configPath);
+	const workersDevConfig = formatConfigSnippet(
+		{ preview_urls: true },
+		config.configPath
+	).trimEnd();
+	const customDomainRouteConfig = {
+		pattern: customDomain,
+		custom_domain: true,
+		...(customDomainRoute?.enabled === undefined
+			? customDomainRoute
+				? {}
+				: { enabled: false }
+			: { enabled: customDomainRoute.enabled }),
+		previews_enabled: true,
+	};
+	const customDomainConfig = formatConfigSnippet(
+		customDomainRouteEntry?.singular
+			? { route: customDomainRouteConfig }
+			: { routes: [customDomainRouteConfig] },
+		config.configPath
+	).trimEnd();
 
 	return [
 		NO_ACTIVE_PREVIEW_URLS_MESSAGE,
 		"",
 		"For a Workers.dev URL such as:",
 		"  https://<preview-name>-<worker>.<subdomain>.workers.dev",
-		workersDevAction,
+		config.preview_urls === true
+			? `Your ${configName} already contains:`
+			: `Add this to your ${configName}:`,
+		workersDevConfig,
 		"",
 		"For a custom-domain URL such as:",
 		`  https://<preview-name>.${customDomain}`,
-		customDomainAction,
+		customDomainRoute?.previews_enabled === true
+			? `Your ${configName} already contains:`
+			: `Add or update this route in your ${configName}:`,
+		customDomainConfig,
 		"",
 		"Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again.",
 		"",
