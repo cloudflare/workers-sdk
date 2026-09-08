@@ -1,5 +1,5 @@
 import { validator } from "hono/validator";
-import { z } from "zod";
+import { z } from "miniflare:zod";
 import type { AppBindings } from "./explorer.worker";
 import type {
 	WorkersKvApiResponseCommon,

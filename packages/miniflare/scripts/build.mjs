@@ -128,6 +128,25 @@ const rewriteNodeToInternalPlugin = {
 };
 
 /**
+ * esbuild plugin that redirects Zod imports to the shared workerd extension.
+ *
+ * Without this, every embedded worker importing Zod gets its own copy of the
+ * library. Keeping the rewrite here also covers imports from generated code and
+ * workspace packages bundled into Miniflare's workers.
+ *
+ * @type {esbuild.Plugin}
+ */
+const aliasZodToMiniflareExtensionPlugin = {
+	name: "alias-zod-to-miniflare-extension",
+	setup(build) {
+		build.onResolve({ filter: /^zod$/ }, () => ({
+			external: true,
+			path: "miniflare:zod",
+		}));
+	},
+};
+
+/**
  * Cache of esbuild build contexts for worker sub-builds. In watch mode,
  * these are reused across rebuilds for incremental compilation.
  * @type {Map<string, esbuild.BuildContext>}
@@ -198,12 +217,18 @@ const embedWorkersPlugin = {
 					minifySyntax: true,
 					outdir: build.initialOptions.outdir,
 					outbase: pkgRoot,
-					// Shared extension workers need node:* → node-internal:*
-					plugins:
-						args.path === miniflareSharedExtensionPath ||
+					plugins: [
+						// Shared extension workers need node:* → node-internal:*
+						...(args.path === miniflareSharedExtensionPath ||
 						args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
-							: [],
+							: []),
+						// The Zod extension must bundle the real package, while all other
+						// workers import that single shared copy.
+						...(args.path === miniflareZodExtensionPath
+							? []
+							: [aliasZodToMiniflareExtensionPlugin]),
+					],
 					// Inject SPARROW_SOURCE_KEY for the local explorer telemetry
 					define:
 						args.path === localExplorerWorkerPath

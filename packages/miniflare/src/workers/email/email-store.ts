@@ -16,7 +16,7 @@
  * directory).
  */
 import { DurableObject } from "cloudflare:workers";
-import { z } from "zod";
+import { z } from "miniflare:zod";
 import {
 	base64ToBytes,
 	bytesToBase64,
