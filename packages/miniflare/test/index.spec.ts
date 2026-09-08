@@ -437,7 +437,9 @@ test("Miniflare: replaces loopback startup error handler with persistent error l
 	const createServer = vi.spyOn(http, "createServer");
 	onTestFinished(() => createServer.mockRestore());
 	const log = new Log(LogLevel.ERROR);
-	const logWithLevel = vi.spyOn(log, "logWithLevel").mockImplementation(() => {});
+	const logWithLevel = vi
+		.spyOn(log, "logWithLevel")
+		.mockImplementation(() => {});
 	onTestFinished(() => logWithLevel.mockRestore());
 
 	const mf = new Miniflare({
