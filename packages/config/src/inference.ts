@@ -4,14 +4,11 @@ import type {
 	JsonBinding,
 	TextBinding,
 	TypedAiBinding,
-	TypedDurableObjectBinding,
 	TypedKvBinding,
 	TypedPipelineBinding,
 	TypedQueueBinding,
-	TypedWorkerBinding,
-	TypedWorkflowBinding,
+	WorkerReference,
 } from "./bindings";
-import type { WorkerConfigExport, WorkerDefinition } from "./worker-definition";
 import type { Pipeline } from "cloudflare:pipelines";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -124,52 +121,76 @@ interface BindingTypeMap<TBinding> {
 	workflow: Workflow;
 }
 
+type SelectedWorkerExportName<TBinding> = TBinding extends {
+	exportName?: infer TExportName;
+}
+	? TExportName extends string
+		? TExportName
+		: "default"
+	: "default";
+
 type InferBindingType<TBinding> =
 	// Worker binding
-	TBinding extends TypedWorkerBinding<
-		infer TConfig,
-		infer TExportName extends string
-	>
-		? InferMainModule<TConfig> extends infer TModule extends WorkerModule
-			? TExportName extends keyof TModule
-				? TModule[TExportName] extends Constructor<any>
-					? Fetcher<
-							ExtractInstance<TModule[TExportName], Rpc.WorkerEntrypointBranded>
-						>
-					: Fetcher
-				: never
-			: never
-		: // Durable Object binding
-			TBinding extends TypedDurableObjectBinding<
-					infer TConfig,
-					infer TExportName extends string
-			  >
-			? InferMainModule<TConfig> extends infer TModule extends WorkerModule
-				? TExportName extends keyof TModule
-					? DurableObjectNamespace<
-							ExtractInstance<TModule[TExportName], Rpc.DurableObjectBranded>
-						>
-					: never
-				: never
-			: // Workflow binding
-				TBinding extends TypedWorkflowBinding<
-						infer TConfig,
-						infer TExportName extends string
-				  >
-				? InferMainModule<TConfig> extends infer TModule extends WorkerModule
+	TBinding extends {
+		type: "worker";
+		worker: infer TWorker extends WorkerReference;
+	}
+		? TWorker extends string
+			? Fetcher
+			: InferMainModule<UnwrapConfig<TWorker>> extends infer TModule extends
+						WorkerModule
+				? SelectedWorkerExportName<TBinding> extends infer TExportName
 					? TExportName extends keyof TModule
-						? ExtractInstance<
-								TModule[TExportName],
-								Rpc.WorkflowEntrypointBranded
-							> extends infer TWorkflow
-							? TWorkflow extends {
-									run(event: { payload: infer P }, step: any): any;
-								}
-								? Workflow<P>
-								: Workflow
-							: Workflow
+						? TModule[TExportName] extends Constructor<any>
+							? Fetcher<
+									ExtractInstance<
+										TModule[TExportName],
+										Rpc.WorkerEntrypointBranded
+									>
+								>
+							: Fetcher
 						: never
 					: never
+				: never
+		: // Durable Object binding
+			TBinding extends {
+					type: "durable-object";
+					worker: infer TWorker extends WorkerReference;
+					exportName: infer TExportName extends string;
+			  }
+			? TWorker extends string
+				? DurableObjectNamespace
+				: InferMainModule<UnwrapConfig<TWorker>> extends infer TModule extends
+							WorkerModule
+					? TExportName extends keyof TModule
+						? DurableObjectNamespace<
+								ExtractInstance<TModule[TExportName], Rpc.DurableObjectBranded>
+							>
+						: never
+					: never
+			: // Workflow binding
+				TBinding extends {
+						type: "workflow";
+						worker: infer TWorker extends WorkerReference;
+						exportName: infer TExportName extends string;
+				  }
+				? TWorker extends string
+					? Workflow
+					: InferMainModule<UnwrapConfig<TWorker>> extends infer TModule extends
+								WorkerModule
+						? TExportName extends keyof TModule
+							? ExtractInstance<
+									TModule[TExportName],
+									Rpc.WorkflowEntrypointBranded
+								> extends infer TWorkflow
+								? TWorkflow extends {
+										run(event: { payload: infer P }, step: any): any;
+									}
+									? Workflow<P>
+									: Workflow
+								: Workflow
+							: never
+						: never
 				: // Unsafe bindings
 					TBinding extends { type: `unsafe:${string}` }
 					? any
@@ -184,27 +205,6 @@ type InferBindingType<TBinding> =
 // CROSS-WORKER BINDING HELPERS (INTERNAL)
 // Types used by the Bindings interface for type-safe cross-worker bindings.
 // ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * Infer the Worker name from a config.
- *
- * @example
- * ```typescript
- * import { defineWorker } from "@cloudflare/config";
- * import type { InferDurableNamespaces, UnwrapConfig } from "@cloudflare/config";
- *
- * const config = defineWorker({ name: "my-worker", ... });
- *
- * type WorkerConfig = UnwrapConfig<typeof config>;
- * // Inferred as: "my-worker"
- * type Name = InferWorkerName<WorkerConfig>;
- * ```
- */
-export type InferWorkerName<TUnwrappedConfig> = TUnwrappedConfig extends {
-	name: infer TName extends string;
-}
-	? TName
-	: never;
 
 /**
  * Infer export names from a config's exports, optionally filtered by type.
@@ -245,12 +245,13 @@ export type InferWorkerEntrypointExports<TUnwrappedConfig> = Exclude<
  * Unwrap function and promise types to get the underlying config.
  * Use this to normalize a config before passing it to other inference utilities.
  */
-export type UnwrapConfig<TConfig> =
-	TConfig extends WorkerDefinition<infer TUnwrappedConfig>
-		? TUnwrappedConfig
-		: TConfig extends WorkerConfigExport<infer TUnwrappedConfig>
-			? TUnwrappedConfig
-			: never;
+export type UnwrapConfig<TConfig> = TConfig extends (
+	...args: any[]
+) => infer TReturn
+	? UnwrapConfig<TReturn>
+	: TConfig extends Promise<infer TCompletion>
+		? UnwrapConfig<TCompletion>
+		: TConfig;
 
 /**
  * Infer the `Env` interface type from a Worker config.
