@@ -1305,12 +1305,32 @@ export async function provisionBindings(
 			}
 		}
 
+		const isUsingRedirectedConfig =
+			config.userConfigPath && config.userConfigPath !== config.configPath;
+		const rawUserConfig =
+			isUsingRedirectedConfig || config.targetEnvironment
+				? (
+						await experimental_readRawConfig(
+							{ config: configPath },
+							{ useRedirectIfAvailable: false }
+						)
+					).rawConfig
+				: undefined;
+
+		// Legacy environments fall back to the top-level config when the named
+		// environment does not exist, so their provisioned IDs must do the same.
+		const targetEnvironment =
+			config.targetEnvironment &&
+			rawUserConfig?.env?.[config.targetEnvironment] !== undefined
+				? config.targetEnvironment
+				: undefined;
+
 		const patch: RawConfig = {};
 		let patchEnvironment: RawConfigEnvironment = patch;
-		if (config.targetEnvironment) {
+		if (targetEnvironment) {
 			patch.env ??= {};
-			patch.env[config.targetEnvironment] ??= {};
-			patchEnvironment = patch.env[config.targetEnvironment];
+			patch.env[targetEnvironment] ??= {};
+			patchEnvironment = patch.env[targetEnvironment];
 		}
 
 		const originalBindings = new Map<
@@ -1318,21 +1338,14 @@ export async function provisionBindings(
 			Map<string, RawConfigBinding>
 		>();
 
-		const isUsingRedirectedConfig =
-			config.userConfigPath && config.userConfigPath !== config.configPath;
-
 		// If we're using a redirected config, then the redirected config potentially has injected
 		// bindings that weren't originally in the user config. These can be provisioned, but we
 		// should not write the IDs back to the user config file (because the bindings weren't there in the first place).
 		if (isUsingRedirectedConfig) {
-			const { rawConfig: unredirectedConfig } =
-				await experimental_readRawConfig(
-					{ config: config.userConfigPath },
-					{ useRedirectIfAvailable: false }
-				);
-			const unredirectedEnvironment = config.targetEnvironment
-				? unredirectedConfig.env?.[config.targetEnvironment]
-				: unredirectedConfig;
+			assert(rawUserConfig);
+			const unredirectedEnvironment = targetEnvironment
+				? rawUserConfig.env?.[targetEnvironment]
+				: rawUserConfig;
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
