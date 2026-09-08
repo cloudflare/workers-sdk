@@ -5,7 +5,7 @@ export const previewBaseConfigNamespace = createNamespace({
 		description: "Manage the Preview base config shared by Worker Previews",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 		hideGlobalFlags: ["script"],
 	},
 });

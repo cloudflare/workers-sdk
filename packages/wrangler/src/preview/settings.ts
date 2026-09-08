@@ -11,7 +11,7 @@ export const previewSettingsUpdateCommand = createCommand({
 			"Update the Worker's Previews settings using the contents of the Wrangler config file",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	args: {
 		"worker-name": {
@@ -41,7 +41,7 @@ export const previewSettingsCommand = createCommand({
 		description: "Show the current Previews settings for a Worker",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
-		status: "private beta",
+		status: "open beta",
 	},
 	args: {
 		"worker-name": {
