@@ -4,6 +4,7 @@ import {
 	configFileName,
 	experimental_readRawConfig,
 	FatalError,
+	getCloudflareComplianceRegion,
 	isPagesConfig,
 	normalizeAndValidateConfig,
 	UserError,
@@ -68,6 +69,25 @@ async function logWarningsWithUpgradeHint(
 	}
 }
 
+function logWarningsIfComplianceRegionIsOverridden(
+	config: Config,
+	hideWarnings: boolean | undefined
+): void {
+	const configuredRegion = config.compliance_region;
+	if (hideWarnings || configuredRegion === undefined) {
+		return;
+	}
+
+	const resolvedRegion = getCloudflareComplianceRegion(config);
+	if (resolvedRegion === configuredRegion) {
+		return;
+	}
+
+	logger.once.warn(
+		`The compliance region was resolved to "${resolvedRegion}" from the \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable, which takes precedence over the configured value "${configuredRegion}".`
+	);
+}
+
 /**
  * Carries the validated `Config` alongside the
  * watcher dependency set and the normalised type-generation settings.
@@ -128,6 +148,7 @@ export async function readNewConfig(
 	);
 
 	void logWarningsWithUpgradeHint(diagnostics, options.hideWarnings);
+	logWarningsIfComplianceRegionIsOverridden(config, options.hideWarnings);
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors(), {
 			telemetryMessage: "new-config worker validation failed",
@@ -181,6 +202,7 @@ export function readConfig(
 	);
 
 	void logWarningsWithUpgradeHint(diagnostics, options?.hideWarnings);
+	logWarningsIfComplianceRegionIsOverridden(config, options.hideWarnings);
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors(), {
 			telemetryMessage: "config wrangler validation failed",
@@ -244,6 +266,7 @@ export function readPagesConfig(
 	);
 
 	void logWarningsWithUpgradeHint(diagnostics, options.hideWarnings);
+	logWarningsIfComplianceRegionIsOverridden(config, options.hideWarnings);
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors(), {
 			telemetryMessage: "config pages validation failed",
