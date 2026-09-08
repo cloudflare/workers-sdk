@@ -1058,6 +1058,75 @@ describe("wrangler workflows", () => {
 			expect(output.steps[0].output).toEqual({});
 			expect(std.out).not.toContain("[...output truncated]");
 		});
+
+		it("should describe an instance with dynamic retry delay without throwing RangeError", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const mockDynamicResponse = {
+				end: null,
+				output: null,
+				params: {},
+				queued: mockQueuedDate.toISOString(),
+				start: mockStartDate.toISOString(),
+				status: "running",
+				success: null,
+				trigger: {
+					source: "unknown",
+				},
+				versionId: "14707576-2549-4848-82ed-f68f8a1b47c7",
+				steps: [
+					{
+						attempts: [
+							{
+								end: mockEndDate.toISOString(),
+								error: {
+									message: "Something failed",
+									name: "Error",
+								},
+								start: mockStartDate.toISOString(),
+								success: false,
+							},
+						],
+						config: {
+							retries: {
+								backoff: "constant",
+								delay: "[dynamic]",
+								limit: 3,
+							},
+							timeout: "10 minutes",
+						},
+						end: null,
+						name: "step-with-dynamic-delay",
+						output: null,
+						start: mockStartDate.toISOString(),
+						success: null,
+						type: "step",
+					},
+				],
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId`,
+					async () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: mockDynamicResponse,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(
+				`workflows instances describe some-workflow instance-with-dynamic-delay`
+			);
+			expect(std.out).toContain("Retries At:  unknown (dynamic delay)");
+			expect(std.out).toContain("Name:        step-with-dynamic-delay");
+		});
 	});
 
 	describe("instances send-event", () => {

@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { red, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
@@ -226,19 +225,21 @@ function logStep(
 
 		if (step.success === null) {
 			const latestAttempt = step.attempts.at(-1);
-			let delay = step.config.retries.delay;
+			const delay = step.config.retries.delay;
 			if (latestAttempt !== undefined && latestAttempt.success === false) {
-				assert(
-					latestAttempt.end,
-					"end date always exists in the API for completed attempts"
-				);
-				const endDate = new Date(latestAttempt.end);
-				if (typeof delay === "string") {
-					delay = ms(delay);
+				if (delay === "[dynamic]") {
+					formattedStep["Retries At"] = "unknown (dynamic delay)";
+				} else if (latestAttempt.end) {
+					const delayMs = typeof delay === "string" ? ms(delay) : delay;
+					if (typeof delayMs === "number" && !Number.isNaN(delayMs)) {
+						const endDate = new Date(latestAttempt.end);
+						const retryDate = addMilliseconds(endDate, delayMs);
+						if (!Number.isNaN(retryDate.getTime())) {
+							formattedStep["Retries At"] =
+								`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
+						}
+					}
 				}
-				const retryDate = addMilliseconds(endDate, delay);
-				formattedStep["Retries At"] =
-					`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
 			}
 		}
 	}
