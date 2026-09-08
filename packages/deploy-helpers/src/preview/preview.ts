@@ -338,6 +338,14 @@ export function formatNoActivePreviewUrlsMessage(config: Config): string {
 			: { routes: [customDomainRouteConfig] },
 		config.configPath
 	).trimEnd();
+	const productionStatus =
+		customDomainRoute?.enabled === undefined
+			? customDomainRoute
+				? "enabled (default)"
+				: "disabled"
+			: customDomainRoute.enabled
+				? "enabled"
+				: "disabled";
 
 	return [
 		NO_ACTIVE_PREVIEW_URLS_MESSAGE,
@@ -355,6 +363,9 @@ export function formatNoActivePreviewUrlsMessage(config: Config): string {
 			? `Your ${configName} already contains:`
 			: `Add or update this route in your ${configName}:`,
 		customDomainConfig,
+		"Resulting route behavior:",
+		`  Production: ${productionStatus}`,
+		"  Previews: enabled",
 		"",
 		"Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again.",
 		"",

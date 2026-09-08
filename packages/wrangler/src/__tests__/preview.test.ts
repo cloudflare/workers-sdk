@@ -286,6 +286,7 @@ describe("wrangler preview", () => {
 						},
 					],
 				},
+				expectedProductionStatus: "disabled",
 			},
 			{
 				name: "an existing implicitly enabled production domain",
@@ -306,6 +307,7 @@ describe("wrangler preview", () => {
 						},
 					],
 				},
+				expectedProductionStatus: "enabled (default)",
 			},
 			{
 				name: "an existing explicitly enabled production domain",
@@ -329,10 +331,14 @@ describe("wrangler preview", () => {
 						},
 					],
 				},
+				expectedProductionStatus: "enabled",
 			},
 		])(
 			"shows exact configuration for $name",
-			({ config, expectedCustomDomainConfig }, { expect }) => {
+			(
+				{ config, expectedCustomDomainConfig, expectedProductionStatus },
+				{ expect }
+			) => {
 				const message = formatNoActivePreviewUrlsMessage(config);
 
 				expect(message).toContain(
@@ -340,6 +346,9 @@ describe("wrangler preview", () => {
 				);
 				expect(message).toContain(
 					JSON.stringify(expectedCustomDomainConfig, null, 2)
+				);
+				expect(message).toContain(
+					`Resulting route behavior:\n  Production: ${expectedProductionStatus}\n  Previews: enabled`
 				);
 			}
 		);
