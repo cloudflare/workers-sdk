@@ -110,3 +110,6 @@ export const zEmailHandlerResult = z.object({
 			"Ordered lifecycle of everything the handler did to the message."
 		),
 }) satisfies z.ZodType<EmailHandlerResult>;
+
+export const zEmailCaptureOrigin = z.enum(["composer", "unknown"]);
+export type EmailCaptureOrigin = z.infer<typeof zEmailCaptureOrigin>;
