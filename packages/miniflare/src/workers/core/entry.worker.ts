@@ -433,6 +433,13 @@ function colourFromHTTPStatus(status: number): Colorize {
 
 const ADDITIONAL_RESPONSE_LOG_HEADER_NAME = "X-Mf-Additional-Response-Log";
 
+// Requests a browser makes on its own, which crowd out the app's own traffic.
+// Logged at debug rather than dropped, so `--log-level debug` still shows them.
+const LOG_NOISE_PATHS = new Set([
+	"/favicon.ico",
+	"/.well-known/appspecific/com.chrome.devtools.json",
+]);
+
 function maybeLogRequest(
 	req: Request,
 	res: Response,
@@ -451,6 +458,14 @@ function maybeLogRequest(
 	}
 
 	const url = new URL(req.url);
+	// An unserved path answers 404, so only a 5xx means the Worker actually broke
+	// and the request stays at info.
+	const level =
+		LOG_NOISE_PATHS.has(url.pathname) && res.status < 500
+			? LogLevel.DEBUG
+			: LogLevel.INFO;
+	if (env[CoreBindings.JSON_LOG_LEVEL] < level) return res;
+
 	const statusText = (res.statusText.trim() || STATUS_CODES[res.status]) ?? "";
 	const lines = [
 		`${bold(req.method)} ${url.pathname} `,
@@ -465,7 +480,7 @@ function maybeLogRequest(
 	ctx.waitUntil(
 		env[CoreBindings.SERVICE_LOOPBACK].fetch("http://localhost/core/log", {
 			method: "POST",
-			headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+			headers: { [SharedHeaders.LOG_LEVEL]: level.toString() },
 			body: message,
 		})
 	);
