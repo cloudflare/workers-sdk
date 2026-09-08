@@ -904,9 +904,10 @@ const HANDLERS = {
 };
 
 type RawConfigBinding = { binding: string } & Record<string, unknown>;
+type RawConfigEnvironment = NonNullable<RawConfig["env"]>[string];
 
 function getRawConfigBindings(
-	config: RawConfig,
+	config: RawConfigEnvironment,
 	resourceType: keyof typeof HANDLERS
 ): RawConfigBinding[] {
 	if (resourceType === "queue") {
@@ -1305,6 +1306,12 @@ export async function provisionBindings(
 		}
 
 		const patch: RawConfig = {};
+		let patchEnvironment: RawConfigEnvironment = patch;
+		if (config.targetEnvironment) {
+			patch.env ??= {};
+			patch.env[config.targetEnvironment] ??= {};
+			patchEnvironment = patch.env[config.targetEnvironment];
+		}
 
 		const originalBindings = new Map<
 			keyof typeof HANDLERS,
@@ -1323,12 +1330,15 @@ export async function provisionBindings(
 					{ config: config.userConfigPath },
 					{ useRedirectIfAvailable: false }
 				);
+			const unredirectedEnvironment = config.targetEnvironment
+				? unredirectedConfig.env?.[config.targetEnvironment]
+				: unredirectedConfig;
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
 				const bindingsByName = new Map<string, RawConfigBinding>();
 				for (const binding of getRawConfigBindings(
-					unredirectedConfig,
+					unredirectedEnvironment ?? {},
 					resourceType
 				)) {
 					bindingsByName.set(binding.binding, binding);
@@ -1352,7 +1362,7 @@ export async function provisionBindings(
 			const bindingToWrite = originalBinding
 				? addProvisionedIdentifier(originalBinding, binding)
 				: toConfigBinding(bindingName, binding);
-			addBindingToPatch(patch, binding.type, bindingToWrite);
+			addBindingToPatch(patchEnvironment, binding.type, bindingToWrite);
 		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.

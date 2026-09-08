@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import {
+	readWranglerConfig,
 	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
@@ -1244,6 +1245,103 @@ describe("resource provisioning", () => {
 				database_id = "new-d1-id"
 				"
 			`);
+
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it("writes provisioned IDs to the original named environment", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DEFAULT_D1",
+						migrations_dir: "default-migrations",
+					},
+				],
+				env: {
+					production: {
+						d1_databases: [
+							{
+								binding: "D1",
+								migrations_dir: "migrations",
+							},
+						],
+					},
+				},
+			});
+			writeRedirectedWranglerConfig({
+				name: "test-name-production",
+				main: "../index.js",
+				userConfigPath: "./wrangler.toml",
+				topLevelName: "test-name",
+				targetEnvironment: "production",
+				definedEnvironments: ["production"],
+				d1_databases: [
+					{
+						binding: "D1",
+						migrations_dir: "../../migrations",
+					},
+				],
+			});
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", async () => {
+					return HttpResponse.json(
+						createFetchResult([
+							{
+								name: "existing-d1",
+								uuid: "existing-d1-id",
+							},
+						])
+					);
+				})
+			);
+			mockSelect({
+				text: "Would you like to connect an existing D1 Database or create a new one?",
+				result: "__WRANGLER_INTERNAL_NEW",
+			});
+			mockPrompt({
+				text: "Enter a name for your new D1 Database",
+				result: "new-d1",
+			});
+			mockCreateD1Database(expect, {
+				assertName: "new-d1",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-production",
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+
+			expect(readWranglerConfig()).toMatchObject({
+				d1_databases: [
+					{
+						binding: "DEFAULT_D1",
+						migrations_dir: "default-migrations",
+					},
+				],
+				env: {
+					production: {
+						d1_databases: [
+							{
+								binding: "D1",
+								database_id: "new-d1-id",
+								migrations_dir: "migrations",
+							},
+						],
+					},
+				},
+			});
 
 			rmSync(".wrangler/deploy/config.json");
 		});
