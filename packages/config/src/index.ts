@@ -4,7 +4,6 @@ export {
 	AssetsSchema,
 	BindingSchema,
 	BrowserBindingSchema,
-	ConfigExportsSchema,
 	D1BindingSchema,
 	DurableObjectCreatedExportSchema,
 	DurableObjectDeletedExportSchema,
@@ -32,12 +31,17 @@ export {
 export { generateTypes } from "./generate";
 export { convertToWranglerConfig } from "./convert";
 export { loadConfig, registerConfigHooks } from "./load";
-export { loadAndValidateConfig } from "./config-loader";
-export { resolveExportDefinition } from "./definition";
+export {
+	loadAndValidateConfig,
+	resolveAndValidateConfigExports,
+} from "./config-loader";
 export type { LoadConfigResult } from "./load";
-export type { LoadAndValidateConfigResult } from "./config-loader";
 export type {
+	ConfigParseResult,
+	LoadAndValidateConfigResult,
 	ParsedConfigExports,
+} from "./config-loader";
+export type {
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 	ParsedOutputSettingsConfig,
