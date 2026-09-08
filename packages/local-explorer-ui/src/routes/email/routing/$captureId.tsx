@@ -18,12 +18,11 @@ import { getSelectedWorker } from "../../../components/WorkerSelector";
 import { ConstantsCard } from "../shared/ConstantsCard";
 import { InfoFlow } from "../shared/InfoFlow";
 import { InfoLoading } from "../shared/InfoLoading";
-import { toEmailId } from "../shared/types";
 import type { EmailRoutingDetail } from "../../../api";
 import type { InfoEvent, InfoMessage } from "../shared/types";
 import type { JSX } from "react";
 
-export const Route = createFileRoute("/email/routing/$emailId")({
+export const Route = createFileRoute("/email/routing/$captureId")({
 	component: EmailRoutingDetailView,
 	errorComponent: ResourceError,
 	notFoundComponent: NotFound,
@@ -38,7 +37,7 @@ export const Route = createFileRoute("/email/routing/$emailId")({
 				: `?worker=${encodeURIComponent(deps.worker)}`
 		)?.name;
 		const response = await emailListRouting({
-			query: { email_id: params.emailId, worker },
+			query: { capture_id: params.captureId, worker: worker ?? "" },
 			throwOnError: false,
 		});
 		if (response.response?.status === 404) {
@@ -46,7 +45,7 @@ export const Route = createFileRoute("/email/routing/$emailId")({
 		}
 		const email = response.data?.result;
 		if (response.error || !email || Array.isArray(email)) {
-			throw new Error(`Failed to load email "${params.emailId}"`);
+			throw new Error(`Failed to load email capture "${params.captureId}"`);
 		}
 		const truncated = hasEmailTruncationWarning(
 			response.data?.messages ?? [],
@@ -64,10 +63,12 @@ export const Route = createFileRoute("/email/routing/$emailId")({
 	},
 });
 
-function toInfoMessage(email: EmailRoutingDetail): InfoMessage {
-	const emailId = toEmailId(email.messageId);
+function toInfoMessage(
+	email: EmailRoutingDetail,
+	captureId: string
+): InfoMessage {
 	const events: InfoEvent[] = email.events.map((event, index) => ({
-		id: `${emailId}-${index}`,
+		id: `${captureId}-${index}`,
 		type: event.type,
 		timestamp: event.timestamp,
 		// `forward`/`reply` events carry a messageId correlating with the full
@@ -84,7 +85,7 @@ function toInfoMessage(email: EmailRoutingDetail): InfoMessage {
 	}));
 
 	return {
-		id: emailId,
+		id: captureId,
 		from: email.from,
 		to: email.to,
 		subject: email.subject,
@@ -103,7 +104,8 @@ function toInfoMessage(email: EmailRoutingDetail): InfoMessage {
 
 function EmailRoutingDetailView(): JSX.Element {
 	const { email, replyTruncated, truncated } = Route.useLoaderData();
-	const message = toInfoMessage(email);
+	const { captureId } = Route.useParams();
+	const message = toInfoMessage(email, captureId);
 	const handlerThrew = hasEmailHandlerException(email);
 
 	return (
