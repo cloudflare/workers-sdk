@@ -4,11 +4,13 @@
 	"compatibility_date": "2025-04-03",
 	"containers": [
 		{
-			// Container image built from the local Dockerfile
-			"image": "./Dockerfile",
+			// Named Container image built from the local Dockerfile
 			"class_name": "Container",
 			"name": "dockerfile-http",
-			"max_instances": 2,
+			"scheduling_policy": "durable_object",
+			"images": {
+				"app": { "dockerfile": "./Dockerfile" },
+			},
 		},
 	],
 	"durable_objects": {

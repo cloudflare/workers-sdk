@@ -102,4 +102,27 @@ export type ContainerDevOptions = {
 	image_tag: string;
 	/** container's DO class name */
 	class_name: string;
+	/** configured image key for Durable Object-managed Containers */
+	image_name?: string;
 } & (DockerfileConfig | ImageURIConfig);
+
+/** A named image passed to workerd's Durable Object Container configuration. */
+export type ContainerDevNamedImage = {
+	name: string;
+	image: string;
+};
+
+/**
+ * Runtime configuration for one Durable Object class with an attached
+ * Container. This structurally matches workerd's ContainerOptions.
+ */
+export type ContainerDevRuntimeOptions = {
+	imageName?: string;
+	images?: ContainerDevNamedImage[];
+};
+
+/** Complete local image and runtime plan derived from Worker configuration. */
+export type ContainerDevPlan = {
+	containerOptions: ContainerDevOptions[];
+	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions>;
+};

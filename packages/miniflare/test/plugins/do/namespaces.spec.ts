@@ -11,7 +11,18 @@ test("builds Durable Object namespaces with detected container privileges", ({
 	expect,
 }) => {
 	const classNames: DurableObjectClasses = new Map([
-		["ContainerObject", { container: { imageName: "example:latest" } }],
+		[
+			"ContainerObject",
+			{
+				container: {
+					images: [
+						{ name: "api", image: "example-api:latest" },
+						{ name: "worker", image: "example-worker:latest" },
+					],
+				},
+			},
+		],
+		["EmptyContainerObject", { container: {} }],
 		["RegularObject", {}],
 	]);
 	const namespaces = getDurableObjectNamespaces(
@@ -25,14 +36,24 @@ test("builds Durable Object namespaces with detected container privileges", ({
 	const regularObject = namespaces.find(
 		({ className }) => className === "RegularObject"
 	);
+	const emptyContainerObject = namespaces.find(
+		({ className }) => className === "EmptyContainerObject"
+	);
 
 	expect(containerObject).toMatchObject({
 		className: "ContainerObject",
 		uniqueKey: "worker-ContainerObject",
 		container: {
-			imageName: "example:latest",
+			images: [
+				{ name: "api", image: "example-api:latest" },
+				{ name: "worker", image: "example-worker:latest" },
+			],
 			privileges: FUSE_CONTAINER_PRIVILEGES,
 		},
+	});
+	expect(emptyContainerObject).toMatchObject({
+		className: "EmptyContainerObject",
+		container: { privileges: FUSE_CONTAINER_PRIVILEGES },
 	});
 	expect(regularObject?.container).toBeUndefined();
 
@@ -45,8 +66,6 @@ test("builds Durable Object namespaces with detected container privileges", ({
 		({ className }) => className === "ContainerObject"
 	);
 
-	expect(containerWithoutPrivileges?.container?.imageName).toBe(
-		"example:latest"
-	);
+	expect(containerWithoutPrivileges?.container).not.toHaveProperty("imageName");
 	expect(containerWithoutPrivileges?.container?.privileges).toBeUndefined();
 });

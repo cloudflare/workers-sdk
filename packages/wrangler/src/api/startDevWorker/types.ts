@@ -1,7 +1,10 @@
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
 import type { DevEnv } from "./DevEnv";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+import type {
+	ContainerDevPlan,
+	ContainerNormalizedConfig,
+} from "@cloudflare/containers-shared";
 import type {
 	AsyncHook,
 	AssetsOptions,
@@ -86,6 +89,7 @@ export type StartDevWorkerOptions = Omit<
 	entrypoint: string;
 	assets?: AssetsOptions;
 	containers?: ContainerNormalizedConfig[];
+	containerDevPlan?: ContainerDevPlan;
 	name: string;
 	complianceRegion: Config["compliance_region"];
 };

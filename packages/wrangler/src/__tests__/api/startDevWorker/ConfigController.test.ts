@@ -165,6 +165,143 @@ describe("ConfigController", () => {
 		});
 	});
 
+	it("should plan named Container images for local runtime", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			"images/api/Dockerfile": "FROM scratch",
+			"images/worker/Dockerfile": "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "named-images-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: {
+							worker: { dockerfile: "./images/worker/Dockerfile" },
+							api: { dockerfile: "./images/api/Dockerfile" },
+						},
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		await controller.set({
+			config: "./wrangler.json",
+			dev: {
+				containerBuildId: "build-id",
+				containerEngine: "unix:///tmp/docker.sock",
+			},
+		});
+
+		const { config } = await event;
+		const containerOptions = config.containerDevPlan?.containerOptions;
+		const apiTag = containerOptions?.find(
+			({ image_name }) => image_name === "api"
+		)?.image_tag;
+		const workerTag = containerOptions?.find(
+			({ image_name }) => image_name === "worker"
+		)?.image_tag;
+		expect(config.containers).toEqual([]);
+		expect(containerOptions).toEqual([
+			expect.objectContaining({
+				class_name: "ManagedDO",
+				image_name: "api",
+				image_tag: "cloudflare-dev/manageddo-api:build-id",
+			}),
+			expect.objectContaining({
+				class_name: "ManagedDO",
+				image_name: "worker",
+				image_tag: "cloudflare-dev/manageddo-worker:build-id",
+			}),
+		]);
+		expect(
+			config.containerDevPlan?.containerRuntimeOptions.get("ManagedDO")
+		).toEqual({
+			images: [
+				{ name: "api", image: apiTag },
+				{ name: "worker", image: workerTag },
+			],
+		});
+	});
+
+	it("should not require a build ID when managed images are omitted", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			"wrangler.json": JSON.stringify({
+				name: "named-images-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		await controller.set({ config: "./wrangler.json" }, true);
+
+		const { config } = await event;
+		expect(config.containers).toEqual([]);
+		expect(config.containerDevPlan?.containerOptions).toEqual([]);
+		expect(
+			config.containerDevPlan?.containerRuntimeOptions.get("ManagedDO")
+		).toEqual({});
+	});
+
+	it("should not plan Container images when Containers are disabled", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export class ManagedDO {}\nexport default {}",
+			Dockerfile: "FROM scratch",
+			"wrangler.json": JSON.stringify({
+				name: "disabled-containers-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-05",
+				dev: { enable_containers: false },
+				containers: [
+					{
+						name: "managed-container",
+						class_name: "ManagedDO",
+						scheduling_policy: "durable_object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				],
+				durable_objects: {
+					bindings: [{ name: "MANAGED", class_name: "ManagedDO" }],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["ManagedDO"] }],
+			}),
+		});
+
+		await controller.set({ config: "./wrangler.json" }, true);
+
+		const { config } = await event;
+		expect(config.dev.enableContainers).toBe(false);
+		expect(config.containerDevPlan).toBeUndefined();
+	});
+
 	it("should accept wrangler-specific dev fields through the public input", async ({
 		expect,
 	}) => {

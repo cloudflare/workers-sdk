@@ -52,6 +52,41 @@ describe("V4MiniflareOptionsSchema", () => {
 		});
 	});
 
+	test("parses Durable Object Container named images", ({ expect }) => {
+		const parsed = V4MiniflareOptionsSchema.parse({
+			script: "export default {}",
+			durableObjects: {
+				OBJECT: {
+					className: "Object",
+					container: {
+						images: [{ name: "api", image: "example-api:latest" }],
+					},
+				},
+				EMPTY: { className: "Empty", container: {} },
+				LEGACY: {
+					className: "Legacy",
+					container: { imageName: "example:latest" },
+				},
+			},
+		});
+
+		expect(parsed).toMatchObject({
+			durableObjects: {
+				OBJECT: {
+					className: "Object",
+					container: {
+						images: [{ name: "api", image: "example-api:latest" }],
+					},
+				},
+				EMPTY: { className: "Empty", container: {} },
+				LEGACY: {
+					className: "Legacy",
+					container: { imageName: "example:latest" },
+				},
+			},
+		});
+	});
+
 	test("parses a multi-worker v4-shaped config", ({ expect }) => {
 		const parsed = V4MiniflareOptionsSchema.parse({
 			rootPath: "./project",
