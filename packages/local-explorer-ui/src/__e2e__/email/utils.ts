@@ -6,6 +6,10 @@ export const EMAIL_ROUTING_DETAIL_ROUTE =
 	"**/cdn-cgi/local/explorer/api/local/email/routing?*";
 export const EMAIL_ROUTING_SEND_ROUTE =
 	"**/cdn-cgi/local/explorer/api/local/email/routing/send?*";
+export const EMAIL_ROUTING_RESEND_ROUTE =
+	"**/cdn-cgi/local/explorer/api/local/email/routing/resend?*";
+export const EMAIL_ROUTING_RESEND_DRAFT_ROUTE =
+	"**/cdn-cgi/local/explorer/api/local/email/routing/resend/draft?*";
 export const EMAIL_SENDING_ROUTE =
 	"**/cdn-cgi/local/explorer/api/local/email/sending?*";
 export const EMAIL_PREVIEW_REMOTE_ROUTE = "https://email-preview.invalid/**";
@@ -23,6 +27,7 @@ interface MockRoutingEmailOptions {
 	handlerException?: boolean;
 	showInList?: boolean;
 	replyTruncated?: boolean;
+	worker?: string;
 }
 
 interface Worker {
@@ -67,10 +72,16 @@ export async function loadWorker(
 export async function mockEmailRoutingDetail(
 	truncated = true,
 	options: MockRoutingEmailOptions = {}
-): Promise<void> {
+): Promise<{
+	detailRequestWorkers: Array<string | null>;
+	listRequestCount: () => number;
+}> {
+	let listRequests = 0;
+	const detailRequestWorkers: Array<string | null> = [];
 	await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
-		const emailId = new URL(route.request().url()).searchParams.get("email_id");
-		const messages = emailId
+		const search = new URL(route.request().url()).searchParams;
+		const captureId = search.get("capture_id");
+		const messages = captureId
 			? [
 					...(truncated
 						? [
@@ -92,8 +103,16 @@ export async function mockEmailRoutingDetail(
 						: []),
 				]
 			: [];
+		if (!captureId) {
+			listRequests++;
+		} else {
+			detailRequestWorkers.push(search.get("worker"));
+		}
 		const summary = {
 			attachments: [],
+			captureId: "00000000-0000-4000-8000-000000000001",
+			capturedPortion: false,
+			editAndResendAvailable: true,
 			events: options.handlerException
 				? [
 						{
@@ -111,8 +130,9 @@ export async function mockEmailRoutingDetail(
 			replies: [],
 			subject: "Test email",
 			to: "recipient@example.com",
+			worker: options.worker ?? "worker-1",
 		};
-		const result = emailId
+		const result = captureId
 			? {
 					...summary,
 					headers: {
@@ -138,7 +158,7 @@ export async function mockEmailRoutingDetail(
 				: [];
 		await fulfillApiResult(route, result, {
 			messages,
-			resultInfo: emailId
+			resultInfo: captureId
 				? undefined
 				: {
 						count: Array.isArray(result) ? result.length : 0,
@@ -147,6 +167,17 @@ export async function mockEmailRoutingDetail(
 					},
 		});
 	});
+	await page.route(EMAIL_ROUTING_RESEND_DRAFT_ROUTE, async (route) => {
+		await fulfillApiResult(route, {
+			attachments: [],
+			from: "sender@example.com",
+			headers: { "X-Test-Header": "first line\nsecond line" },
+			subject: "Test email",
+			text: "Plain received text body",
+			to: ["recipient@example.com"],
+		});
+	});
+	return { detailRequestWorkers, listRequestCount: () => listRequests };
 }
 
 /** Mocks an empty sent-email list for navigation tests. */
@@ -233,6 +264,8 @@ export async function cleanupEmailMocks(): Promise<void> {
 		page.unroute(WORKERS_ROUTE),
 		page.unroute(EMAIL_ROUTING_DETAIL_ROUTE),
 		page.unroute(EMAIL_ROUTING_SEND_ROUTE),
+		page.unroute(EMAIL_ROUTING_RESEND_ROUTE),
+		page.unroute(EMAIL_ROUTING_RESEND_DRAFT_ROUTE),
 		page.unroute(EMAIL_SENDING_ROUTE),
 		page.unroute(EMAIL_PREVIEW_REMOTE_ROUTE),
 	]);

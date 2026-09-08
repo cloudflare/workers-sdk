@@ -17,6 +17,8 @@ interface CursorPaginatedListOptions<T> {
 	};
 }
 
+export type CursorPageLoadResult = "success" | "stale";
+
 interface CursorPaginatedList<T> {
 	error: string | null;
 	hasNext: boolean;
@@ -26,7 +28,12 @@ interface CursorPaginatedList<T> {
 	paging: boolean;
 	previousPage: () => Promise<void>;
 	refresh: () => Promise<void>;
+	refreshFirstPage: () => Promise<CursorPageLoadResult>;
 	refreshing: boolean;
+}
+
+function errorMessage(cause: unknown, fallback: string): string {
+	return cause instanceof Error ? cause.message : fallback;
 }
 
 /**
@@ -53,70 +60,108 @@ export function useCursorPaginatedList<T>({
 	const [refreshing, setRefreshing] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const request = useRef<number>(0);
+	const pagingRequest = useRef<number | undefined>(undefined);
+	const refreshingRequest = useRef<number | undefined>(undefined);
 
 	useEffect(() => {
 		request.current += 1;
+		pagingRequest.current = undefined;
+		refreshingRequest.current = undefined;
 		setItems(initialPage.items);
 		setCurrentCursor(undefined);
 		setNextCursor(initialPage.nextCursor);
 		setPreviousCursors([]);
+		setPaging(false);
+		setRefreshing(false);
 		setError(null);
 	}, [initialPage]);
 
 	const loadPage = useCallback(
-		async (cursor?: string): Promise<boolean> => {
+		async (
+			cursor: string | undefined,
+			kind: "page" | "refresh",
+			resetNavigation: boolean,
+			minimumDelay = false
+		): Promise<CursorPageLoadResult> => {
 			const requestId = request.current + 1;
 			request.current = requestId;
-			let page: CursorPage<T>;
+			setError(null);
+			if (kind === "page") {
+				pagingRequest.current = requestId;
+				setPaging(true);
+			} else {
+				pagingRequest.current = undefined;
+				setPaging(false);
+				refreshingRequest.current = requestId;
+				setRefreshing(true);
+			}
+
 			try {
-				page = await fetchPage(cursor);
+				const pageRequest = fetchPage(cursor);
+				const page = minimumDelay
+					? await withMinimumDelay(pageRequest)
+					: await pageRequest;
+				if (requestId !== request.current) {
+					return "stale";
+				}
+				setItems(page.items);
+				setNextCursor(page.nextCursor);
+				if (resetNavigation) {
+					setCurrentCursor(undefined);
+					setPreviousCursors([]);
+					onPageChange?.();
+				}
+				return "success";
 			} catch (cause) {
 				if (requestId !== request.current) {
-					return false;
+					return "stale";
 				}
+				const fallback =
+					kind === "refresh"
+						? pageErrorMessages.refresh
+						: pageErrorMessages.next;
+				setError(errorMessage(cause, fallback));
 				throw cause;
+			} finally {
+				if (pagingRequest.current === requestId) {
+					pagingRequest.current = undefined;
+					setPaging(false);
+				}
+				if (refreshingRequest.current === requestId) {
+					refreshingRequest.current = undefined;
+					setRefreshing(false);
+				}
 			}
-			if (requestId !== request.current) {
-				return false;
-			}
-			setItems(page.items);
-			setNextCursor(page.nextCursor);
-			return true;
 		},
-		[fetchPage]
+		[fetchPage, onPageChange, pageErrorMessages.next, pageErrorMessages.refresh]
 	);
 
 	const refresh = useCallback(async (): Promise<void> => {
-		setRefreshing(true);
-		setError(null);
 		try {
-			await withMinimumDelay(loadPage(currentCursor));
-		} catch (cause) {
-			setError(
-				cause instanceof Error ? cause.message : pageErrorMessages.refresh
-			);
-		} finally {
-			setRefreshing(false);
+			await loadPage(currentCursor, "refresh", false, true);
+		} catch {
+			// loadPage owns the visible list error.
 		}
-	}, [currentCursor, loadPage, pageErrorMessages.refresh]);
+	}, [currentCursor, loadPage]);
+
+	const refreshFirstPage =
+		useCallback(async (): Promise<CursorPageLoadResult> => {
+			return loadPage(undefined, "refresh", true);
+		}, [loadPage]);
 
 	async function nextPage(): Promise<void> {
 		if (!nextCursor) {
 			return;
 		}
-		setPaging(true);
-		setError(null);
 		try {
-			if (!(await loadPage(nextCursor))) {
+			if ((await loadPage(nextCursor, "page", false)) === "stale") {
 				return;
 			}
 			setPreviousCursors((cursors) => [...cursors, currentCursor]);
 			setCurrentCursor(nextCursor);
 			onPageChange?.();
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : pageErrorMessages.next);
-		} finally {
-			setPaging(false);
+			setError(errorMessage(cause, pageErrorMessages.next));
 		}
 	}
 
@@ -125,21 +170,15 @@ export function useCursorPaginatedList<T>({
 		if (previousCursors.length === 0) {
 			return;
 		}
-		setPaging(true);
-		setError(null);
 		try {
-			if (!(await loadPage(previousCursor))) {
+			if ((await loadPage(previousCursor, "page", false)) === "stale") {
 				return;
 			}
 			setPreviousCursors((cursors) => cursors.slice(0, -1));
 			setCurrentCursor(previousCursor);
 			onPageChange?.();
 		} catch (cause) {
-			setError(
-				cause instanceof Error ? cause.message : pageErrorMessages.previous
-			);
-		} finally {
-			setPaging(false);
+			setError(errorMessage(cause, pageErrorMessages.previous));
 		}
 	}
 
@@ -152,6 +191,7 @@ export function useCursorPaginatedList<T>({
 		paging,
 		previousPage,
 		refresh,
+		refreshFirstPage,
 		refreshing,
 	};
 }
