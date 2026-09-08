@@ -1,9 +1,16 @@
 import type {
 	WorkflowBinding,
+	WorkflowBatchCreateOptions,
+	WorkflowBatchCreateResult as WorkflowBatchCreateRpcResult,
 	WorkflowInstanceRestartOptions,
 	WorkflowInstanceTerminateOptions,
 } from "@cloudflare/workflows-shared/src/binding";
 import type { WorkflowIntrospectionOperation } from "@cloudflare/workflows-shared/src/types";
+
+type WrappedWorkflowBatchCreateResult = {
+	created: WorkflowInstance[];
+	errors: WorkflowBatchCreateRpcResult["errors"];
+};
 
 class WorkflowImpl implements Workflow {
 	constructor(private binding: WorkflowBinding) {}
@@ -27,11 +34,25 @@ class WorkflowImpl implements Workflow {
 
 	async createBatch(
 		options: WorkflowInstanceCreateOptions[]
-	): Promise<WorkflowInstance[]> {
+	): Promise<WorkflowInstance[]>;
+	async createBatch(
+		options: WorkflowBatchCreateOptions
+	): Promise<WrappedWorkflowBatchCreateResult>;
+	async createBatch(
+		options: WorkflowInstanceCreateOptions[] | WorkflowBatchCreateOptions
+	): Promise<WorkflowInstance[] | WrappedWorkflowBatchCreateResult> {
+		if (Array.isArray(options)) {
+			const result = await this.binding.createBatch(options);
+			return result.map((res) => new InstanceImpl(res.id, this.binding));
+		}
+
 		const result = await this.binding.createBatch(options);
-		return result.map((res) => {
-			return new InstanceImpl(res.id, this.binding);
-		});
+		return {
+			created: result.created.map(
+				({ id }) => new InstanceImpl(id, this.binding)
+			),
+			errors: result.errors,
+		};
 	}
 
 	async deleteBatch(instanceIds: string[]): Promise<WorkflowBatchDeleteResult> {
