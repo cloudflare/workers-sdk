@@ -15,6 +15,7 @@
 
 import { z } from "zod";
 import {
+	zEmailCaptureOrigin,
 	zEmailHeaders,
 	zEmailHandlerEvent,
 	zEmailHandlerForward,
@@ -22,6 +23,7 @@ import {
 } from "./contracts";
 
 export type {
+	EmailCaptureOrigin,
 	EmailHandlerEvent,
 	EmailHandlerForward,
 	EmailHandlerReply,
@@ -48,7 +50,8 @@ const zStoredEmailBase = z.object({
 	messageId: z.string(),
 	attachments: z.array(zStoredEmailAttachment),
 });
-export const zStoredRoutingEmailSummary = zStoredEmailBase.extend({
+export const zStoredRoutingEmailListMetadata = zStoredEmailBase.extend({
+	worker: z.string(),
 	to: z.string(),
 	cc: z.array(z.string()).optional(),
 	headers: z.record(z.string(), z.string()).optional(),
@@ -60,12 +63,18 @@ export const zStoredRoutingEmailSummary = zStoredEmailBase.extend({
 	forwards: z.array(zEmailHandlerForward),
 	replies: z.array(zStoredEmailReply),
 	events: z.array(zEmailHandlerEvent),
-});
-export const zStoredRoutingEmailMetadata = zStoredRoutingEmailSummary.extend({
+	origin: zEmailCaptureOrigin.optional(),
 	captureTruncated: z.boolean().optional(),
-	replies: z.array(zStoredEmailReplyMetadata),
+	capturedPortion: z.boolean().optional(),
 });
+export const zStoredRoutingEmailSummary =
+	zStoredRoutingEmailListMetadata.extend({ captureId: z.uuid() });
+export const zStoredRoutingEmailMetadata =
+	zStoredRoutingEmailListMetadata.extend({
+		replies: z.array(zStoredEmailReplyMetadata),
+	});
 export const zStoredRoutingEmail = zStoredRoutingEmailMetadata.extend({
+	captureId: z.uuid(),
 	raw: z.string(),
 	rawBase64: z.string(),
 	replies: z.array(
@@ -111,6 +120,14 @@ export interface EmailListPage<T> {
 	hasMore: boolean;
 }
 
+export type ReceivedCaptureOperationLookup =
+	| { found: false }
+	| {
+			found: true;
+			capturedPortion: boolean;
+			email?: StoredRoutingEmail;
+	  };
+
 /**
  * RPC surface of the email store host worker (see email-store.worker.ts). Used
  * to type the `SERVICE_EMAIL_STORE` service binding in the workers that
@@ -119,6 +136,7 @@ export interface EmailListPage<T> {
  */
 export interface EmailStoreService {
 	getSourceId(): Promise<string>;
+	beginReceivedCapture(captureId: string): Promise<boolean>;
 	storeReceivedBody(
 		captureId: string,
 		part: number,
@@ -130,9 +148,19 @@ export interface EmailStoreService {
 		email: StoredRoutingEmailMetadata
 	): Promise<void>;
 	discardReceived(captureId: string): Promise<void>;
-	/** Looks up a received email by local storage ID and optional worker. */
-	findReceived(
-		id: string,
+	/** Looks up one exact received capture. */
+	findReceivedByCaptureId(
+		captureId: string,
+		worker: string
+	): Promise<StoredRoutingEmail | undefined>;
+	/** Loads an exact capture while preserving metadata if its MIME is absent. */
+	findReceivedForOperation(
+		captureId: string,
+		worker: string
+	): Promise<ReceivedCaptureOperationLookup>;
+	/** Compatibility lookup for the newest received email with this Message-ID. */
+	findReceivedByMessageId(
+		messageId: string,
 		worker?: string
 	): Promise<StoredRoutingEmail | undefined>;
 	listReceived(

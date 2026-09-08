@@ -646,7 +646,7 @@ const config = {
 			"/local/email/routing": {
 				get: {
 					description:
-						"Lists emails received by any email() handler during this dev session. Use the optional `worker` query parameter to filter by worker, or `email_id` to return one email's details.",
+						"Lists emails received by any email() handler during this dev session. Use `capture_id` with `worker` for canonical exact-capture details, or `email_id` for compatibility Message-ID lookup. The two identifiers are mutually exclusive.",
 					operationId: "email-list-routing",
 					parameters: [
 						{
@@ -661,7 +661,14 @@ const config = {
 							name: "email_id",
 							schema: { type: "string" },
 							description:
-								"Return the details for this email instead of a paginated list.",
+								"Compatibility lookup by RFC Message-ID. Returns the newest match and accepts bracketed or bracket-stripped values.",
+						},
+						{
+							in: "query",
+							name: "capture_id",
+							schema: { type: "string", format: "uuid" },
+							description:
+								"Canonical identifier for one captured delivery. Requires `worker` and never falls back to Message-ID lookup.",
 						},
 						{
 							in: "query",
@@ -735,6 +742,138 @@ const config = {
 						},
 					},
 					summary: "List Received Emails",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/routing/resend": {
+				post: {
+					description:
+						"Replays the stored bytes of one exact Routing capture to the same Worker's email() handler with a new Message-ID.",
+					operationId: "email-resend-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string", minLength: 1 },
+							description: "Worker that owns the exact Routing capture.",
+						},
+						{
+							in: "query",
+							name: "capture_id",
+							required: true,
+							schema: { type: "string", format: "uuid" },
+							description: "Opaque identifier for the exact captured delivery.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												properties: {
+													result: {
+														type: "object",
+														properties: {
+															messageId: { type: "string" },
+															outcome: {
+																type: "string",
+																enum: ["ok", "exception"],
+															},
+															rejectReason: { type: "string" },
+															capturedPortion: { type: "boolean" },
+														},
+														required: [
+															"messageId",
+															"outcome",
+															"capturedPortion",
+														],
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Email resend result.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Email resend failure.",
+						},
+					},
+					summary: "Resend Received Email",
+					tags: ["Email"],
+				},
+			},
+			"/local/email/routing/resend/draft": {
+				get: {
+					description:
+						"Projects one complete composer-originated Routing capture back into structured composer fields.",
+					operationId: "email-resend-draft-routing",
+					parameters: [
+						{
+							in: "query",
+							name: "worker",
+							required: true,
+							schema: { type: "string", minLength: 1 },
+							description: "Worker that owns the exact Routing capture.",
+						},
+						{
+							in: "query",
+							name: "capture_id",
+							required: true,
+							schema: { type: "string", format: "uuid" },
+							description: "Opaque identifier for the exact captured delivery.",
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												properties: {
+													result: {
+														$ref: "#/components/schemas/email_send-request",
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Composer projection response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Composer projection failure.",
+						},
+					},
+					summary: "Get Received Email Resend Draft",
 					tags: ["Email"],
 				},
 			},
@@ -2292,8 +2431,7 @@ const config = {
 					},
 					messageId: {
 						type: "string",
-						description:
-							"RFC Message-ID header value. Identifies the email in the store.",
+						description: "RFC Message-ID header value carried by the email.",
 					},
 					attachments: {
 						type: "array",
@@ -2312,7 +2450,7 @@ const config = {
 				properties: {
 					worker: {
 						type: "string",
-						description: "Worker associated with the email, if known.",
+						description: "Worker that handled this captured delivery.",
 					},
 					from: {
 						type: "string",
@@ -2324,7 +2462,7 @@ const config = {
 					messageId: {
 						type: "string",
 						description:
-							"RFC Message-ID header value. Identifies the email in the store.",
+							"RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.",
 					},
 					attachments: {
 						type: "array",
@@ -2333,6 +2471,26 @@ const config = {
 						},
 						description:
 							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					captureId: {
+						type: "string",
+						format: "uuid",
+						pattern:
+							"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+						description: "Opaque identifier for this exact captured delivery.",
+					},
+					editAndResendAvailable: {
+						type: "boolean",
+						description:
+							"Whether this capture can be projected into the email composer.",
+					},
+					editAndResendUnavailableReason: {
+						type: "string",
+					},
+					capturedPortion: {
+						type: "boolean",
+						description:
+							"Whether this capture contains only a portion of the original message.",
 					},
 					to: {
 						type: "string",
@@ -2425,7 +2583,6 @@ const config = {
 				properties: {
 					worker: {
 						type: "string",
-						description: "Worker associated with the email, if known.",
 					},
 					from: {
 						type: "string",
@@ -2437,7 +2594,7 @@ const config = {
 					messageId: {
 						type: "string",
 						description:
-							"RFC Message-ID header value. Identifies the email in the store.",
+							"RFC Message-ID header value. This is message content and compatibility lookup material; captureId identifies the Routing record.",
 					},
 					attachments: {
 						type: "array",
@@ -2446,6 +2603,21 @@ const config = {
 						},
 						description:
 							"Metadata for attachments parsed out of the email. The content itself is only available in the raw MIME.",
+					},
+					captureId: {
+						type: "string",
+						format: "uuid",
+						pattern:
+							"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+					},
+					editAndResendAvailable: {
+						type: "boolean",
+					},
+					editAndResendUnavailableReason: {
+						type: "string",
+					},
+					capturedPortion: {
+						type: "boolean",
 					},
 					to: {
 						type: "string",
@@ -2535,10 +2707,14 @@ const config = {
 					},
 				},
 				required: [
+					"worker",
 					"from",
 					"subject",
 					"messageId",
 					"attachments",
+					"captureId",
+					"editAndResendAvailable",
+					"capturedPortion",
 					"to",
 					"receivedAt",
 					"rawSize",
@@ -2679,7 +2855,7 @@ const config = {
 					messageId: {
 						type: "string",
 						description:
-							"RFC Message-ID header value. Identifies the email in the store.",
+							"RFC Message-ID header value that identifies this Sending record for detail lookup.",
 					},
 					attachments: {
 						type: "array",
@@ -2747,7 +2923,7 @@ const config = {
 					messageId: {
 						type: "string",
 						description:
-							"RFC Message-ID header value. Identifies the email in the store.",
+							"RFC Message-ID header value that identifies this Sending record for detail lookup.",
 					},
 					attachments: {
 						type: "array",
