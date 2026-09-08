@@ -328,10 +328,6 @@ import { previewSecretBulkCommand } from "./preview/secrets/bulk";
 import { previewSecretDeleteCommand } from "./preview/secrets/delete";
 import { previewSecretListCommand } from "./preview/secrets/list";
 import { previewSecretPutCommand } from "./preview/secrets/put";
-import {
-	previewSettingsCommand,
-	previewSettingsUpdateCommand,
-} from "./preview/settings";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -917,14 +913,6 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler preview", definition: previewCommand },
 		{ command: "wrangler preview delete", definition: previewDeleteCommand },
-		{
-			command: "wrangler preview settings",
-			definition: previewSettingsCommand,
-		},
-		{
-			command: "wrangler preview settings update",
-			definition: previewSettingsUpdateCommand,
-		},
 		{ command: "wrangler preview secret", definition: previewSecretNamespace },
 		{
 			command: "wrangler preview secret put",

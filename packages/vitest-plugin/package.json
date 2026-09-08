@@ -60,6 +60,7 @@
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
+		"@cloudflare/runtime-types": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
