@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/pages/delegation-commands.test.ts
+  s_da4850dcde74ad::t_eeff7f198319b8 1-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9ab74a07f5952c81aa2f834f732f729fc32fbd6a",
+  "prompts": {},
+  "sessions": {
+    "s_da4850dcde74ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a06836-3f2c-71d2-b7b1-b00a14ae1f67",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
