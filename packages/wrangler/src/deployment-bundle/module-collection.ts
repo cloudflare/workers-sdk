@@ -56,8 +56,8 @@ function stripQueryString(modulePath: string): string {
  * Name used for a collected module in the bundle and the multipart upload.
  * An absolute specifier is machine-local, so preserving it verbatim produces a
  * bundle that only fails at upload. Under `preserve_file_names` we keep the
- * basename and make it relative, matching how the hashed branch already
- * flattens paths.
+ * basename and place it under a content hash, matching how the hashed branch
+ * already produces portable, unique names.
  */
 function collectedModuleName(
 	cleanedPath: string,
@@ -68,7 +68,7 @@ function collectedModuleName(
 		return `./${fileHash}-${path.basename(cleanedPath)}`;
 	}
 	if (path.isAbsolute(cleanedPath)) {
-		return `./${path.basename(cleanedPath)}`;
+		return `./${fileHash}/${path.basename(cleanedPath)}`;
 	}
 	return cleanedPath;
 }

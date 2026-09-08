@@ -382,18 +382,70 @@ describe("deploy", () => {
 				expectedType: "esm",
 				expectedBindings: [],
 				expectedModules: {
-					"./message.txt": "HELLO FROM ABSOLUTE IMPORT",
+					"./a182964753994a9d8e94adcfa9e4faeff0bfd71a/message.txt":
+						"HELLO FROM ABSOLUTE IMPORT",
 				},
 				// Guard against the old bug of shipping the build-machine absolute path.
 				excludedModules: [absoluteMessagePath],
 			});
 			await runWrangler("deploy index.js --outdir some-dir");
-			expect(fs.existsSync("some-dir/message.txt")).toBe(true);
+			expect(
+				fs.existsSync(
+					"some-dir/a182964753994a9d8e94adcfa9e4faeff0bfd71a/message.txt"
+				)
+			).toBe(true);
 			expect(fs.readFileSync("some-dir/index.js", "utf8")).toContain(
-				'from "./message.txt"'
+				'from "./a182964753994a9d8e94adcfa9e4faeff0bfd71a/message.txt"'
 			);
 			expect(fs.readFileSync("some-dir/index.js", "utf8")).not.toContain(
 				absoluteMessagePath
+			);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should keep absolute imports with matching basenames distinct (esm)", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				rules: [{ type: "Text", globs: ["**/*.txt"], fallthrough: true }],
+				preserve_file_names: true,
+			});
+			fs.mkdirSync("./first");
+			fs.mkdirSync("./second");
+			fs.writeFileSync("./first/message.txt", "FIRST ABSOLUTE MODULE");
+			fs.writeFileSync("./second/message.txt", "SECOND ABSOLUTE MODULE");
+			const firstPath = path
+				.resolve("./first/message.txt")
+				.split(path.sep)
+				.join("/");
+			const secondPath = path
+				.resolve("./second/message.txt")
+				.split(path.sep)
+				.join("/");
+			fs.writeFileSync(
+				"./index.js",
+				`import first from ${JSON.stringify(firstPath)}; import second from ${JSON.stringify(secondPath)}; export default {};`
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./600ae083223cb8c0e884f9b7db426d6f7cce2cd8/message.txt":
+						"FIRST ABSOLUTE MODULE",
+					"./54b3efcc8cb6313f13a918823b64453d43a70c14/message.txt":
+						"SECOND ABSOLUTE MODULE",
+				},
+				excludedModules: [firstPath, secondPath],
+			});
+			await runWrangler("deploy index.js --outdir some-dir");
+			const bundle = fs.readFileSync("some-dir/index.js", "utf8");
+			expect(bundle).toContain(
+				'from "./600ae083223cb8c0e884f9b7db426d6f7cce2cd8/message.txt"'
+			);
+			expect(bundle).toContain(
+				'from "./54b3efcc8cb6313f13a918823b64453d43a70c14/message.txt"'
 			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
