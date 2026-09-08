@@ -193,8 +193,14 @@ export const pagesDeployCommand = createCommand({
 			...(envAccountId ? { account_id: envAccountId } : {}),
 		});
 
-		let projectName =
-			args.projectName ?? config?.name ?? configCache.project_name;
+		// A cached project name is only meaningful for the account it was saved
+		// against. Explicit CLI and Wrangler config names remain authoritative when
+		// authentication selects a different account.
+		const cachedProjectName =
+			configCache.account_id === accountId
+				? configCache.project_name
+				: undefined;
+		let projectName = args.projectName ?? config?.name ?? cachedProjectName;
 		let isExistingProject = true;
 
 		if (projectName) {
@@ -215,14 +221,22 @@ export const pagesDeployCommand = createCommand({
 		}
 
 		// When run by an AI agent, delegate brand-new static Pages deploys to a
-		// Workers static-assets deploy. Existing projects, projects using
-		// unsupported Pages features, and `--force` are never delegated.
+		// Workers static-assets deploy. Deploys to an existing project, projects
+		// using unsupported Pages features, and `--force` are never delegated. The
+		// account is free to already have other Pages projects — only the specific
+		// project being targeted must be new.
 		const delegation = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory: directory,
-			accountHasPagesProjects: async () =>
-				(await listProjects({ accountId })).length > 0,
+			// An account-scoped cached name records an established Pages target. Keep
+			// that target on Pages even if it is currently missing from the account;
+			// the direct Pages flow can report or recreate it without reinterpreting the
+			// deployment as a new Workers project. An unresolved name is likewise not
+			// proof that the eventual autoconfigured name is new.
+			projectExists: projectName
+				? isExistingProject || projectName === cachedProjectName
+				: undefined,
 			force: args.force,
 			projectName,
 			unsupportedArgs: getUnsupportedDeployDelegateArgs(args),
@@ -646,7 +660,23 @@ export const pagesDeployCommand = createCommand({
 	},
 });
 
-function getUnsupportedDeployDelegateArgs(
+/**
+ * Collects the Pages-only `pages deploy` flags that are set on this command, so
+ * their presence can disqualify it from delegation.
+ *
+ * @param args The parsed `pages deploy` command arguments.
+ * @returns The names of any set flags that cannot be represented by a Workers
+ * static-assets deploy — a Pages preview target (`--branch`), git-integration
+ * metadata (`--commit-*`), and a Pages build option (`--skip-caching`). Empty
+ * when none are set.
+ *
+ * `--branch` is deliberately included because it selects the branch for this
+ * deployment. When Pages creates a new project interactively, it prompts for a
+ * separate production branch, so `--branch` may still represent a preview even
+ * though the project itself is new. A Workers static-assets deploy would publish
+ * it to production instead.
+ */
+export function getUnsupportedDeployDelegateArgs(
 	args: (typeof pagesDeployCommand)["args"]
 ): string[] {
 	return [

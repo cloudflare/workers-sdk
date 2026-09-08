@@ -217,6 +217,7 @@ export async function triggersDeploy(
 				config,
 				workerUrl,
 				accountId,
+				scriptName,
 				customDomainsOnly
 			).then(
 				(result) => ({ ...result, category: "Custom domains" }),
