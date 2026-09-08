@@ -189,8 +189,9 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				const b = binding as Extract<WorkerMetadataBinding, { type: "d1" }>;
 				output[name] = {
 					type: "d1",
-					// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
-					database_id: b.database_id ?? b.id,
+					database_id:
+						// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
+						"database_id" in b ? b.database_id : b.id,
 					database_internal_env: b.internalEnv,
 					raw: b.raw,
 				};

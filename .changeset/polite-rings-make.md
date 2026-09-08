@@ -2,6 +2,6 @@
 "wrangler": minor
 ---
 
-Improve onboarding guidance for Previews (when `previews` block is missing from configuration file)
+Improve onboarding when the `previews` block is missing from a Wrangler configuration file
 
-When a local `previews` block is absent, Wrangler writes the Preview Base configuration to the local config file. When no Preview Base configuration exists, Wrangler prints a placeholder configuration derived from production bindings and warns against reusing production binding configuration.
+When a local `previews` block is absent, Wrangler can write a safe Preview Base configuration to the user-authored config file while retaining adapter-generated Preview settings for deployment. If no Preview Base exists, Wrangler prints placeholders for supported production bindings and gives manual guidance for unsupported bindings without exposing production values. After deployment, Wrangler also warns when production secret names are missing from the Preview deployment.
