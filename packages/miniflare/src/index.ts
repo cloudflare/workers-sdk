@@ -3668,7 +3668,14 @@ export class Miniflare {
 		}
 
 		// Close the inspector proxy server if there is one
-		await this.#maybeInspectorProxyController?.dispose();
+		try {
+			await this.#maybeInspectorProxyController?.dispose();
+		} catch (error) {
+			if (!independentCleanupFailed) {
+				independentCleanupFailed = true;
+				independentCleanupError = error;
+			}
+		}
 		// Unregister workers from dev registry and stop the file watcher
 		await this.#devRegistry.dispose();
 

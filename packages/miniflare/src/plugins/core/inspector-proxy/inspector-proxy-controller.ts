@@ -42,6 +42,10 @@ export class InspectorProxyController {
 		private workerNamesToProxy: Set<string>
 	) {
 		this.#server = this.#createServer();
+		// The server starts before callers can observe `ready`, so attach a
+		// rejection handler immediately while preserving the original promise for
+		// public methods to await
+		void this.#server.catch(() => {});
 	}
 
 	async #createServer() {
@@ -290,6 +294,7 @@ export class InspectorProxyController {
 
 			await this.#restartServer();
 		}
+		await this.#server;
 
 		const workerdInspectorJson = (await fetch(
 			`http://127.0.0.1:${runtimeInspectorPort}/json`
@@ -325,7 +330,7 @@ export class InspectorProxyController {
 	}
 
 	async #waitForReady() {
-		await this.#runtimeConnectionEstablished;
+		await Promise.all([this.#server, this.#runtimeConnectionEstablished]);
 	}
 
 	get ready(): Promise<void> {

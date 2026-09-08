@@ -56,7 +56,7 @@ test("InspectorProxy: removes startup error handler after listening", async ({
 	expect(logError).toHaveBeenCalledWith(error);
 });
 
-test("InspectorProxy: closes server after bind failure", async ({
+test("InspectorProxy: closes server and preserves bind failure", async ({
 	expect,
 	onTestFinished,
 }) => {
@@ -69,10 +69,43 @@ test("InspectorProxy: closes server after bind failure", async ({
 		new Set()
 	);
 
-	await expect(controller.getInspectorURL()).rejects.toMatchObject({
-		code: "EADDRNOTAVAIL",
+	await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+	const bindError = await controller.ready.catch((error: unknown) => error);
+	expect(bindError).toMatchObject({
+		address: "192.0.2.1",
+		syscall: "listen",
 	});
+	await expect(controller.getInspectorURL()).rejects.toBe(bindError);
+	await expect(controller.dispose()).rejects.toBe(bindError);
 	expect(close).toHaveBeenCalledOnce();
+});
+
+test("InspectorProxy: propagates bind failure through Miniflare", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		inspectorPort: 0,
+		inspectorHost: "192.0.2.1",
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+				},
+				legacy: { serviceWorkerScript: nullScript },
+				dev: { unsafeInspectorProxy: true },
+			},
+		],
+	});
+
+	const bindError = await mf.ready.catch((error: unknown) => error);
+	expect(bindError).toMatchObject({
+		address: "192.0.2.1",
+		syscall: "listen",
+	});
+	await expect(mf.getInspectorURL()).rejects.toBe(bindError);
+	await expect(mf.dispose()).rejects.toBe(bindError);
 });
 
 test("InspectorProxy: /json/version should provide details about the inspector version", async ({
