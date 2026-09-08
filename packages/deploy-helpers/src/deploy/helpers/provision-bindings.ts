@@ -1366,16 +1366,33 @@ export async function provisionBindings(
 			}
 
 			// See above for why we skip writing back some bindings to the config file.
-			const originalBinding = originalBindings
-				.get(binding.type)
-				?.get(bindingName);
-			if (isUsingRedirectedConfig && !originalBinding) {
+			const originalBindingsByName = originalBindings.get(binding.type);
+			const originalBinding = originalBindingsByName?.get(bindingName);
+			if (isUsingRedirectedConfig) {
+				if (originalBinding) {
+					originalBindingsByName?.set(
+						bindingName,
+						addProvisionedIdentifier(originalBinding, binding)
+					);
+				}
 				continue;
 			}
-			const bindingToWrite = originalBinding
-				? addProvisionedIdentifier(originalBinding, binding)
-				: toConfigBinding(bindingName, binding);
-			addBindingToPatch(patchEnvironment, binding.type, bindingToWrite);
+
+			addBindingToPatch(
+				patchEnvironment,
+				binding.type,
+				toConfigBinding(bindingName, binding)
+			);
+		}
+
+		if (isUsingRedirectedConfig) {
+			// Updating existing Map entries above retains their insertion order, so
+			// positional array patches follow the original user config's order.
+			for (const [resourceType, bindingsByName] of originalBindings) {
+				for (const binding of bindingsByName.values()) {
+					addBindingToPatch(patchEnvironment, resourceType, binding);
+				}
+			}
 		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
