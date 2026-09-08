@@ -1,3 +1,4 @@
+import { HTTPException } from "hono/http-exception";
 import { validator } from "hono/validator";
 import { z } from "zod";
 import type { AppBindings } from "./explorer.worker";
@@ -64,9 +65,9 @@ export function validateRequestBody<T extends z.ZodType>(
 			return await middleware(c, next);
 		} catch (error) {
 			if (
-				error instanceof SyntaxError ||
-				(error instanceof Error &&
-					error.message === "Malformed JSON in request body")
+				error instanceof HTTPException &&
+				error.status === 400 &&
+				error.message === "Malformed JSON in request body"
 			) {
 				return errorResponse(400, 10001, "Invalid JSON request body");
 			}
