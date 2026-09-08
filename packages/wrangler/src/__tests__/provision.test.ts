@@ -1323,7 +1323,10 @@ describe("resource provisioning", () => {
 
 			await runWrangler("deploy --x-auto-create=false");
 
-			expect(readWranglerConfig()).toMatchObject({
+			expect(readWranglerConfig()).toEqual({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "index.js",
 				d1_databases: [
 					{
 						binding: "DEFAULT_D1",
