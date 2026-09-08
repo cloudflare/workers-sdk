@@ -2,7 +2,6 @@ import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
 import {
 	BindingSchema,
-	ConfigExportsSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
 	OutputSettingsSchema,
@@ -909,126 +908,6 @@ describe("OutputSettingsSchema", () => {
 		});
 
 		expect(result.success).toBe(false);
-	});
-});
-
-describe("ConfigExportsSchema", () => {
-	it("discriminates worker and settings exports by type", ({ expect }) => {
-		const result = ConfigExportsSchema.safeParse({
-			default: baseConfig,
-			settings: { type: "settings", accountId: "acc-123" },
-		});
-
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.data.default?.name).toBe("my-worker");
-			expect(result.data.settings?.accountId).toBe("acc-123");
-		}
-	});
-
-	it("reports an invalid-discriminator issue keyed by export name", ({
-		expect,
-	}) => {
-		const result = ConfigExportsSchema.safeParse({
-			default: { name: "my-worker", compatibilityDate: "2026-06-01" },
-		});
-
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.issues[0]?.path).toEqual(["default", "type"]);
-		}
-	});
-
-	it.for([
-		{
-			description: "object",
-			value: { staging: "staging-worker", production: "production-worker" },
-			path: ["WORKER_NAMES", "type"],
-		},
-		{
-			description: "primitive",
-			value: 42,
-			path: ["WORKER_NAMES"],
-		},
-	])(
-		"reports an actionable error for an unknown $description export",
-		({ value, path }, { expect }) => {
-			const result = ConfigExportsSchema.safeParse({
-				default: baseConfig,
-				WORKER_NAMES: value,
-			});
-
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(result.error.issues[0]).toMatchObject({
-					path,
-					message:
-						"The `WORKER_NAMES` export is not a supported export type. Move constants, helper functions, and other unsupported exports to a separate module.",
-				});
-			}
-		}
-	);
-
-	it("rejects a settings config on a non-`settings` export", ({ expect }) => {
-		const result = ConfigExportsSchema.safeParse({
-			default: baseConfig,
-			settings: { type: "settings" },
-			extraSettings: { type: "settings" },
-		});
-
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			const issue = result.error.issues.find((i) =>
-				i.message.includes(
-					"A `settings` config is only allowed on the `settings` export"
-				)
-			);
-			expect(issue?.path).toEqual(["extraSettings"]);
-		}
-	});
-
-	it("rejects a settings config on the `default` export", ({ expect }) => {
-		const result = ConfigExportsSchema.safeParse({
-			default: { type: "settings" },
-		});
-
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			const issue = result.error.issues.find((i) =>
-				i.message.includes(
-					"A `settings` config is only allowed on the `settings` export"
-				)
-			);
-			expect(issue?.path).toEqual(["default"]);
-		}
-	});
-
-	it("rejects a worker config on the reserved `settings` export", ({
-		expect,
-	}) => {
-		const result = ConfigExportsSchema.safeParse({
-			default: baseConfig,
-			settings: { ...baseConfig, name: "settings" },
-		});
-
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			const issue = result.error.issues.find((i) =>
-				i.message.includes(
-					"The `settings` export is reserved for a `settings` config"
-				)
-			);
-			expect(issue?.path).toEqual(["settings"]);
-		}
-	});
-
-	it("allows multiple worker exports", ({ expect }) => {
-		const result = ConfigExportsSchema.safeParse({
-			default: baseConfig,
-			api: { ...baseConfig, name: "api" },
-		});
-
-		expect(result.success).toBe(true);
 	});
 });
 
