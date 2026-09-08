@@ -17,6 +17,7 @@ import yargs from "yargs";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
+import { parseRules } from "../deployment-bundle/rules";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
@@ -38,6 +39,7 @@ import type {
 	Entry,
 	RawConfig,
 	RawEnvironment,
+	Rule,
 } from "@cloudflare/workers-utils";
 
 export interface GenerateTypesOptions {
@@ -766,6 +768,47 @@ export function constructTSModuleGlob(glob: string) {
 }
 
 /**
+ * Generate TypeScript module declarations for bundling rules.
+ *
+ * @param rules - Bundling rules to convert to declarations
+ * @param deduplicateGlobs - Whether to keep only the first declaration for each normalized glob
+ */
+function generateModuleTypeDeclarations(
+	rules: Rule[] = [],
+	deduplicateGlobs = false
+): string[] {
+	const moduleTypeMap: Partial<Record<Rule["type"], string>> = {
+		CompiledWasm: "WebAssembly.Module",
+		Data: "ArrayBuffer",
+		Text: "string",
+	};
+	const declaredGlobs = new Set<string>();
+	const declarations = new Array<string>();
+
+	for (const rule of rules) {
+		const typeScriptType = moduleTypeMap[rule.type];
+		if (typeScriptType === undefined) {
+			continue;
+		}
+
+		for (const glob of rule.globs) {
+			const moduleGlob = constructTSModuleGlob(glob);
+			if (deduplicateGlobs && declaredGlobs.has(moduleGlob)) {
+				continue;
+			}
+
+			declaredGlobs.add(moduleGlob);
+			declarations.push(`declare module "${moduleGlob}" {
+	const value: ${typeScriptType};
+	export default value;
+}`);
+		}
+	}
+
+	return declarations;
+}
+
+/**
  * Generate a import specifier from one module to another
  */
 export function generateImportSpecifier(from: string, to: string) {
@@ -1181,37 +1224,23 @@ async function generateSimpleEnvTypes(
 		}
 	}
 
-	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType === undefined) {
-				continue;
-			}
-
-			for (const glob of ruleObject.globs) {
-				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-\tconst value: ${typeScriptType};
-\texport default value;
-}`);
-			}
-		}
-	}
+	const configuredModulesTypeStructure = generateModuleTypeDeclarations(
+		config.rules
+	);
+	const effectiveModulesTypeStructure = generateModuleTypeDeclarations(
+		parseRules(config.rules, log).rules,
+		true
+	);
 
 	const typesHaveBeenFound =
-		envTypeStructure.length > 0 || modulesTypeStructure.length > 0;
+		envTypeStructure.length > 0 || effectiveModulesTypeStructure.length > 0;
 	if (entrypointFormat === "modules" || typesHaveBeenFound) {
 		const { consoleOutput, fileContent } = generateTypeStrings(
 			entrypointFormat,
 			envInterface,
 			envTypeStructure.map(({ key, type }) => `${key}: ${type};`),
-			modulesTypeStructure,
+			configuredModulesTypeStructure,
+			effectiveModulesTypeStructure,
 			stringKeys,
 			config.compatibility_date,
 			config.compatibility_flags,
@@ -1228,7 +1257,7 @@ async function generateSimpleEnvTypes(
 		);
 
 		const hash = createHash("sha256")
-			.update(consoleOutput)
+			.update(fileContent)
 			.digest("hex")
 			.slice(0, 32);
 
@@ -1643,33 +1672,21 @@ async function generatePerEnvironmentTypes(
 		}
 	}
 
-	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType !== undefined) {
-				for (const glob of ruleObject.globs) {
-					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-	const value: ${typeScriptType};
-	export default value;
-	}`);
-				}
-			}
-		}
-	}
+	const configuredModulesTypeStructure = generateModuleTypeDeclarations(
+		config.rules
+	);
+	const effectiveModulesTypeStructure = generateModuleTypeDeclarations(
+		parseRules(config.rules, log).rules,
+		true
+	);
 
 	const { consoleOutput, fileContent } = generatePerEnvTypeStrings(
 		entrypointFormat,
 		envInterface,
 		perEnvInterfaces,
 		aggregatedEnvBindings,
-		modulesTypeStructure,
+		configuredModulesTypeStructure,
+		effectiveModulesTypeStructure,
 		stringKeys,
 		config.compatibility_date,
 		config.compatibility_flags,
@@ -1686,7 +1703,7 @@ async function generatePerEnvironmentTypes(
 	);
 
 	const hash = createHash("sha256")
-		.update(consoleOutput)
+		.update(fileContent)
 		.digest("hex")
 		.slice(0, 32);
 
@@ -1714,7 +1731,8 @@ function prefixEnvInterface(envInterface: string) {
  * @param envInterface - The name of the generated environment interface
  * @param perEnvInterfaces - Array of per-environment interface strings
  * @param aggregatedEnvBindings - Array of aggregated environment bindings as [key, type, required]
- * @param modulesTypeStructure - Array of module type declaration strings
+ * @param consoleModulesTypeStructure - Array of configured module type declarations for console output
+ * @param fileModulesTypeStructure - Array of effective module type declarations for file output
  * @param stringKeys - Array of variable names that should be typed as strings in process.env
  * @param compatibilityDate - Compatibility date for the worker
  * @param compatibilityFlags - Compatibility flags for the worker
@@ -1732,7 +1750,8 @@ function generatePerEnvTypeStrings(
 		required: boolean;
 		type: string;
 	}>,
-	modulesTypeStructure: string[],
+	consoleModulesTypeStructure: string[],
+	fileModulesTypeStructure: string[],
 	stringKeys: string[],
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
@@ -1780,11 +1799,12 @@ function generatePerEnvTypeStrings(
 		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envBindingLines}\n}`;
 	}
 
-	const modulesContent = modulesTypeStructure.join("\n");
+	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
+	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		consoleOutput: `${baseContent}\n${modulesContent}`,
-		fileContent: `${baseContent}\n${modulesContent}`,
+		consoleOutput: `${baseContent}\n${consoleModulesContent}`,
+		fileContent: `${baseContent}\n${fileModulesContent}`,
 	};
 }
 
@@ -1830,7 +1850,8 @@ const validateTypesFile = (path: string): void => {
  * @param formatType - The worker format type ("modules" or "service-worker")
  * @param envInterface - The name of the generated environment interface
  * @param envTypeStructure - Array of environment binding strings
- * @param modulesTypeStructure - Array of module type declaration strings
+ * @param consoleModulesTypeStructure - Array of configured module type declarations for console output
+ * @param fileModulesTypeStructure - Array of effective module type declarations for file output
  * @param stringKeys - Array of variable names that should be typed as strings in process.env
  * @param compatibilityDate - Compatibility date for the worker
  * @param compatibilityFlags - Compatibility flags for the worker
@@ -1843,7 +1864,8 @@ function generateTypeStrings(
 	formatType: string,
 	envInterface: string,
 	envTypeStructure: string[],
-	modulesTypeStructure: string[],
+	consoleModulesTypeStructure: string[],
+	fileModulesTypeStructure: string[],
 	stringKeys: string[],
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
@@ -1882,11 +1904,12 @@ function generateTypeStrings(
 		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}
 
-	const modulesContent = modulesTypeStructure.join("\n");
+	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
+	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		fileContent: `${baseContent}\n${modulesContent}`,
-		consoleOutput: `${baseContent}\n${modulesContent}`,
+		fileContent: `${baseContent}\n${fileModulesContent}`,
+		consoleOutput: `${baseContent}\n${consoleModulesContent}`,
 	};
 }
 
