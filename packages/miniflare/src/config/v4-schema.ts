@@ -338,10 +338,6 @@ const V4EmailBindingOptionsSchema = z
 		])
 	);
 
-const V4RemoteBindingSchema = z.object({
-	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-});
-
 const V4RemoteBindingWithNameSchema = z.object({
 	binding: z.string(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
@@ -509,7 +505,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 			})
 		)
 		.optional(),
-	websearch: z.record(z.string(), V4RemoteBindingSchema).optional(),
 	browserRendering: z
 		.object({
 			binding: z.string(),
@@ -893,7 +888,6 @@ export type V4WorkerOptionsShape = {
 		string,
 		{ namespace?: string; instance_name?: string } & V4RemoteBinding
 	>;
-	websearch?: Record<string, V4RemoteBinding>;
 	browserRendering?: V4RemoteBindingWithName & { headful?: boolean };
 	dispatchNamespaces?: Record<string, { namespace: string } & V4RemoteBinding>;
 	images?: V4RemoteBindingWithName;

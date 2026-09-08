@@ -661,12 +661,6 @@ function addProductBindings(
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
-	for (const [name, binding] of Object.entries(worker.websearch ?? {})) {
-		env[name] = {
-			type: "web-search",
-			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
-		};
-	}
 	for (const [name, binding] of Object.entries(
 		worker.analyticsEngineDatasets ?? {}
 	)) {

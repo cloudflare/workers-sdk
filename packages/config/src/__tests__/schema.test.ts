@@ -41,7 +41,6 @@ describe("InputWorkerSchema", () => {
 					MY_MEDIA: { type: "media" },
 					MY_STREAM: { type: "stream" },
 					MY_VERSION_METADATA: { type: "version-metadata" },
-					MY_WEB_SEARCH: { type: "web-search" },
 				},
 			});
 
@@ -118,7 +117,6 @@ describe("InputWorkerSchema", () => {
 			["media"],
 			["stream"],
 			["version-metadata"],
-			["web-search"],
 		] as const)("rejects two %s bindings", ([type], { expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
