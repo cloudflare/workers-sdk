@@ -147,7 +147,7 @@ function parseMimeHeaders(source: string): ParsedMimeHeaders {
 				throw new Error("composer MIME has an invalid folded header");
 			}
 			previous[1] += ` ${line.trimStart()}`;
-			continue;
+			previous[1] += `\n${line.slice(1)}`;
 		}
 		const separator = line.indexOf(":");
 		if (separator <= 0) {
