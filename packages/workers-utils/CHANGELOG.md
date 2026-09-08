@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.37.0
+
+### Minor Changes
+
+- [#15470](https://github.com/cloudflare/workers-sdk/pull/15470) [`a849e0d`](https://github.com/cloudflare/workers-sdk/commit/a849e0d6d2253034fc158d5442c5124e77a39bd9) Thanks [@edmundhung](https://github.com/edmundhung)! - Move named tunnel resolution into workers-utils
+
+  Wrangler continues to expose the same behavior while delegating the implementation to the shared utility.
+
 ## 0.36.0
 
 ### Minor Changes
