@@ -45,6 +45,11 @@
 		"miniflare-dist",
 		"wrangler-dist",
 		"templates",
+		"!templates/__tests__",
+		"!templates/**/*.d.ts",
+		"!templates/new-worker*",
+		"!templates/startDevWorker",
+		"!templates/tsconfig*",
 		"kv-asset-handler.js",
 		"config-schema.json"
 	],
