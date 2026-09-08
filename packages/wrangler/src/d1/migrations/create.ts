@@ -10,7 +10,7 @@ import {
 	getNextMigrationNumber,
 	normalizeRelativePath,
 	resolveMigrationsConfig,
-} from "./helpers";
+} from "./wrangler-helpers";
 
 export const d1MigrationsCreateCommand = createCommand({
 	metadata: {

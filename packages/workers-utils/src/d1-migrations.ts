@@ -1,19 +1,45 @@
 import fs from "node:fs";
 import path from "node:path";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
-import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { Minimatch } from "minimatch";
-import { confirm } from "../../dialogs";
-import { logger } from "../../logger";
-import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
-import { executeSql } from "../execute";
-import type { QueryResult } from "../execute";
-import type { Database, Migration } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
+
+export const DEFAULT_MIGRATION_PATH = "./migrations";
+export const DEFAULT_MIGRATION_TABLE = "d1_migrations";
 
 function getDefaultMigrationsPattern(migrationsDir: string) {
 	return normalizeRelativePath(`${migrationsDir}/*.sql`);
 }
+
+export type MigrationsConfigErrorCode =
+	| "MIGRATIONS_PATTERN_REQUIRES_DIR"
+	| "MIGRATIONS_PATTERN_OUTSIDE_DIR";
+
+/** A consumer-neutral migration configuration validation error. */
+export class MigrationsConfigError extends Error {
+	constructor(
+		message: string,
+		readonly code: MigrationsConfigErrorCode,
+		readonly details: {
+			migrationsDir?: string;
+			migrationsPattern: string;
+			suggestedPattern?: string;
+		}
+	) {
+		super(message);
+		this.name = "MigrationsConfigError";
+	}
+}
+
+/** Options for resolving D1 migration configuration. */
+export type ResolveMigrationsConfigOptions = {
+	/** Directory relative migration paths are resolved from. */
+	projectPath: string;
+	/** The configured migrations directory. */
+	migrationsDir?: string;
+	/** The configured migrations glob. */
+	migrationsPattern?: string;
+	/** The configured migration tracking table name. */
+	migrationsTableName?: string;
+};
 
 /**
  * Fully-resolved view of the D1 migrations configuration for one binding.
@@ -27,99 +53,66 @@ function getDefaultMigrationsPattern(migrationsDir: string) {
  *    `migrationsDir` — i.e. {@link stripDirPrefix} can rewrite it relative
  *    to `migrationsDir` without throwing. (When `migrationsDir` is `"."` the
  *    pattern carries no prefix, since normalization strips any leading `./`.)
- *  - `projectPath` is the directory containing the user's Wrangler config —
- *    the base that `migrationsDir` and `migrationsPattern` resolve against.
- *  - `configFile` is the short display name (e.g. `"wrangler.jsonc"`) used
- *    in error messages.
+ *  - `projectPath` is the base that `migrationsDir` and `migrationsPattern`
+ *    resolve against.
  */
 export type MigrationsConfig = {
 	projectPath: string;
-	configFile: string;
 	migrationsDir: string;
 	migrationsPattern: string;
 	migrationsTableName: string;
-	migrationsDirRaw?: string;
 };
 
 /**
- * Resolve the migrations-related config for one D1 binding into a
- * `MigrationsConfig`, throwing a `UserError` if `migrations_pattern` is set
- * without `migrations_dir`, or doesn't start with `${migrations_dir}/`.
+ * Resolve migration-related configuration for one D1 binding.
  *
- * `databaseInfo` may be `null` — `apply --local` and `list --local` pass
- * `null` when the binding can't be found, and fall back to the defaults
- * so the commands surface "no migrations found" instead of crashing.
+ * @param options - The project root and optional migration settings.
+ * @returns Normalized migration configuration.
  */
 export function resolveMigrationsConfig({
-	databaseInfo,
-	configPath,
-}: {
-	databaseInfo: Database | null;
-	configPath: string;
-}): MigrationsConfig {
-	const configFile = configFileName(configPath);
-	const projectPath = path.dirname(configPath);
-
-	const rawDir = databaseInfo?.migrationsDirRaw;
-	const rawPattern = databaseInfo?.migrationsPattern;
-
+	projectPath,
+	migrationsDir: rawDir,
+	migrationsPattern: rawPattern,
+	migrationsTableName = DEFAULT_MIGRATION_TABLE,
+}: ResolveMigrationsConfigOptions): MigrationsConfig {
 	if (rawPattern !== undefined && rawDir === undefined) {
-		throw new UserError(
-			`You have set \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file but have not set \`migrations_dir\` for this D1 binding.\n\n` +
-				`When \`migrations_pattern\` is set, \`migrations_dir\` must also be set, and \`migrations_pattern\` must start with \`\${migrations_dir}/\`. Add a \`migrations_dir\` entry to your ${configFile} file (for example, \`"migrations_dir": "migrations"\`).`,
-			{
-				telemetryMessage:
-					"d1 migrations migrations_pattern set without migrations_dir",
-			}
+		throw new MigrationsConfigError(
+			"migrationsPattern requires migrationsDir to be set.",
+			"MIGRATIONS_PATTERN_REQUIRES_DIR",
+			{ migrationsPattern: rawPattern }
 		);
 	}
 
-	const migrationsDir = normalizeRelativePath(
-		databaseInfo?.migrationsDirRaw ?? DEFAULT_MIGRATION_PATH
-	);
-
+	const migrationsDir = normalizeRelativePath(rawDir ?? DEFAULT_MIGRATION_PATH);
 	let migrationsPattern: string;
 	if (rawPattern === undefined) {
 		migrationsPattern = getDefaultMigrationsPattern(migrationsDir);
 	} else {
 		migrationsPattern = normalizeRelativePath(rawPattern);
 		try {
-			// Called for its throw-on-non-prefix side effect
 			stripDirPrefix(migrationsPattern, migrationsDir);
 		} catch {
 			const suggestedPattern = getDefaultMigrationsPattern(migrationsDir);
-			throw new UserError(
-				`The configured \`migrations_pattern: "${rawPattern}"\` in your ${configFile} file must start with \`${migrationsDir}/\` to match \`"migrations_dir": "${migrationsDir}"\`.\n\n` +
-					`Either change \`migrations_pattern\` so it starts with \`${migrationsDir}/\` (for example, \`"${suggestedPattern}"\`), or change \`migrations_dir\` to match the start of your pattern.`,
+			throw new MigrationsConfigError(
+				`migrationsPattern must start with ${JSON.stringify(`${migrationsDir}/`)}.`,
+				"MIGRATIONS_PATTERN_OUTSIDE_DIR",
 				{
-					telemetryMessage:
-						"d1 migrations migrations_pattern does not start with migrations_dir",
+					migrationsDir,
+					migrationsPattern: rawPattern,
+					suggestedPattern,
 				}
 			);
 		}
 	}
 
-	const migrationsTableName =
-		databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
-
 	return {
 		projectPath,
-		configFile,
 		migrationsDir,
 		migrationsPattern,
 		migrationsTableName,
-		migrationsDirRaw: rawDir,
 	};
 }
 
-/**
- * Normalize a relative path or glob into a canonical form for string-prefix
- * comparisons:
- *
- *  - Backslashes flipped to forward slashes.
- *  - Leading `./` and `//` runs collapsed (via `path.posix.normalize`).
- *  - Trailing `/` stripped (`normalize("foo/")` keeps it; we don't want it).
- */
 /**
  * Rewrite `pattern` relative to `dir` by stripping the `${dir}/` prefix. Both
  * `pattern` and `dir` must already be normalized (see
@@ -140,6 +133,14 @@ function stripDirPrefix(pattern: string, dir: string): string {
 	return pattern.slice(prefix.length);
 }
 
+/**
+ * Normalize a relative path or glob into a canonical form for string-prefix
+ * comparisons:
+ *
+ *  - Backslashes flipped to forward slashes.
+ *  - Leading `./` and `//` runs collapsed (via `path.posix.normalize`).
+ *  - Trailing `/` stripped (`normalize("foo/")` keeps it; we don't want it).
+ */
 export function normalizeRelativePath(p: string): string {
 	const forwardSlashed = p.replace(/\\/g, "/");
 	const normalized = path.posix.normalize(forwardSlashed);
@@ -149,10 +150,12 @@ export function normalizeRelativePath(p: string): string {
 	return normalized;
 }
 
+/** Escape a SQLite identifier using double quotes. */
 export function escapeIdentifier(id: string): string {
 	return `"${id.replace(/"/g, '""')}"`;
 }
 
+/** Build the query that creates the D1 migrations tracking table. */
 export function getCreateMigrationsTableQuery(migrationsTableName: string) {
 	const escapedTableName = escapeIdentifier(migrationsTableName);
 	return `CREATE TABLE IF NOT EXISTS ${escapedTableName}(
@@ -162,6 +165,7 @@ export function getCreateMigrationsTableQuery(migrationsTableName: string) {
 );`;
 }
 
+/** Build the query that lists applied migrations in application order. */
 export function getListAppliedMigrationsQuery(migrationsTableName: string) {
 	const escapedTableName = escapeIdentifier(migrationsTableName);
 	return `SELECT *
@@ -169,82 +173,7 @@ export function getListAppliedMigrationsQuery(migrationsTableName: string) {
 		ORDER BY id`;
 }
 
-export async function getMigrationsPath({
-	projectPath,
-	migrationsDir,
-	migrationsDirRaw,
-	createIfMissing,
-	configPath,
-}: {
-	projectPath: string;
-	migrationsDir: string;
-	migrationsDirRaw: string | undefined;
-	createIfMissing: boolean;
-	configPath: string | undefined;
-}): Promise<string> {
-	const dir = path.resolve(projectPath, migrationsDir);
-	if (fs.existsSync(dir)) {
-		return dir;
-	}
-
-	const warning = `No migrations folder found.${
-		migrationsDirRaw === undefined
-			? ` Set \`migrations_dir\` in your ${configFileName(configPath)} file to choose a different path.`
-			: ""
-	}`;
-
-	if (createIfMissing && (await confirm(`${warning}\nOk to create ${dir}?`))) {
-		fs.mkdirSync(dir, { recursive: true });
-		return dir;
-	} else {
-		logger.warn(warning);
-	}
-
-	throw new UserError(`No migrations present at ${dir}.`, {
-		telemetryMessage: "d1 migrations missing migrations directory",
-	});
-}
-
-export async function getUnappliedMigrations({
-	migrationsConfig,
-	local,
-	remote,
-	config,
-	name,
-	persistTo,
-	preview,
-}: {
-	migrationsConfig: MigrationsConfig;
-	local: boolean | undefined;
-	remote: boolean | undefined;
-	config: Config;
-	name: string;
-	persistTo: string | undefined;
-	preview: boolean | undefined;
-}): Promise<Array<string>> {
-	const appliedMigrations = (
-		await listAppliedMigrations({
-			migrationsTableName: migrationsConfig.migrationsTableName,
-			local,
-			remote,
-			config,
-			name,
-			persistTo,
-			preview,
-		})
-	).map((migration) => {
-		return migration.name;
-	});
-
-	const migrations = getMigrationNames(migrationsConfig, { logHint: true });
-	const unappliedMigrations = getUnappliedMigrationNames(
-		migrations,
-		appliedMigrations
-	);
-
-	return unappliedMigrations;
-}
-
+/** Return migration names that have not already been applied. */
 export function getUnappliedMigrationNames(
 	migrations: string[],
 	appliedMigrations: string[]
@@ -259,45 +188,6 @@ export function getUnappliedMigrationNames(
 
 	return unappliedMigrations;
 }
-
-type ListAppliedMigrationsProps = {
-	migrationsTableName: string;
-	local: boolean | undefined;
-	remote: boolean | undefined;
-	config: Config;
-	name: string;
-	persistTo: string | undefined;
-	preview: boolean | undefined;
-};
-
-const listAppliedMigrations = async ({
-	migrationsTableName,
-	local,
-	remote,
-	config,
-	name,
-	persistTo,
-	preview,
-}: ListAppliedMigrationsProps): Promise<Migration[]> => {
-	const response: QueryResult[] | null = await executeSql({
-		local,
-		remote,
-		config,
-		name,
-		shouldPrompt: !isNonInteractiveOrCI(),
-		persistTo,
-		command: getListAppliedMigrationsQuery(migrationsTableName),
-		file: undefined,
-		json: true,
-		preview,
-	});
-
-	if (!response || response[0].results.length === 0) {
-		return [];
-	}
-
-	return response[0].results as Migration[];
-};
 
 /**
  * Recursively list regular files under `dir` whose `dir`-relative path
@@ -410,15 +300,9 @@ function leadingMigrationNumber(relativePath: string): number {
  * Walk root is `projectPath/migrationsDir`. Each file is matched against
  * `migrationsPattern` interpreted as a glob relative to `projectPath` (i.e.
  * against `${migrationsDir}/${relativePath}`).
- *
- * If no files match but `*\/migration.sql` (drizzle's layout) matches files
- * on disk, logs a hint to stderr suggesting that pattern.
  */
 export function getMigrationNames(
-	migrationsConfig: MigrationsConfig,
-	options: {
-		logHint?: boolean;
-	} = {}
+	migrationsConfig: MigrationsConfig
 ): Array<string> {
 	const walkRoot = path.resolve(
 		migrationsConfig.projectPath,
@@ -438,13 +322,13 @@ export function getMigrationNames(
 		new Minimatch(dirRelativePattern, { dot: false })
 	);
 
-	if (options.logHint && matches.length === 0) {
-		maybeLogHint(migrationsConfig);
-	}
-
 	return matches;
 }
 
+/**
+ * Build a query containing a migration and the tracking-table insert that
+ * records it as applied.
+ */
 export function buildMigrationQuery({
 	migrationsPath,
 	migrationName,
@@ -465,34 +349,27 @@ values ('${migrationName.replace(/'/g, "''")}');`;
 }
 
 /**
- * If the configured `migrations_pattern` found nothing but `*\/migration.sql`
- * (drizzle's layout) matches files under `migrations_dir`, point the user
- * at the right pattern. Runs its own narrow walk — only called in the
- * no-matches branch.
+ * Return a matching Drizzle-style pattern when the configured pattern misses
+ * that layout.
  */
-export function maybeLogHint({
+export function findDrizzleMigrationsPattern({
 	projectPath,
 	migrationsDir,
-	migrationsPattern,
-	configFile,
-}: Pick<
-	MigrationsConfig,
-	"projectPath" | "migrationsDir" | "migrationsPattern" | "configFile"
->) {
+}: Pick<MigrationsConfig, "projectPath" | "migrationsDir">):
+	| string
+	| undefined {
 	const walkRoot = path.resolve(projectPath, migrationsDir);
 	const drizzleFiles = listFilesRelative(
 		walkRoot,
 		new Minimatch("*/migration.sql", { dot: false })
 	);
 	if (drizzleFiles.length === 0) {
-		return;
+		return undefined;
 	}
 	const drizzlePattern = normalizeRelativePath(
 		`${migrationsDir}/*/migration.sql`
 	);
-	logger.warn(
-		`Could not find any migration files matching \`${migrationsPattern}\`. It looks like there are migration files matching \`${drizzlePattern}\` though. If you are using drizzle to manage your migrations, please set \`migrations_pattern\` to \`${drizzlePattern}\` in ${configFile}.`
-	);
+	return drizzlePattern;
 }
 
 /**
@@ -520,34 +397,3 @@ export function getNextMigrationNumber(
 		.filter((n) => Number.isFinite(n));
 	return Math.max(...migrationNumbers, 0) + 1;
 }
-
-export const initMigrationsTable = async ({
-	migrationsTableName,
-	local,
-	remote,
-	config,
-	name,
-	persistTo,
-	preview,
-}: {
-	migrationsTableName: string;
-	local: boolean | undefined;
-	remote: boolean | undefined;
-	config: Config;
-	name: string;
-	persistTo: string | undefined;
-	preview: boolean | undefined;
-}) => {
-	return executeSql({
-		local,
-		remote,
-		config,
-		name,
-		shouldPrompt: !isNonInteractiveOrCI(),
-		persistTo,
-		command: getCreateMigrationsTableQuery(migrationsTableName),
-		file: undefined,
-		json: true,
-		preview,
-	});
-};

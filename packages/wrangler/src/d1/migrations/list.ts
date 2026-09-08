@@ -8,7 +8,7 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 	resolveMigrationsConfig,
-} from "./helpers";
+} from "./wrangler-helpers";
 
 export const d1MigrationsListCommand = createCommand({
 	metadata: {

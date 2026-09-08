@@ -43,6 +43,10 @@
 			"import": "./dist/compatibility-date.mjs",
 			"types": "./dist/compatibility-date.d.mts"
 		},
+		"./d1-migrations": {
+			"import": "./dist/d1-migrations.mjs",
+			"types": "./dist/d1-migrations.d.mts"
+		},
 		"./docker-path": {
 			"import": "./dist/docker-path.mjs",
 			"types": "./dist/docker-path.d.mts"
@@ -83,6 +87,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
+		"@types/minimatch": "^5.1.2",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
 		"ci-info": "catalog:default",
@@ -93,6 +98,7 @@
 		"empathic": "^2.0.0",
 		"jsonc-parser": "catalog:default",
 		"kleur": "^4.1.5",
+		"minimatch": "^5.1.0",
 		"open": "catalog:default",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",

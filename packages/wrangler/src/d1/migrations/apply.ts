@@ -12,7 +12,7 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 	resolveMigrationsConfig,
-} from "./helpers";
+} from "./wrangler-helpers";
 import type { ParseError } from "@cloudflare/workers-utils";
 
 export const d1MigrationsApplyCommand = createCommand({

@@ -4451,6 +4451,9 @@ importers:
       '@types/command-exists':
         specifier: ^1.2.0
         version: 1.2.0
+      '@types/minimatch':
+        specifier: ^5.1.2
+        version: 5.1.2
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
@@ -4481,6 +4484,9 @@ importers:
       kleur:
         specifier: ^4.1.5
         version: 4.1.5
+      minimatch:
+        specifier: ^5.1.0
+        version: 5.1.6
       open:
         specifier: catalog:default
         version: 11.0.0

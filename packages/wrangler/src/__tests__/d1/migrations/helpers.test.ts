@@ -8,9 +8,9 @@ import {
 	getNextMigrationNumber,
 	maybeLogHint,
 	resolveMigrationsConfig,
-} from "../../../d1/migrations/helpers";
+} from "../../../d1/migrations/wrangler-helpers";
 import { mockConsoleMethods } from "../../helpers/mock-console";
-import type { MigrationsConfig } from "../../../d1/migrations/helpers";
+import type { MigrationsConfig } from "../../../d1/migrations/wrangler-helpers";
 import type { Database } from "../../../d1/types";
 
 /**
