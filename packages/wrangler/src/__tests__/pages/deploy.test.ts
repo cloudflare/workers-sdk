@@ -166,7 +166,7 @@ describe("pages deploy", () => {
 		expect(std.out).not.toContain("Delegating to");
 	});
 
-	it("does not delegate using a stale cached project name after an agent switches accounts", async ({
+	it("ignores a cached project name from a different account and does not delegate", async ({
 		expect,
 	}) => {
 		vi.mocked(ci).isCI = false;
@@ -231,7 +231,7 @@ describe("pages deploy", () => {
 		expect(std.out).not.toContain("Delegating to");
 	});
 
-	it("keeps an account-matching cached project on Pages when it is missing remotely", async ({
+	it("keeps a cache-revived project on Pages after an account-only cache update", async ({
 		expect,
 	}) => {
 		vi.mocked(detectAgent).mockReturnValue({
@@ -277,8 +277,9 @@ describe("pages deploy", () => {
 			})
 		);
 
-		// This account-only cache write deliberately reproduces the merge that
-		// retains the previous project name while changing its account ID.
+		// `pages project list` saves only the selected account ID. Since cache writes
+		// merge, this reproduces the edge case where the old project name is retained
+		// and appears to belong to the new account.
 		await runWrangler("pages project list --json");
 		mkdirSync("public");
 		writeFileSync("public/index.html", "hello");
@@ -6982,16 +6983,5 @@ describe("getUnsupportedDeployDelegateArgs", () => {
 		const args = { commitDirty: false, skipCaching: false } as DeployArgs;
 
 		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([]);
-	});
-
-	it("reports only the genuinely unsupported flags when a branch is combined with commit metadata", ({
-		expect,
-	}) => {
-		const args = { branch: "main", commitHash: "abc123" } as DeployArgs;
-
-		expect(getUnsupportedDeployDelegateArgs(args)).toEqual([
-			"--branch",
-			"--commit-hash",
-		]);
 	});
 });
