@@ -254,13 +254,12 @@ export class ProxyWorker implements DurableObject {
 								return;
 							}
 
-							throw new UserWorkerFetchError(error);
+							throw new UserWorkerRequestError(error);
 						}
 					)
 					.catch((error: Error) => {
-						// errors here are from response post-processing, or connection-
-						// level failures rethrown by the rejection handler above (a
-						// non-retriable method, or the retry budget was exhausted)
+						// Errors here include marked request/response I/O failures and
+						// unexpected response post-processing failures.
 
 						// we have crossed an async boundary, so proxyData may have changed
 						// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
@@ -275,13 +274,11 @@ export class ProxyWorker implements DurableObject {
 								this.proxyData?.userWorkerUrl
 							)
 						) {
-							// The fetch itself rejected, so this request never reached a
-							// response: the UserWorker could not be reached, or the request
-							// body could not be read because the client that queued it (during
-							// startup or a reload) has since gone away. Either way it is the
-							// outcome of this one request, not a defect in the ProxyWorker, so
-							// answer it with a 502 instead of failing the whole dev session.
-							if (error instanceof UserWorkerFetchError) {
+							// Forwarding the request or reading the response body failed.
+							// Neither is a ProxyWorker defect, and no response has been sent
+							// to the client yet, so answer with a readable 502 instead of
+							// failing the whole dev session.
+							if (error instanceof UserWorkerRequestError) {
 								void sendMessageToProxyController(this.env, {
 									type: "debug-log",
 									args: [
@@ -393,16 +390,14 @@ function isRequestForLiveReloadWebsocket(req: Request): boolean {
 }
 
 /**
- * Marks a rejection of the `fetch()` to the UserWorker itself, as opposed to an
- * error thrown while post-processing its response. A rejected fetch is a
- * network-level outcome for a single request (UserWorker unreachable, or the
- * client's request body could not be read because the client disconnected)
- * and is never treated as a ProxyWorker failure.
+ * Marks failures forwarding a request or consuming its response body, so they
+ * can be answered with a 502 without making genuine proxy defects recoverable.
+ * Only wrap errors at these I/O boundaries, not the whole response handler.
  */
-class UserWorkerFetchError extends Error {
-	constructor(cause: Error) {
-		super(cause.message, { cause });
-		this.name = "UserWorkerFetchError";
+class UserWorkerRequestError extends Error {
+	constructor(cause: unknown) {
+		super(cause instanceof Error ? cause.message : String(cause), { cause });
+		this.name = "UserWorkerRequestError";
 	}
 }
 
@@ -431,13 +426,10 @@ async function checkForPreviewTokenError(
 	let text: string;
 	try {
 		text = await clone.text();
-	} catch {
-		// this check is a best-effort sniff of the response body. If the body
-		// stream fails while reading it (e.g. the connection to the UserWorker
-		// dropped mid-response), that is the outcome of this one response — the
-		// client sees the broken body — not a ProxyWorker defect, so it must
-		// not escape into the fatal error path. Skip the check.
-		return;
+	} catch (cause) {
+		// Both branches of the cloned body are broken. The response has not
+		// been sent yet, so replace it with a per-request error response.
+		throw new UserWorkerRequestError(cause);
 	}
 	// Naive string match should be good enough when combined with status code check.
 	// "Invalid Workers Preview configuration" is the HTML error returned when the
