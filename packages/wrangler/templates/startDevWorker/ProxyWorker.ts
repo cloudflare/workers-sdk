@@ -428,7 +428,17 @@ async function checkForPreviewTokenError(
 	// At this point HTMLRewriter tries to parse the compressed stream,
 	// so we clone and read the text instead.
 	const clone = response.clone();
-	const text = await clone.text();
+	let text: string;
+	try {
+		text = await clone.text();
+	} catch {
+		// this check is a best-effort sniff of the response body. If the body
+		// stream fails while reading it (e.g. the connection to the UserWorker
+		// dropped mid-response), that is the outcome of this one response — the
+		// client sees the broken body — not a ProxyWorker defect, so it must
+		// not escape into the fatal error path. Skip the check.
+		return;
+	}
 	// Naive string match should be good enough when combined with status code check.
 	// "Invalid Workers Preview configuration" is the HTML error returned when the
 	// preview token has expired. "error code: 1031" is a text/plain error returned
