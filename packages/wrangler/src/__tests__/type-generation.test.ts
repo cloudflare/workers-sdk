@@ -4108,6 +4108,53 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
+	it("unions broader environment matches into scoped module declarations", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [{ type: "Data", globs: ["**/*.asset"] }],
+				env: {
+					staging: {
+						rules: [{ type: "Text", globs: ["text/**/*.asset"] }],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "text/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, ArrayBuffer | string>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
 	it("gives configured rules precedence over overlapping default rules", async ({
 		expect,
 	}) => {

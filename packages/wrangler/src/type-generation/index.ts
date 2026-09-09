@@ -860,10 +860,14 @@ function generateModuleTypeDeclarations(
 
 interface ResolvedModuleTypeDeclarations {
 	scoped: Map<string, Set<string>>;
-	fallbacks: Map<
-		string,
-		{ types: Set<string>; recursiveRuleSeen: boolean; shouldEmit: boolean }
-	>;
+	fallbacks: Map<string, FallbackModuleTypeDeclaration>;
+}
+
+interface FallbackModuleTypeDeclaration {
+	types: Set<string>;
+	recursiveRuleSeen: boolean;
+	recursiveType?: string;
+	shouldEmit: boolean;
 }
 
 /**
@@ -883,10 +887,7 @@ function resolveModuleTypeDeclarations(
 	};
 	const seenRuleGlobs = new Set<string>();
 	const scopedDeclarations = new Map<string, Set<string>>();
-	const fallbackDeclarations = new Map<
-		string,
-		{ types: Set<string>; recursiveRuleSeen: boolean; shouldEmit: boolean }
-	>();
+	const fallbackDeclarations = new Map<string, FallbackModuleTypeDeclaration>();
 
 	for (const rule of rules) {
 		const typeScriptType = moduleTypeMap[rule.type];
@@ -936,6 +937,9 @@ function resolveModuleTypeDeclarations(
 
 			fallbackDeclaration.types.add(typeScriptType);
 			fallbackDeclaration.recursiveRuleSeen = isRecursiveFallback;
+			if (isRecursiveFallback) {
+				fallbackDeclaration.recursiveType = typeScriptType;
+			}
 			fallbackDeclaration.shouldEmit ||= emitsFallback;
 			fallbackDeclarations.set(fallbackModuleGlob, fallbackDeclaration);
 		}
@@ -960,9 +964,9 @@ function generateCombinedModuleTypeDeclarations(ruleSets: Rule[][]): string[] {
 		string,
 		{ types: Set<string>; shouldEmit: boolean }
 	>();
+	const resolvedRuleSets = ruleSets.map(resolveModuleTypeDeclarations);
 
-	for (const rules of ruleSets) {
-		const { scoped, fallbacks } = resolveModuleTypeDeclarations(rules);
+	for (const { scoped, fallbacks } of resolvedRuleSets) {
 		for (const [moduleGlob, types] of scoped) {
 			const combinedTypes =
 				combinedDeclarations.get(moduleGlob) ?? new Set<string>();
@@ -982,6 +986,26 @@ function generateCombinedModuleTypeDeclarations(ruleSets: Rule[][]): string[] {
 			}
 			combinedFallback.shouldEmit ||= shouldEmit;
 			combinedFallbacks.set(moduleGlob, combinedFallback);
+		}
+	}
+
+	for (const [moduleGlob, combinedTypes] of combinedDeclarations) {
+		const fallbackModuleGlob = getFallbackModuleGlob(moduleGlob);
+		if (fallbackModuleGlob === undefined) {
+			continue;
+		}
+
+		for (const { scoped, fallbacks } of resolvedRuleSets) {
+			// An environment-specific scoped rule takes precedence over its own
+			// recursive rule, but another environment's recursive rule still matches.
+			if (scoped.has(moduleGlob)) {
+				continue;
+			}
+
+			const recursiveType = fallbacks.get(fallbackModuleGlob)?.recursiveType;
+			if (recursiveType !== undefined) {
+				combinedTypes.add(recursiveType);
+			}
 		}
 	}
 
