@@ -76,8 +76,8 @@ export type PagesToWorkersDelegateResult =
 			delegate: false;
 			/**
 			 * True when the caller passed `--force` to opt this command out of
-			 * delegation. The caller uses it to emit the one-time `--force` notice
-			 * on the command's success path.
+			 * an otherwise eligible delegation. The caller uses it to emit the
+			 * one-time `--force` notice on the command's success path.
 			 */
 			forcedOptOut?: boolean;
 	  }
@@ -89,7 +89,20 @@ export type PagesToWorkersDelegateResult =
 	  };
 
 /** The outcome recorded against the `delegate pages to workers` metrics event. */
-type DelegateResult = "delegated" | "success" | "failure" | "forced";
+type DelegateResult =
+	| "delegated"
+	| "success"
+	| "failure"
+	| "eligible_forced"
+	| "ineligible";
+
+/** Stable reason recorded when an agent-driven Pages command cannot be delegated. */
+type DelegateIneligibleReason =
+	| "unsupported_args"
+	| "unsupported_feature"
+	| "project_existence_unknown"
+	| "project_existence_lookup_failed"
+	| "project_exists";
 
 /**
  * Status line emitted at the top of the deploy flow, before the Workers deploy
@@ -185,19 +198,13 @@ export async function maybeDelegatePagesToWorkers(
 		return { delegate: false };
 	}
 
-	// The agent explicitly opted out with `--force`. The only callers who should
-	// reach for `--force` are agents we previously delegated, so this is a
-	// strong signal of dissatisfaction with the delegation — record it. We flag
-	// `forcedOptOut` so the caller emits the one-time `--force` notice once the
-	// direct Pages command succeeds (see `logPagesToWorkersForceOptOutNotice`).
-	if (options.force) {
-		recordDelegate("forced", options, agent.id);
-		logger.debug("Pages-to-Workers delegation skipped: --force opt-out");
-		return { delegate: false, forcedOptOut: true };
-	}
-
 	if (options.unsupportedArgs && options.unsupportedArgs.length > 0) {
-		skipDelegate(`unsupported args: ${options.unsupportedArgs.join(", ")}`);
+		recordIneligible(
+			"unsupported_args",
+			`unsupported args: ${options.unsupportedArgs.join(", ")}`,
+			options,
+			agent.id
+		);
 		return { delegate: false };
 	}
 
@@ -208,7 +215,12 @@ export async function maybeDelegatePagesToWorkers(
 		options.assetsDirectory
 	);
 	if (unsupportedFeature) {
-		skipDelegate(unsupportedFeature);
+		recordIneligible(
+			"unsupported_feature",
+			unsupportedFeature,
+			options,
+			agent.id
+		);
 		return { delegate: false };
 	}
 
@@ -221,7 +233,12 @@ export async function maybeDelegatePagesToWorkers(
 	// cheaper, local skip reason above avoids it. If the lookup fails we skip
 	// delegation rather than risk delegating a project that may already exist.
 	if (options.projectExists === undefined) {
-		skipDelegate("target project existence is unknown");
+		recordIneligible(
+			"project_existence_unknown",
+			"target project existence is unknown",
+			options,
+			agent.id
+		);
 		return { delegate: false };
 	}
 
@@ -237,12 +254,35 @@ export async function maybeDelegatePagesToWorkers(
 				e instanceof Error ? e.message : String(e)
 			})`
 		);
-		skipDelegate("target project existence lookup failed");
+		recordIneligible(
+			"project_existence_lookup_failed",
+			"target project existence lookup failed",
+			options,
+			agent.id
+		);
 		return { delegate: false };
 	}
 	if (projectExists) {
-		skipDelegate("target is an established pages project");
+		recordIneligible(
+			"project_exists",
+			"target is an established pages project",
+			options,
+			agent.id
+		);
 		return { delegate: false };
+	}
+
+	// Only treat `--force` as an opt-out after confirming that the command would
+	// otherwise be delegated. The former `forced` result was emitted before the
+	// eligibility checks and therefore also counted established or unsupported
+	// Pages projects. Use a new result value so historical polluted data cannot be
+	// mistaken for this narrower signal.
+	if (options.force) {
+		recordDelegate("eligible_forced", options, agent.id);
+		logger.debug(
+			"Pages-to-Workers delegation skipped: eligible --force opt-out"
+		);
+		return { delegate: false, forcedOptOut: true };
 	}
 
 	// Eligible: commit to the Workers deploy. From here the caller owns the
@@ -315,16 +355,29 @@ function buildWorkersDeployArgs(
 }
 
 /**
- * Logs (at debug level, for local visibility) why a delegation was skipped.
+ * Records and logs why an agent-driven Pages command was ineligible for
+ * delegation.
  *
- * Skips are deliberately not sent to telemetry: they are deterministic, expected
- * non-cases (not an agent's brand-new static project — e.g. the target project
- * already exists, or the project uses an unsupported Pages feature), so the
- * volume carries no signal. The number of skipped commands is derivable from the
- * Pages command's own telemetry, so a dedicated event is not needed.
+ * `forceUsed` preserves visibility into agents that pass `--force` habitually,
+ * without conflating those ineligible commands with genuine opt-outs from an
+ * otherwise eligible delegation.
+ *
+ * @param reason - Stable analytics reason for the ineligibility.
+ * @param debugReason - More specific, locally logged explanation.
+ * @param options - The Pages command inputs considered for delegation.
+ * @param agentId - The detected agent identifier used for analytics.
  */
-function skipDelegate(reason: string): void {
-	logger.debug(`Pages-to-Workers delegation skipped: ${reason}`);
+function recordIneligible(
+	reason: DelegateIneligibleReason,
+	debugReason: string,
+	options: MaybeDelegatePagesToWorkersOptions,
+	agentId: string | null
+): void {
+	recordDelegate("ineligible", options, agentId, {
+		reason,
+		forceUsed: options.force === true,
+	});
+	logger.debug(`Pages-to-Workers delegation skipped: ${debugReason}`);
 }
 
 /** Sends a `delegate pages to workers` metrics event for the given outcome. */
@@ -332,7 +385,7 @@ function recordDelegate(
 	result: DelegateResult,
 	options: MaybeDelegatePagesToWorkersOptions,
 	agentId: string | null,
-	extra: Record<string, string> = {}
+	extra: Record<string, string | boolean> = {}
 ): void {
 	sendMetricsEvent(
 		"delegate pages to workers",
@@ -348,12 +401,12 @@ function recordDelegate(
 
 /**
  * A Pages feature that cannot be carried across to a Workers static-assets
- * deploy. The `reason` doubles as the telemetry/log label.
+ * deploy. The `reason` is used for local debug logging.
  */
 interface UnsupportedPagesFeature {
 	/** File or directory name to look for. */
 	marker: string;
-	/** Stable label used for logging and telemetry. */
+	/** Stable label used for local debug logging. */
 	reason: string;
 	/** When true, the marker only counts if it is a directory. */
 	directoryOnly?: boolean;
