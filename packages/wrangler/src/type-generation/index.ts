@@ -826,10 +826,12 @@ function getFallbackModuleGlob(glob: string): string | undefined {
  *
  * @param rules - Bundling rules to convert to declarations
  * @param resolveOverlappingGlobs - Whether to resolve overlapping declarations using deployment precedence
+ * @param findAdditionalModules - Whether filesystem discovery uses globstar matching
  */
 function generateModuleTypeDeclarations(
 	rules: Rule[] = [],
-	resolveOverlappingGlobs = false
+	resolveOverlappingGlobs = false,
+	findAdditionalModules = false
 ): string[] {
 	const moduleTypeMap: Partial<Record<Rule["type"], string>> = {
 		CompiledWasm: "WebAssembly.Module",
@@ -856,13 +858,21 @@ function generateModuleTypeDeclarations(
 		return declarations;
 	}
 
-	return generateCombinedModuleTypeDeclarations([rules]);
+	return generateCombinedModuleTypeDeclarations([
+		{ findAdditionalModules, rules },
+	]);
 }
 
 interface ResolvedModuleTypeDeclarations {
+	findAdditionalModules: boolean;
 	scoped: Map<string, Set<string>>;
 	fallbacks: Map<string, FallbackModuleTypeDeclaration>;
 	matchingRules: ModuleTypeMatchingRule[];
+}
+
+interface ModuleTypeRuleSet {
+	findAdditionalModules: boolean;
+	rules: Rule[];
 }
 
 interface FallbackModuleTypeDeclaration {
@@ -882,12 +892,13 @@ interface ModuleTypeMatchingRule {
  * Resolve declarations for one deployment configuration while preserving
  * Wrangler's module-rule precedence.
  *
- * @param rules - Effective bundling rules for one deployment configuration
+ * @param ruleSet - Effective rules and discovery behavior for one deployment configuration
  * @returns Module patterns and their possible TypeScript types
  */
 function resolveModuleTypeDeclarations(
-	rules: Rule[]
+	ruleSet: ModuleTypeRuleSet
 ): ResolvedModuleTypeDeclarations {
+	const { findAdditionalModules, rules } = ruleSet;
 	const moduleTypeMap: Partial<Record<Rule["type"], string>> = {
 		CompiledWasm: "WebAssembly.Module",
 		Data: "ArrayBuffer",
@@ -958,6 +969,7 @@ function resolveModuleTypeDeclarations(
 	}
 
 	return {
+		findAdditionalModules,
 		scoped: scopedDeclarations,
 		fallbacks: fallbackDeclarations,
 		matchingRules,
@@ -1069,24 +1081,28 @@ function moduleGlobContains(container: string, contained: string): boolean {
  *
  * @param moduleGlob - Emitted ambient module pattern
  * @param matchingRules - Original and normalized module rules in deployment order
+ * @param findAdditionalModules - Whether deployment discovers files with globstar matching
  * @returns Types selected for at least part of the emitted pattern
  */
 function resolveMatchingModuleTypes(
 	moduleGlob: string,
-	matchingRules: ModuleTypeMatchingRule[]
+	matchingRules: ModuleTypeMatchingRule[],
+	findAdditionalModules: boolean
 ): Set<string> {
 	const types = new Set<string>();
 	const coveredPatterns = new Array<string>();
 	const exactModuleName = moduleGlob.includes("*") ? undefined : moduleGlob;
 
 	for (const rule of matchingRules) {
-		// Declarations describe imported module names, so match the default
-		// `glob-to-regexp` semantics used by `module-collection` for direct imports.
-		// `find_additional_modules` enables globstar only while discovering files.
+		// Discovered files are classified with globstar semantics before imports are
+		// resolved. Otherwise, use the default direct-import matcher.
+		const deploymentRegExp = findAdditionalModules
+			? globToRegExp(rule.deploymentGlob, { globstar: true })
+			: globToRegExp(rule.deploymentGlob);
 		const conservativeFallbackMatchesExact =
 			exactModuleName !== undefined &&
 			rule.isConservativeFallback &&
-			globToRegExp(rule.deploymentGlob).test(exactModuleName);
+			deploymentRegExp.test(exactModuleName);
 		if (
 			exactModuleName !== undefined &&
 			rule.isConservativeFallback &&
@@ -1122,10 +1138,12 @@ function resolveMatchingModuleTypes(
  * Combine independently resolved module declarations from every deployment
  * configuration represented by per-environment type generation.
  *
- * @param ruleSets - Effective bundling rules grouped by deployment configuration
+ * @param ruleSets - Effective bundling rules and discovery behavior grouped by deployment configuration
  * @returns Module declarations containing unions where environments differ
  */
-function generateCombinedModuleTypeDeclarations(ruleSets: Rule[][]): string[] {
+function generateCombinedModuleTypeDeclarations(
+	ruleSets: ModuleTypeRuleSet[]
+): string[] {
 	const combinedDeclarations = new Map<string, Set<string>>();
 	const combinedFallbacks = new Map<
 		string,
@@ -1166,10 +1184,11 @@ function generateCombinedModuleTypeDeclarations(ruleSets: Rule[][]): string[] {
 	}
 
 	for (const [moduleGlob, combinedTypes] of combinedDeclarations) {
-		for (const { matchingRules } of resolvedRuleSets) {
+		for (const { findAdditionalModules, matchingRules } of resolvedRuleSets) {
 			for (const type of resolveMatchingModuleTypes(
 				moduleGlob,
-				matchingRules
+				matchingRules,
+				findAdditionalModules
 			)) {
 				combinedTypes.add(type);
 			}
@@ -1631,7 +1650,8 @@ async function generateSimpleEnvTypes(
 	);
 	const effectiveModulesTypeStructure = generateModuleTypeDeclarations(
 		parseRules(config.rules, log).rules,
-		true
+		true,
+		config.find_additional_modules === true
 	);
 
 	const typesHaveBeenFound =
@@ -2074,23 +2094,35 @@ async function generatePerEnvironmentTypes(
 		}
 	}
 
-	const environmentRuleSets = [
-		config.rules,
-		...envNames.map(
-			(envName) =>
-				readConfig({ ...collectionArgs, env: envName }, { hideWarnings: true })
-					.rules
-		),
+	const environmentRuleSets: ModuleTypeRuleSet[] = [
+		{
+			findAdditionalModules: config.find_additional_modules === true,
+			rules: config.rules,
+		},
+		...envNames.map((envName) => {
+			const environmentConfig = readConfig(
+				{ ...collectionArgs, env: envName },
+				{ hideWarnings: true }
+			);
+			return {
+				findAdditionalModules:
+					environmentConfig.find_additional_modules === true,
+				rules: environmentConfig.rules,
+			};
+		}),
 	];
 	const uniqueRuleSets = [
 		...new Map(
-			environmentRuleSets.map((rules) => [JSON.stringify(rules), rules])
+			environmentRuleSets.map((ruleSet) => [JSON.stringify(ruleSet), ruleSet])
 		).values(),
 	];
 	const configuredModulesTypeStructure =
 		generateCombinedModuleTypeDeclarations(uniqueRuleSets);
 	const effectiveModulesTypeStructure = generateCombinedModuleTypeDeclarations(
-		uniqueRuleSets.map((rules) => parseRules(rules, log).rules)
+		uniqueRuleSets.map(({ findAdditionalModules, rules }) => ({
+			findAdditionalModules,
+			rules: parseRules(rules, log).rules,
+		}))
 	);
 
 	const { consoleOutput, fileContent } = generatePerEnvTypeStrings(
