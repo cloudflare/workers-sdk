@@ -1,10 +1,5 @@
 import { setTimeout } from "node:timers/promises";
 import {
-	HeadBucketCommand,
-	ListObjectsV2Command,
-	S3Client,
-} from "@aws-sdk/client-s3";
-import {
 	APIError,
 	FatalError,
 	getCloudflareApiEnvironmentFromEnv,
@@ -12,6 +7,7 @@ import {
 import { createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import { generateR2ServiceToken, getR2Bucket } from "./client";
+import { R2Client } from "./r2-client";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export const BYTES_PER_MB = 1000 * 1000;
@@ -21,20 +17,20 @@ let __testSkipDelaysFlag = false;
 let __testSkipCredentialValidationFlag = false;
 
 /**
- * Verify the credentials used by the S3Client can access a R2 bucket by performing the
+ * Verify the credentials used by the R2 client can access a R2 bucket by performing the
  * HeadBucket operation. It will retry up to 10 times over 10s to handle newly
  * created credentials that might not be active yet (can take a few seconds to propagate).
  *
  * @param r2
  * @param bucketName
  */
-async function verifyBucketAccess(r2: S3Client, bucketName: string) {
+async function verifyBucketAccess(r2: R2Client, bucketName: string) {
 	const MAX_ATTEMPTS = 10;
 	const DELAY_MS = 1000;
 
 	const checkCredentials = async () => {
 		logger.debug(`Checking if credentials are active`);
-		await r2.send(new HeadBucketCommand({ Bucket: bucketName }));
+		await r2.headBucket(bucketName);
 	};
 
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -68,16 +64,9 @@ export async function verifyR2Credentials(
 	}
 
 	const endpoint = getAccountR2Endpoint(accountId);
-	const r2 = new S3Client({
-		region: "auto",
-		credentials: {
-			accessKeyId,
-			secretAccessKey,
-		},
-		endpoint,
-	});
+	const r2 = new R2Client(endpoint, accessKeyId, secretAccessKey);
 
-	await r2.send(new ListObjectsV2Command({ Bucket: bucketName, MaxKeys: 1 }));
+	await r2.listObjectsV2(bucketName, 1);
 }
 
 export async function authorizeR2Bucket(
@@ -119,14 +108,11 @@ export async function authorizeR2Bucket(
 
 	const endpoint = getAccountR2Endpoint(accountId);
 	logger.debug(`Using R2 Endpoint ${endpoint}`);
-	const r2 = new S3Client({
-		region: "auto",
-		credentials: {
-			accessKeyId: serviceToken.accessKeyId,
-			secretAccessKey: serviceToken.secretAccessKey,
-		},
+	const r2 = new R2Client(
 		endpoint,
-	});
+		serviceToken.accessKeyId,
+		serviceToken.secretAccessKey
+	);
 
 	// Wait for token to settle/propagate, retry up to 10 times, with 2s waits in-between errors
 	if (!quiet) {
