@@ -32,6 +32,7 @@ import {
 	mockGetScriptWithTags,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
+	mockServiceScriptData,
 } from "./helpers";
 
 vi.mock("command-exists");
@@ -144,6 +145,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("--keep-vars", () => {
+		beforeEach(() => mockGetSettings({ result: { bindings: [] } }));
 		it("should send keepVars when keep-vars is passed in", async ({
 			expect,
 		}) => {
@@ -243,6 +245,10 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.js",
 				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "test-dispatch-namespace",
 			});
 
 			await runWrangler(
@@ -1119,6 +1125,10 @@ describe("deploy", () => {
 					"workers/tag": "v2.0.0",
 				},
 				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "test-dispatch-namespace",
 			});
 
 			await runWrangler(

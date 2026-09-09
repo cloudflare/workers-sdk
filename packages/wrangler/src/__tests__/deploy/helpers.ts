@@ -364,12 +364,13 @@ export function mockServiceScriptData(options: {
 							messages: [],
 							result: null,
 						});
-					},
-					{ once: true }
+					}
 				)
 			);
 			return;
 		}
+		// Dispatch script data may be fetched by both pre-upload checks and the
+		// Durable Object migrations flow during one deploy.
 		msw.use(
 			http.get(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
@@ -383,8 +384,7 @@ export function mockServiceScriptData(options: {
 						messages: [],
 						result: { script },
 					});
-				},
-				{ once: true }
+				}
 			)
 		);
 	} else {

@@ -6,6 +6,8 @@ import {
 	APIError,
 	formatTime,
 	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
 	ParseError,
 	printBindings,
 	retryOnAPIFailure,
@@ -22,6 +24,11 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
+import {
+	addContainerImagesBinding,
+	clearRemovedContainerImagesBindings,
+} from "./helpers/container-image-bindings";
+import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
 	applyServiceAndEnvironmentTags,
@@ -55,7 +62,14 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
+export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle"> &
+	Partial<
+		Pick<
+			DeployCallbacks,
+			| "prepareDurableObjectContainerApplications"
+			| "deployDurableObjectContainerApplications"
+		>
+	>;
 
 type VersionsUploadResult = {
 	versionId: string | null;
@@ -117,7 +131,10 @@ async function uploadWorkerVersion(
 	const { name } = validateWorkerProps(props, config);
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
-	const { workerTag, tags, aborted } = await preUploadApiChecks(props, config);
+	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
+		props,
+		config
+	);
 	if (aborted) {
 		return { versionId: null, workerTag };
 	}
@@ -172,6 +189,12 @@ async function uploadWorkerVersion(
 		);
 	}
 
+	const preparedContainerImages =
+		await callbacks.prepareDurableObjectContainerApplications?.(config, {
+			dryRun: Boolean(props.dryRun),
+			scriptName,
+		});
+
 	// Upload assets if assets is being used
 	const assetsUploadResult =
 		assetsOptions && !props.dryRun
@@ -194,6 +217,10 @@ async function uploadWorkerVersion(
 	}
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
+	if (keepVars && !props.dryRun && workerExists) {
+		await clearRemovedContainerImagesBindings(config, bindings, workerUrl);
+	}
+	addContainerImagesBinding(config, bindings, preparedContainerImages ?? {});
 
 	const placement = parseConfigPlacement(config);
 
@@ -210,7 +237,7 @@ async function uploadWorkerVersion(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: getContainerMetadata(config, preparedContainerImages),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -434,6 +461,20 @@ async function uploadWorkerVersion(
 		return { versionId, workerTag, bundleSize };
 	}
 	assert(accountId);
+	// Declarative exports are reconciled only when this version is deployed, so
+	// only migration-managed namespaces can be resolved during version upload.
+	if (
+		!hasDurableObjectExports(config.exports) &&
+		getDurableObjectContainerApps(config.containers).length > 0 &&
+		callbacks.deployDurableObjectContainerApplications
+	) {
+		assert(versionId);
+		await callbacks.deployDurableObjectContainerApplications(config, {
+			versionId,
+			accountId,
+			scriptName,
+		});
+	}
 
 	const uploadMs = Date.now() - start;
 

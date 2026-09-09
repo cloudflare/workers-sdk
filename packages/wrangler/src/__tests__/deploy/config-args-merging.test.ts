@@ -1187,7 +1187,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	describe("keep_vars behavior", () => {
 		describe("deploy", () => {
-			beforeEach(setupDeployMocks);
+			beforeEach(() => {
+				setupDeployMocks();
+				mockGetSettings({ result: { bindings: [] } });
+			});
 
 			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
 				writeWranglerConfig();
@@ -1227,6 +1230,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		});
 
 		describe("versions upload", () => {
+			beforeEach(() => mockGetSettings({ result: { bindings: [] } }));
 			it("without --keep-vars, keepVars is not set", async ({ expect }) => {
 				writeWranglerConfig({ main: "./index.js" });
 				writeWorkerSource();

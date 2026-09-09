@@ -66,9 +66,14 @@ export function mockUploadWorkerRequest(
 		useOldUploadApi?: boolean;
 		expectedObservability?: CfWorkerInit["observability"];
 		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
-		expectedContainers?: { name?: string; class_name?: string }[];
+		expectedContainers?: {
+			name?: string;
+			class_name?: string;
+			images?: Record<string, string>;
+		}[];
 		expectedAnnotations?: Record<string, string | undefined>;
 		expectedDeploymentMessage?: string;
+		expectedBindingsInherit?: "strict";
 	} = {}
 ) {
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
@@ -87,6 +92,11 @@ export function mockUploadWorkerRequest(
 		expect(params.scriptName).toEqual(expectedScriptName);
 		if (useOldUploadApi) {
 			expect(url.searchParams.get("excludeScript")).toEqual("true");
+		}
+		if (options.expectedBindingsInherit !== undefined) {
+			expect(url.searchParams.get("bindings_inherit")).toEqual(
+				options.expectedBindingsInherit
+			);
 		}
 		if (expectedDispatchNamespace) {
 			expect(params.dispatchNamespace).toEqual(expectedDispatchNamespace);
