@@ -31,7 +31,7 @@ import {
 	isFileNotFoundError,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
-import { handleLoopbackRequest } from "./loopback";
+import { createLoopbackHandler } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
@@ -439,7 +439,9 @@ async function buildProjectWorkerOptions(
 	runnerWorker.serviceBindings ??= {};
 	runnerWorker.serviceBindings[SELF_SERVICE_BINDING] = kCurrentWorker;
 	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
-		handleLoopbackRequest;
+		createLoopbackHandler(
+			project.serializedConfig.coverage.coverageFilesDirectory
+		);
 
 	// Build wrappers for entrypoints and Durable Objects defined in this worker
 	runnerWorker.durableObjects ??= {};

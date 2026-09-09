@@ -60,14 +60,6 @@ async function createTestProject() {
 		[
 			"packages:",
 			'  - "."',
-			// TEMPORARY: Remove once Vitest 5 has passed the release-age cooldown.
-			"minimumReleaseAgeExclude:",
-			'  - "@cloudflare/*"',
-			'  - "miniflare"',
-			'  - "wrangler"',
-			'  - "workerd"',
-			'  - "vitest"',
-			'  - "@vitest/*"',
 			"allowBuilds:",
 			"  esbuild: true",
 			"  workerd: true",

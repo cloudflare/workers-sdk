@@ -55,17 +55,16 @@ async function handleSnapshotRequest(
 // Based on https://github.com/vitest-dev/vitest/blob/v5.0.0/packages/coverage-istanbul/src/commands.ts
 async function handleCoverageRequest(
 	request: Request,
-	url: URL
+	coverageFilesDirectory: string
 ): Promise<Response> {
 	if (request.method !== "POST") {
 		return new Response(null, { status: 405 });
 	}
-	const directory = url.searchParams.get("directory");
-	if (directory === null) {
-		return new Response(null, { status: 400 });
-	}
 
-	const filePath = path.join(directory, `coverage-${randomUUID()}.json`);
+	const filePath = path.join(
+		coverageFilesDirectory,
+		`coverage-${randomUUID()}.json`
+	);
 	await fs.writeFile(filePath, new Uint8Array(await request.arrayBuffer()));
 	return new Response(filePath);
 }
@@ -89,19 +88,22 @@ export async function listDurableObjectIds(
 	return Response.json(ids);
 }
 
-export function handleLoopbackRequest(
-	request: Request,
-	mf: Miniflare
-): Awaitable<Response> {
-	const url = new URL(request.url);
-	if (url.pathname === "/snapshot") {
-		return handleSnapshotRequest(request, url);
-	}
-	if (url.pathname === "/coverage") {
-		return handleCoverageRequest(request, url);
-	}
-	if (url.pathname === "/durable-objects") {
-		return listDurableObjectIds(request, mf, url);
-	}
-	return new Response(null, { status: 404 });
+/** Creates the Node-side loopback service used by the Vitest runner Worker. */
+export function createLoopbackHandler(coverageFilesDirectory: string) {
+	return function handleLoopbackRequest(
+		request: Request,
+		mf: Miniflare
+	): Awaitable<Response> {
+		const url = new URL(request.url);
+		if (url.pathname === "/snapshot") {
+			return handleSnapshotRequest(request, url);
+		}
+		if (url.pathname === "/coverage") {
+			return handleCoverageRequest(request, coverageFilesDirectory);
+		}
+		if (url.pathname === "/durable-objects") {
+			return listDurableObjectIds(request, mf, url);
+		}
+		return new Response(null, { status: 404 });
+	};
 }

@@ -166,12 +166,9 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 
 async function writeCoverageFile(
 	loopback: Fetcher,
-	coverageFilesDirectory: string,
 	coverage: unknown
 ): Promise<string> {
-	const url = new URL("http://placeholder/coverage");
-	url.searchParams.set("directory", coverageFilesDirectory);
-	const response = await loopback.fetch(url, {
+	const response = await loopback.fetch("http://placeholder/coverage", {
 		method: "POST",
 		body: JSON.stringify(coverage),
 	});
@@ -211,7 +208,6 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					assert.strictEqual(args.length, 1);
 					return writeCoverageFile(
 						doEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE,
-						__vitest_worker__.config.coverage.coverageFilesDirectory,
 						args[0]
 					);
 				},
