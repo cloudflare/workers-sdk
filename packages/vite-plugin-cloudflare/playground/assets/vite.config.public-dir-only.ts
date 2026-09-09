@@ -15,7 +15,6 @@ export default defineConfig({
 			config(config) {
 				config.entrypoint = undefined;
 				config.name = "public-only";
-				config.assets = {};
 			},
 			inspectorPort: false,
 			persistState: false,
