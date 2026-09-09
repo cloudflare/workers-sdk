@@ -1,4 +1,8 @@
-import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
+import type {
+	FetchPagedListResultFetcher,
+	FetchResultFetcher,
+	Logger,
+} from "@cloudflare/workers-utils";
 
 const noop = () => {};
 
@@ -14,9 +18,14 @@ export let fetchResult: FetchResultFetcher = () => {
 	throw new Error("initContainersSharedContext() must be called first");
 };
 
+export let fetchPagedListResult: FetchPagedListResultFetcher = () => {
+	throw new Error("initContainersSharedContext() must be called first");
+};
+
 export type ContainersSharedContext = {
 	logger: Logger;
 	fetchResult: FetchResultFetcher;
+	fetchPagedListResult?: FetchPagedListResultFetcher;
 };
 
 export function initContainersSharedContext(
@@ -24,4 +33,7 @@ export function initContainersSharedContext(
 ): void {
 	logger = ctx.logger;
 	fetchResult = ctx.fetchResult;
+	if (ctx.fetchPagedListResult !== undefined) {
+		fetchPagedListResult = ctx.fetchPagedListResult;
+	}
 }

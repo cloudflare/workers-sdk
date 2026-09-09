@@ -1081,6 +1081,51 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 	});
+
+	it("cleans up built container images when Worker upload fails", async ({
+		expect,
+	}) => {
+		vi.mocked(spawn)
+			.mockReset()
+			.mockImplementationOnce(mockDockerInfo(expect))
+			.mockImplementationOnce(
+				mockDockerBuild(
+					expect,
+					"my-container",
+					TEST_CONTAINER_BUILD_TAG,
+					"FROM scratch",
+					process.cwd()
+				)
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete(expect, "my-container", TEST_CONTAINER_BUILD_TAG)
+			);
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		msw.use(
+			http.put("*/accounts/:accountId/workers/scripts/:scriptName", () =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 1000, message: "Upload failed" },
+					]),
+					{ status: 500 }
+				)
+			)
+		);
+
+		await expect(runWrangler("deploy index.js")).rejects.toThrow(
+			"A request to the Cloudflare API"
+		);
+
+		expectDockerSpawnWith([
+			"image",
+			"rm",
+			`my-container:${TEST_CONTAINER_BUILD_TAG}`,
+		]);
+	});
 	it("should be able to deploy a snapshot-enabled container from a dockerfile", async ({
 		expect,
 	}) => {
@@ -4287,7 +4332,7 @@ describe("wrangler deploy with containers dry run", () => {
 	it("builds the image without pushing when given a dockerfile", async ({
 		expect,
 	}) => {
-		// Reduced mock chain for dry run (no delete, push)
+		// Reduced mock chain for dry run (no push)
 		vi.mocked(spawn)
 			.mockImplementationOnce(mockDockerInfo(expect))
 			.mockImplementationOnce(
@@ -4298,6 +4343,9 @@ describe("wrangler deploy with containers dry run", () => {
 					"FROM scratch",
 					process.cwd()
 				)
+			)
+			.mockImplementationOnce(
+				mockDockerImageDelete(expect, "my-container", TEST_CONTAINER_BUILD_TAG)
 			);
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 		fs.writeFileSync("./Dockerfile", "FROM scratch");
@@ -4885,6 +4933,20 @@ function setupDockerMocks(
 			return "";
 		}
 	);
+}
+
+function expectDockerSpawnWith(args: string[]) {
+	const calls = vi.mocked(spawn).mock.calls;
+	const match = calls.find(([, actualArgs]) => {
+		return JSON.stringify(actualArgs) === JSON.stringify(args);
+	});
+	if (!match) {
+		throw new Error(
+			`Expected Docker spawn to be called with ${JSON.stringify(args)}, got ${JSON.stringify(
+				calls.map(([, actualArgs]) => actualArgs)
+			)}`
+		);
+	}
 }
 
 // Common test setup

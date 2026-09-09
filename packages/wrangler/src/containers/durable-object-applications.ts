@@ -3,8 +3,11 @@ import { setTimeout } from "node:timers/promises";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import {
 	ApplicationsService,
+	buildAndMaybePush,
 	ContainerImagePreparationsService,
 	ContainerImagePreparationStatus,
+	createDurableObjectNamespaceResolver,
+	listDurableObjects,
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
@@ -15,7 +18,6 @@ import {
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { buildAndMaybePush } from "../cloudchamber/build";
 import {
 	fillOpenAPIConfiguration,
 	promiseSpinner,
@@ -24,10 +26,6 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqli
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
 import { validateDurableObjectContainerApplications } from "./config";
-import {
-	createDurableObjectNamespaceResolver,
-	listDurableObjects,
-} from "./deploy";
 import { containersScope } from ".";
 import type { ApiVersion } from "../versions/types";
 import type { CreateDurableObjectApplicationRequest } from "@cloudflare/containers-shared";

@@ -3,13 +3,11 @@ import {
 	ApplicationsService,
 	ContainerImagePreparationsService,
 	ContainerImagePreparationStatus,
+	createDurableObjectNamespaceResolver,
+	listDurableObjects,
 } from "@cloudflare/containers-shared";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
-import {
-	createDurableObjectNamespaceResolver,
-	listDurableObjects,
-} from "../../containers/deploy";
 import {
 	deployDurableObjectContainerApplications,
 	prepareDurableObjectContainerApplications,
@@ -19,7 +17,11 @@ import { getOrSelectAccountId } from "../../user";
 import type { Config } from "@cloudflare/workers-utils";
 
 vi.mock("node:timers/promises", () => ({ setTimeout: vi.fn() }));
-vi.mock("../../containers/deploy");
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
+	createDurableObjectNamespaceResolver: vi.fn(),
+	listDurableObjects: vi.fn(),
+}));
 vi.mock("../../user");
 vi.mock("../../cloudchamber/common", () => ({
 	fillOpenAPIConfiguration: vi.fn(),

@@ -27,7 +27,7 @@ import {
 	CreateApplicationRolloutRequest,
 	RolloutsService,
 } from "./client";
-import { fetchResult } from "./context";
+import { fetchPagedListResult, fetchResult } from "./context";
 import { Diff } from "./diff";
 import { resolveImageName } from "./images";
 import { inferInstanceType } from "./limits";
@@ -212,7 +212,7 @@ export async function listDurableObjects(
 	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<DurableObjectNamespace[]> {
-	return await fetchResult<DurableObjectNamespace[]>(
+	return await fetchPagedListResult<DurableObjectNamespace>(
 		complianceConfig,
 		`/accounts/${accountId}/workers/durable_objects/namespaces`,
 		{},

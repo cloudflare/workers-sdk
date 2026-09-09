@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
 	buildCommand,
+	cleanupBuiltContainerImages,
 	buildContainerImages,
 	getCloudflareContainerRegistry,
 	getContainerImageTag,
@@ -482,12 +483,14 @@ describe("deploy container image build and push", () => {
 	it("retags and pushes a built image using the Worker version ID tag", async ({
 		expect,
 	}) => {
+		const builtImage = {
+			containerConfig: dockerfileContainer,
+			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+		};
+
 		await expect(
 			pushBuiltContainerImage(
-				{
-					containerConfig: dockerfileContainer,
-					localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
-				},
+				builtImage,
 				"Galaxy-Class",
 				"docker",
 				"some-account-id",
@@ -564,6 +567,52 @@ describe("deploy container image build and push", () => {
 			);
 		expect(tagCallIndex).toBeLessThan(cleanupCallIndex);
 		expect(cleanupCallIndex).toBeLessThan(pushCallIndex);
+		expect(builtImage.localTagCleaned).toBe(true);
+	});
+
+	it("cleans up built deployment images that were not pushed", async ({
+		expect,
+	}) => {
+		const builtImage = {
+			containerConfig: dockerfileContainer,
+			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+		};
+
+		await cleanupBuiltContainerImages(
+			[{ container: dockerfileContainer, builtImage }],
+			"docker"
+		);
+
+		expectSpawnWith([
+			"image",
+			"rm",
+			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+		]);
+		expect(builtImage.localTagCleaned).toBe(true);
+	});
+
+	it("does not clean up built deployment images that were already cleaned", async ({
+		expect,
+	}) => {
+		await cleanupBuiltContainerImages(
+			[
+				{
+					container: dockerfileContainer,
+					builtImage: {
+						containerConfig: dockerfileContainer,
+						localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
+						localTagCleaned: true,
+					},
+				},
+			],
+			"docker"
+		);
+
+		expectNoSpawnWith([
+			"image",
+			"rm",
+			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+		]);
 	});
 
 	it("derives production tags from version IDs, not Worker tags", ({

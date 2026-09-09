@@ -22,7 +22,7 @@ import {
 	writeOutput,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
-import { fetchResult, logger } from "../shared/context";
+import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
 import {
 	buildAssetManifest,
@@ -771,7 +771,7 @@ async function deployWorker(
 
 	if (shouldDeployContainers) {
 		assert(versionId && accountId);
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
 		const containerDeployments: ResolvedContainerDeployment[] = [];
 		for (const container of normalisedContainerConfig) {
 			if ("dockerfile" in container) {

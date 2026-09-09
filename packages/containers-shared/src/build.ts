@@ -28,6 +28,7 @@ export type DockerfileContainerConfig = Exclude<
 export type BuiltContainerImage = {
 	containerConfig: DockerfileContainerConfig;
 	localTag: string;
+	localTagCleaned?: boolean;
 };
 
 export type BuiltContainerDeployment = {
@@ -518,6 +519,59 @@ async function checkImagePlatform(
 	}
 }
 
+/**
+ * Builds a Docker image and optionally pushes it to the Cloudflare managed
+ * registry.
+ *
+ * @param args - Build arguments including tag, Dockerfile path, build context, and platform.
+ * @param pathToDocker - Path to the Docker CLI executable.
+ * @param push - Whether to push the built image to the remote registry.
+ * @param containerConfig - Optional container configuration for limit validation.
+ * @param verifyDockerIsRunning - Whether to verify Docker before building.
+ * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @returns An {@link ImageRef} describing the built or pushed image.
+ */
+export async function buildAndMaybePush(
+	args: BuildArgs,
+	pathToDocker: string,
+	push: boolean,
+	containerConfig?: DockerfileContainerConfig,
+	verifyDockerIsRunning?: boolean,
+	complianceConfig?: ComplianceConfig
+): Promise<ImageRef> {
+	try {
+		const build = await startContainerBuild({
+			pathToDocker,
+			verifyDockerIsRunning,
+			build: args,
+		});
+		await build.ready;
+
+		if (!push) {
+			return { newTag: args.tag };
+		}
+
+		return await pushImageIfChanged({
+			pathToDocker,
+			sourceTag: args.tag,
+			targetTag: args.tag,
+			containerConfig,
+			complianceConfig,
+			cleanupSourceTag: true,
+		});
+	} catch (error) {
+		if (error instanceof Error) {
+			throw new UserError(error.message, {
+				cause: error,
+				telemetryMessage: "container build image operation failed",
+			});
+		}
+		throw new UserError("An unknown error occurred", {
+			telemetryMessage: "container build unknown error",
+		});
+	}
+}
+
 async function buildContainerImage(
 	containerConfig: DockerfileContainerConfig,
 	pathToDocker: string,
@@ -600,7 +654,7 @@ export async function pushBuiltContainerImage(
 	complianceConfig?: ComplianceConfig
 ): Promise<ImageRef> {
 	try {
-		return await pushImageIfChanged({
+		const imageRef = await pushImageIfChanged({
 			pathToDocker,
 			sourceTag: builtImage.localTag,
 			targetTag: getContainerImageTag(builtImage.containerConfig, versionId),
@@ -609,6 +663,8 @@ export async function pushBuiltContainerImage(
 			complianceConfig,
 			cleanupSourceTag: true,
 		});
+		builtImage.localTagCleaned = true;
+		return imageRef;
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, {
@@ -619,6 +675,36 @@ export async function pushBuiltContainerImage(
 		throw new UserError("An unknown error occurred", {
 			telemetryMessage: "container build unknown error",
 		});
+	}
+}
+
+/**
+ * Removes local Docker image tags created while building container images for
+ * deployment. Cleanup is best-effort so it does not hide the original deploy
+ * failure that triggered it.
+ *
+ * @param builtContainerDeployments - Built Dockerfile-based container images.
+ * @param pathToDocker - Path to the Docker CLI executable.
+ */
+export async function cleanupBuiltContainerImages(
+	builtContainerDeployments: BuiltContainerDeployment[],
+	pathToDocker: string
+): Promise<void> {
+	for (const { builtImage } of builtContainerDeployments) {
+		if (builtImage.localTagCleaned) {
+			continue;
+		}
+		try {
+			logger.debug(`Untagging built image: ${builtImage.localTag}.`);
+			await runDockerCmd(pathToDocker, ["image", "rm", builtImage.localTag]);
+			builtImage.localTagCleaned = true;
+		} catch (error) {
+			if (error instanceof Error) {
+				logger.debug(
+					`Cleaning up built image ${builtImage.localTag} failed with error: ${error.message}`
+				);
+			}
+		}
 	}
 }
 

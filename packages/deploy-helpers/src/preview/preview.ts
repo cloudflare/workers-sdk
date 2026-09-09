@@ -19,7 +19,12 @@ import { syncAssets } from "../deploy/helpers/assets";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
 import { parseConfigPlacement } from "../deploy/helpers/placement";
 import { isWorkerNotFoundError } from "../deploy/helpers/worker-not-found-error";
-import { confirm, fetchResult, logger } from "../shared/context";
+import {
+	confirm,
+	fetchPagedListResult,
+	fetchResult,
+	logger,
+} from "../shared/context";
 import { getSubdomainValues } from "../triggers/deploy";
 import {
 	createPreview,
@@ -795,6 +800,7 @@ async function runPreviewContainerOperation<T>(
 ): Promise<T> {
 	initContainersSharedContext({
 		logger: options.quiet ? quietLogger : logger,
+		fetchPagedListResult,
 		fetchResult,
 	});
 
@@ -814,7 +820,7 @@ async function runPreviewContainerOperation<T>(
 	} finally {
 		OpenAPI.LOGGER = previousOpenAPILogger;
 		setLogLevel(previousLogLevel);
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
 	}
 }
 

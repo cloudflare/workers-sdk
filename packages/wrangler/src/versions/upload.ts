@@ -1,7 +1,9 @@
+import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	versionsUpload,
 	type AssetUploadStats,
 } from "@cloudflare/deploy-helpers";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
 import {
 	deployDurableObjectContainerApplications,
@@ -18,6 +20,7 @@ import {
 	mergeVersionsUploadConfigArgs,
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getScriptName } from "../utils/getScriptName";
 
@@ -67,6 +70,11 @@ export const versionsUploadCommand = createCommand({
 
 			const buildResult = await buildWorker(buildProps, config);
 
+			initContainersSharedContext({
+				logger,
+				fetchPagedListResult,
+				fetchResult,
+			});
 			const { assetUploadStats: uploadStats } = await versionsUpload(
 				props,
 				config,

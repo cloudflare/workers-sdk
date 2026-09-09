@@ -1,17 +1,21 @@
-import { initContainersSharedContext } from "@cloudflare/containers-shared";
+import {
+	cleanupBuiltContainerImages,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
+	getDockerPath,
 	getWorkerNameFromProject,
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import {
 	deployDurableObjectContainerApplications,
 	prepareDurableObjectContainerApplications,
 } from "../containers/durable-object-applications";
-import { fillOpenAPIConfiguration } from "../cloudchamber/common";
-import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import { buildDeployContainerImages } from "../deployment-bundle/build-container-images";
 import {
@@ -202,6 +206,7 @@ export async function runDeployCommandHandler(
 
 		initContainersSharedContext({
 			logger,
+			fetchPagedListResult,
 			fetchResult,
 		});
 		props.builtContainerDeployments = await buildDeployContainerImages(props);
@@ -238,6 +243,12 @@ export async function runDeployCommandHandler(
 			}
 		);
 	} finally {
+		if (props.builtContainerDeployments.length > 0) {
+			await cleanupBuiltContainerImages(
+				props.builtContainerDeployments,
+				getDockerPath()
+			);
+		}
 		cleanupDestination(buildProps.destination);
 	}
 }
