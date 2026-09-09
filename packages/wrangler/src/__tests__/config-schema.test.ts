@@ -6,6 +6,7 @@ type WranglerSchema = {
 	$ref?: string;
 	allOf?: { $ref: string }[];
 	allowTrailingCommas?: boolean;
+	definitions?: Record<string, { properties?: Record<string, unknown> }>;
 };
 
 function readSchema(): WranglerSchema {
@@ -25,5 +26,24 @@ describe("config schema", () => {
 		expect(schema.allowTrailingCommas).toBe(true);
 		expect(schema).not.toHaveProperty("$ref");
 		expect(schema.allOf).toEqual([{ $ref: "#/definitions/RawConfig" }]);
+	});
+
+	it("describes every migration operation wrangler accepts", ({ expect }) => {
+		const schema = readSchema();
+		const migration = schema.definitions?.DurableObjectMigration;
+
+		// The schema is generated from `DurableObjectMigration`, so anything missing
+		// from that type is reported by editors as an unknown key, even though
+		// `normalizeAndValidateConfig` accepts it and the deploy succeeds. All four
+		// operations below are documented on the legacy class-migrations page.
+		expect(Object.keys(migration?.properties ?? {})).toEqual(
+			expect.arrayContaining([
+				"new_classes",
+				"new_sqlite_classes",
+				"renamed_classes",
+				"transferred_classes",
+				"deleted_classes",
+			])
+		);
 	});
 });

@@ -1,5 +1,55 @@
 # wrangler
 
+## 4.130.0
+
+### Minor Changes
+
+- [#14372](https://github.com/cloudflare/workers-sdk/pull/14372) [`dbf6aad`](https://github.com/cloudflare/workers-sdk/commit/dbf6aad7b85fad3a2848191804bf627c591b5821) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Add `containers[].observability` support to `wrangler deploy`
+
+  Wrangler now accepts container-specific observability settings via `containers[].observability`, including application-level targeting fields for Containers. Root `observability` continues to work as a fallback when a container does not define its own observability settings.
+
+  `wrangler deploy` now preserves legacy `configuration.observability` for existing container apps that still use rollout-based observability, while using top-level application observability for new or already-migrated apps.
+
+  Existing application diffs are now normalized even when stored resource limits cannot be mapped to a named instance type. API-only metadata and equivalent managed-registry image names no longer appear as edits or affect whether deployment changes require a rollout.
+
+- [#15004](https://github.com/cloudflare/workers-sdk/pull/15004) [`e20df20`](https://github.com/cloudflare/workers-sdk/commit/e20df2042a73fc6d861f07113efc5804b4c0a119) Thanks [@MattieTK](https://github.com/MattieTK)! - Delegate agent Pages project creation with a production branch to Workers
+
+  When run by an AI agent, `wrangler pages project create --production-branch <name>` is now eligible for delegation to a Workers static-assets deploy. The production branch names the target that a Workers deploy would publish to, so it does not need to disqualify a brand-new project from delegation.
+
+  `wrangler pages deploy --branch <name>` remains on Pages because an interactive new-project flow separately prompts for its production branch. The deployment branch may therefore represent a preview and cannot safely be converted into a production Workers deployment.
+
+- [#15004](https://github.com/cloudflare/workers-sdk/pull/15004) [`e20df20`](https://github.com/cloudflare/workers-sdk/commit/e20df2042a73fc6d861f07113efc5804b4c0a119) Thanks [@MattieTK](https://github.com/MattieTK)! - Widen agent Pages-to-Workers delegation to new projects on accounts that already use Pages
+
+  When run by an AI agent, `wrangler pages deploy` and `wrangler pages project create` now delegate a brand-new static Pages project to a Workers static-assets deploy even when the account already has other Pages projects. The gate is now per-project rather than per-account: a command targeting a project that already exists stays on Pages, but a new project is delegated regardless of the account's other Pages projects.
+
+  A project name restored from the Pages configuration cache is only used when the cache belongs to the currently authenticated account. An account-matching cached name remains on Pages even when the project is missing remotely, preserving the user's recorded Pages intent. After switching accounts, an otherwise unnamed deploy stays on Pages rather than treating a stale cached project name as a new project on the selected account.
+
+### Patch Changes
+
+- [#15560](https://github.com/cloudflare/workers-sdk/pull/15560) [`edb3631`](https://github.com/cloudflare/workers-sdk/commit/edb3631666677b51d58000d23ed693d83da9ff48) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260907.1 | ^5.20260908.1 |
+  | workerd                   | 1.20260907.1  | 1.20260908.1  |
+
+- [#15557](https://github.com/cloudflare/workers-sdk/pull/15557) [`63c7ff1`](https://github.com/cloudflare/workers-sdk/commit/63c7ff17b3ac5ca0b977297456fe3bcbe71e90f4) Thanks [@tomekancu](https://github.com/tomekancu)! - Fix `wrangler d1 execute --local` being extremely slow with large SQL files or commands
+
+  The local SQL splitter consumed quoted strings and comments character-by-character, re-checking the full accumulated string each time. This made splitting a large quoted value or comment quadratic, so seed files could take tens of seconds to run. The splitter now only inspects a bounded trailing window on each step, making splitting effectively linear. The remote path is unaffected as it imports the file server-side.
+
+- [#15542](https://github.com/cloudflare/workers-sdk/pull/15542) [`a4e41df`](https://github.com/cloudflare/workers-sdk/commit/a4e41df43cc93686bf57a16b1de0a4b06860f2b9) Thanks [@NAVEENKUMARKR777](https://github.com/NAVEENKUMARKR777)! - Fix `wrangler dev` running the custom build command twice on startup and on every config change
+
+  Wrangler already runs the custom `build.command` once before starting `wrangler dev`, to resolve the Worker's entry point. When `dev.watch` wasn't explicitly disabled, `BundlerController` then unconditionally ran the same build command again the moment it started watching for changes, and repeated this on every subsequent config reload too.
+
+  For fast build commands this just meant duplicate log output (e.g. a `vite build` visibly running twice at startup). For slower or stateful build commands, running two builds concurrently against the same output files could corrupt the result or fail outright (for example, non-deterministic `wasm-opt` failures have been reported for Rust builds).
+
+  The initial watcher setup now only bundles the output the build command already produced, instead of re-running the command. Real file changes detected by the watcher still re-run the build command as before.
+
+- Updated dependencies [[`edb3631`](https://github.com/cloudflare/workers-sdk/commit/edb3631666677b51d58000d23ed693d83da9ff48), [`bcebf08`](https://github.com/cloudflare/workers-sdk/commit/bcebf080bc65759fe43cffff10b3f708693941a8)]:
+  - miniflare@5.20260908.0-alpha
+
 ## 4.129.1
 
 ### Patch Changes

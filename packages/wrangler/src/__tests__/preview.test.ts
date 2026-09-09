@@ -2955,10 +2955,7 @@ describe("wrangler preview", () => {
 				);
 				await runWrangler("preview --name feature/my-branch");
 				expect(createdApplications).toHaveLength(1);
-				const configuration = createdApplications[0]?.configuration as
-					| { observability?: unknown }
-					| undefined;
-				expect(configuration?.observability).toEqual(expected);
+				expect(createdApplications[0]?.observability).toEqual(expected);
 			}
 		);
 

@@ -4,7 +4,6 @@ import crypto from "node:crypto";
 import { ReadableStream, TransformStream } from "node:stream/web";
 import util from "node:util";
 import { stringify } from "devalue";
-import { Headers } from "undici";
 import { Request } from "../../../http";
 import { prefixStream, readPrefix } from "../../../shared";
 import {
@@ -14,6 +13,7 @@ import {
 	createHTTPRevivers,
 	isDurableObjectStub,
 	isFetcherFetch,
+	isHeadersLike,
 	isR2ObjectWriteHttpMetadata,
 	parseWithReadableStreams,
 	ProxyAddresses,
@@ -690,8 +690,11 @@ class ProxyStubHandler<T extends object>
 			// See `isR2ObjectWriteHttpMetadata()` comment for why this special
 			if (isR2ObjectWriteHttpMetadata(targetName, key)) {
 				const arg = args[0];
-				assert(arg instanceof Headers);
-				assert(result instanceof Headers);
+				// `arg` may be a `Headers` instance from a different realm than the
+				// `undici` copy Miniflare uses internally (e.g. Node's global
+				// `Headers`), so check its shape rather than its prototype chain.
+				assert(isHeadersLike(arg));
+				assert(isHeadersLike(result));
 				for (const [key, value] of result) {
 					arg.set(key, value);
 				}
