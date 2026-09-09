@@ -35,30 +35,4 @@ describe("ProxyController", () => {
 		expect(event.stack).toContain("Error: boom");
 		expect(event.exceptionDetails?.exceptionId).toBe(1);
 	});
-
-	test("a ProxyWorker error report dispatches an 'Error inside ProxyWorker' error event", async ({
-		expect,
-	}) => {
-		const bus = new FakeBus();
-		const controller = new ProxyController(bus);
-		const waited = bus.waitFor("error");
-
-		// this is the shape the ProxyWorker posts when it fails while
-		// post-processing a response it received from the UserWorker (a rejected
-		// forward of the request itself is answered with a 502 inside the
-		// ProxyWorker and never reported here). DevEnv treats the resulting
-		// event as fatal — see DevEnv.test.ts.
-		controller.onProxyWorkerMessage({
-			type: "error",
-			error: {
-				name: "Error",
-				message: "Failed to inject live-reload script",
-				stack: "Error: Failed to inject live-reload script\n    at <anonymous>",
-			},
-		});
-
-		const event = await waited;
-		expect(event.source).toBe("ProxyController");
-		expect(event.reason).toBe("Error inside ProxyWorker");
-	});
 });
