@@ -62,12 +62,12 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		);
 	}
 
-	const transformer = sharp(await body.arrayBuffer(), {});
+	const source = await body.arrayBuffer();
 
 	const url = new URL(request.url);
 
 	if (url.pathname == "/info") {
-		return runInfo(transformer);
+		return runInfo(sharp(source, {}));
 	} else {
 		const badTransformsResponse = errorResponse(
 			400,
@@ -97,7 +97,14 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 				);
 			}
 
-			return runTransform(transformer, transforms, outputFormat);
+			// Production applies EXIF orientation before any transforms;
+			// autoOrient bakes the rotation into the pixels at decode so
+			// EXIF-rotated photos (e.g. phone portraits) come out upright.
+			return runTransform(
+				sharp(source, { autoOrient: true }),
+				transforms,
+				outputFormat
+			);
 		} catch {
 			return badTransformsResponse;
 		}
@@ -402,7 +409,7 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 		}
 
 		if (options.format === "json") {
-			const jsonTransformer = sharp(source);
+			const jsonTransformer = sharp(source, { autoOrient: true });
 			applyCfImageTransforms(jsonTransformer, options);
 			const { info } = await jsonTransformer.toBuffer({
 				resolveWithObject: true,
@@ -419,7 +426,9 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 			});
 		}
 
-		const transformer = sharp(source);
+		// Production applies EXIF orientation before any transforms;
+		// autoOrient bakes the rotation into the pixels at decode.
+		const transformer = sharp(source, { autoOrient: true });
 		applyCfImageTransforms(transformer, options);
 
 		const quality = resolveQuality(options.quality);
