@@ -1080,12 +1080,13 @@ function resolveMatchingModuleTypes(
 	const exactModuleName = moduleGlob.includes("*") ? undefined : moduleGlob;
 
 	for (const rule of matchingRules) {
+		// Declarations describe imported module names, so match the default
+		// `glob-to-regexp` semantics used by `module-collection` for direct imports.
+		// `find_additional_modules` enables globstar only while discovering files.
 		const conservativeFallbackMatchesExact =
 			exactModuleName !== undefined &&
 			rule.isConservativeFallback &&
-			globToRegExp(rule.deploymentGlob, { globstar: true }).test(
-				exactModuleName
-			);
+			globToRegExp(rule.deploymentGlob).test(exactModuleName);
 		if (
 			exactModuleName !== undefined &&
 			rule.isConservativeFallback &&

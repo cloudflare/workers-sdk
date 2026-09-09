@@ -4305,13 +4305,14 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses original multi-wildcard scope for exact environment declarations", async ({
+	it("uses direct-import glob semantics for exact environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
 				compatibility_date: "2026-01-01",
+				find_additional_modules: true,
 				rules: [
 					{
 						type: "Text",
@@ -4325,7 +4326,7 @@ describe("generate types - API", () => {
 							{
 								type: "CompiledWasm",
 								globs: [
-									"folder/one/nested/message.asset",
+									"folder/one/two/nested/message.asset",
 									"other/message.asset",
 								],
 							},
@@ -4343,7 +4344,7 @@ describe("generate types - API", () => {
 		fs.writeFileSync(
 			"./consumer.ts",
 			dedent`
-				import inside from "folder/one/nested/message.asset";
+				import inside from "folder/one/two/nested/message.asset";
 				import outside from "other/message.asset";
 
 				type Equal<Left, Right> =
