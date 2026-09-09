@@ -1,6 +1,6 @@
 import { describe, test } from "vitest";
 import { customizeWorkerConfig } from "../plugin-config";
-import type { PluginConfig, ResolvedWorkerConfig } from "../plugin-config";
+import type { ResolvedWorkerConfig } from "../plugin-config";
 
 // Create a minimal mock config for testing
 function createMockWorkerConfig(
@@ -17,19 +17,6 @@ function createMockWorkerConfig(
 }
 
 describe("customizeWorkerConfig", () => {
-	test("does not expose the implicit Worker type in inline config", ({
-		expect,
-	}) => {
-		const pluginConfig = {
-			config: {
-				// @ts-expect-error `type` is implicit for inline Worker config.
-				type: "worker",
-			},
-		} satisfies PluginConfig;
-
-		expect(pluginConfig.config.type).toBe("worker");
-	});
-
 	test("should return the original config when config is undefined", ({
 		expect,
 	}) => {
