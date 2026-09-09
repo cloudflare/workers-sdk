@@ -31,8 +31,6 @@ export type BuildArgs = {
 	args?: Record<string, string>;
 	/** platform to build for. defaults to linux/amd64 */
 	platform?: string;
-	/** sets --network=host at build time. only used by workers CI. */
-	setNetworkToHost?: boolean;
 };
 
 export type ContainerNormalizedConfig = SharedContainerConfig &

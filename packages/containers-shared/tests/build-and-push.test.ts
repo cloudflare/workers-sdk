@@ -384,6 +384,7 @@ describe("deploy container image build and push", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	it("builds Dockerfile containers and pairs each build with the original config", async ({
@@ -444,6 +445,38 @@ describe("deploy container image build and push", () => {
 		expect(getContainerImageTag(container, "Galaxy-Class")).toBe(
 			"test-app:Galaxy"
 		);
+	});
+
+	it("uses host networking for deployment builds when requested by Workers CI", async ({
+		expect,
+	}) => {
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+		vi.stubEnv("WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST", "1");
+		const container = {
+			...dockerfileContainer,
+			dockerfile: args.pathToDockerfile,
+			image_build_context: dir,
+		};
+
+		await expect(
+			buildContainerImages([container], "docker", false)
+		).resolves.toHaveLength(1);
+
+		expectSpawnWith([
+			"build",
+			"--load",
+			"-t",
+			"test-app:wrangler-11111111-1111-4111-8111-111111111111",
+			"--platform",
+			"linux/amd64",
+			"--provenance=false",
+			"--network",
+			"host",
+			"-f",
+			"-",
+			dir,
+		]);
 	});
 
 	it("retags and pushes a built image using the Worker version ID tag", async ({

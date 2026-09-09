@@ -58,7 +58,7 @@ async function constructBuildCommand(options: BuildArgs) {
 			buildCmd.push("--build-arg", `${arg}=${options.args[arg]}`);
 		}
 	}
-	if (options.setNetworkToHost) {
+	if (process.env.WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST) {
 		buildCmd.push("--network", "host");
 	}
 
@@ -440,9 +440,6 @@ export async function buildCommand(
 				buildContext: args.PATH,
 				platform: args.platform,
 				// No option to add env vars at build time...?
-				setNetworkToHost: Boolean(
-					process.env.WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST
-				),
 			},
 		});
 		await build.ready;
