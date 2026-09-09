@@ -8,11 +8,12 @@ export default defineWorker({
 	name: "cron-trigger-worker",
 	entrypoint,
 	compatibilityDate: "2025-02-14",
+	domains: ["example.com"],
 	triggers: [
 		triggers.scheduled({ schedule: "* * * * *" }),
 		triggers.fetch({
-			pattern: "cf-worker-header-test.example.com/*",
-			zone: "example.com",
+			pattern: "cf-worker-header-test.example.net/*",
+			zone: "example.net",
 		}),
 	],
 });

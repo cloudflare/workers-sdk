@@ -9,6 +9,7 @@ import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
+	getZoneFromRoute,
 } from "@cloudflare/workers-utils";
 import {
 	buildPublicUrl,
@@ -202,12 +203,27 @@ function toRemoteComplianceRegion(
 }
 
 function getWorkerZone(
-	config: Pick<ParsedInputWorkerConfig, "triggers">
+	config: Pick<ParsedInputWorkerConfig, "domains" | "triggers">
 ): string | undefined {
+	// Domains are converted to routes before fetch triggers, so this mirrors the
+	// first-route selection used by Wrangler's Miniflare options.
+	const domain = config.domains?.[0];
+	if (domain !== undefined) {
+		return getZoneFromRoute(domain);
+	}
+
 	const fetchTrigger = config.triggers?.find(
 		(trigger) => trigger.type === "fetch"
 	);
-	return fetchTrigger?.type === "fetch" ? fetchTrigger.zone : undefined;
+	if (fetchTrigger?.type !== "fetch") {
+		return undefined;
+	}
+
+	return getZoneFromRoute(
+		fetchTrigger.zone?.includes(".")
+			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
+			: fetchTrigger.pattern
+	);
 }
 
 export async function getDevMiniflareOptions(
