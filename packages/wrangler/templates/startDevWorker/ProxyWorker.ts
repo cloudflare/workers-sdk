@@ -194,7 +194,26 @@ export class ProxyWorker implements DurableObject {
 							res = new Response(res.body, res);
 							rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
-							await checkForPreviewTokenError(res, this.env, proxyData);
+							if (res.status === 400) {
+								// At this point HTMLRewriter tries to parse the compressed
+								// stream, so we clone and read the text instead.
+								let text: string;
+								try {
+									text = await res.clone().text();
+								} catch (cause) {
+									// Both branches of the cloned body are broken. The response
+									// has not been sent yet, so replace it with a per-request
+									// error response.
+									throw new UserWorkerRequestError(cause);
+								}
+
+								if (isPreviewTokenError(text)) {
+									void sendMessageToProxyController(this.env, {
+										type: "previewTokenExpired",
+										proxyData,
+									});
+								}
+							}
 
 							if (isHtmlResponse(res)) {
 								res = insertLiveReloadScript(request, res, this.env, proxyData);
@@ -411,40 +430,24 @@ function sendMessageToProxyController(
 	});
 }
 
-async function checkForPreviewTokenError(
-	response: Response,
-	env: Env,
-	proxyData: ProxyData
-) {
-	if (response.status !== 400) {
-		return;
-	}
-
-	// At this point HTMLRewriter tries to parse the compressed stream,
-	// so we clone and read the text instead.
-	const clone = response.clone();
-	let text: string;
-	try {
-		text = await clone.text();
-	} catch (cause) {
-		// Both branches of the cloned body are broken. The response has not
-		// been sent yet, so replace it with a per-request error response.
-		throw new UserWorkerRequestError(cause);
-	}
-	// Naive string match should be good enough when combined with status code check.
-	// "Invalid Workers Preview configuration" is the HTML error returned when the
-	// preview token has expired. "error code: 1031" is a text/plain error returned
-	// by remote bindings (e.g. Workers AI) when their underlying session has timed out.
-	// Both indicate the preview session needs to be refreshed.
-	if (
+/**
+ * Detects whether a 400 response body from the UserWorker means the preview
+ * session has expired and needs to be refreshed.
+ *
+ * A naive string match is good enough when combined with the status code
+ * check performed by the caller. "Invalid Workers Preview configuration" is
+ * the HTML error returned when the preview token has expired. "error code:
+ * 1031" is a text/plain error returned by remote bindings (e.g. Workers AI)
+ * when their underlying session has timed out.
+ *
+ * @param text the body of a status-400 response from the UserWorker
+ * @returns `true` when the body indicates an expired preview session
+ */
+function isPreviewTokenError(text: string): boolean {
+	return (
 		text.includes("Invalid Workers Preview configuration") ||
 		text.includes("error code: 1031")
-	) {
-		void sendMessageToProxyController(env, {
-			type: "previewTokenExpired",
-			proxyData,
-		});
-	}
+	);
 }
 
 function insertLiveReloadScript(
