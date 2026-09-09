@@ -157,7 +157,7 @@ describe("wrangler workflows", () => {
 				`
 				"wrangler workflows
 
-				?? Manage Workflows
+				🔁 Manage Workflows
 
 				COMMANDS
 				  wrangler workflows list                     List Workflows associated to account
@@ -265,15 +265,15 @@ describe("wrangler workflows", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
-				 ?? wrangler x.x.x
-				??????????????????
-				???????????
-				? Name ? Script name ? Class name ? Created ? Modified ?
-				???????????
-				? wf_1 ? wf_script_1 ? wf_class_1 ? [mock-create-date] ? [mock-modified-date] ?
-				???????????
-				? wf_2 ? wf_script_2 ? wf_class_2 ? [mock-create-date] ? [mock-modified-date] ?
-				???????????"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				┌─┬─┬─┬─┬─┐
+				│ Name │ Script name │ Class name │ Created │ Modified │
+				├─┼─┼─┼─┼─┤
+				│ wf_1 │ wf_script_1 │ wf_class_1 │ [mock-create-date] │ [mock-modified-date] │
+				├─┼─┼─┼─┼─┤
+				│ wf_2 │ wf_script_2 │ wf_class_2 │ [mock-create-date] │ [mock-modified-date] │
+				└─┴─┴─┴─┴─┘"
 			`
 			);
 		});
@@ -482,27 +482,27 @@ describe("wrangler workflows", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
-				 ?? wrangler x.x.x
-				??????????????????
-				???????????
-				? Instance ID ? Version ? Created ? Modified ? Status ?
-				???????????
-				? a ? c ? [mock-create-date] ? [mock-modified-date] ? ? Completed ?
-				???????????
-				? b ? c ? [mock-create-date] ? [mock-modified-date] ? ? Errored ?
-				???????????
-				? c ? c ? [mock-create-date] ? [mock-modified-date] ? ?? Paused ?
-				???????????
-				? d ? c ? [mock-create-date] ? [mock-modified-date] ? ? Queued ?
-				???????????
-				? d ? c ? [mock-create-date] ? [mock-modified-date] ? ? Running ?
-				???????????
-				? e ? c ? [mock-create-date] ? [mock-modified-date] ? ?? Terminated ?
-				???????????
-				? f ? c ? [mock-create-date] ? [mock-modified-date] ? ? Waiting ?
-				???????????
-				? g ? c ? [mock-create-date] ? [mock-modified-date] ? ?? Waiting for Pause ?
-				???????????"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				┌─┬─┬─┬─┬─┐
+				│ Instance ID │ Version │ Created │ Modified │ Status │
+				├─┼─┼─┼─┼─┤
+				│ a │ c │ [mock-create-date] │ [mock-modified-date] │ ✅ Completed │
+				├─┼─┼─┼─┼─┤
+				│ b │ c │ [mock-create-date] │ [mock-modified-date] │ ❌ Errored │
+				├─┼─┼─┼─┼─┤
+				│ c │ c │ [mock-create-date] │ [mock-modified-date] │ ⏸️ Paused │
+				├─┼─┼─┼─┼─┤
+				│ d │ c │ [mock-create-date] │ [mock-modified-date] │ ⌛ Queued │
+				├─┼─┼─┼─┼─┤
+				│ d │ c │ [mock-create-date] │ [mock-modified-date] │ ▶ Running │
+				├─┼─┼─┼─┼─┤
+				│ e │ c │ [mock-create-date] │ [mock-modified-date] │ 🚫 Terminated │
+				├─┼─┼─┼─┼─┤
+				│ f │ c │ [mock-create-date] │ [mock-modified-date] │ ⏰ Waiting │
+				├─┼─┼─┼─┼─┤
+				│ g │ c │ [mock-create-date] │ [mock-modified-date] │ ⏱️ Waiting for Pause │
+				└─┴─┴─┴─┴─┘"
 			`
 			);
 		});
@@ -969,26 +969,26 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows instances describe some-workflow bar`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ?? wrangler x.x.x
-				??????????????????
+				 ⛅️ wrangler x.x.x
+				──────────────────
 				  Name:      event
-				  Type:      ?? Waiting for event
+				  Type:      👀 Waiting for event
 				  Start:     [mock-start-date]
 				  End:       [mock-end-date]
 				  Duration:  4 years
 				  Output:    {}
 				  Name:      string
-				  Type:      ?? Step
+				  Type:      🎯 Step
 				  Start:     [mock-start-date]
 				  End:       [mock-end-date]
 				  Duration:  4 years
-				  Success:   ? Yes
+				  Success:   ✅ Yes
 				  Output:    {}
-				???????????
-				? Start ? End ? Duration ? State ? Error ?
-				???????????
-				? [mock-start-date] ? [mock-end-date] ? 4 years ? ? Success ? string: string ?
-				???????????"
+				┌─┬─┬─┬─┬─┐
+				│ Start │ End │ Duration │ State │ Error │
+				├─┼─┼─┼─┼─┤
+				│ [mock-start-date] │ [mock-end-date] │ 4 years │ ✅ Success │ string: string │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -1001,26 +1001,26 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows instances describe some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ?? wrangler x.x.x
-				??????????????????
+				 ⛅️ wrangler x.x.x
+				──────────────────
 				  Name:      event
-				  Type:      ?? Waiting for event
+				  Type:      👀 Waiting for event
 				  Start:     [mock-start-date]
 				  End:       [mock-end-date]
 				  Duration:  4 years
 				  Output:    {}
 				  Name:      string
-				  Type:      ?? Step
+				  Type:      🎯 Step
 				  Start:     [mock-start-date]
 				  End:       [mock-end-date]
 				  Duration:  4 years
-				  Success:   ? Yes
+				  Success:   ✅ Yes
 				  Output:    {}
-				???????????
-				? Start ? End ? Duration ? State ? Error ?
-				???????????
-				? [mock-start-date] ? [mock-end-date] ? 4 years ? ? Success ? string: string ?
-				???????????"
+				┌─┬─┬─┬─┬─┐
+				│ Start │ End │ Duration │ State │ Error │
+				├─┼─┼─┼─┼─┤
+				│ [mock-start-date] │ [mock-end-date] │ 4 years │ ✅ Success │ string: string │
+				└─┴─┴─┴─┴─┘"
 			`);
 		});
 
@@ -1208,7 +1208,7 @@ describe("wrangler workflows", () => {
 				"workflows instances send-event some-workflow bar --type my-event"
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The event with type "my-event" was sent to the instance "bar" from some-workflow"`
+				`"📤 The event with type "my-event" was sent to the instance "bar" from some-workflow"`
 			);
 		});
 
@@ -1223,7 +1223,7 @@ describe("wrangler workflows", () => {
 				`workflows instances send-event some-workflow bar --type my-event --payload '{"key": "value"}'`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The event with type "my-event" and payload "{"key": "value"}" was sent to the instance "bar" from some-workflow"`
+				`"📤 The event with type "my-event" and payload "{"key": "value"}" was sent to the instance "bar" from some-workflow"`
 			);
 		});
 
@@ -1271,7 +1271,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances pause some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The instance "bar" from some-workflow was paused successfully"`
+				`"⏸️ The instance "bar" from some-workflow was paused successfully"`
 			);
 		});
 
@@ -1316,7 +1316,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances resume some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The instance "bar" from some-workflow was resumed successfully"`
+				`"🔄 The instance "bar" from some-workflow was resumed successfully"`
 			);
 		});
 
@@ -1364,7 +1364,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The instance "bar" from some-workflow was terminated successfully"`
+				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
 			);
 		});
 
@@ -1380,7 +1380,7 @@ describe("wrangler workflows", () => {
 				`workflows instances terminate some-workflow bar --rollback`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The instance "bar" from some-workflow was terminated successfully"`
+				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
 			);
 		});
 
@@ -1571,7 +1571,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances restart some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The instance "bar" from some-workflow was restarted successfully"`
+				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
 			);
 		});
 
@@ -1621,7 +1621,7 @@ describe("wrangler workflows", () => {
 				`workflows instances restart some-workflow bar --from-step-name process --from-step-count 2 --from-step-type do`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? The instance "bar" from some-workflow was restarted successfully"`
+				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
 			);
 		});
 
@@ -1659,7 +1659,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate-all some-workflow`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -1688,7 +1688,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate-all some-workflow`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -1702,7 +1702,7 @@ describe("wrangler workflows", () => {
 				`workflows instances terminate-all some-workflow --status queued`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? A job to terminate instances from Workflow "some-workflow" with status "queued" has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow" with status "queued" has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -1721,7 +1721,7 @@ describe("wrangler workflows", () => {
 				`workflows instances terminate-all some-workflow --status queued`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? A job to terminate instances from Workflow "some-workflow" with status "queued" is already running. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow" with status "queued" is already running. It might take a few minutes to complete."`
 			);
 		});
 
@@ -1774,7 +1774,7 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows trigger some-workflow`);
 			expect(std);
 			expect(std.info).toMatchInlineSnapshot(
-				`"?? Workflow instance "3c70754a-8435-4498-92ad-22e2e2c90853" has been queued successfully"`
+				`"🚀 Workflow instance "3c70754a-8435-4498-92ad-22e2e2c90853" has been queued successfully"`
 			);
 		});
 
@@ -1806,9 +1806,9 @@ describe("wrangler workflows", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"
-				 ?? wrangler x.x.x
-				??????????????????
-				? Workflow "some-workflow" removed successfully.
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				✅ Workflow "some-workflow" removed successfully.
 				 Note that running instances might take a few minutes to be properly terminated."
 			`
 			);
@@ -2471,7 +2471,7 @@ describe("wrangler workflows", () => {
 	});
 
 	// =========================================================================
-	// Local commands (--local) ? hitting /cdn-cgi/local/explorer/api/workflows/...
+	// Local commands (--local) — hitting /cdn-cgi/local/explorer/api/workflows/...
 	// =========================================================================
 
 	describe("local", () => {
@@ -2659,7 +2659,7 @@ describe("wrangler workflows", () => {
 					`workflows trigger my-workflow '{"foo":"bar"}' --local`
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? Workflow instance "local-instance-123" has been triggered successfully"`
+					`"🚀 Workflow instance "local-instance-123" has been triggered successfully"`
 				);
 			});
 
@@ -2681,7 +2681,7 @@ describe("wrangler workflows", () => {
 
 				await runWrangler("workflows trigger my-workflow --local");
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? Workflow instance "local-instance-456" has been triggered successfully"`
+					`"🚀 Workflow instance "local-instance-456" has been triggered successfully"`
 				);
 			});
 		});
@@ -2938,7 +2938,7 @@ describe("wrangler workflows", () => {
 				await runWrangler(
 					"workflows instances describe my-workflow instance-123 --local"
 				);
-				// Step details go through logger.log ? std.out
+				// Step details go through logger.log → std.out
 				expect(std.out).toContain("step1");
 				expect(std.out).toContain("Step");
 			});
@@ -2972,7 +2972,7 @@ describe("wrangler workflows", () => {
 					"workflows instances pause my-workflow instance-123 --local"
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The instance "instance-123" from my-workflow was paused successfully"`
+					`"⏸️ The instance "instance-123" from my-workflow was paused successfully"`
 				);
 			});
 		});
@@ -3005,7 +3005,7 @@ describe("wrangler workflows", () => {
 					"workflows instances resume my-workflow instance-123 --local"
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The instance "instance-123" from my-workflow was resumed successfully"`
+					`"🔄 The instance "instance-123" from my-workflow was resumed successfully"`
 				);
 			});
 		});
@@ -3039,7 +3039,7 @@ describe("wrangler workflows", () => {
 					"workflows instances terminate my-workflow instance-123 --local"
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The instance "instance-123" from my-workflow was terminated successfully"`
+					`"🥷 The instance "instance-123" from my-workflow was terminated successfully"`
 				);
 			});
 
@@ -3070,7 +3070,7 @@ describe("wrangler workflows", () => {
 					"workflows instances terminate my-workflow instance-123 --local --rollback"
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The instance "instance-123" from my-workflow was terminated successfully"`
+					`"🥷 The instance "instance-123" from my-workflow was terminated successfully"`
 				);
 			});
 		});
@@ -3152,7 +3152,7 @@ describe("wrangler workflows", () => {
 					"workflows instances restart my-workflow instance-123 --local"
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The instance "instance-123" from my-workflow was restarted successfully"`
+					`"🥷 The instance "instance-123" from my-workflow was restarted successfully"`
 				);
 			});
 
@@ -3189,7 +3189,7 @@ describe("wrangler workflows", () => {
 					"workflows instances restart my-workflow instance-123 --local --from-step-name checkpoint --from-step-type waitForEvent"
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The instance "instance-123" from my-workflow was restarted successfully"`
+					`"🥷 The instance "instance-123" from my-workflow was restarted successfully"`
 				);
 			});
 		});
@@ -3223,7 +3223,7 @@ describe("wrangler workflows", () => {
 					`workflows instances send-event my-workflow instance-123 --type my-event --payload '{"key":"value"}' --local`
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The event with type "my-event" and payload "{"key":"value"}" was sent to the instance "instance-123" from my-workflow"`
+					`"📤 The event with type "my-event" and payload "{"key":"value"}" was sent to the instance "instance-123" from my-workflow"`
 				);
 			});
 
@@ -3253,7 +3253,7 @@ describe("wrangler workflows", () => {
 					"workflows instances send-event my-workflow instance-123 --type my-event --local"
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"?? The event with type "my-event" was sent to the instance "instance-123" from my-workflow"`
+					`"📤 The event with type "my-event" was sent to the instance "instance-123" from my-workflow"`
 				);
 			});
 
