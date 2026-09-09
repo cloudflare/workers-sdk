@@ -88,6 +88,7 @@ export function resetServerLogs() {
 }
 
 // eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
+// 120s: macOS vite-8 has been timing out the default 50s beforeAll on the headers/redirects SPA.
 beforeAll(async ({}, s) => {
 	let server: ViteDevServer | PreviewServer | undefined;
 	let postServe: (() => Promise<void>) | undefined;
@@ -213,7 +214,7 @@ beforeAll(async ({}, s) => {
 			await postServe();
 		}
 	};
-});
+}, 120_000);
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
