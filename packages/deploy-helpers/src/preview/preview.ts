@@ -4,6 +4,7 @@ import {
 	apply,
 	initContainersSharedContext,
 	listDurableObjects,
+	OpenAPI,
 	pushBuiltContainerImage,
 } from "@cloudflare/containers-shared";
 import {
@@ -94,26 +95,18 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-export type PreviewContainerPreparation = {
+export type PreparedPreviewContainers = {
 	scopedContainerConfig: Config | undefined;
 	normalisedContainerConfig: ContainerNormalizedConfig[];
 	builtContainerDeployments: BuiltContainerDeployment[];
 };
 
-// Building and applying a container to Cloudchamber requires wrangler-only
-// dependencies (Docker, the containers API client) that deploy-helpers has no
-// direct dependency on. As with `DeployCallbacks` (see ../deploy/deploy.ts),
-// the wrangler-specific preparation implementation is injected by the caller.
-export type PreviewCallbacks = {
-	preparePreviewContainers:
-		| ((
-				config: Config,
-				workerName: string,
-				previewSlug: string,
-				options: { quiet: boolean }
-		  ) => Promise<PreviewContainerPreparation>)
-		| undefined;
-};
+export type PreparePreviewContainers = (
+	config: Config,
+	workerName: string,
+	previewSlug: string,
+	options: { quiet: boolean }
+) => Promise<PreparedPreviewContainers>;
 
 export const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
 	"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information";
@@ -511,7 +504,7 @@ export async function preview(
 	config: Config,
 	buildResult: WorkerBuildResult,
 	assetsOptions: PreviewAssetsOptions | undefined,
-	callbacks: PreviewCallbacks
+	preparePreviewContainers: PreparePreviewContainers
 ): Promise<PreviewResult> {
 	const workerName = resolveWorkerName(args, config);
 
@@ -589,18 +582,9 @@ export async function preview(
 		scopedContainerConfig,
 		normalisedContainerConfig,
 		builtContainerDeployments,
-	} = callbacks.preparePreviewContainers
-		? await callbacks.preparePreviewContainers(
-				config,
-				workerName,
-				previewResource.slug,
-				{ quiet: args.json === true }
-			)
-		: {
-				scopedContainerConfig: undefined,
-				normalisedContainerConfig: [],
-				builtContainerDeployments: [],
-			};
+	} = await preparePreviewContainers(config, workerName, previewResource.slug, {
+		quiet: args.json === true,
+	});
 
 	const deploymentRequest = await assemblePreviewDeploymentSettings(
 		config,
@@ -818,14 +802,17 @@ async function runPreviewContainerOperation<T>(
 		return operation();
 	}
 
-	// Building and applying containers prints progress to stdout, the same stream
-	// that carries the `--json` payload. Keep both logging surfaces quiet while
-	// stdout has to stay machine-readable.
+	// Building and applying containers prints progress and generated-client debug
+	// logs to stdout, the same stream that carries the `--json` payload. Keep
+	// those logging surfaces quiet while stdout has to stay machine-readable.
 	const previousLogLevel = getLogLevel();
+	const previousOpenAPILogger = OpenAPI.LOGGER;
 	setLogLevel("error");
+	OpenAPI.LOGGER = quietOpenAPILogger;
 	try {
 		return await operation();
 	} finally {
+		OpenAPI.LOGGER = previousOpenAPILogger;
 		setLogLevel(previousLogLevel);
 		initContainersSharedContext({ logger, fetchResult });
 	}
@@ -837,6 +824,11 @@ const quietLogger: Logger = {
 	info() {},
 	warn: (...args: unknown[]) => logger.warn(...args),
 	error: (...args: unknown[]) => logger.error(...args),
+};
+
+const quietOpenAPILogger = {
+	...quietLogger,
+	debugWithSanitization() {},
 };
 
 /**

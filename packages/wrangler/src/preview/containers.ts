@@ -18,7 +18,7 @@ import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { logger, runWithLogLevel } from "../logger";
-import type { PreviewContainerPreparation } from "@cloudflare/deploy-helpers";
+import type { PreparedPreviewContainers } from "@cloudflare/deploy-helpers";
 import type {
 	Config,
 	ContainerApp,
@@ -53,7 +53,7 @@ export async function preparePreviewContainers(
 	workerName: string,
 	previewSlug: string,
 	options: { quiet: boolean }
-): Promise<PreviewContainerPreparation> {
+): Promise<PreparedPreviewContainers> {
 	initContainersSharedContext({
 		logger,
 		fetchResult,
@@ -63,7 +63,7 @@ export async function preparePreviewContainers(
 		const previewContainers =
 			(config.previews as PreviewsConfig | undefined)?.containers ?? [];
 		if (previewContainers.length === 0) {
-			return emptyPreviewContainerPreparation();
+			return emptyPreparedPreviewContainers();
 		}
 
 		const scopedContainerConfig = buildPreviewContainerConfig(
@@ -73,7 +73,7 @@ export async function preparePreviewContainers(
 			previewContainers
 		);
 		if (!scopedContainerConfig) {
-			return emptyPreviewContainerPreparation();
+			return emptyPreparedPreviewContainers();
 		}
 
 		const normalisedContainerConfig = await getNormalizedContainerOptions(
@@ -121,7 +121,7 @@ export async function preparePreviewContainers(
 	});
 }
 
-function emptyPreviewContainerPreparation(): PreviewContainerPreparation {
+function emptyPreparedPreviewContainers(): PreparedPreviewContainers {
 	return {
 		scopedContainerConfig: undefined,
 		normalisedContainerConfig: [],

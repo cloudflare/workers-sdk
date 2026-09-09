@@ -100,9 +100,7 @@ export const previewCommand = createCommand({
 			config,
 			buildResult,
 			assetsOptions,
-			{
-				preparePreviewContainers,
-			}
+			preparePreviewContainers
 		);
 		cleanupDestination(destination);
 

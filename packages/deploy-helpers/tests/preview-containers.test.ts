@@ -2,11 +2,12 @@ import {
 	apply,
 	initContainersSharedContext,
 	listDurableObjects,
+	OpenAPI,
 	pushBuiltContainerImage,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
-import { beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { initDeployHelpersContext } from "../src";
 import { preview } from "../src/preview/preview";
 import type { WorkerBuildResult } from "../src/shared/types";
@@ -118,6 +119,7 @@ const buildResult: WorkerBuildResult = {
 
 describe("preview containers", () => {
 	beforeEach(() => {
+		OpenAPI.LOGGER = undefined;
 		vi.mocked(apply).mockReset();
 		vi.mocked(initContainersSharedContext).mockReset();
 		vi.mocked(listDurableObjects).mockReset();
@@ -153,6 +155,10 @@ describe("preview containers", () => {
 		});
 	});
 
+	afterEach(() => {
+		OpenAPI.LOGGER = undefined;
+	});
+
 	it("pushes and applies prepared Dockerfile containers directly", async ({
 		expect,
 	}) => {
@@ -169,13 +175,11 @@ describe("preview containers", () => {
 			config,
 			buildResult,
 			undefined,
-			{
-				preparePreviewContainers: vi.fn(async () => ({
-					scopedContainerConfig: config,
-					normalisedContainerConfig: [container],
-					builtContainerDeployments: [builtDeployment],
-				})),
-			}
+			vi.fn(async () => ({
+				scopedContainerConfig: config,
+				normalisedContainerConfig: [container],
+				builtContainerDeployments: [builtDeployment],
+			}))
 		);
 
 		expect(pushBuiltContainerImage).toHaveBeenCalledWith(
@@ -217,13 +221,11 @@ describe("preview containers", () => {
 			config,
 			buildResult,
 			undefined,
-			{
-				preparePreviewContainers: vi.fn(async () => ({
-					scopedContainerConfig: config,
-					normalisedContainerConfig: [container],
-					builtContainerDeployments: [],
-				})),
-			}
+			vi.fn(async () => ({
+				scopedContainerConfig: config,
+				normalisedContainerConfig: [container],
+				builtContainerDeployments: [],
+			}))
 		);
 
 		expect(pushBuiltContainerImage).not.toHaveBeenCalled();
@@ -238,5 +240,49 @@ describe("preview containers", () => {
 			config,
 			ACCOUNT_ID
 		);
+	});
+
+	it("suppresses generated client debug logs while applying preview containers as JSON", async ({
+		expect,
+	}) => {
+		const container = containerConfig();
+		const builtDeployment = builtDeploymentFor(container);
+		const openAPILogger = {
+			debug: vi.fn(),
+			debugWithSanitization: vi.fn(),
+			log: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+		};
+		OpenAPI.LOGGER = openAPILogger;
+		vi.mocked(apply).mockImplementationOnce(async () => {
+			OpenAPI.LOGGER?.debug("generated client debug output");
+			OpenAPI.LOGGER?.debugWithSanitization(
+				"RESPONSE:",
+				"generated client response"
+			);
+		});
+
+		await preview(
+			ACCOUNT_ID,
+			{
+				name: "my-feature",
+				ignoreBaseConfig: false,
+				json: true,
+			},
+			config,
+			buildResult,
+			undefined,
+			vi.fn(async () => ({
+				scopedContainerConfig: config,
+				normalisedContainerConfig: [container],
+				builtContainerDeployments: [builtDeployment],
+			}))
+		);
+
+		expect(openAPILogger.debug).not.toHaveBeenCalled();
+		expect(openAPILogger.debugWithSanitization).not.toHaveBeenCalled();
+		expect(OpenAPI.LOGGER).toBe(openAPILogger);
 	});
 });
