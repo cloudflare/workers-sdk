@@ -55,6 +55,19 @@ export function timeAgo(dateString: string | undefined): string {
 	return `${days}d ago`;
 }
 
+const STREAM_PREVIEW_TRUNCATED_MARKER = "[truncated output]";
+// The two stream placeholders the engine emits for a non-previewable stream:
+// "[ReadableStream: N bytes]" and "[ReadableStream (binary): N bytes]".
+const STREAM_PLACEHOLDER_RE = /^\[ReadableStream( \(binary\))?: \d+ bytes\]$/;
+
+export function isTruncatedStreamPreview(value: unknown): value is string {
+	return (
+		typeof value === "string" &&
+		(value.endsWith(STREAM_PREVIEW_TRUNCATED_MARKER) ||
+			STREAM_PLACEHOLDER_RE.test(value))
+	);
+}
+
 export function formatJson(value: unknown): string {
 	if (value === null || value === undefined) {
 		return "N/A";

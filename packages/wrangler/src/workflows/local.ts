@@ -97,6 +97,24 @@ export async function fetchLocalResult<T>(
 	return json.result;
 }
 
+/**
+ * Like fetchLocalResult, but returns the raw Response so the caller can handle
+ * non-JSON bodies (the /step endpoint streams application/octet-stream).
+ */
+export async function fetchLocalRaw(port: number, path: string) {
+	const url = `http://localhost:${port}${LOCAL_EXPLORER_BASE_PATH}${path}`;
+	try {
+		return await fetch(url);
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : "Unknown network error";
+		throw new UserError(
+			`Could not connect to local dev session on port ${port}. Make sure "wrangler dev" is running.\n  ${message}`,
+			{ telemetryMessage: "workflows local connection failed" }
+		);
+	}
+}
+
 // ============================================================================
 // Local workflow helpers (mirroring the remote utils)
 // ============================================================================

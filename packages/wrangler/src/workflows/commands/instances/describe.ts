@@ -61,11 +61,6 @@ export const workflowsInstancesDescribeCommand = createCommand({
 			type: "boolean",
 			default: true,
 		},
-		"truncate-output-limit": {
-			describe: "Truncate step output after x characters",
-			type: "number",
-			default: 5000,
-		},
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
@@ -94,9 +89,9 @@ export const workflowsInstancesDescribeCommand = createCommand({
 
 		if (args.json) {
 			// The API payload omits `id`, leaving `--id latest` callers no way to
-			// learn which instance was resolved. `--step-output` and
-			// `--truncate-output-limit` are ignored here because truncating would
-			// hand invalid step output to a machine-readable consumer.
+			// learn which instance was resolved. `--step-output` is ignored here
+			// because omitting output would hand incomplete data to a machine-readable
+			// consumer.
 			logger.json({ id, ...instance });
 			return;
 		}
@@ -245,17 +240,11 @@ function logStep(
 
 	if (step.type == "step" || step.type == "waitForEvent") {
 		if (step.output !== undefined && args.stepOutput) {
-			let output: string;
 			try {
-				output = JSON.stringify(step.output);
+				formattedStep.Output = JSON.stringify(step.output);
 			} catch {
-				output = step.output as string;
+				formattedStep.Output = step.output as string;
 			}
-			formattedStep.Output =
-				output.length > args.truncateOutputLimit
-					? output.substring(0, args.truncateOutputLimit) +
-						"[...output truncated]"
-					: output;
 		}
 	}
 
