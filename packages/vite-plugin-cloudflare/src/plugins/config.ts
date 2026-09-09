@@ -25,6 +25,7 @@ import {
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import { withWranglerStateIgnored } from "./wrangler-watch-ignore";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
 import type * as vite from "vite";
@@ -72,6 +73,9 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						ctx.getTunnelHostnames(),
 						userConfig.server?.allowedHosts
 					),
+					watch: {
+						ignored: withWranglerStateIgnored(userConfig.server?.watch?.ignored),
+					},
 					fs: {
 						deny: [
 							...defaultDeniedFiles,
