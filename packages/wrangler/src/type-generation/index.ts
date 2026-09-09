@@ -836,6 +836,51 @@ function generateModuleTypeDeclarations(
 		Text: "string",
 	};
 	const declarations = new Array<string>();
+	if (!resolveOverlappingGlobs) {
+		for (const rule of rules) {
+			const typeScriptType = moduleTypeMap[rule.type];
+			if (typeScriptType === undefined) {
+				continue;
+			}
+
+			for (const glob of rule.globs) {
+				declarations.push(
+					generateModuleTypeDeclaration(getTSModuleGlob(glob).moduleGlob, [
+						typeScriptType,
+					])
+				);
+			}
+		}
+
+		return declarations;
+	}
+
+	return generateCombinedModuleTypeDeclarations([rules]);
+}
+
+interface ResolvedModuleTypeDeclarations {
+	scoped: Map<string, Set<string>>;
+	fallbacks: Map<
+		string,
+		{ types: Set<string>; recursiveRuleSeen: boolean; shouldEmit: boolean }
+	>;
+}
+
+/**
+ * Resolve declarations for one deployment configuration while preserving
+ * Wrangler's module-rule precedence.
+ *
+ * @param rules - Effective bundling rules for one deployment configuration
+ * @returns Module patterns and their possible TypeScript types
+ */
+function resolveModuleTypeDeclarations(
+	rules: Rule[]
+): ResolvedModuleTypeDeclarations {
+	const moduleTypeMap: Partial<Record<Rule["type"], string>> = {
+		CompiledWasm: "WebAssembly.Module",
+		Data: "ArrayBuffer",
+		Text: "string",
+	};
 	const seenRuleGlobs = new Set<string>();
 	const scopedDeclarations = new Map<string, Set<string>>();
 	const fallbackDeclarations = new Map<
@@ -857,13 +902,6 @@ function generateModuleTypeDeclarations(
 				isRecursiveFallback,
 				emitsFallback,
 			} = getTSModuleGlob(glob);
-			if (!resolveOverlappingGlobs) {
-				declarations.push(
-					generateModuleTypeDeclaration(moduleGlob, [typeScriptType])
-				);
-				continue;
-			}
-
 			if (seenRuleGlobs.has(glob)) {
 				continue;
 			}
@@ -903,16 +941,66 @@ function generateModuleTypeDeclarations(
 		}
 	}
 
-	for (const [moduleGlob, types] of scopedDeclarations) {
-		declarations.push(generateModuleTypeDeclaration(moduleGlob, types));
-	}
-	for (const [moduleGlob, { types, shouldEmit }] of fallbackDeclarations) {
-		if (shouldEmit || types.size > 1) {
-			declarations.push(generateModuleTypeDeclaration(moduleGlob, types));
+	return {
+		scoped: scopedDeclarations,
+		fallbacks: fallbackDeclarations,
+	};
+}
+
+/**
+ * Combine independently resolved module declarations from every deployment
+ * configuration represented by per-environment type generation.
+ *
+ * @param ruleSets - Effective bundling rules grouped by deployment configuration
+ * @returns Module declarations containing unions where environments differ
+ */
+function generateCombinedModuleTypeDeclarations(ruleSets: Rule[][]): string[] {
+	const combinedDeclarations = new Map<string, Set<string>>();
+	const combinedFallbacks = new Map<
+		string,
+		{ types: Set<string>; shouldEmit: boolean }
+	>();
+
+	for (const rules of ruleSets) {
+		const { scoped, fallbacks } = resolveModuleTypeDeclarations(rules);
+		for (const [moduleGlob, types] of scoped) {
+			const combinedTypes =
+				combinedDeclarations.get(moduleGlob) ?? new Set<string>();
+			for (const type of types) {
+				combinedTypes.add(type);
+			}
+			combinedDeclarations.set(moduleGlob, combinedTypes);
+		}
+
+		for (const [moduleGlob, { types, shouldEmit }] of fallbacks) {
+			const combinedFallback = combinedFallbacks.get(moduleGlob) ?? {
+				types: new Set<string>(),
+				shouldEmit: false,
+			};
+			for (const type of types) {
+				combinedFallback.types.add(type);
+			}
+			combinedFallback.shouldEmit ||= shouldEmit;
+			combinedFallbacks.set(moduleGlob, combinedFallback);
 		}
 	}
 
-	return declarations;
+	for (const [moduleGlob, { types, shouldEmit }] of combinedFallbacks) {
+		if (!shouldEmit && types.size === 1) {
+			continue;
+		}
+
+		const combinedTypes =
+			combinedDeclarations.get(moduleGlob) ?? new Set<string>();
+		for (const type of types) {
+			combinedTypes.add(type);
+		}
+		combinedDeclarations.set(moduleGlob, combinedTypes);
+	}
+
+	return [...combinedDeclarations].map(([moduleGlob, types]) =>
+		generateModuleTypeDeclaration(moduleGlob, types)
+	);
 }
 
 function generateModuleTypeDeclaration(
@@ -1808,12 +1896,23 @@ async function generatePerEnvironmentTypes(
 		}
 	}
 
-	const configuredModulesTypeStructure = generateModuleTypeDeclarations(
-		config.rules
-	);
-	const effectiveModulesTypeStructure = generateModuleTypeDeclarations(
-		parseRules(config.rules, log).rules,
-		true
+	const environmentRuleSets = [
+		config.rules,
+		...envNames.map(
+			(envName) =>
+				readConfig({ ...collectionArgs, env: envName }, { hideWarnings: true })
+					.rules
+		),
+	];
+	const uniqueRuleSets = [
+		...new Map(
+			environmentRuleSets.map((rules) => [JSON.stringify(rules), rules])
+		).values(),
+	];
+	const configuredModulesTypeStructure =
+		generateCombinedModuleTypeDeclarations(uniqueRuleSets);
+	const effectiveModulesTypeStructure = generateCombinedModuleTypeDeclarations(
+		uniqueRuleSets.map((rules) => parseRules(rules, log).rules)
 	);
 
 	const { consoleOutput, fileContent } = generatePerEnvTypeStrings(

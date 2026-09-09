@@ -9,3 +9,5 @@ Include default module rules in generated Worker types
 Service-worker declaration files are emitted as global scripts so that the generated wildcard module types are visible to imports.
 
 Directory-specific rules retain their scope when TypeScript can represent it; ambiguous relative imports use a union of the possible deployed module types.
+
+When generating combined types for named environments, each environment's effective rules are resolved independently and differing import types are represented as unions.
