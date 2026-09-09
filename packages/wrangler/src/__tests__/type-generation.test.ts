@@ -102,6 +102,8 @@ describe("constructTSModuleGlob() should return a valid TS glob ", () => {
 		["file.foo", "file.foo"],
 		["folder/file.foo", "folder/file.foo"],
 		["folder/*", "folder/*"],
+		["folder/**/*.foo", "folder/*.foo"],
+		["folder/*/nested/*.foo", "*.foo"],
 		["folder/**", "folder/*"],
 		["folder/**/*", "folder/*"],
 	])("$1 -> $2", ([from, to], { expect }) => {
@@ -4039,6 +4041,160 @@ describe("generate types - API", () => {
 		expect(generated.content.match(/declare module "\*\.txt"/g)).toHaveLength(
 			1
 		);
+	});
+
+	it("preserves representable directory scopes for same-extension rules", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["text/**/*.asset"],
+						fallthrough: true,
+					},
+					{
+						type: "Data",
+						globs: ["binary/**/*.asset"],
+						fallthrough: true,
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import text from "text/message.asset";
+				import binary from "binary/message.asset";
+
+				text.toUpperCase();
+				binary.byteLength;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("uses a safe union when relative imports cannot preserve directory scope", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["text/**/*.asset"],
+						fallthrough: true,
+					},
+					{
+						type: "Data",
+						globs: ["binary/**/*.asset"],
+						fallthrough: true,
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import text from "./text/message.asset";
+				import binary from "./binary/message.asset";
+
+				type Equal<Left, Right> =
+					(<Value>() => Value extends Left ? 1 : 2) extends
+					(<Value>() => Value extends Right ? 1 : 2) ? true : false;
+				type Assert<Value extends true> = Value;
+				type TextFallback = Assert<Equal<typeof text, string | ArrayBuffer>>;
+				type BinaryFallback = Assert<Equal<typeof binary, string | ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("uses a safe union when an exact rule overlaps a default rule", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["text/message.bin"],
+						fallthrough: true,
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "./text/message.bin";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type ValueFallback = Assert<Equal<typeof value, string | ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
 	});
 
 	it("includes effective module rules in the generated types hash", async ({

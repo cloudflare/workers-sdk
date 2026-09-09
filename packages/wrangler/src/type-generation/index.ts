@@ -754,36 +754,94 @@ export function constructTypeKey(key: string) {
 	return `"${escapeTypeScriptString(key)}"`;
 }
 
+/**
+ * Convert a Wrangler module-rule glob to a TypeScript ambient module pattern.
+ *
+ * @param glob - Wrangler module-rule glob
+ * @returns A pattern containing at most one asterisk
+ */
 export function constructTSModuleGlob(glob: string) {
-	// Exact module reference, don't transform
+	return getTSModuleGlob(glob).moduleGlob;
+}
+
+function getTSModuleGlob(glob: string): {
+	moduleGlob: string;
+	fallbackModuleGlob?: string;
+	preservesScope: boolean;
+	isRecursiveFallback: boolean;
+	emitsFallback: boolean;
+} {
 	if (!glob.includes("*")) {
-		return glob;
-		// Usually something like **/*.wasm. Turn into *.wasm
-	} else if (glob.includes(".")) {
-		return `*.${glob.split(".").at(-1)}`;
-	} else {
-		// Replace common patterns
-		return glob.replace("**/*", "*").replace("**/", "*/").replace("/**", "/*");
+		return {
+			moduleGlob: glob,
+			fallbackModuleGlob: getFallbackModuleGlob(glob),
+			preservesScope: true,
+			isRecursiveFallback: false,
+			emitsFallback: false,
+		};
 	}
+
+	// A TypeScript `*` also spans path separators, so these common globstar
+	// sequences can be collapsed without discarding literal directory prefixes.
+	const moduleGlob = glob
+		.replaceAll("**/*", "*")
+		.replaceAll("**/", "*/")
+		.replaceAll("/**", "/*");
+	const fallbackModuleGlob = getFallbackModuleGlob(glob);
+	const preservesScope =
+		moduleGlob.indexOf("*") === moduleGlob.lastIndexOf("*");
+
+	return {
+		moduleGlob: preservesScope ? moduleGlob : (fallbackModuleGlob ?? "*"),
+		fallbackModuleGlob,
+		preservesScope,
+		isRecursiveFallback:
+			preservesScope &&
+			moduleGlob === fallbackModuleGlob &&
+			glob.startsWith("**/"),
+		emitsFallback: true,
+	};
+}
+
+function getFallbackModuleGlob(glob: string): string | undefined {
+	const lastAsteriskIndex = glob.lastIndexOf("*");
+	if (lastAsteriskIndex !== -1) {
+		const suffix = glob.slice(lastAsteriskIndex + 1);
+		return suffix ? `*${suffix}` : undefined;
+	}
+
+	const lastSlashIndex = Math.max(
+		glob.lastIndexOf("/"),
+		glob.lastIndexOf("\\")
+	);
+	const lastDotIndex = glob.lastIndexOf(".");
+	return lastDotIndex > lastSlashIndex
+		? `*${glob.slice(lastDotIndex)}`
+		: undefined;
 }
 
 /**
  * Generate TypeScript module declarations for bundling rules.
  *
  * @param rules - Bundling rules to convert to declarations
- * @param deduplicateGlobs - Whether to keep only the first declaration for each normalized glob
+ * @param resolveOverlappingGlobs - Whether to resolve overlapping declarations using deployment precedence
  */
 function generateModuleTypeDeclarations(
 	rules: Rule[] = [],
-	deduplicateGlobs = false
+	resolveOverlappingGlobs = false
 ): string[] {
 	const moduleTypeMap: Partial<Record<Rule["type"], string>> = {
 		CompiledWasm: "WebAssembly.Module",
 		Data: "ArrayBuffer",
 		Text: "string",
 	};
-	const declaredGlobs = new Set<string>();
 	const declarations = new Array<string>();
+	const seenRuleGlobs = new Set<string>();
+	const scopedDeclarations = new Map<string, Set<string>>();
+	const fallbackDeclarations = new Map<
+		string,
+		{ types: Set<string>; recursiveRuleSeen: boolean; shouldEmit: boolean }
+	>();
 
 	for (const rule of rules) {
 		const typeScriptType = moduleTypeMap[rule.type];
@@ -792,20 +850,79 @@ function generateModuleTypeDeclarations(
 		}
 
 		for (const glob of rule.globs) {
-			const moduleGlob = constructTSModuleGlob(glob);
-			if (deduplicateGlobs && declaredGlobs.has(moduleGlob)) {
+			const {
+				moduleGlob,
+				fallbackModuleGlob,
+				preservesScope,
+				isRecursiveFallback,
+				emitsFallback,
+			} = getTSModuleGlob(glob);
+			if (!resolveOverlappingGlobs) {
+				declarations.push(
+					generateModuleTypeDeclaration(moduleGlob, [typeScriptType])
+				);
 				continue;
 			}
 
-			declaredGlobs.add(moduleGlob);
-			declarations.push(`declare module "${moduleGlob}" {
-	const value: ${typeScriptType};
-	export default value;
-}`);
+			if (seenRuleGlobs.has(glob)) {
+				continue;
+			}
+			seenRuleGlobs.add(glob);
+
+			if (fallbackModuleGlob === undefined) {
+				const types = scopedDeclarations.get(moduleGlob) ?? new Set<string>();
+				types.add(typeScriptType);
+				scopedDeclarations.set(moduleGlob, types);
+				continue;
+			}
+
+			// Ambient module patterns cannot be relative and may contain only one `*`.
+			// Keep a suffix-only union so `./` imports are never assigned one scoped
+			// rule's type when multiple deployment rules could match that suffix.
+			const fallbackDeclaration = fallbackDeclarations.get(
+				fallbackModuleGlob
+			) ?? {
+				types: new Set<string>(),
+				recursiveRuleSeen: false,
+				shouldEmit: false,
+			};
+			if (fallbackDeclaration.recursiveRuleSeen) {
+				continue;
+			}
+
+			if (preservesScope && moduleGlob !== fallbackModuleGlob) {
+				const types = scopedDeclarations.get(moduleGlob) ?? new Set<string>();
+				types.add(typeScriptType);
+				scopedDeclarations.set(moduleGlob, types);
+			}
+
+			fallbackDeclaration.types.add(typeScriptType);
+			fallbackDeclaration.recursiveRuleSeen = isRecursiveFallback;
+			fallbackDeclaration.shouldEmit ||= emitsFallback;
+			fallbackDeclarations.set(fallbackModuleGlob, fallbackDeclaration);
+		}
+	}
+
+	for (const [moduleGlob, types] of scopedDeclarations) {
+		declarations.push(generateModuleTypeDeclaration(moduleGlob, types));
+	}
+	for (const [moduleGlob, { types, shouldEmit }] of fallbackDeclarations) {
+		if (shouldEmit || types.size > 1) {
+			declarations.push(generateModuleTypeDeclaration(moduleGlob, types));
 		}
 	}
 
 	return declarations;
+}
+
+function generateModuleTypeDeclaration(
+	moduleGlob: string,
+	types: Iterable<string>
+): string {
+	return `declare module "${moduleGlob}" {
+	const value: ${[...types].join(" | ")};
+	export default value;
+}`;
 }
 
 /**
