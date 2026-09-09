@@ -3576,7 +3576,6 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	expect,
 	onTestFinished,
 }) => {
-	const port = await getPort();
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -3596,25 +3595,119 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "tcp", port }],
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
 				},
 			},
 		],
 	});
 	onTestFinished(() => mf.dispose());
-	await mf.ready;
 
-	const received = await new Promise<Buffer>((resolve, reject) => {
-		const socket = net.connect(port, "127.0.0.1", () => {
-			socket.write("hello");
-		});
-		const chunks: Buffer[] = [];
-		socket.on("data", (chunk) => chunks.push(chunk));
-		socket.on("end", () => resolve(Buffer.concat(chunks)));
-		socket.on("error", reject);
+	const socket = await mf.dispatchConnect();
+	socket.write("hello");
+	expect(await text(socket)).toBe("hello");
+});
+
+test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const firstPort = await getPort();
+	const secondPort = await getPort({ exclude: [firstPort] });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const writer = socket.writable.getWriter();
+								await writer.write(new TextEncoder().encode("a"));
+								await writer.close();
+							},
+						};
+					`),
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: firstPort },
+						{ type: "connect", protocol: "tcp", port: secondPort },
+					],
+				},
+			},
+			{
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const writer = socket.writable.getWriter();
+								await writer.write(new TextEncoder().encode("b"));
+								await writer.close();
+							},
+						};
+					`),
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"Multiple TCP connect triggers configured for entrypoint worker; specify a port"
+	);
+	await expect(mf.dispatchConnect({ port: 123 })).rejects.toThrow(
+		"TCP connect trigger on port 123 not found for entrypoint worker"
+	);
+
+	const firstSocket = await mf.dispatchConnect({ port: firstPort });
+	expect(await text(firstSocket)).toBe("a");
+	const secondWorkerSocket = await mf.dispatchConnect({ workerName: "b" });
+	expect(await text(secondWorkerSocket)).toBe("b");
+});
+
+test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								await socket.readable.pipeTo(socket.writable);
+							},
+						};
+					`),
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+				},
+			},
+		],
+	});
+	let disposed = false;
+	onTestFinished(async () => {
+		if (!disposed) {
+			await mf.dispose();
+		}
 	});
 
-	expect(received.toString()).toBe("hello");
+	const socket = await mf.dispatchConnect();
+	const closed = once(socket, "close");
+	await mf.dispose();
+	disposed = true;
+	await closed;
+	expect(socket.destroyed).toBe(true);
 });
 
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
