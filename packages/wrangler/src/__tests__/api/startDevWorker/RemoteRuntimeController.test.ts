@@ -1,6 +1,7 @@
 import { APIError } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
+import { PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL } from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior
 import {
 	createPreviewSession,
@@ -292,6 +293,261 @@ describe("RemoteRuntimeController", () => {
 			// Advance past where the timer would have fired
 			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
 			expect(createWorkerPreview).not.toHaveBeenCalled();
+		});
+
+		it("should keep retrying the proactive refresh after a transient failure, and recover once it succeeds", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// The next proactive refresh fails outright (e.g. the machine is
+			// offline) — a non-retryable status keeps `retryOnAPIFailure` from
+			// needing a real-time backoff wait fake timers wouldn't advance.
+			vi.mocked(createPreviewSession).mockRejectedValueOnce(
+				new APIError({
+					text: "network unreachable",
+					notes: [],
+					status: 400,
+					telemetryMessage: false,
+				})
+			);
+
+			// Register both waiters before advancing, with a timeout larger than
+			// the advance window, so neither races the refresh timers.
+			const errorPromise = bus.waitFor("error", undefined, 60 * 60 * 1000);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			const errorEvent = await errorPromise;
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Error refreshing preview token",
+			});
+
+			// Connectivity returns before the next short-interval retry: it must
+			// succeed and refresh the session with no restart required.
+			vi.mocked(createPreviewSession).mockResolvedValue({
+				value: "test-session-value",
+				host: "test.workers.dev",
+				name: "test",
+			});
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL + 1
+			);
+			const reloadEvent = await reloadPromise;
+			expect(reloadEvent.type).toBe("reloadComplete");
+		});
+
+		it("should also retry when only the token upload fails, since that failure never throws", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// `createPreviewSession` (the session step) keeps succeeding, but
+			// `createWorkerPreview` (the token upload step) fails. `#previewToken`
+			// handles this itself — reporting the error and returning `undefined`
+			// rather than throwing — so `#updatePreviewToken` returns `false`
+			// without an exception for `#refreshPreviewToken` to catch.
+			// `handlePreviewSessionUploadError` is mocked to its default
+			// `undefined` return, i.e. "don't restart the session".
+			vi.mocked(createWorkerPreview).mockRejectedValue(
+				new Error("upload failed")
+			);
+
+			const errorPromise = bus.waitFor("error", undefined, 60 * 60 * 1000);
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			const errorEvent = await errorPromise;
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Failed to obtain a preview token",
+			});
+
+			// It must still keep retrying on the short interval rather than
+			// silently giving up just because nothing threw.
+			const secondErrorPromise = bus.waitFor(
+				"error",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL + 1
+			);
+			await secondErrorPromise;
+
+			// Recovers once the upload succeeds again.
+			vi.mocked(createWorkerPreview).mockResolvedValue({
+				value: "test-preview-token",
+				host: "test.workers.dev",
+			});
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL + 1
+			);
+			const reloadEvent = await reloadPromise;
+			expect(reloadEvent.type).toBe("reloadComplete");
+		});
+
+		it("should not retry a refresh that a concurrent rebuild aborted", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// Simulate the proactive refresh being in flight when a rebuild
+			// starts: `createWorkerPreview` hangs until its abort signal fires,
+			// exactly like the real network call would once `onBundleStart()`
+			// aborts it. `#currentBundleId` only advances once that rebuild
+			// *completes* (`onBundleComplete`), so at the moment of the abort it
+			// still matches this refresh's captured `bundleId` — the fix must
+			// tell an aborted attempt apart from a genuine failure some other
+			// way.
+			vi.mocked(createPreviewSession).mockClear();
+			vi.mocked(createWorkerPreview).mockImplementation(
+				(..._args: unknown[]) =>
+					new Promise((_resolve, reject) => {
+						const signal = _args[5] as AbortSignal;
+						signal.addEventListener("abort", () => {
+							const err = new Error("aborted");
+							err.name = "AbortError";
+							reject(err);
+						});
+					})
+			);
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			controller.onBundleStart({ type: "bundleStart", config });
+			await vi.advanceTimersByTimeAsync(0);
+
+			// The abort must not be reported as an error, nor scheduled for
+			// retry. `createPreviewSession` was already called once by this
+			// point, for this refresh's own (unaborted) session step — the
+			// assertion is that it does *not* climb further.
+			expect(createPreviewSession).toHaveBeenCalledTimes(1);
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
+			);
+			expect(createPreviewSession).toHaveBeenCalledTimes(1);
+
+			// The rebuild itself completes normally afterwards, unaffected.
+			vi.mocked(createWorkerPreview).mockResolvedValue({
+				value: "test-preview-token",
+				host: "test.workers.dev",
+			});
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: { ...bundle, path: "/virtual/index2.mjs" },
+			});
+			await reloadPromise;
+		});
+
+		it("should not recreate the refresh timer when a thrown error surfaces after a concurrent rebuild aborted it", async ({
+			expect,
+		}) => {
+			vi.useFakeTimers();
+
+			const { controller, bus } = setup();
+			const config = makeConfig();
+			const bundle = makeBundle();
+
+			controller.onBundleStart({ type: "bundleStart", config });
+			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
+			await bus.waitFor("reloadComplete");
+
+			// The session step hangs so it's still in flight when
+			// `onBundleStart()` aborts the controller. Rather than the abort
+			// itself rejecting this call (already covered above), a *different*,
+			// unrelated error surfaces afterwards — e.g. a concurrent
+			// account/context lookup failure — while the signal happens to
+			// already be aborted. `onBundleStart()` also clears the pending
+			// refresh timer; a thrown, non-`AbortError` failure must not
+			// recreate it for this now-superseded bundle.
+			let rejectAccountContext!: (err: unknown) => void;
+			vi.mocked(getWorkerAccountAndContext).mockImplementation(
+				() =>
+					new Promise((_resolve, reject) => {
+						rejectAccountContext = reject;
+					})
+			);
+
+			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
+			controller.onBundleStart({ type: "bundleStart", config });
+			rejectAccountContext(new Error("account lookup failed"));
+
+			const errorEvent = await bus.waitFor("error", undefined, 60 * 60 * 1000);
+			expect(errorEvent).toMatchObject({
+				type: "error",
+				reason: "Error refreshing preview token",
+			});
+
+			// The error is still reported, but must not resurrect a retry timer
+			// for the superseded bundle.
+			vi.mocked(getWorkerAccountAndContext).mockResolvedValue({
+				workerAccount: {
+					accountId: "test-account-id",
+					apiToken: { apiToken: "test-token" },
+				},
+				workerContext: {
+					env: undefined,
+					zone: undefined,
+					host: undefined,
+					routes: undefined,
+					sendMetrics: undefined,
+				},
+			});
+			vi.mocked(createPreviewSession).mockClear();
+			await vi.advanceTimersByTimeAsync(
+				PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL * 2
+			);
+			expect(createPreviewSession).not.toHaveBeenCalled();
+
+			// The rebuild itself completes normally afterwards, unaffected.
+			const reloadPromise = bus.waitFor(
+				"reloadComplete",
+				undefined,
+				60 * 60 * 1000
+			);
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle: { ...bundle, path: "/virtual/index3.mjs" },
+			});
+			await reloadPromise;
 		});
 	});
 

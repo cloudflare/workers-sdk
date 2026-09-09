@@ -23,7 +23,11 @@ import { realishPrintLogs } from "../../tail/printing";
 import { getAccessHeaders } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
+import {
+	PREVIEW_TOKEN_REFRESH_INTERVAL,
+	PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL,
+	unwrapHook,
+} from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -424,6 +428,25 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
+		const bundleId = this.#currentBundleId;
+		// Captured before anything async: `onBundleStart()` aborts this exact
+		// signal (before replacing `#abortController`) if a rebuild starts
+		// while this refresh is in flight, but doesn't bump `#currentBundleId`
+		// until that rebuild *completes* — so a bundle-ID match alone can't
+		// tell an aborted-by-rebuild refresh apart from a genuine failure,
+		// whether that failure surfaces as a thrown error or (from
+		// `#previewToken`'s non-restart upload-error path) a `false` return.
+		const abortSignal = this.#abortController.signal;
+		// A newer bundle superseding this refresh, or this refresh's own
+		// signal having been aborted, means a rebuild is already handling
+		// things — that rebuild's own success path reschedules normally, so
+		// retrying a stale attempt here would revive outdated worker code (or,
+		// for a thrown error, recreate the timer `onBundleStart()` just
+		// cleared).
+		const shouldRetry = () =>
+			bundleId === this.#currentBundleId &&
+			!abortSignal.aborted &&
+			!this.tearingDown;
 		try {
 			assert(this.#latestConfig.dev.auth);
 			const auth = await unwrapHook(this.#latestConfig.dev.auth);
@@ -439,11 +462,16 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.#latestBundle,
 				auth,
 				this.#latestRoutes,
-				this.#currentBundleId
+				bundleId
 			);
 
 			if (refreshed) {
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			} else if (shouldRetry()) {
+				// `#updatePreviewToken` (via `#previewToken`) already reported a
+				// non-restart upload failure and returned `false` without
+				// throwing — that failure needs the same retry as a thrown one.
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
@@ -457,6 +485,16 @@ export class RemoteRuntimeController extends RuntimeController {
 				source: "RemoteRuntimeController",
 				data: undefined,
 			});
+
+			// A failed refresh must not give up the retry cycle for good: unlike
+			// a successful refresh (which reschedules itself via
+			// `#updatePreviewToken`), nothing else will trigger another attempt
+			// for a session that isn't otherwise reloading — so a transient
+			// failure (e.g. the machine is offline) would otherwise strand the
+			// session even after connectivity returns.
+			if (shouldRetry()) {
+				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
+			}
 		}
 	}
 
