@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Correct Pages-to-Workers delegation analytics for forced and ineligible commands
