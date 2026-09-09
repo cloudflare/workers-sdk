@@ -208,16 +208,20 @@ function splitSqlIntoStatements(sql: string): string[] {
 
 /**
  * Pulls characters from the string iterator while the predicate remains true.
+ * Only the bounded trailing window is passed to the predicate.
  */
 function consumeWhile(
 	iterator: Iterator<string>,
-	predicate: (str: string) => boolean
+	predicate: (str: string) => boolean,
+	window: number = 16
 ) {
 	let next = iterator.next();
 	let str = "";
+	let tail = "";
 	while (!next.done) {
 		str += next.value;
-		if (!predicate(str)) {
+		tail = (tail + next.value).slice(-window);
+		if (!predicate(tail)) {
 			break;
 		}
 		next = iterator.next();
@@ -229,7 +233,11 @@ function consumeWhile(
  * Pulls characters from the string iterator until the `endMarker` is found.
  */
 function consumeUntilMarker(iterator: Iterator<string>, endMarker: string) {
-	return consumeWhile(iterator, (str) => !str.endsWith(endMarker));
+	return consumeWhile(
+		iterator,
+		(str) => !str.endsWith(endMarker),
+		endMarker.length
+	);
 }
 
 /**

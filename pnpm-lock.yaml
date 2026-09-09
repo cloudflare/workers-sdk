@@ -4130,6 +4130,9 @@ importers:
       '@cloudflare/remote-bindings':
         specifier: workspace:*
         version: link:../remote-bindings
+      '@cloudflare/runtime-types':
+        specifier: workspace:*
+        version: link:../runtime-types
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

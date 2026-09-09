@@ -47,28 +47,43 @@ describe("maybeDelegatePagesToWorkers", () => {
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
-	for (const command of ["deploy", "create"] as const) {
-		it(`does not delegate (or emit telemetry) when the account already has Pages projects (${command})`, async ({
-			expect,
-		}) => {
-			const result = await maybeDelegatePagesToWorkers({
-				command,
-				projectPath: process.cwd(),
-				accountHasPagesProjects: async () => true,
-			});
-
-			expect(result).toEqual({ delegate: false });
-			// Skips are deterministic, expected non-cases, so they are not sent to
-			// telemetry.
-			expect(sendMetricsEvent).not.toHaveBeenCalled();
-		});
-	}
-
-	it("delegates when the account has no Pages projects", async ({ expect }) => {
+	it("does not delegate (or emit telemetry) when the deploy targets an existing Pages project", async ({
+		expect,
+	}) => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
-			accountHasPagesProjects: async () => false,
+			projectExists: true,
+		});
+
+		expect(result).toEqual({ delegate: false });
+		// Skips are deterministic, expected non-cases, so they are not sent to
+		// telemetry.
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
+	});
+
+	it("does not delegate when the target project's existence is unknown", async ({
+		expect,
+	}) => {
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+		});
+
+		expect(result).toEqual({ delegate: false });
+		expect(sendMetricsEvent).not.toHaveBeenCalled();
+	});
+
+	it("delegates a new project even when the account already has other Pages projects", async ({
+		expect,
+	}) => {
+		// The gate is per-project, not per-account: `projectExists: false` means
+		// this specific project is new, so we delegate regardless of what else the
+		// account has.
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			projectExists: false,
 		});
 
 		expect(result).toEqual({
@@ -79,37 +94,48 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 	});
 
-	it("skips delegation (without emitting telemetry) when the account Pages projects lookup fails", async ({
+	it("does not delegate when a lazy projectExists resolver reports the project already exists", async ({
 		expect,
 	}) => {
 		const result = await maybeDelegatePagesToWorkers({
-			command: "deploy",
+			command: "create",
 			projectPath: process.cwd(),
-			accountHasPagesProjects: async () => {
-				throw new Error("boom");
-			},
+			projectExists: async () => true,
 		});
 
 		expect(result).toEqual({ delegate: false });
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
-	it("does not query account Pages projects when a cheaper, local check already skips", async ({
+	it("delegates when a lazy projectExists resolver reports the project is new", async ({
 		expect,
 	}) => {
-		createFunctionsDir(process.cwd());
-		const accountHasPagesProjects = vi.fn(async () => true);
-
 		const result = await maybeDelegatePagesToWorkers({
-			command: "deploy",
+			command: "create",
 			projectPath: process.cwd(),
-			accountHasPagesProjects,
+			projectExists: async () => false,
+		});
+
+		expect(result).toEqual({
+			delegate: true,
+			command: "create",
+			agentId: "test-agent",
+			deployArgs: {},
+		});
+	});
+
+	it("skips delegation when the projectExists lookup throws, leaving the command on Pages", async ({
+		expect,
+	}) => {
+		const result = await maybeDelegatePagesToWorkers({
+			command: "create",
+			projectPath: process.cwd(),
+			projectExists: async () => {
+				throw new Error("boom");
+			},
 		});
 
 		expect(result).toEqual({ delegate: false });
-		// The functions/ directory is a local, no-cost skip reason, so the
-		// account-listing API call must never be made.
-		expect(accountHasPagesProjects).not.toHaveBeenCalled();
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
@@ -139,6 +165,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			const result = await maybeDelegatePagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
+				projectExists: false,
 			});
 
 			expect(result).toEqual({ delegate: false });
@@ -172,6 +199,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			const result = await maybeDelegatePagesToWorkers({
 				command: "deploy",
 				projectPath: process.cwd(),
+				projectExists: false,
 			});
 
 			expect(result).toEqual({
@@ -193,6 +221,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 				command: "deploy",
 				projectPath: process.cwd(),
 				assetsDirectory,
+				projectExists: false,
 			});
 
 			expect(result).toEqual({
@@ -210,7 +239,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
-			unsupportedArgs: ["--branch"],
+			unsupportedArgs: ["--commit-hash"],
 		});
 
 		expect(result).toEqual({ delegate: false });
@@ -221,6 +250,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
+			projectExists: false,
 		});
 
 		expect(result).toEqual({
@@ -245,6 +275,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
+			projectExists: false,
 			projectName: "my-app",
 		});
 
@@ -266,6 +297,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			command: "deploy",
 			projectPath: process.cwd(),
 			assetsDirectory,
+			projectExists: false,
 			projectName: "my-app",
 		});
 
@@ -292,6 +324,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "create",
 			projectPath: process.cwd(),
+			projectExists: false,
 			projectName: "my-proj",
 			compatibilityDate: "2024-01-01",
 			compatibilityFlags: ["nodejs_compat"],
