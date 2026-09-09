@@ -1740,7 +1740,7 @@ importers:
         version: 5.8.3
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/build-output-utils:
     dependencies:
@@ -1759,7 +1759,7 @@ importers:
         version: link:../workers-utils
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1802,7 +1802,7 @@ importers:
         version: 6.0.2
       tsdown:
         specifier: ^0.15.9
-        version: 0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(typescript@5.9.3)
+        version: 0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(typescript@5.9.3)
 
   packages/codemods:
     devDependencies:
@@ -1848,7 +1848,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2560,7 +2560,7 @@ importers:
         version: 22.15.17
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2723,7 +2723,7 @@ importers:
         version: 0.28.1
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2751,7 +2751,7 @@ importers:
         version: 22.15.17
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2930,7 +2930,7 @@ importers:
         version: 1.2.2
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4183,7 +4183,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4498,7 +4498,7 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: ^0.15.9
-        version: 0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(typescript@5.8.3)
+        version: 0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(typescript@5.8.3)
       tsup:
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.23)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.9.0)
@@ -4826,8 +4826,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       shell-quote:
-        specifier: ^1.8.1
-        version: 1.8.1
+        specifier: ^1.9.0
+        version: 1.10.0
       signal-exit:
         specifier: catalog:default
         version: 4.1.0
@@ -4851,7 +4851,7 @@ importers:
         version: 1.5.0
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
       tsup:
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.23)(supports-color@9.2.2)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.1)
@@ -15394,8 +15394,9 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.1:
-    resolution: {integrity: sha512-6j1W9l1iAs/4xYBI1SYOVZyFcCis9b4KCLQ8fgAGG07QvzaRLVVRQvAy85yNmmZSjYjg4MWh4gNvlPujU/5LpA==}
+  shell-quote@1.10.0:
+    resolution: {integrity: sha512-w1aiOKwKuRgtwAReIIj89puqg+I7GvX4IbLrvmhXbzQsj1+Zwi4VO3+fa6ZF91TWSjIxoEkKnMeHcLEODK5ZXA==}
+    engines: {node: '>= 0.4'}
 
   shell-quote@1.8.3:
     resolution: {integrity: sha512-ObmnIF4hXNg1BqhnHmgbDETF8dLPCggZWBjkQfhZpbszZnYur5DUljTcCHii5LC3J5E0yeO/1LIMyH+UvHQgyw==}
@@ -20118,6 +20119,13 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
+  '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)':
+    dependencies:
+      '@emnapi/core': 1.11.1
+      '@emnapi/runtime': 1.11.3
+      '@tybys/wasm-util': 0.10.3
+    optional: true
+
   '@netlify/build-info@10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)':
     dependencies:
       '@bugsnag/js': 8.6.0
@@ -20953,17 +20961,17 @@ snapshots:
   '@rolldown/binding-openharmony-arm64@1.2.3':
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
+  '@rolldown/binding-wasm32-wasi@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
+  '@rolldown/binding-wasm32-wasi@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -22608,15 +22616,6 @@ snapshots:
       msw: 2.14.6(@types/node@22.15.17)(typescript@5.8.3)
       vite: 8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
 
-  '@vitest/mocker@4.1.0(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))':
-    dependencies:
-      '@vitest/spy': 4.1.0
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      msw: 2.14.6(@types/node@22.15.17)(typescript@5.8.3)
-      vite: 8.2.0(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-
   '@vitest/mocker@4.1.0(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.0
@@ -22684,7 +22683,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.0.3
-      vitest: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      vitest: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -23589,7 +23588,7 @@ snapshots:
       date-fns: 2.30.0
       lodash: 4.17.23
       rxjs: 7.8.2
-      shell-quote: 1.8.3
+      shell-quote: 1.10.0
       spawn-command: 0.0.2
       supports-color: 8.1.1
       tree-kill: 1.2.2
@@ -27651,7 +27650,7 @@ snapshots:
 
   reusify@1.0.4: {}
 
-  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(typescript@5.8.3):
+  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
@@ -27662,14 +27661,14 @@ snapshots:
       dts-resolver: 2.1.3
       get-tsconfig: 4.13.6
       magic-string: 0.30.21
-      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(typescript@5.9.3):
+  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.9.3):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
@@ -27680,14 +27679,14 @@ snapshots:
       dts-resolver: 2.1.3
       get-tsconfig: 4.13.6
       magic-string: 0.30.21
-      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(typescript@5.8.3):
+  rolldown-plugin-dts@0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
@@ -27698,14 +27697,14 @@ snapshots:
       get-tsconfig: 4.13.6
       magic-string: 0.30.21
       obug: 0.1.3(ms@2.1.3)
-      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
       - ms
       - oxc-resolver
 
-  rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1):
+  rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3):
     dependencies:
       '@oxc-project/types': 0.95.0
       '@rolldown/pluginutils': 1.0.0-beta.44
@@ -27720,7 +27719,7 @@ snapshots:
       '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.44
       '@rolldown/binding-linux-x64-musl': 1.0.0-beta.44
       '@rolldown/binding-openharmony-arm64': 1.0.0-beta.44
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.44
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.44
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.44
@@ -27728,7 +27727,7 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1):
+  rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3):
     dependencies:
       '@oxc-project/types': 0.96.0
       '@rolldown/pluginutils': 1.0.0-beta.49
@@ -27743,7 +27742,7 @@ snapshots:
       '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.49
       '@rolldown/binding-linux-x64-musl': 1.0.0-beta.49
       '@rolldown/binding-openharmony-arm64': 1.0.0-beta.49
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.49
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.49
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.49
@@ -28129,7 +28128,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.1: {}
+  shell-quote@1.10.0: {}
 
   shell-quote@1.8.3: {}
 
@@ -28732,7 +28731,7 @@ snapshots:
       strip-bom: 3.0.0
       strip-json-comments: 2.0.1
 
-  tsdown@0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(typescript@5.8.3):
+  tsdown@0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(typescript@5.8.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -28741,8 +28740,8 @@ snapshots:
       diff: 8.0.3
       empathic: 2.0.1
       hookable: 5.5.3
-      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
-      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(typescript@5.8.3)
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
+      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.8.3)
       semver: 7.7.3
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
@@ -28759,7 +28758,7 @@ snapshots:
       - supports-color
       - vue-tsc
 
-  tsdown@0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(typescript@5.9.3):
+  tsdown@0.15.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(typescript@5.9.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -28768,8 +28767,8 @@ snapshots:
       diff: 8.0.3
       empathic: 2.0.1
       hookable: 5.5.3
-      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
-      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(typescript@5.9.3)
+      rolldown: 1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
+      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.9.3)
       semver: 7.7.3
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
@@ -28786,7 +28785,7 @@ snapshots:
       - supports-color
       - vue-tsc
 
-  tsdown@0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3):
+  tsdown@0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3):
     dependencies:
       ansis: 4.3.1
       cac: 6.7.14
@@ -28795,14 +28794,14 @@ snapshots:
       empathic: 2.0.1
       hookable: 5.5.3
       obug: 0.1.3(ms@2.1.3)
-      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
-      rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(typescript@5.8.3)
+      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
+      rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.8.3)
       semver: 7.8.5
       tinyexec: 1.2.4
       tinyglobby: 0.2.17
       tree-kill: 1.2.2
       unconfig-core: 7.5.0
-      unrun: 0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(synckit@0.11.12)
+      unrun: 0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12)
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -29213,10 +29212,10 @@ snapshots:
       picomatch: 4.0.5
       webpack-virtual-modules: 0.6.2
 
-  unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(synckit@0.11.12):
+  unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12):
     dependencies:
       '@oxc-project/runtime': 0.96.0
-      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
     optionalDependencies:
       synckit: 0.11.12
     transitivePeerDependencies:
@@ -29457,21 +29456,6 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.9.0
 
-  vite@8.2.0(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0):
-    dependencies:
-      lightningcss: 1.33.0
-      picomatch: 4.0.5
-      postcss: 8.5.23
-      rolldown: 1.2.3
-      tinyglobby: 0.2.17
-    optionalDependencies:
-      '@types/node': 22.15.17
-      esbuild: 0.23.1
-      fsevents: 2.3.3
-      jiti: 2.6.1
-      tsx: 4.21.0
-      yaml: 2.9.0
-
   vite@8.2.0(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.33.0
@@ -29544,35 +29528,6 @@ snapshots:
       tinyglobby: 0.2.17
       tinyrainbow: 3.0.3
       vite: 8.1.5(@types/node@22.15.17)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@opentelemetry/api': 1.9.1
-      '@types/node': 22.15.17
-      '@vitest/ui': 4.1.0(vitest@4.1.0)
-    transitivePeerDependencies:
-      - msw
-
-  vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)):
-    dependencies:
-      '@vitest/expect': 4.1.0
-      '@vitest/mocker': 4.1.0(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.2.0(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
-      '@vitest/pretty-format': 4.1.0
-      '@vitest/runner': 4.1.0
-      '@vitest/snapshot': 4.1.0
-      '@vitest/spy': 4.1.0
-      '@vitest/utils': 4.1.0
-      es-module-lexer: 2.3.1
-      expect-type: 1.3.0
-      magic-string: 0.30.21
-      obug: 2.1.4
-      pathe: 2.0.3
-      picomatch: 4.0.5
-      std-env: 4.0.0
-      tinybench: 2.9.0
-      tinyexec: 1.2.4
-      tinyglobby: 0.2.17
-      tinyrainbow: 3.0.3
-      vite: 8.2.0(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
