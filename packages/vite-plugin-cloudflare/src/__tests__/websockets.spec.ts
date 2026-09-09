@@ -19,6 +19,7 @@ describe("handleWebSocket", () => {
 	let miniflare: Miniflare | undefined;
 	let port: number;
 	const openSockets = new Set<net.Socket>();
+	const serverSockets = new Set<net.Socket>();
 
 	const DEFAULT_WORKER_SCRIPT = `export default {
 		fetch() {
@@ -31,6 +32,10 @@ describe("handleWebSocket", () => {
 	beforeEach(() => {
 		miniflare = undefined;
 		httpServer = http.createServer((_req, res) => res.end("OK"));
+		httpServer.on("connection", (socket) => {
+			serverSockets.add(socket);
+			socket.on("close", () => serverSockets.delete(socket));
+		});
 	});
 
 	/**
@@ -73,11 +78,43 @@ describe("handleWebSocket", () => {
 		return socket;
 	}
 
+	/** Starts the HTTP server and records its assigned port. */
+	async function listenHttpServer() {
+		await new Promise<void>((resolve) =>
+			httpServer.listen(0, "127.0.0.1", resolve)
+		);
+		port = (httpServer.address() as AddressInfo).port;
+	}
+
+	/** Writes a Vite HMR WebSocket upgrade request to the server. */
+	function writeViteHmrUpgrade(socket: net.Socket) {
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Protocol: vite-hmr\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+	}
+
+	/** Attaches the Cloudflare WebSocket handler with a lightweight Miniflare test double. */
+	function attachWebSocketHandler(viteWebSocketEnabled: boolean) {
+		const dispatchFetch = vi.fn();
+		handleWebSocket(
+			httpServer,
+			{ dispatchFetch } as unknown as Miniflare,
+			undefined,
+			viteWebSocketEnabled
+		);
+		return dispatchFetch;
+	}
+
 	async function listen(entryWorkerName?: string) {
 		const mf = miniflare ?? startMiniflare();
 		handleWebSocket(httpServer, mf, entryWorkerName);
-		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
-		port = (httpServer.address() as AddressInfo).port;
+		await listenHttpServer();
 		// Wait for `workerd` to boot here (under the generous `testTimeout`)
 		// rather than letting the cold start eat into the tight `vi.waitFor`
 		// budgets below, which caused Windows CI flakes.
@@ -92,6 +129,10 @@ describe("handleWebSocket", () => {
 			socket.destroy();
 		}
 		openSockets.clear();
+		for (const socket of serverSockets) {
+			socket.destroy();
+		}
+		serverSockets.clear();
 		httpServer?.closeAllConnections();
 		await miniflare?.dispose();
 		await new Promise<void>((resolve, reject) =>
@@ -176,6 +217,41 @@ describe("handleWebSocket", () => {
 		);
 		expect(init.headers.get("sec-websocket-protocol")).toBe("vite-hmr");
 		expect(init.headers.get("sec-websocket-version")).toBe("13");
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15285
+	test("closes Vite HMR upgrades when Vite WebSockets are disabled", async ({
+		expect,
+	}) => {
+		const dispatchFetch = attachWebSocketHandler(false);
+		await listenHttpServer();
+		const socket = await connect();
+
+		writeViteHmrUpgrade(socket);
+
+		await vi.waitFor(() => expect(socket.destroyed).toBe(true), {
+			timeout: 5_000,
+		});
+		expect(dispatchFetch).not.toHaveBeenCalled();
+	});
+
+	test("leaves Vite HMR upgrades for Vite when WebSockets are enabled", async ({
+		expect,
+	}) => {
+		const dispatchFetch = attachWebSocketHandler(true);
+		const viteHandled = new Promise<boolean>((resolve) => {
+			httpServer.on("upgrade", (_request, socket) => {
+				resolve(!socket.destroyed);
+				socket.destroy();
+			});
+		});
+		await listenHttpServer();
+		const socket = await connect();
+
+		writeViteHmrUpgrade(socket);
+
+		expect(await viteHandled).toBe(true);
+		expect(dispatchFetch).not.toHaveBeenCalled();
 	});
 
 	/**
