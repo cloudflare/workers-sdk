@@ -122,6 +122,22 @@ describe("resolvePluginConfig", () => {
 		).toBe(entrypoint);
 	});
 
+	test.for(["src/index.ts", "./src/missing.ts"] as const)(
+		"preserves the %s filesystem entrypoint for Vite to resolve",
+		async (entrypoint, { expect }) => {
+			writeEntryConfig({ entrypoint });
+			const result = (await resolvePluginConfig(
+				{},
+				{ root },
+				buildEnv
+			)) as WorkersResolvedConfig;
+
+			expect(
+				result.environmentNameToWorkerMap.get("entry_worker")?.config.entrypoint
+			).toBe(entrypoint);
+		}
+	);
+
 	test.for([
 		["auxiliaryWorker", "auxiliary-worker"],
 		["Worker_B", "worker-b"],
@@ -135,14 +151,6 @@ describe("resolvePluginConfig", () => {
 			);
 		}
 	);
-
-	test("rejects a file entrypoint that does not exist", async ({ expect }) => {
-		writeEntryConfig({ entrypoint: "./src/missing.ts" });
-
-		await expect(resolvePluginConfig({}, { root }, buildEnv)).rejects.toThrow(
-			/The configured Worker entrypoint \(.*?missing\.ts\) doesn't point to an existing file/
-		);
-	});
 
 	test("resolves and customizes a named auxiliary Worker export", async ({
 		expect,
@@ -179,7 +187,7 @@ describe("resolvePluginConfig", () => {
 		const auxiliary = result.environmentNameToWorkerMap.get("auxiliary");
 		expect(auxiliary?.config).toMatchObject({
 			name: "auxiliary-2024-12-30",
-			entrypoint: path.join(root, "src/aux.ts"),
+			entrypoint: "./src/aux.ts",
 			compatibilityDate: "2025-01-15",
 		});
 		expect(auxiliary?.config.compatibilityFlags).toBeUndefined();
@@ -209,11 +217,11 @@ describe("resolvePluginConfig", () => {
 			expect(
 				result.environmentNameToWorkerMap.get(result.entryWorkerEnvironmentName)
 					?.config.entrypoint
-			).toBe(path.join(root, "src/index.ts"));
+			).toBe("./src/index.ts");
 			expect(
 				result.environmentNameToWorkerMap.get("viteOnlyWorker")?.config
 					.entrypoint
-			).toBe(path.join(root, "src/aux.ts"));
+			).toBe("./src/aux.ts");
 			expect(result.configPaths).toEqual(new Set());
 			expect(result.parsedConfig).toEqual({});
 		}
@@ -374,7 +382,7 @@ describe("resolvePluginConfig", () => {
 		expect(
 			result.environmentNameToWorkerMap.get("prerender_worker")?.config
 				.entrypoint
-		).toBe(path.join(root, "src/prerender.ts"));
+		).toBe("./src/prerender.ts");
 	});
 
 	test("customizes the prerender Worker export", async ({ expect }) => {
@@ -435,7 +443,7 @@ describe("resolvePluginConfig", () => {
 		expect(
 			result.environmentNameToWorkerMap.get("prerender_worker")?.config
 				.entrypoint
-		).toBe(path.join(root, "src/prerender.ts"));
+		).toBe("./src/prerender.ts");
 	});
 
 	test("supports an assets-only entry Worker", async ({ expect }) => {

@@ -258,37 +258,12 @@ function createDefaultWorkerConfig(name: string): ParsedInputWorkerConfig {
 	};
 }
 
-const ENTRY_MODULE_EXTENSIONS = [".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"];
-
-function resolveWorkerEntrypoint(root: string, entrypoint: string): string {
-	const isFilePath =
-		path.isAbsolute(entrypoint) ||
-		entrypoint.startsWith("./") ||
-		entrypoint.startsWith("../") ||
-		ENTRY_MODULE_EXTENSIONS.some((extension) => entrypoint.endsWith(extension));
-
-	if (!isFilePath) {
-		return entrypoint;
-	}
-
-	const resolvedEntrypoint = path.resolve(root, entrypoint);
-	if (!fs.existsSync(resolvedEntrypoint)) {
-		throw new Error(
-			`The configured Worker entrypoint (${resolvedEntrypoint}) doesn't point to an existing file`
-		);
-	}
-
-	return resolvedEntrypoint;
-}
-
-/** Resolves a Worker config and validates its entrypoint. */
+/** Resolves a Worker config. */
 function resolveWorkerConfig(options: {
-	root: string;
 	workerConfig: ParsedInputWorkerConfig;
 	configCustomizer: WorkerConfigCustomizer<true> | undefined;
 }): ResolvedWorker;
 function resolveWorkerConfig(options: {
-	root: string;
 	workerConfig: ParsedInputWorkerConfig;
 	configCustomizer: WorkerConfigCustomizer<false> | undefined;
 	entryWorkerConfig: ParsedInputWorkerConfig;
@@ -296,12 +271,10 @@ function resolveWorkerConfig(options: {
 function resolveWorkerConfig(
 	options:
 		| {
-				root: string;
 				workerConfig: ParsedInputWorkerConfig;
 				configCustomizer: WorkerConfigCustomizer<true> | undefined;
 		  }
 		| {
-				root: string;
 				workerConfig: ParsedInputWorkerConfig;
 				configCustomizer: WorkerConfigCustomizer<false> | undefined;
 				entryWorkerConfig: ParsedInputWorkerConfig;
@@ -335,11 +308,9 @@ function resolveWorkerConfig(
 		return { type: "assets-only", config: assetsOnlyConfig };
 	}
 
-	const entrypoint = resolveWorkerEntrypoint(options.root, config.entrypoint);
-
 	return {
 		type: "worker",
-		config: { ...config, entrypoint },
+		config: { ...config, entrypoint: config.entrypoint },
 	};
 }
 
@@ -421,7 +392,6 @@ export async function resolvePluginConfig(
 	// customizer is intentionally applied afterwards so generated declarations
 	// only describe `cloudflare.config.ts`.
 	const entryWorkerResolvedConfig = resolveWorkerConfig({
-		root,
 		workerConfig:
 			parsedConfig.default?.type === "worker"
 				? parsedConfig.default
@@ -444,7 +414,6 @@ export async function resolvePluginConfig(
 
 	if (prerenderWorkerBaseConfig && viteEnv.command === "build") {
 		const workerResolvedConfig = resolveWorkerConfig({
-			root,
 			workerConfig: prerenderWorkerBaseConfig,
 			configCustomizer: prerenderWorkerConfig?.config,
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
@@ -478,7 +447,6 @@ export async function resolvePluginConfig(
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		addAuxiliaryWorkers({
-			root,
 			auxiliaryWorkers: pluginConfig.auxiliaryWorkers,
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
 			parsedConfig,
@@ -537,7 +505,6 @@ export async function resolvePluginConfig(
 	}
 
 	addAuxiliaryWorkers({
-		root,
 		auxiliaryWorkers: pluginConfig.auxiliaryWorkers,
 		entryWorkerConfig: entryWorkerResolvedConfig.config,
 		parsedConfig,
@@ -561,7 +528,6 @@ export async function resolvePluginConfig(
 }
 
 function addAuxiliaryWorkers(options: {
-	root: string;
 	auxiliaryWorkers: Record<string, AuxiliaryWorkerConfig> | undefined;
 	entryWorkerConfig: ParsedInputWorkerConfig;
 	parsedConfig: ParsedConfigExports;
@@ -602,7 +568,6 @@ function addAuxiliaryWorkers(options: {
 		}
 
 		const workerResolvedConfig = resolveWorkerConfig({
-			root: options.root,
 			workerConfig: exportedConfig ?? createDefaultWorkerConfig(exportName),
 			configCustomizer: auxiliaryWorker.config,
 			entryWorkerConfig: options.entryWorkerConfig,

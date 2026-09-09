@@ -92,7 +92,7 @@ describe("cloudflare.config.ts", () => {
 		).toMatchObject({
 			name: "entry-worker",
 			compatibilityDate: "2024-12-30",
-			entrypoint: path.join(root, "src/index.ts"),
+			entrypoint: "./src/index.ts",
 		});
 	});
 
@@ -117,7 +117,7 @@ describe("cloudflare.config.ts", () => {
 			expect(
 				result.environmentNameToWorkerMap.get(result.entryWorkerEnvironmentName)
 					?.config.entrypoint
-			).toBe(path.join(root, "src/index.ts"));
+			).toBe("./src/index.ts");
 			expect(result.configPaths).toContain(
 				path.join(root, "cloudflare.config.ts")
 			);

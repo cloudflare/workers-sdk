@@ -57,10 +57,7 @@ describe("config-changes", () => {
 
 			await vi.waitFor(async () => {
 				expect(serverLogs.errors.join()).toMatch(
-					/.*The configured Worker entrypoint .+? doesn't point to an existing file.*/
-				);
-				expect(await getTextResponse()).toContain(
-					'The value of MY_VAR is "one"'
+					/Failed to resolve Worker entrypoint ".+non-existing-file\.ts" for environment "worker"/
 				);
 			}, WAIT_FOR_OPTIONS);
 		}
