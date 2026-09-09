@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { tailEventsReplacer, tailEventsReviver } from "./tail-events";
 
 interface Env {
 	ENTRY_USER_WORKER: Service<WorkerEntrypoint>;
@@ -37,28 +38,4 @@ export default class ViteProxyWorker extends WorkerEntrypoint<Env> {
 			JSON.parse(JSON.stringify(events, tailEventsReplacer), tailEventsReviver)
 		);
 	}
-}
-
-const serializedDate = "___serialized_date___";
-
-function tailEventsReplacer(_: string, value: unknown) {
-	// The tail events might contain Date objects which will not be restored directly
-	if (value instanceof Date) {
-		return { [serializedDate]: value.toISOString() };
-	}
-	return value;
-}
-
-function tailEventsReviver(_: string, value: unknown) {
-	// To restore Date objects from the serialized events
-	if (
-		value &&
-		typeof value === "object" &&
-		serializedDate in value &&
-		typeof value[serializedDate] === "string"
-	) {
-		return new Date(value[serializedDate]);
-	}
-
-	return value;
 }
