@@ -3185,11 +3185,12 @@ export class Miniflare {
 
 		const configuredHost = trigger.address ?? DEFAULT_HOST;
 		const host =
-			configuredHost === "*" ||
+			resolveLocalhost(configuredHost) ??
+			(configuredHost === "*" ||
 			configuredHost === "0.0.0.0" ||
 			configuredHost === "::"
 				? DEFAULT_HOST
-				: configuredHost;
+				: configuredHost);
 		const socket = net.connect({ host, port });
 		this.#dispatchConnectSockets.add(socket);
 		socket.once("close", () => this.#dispatchConnectSockets.delete(socket));
