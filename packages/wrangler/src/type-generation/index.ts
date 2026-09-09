@@ -822,6 +822,18 @@ function getFallbackModuleGlob(glob: string): string | undefined {
 }
 
 /**
+ * Resolve the effective additional-module discovery setting used by deployment.
+ *
+ * @param config - Normalized Wrangler configuration
+ * @returns Whether deployment discovers modules from the filesystem
+ */
+function isAdditionalModuleDiscoveryEnabled(
+	config: Pick<Config, "find_additional_modules" | "no_bundle">
+): boolean {
+	return config.find_additional_modules ?? config.no_bundle === true;
+}
+
+/**
  * Generate TypeScript module declarations for bundling rules.
  *
  * @param rules - Bundling rules to convert to declarations
@@ -1651,7 +1663,7 @@ async function generateSimpleEnvTypes(
 	const effectiveModulesTypeStructure = generateModuleTypeDeclarations(
 		parseRules(config.rules, log).rules,
 		true,
-		config.find_additional_modules === true
+		isAdditionalModuleDiscoveryEnabled(config)
 	);
 
 	const typesHaveBeenFound =
@@ -2096,7 +2108,7 @@ async function generatePerEnvironmentTypes(
 
 	const environmentRuleSets: ModuleTypeRuleSet[] = [
 		{
-			findAdditionalModules: config.find_additional_modules === true,
+			findAdditionalModules: isAdditionalModuleDiscoveryEnabled(config),
 			rules: config.rules,
 		},
 		...envNames.map((envName) => {
@@ -2106,7 +2118,7 @@ async function generatePerEnvironmentTypes(
 			);
 			return {
 				findAdditionalModules:
-					environmentConfig.find_additional_modules === true,
+					isAdditionalModuleDiscoveryEnabled(environmentConfig),
 				rules: environmentConfig.rules,
 			};
 		}),

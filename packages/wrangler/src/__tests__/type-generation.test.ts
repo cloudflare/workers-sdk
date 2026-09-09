@@ -4313,6 +4313,7 @@ describe("generate types - API", () => {
 			JSON.stringify({
 				compatibility_date: "2026-01-01",
 				find_additional_modules: false,
+				no_bundle: true,
 				rules: [
 					{
 						type: "Text",
@@ -4376,7 +4377,6 @@ describe("generate types - API", () => {
 			"./wrangler.jsonc",
 			JSON.stringify({
 				compatibility_date: "2026-01-01",
-				find_additional_modules: false,
 				rules: [
 					{
 						type: "CompiledWasm",
@@ -4385,7 +4385,7 @@ describe("generate types - API", () => {
 				],
 				env: {
 					staging: {
-						find_additional_modules: true,
+						no_bundle: true,
 						rules: [
 							{
 								type: "Text",
@@ -4413,6 +4413,58 @@ describe("generate types - API", () => {
 					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
 				type Assert<Item extends true> = Item;
 				type Value = Assert<Equal<typeof value, WebAssembly.Module | ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("defaults module discovery on for unbundled module rules", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				no_bundle: true,
+				rules: [
+					{
+						type: "Text",
+						globs: ["folder/*/nested/*.asset"],
+					},
+					{
+						type: "Data",
+						globs: ["folder/one/two/nested/message.asset"],
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "folder/one/two/nested/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, ArrayBuffer>>;
 			`,
 			"utf-8"
 		);
