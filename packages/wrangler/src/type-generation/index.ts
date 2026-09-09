@@ -12,6 +12,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import * as find from "empathic/find";
+import globToRegExp from "glob-to-regexp";
 import { getNodeCompat } from "miniflare";
 import yargs from "yargs";
 import { readConfig } from "../config";
@@ -871,6 +872,8 @@ interface FallbackModuleTypeDeclaration {
 }
 
 interface ModuleTypeMatchingRule {
+	deploymentGlob: string;
+	isConservativeFallback: boolean;
 	moduleGlob: string;
 	type: string;
 }
@@ -913,7 +916,12 @@ function resolveModuleTypeDeclarations(
 				continue;
 			}
 			seenRuleGlobs.add(glob);
-			matchingRules.push({ moduleGlob, type: typeScriptType });
+			matchingRules.push({
+				deploymentGlob: glob,
+				isConservativeFallback: !preservesScope,
+				moduleGlob,
+				type: typeScriptType,
+			});
 
 			if (fallbackModuleGlob === undefined) {
 				const types = scopedDeclarations.get(moduleGlob) ?? new Set<string>();
@@ -1060,7 +1068,7 @@ function moduleGlobContains(container: string, contained: string): boolean {
  * covered by an earlier rule.
  *
  * @param moduleGlob - Emitted ambient module pattern
- * @param matchingRules - Normalized module rules in deployment order
+ * @param matchingRules - Original and normalized module rules in deployment order
  * @returns Types selected for at least part of the emitted pattern
  */
 function resolveMatchingModuleTypes(
@@ -1069,8 +1077,23 @@ function resolveMatchingModuleTypes(
 ): Set<string> {
 	const types = new Set<string>();
 	const coveredPatterns = new Array<string>();
+	const exactModuleName = moduleGlob.includes("*") ? undefined : moduleGlob;
 
 	for (const rule of matchingRules) {
+		const conservativeFallbackMatchesExact =
+			exactModuleName !== undefined &&
+			rule.isConservativeFallback &&
+			globToRegExp(rule.deploymentGlob, { globstar: true }).test(
+				exactModuleName
+			);
+		if (
+			exactModuleName !== undefined &&
+			rule.isConservativeFallback &&
+			!conservativeFallbackMatchesExact
+		) {
+			continue;
+		}
+
 		const overlap = intersectModuleGlobs(moduleGlob, rule.moduleGlob);
 		if (
 			overlap === undefined ||
@@ -1080,9 +1103,14 @@ function resolveMatchingModuleTypes(
 		}
 
 		types.add(rule.type);
-		coveredPatterns.push(overlap);
-		if (moduleGlobContains(rule.moduleGlob, moduleGlob)) {
-			break;
+		// A suffix-only fallback produced from a multi-wildcard Wrangler glob is
+		// intentionally broader than the deployment rule. It contributes a safe
+		// type, but cannot prove that later rules are unreachable.
+		if (!rule.isConservativeFallback || conservativeFallbackMatchesExact) {
+			coveredPatterns.push(overlap);
+			if (moduleGlobContains(rule.moduleGlob, moduleGlob)) {
+				break;
+			}
 		}
 	}
 
