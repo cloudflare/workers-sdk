@@ -89,6 +89,16 @@ describe("rules engine", () => {
 			matcher({ request: new Request("https://next.my.pages.dev/magic") })
 		).toEqual(["6/my/"]);
 	});
+
+	test("it should support placeholders sharing a prefix", ({ expect }) => {
+		const matcher = generateRulesMatcher(
+			{ "/p/:id/:id_2": "/dest/:id/:id_2" },
+			(match, replacements) => replacer(match, replacements)
+		);
+		expect(
+			matcher({ request: new Request("https://example.com/p/1/2") })
+		).toEqual(["/dest/1/2"]);
+	});
 });
 
 describe("replacer", () => {
@@ -119,6 +129,27 @@ describe("replacer", () => {
 		).toEqual(
 			"Link: </assets/js/main.js>; rel=preload; as=script, </assets/js/lang.js>; rel=preload; as=script"
 		);
+	});
+
+	test("should not let a placeholder eat a longer one sharing its prefix", ({
+		expect,
+	}) => {
+		expect(replacer("/new/:a/:ab", { a: "X", ab: "Y" })).toEqual("/new/X/Y");
+		expect(replacer("/dest/:id/:id_2", { id: "1", id_2: "2" })).toEqual(
+			"/dest/1/2"
+		);
+	});
+
+	test("should leave placeholders with no replacement alone", ({ expect }) => {
+		expect(replacer("/:code/:missing", { code: "123" })).toEqual(
+			"/123/:missing"
+		);
+	});
+
+	test("should not re-substitute inside an already-replaced value", ({
+		expect,
+	}) => {
+		expect(replacer("/:a/:b", { a: ":b", b: "second" })).toEqual("/:b/second");
 	});
 });
 
