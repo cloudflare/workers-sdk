@@ -769,6 +769,14 @@ type PendingWorkflowStorageDelete = {
 	deleted: boolean;
 };
 
+/** Selects the Worker TCP trigger used by `Miniflare#dispatchConnect()`. */
+export interface DispatchConnectOptions {
+	/** Defaults to the entrypoint Worker. */
+	workerName?: string;
+	/** The configured trigger port, including `0` for an OS-assigned port. */
+	port?: number;
+}
+
 const WORKFLOW_STORAGE_EXTENSIONS = [".sqlite", ".sqlite-shm", ".sqlite-wal"];
 const WORKFLOW_STORAGE_DELETE_RETRY_INTERVAL_MS = 50;
 const WORKFLOW_STORAGE_DELETE_TIMEOUT_MS = 2_000;
@@ -806,6 +814,7 @@ export class Miniflare {
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
+	#dispatchConnectSockets = new Set<net.Socket>();
 	#proxyClient?: ProxyClient;
 	#runtimeRestartError?: MiniflareCoreError;
 	// Number of times workerd has crashed and been restarted for this instance.
@@ -3132,6 +3141,101 @@ export class Miniflare {
 		return response;
 	};
 
+	/**
+	 * Opens a TCP connection to a Worker's connect trigger.
+	 *
+	 * @param options Worker and trigger selection options
+	 * @returns A connected Node.js socket
+	 */
+	dispatchConnect = async (
+		options: DispatchConnectOptions = {}
+	): Promise<net.Socket> => {
+		this.#checkDisposed();
+		await this.ready;
+
+		const workerIndex = this.#findAndAssertWorkerIndex(options.workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
+		const connectTriggers = getTriggersOfType(workerOpts.config, "connect");
+		const workerDescription =
+			options.workerName === undefined
+				? "entrypoint worker"
+				: `${JSON.stringify(options.workerName)} worker`;
+
+		let trigger: (typeof connectTriggers)[number] | undefined;
+		if (options.port === undefined) {
+			if (connectTriggers.length === 0) {
+				throw new TypeError(
+					`No TCP connect triggers configured for ${workerDescription}`
+				);
+			}
+			if (connectTriggers.length > 1) {
+				throw new TypeError(
+					`Multiple TCP connect triggers configured for ${workerDescription}; specify a port`
+				);
+			}
+			trigger = connectTriggers[0];
+		} else {
+			trigger = connectTriggers.find(({ port }) => port === options.port);
+			if (trigger === undefined) {
+				throw new TypeError(
+					`TCP connect trigger on port ${options.port} not found for ${workerDescription}`
+				);
+			}
+		}
+
+		assert(this.#socketPorts !== undefined);
+		const socketName = getConnectSocketName(
+			workerIndex,
+			trigger.protocol,
+			trigger.port
+		);
+		const port = this.#socketPorts.get(socketName);
+		assert(port !== undefined);
+
+		const configuredHost = trigger.address ?? DEFAULT_HOST;
+		const host =
+			resolveLocalhost(configuredHost) ??
+			(configuredHost === "*" ||
+			configuredHost === "0.0.0.0" ||
+			configuredHost === "::"
+				? DEFAULT_HOST
+				: configuredHost);
+		const socket = net.connect({ host, port });
+		this.#dispatchConnectSockets.add(socket);
+		socket.once("close", () => this.#dispatchConnectSockets.delete(socket));
+
+		try {
+			await new Promise<void>((resolve, reject) => {
+				function cleanup() {
+					socket.off("connect", onConnect);
+					socket.off("error", onError);
+					socket.off("close", onClose);
+				}
+				function onConnect() {
+					cleanup();
+					resolve();
+				}
+				function onError(error: Error) {
+					cleanup();
+					reject(error);
+				}
+				function onClose() {
+					cleanup();
+					reject(new Error("Socket closed before connecting"));
+				}
+
+				socket.once("connect", onConnect);
+				socket.once("error", onError);
+				socket.once("close", onClose);
+			});
+		} catch (error) {
+			socket.destroy();
+			throw error;
+		}
+
+		return socket;
+	};
+
 	/** @internal */
 	async _getProxyClient(): Promise<ProxyClient> {
 		this.#checkDisposed();
@@ -3566,6 +3670,10 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
+		for (const socket of this.#dispatchConnectSockets) {
+			socket.destroy();
+		}
+		this.#dispatchConnectSockets.clear();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
