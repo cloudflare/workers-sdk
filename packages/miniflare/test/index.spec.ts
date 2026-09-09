@@ -21,6 +21,7 @@ import {
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
+	Log,
 	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
@@ -429,9 +430,64 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 	expect(await res.text()).toBe("body");
 });
 
+test("Miniflare: replaces loopback startup error handler with persistent error logging", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const createServer = vi.spyOn(http, "createServer");
+	onTestFinished(() => createServer.mockRestore());
+	const log = new Log(LogLevel.ERROR);
+	const logWithLevel = vi
+		.spyOn(log, "logWithLevel")
+		.mockImplementation(() => {});
+	onTestFinished(() => logWithLevel.mockRestore());
+
+	const mf = new Miniflare({
+		log,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const ready = await mf.ready;
+	logWithLevel.mockClear();
+
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	for (const message of ["First loopback error", "Second loopback error"]) {
+		expect(() => server.emit("error", new Error(message))).not.toThrow();
+		expect(logWithLevel).toHaveBeenLastCalledWith(
+			LogLevel.ERROR,
+			expect.stringContaining(message)
+		);
+		expect(server.listenerCount("error")).toBe(1);
+	}
+	expect(logWithLevel).toHaveBeenCalledTimes(2);
+	expect(await mf.ready).toEqual(ready);
+	expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("ok");
+});
+
 test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	expect,
+	onTestFinished,
 }) => {
+	const createServer = vi.spyOn(http, "createServer");
+	const close = vi.spyOn(http.Server.prototype, "close");
+	onTestFinished(() => {
+		createServer.mockRestore();
+		close.mockRestore();
+	});
+
 	const mf = new Miniflare({
 		host: "192.0.2.1",
 		workers: [
@@ -439,7 +495,7 @@ test("Miniflare: rejects ready when loopback server cannot bind", async ({
 				config: {
 					type: "worker",
 					name: "",
-					compatibilityDate: "2025-05-01",
+					compatibilityDate: "2026-09-04",
 					manifest: singleModuleManifest(
 						`export default { fetch() { return new Response("ok"); } }`
 					),
@@ -449,6 +505,10 @@ test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	});
 
 	await expect(mf.ready).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	expect(close.mock.instances).toContain(server);
+	expect(server.listening).toBe(false);
 	await expect(mf.dispose()).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
 });
 
@@ -459,7 +519,7 @@ test("Miniflare: setOptions: recovers after loopback bind failure", async ({
 		config: {
 			type: "worker" as const,
 			name: "",
-			compatibilityDate: "2025-05-01",
+			compatibilityDate: "2026-09-04",
 			manifest: singleModuleManifest(
 				`export default { fetch() { return new Response("ok"); } }`
 			),

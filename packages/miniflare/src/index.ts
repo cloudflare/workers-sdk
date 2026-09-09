@@ -1948,8 +1948,17 @@ export class Miniflare {
 			// already disable their timeouts.
 			server.keepAliveTimeout = 0;
 			server.on("upgrade", this.#handleLoopbackUpgrade);
-			server.once("error", reject);
-			server.listen(0, hostname, () => resolve(server));
+			const onError = (error: Error) => {
+				server.close();
+				reject(error);
+			};
+			server.once("error", onError);
+			server.listen(0, hostname, () => {
+				server.off("error", onError);
+				// Startup has settled, so report operational errors through the logger
+				server.on("error", (error) => this.#log.error(error));
+				resolve(server);
+			});
 		});
 	}
 
@@ -3661,7 +3670,14 @@ export class Miniflare {
 		}
 
 		// Close the inspector proxy server if there is one
-		await this.#maybeInspectorProxyController?.dispose();
+		try {
+			await this.#maybeInspectorProxyController?.dispose();
+		} catch (error) {
+			if (!independentCleanupFailed) {
+				independentCleanupFailed = true;
+				independentCleanupError = error;
+			}
+		}
 		// Unregister workers from dev registry and stop the file watcher
 		await this.#devRegistry.dispose();
 
