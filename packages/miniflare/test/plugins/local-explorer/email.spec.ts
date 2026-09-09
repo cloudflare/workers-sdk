@@ -724,6 +724,33 @@ describe("email resend Message-ID replacement", () => {
 		}
 	});
 
+	test("preserves multiline custom headers through projection", async ({
+		expect,
+	}) => {
+		const raw = buildMimeMessage(
+			{
+				from: "sender@example.com",
+				to: ["recipient@example.com"],
+				subject: "Multiline header projection",
+				headers: { "X-Multiline": "first line\nsecond line" },
+				text: "Body",
+			},
+			"<multiline-header@example.com>"
+		);
+
+		const projection = await projectComposerMime(new TextEncoder().encode(raw));
+		expect(projection.headers).toEqual({
+			"X-Multiline": "first line\nsecond line",
+		});
+
+		const rebuilt = buildMimeMessage(
+			projection,
+			"<rebuilt-multiline-header@example.com>"
+		);
+		expect(rebuilt).toContain("X-Multiline: first line\r\n second line");
+		expect(rebuilt).not.toMatch(/^second line:/mu);
+	});
+
 	test("rejects duplicate optional composer address headers", async ({
 		expect,
 	}) => {
