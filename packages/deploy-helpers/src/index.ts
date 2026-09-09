@@ -53,6 +53,4 @@ export * from "./preview/api";
 export * from "./preview/shared";
 export * from "./preview/preview";
 export * from "./preview/format";
-export * from "./preview/merge-deep";
-export * from "./preview/settings";
 export * from "./preview/box";
