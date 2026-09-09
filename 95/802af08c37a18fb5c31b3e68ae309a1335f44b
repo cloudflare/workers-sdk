@@ -1,0 +1,21 @@
+packages/wrangler/src/__tests__/pages/delegate-to-workers.test.ts
+  s_4d82e03d095853::t_53db916f77b433 4,27-49,73,81,93,126,158,172,191,209,265,364,370,377-399
+.changeset/clean-delegation-analytics.md
+  s_4d82e03d095853::t_cfbaef465c7ec2 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "95802af08c37a18fb5c31b3e68ae309a1335f44b",
+  "prompts": {},
+  "sessions": {
+    "s_4d82e03d095853": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0864a-2e1d-77c1-b245-96ed38ae3e04",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
