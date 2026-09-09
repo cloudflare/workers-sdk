@@ -861,13 +861,18 @@ function generateModuleTypeDeclarations(
 interface ResolvedModuleTypeDeclarations {
 	scoped: Map<string, Set<string>>;
 	fallbacks: Map<string, FallbackModuleTypeDeclaration>;
+	matchingRules: ModuleTypeMatchingRule[];
 }
 
 interface FallbackModuleTypeDeclaration {
 	types: Set<string>;
 	recursiveRuleSeen: boolean;
-	recursiveType?: string;
 	shouldEmit: boolean;
+}
+
+interface ModuleTypeMatchingRule {
+	moduleGlob: string;
+	type: string;
 }
 
 /**
@@ -888,6 +893,7 @@ function resolveModuleTypeDeclarations(
 	const seenRuleGlobs = new Set<string>();
 	const scopedDeclarations = new Map<string, Set<string>>();
 	const fallbackDeclarations = new Map<string, FallbackModuleTypeDeclaration>();
+	const matchingRules = new Array<ModuleTypeMatchingRule>();
 
 	for (const rule of rules) {
 		const typeScriptType = moduleTypeMap[rule.type];
@@ -907,6 +913,7 @@ function resolveModuleTypeDeclarations(
 				continue;
 			}
 			seenRuleGlobs.add(glob);
+			matchingRules.push({ moduleGlob, type: typeScriptType });
 
 			if (fallbackModuleGlob === undefined) {
 				const types = scopedDeclarations.get(moduleGlob) ?? new Set<string>();
@@ -937,9 +944,6 @@ function resolveModuleTypeDeclarations(
 
 			fallbackDeclaration.types.add(typeScriptType);
 			fallbackDeclaration.recursiveRuleSeen = isRecursiveFallback;
-			if (isRecursiveFallback) {
-				fallbackDeclaration.recursiveType = typeScriptType;
-			}
 			fallbackDeclaration.shouldEmit ||= emitsFallback;
 			fallbackDeclarations.set(fallbackModuleGlob, fallbackDeclaration);
 		}
@@ -948,7 +952,141 @@ function resolveModuleTypeDeclarations(
 	return {
 		scoped: scopedDeclarations,
 		fallbacks: fallbackDeclarations,
+		matchingRules,
 	};
+}
+
+/**
+ * Find the overlap between two TypeScript ambient module patterns.
+ *
+ * TypeScript permits at most one `*` in an ambient module pattern. This makes
+ * their intersection another one-asterisk pattern whenever their fixed
+ * prefixes and suffixes are compatible.
+ *
+ * @param left - First ambient module pattern
+ * @param right - Second ambient module pattern
+ * @returns A pattern representing their overlap, or undefined when disjoint
+ */
+function intersectModuleGlobs(left: string, right: string): string | undefined {
+	const leftAsteriskIndex = left.indexOf("*");
+	const rightAsteriskIndex = right.indexOf("*");
+
+	if (leftAsteriskIndex === -1) {
+		return moduleGlobMatches(right, left) ? left : undefined;
+	}
+	if (rightAsteriskIndex === -1) {
+		return moduleGlobMatches(left, right) ? right : undefined;
+	}
+
+	const leftPrefix = left.slice(0, leftAsteriskIndex);
+	const rightPrefix = right.slice(0, rightAsteriskIndex);
+	if (
+		!leftPrefix.startsWith(rightPrefix) &&
+		!rightPrefix.startsWith(leftPrefix)
+	) {
+		return undefined;
+	}
+
+	const leftSuffix = left.slice(leftAsteriskIndex + 1);
+	const rightSuffix = right.slice(rightAsteriskIndex + 1);
+	if (!leftSuffix.endsWith(rightSuffix) && !rightSuffix.endsWith(leftSuffix)) {
+		return undefined;
+	}
+
+	const prefix =
+		leftPrefix.length >= rightPrefix.length ? leftPrefix : rightPrefix;
+	const suffix =
+		leftSuffix.length >= rightSuffix.length ? leftSuffix : rightSuffix;
+	return `${prefix}*${suffix}`;
+}
+
+/**
+ * Check whether an ambient module pattern matches an exact module specifier.
+ *
+ * @param moduleGlob - Ambient module pattern containing at most one `*`
+ * @param moduleName - Exact module specifier
+ * @returns Whether the module specifier matches the pattern
+ */
+function moduleGlobMatches(moduleGlob: string, moduleName: string): boolean {
+	const asteriskIndex = moduleGlob.indexOf("*");
+	if (asteriskIndex === -1) {
+		return moduleGlob === moduleName;
+	}
+
+	const prefix = moduleGlob.slice(0, asteriskIndex);
+	const suffix = moduleGlob.slice(asteriskIndex + 1);
+	return (
+		moduleName.length >= prefix.length + suffix.length &&
+		moduleName.startsWith(prefix) &&
+		moduleName.endsWith(suffix)
+	);
+}
+
+/**
+ * Check whether every module matched by one ambient pattern is also matched by
+ * another.
+ *
+ * @param container - Candidate containing ambient module pattern
+ * @param contained - Candidate contained ambient module pattern
+ * @returns Whether the first pattern contains the second
+ */
+function moduleGlobContains(container: string, contained: string): boolean {
+	const containedAsteriskIndex = contained.indexOf("*");
+	if (containedAsteriskIndex === -1) {
+		return moduleGlobMatches(container, contained);
+	}
+
+	const containerAsteriskIndex = container.indexOf("*");
+	if (containerAsteriskIndex === -1) {
+		return false;
+	}
+
+	const containerPrefix = container.slice(0, containerAsteriskIndex);
+	const containedPrefix = contained.slice(0, containedAsteriskIndex);
+	const containerSuffix = container.slice(containerAsteriskIndex + 1);
+	const containedSuffix = contained.slice(containedAsteriskIndex + 1);
+	return (
+		containedPrefix.startsWith(containerPrefix) &&
+		containedSuffix.endsWith(containerSuffix)
+	);
+}
+
+/**
+ * Resolve all types that can be selected for an emitted ambient module pattern
+ * in one deployment configuration.
+ *
+ * Rules retain Wrangler's first-match precedence. A later rule contributes
+ * only when some part of its overlap with the emitted pattern was not already
+ * covered by an earlier rule.
+ *
+ * @param moduleGlob - Emitted ambient module pattern
+ * @param matchingRules - Normalized module rules in deployment order
+ * @returns Types selected for at least part of the emitted pattern
+ */
+function resolveMatchingModuleTypes(
+	moduleGlob: string,
+	matchingRules: ModuleTypeMatchingRule[]
+): Set<string> {
+	const types = new Set<string>();
+	const coveredPatterns = new Array<string>();
+
+	for (const rule of matchingRules) {
+		const overlap = intersectModuleGlobs(moduleGlob, rule.moduleGlob);
+		if (
+			overlap === undefined ||
+			coveredPatterns.some((pattern) => moduleGlobContains(pattern, overlap))
+		) {
+			continue;
+		}
+
+		types.add(rule.type);
+		coveredPatterns.push(overlap);
+		if (moduleGlobContains(rule.moduleGlob, moduleGlob)) {
+			break;
+		}
+	}
+
+	return types;
 }
 
 /**
@@ -967,13 +1105,11 @@ function generateCombinedModuleTypeDeclarations(ruleSets: Rule[][]): string[] {
 	const resolvedRuleSets = ruleSets.map(resolveModuleTypeDeclarations);
 
 	for (const { scoped, fallbacks } of resolvedRuleSets) {
-		for (const [moduleGlob, types] of scoped) {
-			const combinedTypes =
-				combinedDeclarations.get(moduleGlob) ?? new Set<string>();
-			for (const type of types) {
-				combinedTypes.add(type);
-			}
-			combinedDeclarations.set(moduleGlob, combinedTypes);
+		for (const moduleGlob of scoped.keys()) {
+			combinedDeclarations.set(
+				moduleGlob,
+				combinedDeclarations.get(moduleGlob) ?? new Set<string>()
+			);
 		}
 
 		for (const [moduleGlob, { types, shouldEmit }] of fallbacks) {
@@ -989,37 +1125,26 @@ function generateCombinedModuleTypeDeclarations(ruleSets: Rule[][]): string[] {
 		}
 	}
 
-	for (const [moduleGlob, combinedTypes] of combinedDeclarations) {
-		const fallbackModuleGlob = getFallbackModuleGlob(moduleGlob);
-		if (fallbackModuleGlob === undefined) {
-			continue;
-		}
-
-		for (const { scoped, fallbacks } of resolvedRuleSets) {
-			// An environment-specific scoped rule takes precedence over its own
-			// recursive rule, but another environment's recursive rule still matches.
-			if (scoped.has(moduleGlob)) {
-				continue;
-			}
-
-			const recursiveType = fallbacks.get(fallbackModuleGlob)?.recursiveType;
-			if (recursiveType !== undefined) {
-				combinedTypes.add(recursiveType);
-			}
-		}
-	}
-
 	for (const [moduleGlob, { types, shouldEmit }] of combinedFallbacks) {
 		if (!shouldEmit && types.size === 1) {
 			continue;
 		}
 
-		const combinedTypes =
-			combinedDeclarations.get(moduleGlob) ?? new Set<string>();
-		for (const type of types) {
-			combinedTypes.add(type);
+		combinedDeclarations.set(
+			moduleGlob,
+			combinedDeclarations.get(moduleGlob) ?? new Set<string>()
+		);
+	}
+
+	for (const [moduleGlob, combinedTypes] of combinedDeclarations) {
+		for (const { matchingRules } of resolvedRuleSets) {
+			for (const type of resolveMatchingModuleTypes(
+				moduleGlob,
+				matchingRules
+			)) {
+				combinedTypes.add(type);
+			}
 		}
-		combinedDeclarations.set(moduleGlob, combinedTypes);
 	}
 
 	return [...combinedDeclarations].map(([moduleGlob, types]) =>
