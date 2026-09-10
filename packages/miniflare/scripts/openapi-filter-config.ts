@@ -21,6 +21,14 @@ const config = {
 			methods: ["get", "put", "delete"],
 		},
 		{
+			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk",
+			methods: ["put"],
+		},
+		{
+			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/delete",
+			methods: ["post"],
+		},
+		{
 			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/get",
 			methods: ["post"],
 		},

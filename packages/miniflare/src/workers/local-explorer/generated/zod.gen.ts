@@ -269,6 +269,31 @@ export const zWorkersKvBulkGetResult = z.object({
  */
 export const zWorkersKvKeyNameBulk = z.string().max(512);
 
+export const zWorkersKvBulkDelete = z.array(zWorkersKvKeyNameBulk);
+
+export const zWorkersKvBulkResult = z.object({
+	successful_key_count: z.number().optional(),
+	unsuccessful_keys: z.array(z.string()).optional(),
+});
+
+export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
+
+/**
+ * Expires the key after a number of seconds. Must be at least 60.
+ */
+export const zWorkersKvExpirationTtl = z.number().gte(60);
+
+export const zWorkersKvBulkWrite = z.array(
+	z.object({
+		base64: z.boolean().optional().default(false),
+		expiration: zWorkersKvExpiration.optional(),
+		expiration_ttl: zWorkersKvExpirationTtl.optional(),
+		key: zWorkersKvKeyNameBulk,
+		metadata: zWorkersKvListMetadata.optional(),
+		value: z.string().max(26214400),
+	})
+);
+
 export const zWorkersKvMessages = z.array(
 	z.object({
 		code: z.int().gte(1000),
@@ -310,8 +335,6 @@ export const zWorkersKvCursorResultInfo = z.object({
 	count: z.number().optional(),
 	cursor: zWorkersKvCursor.optional(),
 });
-
-export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
 
 /**
  * A name for a value. A value stored under a given key may be retrieved via the same key.
@@ -705,11 +728,13 @@ export const zWorkersKvAnyWritable = z
 	])
 	.nullable();
 
-export const zWorkersKvMetadataWritable = zWorkersKvAnyWritable.and(
+export const zWorkersKvBulkDeleteWritable = z.array(zWorkersKvKeyNameBulk);
+
+export const zWorkersKvListMetadataWritable = zWorkersKvAnyWritable.and(
 	z.unknown()
 );
 
-export const zWorkersKvListMetadataWritable = zWorkersKvAnyWritable.and(
+export const zWorkersKvMetadataWritable = zWorkersKvAnyWritable.and(
 	z.unknown()
 );
 
@@ -806,6 +831,42 @@ export const zWorkersKvNamespaceWriteKeyValuePairWithMetadataData = z.object({
  */
 export const zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse =
 	zWorkersKvApiResponseCommonNoResult;
+
+export const zWorkersKvNamespaceWriteMultipleKeyValuePairsData = z.object({
+	body: zWorkersKvBulkWrite,
+	path: z.object({
+		namespace_id: zWorkersKvNamespaceIdentifier,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Write multiple key-value pairs response.
+ */
+export const zWorkersKvNamespaceWriteMultipleKeyValuePairsResponse =
+	zWorkersKvApiResponseCommonNoResult.and(
+		z.object({
+			result: zWorkersKvBulkResult.optional(),
+		})
+	);
+
+export const zWorkersKvNamespaceDeleteMultipleKeyValuePairsData = z.object({
+	body: zWorkersKvBulkDeleteWritable,
+	path: z.object({
+		namespace_id: zWorkersKvNamespaceIdentifier,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete multiple key-value pairs response.
+ */
+export const zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse =
+	zWorkersKvApiResponseCommonNoResult.and(
+		z.object({
+			result: zWorkersKvBulkResult.optional(),
+		})
+	);
 
 export const zWorkersKvNamespaceGetMultipleKeyValuePairsData = z.object({
 	body: z.object({
