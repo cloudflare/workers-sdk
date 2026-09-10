@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { red, white } from "@cloudflare/cli-shared-helpers/colors";
 import {
@@ -226,19 +225,22 @@ function logStep(
 
 		if (step.success === null) {
 			const latestAttempt = step.attempts.at(-1);
-			let delay = step.config.retries.delay;
 			if (latestAttempt !== undefined && latestAttempt.success === false) {
-				assert(
-					latestAttempt.end,
-					"end date always exists in the API for completed attempts"
-				);
-				const endDate = new Date(latestAttempt.end);
-				if (typeof delay === "string") {
-					delay = ms(delay);
+				const retryDelayMs = parseRetryDelayMs(step.config.retries.delay);
+				if (latestAttempt.end == null) {
+					formattedStep["Retries At"] = "unknown";
+				} else if (retryDelayMs == null) {
+					formattedStep["Retries At"] = "unknown (dynamic delay)";
+				} else {
+					const retryDate = addMilliseconds(
+						new Date(latestAttempt.end),
+						retryDelayMs
+					);
+					if (!Number.isNaN(retryDate.getTime())) {
+						formattedStep["Retries At"] =
+							`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
+					}
 				}
-				const retryDate = addMilliseconds(endDate, delay);
-				formattedStep["Retries At"] =
-					`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
 			}
 		}
 	}
@@ -298,6 +300,27 @@ function logStep(
 
 		logger.table(prettyAttempts);
 	}
+}
+
+const DYNAMIC_RETRY_DELAY = "[dynamic]";
+
+function parseRetryDelayMs(delay: unknown): number | null {
+	if (delay === DYNAMIC_RETRY_DELAY) {
+		return null;
+	}
+
+	if (typeof delay === "number") {
+		return Number.isFinite(delay) ? delay : null;
+	}
+
+	if (typeof delay === "string") {
+		const parsed = ms(delay);
+		return typeof parsed === "number" && Number.isFinite(parsed)
+			? parsed
+			: null;
+	}
+
+	return null;
 }
 
 function getLastSuccessfulStep(logs: InstanceStatusAndLogs): string | null {
