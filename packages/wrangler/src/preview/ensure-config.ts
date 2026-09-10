@@ -65,7 +65,10 @@ function containsGeneratedPlaceholder(value: unknown): boolean {
 		return value.some(containsGeneratedPlaceholder);
 	}
 	if (typeof value === "object" && value !== null) {
-		return Object.values(value).some(containsGeneratedPlaceholder);
+		return Object.entries(value).some(
+			([key, child]) =>
+				key === REPLACE_ME || containsGeneratedPlaceholder(child)
+		);
 	}
 	return false;
 }

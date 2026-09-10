@@ -1144,6 +1144,40 @@ describe("wrangler preview", () => {
 				expect(readFileSync("wrangler.json", "utf8")).toBe(originalConfig);
 			});
 
+			test("rejects generated placeholder keys before deployment", async ({
+				expect,
+			}) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						previews: { vars: { "<REPLACE_ME>": "preview-safe-value" } },
+					},
+					"wrangler.json"
+				);
+				let previewBaseRequests = 0;
+				let deploymentRequests = 0;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						previewBaseRequests++;
+						return HttpResponse.json({ success: true, result: {} });
+					})
+				);
+				mockContainerPreview({
+					previewId: "preview-placeholder-key",
+					onCreateDeployment: () => deploymentRequests++,
+				});
+
+				await expect(
+					runWrangler(
+						"preview --name test-preview --config wrangler.json --json"
+					)
+				).rejects.toThrow("contains the generated placeholder `<REPLACE_ME>`");
+
+				expect(previewBaseRequests).toBe(0);
+				expect(deploymentRequests).toBe(0);
+			});
+
 			test("allows Preview values that only contain the placeholder text", async ({
 				expect,
 			}) => {
