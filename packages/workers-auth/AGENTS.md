@@ -143,12 +143,10 @@ Each CLI is a thin **descriptor + entrypoint**:
     8877, `cf-oauth-consent-*` pages, scoped-token-only auth) mirror the `cf`
     CLI's registration, and device authorization is its default interactive
     login flow. cf carries its own scope policy (`src/cf/scopes.ts`): the full
-    requestable production registration is the flat validation/type catalog for
-    explicit requests, while `DefaultScopeKeys` remains a deliberately
-    narrower, compatibility-preserving login default. Registration must not be
-    treated as the scopes every login requests. This is distinct from wrangler's
-    smaller `src/core/scopes.ts` key → description map, so cf does not
-    re-export `DefaultScopes`.
+    requestable production registration is the flat validation/type catalog and
+    the default scope set requested on login. This is distinct from wrangler's
+    smaller `src/core/scopes.ts` key → description map, so cf does not re-export
+    `DefaultScopes`.
 
 ## CONVENTIONS
 

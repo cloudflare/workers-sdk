@@ -1,7 +1,5 @@
 // The complete requestable production registration for cf's OAuth client, used
-// to type and validate explicit scope requests. Registration is an allowlist,
-// not the set every login should request: the compatibility-preserving defaults
-// remain separate below.
+// as the default login scope set and to type and validate explicit requests.
 //
 // Keep this list in the registration's canonical order. The OAuth flows append
 // `offline_access` automatically, so that registered protocol scope is
@@ -494,100 +492,7 @@ export const CF_REGISTERED_SCOPES = [
  */
 export type Scope = (typeof CF_REGISTERED_SCOPES)[number];
 
-// The default request stays deliberately narrower than the registered catalog.
-// Preserve this list exactly to avoid expanding existing login permissions.
-const CF_DEFAULT_SCOPES = [
-	"openid",
-	"offline",
-	"user:read",
-	"account:read",
-	"access:read",
-	"access:write",
-	"agw:read",
-	"agw:run",
-	"agw:write",
-	"ai:read",
-	"ai:write",
-	"ai-search:read",
-	"ai-search:run",
-	"ai-search:write",
-	"aiaudit:read",
-	"aiaudit:write",
-	"aig:read",
-	"aig:write",
-	"auditlogs:read",
-	"browser:read",
-	"browser:write",
-	"cfone:read",
-	"cfone:write",
-	"cloudchamber:write",
-	"connectivity:admin",
-	"connectivity:bind",
-	"connectivity:read",
-	"constellation:write",
-	"containers:write",
-	"d1:write",
-	"dex:read",
-	"dex:write",
-	"dns_analytics:read",
-	"dns_records:edit",
-	"dns_records:read",
-	"dns_settings:read",
-	"email_routing:write",
-	"email_sending:write",
-	"firstpartytags:write",
-	"images:read",
-	"images:write",
-	"lb:edit",
-	"lb:read",
-	"logpush:read",
-	"logpush:write",
-	"mcp_portals:read",
-	"mcp_portals:write",
-	"notebook-examples:read",
-	"notification:read",
-	"notification:write",
-	"pages:read",
-	"pages:write",
-	"pipelines:read",
-	"pipelines:setup",
-	"pipelines:write",
-	"query_cache:write",
-	"queues:write",
-	"r2_catalog:write",
-	"radar:read",
-	"rag:read",
-	"rag:write",
-	"registrar:read",
-	"registrar:write",
-	"secrets_store:read",
-	"secrets_store:write",
-	"sso-connector:read",
-	"sso-connector:write",
-	"ssl_certs:write",
-	"teams:pii",
-	"teams:read",
-	"teams:secure_location",
-	"teams:write",
-	"url_scanner:read",
-	"url_scanner:write",
-	"vectorize:write",
-	"workers:read",
-	"workers:write",
-	"workers_builds:read",
-	"workers_builds:write",
-	"workers_deployments:read",
-	"workers_kv:write",
-	"workers_observability:read",
-	"workers_observability:write",
-	"workers_observability_telemetry:write",
-	"workers_routes:write",
-	"workers_scripts:write",
-	"workers_tail:read",
-	"zone:read",
-] as const satisfies readonly Scope[];
-
-export let DefaultScopeKeys: Scope[] = [...CF_DEFAULT_SCOPES];
+export let DefaultScopeKeys: Scope[] = [...CF_REGISTERED_SCOPES];
 
 export function setLoginScopeKeys(scopes: Scope[]) {
 	DefaultScopeKeys = scopes;
