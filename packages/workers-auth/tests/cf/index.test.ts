@@ -4,11 +4,13 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import {
 	CF_CLI,
+	DefaultScopeKeys,
 	createCfAuth,
 	createCfProfileStore,
 	getAuthConfigFilePath,
 	getCfConfigPath,
 	readAuthConfigFile,
+	validateScopeKeys,
 	writeAuthConfigFile,
 } from "../../src/cf";
 import type { AuthContext } from "../../src/cf";
@@ -48,6 +50,23 @@ describe("cf auth layer", () => {
 			deviceLogin: "cf auth login --device",
 		});
 		expect(CF_CLI.displayName).toBe("cf");
+	});
+
+	it("accepts registered API token-derived scopes", ({ expect }) => {
+		const registeredScopes = [
+			"logs.write",
+			"account-logs.write",
+			"access-idp.write",
+			"secrets-store.write",
+			"fraud-detection-pii.read",
+			"teams-pii.read",
+		];
+
+		expect(validateScopeKeys(registeredScopes)).toBe(true);
+		const defaultScopeSet = new Set<string>(DefaultScopeKeys);
+		expect(registeredScopes.every((scope) => defaultScopeSet.has(scope))).toBe(
+			true
+		);
 	});
 
 	it("resolves its config directory to `cloudflare` (no leading dot, not `.wrangler`)", ({
