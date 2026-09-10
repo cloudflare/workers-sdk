@@ -149,8 +149,8 @@ function EmailRoutingView(): JSX.Element {
 								captureId && rowWorker
 									? getEmailRoutingActionKey(rowWorker, captureId)
 									: `summary\u0000${rowWorker ?? ""}\u0000${email.messageId}\u0000${email.receivedAt}\u0000${index}`,
-							navigable: Boolean(captureId && rowWorker),
-							navigationId: captureId,
+							navigable: Boolean(rowWorker),
+							navigationId: captureId ?? email.messageId,
 							primary: email.subject || "(no subject)",
 							secondary: `${formatEmailAddress(email.from)} → ${formatEmailAddress(email.to)}`,
 							secondaryTitle: `From: ${formatEmailAddress(email.from)}; To: ${formatEmailAddress(email.to)}`,
@@ -167,11 +167,12 @@ function EmailRoutingView(): JSX.Element {
 					onNext={() => void nextPage()}
 					onPrevious={() => void previousPage()}
 					onRefresh={() => void refresh()}
-					onRowClick={(captureId, email) => {
+					onRowClick={(routingId, email) => {
 						void navigate({
-							params: { captureId },
+							params: { captureId: routingId },
 							search: (previous) => ({
 								...previous,
+								lookup: email.captureId ? undefined : "message-id",
 								worker: email.worker,
 							}),
 							to: "/email/routing/$captureId",

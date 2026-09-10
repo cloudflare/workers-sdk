@@ -27,7 +27,16 @@ export const Route = createFileRoute("/email/routing/$captureId")({
 	errorComponent: ResourceError,
 	notFoundComponent: NotFound,
 	pendingComponent: InfoLoading,
-	loaderDeps: ({ search }) => ({ worker: search.worker }),
+	validateSearch: (
+		search: Record<string, unknown>
+	): { lookup?: "message-id"; worker?: string } => ({
+		lookup: search.lookup === "message-id" ? "message-id" : undefined,
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+	}),
+	loaderDeps: ({ search }) => ({
+		lookup: search.lookup,
+		worker: search.worker,
+	}),
 	loader: async ({ params, deps }) => {
 		const workersResponse = await localExplorerListWorkers();
 		const worker = getSelectedWorker(
@@ -37,7 +46,10 @@ export const Route = createFileRoute("/email/routing/$captureId")({
 				: `?worker=${encodeURIComponent(deps.worker)}`
 		)?.name;
 		const response = await emailListRouting({
-			query: { capture_id: params.captureId, worker: worker ?? "" },
+			query:
+				deps.lookup === "message-id"
+					? { email_id: params.captureId, worker }
+					: { capture_id: params.captureId, worker: worker ?? "" },
 			throwOnError: false,
 		});
 		if (response.response?.status === 404) {
@@ -45,7 +57,7 @@ export const Route = createFileRoute("/email/routing/$captureId")({
 		}
 		const email = response.data?.result;
 		if (response.error || !email || Array.isArray(email)) {
-			throw new Error(`Failed to load email capture "${params.captureId}"`);
+			throw new Error(`Failed to load email "${params.captureId}"`);
 		}
 		const truncated = hasEmailTruncationWarning(
 			response.data?.messages ?? [],
