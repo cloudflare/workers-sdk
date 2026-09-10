@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, it, vi } from "vitest";
+import { beforeEach, describe, it, vi, type ExpectStatic } from "vitest";
 import { sendMetricsEvent } from "../../metrics";
 import {
 	logPagesToWorkersForceOptOutNotice,
@@ -22,6 +22,29 @@ function createFunctionsDir(dir: string): void {
 /** Create a named (empty) file marker inside `dir`. */
 function createFile(dir: string, name: string): void {
 	writeFileSync(join(dir, name), "");
+}
+
+/**
+ * Assert the bounded analytics emitted for an ineligible agent command.
+ *
+ * @param expect - The current test's expectation API.
+ * @param reason - Expected stable ineligibility reason.
+ * @param forceUsed - Whether the command included `--force`.
+ */
+function expectIneligibleMetrics(
+	expect: ExpectStatic,
+	reason: string,
+	forceUsed = false
+): void {
+	expect(sendMetricsEvent).toHaveBeenCalledWith(
+		"delegate pages to workers",
+		expect.objectContaining({
+			result: "ineligible",
+			reason,
+			forceUsed,
+		}),
+		expect.anything()
+	);
 }
 
 describe("maybeDelegatePagesToWorkers", () => {
@@ -47,9 +70,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		expect(sendMetricsEvent).not.toHaveBeenCalled();
 	});
 
-	it("does not delegate (or emit telemetry) when the deploy targets an existing Pages project", async ({
-		expect,
-	}) => {
+	it("records an existing Pages project as ineligible", async ({ expect }) => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
@@ -57,9 +78,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		// Skips are deterministic, expected non-cases, so they are not sent to
-		// telemetry.
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
+		expectIneligibleMetrics(expect, "project_exists");
 	});
 
 	it("does not delegate when the target project's existence is unknown", async ({
@@ -71,7 +90,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
+		expectIneligibleMetrics(expect, "project_existence_unknown");
 	});
 
 	it("delegates a new project even when the account already has other Pages projects", async ({
@@ -104,7 +123,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
+		expectIneligibleMetrics(expect, "project_exists");
 	});
 
 	it("delegates when a lazy projectExists resolver reports the project is new", async ({
@@ -136,7 +155,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
+		expectIneligibleMetrics(expect, "project_existence_lookup_failed");
 	});
 
 	it("does not delegate when project has a functions directory", async ({
@@ -150,7 +169,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
+		expectIneligibleMetrics(expect, "unsupported_feature");
 	});
 
 	const unsupportedFileMarkers: [marker: string, reason: string][] = [
@@ -169,7 +188,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 			});
 
 			expect(result).toEqual({ delegate: false });
-			expect(sendMetricsEvent).not.toHaveBeenCalled();
+			expectIneligibleMetrics(expect, "unsupported_feature");
 		});
 	}
 
@@ -187,7 +206,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
+		expectIneligibleMetrics(expect, "unsupported_feature");
 	});
 
 	for (const marker of ["_redirects", "_headers"]) {
@@ -243,7 +262,7 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 
 		expect(result).toEqual({ delegate: false });
-		expect(sendMetricsEvent).not.toHaveBeenCalled();
+		expectIneligibleMetrics(expect, "unsupported_args");
 	});
 
 	it("delegates a brand-new static deploy to Workers", async ({ expect }) => {
@@ -342,19 +361,42 @@ describe("maybeDelegatePagesToWorkers", () => {
 		});
 	});
 
-	it("does not delegate when --force is set, records the opt-out, and flags forcedOptOut", async ({
+	it("records a new opt-out result when --force prevents an eligible delegation", async ({
 		expect,
 	}) => {
 		const result = await maybeDelegatePagesToWorkers({
 			command: "deploy",
 			projectPath: process.cwd(),
+			projectExists: false,
 			force: true,
 		});
 
 		expect(result).toEqual({ delegate: false, forcedOptOut: true });
 		expect(sendMetricsEvent).toHaveBeenCalledWith(
 			"delegate pages to workers",
-			expect.objectContaining({ command: "deploy", result: "forced" }),
+			expect.objectContaining({
+				command: "deploy",
+				result: "eligible_forced",
+			}),
+			expect.anything()
+		);
+	});
+
+	it("records an ineligible --force command without flagging an opt-out", async ({
+		expect,
+	}) => {
+		const result = await maybeDelegatePagesToWorkers({
+			command: "deploy",
+			projectPath: process.cwd(),
+			projectExists: true,
+			force: true,
+		});
+
+		expect(result).toEqual({ delegate: false });
+		expectIneligibleMetrics(expect, "project_exists", true);
+		expect(sendMetricsEvent).not.toHaveBeenCalledWith(
+			"delegate pages to workers",
+			expect.objectContaining({ result: "eligible_forced" }),
 			expect.anything()
 		);
 	});
