@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	environments: {
-		build_output_worker: {
+		ssr: {
 			build: {
 				sourcemap: true,
 			},

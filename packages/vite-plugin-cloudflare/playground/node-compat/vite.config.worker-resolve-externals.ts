@@ -21,7 +21,7 @@ export default defineConfig({
 		{
 			name: "test-plugin",
 			async configureServer(viteDevServer) {
-				const workerEnvironment = viteDevServer.environments.worker;
+				const workerEnvironment = viteDevServer.environments.ssr;
 				assert(workerEnvironment);
 
 				const resolved =

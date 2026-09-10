@@ -57,7 +57,7 @@ describe("config-changes", () => {
 
 			await vi.waitFor(async () => {
 				expect(serverLogs.errors.join()).toMatch(
-					/Failed to resolve Worker entrypoint ".+non-existing-file\.ts" for environment "worker"/
+					/Failed to resolve Worker entrypoint ".+non-existing-file\.ts" for environment "ssr"/
 				);
 			}, WAIT_FOR_OPTIONS);
 		}

@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	mode: "package-export-main",
 	environments: {
-		worker: {
+		ssr: {
 			optimizeDeps: {
 				exclude: ["@playground/main-resolution-package"],
 			},
