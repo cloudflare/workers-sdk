@@ -258,13 +258,13 @@ describe("Container namespace resolution", () => {
 			vi.fn().mockResolvedValue("namespace")
 		);
 
-		const args = {
+		const deployArgs = {
 			versionId: "version",
 			accountId: "account",
 			scriptName: "worker",
 		};
-		await deployDurableObjectContainerApplications(config, args);
-		await deployDurableObjectContainerApplications(config, args);
+		await deployDurableObjectContainerApplications(config, deployArgs);
+		await deployDurableObjectContainerApplications(config, deployArgs);
 
 		expect(create).toHaveBeenCalledTimes(2);
 		expect(create).toHaveBeenNthCalledWith(1, {

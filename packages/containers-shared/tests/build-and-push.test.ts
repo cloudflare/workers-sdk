@@ -580,9 +580,7 @@ describe("deploy container image build and push", () => {
 		expect(builtImage.localTagCleaned).toBe(true);
 	});
 
-	it("does not clean up built deployment images that were already cleaned", async ({
-		expect,
-	}) => {
+	it("does not clean up built deployment images that were already cleaned", async () => {
 		await cleanupBuiltContainerImages(
 			[
 				{

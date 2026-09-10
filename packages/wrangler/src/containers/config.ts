@@ -6,14 +6,13 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
-	getDurableObjectContainerApps,
+	getDurableObjectClassNameToUseSQLiteMap,
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
 	UserError,
 	validateDurableObjectContainerApplications,
 } from "@cloudflare/workers-utils";
-import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
