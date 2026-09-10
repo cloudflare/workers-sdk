@@ -7,6 +7,7 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
+import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	type ApiVersion,
 	deployVersionedDurableObjectContainerApplications,
@@ -17,11 +18,12 @@ import {
 	resolveVersionedDurableObjectContainerApplications,
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
@@ -220,6 +222,15 @@ export const versionsDeployCommand = createCommand({
 			return;
 		}
 
+		if (containerApplications.length > 0) {
+			initContainersSharedContext({
+				logger,
+				fetchPagedListResult,
+				fetchResult,
+			});
+			await fillOpenAPIConfiguration(config, containersScope);
+		}
+
 		const resolvedContainerApplications =
 			await resolveVersionedDurableObjectContainerApplications(config, {
 				applications: containerApplications,
@@ -276,9 +287,6 @@ export const versionsDeployCommand = createCommand({
 		// As with a normal deploy, applications are created after the Worker
 		// deployment succeeds so a rejected deployment cannot leak applications.
 		try {
-			if (resolvedContainerApplications.length > 0) {
-				await fillOpenAPIConfiguration(config, containersScope);
-			}
 			await deployVersionedDurableObjectContainerApplications(config, {
 				applications: resolvedContainerApplications,
 				accountId,

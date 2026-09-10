@@ -205,6 +205,7 @@ describe("buildCommand", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 		for (const dir of tempDirs) {
 			removeDirSync(dir);
 		}
@@ -660,6 +661,36 @@ describe("buildCommand arguments", () => {
 			dir,
 		]);
 	});
+
+	it("falls back to WRANGLER_DOCKER_BIN when no Docker path is provided", async ({
+		expect,
+	}) => {
+		const { dir } = createBuildArgs();
+		tempDirs.push(dir);
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/env/docker");
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: "test-app:tag",
+				push: false,
+				platform: "linux/amd64",
+			})
+		).resolves.toBeUndefined();
+
+		expectSpawnCommandWith("/env/docker", [
+			"build",
+			"--load",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/amd64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
 });
 
 describe("pushCommand", () => {
@@ -675,6 +706,7 @@ describe("pushCommand", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	it("validates platform, tags, and pushes to the managed registry", async ({
@@ -704,6 +736,29 @@ describe("pushCommand", () => {
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 		expectSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("falls back to WRANGLER_DOCKER_BIN when no Docker path is provided", async () => {
+		vi.stubEnv("WRANGLER_DOCKER_BIN", "/env/docker");
+
+		await pushCommand({ TAG: "test-app:tag" }, "some-account-id");
+
+		expectSpawnCommandWith("/env/docker", [
+			"image",
+			"inspect",
+			"test-app:tag",
+			"--format",
+			"{{ .Os }}/{{ .Architecture }}",
+		]);
+		expectSpawnCommandWith("/env/docker", [
+			"tag",
+			"test-app:tag",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+		expectSpawnCommandWith("/env/docker", [
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);

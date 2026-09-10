@@ -28,7 +28,6 @@ export function buildYargs(yargs: CommonYargsArgv) {
 		})
 		.option("path-to-docker", {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		})
@@ -53,7 +52,6 @@ export function pushYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("path-to-docker", {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		})
@@ -81,7 +79,6 @@ export const cloudchamberBuildCommand = createCommand({
 		},
 		"path-to-docker": {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		},
@@ -127,7 +124,6 @@ export const cloudchamberPushCommand = createCommand({
 		},
 		"path-to-docker": {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		},

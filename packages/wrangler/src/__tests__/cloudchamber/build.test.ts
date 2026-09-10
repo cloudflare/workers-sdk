@@ -41,11 +41,13 @@ describe("containers build", () => {
 			expect.objectContaining({
 				PATH: "./container-context",
 				tag: "test-app:tag",
-				pathToDocker: "docker",
 				push: true,
 				platform: "linux/amd64",
 			}),
 			expect.any(Object)
+		);
+		expect(vi.mocked(buildCommand).mock.calls[0]?.[0]).not.toHaveProperty(
+			"pathToDocker"
 		);
 	});
 

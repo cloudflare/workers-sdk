@@ -49,7 +49,7 @@ describe("containers push", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string] [default: "docker"]"
+			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string]"
 		`);
 	});
 
@@ -62,10 +62,12 @@ describe("containers push", () => {
 		expect(pushCommand).toHaveBeenCalledWith(
 			expect.objectContaining({
 				TAG: "test-namespace/app:tag",
-				pathToDocker: "docker",
 			}),
 			"some-account-id",
 			expect.any(Object)
+		);
+		expect(vi.mocked(pushCommand).mock.calls[0]?.[0]).not.toHaveProperty(
+			"pathToDocker"
 		);
 	});
 

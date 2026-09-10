@@ -32,7 +32,6 @@ export const containersBuildCommand = createCommand({
 		},
 		"path-to-docker": {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		},
@@ -74,7 +73,6 @@ export const containersPushCommand = createCommand({
 		},
 		"path-to-docker": {
 			type: "string",
-			default: "docker",
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		},
