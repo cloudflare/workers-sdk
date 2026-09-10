@@ -1,3 +1,4 @@
+import { convertToWranglerConfig } from "@cloudflare/config";
 import {
 	CorePaths,
 	getDefaultDevRegistryPath,
@@ -55,15 +56,18 @@ export function addShortcuts(
 			const workerConfigs = ctx.allWorkerConfigs;
 
 			for (const workerConfig of workerConfigs) {
+				const wranglerConfig = convertToWranglerConfig(workerConfig);
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-						workerConfig
+						wranglerConfig
 					);
 
+				// TODO: Include Containers when they are supported by
+				// cloudflare.config.ts.
 				wrangler.unstable_printBindings(bindings, {
-					tailConsumers: workerConfig.tail_consumers,
-					streamingTailConsumers: workerConfig.streaming_tail_consumers,
-					containers: workerConfig.containers,
+					tailConsumers: wranglerConfig.tail_consumers,
+					streamingTailConsumers: wranglerConfig.streaming_tail_consumers,
+					containers: wranglerConfig.containers,
 					warnIfNoBindings: true,
 					isMultiWorker: workerConfigs.length > 1,
 					name: workerConfig.name ?? "Your Worker",

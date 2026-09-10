@@ -1,8 +1,11 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { test, describe } from "vitest";
 import {
 	getTextResponse,
 	isBuild,
 	page,
+	rootDir,
 	viteTestUrl,
 } from "../../__test-utils__";
 
@@ -19,7 +22,26 @@ describe("pre-rendering", () => {
 		async ({ expect }) => {
 			await page.goto(`${viteTestUrl}/prerendered`);
 			const content = await page.textContent("h1");
-			expect(content).toBe("Pre-rendered HTML");
+			expect(content).toBe("Pre-rendered HTML from auxiliary Worker");
+		}
+	);
+
+	test.runIf(isBuild)(
+		"emits the prerender Worker in Build Output",
+		({ expect }) => {
+			const workerDir = path.join(
+				rootDir,
+				".cloudflare/output/v0/workers/prerender"
+			);
+			const config = JSON.parse(
+				fs.readFileSync(path.join(workerDir, "config.json"), "utf-8")
+			) as { manifest: { mainModule: string } };
+
+			expect(
+				fs.existsSync(
+					path.join(workerDir, "bundle", config.manifest.mainModule)
+				)
+			).toBe(true);
 		}
 	);
 });

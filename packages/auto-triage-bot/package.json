@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/sandbox": "^0.12.4",
-		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/vite-plugin": "npm:@cloudflare/vite-plugin@1.54.5",
 		"@cloudflare/workers-types": "catalog:default",
 		"@flue/cli": "^2.0.3",
 		"@flue/github": "^2.0.3",

@@ -4,7 +4,6 @@
 	"type": "module",
 	"scripts": {
 		"build:default": "vite build --app",
-		"cf-typegen": "wrangler types --include-runtime=false",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"

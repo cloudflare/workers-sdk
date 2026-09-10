@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import * as path from "node:path";
 import { assertHasNodeJsCompat } from "../nodejs-compat";
 import {
 	VIRTUAL_EXPORT_TYPES,
@@ -32,15 +33,19 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 				if (source === VIRTUAL_USER_ENTRY) {
 					const workerConfig = ctx.getWorkerConfig(this.environment.name);
 					assert(workerConfig, "Expected `workerConfig` to be defined");
-					const main = await this.resolve(workerConfig.main);
+					const entrypoint =
+						(await this.resolve(workerConfig.entrypoint)) ??
+						(await this.resolve(
+							path.resolve(ctx.resolvedViteConfig.root, workerConfig.entrypoint)
+						));
 
-					if (!main) {
+					if (!entrypoint) {
 						throw new Error(
-							`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+							`Failed to resolve Worker entrypoint "${workerConfig.entrypoint}" for environment "${this.environment.name}"`
 						);
 					}
 
-					return main;
+					return entrypoint;
 				}
 
 				return `\0${source}`;

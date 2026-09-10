@@ -16,12 +16,12 @@ import {
 } from "@cloudflare/workers-shared/utils/types";
 import type {
 	AssetsOnlyResolvedConfig,
+	ResolvedWorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 /**
  * Returns true if the `changedFile` matches one of the _headers or _redirects files,
@@ -47,7 +47,7 @@ export function hasAssetsConfigChanged(
  */
 export function getAssetsConfig(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	entryWorkerConfig: Unstable_Config | undefined,
+	entryWorkerConfig: ResolvedWorkerConfig | undefined,
 	resolvedConfig: vite.ResolvedConfig
 ): AssetConfig {
 	const assetsConfig =
@@ -55,24 +55,24 @@ export function getAssetsConfig(
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
 
-	const compatibilityOptions =
+	const workerConfig =
 		resolvedPluginConfig.type === "assets-only"
-			? {
-					compatibility_date: resolvedPluginConfig.config.compatibility_date,
-					compatibility_flags: resolvedPluginConfig.config.compatibility_flags,
-				}
-			: {
-					...(entryWorkerConfig?.compatibility_date
-						? { compatibility_date: entryWorkerConfig.compatibility_date }
-						: {}),
-					...(entryWorkerConfig?.compatibility_flags
-						? { compatibility_flags: entryWorkerConfig.compatibility_flags }
-						: {}),
-				};
+			? resolvedPluginConfig.config
+			: entryWorkerConfig;
 
 	const config = {
-		...compatibilityOptions,
-		...assetsConfig,
+		...(workerConfig?.compatibilityDate
+			? { compatibility_date: workerConfig.compatibilityDate }
+			: {}),
+		...(workerConfig?.compatibilityFlags
+			? { compatibility_flags: workerConfig.compatibilityFlags }
+			: {}),
+		...(assetsConfig?.htmlHandling
+			? { html_handling: assetsConfig.htmlHandling }
+			: {}),
+		...(assetsConfig?.notFoundHandling
+			? { not_found_handling: assetsConfig.notFoundHandling }
+			: {}),
 		has_static_routing:
 			resolvedPluginConfig.type === "workers" &&
 			resolvedPluginConfig.staticRouting
@@ -109,7 +109,7 @@ export function getAssetsConfig(
 		RedirectsSchema.parse(
 			constructRedirects({
 				redirects: parseRedirects(redirectsContents, {
-					htmlHandling: assetsConfig?.html_handling,
+					htmlHandling: assetsConfig?.htmlHandling,
 				}),
 				redirectsFile,
 				logger,

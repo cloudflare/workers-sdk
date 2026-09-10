@@ -9,8 +9,12 @@ test.runIf(isBuild)(
 	async ({ expect }) => {
 		const fallbackEntryPath = path.join(
 			testDir,
-			"dist",
-			"client",
+			".cloudflare",
+			"output",
+			"v0",
+			"workers",
+			"default",
+			"assets",
 			"__cloudflare_fallback_entry__"
 		);
 

@@ -53,6 +53,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
@@ -62,7 +63,6 @@
 	},
 	"devDependencies": {
 		"@cloudflare/build-output-utils": "workspace:*",
-		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",

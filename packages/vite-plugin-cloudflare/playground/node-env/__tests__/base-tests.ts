@@ -16,7 +16,10 @@ test("replaces process.env.NODE_ENV with the correct value", async ({
 test.skipIf(!isBuild)(
 	"the build output does not include react development code (such is tree-shaken away)",
 	async ({ expect }) => {
-		const outputJs = readFileSync("./dist/worker/index.js", "utf8");
+		const outputJs = readFileSync(
+			"./.cloudflare/output/v0/workers/default/bundle/index.js",
+			"utf8"
+		);
 		expect(outputJs).not.toContain("react-dom.development.js");
 		// the React development code links to the facebook/react repo in a few places
 		expect(outputJs).not.toContain("https://github.com/facebook/react");

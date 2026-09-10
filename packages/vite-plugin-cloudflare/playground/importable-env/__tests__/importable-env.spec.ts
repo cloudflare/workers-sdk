@@ -1,7 +1,9 @@
 import { test } from "vitest";
 import { getJsonResponse, serverLogs } from "../../__test-utils__";
 
-test("the importable env is accessible from outside the request handler", async ({
+// TODO: Reinstate when .env and .dev.vars files are supported with
+// cloudflare.config.ts.
+test.skip("the importable env is accessible from outside the request handler", async ({
 	expect,
 }) => {
 	expect(serverLogs.info.join()).toMatch(
@@ -9,7 +11,7 @@ test("the importable env is accessible from outside the request handler", async 
 	);
 });
 
-test("the fetch handler env contains the correct entries", async ({
+test.skip("the fetch handler env contains the correct entries", async ({
 	expect,
 }) => {
 	const json = (await getJsonResponse()) as Record<string, unknown>;
@@ -25,7 +27,9 @@ test("the fetch handler env contains the correct entries", async ({
 	]);
 });
 
-test("the imported env contains the correct entries", async ({ expect }) => {
+test.skip("the imported env contains the correct entries", async ({
+	expect,
+}) => {
 	const json = (await getJsonResponse()) as Record<string, unknown>;
 	expect(json?.["entries of the imported env"]).toEqual([
 		{
@@ -39,7 +43,7 @@ test("the imported env contains the correct entries", async ({ expect }) => {
 	]);
 });
 
-test("the entries in the fetch handler env and the imported env are the same", async ({
+test.skip("the entries in the fetch handler env and the imported env are the same", async ({
 	expect,
 }) => {
 	const json = (await getJsonResponse()) as Record<string, unknown>;

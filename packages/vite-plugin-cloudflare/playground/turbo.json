@@ -36,7 +36,8 @@
 				"CLOUDFLARE_VITE_BUILD",
 				"VITE_DEBUG_SERVE",
 				"VITE_INLINE",
-				"VITE_TEST_BUILD"
+				"VITE_TEST_BUILD",
+				"WRANGLER_DOCKER_BIN"
 			],
 			"outputLogs": "new-only"
 		},
@@ -52,7 +53,8 @@
 			"passThroughEnv": [
 				"CLOUDFLARE_VITE_BUILD",
 				"VITE_DEBUG_SERVE",
-				"VITE_INLINE"
+				"VITE_INLINE",
+				"WRANGLER_DOCKER_BIN"
 			],
 			"outputLogs": "new-only"
 		}

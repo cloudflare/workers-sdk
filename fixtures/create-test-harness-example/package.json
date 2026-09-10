@@ -23,7 +23,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/vite-plugin": "npm:@cloudflare/vite-plugin@1.54.5",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@playwright/test": "catalog:default",

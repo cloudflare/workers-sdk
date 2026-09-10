@@ -11,14 +11,13 @@ export default defineConfig({
 			const workerAEnvironment = builder.environments.worker_a;
 			assert(workerAEnvironment, `No "worker_a" environment`);
 
-			// We deliberately build just the `worker_a` environment to test that the plugin builds any remaining Worker environments
+			// We deliberately build just the entry Worker environment to test that the plugin builds any remaining Worker environments
 			await builder.build(workerAEnvironment);
 		},
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-a/wrangler.jsonc",
-			auxiliaryWorkers: [{ configPath: "./worker-b/wrangler.jsonc" }],
+			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
 		}),

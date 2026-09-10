@@ -8,6 +8,7 @@ export function createConfig(assetsOnly: boolean) {
 	return defineConfig({
 		plugins: [
 			cloudflare({
+				types: { includeRuntime: false },
 				inspectorPort: false,
 				persistState: false,
 				viteEnvironment: { name: "ssr" },
@@ -18,7 +19,14 @@ export function createConfig(assetsOnly: boolean) {
 							return {
 								...entryWorkerConfig,
 								name: "prerender",
-								main: "./src/prerender.ts",
+								entrypoint: "./src/prerender.ts",
+								env: {
+									...entryWorkerConfig.env,
+									AUXILIARY_WORKER: {
+										type: "worker",
+										worker: "auxiliary-worker",
+									},
+								},
 							};
 						},
 					},

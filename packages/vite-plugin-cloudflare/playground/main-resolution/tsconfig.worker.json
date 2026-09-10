@@ -1,4 +1,7 @@
 {
 	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
+	"compilerOptions": {
+		"allowImportingTsExtensions": true
+	},
 	"include": ["src", "nested-config"]
 }

@@ -1,11 +1,5 @@
 import assert from "node:assert";
-import {
-	getCloudflareContainerRegistry,
-	prepareContainerImagesForDev,
-} from "@cloudflare/containers-shared";
-import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import { initRunners } from "../cloudflare-environment";
@@ -14,7 +8,6 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { configureContainerPull, getDockerPath } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
 	compareExportTypes,
@@ -27,42 +20,18 @@ import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 
-let exitCallback = () => {};
-
-process.on("exit", () => {
-	exitCallback();
-});
-
 /**
  * Plugin to provide core development functionality
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
-	let containerImageTags = new Set<string>();
-
 	return {
-		buildEnd() {
-			// Server restarts are handled here.
-			// Server shutdown is handled in the patched `server.close()`.
-			if (
-				ctx.resolvedViteConfig.command === "serve" &&
-				ctx.isRestartingDevServer &&
-				containerImageTags.size
-			) {
-				const dockerPath = getDockerPath();
-				cleanupContainers(dockerPath, containerImageTags);
-			}
-		},
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
 
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
-			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
+			await ctx.startOrUpdateMiniflare(initialOptions);
 
-			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
-
-			// Dispose Miniflare and clean up containers when the dev server
-			// shuts down. `buildEnd` can't be used for this under
-			// `experimental.bundledDev`.
+			// Dispose Miniflare when the dev server shuts down.
 			// Note Vite's `restartServer` calls `server.close()` on every restart, so we skip
 			// teardown while restarting.
 			const closeServer = viteDevServer.close.bind(viteDevServer);
@@ -71,9 +40,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					await closeServer();
 				} finally {
 					if (!ctx.isRestartingDevServer) {
-						if (containerImageTags.size) {
-							cleanupContainers(getDockerPath(), containerImageTags);
-						}
 						try {
 							await ctx.disposeMiniflare();
 						} catch (error) {
@@ -127,8 +93,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						ctx,
 						viteDevServer
 					);
-					containerTagToOptionsMap = updatedOptions.containerTagToOptionsMap;
-					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
+					await ctx.startOrUpdateMiniflare(updatedOptions);
 					await initRunners(
 						ctx.resolvedPluginConfig,
 						viteDevServer,
@@ -190,7 +155,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				}
 
 				const staticRouting: StaticRouting | undefined =
-					entryWorkerConfig.assets?.run_worker_first === true
+					entryWorkerConfig.assets?.runWorkerFirst === true
 						? { user_worker: ["/*"] }
 						: ctx.resolvedPluginConfig.staticRouting;
 
@@ -229,81 +194,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
-				if (containerTagToOptionsMap.size) {
-					viteDevServer.config.logger.info(
-						colors.dim(
-							colors.yellow(
-								"∷ Building container images for local development...\n"
-							)
-						)
-					);
-
-					const hasCFRegistryImages = [
-						...containerTagToOptionsMap.values(),
-					].some(
-						(opts) =>
-							"image_uri" in opts &&
-							new URL(`http://${opts.image_uri}`).hostname ===
-								getCloudflareContainerRegistry(ctx.entryWorkerConfig)
-					);
-
-					if (hasCFRegistryImages) {
-						const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-						const accountId =
-							ctx.entryWorkerConfig?.account_id ??
-							process.env.CLOUDFLARE_ACCOUNT_ID;
-
-						if (!apiToken || !accountId) {
-							throw new UserError(
-								"To use images from the Cloudflare-managed registry with the Vite plugin, " +
-									"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
-									"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
-									"Alternatively, use a Dockerfile that references the image via FROM.",
-								{ telemetryMessage: false }
-							);
-						}
-
-						configureContainerPull(accountId, apiToken, ctx.entryWorkerConfig);
-					}
-
-					await prepareContainerImagesForDev({
-						dockerPath: getDockerPath(),
-						containerOptions: [...containerTagToOptionsMap.values()],
-						onContainerImagePreparationStart: () => {},
-						onContainerImagePreparationEnd: () => {},
-						logger: viteDevServer.config.logger,
-						complianceConfig: ctx.entryWorkerConfig,
-					});
-
-					containerImageTags = new Set(containerTagToOptionsMap.keys());
-					viteDevServer.config.logger.info(
-						colors.dim(
-							colors.yellow(
-								"\n⚡️ Containers successfully built. To rebuild your containers during development, restart the Vite dev server (r + enter)."
-							)
-						)
-					);
-
-					/*
-					 * Upon exiting the dev process we should ensure we perform any
-					 * containers-specific cleanup work. Vite recommends using the
-					 * `buildEnd` and `closeBundle` hooks, which are called when the
-					 * server is closed. Unfortunately none of these hooks work if the
-					 * process exits forcefully, via `ctrl+C`, and Vite provides no
-					 * other alternatives. For this reason we decided to hook into both
-					 * `buildEnd` and the `exit` event, and ensure we always cleanup
-					 * (please note that handling the `beforeExit` event, which does
-					 * support async ops, is not an option, since Vite calls
-					 * `process.exit()` imperatively, and therefore causes `beforeExit`
-					 * not to be emitted).
-					 *
-					 */
-					exitCallback = () => {
-						if (containerImageTags.size) {
-							cleanupContainers(getDockerPath(), containerImageTags);
-						}
-					};
-				}
+				// TODO: Reinstate Container development support when Containers are
+				// supported by cloudflare.config.ts.
 			}
 
 			return () => {
