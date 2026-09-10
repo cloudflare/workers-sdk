@@ -1,5 +1,18 @@
 # @cloudflare/autoconfig
 
+## 0.4.4
+
+### Patch Changes
+
+- [#15576](https://github.com/cloudflare/workers-sdk/pull/15576) [`5e0d6d3`](https://github.com/cloudflare/workers-sdk/commit/5e0d6d37194c0306a736a7d11995f5544b5715b3) Thanks [@edmundhung](https://github.com/edmundhung)! - Remove the unused Nitro Vite import when autoconfiguring TanStack Start for Cloudflare
+
+  TanStack Start projects created for Node.js no longer retain an unused Nitro Vite import after Cloudflare autoconfiguration.
+
+- Updated dependencies [[`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e), [`bff525d`](https://github.com/cloudflare/workers-sdk/commit/bff525d66dd3785481148353d782dd33c3a644ed)]:
+  - @cloudflare/workers-utils@0.38.0
+  - @cloudflare/cli-shared-helpers@0.1.29
+  - @cloudflare/config@0.11.0
+
 ## 0.4.3
 
 ### Patch Changes

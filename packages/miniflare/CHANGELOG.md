@@ -1,5 +1,54 @@
 # miniflare
 
+## 5.20260910.0-alpha
+
+### Minor Changes
+
+- [#15578](https://github.com/cloudflare/workers-sdk/pull/15578) [`15cd6e1`](https://github.com/cloudflare/workers-sdk/commit/15cd6e16129af3dad09d53d6cd03f963f9203970) Thanks [@ThomasRubini](https://github.com/ThomasRubini)! - Add `Miniflare#dispatchConnect()` for testing Worker TCP handlers
+
+  Tests can now open a Node.js socket to a Worker's configured TCP trigger without reserving and connecting to a fixed port manually. Miniflare waits for startup, resolves OS-assigned ports, supports selecting Workers and triggers, and closes dispatched sockets during disposal.
+
+### Patch Changes
+
+- [#15432](https://github.com/cloudflare/workers-sdk/pull/15432) [`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94) Thanks [@razethion](https://github.com/razethion)! - Prevent delayed internal errors from fetch-only remote bindings
+
+  Fetch-only remote bindings such as D1 and R2 previously opened an unused WebSocket RPC session. RPC sessions are now created only when an RPC method is called.
+
+- [#15585](https://github.com/cloudflare/workers-sdk/pull/15585) [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260908.1 | ^5.20260910.1 |
+  | workerd                   | 1.20260908.1  | 1.20260910.1  |
+
+- [#14814](https://github.com/cloudflare/workers-sdk/pull/14814) [`a549e58`](https://github.com/cloudflare/workers-sdk/commit/a549e58af707e84d6aeddaadc6566103ae236dbb) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Match `Content-Type` case-insensitively when simulating Cloudflare's response compression
+
+  Locally, responses were only compressed when the `Content-Type` matched the compressible media type list exactly. Because HTTP media types are case-insensitive and may carry whitespace before their parameters, headers such as `Application/JSON` or `text/html ; charset=utf-8` were treated as non-compressible, diverging from production behaviour. The media type is now trimmed and lowercased before matching.
+
+- [#15540](https://github.com/cloudflare/workers-sdk/pull/15540) [`dbb3ff4`](https://github.com/cloudflare/workers-sdk/commit/dbb3ff4ebe7579be76f42591957c429f26da319b) Thanks [@NAVEENKUMARKR777](https://github.com/NAVEENKUMARKR777)! - Fix `DevalueError: Cannot stringify arbitrary non-POJOs` when passing a `Headers` instance to a proxied binding method
+
+  `R2Object#writeHttpMetadata()`, `R2Bucket#put()`'s `onlyIf` option, and other proxied APIs that accept a `Headers` argument previously only worked if that `Headers` instance came from the exact same `Headers` implementation Miniflare uses internally (`undici`). In practice, user code almost always constructs `Headers` using the platform global instead (for example inside Next.js, Astro, Remix, or SvelteKit dev servers), which is backed by a different copy of `undici` and isn't `instanceof` the one Miniflare imports. This mismatch caused serialisation to fail with a confusing `DevalueError`, even though the exact same code worked fine when deployed.
+
+  `Headers`, `Request`, and `Response` values are now also recognised by their `Symbol.toStringTag`, which is realm-independent, so any spec-compliant instance is accepted regardless of which copy of the class created it.
+
+- [#15485](https://github.com/cloudflare/workers-sdk/pull/15485) [`fea3cd0`](https://github.com/cloudflare/workers-sdk/commit/fea3cd0f2ef5af6c8f2b50c794a89b8ef03ca82b) Thanks [@RealBhupesh](https://github.com/RealBhupesh)! - Reject loopback server bind failures during Miniflare startup instead of leaving `ready` and `dispose()` hanging
+
+  `#startLoopbackServer` now attaches an `error` listener before `listen`, matching the inspector proxy. When the configured host cannot be bound (e.g. `192.0.2.1`), `ready` rejects and `dispose()` still settles even if the loopback server never started.
+
+- [#15580](https://github.com/cloudflare/workers-sdk/pull/15580) [`6bd7b6c`](https://github.com/cloudflare/workers-sdk/commit/6bd7b6cae44d441e415130991e3f181694bd3b6d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update `sharp` to 0.35.4
+
+  This updates the image-processing dependency used by Miniflare's local Images binding to a version that addresses `GHSA-rgj7-g3m4-5g8c`, covering vulnerabilities in its bundled libheif library.
+
+- [#15515](https://github.com/cloudflare/workers-sdk/pull/15515) [`be1caec`](https://github.com/cloudflare/workers-sdk/commit/be1caeca44ccd9660a81420805fb0958ca422589) Thanks [@Wichtowski](https://github.com/Wichtowski)! - Handle Miniflare listener startup failures consistently
+
+  Loopback and inspector servers now remove startup-only error handlers after binding and close the server after bind failures. Inspector bind failures are observed immediately and propagated through readiness, URL access, and disposal.
+
+- [#15403](https://github.com/cloudflare/workers-sdk/pull/15403) [`dbc9506`](https://github.com/cloudflare/workers-sdk/commit/dbc9506e48d99237be701685d08582966f62f59f) Thanks [@james-elicx](https://github.com/james-elicx)! - Reduce the size of Miniflare's embedded asset and router Workers
+
+  Miniflare does not configure Sentry credentials for its asset services, so their builds now replace the unused production Sentry setup with a no-op instead of bundling Toucan.
+
 ## 5.20260908.0-alpha
 
 ### Minor Changes
