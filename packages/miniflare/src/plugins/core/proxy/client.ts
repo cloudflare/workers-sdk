@@ -24,7 +24,7 @@ import {
 } from "../../../workers";
 import { DECODER, SynchronousFetcher } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
-import type { DispatchFetch, Response } from "../../../http";
+import type { DispatchFetch, RequestInit, Response } from "../../../http";
 import type {
 	Awaitable,
 	ReducersRevivers,
@@ -758,11 +758,43 @@ class ProxyStubHandler<T extends object>
 		return this.#parseAsyncResponse(resPromise);
 	}
 	#fetcherFetchCall(args: unknown[]) {
-		// @ts-expect-error `...args` isn't type-safe here, but `undici` should
-		//  validate types at runtime, and throw appropriate errors
-		const userRequest = new Request(...args);
-		// Create a new request with the proxy URL, preserving the original request
-		const request = new Request(this.bridge.url, userRequest);
+		let userRequest: Request | globalThis.Request;
+		if (args[0] instanceof globalThis.Request) {
+			const globalRequestInit = args[1] as ConstructorParameters<
+				typeof globalThis.Request
+			>[1];
+			userRequest = new globalThis.Request(args[0], globalRequestInit);
+		} else {
+			// @ts-expect-error `...args` isn't type-safe here, but `undici` should
+			//  validate types at runtime, and throw appropriate errors
+			userRequest = new Request(...args);
+		}
+		const body = userRequest.body;
+		// Create an internal transport request with the proxy URL. `mode` and
+		// `keepalive` aren't sent over HTTP, and undici rejects exposed stream
+		// bodies combined with `no-cors` or `keepalive`.
+		const request = new Request(this.bridge.url, {
+			method: userRequest.method,
+			headers: userRequest.headers,
+			redirect: userRequest.redirect,
+			integrity: userRequest.integrity,
+			signal: userRequest.signal,
+			mode:
+				body !== null && userRequest.mode === "no-cors"
+					? "cors"
+					: userRequest.mode,
+			credentials: userRequest.credentials,
+			cache: userRequest.cache,
+			referrer: userRequest.referrer,
+			referrerPolicy: userRequest.referrerPolicy,
+			keepalive: body === null && userRequest.keepalive,
+			...(body === null ? {} : { body, duplex: "half" as const }),
+			cf:
+				userRequest instanceof Request
+					? userRequest.cf
+					: ((args[1] as RequestInit | undefined)?.cf ??
+						(args[0] as { cf?: RequestInit["cf"] }).cf),
+		});
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
 		request.headers.set(CoreHeaders.OP_ORIGINAL_URL, userRequest.url);
