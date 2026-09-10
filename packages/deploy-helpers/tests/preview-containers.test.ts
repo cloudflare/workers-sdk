@@ -1,5 +1,6 @@
 import {
 	apply,
+	cleanupBuiltContainerImages,
 	initContainersSharedContext,
 	listDurableObjects,
 	OpenAPI,
@@ -32,6 +33,7 @@ const mockPreviewApi = vi.hoisted(() => ({
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
 	apply: vi.fn(),
+	cleanupBuiltContainerImages: vi.fn(),
 	initContainersSharedContext: vi.fn(),
 	listDurableObjects: vi.fn(),
 	pushBuiltContainerImage: vi.fn(),
@@ -121,6 +123,8 @@ describe("preview containers", () => {
 	beforeEach(() => {
 		OpenAPI.LOGGER = undefined;
 		vi.mocked(apply).mockReset();
+		vi.mocked(cleanupBuiltContainerImages).mockReset();
+		vi.mocked(cleanupBuiltContainerImages).mockResolvedValue(undefined);
 		vi.mocked(initContainersSharedContext).mockReset();
 		vi.mocked(listDurableObjects).mockReset();
 		vi.mocked(listDurableObjects).mockResolvedValue([]);
@@ -284,5 +288,71 @@ describe("preview containers", () => {
 		expect(openAPILogger.debug).not.toHaveBeenCalled();
 		expect(openAPILogger.debugWithSanitization).not.toHaveBeenCalled();
 		expect(OpenAPI.LOGGER).toBe(openAPILogger);
+	});
+
+	it("cleans up built container images when preview deployment creation fails", async ({
+		expect,
+	}) => {
+		const container = containerConfig();
+		const builtDeployment = builtDeploymentFor(container);
+		mockPreviewApi.createPreviewDeployment.mockRejectedValue(
+			new Error("deployment failed")
+		);
+
+		await expect(
+			preview(
+				ACCOUNT_ID,
+				{
+					name: "my-feature",
+					ignoreBaseConfig: false,
+					json: true,
+				},
+				config,
+				buildResult,
+				undefined,
+				vi.fn(async () => ({
+					scopedContainerConfig: config,
+					normalisedContainerConfig: [container],
+					builtContainerDeployments: [builtDeployment],
+				}))
+			)
+		).rejects.toThrow("deployment failed");
+
+		expect(cleanupBuiltContainerImages).toHaveBeenCalledWith(
+			[builtDeployment],
+			expect.any(String)
+		);
+	});
+
+	it("cleans up built container images when applying preview containers fails", async ({
+		expect,
+	}) => {
+		const container = containerConfig();
+		const builtDeployment = builtDeploymentFor(container);
+		vi.mocked(apply).mockRejectedValue(new Error("apply failed"));
+
+		await expect(
+			preview(
+				ACCOUNT_ID,
+				{
+					name: "my-feature",
+					ignoreBaseConfig: false,
+					json: true,
+				},
+				config,
+				buildResult,
+				undefined,
+				vi.fn(async () => ({
+					scopedContainerConfig: config,
+					normalisedContainerConfig: [container],
+					builtContainerDeployments: [builtDeployment],
+				}))
+			)
+		).rejects.toThrow("apply failed");
+
+		expect(cleanupBuiltContainerImages).toHaveBeenCalledWith(
+			[builtDeployment],
+			expect.any(String)
+		);
 	});
 });

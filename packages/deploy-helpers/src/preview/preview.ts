@@ -2,6 +2,7 @@ import path from "node:path";
 import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	apply,
+	cleanupBuiltContainerImages,
 	initContainersSharedContext,
 	listDurableObjects,
 	OpenAPI,
@@ -591,80 +592,93 @@ export async function preview(
 		quiet: args.json === true,
 	});
 
-	const deploymentRequest = await assemblePreviewDeploymentSettings(
-		config,
-		buildResult,
-		accountId,
-		workerName,
-		previewResource.id,
-		{
-			message: args.message ?? fallbackMessage,
-			tag: args.tag ?? fallbackTag,
-			repositoryUrl,
-			pullRequest,
-			commitSha,
-			assetsOptions,
-		}
-	);
-	const deployment = await createPreviewDeployment(
-		config,
-		accountId,
-		workerName,
-		previewResource.id,
-		deploymentRequest
-	);
-
-	if (normalisedContainerConfig.length > 0 && scopedContainerConfig) {
-		try {
-			await deployPreviewContainers(
-				scopedContainerConfig,
-				normalisedContainerConfig,
-				builtContainerDeployments,
-				deployment,
-				accountId,
-				{ quiet: args.json === true }
-			);
-		} catch (error) {
-			// The deployment is live by this point, so say so before the push or
-			// apply error surfaces on its own. Written to stderr so it cannot
-			// corrupt a `--json` payload.
-			logger.warn(
-				`The preview "${previewResource.name}" was created, but its containers did not come up. Its Durable Objects have no container backing them until the containers are applied successfully.`
-			);
-			throw error;
-		}
-	}
-
-	if (args.json) {
-		logger.log(
-			JSON.stringify({ preview: previewResource, deployment }, null, 2)
+	try {
+		const deploymentRequest = await assemblePreviewDeploymentSettings(
+			config,
+			buildResult,
+			accountId,
+			workerName,
+			previewResource.id,
+			{
+				message: args.message ?? fallbackMessage,
+				tag: args.tag ?? fallbackTag,
+				repositoryUrl,
+				pullRequest,
+				commitSha,
+				assetsOptions,
+			}
 		);
-	} else {
-		logger.log(
-			formatPreviewDeploymentSummary(
-				previewResource,
-				deployment,
-				isNewPreview,
-				pullRequest
-			)
+		const deployment = await createPreviewDeployment(
+			config,
+			accountId,
+			workerName,
+			previewResource.id,
+			deploymentRequest
 		);
 
-		const topLevelBindings = getBindings(config);
-		if (Object.keys(topLevelBindings).length > 0) {
-			const previewBaseConfig = await getPreviewBaseConfig(
-				config,
-				accountId,
-				workerName
+		if (normalisedContainerConfig.length > 0 && scopedContainerConfig) {
+			try {
+				await deployPreviewContainers(
+					scopedContainerConfig,
+					normalisedContainerConfig,
+					builtContainerDeployments,
+					deployment,
+					accountId,
+					{ quiet: args.json === true }
+				);
+			} catch (error) {
+				// The deployment is live by this point, so say so before the push or
+				// apply error surfaces on its own. Written to stderr so it cannot
+				// corrupt a `--json` payload.
+				logger.warn(
+					`The preview "${previewResource.name}" was created, but its containers did not come up. Its Durable Objects have no container backing them until the containers are applied successfully.`
+				);
+				throw error;
+			}
+		}
+
+		if (args.json) {
+			logger.log(
+				JSON.stringify({ preview: previewResource, deployment }, null, 2)
 			);
-			logMissingPreviewsBindingsWarning(
-				topLevelBindings,
-				previewBaseConfig.env,
-				extractConfigBindings(config)
+		} else {
+			logger.log(
+				formatPreviewDeploymentSummary(
+					previewResource,
+					deployment,
+					isNewPreview,
+					pullRequest
+				)
+			);
+
+			const topLevelBindings = getBindings(config);
+			if (Object.keys(topLevelBindings).length > 0) {
+				const previewBaseConfig = await getPreviewBaseConfig(
+					config,
+					accountId,
+					workerName
+				);
+				logMissingPreviewsBindingsWarning(
+					topLevelBindings,
+					previewBaseConfig.env,
+					extractConfigBindings(config)
+				);
+			}
+		}
+
+		return { preview: previewResource, deployment, isNewPreview };
+	} finally {
+		if (builtContainerDeployments.length > 0) {
+			await runPreviewContainerOperation(
+				{ quiet: args.json === true },
+				async () =>
+					await cleanupBuiltContainerImages(
+						builtContainerDeployments,
+						getDockerPath()
+					)
 			);
 		}
 	}
-
-	return { preview: previewResource, deployment, isNewPreview };
 }
 
 /**
