@@ -480,6 +480,46 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 
 describe("experimental_patchConfig()", () => {
 	runInTempDir();
+	it("does not overwrite values with empty additive patches", ({ expect }) => {
+		writeWranglerConfig(
+			{
+				compatibility_flags: ["nodejs_compat"],
+				kv_namespaces: [{ binding: "KV", id: "namespace-id" }],
+				vars: { ENVIRONMENT: "production" },
+			},
+			"./wrangler.json"
+		);
+
+		const result = experimental_patchConfig("./wrangler.json", {
+			compatibility_flags: [],
+			kv_namespaces: [],
+			vars: {},
+		});
+
+		expect(JSON.parse(result)).toMatchObject({
+			compatibility_flags: ["nodejs_compat"],
+			kv_namespaces: [{ binding: "KV", id: "namespace-id" }],
+			vars: { ENVIRONMENT: "production" },
+		});
+	});
+
+	it.for(["json", "jsonc", "toml"])(
+		"creates an empty previews block in %s configuration",
+		(configType, { expect }) => {
+			const path = `./wrangler.${configType}`;
+			writeFileSync(
+				path,
+				configType === "toml"
+					? 'name = "test-name"\n'
+					: '{\n  "name": "test-name"\n}\n'
+			);
+
+			const result = experimental_patchConfig(path, { previews: {} }, false);
+			expect(result).toContain(
+				configType === "toml" ? "[previews]" : '"previews": {}'
+			);
+		}
+	);
 	describe.each([true, false])("isArrayInsertion = %o", (isArrayInsertion) => {
 		describe.each(testCases)(
 			`$name`,
