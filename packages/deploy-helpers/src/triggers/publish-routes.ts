@@ -254,6 +254,7 @@ export async function publishCustomDomains(
 	complianceConfig: ComplianceConfig,
 	workerUrl: string,
 	accountId: string,
+	scriptName: string,
 	domains: Array<RouteObject>
 ): Promise<TriggerDeployment> {
 	const options = {
@@ -273,10 +274,61 @@ export async function publishCustomDomains(
 					: undefined,
 		};
 	});
+	let changeset: CustomDomainChangeset;
+	try {
+		changeset = await fetchResult<CustomDomainChangeset>(
+			complianceConfig,
+			`${workerUrl}/domains/changeset?replace_state=true`,
+			{
+				method: "POST",
+				body: JSON.stringify(origins),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			}
+		);
+	} catch (error) {
+		if (process.stdout.isTTY) {
+			throw error;
+		}
+		changeset = { added: [], removed: [], updated: [], conflicting: [] };
+	}
+	const updatesRequired = changeset.updated.filter((domain) => domain.modified);
+	const previewUpdates = updatesRequired.filter(
+		(domain) => domain.previews_enabled === true
+	);
+	const fetchExistingDomain = (domain: UpdatedCustomDomain) =>
+		fetchResult<CustomDomain>(
+			complianceConfig,
+			`/accounts/${accountId}/workers/domains/records/${domain.id}`
+		);
+	let existing: CustomDomain[];
+	if (process.stdout.isTTY) {
+		existing = await Promise.all(updatesRequired.map(fetchExistingDomain));
+	} else {
+		const results = await Promise.allSettled(
+			previewUpdates.map(fetchExistingDomain)
+		);
+		existing = results.flatMap((result) =>
+			result.status === "fulfilled" ? [result.value] : []
+		);
+	}
+	const existingById = new Map(existing.map((domain) => [domain.id, domain]));
+	const changed =
+		changeset.added.some((domain) => domain.previews_enabled === true) ||
+		previewUpdates.some((domain) => {
+			const existingDomain = existingById.get(domain.id);
+			return (
+				existingDomain !== undefined &&
+				(existingDomain.service !== scriptName ||
+					existingDomain.previews_enabled !== true)
+			);
+		});
 
 	const fail = (): TriggerDeployment => {
 		return {
 			targets: [],
+			changed,
 			error: new UserError(
 				domains.length > 1
 					? `Publishing to ${domains.length} Custom Domains was skipped, fix conflicts and try again`
@@ -290,41 +342,23 @@ export async function publishCustomDomains(
 		options.override_existing_origin = true;
 		options.override_existing_dns_record = true;
 	} else {
-		const changeset = await fetchResult<CustomDomainChangeset>(
-			complianceConfig,
-			`${workerUrl}/domains/changeset?replace_state=true`,
-			{
-				method: "POST",
-				body: JSON.stringify(origins),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			}
-		);
-
-		const updatesRequired = changeset.updated.filter(
-			(domain) => domain.modified
-		);
 		if (updatesRequired.length > 0) {
-			const existing = await Promise.all(
-				updatesRequired.map((domain) =>
-					fetchResult<CustomDomain>(
-						complianceConfig,
-						`/accounts/${accountId}/workers/domains/records/${domain.id}`
-					)
-				)
+			const existingForOtherWorkers = existing.filter(
+				(domain) => domain.service !== scriptName
 			);
-			const existingRendered = existing
-				.map(
-					(domain) =>
-						`\t• ${domain.hostname} (used as a domain for "${domain.service}")`
-				)
-				.join("\n");
-			const message = `Custom Domains already exist for these domains:
+			if (existingForOtherWorkers.length > 0) {
+				const existingRendered = existingForOtherWorkers
+					.map(
+						(domain) =>
+							`\t• ${domain.hostname} (used as a domain for "${domain.service}")`
+					)
+					.join("\n");
+				const message = `Custom Domains already exist for these domains:
 ${existingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) {
-				return fail();
+				if (!(await confirm(message))) {
+					return fail();
+				}
 			}
 			options.override_existing_origin = true;
 		}
@@ -351,5 +385,5 @@ Update them to point to this script instead?`;
 		},
 	});
 
-	return { targets: domains.map((domain) => renderRoute(domain)) };
+	return { targets: domains.map((domain) => renderRoute(domain)), changed };
 }

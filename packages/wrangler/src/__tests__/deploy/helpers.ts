@@ -154,13 +154,15 @@ export function mockCustomDomainLookup(origin: CustomDomain) {
 }
 
 export function mockCustomDomainsChangesetRequest({
-	originConflicts = [],
+	updatedDomains = [],
 	dnsRecordConflicts = [],
 	env = undefined,
+	changeset = {},
 }: {
-	originConflicts?: Array<CustomDomain>;
+	updatedDomains?: Array<CustomDomain>;
 	dnsRecordConflicts?: Array<CustomDomain>;
 	env?: string | undefined;
+	changeset?: Partial<CustomDomainChangeset>;
 }) {
 	msw.use(
 		http.post<{ accountId: string; scriptName: string; envName: string }>(
@@ -172,10 +174,14 @@ export function mockCustomDomainsChangesetRequest({
 				);
 
 				const domains = (await request.json()) as Array<
-					{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+					{
+						hostname: string;
+						enabled?: boolean;
+						previews_enabled?: boolean;
+					} & ({ zone_id?: string } | { zone_name?: string })
 				>;
 
-				const changeset: CustomDomainChangeset = {
+				const responseChangeset: CustomDomainChangeset = {
 					added: domains.map((domain) => {
 						return {
 							...domain,
@@ -184,22 +190,23 @@ export function mockCustomDomainsChangesetRequest({
 							environment: env ?? "",
 							zone_name: "",
 							zone_id: "",
-							enabled: true,
-							previews_enabled: false,
+							enabled: domain.enabled ?? true,
+							previews_enabled: domain.previews_enabled ?? false,
 						};
 					}),
 					removed: [],
 					updated:
-						originConflicts?.map((domain) => {
+						updatedDomains.map((domain) => {
 							return {
 								...domain,
 								modified: true,
 							};
 						}) ?? [],
 					conflicting: dnsRecordConflicts,
+					...changeset,
 				};
 
-				return HttpResponse.json(createFetchResult(changeset));
+				return HttpResponse.json(createFetchResult(responseChangeset));
 			},
 			{ once: true }
 		)
