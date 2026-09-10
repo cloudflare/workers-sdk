@@ -13528,6 +13528,27 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should reject invalid targeted placement in previews config", ({
+				expect,
+			}) => {
+				const invalidPlacements = [
+					{ mode: "targeted" },
+					{ mode: "targeted", region: "" },
+					{ mode: "off", region: "WEU" },
+				];
+
+				for (const placement of invalidPlacements) {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ previews: { placement } } as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.renderErrors()).toContain('"previews.placement');
+				}
+			});
+
 			it("should accept previews.queues as an object with producers", ({
 				expect,
 			}) => {
