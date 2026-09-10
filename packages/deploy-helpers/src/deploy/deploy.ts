@@ -386,7 +386,7 @@ async function deployWorker(
 		});
 	}
 
-	const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config.placement);
 
 	const entryPointName = path.basename(resolvedEntryPointPath);
 	const main: CfModule = {

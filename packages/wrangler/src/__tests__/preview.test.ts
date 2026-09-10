@@ -4978,7 +4978,7 @@ describe("wrangler preview", () => {
 			vi.unstubAllEnvs();
 		});
 
-		test("should inherit top-level previews config into an environment when env.previews is absent", async ({
+		test("should disable placement when previews placement is off", async ({
 			expect,
 		}) => {
 			writeFileSync(
@@ -4989,6 +4989,7 @@ describe("wrangler preview", () => {
 					compatibility_date: "2025-01-01",
 					placement: { mode: "smart" },
 					previews: {
+						placement: { mode: "off" },
 						observability: {
 							enabled: true,
 							redact_query_string: true,
@@ -5013,7 +5014,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						compatibility_date?: string;
-						placement?: { mode?: string };
+						placement?: { mode?: string } | null;
 						env?: Record<
 							string,
 							{ type: string; text?: string; namespace_id?: string }
@@ -5088,7 +5089,7 @@ describe("wrangler preview", () => {
 				redact_query_string: true,
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
-			expect(deploymentRequestBody?.placement).toEqual({ mode: "smart" });
+			expect(deploymentRequestBody?.placement).toBeNull();
 			expect(deploymentRequestBody?.env).toMatchObject({
 				TOP_LEVEL_PREVIEW: { type: "plain_text", text: "top-value" },
 				TOP_KV: { type: "kv_namespace", namespace_id: "top-kv-id" },
@@ -5105,6 +5106,7 @@ describe("wrangler preview", () => {
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
 					limits: { cpu_ms: 100, subrequests: 200 },
+					placement: { mode: "smart" },
 					previews: {
 						observability: { enabled: true },
 						vars: { TOP_LEVEL_PREVIEW: "top-value" },
@@ -5115,6 +5117,7 @@ describe("wrangler preview", () => {
 						staging: {
 							previews: {
 								observability: { enabled: false },
+								placement: { mode: "targeted", region: "WEU" },
 								vars: { STAGE_PREVIEW: "stage-value" },
 								queues: {
 									producers: [{ binding: "STAGE_QUEUE", queue: "jobs" }],
@@ -5135,6 +5138,7 @@ describe("wrangler preview", () => {
 				| {
 						compatibility_date?: string;
 						limits?: { cpu_ms?: number; subrequests?: number };
+						placement?: { mode?: string; region?: string } | null;
 						env?: Record<
 							string,
 							{
@@ -5214,6 +5218,10 @@ describe("wrangler preview", () => {
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
 			expect(deploymentRequestBody?.limits).toEqual({ subrequests: 50 });
+			expect(deploymentRequestBody?.placement).toEqual({
+				mode: "targeted",
+				region: "WEU",
+			});
 			expect(deploymentRequestBody?.env).toMatchObject({
 				STAGE_PREVIEW: { type: "plain_text", text: "stage-value" },
 				STAGE_QUEUE: { type: "queue", queue_name: "jobs" },

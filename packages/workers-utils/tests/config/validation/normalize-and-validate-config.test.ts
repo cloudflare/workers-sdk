@@ -13591,6 +13591,63 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should accept previews.placement", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						placement: { mode: "targeted", region: "WEU" },
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should reject malformed previews.placement", ({ expect }) => {
+				const rawConfig = {
+					previews: { placement: "smart" },
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "previews.placement" should be an object'
+				);
+			});
+
+			it("should reject invalid targeted previews.placement", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						placement: {
+							mode: "targeted",
+							region: "WEU",
+							host: "example.com",
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'"previews.placement" fields "region", "host" are mutually exclusive'
+				);
+			});
+
 			it("should accept previews.cache with enabled: true", ({ expect }) => {
 				const rawConfig = {
 					previews: {
