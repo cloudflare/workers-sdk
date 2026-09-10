@@ -8,6 +8,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Workspace packages kept external so consumers share a single copy of
 	// types and runtime code (e.g. ParseError instanceof checks).
 	"@cloudflare/cli-shared-helpers",
+	"@cloudflare/containers-shared",
 	"@cloudflare/workers-utils",
 	"miniflare",
 

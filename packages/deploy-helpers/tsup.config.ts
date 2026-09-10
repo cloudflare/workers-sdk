@@ -21,10 +21,7 @@ export default defineConfig(() => [
 		tsconfig: "tsconfig.json",
 		metafile: true,
 		sourcemap: process.env.SOURCEMAPS !== "false",
-		noExternal: [
-			"@cloudflare/containers-shared",
-			/^@cloudflare\/workers-shared(\/.*)?$/,
-		],
+		noExternal: [/^@cloudflare\/workers-shared(\/.*)?$/],
 		external: [
 			/^@cloudflare\//,
 			"blake3-wasm",

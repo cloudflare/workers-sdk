@@ -11,6 +11,7 @@ import {
 	validateAssetsArgsAndConfig,
 	validateAssetsOptions,
 } from "../assets";
+import { getNormalizedContainerOptions } from "../containers/config";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -137,6 +138,13 @@ export async function mergeDeployConfigArgs(
 	}));
 	const routes =
 		args.routes ?? config.routes ?? (config.route ? [config.route] : []);
+	const normalisedContainerConfig = await getNormalizedContainerOptions(
+		config,
+		{
+			containersRollout: args.containersRollout,
+			dryRun: shared.dryRun,
+		}
+	);
 
 	return {
 		props: {
@@ -154,6 +162,8 @@ export async function mergeDeployConfigArgs(
 			dispatchNamespace: args.dispatchNamespace,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
+			normalisedContainerConfig,
+			builtContainerDeployments: [],
 		},
 		buildProps: { ...buildProps, metafile: args.metafile },
 	};

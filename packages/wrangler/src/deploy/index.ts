@@ -1,17 +1,20 @@
+import {
+	cleanupBuiltContainerImages,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
+	getDockerPath,
+	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
-import { buildContainer } from "../containers/build";
-import { getNormalizedContainerOptions } from "../containers/config";
-import { deployContainers } from "../containers/deploy";
-import {
-	deployDurableObjectContainerApplications,
-	prepareDurableObjectContainerApplications,
-} from "../containers/durable-object-applications";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
+import { buildDeployContainerImages } from "../deployment-bundle/build-container-images";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -198,17 +201,27 @@ export async function runDeployCommandHandler(
 
 		const buildResult = await buildWorker(buildProps, config);
 
+		initContainersSharedContext({
+			logger,
+			fetchPagedListResult,
+			fetchResult,
+		});
+		props.builtContainerDeployments = await buildDeployContainerImages(props);
+		if (
+			!props.dryRun &&
+			props.containersRollout !== "none" &&
+			(props.normalisedContainerConfig.length > 0 ||
+				getDurableObjectContainerApps(config.containers).length > 0)
+		) {
+			await fillOpenAPIConfiguration(config, containersScope);
+		}
+
 		const { sourceMapSize, assetUploadStats } = await deploy(
 			props,
 			config,
 			buildResult,
 			{
 				syncWorkersSite,
-				getNormalizedContainerOptions,
-				buildContainer,
-				deployContainers,
-				prepareDurableObjectContainerApplications,
-				deployDurableObjectContainerApplications,
 				analyseBundle,
 			}
 		);
@@ -226,6 +239,12 @@ export async function runDeployCommandHandler(
 			}
 		);
 	} finally {
+		if (props.builtContainerDeployments.length > 0) {
+			await cleanupBuiltContainerImages(
+				props.builtContainerDeployments,
+				getDockerPath()
+			);
+		}
 		cleanupDestination(buildProps.destination);
 	}
 }

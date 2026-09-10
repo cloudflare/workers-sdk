@@ -31,6 +31,10 @@ import {
 import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
+	deployDurableObjectContainerApplications,
+	prepareDurableObjectContainerApplications,
+} from "./helpers/durable-object-container-applications";
+import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
@@ -62,14 +66,7 @@ import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle"> &
-	Partial<
-		Pick<
-			DeployCallbacks,
-			| "prepareDurableObjectContainerApplications"
-			| "deployDurableObjectContainerApplications"
-		>
-	>;
+export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
 
 type VersionsUploadResult = {
 	versionId: string | null;
@@ -190,7 +187,8 @@ async function uploadWorkerVersion(
 	}
 
 	const preparedContainerImages =
-		await callbacks.prepareDurableObjectContainerApplications?.(config, {
+		await prepareDurableObjectContainerApplications(config, {
+			accountId,
 			dryRun: Boolean(props.dryRun),
 			scriptName,
 		});
@@ -465,11 +463,10 @@ async function uploadWorkerVersion(
 	// only migration-managed namespaces can be resolved during version upload.
 	if (
 		!hasDurableObjectExports(config.exports) &&
-		getDurableObjectContainerApps(config.containers).length > 0 &&
-		callbacks.deployDurableObjectContainerApplications
+		getDurableObjectContainerApps(config.containers).length > 0
 	) {
 		assert(versionId);
-		await callbacks.deployDurableObjectContainerApplications(config, {
+		await deployDurableObjectContainerApplications(config, {
 			versionId,
 			accountId,
 			scriptName,
