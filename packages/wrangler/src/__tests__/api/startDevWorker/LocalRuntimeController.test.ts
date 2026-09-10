@@ -3,12 +3,13 @@ import fs, { readFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import util from "node:util";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { assert, describe, it } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import WebSocket from "ws";
 import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo-handler";
 import {
@@ -25,6 +26,12 @@ import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
 import type { Bundle, File, StartDevWorkerOptions } from "../../../api";
 import type { Config, Rule } from "@cloudflare/workers-utils";
+
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
+	cleanupContainers: vi.fn(),
+	prepareContainerImagesForDev: vi.fn(),
+}));
 
 export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
 	string | Uint8Array
@@ -134,6 +141,44 @@ function configDefaults(
 	};
 }
 
+const testContainers = [
+	{
+		name: "container",
+		class_name: "Container",
+		image_uri: "docker.io/example/image:latest",
+	} as NonNullable<StartDevWorkerOptions["containers"]>[number],
+];
+
+function containerConfig(
+	name: string,
+	containerBuildId: string,
+	containerEngine: NonNullable<StartDevWorkerOptions["dev"]>["containerEngine"]
+): StartDevWorkerOptions {
+	return configDefaults({
+		name,
+		containers: testContainers,
+		dev: {
+			persist: "./persist",
+			remote: false,
+			enableContainers: true,
+			containerBuildId,
+			containerEngine,
+			dockerPath: "docker",
+		},
+	});
+}
+
+function sendBundle(
+	controller: LocalRuntimeController,
+	config: StartDevWorkerOptions
+): void {
+	controller.onBundleComplete({
+		type: "bundleComplete",
+		config,
+		bundle: makeEsbuildBundle("export default { fetch() {} }") as Bundle,
+	});
+}
+
 describe("LocalRuntimeController", () => {
 	mockConsoleMethods();
 	runInTempDir();
@@ -183,6 +228,41 @@ describe("LocalRuntimeController", () => {
 	});
 
 	describe("Core", () => {
+		it("rejects conflicting multiworker container engines", async ({
+			expect,
+		}) => {
+			vi.mocked(prepareContainerImagesForDev).mockReset();
+			const bus = new FakeBus();
+			const controller = new MultiworkerRuntimeController(bus, 2);
+			teardown(() => controller.teardown());
+
+			sendBundle(
+				controller,
+				containerConfig("first-worker", "build-1", "unix:///first.sock")
+			);
+			await vi.waitFor(() => {
+				expect(prepareContainerImagesForDev).toHaveBeenCalledOnce();
+			});
+
+			const conflictError = bus.waitFor("error");
+			sendBundle(
+				controller,
+				containerConfig("second-worker", "build-2", "unix:///second.sock")
+			);
+
+			await expect(conflictError).resolves.toMatchObject({
+				cause: expect.objectContaining({
+					message: expect.stringMatching(
+						/must use the same dev\.container_engine/
+					),
+				}),
+			});
+			expect(prepareContainerImagesForDev).toHaveBeenCalledOnce();
+			expect(prepareContainerImagesForDev).toHaveBeenCalledWith(
+				expect.objectContaining({ dockerHost: "unix:///first.sock" })
+			);
+		});
+
 		it("dispatches a typed runtimeError for an uncaught Worker exception", async ({
 			expect,
 		}) => {
@@ -1691,6 +1771,53 @@ describe("MultiworkerRuntimeController", () => {
 	runInTempDir();
 	// Make sure teardown is declared after runInTempDir so it runs before we delete the temp directory
 	const teardown = useTeardown();
+
+	it("preserves a structured container engine in merged options", async ({
+		expect,
+	}) => {
+		const containerEngine = {
+			localDocker: {
+				socketPath: "unix:///custom/docker.sock",
+				containerEgressInterceptorImage: "custom-egress",
+			},
+		};
+		const primaryConfig = configDefaults({
+			name: "primary-worker",
+			dev: {
+				persist: "./persist",
+				remote: false,
+				multiworkerPrimary: true,
+			},
+		});
+		const secondaryConfig = configDefaults({
+			name: "secondary-worker",
+			dev: {
+				persist: "./persist",
+				remote: false,
+				multiworkerPrimary: false,
+				containerEngine,
+			},
+		});
+		const bus = new FakeBus();
+		const controller = new MultiworkerRuntimeController(bus, 2);
+		teardown(() => controller.teardown());
+
+		const initialReload = bus.waitFor("reloadComplete");
+		sendBundle(controller, primaryConfig);
+		sendBundle(controller, secondaryConfig);
+		await initialReload;
+
+		assert(controller.mf);
+		const setOptions = vi.spyOn(controller.mf, "setOptions");
+		const updatedReload = bus.waitFor("reloadComplete");
+		sendBundle(controller, primaryConfig);
+		await updatedReload;
+
+		expect(setOptions).toHaveBeenCalledOnce();
+		expect(setOptions.mock.calls[0]?.[0].containerEngine).toEqual(
+			containerEngine
+		);
+	});
 
 	// The multiworker controller builds its Miniflare options through its own
 	// code path, so the runtimeError wiring must be pinned separately from the

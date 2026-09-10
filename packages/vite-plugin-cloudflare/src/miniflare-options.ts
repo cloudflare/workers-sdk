@@ -5,10 +5,7 @@ import * as path from "node:path";
 import * as timers from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { format } from "node:util";
-import {
-	generateContainerBuildId,
-	resolveDockerHost,
-} from "@cloudflare/containers-shared";
+import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	getBrowserRenderingHeadfulFromEnv,
@@ -35,7 +32,11 @@ import {
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
-import { getContainerOptions, getDockerPath } from "./containers";
+import {
+	getContainerOptions,
+	getDockerPath,
+	selectViteContainerEngine,
+} from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
@@ -339,7 +340,13 @@ export async function getDevMiniflareOptions(
 	];
 
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
-	let containerEngine: string | undefined;
+	const containerEngine =
+		resolvedPluginConfig.type === "workers"
+			? selectViteContainerEngine(
+					resolvedPluginConfig.environmentNameToWorkerMap.values(),
+					getDockerPath()
+				)
+			: undefined;
 
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
@@ -388,8 +395,6 @@ export async function getDevMiniflareOptions(
 								worker.config.containers?.length &&
 								worker.config.dev.enable_containers
 							) {
-								const dockerPath = getDockerPath();
-								containerEngine = resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
 
 								const options = getContainerOptions({
@@ -763,7 +768,10 @@ export async function getPreviewMiniflareOptions(
 	);
 	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
 	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
-	let containerEngine: string | undefined;
+	const containerEngine = selectViteContainerEngine(
+		resolvedPluginConfig.workers,
+		getDockerPath()
+	);
 
 	const workers: Array<V4WorkerOptions> = (
 		await Promise.all(
@@ -810,8 +818,6 @@ export async function getPreviewMiniflareOptions(
 					workerConfig.containers?.length &&
 					workerConfig.dev.enable_containers
 				) {
-					const dockerPath = getDockerPath();
-					containerEngine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
 
 					const options = getContainerOptions({

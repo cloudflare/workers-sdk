@@ -12,6 +12,7 @@ import {
 	checkExposedPorts,
 	cleanupDuplicateImageTags,
 	containerPrivilegesAllowed,
+	runDockerCmdWithOutput,
 	verifyDockerInstalled,
 } from "./../src/utils";
 import type { ContainerDevOptions } from "../src/types";
@@ -43,7 +44,9 @@ vi.mock("../src/inspect", async (importOriginal) => {
 
 const containerConfig = {
 	dockerfile: "",
+	image_build_context: "",
 	class_name: "MyContainer",
+	image_tag: "cloudflare-dev/mycontainer:build-123",
 } as ContainerDevOptions;
 describe("checkExposedPorts", () => {
 	beforeEach(() => {
@@ -113,6 +116,29 @@ describe("cleanupDuplicateImageTags", () => {
 		expect(execFileSync).toHaveBeenCalledWith(
 			"docker",
 			["rmi", "cloudflare-dev/egresstestcontainer:build-122"],
+			{ encoding: "utf8" }
+		);
+	});
+});
+
+describe("runDockerCmdWithOutput", () => {
+	beforeEach(() => {
+		vi.mocked(execFileSync).mockReset();
+	});
+
+	it("uses the selected Docker host", ({ expect }) => {
+		vi.mocked(execFileSync).mockReturnValue("container-id\n");
+
+		expect(
+			runDockerCmdWithOutput(
+				"docker",
+				["ps", "-a"],
+				"unix:///custom/docker.sock"
+			)
+		).toBe("container-id");
+		expect(execFileSync).toHaveBeenCalledWith(
+			"docker",
+			["--host", "unix:///custom/docker.sock", "ps", "-a"],
 			{ encoding: "utf8" }
 		);
 	});

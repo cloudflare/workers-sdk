@@ -1,8 +1,10 @@
+import assert from "node:assert";
 import {
+	cleanupContainers,
 	getCloudflareContainerRegistry,
+	getDockerHostFromContainerEngine,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
 import colors from "picocolors";
@@ -60,6 +62,13 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 			}
 
 			if (containerTagToOptionsMap.size) {
+				const { containerEngine } = miniflareOptions;
+				assert(
+					containerEngine,
+					"Expected a container engine for configured containers"
+				);
+				const containerDockerHost =
+					getDockerHostFromContainerEngine(containerEngine);
 				const dockerPath = getDockerPath();
 
 				vitePreviewServer.config.logger.info(
@@ -97,7 +106,8 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 				}
 
 				await prepareContainerImagesForDev({
-					dockerPath: getDockerPath(),
+					dockerPath,
+					dockerHost: containerDockerHost,
 					containerOptions: [...containerTagToOptionsMap.values()],
 					onContainerImagePreparationStart: () => {},
 					onContainerImagePreparationEnd: () => {},
@@ -112,7 +122,11 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 
 				exitCallback = () => {
 					if (containerImageTags.size) {
-						cleanupContainers(dockerPath, containerImageTags);
+						cleanupContainers(
+							dockerPath,
+							containerImageTags,
+							containerDockerHost
+						);
 					}
 				};
 			}

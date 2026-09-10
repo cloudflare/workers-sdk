@@ -1,7 +1,10 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
+import {
+	getDockerHostFromContainerEngine,
+	prepareContainerImagesForDev,
+} from "@cloudflare/containers-shared";
+import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { convertV4MiniflareOptions, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
@@ -172,8 +175,33 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				return;
 			}
 
+			const hasEnabledContainers = Boolean(
+				data.config.containers?.length && data.config.dev.enableContainers
+			);
+			let configuredDockerHost: string | undefined;
+			if (hasEnabledContainers) {
+				assert(
+					data.config.dev.containerEngine,
+					"Container engine should be set if containers are enabled and defined"
+				);
+				configuredDockerHost = getDockerHostFromContainerEngine(
+					data.config.dev.containerEngine
+				);
+				if (
+					this.dockerHost !== undefined &&
+					this.dockerHost !== configuredDockerHost
+				) {
+					throw new UserError(
+						`All Workers with containers in a multiworker session must use the same dev.container_engine. ` +
+							`Worker "${workerName}" resolves to "${configuredDockerHost}", but this session already uses "${this.dockerHost}". ` +
+							"Configure every Worker with the same endpoint and restart the session.",
+						{ telemetryMessage: false }
+					);
+				}
+			}
+
 			if (
-				data.config.containers?.length &&
+				hasEnabledContainers &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
@@ -182,17 +210,23 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					data.config.dev.containerBuildId,
 					"Build ID should be set if containers are enabled and defined"
 				);
+				assert(data.config.containers);
 				const containerOptions = await getContainerDevOptions(
 					data.config.containers,
 					data.config.dev.containerBuildId
 				);
-				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
+				// Miniflare supports one top-level container engine, so every worker
+				// must prepare images through the first selected endpoint.
+				this.dockerPath ??= data.config.dev?.dockerPath ?? getDockerPath();
+				assert(configuredDockerHost);
+				this.dockerHost ??= configuredDockerHost;
 				// keep track of them so we can clean up later
 				for (const container of containerOptions ?? []) {
 					this.containerImageTagsSeen.add(container.image_tag);
 				}
 				await prepareContainerImagesForDev({
 					dockerPath: this.dockerPath,
+					dockerHost: this.dockerHost,
 					containerOptions,
 					onContainerImagePreparationStart: (buildStartEvent) => {
 						this.containerBeingBuilt = {

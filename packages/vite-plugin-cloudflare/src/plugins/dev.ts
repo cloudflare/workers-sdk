@@ -1,9 +1,10 @@
 import assert from "node:assert";
 import {
+	cleanupContainers,
 	getCloudflareContainerRegistry,
+	getDockerHostFromContainerEngine,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
@@ -31,6 +32,7 @@ import {
 } from "../utils";
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+import type { ContainerEngine } from "@cloudflare/workers-utils";
 
 let exitCallback = () => {};
 
@@ -43,6 +45,21 @@ process.on("exit", () => {
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTags = new Set<string>();
+	let containerEngine: ContainerEngine | undefined;
+	function cleanupContainerInstances(): void {
+		if (!containerImageTags.size) {
+			return;
+		}
+		assert(
+			containerEngine,
+			"Expected a container engine for configured containers"
+		);
+		cleanupContainers(
+			getDockerPath(),
+			containerImageTags,
+			getDockerHostFromContainerEngine(containerEngine)
+		);
+	}
 
 	return {
 		buildEnd() {
@@ -53,8 +70,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				ctx.isRestartingDevServer &&
 				containerImageTags.size
 			) {
-				const dockerPath = getDockerPath();
-				cleanupContainers(dockerPath, containerImageTags);
+				cleanupContainerInstances();
 			}
 		},
 		async configureServer(viteDevServer) {
@@ -62,6 +78,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
+			containerEngine = initialOptions.miniflareOptions.containerEngine;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
@@ -76,9 +93,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					await closeServer();
 				} finally {
 					if (!ctx.isRestartingDevServer) {
-						if (containerImageTags.size) {
-							cleanupContainers(getDockerPath(), containerImageTags);
-						}
+						cleanupContainerInstances();
 						try {
 							await ctx.disposeMiniflare();
 						} catch (error) {
@@ -133,6 +148,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						viteDevServer
 					);
 					containerTagToOptionsMap = updatedOptions.containerTagToOptionsMap;
+					containerEngine = updatedOptions.miniflareOptions.containerEngine;
 					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
 					await initRunners(
 						ctx.resolvedPluginConfig,
@@ -235,6 +251,10 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				}
 
 				if (containerTagToOptionsMap.size) {
+					assert(
+						containerEngine,
+						"Expected a container engine for configured containers"
+					);
 					viteDevServer.config.logger.info(
 						colors.dim(
 							colors.yellow(
@@ -273,6 +293,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 					await prepareContainerImagesForDev({
 						dockerPath: getDockerPath(),
+						dockerHost: getDockerHostFromContainerEngine(containerEngine),
 						containerOptions: [...containerTagToOptionsMap.values()],
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
@@ -303,11 +324,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					 * not to be emitted).
 					 *
 					 */
-					exitCallback = () => {
-						if (containerImageTags.size) {
-							cleanupContainers(getDockerPath(), containerImageTags);
-						}
-					};
+					exitCallback = cleanupContainerInstances;
 				}
 			}
 

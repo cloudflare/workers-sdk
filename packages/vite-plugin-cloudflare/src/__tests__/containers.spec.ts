@@ -1,10 +1,36 @@
+import { execFileSync } from "node:child_process";
 import { OpenAPI } from "@cloudflare/containers-shared";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { configureContainerPull, getContainerOptions } from "../containers";
+import {
+	configureContainerPull,
+	getContainerOptions,
+	selectViteContainerEngine,
+} from "../containers";
 import type { ResolvedWorkerConfig } from "../plugin-config";
 
 type Containers = ResolvedWorkerConfig["containers"];
 type Exports = ResolvedWorkerConfig["exports"];
+
+function containerWorker(
+	name: string,
+	containerEngine?: ResolvedWorkerConfig["dev"]["container_engine"],
+	enableContainers = true
+) {
+	return {
+		config: {
+			name,
+			containers: enableContainers
+				? [{ name: "container", image: "docker.io/example/image:latest" }]
+				: undefined,
+			dev: {
+				enable_containers: enableContainers,
+				container_engine: containerEngine,
+			},
+		},
+	};
+}
+
+vi.mock("node:child_process");
 
 describe("getContainerOptions", () => {
 	test("returns undefined when no containers are configured", ({ expect }) => {
@@ -138,6 +164,75 @@ describe("getContainerOptions", () => {
 				containerBuildId: "build-id",
 			})
 		).toEqual([]);
+	});
+});
+
+describe("Vite container engine selection", () => {
+	beforeEach(() => {
+		vi.stubEnv("WRANGLER_DOCKER_HOST", undefined);
+		vi.stubEnv("DOCKER_HOST", undefined);
+		vi.mocked(execFileSync).mockReset();
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	test("uses the resolved Docker host by default", ({ expect }) => {
+		vi.stubEnv("WRANGLER_DOCKER_HOST", "unix:///wrangler/docker.sock");
+
+		expect(
+			selectViteContainerEngine([containerWorker("worker")], "docker")
+		).toBe("unix:///wrangler/docker.sock");
+	});
+
+	test("uses an explicit string engine without inspecting Docker contexts", ({
+		expect,
+	}) => {
+		expect(
+			selectViteContainerEngine(
+				[
+					containerWorker("inactive-worker", undefined, false),
+					containerWorker("worker", "unix:///custom/docker.sock"),
+				],
+				"docker"
+			)
+		).toBe("unix:///custom/docker.sock");
+		expect(execFileSync).not.toHaveBeenCalled();
+	});
+
+	test("uses the endpoint from an explicit local Docker engine", ({
+		expect,
+	}) => {
+		const containerEngine = {
+			localDocker: {
+				socketPath: "unix:///custom/docker.sock",
+				containerEgressInterceptorImage: "custom-egress",
+			},
+		};
+
+		expect(
+			selectViteContainerEngine(
+				[
+					containerWorker("worker", containerEngine),
+					containerWorker("second-worker", "unix:///custom/docker.sock"),
+				],
+				"docker"
+			)
+		).toBe(containerEngine);
+		expect(execFileSync).not.toHaveBeenCalled();
+	});
+
+	test("rejects conflicting endpoints across Workers", ({ expect }) => {
+		expect(() =>
+			selectViteContainerEngine(
+				[
+					containerWorker("first-worker", "unix:///first.sock"),
+					containerWorker("second-worker", "unix:///second.sock"),
+				],
+				"docker"
+			)
+		).toThrow(/must use the same dev\.container_engine/);
 	});
 });
 
