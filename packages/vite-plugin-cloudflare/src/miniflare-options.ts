@@ -533,23 +533,7 @@ export async function getDevMiniflareOptions(
 							const resolvedLocalBindings =
 								resolvedLocalBindingsByWorkerName.get(worker.config.name);
 							assert(resolvedLocalBindings);
-							const env: MiniflareEnv = {};
-							for (const [name, binding] of Object.entries(
-								resolvedLocalBindings.bindings
-							)) {
-								if (binding.type === "hyperdrive") {
-									assert(
-										binding.dev?.connectionString !== undefined,
-										`Hyperdrive binding "${name}" must define dev.connectionString for local development.`
-									);
-									env[name] = {
-										...binding,
-										dev: { connectionString: binding.dev.connectionString },
-									};
-								} else {
-									env[name] = binding;
-								}
-							}
+							const env = { ...resolvedLocalBindings.bindings };
 							for (const [name, binding] of Object.entries(env)) {
 								if (binding.type === "assets") {
 									env[name] = {
@@ -846,23 +830,7 @@ export async function getPreviewMiniflareOptions(
 				workerConfig.name
 			);
 			assert(resolvedLocalBindings);
-			const env: MiniflareEnv = {};
-			for (const [name, binding] of Object.entries(
-				resolvedLocalBindings.bindings
-			)) {
-				if (binding.type === "hyperdrive") {
-					assert(
-						binding.dev?.connectionString !== undefined,
-						`Hyperdrive binding "${name}" must define dev.connectionString for local development.`
-					);
-					env[name] = {
-						...binding,
-						dev: { connectionString: binding.dev.connectionString },
-					};
-				} else {
-					env[name] = binding;
-				}
-			}
+			const env = { ...resolvedLocalBindings.bindings };
 			const workerExports: MiniflareExports = {};
 			for (const [name, workerExport] of Object.entries(exports ?? {})) {
 				if (

@@ -38,4 +38,10 @@ describe("local bindings", () => {
 			missingSecrets: ["MISSING"],
 		});
 	});
+
+	test("requires a local Hyperdrive connection string", ({ expect }) => {
+		expect(() => resolveLocalBindings(workerConfig.env, {})).toThrow(
+			'Hyperdrive binding "HYPERDRIVE" must define dev.connectionString for local development.'
+		);
+	});
 });

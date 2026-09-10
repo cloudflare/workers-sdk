@@ -1,9 +1,10 @@
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type { WorkerOptions } from "miniflare";
 
-type WorkerBindings = NonNullable<ParsedInputWorkerConfig["env"]>;
+type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
 
 export interface ResolvedLocalBindings {
-	bindings: WorkerBindings;
+	bindings: MiniflareEnv;
 	missingSecrets: string[];
 }
 
@@ -23,17 +24,24 @@ export function resolveLocalBindings(
 	localEnv: Record<string, string>,
 	devVars?: Record<string, string>
 ): ResolvedLocalBindings {
-	const bindings: WorkerBindings = {};
+	const bindings: MiniflareEnv = {};
 	const missingSecrets: string[] = [];
 	const localValues = devVars ?? localEnv;
 
 	for (const [name, binding] of Object.entries(configuredBindings ?? {})) {
 		if (binding.type === "hyperdrive") {
 			const connectionString =
-				localEnv[`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}`];
-			bindings[name] = connectionString
-				? { ...binding, dev: { connectionString } }
-				: binding;
+				localEnv[`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}`] ||
+				binding.dev?.connectionString;
+			if (connectionString === undefined) {
+				throw new Error(
+					`Hyperdrive binding "${name}" must define dev.connectionString for local development.`
+				);
+			}
+			bindings[name] = {
+				...binding,
+				dev: { ...binding.dev, connectionString },
+			};
 			continue;
 		}
 
