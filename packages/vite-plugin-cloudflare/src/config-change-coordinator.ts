@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { getDevVarsCandidatePaths } from "@cloudflare/workers-utils/local-env";
 import { hasAssetsConfigChanged } from "./asset-config";
 import { assertIsNotPreview } from "./context";
 import { debuglog } from "./utils";
@@ -9,6 +10,7 @@ import type * as vite from "vite";
 export class ConfigChangeCoordinator {
 	#pluginContext?: PluginContext;
 	#server?: vite.ViteDevServer;
+	#localDevVarsFiles = new Set<string>();
 	#restartInFlight = false;
 	#restartPending = false;
 
@@ -31,11 +33,24 @@ export class ConfigChangeCoordinator {
 	}
 
 	#attachWatcher(): void {
+		const ctx = this.#pluginContext;
+		assert(ctx, "Expected the current plugin context to be defined");
 		assert(this.#server, "Expected the active Vite dev server to be defined");
 		const watcher = this.#server.watcher;
+		this.#localDevVarsFiles = new Set(
+			getDevVarsCandidatePaths(
+				ctx.resolvedViteConfig.envDir,
+				ctx.resolvedViteConfig.mode
+			)
+		);
+		watcher.add([...this.#localDevVarsFiles]);
 
 		watcher.off("change", this.#handleChange);
+		watcher.off("add", this.#handleChange);
+		watcher.off("unlink", this.#handleChange);
 		watcher.on("change", this.#handleChange);
+		watcher.on("add", this.#handleChange);
+		watcher.on("unlink", this.#handleChange);
 	}
 
 	readonly #handleChange = async (changedFilePath: string): Promise<void> => {
@@ -44,9 +59,8 @@ export class ConfigChangeCoordinator {
 		assertIsNotPreview(ctx);
 		const resolvedPluginConfig = ctx.resolvedPluginConfig;
 
-		// TODO: Reinstate .env and .dev.vars watching when local variable
-		// loading is supported with cloudflare.config.ts.
 		if (
+			!this.#localDevVarsFiles.has(changedFilePath) &&
 			!resolvedPluginConfig.configPaths.has(changedFilePath) &&
 			!hasAssetsConfigChanged(
 				resolvedPluginConfig,

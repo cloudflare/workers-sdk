@@ -1,9 +1,7 @@
 import { test } from "vitest";
 import { getJsonResponse, serverLogs } from "../../__test-utils__";
 
-// TODO: Reinstate when .env and .dev.vars files are supported with
-// cloudflare.config.ts.
-test.skip("the importable env is accessible from outside the request handler", async ({
+test("the importable env is accessible outside the request handler", ({
 	expect,
 }) => {
 	expect(serverLogs.info.join()).toMatch(
@@ -11,11 +9,9 @@ test.skip("the importable env is accessible from outside the request handler", a
 	);
 });
 
-test.skip("the fetch handler env contains the correct entries", async ({
-	expect,
-}) => {
+test("the fetch handler env contains the local secret", async ({ expect }) => {
 	const json = (await getJsonResponse()) as Record<string, unknown>;
-	expect(json?.["entries of the fetch handler env"]).toEqual([
+	expect(json["entries of the fetch handler env"]).toEqual([
 		{
 			key: "importable-env_VAR",
 			value: "my importable env variable",
@@ -27,11 +23,9 @@ test.skip("the fetch handler env contains the correct entries", async ({
 	]);
 });
 
-test.skip("the imported env contains the correct entries", async ({
-	expect,
-}) => {
+test("the imported env contains the local secret", async ({ expect }) => {
 	const json = (await getJsonResponse()) as Record<string, unknown>;
-	expect(json?.["entries of the imported env"]).toEqual([
+	expect(json["entries of the imported env"]).toEqual([
 		{
 			key: "importable-env_VAR",
 			value: "my importable env variable",
@@ -43,9 +37,9 @@ test.skip("the imported env contains the correct entries", async ({
 	]);
 });
 
-test.skip("the entries in the fetch handler env and the imported env are the same", async ({
+test("the handler and imported env contain the same entries", async ({
 	expect,
 }) => {
 	const json = (await getJsonResponse()) as Record<string, unknown>;
-	expect(json?.["are the two set of entries the same?"]).toEqual(true);
+	expect(json["are the two set of entries the same?"]).toBe(true);
 });
