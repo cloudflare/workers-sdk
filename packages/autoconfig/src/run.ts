@@ -165,6 +165,7 @@ export async function runAutoConfig(
 		dryRunConfigurationResults,
 		{
 			build: buildCommand,
+			dev: autoConfigDetails.devCommand,
 			deploy:
 				dryRunConfigurationResults.deployCommandOverride ??
 				`${npx} ${target} deploy`,
@@ -517,6 +518,7 @@ export async function buildOperationsSummary(
 	configurationResults: ConfigurationResults,
 	projectCommands: {
 		build?: string;
+		dev?: string;
 		deploy: string;
 		version?: string;
 	},
@@ -532,6 +534,14 @@ export async function buildOperationsSummary(
 			? getWranglerConfig(workerConfig, configurationResults)
 			: null;
 
+	const resolvedBuildCommand = autoConfigDetails.framework.resolveCommand(
+		"build",
+		projectCommands.build
+	);
+	const resolvedDevCommand = autoConfigDetails.framework.resolveCommand(
+		"dev",
+		projectCommands.dev
+	);
 	const summary: AutoConfigSummary = {
 		scripts: {},
 		...(target === "wrangler"
@@ -543,6 +553,13 @@ export async function buildOperationsSummary(
 		outputDir: autoConfigDetails.outputDir,
 		frameworkId: autoConfigDetails.framework.id,
 		buildCommand: projectCommands.build,
+		...(configurationResults.buildTool
+			? { buildTool: configurationResults.buildTool }
+			: {}),
+		commands: {
+			...(resolvedBuildCommand ? { build: resolvedBuildCommand } : {}),
+			...(resolvedDevCommand ? { dev: resolvedDevCommand } : {}),
+		},
 		deployCommand: projectCommands.deploy,
 		versionCommand: projectCommands.version,
 	};

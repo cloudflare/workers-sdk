@@ -44,6 +44,14 @@ class BuildCommandOverrideFramework extends Static {
 	}
 }
 
+class UnsupportedBuildModeFramework extends Framework {
+	configure(): ConfigurationResults {
+		return {
+			workerConfig: null,
+		};
+	}
+}
+
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	mockConsoleMethods();
@@ -91,6 +99,12 @@ describe("runAutoConfig()", () => {
 		});
 		expect(summary.buildConfig).toEqual({ assetsDirectory: "public" });
 		expect(summary.buildCommand).toBe("npx framework build");
+		expect(summary.buildTool).toBe("wrangler");
+		expect(summary.commands.build).toEqual({
+			executable: "npx",
+			args: ["framework", "build"],
+			supportsMode: false,
+		});
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
@@ -202,7 +216,7 @@ describe("runAutoConfig()", () => {
 			"tsconfig.json": "{}",
 		});
 
-		await runAutoConfig(
+		const summary = await runAutoConfig(
 			{
 				configured: false,
 				projectPath: process.cwd(),
@@ -227,10 +241,79 @@ describe("runAutoConfig()", () => {
 			isWorkspaceRoot: false,
 		});
 		expect(installWrangler).not.toHaveBeenCalled();
+		expect(summary.buildTool).toBe("vite");
+		expect(summary.commands).toEqual({});
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
 			scripts: {
 				"cf-typegen": "cf types",
 			},
+		});
+	});
+
+	it("does not infer framework command capabilities from the build tool", async ({
+		expect,
+	}) => {
+		const context = createMockContext();
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+
+		const summary = await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "angular-app",
+				framework: new Static({ id: "static", name: "Static" }),
+				buildCommand: "ng build",
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context,
+				skipConfirmations: true,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(summary.buildCommand).toBe("ng build");
+		expect(summary.buildTool).toBe("wrangler");
+		expect(summary.commands.build).toEqual({
+			executable: "ng",
+			args: ["build"],
+			supportsMode: false,
+		});
+		expect(context.runCommand).toHaveBeenCalledWith(
+			"ng build",
+			process.cwd(),
+			"[build]"
+		);
+	});
+
+	it("reports when build modes are unsupported", async ({ expect }) => {
+		const summary = await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "external-app",
+				framework: new UnsupportedBuildModeFramework({
+					id: "static",
+					name: "External",
+				}),
+				buildCommand: "external build",
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(summary.buildTool).toBeUndefined();
+		expect(summary.commands.build).toEqual({
+			executable: "external",
+			args: ["build"],
+			supportsMode: false,
 		});
 	});
 
@@ -295,5 +378,31 @@ describe("runAutoConfig()", () => {
 		expect(readFileSync("wrangler.config.ts", "utf8")).toBe(
 			existingBuildConfig
 		);
+	});
+});
+
+describe("Framework.resolveCommand()", () => {
+	const framework = new UnsupportedBuildModeFramework({
+		id: "static",
+		name: "External",
+	});
+
+	it("returns an executable and argument vector", ({ expect }) => {
+		expect(
+			framework.resolveCommand(
+				"build",
+				'npx framework build --output "dist directory"'
+			)
+		).toEqual({
+			executable: "npx",
+			args: ["framework", "build", "--output", "dist directory"],
+			supportsMode: false,
+		});
+	});
+
+	it("rejects shell control operators", ({ expect }) => {
+		expect(() =>
+			framework.resolveCommand("build", "framework prepare && framework build")
+		).toThrow("Only simple commands are supported");
 	});
 });

@@ -34,7 +34,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					packageManager: NpmPackageManager,
 				},
 				testWorkerConfig,
-				{ workerConfig: testWorkerConfig },
+				{ buildTool: "wrangler", workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
@@ -62,6 +62,17 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary).toMatchInlineSnapshot(`
 				{
 				  "buildCommand": "npm run build",
+				  "buildTool": "wrangler",
+				  "commands": {
+				    "build": {
+				      "args": [
+				        "run",
+				        "build",
+				      ],
+				      "executable": "npm",
+				      "supportsMode": false,
+				    },
+				  },
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "public",
@@ -96,7 +107,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					packageManager: NpmPackageManager,
 				},
 				testWorkerConfig,
-				{ workerConfig: testWorkerConfig },
+				{ buildTool: "wrangler", workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
@@ -117,6 +128,17 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary).toMatchInlineSnapshot(`
 				{
 				  "buildCommand": "npm run build",
+				  "buildTool": "wrangler",
+				  "commands": {
+				    "build": {
+				      "args": [
+				        "run",
+				        "build",
+				      ],
+				      "executable": "npm",
+				      "supportsMode": false,
+				    },
+				  },
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "dist",
@@ -156,7 +178,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					packageManager: NpmPackageManager,
 				},
 				testWorkerConfig,
-				{ workerConfig: testWorkerConfig },
+				{ buildTool: "wrangler", workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
@@ -177,6 +199,17 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary).toMatchInlineSnapshot(`
 				{
 				  "buildCommand": "npm run build",
+				  "buildTool": "wrangler",
+				  "commands": {
+				    "build": {
+				      "args": [
+				        "run",
+				        "build",
+				      ],
+				      "executable": "npm",
+				      "supportsMode": false,
+				    },
+				  },
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "out",
@@ -260,12 +293,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Astro({ id: "astro", name: "Astro" }),
 					configured: false,
 					outputDir: "dist",
+					devCommand: "npm run dev",
 					packageManager: NpmPackageManager,
 				},
 				testWorkerConfig,
 				{ workerConfig: testWorkerConfig },
 				{
 					build: "npm run build",
+					dev: "npm run dev",
 					deploy: "npx wrangler deploy",
 				},
 				false,
@@ -282,6 +317,19 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary.frameworkId).toBe("astro");
+			expect(summary.buildTool).toBeUndefined();
+			expect(summary.commands).toEqual({
+				build: {
+					executable: "npm",
+					args: ["run", "build"],
+					supportsMode: true,
+				},
+				dev: {
+					executable: "npm",
+					args: ["run", "dev"],
+					supportsMode: true,
+				},
+			});
 		});
 
 		test("doesn't show the framework specific configuration step for the Static framework", async ({

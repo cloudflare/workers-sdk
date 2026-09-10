@@ -1,6 +1,10 @@
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type { Framework } from "./frameworks/framework-class";
-import type { BuildConfig } from "./frameworks/framework-class";
+import type {
+	AutoConfigCommands,
+	BuildConfig,
+	BuildTool,
+} from "./frameworks/framework-class";
 import type { WorkerConfigInput } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
@@ -23,6 +27,8 @@ type AutoConfigDetailsBase = {
 	devCommand?: string;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
+	/** Resolved framework commands and the arguments each command supports. */
+	commands?: AutoConfigCommands;
 	/** Environment required when running the detected dev or build commands. */
 	env?: Readonly<Record<string, string>>;
 	/** The output directory (if no framework is used, points to the raw asset files) */
@@ -84,6 +90,10 @@ export type AutoConfigSummary = {
 	outputDir: string;
 	frameworkId?: string;
 	buildCommand?: string;
+	/** The Cloudflare-aware tool used by this framework setup, if any. */
+	buildTool?: BuildTool;
+	/** Resolved framework commands and the arguments each command supports. */
+	commands: AutoConfigCommands;
 	deployCommand?: string;
 	versionCommand?: string;
 };

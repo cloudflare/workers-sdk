@@ -78,6 +78,7 @@ describe("Angular framework configure()", () => {
 			const result = await framework.configure(BASE_OPTIONS);
 
 			expect(result.workerConfig).toEqual({});
+			expect(result.buildTool).toBe("wrangler");
 			expect(result.buildConfig?.assetsDirectory).toBe("dist/my-angular-app/");
 			expect(result.workerConfig).not.toHaveProperty("entrypoint");
 		});
