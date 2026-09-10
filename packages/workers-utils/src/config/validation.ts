@@ -1241,10 +1241,11 @@ function normalizeAndValidatePlacement(
 
 		// Detect which format is being used
 		const hasHint = "hint" in placement;
-		const hasRegion = "region" in placement;
-		const hasHost = "host" in placement;
-		const hasHostname = "hostname" in placement;
-		const hasTargetedFields = hasRegion || hasHost || hasHostname;
+		const targetedFields = ["region", "host", "hostname"] as const;
+		const presentTargetedFields = targetedFields.filter(
+			(field) => field in placement
+		);
+		const hasTargetedFields = presentTargetedFields.length > 0;
 
 		// Validate that formats aren't mixed
 		if (hasHint && hasTargetedFields) {
@@ -1289,60 +1290,35 @@ function normalizeAndValidatePlacement(
 		}
 		// Validate new format (with region/host/hostname)
 		else if (hasTargetedFields) {
-			// Mode is optional for new format, but if present must be "off" or "targeted"
+			// Mode is optional for new format, but if present must be "targeted"
 			validateOptionalProperty(
 				diagnostics,
 				diagnosticField,
 				"mode",
 				placement.mode,
 				"string",
-				["off", "targeted"]
+				["targeted"]
 			);
 
-			// Validate that region/host/hostname are strings if present
-			if (hasRegion) {
-				validateOptionalProperty(
+			for (const field of presentTargetedFields) {
+				validateRequiredProperty(
 					diagnostics,
 					diagnosticField,
-					"region",
-					placement.region,
+					field,
+					placement[field],
 					"string"
 				);
-			}
-			if (hasHost) {
-				validateOptionalProperty(
-					diagnostics,
-					diagnosticField,
-					"host",
-					placement.host,
-					"string"
-				);
-			}
-			if (hasHostname) {
-				validateOptionalProperty(
-					diagnostics,
-					diagnosticField,
-					"hostname",
-					placement.hostname,
-					"string"
-				);
+				if (placement[field] === "") {
+					diagnostics.errors.push(
+						`"${diagnosticField}.${field}" must be a non-empty string.`
+					);
+				}
 			}
 
 			// Validate that region/host/hostname are mutually exclusive
-			const fieldsPresent = [hasRegion, hasHost, hasHostname].filter(Boolean);
-			if (fieldsPresent.length > 1) {
-				const presentFields = [];
-				if (hasRegion) {
-					presentFields.push("region");
-				}
-				if (hasHost) {
-					presentFields.push("host");
-				}
-				if (hasHostname) {
-					presentFields.push("hostname");
-				}
+			if (presentTargetedFields.length > 1) {
 				diagnostics.errors.push(
-					`"${diagnosticField}" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
+					`"${diagnosticField}" fields ${presentTargetedFields.map((field) => `"${field}"`).join(", ")} are mutually exclusive. Only one can be specified.`
 				);
 			}
 		}
@@ -1356,6 +1332,13 @@ function normalizeAndValidatePlacement(
 				"string",
 				["off", "smart", "targeted"]
 			);
+			if (placement.mode === "targeted") {
+				validateAtLeastOnePropertyRequired(diagnostics, diagnosticField, [
+					{ key: "region", value: placement.region, type: "string" },
+					{ key: "host", value: placement.host, type: "string" },
+					{ key: "hostname", value: placement.hostname, type: "string" },
+				]);
+			}
 		}
 	}
 
