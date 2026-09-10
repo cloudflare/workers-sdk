@@ -5,6 +5,7 @@ import {
 	ContainerImagePreparationStatus,
 } from "@cloudflare/containers-shared";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { buildAndMaybePush } from "../../cloudchamber/build";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import {
 	createDurableObjectNamespaceResolver,
@@ -21,6 +22,7 @@ import type { Config } from "@cloudflare/workers-utils";
 vi.mock("node:timers/promises", () => ({ setTimeout: vi.fn() }));
 vi.mock("../../containers/deploy");
 vi.mock("../../user");
+vi.mock("../../cloudchamber/build");
 vi.mock("../../cloudchamber/common", () => ({
 	fillOpenAPIConfiguration: vi.fn(),
 	promiseSpinner: async (promise: Promise<unknown>) => promise,
@@ -36,6 +38,24 @@ const config = {
 			class_name: "Sandbox",
 			scheduling_policy: "durable_object",
 			images: { tools: { image } },
+		},
+	],
+} as unknown as Config;
+const exportConfig = {
+	migrations: [],
+	durable_objects: { bindings: [] },
+	exports: {
+		Sandbox: {
+			type: "durable-object",
+			storage: "sqlite",
+			container: "sandbox",
+		},
+	},
+	containers: [
+		{
+			name: "sandbox",
+			scheduling_policy: "durable_object",
+			images: { tools: { dockerfile: "./Dockerfile" } },
 		},
 	],
 } as unknown as Config;
@@ -55,6 +75,51 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("Container image preparation", () => {
+	it("uses the export class for Dockerfile tags and prepared image keys", async ({
+		expect,
+	}) => {
+		vi.mocked(buildAndMaybePush).mockResolvedValue({ remoteDigest: image });
+		vi.spyOn(
+			ContainerImagePreparationsService,
+			"prepareContainerImage"
+		).mockResolvedValue({
+			image,
+			status: ContainerImagePreparationStatus.READY,
+		});
+
+		const result = await prepareDurableObjectContainerApplications(
+			exportConfig,
+			args
+		);
+
+		expect(result).toEqual({ Sandbox: { tools: image } });
+		expect(buildAndMaybePush).toHaveBeenCalledOnce();
+		expect(vi.mocked(buildAndMaybePush).mock.calls[0][0].tag).toMatch(
+			/^worker-sandbox-tools:wrangler-/
+		);
+		expect(exportConfig.containers?.[0].class_name).toBeUndefined();
+		expect(listDurableObjects).not.toHaveBeenCalled();
+	});
+	it("rejects a name-only export link to legacy storage before building images", async ({
+		expect,
+	}) => {
+		await expect(
+			prepareDurableObjectContainerApplications(
+				{
+					...exportConfig,
+					exports: {
+						Sandbox: {
+							type: "durable-object",
+							storage: "legacy-kv",
+							container: "sandbox",
+						},
+					},
+				},
+				args
+			)
+		).rejects.toThrow("legacy KV storage backend");
+		expect(buildAndMaybePush).not.toHaveBeenCalled();
+	});
 	it("polls pending images until ready and reuses their preparation", async ({
 		expect,
 	}) => {

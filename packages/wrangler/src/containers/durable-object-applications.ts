@@ -10,7 +10,7 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	CONTAINER_IMAGES_BINDING,
-	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
 	getDockerPath,
 	isNonInteractiveOrCI,
 	UserError,
@@ -33,8 +33,8 @@ import type { ApiVersion } from "../versions/types";
 import type { CreateDurableObjectApplicationRequest } from "@cloudflare/containers-shared";
 import type {
 	Config,
-	DurableObjectContainerApp,
 	DurableObjectContainerImage,
+	ResolvedDurableObjectContainerApp,
 } from "@cloudflare/workers-utils";
 
 const IMAGE_PREPARATION_POLL_INTERVAL_MS = 2_000;
@@ -54,7 +54,7 @@ type PrepareDurableObjectContainerApplicationsArgs = {
 };
 
 type DurableObjectContainerApplication = Pick<
-	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
 	"class_name" | "name"
 >;
 
@@ -310,7 +310,7 @@ function buildTag(
 
 async function buildOrResolveImage(
 	config: Config,
-	container: DurableObjectContainerApp,
+	container: ResolvedDurableObjectContainerApp,
 	imageName: string,
 	imageConfig: DurableObjectContainerImage,
 	scriptName: string,
@@ -398,14 +398,16 @@ export async function prepareDurableObjectContainerApplications(
 	}: PrepareDurableObjectContainerApplicationsArgs
 ): Promise<PreparedContainerImages> {
 	validateDurableObjectContainerApplications(config);
+	const managedContainers = getResolvedDurableObjectContainerApps(
+		config.containers,
+		config.exports
+	);
 	if (!dryRun) {
 		const storageByClass = getDurableObjectClassNameToUseSQLiteMap(
 			config.migrations,
 			config.exports
 		);
-		const unknownStorage = getDurableObjectContainerApps(
-			config.containers
-		).filter(
+		const unknownStorage = managedContainers.filter(
 			(container) => storageByClass.get(container.class_name) === undefined
 		);
 		if (unknownStorage.length > 0) {
@@ -436,7 +438,7 @@ export async function prepareDurableObjectContainerApplications(
 		}
 	}
 
-	const containers = getDurableObjectContainerApps(config.containers).filter(
+	const containers = managedContainers.filter(
 		(container) => Object.keys(container.images ?? {}).length > 0
 	);
 	if (containers.length === 0) {
@@ -504,7 +506,10 @@ export async function deployDurableObjectContainerApplications(
 		dispatchNamespace,
 	}: DeployDurableObjectContainerApplicationsArgs
 ): Promise<void> {
-	const containers = getDurableObjectContainerApps(config.containers);
+	const containers = getResolvedDurableObjectContainerApps(
+		config.containers,
+		config.exports
+	);
 	if (containers.length === 0) {
 		return;
 	}

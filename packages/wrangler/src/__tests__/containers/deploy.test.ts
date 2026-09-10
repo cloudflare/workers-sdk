@@ -4078,6 +4078,99 @@ describe("wrangler deploy with containers", () => {
 			);
 		});
 
+		it.for(["populated", "empty"] as const)(
+			"deploys a name-only managed Container export with %s images",
+			async (imageMap, { expect }) => {
+				const image =
+					"registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				const imageRefs: Record<string, string> =
+					imageMap === "empty" ? {} : { app: image };
+				const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
+				const exports = {
+					Sandbox: {
+						type: "durable-object" as const,
+						storage: "sqlite" as const,
+						container: "managed-app",
+					},
+				};
+				writeWranglerConfig({
+					containers: [
+						{
+							name: "managed-app",
+							scheduling_policy: "durable_object",
+							...(imageMap === "populated" && { images: { app: { image } } }),
+						},
+					],
+					exports,
+				});
+				fs.writeFileSync(
+					"index.js",
+					"export class Sandbox {}; export default {};"
+				);
+				mockUploadWorkerRequest({
+					useOldUploadApi: true,
+					expectedBindings: [
+						{
+							name: CONTAINER_IMAGES_BINDING,
+							type: "json",
+							json: { Sandbox: imageRefs },
+						},
+					],
+					expectedContainers: [
+						{
+							name: "managed-app",
+							class_name: "Sandbox",
+							...(imageMap === "populated" && { images: imageRefs }),
+						},
+					],
+					expectedExports: exports,
+					expectedMigrations: undefined,
+				});
+				mockListDurableObjects([
+					{
+						id: "unrelated",
+						name: "managed-app",
+						script: "test-name",
+						class: "Unrelated",
+					},
+					{
+						id: namespaceId,
+						name: "sandbox-namespace",
+						script: "test-name",
+						class: "Sandbox",
+					},
+				]);
+				const preparationRequests: unknown[] = [];
+				const applicationRequests: unknown[] = [];
+				msw.use(
+					http.post("*/image-preparations", async ({ request }) => {
+						preparationRequests.push(await request.json());
+						return HttpResponse.json(
+							createFetchResult({
+								image,
+								status: ContainerImagePreparationStatus.READY,
+							})
+						);
+					}),
+					http.post("*/applications", async ({ request }) => {
+						const body = await request.json();
+						applicationRequests.push(body);
+						return HttpResponse.json(createFetchResult(body));
+					})
+				);
+
+				await runWrangler("deploy index.js");
+
+				expect(preparationRequests).toEqual(
+					imageMap === "empty" ? [] : [{ image }]
+				);
+				expect(applicationRequests).toEqual([
+					expectedDurableObjectApplicationRequest("managed-app", namespaceId),
+				]);
+				expect(spawn).not.toHaveBeenCalled();
+			}
+		);
+
 		it("should error if a container name has been used before but attached to a different DO", async ({
 			expect,
 		}) => {

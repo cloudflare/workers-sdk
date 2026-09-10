@@ -7,7 +7,7 @@ import { addContainerImagesBinding } from "../src/deploy/helpers/container-image
 import type { Binding, Config } from "@cloudflare/workers-utils";
 
 describe("addContainerImagesBinding", () => {
-	it("adds only Durable Object-managed images to the JSON binding", ({
+	it("resolves named export links in the image binding, including empty image maps", ({
 		expect,
 	}) => {
 		const config = {
@@ -20,7 +20,6 @@ describe("addContainerImagesBinding", () => {
 				},
 				{
 					name: "sandbox",
-					class_name: "Sandbox",
 					scheduling_policy: "durable_object",
 					images: {
 						sandbox: { dockerfile: "./container/Dockerfile" },
@@ -28,10 +27,21 @@ describe("addContainerImagesBinding", () => {
 				},
 				{
 					name: "tools",
-					class_name: "Tools",
 					scheduling_policy: "durable_object",
 				},
 			],
+			exports: {
+				Sandbox: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "sandbox",
+				},
+				Tools: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "tools",
+				},
+			},
 		} as unknown as Config;
 		const bindings: Record<string, Binding> = {};
 
@@ -53,6 +63,7 @@ describe("addContainerImagesBinding", () => {
 				Tools: {},
 			},
 		});
+		expect(config.containers?.[1].class_name).toBeUndefined();
 	});
 
 	it("does not add the binding for scheduler-backed containers", ({
@@ -155,14 +166,13 @@ describe("addContainerImagesBinding", () => {
 		);
 	});
 
-	it("inherits the binding when the existing image map should be preserved", ({
+	it("inherits the existing image map without resolving local container changes", ({
 		expect,
 	}) => {
 		const config = {
 			containers: [
 				{
 					name: "sandbox",
-					class_name: "Sandbox",
 					scheduling_policy: "durable_object",
 					images: {
 						sandbox: { dockerfile: "./container/Dockerfile" },

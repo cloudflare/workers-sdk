@@ -44,29 +44,39 @@ describe("getContainerMetadata", () => {
 		expect(metadata).toEqual([{ name: "sandbox-app", class_name: "Sandbox" }]);
 	});
 
-	it("includes prepared named images for Durable Object-managed containers", ({
+	it("resolves managed export links while preserving scheduler metadata and order", ({
 		expect,
 	}) => {
-		const metadata = getContainerMetadata(
-			{
-				containers: [
-					{
-						class_name: "Sandbox",
-						name: "sandbox-app",
-						scheduling_policy: "durable_object",
-						images: {
-							sandbox: { dockerfile: "./container/Dockerfile" },
-						},
+		const config = {
+			containers: [
+				{
+					name: "sandbox-app",
+					scheduling_policy: "durable_object",
+					images: {
+						sandbox: { dockerfile: "./container/Dockerfile" },
 					},
-				],
-			} as unknown as Config,
-			{
-				Sandbox: {
-					sandbox:
-						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				},
-			}
-		);
+				{ name: "scheduled-app", image: "./Dockerfile" },
+			],
+			exports: {
+				Sandbox: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "sandbox-app",
+				},
+				Scheduled: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "scheduled-app",
+				},
+			},
+		} as unknown as Config;
+		const metadata = getContainerMetadata(config, {
+			Sandbox: {
+				sandbox:
+					"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			},
+		});
 
 		expect(metadata).toEqual([
 			{
@@ -77,7 +87,9 @@ describe("getContainerMetadata", () => {
 						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				},
 			},
+			{ name: "scheduled-app" },
 		]);
+		expect(config.containers?.[0].class_name).toBeUndefined();
 	});
 
 	it("keeps Durable Object metadata without images when preparation is skipped", ({
@@ -271,11 +283,17 @@ describe("getContainerMetadataForRolloutSkip", () => {
 					containers: [
 						{
 							name: "sandbox",
-							class_name: "Sandbox",
 							scheduling_policy: "durable_object",
 							images: { app: { dockerfile: "./Dockerfile" } },
 						},
 					],
+					exports: {
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox",
+						},
+					},
 				} as unknown as Config,
 				{
 					...options,
@@ -310,7 +328,6 @@ describe("getContainerMetadataForRolloutSkip", () => {
 				{
 					containers: [
 						{
-							class_name: "Added",
 							name: "added-app",
 							scheduling_policy: "durable_object",
 							images: { app: { dockerfile: "./Dockerfile" } },

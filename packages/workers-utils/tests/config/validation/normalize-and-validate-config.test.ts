@@ -2657,36 +2657,39 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("errors when `container` is combined with `legacy-kv` storage", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
+			it.for(["default", "durable_object"] as const)(
+				"errors when `container` is combined with `legacy-kv` storage (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+								},
+							],
+							exports: {
+								MyDO: {
+									type: "durable-object",
+									storage: "legacy-kv",
+									container: "my-container",
+								},
 							},
-						],
-						exports: {
-							MyDO: {
-								type: "durable-object",
-								storage: "legacy-kv",
-								container: "my-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "exports.MyDO.container" requires "storage" to be "sqlite". Containers are not supported on Durable Objects using the "legacy-kv" storage backend."
 				`);
-			});
+				}
+			);
 
 			for (const state of ["deleted", "renamed", "transferred"] as const) {
 				it(`errors when \`container\` is set on a ${state} tombstone`, ({
@@ -2724,73 +2727,79 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[containers] linked via `exports`", () => {
-			it("errors when `container` names a container that does not exist", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
+			it.for(["default", "durable_object"] as const)(
+				"errors when `container` names a container that does not exist (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+								},
+							],
+							exports: {
+								MyDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "missing-container",
+								},
 							},
-						],
-						exports: {
-							MyDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "missing-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - "exports.MyDO.container" references a container named "missing-container", but no container with that name is defined in "containers".
 					  - The container "my-container" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field."
 				`);
-			});
+				}
+			);
 
-			it("errors when two Durable Object exports reference the same container", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
+			it.for(["default", "durable_object"] as const)(
+				"errors when two Durable Object exports reference the same container (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+								},
+							],
+							exports: {
+								MyDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "my-container",
+								},
+								OtherDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "my-container",
+								},
 							},
-						],
-						exports: {
-							MyDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "my-container",
-							},
-							OtherDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "my-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The container "my-container" is referenced by more than one Durable Object export (MyDO, OtherDO). A container can only back a single Durable Object."
 				`);
-			});
+				}
+			);
 
 			it("reports the duplicate claim only once when the container also sets `class_name`", ({
 				expect,
@@ -2868,41 +2877,44 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("errors when a different export claims a container that already names its class", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "my-worker",
-						containers: [
-							{
-								name: "my-container",
-								image: "registry.cloudflare.com/something:hello",
-								class_name: "MyDO",
+			it.for(["default", "durable_object"] as const)(
+				"errors when a different export claims a container that already names its class (%s)",
+				(scheduling_policy, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "my-worker",
+							containers: [
+								{
+									name: "my-container",
+									...(scheduling_policy === "durable_object"
+										? { scheduling_policy }
+										: { image: "registry.cloudflare.com/something:hello" }),
+									class_name: "MyDO",
+								},
+							],
+							exports: {
+								// `MyDO` does not name a container, so the mismatch is only
+								// visible from the other direction: `OtherDO` claims the
+								// container that `MyDO` has already been given.
+								MyDO: { type: "durable-object", storage: "sqlite" },
+								OtherDO: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "my-container",
+								},
 							},
-						],
-						exports: {
-							// `MyDO` does not name a container, so the mismatch is only
-							// visible from the other direction: `OtherDO` claims the
-							// container that `MyDO` has already been given.
-							MyDO: { type: "durable-object", storage: "sqlite" },
-							OtherDO: {
-								type: "durable-object",
-								storage: "sqlite",
-								container: "my-container",
-							},
-						},
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The container "my-container" sets "class_name" to "MyDO", but "exports.OtherDO.container" references it. A Durable Object and its container must reference each other consistently."
 				`);
-			});
+				}
+			);
 
 			it("allows a consistent round trip between a container and its export", ({
 				expect,
@@ -4837,7 +4849,7 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it("should require a class name for a Durable Object-managed container", ({
+			it("should require a name or class name for a Durable Object-managed container", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -4854,9 +4866,75 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderErrors()).toContain(
-					'"containers.class_name" must be a non-empty string when "containers.scheduling_policy" is "durable_object".'
+					'"containers.name" is required when "containers.class_name" is not defined'
 				);
 			});
+
+			it.for([undefined, "staging"])(
+				"accepts a name-only managed container with inherited exports in environment %s",
+				(env, { expect }) => {
+					const containers = [
+						{ name: "sandbox", scheduling_policy: "durable_object" as const },
+					];
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "worker",
+							exports: {
+								Sandbox: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "sandbox",
+								},
+							},
+							...(env === undefined
+								? { containers }
+								: { env: { staging: { containers } } }),
+						},
+						undefined,
+						undefined,
+						{ env }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(config.containers).toEqual(containers);
+					expect(config.exports.Sandbox).toEqual({
+						type: "durable-object",
+						storage: "sqlite",
+						container: "sandbox",
+					});
+				}
+			);
+
+			it.for(["", 123])(
+				"rejects an invalid explicit managed class name %j even when an export links the container",
+				(class_name, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: [
+								{
+									name: "sandbox",
+									class_name,
+									scheduling_policy: "durable_object",
+								},
+							],
+							exports: {
+								Sandbox: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "sandbox",
+								},
+							},
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain("containers.class_name");
+				}
+			);
 
 			it("should reject malformed Durable Object-managed container images", ({
 				expect,

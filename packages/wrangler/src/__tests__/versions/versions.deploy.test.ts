@@ -603,7 +603,7 @@ describe("versions deploy", () => {
 		]);
 	});
 
-	test("creates a Container application after a selected version provisions its export", async ({
+	test("creates a name-only Container application after a selected version provisions its export", async ({
 		expect,
 	}) => {
 		const versionId = "10000000-0000-0000-0000-000000000000";
@@ -614,7 +614,7 @@ describe("versions deploy", () => {
 		msw.use(
 			mswGetVersion(
 				containerVersion(versionId, [
-					{ className: "UploadedDurableObject", name: "uploaded-app" },
+					{ className: "Sandbox", name: "managed-app" },
 				])
 			),
 			http.get(
@@ -626,10 +626,17 @@ describe("versions deploy", () => {
 							deploymentCreated
 								? [
 										{
-											id: namespaceId,
-											name: "uploaded-app",
+											id: "unrelated",
+											name: "managed-app",
 											script: "test-name",
-											class: "UploadedDurableObject",
+											class: "Unrelated",
+											use_sqlite: true,
+										},
+										{
+											id: namespaceId,
+											name: "sandbox-namespace",
+											script: "test-name",
+											class: "Sandbox",
 											use_sqlite: true,
 										},
 									]
@@ -654,14 +661,28 @@ describe("versions deploy", () => {
 				return HttpResponse.json(createFetchResult(body));
 			})
 		);
-		writeWranglerConfig();
+		writeWranglerConfig({
+			exports: {
+				Sandbox: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "managed-app",
+				},
+			},
+			containers: [
+				{
+					name: "managed-app",
+					scheduling_policy: "durable_object",
+				},
+			],
+		});
 
 		await runWrangler(`versions deploy ${versionId}@100% --yes`);
 
 		expect(namespaceRequests).toBe(2);
 		expect(applicationRequests).toEqual([
 			{
-				name: "uploaded-app",
+				name: "managed-app",
 				scheduling_policy: "durable_object",
 				durable_objects: { namespace_id: namespaceId },
 			},

@@ -6,7 +6,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import {
-	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
@@ -57,7 +57,10 @@ export function validateDurableObjectContainerApplications(
 		config.exports
 	);
 
-	for (const container of getDurableObjectContainerApps(config.containers)) {
+	for (const container of getResolvedDurableObjectContainerApps(
+		config.containers,
+		config.exports
+	)) {
 		const maybeBoundDO = config.durable_objects.bindings.find(
 			(durableObject) => durableObject.class_name === container.class_name
 		);

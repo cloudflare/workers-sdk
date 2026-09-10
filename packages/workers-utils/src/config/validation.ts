@@ -3778,19 +3778,16 @@ function validateContainerApp(
 				typeof containerAppOptional.class_name === "string" &&
 				containerAppOptional.class_name.length > 0;
 
-			if (isDurableObjectManaged) {
-				if (!hasValidDurableObjectClassName) {
-					diagnostics.errors.push(
-						`"containers.class_name" must be a non-empty string when "containers.scheduling_policy" is "durable_object".`
-					);
-				}
-			} else {
-				validateOptionalProperty(
-					diagnostics,
-					field,
-					"class_name",
-					containerAppOptional.class_name,
-					"string"
+			validateOptionalProperty(
+				diagnostics,
+				field,
+				"class_name",
+				containerAppOptional.class_name,
+				"string"
+			);
+			if (isDurableObjectManaged && containerAppOptional.class_name === "") {
+				diagnostics.errors.push(
+					`"containers.class_name" must be a non-empty string when specified for a Durable Object-managed Container.`
 				);
 			}
 
@@ -3806,7 +3803,9 @@ function validateContainerApp(
 			if (
 				generateDefaultName &&
 				!containerAppOptional.name &&
-				(!isDurableObjectManaged || hasValidDurableObjectClassName)
+				(!isDurableObjectManaged ||
+					containerAppOptional.class_name === undefined ||
+					hasValidDurableObjectClassName)
 			) {
 				// The default name is derived from the class name, so without one there
 				// is nothing to derive it from. Such a container must be linked to a

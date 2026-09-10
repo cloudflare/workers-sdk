@@ -1,6 +1,7 @@
 import {
 	CONTAINER_IMAGES_BINDING,
 	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
@@ -74,7 +75,10 @@ export function addContainerImagesBinding(
 	bindings[CONTAINER_IMAGES_BINDING] = {
 		type: "json",
 		value: Object.fromEntries(
-			containers.map((container) => {
+			getResolvedDurableObjectContainerApps(
+				config.containers,
+				config.exports
+			).map((container) => {
 				const configuredImages = Object.keys(container.images ?? {});
 				const preparedImages = preparedContainerImages[container.class_name];
 				if (configuredImages.length > 0 && preparedImages === undefined) {

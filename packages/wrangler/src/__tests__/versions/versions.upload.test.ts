@@ -2576,78 +2576,99 @@ describe("versions upload", () => {
 			expect(metadata.migrations).toBeUndefined();
 		});
 
-		test("defers exports-managed Container application creation until versions deploy", async ({
-			expect,
-		}) => {
-			mockGetScript();
-			const requests = mockUploadVersion(false, 0);
-			let namespaceListRequests = 0;
-			let applicationRequests = 0;
-			msw.use(
-				http.get(
-					"*/accounts/:accountId/workers/durable_objects/namespaces",
-					() => {
-						namespaceListRequests++;
-						return HttpResponse.json(createFetchResult([]));
-					}
-				),
-				http.post("*/applications", () => {
-					applicationRequests++;
-					return HttpResponse.json(createFetchResult({}));
-				})
-			);
+		test.for(["populated", "empty"] as const)(
+			"uploads a name-only managed Container export with %s images and defers application creation",
+			async (imageMap, { expect }) => {
+				const image =
+					"registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				const imageRefs: Record<string, string> =
+					imageMap === "empty" ? {} : { app: image };
+				mockGetScript();
+				mockContainersAccount();
+				const requests = mockUploadVersion(false, 0);
+				const preparationRequests: unknown[] = [];
+				let namespaceListRequests = 0;
+				let applicationRequests = 0;
+				msw.use(
+					http.post("*/image-preparations", async ({ request }) => {
+						preparationRequests.push(await request.json());
+						return HttpResponse.json(
+							createFetchResult({
+								image,
+								status: ContainerImagePreparationStatus.READY,
+							})
+						);
+					}),
+					http.get(
+						"*/accounts/:accountId/workers/durable_objects/namespaces",
+						() => {
+							namespaceListRequests++;
+							return HttpResponse.json(createFetchResult([]));
+						}
+					),
+					http.post("*/applications", () => {
+						applicationRequests++;
+						return HttpResponse.json(createFetchResult({}));
+					})
+				);
 
-			writeWranglerConfig(
-				{
-					name: "test-name",
-					main: "./index.js",
-					exports: {
-						MyDurableObject: {
-							type: "durable-object",
-							storage: "sqlite",
-							container: "managed-app",
-						},
-					},
-					containers: [
-						{
-							name: "managed-app",
-							class_name: "MyDurableObject",
-							scheduling_policy: "durable_object",
-						},
-					],
-				},
-				"./wrangler.json"
-			);
-			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
-
-			await runWrangler("versions upload --config ./wrangler.json");
-
-			const metadata = await getMetadata(requests[requests.length - 1]);
-			expect(metadata.exports).toEqual({
-				MyDurableObject: {
-					type: "durable-object",
-					storage: "sqlite",
-					container: "managed-app",
-				},
-			});
-			expect(metadata.containers).toEqual([
-				{
-					name: "managed-app",
-					class_name: "MyDurableObject",
-				},
-			]);
-			expect(metadata.bindings).toEqual(
-				expect.arrayContaining([
+				writeWranglerConfig(
 					{
-						name: CONTAINER_IMAGES_BINDING,
-						type: "json",
-						json: { MyDurableObject: {} },
+						name: "test-name",
+						main: "./index.js",
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "managed-app",
+							},
+						},
+						containers: [
+							{
+								name: "managed-app",
+								scheduling_policy: "durable_object",
+								...(imageMap === "populated" && { images: { app: { image } } }),
+							},
+						],
 					},
-				])
-			);
-			expect(namespaceListRequests).toBe(0);
-			expect(applicationRequests).toBe(0);
-		});
+					"./wrangler.json"
+				);
+				writeWorkerSource({ durableObjects: ["Sandbox"] });
+
+				await runWrangler("versions upload --config ./wrangler.json");
+
+				const metadata = await getMetadata(requests[requests.length - 1]);
+				expect(metadata.exports).toEqual({
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "managed-app",
+					},
+				});
+				expect(metadata.containers).toEqual([
+					{
+						name: "managed-app",
+						class_name: "Sandbox",
+						...(imageMap === "populated" && { images: imageRefs }),
+					},
+				]);
+				expect(metadata.bindings).toEqual(
+					expect.arrayContaining([
+						{
+							name: CONTAINER_IMAGES_BINDING,
+							type: "json",
+							json: { Sandbox: imageRefs },
+						},
+					])
+				);
+				expect(preparationRequests).toEqual(
+					imageMap === "empty" ? [] : [{ image }]
+				);
+				expect(metadata.migrations).toBeUndefined();
+				expect(namespaceListRequests).toBe(0);
+				expect(applicationRequests).toBe(0);
+			}
+		);
 
 		test("surfaces a friendly error when EWC rejects a binding to a not-yet-provisioned `exports` class (code 100406)", async ({
 			expect,

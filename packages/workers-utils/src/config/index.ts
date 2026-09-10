@@ -45,10 +45,14 @@ export {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
 	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
 } from "./containers";
-export type { DurableObjectContainerApp } from "./containers";
+export type {
+	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
+} from "./containers";
 
 export function configFormat(
 	configPath: string | undefined
