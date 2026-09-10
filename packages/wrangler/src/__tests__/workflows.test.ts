@@ -9,7 +9,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, it } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -1057,6 +1057,78 @@ describe("wrangler workflows", () => {
 			const output = JSON.parse(std.out);
 			expect(output.steps[0].output).toEqual({});
 			expect(std.out).not.toContain("[...output truncated]");
+		});
+		it("should describe a running instance and steps with duration calculated up to now", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+			vi.setSystemTime(new Date("2026-09-10T12:00:00.000Z"));
+
+			const runningResponse = {
+				end: null,
+				output: null,
+				params: {},
+				queued: "2026-09-10T11:50:00.000Z",
+				start: "2026-09-10T11:55:00.000Z",
+				status: "running",
+				success: null,
+				trigger: {
+					source: "unknown",
+				},
+				versionId: "14707576-2549-4848-82ed-f68f8a1b47c7",
+				steps: [
+					{
+						attempts: [
+							{
+								end: null,
+								error: null,
+								start: "2026-09-10T11:58:00.000Z",
+								success: null,
+							},
+						],
+						config: {
+							retries: {
+								backoff: "constant",
+								delay: "10 seconds",
+								limit: 3,
+							},
+							timeout: "10 minutes",
+						},
+						end: null,
+						name: "running-step",
+						output: null,
+						start: "2026-09-10T11:58:00.000Z",
+						success: null,
+						type: "step",
+					},
+				],
+			};
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId`,
+					async () => {
+						return HttpResponse.json({
+							success: true,
+						errors: [],
+						messages: [],
+						result: runningResponse,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			try {
+				await runWrangler(
+					`workflows instances describe some-workflow running-instance`
+				);
+				expect(std.out).toContain("Duration:  2 minutes");
+				expect(std.out).toContain("│ 2 minutes │ 🔄 Working │");
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 	});
 
