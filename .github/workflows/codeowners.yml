@@ -38,6 +38,7 @@ jobs:
     #   - the PR head is the changeset-release branch (auto-generated changeset PRs), or
     #   - the PR base is neither `main` nor `vite-plugin-v2` (other PRs against
     #     feature branches don't need formal review).
+    # TODO: Remove `vite-plugin-v2` when no longer used.
     steps:
       - name: "Checkout Base Branch"
         if: >-
