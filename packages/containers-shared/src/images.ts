@@ -50,7 +50,6 @@ export async function pullEgressInterceptorImage(
  * @param dockerPath - Path to the Docker CLI executable.
  * @param options - Container image and local development tag configuration.
  * @param logger - Logger used for recoverable registry credential warnings.
- * @param accountId - Optional Cloudflare account ID used to request registry credentials.
  * @param complianceConfig - Compliance configuration used to identify the managed registry.
  * @returns An object with an `abort` function and a `ready` promise.
  */
@@ -58,7 +57,6 @@ export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
 	logger: WranglerLogger | ViteLogger,
-	accountId?: string,
 	complianceConfig?: ComplianceConfig
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
@@ -66,15 +64,7 @@ export async function pullImage(
 	const isExternalRegistry =
 		domain !== getCloudflareContainerRegistry(complianceConfig);
 	try {
-		if (accountId === undefined) {
-			throw new Error("An account ID is required to get registry credentials");
-		}
-		await dockerLoginImageRegistry(
-			dockerPath,
-			domain,
-			accountId,
-			complianceConfig
-		);
+		await dockerLoginImageRegistry(dockerPath, domain);
 	} catch (e) {
 		if (!isExternalRegistry) {
 			throw e;
@@ -136,7 +126,6 @@ export async function prepareContainerImagesForDev(args: {
 		containerOptions: ContainerDevOptions;
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
-	accountId?: string;
 	complianceConfig?: ComplianceConfig;
 }): Promise<void> {
 	const {
@@ -191,7 +180,6 @@ export async function prepareContainerImagesForDev(args: {
 				dockerPath,
 				options,
 				args.logger,
-				args.accountId,
 				args.complianceConfig
 			);
 			onContainerImagePreparationStart({

@@ -14,12 +14,14 @@ import {
 	buildContainerImages,
 	getCloudflareContainerRegistry,
 	getContainerImageTag,
+	ImageRegistriesService,
 	initContainersSharedContext,
 	InstanceType,
 	pushBuiltContainerImage,
 	pushCommand,
 	SchedulingPolicy,
 } from "../index";
+import type { BuiltContainerImage } from "../src/build";
 import type { CompleteAccountCustomer } from "../src/client";
 import type { ContainerNormalizedConfig } from "../src/types";
 import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
@@ -44,6 +46,13 @@ const account = {
 		disk_mb_per_deployment: 4000,
 	},
 } as CompleteAccountCustomer;
+
+const registryCredentials = {
+	account_id: "some-account-id",
+	username: "username",
+	password: "password",
+	registry_host: getCloudflareContainerRegistry(),
+};
 
 const dockerfileContainer = {
 	name: "test-app",
@@ -176,6 +185,10 @@ describe("buildCommand", () => {
 			'{"Descriptor":{"digest":"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}'
 		);
 		vi.spyOn(AccountService, "getMe").mockResolvedValue(account);
+		vi.spyOn(
+			ImageRegistriesService,
+			"generateImageRegistryCredentials"
+		).mockResolvedValue(registryCredentials);
 		fetchResultMock = vi.fn(
 			async <ResponseType>(
 				_config: Parameters<FetchResultFetcher>[0],
@@ -183,17 +196,6 @@ describe("buildCommand", () => {
 			) => {
 				if (path === "/accounts/some-account-id/containers/me") {
 					return account as ResponseType;
-				}
-				if (
-					path ===
-					"/accounts/some-account-id/containers/registries/registry.cloudflare.com/credentials"
-				) {
-					return {
-						account_id: "some-account-id",
-						username: "username",
-						password: "password",
-						registry_host: getCloudflareContainerRegistry(),
-					} as ResponseType;
 				}
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
@@ -264,18 +266,12 @@ describe("buildCommand", () => {
 			"--format",
 			"{{ .Size }} {{ len .RootFS.Layers }}",
 		]);
-		expect(vi.mocked(fetchResultMock)).toHaveBeenCalledWith(
-			{},
-			"/accounts/some-account-id/containers/registries/registry.cloudflare.com/credentials",
-			{
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({
-					expiration_minutes: 15,
-					permissions: ["push", "pull"],
-				}),
-			}
-		);
+		expect(
+			ImageRegistriesService.generateImageRegistryCredentials
+		).toHaveBeenCalledWith(getCloudflareContainerRegistry(), {
+			expiration_minutes: 15,
+			permissions: ["push", "pull"],
+		});
 		expectSpawnWith([
 			"tag",
 			"test-app:tag",
@@ -358,6 +354,10 @@ describe("deploy container image build and push", () => {
 			"11111111-1111-4111-8111-111111111111"
 		);
 		vi.spyOn(AccountService, "getMe").mockResolvedValue(account);
+		vi.spyOn(
+			ImageRegistriesService,
+			"generateImageRegistryCredentials"
+		).mockResolvedValue(registryCredentials);
 		fetchResultMock = vi.fn(
 			async <ResponseType>(
 				_config: Parameters<FetchResultFetcher>[0],
@@ -365,17 +365,6 @@ describe("deploy container image build and push", () => {
 			) => {
 				if (path === "/accounts/some-account-id/containers/me") {
 					return account as ResponseType;
-				}
-				if (
-					path ===
-					"/accounts/some-account-id/containers/registries/registry.cloudflare.com/credentials"
-				) {
-					return {
-						account_id: "some-account-id",
-						username: "username",
-						password: "password",
-						registry_host: getCloudflareContainerRegistry(),
-					} as ResponseType;
 				}
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
@@ -483,7 +472,7 @@ describe("deploy container image build and push", () => {
 	it("retags and pushes a built image using the Worker version ID tag", async ({
 		expect,
 	}) => {
-		const builtImage = {
+		const builtImage: BuiltContainerImage = {
 			containerConfig: dockerfileContainer,
 			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
 		};
@@ -573,7 +562,7 @@ describe("deploy container image build and push", () => {
 	it("cleans up built deployment images that were not pushed", async ({
 		expect,
 	}) => {
-		const builtImage = {
+		const builtImage: BuiltContainerImage = {
 			containerConfig: dockerfileContainer,
 			localTag: "test-app:wrangler-11111111-1111-4111-8111-111111111111",
 		};
@@ -680,26 +669,10 @@ describe("pushCommand", () => {
 		vi.clearAllMocks();
 		inspectOutputs = ["linux/amd64"];
 		mockDockerProcesses();
-		fetchResultMock = vi.fn(
-			async <ResponseType>(
-				_config: Parameters<FetchResultFetcher>[0],
-				path: string
-			) => {
-				if (
-					path ===
-					"/accounts/some-account-id/containers/registries/registry.cloudflare.com/credentials"
-				) {
-					return {
-						account_id: "some-account-id",
-						username: "username",
-						password: "password",
-						registry_host: getCloudflareContainerRegistry(),
-					} as ResponseType;
-				}
-				throw new Error(`Unexpected fetchResult path: ${path}`);
-			}
-		) as FetchResultFetcher;
-		initContainersSharedContext({ logger, fetchResult: fetchResultMock });
+		vi.spyOn(
+			ImageRegistriesService,
+			"generateImageRegistryCredentials"
+		).mockResolvedValue(registryCredentials);
 	});
 
 	afterEach(() => {
@@ -714,18 +687,12 @@ describe("pushCommand", () => {
 			"some-account-id"
 		);
 
-		expect(vi.mocked(fetchResultMock)).toHaveBeenCalledWith(
-			{},
-			"/accounts/some-account-id/containers/registries/registry.cloudflare.com/credentials",
-			{
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({
-					expiration_minutes: 15,
-					permissions: ["push", "pull"],
-				}),
-			}
-		);
+		expect(
+			ImageRegistriesService.generateImageRegistryCredentials
+		).toHaveBeenCalledWith(getCloudflareContainerRegistry(), {
+			expiration_minutes: 15,
+			permissions: ["push", "pull"],
+		});
 		expectSpawnWith([
 			"image",
 			"inspect",

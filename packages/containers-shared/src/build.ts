@@ -297,9 +297,7 @@ async function pushImageIfChanged({
 		pathToDocker,
 		// Won't be an external registry since this is building from a Dockerfile
 		// rather than specifying an image URI.
-		getCloudflareContainerRegistry(complianceConfig),
-		accountId ?? account.external_account_id,
-		complianceConfig
+		getCloudflareContainerRegistry(complianceConfig)
 	);
 	try {
 		// We don't try to parse until this point because we don't want to fail on
@@ -475,9 +473,7 @@ export async function pushCommand(
 		const dockerPath = args.pathToDocker ?? getDockerPath();
 		await dockerLoginImageRegistry(
 			dockerPath,
-			getCloudflareContainerRegistry(complianceConfig),
-			accountId,
-			complianceConfig
+			getCloudflareContainerRegistry(complianceConfig)
 		);
 
 		await checkImagePlatform(dockerPath, args.TAG);

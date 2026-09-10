@@ -1,12 +1,22 @@
 import { spawn } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils/errors";
-import { ImageRegistryPermissions } from "./client";
-import { fetchResult } from "./context";
-import type {
-	AccountRegistryToken,
-	ImageRegistryCredentialsConfiguration,
-} from "./client";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
+import { OpenAPI } from "./client/core/OpenAPI";
+
+export function configureOpenAPIForContainerPull(
+	accountId: string,
+	apiToken: string,
+	apiBase = "https://api.cloudflare.com/client/v4"
+): void {
+	OpenAPI.BASE = `${apiBase}/accounts/${accountId}/containers`;
+	OpenAPI.CREDENTIALS = "omit";
+	const existingHeaders =
+		typeof OpenAPI.HEADERS === "object" ? OpenAPI.HEADERS : {};
+	OpenAPI.HEADERS = {
+		...existingHeaders,
+		Authorization: `Bearer ${apiToken}`,
+	};
+}
 
 /**
  * Gets push and pull credentials for a configured image registry
@@ -15,30 +25,19 @@ import type { ComplianceConfig } from "@cloudflare/workers-utils";
  */
 export async function dockerLoginImageRegistry(
 	pathToDocker: string,
-	domain: string,
-	accountId: string,
-	complianceConfig?: ComplianceConfig
-): Promise<void> {
-	const credentials = await fetchResult<AccountRegistryToken>(
-		complianceConfig ?? {},
-		`/accounts/${accountId}/containers/registries/${domain}/credentials`,
-		{
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({
-				// How long the credentials should be valid for.
-				expiration_minutes: 15,
-				permissions: [
-					ImageRegistryPermissions.PUSH,
-					ImageRegistryPermissions.PULL,
-				],
-			} satisfies ImageRegistryCredentialsConfiguration),
-		}
-	);
+	domain: string
+) {
+	// how long the credentials should be valid for
+	const expirationMinutes = 15;
 
-	if (credentials.password === undefined) {
-		throw new Error("Expected registry credentials to include a password");
-	}
+	const credentials =
+		await ImageRegistriesService.generateImageRegistryCredentials(domain, {
+			expiration_minutes: expirationMinutes,
+			permissions: [
+				ImageRegistryPermissions.PUSH,
+				ImageRegistryPermissions.PULL,
+			],
+		});
 
 	const child = spawn(
 		pathToDocker,

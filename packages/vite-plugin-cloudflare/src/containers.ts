@@ -1,58 +1,38 @@
 import path from "node:path";
 import {
+	configureOpenAPIForContainerPull,
 	getDevContainerImageName,
-	initContainersSharedContext,
 } from "@cloudflare/containers-shared";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	fetchResultBase,
+	getCloudflareApiBaseUrl,
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
 } from "@cloudflare/workers-utils";
 import type { ResolvedWorkerConfig } from "./plugin-config";
-import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
- * Configures the Containers shared context used to retrieve image pull credentials.
+ * Configures the Containers API client used to retrieve image pull credentials.
  *
+ * @param accountId - Cloudflare account ID that owns the managed registry.
  * @param apiToken - API token used to request registry credentials.
- * @param logger - Logger used for API request logging.
+ * @param complianceConfig - Compliance configuration used to select the API endpoint.
  * @returns No value.
  */
 export function configureContainerPull(
+	accountId: string,
 	apiToken: string,
-	logger: Pick<Logger, "info" | "warn" | "error">
+	complianceConfig?: ComplianceConfig
 ): void {
-	const containersLogger = {
-		debug: () => {},
-		debugWithSanitization: () => {},
-		log: logger.info.bind(logger),
-		info: logger.info.bind(logger),
-		warn: logger.warn.bind(logger),
-		error: logger.error.bind(logger),
-	} satisfies Logger;
-
-	const fetchResult: FetchResultFetcher = async (
-		requestComplianceConfig,
-		resource,
-		init,
-		queryParams,
-		abortSignal
-	) => {
-		return await fetchResultBase(
-			requestComplianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			resource,
-			init,
-			"@cloudflare/vite-plugin",
-			containersLogger,
-			queryParams,
-			abortSignal,
-			{ apiToken }
-		);
-	};
-
-	initContainersSharedContext({ logger: containersLogger, fetchResult });
+	configureOpenAPIForContainerPull(
+		accountId,
+		apiToken,
+		getCloudflareApiBaseUrl(
+			complianceConfig ?? COMPLIANCE_REGION_CONFIG_UNKNOWN
+		)
+	);
 }
 
 /**

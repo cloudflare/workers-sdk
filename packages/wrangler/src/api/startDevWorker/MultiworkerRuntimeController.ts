@@ -1,19 +1,14 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import {
-	initContainersSharedContext,
-	prepareContainerImagesForDev,
-} from "@cloudflare/containers-shared";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { convertV4MiniflareOptions, Miniflare, Mutex } from "miniflare";
-import { fetchResult } from "../../cfetch";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
-	getContainerImagePullAccountId,
 	getContainerDevOptions,
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
@@ -196,7 +191,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				for (const container of containerOptions ?? []) {
 					this.containerImageTagsSeen.add(container.image_tag);
 				}
-				initContainersSharedContext({ logger, fetchResult });
 				await prepareContainerImagesForDev({
 					dockerPath: this.dockerPath,
 					containerOptions,
@@ -210,10 +204,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 						this.containerBeingBuilt = undefined;
 					},
 					logger: logger,
-					accountId: await getContainerImagePullAccountId(
-						data.config,
-						containerOptions
-					),
 					complianceConfig: {
 						compliance_region: data.config.complianceRegion,
 					},

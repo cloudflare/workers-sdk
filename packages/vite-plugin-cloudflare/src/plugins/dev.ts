@@ -252,7 +252,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 								getCloudflareContainerRegistry(ctx.entryWorkerConfig)
 					);
 
-					let containerPullAccountId: string | undefined;
 					if (hasCFRegistryImages) {
 						const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 						const accountId =
@@ -269,8 +268,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							);
 						}
 
-						configureContainerPull(apiToken, viteDevServer.config.logger);
-						containerPullAccountId = accountId;
+						configureContainerPull(accountId, apiToken, ctx.entryWorkerConfig);
 					}
 
 					await prepareContainerImagesForDev({
@@ -279,7 +277,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
 						logger: viteDevServer.config.logger,
-						accountId: containerPullAccountId,
 						complianceConfig: ctx.entryWorkerConfig,
 					});
 
