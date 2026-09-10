@@ -27,6 +27,7 @@ export interface Binding {
 	instance_name?: string;
 	id?: string;
 	service?: string;
+	environment?: string;
 	dataset?: string;
 	namespace?: string;
 	outbound?: {
@@ -125,7 +126,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	migrations?: CfWorkerInit["migrations"];
 	limits?: CfUserLimits;
-	placement?: CfPlacement;
+	placement?: CfPlacement | null;
 	cache?: CacheOptions;
 	env?: EnvBindings;
 	containers?: Array<{ class_name: string }>;

@@ -1992,7 +1992,7 @@ export type ContainerEngine =
  *
  * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
  * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
- * - Select inheritable properties: `logpush`, `observability`, `limits`, `cache`
+ * - Select inheritable properties: `logpush`, `observability`, `limits`, `placement`, `cache`
  *
  * @inheritable
  */
@@ -2002,6 +2002,6 @@ export interface PreviewsConfig
 		Partial<
 			Pick<
 				EnvironmentInheritable,
-				"logpush" | "observability" | "limits" | "cache"
+				"logpush" | "observability" | "limits" | "placement" | "cache"
 			>
 		> {}
