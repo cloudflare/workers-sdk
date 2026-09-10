@@ -25,7 +25,7 @@
 
 	"define": {
 		"ROOT": "'playground/devprod/cloudflare/dev'",
-		"PREVIEW": "':any/cloudflarepreviews/com'"
+		"PREVIEW": "'cloudflarepreviews.com'"
 	},
 
 	"routes": [
@@ -81,7 +81,7 @@
 
 			"define": {
 				"ROOT": "'playground-testing/devprod/cloudflare/dev'",
-				"PREVIEW": "':any/playground-testing/devprod/cloudflare/dev'"
+				"PREVIEW": "'playground-testing.devprod.cloudflare.dev'"
 			},
 
 			"routes": [
