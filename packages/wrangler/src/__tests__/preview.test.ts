@@ -4,6 +4,7 @@ import { stripVTControlCharacters } from "node:util";
 import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	extractConfigBindings,
+	formatNoActivePreviewUrlsMessage,
 	getBranchName,
 	getCommitSha,
 	getPullRequestMetadata,
@@ -28,7 +29,10 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { OutputEntry } from "../output";
-import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+import type { Config, PreviewsConfig, Route } from "@cloudflare/workers-utils";
+
+const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
+	"Note: This Preview deployment has no active URLs.";
 
 vi.mock("node:child_process", async () => {
 	const actual =
@@ -45,6 +49,31 @@ function configWithPreviews(previews: PreviewsConfig): Config {
 		previews,
 	};
 }
+
+function configForUrlGuidance(config: Partial<Config>): Config {
+	return {
+		...defaultWranglerConfig,
+		configPath: "/test/wrangler.json",
+		...config,
+	};
+}
+
+const explicitlyEnabledPreviewRoute = {
+	pattern: "explicit.example.com",
+	custom_domain: true,
+	enabled: true,
+	previews_enabled: true,
+} satisfies Route;
+const existingRoutes = [
+	{ pattern: "shop.example.com", zone_id: "z1" },
+	{ pattern: "app.example.com", custom_domain: true, enabled: true },
+	{
+		pattern: "beta.example.com",
+		custom_domain: true,
+		enabled: false,
+		previews_enabled: true,
+	},
+] satisfies Route[];
 
 type PreviewDeploymentModulePart = {
 	name: string;
@@ -256,6 +285,224 @@ describe("wrangler preview", () => {
 					{ ...defaultWranglerConfig, name: "config-worker" }
 				)
 			).toBe("ci-worker");
+		});
+	});
+
+	describe("formatNoActivePreviewUrlsMessage", () => {
+		test.for([
+			{
+				name: "a new Preview-only custom domain",
+				config: configForUrlGuidance({}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							enabled: false,
+							previews_enabled: true,
+						},
+					],
+				},
+				expectedProductionStatus: "disabled",
+			},
+			{
+				name: "an existing implicitly enabled production domain",
+				config: configForUrlGuidance({
+					routes: [
+						{
+							pattern: "implicit.example.com",
+							custom_domain: true,
+						},
+					],
+				}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{
+							pattern: "implicit.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				},
+				expectedProductionStatus: "enabled (default)",
+			},
+			{
+				name: "an existing explicitly enabled production domain",
+				config: configForUrlGuidance({
+					routes: [explicitlyEnabledPreviewRoute],
+				}),
+				expectedCustomDomainConfig: {
+					routes: [explicitlyEnabledPreviewRoute],
+				},
+				expectedProductionStatus: "enabled",
+			},
+			{
+				name: "an existing multi-route config with a non-custom-domain and another custom-domain route",
+				config: configForUrlGuidance({ routes: existingRoutes }),
+				expectedCustomDomainConfig: { routes: existingRoutes },
+				expectedProductionStatus: "disabled",
+			},
+			{
+				name: "an existing singular non-custom-domain route",
+				config: configForUrlGuidance({
+					route: { pattern: "shop.example.com", zone_id: "z1" },
+				}),
+				expectedCustomDomainConfig: {
+					routes: [
+						{ pattern: "shop.example.com", zone_id: "z1" },
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							enabled: false,
+							previews_enabled: true,
+						},
+					],
+				},
+				expectedProductionStatus: "disabled",
+			},
+		])(
+			"shows exact configuration for $name",
+			(
+				{ config, expectedCustomDomainConfig, expectedProductionStatus },
+				{ expect }
+			) => {
+				const message = formatNoActivePreviewUrlsMessage(config);
+
+				expect(message).toContain(
+					JSON.stringify({ preview_urls: true }, null, 2)
+				);
+				expect(message).toContain(
+					JSON.stringify(expectedCustomDomainConfig, null, 2)
+				);
+				expect(message).toContain(
+					`Resulting route behavior:\n  Production: ${expectedProductionStatus}\n  Previews: enabled`
+				);
+			}
+		);
+
+		test("preserves a singular non-custom-domain route in TOML guidance", ({
+			expect,
+		}) => {
+			const message = formatNoActivePreviewUrlsMessage({
+				...configForUrlGuidance({
+					route: { pattern: "shop.example.com", zone_id: "z1" },
+				}),
+				configPath: "/test/wrangler.toml",
+			});
+
+			expect(message).toContain('pattern = "shop.example.com"');
+			expect(message).toContain('zone_id = "z1"');
+			expect(message).toContain('pattern = "previews.example.com"');
+			expect(message).toContain(
+				"Replace `route` with this in your wrangler.toml"
+			);
+		});
+
+		test.for([
+			{
+				configPath: "/test/wrangler.json",
+				userConfigPath: undefined,
+				configName: "wrangler.json",
+				expectedWorkersDevConfig: JSON.stringify(
+					{ env: { staging: { preview_urls: true } } },
+					null,
+					2
+				),
+				expectedCustomDomainConfig: JSON.stringify(
+					{
+						env: {
+							staging: {
+								routes: [
+									{
+										pattern: "app.example.com",
+										custom_domain: true,
+										previews_enabled: true,
+									},
+								],
+							},
+						},
+					},
+					null,
+					2
+				),
+			},
+			{
+				configPath: "/test/wrangler.toml",
+				userConfigPath: undefined,
+				configName: "wrangler.toml",
+				expectedWorkersDevConfig: "[env.staging]\npreview_urls = true",
+				expectedCustomDomainConfig:
+					'[[env.staging.routes]]\npattern = "app.example.com"\ncustom_domain = true\npreviews_enabled = true',
+			},
+			{
+				configPath: "/test/generated/wrangler.json",
+				userConfigPath: "/test/wrangler.toml",
+				configName: "wrangler.toml",
+				expectedWorkersDevConfig: "[env.staging]\npreview_urls = true",
+				expectedCustomDomainConfig:
+					'[[env.staging.routes]]\npattern = "app.example.com"\ncustom_domain = true\npreviews_enabled = true',
+			},
+		])(
+			"scopes URL guidance to the selected environment in $configPath",
+			(
+				{
+					configPath,
+					userConfigPath,
+					configName,
+					expectedWorkersDevConfig,
+					expectedCustomDomainConfig,
+				},
+				{ expect }
+			) => {
+				const message = formatNoActivePreviewUrlsMessage({
+					...configForUrlGuidance({
+						preview_urls: false,
+						routes: [
+							{
+								pattern: "app.example.com",
+								custom_domain: true,
+								previews_enabled: false,
+							},
+						],
+					}),
+					configPath,
+					userConfigPath,
+					targetEnvironment: "staging",
+				});
+
+				expect(message).toContain(`Update this in your ${configName}`);
+				expect(message).toContain(expectedWorkersDevConfig);
+				expect(message).toContain(expectedCustomDomainConfig);
+			}
+		);
+
+		test("does not ask the user to commit a change when both settings are already present", ({
+			expect,
+		}) => {
+			const message = formatNoActivePreviewUrlsMessage(
+				configForUrlGuidance({
+					preview_urls: true,
+					routes: [
+						{
+							pattern: "app.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				})
+			);
+
+			expect(message).not.toContain("commit the configuration change");
+		});
+
+		test("tells the user to update, not add, an explicit preview_urls: false", ({
+			expect,
+		}) => {
+			const message = formatNoActivePreviewUrlsMessage(
+				configForUrlGuidance({ preview_urls: false })
+			);
+
+			expect(message).toContain("Update this in your wrangler.json");
 		});
 	});
 
@@ -1893,10 +2140,50 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment URLs:");
 			expect(std.out).toContain("  https://dep-one.test-worker.cloudflare.app");
 			expect(std.out).toContain("  https://dep-two.test-worker.cloudflare.app");
-			expect(std.out).not.toContain("no active URLs");
+			expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 		});
 
-		test("should note when URL arrays are empty", async ({ expect }) => {
+		test.for<{
+			name: string;
+			previewUrls: string[];
+			deploymentUrls: string[];
+			shouldShowGuidance: boolean;
+		}>([
+			{
+				name: "both URL arrays are empty",
+				previewUrls: [],
+				deploymentUrls: [],
+				shouldShowGuidance: true,
+			},
+			{
+				name: "the Preview URL array is active",
+				previewUrls: ["https://empty-urls-preview.test-worker.workers.dev"],
+				deploymentUrls: [],
+				shouldShowGuidance: false,
+			},
+			{
+				name: "the deployment URL array is active",
+				previewUrls: [],
+				deploymentUrls: [
+					"https://deployment-id-empty-urls.test-worker.workers.dev",
+				],
+				shouldShowGuidance: false,
+			},
+		])("handles URL guidance when $name", async (testCase, { expect }) => {
+			writeWranglerConfig(
+				{
+					main: "src/index.ts",
+					routes: [
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							enabled: false,
+							previews_enabled: true,
+						},
+					],
+				},
+				"wrangler.json"
+			);
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
@@ -1920,7 +2207,7 @@ describe("wrangler preview", () => {
 									id: "preview-id-empty-urls",
 									name: "empty-urls-preview",
 									slug: "empty-urls-preview",
-									urls: [],
+									urls: testCase.previewUrls,
 									worker_name: "test-worker",
 									created_on: new Date().toISOString(),
 								},
@@ -1938,7 +2225,7 @@ describe("wrangler preview", () => {
 									id: "deployment-id-empty-urls",
 									preview_id: "preview-id-empty-urls",
 									preview_name: "empty-urls-preview",
-									urls: [],
+									urls: testCase.deploymentUrls,
 									compatibility_date: "2025-01-01",
 									env: {},
 									created_on: new Date().toISOString(),
@@ -1951,6 +2238,11 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --name empty-urls-preview");
 
+			if (!testCase.shouldShowGuidance) {
+				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+				return;
+			}
+
 			const summaryLines = stripVTControlCharacters(std.out)
 				.split("\n")
 				.filter(
@@ -1960,9 +2252,8 @@ describe("wrangler preview", () => {
 				"Preview: empty-urls-preview (new)",
 				"Deployment ID: deployment-id-empty-urls",
 			]);
-			expect(std.out).toContain(
-				"Note: This Preview deployment has no active URLs. To get one, enable Preview Deployments on workers.dev or a custom domain. See https://developers.cloudflare.com/workers/previews/custom-domains/ for more information"
-			);
+			expect(std.out).toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
+			expect(std.out).toContain('"preview_urls": true');
 		});
 
 		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
