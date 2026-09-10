@@ -37,17 +37,17 @@ export function resolveLocalBindings(
 			continue;
 		}
 
-		if (binding.type !== "secret") {
-			bindings[name] = binding;
+		if (binding.type === "secret") {
+			const localValue = localValues[name];
+			if (localValue !== undefined) {
+				bindings[name] = { type: "text", value: localValue };
+			} else {
+				missingSecrets.push(name);
+			}
 			continue;
 		}
 
-		const localValue = localValues[name];
-		if (localValue !== undefined) {
-			bindings[name] = { type: "text", value: localValue };
-		} else {
-			missingSecrets.push(name);
-		}
+		bindings[name] = binding;
 	}
 
 	return { bindings, missingSecrets };
