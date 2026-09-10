@@ -1,19 +1,19 @@
-import { writeFileSync } from "node:fs";
-import path from "node:path";
 import {
-	buildContainerImages,
+	apply,
+	buildAndMaybePush,
+	listDurableObjects,
 	SchedulingPolicy,
-	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, test, vi } from "vitest";
-import { preparePreviewContainers } from "../../preview/containers";
+import { logger } from "../../logger";
+import { deployPreviewContainers } from "../../preview/containers";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import type {
-	BuiltContainerDeployment,
 	ContainerNormalizedConfig,
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
+import type { DeploymentResource } from "@cloudflare/deploy-helpers";
 import type { Config } from "@cloudflare/workers-utils";
 
 vi.mock("../../cloudchamber/common", async (importOriginal) => ({
@@ -22,11 +22,13 @@ vi.mock("../../cloudchamber/common", async (importOriginal) => ({
 }));
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
-	buildContainerImages: vi.fn(),
-	verifyDockerInstalled: vi.fn(),
+	apply: vi.fn(),
+	buildAndMaybePush: vi.fn(),
+	listDurableObjects: vi.fn(),
 }));
 
 const PREVIEW_APP_NAME = "test-worker_my-feature_MyContainer";
+const ACCOUNT_ID = "some-account-id";
 
 function containerConfig(
 	overrides: Partial<SharedContainerConfig> = {}
@@ -47,74 +49,189 @@ function containerConfig(
 	} as ContainerNormalizedConfig;
 }
 
-function builtDeploymentFor(
-	container: ContainerNormalizedConfig
-): BuiltContainerDeployment {
-	return {
-		container: container as BuiltContainerDeployment["container"],
-		builtImage: {
-			containerConfig:
-				container as BuiltContainerDeployment["builtImage"]["containerConfig"],
-			localTag: "preview:temp",
+const deployment = {
+	id: "deployment-id",
+	env: {
+		MY_CONTAINER: {
+			type: "durable_object_namespace",
+			class_name: "MyContainer",
+			namespace_id: "preview-do-ns-id",
 		},
-	};
-}
+	},
+} as unknown as DeploymentResource;
 
-function previewConfig(container: {
-	class_name?: string;
-	image: string;
-}): Config {
-	return {
-		...defaultWranglerConfig,
-		name: "test-worker",
-		configPath: path.resolve("wrangler.toml"),
-		topLevelName: "test-worker",
-		previews: {
-			containers: [container],
-			durable_objects: {
-				bindings: [
-					{
-						name: "MY_CONTAINER",
-						class_name: "MyContainer",
-					},
-				],
-			},
-		},
-		durable_objects: {
-			bindings: [],
-		},
-		migrations: [],
-	} as unknown as Config;
-}
-
-describe("preparePreviewContainers", () => {
-	runInTempDir();
+describe("deployPreviewContainers", () => {
+	const std = mockConsoleMethods();
 
 	beforeEach(() => {
-		vi.mocked(buildContainerImages).mockReset();
-		vi.mocked(verifyDockerInstalled).mockReset();
-		vi.mocked(buildContainerImages).mockResolvedValue([
-			builtDeploymentFor(containerConfig()),
-		]);
+		vi.mocked(apply).mockReset();
+		vi.mocked(buildAndMaybePush).mockReset();
+		vi.mocked(listDurableObjects).mockReset();
+		vi.mocked(listDurableObjects).mockResolvedValue([]);
+		vi.mocked(buildAndMaybePush).mockResolvedValue({ newTag: "built:tag" });
 	});
 
-	test("should preserve an uppercase preview slug in the application name", async ({
+	// Docker rejects uppercase characters in an image repository name, but the
+	// Cloudchamber application name must stay byte-identical to the name the
+	// control plane generates, which embeds the PascalCase DO class name.
+	test("should lowercase the image repository name while preserving the application name", async ({
 		expect,
 	}) => {
-		const dockerfile = path.resolve("Dockerfile");
-		writeFileSync(dockerfile, "FROM scratch");
+		const container = containerConfig();
+		const config = {
+			...defaultWranglerConfig,
+			containers: [container],
+		} as unknown as Config;
 
-		await preparePreviewContainers(
-			previewConfig({ class_name: "MyContainer", image: dockerfile }),
-			"test-worker",
-			"Feature-MyBranch",
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: false,
+		});
+
+		expect(buildAndMaybePush).toHaveBeenCalledWith(
+			expect.objectContaining({
+				tag: "test-worker_my-feature_mycontainer:deployment",
+			}),
+			expect.any(String),
+			true,
+			expect.objectContaining({ name: "test-worker_my-feature_mycontainer" }),
+			false,
+			config
+		);
+		expect(vi.mocked(apply).mock.calls[0]?.[1]).toMatchObject({
+			name: PREVIEW_APP_NAME,
+		});
+	});
+
+	test("should lowercase an uppercase preview slug in the image repository name", async ({
+		expect,
+	}) => {
+		const container = containerConfig({
+			name: "test-worker_Feature-MyBranch_MyContainer",
+		});
+		const config = {
+			...defaultWranglerConfig,
+			containers: [container],
+		} as unknown as Config;
+
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: false,
+		});
+
+		expect(vi.mocked(buildAndMaybePush).mock.calls[0]?.[0]).toMatchObject({
+			tag: "test-worker_feature-mybranch_mycontainer:deployment",
+		});
+	});
+
+	// The image push target is derived from the compliance region, so an account
+	// in a restricted region must not fall back to the public registry.
+	test("should forward the compliance region to the image build", async ({
+		expect,
+	}) => {
+		const container = containerConfig();
+		const config = {
+			...defaultWranglerConfig,
+			compliance_region: "fedramp_high",
+			containers: [container],
+		} as unknown as Config;
+
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: false,
+		});
+
+		expect(vi.mocked(buildAndMaybePush).mock.calls[0]?.[5]).toMatchObject({
+			compliance_region: "fedramp_high",
+		});
+	});
+
+	// A cross-script binding names a Durable Object owned by another Worker, so
+	// its namespace must never be selected for this preview's container. The
+	// class-name-keyed map would otherwise let it overwrite the local entry.
+	test("should ignore a cross-script Durable Object binding that shares a class name", async ({
+		expect,
+	}) => {
+		const container = containerConfig();
+		const config = {
+			...defaultWranglerConfig,
+			containers: [container],
+		} as unknown as Config;
+		const deploymentWithCrossScriptBinding = {
+			id: "deployment-id",
+			env: {
+				MY_CONTAINER: {
+					type: "durable_object_namespace",
+					class_name: "MyContainer",
+					namespace_id: "preview-do-ns-id",
+				},
+				// Same class name, implemented by another Worker. Declared last so
+				// an unfiltered map would end up holding this namespace_id.
+				FOREIGN_CONTAINER: {
+					type: "durable_object_namespace",
+					class_name: "MyContainer",
+					namespace_id: "other-worker-do-ns-id",
+					script_name: "owner-worker",
+				},
+			},
+		} as unknown as DeploymentResource;
+
+		await deployPreviewContainers(
+			config,
+			[container],
+			deploymentWithCrossScriptBinding,
+			ACCOUNT_ID,
 			{ quiet: false }
 		);
 
-		expect(vi.mocked(buildContainerImages).mock.calls[0]?.[0][0]).toMatchObject(
-			{
-				name: "test-worker_Feature-MyBranch_MyContainer",
-			}
-		);
+		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+			durable_object_namespace_id: "preview-do-ns-id",
+		});
+	});
+
+	test("should not build an image for a container configured with an image URI", async ({
+		expect,
+	}) => {
+		const container = {
+			...containerConfig(),
+			dockerfile: undefined,
+			image_build_context: undefined,
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
+		} as unknown as ContainerNormalizedConfig;
+		delete (container as Record<string, unknown>).dockerfile;
+		const config = {
+			...defaultWranglerConfig,
+			containers: [container],
+		} as unknown as Config;
+
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: false,
+		});
+
+		expect(buildAndMaybePush).not.toHaveBeenCalled();
+		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+			imageRef: {
+				newTag: "registry.cloudflare.com/some-account-id/test:latest",
+			},
+		});
+	});
+
+	// `logger` drops a message above its level instead of redirecting it, so a
+	// level of `error` discards warnings rather than leaving them on stderr.
+	test("should keep warnings on stderr while suppressing stdout", async ({
+		expect,
+	}) => {
+		const container = containerConfig();
+		const config = {
+			...defaultWranglerConfig,
+			containers: [container],
+		} as unknown as Config;
+		vi.mocked(apply).mockImplementation(async () => {
+			logger.warn("a container warning");
+		});
+
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: true,
+		});
+
+		expect(std.warn).toContain("a container warning");
+		expect(std.out).toBe("");
 	});
 });
