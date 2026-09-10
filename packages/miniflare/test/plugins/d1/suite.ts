@@ -665,7 +665,7 @@ test("dumpSql exports Infinity and -Infinity as valid, re-importable SQL literal
 	const [dumpStatements] = result as [string[]];
 	const dump = dumpStatements.join("\n");
 
-	// The dump must not contain the raw JS token as a bare identifier
+	// The dump must not contain the raw JS Infinity/-Infinity tokens as bare identifiers
 	expect(dump).not.toMatch(/VALUES\(1,Infinity\)/);
 	expect(dump).not.toMatch(/VALUES\(2,-Infinity\)/);
 
