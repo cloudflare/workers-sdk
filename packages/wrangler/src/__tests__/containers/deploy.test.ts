@@ -18,7 +18,6 @@ import {
 import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
-import { deployDurableObjectContainerApplications } from "../../containers/durable-object-applications";
 import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockServiceScriptData } from "../deploy/helpers";
@@ -359,50 +358,6 @@ describe("wrangler deploy with containers", () => {
 		expect(modifyRequests).toBe(0);
 		expect(rolloutRequests).toBe(0);
 		expect(spawn).not.toHaveBeenCalled();
-	});
-	it("should reuse the idempotent application create contract on repeat deployments", async ({
-		expect,
-	}) => {
-		const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
-		const config = {
-			...DEFAULT_DURABLE_OBJECTS,
-			containers: [
-				{
-					name: "managed-app",
-					class_name: "ExampleDurableObject",
-					scheduling_policy: "durable_object",
-					images: {},
-				},
-			],
-		} as Parameters<typeof deployDurableObjectContainerApplications>[0];
-		mockGetVersion("Galaxy-Class", [
-			{
-				...defaultDOBinding,
-				namespace_id: namespaceId,
-			},
-		]);
-
-		const applicationRequests: unknown[] = [];
-		msw.use(
-			http.post("*/applications", async ({ request }) => {
-				const body = await request.json();
-				applicationRequests.push(body);
-				return HttpResponse.json(createFetchResult(body));
-			})
-		);
-
-		const args = {
-			versionId: "Galaxy-Class",
-			accountId: "some-account-id",
-			scriptName: "test-name",
-		};
-		await deployDurableObjectContainerApplications(config, args);
-		await deployDurableObjectContainerApplications(config, args);
-
-		expect(applicationRequests).toEqual([
-			expectedDurableObjectApplicationRequest("managed-app", namespaceId),
-			expectedDurableObjectApplicationRequest("managed-app", namespaceId),
-		]);
 	});
 	it("should preserve Durable Object-managed container images when --containers-rollout=none", async ({
 		expect,

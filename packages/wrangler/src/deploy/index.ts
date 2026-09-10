@@ -5,6 +5,7 @@ import {
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
 	getDockerPath,
+	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
@@ -12,10 +13,6 @@ import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
-import {
-	deployDurableObjectContainerApplications,
-	prepareDurableObjectContainerApplications,
-} from "../containers/durable-object-applications";
 import { createCommand } from "../core/create-command";
 import { buildDeployContainerImages } from "../deployment-bundle/build-container-images";
 import {
@@ -213,7 +210,8 @@ export async function runDeployCommandHandler(
 		if (
 			!props.dryRun &&
 			props.containersRollout !== "none" &&
-			props.normalisedContainerConfig.length > 0
+			(props.normalisedContainerConfig.length > 0 ||
+				getDurableObjectContainerApps(config.containers).length > 0)
 		) {
 			await fillOpenAPIConfiguration(config, containersScope);
 		}
@@ -224,8 +222,6 @@ export async function runDeployCommandHandler(
 			buildResult,
 			{
 				syncWorkersSite,
-				prepareDurableObjectContainerApplications,
-				deployDurableObjectContainerApplications,
 				analyseBundle,
 			}
 		);

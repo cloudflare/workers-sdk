@@ -3,12 +3,11 @@ import {
 	versionsUpload,
 	type AssetUploadStats,
 } from "@cloudflare/deploy-helpers";
+import { getDurableObjectContainerApps } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
-import {
-	deployDurableObjectContainerApplications,
-	prepareDurableObjectContainerApplications,
-} from "../containers/durable-object-applications";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import {
 	sharedDeployVersionsArgs,
@@ -75,14 +74,18 @@ export const versionsUploadCommand = createCommand({
 				fetchPagedListResult,
 				fetchResult,
 			});
+			if (
+				!props.dryRun &&
+				getDurableObjectContainerApps(config.containers).length > 0
+			) {
+				await fillOpenAPIConfiguration(config, containersScope);
+			}
 			const { assetUploadStats: uploadStats } = await versionsUpload(
 				props,
 				config,
 				buildResult,
 				{
 					analyseBundle: analyseBundle,
-					prepareDurableObjectContainerApplications,
-					deployDurableObjectContainerApplications,
 				}
 			);
 			assetUploadStats = uploadStats;

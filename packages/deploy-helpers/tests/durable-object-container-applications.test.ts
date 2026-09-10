@@ -5,27 +5,26 @@ import {
 	ContainerImagePreparationStatus,
 	createDurableObjectNamespaceResolver,
 	listDurableObjects,
+	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import {
 	deployDurableObjectContainerApplications,
-	prepareDurableObjectContainerApplications,
 	resolveVersionedDurableObjectContainerApplications,
-} from "../../containers/durable-object-applications";
-import { getOrSelectAccountId } from "../../user";
+	prepareDurableObjectContainerApplications,
+} from "../src/deploy/helpers/durable-object-container-applications";
+import type { Application } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
 vi.mock("node:timers/promises", () => ({ setTimeout: vi.fn() }));
+vi.mock("@cloudflare/cli-shared-helpers", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/cli-shared-helpers")>()),
+	updateStatus: vi.fn(),
+}));
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
 	createDurableObjectNamespaceResolver: vi.fn(),
 	listDurableObjects: vi.fn(),
-}));
-vi.mock("../../user");
-vi.mock("../../cloudchamber/common", () => ({
-	fillOpenAPIConfiguration: vi.fn(),
-	promiseSpinner: async (promise: Promise<unknown>) => promise,
 }));
 
 const image = `registry.cloudflare.com/account/tools@sha256:${"a".repeat(64)}`;
@@ -41,7 +40,7 @@ const config = {
 		},
 	],
 } as unknown as Config;
-const args = { dryRun: false, scriptName: "worker" };
+const args = { accountId: "account", dryRun: false, scriptName: "worker" };
 const namespace = {
 	id: "namespace",
 	name: "sandbox",
@@ -49,9 +48,18 @@ const namespace = {
 	script: "worker",
 	use_sqlite: true,
 };
+const application = {
+	id: "application",
+	created_at: "2026-09-10T00:00:00Z",
+	account_id: "account",
+	name: "sandbox",
+	version: 1,
+	scheduling_policy: SchedulingPolicy.DURABLE_OBJECT,
+	instances: 1,
+	configuration: { image },
+} satisfies Application;
 
 beforeEach(() => {
-	vi.mocked(getOrSelectAccountId).mockResolvedValue("account");
 	vi.mocked(setTimeout).mockResolvedValue(undefined);
 });
 afterEach(() => vi.restoreAllMocks());
@@ -161,7 +169,6 @@ describe("unknown Durable Object storage", () => {
 		await expect(
 			prepareDurableObjectContainerApplications(unknownStorageConfig, args)
 		).rejects.toThrow("legacy KV storage backend");
-		expect(fillOpenAPIConfiguration).not.toHaveBeenCalled();
 	});
 	it.for([
 		[],
@@ -210,6 +217,7 @@ describe("unknown Durable Object storage", () => {
 	it("does not query namespaces for a dry run", async ({ expect }) => {
 		await prepareDurableObjectContainerApplications(unknownStorageConfig, {
 			...args,
+			accountId: undefined,
 			dryRun: true,
 		});
 		expect(listDurableObjects).not.toHaveBeenCalled();
@@ -223,7 +231,7 @@ describe("unknown Durable Object storage", () => {
 });
 
 describe("Container namespace resolution", () => {
-	it("does not accept a preview when the production namespace is missing", async ({
+	it("does not accept a preview when a versioned production namespace is missing", async ({
 		expect,
 	}) => {
 		vi.mocked(listDurableObjects).mockResolvedValue([
@@ -240,10 +248,42 @@ describe("Container namespace resolution", () => {
 			})
 		).rejects.toThrow("has no namespace");
 	});
+	it("reuses the idempotent application create contract on repeat deployments", async ({
+		expect,
+	}) => {
+		const create = vi
+			.spyOn(ApplicationsService, "createApplication")
+			.mockResolvedValue(application);
+		vi.mocked(createDurableObjectNamespaceResolver).mockReturnValue(
+			vi.fn().mockResolvedValue("namespace")
+		);
+
+		const args = {
+			versionId: "version",
+			accountId: "account",
+			scriptName: "worker",
+		};
+		await deployDurableObjectContainerApplications(config, args);
+		await deployDurableObjectContainerApplications(config, args);
+
+		expect(create).toHaveBeenCalledTimes(2);
+		expect(create).toHaveBeenNthCalledWith(1, {
+			name: "sandbox",
+			scheduling_policy: "durable_object",
+			durable_objects: { namespace_id: "namespace" },
+		});
+		expect(create).toHaveBeenNthCalledWith(2, {
+			name: "sandbox",
+			scheduling_policy: "durable_object",
+			durable_objects: { namespace_id: "namespace" },
+		});
+	});
 	it("resolves every namespace before creating the first application", async ({
 		expect,
 	}) => {
-		const create = vi.spyOn(ApplicationsService, "createApplication");
+		const create = vi
+			.spyOn(ApplicationsService, "createApplication")
+			.mockResolvedValue(application);
 		vi.mocked(createDurableObjectNamespaceResolver).mockReturnValue(
 			vi
 				.fn()

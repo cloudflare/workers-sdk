@@ -37,6 +37,7 @@ export * from "./deploy/helpers/versions-api";
 export * from "./deploy/helpers/check-workflow-conflicts";
 export * from "./deploy/helpers/download-worker-config";
 export * from "./deploy/helpers/durable";
+export * from "./deploy/helpers/durable-object-container-applications";
 export * from "./deploy/helpers/exports";
 export * from "./deploy/helpers/exports-reconciliation";
 export * from "./deploy/helpers/inconsistent-exports";

@@ -46,6 +46,10 @@ import {
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
 import {
+	deployDurableObjectContainerApplications,
+	prepareDurableObjectContainerApplications,
+} from "./helpers/durable-object-container-applications";
+import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
@@ -118,27 +122,6 @@ export type DeployCallbacks = {
 				manifest: { [filePath: string]: string } | undefined;
 				namespace: string | undefined;
 		  }>)
-		| undefined;
-	prepareDurableObjectContainerApplications:
-		| ((
-				config: Config,
-				args: {
-					dryRun: boolean;
-					scriptName: string;
-					dispatchNamespace?: string;
-				}
-		  ) => Promise<Record<string, Record<string, string>>>)
-		| undefined;
-	deployDurableObjectContainerApplications:
-		| ((
-				config: Config,
-				args: {
-					versionId: string;
-					accountId: string;
-					scriptName: string;
-					dispatchNamespace?: string;
-				}
-		  ) => Promise<void>)
 		| undefined;
 	analyseBundle:
 		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
@@ -251,7 +234,8 @@ async function deployWorker(
 	const skipContainerChanges = props.containersRollout === "none";
 	const preparedContainerImages = skipContainerChanges
 		? undefined
-		: await callbacks.prepareDurableObjectContainerApplications?.(config, {
+		: await prepareDurableObjectContainerApplications(config, {
+				accountId,
 				dryRun: Boolean(isDryRun),
 				scriptName,
 				dispatchNamespace: props.dispatchNamespace,
@@ -808,12 +792,11 @@ async function deployWorker(
 	}
 	if (
 		!skipContainerChanges &&
-		getDurableObjectContainerApps(config.containers).length > 0 &&
-		callbacks.deployDurableObjectContainerApplications
+		getDurableObjectContainerApps(config.containers).length > 0
 	) {
 		assert(versionId && accountId);
 		try {
-			await callbacks.deployDurableObjectContainerApplications(config, {
+			await deployDurableObjectContainerApplications(config, {
 				versionId,
 				accountId,
 				scriptName,

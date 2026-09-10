@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
@@ -13,21 +14,14 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	CONTAINER_IMAGES_BINDING,
-	getDurableObjectContainerApps,
 	getDockerPath,
-	isNonInteractiveOrCI,
+	getDurableObjectClassNameToUseSQLiteMap,
+	getDurableObjectContainerApps,
 	UserError,
+	validateDurableObjectContainerApplications,
 } from "@cloudflare/workers-utils";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
-import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
-import { logger } from "../logger";
-import { getOrSelectAccountId } from "../user";
-import { validateDurableObjectContainerApplications } from "./config";
-import { containersScope } from ".";
-import type { ApiVersion } from "../versions/types";
+import { logger } from "../../shared/context";
+import type { ApiVersion } from "./versions-types";
 import type { CreateDurableObjectApplicationRequest } from "@cloudflare/containers-shared";
 import type {
 	Config,
@@ -46,12 +40,13 @@ type DeployDurableObjectContainerApplicationsArgs = {
 };
 
 type PrepareDurableObjectContainerApplicationsArgs = {
+	accountId: string | undefined;
 	dispatchNamespace?: string;
 	dryRun: boolean;
 	scriptName: string;
 };
 
-type DurableObjectContainerApplication = Pick<
+export type DurableObjectContainerApplication = Pick<
 	DurableObjectContainerApp,
 	"class_name" | "name"
 >;
@@ -78,6 +73,15 @@ function toCreateApplicationRequest(
 		scheduling_policy: SchedulingPolicy.DURABLE_OBJECT,
 		durable_objects: { namespace_id: namespaceId },
 	};
+}
+
+export async function createDurableObjectContainerApplication(
+	application: DurableObjectContainerApplication,
+	namespaceId: string
+): Promise<void> {
+	await ApplicationsService.createApplication(
+		toCreateApplicationRequest(application, namespaceId)
+	);
 }
 
 function getContainerImageClasses(
@@ -210,16 +214,7 @@ export function getVersionedDurableObjectContainerApplications(
 	});
 }
 
-async function createApplication(
-	application: DurableObjectContainerApplication,
-	namespaceId: string
-): Promise<void> {
-	await ApplicationsService.createApplication(
-		toCreateApplicationRequest(application, namespaceId)
-	);
-}
-
-/** Resolve every versioned application’s namespace without creating applications. */
+/** Resolve every versioned application's namespace without creating applications. */
 export async function resolveVersionedDurableObjectContainerApplications(
 	config: Config,
 	{
@@ -285,11 +280,13 @@ export async function deployVersionedDurableObjectContainerApplications(
 		config,
 		args
 	);
-	await fillOpenAPIConfiguration(config, containersScope);
 	for (const application of applications) {
 		// The strict resolution above checks the whole set before any mutation.
 		if (application.namespaceId !== undefined) {
-			await createApplication(application, application.namespaceId);
+			await createDurableObjectContainerApplication(
+				application,
+				application.namespaceId
+			);
 		}
 	}
 }
@@ -312,17 +309,15 @@ async function buildOrResolveImage(
 	imageName: string,
 	imageConfig: DurableObjectContainerImage,
 	scriptName: string,
-	dryRun: boolean
+	dryRun: boolean,
+	accountId: string | undefined
 ): Promise<string> {
 	if (isRegistryImage(imageConfig)) {
 		if (dryRun) {
 			return imageConfig.image;
 		}
-		return resolveImageName(
-			await getOrSelectAccountId(config),
-			imageConfig.image,
-			config
-		);
+		assert(accountId, "Expected accountId to resolve container image name");
+		return resolveImageName(accountId, imageConfig.image, config);
 	}
 
 	const baseDir = config.configPath
@@ -390,6 +385,7 @@ async function waitForImagePreparation(image: string): Promise<void> {
 export async function prepareDurableObjectContainerApplications(
 	config: Config,
 	{
+		accountId,
 		dryRun,
 		scriptName,
 		dispatchNamespace,
@@ -397,6 +393,7 @@ export async function prepareDurableObjectContainerApplications(
 ): Promise<PreparedContainerImages> {
 	validateDurableObjectContainerApplications(config);
 	if (!dryRun) {
+		assert(accountId, "Expected accountId to prepare container applications");
 		const storageByClass = getDurableObjectClassNameToUseSQLiteMap(
 			config.migrations,
 			config.exports
@@ -407,10 +404,7 @@ export async function prepareDurableObjectContainerApplications(
 			(container) => storageByClass.get(container.class_name) === undefined
 		);
 		if (unknownStorage.length > 0) {
-			const namespaces = await listDurableObjects(
-				config,
-				await getOrSelectAccountId(config)
-			);
+			const namespaces = await listDurableObjects(config, accountId);
 			for (const container of unknownStorage) {
 				if (
 					namespaces.some(
@@ -441,10 +435,6 @@ export async function prepareDurableObjectContainerApplications(
 		return {};
 	}
 
-	if (!dryRun) {
-		await fillOpenAPIConfiguration(config, containersScope);
-	}
-
 	const imagesByClass: [string, Record<string, string>][] = [];
 	const preparedImages = new Map<string, string>();
 	for (const container of containers) {
@@ -466,20 +456,16 @@ export async function prepareDurableObjectContainerApplications(
 					imageName,
 					imageConfig,
 					scriptName,
-					dryRun
+					dryRun,
+					accountId
 				);
 
 				if (!dryRun) {
 					const imageLine = `  ${image}`;
-					const message = `Preparing ${imageName} for Cloudflare Containers\n${imageLine}`;
-					if (isNonInteractiveOrCI()) {
-						updateStatus(message);
-						await waitForImagePreparation(image);
-					} else {
-						await promiseSpinner(waitForImagePreparation(image), {
-							message,
-						});
-					}
+					updateStatus(
+						`Preparing ${imageName} for Cloudflare Containers\n${imageLine}`
+					);
+					await waitForImagePreparation(image);
 					updateStatus(`${imageName} is ready to run\n${imageLine}`);
 				}
 				preparedImages.set(source, image);
@@ -507,7 +493,6 @@ export async function deployDurableObjectContainerApplications(
 		return;
 	}
 
-	await fillOpenAPIConfiguration(config, containersScope);
 	const resolveNamespaceId = createDurableObjectNamespaceResolver(config, {
 		versionId,
 		accountId,
@@ -524,6 +509,6 @@ export async function deployDurableObjectContainerApplications(
 		});
 	}
 	for (const { container, namespaceId } of applications) {
-		await createApplication(container, namespaceId);
+		await createDurableObjectContainerApplication(container, namespaceId);
 	}
 }

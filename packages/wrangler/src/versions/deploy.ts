@@ -9,17 +9,17 @@ import {
 } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	type ApiVersion,
+	deployVersionedDurableObjectContainerApplications,
+	getVersionedDurableObjectContainerApplications,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
 	printVersions,
 	renderInconsistentExportsAcrossVersionsError,
+	resolveVersionedDurableObjectContainerApplications,
 } from "@cloudflare/deploy-helpers";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
-import {
-	deployVersionedDurableObjectContainerApplications,
-	getVersionedDurableObjectContainerApplications,
-	resolveVersionedDurableObjectContainerApplications,
-} from "../containers/durable-object-applications";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import * as metrics from "../metrics";
@@ -276,6 +276,9 @@ export const versionsDeployCommand = createCommand({
 		// As with a normal deploy, applications are created after the Worker
 		// deployment succeeds so a rejected deployment cannot leak applications.
 		try {
+			if (resolvedContainerApplications.length > 0) {
+				await fillOpenAPIConfiguration(config, containersScope);
+			}
 			await deployVersionedDurableObjectContainerApplications(config, {
 				applications: resolvedContainerApplications,
 				accountId,
