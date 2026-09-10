@@ -20,7 +20,6 @@ export const setupProjectDirectory = (ctx: C3Context) => {
 
 	const directory = dirname(path);
 
-	// Creating a Windows drive root (`E:\`) throws EPERM. Skip if it already exists.
 	if (!existsSync(directory)) {
 		mkdirSync(directory, { recursive: true });
 	}
