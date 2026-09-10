@@ -10,6 +10,7 @@ import {
 	loadWorker,
 	mockEmailRoutingDetail,
 	mockEmptyEmailSending,
+	WORKERS_ROUTE,
 } from "./utils";
 
 afterEach(async () => {
@@ -503,7 +504,7 @@ describe("email routing", () => {
 		});
 		await page.goto(
 			new URL(
-				"/cdn-cgi/local/explorer/email/routing?worker=worker-1",
+				"/cdn-cgi/local/explorer/email/routing?worker=worker-2",
 				viteUrl
 			).toString()
 		);
@@ -533,6 +534,10 @@ describe("email routing", () => {
 			.waitFor();
 		await expect.poll(() => routingMock.listRequestCount()).toBeGreaterThan(1);
 
+		await page.unroute(WORKERS_ROUTE);
+		await page.route(WORKERS_ROUTE, async (route) => {
+			await fulfillApiResult(route, [{ isSelf: true, name: "worker-1" }]);
+		});
 		await row.click();
 		await expect
 			.poll(() => new URL(page.url()).pathname)
@@ -567,7 +572,7 @@ describe("email routing", () => {
 					subject: "Older peer capture",
 					text: "Legacy body",
 					to: "recipient@example.com",
-					worker: "worker-1",
+					worker: "worker-2",
 				});
 				return;
 			}
@@ -588,7 +593,7 @@ describe("email routing", () => {
 						receivedAt: "2026-08-27T00:00:00.000Z",
 						subject: "Partial capture",
 						to: "recipient@example.com",
-						worker: "worker-1",
+						worker: "worker-2",
 					},
 					{
 						attachments: [],
@@ -599,7 +604,7 @@ describe("email routing", () => {
 						receivedAt: "2026-08-26T00:00:00.000Z",
 						subject: "Older peer capture",
 						to: "recipient@example.com",
-						worker: "worker-1",
+						worker: "worker-2",
 					},
 				],
 				{
@@ -611,10 +616,13 @@ describe("email routing", () => {
 			draftRequests++;
 			await fulfillApiResult(route, null);
 		});
-		await loadWorker();
+		await loadWorker([
+			{ isSelf: true, name: "worker-1" },
+			{ isSelf: false, name: "worker-2" },
+		]);
 		await page.goto(
 			new URL(
-				"/cdn-cgi/local/explorer/email/routing?worker=worker-1",
+				"/cdn-cgi/local/explorer/email/routing?worker=worker-2",
 				viteUrl
 			).toString()
 		);
@@ -636,12 +644,16 @@ describe("email routing", () => {
 		const legacyRow = page.getByRole("button", {
 			name: /Older peer capture/,
 		});
+		await page.unroute(WORKERS_ROUTE);
+		await page.route(WORKERS_ROUTE, async (route) => {
+			await fulfillApiResult(route, [{ isSelf: true, name: "worker-1" }]);
+		});
 		await legacyRow.click();
 		await expect
 			.poll(() => legacyDetailQuery?.get("email_id"))
 			.toBe("<legacy@example.com>");
 		expect(legacyDetailQuery?.get("capture_id")).toBeNull();
-		expect(legacyDetailQuery?.get("worker")).toBe("worker-1");
+		expect(legacyDetailQuery?.get("worker")).toBe("worker-2");
 		await page.getByRole("button", { name: "Content" }).click();
 		await page.getByText("Legacy body", { exact: true }).waitFor();
 	});

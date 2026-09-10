@@ -1,6 +1,6 @@
 import { EnvelopeSimpleIcon } from "@phosphor-icons/react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { emailListRouting, localExplorerListWorkers } from "../../../api";
+import { emailListRouting } from "../../../api";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { EmailContent } from "../../../components/email/EmailContent";
 import {
@@ -14,7 +14,6 @@ import {
 import { ReceivedEmailHeaders } from "../../../components/email/ReceivedEmailHeaders";
 import { NotFound } from "../../../components/NotFound";
 import { ResourceError } from "../../../components/ResourceError";
-import { getSelectedWorker } from "../../../components/WorkerSelector";
 import { ConstantsCard } from "../shared/ConstantsCard";
 import { InfoFlow } from "../shared/InfoFlow";
 import { InfoLoading } from "../shared/InfoLoading";
@@ -38,18 +37,11 @@ export const Route = createFileRoute("/email/routing/$captureId")({
 		worker: search.worker,
 	}),
 	loader: async ({ params, deps }) => {
-		const workersResponse = await localExplorerListWorkers();
-		const worker = getSelectedWorker(
-			workersResponse.data?.result ?? [],
-			deps.worker === undefined
-				? ""
-				: `?worker=${encodeURIComponent(deps.worker)}`
-		)?.name;
 		const response = await emailListRouting({
 			query:
 				deps.lookup === "message-id"
-					? { email_id: params.captureId, worker }
-					: { capture_id: params.captureId, worker: worker ?? "" },
+					? { email_id: params.captureId, worker: deps.worker }
+					: { capture_id: params.captureId, worker: deps.worker ?? "" },
 			throwOnError: false,
 		});
 		if (response.response?.status === 404) {

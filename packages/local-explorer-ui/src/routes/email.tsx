@@ -48,17 +48,13 @@ function EmailLayout(): JSX.Element {
 		)?.name ?? "";
 
 	useEffect(() => {
-		if (selectedWorker === "" || search.worker === selectedWorker) {
+		// Detail URLs identify a specific Worker-owned resource. If that Worker is
+		// no longer visible, preserve the requested identity so the detail API can
+		// report it as missing or unavailable instead of targeting the default Worker.
+		if (routingDetailParams) {
 			return;
 		}
-
-		if (routingDetailParams) {
-			void navigate({
-				params: routingDetailParams,
-				replace: true,
-				search: (previous) => ({ ...previous, worker: selectedWorker }),
-				to: "/email/routing/$captureId",
-			});
+		if (selectedWorker === "" || search.worker === selectedWorker) {
 			return;
 		}
 
