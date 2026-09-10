@@ -680,9 +680,8 @@ test("dumpSql exports Infinity and -Infinity as valid, re-importable SQL literal
 	useDispose(mirrorMF);
 	const mirrorDb = await mirrorMF.getD1Database("test");
 
-	// exec(dump) must not throw — this is the core guarantee of the fix.
-	// (If the dump contained bare `Infinity`/`-Infinity` identifiers, SQLite
-	// would reject them at parse time and exec would throw.)
+	// exec(dump) must not throw, If the dump contained the bare `Infinity`/`-Infinity`
+	// identifiers, SQLite would reject them at parse time and exec would throw
 	await mirrorDb.exec(dump);
 
 	// Assert the exported SQL actually contains the correctly converted value for each row
