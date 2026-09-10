@@ -1,0 +1,57 @@
+.changeset/durable-object-application-settings.md
+  s_23cc57bf2d1f01::t_be354d27462b80 1-11
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_69574ad3cac0e0::t_e80012257d9de8 169,869
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_296d2208c54177::t_ac9dcda62f5e04 476
+packages/workers-utils/src/config/containers.ts
+  s_23cc57bf2d1f01::t_ac8795d2eb688a 12-14
+packages/workers-utils/src/config/environment.ts
+  s_23cc57bf2d1f01::t_bf9c14df46adef 209-211,219-220
+packages/workers-utils/src/config/validation.ts
+  s_69574ad3cac0e0::t_ed3e8ba1f77c49 3752-3791,3881-3901,3904-3911,3915
+packages/workers-utils/tests/config/durable-object-container-settings.test.ts
+  s_296d2208c54177::t_f5879baa07d030 1-68
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_23cc57bf2d1f01::t_e4a73be85c16b7 151,356,368,380-381,383-392,394,396-403,414-423,426-432,471-472,502-505,4532-4541,4920-4929
+packages/wrangler/src/__tests__/containers/durable-object-applications.test.ts
+  s_23cc57bf2d1f01::t_7f113153e33b19 4,7,17,60-295
+packages/wrangler/src/__tests__/versions/versions.deploy.test.ts
+  s_23cc57bf2d1f01::t_ea34e63d254b07 242-251,457-548,550-551,553-554,556,558-560,564-565,567-569,571-583
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_23cc57bf2d1f01::t_704aee782ca3de 160-169,2404-2416,2419-2446,2449-2450,2453-2483,2485-2489,2491-2494,2496-2509,2511,2513-2520,2522-2553
+packages/wrangler/src/containers/durable-object-applications.ts
+  s_23cc57bf2d1f01::t_67ec350c743efd 3,7,35-38,53-54,75-109,118-120,125,208-214,266,268-270,272-321,374-379,399,497,604-610,618,643-648
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e33ad622b3b86f59b8a9d60bbdfac36113a5e794",
+  "prompts": {},
+  "sessions": {
+    "s_23cc57bf2d1f01": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0722b-2bac-7980-85e3-fd36689799d5",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    },
+    "s_296d2208c54177": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0895e-c950-7290-824b-e1d403fde9b9",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    },
+    "s_69574ad3cac0e0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0881c-4b9a-70a1-957d-4a2d299d0ad2",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}
