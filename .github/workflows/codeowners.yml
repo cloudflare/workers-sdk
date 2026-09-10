@@ -10,7 +10,16 @@ name: "Code Owners"
 #   - The action only reads config files and calls the GitHub API
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] checks base branch ownership rules and fetches PR head for diff computation without executing PR code
-    types: [opened, edited, reopened, synchronize, ready_for_review, labeled, unlabeled]
+    types:
+      [
+        opened,
+        edited,
+        reopened,
+        synchronize,
+        ready_for_review,
+        labeled,
+        unlabeled,
+      ]
 
 concurrency:
   group: codeowners-${{ github.event.pull_request.number }}
