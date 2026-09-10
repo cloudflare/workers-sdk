@@ -542,11 +542,35 @@ describe("email routing", () => {
 			.toBe("worker-2");
 	});
 
-	test("keeps unavailable editing focusable and older-peer rows inert", async ({
+	test("keeps unavailable editing focusable and uses compatibility detail lookup for older-peer rows", async ({
 		expect,
 	}) => {
 		let draftRequests = 0;
+		let legacyDetailQuery: URLSearchParams | undefined;
 		await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
+			const search = new URL(route.request().url()).searchParams;
+			if (search.has("email_id")) {
+				legacyDetailQuery = search;
+				await fulfillApiResult(route, {
+					attachments: [],
+					events: [],
+					forwards: [],
+					from: "legacy@example.com",
+					headers: {},
+					messageId: "<legacy@example.com>",
+					outcome: "ok",
+					raw: "Content-Type: text/plain\r\n\r\nLegacy body",
+					rawBase64: btoa("Content-Type: text/plain\r\n\r\nLegacy body"),
+					rawSize: 42,
+					receivedAt: "2026-08-26T00:00:00.000Z",
+					replies: [],
+					subject: "Older peer capture",
+					text: "Legacy body",
+					to: "recipient@example.com",
+					worker: "worker-1",
+				});
+				return;
+			}
 			await fulfillApiResult(
 				route,
 				[
@@ -609,10 +633,17 @@ describe("email routing", () => {
 			.waitFor();
 		await editButton.press("Enter");
 		expect(draftRequests).toBe(0);
-		expect(
-			await page.getByRole("button", { name: /Older peer capture/ }).count()
-		).toBe(0);
-		expect(await page.getByText("Older peer capture").count()).toBe(1);
+		const legacyRow = page.getByRole("button", {
+			name: /Older peer capture/,
+		});
+		await legacyRow.click();
+		await expect
+			.poll(() => legacyDetailQuery?.get("email_id"))
+			.toBe("<legacy@example.com>");
+		expect(legacyDetailQuery?.get("capture_id")).toBeNull();
+		expect(legacyDetailQuery?.get("worker")).toBe("worker-1");
+		await page.getByRole("button", { name: "Content" }).click();
+		await page.getByText("Legacy body", { exact: true }).waitFor();
 	});
 
 	test("reports composer validation errors accessibly and rejects managed headers", async ({
