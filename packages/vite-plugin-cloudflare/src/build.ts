@@ -172,7 +172,8 @@ async function fallbackBuild(
 	fs.unlinkSync(fallbackEntryPath);
 }
 
-function loadViteManifest(directory: string) {
+/** Read the Vite manifest emitted for a completed environment build. */
+export function loadViteManifest(directory: string): vite.Manifest {
 	const contents = fs.readFileSync(
 		path.resolve(directory, ".vite", "manifest.json"),
 		"utf-8"

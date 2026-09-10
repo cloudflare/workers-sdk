@@ -22,6 +22,11 @@ describe("Build Output Specification", () => {
 		expect(response).toBe("hello from text binding");
 	});
 
+	test("serves the additional module", async ({ expect }) => {
+		const response = await getTextResponse("/additional-module");
+		expect(response).toBe("hello from additional module\n");
+	});
+
 	test("serves static assets", async ({ expect }) => {
 		const response = await getTextResponse("/static.txt");
 		expect(response.trim()).toBe("static asset");
@@ -44,6 +49,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 			"bundle",
 			config.manifest.mainModule
 		);
+		expect(config.manifest.mainModule).toMatch(/^chunks\/index-[\w-]+\.mjs$/);
 		expect(fs.existsSync(entryPath)).toBe(true);
 	});
 
@@ -63,7 +69,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(config).not.toHaveProperty("entrypoint");
 		expect(typeof config.manifest).toBe("object");
 		const manifest = config.manifest as Record<string, unknown>;
-		expect(manifest.type).toBe("complete");
+		expect(manifest.type).toBe("partial");
 		expect(typeof manifest.mainModule).toBe("string");
 		expect(typeof manifest.modules).toBe("object");
 	});
@@ -83,7 +89,7 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		}
 	});
 
-	test("includes source maps in `manifest.modules` with type `sourcemap`", ({
+	test("only includes explicitly typed additional modules in the manifest", ({
 		expect,
 	}) => {
 		const configPath = path.join(getBuildOutputDir(), "config.json");
@@ -93,10 +99,19 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 				modules: Record<string, { type: string }>;
 			};
 		};
+		const additionalModule = Object.entries(config.manifest.modules).find(
+			([moduleName]) =>
+				moduleName.includes("additional-module-") && moduleName.endsWith(".txt")
+		);
+		expect(additionalModule).toBeDefined();
+		expect(additionalModule?.[1]).toEqual({ type: "text" });
+		expect(config.manifest.modules).not.toHaveProperty(
+			config.manifest.mainModule
+		);
+		expect(Object.keys(config.manifest.modules)).toHaveLength(1);
+
 		const sourceMapName = `${config.manifest.mainModule}.map`;
-		expect(config.manifest.modules[sourceMapName]).toEqual({
-			type: "sourcemap",
-		});
+		expect(config.manifest.modules).not.toHaveProperty(sourceMapName);
 		const sourceMapPath = path.join(
 			getBuildOutputDir(),
 			"bundle",
