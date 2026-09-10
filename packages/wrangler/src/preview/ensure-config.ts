@@ -16,14 +16,15 @@ import { logger } from "../logger";
 import {
 	convertPreviewBaseToPreviewsConfig,
 	convertProductionToPreviewsConfig,
+	REPLACE_ME,
 } from "./preview-config";
+import type { ProposedPreviewsConfig } from "./preview-config";
 import type { PreviewBaseConfig } from "@cloudflare/deploy-helpers";
 import type {
 	Config,
 	PreviewsConfig,
 	RawConfig,
 } from "@cloudflare/workers-utils";
-import type { ProposedPreviewsConfig } from "./preview-config";
 
 export type EnsurePreviewsConfigArgs = {
 	workerName?: string;
@@ -40,6 +41,8 @@ const ADD_PREVIEW_BASE_CONFIG_PROMPT =
 	"Would you like Wrangler to add the Preview Base configuration to your config file?";
 const MISSING_PREVIEWS_CONFIG_MESSAGE =
 	"Your Wrangler configuration is missing a `previews` block. Add the following to your configuration file:";
+const GENERATED_PLACEHOLDER_MESSAGE =
+	"Your `previews` configuration contains the generated placeholder `<REPLACE_ME>`. Replace it with a Preview-safe value before deploying.";
 
 function hasConfiguredValues(value: unknown): boolean {
 	if (value === undefined) {
@@ -54,10 +57,20 @@ function hasConfiguredValues(value: unknown): boolean {
 	return true;
 }
 
-function writePreviewsConfig(
-	config: Config,
-	previews: PreviewsConfig
-): void {
+function containsGeneratedPlaceholder(value: unknown): boolean {
+	if (value === REPLACE_ME) {
+		return true;
+	}
+	if (Array.isArray(value)) {
+		return value.some(containsGeneratedPlaceholder);
+	}
+	if (typeof value === "object" && value !== null) {
+		return Object.values(value).some(containsGeneratedPlaceholder);
+	}
+	return false;
+}
+
+function writePreviewsConfig(config: Config, previews: PreviewsConfig): void {
 	const configPath = config.userConfigPath;
 	if (configPath === undefined) {
 		throw new Error("Cannot write Preview configuration without a user config");
@@ -76,6 +89,11 @@ export async function ensurePreviewsConfig(
 	config: Config
 ): Promise<Config> {
 	if (config.previews !== undefined) {
+		if (containsGeneratedPlaceholder(config.previews)) {
+			throw new UserError(GENERATED_PLACEHOLDER_MESSAGE, {
+				telemetryMessage: "preview command previews configuration placeholder",
+			});
+		}
 		return config;
 	}
 
@@ -138,13 +156,18 @@ export async function ensurePreviewsConfig(
 		);
 	}
 
-	if (!hasConfiguredValues(baseConversion.config)) {
+	if (
+		!hasConfiguredValues(baseConversion.config) &&
+		baseConversion.omittedBindings.length > 0
+	) {
 		return config;
 	}
 
+	const format = configFormat(config.userConfigPath);
 	const canWriteConfig =
 		config.userConfigPath !== undefined &&
-		JSON_CONFIG_FORMATS.includes(configFormat(config.userConfigPath));
+		config.userConfigPath === config.configPath &&
+		(format === "toml" || JSON_CONFIG_FORMATS.includes(format));
 	if (!canWriteConfig || args.json || isNonInteractiveOrCI()) {
 		throw new UserError(
 			`${MISSING_PREVIEWS_CONFIG_MESSAGE}\n\n${formatConfigSnippet(

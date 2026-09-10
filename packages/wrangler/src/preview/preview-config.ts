@@ -114,27 +114,29 @@ export function convertTopLevelSettings(
 				if (placement === undefined) {
 					break;
 				}
-				if ("hint" in placement) {
+				if (placement.mode === "smart") {
 					converted.placement = {
 						mode: placement.mode,
 						...(placement.hint !== undefined && {
 							hint: usePlaceholderValue ? REPLACE_ME : placement.hint,
 						}),
 					};
-				} else {
+				} else if (placement.mode === "off") {
+					converted.placement = { mode: placement.mode };
+				} else if ("region" in placement) {
 					converted.placement = {
 						mode: placement.mode,
-						...(placement.region !== undefined && {
-							region: usePlaceholderValue ? REPLACE_ME : placement.region,
-						}),
-						...(placement.host !== undefined && {
-							host: usePlaceholderValue ? REPLACE_ME : placement.host,
-						}),
-						...(placement.hostname !== undefined && {
-							hostname: usePlaceholderValue
-								? REPLACE_ME
-								: placement.hostname,
-						}),
+						region: usePlaceholderValue ? REPLACE_ME : placement.region,
+					};
+				} else if ("host" in placement) {
+					converted.placement = {
+						mode: placement.mode,
+						host: usePlaceholderValue ? REPLACE_ME : placement.host,
+					};
+				} else if ("hostname" in placement) {
+					converted.placement = {
+						mode: placement.mode,
+						hostname: usePlaceholderValue ? REPLACE_ME : placement.hostname,
 					};
 				}
 				break;
@@ -218,9 +220,7 @@ export function convertBindings(
 					config.set(field, Object.fromEntries(merged));
 					continue;
 				}
-				throw new Error(
-					`Preview ${field} binding is defined more than once`
-				);
+				throw new Error(`Preview ${field} binding is defined more than once`);
 			}
 		}
 	}
@@ -267,10 +267,12 @@ export function convertBinding(
 		case "browser":
 			return { browser: { binding: name } };
 		case "ai":
+			if (binding.staging !== undefined) {
+				return null;
+			}
 			return {
 				ai: {
 					binding: name,
-					...(binding.staging !== undefined && { staging: binding.staging }),
 				},
 			};
 		case "images":
@@ -338,9 +340,7 @@ export function convertBinding(
 					bindings: [
 						{
 							name,
-							class_name: usePlaceholderValue
-								? REPLACE_ME
-								: binding.class_name,
+							class_name: usePlaceholderValue ? REPLACE_ME : binding.class_name,
 							...(binding.script_name !== undefined && {
 								script_name: usePlaceholderValue
 									? REPLACE_ME
@@ -362,9 +362,7 @@ export function convertBinding(
 					{
 						binding: name,
 						name: usePlaceholderValue ? REPLACE_ME : binding.workflow_name,
-						class_name: usePlaceholderValue
-							? REPLACE_ME
-							: binding.class_name,
+						class_name: usePlaceholderValue ? REPLACE_ME : binding.class_name,
 						...(binding.script_name !== undefined && {
 							script_name: usePlaceholderValue
 								? REPLACE_ME
@@ -399,9 +397,7 @@ export function convertBinding(
 				r2_buckets: [
 					{
 						binding: name,
-						bucket_name: usePlaceholderValue
-							? REPLACE_ME
-							: binding.bucket_name,
+						bucket_name: usePlaceholderValue ? REPLACE_ME : binding.bucket_name,
 					},
 				],
 			};
@@ -427,9 +423,7 @@ export function convertBinding(
 				vectorize: [
 					{
 						binding: name,
-						index_name: usePlaceholderValue
-							? REPLACE_ME
-							: binding.index_name,
+						index_name: usePlaceholderValue ? REPLACE_ME : binding.index_name,
 					},
 				],
 			};
@@ -463,9 +457,7 @@ export function convertBinding(
 								: binding.environment,
 						}),
 						...(binding.entrypoint !== undefined && {
-							entrypoint: usePlaceholderValue
-								? REPLACE_ME
-								: binding.entrypoint,
+							entrypoint: usePlaceholderValue ? REPLACE_ME : binding.entrypoint,
 						}),
 					},
 				],
@@ -489,9 +481,7 @@ export function convertBinding(
 				dispatch_namespaces: [
 					{
 						binding: name,
-						namespace: usePlaceholderValue
-							? REPLACE_ME
-							: binding.namespace,
+						namespace: usePlaceholderValue ? REPLACE_ME : binding.namespace,
 						...(binding.outbound !== undefined && {
 							outbound: {
 								service: usePlaceholderValue
@@ -507,7 +497,7 @@ export function convertBinding(
 											{ length: binding.outbound.params?.length ?? 0 },
 											() => REPLACE_ME
 										)
-									: binding.outbound.params?.map(({ name }) => name) ?? [],
+									: (binding.outbound.params?.map(({ name }) => name) ?? []),
 							},
 						}),
 					},
@@ -553,9 +543,7 @@ export function convertBinding(
 					{
 						binding: name,
 						store_id: usePlaceholderValue ? REPLACE_ME : binding.store_id,
-						secret_name: usePlaceholderValue
-							? REPLACE_ME
-							: binding.secret_name,
+						secret_name: usePlaceholderValue ? REPLACE_ME : binding.secret_name,
 					},
 				],
 			};
@@ -567,9 +555,7 @@ export function convertBinding(
 				artifacts: [
 					{
 						binding: name,
-						namespace: usePlaceholderValue
-							? REPLACE_ME
-							: binding.namespace,
+						namespace: usePlaceholderValue ? REPLACE_ME : binding.namespace,
 					},
 				],
 			};
@@ -610,9 +596,7 @@ export function convertBinding(
 				vpc_services: [
 					{
 						binding: name,
-						service_id: usePlaceholderValue
-							? REPLACE_ME
-							: binding.service_id,
+						service_id: usePlaceholderValue ? REPLACE_ME : binding.service_id,
 					},
 				],
 			};
@@ -637,7 +621,19 @@ export function convertPreviewBaseToPreviewsConfig(
 	return {
 		...convertedBindings,
 		config: {
-			...convertTopLevelSettings(baseConfig, false),
+			...convertTopLevelSettings(
+				{
+					observability: baseConfig.observability,
+					logpush: baseConfig.logpush,
+					limits: baseConfig.limits,
+					placement: baseConfig.placement,
+					cache: baseConfig.cache,
+					tail_consumers: baseConfig.tail_consumers?.map(({ name }) => ({
+						service: name,
+					})),
+				},
+				false
+			),
 			...convertedBindings.config,
 		},
 	};
@@ -654,7 +650,20 @@ export function convertProductionToPreviewsConfig(
 	return {
 		...convertedBindings,
 		config: {
-			...convertTopLevelSettings(config, true),
+			...convertTopLevelSettings(
+				{
+					define: config.define,
+					observability: config.observability,
+					logpush: config.logpush,
+					limits: config.limits,
+					placement: config.placement,
+					cache: config.cache,
+					containers: config.containers,
+					tail_consumers: config.tail_consumers,
+					streaming_tail_consumers: config.streaming_tail_consumers,
+				},
+				true
+			),
 			...convertedBindings.config,
 		},
 	};
