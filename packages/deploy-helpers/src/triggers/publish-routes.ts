@@ -66,7 +66,9 @@ export function renderRoute(route: Route): string {
 		if (isCustomDomain) {
 			const flags: string[] = [];
 			if ("enabled" in route && route.enabled !== undefined) {
-				flags.push(route.enabled ? "enabled" : "disabled");
+				flags.push(
+					route.enabled ? "production: enabled" : "production: disabled"
+				);
 			}
 			if ("previews_enabled" in route && route.previews_enabled !== undefined) {
 				flags.push(

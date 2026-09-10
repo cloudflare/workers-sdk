@@ -503,7 +503,7 @@ describe("deploy", () => {
 				});
 				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
-				expect(std.out).toContain("[enabled, previews: enabled]");
+				expect(std.out).toContain("[production: enabled, previews: enabled]");
 				expect(std.out).toContain(PREVIEW_DOMAIN_PROVISIONING_NOTE);
 				expect(
 					std.out.indexOf(PREVIEW_DOMAIN_PROVISIONING_NOTE)
