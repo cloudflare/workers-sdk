@@ -685,9 +685,7 @@ test("dumpSql exports Infinity and -Infinity as valid, re-importable SQL literal
 	// would reject them at parse time and exec would throw.)
 	await mirrorDb.exec(dump);
 
-	// Assert the exported SQL actually contains the correctly-signed literal
-	// for each row — this is the real guarantee of the fix, checked before
-	// the D1 JS binding's Infinity->null normalisation can hide it.
+	// Assert the exported SQL actually contains the correctly converted value for each row
 	expect(dump).toMatch(
 		/INSERT INTO "inf_test" \("id","r"\) VALUES\(1,9e999\);/
 	);
