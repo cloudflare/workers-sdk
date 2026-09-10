@@ -29,8 +29,6 @@ jobs:
         vite: ["vite-8"]
         include:
           - os: ubuntu-latest
-            vite: "vite-6"
-          - os: ubuntu-latest
             vite: "vite-7"
     runs-on: ${{ matrix.os }}
     steps:
@@ -89,10 +87,6 @@ jobs:
               }
               console.log(`VITE_PLUGIN_BUILD_HASH=${task.hash}`);
             ' >> "$GITHUB_ENV"
-      - name: Downgrade to Vite 6
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
-        run: |
-          pnpm update -r --no-save vite@^6.1.0
       - name: Downgrade to Vite 7
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-7'
         run: |
