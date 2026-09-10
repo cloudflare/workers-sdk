@@ -339,6 +339,16 @@ export async function resolvePluginConfig(
 		loadEnv(envDir, localEnvMode),
 		loadDevVars(envDir, localEnvMode),
 	]);
+	// TODO: Replace this process-global compatibility bridge by explicitly
+	// passing typed Cloudflare tool settings to the services that consume them.
+	Object.assign(
+		process.env,
+		Object.fromEntries(
+			Object.entries(localEnv.values).filter(([name]) =>
+				name.startsWith("CLOUDFLARE_")
+			)
+		)
+	);
 	const types = normalizeTypes(pluginConfig.types);
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,

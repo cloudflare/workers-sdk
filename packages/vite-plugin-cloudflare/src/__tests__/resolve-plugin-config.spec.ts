@@ -489,7 +489,7 @@ describe("resolvePluginConfig", () => {
 		}
 	});
 
-	test("resolves Cloudflare environment files from Vite's envDir without mutating process.env", async ({
+	test("resolves Cloudflare environment files from Vite's envDir and exposes Cloudflare-prefixed values to process.env", async ({
 		expect,
 	}) => {
 		writeEntryConfig();
@@ -497,13 +497,14 @@ describe("resolvePluginConfig", () => {
 		fs.mkdirSync(envDir);
 		fs.writeFileSync(
 			path.join(envDir, ".env.production"),
-			"CLOUDFLARE_VITE_FORCE_LOCAL=true"
+			"CLOUDFLARE_VITE_FORCE_LOCAL=true\nCLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
 		fs.writeFileSync(
 			path.join(envDir, ".dev.vars.production"),
-			"SECRET=from-dev-vars"
+			"CLOUDFLARE_ACCOUNT_ID=from-dev-vars"
 		);
 		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
 		const result = await resolvePluginConfig(
 			{ remoteBindings: true },
@@ -513,8 +514,8 @@ describe("resolvePluginConfig", () => {
 
 		expect(result.remoteBindings).toBe(false);
 		expect(result.localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL).toBe("true");
-		expect(result.devVars?.SECRET).toBe("from-dev-vars");
-		expect(process.env.CLOUDFLARE_VITE_FORCE_LOCAL).toBeUndefined();
+		expect(result.devVars?.CLOUDFLARE_ACCOUNT_ID).toBe("from-dev-vars");
+		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("test-account-id");
 	});
 
 	test("honours Vite's envDir false option", async ({ expect }) => {
