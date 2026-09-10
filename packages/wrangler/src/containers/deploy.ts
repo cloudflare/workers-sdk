@@ -33,7 +33,7 @@ import {
 	getDockerPath,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
+import { fetchPagedListResult } from "../cfetch";
 import {
 	fillOpenAPIConfiguration,
 	promiseSpinner,
@@ -69,6 +69,7 @@ import type {
 } from "@cloudflare/workers-utils";
 
 type DeployContainersArgs = {
+	dispatchNamespace?: string;
 	versionId: string;
 	accountId: string;
 	scriptName: string;
@@ -76,21 +77,87 @@ type DeployContainersArgs = {
 
 type ObservabilityWriteTarget = "top-level" | "configuration";
 
+export function createDurableObjectNamespaceResolver(
+	config: Config,
+	{ versionId, accountId, scriptName, dispatchNamespace }: DeployContainersArgs
+): (className: string) => Promise<string> {
+	const boundDOs = new Set(
+		config.durable_objects.bindings.map((binding) => binding.class_name)
+	);
+	let maybeVersionInfo: ApiVersion | undefined;
+	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
+
+	return async (className: string) => {
+		// Worker version endpoints do not address dispatch scripts. Resolve those
+		// from the account list, including their dispatch namespace in the identity.
+		if (boundDOs.has(className) && dispatchNamespace === undefined) {
+			maybeVersionInfo ??= await fetchUploadedVersion(
+				config,
+				accountId,
+				scriptName,
+				versionId
+			);
+			type DurableObjectBinding = Extract<
+				WorkerMetadataBinding,
+				{ type: "durable_object_namespace" }
+			>;
+			const targetDurableObject = maybeVersionInfo.resources.bindings.find(
+				(binding): binding is DurableObjectBinding =>
+					binding.type === "durable_object_namespace" &&
+					binding.class_name === className &&
+					(binding.script_name === undefined ||
+						binding.script_name === scriptName) &&
+					binding.namespace_id !== undefined
+			);
+			if (!targetDurableObject?.namespace_id) {
+				throw new UserError(
+					"Could not deploy container configuration as durable object was not found in list of bindings",
+					{
+						telemetryMessage:
+							"containers deploy durable object binding missing",
+					}
+				);
+			}
+			return targetDurableObject.namespace_id;
+		}
+
+		maybeAllDurableObjects ??= await listDurableObjects(config, accountId);
+		const targetDurableObject = maybeAllDurableObjects.find(
+			(durableObject) =>
+				durableObject.class === className &&
+				durableObject.script === scriptName &&
+				durableObject.preview === undefined &&
+				durableObject.dispatch_namespace === dispatchNamespace
+		);
+		if (!targetDurableObject) {
+			throw new UserError(
+				"Could not deploy container configuration as durable object was not found in the account namespace list",
+				{
+					telemetryMessage:
+						"containers deploy durable object namespace missing",
+				}
+			);
+		}
+		return targetDurableObject.id;
+	};
+}
+
 export async function deployContainers(
 	config: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
-	{ versionId, accountId, scriptName }: DeployContainersArgs
+	{ versionId, accountId, scriptName, dispatchNamespace }: DeployContainersArgs
 ) {
 	await fillOpenAPIConfiguration(config, containersScope);
 
 	const pathToDocker = getDockerPath();
-	const boundDOs = new Set(
-		config.durable_objects.bindings.map((b) => b.class_name)
-	);
+	const resolveNamespaceId = createDurableObjectNamespaceResolver(config, {
+		versionId,
+		accountId,
+		scriptName,
+		dispatchNamespace,
+	});
 
 	let imageRef: ImageRef;
-	let maybeVersionInfo: ApiVersion | undefined;
-	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
 
 	for (const container of normalisedContainerConfig) {
 		if ("dockerfile" in container) {
@@ -106,68 +173,15 @@ export async function deployContainers(
 			imageRef = { newTag: container.image_uri };
 		}
 
-		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
-		if (boundDOs.has(container.class_name)) {
-			maybeVersionInfo ??= await fetchUploadedVersion(
-				config,
-				accountId,
-				scriptName,
-				versionId
-			);
-			type DurableObjectBinding = Extract<
-				WorkerMetadataBinding,
-				{ type: "durable_object_namespace" }
-			>;
-			const targetDurableObject = maybeVersionInfo.resources.bindings.find(
-				(binding): binding is DurableObjectBinding =>
-					binding.type === "durable_object_namespace" &&
-					binding.class_name === container.class_name &&
-					// DO cannot be defined in a different script to the container
-					(binding.script_name === undefined ||
-						binding.script_name === scriptName) &&
-					binding.namespace_id !== undefined
-			);
-			if (!targetDurableObject) {
-				throw new UserError(
-					"Could not deploy container application as durable object was not found in list of bindings",
-					{
-						telemetryMessage:
-							"containers deploy durable object binding missing",
-					}
-				);
-			}
-			assert(
-				targetDurableObject && targetDurableObject.namespace_id !== undefined
-			);
-
-			await apply(
-				{
-					imageRef,
-					durable_object_namespace_id: targetDurableObject.namespace_id,
-				},
-				container,
-				config
-			);
-		} else {
-			// The DO is unbound, so we need to list all DO namespaces to find the right one
-			// TODO: use the list API with filters when it exists
-			maybeAllDurableObjects ??= await listDurableObjects(config, accountId);
-			const targetDurableObject = maybeAllDurableObjects.find(
-				(durableObject) =>
-					durableObject.class === container.class_name &&
-					durableObject.script === scriptName
-			);
-
-			assert(targetDurableObject, "Durable Object not returned from list API");
-			await apply(
-				{
-					imageRef,
-					durable_object_namespace_id: targetDurableObject.id,
-				},
-				container,
-				config
-			);
-		}
+		const namespaceId = await resolveNamespaceId(container.class_name);
+		await apply(
+			{
+				imageRef,
+				durable_object_namespace_id: namespaceId,
+			},
+			container,
+			config
+		);
 	}
 }
 
@@ -199,7 +213,8 @@ export type DurableObjectNamespace = {
 	class: string;
 	name: string;
 	script: string;
-	useSqlite: boolean;
+	use_sqlite: boolean;
+	dispatch_namespace?: string;
 	/**
 	 * Set when the namespace belongs to a Worker preview. For those, `script` is
 	 * the parent Worker's name, so `preview.id` is what distinguishes a
@@ -211,7 +226,7 @@ export async function listDurableObjects(
 	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<DurableObjectNamespace[]> {
-	return await fetchResult<DurableObjectNamespace[]>(
+	return await fetchPagedListResult<DurableObjectNamespace>(
 		complianceConfig,
 		`/accounts/${accountId}/workers/durable_objects/namespaces`,
 		{},

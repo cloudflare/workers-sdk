@@ -21,6 +21,7 @@ import {
 	DeferredPromise,
 	fetch,
 	kCurrentWorker,
+	Log,
 	LogLevel,
 	Miniflare,
 	MiniflareCoreError,
@@ -429,9 +430,64 @@ test("Miniflare: can use localhost as host", async ({ expect }) => {
 	expect(await res.text()).toBe("body");
 });
 
+test("Miniflare: replaces loopback startup error handler with persistent error logging", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const createServer = vi.spyOn(http, "createServer");
+	onTestFinished(() => createServer.mockRestore());
+	const log = new Log(LogLevel.ERROR);
+	const logWithLevel = vi
+		.spyOn(log, "logWithLevel")
+		.mockImplementation(() => {});
+	onTestFinished(() => logWithLevel.mockRestore());
+
+	const mf = new Miniflare({
+		log,
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const ready = await mf.ready;
+	logWithLevel.mockClear();
+
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	for (const message of ["First loopback error", "Second loopback error"]) {
+		expect(() => server.emit("error", new Error(message))).not.toThrow();
+		expect(logWithLevel).toHaveBeenLastCalledWith(
+			LogLevel.ERROR,
+			expect.stringContaining(message)
+		);
+		expect(server.listenerCount("error")).toBe(1);
+	}
+	expect(logWithLevel).toHaveBeenCalledTimes(2);
+	expect(await mf.ready).toEqual(ready);
+	expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("ok");
+});
+
 test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	expect,
+	onTestFinished,
 }) => {
+	const createServer = vi.spyOn(http, "createServer");
+	const close = vi.spyOn(http.Server.prototype, "close");
+	onTestFinished(() => {
+		createServer.mockRestore();
+		close.mockRestore();
+	});
+
 	const mf = new Miniflare({
 		host: "192.0.2.1",
 		workers: [
@@ -439,7 +495,7 @@ test("Miniflare: rejects ready when loopback server cannot bind", async ({
 				config: {
 					type: "worker",
 					name: "",
-					compatibilityDate: "2025-05-01",
+					compatibilityDate: "2026-09-04",
 					manifest: singleModuleManifest(
 						`export default { fetch() { return new Response("ok"); } }`
 					),
@@ -449,6 +505,10 @@ test("Miniflare: rejects ready when loopback server cannot bind", async ({
 	});
 
 	await expect(mf.ready).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
+	expect(createServer).toHaveBeenCalledOnce();
+	const server = createServer.mock.results[0].value;
+	expect(close.mock.instances).toContain(server);
+	expect(server.listening).toBe(false);
 	await expect(mf.dispose()).rejects.toMatchObject({ code: "EADDRNOTAVAIL" });
 });
 
@@ -459,7 +519,7 @@ test("Miniflare: setOptions: recovers after loopback bind failure", async ({
 		config: {
 			type: "worker" as const,
 			name: "",
-			compatibilityDate: "2025-05-01",
+			compatibilityDate: "2026-09-04",
 			manifest: singleModuleManifest(
 				`export default { fetch() { return new Response("ok"); } }`
 			),
@@ -3576,7 +3636,6 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 	expect,
 	onTestFinished,
 }) => {
-	const port = await getPort();
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -3596,25 +3655,119 @@ test("Miniflare: connectHandlers deliver raw TCP connections to the Worker's con
 							},
 						};
 					`),
-					triggers: [{ type: "connect", protocol: "tcp", port }],
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
 				},
 			},
 		],
 	});
 	onTestFinished(() => mf.dispose());
-	await mf.ready;
 
-	const received = await new Promise<Buffer>((resolve, reject) => {
-		const socket = net.connect(port, "127.0.0.1", () => {
-			socket.write("hello");
-		});
-		const chunks: Buffer[] = [];
-		socket.on("data", (chunk) => chunks.push(chunk));
-		socket.on("end", () => resolve(Buffer.concat(chunks)));
-		socket.on("error", reject);
+	const socket = await mf.dispatchConnect();
+	socket.write("hello");
+	expect(await text(socket)).toBe("hello");
+});
+
+test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const firstPort = await getPort();
+	const secondPort = await getPort({ exclude: [firstPort] });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "a",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const writer = socket.writable.getWriter();
+								await writer.write(new TextEncoder().encode("a"));
+								await writer.close();
+							},
+						};
+					`),
+					triggers: [
+						{ type: "connect", protocol: "tcp", port: firstPort },
+						{ type: "connect", protocol: "tcp", port: secondPort },
+					],
+				},
+			},
+			{
+				config: {
+					type: "worker",
+					name: "b",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								const writer = socket.writable.getWriter();
+								await writer.write(new TextEncoder().encode("b"));
+								await writer.close();
+							},
+						};
+					`),
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose());
+
+	await expect(mf.dispatchConnect()).rejects.toThrow(
+		"Multiple TCP connect triggers configured for entrypoint worker; specify a port"
+	);
+	await expect(mf.dispatchConnect({ port: 123 })).rejects.toThrow(
+		"TCP connect trigger on port 123 not found for entrypoint worker"
+	);
+
+	const firstSocket = await mf.dispatchConnect({ port: firstPort });
+	expect(await text(firstSocket)).toBe("a");
+	const secondWorkerSocket = await mf.dispatchConnect({ workerName: "b" });
+	expect(await text(secondWorkerSocket)).toBe("b");
+});
+
+test("Miniflare: dispatchConnect sockets are closed on dispose", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					type: "worker",
+					name: "",
+					compatibilityDate: "2025-05-01",
+					compatibilityFlags: ["experimental"],
+					manifest: singleModuleManifest(`
+						export default {
+							async connect(socket) {
+								await socket.readable.pipeTo(socket.writable);
+							},
+						};
+					`),
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
+				},
+			},
+		],
+	});
+	let disposed = false;
+	onTestFinished(async () => {
+		if (!disposed) {
+			await mf.dispose();
+		}
 	});
 
-	expect(received.toString()).toBe("hello");
+	const socket = await mf.dispatchConnect();
+	const closed = once(socket, "close");
+	await mf.dispose();
+	disposed = true;
+	await closed;
+	expect(socket.destroyed).toBe(true);
 });
 
 test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {

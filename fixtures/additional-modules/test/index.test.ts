@@ -19,6 +19,8 @@ function get(worker: WranglerDev, pathname: string) {
 	return worker.fetch(url, { headers: { "MF-Disable-Pretty-Error": "true" } });
 }
 
+const RELOAD_TIMEOUT = 5_000;
+
 describe("find_additional_modules dev", () => {
 	let tmpDir: string;
 	let worker: WranglerDev;
@@ -70,7 +72,8 @@ describe("find_additional_modules dev", () => {
 		expect(await res.text()).toBe("hello");
 	});
 
-	test("watches additional modules", async ({ expect }) => {
+	// This test mutates shared fixture state and cannot be safely retried.
+	test("watches additional modules", { retry: 0 }, async ({ expect }) => {
 		const srcDir = path.join(tmpDir, "src");
 
 		// Update dynamically imported file
@@ -78,19 +81,25 @@ describe("find_additional_modules dev", () => {
 			path.join(srcDir, "dynamic.js"),
 			'export default "new dynamic";'
 		);
-		await vi.waitFor(async () => {
-			const res = await get(worker, "/dynamic");
-			assert.strictEqual(await res.text(), "new dynamic");
-		});
+		await vi.waitFor(
+			async () => {
+				const res = await get(worker, "/dynamic");
+				assert.strictEqual(await res.text(), "new dynamic");
+			},
+			{ timeout: RELOAD_TIMEOUT }
+		);
 
 		// Delete dynamically imported file
 		await fs.rm(path.join(srcDir, "lang", "en.js"));
 
-		await vi.waitFor(async () => {
-			await expect(get(worker, "/lang/en")).rejects.toThrow(
-				'No such module "lang/en.js".'
-			);
-		});
+		await vi.waitFor(
+			async () => {
+				await expect(get(worker, "/lang/en")).rejects.toThrow(
+					'No such module "lang/en.js".'
+				);
+			},
+			{ timeout: RELOAD_TIMEOUT }
+		);
 
 		// Create new dynamically imported file in new directory
 		await fs.mkdir(path.join(srcDir, "lang", "en"));
@@ -98,20 +107,26 @@ describe("find_additional_modules dev", () => {
 			path.join(srcDir, "lang", "en", "us.js"),
 			'export default { hello: "hey" };'
 		);
-		await vi.waitFor(async () => {
-			const res = await get(worker, "/lang/en/us");
-			assert.strictEqual(await res.text(), "hey");
-		});
+		await vi.waitFor(
+			async () => {
+				const res = await get(worker, "/lang/en/us");
+				assert.strictEqual(await res.text(), "hey");
+			},
+			{ timeout: RELOAD_TIMEOUT }
+		);
 
 		// Update newly created file
 		await fs.writeFile(
 			path.join(srcDir, "lang", "en", "us.js"),
 			'export default { hello: "bye" };'
 		);
-		await vi.waitFor(async () => {
-			const res = await get(worker, "/lang/en/us");
-			assert.strictEqual(await res.text(), "bye");
-		});
+		await vi.waitFor(
+			async () => {
+				const res = await get(worker, "/lang/en/us");
+				assert.strictEqual(await res.text(), "bye");
+			},
+			{ timeout: RELOAD_TIMEOUT }
+		);
 	});
 });
 

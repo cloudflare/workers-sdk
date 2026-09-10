@@ -43,7 +43,10 @@ export * from "./deploy/helpers/inconsistent-exports";
 export * from "./deploy/helpers/binding-depends-on-export";
 export * from "./deploy/helpers/match-tag";
 export * from "./deploy/helpers/check-remote-secrets-override";
-export * from "./deploy/helpers/confirm-latest-deployment-overwrite";
+export {
+	confirmLatestDeploymentOverwrite,
+	printVersions,
+} from "./deploy/helpers/confirm-latest-deployment-overwrite";
 export * from "./deploy/helpers/assets";
 export * from "./deploy/helpers/hash";
 export * from "./deploy/helpers/jwt";
@@ -53,6 +56,4 @@ export * from "./preview/api";
 export * from "./preview/shared";
 export * from "./preview/preview";
 export * from "./preview/format";
-export * from "./preview/merge-deep";
-export * from "./preview/settings";
 export * from "./preview/box";

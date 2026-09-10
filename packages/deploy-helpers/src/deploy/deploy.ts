@@ -9,6 +9,7 @@ import {
 	formatTime,
 	getBindings,
 	getDockerPath,
+	getDurableObjectContainerApps,
 	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	printBindings,
@@ -29,7 +30,15 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
-import { confirmLatestDeploymentOverwrite } from "./helpers/confirm-latest-deployment-overwrite";
+import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
+import {
+	addContainerImagesBinding,
+	clearRemovedContainerImagesBindings,
+} from "./helpers/container-image-bindings";
+import {
+	getContainerMetadata,
+	getContainerMetadataForRolloutSkip,
+} from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import { deployWfpUserWorker } from "./helpers/deploy-wfp";
 import {
@@ -70,6 +79,7 @@ import type { DeployProps, WorkerBuildResult } from "../shared/types";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
+	ApiDeployment,
 	ApiVersion,
 	Percentage,
 	VersionId,
@@ -130,7 +140,33 @@ export type DeployCallbacks = {
 		| ((
 				config: Config,
 				normalisedContainerConfig: ContainerNormalizedConfig[],
-				args: { versionId: string; accountId: string; scriptName: string }
+				args: {
+					versionId: string;
+					accountId: string;
+					scriptName: string;
+					dispatchNamespace?: string;
+				}
+		  ) => Promise<void>)
+		| undefined;
+	prepareDurableObjectContainerApplications:
+		| ((
+				config: Config,
+				args: {
+					dryRun: boolean;
+					scriptName: string;
+					dispatchNamespace?: string;
+				}
+		  ) => Promise<Record<string, Record<string, string>>>)
+		| undefined;
+	deployDurableObjectContainerApplications:
+		| ((
+				config: Config,
+				args: {
+					versionId: string;
+					accountId: string;
+					scriptName: string;
+					dispatchNamespace?: string;
+				}
 		  ) => Promise<void>)
 		| undefined;
 	analyseBundle:
@@ -213,13 +249,15 @@ async function deployWorker(
 	const { format } = entry;
 	const { projectRoot } = entry;
 
+	let latestDeployment: ApiDeployment | undefined;
 	if (!props.dispatchNamespace && accountId && scriptName) {
-		const yes = await confirmLatestDeploymentOverwrite(
+		const confirmation = await confirmLatestDeploymentOverwriteAndGetLatest(
 			config,
 			accountId,
 			scriptName
 		);
-		if (!yes) {
+		latestDeployment = confirmation.latestDeployment;
+		if (!confirmation.confirmed) {
 			cancel("Aborting deploy...");
 			return { versionId, workerTag };
 		}
@@ -238,6 +276,27 @@ async function deployWorker(
 		content,
 		sourceMaps,
 	} = buildResult;
+	const skipContainerChanges = props.containersRollout === "none";
+	const preparedContainerImages = skipContainerChanges
+		? undefined
+		: await callbacks.prepareDurableObjectContainerApplications?.(config, {
+				dryRun: Boolean(isDryRun),
+				scriptName,
+				dispatchNamespace: props.dispatchNamespace,
+			});
+	const rolloutSkipContainerState = skipContainerChanges
+		? await getContainerMetadataForRolloutSkip(config, {
+				accountId,
+				scriptName,
+				dispatchNamespace: props.dispatchNamespace,
+				workerExists,
+				latestDeployment,
+				dryRun: isDryRun,
+			})
+		: undefined;
+	const containerMetadata = rolloutSkipContainerState
+		? rolloutSkipContainerState.containers
+		: getContainerMetadata(config, preparedContainerImages);
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
 	const { migrations, exports } = await resolveExportsUploadPayload({
@@ -308,6 +367,15 @@ async function deployWorker(
 		type: "deploy",
 		workerExists,
 	});
+	if (!skipContainerChanges && keepVars && !isDryRun && workerExists) {
+		await clearRemovedContainerImagesBindings(config, bindings, workerUrl);
+	}
+	addContainerImagesBinding(config, bindings, preparedContainerImages ?? {}, {
+		preserveExisting: skipContainerChanges,
+		workerExists,
+		hasExistingBinding:
+			rolloutSkipContainerState?.hasExistingContainerImagesBinding,
+	});
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
@@ -333,7 +401,7 @@ async function deployWorker(
 		migrations,
 		exports,
 		modules,
-		containers: config.containers,
+		containers: containerMetadata,
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -396,7 +464,9 @@ async function deployWorker(
 		migrations === undefined &&
 		!hasDurableObjectExports(config.exports) &&
 		!config.first_party_worker &&
-		config.containers === undefined;
+		config.containers === undefined &&
+		// Rollout skip can recover Container metadata absent from local config.
+		containerMetadata === undefined;
 
 	let workerBundle: FormData;
 	const dockerPath = getDockerPath();
@@ -777,7 +847,32 @@ async function deployWorker(
 			versionId,
 			accountId,
 			scriptName,
+			dispatchNamespace: props.dispatchNamespace,
 		});
+	}
+	if (
+		!skipContainerChanges &&
+		getDurableObjectContainerApps(config.containers).length > 0 &&
+		callbacks.deployDurableObjectContainerApplications
+	) {
+		assert(versionId && accountId);
+		try {
+			await callbacks.deployDurableObjectContainerApplications(config, {
+				versionId,
+				accountId,
+				scriptName,
+				dispatchNamespace: props.dispatchNamespace,
+			});
+		} catch (error) {
+			throw new UserError(
+				"The Worker version was deployed, but Wrangler could not finish creating its Durable Object-managed Container applications. Re-run the same `wrangler deploy` command to retry the idempotent application creation and finish deployment.",
+				{
+					telemetryMessage:
+						"deploy durable object container application creation failed after deployment",
+					cause: error,
+				}
+			);
+		}
 	}
 
 	// Early exit for WfP since it doesn't need the below code
