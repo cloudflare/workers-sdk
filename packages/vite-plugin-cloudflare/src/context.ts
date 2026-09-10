@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { Miniflare } from "miniflare";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
+import type { ConfigChangeCoordinator } from "./config-change-coordinator";
 import type { ExportTypes } from "./export-types";
 import type { NodeJsCompat } from "./nodejs-compat";
 import type {
@@ -29,6 +30,8 @@ export interface SharedContext {
 	workerNameToExportTypesMap?: Map<string, ExportTypes>;
 	/** Tracks the number of in-flight dev server restarts (0 means no restart in progress) */
 	restartingDevServerCount: number;
+	/** Coordinates config changes across the PluginContext created for each restart. */
+	configChangeCoordinator?: ConfigChangeCoordinator;
 	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
 }
@@ -114,6 +117,15 @@ export class PluginContext {
 
 	get isRestartingDevServer(): boolean {
 		return this.#sharedContext.restartingDevServerCount > 0;
+	}
+
+	get configChangeCoordinator(): ConfigChangeCoordinator {
+		assert(
+			this.#sharedContext.configChangeCoordinator,
+			"Expected `configChangeCoordinator` to be defined"
+		);
+
+		return this.#sharedContext.configChangeCoordinator;
 	}
 
 	getTunnelHostnames(): string[] {

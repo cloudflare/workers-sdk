@@ -6,7 +6,6 @@ import {
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
-import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp } from "../build";
 import {
 	cloudflareBuiltInModules,
@@ -18,7 +17,7 @@ import {
 	type AssetsOnlyResolvedConfig,
 	type WorkersResolvedConfig,
 } from "../plugin-config";
-import { createPlugin, debuglog, getOutputDirectory } from "../utils";
+import { createPlugin, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
@@ -90,46 +89,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			if (ctx.resolvedViteConfig.command === "build") {
 				await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
 			}
-		},
-		configureServer(viteDevServer) {
-			// This variable is used to guard against config changes triggering
-			// a restart while another restart is already in flight. Note that we are
-			// deliberately not calling `watcher.off` since on failed restarts
-			// (e.g. the changed config is invalid) vite would resolve without replacing
-			// the server, so a removed handler would never be re-registered and
-			// config changes, including the one that fixes the config, would be
-			// ignored for the rest of the session.
-			let restartInFlight = false;
-
-			const configChangedHandler = async (changedFilePath: string) => {
-				assertIsNotPreview(ctx);
-
-				if (restartInFlight) {
-					return;
-				}
-
-				// TODO: Reinstate .env and .dev.vars watching when local variable
-				// loading is supported with cloudflare.config.ts.
-				if (
-					ctx.resolvedPluginConfig.configPaths.has(changedFilePath) ||
-					hasAssetsConfigChanged(
-						ctx.resolvedPluginConfig,
-						ctx.resolvedViteConfig,
-						changedFilePath
-					)
-				) {
-					debuglog("Config changed: " + changedFilePath);
-					restartInFlight = true;
-					debuglog("Restarting dev server and aborting previous setup");
-					try {
-						await viteDevServer.restart();
-					} finally {
-						restartInFlight = false;
-					}
-				}
-			};
-
-			viteDevServer.watcher.on("change", configChangedHandler);
 		},
 		buildApp: {
 			order: "post",

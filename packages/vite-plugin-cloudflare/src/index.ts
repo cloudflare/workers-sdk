@@ -1,4 +1,5 @@
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
+import { ConfigChangeCoordinator } from "./config-change-coordinator";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -50,6 +51,7 @@ export type { PluginConfig } from "./plugin-config";
 export type { WorkerConfig } from "@cloudflare/config";
 
 const sharedContext: SharedContext = {
+	configChangeCoordinator: new ConfigChangeCoordinator(),
 	restartingDevServerCount: 0,
 	tunnelHostnames: new Set(),
 };
@@ -78,6 +80,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			async configureServer(viteDevServer) {
+				ctx.configChangeCoordinator.registerServer(ctx, viteDevServer);
+
 				// Patch the `server.restart` method to track whether the server is restarting or not.
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
@@ -88,6 +92,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
 						ctx.endRestartingDevServer();
+						ctx.configChangeCoordinator.restartCompleted();
 					}
 				};
 			},
