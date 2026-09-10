@@ -52,6 +52,15 @@ function EmailLayout(): JSX.Element {
 		// no longer visible, preserve the requested identity so the detail API can
 		// report it as missing or unavailable instead of targeting the default Worker.
 		if (routingDetailParams) {
+			if (search.worker !== undefined || selectedWorker === "") {
+				return;
+			}
+			void navigate({
+				params: routingDetailParams,
+				replace: true,
+				search: (previous) => ({ ...previous, worker: selectedWorker }),
+				to: "/email/routing/$captureId",
+			});
 			return;
 		}
 		if (selectedWorker === "" || search.worker === selectedWorker) {
