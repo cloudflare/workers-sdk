@@ -1,13 +1,13 @@
-import { startTunnel } from "@cloudflare/workers-utils";
+import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import encodeQR from "qr";
-import * as wrangler from "wrangler";
+import { createAuth, createLogger, USER_AGENT } from "../auth";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { debuglog, createPlugin } from "../utils";
 import type { PluginContext } from "../context";
-import type { Tunnel } from "@cloudflare/workers-utils";
+import type { Config, Tunnel } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 function createPublicExposureWarning(
@@ -109,7 +109,8 @@ export class TunnelManager {
 		shortcutPressed?: boolean;
 		allowedHosts: true | string[] | undefined;
 		accountId: string | undefined;
-		complianceRegion: wrangler.Unstable_Config["compliance_region"];
+		complianceRegion: Config["compliance_region"];
+		profileDir?: string;
 	}): Promise<string[] | null> {
 		try {
 			const previousTunnel = this.#tunnel;
@@ -133,17 +134,29 @@ export class TunnelManager {
 				)
 			);
 
-			const namedTunnel =
-				options.name !== undefined
-					? await wrangler.unstable_resolveNamedTunnel(
-							options.name,
-							new URL(options.origin),
-							{
-								accountId: options.accountId,
-								complianceRegion: options.complianceRegion,
-							}
-						)
-					: undefined;
+			let namedTunnel;
+			if (options.name !== undefined) {
+				const logger = createLogger(this.#logger);
+				const auth = createAuth(options.profileDir ?? process.cwd(), logger);
+				const accountId = await auth.requireAuth({
+					...(options.accountId ? { account_id: options.accountId } : {}),
+					...(options.complianceRegion
+						? { compliance_region: options.complianceRegion }
+						: {}),
+				});
+				namedTunnel = await resolveNamedTunnel(
+					options.name,
+					new URL(options.origin),
+					{
+						abortSignal: abortController.signal,
+						accountId,
+						apiToken: auth.requireApiToken(),
+						complianceRegion: options.complianceRegion,
+						logger,
+						userAgent: USER_AGENT,
+					}
+				);
+			}
 
 			if (abortController.signal.aborted) {
 				return null;
@@ -439,9 +452,8 @@ export async function setupDevTunnel(
 		shortcutPressed,
 		name: tunnel.name,
 		accountId: ctx.settings?.accountId,
-		complianceRegion: toWranglerComplianceRegion(
-			ctx.settings?.complianceRegion
-		),
+		complianceRegion: toApiComplianceRegion(ctx.settings?.complianceRegion),
+		profileDir: server.config.root,
 		// We will restart the server with the tunnel hostnames in allowedHosts if needed
 		allowedHosts: true,
 	});
@@ -513,9 +525,8 @@ export async function setupPreviewTunnel(
 		name: tunnel.name,
 		allowedHosts: preview?.allowedHosts,
 		accountId: ctx.settings?.accountId,
-		complianceRegion: toWranglerComplianceRegion(
-			ctx.settings?.complianceRegion
-		),
+		complianceRegion: toApiComplianceRegion(ctx.settings?.complianceRegion),
+		profileDir: server.config.root,
 	});
 
 	if (!publicUrls) {
@@ -527,9 +538,9 @@ export async function setupPreviewTunnel(
 	}
 }
 
-function toWranglerComplianceRegion(
+function toApiComplianceRegion(
 	region: "public" | "fedramp-high" | undefined
-): wrangler.Unstable_Config["compliance_region"] {
+): Config["compliance_region"] {
 	return region === "fedramp-high" ? "fedramp_high" : region;
 }
 
