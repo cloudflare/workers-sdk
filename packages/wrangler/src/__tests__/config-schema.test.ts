@@ -82,5 +82,20 @@ describe("config schema", () => {
 			["dockerfile"],
 			["image"],
 		]);
+		const dockerfile = image?.anyOf?.find((variant) =>
+			variant.required?.includes("dockerfile")
+		);
+		const registry = image?.anyOf?.find((variant) =>
+			variant.required?.includes("image")
+		);
+		expect(dockerfile?.properties?.build_context).toMatchObject({
+			type: "string",
+		});
+		expect(dockerfile?.properties?.build_vars).toMatchObject({
+			type: "object",
+			additionalProperties: { type: "string" },
+		});
+		expect(registry?.properties).not.toHaveProperty("build_context");
+		expect(registry?.properties).not.toHaveProperty("build_vars");
 	});
 });

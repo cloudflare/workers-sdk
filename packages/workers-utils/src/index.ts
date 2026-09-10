@@ -19,11 +19,15 @@ export {
 	getContainerNameToClassNameMap,
 	getDurableObjectClassNameToUseSQLiteMap,
 	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
 	validateDurableObjectContainerApplications,
 } from "./config/containers";
-export type { DurableObjectContainerApp } from "./config/containers";
+export type {
+	DurableObjectContainerApp,
+	ResolvedDurableObjectContainerApp,
+} from "./config/containers";
 export {
 	type RedirectedRawConfig,
 	defaultWranglerConfig,

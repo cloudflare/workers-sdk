@@ -1,4 +1,7 @@
-import { CONTAINER_IMAGES_BINDING } from "@cloudflare/workers-utils";
+import {
+	CONTAINER_IMAGES_BINDING,
+	defaultWranglerConfig,
+} from "@cloudflare/workers-utils";
 import { describe, it, vi } from "vitest";
 import {
 	getContainerMetadata,
@@ -99,26 +102,39 @@ describe("getContainerMetadata", () => {
 		expect(metadata).toEqual([{ name: "sandbox-app", class_name: "Sandbox" }]);
 	});
 
-	it("includes prepared named images for Durable Object-managed containers", ({
+	it("resolves managed export links while preserving scheduler metadata and order", ({
 		expect,
 	}) => {
+		const containers: ContainerApp[] = [
+			{
+				name: "sandbox-app",
+				scheduling_policy: "durable_object",
+				images: {
+					sandbox: { dockerfile: "./container/Dockerfile" },
+				},
+			},
+			{ name: "scheduled-app", image: "./Dockerfile" },
+		];
 		const metadata = getContainerMetadata(
-			containerConfig({
-				durableObjectContainerConfig: [
-					{
-						class_name: "Sandbox",
-						name: "sandbox-app",
-						scheduling_policy: "durable_object",
-						images: {
-							sandbox: { dockerfile: "./container/Dockerfile" },
-						},
-					},
-				],
-			}),
+			containers,
 			{
 				Sandbox: {
 					sandbox:
 						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			},
+			{
+				exports: {
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "sandbox-app",
+					},
+					Scheduled: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "scheduled-app",
+					},
 				},
 			}
 		);
@@ -132,7 +148,9 @@ describe("getContainerMetadata", () => {
 						"registry.cloudflare.com/account/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				},
 			},
+			{ name: "scheduled-app" },
 		]);
+		expect(containers[0].class_name).toBeUndefined();
 	});
 
 	it("keeps Durable Object metadata without images when preparation is skipped", ({
@@ -207,35 +225,25 @@ describe("getContainerMetadataForRolloutSkip", () => {
 		};
 	}
 	function recover(config: Config, versions: ApiVersion[]) {
+		const { containers, ...workerConfig } = config;
 		vi.mocked(fetchVersions).mockResolvedValue(versions);
-		return getContainerMetadataForRolloutSkip(
-			config,
-			containerConfig({
-				containerMetadataConfig: config.containers?.map((container) => ({
-					...(container.name !== undefined && { name: container.name }),
-					...(container.class_name !== undefined && {
-						class_name: container.class_name,
-					}),
+		return getContainerMetadataForRolloutSkip(workerConfig, containers, {
+			accountId: "account",
+			scriptName: "worker",
+			dispatchNamespace: undefined,
+			workerExists: true,
+			latestDeployment: {
+				id: "deployment",
+				source: "api",
+				strategy: "percentage",
+				author_email: "",
+				created_on: "",
+				versions: versions.map(({ id }) => ({
+					version_id: id,
+					percentage: 100 / versions.length,
 				})),
-			}),
-			{
-				accountId: "account",
-				scriptName: "worker",
-				dispatchNamespace: undefined,
-				workerExists: true,
-				latestDeployment: {
-					id: "deployment",
-					source: "api",
-					strategy: "percentage",
-					author_email: "",
-					created_on: "",
-					versions: versions.map(({ id }) => ({
-						version_id: id,
-						percentage: 100 / versions.length,
-					})),
-				},
-			}
-		);
+			},
+		});
 	}
 
 	it("ignores other user variables even when their presence differs", async ({
@@ -341,12 +349,20 @@ describe("getContainerMetadataForRolloutSkip", () => {
 		"keeps local metadata for first deployments and dry runs: %j",
 		async (options, { expect }) => {
 			const result = await getContainerMetadataForRolloutSkip(
-				{} as Config,
+				{
+					...defaultWranglerConfig,
+					exports: {
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox",
+						},
+					},
+				},
 				containerConfig({
 					durableObjectContainerConfig: [
 						{
 							name: "sandbox",
-							class_name: "Sandbox",
 							scheduling_policy: "durable_object",
 							images: { app: { dockerfile: "./Dockerfile" } },
 						},
@@ -385,7 +401,6 @@ describe("getContainerMetadataForRolloutSkip", () => {
 				{
 					containers: [
 						{
-							class_name: "Added",
 							name: "added-app",
 							scheduling_policy: "durable_object",
 							images: { app: { dockerfile: "./Dockerfile" } },

@@ -8,9 +8,15 @@ export const CONTAINER_IMAGES_BINDING =
 	"EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES";
 
 export type DurableObjectContainerApp = ContainerApp & {
-	class_name: string;
 	name: string;
 	scheduling_policy: "durable_object";
+	unsafe?: {
+		configuration?: { experimental_flags?: string[] };
+	};
+};
+
+export type ResolvedDurableObjectContainerApp = DurableObjectContainerApp & {
+	class_name: string;
 };
 
 export function isDurableObjectContainerApp(
@@ -25,6 +31,29 @@ export function getDurableObjectContainerApps(
 	return Array.isArray(containers)
 		? containers.filter(isDurableObjectContainerApp)
 		: [];
+}
+
+/**
+ * Resolve validated Durable Object-managed Containers to their owning classes.
+ * Keep the original configuration unchanged so export-link validation can still
+ * distinguish explicit class names from references through `exports`.
+ *
+ * @throws {UserError} If a Container is not linked to a Durable Object class.
+ */
+export function getResolvedDurableObjectContainerApps(
+	containers: ContainerApp[] | undefined,
+	exports: Exports | undefined
+): ResolvedDurableObjectContainerApp[] {
+	return getDurableObjectContainerApps(containers).map((container) => {
+		const className = resolveContainerClassName(container, exports);
+		if (typeof className !== "string" || className.length === 0) {
+			throw new UserError(
+				`The container "${container.name}" is not linked to a Durable Object. Either set "containers.class_name", or reference this container from a Durable Object's \`exports\` entry via its "container" field.`,
+				{ telemetryMessage: "durable object container class unresolved" }
+			);
+		}
+		return { ...container, class_name: className };
+	});
 }
 
 /**
@@ -207,7 +236,10 @@ export function validateDurableObjectContainerApplications(
 		config.exports
 	);
 
-	for (const container of containers) {
+	for (const container of getResolvedDurableObjectContainerApps(
+		containers,
+		config.exports
+	)) {
 		const maybeBoundDO = config.durable_objects.bindings.find(
 			(durableObject) => durableObject.class_name === container.class_name
 		);
