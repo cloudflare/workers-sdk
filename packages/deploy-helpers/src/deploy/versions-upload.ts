@@ -220,7 +220,7 @@ async function uploadWorkerVersion(
 	}
 	addContainerImagesBinding(config, bindings, preparedContainerImages ?? {});
 
-	const placement = parseConfigPlacement(config);
+	const placement = parseConfigPlacement(config.placement);
 
 	const entryPointName = path.basename(resolvedEntryPointPath);
 	const main = {
