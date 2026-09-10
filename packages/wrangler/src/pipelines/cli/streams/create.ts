@@ -68,10 +68,12 @@ export const pipelinesStreamsCreateCommand = createCommand({
 				);
 			}
 
+			let parsed: Record<string, unknown>;
 			try {
-				parsedSchema = parseJSON(schemaContent, args.schemaFile) as {
-					fields: SchemaField[];
-				};
+				parsed = parseJSON(schemaContent, args.schemaFile) as Record<
+					string,
+					unknown
+				>;
 			} catch (error) {
 				throw new UserError(
 					`Failed to parse schema file '${args.schemaFile}': ${error instanceof Error ? error.message : String(error)}`,
@@ -82,10 +84,25 @@ export const pipelinesStreamsCreateCommand = createCommand({
 				);
 			}
 
-			if (!parsedSchema || !Array.isArray(parsedSchema.fields)) {
-				throw new UserError("Schema file must contain a 'fields' array", {
-					telemetryMessage: "pipelines streams create invalid schema file",
-				});
+			// Accept both a direct schema object ({ fields: [...] }) and a full
+			// stream response from `streams get --json` (which nests the schema
+			// under a "schema" key).
+			if (
+				parsed &&
+				typeof parsed.schema === "object" &&
+				parsed.schema !== null &&
+				Array.isArray((parsed.schema as { fields?: unknown }).fields)
+			) {
+				parsedSchema = parsed.schema as { fields: SchemaField[] };
+			} else if (parsed && Array.isArray(parsed.fields)) {
+				parsedSchema = parsed as unknown as { fields: SchemaField[] };
+			} else {
+				throw new UserError(
+					"Schema file must contain a 'fields' array, or be the JSON output of `wrangler pipelines streams get --json`",
+					{
+						telemetryMessage: "pipelines streams create invalid schema file",
+					}
+				);
 			}
 
 			schema = parsedSchema;
