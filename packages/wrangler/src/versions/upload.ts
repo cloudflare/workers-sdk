@@ -90,6 +90,7 @@ export const versionsUploadCommand = createCommand({
 				await fillOpenAPIConfiguration(config, containersScope);
 			}
 			const { assetUploadStats: uploadStats } = await versionsUpload(
+
 				props,
 				config,
 				buildResult,
