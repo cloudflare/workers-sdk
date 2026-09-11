@@ -1,0 +1,126 @@
+import { describe, it } from "vitest";
+import {
+	createCronStateFromSeed,
+	parseCronWorkerMetadata,
+	reconcilePersistenceKeysForRefresh,
+	RefreshGenerationTracker,
+	selectCronFallbackWorker,
+	shouldReplaceCustomRowsForPersistenceScope,
+} from "../../components/cron-triggers/CronTriggersContext";
+
+describe("Cron Triggers provider state", () => {
+	it("treats absent and explicit empty trigger metadata as authoritative empty arrays", ({
+		expect,
+	}) => {
+		const metadata = parseCronWorkerMetadata([
+			{ name: "absent" },
+			{ name: "empty", triggers: { crons: [] } },
+		]);
+		expect(metadata).toEqual([
+			{ name: "absent", triggers: { crons: [] } },
+			{ name: "empty", triggers: { crons: [] } },
+		]);
+		const state = createCronStateFromSeed(metadata ?? [], true);
+		expect(state.absent?.authoritative).toBe(true);
+		expect(state.absent?.crons).toEqual([]);
+	});
+
+	it("does not claim authority when the root request failed", ({ expect }) => {
+		expect(
+			createCronStateFromSeed(
+				[{ name: "worker", triggers: { crons: ["0 0 * * *"] } }],
+				false
+			)
+		).toEqual({});
+	});
+
+	it("retains an optional persistence scope from Worker metadata", ({
+		expect,
+	}) => {
+		expect(
+			parseCronWorkerMetadata([
+				{ name: "worker", persistenceScope: "project-scope" },
+			])
+		).toEqual([
+			{
+				name: "worker",
+				persistenceScope: "project-scope",
+				triggers: { crons: [] },
+			},
+		]);
+	});
+
+	it("retains persistence keys for Workers omitted from a partial refresh", ({
+		expect,
+	}) => {
+		expect(
+			reconcilePersistenceKeysForRefresh(
+				{
+					omitted: "key-for-omitted-worker",
+					returned: "old-key-for-returned-worker",
+				},
+				[
+					{
+						name: "returned",
+						persistenceScope: "new-scope",
+					},
+				]
+			)
+		).toEqual({
+			omitted: "key-for-omitted-worker",
+			returned:
+				"local-explorer.cron-triggers.custom-rows.v1.new-scope.returned",
+		});
+	});
+
+	it("removes a known key when returned metadata explicitly has no scope", ({
+		expect,
+	}) => {
+		expect(
+			reconcilePersistenceKeysForRefresh(
+				{ returned: "old-key-for-returned-worker" },
+				[{ name: "returned" }]
+			)
+		).toEqual({});
+	});
+
+	it("only replaces drafts when one explicit scope changes to another", ({
+		expect,
+	}) => {
+		expect(
+			shouldReplaceCustomRowsForPersistenceScope("scope-a", "scope-b")
+		).toBe(true);
+		expect(
+			shouldReplaceCustomRowsForPersistenceScope("scope-a", "scope-a")
+		).toBe(false);
+		expect(
+			shouldReplaceCustomRowsForPersistenceScope("scope-a", undefined)
+		).toBe(false);
+		expect(
+			shouldReplaceCustomRowsForPersistenceScope(undefined, "scope-a")
+		).toBe(false);
+		expect(
+			shouldReplaceCustomRowsForPersistenceScope(undefined, undefined)
+		).toBe(false);
+	});
+
+	it("recovers a self-first fallback without exposing internal workers", ({
+		expect,
+	}) => {
+		expect(
+			selectCronFallbackWorker([
+				{ isSelf: true, name: "__router-worker__" },
+				{ name: "peer" },
+				{ isSelf: true, name: "self" },
+			])
+		).toBe("self");
+	});
+
+	it("rejects stale out-of-order refresh generations", ({ expect }) => {
+		const tracker = new RefreshGenerationTracker();
+		const older = tracker.start();
+		const newer = tracker.start();
+		expect(tracker.isLatest(newer)).toBe(true);
+		expect(tracker.isLatest(older)).toBe(false);
+	});
+});
