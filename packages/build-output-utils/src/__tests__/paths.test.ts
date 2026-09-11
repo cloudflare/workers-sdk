@@ -5,6 +5,9 @@ import {
 	BUILD_OUTPUT_VERSION,
 	CONFIG_FILENAME,
 	DEFAULT_WORKER_DIRECTORY_NAME,
+	getContainerConfigPath,
+	getContainerDir,
+	getContainersDir,
 	getSettingsConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
@@ -33,6 +36,16 @@ describe("path resolvers", () => {
 
 	it("resolve the workers directory", ({ expect }) => {
 		expect(getWorkersDir(root)).toBe(path.join(outputDir, "workers"));
+	});
+
+	it("resolve Container paths", ({ expect }) => {
+		const containersDir = path.join(outputDir, "containers");
+		const containerDir = path.join(containersDir, "api-container");
+		expect(getContainersDir(root)).toBe(containersDir);
+		expect(getContainerDir(root, "api-container")).toBe(containerDir);
+		expect(getContainerConfigPath(root, "api-container")).toBe(
+			path.join(containerDir, "config.json")
+		);
 	});
 
 	it("resolve the Worker's config, bundle, and assets paths", ({ expect }) => {
@@ -66,6 +79,23 @@ describe("path resolvers", () => {
 		]) {
 			expect(() => getWorkerConfigPath(root, workerDirectoryName)).toThrow(
 				"Worker directory names must be non-empty, single path segments."
+			);
+		}
+	});
+
+	it("rejects invalid Container directory names", ({ expect }) => {
+		for (const containerDirectoryName of [
+			"",
+			".",
+			"..",
+			"nested/container",
+			"nested\\container",
+			"container\0name",
+		]) {
+			expect(() =>
+				getContainerConfigPath(root, containerDirectoryName)
+			).toThrow(
+				"Container directory names must be non-empty, single path segments."
 			);
 		}
 	});
