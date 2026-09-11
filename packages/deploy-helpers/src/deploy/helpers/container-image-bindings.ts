@@ -1,12 +1,9 @@
-import {
-	CONTAINER_IMAGES_BINDING,
-	getDurableObjectContainerApps,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { CONTAINER_IMAGES_BINDING, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
+import type { ContainerlessConfig } from "../../shared/types";
 import type {
 	Binding,
-	Config,
+	DurableObjectContainerApp,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
@@ -14,11 +11,12 @@ type PreparedContainerImages = Record<string, Record<string, string>>;
 
 /** Prevent keep_vars from retaining generated images when no managed Containers remain. */
 export async function clearRemovedContainerImagesBindings(
-	config: Config,
+	config: ContainerlessConfig,
+	durableObjectContainerConfig: DurableObjectContainerApp[],
 	bindings: Record<string, Binding>,
 	workerUrl: string
 ): Promise<void> {
-	if (getDurableObjectContainerApps(config.containers).length > 0) {
+	if (durableObjectContainerConfig.length > 0) {
 		return;
 	}
 	// A full upload clears Container metadata even when containers is omitted.
@@ -34,7 +32,7 @@ export async function clearRemovedContainerImagesBindings(
 }
 
 export function addContainerImagesBinding(
-	config: Config,
+	durableObjectContainerConfig: DurableObjectContainerApp[],
 	bindings: Record<string, Binding>,
 	preparedContainerImages: PreparedContainerImages,
 	options: {
@@ -43,7 +41,6 @@ export function addContainerImagesBinding(
 		hasExistingBinding?: boolean;
 	} = {}
 ): void {
-	const containers = getDurableObjectContainerApps(config.containers);
 	const shouldInheritExisting =
 		options.preserveExisting &&
 		options.workerExists &&
@@ -52,7 +49,7 @@ export function addContainerImagesBinding(
 	if (options.preserveExisting && !shouldInheritExisting) {
 		return;
 	}
-	if (containers.length === 0 && !shouldInheritExisting) {
+	if (durableObjectContainerConfig.length === 0 && !shouldInheritExisting) {
 		return;
 	}
 
@@ -74,7 +71,7 @@ export function addContainerImagesBinding(
 	bindings[CONTAINER_IMAGES_BINDING] = {
 		type: "json",
 		value: Object.fromEntries(
-			containers.map((container) => {
+			durableObjectContainerConfig.map((container) => {
 				const configuredImages = Object.keys(container.images ?? {});
 				const preparedImages = preparedContainerImages[container.class_name];
 				if (configuredImages.length > 0 && preparedImages === undefined) {
