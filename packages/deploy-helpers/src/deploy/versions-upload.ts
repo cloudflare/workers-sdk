@@ -59,11 +59,15 @@ import {
 	validateWorkerProps,
 } from "./helpers/validate-worker-props";
 import { patchNonVersionedScriptSettings } from "./helpers/versions-api";
-import type { VersionsUploadProps, WorkerBuildResult } from "../shared/types";
+import type {
+	ContainerlessConfig,
+	VersionsUploadProps,
+	WorkerBuildResult,
+} from "../shared/types";
 import type { DeployCallbacks } from "./deploy";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
@@ -79,7 +83,7 @@ type VersionsUploadResult = {
 
 export default async function versionsUpload(
 	props: VersionsUploadProps,
-	config: Config,
+	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
 	callbacks: VersionsUploadCallbacks
 ): Promise<VersionsUploadResult> {
@@ -115,7 +119,7 @@ export default async function versionsUpload(
 
 async function uploadWorkerVersion(
 	props: VersionsUploadProps,
-	config: Config,
+	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
 	callbacks: VersionsUploadCallbacks
 ): Promise<VersionsUploadResult> {
@@ -185,13 +189,21 @@ async function uploadWorkerVersion(
 			{ telemetryMessage: "versions upload pending durable object migration" }
 		);
 	}
+	const durableObjectContainerConfig = getDurableObjectContainerApps(
+		props.containers.source
+	);
 
 	const preparedContainerImages =
-		await prepareDurableObjectContainerApplications(config, {
-			accountId,
-			dryRun: Boolean(props.dryRun),
-			scriptName,
-		});
+		await prepareDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig,
+			props.containers.durableObjects.builtImages,
+			{
+				accountId,
+				dryRun: Boolean(props.dryRun),
+				scriptName,
+			}
+		);
 
 	// Upload assets if assets is being used
 	const assetsUploadResult =
@@ -216,9 +228,18 @@ async function uploadWorkerVersion(
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
 	if (keepVars && !props.dryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(config, bindings, workerUrl);
+		await clearRemovedContainerImagesBindings(
+			config,
+			durableObjectContainerConfig,
+			bindings,
+			workerUrl
+		);
 	}
-	addContainerImagesBinding(config, bindings, preparedContainerImages ?? {});
+	addContainerImagesBinding(
+		durableObjectContainerConfig,
+		bindings,
+		preparedContainerImages ?? {}
+	);
 
 	const placement = parseConfigPlacement(config);
 
@@ -235,7 +256,10 @@ async function uploadWorkerVersion(
 		migrations,
 		exports,
 		modules,
-		containers: getContainerMetadata(config, preparedContainerImages),
+		containers: getContainerMetadata(
+			props.containers.source,
+			preparedContainerImages
+		),
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
@@ -463,14 +487,18 @@ async function uploadWorkerVersion(
 	// only migration-managed namespaces can be resolved during version upload.
 	if (
 		!hasDurableObjectExports(config.exports) &&
-		getDurableObjectContainerApps(config.containers).length > 0
+		durableObjectContainerConfig.length > 0
 	) {
 		assert(versionId);
-		await deployDurableObjectContainerApplications(config, {
-			versionId,
-			accountId,
-			scriptName,
-		});
+		await deployDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig,
+			{
+				versionId,
+				accountId,
+				scriptName,
+			}
+		);
 	}
 
 	const uploadMs = Date.now() - start;
