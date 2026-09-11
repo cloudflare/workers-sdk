@@ -38,7 +38,6 @@ import {
 	resolveWorkerName,
 	shouldUseCIMetadataFallback,
 } from "./shared";
-import type { DeployCallbacks } from "../deploy/deploy";
 import type { WorkerBuildResult } from "../shared/types";
 import type {
 	Binding,
@@ -102,10 +101,16 @@ export type PreviewResult = {
 // running that advertises containers nothing ever built. `deployPreviewContainers`
 // does need the deployment, since that's what resolves each container's DO
 // namespace_id, so it still runs after.
-export type PreviewCallbacks = Pick<
-	DeployCallbacks,
-	"getNormalizedContainerOptions"
-> & {
+export type PreviewCallbacks = {
+	getNormalizedContainerOptions:
+		| ((
+				config: Config,
+				args: {
+					containersRollout?: "gradual" | "immediate" | "none";
+					dryRun?: boolean;
+				}
+		  ) => Promise<ContainerNormalizedConfig[]>)
+		| undefined;
 	deployPreviewContainers:
 		| ((
 				scopedConfig: Config,

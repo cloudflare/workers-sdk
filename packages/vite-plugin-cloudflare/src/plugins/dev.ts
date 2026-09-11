@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import {
+	cleanupContainers,
 	getCloudflareContainerRegistry,
 	prepareContainerImagesForDev,
 } from "@cloudflare/containers-shared";
-import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { UserError } from "@cloudflare/workers-utils";
 import { buildPublicUrl, CoreHeaders } from "miniflare";

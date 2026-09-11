@@ -1,5 +1,83 @@
 # wrangler
 
+## 4.131.0
+
+### Minor Changes
+
+- [#15480](https://github.com/cloudflare/workers-sdk/pull/15480) [`36aed7f`](https://github.com/cloudflare/workers-sdk/commit/36aed7f0f2db5056af9df917cf6c22a2be950b1e) Thanks [@skepticfx](https://github.com/skepticfx)! - Add Durable Object-managed Containers to top-level container configuration
+
+  Wrangler now accepts `scheduling_policy: "durable_object"` in the top-level `containers` array and creates its namespace-backed application after the Worker upload resolves the Durable Object namespace ID. The namespace ID is also the application ID, so repeated deploys idempotently ensure the same application without name-based lookup, modification, or a Containers rollout.
+
+  Durable Object-managed entries accept `class_name`, `scheduling_policy`, an optional `name`, and an optional named `images` map. Scheduler-only fields are rejected. Each image provides either a local `dockerfile` or a digest-pinned managed-registry `image`. Wrangler builds or resolves each image, waits while Cloudflare prepares it for the Containers runtime, and uploads the resulting references with the Worker version for access through `ctx.container.images` and `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES`. Local development support for these entries is deferred to a follow-up.
+
+  Existing scheduler-backed entries and Durable Object migrations continue to work unchanged.
+
+  With `--containers-rollout=none`, existing Workers retain their deployed Container metadata and image binding even when local `containers` is omitted or empty; local scheduler edits are also ignored. The upload stops if the deployed versions cannot be recovered. Existing Workers for Platforms dispatch scripts reject this flag before upload because their API does not expose enough metadata to preserve Container associations safely. First deployments can still skip Container preparation and rollout. Without this flag, removing managed Containers, including by omitting `containers` entirely, clears the experimental image binding even with `keep_vars`.
+
+  `versions deploy` validates the selected versions before changing traffic and creates their Durable Object-managed applications only after deployment succeeds. Both `deploy` and `versions deploy` report partial completion if application creation fails afterward, with instructions to retry the same command.
+
+  `EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES` is a temporary, reserved Wrangler binding until native Container image metadata is available. Its class keys identify managed applications during `versions deploy`, including classes with empty image maps. User configuration cannot declare a binding with this name; existing versions that already use it are treated as Container configuration.
+
+- [#15493](https://github.com/cloudflare/workers-sdk/pull/15493) [`493e635`](https://github.com/cloudflare/workers-sdk/commit/493e63548f75f8f1d9847f5576835e2e1f1682a5) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Remove `wrangler preview settings` commands
+
+  The private-beta `wrangler preview settings` and `wrangler preview settings update` commands are no longer available.
+
+### Patch Changes
+
+- [#15411](https://github.com/cloudflare/workers-sdk/pull/15411) [`0b43395`](https://github.com/cloudflare/workers-sdk/commit/0b433956a805d7aa86b39ebffc2c2d476a40cc89) Thanks [@xgame92](https://github.com/xgame92)! - Fail `wrangler versions upload` early when a Worker has a pending Durable Object migration
+
+  Wrangler now directs users to run `wrangler deploy` to apply the migration instead of sending a version upload request that the API will reject.
+
+- [#15518](https://github.com/cloudflare/workers-sdk/pull/15518) [`9d75006`](https://github.com/cloudflare/workers-sdk/commit/9d75006728cb1f6a7df6b30cd7f80cc5194d5ad5) Thanks [@taylorlee](https://github.com/taylorlee)! - Detect named-only module Worker entrypoints correctly
+
+  Wrangler now distinguishes named-only module Workers from legacy Service Workers that happen to have named exports. A default export identifies a module Worker; otherwise, legacy `addEventListener` registration identifies Service Worker format.
+
+- [#15581](https://github.com/cloudflare/workers-sdk/pull/15581) [`b605aa6`](https://github.com/cloudflare/workers-sdk/commit/b605aa60b4c9ed2546a0fd1a6ebc677c15422bc0) Thanks [@MattieTK](https://github.com/MattieTK)! - Correct Pages-to-Workers delegation analytics for forced and ineligible commands
+
+  The legacy `forced` result counted every agent-driven Pages command using `--force`, including commands that could never have been delegated. Wrangler now emits `eligible_forced` only when `--force` prevents an otherwise eligible delegation, and records other agent commands as `ineligible` with a bounded reason and whether force was used.
+
+- [#15432](https://github.com/cloudflare/workers-sdk/pull/15432) [`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94) Thanks [@razethion](https://github.com/razethion)! - Prevent delayed internal errors from fetch-only remote bindings
+
+  Fetch-only remote bindings such as D1 and R2 previously opened an unused WebSocket RPC session. RPC sessions are now created only when an RPC method is called.
+
+- [#15585](https://github.com/cloudflare/workers-sdk/pull/15585) [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260908.1 | ^5.20260910.1 |
+  | workerd                   | 1.20260908.1  | 1.20260910.1  |
+
+- [#15554](https://github.com/cloudflare/workers-sdk/pull/15554) [`bff525d`](https://github.com/cloudflare/workers-sdk/commit/bff525d66dd3785481148353d782dd33c3a644ed) Thanks [@XiaoZ-0218](https://github.com/XiaoZ-0218)! - Add the missing `transferred_classes` migration to the config schema
+
+  `DurableObjectMigration` described `new_classes`, `new_sqlite_classes`, `renamed_classes` and `deleted_classes`, but not `transferred_classes`. `normalizeAndValidateConfig` has always validated that key, and the deploy path forwards it to the API along with the rest of the step, so Transfer migrations worked — but `config-schema.json` is generated from the type, so an editor resolving `$schema` reported a valid, documented migration as an unknown key.
+
+  Adding the field to the type puts it in the generated schema. No runtime change.
+
+- [#15584](https://github.com/cloudflare/workers-sdk/pull/15584) [`96688b3`](https://github.com/cloudflare/workers-sdk/commit/96688b3ccada3b56ad6cc42e1cbd63f4c268db1a) Thanks [@Svector-anu](https://github.com/Svector-anu)! - Bump `shell-quote` to 1.9.0+ to pick up two disclosed advisories
+
+  `shell-quote@1.8.1` is affected by a ReDoS in `parse()` (CVE-2026-13311 / GHSA-395f-4hp3-45gv — an unauthenticated attacker who can feed a string into `parse()` can block the event loop for tens of seconds with plain space-separated input, no shell metacharacters required) and by an object-token escaping bug in `quote()` (CVE-2026-9277 / GHSA-w7jw-789q-3m8p), both fixed upstream in `1.9.0`. Wrangler's `parse()` wrapper (`src/utils/shell-quote.ts`) is reachable from `pages dev`/`init` command-line parsing, so the ReDoS applies; the `quote()` call site only ever passes string arguments, so the object-token issue was not reachable here, but there is no reason to stay on a vulnerable range once a patch exists.
+
+- [#15563](https://github.com/cloudflare/workers-sdk/pull/15563) [`ed5797a`](https://github.com/cloudflare/workers-sdk/commit/ed5797a17d837c381ebb63f50ea3fdc155df88fe) Thanks [@Bortlesboat](https://github.com/Bortlesboat)! - Encode filenames in Pages HTML redirects
+
+  Fix `wrangler pages dev` returning a 502 response when redirecting HTML paths containing Unicode characters. Keep reserved characters in filenames encoded in the redirect destination and preserve the request query string.
+
+- [#14889](https://github.com/cloudflare/workers-sdk/pull/14889) [`128235a`](https://github.com/cloudflare/workers-sdk/commit/128235a8c08ca40d93b96d408297d21cbdcc9eb6) Thanks [@chinesepowered](https://github.com/chinesepowered)! - Fix `wrangler types --strict-vars=false` emitting invalid TypeScript for an empty array var
+
+  A var whose value was an empty array produced `()[]`, which is a syntax error. Because this lands in the generated `worker-configuration.d.ts`, it did not just break that one line — the whole file failed to parse, so no binding types resolved at all. An empty array now generates `unknown[]`.
+
+- [#15494](https://github.com/cloudflare/workers-sdk/pull/15494) [`f8aea7e`](https://github.com/cloudflare/workers-sdk/commit/f8aea7e325357fc490c8f37dc2f750fe35dfd59e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Use `previews_base_config` for Preview configuration
+
+  Preview commands now read the Worker Previews Base configuration from the `previews_base_config` API field.
+
+- [#15569](https://github.com/cloudflare/workers-sdk/pull/15569) [`24ef86b`](https://github.com/cloudflare/workers-sdk/commit/24ef86ba87da44cda2ae4cc42b5cb57dc5ff6669) Thanks [@RealBhupesh](https://github.com/RealBhupesh)! - Fix `wrangler workflows instances describe` crashing on dynamic retry delays
+
+  The Workflows API serializes function retry delays as `"[dynamic]"`. The describe command previously parsed that as a duration, produced an Invalid Date, and threw `RangeError: Invalid time value` before printing remaining steps. It now renders `unknown (dynamic delay)` and also tolerates attempts whose `end` timestamp is missing.
+
+- Updated dependencies [[`f45b596`](https://github.com/cloudflare/workers-sdk/commit/f45b5968bac153d6f436f8408968573aecb44a94), [`f69f95a`](https://github.com/cloudflare/workers-sdk/commit/f69f95aa2da329dcfa9888cfeb204cdda634d979), [`a549e58`](https://github.com/cloudflare/workers-sdk/commit/a549e58af707e84d6aeddaadc6566103ae236dbb), [`dbb3ff4`](https://github.com/cloudflare/workers-sdk/commit/dbb3ff4ebe7579be76f42591957c429f26da319b), [`fea3cd0`](https://github.com/cloudflare/workers-sdk/commit/fea3cd0f2ef5af6c8f2b50c794a89b8ef03ca82b), [`6bd7b6c`](https://github.com/cloudflare/workers-sdk/commit/6bd7b6cae44d441e415130991e3f181694bd3b6d), [`15cd6e1`](https://github.com/cloudflare/workers-sdk/commit/15cd6e16129af3dad09d53d6cd03f963f9203970), [`be1caec`](https://github.com/cloudflare/workers-sdk/commit/be1caeca44ccd9660a81420805fb0958ca422589), [`dbc9506`](https://github.com/cloudflare/workers-sdk/commit/dbc9506e48d99237be701685d08582966f62f59f)]:
+  - miniflare@5.20260910.0-alpha
+
 ## 4.130.0
 
 ### Minor Changes

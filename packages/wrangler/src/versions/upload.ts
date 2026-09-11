@@ -1,12 +1,13 @@
+import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	versionsUpload,
 	type AssetUploadStats,
 } from "@cloudflare/deploy-helpers";
+import { getDurableObjectContainerApps } from "@cloudflare/workers-utils";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
-import {
-	deployDurableObjectContainerApplications,
-	prepareDurableObjectContainerApplications,
-} from "../containers/durable-object-applications";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import {
 	sharedDeployVersionsArgs,
@@ -18,6 +19,7 @@ import {
 	mergeVersionsUploadConfigArgs,
 } from "../deployment-bundle/merge-config-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getScriptName } from "../utils/getScriptName";
 
@@ -67,14 +69,23 @@ export const versionsUploadCommand = createCommand({
 
 			const buildResult = await buildWorker(buildProps, config);
 
+			initContainersSharedContext({
+				logger,
+				fetchPagedListResult,
+				fetchResult,
+			});
+			if (
+				!props.dryRun &&
+				getDurableObjectContainerApps(config.containers).length > 0
+			) {
+				await fillOpenAPIConfiguration(config, containersScope);
+			}
 			const { assetUploadStats: uploadStats } = await versionsUpload(
 				props,
 				config,
 				buildResult,
 				{
 					analyseBundle: analyseBundle,
-					prepareDurableObjectContainerApplications,
-					deployDurableObjectContainerApplications,
 				}
 			);
 			assetUploadStats = uploadStats;

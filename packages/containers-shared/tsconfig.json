@@ -8,7 +8,8 @@
 		"experimentalDecorators": true,
 		"skipLibCheck": true,
 		"types": ["node"],
-		"noUncheckedIndexedAccess": true
+		"noUncheckedIndexedAccess": true,
+		"tsBuildInfoFile": ".tsbuildinfo"
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["dist", "node_modules"]
