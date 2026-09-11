@@ -1097,6 +1097,54 @@ describe("wrangler preview", () => {
 				}
 			);
 
+			test.for([
+				{
+					name: "empty limits",
+					baseConfig: { limits: {} },
+					expected: { limits: {} },
+				},
+				{
+					name: "empty tail consumers",
+					baseConfig: { tail_consumers: [] },
+					expected: { tail_consumers: [] },
+				},
+			])(
+				"onboards Preview Base $name",
+				async ({ baseConfig, expected }, { expect }) => {
+					writeWranglerConfig(
+						{
+							name: "test-worker",
+							main: "src/index.ts",
+							compatibility_date: "2025-01-01",
+						},
+						"wrangler.json"
+					);
+					setIsTTY(true);
+					mockConfirm({
+						text: addPreviewBaseConfigPrompt,
+						options: { defaultValue: true },
+						result: true,
+					});
+					msw.use(
+						http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+							HttpResponse.json({
+								success: true,
+								result: { previews_base_config: baseConfig },
+							})
+						)
+					);
+					mockContainerPreview({ previewId: "preview-empty-setting" });
+
+					await runWrangler(
+						"preview --name test-preview --config wrangler.json"
+					);
+
+					expect(readWranglerConfig("wrangler.json").previews).toEqual(
+						expected
+					);
+				}
+			);
+
 			test("falls back to guidance for commented TOML", async ({ expect }) => {
 				writeWranglerConfig(
 					{

@@ -45,6 +45,10 @@ const MISSING_PREVIEWS_CONFIG_MESSAGE =
 const GENERATED_PLACEHOLDER_MESSAGE =
 	"Your `previews` configuration contains the generated placeholder `<REPLACE_ME>`. Replace it with a Preview-safe value before deploying.";
 
+function hasConfiguredFields(value: object | undefined): boolean {
+	return value !== undefined && Object.keys(value).length > 0;
+}
+
 function hasConfiguredValues(value: unknown): boolean {
 	if (value === undefined) {
 		return false;
@@ -147,7 +151,7 @@ export async function ensurePreviewsConfig(
 		);
 	}
 
-	if (!hasConfiguredValues(baseConfig)) {
+	if (!hasConfiguredFields(baseConfig)) {
 		if (!hasConfiguredValues(productionConversion.config)) {
 			return config;
 		}
@@ -161,7 +165,7 @@ export async function ensurePreviewsConfig(
 	}
 
 	if (
-		!hasConfiguredValues(baseConversion.config) &&
+		!hasConfiguredFields(baseConversion.config) &&
 		baseConversion.omittedBindings.length > 0
 	) {
 		return config;
