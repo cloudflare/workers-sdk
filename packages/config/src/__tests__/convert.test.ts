@@ -235,15 +235,25 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps d1 with id and name", ({ expect }) => {
+		it("maps d1 with id, name, and jurisdiction", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				...baseConfig,
 				env: {
-					MY_DB: { type: "d1", id: "db-id", name: "db-name" },
+					MY_DB: {
+						type: "d1",
+						id: "db-id",
+						name: "db-name",
+						jurisdiction: "eu",
+					},
 				},
 			});
 			expect(result.d1_databases).toEqual([
-				{ binding: "MY_DB", database_id: "db-id", database_name: "db-name" },
+				{
+					binding: "MY_DB",
+					database_id: "db-id",
+					database_name: "db-name",
+					jurisdiction: "eu",
+				},
 			]);
 		});
 

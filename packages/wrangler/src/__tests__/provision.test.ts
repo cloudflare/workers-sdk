@@ -1517,6 +1517,40 @@ describe("resource provisioning", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it("creates an auto-provisioned D1 database in the configured jurisdiction", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-d1",
+				assertJurisdiction: "eu",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain('Creating new D1 Database "test-name-d1"');
+			expect(std.err).toBe("");
+		});
+
 		it("can inherit d1 binding when the database name is provided", async ({
 			expect,
 		}) => {
@@ -2048,15 +2082,21 @@ function mockCreateD1Database(
 	options: {
 		resultId?: string;
 		assertName?: string;
+		assertJurisdiction?: string;
 	} = {}
 ) {
 	msw.use(
 		http.post(
 			"*/accounts/:accountId/d1/database",
 			async ({ request }) => {
-				if (options.assertName) {
+				if (options.assertName || options.assertJurisdiction) {
 					const requestBody = await request.json();
-					expect(requestBody).toEqual({ name: options.assertName });
+					expect(requestBody).toEqual({
+						name: options.assertName,
+						...(options.assertJurisdiction && {
+							jurisdiction: options.assertJurisdiction,
+						}),
+					});
 				}
 
 				return HttpResponse.json(
