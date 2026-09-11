@@ -628,7 +628,8 @@ class D1Handler extends ProvisionResourceHandler<
 		const db = await createD1Database(
 			this.complianceConfig,
 			this.accountId,
-			name
+			name,
+			this.binding.jurisdiction
 		);
 		return db.uuid;
 	}
@@ -1601,7 +1602,8 @@ async function listFlagshipApps(
 async function createD1Database(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	name: string
+	name: string,
+	jurisdiction?: string
 ) {
 	try {
 		return await fetchResult<DatabaseCreationResult>(
@@ -1612,7 +1614,10 @@ async function createD1Database(
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ name }),
+				body: JSON.stringify({
+					name,
+					...(jurisdiction && { jurisdiction }),
+				}),
 			}
 		);
 	} catch (e) {
