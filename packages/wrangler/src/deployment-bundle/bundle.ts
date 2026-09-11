@@ -193,6 +193,7 @@ export async function bundleWorker(
 
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
+	const middlewareConfig: Record<string, Record<string, unknown>> = {};
 
 	if (
 		targetConsumer === "dev" &&
@@ -272,16 +273,20 @@ export async function bundleWorker(
 		inject.push(checkedFetchFileToInject);
 	}
 
-	// When multiple workers are running we need some way to disambiguate logs between them. Inject a patched version of `globalThis.console` that prefixes logs with the worker name
+	// When multiple workers are running we need some way to disambiguate logs
+	// between them. This patch only has a side effect, so inject it independently
+	// of the middleware facade, which may be skipped for named-only Workers.
 	if (getFlag("MULTIWORKER")) {
-		middlewareToLoad.push({
-			name: "patch-console-prefix",
-			path: "templates/middleware/middleware-patch-console-prefix.ts",
-			supports: ["modules", "service-worker"],
-			config: {
-				prefix: chalk.blue(`[${entry.name}]`),
-			},
-		});
+		const name = "patch-console-prefix";
+		inject.push(
+			path.resolve(
+				getBasePath(),
+				"templates/middleware/middleware-patch-console-prefix.ts"
+			)
+		);
+		middlewareConfig[name] = {
+			prefix: chalk.blue(`[${entry.name}]`),
+		};
 	}
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {
@@ -420,13 +425,14 @@ export async function bundleWorker(
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),
-			configProviderPlugin(
-				Object.fromEntries(
+			configProviderPlugin({
+				...Object.fromEntries(
 					middlewareToLoad
 						.filter((m) => m.config !== undefined)
 						.map((m) => [m.name, m.config] as [string, Record<string, unknown>])
-				)
-			),
+				),
+				...middlewareConfig,
+			}),
 		],
 		...(jsxFactory && { jsxFactory }),
 		...(jsxFragment && { jsxFragment }),
