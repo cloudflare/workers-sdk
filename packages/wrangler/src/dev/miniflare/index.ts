@@ -1175,6 +1175,7 @@ export async function buildMiniflareOptions(
 				...sitesOptions,
 				...assetOptions,
 				routes: config.routes,
+				cronTriggers: config.crons,
 				outboundService: config.outboundService,
 				zone: config.zone,
 				access: config.access?.dev,
