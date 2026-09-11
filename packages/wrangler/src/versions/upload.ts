@@ -1,14 +1,21 @@
-import { initContainersSharedContext } from "@cloudflare/containers-shared";
+import {
+	cleanupBuiltImages,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
 import {
 	versionsUpload,
 	type AssetUploadStats,
 } from "@cloudflare/deploy-helpers";
-import { getDurableObjectContainerApps } from "@cloudflare/workers-utils";
+import {
+	getDockerPath,
+	getDurableObjectContainerApps,
+} from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { analyseBundle } from "../check/commands";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
+import { buildDurableObjectContainerImages } from "../deployment-bundle/build-container-images";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -74,9 +81,11 @@ export const versionsUploadCommand = createCommand({
 				fetchPagedListResult,
 				fetchResult,
 			});
+			props.containers.durableObjects.builtImages =
+				await buildDurableObjectContainerImages(props, config);
 			if (
 				!props.dryRun &&
-				getDurableObjectContainerApps(config.containers).length > 0
+				getDurableObjectContainerApps(props.containers.source).length > 0
 			) {
 				await fillOpenAPIConfiguration(config, containersScope);
 			}
@@ -90,6 +99,13 @@ export const versionsUploadCommand = createCommand({
 			);
 			assetUploadStats = uploadStats;
 		} finally {
+			if (props.containers.durableObjects.builtImages.length > 0) {
+				const dockerPath = getDockerPath();
+				await cleanupBuiltImages(
+					props.containers.durableObjects.builtImages,
+					dockerPath
+				);
+			}
 			metrics.sendMetricsEvent(
 				"upload worker version",
 				{

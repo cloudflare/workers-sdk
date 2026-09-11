@@ -5,6 +5,7 @@ import {
 	ContainerImagePreparationStatus,
 	createDurableObjectNamespaceResolver,
 	listDurableObjects,
+	pushImageIfChanged,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -13,8 +14,12 @@ import {
 	resolveVersionedDurableObjectContainerApplications,
 	prepareDurableObjectContainerApplications,
 } from "../src/deploy/helpers/durable-object-container-applications";
+import type { BuiltDurableObjectContainerImage } from "../src/shared/types";
 import type { Application } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	DurableObjectContainerApp,
+} from "@cloudflare/workers-utils";
 
 vi.mock("node:timers/promises", () => ({ setTimeout: vi.fn() }));
 vi.mock("@cloudflare/cli-shared-helpers", async (importOriginal) => ({
@@ -25,6 +30,7 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
 	createDurableObjectNamespaceResolver: vi.fn(),
 	listDurableObjects: vi.fn(),
+	pushImageIfChanged: vi.fn(),
 }));
 
 const image = `registry.cloudflare.com/account/tools@sha256:${"a".repeat(64)}`;
@@ -40,6 +46,8 @@ const config = {
 		},
 	],
 } as unknown as Config;
+const durableObjectContainerConfig =
+	config.containers as DurableObjectContainerApp[];
 const args = { accountId: "account", dryRun: false, scriptName: "worker" };
 const namespace = {
 	id: "namespace",
@@ -79,15 +87,14 @@ describe("Container image preparation", () => {
 				status: ContainerImagePreparationStatus.READY,
 			});
 		const result = await prepareDurableObjectContainerApplications(
-			{
-				...config,
-				containers: [
-					{
-						...config.containers?.[0],
-						images: { tools: { image }, alias: { image } },
-					},
-				],
-			} as Config,
+			config,
+			[
+				{
+					...durableObjectContainerConfig[0],
+					images: { tools: { image }, alias: { image } },
+				},
+			],
+			[],
 			args
 		);
 		expect(result).toEqual({ Sandbox: { tools: image, alias: image } });
@@ -105,7 +112,12 @@ describe("Container image preparation", () => {
 				reason: "Image cannot be prepared",
 			});
 		await expect(
-			prepareDurableObjectContainerApplications(config, args)
+			prepareDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				[],
+				args
+			)
 		).rejects.toThrow("Image cannot be prepared");
 		expect(prepare).toHaveBeenCalledOnce();
 		expect(setTimeout).not.toHaveBeenCalled();
@@ -124,7 +136,12 @@ describe("Container image preparation", () => {
 			.mockReturnValueOnce(0)
 			.mockReturnValue(15 * 60_000);
 		await expect(
-			prepareDurableObjectContainerApplications(config, args)
+			prepareDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				[],
+				args
+			)
 		).rejects.toThrow("Timed out while preparing the container image");
 		expect(prepare).toHaveBeenCalledOnce();
 	});
@@ -139,12 +156,62 @@ describe("Container image preparation", () => {
 				status: ContainerImagePreparationStatus.READY,
 			});
 		await expect(
-			prepareDurableObjectContainerApplications(config, args)
+			prepareDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				[],
+				args
+			)
 		).rejects.toThrow("connection reset");
 		await expect(
-			prepareDurableObjectContainerApplications(config, args)
+			prepareDurableObjectContainerApplications(
+				config,
+				durableObjectContainerConfig,
+				[],
+				args
+			)
 		).resolves.toEqual({ Sandbox: { tools: image } });
 		expect(prepare).toHaveBeenCalledTimes(2);
+	});
+	it("pushes a prebuilt Dockerfile image before preparing it", async ({
+		expect,
+	}) => {
+		vi.spyOn(
+			ContainerImagePreparationsService,
+			"prepareContainerImage"
+		).mockResolvedValue({
+			image,
+			status: ContainerImagePreparationStatus.READY,
+		});
+		const push = vi.mocked(pushImageIfChanged).mockResolvedValue({
+			remoteDigest: image,
+		});
+		const builtImage: BuiltDurableObjectContainerImage = {
+			className: "Sandbox",
+			imageName: "tools",
+			localTag: "worker-sandbox-tools:wrangler-test",
+		};
+		const result = await prepareDurableObjectContainerApplications(
+			config,
+			[
+				{
+					...durableObjectContainerConfig[0],
+					images: { tools: { dockerfile: "./Dockerfile" } },
+				},
+			],
+			[builtImage],
+			args
+		);
+		expect(result).toEqual({ Sandbox: { tools: image } });
+		expect(push).toHaveBeenCalledWith({
+			pathToDocker: expect.any(String),
+			sourceTag: builtImage.localTag,
+			targetTag: builtImage.localTag,
+			accountId: "account",
+			complianceConfig: config,
+			cleanupSourceTag: true,
+		});
+		expect(builtImage.localTagCleaned).toBe(true);
 	});
 });
 
@@ -160,6 +227,8 @@ describe("unknown Durable Object storage", () => {
 			},
 		],
 	} as unknown as Config;
+	const unknownStorageDurableObjectContainerConfig =
+		unknownStorageConfig.containers as DurableObjectContainerApp[];
 	it("rejects confirmed legacy storage even with no images to prepare", async ({
 		expect,
 	}) => {
@@ -167,7 +236,12 @@ describe("unknown Durable Object storage", () => {
 			{ ...namespace, use_sqlite: false },
 		]);
 		await expect(
-			prepareDurableObjectContainerApplications(unknownStorageConfig, args)
+			prepareDurableObjectContainerApplications(
+				unknownStorageConfig,
+				unknownStorageDurableObjectContainerConfig,
+				[],
+				args
+			)
 		).rejects.toThrow("legacy KV storage backend");
 	});
 	it.for([
@@ -188,7 +262,12 @@ describe("unknown Durable Object storage", () => {
 		async (namespaces, { expect }) => {
 			vi.mocked(listDurableObjects).mockResolvedValue(namespaces);
 			await expect(
-				prepareDurableObjectContainerApplications(unknownStorageConfig, args)
+				prepareDurableObjectContainerApplications(
+					unknownStorageConfig,
+					unknownStorageDurableObjectContainerConfig,
+					[],
+					args
+				)
 			).resolves.toEqual({});
 		}
 	);
@@ -199,33 +278,53 @@ describe("unknown Durable Object storage", () => {
 			{ ...namespace, dispatch_namespace: "target" },
 		]);
 		await expect(
-			prepareDurableObjectContainerApplications(unknownStorageConfig, {
-				...args,
-				dispatchNamespace: "target",
-			})
+			prepareDurableObjectContainerApplications(
+				unknownStorageConfig,
+				unknownStorageDurableObjectContainerConfig,
+				[],
+				{
+					...args,
+					dispatchNamespace: "target",
+				}
+			)
 		).resolves.toEqual({});
 		vi.mocked(listDurableObjects).mockResolvedValue([
 			{ ...namespace, dispatch_namespace: "target", use_sqlite: false },
 		]);
 		await expect(
-			prepareDurableObjectContainerApplications(unknownStorageConfig, {
-				...args,
-				dispatchNamespace: "target",
-			})
+			prepareDurableObjectContainerApplications(
+				unknownStorageConfig,
+				unknownStorageDurableObjectContainerConfig,
+				[],
+				{
+					...args,
+					dispatchNamespace: "target",
+				}
+			)
 		).rejects.toThrow("legacy KV storage backend");
 	});
 	it("does not query namespaces for a dry run", async ({ expect }) => {
-		await prepareDurableObjectContainerApplications(unknownStorageConfig, {
-			...args,
-			accountId: undefined,
-			dryRun: true,
-		});
+		await prepareDurableObjectContainerApplications(
+			unknownStorageConfig,
+			unknownStorageDurableObjectContainerConfig,
+			[],
+			{
+				...args,
+				accountId: undefined,
+				dryRun: true,
+			}
+		);
 		expect(listDurableObjects).not.toHaveBeenCalled();
 	});
 	it("propagates a namespace lookup failure", async ({ expect }) => {
 		vi.mocked(listDurableObjects).mockRejectedValue(new Error("lookup failed"));
 		await expect(
-			prepareDurableObjectContainerApplications(unknownStorageConfig, args)
+			prepareDurableObjectContainerApplications(
+				unknownStorageConfig,
+				unknownStorageDurableObjectContainerConfig,
+				[],
+				args
+			)
 		).rejects.toThrow("lookup failed");
 	});
 });
@@ -263,8 +362,16 @@ describe("Container namespace resolution", () => {
 			accountId: "account",
 			scriptName: "worker",
 		};
-		await deployDurableObjectContainerApplications(config, deployArgs);
-		await deployDurableObjectContainerApplications(config, deployArgs);
+		await deployDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig,
+			deployArgs
+		);
+		await deployDurableObjectContainerApplications(
+			config,
+			durableObjectContainerConfig,
+			deployArgs
+		);
 
 		expect(create).toHaveBeenCalledTimes(2);
 		expect(create).toHaveBeenNthCalledWith(1, {
@@ -292,17 +399,15 @@ describe("Container namespace resolution", () => {
 		);
 		await expect(
 			deployDurableObjectContainerApplications(
-				{
-					...config,
-					containers: [
-						...(config.containers ?? []),
-						{
-							name: "other",
-							class_name: "Other",
-							scheduling_policy: "durable_object",
-						},
-					],
-				},
+				config,
+				[
+					...durableObjectContainerConfig,
+					{
+						name: "other",
+						class_name: "Other",
+						scheduling_policy: "durable_object",
+					},
+				],
 				{ versionId: "version", accountId: "account", scriptName: "worker" }
 			)
 		).rejects.toThrow("missing namespace");
