@@ -1,5 +1,33 @@
 # @cloudflare/deploy-helpers
 
+## 0.11.1
+
+### Patch Changes
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add a provisioning delay note when custom domain Preview URLs change
+
+  Wrangler now explains that DNS and TLS certificate provisioning may continue after a deploy adds a custom domain or enables its Preview URLs. Stable redeploys don't repeat the note.
+
+  This assumes that a request which matches the stored custom domain state doesn't restart provisioning. The client infers this from the API changeset and current domain record because this repository can't verify the backend behavior.
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Clarify production status labels for custom domain routes
+
+  Wrangler now prefixes explicit custom domain production states with `production:` so they match Preview labels. The updated labels appear in deployed trigger output and `WRANGLER_OUTPUT_FILE_PATH`.
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Avoid replacement prompts for custom domains already on the Worker
+
+  Wrangler now updates Preview settings without asking to replace a custom domain when that domain already belongs to the deployed Worker. It still asks before replacing domains attached to another Worker.
+
+- [#15592](https://github.com/cloudflare/workers-sdk/pull/15592) [`945aaa3`](https://github.com/cloudflare/workers-sdk/commit/945aaa32e0c38116e501f8509884cb1cc8f1d51b) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Explain how to enable Preview URLs when a Preview deployment has none
+
+  `wrangler preview` now shows URL shapes and configuration snippets for Workers.dev and custom domains. The custom domain snippet preserves every configured route, and the guidance distinguishes missing settings from disabled ones.
+
+  This changes a private beta feature. The warning also makes clear that `wrangler deploy` publishes code from the current checkout.
+
+- Updated dependencies [[`47d906f`](https://github.com/cloudflare/workers-sdk/commit/47d906f52d109509f61b1c801c1b08ecad583c0d), [`c2699bf`](https://github.com/cloudflare/workers-sdk/commit/c2699bf625134a2425d7142c72c4f31c4b6f8eab), [`7d39eed`](https://github.com/cloudflare/workers-sdk/commit/7d39eed90b6155961b7d342f7b69b6df95d21188)]:
+  - miniflare@5.20260911.0-alpha
+  - @cloudflare/containers-shared@0.16.1
+
 ## 0.11.0
 
 ### Minor Changes
