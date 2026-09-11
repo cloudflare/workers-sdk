@@ -1187,6 +1187,121 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 
+	describe("containers", () => {
+		it("omits containers when no Container exports are provided", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig);
+
+			expect(result).not.toHaveProperty("containers");
+		});
+
+		it("converts standard Container exports to Wrangler containers", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig(baseConfig, undefined, [
+				{
+					type: "container",
+					name: "dockerfile-container",
+					image: {
+						dockerfile: "./Dockerfile",
+						buildContext: ".",
+						buildVars: { VERSION: "1" },
+					},
+					maxInstances: 4,
+					instanceType: {
+						vcpu: 1,
+						memoryMib: 1024,
+						diskMb: 4000,
+					},
+					schedulingPolicy: "regional",
+					ssh: { enabled: true, port: 2222 },
+					authorizedKeys: [{ name: "deploy", publicKey: "ssh-ed25519 key" }],
+					constraints: {
+						regions: ["ENAM", "WEUR"],
+						jurisdiction: "eu",
+					},
+					rollout: {
+						kind: "full-auto",
+						stepPercentage: [50, 100],
+						activeGracePeriod: 30,
+					},
+					observability: {
+						enabled: true,
+						logs: { enabled: true },
+						targetInstancePercentage: 50,
+					},
+					unsafe: { experimental: true },
+				},
+				{
+					type: "container",
+					name: "referenced-container",
+					image: { reference: "registry.example.com/image:tag" },
+					maxInstances: 20,
+					observability: {
+						enabled: true,
+						targetInstanceCount: 2,
+					},
+				},
+			]);
+
+			expect(result.containers).toEqual([
+				{
+					name: "dockerfile-container",
+					image: "./Dockerfile",
+					image_build_context: ".",
+					image_vars: { VERSION: "1" },
+					max_instances: 4,
+					instance_type: {
+						vcpu: 1,
+						memory_mib: 1024,
+						disk_mb: 4000,
+					},
+					scheduling_policy: "regional",
+					ssh: { enabled: true, port: 2222 },
+					authorized_keys: [{ name: "deploy", public_key: "ssh-ed25519 key" }],
+					constraints: {
+						regions: ["ENAM", "WEUR"],
+						jurisdiction: "eu",
+					},
+					rollout_kind: "full_auto",
+					rollout_step_percentage: [50, 100],
+					rollout_active_grace_period: 30,
+					observability: {
+						enabled: true,
+						logs: { enabled: true },
+						target_instance_percentage: 50,
+					},
+					unsafe: { experimental: true },
+				},
+				{
+					name: "referenced-container",
+					image: "registry.example.com/image:tag",
+					max_instances: 20,
+					observability: {
+						enabled: true,
+						target_instance_count: 2,
+					},
+				},
+			]);
+		});
+
+		it("rejects Durable Object-managed Container exports", ({ expect }) => {
+			expect(() =>
+				convertToWranglerConfig(baseConfig, undefined, [
+					{
+						type: "container",
+						name: "managed-container",
+						schedulingPolicy: "durable-object",
+						images: { app: { dockerfile: "./Dockerfile" } },
+					},
+				])
+			).toThrow(
+				"Durable Object-managed Containers are not currently supported by `convertToWranglerConfig()`."
+			);
+		});
+	});
+
 	describe("settings", () => {
 		it("maps accountId to account_id", ({ expect }) => {
 			const result = convertToWranglerConfig(baseConfig, {
