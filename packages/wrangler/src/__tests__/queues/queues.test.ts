@@ -1869,6 +1869,17 @@ describe("wrangler", () => {
 				},
 			};
 
+			const notificationConsumer = {
+				consumer_id: "1003",
+				type: "notification",
+				dead_letter_queue: "my-dlq",
+				settings: {
+					email: [{ id: "user@example.com" }],
+					pagerduty: [{ id: "pd-key-1" }],
+					webhooks: [{ id: "wh-1" }],
+				},
+			};
+
 			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues consumer list --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1895,7 +1906,9 @@ describe("wrangler", () => {
 				`);
 			});
 
-			it("should list both worker and http consumers", async ({ expect }) => {
+			it("should list worker, http, and notification consumers", async ({
+				expect,
+			}) => {
 				mockGetQueueByNameRequest(expectedQueueName, {
 					queue_id: expectedQueueId,
 					queue_name: expectedQueueName,
@@ -1903,8 +1916,12 @@ describe("wrangler", () => {
 					modified_on: "",
 					producers: [],
 					producers_total_count: 0,
-					consumers: [workerConsumer, httpConsumer],
-					consumers_total_count: 2,
+					consumers: [
+						workerConsumer,
+						httpConsumer,
+						notificationConsumer,
+					],
+					consumers_total_count: 3,
 				});
 
 				await runWrangler("queues consumer list testQueue");
@@ -1924,6 +1941,12 @@ describe("wrangler", () => {
 					│ consumer_id │ dead_letter_queue │ batch_size │ max_retries │ visibility_timeout_ms │ retry_delay │
 					├─┼─┼─┼─┼─┼─┤
 					│ 1002 │ my-dlq │ 5 │ 2 │ 10000 │ 15 │
+					└─┴─┴─┴─┴─┴─┘
+					Notification consumers:
+					┌─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ dead_letter_queue │ email │ pagerduty │ webhooks │
+					├─┼─┼─┼─┼─┼─┤
+					│ 1003 │ my-dlq │ user@example.com │ pd-key-1 │ wh-1 │
 					└─┴─┴─┴─┴─┴─┘"
 				`);
 			});
@@ -1986,6 +2009,35 @@ describe("wrangler", () => {
 				`);
 			});
 
+			it("should list only notification consumers when queue has no worker or http consumers", async ({
+				expect,
+			}) => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [notificationConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Notification consumers:
+					┌─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ dead_letter_queue │ email │ pagerduty │ webhooks │
+					├─┼─┼─┼─┼─┼─┤
+					│ 1003 │ my-dlq │ user@example.com │ pd-key-1 │ wh-1 │
+					└─┴─┴─┴─┴─┴─┘"
+				`);
+			});
+
 			it("should show empty message when queue has no consumers", async ({
 				expect,
 			}) => {
@@ -2030,8 +2082,12 @@ describe("wrangler", () => {
 					modified_on: "",
 					producers: [],
 					producers_total_count: 0,
-					consumers: [workerConsumer, httpConsumer],
-					consumers_total_count: 2,
+					consumers: [
+						workerConsumer,
+						httpConsumer,
+						notificationConsumer,
+					],
+					consumers_total_count: 3,
 				});
 
 				await runWrangler("queues consumer list testQueue --json");
@@ -2061,6 +2117,28 @@ describe("wrangler", () => {
 					      "visibility_timeout_ms": 10000,
 					    },
 					    "type": "http_pull",
+					  },
+					  {
+					    "consumer_id": "1003",
+					    "dead_letter_queue": "my-dlq",
+					    "settings": {
+					      "email": [
+					        {
+					          "id": "user@example.com",
+					        },
+					      ],
+					      "pagerduty": [
+					        {
+					          "id": "pd-key-1",
+					        },
+					      ],
+					      "webhooks": [
+					        {
+					          "id": "wh-1",
+					        },
+					      ],
+					    },
+					    "type": "notification",
 					  },
 					]
 				`);
@@ -2420,6 +2498,517 @@ describe("wrangler", () => {
 			});
 		});
 
+		describe("notification consumers", () => {
+			it("should show the correct help text", async ({ expect }) => {
+				await runWrangler("queues consumer notification --help");
+
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues consumer notification
+
+					Configure Queue Notification Consumers
+
+					COMMANDS
+					  wrangler queues consumer notification add <queue-name>     Add a Queue Notification Consumer
+					  wrangler queues consumer notification remove <queue-name>  Remove a Queue Notification Consumer
+					  wrangler queues consumer notification list <queue-name>    List Notification consumers for a queue
+
+					GLOBAL FLAGS
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
+					  -v, --version         Show version number  [boolean]"
+				`);
+			});
+
+			describe("add", () => {
+				function mockPostRequest(
+					expect: ExpectStatic,
+					queueId: string,
+					expectedBody: PostTypedConsumerBody
+				) {
+					const requests = { count: 0 };
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/queues/:queueId/consumers",
+							async ({ request, params }) => {
+								requests.count += 1;
+								expect(params.queueId).toEqual(queueId);
+								expect(params.accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual(expectedBody);
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {},
+								});
+							},
+							{ once: true }
+						)
+					);
+					return requests;
+				}
+
+				it("should show the correct help text", async ({ expect }) => {
+					await runWrangler("queues consumer notification add --help");
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"wrangler queues consumer notification add <queue-name>
+
+						Add a Queue Notification Consumer
+
+						POSITIONALS
+						  queue-name  Name of the queue for the consumer  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config          Path to Wrangler configuration file  [string]
+						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help            Show help  [boolean]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+						      --profile         Use a specific auth profile  [string]
+						  -v, --version         Show version number  [boolean]
+
+						OPTIONS
+						      --email              Email addresses for notifications  [array]
+						      --pagerduty          PagerDuty integration keys for notifications  [array]
+						      --webhook            Webhook IDs for notifications  [array]
+						      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]"
+					`);
+				});
+
+				it("should error when no mechanisms are provided", async ({
+					expect,
+				}) => {
+					await expect(
+						runWrangler("queues consumer notification add testQueue")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: At least one notification mechanism must be specified (--email, --pagerduty, or --webhook)]`
+					);
+				});
+
+				it("should add a notification consumer with email", async ({
+					expect,
+				}) => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [],
+							producers_total_count: 0,
+							consumers_total_count: 0,
+							modified_on: "",
+						}
+					);
+
+					const expectedBody: PostTypedConsumerBody = {
+						type: "notification",
+						settings: {
+							email: [{ id: "user@example.com" }],
+							pagerduty: [],
+							webhooks: [],
+						},
+						dead_letter_queue: undefined,
+					};
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
+
+					await runWrangler(
+						"queues consumer notification add testQueue --email user@example.com"
+					);
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
+					`);
+				});
+
+				it("should add a notification consumer with all mechanisms", async ({
+					expect,
+				}) => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [],
+							producers_total_count: 0,
+							consumers_total_count: 0,
+							modified_on: "",
+						}
+					);
+
+					const expectedBody: PostTypedConsumerBody = {
+						type: "notification",
+						settings: {
+							email: [
+								{ id: "user@example.com" },
+								{ id: "admin@example.com" },
+							],
+							pagerduty: [{ id: "pd-key-1" }],
+							webhooks: [{ id: "wh-1" }, { id: "wh-2" }],
+						},
+						dead_letter_queue: "myDLQ",
+					};
+					const postRequest = mockPostRequest(
+						expect,
+						expectedQueueId,
+						expectedBody
+					);
+
+					await runWrangler(
+						"queues consumer notification add testQueue --email user@example.com --email admin@example.com --pagerduty pd-key-1 --webhook wh-1 --webhook wh-2 --dead-letter-queue myDLQ"
+					);
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
+					`);
+				});
+			});
+
+			describe("delete", () => {
+				function mockDeleteRequest(
+					expect: ExpectStatic,
+					queueId: string,
+					consumerId: string
+				) {
+					const requests = { count: 0 };
+					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
+					msw.use(
+						http.delete(
+							`*/${resource}`,
+							async ({ params }) => {
+								requests.count++;
+								expect(params.accountId).toBe("some-account-id");
+								expect(params.expectedQueueId).toBe(queueId);
+								expect(params.expectedConsumerId).toBe(consumerId);
+								return HttpResponse.json(
+									{
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									},
+									{ status: 200 }
+								);
+							},
+							{ once: true }
+						)
+					);
+
+					return requests;
+				}
+
+				it("should show the correct help text", async ({ expect }) => {
+					await runWrangler("queues consumer notification remove --help");
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"wrangler queues consumer notification remove <queue-name>
+
+						Remove a Queue Notification Consumer
+
+						POSITIONALS
+						  queue-name  Name of the queue for the consumer  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config          Path to Wrangler configuration file  [string]
+						      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help            Show help  [boolean]
+						      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+						      --profile         Use a specific auth profile  [string]
+						  -v, --version         Show version number  [boolean]"
+					`);
+				});
+
+				it("should delete a notification consumer", async ({ expect }) => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [
+								{
+									type: "notification",
+									consumer_id: expectedConsumerId,
+									settings: {
+										email: [{ id: "user@example.com" }],
+										pagerduty: [],
+										webhooks: [],
+									},
+								},
+							],
+							producers_total_count: 0,
+							consumers_total_count: 1,
+							modified_on: "",
+						}
+					);
+
+					const deleteRequest = mockDeleteRequest(
+						expect,
+						expectedQueueId,
+						expectedConsumerId
+					);
+					await runWrangler(
+						"queues consumer notification remove testQueue"
+					);
+
+					expect(deleteRequest.count).toEqual(1);
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						 ⛅️ wrangler x.x.x
+						──────────────────
+						Removing consumer from queue testQueue.
+						Removed consumer from queue testQueue."
+					`);
+				});
+
+				it("should error when no notification consumer exists", async ({
+					expect,
+				}) => {
+					mockGetQueueByNameRequest(expectedQueueName, {
+						queue_id: expectedQueueId,
+						queue_name: expectedQueueName,
+						created_on: "",
+						producers: [],
+						consumers: [
+							{
+								type: "worker",
+								consumer_id: expectedConsumerId,
+								script: "my-worker",
+								settings: {},
+							},
+						],
+						producers_total_count: 0,
+						consumers_total_count: 1,
+						modified_on: "",
+					});
+
+					await expect(
+						runWrangler(
+							"queues consumer notification remove testQueue"
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: No notification consumer exists for queue testQueue]`
+					);
+				});
+			});
+		});
+
+		describe("consumer notification list", () => {
+			const notificationConsumer = {
+				consumer_id: "1003",
+				type: "notification",
+				dead_letter_queue: "my-dlq",
+				settings: {
+					email: [{ id: "user@example.com" }],
+					pagerduty: [{ id: "pd-key-1" }],
+					webhooks: [{ id: "wh-1" }],
+				},
+			};
+
+			it("should show the correct help text", async ({ expect }) => {
+				await runWrangler("queues consumer notification list --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues consumer notification list <queue-name>
+
+					List Notification consumers for a queue
+
+					POSITIONALS
+					  queue-name  Name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config          Path to Wrangler configuration file  [string]
+					      --cwd             Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env             Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file        Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help            Show help  [boolean]
+					      --install-skills  Install Cloudflare skills for detected AI coding agents before running the command  [boolean] [default: false]
+					      --profile         Use a specific auth profile  [string]
+					  -v, --version         Show version number  [boolean]
+
+					OPTIONS
+					      --json  Output in JSON format  [boolean] [default: false]"
+				`);
+			});
+
+			it("should list notification consumers", async ({ expect }) => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [notificationConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler(
+					"queues consumer notification list testQueue"
+				);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					┌─┬─┬─┬─┬─┐
+					│ consumer_id │ dead_letter_queue │ email │ pagerduty │ webhooks │
+					├─┼─┼─┼─┼─┤
+					│ 1003 │ my-dlq │ user@example.com │ pd-key-1 │ wh-1 │
+					└─┴─┴─┴─┴─┘"
+				`);
+			});
+
+			it("should show empty message when queue has no notification consumers", async ({
+				expect,
+			}) => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [
+						{
+							consumer_id: "1001",
+							type: "worker",
+							script: "my-worker",
+							settings: {},
+						},
+					],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler(
+					"queues consumer notification list testQueue"
+				);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					No Notification consumers found for queue "testQueue"."
+				`);
+			});
+
+			it("should show error when queue does not exist", async ({
+				expect,
+			}) => {
+				mockGetQueueByNameRequest(expectedQueueName, null);
+
+				await expect(
+					runWrangler(
+						"queues consumer notification list testQueue"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
+				);
+			});
+
+			it('should output notification consumers as JSON with "--json" flag', async ({
+				expect,
+			}) => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [notificationConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler(
+					"queues consumer notification list testQueue --json"
+				);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+					[
+					  {
+					    "consumer_id": "1003",
+					    "dead_letter_queue": "my-dlq",
+					    "settings": {
+					      "email": [
+					        {
+					          "id": "user@example.com",
+					        },
+					      ],
+					      "pagerduty": [
+					        {
+					          "id": "pd-key-1",
+					        },
+					      ],
+					      "webhooks": [
+					        {
+					          "id": "wh-1",
+					        },
+					      ],
+					    },
+					    "type": "notification",
+					  },
+					]
+				`);
+			});
+
+			it('should output empty array as JSON with "--json" flag when no notification consumers', async ({
+				expect,
+			}) => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [
+						{
+							consumer_id: "1001",
+							type: "worker",
+							script: "my-worker",
+							settings: {},
+						},
+					],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler(
+					"queues consumer notification list testQueue --json"
+				);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`[]`);
+			});
+		});
+
 		describe("info", () => {
 			const mockQueue = {
 				queue_id: "1234567",
@@ -2556,6 +3145,42 @@ describe("wrangler", () => {
 					Producers: r2_bucket:test-bucket1, r2_bucket:test-bucket2
 					Number of Consumers: 1
 					Consumers: r2_bucket:bucket-consumer"
+				`);
+			});
+			it("should return notification consumer info with mechanisms", async ({
+				expect,
+			}) => {
+				const mockNotificationQueue = {
+					...mockQueue,
+					consumers: [
+						{
+							...mockQueue.consumers[0],
+							type: "notification",
+							settings: {
+								email: [{ id: "user@example.com" }],
+								pagerduty: [{ id: "pd-key-1" }],
+								webhooks: [{ id: "wh-1" }, { id: "wh-2" }],
+							},
+						},
+					],
+				};
+				mockGetQueueByNameRequest(
+					expectedQueueName,
+					mockNotificationQueue
+				);
+				await runWrangler("queues info testQueue");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Queue Name: testQueue
+					Queue ID: 1234567
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers: worker:test-producer1, worker:test-producer2
+					Number of Consumers: 1
+					Consumers: Notification Consumer (email: user@example.com, pagerduty: pd-key-1, webhooks: wh-1, wh-2)"
 				`);
 			});
 		});
