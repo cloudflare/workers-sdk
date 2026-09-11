@@ -296,7 +296,10 @@ export async function runAutoConfig(
 	maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
 
 	// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
-	if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
+	if (
+		resolve(autoConfigDetails.projectPath, autoConfigDetails.outputDir) ===
+		resolve(autoConfigDetails.projectPath)
+	) {
 		maybeAppendWranglerToGitIgnoreLikeFile(
 			`${autoConfigDetails.projectPath}/.assetsignore`
 		);
