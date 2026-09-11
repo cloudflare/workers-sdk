@@ -1,7 +1,13 @@
-import { describe, it, vi } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import { bindings } from "../bindings";
 import { resolveAndValidateConfigExports } from "../config-loader";
+import { defineContainer } from "../container-definition";
+import { exports as workerExports } from "../exports";
 import { defineWorker } from "../worker-definition";
+import type {
+	ContainerConfigExport,
+	ContainerConfigInput,
+} from "../container-definition";
 import type { ConfigContext } from "../definition";
 import type {
 	WorkerConfigExport,
@@ -34,10 +40,413 @@ describe("resolveAndValidateConfigExports", () => {
 		}
 	});
 
-	it("collects settings and Worker validation errors", async ({ expect }) => {
+	it("parses a named standalone Container without a Worker", async ({
+		expect,
+	}) => {
+		const container = defineContainer({
+			name: "standalone-container",
+			image: { reference: "registry.example.com/standalone:latest" },
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ container },
+			{ mode: "production" }
+		);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.container).toMatchObject({
+				type: "container",
+				name: "standalone-container",
+			});
+		}
+	});
+
+	it("parses a Durable Object Container", async ({ expect }) => {
+		const container = defineContainer({
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: { reference: "registry.example.com/primary:latest" },
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ container },
+			{ mode: "production" }
+		);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.container).toMatchObject({
+				type: "container",
+				name: "durable-object-container",
+				schedulingPolicy: "durable-object",
+			});
+		}
+	});
+
+	it("rejects a Container on the default export", async ({ expect }) => {
+		const container = defineContainer({
+			name: "standalone-container",
+			image: { reference: "registry.example.com/standalone:latest" },
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: container },
+			{ mode: "production" }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]).toMatchObject({
+				path: ["default"],
+				message:
+					"The `default` export is reserved for a `worker` config; found a `container` config.",
+			});
+		}
+	});
+
+	it("parses Worker-referenced Container exports", async ({ expect }) => {
+		const container = defineContainer({
+			name: "my-container",
+			image: { dockerfile: "./Dockerfile" },
+		});
+		const worker = defineWorker({
+			name: "my-worker",
+			compatibilityDate,
+			exports: {
+				ContainerDO: workerExports.durableObject({
+					storage: "sqlite",
+					container,
+				}),
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: worker, container },
+			{ mode: "development" }
+		);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			const parsedWorker = result.data.default;
+			const parsedContainer = result.data.container;
+			assert(parsedWorker?.type === "worker");
+			assert(
+				parsedContainer?.type === "container" && "image" in parsedContainer
+			);
+			expect(parsedWorker.exports?.ContainerDO).toMatchObject({
+				container: "my-container",
+			});
+			expect(parsedContainer.image).toEqual({ dockerfile: "./Dockerfile" });
+		}
+	});
+
+	it("resolves repeated Container references once using the config context", async ({
+		expect,
+	}) => {
+		const containerFactory = vi.fn((ctx: ConfigContext) => ({
+			name: `my-container-${ctx.mode}`,
+			image: { dockerfile: "./Dockerfile" },
+		}));
+		const container = defineContainer(containerFactory);
+		const worker = defineWorker({
+			name: "my-worker",
+			compatibilityDate,
+			exports: {
+				ContainerDO: workerExports.durableObject({
+					storage: "sqlite",
+					container,
+				}),
+			},
+		});
+		const ctx = { mode: "test" };
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: worker, container },
+			ctx
+		);
+
+		expect(result.success).toBe(true);
+		expect(containerFactory).toHaveBeenCalledOnce();
+		expect(containerFactory).toHaveBeenCalledWith(ctx);
+		if (result.success) {
+			const parsedWorker = result.data.default;
+			assert(parsedWorker?.type === "worker");
+			expect(parsedWorker.exports).toMatchObject({
+				ContainerDO: { container: "my-container-test" },
+			});
+		}
+	});
+
+	it("rejects a string reference to an exported Container", async ({
+		expect,
+	}) => {
+		const container = defineContainer({
+			name: "my-container",
+			image: { reference: "registry.example.com/container:latest" },
+		});
+		const worker = {
+			type: "worker",
+			name: "my-worker",
+			compatibilityDate,
+			exports: {
+				ContainerDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "my-container",
+				},
+			},
+		};
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: worker, container },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]).toMatchObject({
+				path: ["default", "exports", "ContainerDO", "container"],
+				message:
+					"Container provided as a string. Reference an exported Container definition instead.",
+			});
+		}
+	});
+
+	it("rejects an unexported Container reference with an exported Container's name", async ({
+		expect,
+	}) => {
+		const referencedContainer = defineContainer({
+			name: "my-container",
+			image: { reference: "registry.example.com/referenced:latest" },
+		});
+		const exportedContainer = defineContainer({
+			name: "my-container",
+			image: { reference: "registry.example.com/exported:latest" },
+		});
+		const worker = defineWorker({
+			name: "my-worker",
+			compatibilityDate,
+			exports: {
+				ContainerDO: workerExports.durableObject({
+					storage: "sqlite",
+					container: referencedContainer,
+				}),
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: worker, container: exportedContainer },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]).toMatchObject({
+				path: ["default", "exports", "ContainerDO", "container"],
+				message: 'The referenced Container "my-container" is not exported.',
+			});
+		}
+	});
+
+	it("rejects duplicate exported Container names", async ({ expect }) => {
+		const first = defineContainer({
+			name: "duplicate-container",
+			image: { reference: "registry.example.com/first:latest" },
+		});
+		const second = defineContainer({
+			name: "duplicate-container",
+			image: { reference: "registry.example.com/second:latest" },
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ first, second },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual(["second", "name"]);
+		}
+	});
+
+	it("rejects duplicate exported Worker names", async ({ expect }) => {
+		const entry = defineWorker({
+			name: "duplicate-worker",
+			compatibilityDate,
+		});
+		const auxiliary = defineWorker({
+			name: "duplicate-worker",
+			compatibilityDate,
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: entry, auxiliary },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual(["auxiliary", "name"]);
+		}
+	});
+
+	it("rejects a Container referenced by multiple Durable Objects", async ({
+		expect,
+	}) => {
+		const container = defineContainer({
+			name: "my-container",
+			image: { reference: "registry.example.com/container:latest" },
+		});
+		const worker = defineWorker({
+			name: "my-worker",
+			compatibilityDate,
+			exports: {
+				FirstDO: workerExports.durableObject({
+					storage: "sqlite",
+					container,
+				}),
+				SecondDO: workerExports.durableObject({
+					storage: "sqlite",
+					container,
+				}),
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: worker, container },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual([
+				"default",
+				"exports",
+				"SecondDO",
+				"container",
+			]);
+		}
+	});
+
+	it("rejects a Container referenced by Durable Objects in different Workers", async ({
+		expect,
+	}) => {
+		const container = defineContainer({
+			name: "my-container",
+			image: { reference: "registry.example.com/container:latest" },
+		});
+		const entry = defineWorker({
+			name: "entry",
+			compatibilityDate,
+			exports: {
+				FirstDO: workerExports.durableObject({
+					storage: "sqlite",
+					container,
+				}),
+			},
+		});
+		const auxiliary = defineWorker({
+			name: "auxiliary",
+			compatibilityDate,
+			exports: {
+				SecondDO: workerExports.durableObject({
+					storage: "sqlite",
+					container,
+				}),
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: entry, auxiliary, container },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual([
+				"auxiliary",
+				"exports",
+				"SecondDO",
+				"container",
+			]);
+		}
+	});
+
+	it("rejects references to non-Container configs", async ({ expect }) => {
+		const notAContainer = defineWorker({
+			name: "not-a-container",
+			compatibilityDate,
+		});
+		const worker = defineWorker({
+			name: "my-worker",
+			compatibilityDate,
+			exports: {
+				ContainerDO: workerExports.durableObject({
+					storage: "sqlite",
+					container: notAContainer as unknown as ContainerConfigExport,
+				}),
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: worker },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual([
+				"default",
+				"exports",
+				"ContainerDO",
+			]);
+		}
+	});
+
+	it("rejects Container references without a name", async ({ expect }) => {
+		const invalidContainer = defineContainer((() => ({
+			image: { reference: "registry.example.com/container:latest" },
+		})) as unknown as () => ContainerConfigInput);
+		const worker = defineWorker({
+			name: "my-worker",
+			compatibilityDate,
+			exports: {
+				ContainerDO: workerExports.durableObject({
+					storage: "sqlite",
+					container: invalidContainer,
+				}),
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: worker },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual([
+				"default",
+				"exports",
+				"ContainerDO",
+			]);
+		}
+	});
+
+	it("collects settings, Worker, and Container validation errors", async ({
+		expect,
+	}) => {
 		const result = await resolveAndValidateConfigExports(
 			{
 				default: { ...baseConfig, compatibilityDate: 42 },
+				container: {
+					type: "container",
+					name: "",
+					image: { dockerfile: "./Dockerfile" },
+				},
 				settings: { type: "settings", accountId: 42 },
 			},
 			{ mode: undefined }
@@ -49,6 +458,7 @@ describe("resolveAndValidateConfigExports", () => {
 				expect.arrayContaining([
 					["settings", "accountId"],
 					["default", "compatibilityDate"],
+					["container", "name"],
 				])
 			);
 		}
@@ -163,10 +573,43 @@ describe("resolveAndValidateConfigExports", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.default?.env?.AUXILIARY).toMatchObject({
+			const config = result.data.default;
+			assert(config?.type === "worker");
+			expect(config.env?.AUXILIARY).toMatchObject({
 				type: "worker",
 				worker: "auxiliary",
 			});
+		}
+	});
+
+	it("rejects references to non-Worker configs", async ({ expect }) => {
+		const notAWorker = defineContainer({
+			name: "not-a-worker",
+			image: { reference: "registry.example.com/container:latest" },
+		});
+		const entry = defineWorker({
+			name: "entry",
+			compatibilityDate,
+			env: {
+				AUXILIARY: bindings.worker({
+					worker: notAWorker as unknown as WorkerConfigExport,
+				}),
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ default: entry },
+			{ mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual([
+				"default",
+				"env",
+				"AUXILIARY",
+				"worker",
+			]);
 		}
 	});
 
@@ -207,7 +650,9 @@ describe("resolveAndValidateConfigExports", () => {
 		expect(auxiliaryFactory).toHaveBeenCalledOnce();
 		expect(auxiliaryFactory).toHaveBeenCalledWith(ctx);
 		if (result.success) {
-			expect(result.data.default?.env).toMatchObject({
+			const config = result.data.default;
+			assert(config?.type === "worker");
+			expect(config.env).toMatchObject({
 				FIRST: { worker: "auxiliary-test" },
 				SECOND: { worker: "auxiliary-test" },
 				COUNTER: { worker: "auxiliary-test" },
@@ -241,7 +686,9 @@ describe("resolveAndValidateConfigExports", () => {
 		expect(result.success).toBe(true);
 		expect(invalidFactory).toHaveBeenCalledOnce();
 		if (result.success) {
-			expect(result.data.default?.env).toMatchObject({
+			const config = result.data.default;
+			assert(config?.type === "worker");
+			expect(config.env).toMatchObject({
 				FIRST: { worker: "referenced-only" },
 				SECOND: { worker: "referenced-only" },
 			});
@@ -264,7 +711,9 @@ describe("resolveAndValidateConfigExports", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.default?.env?.EXTERNAL).toMatchObject({
+			const config = result.data.default;
+			assert(config?.type === "worker");
+			expect(config.env?.EXTERNAL).toMatchObject({
 				worker: "external-worker",
 			});
 		}
@@ -318,10 +767,14 @@ describe("resolveAndValidateConfigExports", () => {
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data.default?.env?.SECOND).toMatchObject({
+			const first = result.data.default;
+			const second = result.data.second;
+			assert(first?.type === "worker");
+			assert(second?.type === "worker");
+			expect(first.env?.SECOND).toMatchObject({
 				worker: "second",
 			});
-			expect(result.data.second?.env?.FIRST).toMatchObject({
+			expect(second.env?.FIRST).toMatchObject({
 				worker: "first",
 			});
 		}

@@ -2,8 +2,10 @@ import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
 import {
 	BindingSchema,
+	InputContainerSchema,
 	InputSettingsSchema,
 	InputWorkerSchema,
+	OutputContainerSchema,
 	OutputSettingsSchema,
 	OutputWorkerSchema,
 } from "../schema";
@@ -13,6 +15,12 @@ const baseConfig = {
 	type: "worker",
 	name: "my-worker",
 	compatibilityDate: "2026-06-01",
+} as const;
+
+const baseContainer = {
+	type: "container",
+	name: "my-container",
+	image: { dockerfile: "./Dockerfile" },
 } as const;
 
 describe("InputWorkerSchema", () => {
@@ -698,6 +706,433 @@ describe("InputWorkerSchema", () => {
 	});
 });
 
+describe("InputContainerSchema", () => {
+	it("accepts a Container with a Dockerfile", ({ expect }) => {
+		const result = InputContainerSchema.safeParse(baseContainer);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({ maxInstances: 20 });
+		}
+	});
+
+	it("accepts a Container with an image reference", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			image: { reference: "registry.example.com/my-image:latest" },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects a local image reference", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			image: { localReference: "locally-built-image:latest" },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts all optional fields", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			image: {
+				dockerfile: "./container/Dockerfile",
+				buildContext: "./container",
+				buildVars: { NODE_VERSION: "24" },
+			},
+			maxInstances: 10,
+			instanceType: { vcpu: 2, memoryMib: 4096, diskMb: 20_000 },
+			schedulingPolicy: "regional",
+			ssh: { enabled: true, port: 2222 },
+			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
+			constraints: {
+				regions: ["ENAM", "WEUR", "APAC"],
+				jurisdiction: "eu",
+			},
+			rollout: {
+				kind: "full-manual",
+				stepPercentage: [10, 50, 100],
+				activeGracePeriod: 300,
+			},
+			observability: {
+				enabled: true,
+				logs: { enabled: true },
+				targetInstancePercentage: 25,
+			},
+			unsafe: { experimentalFeature: true },
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it.for(["name", "image"] as const)("requires %s", (field, { expect }) => {
+		const { [field]: _omitted, ...container } = baseContainer;
+		const result = InputContainerSchema.safeParse(container);
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects an empty name", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			name: "",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("requires type: 'container'", ({ expect }) => {
+		const { type: _type, ...container } = baseContainer;
+
+		expect(InputContainerSchema.safeParse(container).success).toBe(false);
+	});
+
+	it("accepts a Durable Object Container", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: { dockerfile: "./Dockerfile" },
+				fallback: { reference: "registry.example.com/fallback:latest" },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts a Durable Object Container without images", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects Docker build fields without a Dockerfile", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			image: {
+				reference: "registry.example.com/my-image:latest",
+				buildContext: ".",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it.for([
+		{ description: "Dockerfile path", image: { dockerfile: "" } },
+		{ description: "image reference", image: { reference: "" } },
+	])("rejects an empty $description", ({ image }, { expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			image,
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it.for([-1, 1.5])(
+		"rejects maxInstances of %s",
+		(maxInstances, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				maxInstances,
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
+	it.for([
+		["vcpu", 0.0624],
+		["memoryMib", -1],
+		["diskMb", -1],
+	] as const)(
+		"rejects an invalid custom instance type %s",
+		([field, value], { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				instanceType: { [field]: value },
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
+	it.for([-1, 0, 1.5, 65_536])(
+		"rejects an SSH port of %s",
+		(port, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				ssh: { enabled: true, port },
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
+	it("rejects an unsupported rollout step percentage", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			rollout: { stepPercentage: 15 },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual([
+				"rollout",
+				"stepPercentage",
+			]);
+		}
+	});
+
+	it.for([5, 10, 20, 25, 50, 100])(
+		"accepts a rollout step percentage of %s",
+		(stepPercentage, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				rollout: { stepPercentage },
+			});
+
+			expect(result.success).toBe(true);
+		}
+	);
+
+	it.for([
+		{
+			description: "empty",
+			stepPercentage: [],
+			path: ["rollout", "stepPercentage"],
+		},
+		{
+			description: "out of range",
+			stepPercentage: [5, 100],
+			path: ["rollout", "stepPercentage", 0],
+		},
+		{
+			description: "descending",
+			stepPercentage: [50, 10, 100],
+			path: ["rollout", "stepPercentage", 1],
+		},
+		{
+			description: "not completed",
+			stepPercentage: [10, 50],
+			path: ["rollout", "stepPercentage", 1],
+		},
+	])(
+		"rejects a $description rollout plan",
+		({ stepPercentage, path }, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				rollout: { stepPercentage },
+			});
+
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues.map((issue) => issue.path)).toContainEqual(
+					path
+				);
+			}
+		}
+	);
+
+	it("rejects more rollout steps than maximum instances", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			maxInstances: 2,
+			rollout: { stepPercentage: [10, 50, 100] },
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0]?.path).toEqual([
+				"rollout",
+				"stepPercentage",
+			]);
+		}
+	});
+
+	it("rejects a negative rollout active grace period", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			rollout: { activeGracePeriod: -1 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it.for([
+		{ targetInstancePercentage: -1 },
+		{ targetInstancePercentage: 101 },
+		{ targetInstanceCount: -1 },
+		{ targetInstanceCount: 1.5 },
+	])(
+		"rejects an invalid observability target: %o",
+		(observability, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				observability,
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
+	it.for([{ targetInstancePercentage: 100 }, { targetInstanceCount: 0 }])(
+		"accepts an observability target boundary: %o",
+		(observability, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				observability,
+			});
+
+			expect(result.success).toBe(true);
+		}
+	);
+
+	it("rejects both observability targets together", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			observability: {
+				targetInstancePercentage: 50,
+				targetInstanceCount: 2,
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects standard Container fields with durable-object scheduling", ({
+		expect,
+	}) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			schedulingPolicy: "durable-object",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unsupported enum values", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			instanceType: "standard",
+			schedulingPolicy: "random",
+		});
+
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("OutputContainerSchema", () => {
+	it.for([
+		{ reference: "registry.example.com/my-image:digest" },
+		{ localReference: "locally-built-image:latest" },
+	])("accepts a built image reference: %o", (image, { expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			...baseContainer,
+			image,
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({ maxInstances: 20 });
+		}
+	});
+
+	it("rejects a Dockerfile that has not been built", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse(baseContainer);
+
+		expect(result.success).toBe(false);
+	});
+
+	it.for([{ reference: "" }, { localReference: "" }])(
+		"rejects an empty image reference: %o",
+		(image, { expect }) => {
+			const result = OutputContainerSchema.safeParse({
+				...baseContainer,
+				image,
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
+	it("rejects both image reference types together", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			...baseContainer,
+			image: {
+				reference: "registry.example.com/my-image:digest",
+				localReference: "locally-built-image:latest",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts built Durable Object Container images", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: { reference: "registry.example.com/primary:digest" },
+				local: { localReference: "locally-built-fallback:latest" },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects unbuilt Durable Object Container images", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: { primary: { dockerfile: "./Dockerfile" } },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("validates rollout steps against maximum instances", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			...baseContainer,
+			image: { reference: "registry.example.com/my-image:digest" },
+			maxInstances: 2,
+			rollout: { stepPercentage: [10, 50, 100] },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects invalid custom instance resources", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			...baseContainer,
+			image: { reference: "registry.example.com/my-image:digest" },
+			instanceType: { vcpu: 0, memoryMib: -1, diskMb: -1 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects invalid observability targets", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			...baseContainer,
+			image: { reference: "registry.example.com/my-image:digest" },
+			observability: { targetInstancePercentage: 101 },
+		});
+
+		expect(result.success).toBe(false);
+	});
+});
+
 describe("OutputWorkerSchema", () => {
 	it("accepts a config without manifest (assets-only mode)", ({ expect }) => {
 		const result = OutputWorkerSchema.safeParse({ ...baseConfig });
@@ -1008,7 +1443,7 @@ describe("ExportSchema", () => {
 			exportConfig.durableObject({
 				storage: "legacy-kv",
 				// @ts-expect-error `container` requires `storage: "sqlite"`
-				container: "my-container",
+				container: baseContainer,
 			});
 
 			exportConfig.durableObject({
@@ -1016,7 +1451,7 @@ describe("ExportSchema", () => {
 				storage: "legacy-kv",
 				transferFrom: "source-worker",
 				// @ts-expect-error `container` requires `storage: "sqlite"`
-				container: "my-container",
+				container: baseContainer,
 			});
 
 			const _exports: NonNullable<ParsedInputWorkerConfig["exports"]> = {
@@ -1029,13 +1464,16 @@ describe("ExportSchema", () => {
 			};
 
 			// The permitted combinations must still compile.
-			exportConfig.durableObject({ storage: "sqlite", container: "my-do" });
+			exportConfig.durableObject({
+				storage: "sqlite",
+				container: baseContainer,
+			});
 			exportConfig.durableObject({ storage: "legacy-kv" });
 			exportConfig.durableObject({
 				state: "expecting-transfer",
 				storage: "sqlite",
 				transferFrom: "source-worker",
-				container: "my-do",
+				container: baseContainer,
 			});
 			exportConfig.durableObject({
 				state: "expecting-transfer",

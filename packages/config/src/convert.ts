@@ -1,29 +1,41 @@
 import {
 	UserError,
 	type RawConfig,
+	type ContainerApp,
 	type Exports,
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type {
+	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 } from "./schema";
 import type { Json } from "./utils";
 
+const ROLLOUT_KIND_MAP = {
+	"full-auto": "full_auto",
+	"full-manual": "full_manual",
+	none: "none",
+} as const;
+
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
- * The caller is responsible for unwrapping any function/promise wrapper around
- * the config and validating it against `InputWorkerSchema` before passing it in.
+ * The caller is responsible for unwrapping any function/promise wrappers and
+ * validating the configs against their corresponding input schemas before
+ * passing them in.
  *
  * @param workerConfig The parsed (post-validation) Worker config.
  * @param settingsConfig The optional parsed settings config, whose fields
  * are merged onto the result.
+ * @param containerExports The parsed Container exports to include in the
+ * result.
  * @returns The corresponding Wrangler `RawConfig`.
  */
 export function convertToWranglerConfig(
 	workerConfig: ParsedInputWorkerConfig,
-	settingsConfig?: ParsedInputSettingsConfig
+	settingsConfig?: ParsedInputSettingsConfig,
+	containerExports: ParsedInputContainerConfig[] = []
 ): RawConfig {
 	const result: RawConfig = {};
 
@@ -37,8 +49,123 @@ export function convertToWranglerConfig(
 	if (settingsConfig !== undefined) {
 		convertSettings(settingsConfig, result);
 	}
+	if (containerExports.length > 0) {
+		result.containers = containerExports.map((container) =>
+			convertContainer(container)
+		);
+	}
 
 	return result;
+}
+
+function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
+	if (container.schedulingPolicy === "durable-object") {
+		throw new UserError(
+			"Durable Object-managed Containers are not currently supported by `convertToWranglerConfig()`.",
+			{ telemetryMessage: false }
+		);
+	}
+
+	const converted: ContainerApp = {
+		name: container.name,
+	};
+
+	if (container.observability !== undefined) {
+		converted.observability = convertContainerObservability(
+			container.observability
+		);
+	}
+	if (container.unsafe !== undefined) {
+		converted.unsafe = container.unsafe;
+	}
+
+	converted.image =
+		"dockerfile" in container.image
+			? container.image.dockerfile
+			: container.image.reference;
+	converted.max_instances = container.maxInstances;
+	if ("dockerfile" in container.image) {
+		if (container.image.buildContext !== undefined) {
+			converted.image_build_context = container.image.buildContext;
+		}
+		if (container.image.buildVars !== undefined) {
+			converted.image_vars = container.image.buildVars;
+		}
+	}
+	if (container.instanceType !== undefined) {
+		if (typeof container.instanceType === "string") {
+			converted.instance_type = container.instanceType;
+		} else {
+			const instanceType: Exclude<
+				NonNullable<ContainerApp["instance_type"]>,
+				string
+			> = {};
+			if (container.instanceType.vcpu !== undefined) {
+				instanceType.vcpu = container.instanceType.vcpu;
+			}
+			if (container.instanceType.memoryMib !== undefined) {
+				instanceType.memory_mib = container.instanceType.memoryMib;
+			}
+			if (container.instanceType.diskMb !== undefined) {
+				instanceType.disk_mb = container.instanceType.diskMb;
+			}
+			converted.instance_type = instanceType;
+		}
+	}
+	if (container.schedulingPolicy !== undefined) {
+		converted.scheduling_policy = container.schedulingPolicy;
+	}
+	if (container.ssh !== undefined) {
+		converted.ssh = container.ssh;
+	}
+	if (container.authorizedKeys !== undefined) {
+		converted.authorized_keys = container.authorizedKeys.map(
+			({ name, publicKey }) => ({ name, public_key: publicKey })
+		);
+	}
+	if (container.constraints !== undefined) {
+		converted.constraints = container.constraints;
+	}
+	if (container.rollout !== undefined) {
+		if (container.rollout.kind !== undefined) {
+			converted.rollout_kind = ROLLOUT_KIND_MAP[container.rollout.kind];
+		}
+		if (container.rollout.stepPercentage !== undefined) {
+			converted.rollout_step_percentage = container.rollout.stepPercentage;
+		}
+		if (container.rollout.activeGracePeriod !== undefined) {
+			converted.rollout_active_grace_period =
+				container.rollout.activeGracePeriod;
+		}
+	}
+
+	return converted;
+}
+
+function convertContainerObservability(
+	observability: NonNullable<ParsedInputContainerConfig["observability"]>
+): NonNullable<ContainerApp["observability"]> {
+	const converted: NonNullable<ContainerApp["observability"]> = {};
+	if (observability.enabled !== undefined) {
+		converted.enabled = observability.enabled;
+	}
+	if (observability.logs !== undefined) {
+		converted.logs = observability.logs;
+	}
+	if (
+		"targetInstancePercentage" in observability &&
+		observability.targetInstancePercentage !== undefined
+	) {
+		converted.target_instance_percentage =
+			observability.targetInstancePercentage;
+	}
+	if (
+		"targetInstanceCount" in observability &&
+		observability.targetInstanceCount !== undefined
+	) {
+		converted.target_instance_count = observability.targetInstanceCount;
+	}
+	return converted;
 }
 
 /**
