@@ -141,6 +141,11 @@ function convertWorkerOptions(
 		config.triggers.push({ type: "fetch", pattern: route });
 	}
 
+	for (const cron of worker.cronTriggers ?? []) {
+		config.triggers ??= [];
+		config.triggers.push({ type: "scheduled", schedule: cron });
+	}
+
 	for (const connectHandler of worker.connectHandlers ?? []) {
 		config.triggers ??= [];
 		config.triggers.push({ type: "connect", ...connectHandler });
