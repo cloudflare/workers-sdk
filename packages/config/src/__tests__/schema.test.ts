@@ -20,7 +20,6 @@ const baseConfig = {
 const baseContainer = {
 	type: "container",
 	name: "my-container",
-	compatibilityDate: "2026-06-24",
 	image: { dockerfile: "./Dockerfile" },
 } as const;
 
@@ -712,6 +711,9 @@ describe("InputContainerSchema", () => {
 		const result = InputContainerSchema.safeParse(baseContainer);
 
 		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({ maxInstances: 20 });
+		}
 	});
 
 	it("accepts a Container with an image reference", ({ expect }) => {
@@ -721,6 +723,15 @@ describe("InputContainerSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("rejects a local image reference", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			image: { localReference: "locally-built-image:latest" },
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("accepts all optional fields", ({ expect }) => {
@@ -736,16 +747,9 @@ describe("InputContainerSchema", () => {
 			schedulingPolicy: "regional",
 			ssh: { enabled: true, port: 2222 },
 			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
-			trustedUserCaKeys: [{ publicKey: "ssh-ed25519 BBBB" }],
 			constraints: {
 				regions: ["ENAM", "WEUR", "APAC"],
 				jurisdiction: "eu",
-				cities: ["LHR"],
-				tiers: [1, 2],
-			},
-			affinities: {
-				colocation: "datacenter",
-				hardwareGeneration: "highest-overall-performance",
 			},
 			rollout: {
 				kind: "full-manual",
@@ -756,7 +760,6 @@ describe("InputContainerSchema", () => {
 				enabled: true,
 				logs: { enabled: true },
 				targetInstancePercentage: 25,
-				targetInstanceCount: 2,
 			},
 			unsafe: { experimentalFeature: true },
 		});
@@ -764,15 +767,12 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it.for(["name", "compatibilityDate", "image"] as const)(
-		"requires %s",
-		(field, { expect }) => {
-			const { [field]: _omitted, ...container } = baseContainer;
-			const result = InputContainerSchema.safeParse(container);
+	it.for(["name", "image"] as const)("requires %s", (field, { expect }) => {
+		const { [field]: _omitted, ...container } = baseContainer;
+		const result = InputContainerSchema.safeParse(container);
 
-			expect(result.success).toBe(false);
-		}
-	);
+		expect(result.success).toBe(false);
+	});
 
 	it("rejects an empty name", ({ expect }) => {
 		const result = InputContainerSchema.safeParse({
@@ -787,6 +787,30 @@ describe("InputContainerSchema", () => {
 		const { type: _type, ...container } = baseContainer;
 
 		expect(InputContainerSchema.safeParse(container).success).toBe(false);
+	});
+
+	it("accepts a Durable Object Container", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: { dockerfile: "./Dockerfile" },
+				fallback: { reference: "registry.example.com/fallback:latest" },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts a Durable Object Container without images", ({ expect }) => {
+		const result = InputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+		});
+
+		expect(result.success).toBe(true);
 	});
 
 	it("rejects Docker build fields without a Dockerfile", ({ expect }) => {
@@ -960,16 +984,39 @@ describe("InputContainerSchema", () => {
 		}
 	);
 
-	it("accepts observability target boundaries", ({ expect }) => {
+	it.for([{ targetInstancePercentage: 100 }, { targetInstanceCount: 0 }])(
+		"accepts an observability target boundary: %o",
+		(observability, { expect }) => {
+			const result = InputContainerSchema.safeParse({
+				...baseContainer,
+				observability,
+			});
+
+			expect(result.success).toBe(true);
+		}
+	);
+
+	it("rejects both observability targets together", ({ expect }) => {
 		const result = InputContainerSchema.safeParse({
 			...baseContainer,
 			observability: {
-				targetInstancePercentage: 100,
-				targetInstanceCount: 0,
+				targetInstancePercentage: 50,
+				targetInstanceCount: 2,
 			},
 		});
 
-		expect(result.success).toBe(true);
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects standard Container fields with durable-object scheduling", ({
+		expect,
+	}) => {
+		const result = InputContainerSchema.safeParse({
+			...baseContainer,
+			schedulingPolicy: "durable-object",
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("rejects unsupported enum values", ({ expect }) => {
@@ -984,13 +1031,19 @@ describe("InputContainerSchema", () => {
 });
 
 describe("OutputContainerSchema", () => {
-	it("accepts a built image reference", ({ expect }) => {
+	it.for([
+		{ reference: "registry.example.com/my-image:digest" },
+		{ localReference: "locally-built-image:latest" },
+	])("accepts a built image reference: %o", (image, { expect }) => {
 		const result = OutputContainerSchema.safeParse({
 			...baseContainer,
-			image: { reference: "registry.example.com/my-image:digest" },
+			image,
 		});
 
 		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({ maxInstances: 20 });
+		}
 	});
 
 	it("rejects a Dockerfile that has not been built", ({ expect }) => {
@@ -999,10 +1052,50 @@ describe("OutputContainerSchema", () => {
 		expect(result.success).toBe(false);
 	});
 
-	it("rejects an empty image reference", ({ expect }) => {
+	it.for([{ reference: "" }, { localReference: "" }])(
+		"rejects an empty image reference: %o",
+		(image, { expect }) => {
+			const result = OutputContainerSchema.safeParse({
+				...baseContainer,
+				image,
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
+	it("rejects both image reference types together", ({ expect }) => {
 		const result = OutputContainerSchema.safeParse({
 			...baseContainer,
-			image: { reference: "" },
+			image: {
+				reference: "registry.example.com/my-image:digest",
+				localReference: "locally-built-image:latest",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts built Durable Object Container images", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: { reference: "registry.example.com/primary:digest" },
+				local: { localReference: "locally-built-fallback:latest" },
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects unbuilt Durable Object Container images", ({ expect }) => {
+		const result = OutputContainerSchema.safeParse({
+			type: "container",
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: { primary: { dockerfile: "./Dockerfile" } },
 		});
 
 		expect(result.success).toBe(false);

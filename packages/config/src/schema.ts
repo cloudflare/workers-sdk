@@ -339,9 +339,29 @@ const EnvSchema = z
 	.superRefine(validateSingletonBindings)
 	.optional();
 
+const ContainerImageDockerfileSchema = z.strictObject({
+	dockerfile: z.string().min(1),
+	buildContext: z.string().optional(),
+	buildVars: z.record(z.string(), z.string()).optional(),
+});
+
 const ContainerImageReferenceSchema = z.strictObject({
 	reference: z.string().min(1),
 });
+
+const ContainerImageLocalReferenceSchema = z.strictObject({
+	localReference: z.string().min(1),
+});
+
+const InputContainerImageSchema = z.union([
+	ContainerImageDockerfileSchema,
+	ContainerImageReferenceSchema,
+]);
+
+const OutputContainerImageSchema = z.union([
+	ContainerImageReferenceSchema,
+	ContainerImageLocalReferenceSchema,
+]);
 
 const VALID_ROLLOUT_STEP_PERCENTAGES = new Set([5, 10, 20, 25, 50, 100]);
 
@@ -396,7 +416,10 @@ const ContainerRolloutStepPercentageSchema = z
 	});
 
 function validateContainerRelationships(
-	container: Pick<ContainerConfig, "maxInstances" | "rollout">,
+	container: Pick<
+		Extract<ContainerConfig, { image: unknown }>,
+		"maxInstances" | "rollout"
+	>,
 	ctx: z.RefinementCtx
 ): void {
 	const stepPercentage = container.rollout?.stepPercentage;
@@ -414,11 +437,29 @@ function validateContainerRelationships(
 	}
 }
 
+const ContainerObservabilityBaseSchema = z.strictObject({
+	enabled: z.boolean().optional(),
+	logs: z.strictObject({ enabled: z.boolean().optional() }).optional(),
+});
+
+const ContainerObservabilitySchema = z.union([
+	ContainerObservabilityBaseSchema.extend({
+		targetInstancePercentage: z.number().min(0).max(100).optional(),
+	}),
+	ContainerObservabilityBaseSchema.extend({
+		targetInstanceCount: z.number().int().nonnegative().optional(),
+	}),
+]);
+
 const BaseContainerSchema = z.strictObject({
 	type: z.literal("container"),
 	name: z.string().min(1),
-	compatibilityDate: z.string(),
-	maxInstances: z.number().int().nonnegative().optional(),
+	observability: ContainerObservabilitySchema.optional(),
+	unsafe: z.record(z.string(), z.unknown()).optional(),
+});
+
+const StandardContainerBaseSchema = BaseContainerSchema.extend({
+	maxInstances: z.number().int().nonnegative().default(20),
 	instanceType: z
 		.union([
 			z.enum([
@@ -436,7 +477,7 @@ const BaseContainerSchema = z.strictObject({
 			}),
 		])
 		.optional(),
-	schedulingPolicy: z.enum(["default", "moon", "regional"]).optional(),
+	schedulingPolicy: z.enum(["default", "regional"]).optional(),
 	ssh: z
 		.strictObject({
 			enabled: z.boolean(),
@@ -445,14 +486,6 @@ const BaseContainerSchema = z.strictObject({
 		.optional(),
 	authorizedKeys: z
 		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
-		.optional(),
-	trustedUserCaKeys: z
-		.array(
-			z.strictObject({
-				name: z.string().optional(),
-				publicKey: z.string(),
-			})
-		)
 		.optional(),
 	constraints: z
 		.strictObject({
@@ -472,14 +505,6 @@ const BaseContainerSchema = z.strictObject({
 				)
 				.optional(),
 			jurisdiction: z.enum(["eu", "fedramp"]).optional(),
-			cities: z.array(z.string()).optional(),
-			tiers: z.array(z.number()).optional(),
-		})
-		.optional(),
-	affinities: z
-		.strictObject({
-			colocation: z.literal("datacenter").optional(),
-			hardwareGeneration: z.literal("highest-overall-performance").optional(),
 		})
 		.optional(),
 	rollout: z
@@ -489,41 +514,40 @@ const BaseContainerSchema = z.strictObject({
 			activeGracePeriod: z.number().nonnegative().optional(),
 		})
 		.optional(),
-	observability: z
-		.strictObject({
-			enabled: z.boolean().optional(),
-			logs: z.strictObject({ enabled: z.boolean().optional() }).optional(),
-			targetInstancePercentage: z.number().min(0).max(100).optional(),
-			targetInstanceCount: z.number().int().nonnegative().optional(),
-		})
-		.optional(),
-	unsafe: z.record(z.string(), z.unknown()).optional(),
+});
+
+const DurableObjectContainerBaseSchema = BaseContainerSchema.extend({
+	schedulingPolicy: z.literal("durable-object"),
 });
 
 /**
  * Input Container schema — validates user-authored `cloudflare.config.ts`
  * Container exports. Dockerfiles are built by the consuming build tool.
  */
-export const InputContainerSchema = BaseContainerSchema.extend({
-	image: z.union([
-		z.strictObject({
-			dockerfile: z.string().min(1),
-			buildContext: z.string().optional(),
-			buildVars: z.record(z.string(), z.string()).optional(),
-		}),
-		ContainerImageReferenceSchema,
-	]),
-}).superRefine(validateContainerRelationships);
+export const InputContainerSchema = z.union([
+	StandardContainerBaseSchema.extend({
+		image: InputContainerImageSchema,
+	}).superRefine(validateContainerRelationships),
+	DurableObjectContainerBaseSchema.extend({
+		images: z.record(z.string(), InputContainerImageSchema).optional(),
+	}),
+]);
 
 export type ParsedInputContainerConfig = z.output<typeof InputContainerSchema>;
 
 /**
  * Output Container schema — validates Container configs in the Build Output
- * Specification, after any Dockerfile has been built into an image reference.
+ * Specification, after any Dockerfile has been built into a local or remote
+ * image reference.
  */
-export const OutputContainerSchema = BaseContainerSchema.extend({
-	image: ContainerImageReferenceSchema,
-}).superRefine(validateContainerRelationships);
+export const OutputContainerSchema = z.union([
+	StandardContainerBaseSchema.extend({
+		image: OutputContainerImageSchema,
+	}).superRefine(validateContainerRelationships),
+	DurableObjectContainerBaseSchema.extend({
+		images: z.record(z.string(), OutputContainerImageSchema).optional(),
+	}),
+]);
 
 export type ParsedOutputContainerConfig = z.output<
 	typeof OutputContainerSchema

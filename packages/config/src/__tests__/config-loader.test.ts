@@ -45,7 +45,6 @@ describe("resolveAndValidateConfigExports", () => {
 	}) => {
 		const container = defineContainer({
 			name: "standalone-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/standalone:latest" },
 		});
 
@@ -63,10 +62,33 @@ describe("resolveAndValidateConfigExports", () => {
 		}
 	});
 
+	it("parses a Durable Object Container", async ({ expect }) => {
+		const container = defineContainer({
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: { reference: "registry.example.com/primary:latest" },
+			},
+		});
+
+		const result = await resolveAndValidateConfigExports(
+			{ container },
+			{ mode: "production" }
+		);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.container).toMatchObject({
+				type: "container",
+				name: "durable-object-container",
+				schedulingPolicy: "durable-object",
+			});
+		}
+	});
+
 	it("rejects a Container on the default export", async ({ expect }) => {
 		const container = defineContainer({
 			name: "standalone-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/standalone:latest" },
 		});
 
@@ -88,7 +110,6 @@ describe("resolveAndValidateConfigExports", () => {
 	it("parses Worker-referenced Container exports", async ({ expect }) => {
 		const container = defineContainer({
 			name: "my-container",
-			compatibilityDate,
 			image: { dockerfile: "./Dockerfile" },
 		});
 		const worker = defineWorker({
@@ -112,7 +133,9 @@ describe("resolveAndValidateConfigExports", () => {
 			const parsedWorker = result.data.default;
 			const parsedContainer = result.data.container;
 			assert(parsedWorker?.type === "worker");
-			assert(parsedContainer?.type === "container");
+			assert(
+				parsedContainer?.type === "container" && "image" in parsedContainer
+			);
 			expect(parsedWorker.exports?.ContainerDO).toMatchObject({
 				container: "my-container",
 			});
@@ -125,7 +148,6 @@ describe("resolveAndValidateConfigExports", () => {
 	}) => {
 		const containerFactory = vi.fn((ctx: ConfigContext) => ({
 			name: `my-container-${ctx.mode}`,
-			compatibilityDate,
 			image: { dockerfile: "./Dockerfile" },
 		}));
 		const container = defineContainer(containerFactory);
@@ -163,7 +185,6 @@ describe("resolveAndValidateConfigExports", () => {
 	}) => {
 		const container = defineContainer({
 			name: "my-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/container:latest" },
 		});
 		const worker = {
@@ -199,12 +220,10 @@ describe("resolveAndValidateConfigExports", () => {
 	}) => {
 		const referencedContainer = defineContainer({
 			name: "my-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/referenced:latest" },
 		});
 		const exportedContainer = defineContainer({
 			name: "my-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/exported:latest" },
 		});
 		const worker = defineWorker({
@@ -235,12 +254,10 @@ describe("resolveAndValidateConfigExports", () => {
 	it("rejects duplicate exported Container names", async ({ expect }) => {
 		const first = defineContainer({
 			name: "duplicate-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/first:latest" },
 		});
 		const second = defineContainer({
 			name: "duplicate-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/second:latest" },
 		});
 
@@ -281,7 +298,6 @@ describe("resolveAndValidateConfigExports", () => {
 	}) => {
 		const container = defineContainer({
 			name: "my-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/container:latest" },
 		});
 		const worker = defineWorker({
@@ -320,7 +336,6 @@ describe("resolveAndValidateConfigExports", () => {
 	}) => {
 		const container = defineContainer({
 			name: "my-container",
-			compatibilityDate,
 			image: { reference: "registry.example.com/container:latest" },
 		});
 		const entry = defineWorker({
@@ -393,7 +408,6 @@ describe("resolveAndValidateConfigExports", () => {
 
 	it("rejects Container references without a name", async ({ expect }) => {
 		const invalidContainer = defineContainer((() => ({
-			compatibilityDate,
 			image: { reference: "registry.example.com/container:latest" },
 		})) as unknown as () => ContainerConfigInput);
 		const worker = defineWorker({
@@ -430,8 +444,7 @@ describe("resolveAndValidateConfigExports", () => {
 				default: { ...baseConfig, compatibilityDate: 42 },
 				container: {
 					type: "container",
-					name: "my-container",
-					compatibilityDate: 42,
+					name: "",
 					image: { dockerfile: "./Dockerfile" },
 				},
 				settings: { type: "settings", accountId: 42 },
@@ -445,7 +458,7 @@ describe("resolveAndValidateConfigExports", () => {
 				expect.arrayContaining([
 					["settings", "accountId"],
 					["default", "compatibilityDate"],
-					["container", "compatibilityDate"],
+					["container", "name"],
 				])
 			);
 		}
@@ -572,7 +585,6 @@ describe("resolveAndValidateConfigExports", () => {
 	it("rejects references to non-Worker configs", async ({ expect }) => {
 		const notAWorker = defineContainer({
 			name: "not-a-worker",
-			compatibilityDate,
 			image: { reference: "registry.example.com/container:latest" },
 		});
 		const entry = defineWorker({

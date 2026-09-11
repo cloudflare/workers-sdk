@@ -12,23 +12,31 @@ import type { ParsedInputWorkerConfig } from "../schema";
 
 const objectContainer = defineContainer({
 	name: "object-container",
-	compatibilityDate: "2026-06-24",
 	image: { dockerfile: "./Dockerfile", buildVars: { NODE_VERSION: "24" } },
+	observability: { targetInstancePercentage: 50 },
 });
 
 const factoryContainer = defineContainer((ctx) => ({
 	name: `factory-container-${ctx.mode}`,
-	compatibilityDate: "2026-06-24",
 	image: { reference: "registry.example.com/container:latest" },
 }));
 
 const promisedContainer = defineContainer(
 	Promise.resolve({
 		name: "promised-container",
-		compatibilityDate: "2026-06-24",
 		image: { dockerfile: "./Dockerfile" },
 	})
 );
+
+const durableObjectContainer = defineContainer({
+	name: "durable-object-container",
+	schedulingPolicy: "durable-object",
+	images: {
+		primary: { dockerfile: "./Dockerfile" },
+		fallback: { reference: "registry.example.com/fallback:latest" },
+	},
+	observability: { targetInstanceCount: 2 },
+});
 
 defineWorker({
 	name: "worker",
@@ -46,6 +54,10 @@ defineWorker({
 			storage: "sqlite",
 			container: promisedContainer,
 		}),
+		DurableObjectContainerDO: workerExports.durableObject({
+			storage: "sqlite",
+			container: durableObjectContainer,
+		}),
 	},
 });
 
@@ -55,14 +67,16 @@ workerExports.durableObject({
 	container: objectContainer,
 });
 
-const invalidContainer: ContainerConfigInput = {
-	name: "invalid",
-	compatibilityDate: "2026-06-24",
+const invalidObservabilityTargets: ContainerConfigInput = {
+	name: "invalid-observability",
 	image: { dockerfile: "./Dockerfile" },
-	// @ts-expect-error Deprecated Container fields are not accepted.
-	className: "ContainerDO",
+	observability: {
+		targetInstancePercentage: 50,
+		// @ts-expect-error Observability targets are mutually exclusive.
+		targetInstanceCount: 2,
+	},
 };
-void invalidContainer;
+void invalidObservabilityTargets;
 
 type Equal<T, U> =
 	(<V>() => V extends T ? 1 : 2) extends <V>() => V extends U ? 1 : 2
@@ -78,6 +92,9 @@ export type FactoryContainerExportTest = Assert<
 >;
 export type PromisedContainerExportTest = Assert<
 	typeof promisedContainer extends ContainerConfigExport ? true : false
+>;
+export type DurableObjectContainerExportTest = Assert<
+	typeof durableObjectContainer extends ContainerConfigExport ? true : false
 >;
 export type StringContainerReferenceTest = Assert<
 	Equal<

@@ -266,7 +266,6 @@ function worker(
  *
  * const myContainer = defineContainer({
  *   name: "my-container",
- *   compatibilityDate: "2026-06-24",
  *   image: { dockerfile: "./Dockerfile" },
  * });
  *

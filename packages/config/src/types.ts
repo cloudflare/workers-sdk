@@ -130,13 +130,32 @@ type Export =
 	| WorkerEntrypointExport;
 // TODO: support Workflows
 
-/**
- * Container application configuration. This is the input shape passed to
- * `defineContainer`.
- *
- * Fields are validated at runtime by `InputContainerSchema`.
- */
-export interface ContainerConfig {
+/** An image source accepted in an authored Container configuration. */
+type ContainerImage =
+	| {
+			/** The path to a Dockerfile. */
+			dockerfile: string;
+			/**
+			 * Build context of the application.
+			 *
+			 * @default The directory containing `dockerfile`.
+			 */
+			buildContext?: string;
+			/** Image variables available to the image at build time only. */
+			buildVars?: Record<string, string>;
+	  }
+	| {
+			/**
+			 * Reference to an existing image.
+			 *
+			 * For supported registries, refer to
+			 * https://developers.cloudflare.com/containers/guides/image-management/#use-pre-built-container-images
+			 */
+			reference: string;
+	  };
+
+/** Fields shared by all Container application configurations. */
+interface BaseContainerConfig {
 	/**
 	 * Discriminates this config as a Container config.
 	 *
@@ -153,39 +172,45 @@ export interface ContainerConfig {
 	 */
 	name: string;
 
-	/**
-	 * A date in the form yyyy-mm-dd that determines which compatibility behavior
-	 * changes apply to the Container application.
-	 */
-	compatibilityDate: string;
-
-	/**
-	 * The image to build or deploy. Specify either a Dockerfile to build or a
-	 * reference to an existing image.
-	 */
-	image:
+	/** Configures observability for Container instances. */
+	observability?: {
+		/** Whether observability is enabled. */
+		enabled?: boolean;
+		logs?: {
+			/** Whether log collection is enabled. */
+			enabled?: boolean;
+		};
+	} & (
 		| {
-				/** The path to a Dockerfile. */
-				dockerfile: string;
-				/**
-				 * Build context of the application.
-				 *
-				 * @default The directory containing `dockerfile`.
-				 */
-				buildContext?: string;
-				/**
-				 * Image variables available to the image at build time only.
-				 * For runtime environment variables, see
-				 * https://developers.cloudflare.com/containers/examples/env-vars-and-secrets/
-				 */
-				buildVars?: Record<string, string>;
+				/** Percentage of Container instances targeted for observability. */
+				targetInstancePercentage?: number;
+				targetInstanceCount?: never;
 		  }
 		| {
-				/** Reference to an existing image. */
-				reference: string;
-		  };
+				targetInstancePercentage?: never;
+				/** Number of Container instances targeted for observability. */
+				targetInstanceCount?: number;
+		  }
+	);
 
-	/** Number of maximum application instances. */
+	/**
+	 * Passed through without client-side validation or transformation.
+	 *
+	 * @hidden
+	 */
+	unsafe?: Record<string, unknown>;
+}
+
+/** A Container application managed with a standard scheduling policy. */
+interface StandardContainerConfig extends BaseContainerConfig {
+	/** The image to build or deploy. */
+	image: ContainerImage;
+
+	/**
+	 * Maximum number of application instances.
+	 *
+	 * @default 20
+	 */
 	maxInstances?: number;
 
 	/**
@@ -225,7 +250,7 @@ export interface ContainerConfig {
 	 *
 	 * @default "default"
 	 */
-	schedulingPolicy?: "default" | "moon" | "regional";
+	schedulingPolicy?: "default" | "regional";
 
 	ssh?: {
 		/**
@@ -246,11 +271,6 @@ export interface ContainerConfig {
 	/** SSH public keys to put in the Container's authorized_keys file. */
 	authorizedKeys?: Array<{ name: string; publicKey: string }>;
 
-	/**
-	 * Trusted user CA keys to put in the Container's trusted_user_ca_keys file.
-	 */
-	trustedUserCaKeys?: Array<{ name?: string; publicKey: string }>;
-
 	/** Scheduling constraints for Container placement. */
 	constraints?: {
 		/** Limit Container placement to specific geographic regions. */
@@ -259,20 +279,6 @@ export interface ContainerConfig {
 		>;
 		/** Restrict Containers to compliance boundaries. */
 		jurisdiction?: "eu" | "fedramp";
-		/** @hidden */
-		cities?: string[];
-		/** @hidden */
-		tiers?: number[];
-	};
-
-	/**
-	 * Scheduling affinities.
-	 *
-	 * @hidden
-	 */
-	affinities?: {
-		colocation?: "datacenter";
-		hardwareGeneration?: "highest-overall-performance";
 	};
 
 	rollout?: {
@@ -310,29 +316,22 @@ export interface ContainerConfig {
 		 */
 		activeGracePeriod?: number;
 	};
-
-	/** Configures observability for Container instances. */
-	observability?: {
-		/** Whether observability is enabled. */
-		enabled?: boolean;
-		logs?: {
-			/** Whether log collection is enabled. */
-			enabled?: boolean;
-		};
-		/** Percentage of Container instances targeted for observability (0–100). */
-		targetInstancePercentage?: number;
-		/** Non-negative integer number of Container instances targeted. */
-		targetInstanceCount?: number;
-	};
-
-	/**
-	 * Directly passed to the API without client-side validation or
-	 * transformation.
-	 *
-	 * @hidden
-	 */
-	unsafe?: Record<string, unknown>;
 }
+
+/** A Container application managed by a Durable Object. */
+interface DurableObjectContainerConfig extends BaseContainerConfig {
+	schedulingPolicy: "durable-object";
+	/** Named images that the Durable Object can start. */
+	images?: Record<string, ContainerImage>;
+}
+
+/**
+ * Container application configuration. This is the input shape passed to
+ * `defineContainer` and is validated at runtime by `InputContainerSchema`.
+ */
+export type ContainerConfig =
+	| DurableObjectContainerConfig
+	| StandardContainerConfig;
 
 /**
  * Worker configuration. This is the input shape passed to
