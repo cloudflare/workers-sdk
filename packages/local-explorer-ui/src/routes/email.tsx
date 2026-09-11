@@ -10,7 +10,10 @@ import { getSelectedWorker } from "../components/WorkerSelector";
 
 export const Route = createFileRoute("/email")({
 	component: EmailLayout,
-	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
+	validateSearch: (
+		search: Record<string, unknown>
+	): { lookup?: "message-id"; worker?: string } => ({
+		lookup: search.lookup === "message-id" ? "message-id" : undefined,
 		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
 });
@@ -52,7 +55,11 @@ function EmailLayout(): JSX.Element {
 		// no longer visible, preserve the requested identity so the detail API can
 		// report it as missing or unavailable instead of targeting the default Worker.
 		if (routingDetailParams) {
-			if (search.worker !== undefined || selectedWorker === "") {
+			if (
+				search.lookup === "message-id" ||
+				search.worker !== undefined ||
+				selectedWorker === ""
+			) {
 				return;
 			}
 			void navigate({
@@ -74,7 +81,14 @@ function EmailLayout(): JSX.Element {
 				to: listRoute,
 			});
 		}
-	}, [listRoute, navigate, routingDetailParams, search.worker, selectedWorker]);
+	}, [
+		listRoute,
+		navigate,
+		routingDetailParams,
+		search.lookup,
+		search.worker,
+		selectedWorker,
+	]);
 
 	return <Outlet />;
 }
