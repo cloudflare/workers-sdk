@@ -15,9 +15,11 @@ import {
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
 import type {
+	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
+import type { NamedInputContainerConfig } from "@cloudflare/containers-shared";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -35,6 +37,8 @@ export interface LoadNewConfigResult {
 	parsedWorkerConfig: ParsedInputWorkerConfig;
 	/** The validated `settings` export, if present. */
 	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/** Validated Container exports paired with their Build Output directory names. */
+	parsedContainerConfigs: NamedInputContainerConfig[];
 	/**
 	 * The mode the config was resolved in, from `--mode`/`--env` or
 	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
@@ -107,6 +111,11 @@ export async function loadNewConfig(options: {
 		workerConfigResult.result.data.settings?.type === "settings"
 			? workerConfigResult.result.data.settings
 			: undefined;
+	const containers = Object.entries(workerConfigResult.result.data)
+		.filter((entry): entry is [string, ParsedInputContainerConfig] => {
+			return entry[1]?.type === "container";
+		})
+		.map(([directoryName, config]) => ({ directoryName, config }));
 
 	// ── Wrangler (tooling) config ───────────────────────────────────────
 	let wranglerConfigResult:
@@ -160,6 +169,7 @@ export async function loadNewConfig(options: {
 		rawConfig,
 		parsedWorkerConfig: worker,
 		parsedSettingsConfig: settings,
+		parsedContainerConfigs: containers,
 		mode,
 		cloudflareConfigPath,
 		wranglerConfigPath,

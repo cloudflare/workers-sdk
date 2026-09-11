@@ -20,6 +20,7 @@ import type {
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
+import type { NamedInputContainerConfig } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	ConfigBindingOptions,
@@ -76,6 +77,8 @@ export interface NewConfig {
 	config: Config;
 	parsedWorkerConfig: ParsedInputWorkerConfig;
 	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
+	/** Validated Container exports paired with their Build Output directory names. */
+	parsedContainerConfigs: NamedInputContainerConfig[];
 	/**
 	 * The mode the config was resolved in, from `--mode`/`--env` or
 	 * `CLOUDFLARE_ENV`. `undefined` when no mode was selected.
@@ -138,6 +141,7 @@ export async function readNewConfig(
 		config,
 		parsedWorkerConfig: loaded.parsedWorkerConfig,
 		parsedSettingsConfig: loaded.parsedSettingsConfig,
+		parsedContainerConfigs: loaded.parsedContainerConfigs,
 		mode: loaded.mode,
 		dependencies: loaded.dependencies,
 		types: loaded.types,

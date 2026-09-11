@@ -1,7 +1,6 @@
 import { test, vi } from "vitest";
 import {
 	getTextResponse,
-	isCINonLinux,
 	isLocalWithoutDockerRunning,
 	viteTestUrl,
 	WAIT_FOR_OPTIONS,
@@ -18,7 +17,7 @@ const isDevProdTestingAccount =
 // We can only really run these tests on Linux, because we build our images for linux/amd64,
 // and github runners don't really support container virtualization in any sane way.
 const skipContainerTests =
-	isCINonLinux ||
+	process.platform !== "linux" ||
 	// If the test is being run locally and docker is not running we just skip these tests
 	isLocalWithoutDockerRunning;
 

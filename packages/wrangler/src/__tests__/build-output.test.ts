@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { buildOutputContainerConfigs } from "@cloudflare/containers-shared";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -8,6 +9,14 @@ import { runWrangler } from "./helpers/run-wrangler";
 vi.mock("@cloudflare/config", async (importOriginal) => {
 	const { createConfigMock } = await import("./helpers/mock-new-config");
 	return createConfigMock(importOriginal);
+});
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/containers-shared")>();
+	return {
+		...actual,
+		buildOutputContainerConfigs: vi.fn(actual.buildOutputContainerConfigs),
+	};
 });
 
 const WORKER_NAME = "build-output-test-worker";
@@ -45,6 +54,14 @@ function bundlePath(...segments: string[]): string {
 
 function assetsPath(...segments: string[]): string {
 	return path.join(workerDir(), "assets", ...segments);
+}
+
+function containerConfigPath(directoryName: string): string {
+	return path.resolve(
+		".cloudflare/output/v0/containers",
+		directoryName,
+		"config.json"
+	);
 }
 
 describe("wrangler build --experimental-cf-build-output", () => {
@@ -85,6 +102,77 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(manifest.modules["index.js"]).toEqual({ type: "esm" });
 
 		expect(fs.existsSync(bundlePath("index.js"))).toBe(true);
+	});
+
+	it("builds and emits Container configs under their export names", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `export default {
+				type: "worker",
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./src/index.js",
+			};
+			export const api = {
+				type: "container",
+				name: "api-container",
+				image: { dockerfile: "./container/Dockerfile" },
+			};`,
+			"src/index.js": `export default {
+				async fetch() { return new Response("hello"); }
+			};`,
+			"container/Dockerfile": "FROM node:22",
+		});
+		vi.mocked(buildOutputContainerConfigs).mockImplementationOnce(
+			async ({ containers }) => ({
+				containers: containers.map(({ directoryName, config }) => ({
+					directoryName,
+					config: {
+						...config,
+						image: {
+							localReference:
+								"api-container:wrangler-11111111-1111-4111-8111-111111111111",
+						},
+					},
+				})),
+				builtImages: [
+					{
+						localTag:
+							"api-container:wrangler-11111111-1111-4111-8111-111111111111",
+					},
+				],
+			})
+		);
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		expect(buildOutputContainerConfigs).toHaveBeenCalledWith({
+			containers: [
+				{
+					directoryName: "api",
+					config: expect.objectContaining({
+						type: "container",
+						name: "api-container",
+						image: { dockerfile: "./container/Dockerfile" },
+					}),
+				},
+			],
+			root: process.cwd(),
+			pathToDocker: "docker",
+		});
+		expect(
+			JSON.parse(fs.readFileSync(containerConfigPath("api"), "utf-8"))
+		).toMatchObject({
+			type: "container",
+			name: "api-container",
+			image: {
+				localReference:
+					"api-container:wrangler-11111111-1111-4111-8111-111111111111",
+			},
+		});
 	});
 
 	it("uses the .js extension for the manifest key even when the entrypoint is .ts", async ({
