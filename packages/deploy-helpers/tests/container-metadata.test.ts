@@ -9,37 +9,92 @@ import type {
 	ApiDeployment,
 	ApiVersion,
 } from "../src/deploy/helpers/versions-types";
-import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	Config,
+	ContainerApp,
+	DurableObjectContainerApp,
+} from "@cloudflare/workers-utils";
 
 vi.mock("../src/deploy/helpers/versions-api");
+
+function containerConfig(
+	options: {
+		containerMetadataConfig?: CfWorkerInit["containers"];
+		durableObjectContainerConfig?: DurableObjectContainerApp[];
+	} = {}
+) {
+	const metadata = Object.hasOwn(options, "containerMetadataConfig")
+		? options.containerMetadataConfig
+		: [];
+	return metadata === undefined
+		? undefined
+		: [
+				...(metadata as ContainerApp[]),
+				...(options.durableObjectContainerConfig ?? []),
+			];
+}
 
 describe("getContainerMetadata", () => {
 	it("returns undefined when container configuration is absent", ({
 		expect,
 	}) => {
-		expect(getContainerMetadata({} as Config)).toBeUndefined();
+		expect(
+			getContainerMetadata(
+				containerConfig({ containerMetadataConfig: undefined })
+			)
+		).toBeUndefined();
 	});
 
 	it("returns an empty list when container configuration is explicitly empty", ({
 		expect,
 	}) => {
-		expect(
-			getContainerMetadata({ containers: [] } as unknown as Config)
-		).toEqual([]);
+		expect(getContainerMetadata(containerConfig({}))).toEqual([]);
+	});
+
+	it("includes standard container metadata", ({ expect }) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				containerMetadataConfig: [
+					{
+						class_name: "Scheduled",
+						name: "scheduled-app",
+					},
+				],
+			})
+		);
+
+		expect(metadata).toEqual([
+			{ name: "scheduled-app", class_name: "Scheduled" },
+		]);
+	});
+
+	it("preserves standard container metadata without an explicit class name", ({
+		expect,
+	}) => {
+		const metadata = getContainerMetadata(
+			containerConfig({
+				containerMetadataConfig: [{ name: "scheduled-app" }],
+			})
+		);
+
+		expect(metadata).toEqual([{ name: "scheduled-app" }]);
 	});
 
 	it("includes the resolved name when no Durable Object-managed images are configured", ({
 		expect,
 	}) => {
-		const metadata = getContainerMetadata({
-			containers: [
-				{
-					class_name: "Sandbox",
-					name: "sandbox-app",
-					scheduling_policy: "durable_object",
-				},
-			],
-		} as unknown as Config);
+		const metadata = getContainerMetadata(
+			containerConfig({
+				durableObjectContainerConfig: [
+					{
+						class_name: "Sandbox",
+						name: "sandbox-app",
+						scheduling_policy: "durable_object",
+					},
+				],
+			})
+		);
 
 		expect(metadata).toEqual([{ name: "sandbox-app", class_name: "Sandbox" }]);
 	});
@@ -48,8 +103,8 @@ describe("getContainerMetadata", () => {
 		expect,
 	}) => {
 		const metadata = getContainerMetadata(
-			{
-				containers: [
+			containerConfig({
+				durableObjectContainerConfig: [
 					{
 						class_name: "Sandbox",
 						name: "sandbox-app",
@@ -59,7 +114,7 @@ describe("getContainerMetadata", () => {
 						},
 					},
 				],
-			} as unknown as Config,
+			}),
 			{
 				Sandbox: {
 					sandbox:
@@ -84,8 +139,8 @@ describe("getContainerMetadata", () => {
 		expect,
 	}) => {
 		const metadata = getContainerMetadata(
-			{
-				containers: [
+			containerConfig({
+				durableObjectContainerConfig: [
 					{
 						class_name: "Sandbox",
 						name: "sandbox-app",
@@ -95,7 +150,7 @@ describe("getContainerMetadata", () => {
 						},
 					},
 				],
-			} as unknown as Config,
+			}),
 			{},
 			{ allowUnprepared: true }
 		);
@@ -153,23 +208,34 @@ describe("getContainerMetadataForRolloutSkip", () => {
 	}
 	function recover(config: Config, versions: ApiVersion[]) {
 		vi.mocked(fetchVersions).mockResolvedValue(versions);
-		return getContainerMetadataForRolloutSkip(config, {
-			accountId: "account",
-			scriptName: "worker",
-			dispatchNamespace: undefined,
-			workerExists: true,
-			latestDeployment: {
-				id: "deployment",
-				source: "api",
-				strategy: "percentage",
-				author_email: "",
-				created_on: "",
-				versions: versions.map(({ id }) => ({
-					version_id: id,
-					percentage: 100 / versions.length,
+		return getContainerMetadataForRolloutSkip(
+			config,
+			containerConfig({
+				containerMetadataConfig: config.containers?.map((container) => ({
+					...(container.name !== undefined && { name: container.name }),
+					...(container.class_name !== undefined && {
+						class_name: container.class_name,
+					}),
 				})),
-			},
-		});
+			}),
+			{
+				accountId: "account",
+				scriptName: "worker",
+				dispatchNamespace: undefined,
+				workerExists: true,
+				latestDeployment: {
+					id: "deployment",
+					source: "api",
+					strategy: "percentage",
+					author_email: "",
+					created_on: "",
+					versions: versions.map(({ id }) => ({
+						version_id: id,
+						percentage: 100 / versions.length,
+					})),
+				},
+			}
+		);
 	}
 
 	it("ignores other user variables even when their presence differs", async ({
@@ -235,13 +301,17 @@ describe("getContainerMetadataForRolloutSkip", () => {
 		"rejects an existing Worker without recoverable deployed versions: %j",
 		async (latestDeployment, { expect }) => {
 			await expect(
-				getContainerMetadataForRolloutSkip({} as Config, {
-					accountId: "account",
-					scriptName: "worker",
-					dispatchNamespace: undefined,
-					workerExists: true,
-					latestDeployment,
-				})
+				getContainerMetadataForRolloutSkip(
+					{} as Config,
+					containerConfig({ containerMetadataConfig: undefined }),
+					{
+						accountId: "account",
+						scriptName: "worker",
+						dispatchNamespace: undefined,
+						workerExists: true,
+						latestDeployment,
+					}
+				)
 			).rejects.toThrow("deployed Container metadata could not be recovered");
 			expect(fetchVersions).not.toHaveBeenCalled();
 		}
@@ -249,13 +319,17 @@ describe("getContainerMetadataForRolloutSkip", () => {
 
 	it("rejects an existing Worker without an account ID", async ({ expect }) => {
 		await expect(
-			getContainerMetadataForRolloutSkip({} as Config, {
-				accountId: undefined,
-				scriptName: "worker",
-				dispatchNamespace: undefined,
-				workerExists: true,
-				latestDeployment: undefined,
-			})
+			getContainerMetadataForRolloutSkip(
+				{} as Config,
+				containerConfig({ containerMetadataConfig: undefined }),
+				{
+					accountId: undefined,
+					scriptName: "worker",
+					dispatchNamespace: undefined,
+					workerExists: true,
+					latestDeployment: undefined,
+				}
+			)
 		).rejects.toThrow("deployed Container metadata could not be recovered");
 	});
 
@@ -267,8 +341,9 @@ describe("getContainerMetadataForRolloutSkip", () => {
 		"keeps local metadata for first deployments and dry runs: %j",
 		async (options, { expect }) => {
 			const result = await getContainerMetadataForRolloutSkip(
-				{
-					containers: [
+				{} as Config,
+				containerConfig({
+					durableObjectContainerConfig: [
 						{
 							name: "sandbox",
 							class_name: "Sandbox",
@@ -276,7 +351,7 @@ describe("getContainerMetadataForRolloutSkip", () => {
 							images: { app: { dockerfile: "./Dockerfile" } },
 						},
 					],
-				} as unknown as Config,
+				}),
 				{
 					...options,
 					scriptName: "worker",

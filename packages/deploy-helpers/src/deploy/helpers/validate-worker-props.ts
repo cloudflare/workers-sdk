@@ -23,12 +23,12 @@ import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type { DeployProps, VersionsUploadProps } from "../../shared/types";
 import type {
-	AssetsOptions,
-	Config,
-	RawConfig,
-} from "@cloudflare/workers-utils";
+	ContainerlessConfig,
+	DeployProps,
+	VersionsUploadProps,
+} from "../../shared/types";
+import type { AssetsOptions, RawConfig } from "@cloudflare/workers-utils";
 
 /**
  *
@@ -45,7 +45,7 @@ type ValidateWorkerPropsInput =
 
 export function validateWorkerProps<T extends ValidateWorkerPropsInput>(
 	props: T,
-	config: Config
+	config: ContainerlessConfig
 ): T & { name: string } {
 	const { name, compatibilityDate } = props;
 	const { format } = props.entry;
@@ -119,7 +119,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	} else {
 		if (
-			config.containers?.some(
+			props.containers.source?.some(
 				(container) => !isDurableObjectContainerApp(container)
 			)
 		) {
@@ -146,7 +146,7 @@ export type PreUploadApiChecksResult = {
  */
 export async function preUploadApiChecks(
 	props: DeployProps | VersionsUploadProps,
-	config: Config
+	config: ContainerlessConfig
 ): Promise<PreUploadApiChecksResult> {
 	const { accountId, name } = props;
 

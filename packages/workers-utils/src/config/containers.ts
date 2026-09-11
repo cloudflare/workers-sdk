@@ -195,14 +195,19 @@ export function getDurableObjectClassNameToUseSQLiteMap(
  * Validate that every Durable Object-managed container belongs to this Worker.
  */
 export function validateDurableObjectContainerApplications(
-	config: Config
+	config: Pick<Config, "migrations" | "exports" | "durable_objects"> & {
+		containers?: ContainerApp[];
+	},
+	containers: DurableObjectContainerApp[] = getDurableObjectContainerApps(
+		config.containers
+	)
 ): void {
 	const allDOs = getDurableObjectClassNameToUseSQLiteMap(
 		config.migrations,
 		config.exports
 	);
 
-	for (const container of getDurableObjectContainerApps(config.containers)) {
+	for (const container of containers) {
 		const maybeBoundDO = config.durable_objects.bindings.find(
 			(durableObject) => durableObject.class_name === container.class_name
 		);
