@@ -629,7 +629,8 @@ class D1Handler extends ProvisionResourceHandler<
 			this.accountId,
 			name,
 			this.d1ListCommand,
-			this.d1DeleteCommand
+			this.d1DeleteCommand,
+			this.binding.jurisdiction
 		);
 		return db.uuid;
 	}
@@ -1628,7 +1629,8 @@ async function createD1Database(
 	accountId: string,
 	name: string,
 	d1ListCommand: string,
-	d1DeleteCommand: string
+	d1DeleteCommand: string,
+	jurisdiction?: string
 ) {
 	try {
 		return await fetchResult<DatabaseCreationResult>(
@@ -1639,7 +1641,10 @@ async function createD1Database(
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ name }),
+				body: JSON.stringify({
+					name,
+					...(jurisdiction && { jurisdiction }),
+				}),
 			}
 		);
 	} catch (e) {

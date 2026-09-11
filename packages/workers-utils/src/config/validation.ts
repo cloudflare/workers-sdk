@@ -5139,6 +5139,15 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "jurisdiction", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "migrations_dir", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "migrations_dir" field but got ${JSON.stringify(
@@ -5171,6 +5180,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"database_id",
 		"database_internal_env",
 		"database_name",
+		"jurisdiction",
 		"migrations_dir",
 		"migrations_pattern",
 		"migrations_table",
