@@ -6,6 +6,7 @@ import {
 	useSidebar,
 } from "@cloudflare/kumo";
 import {
+	ClockCountdownIcon,
 	EnvelopeSimpleIcon,
 	MonitorIcon,
 	MoonIcon,
@@ -238,6 +239,24 @@ export function AppSidebar({
 				},
 			],
 			title: "Email",
+		},
+		{
+			emptyLabel: "",
+			groupId: "cron-triggers" as const,
+			icon: ClockCountdownIcon,
+			items: [
+				{
+					id: "cron-triggers",
+					isActive: currentPath.startsWith("/cron-triggers"),
+					label: "Cron Triggers",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/cron-triggers",
+					},
+				},
+			],
+			title: "Cron Triggers",
 		},
 	] satisfies Array<{
 		emptyLabel: string;
