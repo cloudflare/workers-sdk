@@ -1,5 +1,22 @@
 # miniflare
 
+## 5.20260911.0-alpha
+
+### Patch Changes
+
+- [#15602](https://github.com/cloudflare/workers-sdk/pull/15602) [`47d906f`](https://github.com/cloudflare/workers-sdk/commit/47d906f52d109509f61b1c801c1b08ecad583c0d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20260910.1 | ^5.20260911.1 |
+  | workerd                   | 1.20260910.1  | 1.20260911.1  |
+
+- [#15121](https://github.com/cloudflare/workers-sdk/pull/15121) [`c2699bf`](https://github.com/cloudflare/workers-sdk/commit/c2699bf625134a2425d7142c72c4f31c4b6f8eab) Thanks [@HaoChiBao](https://github.com/HaoChiBao)! - Fix Durable Object `stub.fetch` rejecting Node's global `Request`
+
+  Passing a Node.js global `Request` object to a Durable Object stub's `fetch()` (for example when using `getPlatformProxy`) previously failed with a URL parsing error. Such requests are now accepted and forwarded as expected.
+
 ## 5.20260910.0-alpha
 
 ### Minor Changes

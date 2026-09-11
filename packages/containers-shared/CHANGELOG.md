@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.16.1
+
+### Patch Changes
+
+- [#15512](https://github.com/cloudflare/workers-sdk/pull/15512) [`7d39eed`](https://github.com/cloudflare/workers-sdk/commit/7d39eed90b6155961b7d342f7b69b6df95d21188) Thanks [@emily-shen](https://github.com/emily-shen)! - Publish `@cloudflare/containers-shared` for internal use
+
+  It remains internal-only and does not provide a stable public API surface.
+
 ## 0.16.0
 
 ### Minor Changes
