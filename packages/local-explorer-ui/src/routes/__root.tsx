@@ -30,9 +30,13 @@ export const Route = createRootRoute({
 	component: RootLayout,
 	notFoundComponent: NotFound,
 	loader: async () => {
-		const workersResponse = await localExplorerListWorkers();
-		const workers = workersResponse.data?.result ?? [];
-		return { workers };
+		try {
+			const workersResponse = await localExplorerListWorkers();
+			const workers = workersResponse.data?.result ?? [];
+			return { bootstrapAuthoritative: true, workers };
+		} catch {
+			return { bootstrapAuthoritative: false, workers: [] };
+		}
 	},
 });
 

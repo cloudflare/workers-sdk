@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as EmailRouteImport } from './routes/email'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ObservabilityIndexRouteImport } from './routes/observability/index'
+import { Route as CronTriggersIndexRouteImport } from './routes/cron-triggers/index'
 import { Route as WorkflowsWorkflowNameRouteImport } from './routes/workflows/$workflowName'
 import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
 import { Route as ObservabilityEventsRouteImport } from './routes/observability/events'
@@ -42,6 +43,11 @@ const IndexRoute = IndexRouteImport.update({
 const ObservabilityIndexRoute = ObservabilityIndexRouteImport.update({
   id: '/observability/',
   path: '/observability/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CronTriggersIndexRoute = CronTriggersIndexRouteImport.update({
+  id: '/cron-triggers/',
+  path: '/cron-triggers/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkflowsWorkflowNameRoute = WorkflowsWorkflowNameRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
+  '/cron-triggers/': typeof CronTriggersIndexRoute
   '/observability/': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
   '/email/routing/$captureId': typeof EmailRoutingCaptureIdRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/email/sending': typeof EmailSendingRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/observability/events': typeof ObservabilityEventsRoute
+  '/cron-triggers': typeof CronTriggersIndexRoute
   '/observability': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
   '/email/routing/$captureId': typeof EmailRoutingCaptureIdRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/observability/events': typeof ObservabilityEventsRoute
   '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
+  '/cron-triggers/': typeof CronTriggersIndexRoute
   '/observability/': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
   '/email/routing/$captureId': typeof EmailRoutingCaptureIdRoute
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/observability/events'
     | '/r2/$bucketName'
     | '/workflows/$workflowName'
+    | '/cron-triggers/'
     | '/observability/'
     | '/do/$className/$objectId'
     | '/email/routing/$captureId'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/email/sending'
     | '/kv/$namespaceId'
     | '/observability/events'
+    | '/cron-triggers'
     | '/observability'
     | '/do/$className/$objectId'
     | '/email/routing/$captureId'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/observability/events'
     | '/r2/$bucketName'
     | '/workflows/$workflowName'
+    | '/cron-triggers/'
     | '/observability/'
     | '/do/$className/$objectId'
     | '/email/routing/$captureId'
@@ -258,6 +270,7 @@ export interface RootRouteChildren {
   ObservabilityEventsRoute: typeof ObservabilityEventsRoute
   R2BucketNameRoute: typeof R2BucketNameRouteWithChildren
   WorkflowsWorkflowNameRoute: typeof WorkflowsWorkflowNameRouteWithChildren
+  CronTriggersIndexRoute: typeof CronTriggersIndexRoute
   ObservabilityIndexRoute: typeof ObservabilityIndexRoute
 }
 
@@ -282,6 +295,13 @@ declare module '@tanstack/react-router' {
       path: '/observability'
       fullPath: '/observability/'
       preLoaderRoute: typeof ObservabilityIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cron-triggers/': {
+      id: '/cron-triggers/'
+      path: '/cron-triggers'
+      fullPath: '/cron-triggers/'
+      preLoaderRoute: typeof CronTriggersIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workflows/$workflowName': {
@@ -477,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   ObservabilityEventsRoute: ObservabilityEventsRoute,
   R2BucketNameRoute: R2BucketNameRouteWithChildren,
   WorkflowsWorkflowNameRoute: WorkflowsWorkflowNameRouteWithChildren,
+  CronTriggersIndexRoute: CronTriggersIndexRoute,
   ObservabilityIndexRoute: ObservabilityIndexRoute,
 }
 export const routeTree = rootRouteImport
