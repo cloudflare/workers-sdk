@@ -87,7 +87,8 @@ port.addEventListener("message", async (event) => {
       port.postMessage({ id, error: new Error(String(error)) });
     }
   } finally {
-    Atomics.store(notifyHandle, /* index */ 0, /* value */ 1);
+    // Publish THIS request's generation (never 0), not a bare flag: see fetch()
+    Atomics.store(notifyHandle, /* index */ 0, /* generation */ (id + 1) | 0);
     Atomics.notify(notifyHandle, /* index */ 0);
   }
 });
@@ -130,8 +131,15 @@ export class SynchronousFetcher {
 
 	fetch(url: URL | string, init: SynchronousRequestInit): SynchronousResponse {
 		this.#ensureWorker();
-		Atomics.store(this.#notifyHandle, /* index */ 0, /* value */ 0);
 		const id = this.#nextId++;
+		// Each request owns a generation (`id + 1`, never 0) that the worker stores
+		// once its reply is in `port1`'s queue. A shared 0/1 flag raced: a reply's
+		// `store(1)` could land before our `Atomics.wait` (which then returned
+		// "not-equal" at once) while its `Atomics.notify` landed after the NEXT
+		// request had armed its wait. That wait woke to an empty queue, the
+		// `assert` below threw, and every later call received the previous
+		// call's reply (a preempted worker thread under a contended CI runner).
+		const generation = (id + 1) | 0;
 		this.#channel.port1.postMessage({
 			id,
 			method: init.method,
@@ -139,8 +147,17 @@ export class SynchronousFetcher {
 			headers: init.headers,
 			body: init.body,
 		});
-		// If index 0 contains value 0, block until wake-up notification
-		Atomics.wait(this.#notifyHandle, /* index */ 0, /* value */ 0);
+		// Block until the worker has published THIS request's generation. A stale
+		// notify from the previous reply wakes us early, so re-check and wait
+		// again; the store follows the reply's `postMessage`, so once the
+		// generation is seen the reply is already in `port1`'s queue.
+		for (
+			let seen = Atomics.load(this.#notifyHandle, /* index */ 0);
+			seen !== generation;
+			seen = Atomics.load(this.#notifyHandle, /* index */ 0)
+		) {
+			Atomics.wait(this.#notifyHandle, /* index */ 0, seen);
+		}
 		// Never yielded to the event loop here, and we're the only ones with access
 		// to port1, so know this message is for this request
 		const message: WorkerResponse | undefined = receiveMessageOnPort(
