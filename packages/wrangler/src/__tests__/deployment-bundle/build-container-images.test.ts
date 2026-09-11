@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
 	buildAndMaybePush,
 	cleanupBuiltImages,
@@ -54,14 +55,18 @@ describe("buildDurableObjectContainerImages", () => {
 		};
 
 		const result = await buildDurableObjectContainerImages(props, config);
+		const expectedDockerfile = path.resolve(
+			"/project",
+			"./container/Dockerfile"
+		);
 
 		expect(verifyDockerInstalled).toHaveBeenCalledOnce();
 		expect(buildAndMaybePush).toHaveBeenCalledOnce();
 		expect(buildAndMaybePush).toHaveBeenCalledWith(
 			{
 				tag: expect.stringMatching(/^worker-sandbox-tools:wrangler-/),
-				pathToDockerfile: "/project/container/Dockerfile",
-				buildContext: "/project/container",
+				pathToDockerfile: expectedDockerfile,
+				buildContext: path.dirname(expectedDockerfile),
 				platform: "linux/amd64",
 			},
 			expect.any(String),
