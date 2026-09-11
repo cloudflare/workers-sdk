@@ -2054,6 +2054,9 @@ importers:
       command-exists:
         specifier: catalog:default
         version: 1.2.9
+      devtools-protocol:
+        specifier: ^0.0.1182435
+        version: 0.0.1182435
       dotenv:
         specifier: catalog:default
         version: 16.3.1
@@ -2069,6 +2072,9 @@ importers:
       undici:
         specifier: catalog:default
         version: 7.29.0
+      ws:
+        specifier: catalog:default
+        version: 8.21.0
     devDependencies:
       '@cloudflare/workers-shared':
         specifier: workspace:*
@@ -2088,12 +2094,12 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      '@types/ws':
+        specifier: ^8.5.7
+        version: 8.5.13
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
-      devtools-protocol:
-        specifier: ^0.0.1182435
-        version: 0.0.1182435
       esbuild:
         specifier: catalog:default
         version: 0.28.1

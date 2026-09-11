@@ -5,12 +5,10 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
 import { beforeEach, describe, it, vi } from "vitest";
-import * as checkCommands from "../check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { mockConsoleMethods } from "./helpers/mock-console";
-vi.mock("../check/commands", () => ({ analyseBundle: vi.fn() }));
-const mockAnalyseBundle = vi.mocked(checkCommands.analyseBundle);
+const mockAnalyseBundle = vi.fn();
 
 describe("helpIfErrorIsSizeOrScriptStartup", () => {
 	const std = mockConsoleMethods();

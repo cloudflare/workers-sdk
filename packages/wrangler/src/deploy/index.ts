@@ -10,7 +10,6 @@ import {
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { analyseBundle } from "../check/commands";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
@@ -228,7 +227,6 @@ export async function runDeployCommandHandler(
 			buildResult,
 			{
 				syncWorkersSite,
-				analyseBundle,
 			}
 		);
 
