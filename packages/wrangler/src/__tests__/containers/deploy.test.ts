@@ -986,7 +986,8 @@ describe("wrangler deploy with containers", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+			Building image my-container...
+			Built image my-container (TIMINGS)
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -997,7 +998,8 @@ describe("wrangler deploy with containers", () => {
 			- my-container (<cwd>/Dockerfile)
 
 			Uploaded test-name (TIMINGS)
-			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Pushing image my-container...
+			Pushed image my-container (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -1480,7 +1482,8 @@ describe("wrangler deploy with containers", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+				Building image my-container...
+				Built image my-container (TIMINGS)
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
@@ -1491,7 +1494,8 @@ describe("wrangler deploy with containers", () => {
 				- my-container (<test-cwd>/Dockerfile)
 
 				Uploaded test-name (TIMINGS)
-				Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+				Pushing image my-container...
+				Pushed image my-container (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
@@ -1549,7 +1553,8 @@ describe("wrangler deploy with containers", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+			Building image my-container...
+			Built image my-container (TIMINGS)
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
@@ -1560,7 +1565,8 @@ describe("wrangler deploy with containers", () => {
 			- my-container (<cwd>/Dockerfile)
 
 			Uploaded test-name (TIMINGS)
-			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Pushing image my-container...
+			Pushed image my-container (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -3424,7 +3430,9 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
-		expect(std.out).toContain("Image already exists remotely, skipping push");
+		expect(std.out).toContain(
+			"Image my-container is unchanged; reusing existing upload."
+		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -3539,7 +3547,9 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
-		expect(std.out).toContain("Image already exists remotely, skipping push");
+		expect(std.out).toContain(
+			"Image my-container is unchanged; reusing existing upload."
+		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -4318,7 +4328,8 @@ describe("wrangler deploy with containers dry run", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Building image my-container:wrangler-11111111-1111-4111-8111-111111111111
+			Building image my-container...
+			Built image my-container (TIMINGS)
 			Total Upload: xx KiB / gzip: xx KiB
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
@@ -5049,9 +5060,11 @@ function mockGetVersionNotFoundOnce(
 }
 
 function defaultChildProcess() {
+	const stdout = new PassThrough();
+	const stderr = new PassThrough();
 	return {
-		stderr: Buffer.from([]),
-		stdout: Buffer.from("i promise I am a successful process"),
+		stderr,
+		stdout,
 		on: function (reason: string, cbPassed: (code: number) => unknown) {
 			if (reason === "close") {
 				cbPassed(0);
@@ -5227,6 +5240,8 @@ function mockDockerBuild(
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"build",
+			"--progress",
+			"plain",
 			"--load",
 			"-t",
 			`${containerName}:${tag}`,
@@ -5248,14 +5263,14 @@ function mockDockerBuild(
 		return {
 			pid: -1,
 			error: undefined,
-			stderr: Buffer.from([]),
-			stdout: Buffer.from("i promise I am a successful docker build"),
+			stderr: new PassThrough(),
+			stdout: new PassThrough(),
 			stdin: readable,
 			status: 0,
 			signal: null,
 			output: [null],
 			on: (reason: string, cbPassed: (code: number) => unknown) => {
-				if (reason === "exit") {
+				if (reason === "close") {
 					expect(dockerfile).toEqual(expectedDockerfile);
 					cbPassed(0);
 				}
@@ -5415,12 +5430,15 @@ function mockDockerLogin(expect: ExpectStatic, expectedPassword: string) {
 			final() {},
 		});
 		return {
-			stdout: Buffer.from("i promise I am a successful docker login"),
+			stdout: new PassThrough(),
+			stderr: new PassThrough(),
 			stdin: readable,
 			on: function (reason: string, cbPassed: (code: number) => unknown) {
 				if (reason === "close") {
-					expect(password).toEqual(expectedPassword);
-					cbPassed(0);
+					setImmediate(() => {
+						expect(password).toEqual(expectedPassword);
+						cbPassed(0);
+					});
 				}
 				return this;
 			},
@@ -5437,6 +5455,7 @@ function mockDockerPush(
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"push",
+			"--quiet",
 			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
 		]);
 		return defaultChildProcess();

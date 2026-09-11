@@ -12,6 +12,7 @@ import {
 	checkExposedPorts,
 	cleanupDuplicateImageTags,
 	containerPrivilegesAllowed,
+	runDockerCmd,
 	verifyDockerInstalled,
 } from "./../src/utils";
 import type { ContainerDevOptions } from "../src/types";
@@ -261,16 +262,59 @@ describe("containerPrivilegesAllowed", () => {
  * @param exitCode - The exit code the fake process should emit.
  * @returns A minimal child-process-like object accepted by `runDockerCmd`.
  */
-function createFakeChildProcess(exitCode: number): ReturnType<typeof spawn> {
+function createFakeChildProcess(
+	exitCode: number,
+	{
+		stdout = "",
+		stderr = "",
+	}: {
+		stdout?: string;
+		stderr?: string;
+	} = {}
+): ReturnType<typeof spawn> {
 	const emitter = new EventEmitter();
+	const stdoutStream = new EventEmitter();
+	const stderrStream = new EventEmitter();
 	// Simulate async close so listeners are registered before the event fires.
-	process.nextTick(() => emitter.emit("close", exitCode));
+	process.nextTick(() => {
+		stdoutStream.emit("data", Buffer.from(stdout));
+		stderrStream.emit("data", Buffer.from(stderr));
+		emitter.emit("close", exitCode);
+	});
 	return Object.assign(emitter, {
 		pid: 1234,
 		stdin: null,
+		stdout: stdoutStream,
+		stderr: stderrStream,
 		unref: vi.fn(),
 	}) as unknown as ReturnType<typeof spawn>;
 }
+
+describe("runDockerCmd", () => {
+	beforeEach(() => {
+		vi.mocked(spawn).mockReset();
+	});
+
+	it("includes captured diagnostics when a command fails", async ({
+		expect,
+	}) => {
+		vi.mocked(spawn).mockReturnValue(
+			createFakeChildProcess(1, {
+				stderr: "denied: requested access to the resource is denied",
+			})
+		);
+
+		const command = runDockerCmd(
+			"docker",
+			["push", "example"],
+			["ignore", "pipe", "pipe"]
+		);
+
+		await expect(command.ready).rejects.toThrow(
+			"Docker command failed with exit code 1:\ndenied: requested access to the resource is denied"
+		);
+	});
+});
 
 describe("verifyDockerInstalled", () => {
 	beforeEach(() => {

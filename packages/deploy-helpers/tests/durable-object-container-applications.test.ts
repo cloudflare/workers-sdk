@@ -210,6 +210,7 @@ describe("Container image preparation", () => {
 			accountId: "account",
 			complianceConfig: config,
 			cleanupSourceTag: true,
+			displayName: "Sandbox/tools",
 		});
 		expect(builtImage.localTagCleaned).toBe(true);
 	});
