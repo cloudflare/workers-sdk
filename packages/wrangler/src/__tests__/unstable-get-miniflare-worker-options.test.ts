@@ -231,6 +231,58 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 		});
 	});
 
+	describe("cron triggers", () => {
+		it("passes through exact cron strings from the selected environment", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					triggers: { crons: ["*/5 * * * *", " 0 17 * * SUN "] },
+					env: {
+						staging: {
+							triggers: { crons: ["30 6 * * mon"] },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const base = unstable_getMiniflareWorkerOptions("./wrangler.json");
+			const staging = unstable_getMiniflareWorkerOptions(
+				"./wrangler.json",
+				"staging"
+			);
+
+			expect(base.workerOptions.cronTriggers).toEqual([
+				"*/5 * * * *",
+				" 0 17 * * SUN ",
+			]);
+			expect(staging.workerOptions.cronTriggers).toEqual(["30 6 * * mon"]);
+		});
+
+		it.for([
+			{ label: "missing", crons: undefined },
+			{ label: "empty", crons: [] as string[] },
+		])("passes through $label cron triggers", ({ crons }, { expect }) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					triggers: { crons },
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			expect(workerOptions.cronTriggers).toEqual(crons);
+		});
+	});
+
 	describe("workflow bindings", () => {
 		it("drops deploy-only workflow fields that the local runtime has no concept of", ({
 			expect,
