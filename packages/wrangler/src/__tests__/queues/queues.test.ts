@@ -190,6 +190,57 @@ describe("wrangler", () => {
 					└─┴─┴─┴─┴─┴─┘"
 				`);
 			});
+
+			it("should list queues' jurisdictions, if present", async ({
+				expect,
+			}) => {
+				const expectedQueues: QueueResponse[] = [
+					{
+						queue_id: "5e1b9969eb974d8c99c48d19df104c7a",
+						queue_name: "queue-1",
+						created_on: "01-01-2001",
+						modified_on: "01-01-2001",
+						producers: [],
+						producers_total_count: 0,
+						consumers: [],
+						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0,
+						},
+					},
+					{
+						queue_id: "def19fa3787741579c9088eb850474af",
+						queue_name: "queue-2",
+						jurisdiction: "eu",
+						created_on: "01-01-2001",
+						modified_on: "01-01-2001",
+						producers: [],
+						producers_total_count: 0,
+						consumers: [],
+						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0,
+						},
+					},
+				];
+				const expectedPage = 1;
+				mockListRequest(expect, expectedQueues, expectedPage);
+				await runWrangler("queues list");
+
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					┌─┬─┬─┬─┬─┬─┬─┐
+					│ id │ name │ jurisdiction │ created_on │ modified_on │ producers │ consumers │
+					├─┼─┼─┼─┼─┼─┼─┤
+					│ 5e1b9969eb974d8c99c48d19df104c7a │ queue-1 │ │ 01-01-2001 │ 01-01-2001 │ 0 │ 0 │
+					├─┼─┼─┼─┼─┼─┼─┤
+					│ def19fa3787741579c9088eb850474af │ queue-2 │ eu │ 01-01-2001 │ 01-01-2001 │ 0 │ 0 │
+					└─┴─┴─┴─┴─┴─┴─┘"
+				`);
+			});
 		});
 
 		describe("create", () => {
@@ -257,6 +308,7 @@ describe("wrangler", () => {
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
+					      --jurisdiction                   The jurisdiction of the queue  [string] [choices: "eu", "us", "fedramp"]
 					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 86400  [number]
 					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
@@ -2475,6 +2527,31 @@ describe("wrangler", () => {
 					  -v, --version         Show version number  [boolean]"
 				`);
 			});
+
+			it("should return queue info with jurisdiction, if present", async ({
+				expect,
+			}) => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					...mockQueue,
+					jurisdiction: "eu",
+				});
+				await runWrangler("queues info testQueue");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Queue Name: testQueue
+					Queue ID: 1234567
+					Jurisdiction: eu
+					Created On: 2024-05-20T14:43:56.70498Z
+					Last Modified: 2024-07-19T14:43:56.70498Z
+					Number of Producers: 2
+					Producers: worker:test-producer1, worker:test-producer2
+					Number of Consumers: 1
+					Consumers: worker:test-consumer"
+				`);
+			});
+
 			it("should return queue info with worker producers when the queue has workers configured as producers", async ({
 				expect,
 			}) => {
@@ -2494,6 +2571,7 @@ describe("wrangler", () => {
 					Consumers: worker:test-consumer"
 				`);
 			});
+
 			it('should return "http consumer" and a curl command when the consumer type is http_pull', async ({
 				expect,
 			}) => {
