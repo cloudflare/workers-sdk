@@ -78,7 +78,7 @@ describe("path resolvers", () => {
 			"worker\0name",
 		]) {
 			expect(() => getWorkerConfigPath(root, workerDirectoryName)).toThrow(
-				"Worker directory names must be non-empty, single path segments."
+				`Worker directory names must be non-empty, single path segments. Received ${JSON.stringify(workerDirectoryName)}.`
 			);
 		}
 	});
@@ -95,7 +95,7 @@ describe("path resolvers", () => {
 			expect(() =>
 				getContainerConfigPath(root, containerDirectoryName)
 			).toThrow(
-				"Container directory names must be non-empty, single path segments."
+				`Container directory names must be non-empty, single path segments. Received ${JSON.stringify(containerDirectoryName)}.`
 			);
 		}
 	});

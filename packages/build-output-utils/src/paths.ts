@@ -70,7 +70,7 @@ function validateDirectoryName(name: string, resourceName: string): void {
 		name.includes("\0")
 	) {
 		throw new Error(
-			`${resourceName} directory names must be non-empty, single path segments.`
+			`${resourceName} directory names must be non-empty, single path segments. Received ${JSON.stringify(name)}.`
 		);
 	}
 }
