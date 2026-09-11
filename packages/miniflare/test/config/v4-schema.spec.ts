@@ -113,6 +113,30 @@ describe("V4MiniflareOptionsSchema", () => {
 		});
 	});
 
+	test("parses exact cron trigger strings", ({ expect }) => {
+		const parsed = V4MiniflareOptionsSchema.parse({
+			script: "export default {};",
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+
+		expect(parsed).toMatchObject({
+			cronTriggers: ["*/5 * * * *", " 0 17 * * SUN "],
+		});
+	});
+
+	test("accepts missing and empty cron triggers", ({ expect }) => {
+		const missing = V4MiniflareOptionsSchema.parse({
+			script: "export default {};",
+		});
+		const empty = V4MiniflareOptionsSchema.parse({
+			script: "export default {};",
+			cronTriggers: [],
+		});
+
+		expect(missing).not.toHaveProperty("cronTriggers");
+		expect(empty).toMatchObject({ cronTriggers: [] });
+	});
+
 	test("accepts unknown top-level keys like v4 plugin-by-plugin parsing", ({
 		expect,
 	}) => {
