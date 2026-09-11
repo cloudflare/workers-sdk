@@ -18,6 +18,12 @@ export type ProposedPreviewsConfig = {
 	omittedBindings: BindingReference[];
 };
 
+function omitUndefined<T extends Record<string, unknown>>(object: T): T {
+	return Object.fromEntries(
+		Object.entries(object).filter(([, value]) => value !== undefined)
+	) as T;
+}
+
 /** Converts Preview Base API data into local Preview configuration. */
 export function convertPreviewBaseToPreviewsConfig(
 	baseConfig: PreviewBaseConfig
@@ -110,46 +116,42 @@ export function convertTopLevelSettings(
 				if (observability === undefined) {
 					break;
 				}
-				converted.observability = {
+				converted.observability = omitUndefined({
 					enabled: observability.enabled,
 					head_sampling_rate: observability.head_sampling_rate,
 					redact_query_string: observability.redact_query_string,
-					...(observability.logs !== undefined && {
-						logs: {
-							enabled: observability.logs.enabled,
-							head_sampling_rate: observability.logs.head_sampling_rate,
-							invocation_logs: observability.logs.invocation_logs,
-							persist: observability.logs.persist,
-							...(observability.logs.destinations !== undefined && {
-								destinations: usePlaceholderValue
-									? Array.from(
-											{
-												length: observability.logs.destinations.length,
-											},
-											() => REPLACE_ME
-										)
-									: observability.logs.destinations,
-							}),
-						},
-					}),
-					...(observability.traces !== undefined && {
-						traces: {
-							enabled: observability.traces.enabled,
-							head_sampling_rate: observability.traces.head_sampling_rate,
-							persist: observability.traces.persist,
-							...(observability.traces.destinations !== undefined && {
-								destinations: usePlaceholderValue
-									? Array.from(
-											{
-												length: observability.traces.destinations.length,
-											},
-											() => REPLACE_ME
-										)
-									: observability.traces.destinations,
-							}),
-						},
-					}),
-				};
+					logs:
+						observability.logs === undefined
+							? undefined
+							: omitUndefined({
+									enabled: observability.logs.enabled,
+									head_sampling_rate: observability.logs.head_sampling_rate,
+									invocation_logs: observability.logs.invocation_logs,
+									persist: observability.logs.persist,
+									destinations:
+										observability.logs.destinations === undefined
+											? undefined
+											: usePlaceholderValue
+												? observability.logs.destinations.map(() => REPLACE_ME)
+												: observability.logs.destinations,
+								}),
+					traces:
+						observability.traces === undefined
+							? undefined
+							: omitUndefined({
+									enabled: observability.traces.enabled,
+									head_sampling_rate: observability.traces.head_sampling_rate,
+									persist: observability.traces.persist,
+									destinations:
+										observability.traces.destinations === undefined
+											? undefined
+											: usePlaceholderValue
+												? observability.traces.destinations.map(
+														() => REPLACE_ME
+													)
+												: observability.traces.destinations,
+								}),
+				});
 				break;
 			}
 			case "logpush":
@@ -159,10 +161,10 @@ export function convertTopLevelSettings(
 				break;
 			case "limits":
 				if (!usePlaceholderValue && settings.limits !== undefined) {
-					converted.limits = {
+					converted.limits = omitUndefined({
 						cpu_ms: settings.limits.cpu_ms,
 						subrequests: settings.limits.subrequests,
-					};
+					});
 				}
 				break;
 			case "placement": {
@@ -180,29 +182,29 @@ export function convertTopLevelSettings(
 				} else if (placement.mode === "off") {
 					converted.placement = { mode: placement.mode };
 				} else if ("region" in placement) {
-					converted.placement = {
+					converted.placement = omitUndefined({
 						mode: placement.mode,
 						region: usePlaceholderValue ? REPLACE_ME : placement.region,
-					};
+					});
 				} else if ("host" in placement) {
-					converted.placement = {
+					converted.placement = omitUndefined({
 						mode: placement.mode,
 						host: usePlaceholderValue ? REPLACE_ME : placement.host,
-					};
+					});
 				} else if ("hostname" in placement) {
-					converted.placement = {
+					converted.placement = omitUndefined({
 						mode: placement.mode,
 						hostname: usePlaceholderValue ? REPLACE_ME : placement.hostname,
-					};
+					});
 				}
 				break;
 			}
 			case "cache":
 				if (!usePlaceholderValue && settings.cache !== undefined) {
-					converted.cache = {
+					converted.cache = omitUndefined({
 						enabled: settings.cache.enabled,
 						cross_version_cache: settings.cache.cross_version_cache,
-					};
+					});
 				}
 				break;
 			case "containers":
@@ -434,11 +436,11 @@ export function convertBinding(
 			return {
 				queues: {
 					producers: [
-						{
+						omitUndefined({
 							binding: name,
 							queue: usePlaceholderValue ? REPLACE_ME : binding.queue_name,
 							delivery_delay: binding.delivery_delay,
-						},
+						}),
 					],
 				},
 			};

@@ -60,6 +60,36 @@ describe("Preview configuration conversion", () => {
 		).toEqual({ define: {}, logpush: false, tail_consumers: [] });
 	});
 
+	test("omits optional fields absent from Preview Base", ({ expect }) => {
+		expect(
+			convertPreviewBaseToPreviewsConfig({
+				observability: {
+					enabled: true,
+					logs: { enabled: false },
+					traces: { persist: true },
+				},
+				limits: { subrequests: 100 },
+				placement: { region: "aws:us-east-1" },
+				cache: { enabled: false },
+				env: {
+					QUEUE: { type: "queue", queue_name: "preview-queue" },
+				},
+			} as Parameters<typeof convertPreviewBaseToPreviewsConfig>[0]).config
+		).toStrictEqual({
+			observability: {
+				enabled: true,
+				logs: { enabled: false },
+				traces: { persist: true },
+			},
+			limits: { subrequests: 100 },
+			placement: { region: "aws:us-east-1" },
+			cache: { enabled: false },
+			queues: {
+				producers: [{ binding: "QUEUE", queue: "preview-queue" }],
+			},
+		});
+	});
+
 	test("keeps staged AI bindings remote-only", ({ expect }) => {
 		expect(
 			convertBindings({ AI: { type: "ai", staging: true } }, false)

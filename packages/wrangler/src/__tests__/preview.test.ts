@@ -1056,6 +1056,47 @@ describe("wrangler preview", () => {
 				}
 			);
 
+			test.for(["wrangler.json", "wrangler.jsonc"])(
+				"onboards sparse Preview Base settings into $0",
+				async (configPath, { expect }) => {
+					writeWranglerConfig(
+						{
+							name: "test-worker",
+							main: "src/index.ts",
+							compatibility_date: "2025-01-01",
+						},
+						configPath
+					);
+					setIsTTY(true);
+					mockConfirm({
+						text: addPreviewBaseConfigPrompt,
+						options: { defaultValue: true },
+						result: true,
+					});
+					msw.use(
+						http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+							HttpResponse.json({
+								success: true,
+								result: {
+									previews_base_config: {
+										limits: { subrequests: 100 },
+									},
+								},
+							})
+						)
+					);
+					mockContainerPreview({ previewId: "preview-sparse-base" });
+
+					await runWrangler(
+						`preview --name test-preview --config ${configPath}`
+					);
+
+					expect(readWranglerConfig(configPath).previews).toEqual({
+						limits: { subrequests: 100 },
+					});
+				}
+			);
+
 			test("does not onboard a genuinely empty Preview Base response", async ({
 				expect,
 			}) => {
