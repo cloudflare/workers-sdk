@@ -1,5 +1,6 @@
 import http from "node:http";
 import net from "node:net";
+import { PassThrough } from "node:stream";
 import { DeferredPromise, Miniflare, Response } from "miniflare";
 import {
 	afterEach,
@@ -11,7 +12,7 @@ import {
 	test,
 	vi,
 } from "vitest";
-import { handleWebSocket } from "../websockets";
+import { handleWebSocket, waitForSocketDrain } from "../websockets";
 import type { AddressInfo } from "node:net";
 
 describe("handleWebSocket", () => {
@@ -67,6 +68,7 @@ describe("handleWebSocket", () => {
 	 */
 	async function connect() {
 		const socket = net.connect(port, "127.0.0.1");
+		socket.on("error", () => {});
 		openSockets.add(socket);
 		socket.on("close", () => openSockets.delete(socket));
 		await new Promise<void>((r) => socket.on("connect", r));
@@ -288,6 +290,7 @@ describe("handleWebSocket", () => {
 		await listen();
 
 		const socket = await connect();
+		socket.on("error", () => {});
 
 		const chunks: Buffer[] = [];
 		socket.on("data", (chunk) => chunks.push(chunk));
@@ -417,5 +420,294 @@ describe("handleWebSocket", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15170
+	test("delivers non-101 HTTP response when Worker rejects WebSocket upgrade", async ({
+		expect,
+	}) => {
+		const largePayload = "X".repeat(64 * 1024);
+		const expectedBody = "Unauthorized: upgrade rejected\n" + largePayload;
+		const mf = await listen();
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
+			new Response(expectedBody, {
+				status: 401,
+				headers: {
+					"X-Custom-Auth": "denied",
+					"Content-Type": "text/plain",
+				},
+			})
+		);
+
+		const socket = await connect();
+
+		const chunks: Buffer[] = [];
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+		socket.on("end", () => {
+			socket.end();
+		});
+		socket.on("data", (chunk) => chunks.push(chunk));
+
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+
+		const raw = Buffer.concat(chunks).toString("utf8");
+		expect(raw).toContain("HTTP/1.1 401");
+		expect(raw).toContain("x-custom-auth: denied");
+		expect(raw).toContain(expectedBody);
+	});
+
+	test("terminates response writer and cleans up resources when client disconnects during backpressure", async ({
+		expect,
+	}) => {
+		const unhandled = vi.fn();
+		process.on("unhandledRejection", unhandled);
+		onTestFinished(() => {
+			process.off("unhandledRejection", unhandled);
+		});
+		const backpressureEntered = new DeferredPromise<void>();
+		httpServer.prependOnceListener("upgrade", (_request, serverSocket) => {
+			vi.spyOn(serverSocket, "write")
+				.mockImplementationOnce(() => true)
+				.mockImplementationOnce(() => {
+					backpressureEntered.resolve();
+					return false;
+				});
+		});
+		const mf = await listen();
+
+		const chunk = new Uint8Array(1024).fill(65);
+		const stream = new ReadableStream<Uint8Array>({
+			pull(controller) {
+				controller.enqueue(chunk);
+			},
+		});
+
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
+			new Response(stream, {
+				status: 403,
+				headers: {
+					"Content-Type": "application/octet-stream",
+				},
+			})
+		);
+
+		const socket = await connect();
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await backpressureEntered;
+		expect(stream.locked).toBe(true);
+		socket.resetAndDestroy();
+
+		// Verify server-side response stream reader is released and response writer terminates
+		await vi.waitFor(() => {
+			expect(stream.locked).toBe(false);
+		});
+
+		// Verify server remains responsive and did not hang
+		const response = await fetch(`http://127.0.0.1:${port}`);
+		expect(response.ok).toBe(true);
+		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	test("cancels response body when client disconnects before response body writing", async ({
+		expect,
+	}) => {
+		const unhandled = vi.fn();
+		process.on("unhandledRejection", unhandled);
+		onTestFinished(() => {
+			process.off("unhandledRejection", unhandled);
+		});
+
+		let cancelCalled = false;
+		const stream = new ReadableStream<Uint8Array>({
+			pull() {},
+			cancel() {
+				cancelCalled = true;
+			},
+		});
+
+		const mf = await listen();
+		const responseObj = new Response(stream, {
+			status: 403,
+			headers: {
+				"Content-Type": "text/plain",
+			},
+		});
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(responseObj);
+
+		const socket = await connect();
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await vi.waitFor(() => expect(mf.dispatchFetch).toHaveBeenCalled());
+		socket.resetAndDestroy();
+
+		await vi.waitFor(
+			() => {
+				expect(cancelCalled).toBe(true);
+				expect(responseObj.body?.locked).toBe(false);
+			},
+			{ timeout: 1000 }
+		);
+
+		const response = await fetch(`http://127.0.0.1:${port}`);
+		expect(response.ok).toBe(true);
+		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	test("cancels response body and unblocks handler when client disconnects while reader.read() is pending", async ({
+		expect,
+	}) => {
+		const unhandled = vi.fn();
+		process.on("unhandledRejection", unhandled);
+		onTestFinished(() => {
+			process.off("unhandledRejection", unhandled);
+		});
+
+		const pullStarted = new DeferredPromise<void>();
+		let cancelCalled = false;
+		let cancelResolve: (() => void) | undefined;
+
+		const mf = await listen();
+		vi.spyOn(mf, "dispatchFetch").mockImplementation(async () => {
+			const stream = new ReadableStream<Uint8Array>({
+				pull() {
+					pullStarted.resolve();
+					return new Promise<void>((resolve) => {
+						cancelResolve = resolve;
+					});
+				},
+				cancel() {
+					cancelCalled = true;
+					cancelResolve?.();
+				},
+			});
+			return new Response(stream, {
+				status: 403,
+				headers: {
+					"Content-Type": "text/plain",
+				},
+			});
+		});
+
+		const socket = await connect();
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Wait until reader.read() is demonstrably pending
+		await pullStarted;
+
+		// Client disconnects while reader.read() is pending
+		socket.resetAndDestroy();
+
+		// Verify response stream is actively cancelled without hanging
+		await vi.waitFor(
+			() => {
+				expect(cancelCalled).toBe(true);
+			},
+			{ timeout: 1000 }
+		);
+
+		const response = await fetch(`http://127.0.0.1:${port}`);
+		expect(response.ok).toBe(true);
+		expect(unhandled).not.toHaveBeenCalled();
+	});
+});
+
+describe("waitForSocketDrain", () => {
+	test("resolves when drain event is emitted and removes all listeners", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		const promise = waitForSocketDrain(socket);
+
+		expect(socket.listenerCount("drain")).toBe(1);
+		expect(socket.listenerCount("close")).toBe(1);
+		expect(socket.listenerCount("error")).toBe(1);
+
+		socket.emit("drain");
+		await promise;
+
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
+	});
+
+	test("resolves when close event is emitted and removes all listeners", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		const promise = waitForSocketDrain(socket);
+
+		expect(socket.listenerCount("drain")).toBe(1);
+		expect(socket.listenerCount("close")).toBe(1);
+		expect(socket.listenerCount("error")).toBe(1);
+
+		socket.emit("close");
+		await promise;
+
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
+	});
+
+	test("resolves when error event is emitted and removes all listeners", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		const promise = waitForSocketDrain(socket);
+
+		expect(socket.listenerCount("drain")).toBe(1);
+		expect(socket.listenerCount("close")).toBe(1);
+		expect(socket.listenerCount("error")).toBe(1);
+
+		socket.emit("error", new Error("connection reset"));
+		await promise;
+
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
+	});
+
+	test("resolves immediately if socket is already destroyed", async ({
+		expect,
+	}) => {
+		const socket = new PassThrough();
+		socket.destroy();
+
+		await waitForSocketDrain(socket);
+		expect(socket.listenerCount("drain")).toBe(0);
+		expect(socket.listenerCount("close")).toBe(0);
+		expect(socket.listenerCount("error")).toBe(0);
 	});
 });
