@@ -13,6 +13,7 @@ export default defineConfig(() => [
 			context: "src/shared/context.ts",
 			"create-worker-upload-form":
 				"src/deploy/helpers/create-worker-upload-form.ts",
+			"startup-profile": "src/startup-profile.ts",
 		},
 		platform: "node",
 		format: "esm",
@@ -33,6 +34,7 @@ export default defineConfig(() => [
 			"dotenv",
 			"command-exists",
 			"esbuild",
+			"ws",
 		],
 	},
 ]);

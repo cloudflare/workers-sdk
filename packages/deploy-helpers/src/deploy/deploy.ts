@@ -123,9 +123,12 @@ export type DeployCallbacks = {
 				namespace: string | undefined;
 		  }>)
 		| undefined;
-	analyseBundle:
-		| ((workerBundle: string | FormData) => Promise<Record<string, unknown>>)
-		| undefined;
+	/**
+	 * @deprecated Startup profiling is provided by deploy-helpers automatically.
+	 */
+	analyseBundle?: (
+		workerBundle: string | FormData
+	) => Promise<Record<string, unknown>>;
 };
 
 type DeployResult = {
@@ -675,6 +678,7 @@ async function deployWorker(
 				dependencies,
 				workerBundle,
 				projectRoot,
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
 				callbacks.analyseBundle
 			);
 			if (message !== null) {

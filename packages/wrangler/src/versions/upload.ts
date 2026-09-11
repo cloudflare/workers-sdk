@@ -5,7 +5,6 @@ import {
 } from "@cloudflare/deploy-helpers";
 import { getDurableObjectContainerApps } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { analyseBundle } from "../check/commands";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
@@ -83,10 +82,7 @@ export const versionsUploadCommand = createCommand({
 			const { assetUploadStats: uploadStats } = await versionsUpload(
 				props,
 				config,
-				buildResult,
-				{
-					analyseBundle: analyseBundle,
-				}
+				buildResult
 			);
 			assetUploadStats = uploadStats;
 		} finally {
