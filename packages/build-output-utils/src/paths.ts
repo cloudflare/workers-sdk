@@ -54,26 +54,63 @@ export function getWorkersDir(root: string): string {
 }
 
 /**
+ * Absolute path to the Containers output directory.
+ */
+export function getContainersDir(root: string): string {
+	return path.join(getBuildOutputDir(root), BUILD_OUTPUT_VERSION, "containers");
+}
+
+function validateDirectoryName(name: string, resourceName: string): void {
+	if (
+		name.length === 0 ||
+		name === "." ||
+		name === ".." ||
+		name.includes("/") ||
+		name.includes("\\") ||
+		name.includes("\0")
+	) {
+		throw new Error(
+			`${resourceName} directory names must be non-empty, single path segments. Received ${JSON.stringify(name)}.`
+		);
+	}
+}
+
+/**
  * Absolute path to a Worker's directory (`workers/<worker-directory-name>`).
  */
 export function getWorkerDir(
 	root: string,
 	workerDirectoryName = DEFAULT_WORKER_DIRECTORY_NAME
 ): string {
-	if (
-		workerDirectoryName.length === 0 ||
-		workerDirectoryName === "." ||
-		workerDirectoryName === ".." ||
-		workerDirectoryName.includes("/") ||
-		workerDirectoryName.includes("\\") ||
-		workerDirectoryName.includes("\0")
-	) {
-		throw new Error(
-			"Worker directory names must be non-empty, single path segments."
-		);
-	}
+	validateDirectoryName(workerDirectoryName, "Worker");
 
 	return path.join(getWorkersDir(root), workerDirectoryName);
+}
+
+/**
+ * Absolute path to a Container's directory
+ * (`containers/<container-directory-name>`).
+ */
+export function getContainerDir(
+	root: string,
+	containerDirectoryName: string
+): string {
+	validateDirectoryName(containerDirectoryName, "Container");
+
+	return path.join(getContainersDir(root), containerDirectoryName);
+}
+
+/**
+ * Absolute path to the Container's config file.
+ */
+export function getContainerConfigPath(
+	root: string,
+	containerDirectoryName: string
+): string {
+	return path.join(
+		getContainerDir(root, containerDirectoryName),
+		CONFIG_FILENAME
+	);
 }
 
 /**
