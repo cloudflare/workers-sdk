@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
 	getPreviewBaseConfig,
 	isWorkerNotFoundError,
@@ -170,7 +171,9 @@ export async function ensurePreviewsConfig(
 	const canWriteConfig =
 		config.userConfigPath !== undefined &&
 		config.userConfigPath === config.configPath &&
-		(format === "toml" || JSON_CONFIG_FORMATS.includes(format));
+		(JSON_CONFIG_FORMATS.includes(format) ||
+			(format === "toml" &&
+				!readFileSync(config.userConfigPath, "utf8").includes("#")));
 	if (!canWriteConfig || args.json || isNonInteractiveOrCI()) {
 		throw new UserError(
 			`${MISSING_PREVIEWS_CONFIG_MESSAGE}\n\n${formatConfigSnippet(

@@ -1097,6 +1097,45 @@ describe("wrangler preview", () => {
 				}
 			);
 
+			test("falls back to guidance for commented TOML", async ({ expect }) => {
+				writeWranglerConfig(
+					{
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+					},
+					"wrangler.toml"
+				);
+				const originalConfig = `# Keep this comment.\n${readFileSync(
+					"wrangler.toml",
+					"utf8"
+				)}`;
+				writeFileSync("wrangler.toml", originalConfig);
+				setIsTTY(true);
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+						HttpResponse.json({
+							success: true,
+							result: { previews_base_config: { logpush: true } },
+						})
+					)
+				);
+				let deploymentRequests = 0;
+				mockContainerPreview({
+					previewId: "preview-commented-toml",
+					onCreateDeployment: () => deploymentRequests++,
+				});
+
+				await expect(
+					runWrangler("preview --name test-preview --config wrangler.toml")
+				).rejects.toThrow(
+					"Your Wrangler configuration is missing a `previews` block. Add the following to your configuration file:\n\n[previews]\nlogpush = true"
+				);
+
+				expect(readFileSync("wrangler.toml", "utf8")).toBe(originalConfig);
+				expect(deploymentRequests).toBe(0);
+			});
+
 			test("does not onboard a genuinely empty Preview Base response", async ({
 				expect,
 			}) => {
