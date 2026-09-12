@@ -72,7 +72,9 @@ describe("buildDurableObjectContainerImages", () => {
 			expect.any(String),
 			false,
 			undefined,
-			false
+			false,
+			undefined,
+			{ displayName: "Sandbox/tools" }
 		);
 		expect(result).toEqual([
 			{

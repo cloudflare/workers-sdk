@@ -189,7 +189,6 @@ async function buildContainer(
 	complianceConfig?: ComplianceConfig
 ): Promise<ImageRef> {
 	const imageFullName = `${containerConfig.name}:${imageTag.split("-")[0]}`;
-	logger.log("Building image", imageFullName);
 
 	return await buildAndMaybePush(
 		{
@@ -202,6 +201,7 @@ async function buildContainer(
 		!dryRun,
 		containerConfig,
 		verifyDockerIsRunning,
-		complianceConfig
+		complianceConfig,
+		{ displayName: containerConfig.name }
 	);
 }
