@@ -143,16 +143,28 @@ export async function getDetailsForAutoConfig({
 	const outputDir =
 		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
 
+	const devCommand = getProjectCommand(
+		detectedFramework.devCommand,
+		packageManager
+	);
+	const buildCommand = getProjectCommand(
+		detectedFramework.buildCommand,
+		packageManager
+	);
+	const resolvedDevCommand = framework.resolveCommand("dev", devCommand);
+	const resolvedBuildCommand = framework.resolveCommand("build", buildCommand);
+
 	const baseDetails = {
 		projectPath,
 		framework,
 		packageJson,
 		packageManager,
-		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
-		buildCommand: getProjectCommand(
-			detectedFramework.buildCommand,
-			packageManager
-		),
+		devCommand,
+		buildCommand,
+		commands: {
+			...(resolvedDevCommand ? { dev: resolvedDevCommand } : {}),
+			...(resolvedBuildCommand ? { build: resolvedBuildCommand } : {}),
+		},
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};

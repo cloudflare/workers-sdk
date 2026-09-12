@@ -31,7 +31,8 @@
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/config": "workspace:*",
-		"@cloudflare/workers-utils": "workspace:*"
+		"@cloudflare/workers-utils": "workspace:*",
+		"shell-quote": "^1.9.0"
 	},
 	"devDependencies": {
 		"@cloudflare/shared-ast-primitives": "workspace:*",
@@ -39,6 +40,7 @@
 		"@netlify/build-info": "10.5.1",
 		"@types/esprima": "^4.0.3",
 		"@types/node": "catalog:default",
+		"@types/shell-quote": "^1.7.2",
 		"chalk": "catalog:default",
 		"empathic": "^2.0.0",
 		"esprima": "4.0.1",

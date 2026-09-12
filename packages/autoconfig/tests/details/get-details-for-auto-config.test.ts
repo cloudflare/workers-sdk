@@ -64,6 +64,18 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			framework: { id: "astro" },
 			buildCommand: "npx astro build",
 			devCommand: "npx astro dev",
+			commands: {
+				build: {
+					executable: "npx",
+					args: ["astro", "build"],
+					supportsMode: true,
+				},
+				dev: {
+					executable: "npx",
+					args: ["astro", "dev"],
+					supportsMode: true,
+				},
+			},
 			packageManager: { type: "npm" },
 		});
 	});
@@ -97,6 +109,18 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
 				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
+				commands: {
+					build: {
+						executable: pm === "pnpm" ? "pnpm" : "npx",
+						args: ["astro", "build"],
+						supportsMode: true,
+					},
+					dev: {
+						executable: pm === "pnpm" ? "pnpm" : "npx",
+						args: ["astro", "dev"],
+						supportsMode: true,
+					},
+				},
 				configured: false,
 				outputDir: "dist",
 				packageJson: {

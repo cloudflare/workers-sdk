@@ -15,6 +15,13 @@ import type {
 } from "./framework-class";
 
 export class Vite extends Framework {
+	override get commandCapabilities() {
+		return {
+			build: { supportsMode: true },
+			dev: { supportsMode: true },
+		} as const;
+	}
+
 	readonly env = {
 		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 	} as const;

@@ -10,7 +10,11 @@ export { runAutoConfig, buildOperationsSummary } from "./run";
 
 export { Framework } from "./frameworks/framework-class";
 export type {
+	AutoConfigCommand,
+	AutoConfigCommandName,
+	AutoConfigCommands,
 	BuildConfig,
+	BuildTool,
 	ConfigurationOptions,
 	ConfigurationResults,
 	PackageJsonScriptsOverrides,

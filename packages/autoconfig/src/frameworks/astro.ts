@@ -24,6 +24,13 @@ import type {
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
+	override get commandCapabilities() {
+		return {
+			build: { supportsMode: true },
+			dev: { supportsMode: true },
+		} as const;
+	}
+
 	async configure({
 		outputDir,
 		dryRun,
