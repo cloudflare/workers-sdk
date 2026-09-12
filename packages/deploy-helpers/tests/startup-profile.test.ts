@@ -93,6 +93,7 @@ describe("startup profile", () => {
 				STARTUP_QUEUE: "send",
 				STARTUP_SERVICE: "fetch",
 				STARTUP_RAW_KV: "fetch",
+				STARTUP_RAW_VECTORIZE: "fetch",
 			};
 			for (const [bindingName, methodName] of Object.entries(expectedMethods)) {
 				if (typeof env[bindingName]?.[methodName] !== "function") {
@@ -132,6 +133,12 @@ describe("startup profile", () => {
 						name: "STARTUP_RAW_KV",
 						type: "kv_namespace",
 						namespace_id: "startup-raw-kv",
+						raw: true,
+					},
+					{
+						name: "STARTUP_RAW_VECTORIZE",
+						type: "vectorize",
+						index_name: "startup-raw-vectorize",
 						raw: true,
 					},
 				],
