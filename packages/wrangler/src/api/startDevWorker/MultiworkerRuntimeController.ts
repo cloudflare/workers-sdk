@@ -13,10 +13,9 @@ import {
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
-import type { RemoteProxySession } from "../remoteBindings";
+import type { RemoteProxySessionData } from "../remoteBindings";
 import type { ControllerBus } from "./BaseController";
 import type { BundleCompleteEvent } from "./events";
-import type { Binding } from "./index";
 
 // Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
 function ensureMatchingSql(options: MF.Options) {
@@ -85,13 +84,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
-	#remoteProxySessionsData = new Map<
-		string,
-		{
-			session: RemoteProxySession;
-			remoteBindings: Record<string, Binding>;
-		} | null
-	>();
+	#remoteProxySessionsData = new Map<string, RemoteProxySessionData | null>();
 
 	// If this doesn't match what is in config, trigger a rebuild.
 	// Used for the rebuild hotkey
@@ -235,7 +228,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 						type: "devRegistryUpdate",
 						registry,
 					});
-				}
+				},
+				this.#remoteProxySessionsData.get(data.config.name)
+					?.hyperdriveConnectionStrings
 			);
 
 			// `handleUncaughtError` is a shared Miniflare option, and the

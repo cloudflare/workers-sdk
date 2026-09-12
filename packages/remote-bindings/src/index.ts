@@ -8,6 +8,7 @@ export type {
 	WorkerConfigObject,
 } from "./maybe-start-or-update-session";
 export { startRemoteProxySession } from "./start-remote-proxy-session";
+export { seedRemoteHyperdriveBindings } from "./seed-hyperdrive-bindings";
 export type { RemoteBindingsLogger } from "./logger";
 export type {
 	RemoteProxySession,
