@@ -11,6 +11,8 @@ export const EXTERNAL_DEPENDENCIES = [
 	"@cloudflare/containers-shared",
 	"@cloudflare/workers-utils",
 	"miniflare",
+	// Public declaration files expose Chrome DevTools Protocol profile types.
+	"devtools-protocol",
 
 	// These are externalized to avoid duplication in wrangler's bundle,
 	// which already bundles these packages itself.
@@ -21,4 +23,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	"p-queue",
 	"pretty-bytes",
 	"undici",
+	// WebSocket client for the local workerd inspector used by startup profiling.
+	"ws",
 ];

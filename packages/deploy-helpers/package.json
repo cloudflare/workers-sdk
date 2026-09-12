@@ -29,6 +29,10 @@
 		"./create-worker-upload-form": {
 			"import": "./dist/create-worker-upload-form.mjs",
 			"types": "./dist/create-worker-upload-form.d.mts"
+		},
+		"./startup-profile": {
+			"import": "./dist/startup-profile.mjs",
+			"types": "./dist/startup-profile.d.mts"
 		}
 	},
 	"scripts": {
@@ -47,11 +51,13 @@
 		"blake3-wasm": "2.1.5",
 		"chalk": "catalog:default",
 		"command-exists": "catalog:default",
+		"devtools-protocol": "0.0.1182435",
 		"dotenv": "catalog:default",
 		"miniflare": "workspace:*",
 		"p-queue": "9.0.0",
 		"pretty-bytes": "6.1.1",
-		"undici": "catalog:default"
+		"undici": "catalog:default",
+		"ws": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-shared": "workspace:*",
@@ -60,8 +66,8 @@
 		"@types/command-exists": "^1.2.0",
 		"@types/json-diff": "^1.0.3",
 		"@types/node": "catalog:default",
+		"@types/ws": "^8.5.7",
 		"concurrently": "^8.2.2",
-		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "catalog:default",
 		"json-diff": "^1.0.6",
 		"ts-dedent": "^2.2.0",

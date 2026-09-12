@@ -6,12 +6,14 @@ import { logger } from "../../shared/context";
 import type { Metafile } from "esbuild";
 import type { FormData } from "undici";
 
+type AnalyseBundle = (bundle: FormData | string) => Promise<unknown>;
+
 export async function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,
 	dependencies: { [path: string]: { bytesInOutput: number } },
 	workerBundle: FormData | string,
 	projectRoot: string | undefined,
-	analyseBundle?: (bundle: FormData | string) => Promise<unknown>
+	analyseBundle?: AnalyseBundle
 ): Promise<string | null> {
 	if (errIsScriptSize(err)) {
 		return diagnoseScriptSizeError(err, dependencies);
@@ -58,7 +60,7 @@ export async function diagnoseStartupError(
 	err: ParseError,
 	workerBundle: FormData | string,
 	projectRoot: string | undefined,
-	analyseBundle?: (bundle: FormData | string) => Promise<unknown>
+	analyseBundle: AnalyseBundle = analyseBundleLazily
 ): Promise<string> {
 	let errorMessage = dedent`
 		Your Worker failed validation because it exceeded startup limits.
@@ -71,24 +73,22 @@ export async function diagnoseStartupError(
 		Refer to https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time for more details`;
 
 	try {
-		if (!analyseBundle) {
-			return errorMessage;
-		}
 		const cpuProfile = await analyseBundle(workerBundle);
 		const tmpDir = await getWranglerTmpDir(
 			projectRoot,
 			"startup-profile",
 			false
 		);
-		const profile = path.relative(
+		const profilePath = path.join(tmpDir.path, "worker.cpuprofile");
+		const displayProfilePath = path.relative(
 			projectRoot ?? process.cwd(),
-			path.join(tmpDir.path, `worker.cpuprofile`)
+			profilePath
 		);
-		await writeFile(profile, JSON.stringify(cpuProfile));
+		await writeFile(profilePath, JSON.stringify(cpuProfile));
 
 		errorMessage += dedent`
 
-			A CPU Profile of your Worker's startup phase has been written to ${profile} - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`;
+			A CPU Profile of your Worker's startup phase has been written to ${displayProfilePath} - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`;
 	} catch (profilingError) {
 		logger.debug(
 			`An error occurred while trying to locally profile the Worker: ${profilingError}`
@@ -96,6 +96,13 @@ export async function diagnoseStartupError(
 	}
 
 	return errorMessage;
+}
+
+async function analyseBundleLazily(
+	workerBundle: FormData | string
+): Promise<unknown> {
+	const { analyseBundle } = await import("../../startup-profile");
+	return analyseBundle(workerBundle);
 }
 
 /**
