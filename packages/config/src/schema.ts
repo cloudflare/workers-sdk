@@ -38,6 +38,7 @@ export const D1BindingSchema = z.strictObject({
 	type: z.literal("d1"),
 	name: z.string().optional(),
 	id: z.string().optional(),
+	jurisdiction: z.string().optional(),
 	dev: RemoteBindingDevSchema.optional(),
 });
 

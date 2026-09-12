@@ -6405,12 +6405,12 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should allow the database_id field to be omitted (resource provisioning)", ({
+			it("should allow provisioning options without a database_id", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
-						d1_databases: [{ binding: "VALID" }],
+						d1_databases: [{ binding: "VALID", jurisdiction: "eu" }],
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
@@ -6419,6 +6419,31 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if D1 database jurisdiction has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								jurisdiction: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "jurisdiction" field but got {"binding":"DB","jurisdiction":true}."
+				`);
 			});
 
 			it("should error if D1 database database_name has incorrect type", ({

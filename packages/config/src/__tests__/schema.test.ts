@@ -70,6 +70,17 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts a jurisdiction on D1 bindings", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				env: {
+					DB: { type: "d1", jurisdiction: "eu" },
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
 		it("accepts multiple agent-memory bindings", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,
