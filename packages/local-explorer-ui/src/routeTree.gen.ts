@@ -25,7 +25,7 @@ import { Route as R2BucketNameIndexRouteImport } from './routes/r2/$bucketName/i
 import { Route as EmailRoutingIndexRouteImport } from './routes/email/routing/index'
 import { Route as DoClassNameIndexRouteImport } from './routes/do/$className/index'
 import { Route as WorkflowsWorkflowNameInstanceIdRouteImport } from './routes/workflows/$workflowName/$instanceId'
-import { Route as EmailRoutingEmailIdRouteImport } from './routes/email/routing/$emailId'
+import { Route as EmailRoutingCaptureIdRouteImport } from './routes/email/routing/$captureId'
 import { Route as DoClassNameObjectIdRouteImport } from './routes/do/$className/$objectId'
 import { Route as R2BucketNameObjectSplatRouteImport } from './routes/r2/$bucketName/object.$'
 
@@ -111,9 +111,9 @@ const WorkflowsWorkflowNameInstanceIdRoute =
     path: '/$instanceId',
     getParentRoute: () => WorkflowsWorkflowNameRoute,
   } as any)
-const EmailRoutingEmailIdRoute = EmailRoutingEmailIdRouteImport.update({
-  id: '/$emailId',
-  path: '/$emailId',
+const EmailRoutingCaptureIdRoute = EmailRoutingCaptureIdRouteImport.update({
+  id: '/$captureId',
+  path: '/$captureId',
   getParentRoute: () => EmailRoutingRoute,
 } as any)
 const DoClassNameObjectIdRoute = DoClassNameObjectIdRouteImport.update({
@@ -140,7 +140,7 @@ export interface FileRoutesByFullPath {
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
   '/observability/': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
-  '/email/routing/$emailId': typeof EmailRoutingEmailIdRoute
+  '/email/routing/$captureId': typeof EmailRoutingCaptureIdRoute
   '/workflows/$workflowName/$instanceId': typeof WorkflowsWorkflowNameInstanceIdRoute
   '/do/$className/': typeof DoClassNameIndexRoute
   '/email/routing/': typeof EmailRoutingIndexRoute
@@ -157,7 +157,7 @@ export interface FileRoutesByTo {
   '/observability/events': typeof ObservabilityEventsRoute
   '/observability': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
-  '/email/routing/$emailId': typeof EmailRoutingEmailIdRoute
+  '/email/routing/$captureId': typeof EmailRoutingCaptureIdRoute
   '/workflows/$workflowName/$instanceId': typeof WorkflowsWorkflowNameInstanceIdRoute
   '/do/$className': typeof DoClassNameIndexRoute
   '/email/routing': typeof EmailRoutingIndexRoute
@@ -179,7 +179,7 @@ export interface FileRoutesById {
   '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
   '/observability/': typeof ObservabilityIndexRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
-  '/email/routing/$emailId': typeof EmailRoutingEmailIdRoute
+  '/email/routing/$captureId': typeof EmailRoutingCaptureIdRoute
   '/workflows/$workflowName/$instanceId': typeof WorkflowsWorkflowNameInstanceIdRoute
   '/do/$className/': typeof DoClassNameIndexRoute
   '/email/routing/': typeof EmailRoutingIndexRoute
@@ -202,7 +202,7 @@ export interface FileRouteTypes {
     | '/workflows/$workflowName'
     | '/observability/'
     | '/do/$className/$objectId'
-    | '/email/routing/$emailId'
+    | '/email/routing/$captureId'
     | '/workflows/$workflowName/$instanceId'
     | '/do/$className/'
     | '/email/routing/'
@@ -219,7 +219,7 @@ export interface FileRouteTypes {
     | '/observability/events'
     | '/observability'
     | '/do/$className/$objectId'
-    | '/email/routing/$emailId'
+    | '/email/routing/$captureId'
     | '/workflows/$workflowName/$instanceId'
     | '/do/$className'
     | '/email/routing'
@@ -240,7 +240,7 @@ export interface FileRouteTypes {
     | '/workflows/$workflowName'
     | '/observability/'
     | '/do/$className/$objectId'
-    | '/email/routing/$emailId'
+    | '/email/routing/$captureId'
     | '/workflows/$workflowName/$instanceId'
     | '/do/$className/'
     | '/email/routing/'
@@ -375,11 +375,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkflowsWorkflowNameInstanceIdRouteImport
       parentRoute: typeof WorkflowsWorkflowNameRoute
     }
-    '/email/routing/$emailId': {
-      id: '/email/routing/$emailId'
-      path: '/$emailId'
-      fullPath: '/email/routing/$emailId'
-      preLoaderRoute: typeof EmailRoutingEmailIdRouteImport
+    '/email/routing/$captureId': {
+      id: '/email/routing/$captureId'
+      path: '/$captureId'
+      fullPath: '/email/routing/$captureId'
+      preLoaderRoute: typeof EmailRoutingCaptureIdRouteImport
       parentRoute: typeof EmailRoutingRoute
     }
     '/do/$className/$objectId': {
@@ -400,12 +400,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface EmailRoutingRouteChildren {
-  EmailRoutingEmailIdRoute: typeof EmailRoutingEmailIdRoute
+  EmailRoutingCaptureIdRoute: typeof EmailRoutingCaptureIdRoute
   EmailRoutingIndexRoute: typeof EmailRoutingIndexRoute
 }
 
 const EmailRoutingRouteChildren: EmailRoutingRouteChildren = {
-  EmailRoutingEmailIdRoute: EmailRoutingEmailIdRoute,
+  EmailRoutingCaptureIdRoute: EmailRoutingCaptureIdRoute,
   EmailRoutingIndexRoute: EmailRoutingIndexRoute,
 }
 

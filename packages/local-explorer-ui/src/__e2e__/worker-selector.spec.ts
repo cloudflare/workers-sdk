@@ -36,12 +36,14 @@ function waitForWorkersResponse() {
 
 async function mockEmailRoutingDetail(): Promise<void> {
 	await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
-		const emailId = new URL(route.request().url()).searchParams.get("email_id");
+		const captureId = new URL(route.request().url()).searchParams.get(
+			"capture_id"
+		);
 		await route.fulfill({
 			contentType: "application/json",
 			body: JSON.stringify({
 				errors: [],
-				messages: emailId
+				messages: captureId
 					? [
 							{
 								code: 10604,
@@ -50,9 +52,12 @@ async function mockEmailRoutingDetail(): Promise<void> {
 							},
 						]
 					: [],
-				result: emailId
+				result: captureId
 					? {
 							attachments: [],
+							captureId,
+							capturedPortion: false,
+							editAndResendAvailable: true,
 							events: [],
 							forwards: [],
 							from: "sender@example.com",
@@ -66,9 +71,10 @@ async function mockEmailRoutingDetail(): Promise<void> {
 							subject: "Test email",
 							text: "Plain received text body",
 							to: "recipient@example.com",
+							worker: "worker-1",
 						}
 					: [],
-				result_info: emailId
+				result_info: captureId
 					? undefined
 					: { count: 0, has_more: false, per_page: 25 },
 				success: true,
@@ -89,16 +95,19 @@ describe("worker selector", () => {
 		const requestedWorkers: Array<string | null> = [];
 		await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
 			const search = new URL(route.request().url()).searchParams;
-			const emailId = search.get("email_id");
+			const captureId = search.get("capture_id");
 			requestedWorkers.push(search.get("worker"));
 			await route.fulfill({
 				contentType: "application/json",
 				body: JSON.stringify({
 					errors: [],
 					messages: [],
-					result: emailId
+					result: captureId
 						? {
 								attachments: [],
+								captureId,
+								capturedPortion: false,
+								editAndResendAvailable: true,
 								events: [],
 								forwards: [],
 								from: "sender@example.com",
@@ -111,9 +120,10 @@ describe("worker selector", () => {
 								subject: "Direct email",
 								text: "Body",
 								to: "recipient@example.com",
+								worker: search.get("worker") ?? "worker-1",
 							}
 						: [],
-					result_info: emailId
+					result_info: captureId
 						? undefined
 						: { count: 0, has_more: false, per_page: 10 },
 					success: true,
@@ -151,7 +161,7 @@ describe("worker selector", () => {
 		requestedWorkers.length = 0;
 		await page.goto(
 			new URL(
-				"/cdn-cgi/local/explorer/email/routing/test-email-id",
+				"/cdn-cgi/local/explorer/email/routing/00000000-0000-4000-8000-000000000001",
 				viteUrl
 			).toString()
 		);
@@ -167,6 +177,68 @@ describe("worker selector", () => {
 		expect(requestedWorkers.every((worker) => worker === "worker-1")).toBe(
 			true
 		);
+	});
+
+	test("keeps workerless Message-ID detail lookups unfiltered", async ({
+		expect,
+	}) => {
+		const requestedWorkers: Array<string | null> = [];
+		const requestedEmailIds: Array<string | null> = [];
+		await page.route(EMAIL_ROUTING_DETAIL_ROUTE, async (route) => {
+			const search = new URL(route.request().url()).searchParams;
+			const emailId = search.get("email_id");
+			if (emailId !== null) {
+				requestedWorkers.push(search.get("worker"));
+				requestedEmailIds.push(emailId);
+			}
+			await route.fulfill({
+				contentType: "application/json",
+				body: JSON.stringify({
+					errors: [],
+					messages: [],
+					result:
+						emailId === null
+							? []
+							: {
+									attachments: [],
+									events: [],
+									forwards: [],
+									from: "legacy@example.com",
+									headers: {},
+									messageId: emailId,
+									outcome: "ok",
+									raw: "Content-Type: text/plain\r\n\r\nLegacy body",
+									rawSize: 11,
+									receivedAt: "2026-09-11T00:00:00.000Z",
+									replies: [],
+									subject: "Legacy detail",
+									text: "Legacy body",
+									to: "recipient@example.com",
+									worker: "worker-2",
+								},
+					result_info:
+						emailId === null
+							? { count: 0, has_more: false, per_page: 10 }
+							: undefined,
+					success: true,
+				}),
+			});
+		});
+		await loadWorkers(2);
+
+		const messageId = "<legacy@example.com>";
+		await page.goto(
+			new URL(
+				`/cdn-cgi/local/explorer/email/routing/${encodeURIComponent(messageId)}?lookup=message-id`,
+				viteUrl
+			).toString()
+		);
+
+		await page.getByText("Legacy detail").last().waitFor();
+		expect(new URL(page.url()).searchParams.get("worker")).toBeNull();
+		await expect.poll(() => requestedEmailIds.length).toBeGreaterThan(0);
+		expect(requestedEmailIds.every((id) => id === messageId)).toBe(true);
+		expect(requestedWorkers.every((worker) => worker === null)).toBe(true);
 	});
 
 	test("discards stale email lists after switching workers", async ({
@@ -192,6 +264,12 @@ describe("worker selector", () => {
 					result: [
 						{
 							attachments: [],
+							captureId:
+								worker === "worker-2"
+									? "00000000-0000-4000-8000-000000000002"
+									: "00000000-0000-4000-8000-000000000001",
+							capturedPortion: false,
+							editAndResendAvailable: true,
 							events: [],
 							forwards: [],
 							from: "sender@example.com",
@@ -202,6 +280,7 @@ describe("worker selector", () => {
 							replies: [],
 							subject,
 							to: "recipient@example.com",
+							worker: worker ?? "worker-1",
 						},
 					],
 					result_info: { count: 1, has_more: false, per_page: 10 },
@@ -329,7 +408,7 @@ describe("worker selector", () => {
 		await loadWorkers(2);
 		await page.goto(
 			new URL(
-				"/cdn-cgi/local/explorer/email/routing/test-email-id?worker=worker-1",
+				"/cdn-cgi/local/explorer/email/routing/00000000-0000-4000-8000-000000000001?worker=worker-1",
 				viteUrl
 			).toString()
 		);
@@ -367,7 +446,7 @@ describe("worker selector", () => {
 		await page.goBack();
 		await expect
 			.poll(() => new URL(page.url()).pathname)
-			.toMatch(/\/email\/routing\/test-email-id$/);
+			.toMatch(/\/email\/routing\/00000000-0000-4000-8000-000000000001$/);
 		await expect
 			.poll(() => new URL(page.url()).searchParams.get("worker"))
 			.toBe("worker-1");

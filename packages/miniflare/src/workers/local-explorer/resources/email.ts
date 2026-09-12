@@ -1,16 +1,10 @@
-import PostalMime, { decodeWords } from "postal-mime";
+import PostalMime, { addressParser, decodeWords } from "postal-mime";
 import { z } from "zod";
 import { EMAIL_STORE_SERVICE_NAME } from "../../../plugins/core/constants";
 import { CoreBindings, CorePaths } from "../../core";
 import { handleEmail } from "../../core/email";
 import { base64ToBytes, bytesToBase64 } from "../../email/capture";
-import {
-	zEmailHandlerResult,
-	zEmailRoutingDetail,
-	zEmailRoutingItem,
-	zEmailSendingDetail,
-	zEmailSendingItem,
-} from "../../email/contracts";
+import { zEmailHandlerResult } from "../../email/contracts";
 import {
 	hasControlCharacters,
 	hasInvalidHeaderValueCharacters,
@@ -21,33 +15,94 @@ import {
 import {
 	extractAddressFromString,
 	messageIdToStorageId,
+	setMessageIdHeader,
 	synthesizeMessageId,
 } from "../../email/message-id";
-import { buildMimeMessage } from "../../email/mime";
+import { buildMimeMessage, projectComposerMime } from "../../email/mime";
 import {
 	fetchFromPeer,
 	getPeerEntrypoint,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import { zLocalExplorerListWorkersResponse } from "../generated/zod.gen";
+import { normalizeEmailRoutingItemCapabilities } from "../email-contracts";
+import {
+	zEmailRoutingDetail,
+	zEmailRoutingItem,
+	zEmailSendRequest,
+	zEmailSendingDetail,
+	zEmailSendingItem,
+	zLocalExplorerListWorkersResponse,
+} from "../generated/zod.gen";
+import type {
+	EmailListPage,
+	EmailStoreService,
+	ReceivedCaptureOperationLookup,
+	StoredRoutingEmail,
+	StoredRoutingEmailSummary,
+} from "../../email/storage";
+import type { AppContext } from "../common";
 import type {
 	EmailRoutingItem,
 	EmailSendingItem,
 	EmailSendRequest,
-} from "../../email/contracts";
-import type {
-	EmailListPage,
-	EmailStoreService,
-	StoredRoutingEmail,
-} from "../../email/storage";
-import type { AppContext } from "../common";
+} from "../generated";
 import type { zEmailListRoutingData } from "../generated/zod.gen";
 
 const EMAIL_ERROR_NOT_FOUND = 10601;
 const EMAIL_ERROR_SEND_FAILED = 10602;
 const EMAIL_ERROR_PEER_UNAVAILABLE = 10603;
 const EMAIL_WARNING_CAPTURE_TRUNCATED = 10604;
+const CAPTURED_PORTION_EDIT_REASON =
+	"This email contains only a captured portion of the original message and cannot be edited safely.";
+const UNKNOWN_ORIGIN_EDIT_REASON =
+	"Only emails created by the test email composer can be edited and resent.";
+
+function getCapturedPortion(email: {
+	capturedPortion?: boolean;
+	captureTruncated?: boolean;
+}): boolean {
+	return email.capturedPortion ?? email.captureTruncated === true;
+}
+
+function getEditAndResendUnavailableReason(email: {
+	origin?: "composer" | "unknown";
+	capturedPortion?: boolean;
+	captureTruncated?: boolean;
+}): string | undefined {
+	if (getCapturedPortion(email)) {
+		return CAPTURED_PORTION_EDIT_REASON;
+	}
+	if (email.origin !== "composer") {
+		return UNKNOWN_ORIGIN_EDIT_REASON;
+	}
+	return undefined;
+}
+
+function toPublicRoutingItem(
+	email: StoredRoutingEmailSummary
+): EmailRoutingItem {
+	const {
+		origin,
+		captureTruncated: _captureTruncated,
+		capturedPortion: storedCapturedPortion,
+		...item
+	} = email;
+	const capturedPortion = getCapturedPortion(email);
+	const editAndResendUnavailableReason = getEditAndResendUnavailableReason({
+		origin,
+		capturedPortion: storedCapturedPortion,
+		captureTruncated: email.captureTruncated,
+	});
+	return zEmailRoutingItem.parse({
+		...item,
+		capturedPortion,
+		editAndResendAvailable: editAndResendUnavailableReason === undefined,
+		...(editAndResendUnavailableReason === undefined
+			? {}
+			: { editAndResendUnavailableReason }),
+	});
+}
 
 function getEmailStore(c: AppContext): EmailStoreService {
 	return c.env[CoreBindings.SERVICE_EMAIL_STORE];
@@ -622,6 +677,18 @@ function validateEmailRequest(body: EmailSendRequest): string | undefined {
 	return undefined;
 }
 
+function getFirstMailboxAddress(values: string[]): string {
+	try {
+		return (
+			addressParser(values.join(", "), { flatten: true }).find(
+				(address) => address.address !== undefined && address.address !== ""
+			)?.address ?? ""
+		);
+	} catch {
+		return "";
+	}
+}
+
 type EmailListDescriptor<T extends EmailListItem> = {
 	resource: EmailCursorResource;
 	basePath: string;
@@ -637,13 +704,19 @@ type EmailListDescriptor<T extends EmailListItem> = {
 const receivedEmailListDescriptor: EmailListDescriptor<EmailRoutingItem> = {
 	resource: "routing",
 	basePath: "/local/email/routing",
-	itemSchema: zEmailRoutingItem,
+	itemSchema: zEmailRoutingItem.transform(
+		normalizeEmailRoutingItemCapabilities
+	),
 	async listStorePage(store, cursor, limit, worker) {
 		using result = (await store.listReceived(cursor, limit, worker)) as Awaited<
 			ReturnType<EmailStoreService["listReceived"]>
 		> &
 			Disposable;
-		return structuredClone(result);
+		const page = structuredClone(result);
+		return {
+			...page,
+			items: page.items.map(toPublicRoutingItem),
+		};
 	},
 };
 
@@ -785,23 +858,76 @@ export async function getReceivedEmail(
 	worker?: string
 ): Promise<Response> {
 	const store = getEmailStore(c);
-	using email = (await store.findReceived(
-		messageIdToStorageId(emailId),
-		worker
-	)) as (StoredRoutingEmail & Disposable) | undefined;
+	using email = (await store.findReceivedByMessageId(emailId, worker)) as
+		| (StoredRoutingEmail & Disposable)
+		| undefined;
 	if (!email) {
 		// The email may have been captured by a worker in another Miniflare
 		// instance; look it up there before giving up.
 		return getReceivedEmailFromPeers(c, emailId, worker);
 	}
-	// When a worker is requested, only return the email if it belongs to it so
-	// selecting a worker never leaks another worker's messages.
-	if (worker !== undefined && email.worker !== worker) {
-		return getReceivedEmailFromPeers(c, emailId, worker);
+	return renderReceivedEmail(c, email);
+}
+
+/** Returns one exact received capture after resolving its current Worker owner. */
+export async function getReceivedEmailByCaptureId(
+	c: AppContext,
+	captureId: string,
+	worker: string
+): Promise<Response> {
+	if (!isLocalWorker(c, worker)) {
+		const ownerLookup = await findWorkerOwner(
+			c,
+			await getPeerUrlsIfAggregating(c),
+			worker
+		);
+		if (ownerLookup.owner !== null) {
+			const params = new URLSearchParams({
+				capture_id: captureId,
+				worker,
+			});
+			const response = await fetchFromPeer(
+				ownerLookup.owner,
+				`/local/email/routing?${params}`
+			);
+			return response ?? peerUnavailableResponse(worker);
+		}
+		if (ownerLookup.unavailable) {
+			return peerUnavailableResponse(worker);
+		}
+		return receivedCaptureNotFound(captureId);
 	}
+
+	using email = (await getEmailStore(c).findReceivedByCaptureId(
+		captureId,
+		worker
+	)) as (StoredRoutingEmail & Disposable) | undefined;
+	return email === undefined
+		? receivedCaptureNotFound(captureId)
+		: renderReceivedEmail(c, email);
+}
+
+function receivedCaptureNotFound(captureId: string): Response {
+	return errorResponse(
+		404,
+		EMAIL_ERROR_NOT_FOUND,
+		`Email capture '${captureId}' not found.`
+	);
+}
+
+async function renderReceivedEmail(
+	c: AppContext,
+	email: StoredRoutingEmail
+): Promise<Response> {
 	// Decode MIME "encoded-word" headers (e.g. `=?utf-8?B?...?=`) in each reply's
 	// display text so the explorer shows readable subjects.
-	const { captureTruncated, replies: storedReplies, ...storedEmail } = email;
+	const {
+		origin,
+		captureTruncated,
+		capturedPortion: storedCapturedPortion,
+		replies: storedReplies,
+		...storedEmail
+	} = email;
 	let body: { text?: string; html?: string } = {};
 	if (email.rawBase64 !== undefined) {
 		try {
@@ -820,6 +946,23 @@ export async function getReceivedEmail(
 	const decoded = {
 		...storedEmail,
 		...body,
+		capturedPortion: getCapturedPortion(email),
+		editAndResendAvailable:
+			getEditAndResendUnavailableReason(email) === undefined,
+		...(getEditAndResendUnavailableReason({
+			origin,
+			capturedPortion: storedCapturedPortion,
+			captureTruncated,
+		}) === undefined
+			? {}
+			: {
+					editAndResendUnavailableReason:
+						getEditAndResendUnavailableReason({
+							origin,
+							capturedPortion: storedCapturedPortion,
+							captureTruncated,
+						}) ?? "",
+				}),
 		replies: storedReplies.map(
 			({ captureTruncated: _captureTruncated, ...reply }) => ({
 				...reply,
@@ -948,9 +1091,13 @@ async function deliverTestEmail(
 		from: string;
 		to: string;
 		id: string;
-		mime: string;
+		mime: string | Uint8Array;
 		worker: string;
-	}
+	},
+	captureContext: {
+		origin?: "composer" | "unknown";
+		capturedPortion?: boolean;
+	} = {}
 ): Promise<Response | undefined> {
 	const { from, to, id, mime, worker } = email;
 
@@ -979,7 +1126,8 @@ async function deliverTestEmail(
 		// Hono's `executionCtx` and workerd's `ExecutionContext` differ only by
 		// the `@cloudflare/workers-types` version in scope; `handleEmail` uses
 		// only `waitUntil`, which both provide.
-		c.executionCtx as unknown as ExecutionContext
+		c.executionCtx as unknown as ExecutionContext,
+		captureContext
 	);
 }
 
@@ -1031,7 +1179,7 @@ export async function sendTestEmail(
 	}
 
 	const from = extractAddressFromString(body.from);
-	const to = extractAddressFromString(body.to[0] ?? "");
+	const to = getFirstMailboxAddress(body.to);
 
 	if (!to) {
 		return errorResponse(400, 10000, "At least one recipient is required.");
@@ -1043,7 +1191,11 @@ export async function sendTestEmail(
 	const id = messageIdToStorageId(messageId);
 	const mime = buildMimeMessage(body, messageId);
 
-	const response = await deliverTestEmail(c, { from, to, id, mime, worker });
+	const response = await deliverTestEmail(
+		c,
+		{ from, to, id, mime, worker },
+		{ origin: "composer" }
+	);
 	if (response === undefined) {
 		return errorResponse(
 			400,
@@ -1095,6 +1247,278 @@ export async function sendTestEmail(
 				: {}),
 		})
 	);
+}
+
+function capturedPortionWarning() {
+	return {
+		code: EMAIL_WARNING_CAPTURE_TRUNCATED,
+		message:
+			"Only the captured portion of the original email was available for resend.",
+	};
+}
+
+function emailOperationError(
+	status: number,
+	code: number,
+	message: string,
+	capturedPortion: boolean
+): Response {
+	return Response.json(
+		{
+			success: false,
+			errors: [{ code, message }],
+			messages: capturedPortion ? [capturedPortionWarning()] : [],
+			result: null,
+		},
+		{ status }
+	);
+}
+
+async function forwardEmailCaptureOperation(
+	c: AppContext,
+	worker: string,
+	captureId: string,
+	path: string,
+	method: "GET" | "POST"
+): Promise<Response | undefined> {
+	if (isLocalWorker(c, worker)) {
+		return undefined;
+	}
+	const ownerLookup = await findWorkerOwner(
+		c,
+		await getPeerUrlsIfAggregating(c),
+		worker
+	);
+	if (ownerLookup.owner !== null) {
+		const params = new URLSearchParams({ capture_id: captureId, worker });
+		const response = await fetchFromPeer(
+			ownerLookup.owner,
+			`${path}?${params}`,
+			{ method }
+		);
+		return response ?? peerUnavailableResponse(worker);
+	}
+	return ownerLookup.unavailable
+		? peerUnavailableResponse(worker)
+		: emailOperationError(
+				400,
+				EMAIL_ERROR_SEND_FAILED,
+				`Worker '${worker}' is not available in this dev session.`,
+				false
+			);
+}
+
+async function loadReceivedCaptureForOperation(
+	c: AppContext,
+	worker: string,
+	captureId: string
+): Promise<ReceivedCaptureOperationLookup> {
+	using result = (await getEmailStore(c).findReceivedForOperation(
+		captureId,
+		worker
+	)) as ReceivedCaptureOperationLookup & Disposable;
+	return structuredClone(result);
+}
+
+/** Projects one eligible received capture into the structured email composer. */
+export async function getResendDraft(
+	c: AppContext,
+	worker: string,
+	captureId: string
+): Promise<Response> {
+	const forwarded = await forwardEmailCaptureOperation(
+		c,
+		worker,
+		captureId,
+		"/local/email/routing/resend/draft",
+		"GET"
+	);
+	if (forwarded !== undefined) {
+		return forwarded;
+	}
+
+	let lookup: ReceivedCaptureOperationLookup;
+	try {
+		lookup = await loadReceivedCaptureForOperation(c, worker, captureId);
+	} catch (error) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			`Stored email cannot be loaded: ${error instanceof Error ? error.message : String(error)}`,
+			false
+		);
+	}
+	if (!lookup.found) {
+		return receivedCaptureNotFound(captureId);
+	}
+	const email = lookup.email;
+	if (email === undefined) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			"Stored email cannot be projected into the composer: captured MIME is unavailable.",
+			lookup.capturedPortion
+		);
+	}
+	const capturedPortion = getCapturedPortion(email);
+	const unavailableReason = getEditAndResendUnavailableReason(email);
+	if (unavailableReason !== undefined) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			unavailableReason,
+			capturedPortion
+		);
+	}
+	if (email.rawBase64 === undefined) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			"Stored email cannot be projected into the composer: captured MIME is unavailable.",
+			capturedPortion
+		);
+	}
+
+	try {
+		const projected = zEmailSendRequest.parse({
+			...(await projectComposerMime(base64ToBytes(email.rawBase64))),
+			bcc: [],
+		});
+		return c.json(wrapResponse(projected));
+	} catch (error) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			`Stored email cannot be projected into the composer: ${error instanceof Error ? error.message : String(error)}`,
+			capturedPortion
+		);
+	}
+}
+
+/** Replays one received capture to the same Worker's email handler. */
+export async function resendCapturedEmail(
+	c: AppContext,
+	worker: string,
+	captureId: string
+): Promise<Response> {
+	const forwarded = await forwardEmailCaptureOperation(
+		c,
+		worker,
+		captureId,
+		"/local/email/routing/resend",
+		"POST"
+	);
+	if (forwarded !== undefined) {
+		return forwarded;
+	}
+
+	let lookup: ReceivedCaptureOperationLookup;
+	try {
+		lookup = await loadReceivedCaptureForOperation(c, worker, captureId);
+	} catch (error) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			`Stored email cannot be loaded: ${error instanceof Error ? error.message : String(error)}`,
+			false
+		);
+	}
+	if (!lookup.found) {
+		return receivedCaptureNotFound(captureId);
+	}
+	const email = lookup.email;
+	if (email === undefined) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			"Stored email cannot be resent: captured MIME is unavailable.",
+			lookup.capturedPortion
+		);
+	}
+	const capturedPortion = getCapturedPortion(email);
+	if (email.rawBase64 === undefined) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			"Stored email cannot be resent: captured MIME is unavailable.",
+			capturedPortion
+		);
+	}
+	let mime: Uint8Array;
+	let messageId: string;
+	try {
+		const source = base64ToBytes(email.rawBase64);
+		messageId = synthesizeMessageId(extractAddressFromString(email.from));
+		mime = setMessageIdHeader(source, messageId);
+	} catch (error) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			`Stored email cannot be resent: ${error instanceof Error ? error.message : String(error)}`,
+			capturedPortion
+		);
+	}
+
+	const response = await deliverTestEmail(
+		c,
+		{
+			from: email.from,
+			to: email.to,
+			id: messageIdToStorageId(messageId),
+			mime,
+			worker,
+		},
+		{
+			origin: email.origin ?? "unknown",
+			capturedPortion,
+		}
+	);
+	if (response === undefined) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			`Worker '${worker}' is not available in this dev session.`,
+			capturedPortion
+		);
+	}
+	if (response.status >= 400 && response.status < 500) {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			(await response.text()) || "Stored email could not be delivered.",
+			capturedPortion
+		);
+	}
+	const contentType = response.headers.get("Content-Type") ?? "";
+	if (!contentType.includes("application/json")) {
+		await response.text();
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			`Worker '${worker}' does not export an email() handler.`,
+			capturedPortion
+		);
+	}
+	const result = zEmailHandlerResult.parse(await response.json());
+	if (result.events.length === 1 && result.events[0]?.type === "unhandled") {
+		return emailOperationError(
+			400,
+			EMAIL_ERROR_SEND_FAILED,
+			`Worker '${worker}' does not export an email() handler.`,
+			capturedPortion
+		);
+	}
+	return c.json({
+		...wrapResponse({
+			messageId,
+			outcome: result.outcome,
+			capturedPortion,
+			...(result.rejectReason === undefined
+				? {}
+				: { rejectReason: result.rejectReason }),
+		}),
+		messages: capturedPortion ? [capturedPortionWarning()] : [],
+	});
 }
 
 export async function listSentEmails(

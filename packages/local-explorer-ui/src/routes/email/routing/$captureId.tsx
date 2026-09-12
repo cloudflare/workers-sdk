@@ -18,27 +18,36 @@ import { getSelectedWorker } from "../../../components/WorkerSelector";
 import { ConstantsCard } from "../shared/ConstantsCard";
 import { InfoFlow } from "../shared/InfoFlow";
 import { InfoLoading } from "../shared/InfoLoading";
-import { toEmailId } from "../shared/types";
 import type { EmailRoutingDetail } from "../../../api";
 import type { InfoEvent, InfoMessage } from "../shared/types";
 import type { JSX } from "react";
 
-export const Route = createFileRoute("/email/routing/$emailId")({
+export const Route = createFileRoute("/email/routing/$captureId")({
 	component: EmailRoutingDetailView,
 	errorComponent: ResourceError,
 	notFoundComponent: NotFound,
 	pendingComponent: InfoLoading,
-	loaderDeps: ({ search }) => ({ worker: search.worker }),
+	validateSearch: (
+		search: Record<string, unknown>
+	): { lookup?: "message-id"; worker?: string } => ({
+		lookup: search.lookup === "message-id" ? "message-id" : undefined,
+		worker: typeof search.worker === "string" ? search.worker : undefined,
+	}),
+	loaderDeps: ({ search }) => ({
+		lookup: search.lookup,
+		worker: search.worker,
+	}),
 	loader: async ({ params, deps }) => {
-		const workersResponse = await localExplorerListWorkers();
-		const worker = getSelectedWorker(
-			workersResponse.data?.result ?? [],
-			deps.worker === undefined
-				? ""
-				: `?worker=${encodeURIComponent(deps.worker)}`
-		)?.name;
+		let worker = deps.worker;
+		if (deps.lookup !== "message-id" && worker === undefined) {
+			const workersResponse = await localExplorerListWorkers();
+			worker = getSelectedWorker(workersResponse.data?.result ?? [], "")?.name;
+		}
 		const response = await emailListRouting({
-			query: { email_id: params.emailId, worker },
+			query:
+				deps.lookup === "message-id"
+					? { email_id: params.captureId, worker }
+					: { capture_id: params.captureId, worker: worker ?? "" },
 			throwOnError: false,
 		});
 		if (response.response?.status === 404) {
@@ -46,7 +55,7 @@ export const Route = createFileRoute("/email/routing/$emailId")({
 		}
 		const email = response.data?.result;
 		if (response.error || !email || Array.isArray(email)) {
-			throw new Error(`Failed to load email "${params.emailId}"`);
+			throw new Error(`Failed to load email "${params.captureId}"`);
 		}
 		const truncated = hasEmailTruncationWarning(
 			response.data?.messages ?? [],
@@ -64,10 +73,12 @@ export const Route = createFileRoute("/email/routing/$emailId")({
 	},
 });
 
-function toInfoMessage(email: EmailRoutingDetail): InfoMessage {
-	const emailId = toEmailId(email.messageId);
+function toInfoMessage(
+	email: EmailRoutingDetail,
+	captureId: string
+): InfoMessage {
 	const events: InfoEvent[] = email.events.map((event, index) => ({
-		id: `${emailId}-${index}`,
+		id: `${captureId}-${index}`,
 		type: event.type,
 		timestamp: event.timestamp,
 		// `forward`/`reply` events carry a messageId correlating with the full
@@ -84,7 +95,7 @@ function toInfoMessage(email: EmailRoutingDetail): InfoMessage {
 	}));
 
 	return {
-		id: emailId,
+		id: captureId,
 		from: email.from,
 		to: email.to,
 		subject: email.subject,
@@ -103,7 +114,8 @@ function toInfoMessage(email: EmailRoutingDetail): InfoMessage {
 
 function EmailRoutingDetailView(): JSX.Element {
 	const { email, replyTruncated, truncated } = Route.useLoaderData();
-	const message = toInfoMessage(email);
+	const { captureId } = Route.useParams();
+	const message = toInfoMessage(email, captureId);
 	const handlerThrew = hasEmailHandlerException(email);
 
 	return (

@@ -5,10 +5,20 @@ function quoteDisplayName(name: string): string {
 	return `"${name.replace(/["\\]/gu, (character) => `\\${character}`)}"`;
 }
 
-export function formatParsedAddress(address: {
+interface ParsedAddress {
 	address?: string;
+	group?: ParsedAddress[];
 	name?: string;
-}): string {
+}
+
+export function formatParsedAddress(address: ParsedAddress): string {
+	if (address.group !== undefined) {
+		const members = address.group.map(formatParsedAddress).join(", ");
+		if (address.name === undefined || address.name === "") {
+			return members;
+		}
+		return `${quoteDisplayName(address.name)}:${members === "" ? "" : ` ${members}`};`;
+	}
 	const email = address.address ?? "";
 	return address.name === undefined || address.name === ""
 		? email

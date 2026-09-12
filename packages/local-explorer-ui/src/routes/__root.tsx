@@ -44,7 +44,7 @@ function RootLayout() {
 	const matchRoute = useMatchRoute();
 	const routingDetailParams = matchRoute({
 		includeSearch: false,
-		to: "/email/routing/$emailId",
+		to: "/email/routing/$captureId",
 	});
 
 	const [sidebarOpen, setSidebarOpen] = useState<boolean>(loadSidebarOpenState);
