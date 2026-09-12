@@ -1865,11 +1865,20 @@ describe.sequential("wrangler dev", () => {
 				fs.writeFileSync("index.js", `export default {};`);
 
 				const config = await runWranglerUntilConfig("dev");
+				expect(config.containers?.[0]?.name).toBe("my-container");
 				expect(config.containers).toEqual([
 					expect.objectContaining({
 						name: "my-container",
+						image_uri: "registry.cloudflare.com/some-account-id/hello:world",
 						class_name: "MyContainerDO",
 					}),
+				]);
+				expect(config.containerDevPlan?.containerOptions).toEqual([
+					{
+						image_uri: "registry.cloudflare.com/some-account-id/hello:world",
+						class_name: "MyContainerDO",
+						image_tag: expect.stringMatching(/^cloudflare-dev\/mycontainerdo:/),
+					},
 				]);
 			});
 		});

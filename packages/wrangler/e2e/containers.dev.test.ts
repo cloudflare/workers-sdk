@@ -89,8 +89,22 @@ for (const source of imageSource) {
 									case "/status":
 										return new Response(JSON.stringify(this.container.running));
 
+									case "/images":
+										return Response.json(Object.keys(this.container.images));
+
+									case "/start-default":
+										this.container.start({
+											entrypoint: ["node", "app.js"],
+											env: { MESSAGE: "I'm an env var!" },
+											enableInternet: false,
+										});
+										return new Response("Container create request sent...");
+
 									case "/start":
 										this.container.start({
+											...(this.container.images.app === undefined
+												? {}
+												: { image: this.container.images.app }),
 											entrypoint: ["node", "app.js"],
 											env: { MESSAGE: "I'm an env var!" },
 											enableInternet: false,
@@ -297,6 +311,83 @@ for (const source of imageSource) {
 			expect(ids.length).toBe(1);
 			await worker.stop();
 		});
+
+		it.runIf(source === "build")(
+			"selects a named image without configuring a default",
+			async ({ expect }) => {
+				await helper.seed({
+					"wrangler.json": JSON.stringify({
+						...wranglerConfig,
+						migrations: [{ tag: "v1", new_sqlite_classes: ["E2EContainer"] }],
+						containers: [
+							{
+								name: `${workerName}-container`,
+								class_name: "E2EContainer",
+								scheduling_policy: "durable_object",
+								images: { app: { dockerfile: "./Dockerfile" } },
+							},
+						],
+					}),
+				});
+
+				const worker = helper.runLongLived("wrangler dev");
+				const ready = await worker.waitForReady();
+
+				const imagesResponse = await fetch(`${ready.url}/images`);
+				expect(imagesResponse.status).toBe(200);
+				expect(await imagesResponse.json()).toEqual(["app"]);
+
+				const defaultStartResponse = await fetch(`${ready.url}/start-default`, {
+					headers: { "MF-Disable-Pretty-Error": "true" },
+				});
+				expect(defaultStartResponse.status).toBe(500);
+				expect(await defaultStartResponse.text()).toContain(
+					"Container.start() requires an image or container snapshot"
+				);
+
+				const startResponse = await fetch(`${ready.url}/start`);
+				expect(startResponse.status).toBe(200);
+
+				await waitFor(async () => {
+					const response = await fetch(`${ready.url}/fetch`, {
+						signal: AbortSignal.timeout(3_000),
+						headers: { "MF-Disable-Pretty-Error": "true" },
+					});
+					expect(await response.text()).toBe(
+						"Hello World! Have an env var! I'm an env var!"
+					);
+				});
+
+				await worker.stop();
+			}
+		);
+
+		it.runIf(source === "build")(
+			"attaches a Container when configured images are omitted",
+			async ({ expect }) => {
+				await helper.seed({
+					"wrangler.json": JSON.stringify({
+						...wranglerConfig,
+						migrations: [{ tag: "v1", new_sqlite_classes: ["E2EContainer"] }],
+						containers: [
+							{
+								name: `${workerName}-container`,
+								class_name: "E2EContainer",
+								scheduling_policy: "durable_object",
+							},
+						],
+					}),
+				});
+
+				const worker = helper.runLongLived("wrangler dev");
+				const ready = await worker.waitForReady();
+				const imagesResponse = await fetch(`${ready.url}/images`);
+
+				expect(imagesResponse.status).toBe(200);
+				expect(await imagesResponse.json()).toEqual([]);
+				await worker.stop();
+			}
+		);
 
 		it("should clean up duplicate image tags after build", async ({
 			expect,

@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import path from "node:path";
-import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
 	extractBindingsOfType,
 	getBrowserRenderingHeadfulFromEnv,
@@ -22,6 +21,7 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
+import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
 	AssetsOptions,
 	Binding,
@@ -40,7 +40,6 @@ import type {
 	ServiceFetch,
 } from "@cloudflare/workers-utils";
 import type {
-	DOContainerOptions,
 	Json,
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,
@@ -99,8 +98,7 @@ export interface ConfigBundle {
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
-	containerDOClassNames: Set<string> | undefined;
-	containerBuildId: string | undefined;
+	containerRuntimeOptions?: Map<string, ContainerDevRuntimeOptions>;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
@@ -483,8 +481,7 @@ type MiniflareBindingsConfig = Pick<
 	| "tails"
 	| "streamingTails"
 	| "complianceRegion"
-	| "containerDOClassNames"
-	| "containerBuildId"
+	| "containerRuntimeOptions"
 	| "enableContainers"
 > &
 	Partial<
@@ -760,14 +757,9 @@ export function buildMiniflareBindingOptions(
 				className,
 				scriptName: undefined,
 				useSQLite,
-				container:
-					config.containerDOClassNames?.size && config.enableContainers
-						? getImageNameFromDOClassName({
-								doClassName: className,
-								containerDOClassNames: config.containerDOClassNames,
-								containerBuildId: config.containerBuildId,
-							})
-						: undefined,
+				container: config.enableContainers
+					? config.containerRuntimeOptions?.get(className)
+					: undefined,
 			});
 		}
 	}
@@ -1044,14 +1036,9 @@ export function buildMiniflareBindingOptions(
 							className,
 							scriptName,
 							useSQLite: classNameToUseSQLite.get(className),
-							container:
-								config.containerDOClassNames?.size && config.enableContainers
-									? getImageNameFromDOClassName({
-											doClassName: className,
-											containerDOClassNames: config.containerDOClassNames,
-											containerBuildId: config.containerBuildId,
-										})
-									: undefined,
+							container: config.enableContainers
+								? config.containerRuntimeOptions?.get(className)
+								: undefined,
 						},
 					];
 				}
@@ -1212,30 +1199,6 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return options;
-}
-
-/**
- * Returns the Container options for the DO class name.
- * @returns The configuration or `undefined` when the DO has no attached container
- */
-export function getImageNameFromDOClassName(options: {
-	doClassName: string;
-	containerDOClassNames: Set<string>;
-	containerBuildId: string | undefined;
-}): DOContainerOptions | undefined {
-	assert(
-		options.containerBuildId,
-		"Build ID should be set if containers are defined and enabled"
-	);
-
-	if (options.containerDOClassNames.has(options.doClassName)) {
-		return {
-			imageName: getDevContainerImageName(
-				options.doClassName,
-				options.containerBuildId
-			),
-		};
-	}
 }
 
 /**

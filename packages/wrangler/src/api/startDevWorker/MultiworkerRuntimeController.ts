@@ -9,7 +9,6 @@ import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
-	getContainerDevOptions,
 	getUserWorkerInnerUrlOverrides,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
@@ -173,19 +172,16 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			}
 
 			if (
-				data.config.containers?.length &&
+				data.config.containerDevPlan?.containerOptions.length &&
 				this.#currentContainerBuildId !== data.config.dev.containerBuildId
 			) {
 				logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 				// Assemble container options and build if necessary
 				assert(
 					data.config.dev.containerBuildId,
-					"Build ID should be set if containers are enabled and defined"
+					"Build ID should be set when Container images require preparation"
 				);
-				const containerOptions = await getContainerDevOptions(
-					data.config.containers,
-					data.config.dev.containerBuildId
-				);
+				const containerOptions = data.config.containerDevPlan.containerOptions;
 				this.dockerPath = data.config.dev?.dockerPath ?? getDockerPath();
 				// keep track of them so we can clean up later
 				for (const container of containerOptions ?? []) {

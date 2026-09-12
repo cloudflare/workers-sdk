@@ -1,5 +1,6 @@
 import { test, vi } from "vitest";
 import {
+	getJsonResponse,
 	getTextResponse,
 	isCINonLinux,
 	isLocalWithoutDockerRunning,
@@ -25,6 +26,8 @@ const skipContainerTests =
 test.skipIf(skipContainerTests)(
 	"starts container built from local Dockerfile",
 	async ({ expect }) => {
+		expect(await getJsonResponse("/dockerfile/images")).toEqual(["app"]);
+
 		const startResponse = await getTextResponse("/dockerfile/start");
 		expect(startResponse).toBe("Container create request sent...");
 

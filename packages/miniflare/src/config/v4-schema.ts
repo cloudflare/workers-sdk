@@ -245,7 +245,14 @@ const V4DurableObjectSchema = z.object({
 		.optional(),
 	unsafePreventEviction: z.boolean().optional(),
 	remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
-	container: z.object({ imageName: z.string() }).optional(),
+	container: z
+		.object({
+			imageName: z.string().optional(),
+			images: z
+				.array(z.object({ name: z.string(), image: z.string() }))
+				.optional(),
+		})
+		.optional(),
 });
 
 const V4QueueMessageDelaySchema = z.number().int().min(0).max(86400).optional();
@@ -744,7 +751,10 @@ export type V4DurableObject = {
 	unsafeUniqueKey?: string | symbol;
 	unsafePreventEviction?: boolean;
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
-	container?: { imageName: string };
+	container?: {
+		imageName?: string;
+		images?: { name: string; image: string }[];
+	};
 };
 export type V4QueueProducerOptions = {
 	queueName: string;
