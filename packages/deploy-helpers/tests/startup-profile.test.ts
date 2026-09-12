@@ -9,12 +9,20 @@ import {
 	summarizeStartupProfile,
 } from "@cloudflare/deploy-helpers/startup-profile";
 import { removeDir } from "@cloudflare/workers-utils";
+import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { FormData, Request } from "undici";
 import { describe, it } from "vitest";
 
 describe("startup profile", () => {
-	it("profiles a multipart module Worker", async ({ expect }) => {
-		const source = "export default { fetch() { return new Response('ok'); } };";
+	const std = mockConsoleMethods();
+
+	it("profiles a multipart module Worker without forwarding startup logs", async ({
+		expect,
+	}) => {
+		const source = `
+			console.log("__STARTUP_LOG__");
+			export default { fetch() { return new Response("ok"); } };
+		`;
 		const workerBundle = new FormData();
 		workerBundle.set(
 			"metadata",
@@ -34,6 +42,7 @@ describe("startup profile", () => {
 
 		expect(profile.nodes.length).toBeGreaterThan(0);
 		expect(profile.endTime).toBeGreaterThanOrEqual(profile.startTime);
+		expect(std.out).not.toContain("__STARTUP_LOG__");
 	});
 
 	it("rejects service-worker format Workers", async ({ expect }) => {

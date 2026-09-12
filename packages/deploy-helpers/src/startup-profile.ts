@@ -181,6 +181,7 @@ export async function analyseBundle(
 				...(await convertWorkerBundleToModules(parsedWorkerBundle)),
 			],
 			inspectorPort: 0,
+			handleStructuredLogs: () => undefined,
 		})
 	);
 	const abortController = new AbortController();
