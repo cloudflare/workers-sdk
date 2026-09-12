@@ -194,7 +194,26 @@ export class ProxyWorker implements DurableObject {
 							res = new Response(res.body, res);
 							rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
-							await checkForPreviewTokenError(res, this.env, proxyData);
+							if (res.status === 400) {
+								// At this point HTMLRewriter tries to parse the compressed
+								// stream, so we clone and read the text instead.
+								let text: string;
+								try {
+									text = await res.clone().text();
+								} catch (cause) {
+									// Both branches of the cloned body are broken. The response
+									// has not been sent yet, so replace it with a per-request
+									// error response.
+									throw new UserWorkerRequestError(cause);
+								}
+
+								if (isPreviewTokenError(text)) {
+									void sendMessageToProxyController(this.env, {
+										type: "previewTokenExpired",
+										proxyData,
+									});
+								}
+							}
 
 							if (isHtmlResponse(res)) {
 								res = insertLiveReloadScript(request, res, this.env, proxyData);
@@ -254,13 +273,12 @@ export class ProxyWorker implements DurableObject {
 								return;
 							}
 
-							throw error;
+							throw new UserWorkerRequestError(error);
 						}
 					)
 					.catch((error: Error) => {
-						// errors here are from response post-processing, or connection-
-						// level failures rethrown by the rejection handler above (a
-						// non-retriable method, or the retry budget was exhausted)
+						// Errors here include marked request/response I/O failures and
+						// unexpected response post-processing failures.
 
 						// we have crossed an async boundary, so proxyData may have changed
 						// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
@@ -275,6 +293,29 @@ export class ProxyWorker implements DurableObject {
 								this.proxyData?.userWorkerUrl
 							)
 						) {
+							// Forwarding the request or reading the response body failed.
+							// Neither is a ProxyWorker defect, and no response has been sent
+							// to the client yet, so answer with a readable 502 instead of
+							// failing the whole dev session.
+							if (error instanceof UserWorkerRequestError) {
+								void sendMessageToProxyController(this.env, {
+									type: "debug-log",
+									args: [
+										"Could not proxy request to the UserWorker:",
+										request.method,
+										request.url,
+										error.message,
+									],
+								});
+								deferredResponse.resolve(
+									new Response(
+										`Could not proxy this request to your Worker: ${error.message}`,
+										{ status: 502 }
+									)
+								);
+								return;
+							}
+
 							const attemptsNote = ` (failed after ${attempt + 1} ${
 								attempt === 0 ? "attempt" : "attempts"
 							})`;
@@ -367,6 +408,18 @@ function isRequestForLiveReloadWebsocket(req: Request): boolean {
 	return isWebSocketUpgrade && websocketProtocol === LIVE_RELOAD_PROTOCOL;
 }
 
+/**
+ * Marks failures forwarding a request or consuming its response body, so they
+ * can be answered with a 502 without making genuine proxy defects recoverable.
+ * Only wrap errors at these I/O boundaries, not the whole response handler.
+ */
+class UserWorkerRequestError extends Error {
+	constructor(cause: unknown) {
+		super(cause instanceof Error ? cause.message : String(cause), { cause });
+		this.name = "UserWorkerRequestError";
+	}
+}
+
 function sendMessageToProxyController(
 	env: Env,
 	message: ProxyWorkerOutgoingRequestBody
@@ -377,33 +430,24 @@ function sendMessageToProxyController(
 	});
 }
 
-async function checkForPreviewTokenError(
-	response: Response,
-	env: Env,
-	proxyData: ProxyData
-) {
-	if (response.status !== 400) {
-		return;
-	}
-
-	// At this point HTMLRewriter tries to parse the compressed stream,
-	// so we clone and read the text instead.
-	const clone = response.clone();
-	const text = await clone.text();
-	// Naive string match should be good enough when combined with status code check.
-	// "Invalid Workers Preview configuration" is the HTML error returned when the
-	// preview token has expired. "error code: 1031" is a text/plain error returned
-	// by remote bindings (e.g. Workers AI) when their underlying session has timed out.
-	// Both indicate the preview session needs to be refreshed.
-	if (
+/**
+ * Detects whether a 400 response body from the UserWorker means the preview
+ * session has expired and needs to be refreshed.
+ *
+ * A naive string match is good enough when combined with the status code
+ * check performed by the caller. "Invalid Workers Preview configuration" is
+ * the HTML error returned when the preview token has expired. "error code:
+ * 1031" is a text/plain error returned by remote bindings (e.g. Workers AI)
+ * when their underlying session has timed out.
+ *
+ * @param text the body of a status-400 response from the UserWorker
+ * @returns `true` when the body indicates an expired preview session
+ */
+function isPreviewTokenError(text: string): boolean {
+	return (
 		text.includes("Invalid Workers Preview configuration") ||
 		text.includes("error code: 1031")
-	) {
-		void sendMessageToProxyController(env, {
-			type: "previewTokenExpired",
-			proxyData,
-		});
-	}
+	);
 }
 
 function insertLiveReloadScript(
