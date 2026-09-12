@@ -360,23 +360,15 @@ export function createCloudflareAuth(
 		).account;
 	}
 
-	// Ensure the user is logged in, then fetch every page of a paginated
-	// Cloudflare REST list resource. Uses `fetchInternalBase` directly with the
-	// token the flow already holds (no dependency back on wrangler's cfetch),
-	// preserving the login-triggering behaviour callers relied on.
+	// Fetch every page of a paginated Cloudflare REST list resource. Authentication
+	// is resolved once by `fetchAllAccounts` before its account and membership
+	// requests fan out, so both requests share the same credentials without
+	// starting concurrent login flows.
 	async function fetchAccountsPaged<ResponseType>(
 		complianceConfig: ComplianceConfig,
-		resource: string
+		resource: string,
+		credentials: ApiCredentials
 	): Promise<ResponseType[]> {
-		const result = await loginOrRefreshIfRequired(complianceConfig);
-		if (!result.loggedIn) {
-			throw new UserError(
-				`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[result.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
-				{ telemetryMessage: "cfetch auth login required" }
-			);
-		}
-		const credentials = requireApiToken();
-
 		const results: ResponseType[] = [];
 		let getMoreResults = true;
 		let page = 1;
@@ -416,12 +408,21 @@ export function createCloudflareAuth(
 		options: { throwOnEmpty?: boolean } = {}
 	): Promise<Account[]> {
 		const { throwOnEmpty = true } = options;
+		const loginResult = await loginOrRefreshIfRequired(complianceConfig);
+		if (!loginResult.loggedIn) {
+			throw new UserError(
+				`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[loginResult.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
+				{ telemetryMessage: "cfetch auth login required" }
+			);
+		}
+		const credentials = requireApiToken();
 
 		const [accountsRes, membershipsRes] = await Promise.allSettled([
-			fetchAccountsPaged<Account>(complianceConfig, `/accounts`),
+			fetchAccountsPaged<Account>(complianceConfig, `/accounts`, credentials),
 			fetchAccountsPaged<{ account: Account }>(
 				complianceConfig,
-				`/memberships`
+				`/memberships`,
+				credentials
 			),
 		]);
 
