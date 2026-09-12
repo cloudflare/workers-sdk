@@ -8,9 +8,12 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	getDockerPath,
-	getDurableObjectContainerApps,
+	getResolvedDurableObjectContainerApps,
 } from "@cloudflare/workers-utils";
-import type { BuiltContainerImage } from "@cloudflare/containers-shared";
+import type {
+	BuildArgs,
+	BuiltContainerImage,
+} from "@cloudflare/containers-shared";
 import type {
 	BuiltDurableObjectContainerImage,
 	DeployProps,
@@ -52,9 +55,14 @@ export async function buildDeployContainerImages(
 	return buildContainerImages(containersWithDockerfile, dockerPath, false);
 }
 
+type DockerfileDurableObjectContainerImage = Extract<
+	DurableObjectContainerImage,
+	{ dockerfile: string }
+>;
+
 function isDockerfileDurableObjectContainerImage(
 	image: DurableObjectContainerImage
-): image is Extract<DurableObjectContainerImage, { dockerfile: string }> {
+): image is DockerfileDurableObjectContainerImage {
 	return typeof image.dockerfile === "string";
 }
 
@@ -70,6 +78,38 @@ function buildDurableObjectImageTag(
 	return `${repository}:wrangler-${Date.now().toString(36)}`;
 }
 
+function getImageBuildOptions(
+	config: Config,
+	image: DockerfileDurableObjectContainerImage
+): Pick<BuildArgs, "pathToDockerfile" | "buildContext" | "args"> {
+	const baseDir = config.configPath
+		? path.dirname(config.configPath)
+		: process.cwd();
+	const dockerfile = path.resolve(baseDir, image.dockerfile);
+	return {
+		pathToDockerfile: dockerfile,
+		buildContext:
+			image.build_context === undefined
+				? path.dirname(dockerfile)
+				: path.resolve(baseDir, image.build_context),
+		args: image.build_vars,
+	};
+}
+
+function getImageBuildKey(
+	build: Pick<BuildArgs, "pathToDockerfile" | "buildContext" | "args">
+): string {
+	const vars = build.args ?? {};
+	// Reuse only equivalent builds; variable declaration order has no effect.
+	return JSON.stringify([
+		build.pathToDockerfile,
+		build.buildContext,
+		Object.keys(vars)
+			.sort()
+			.map((name) => [name, vars[name]]),
+	]);
+}
+
 type DurableObjectContainerBuildProps =
 	| Pick<
 			DeployProps,
@@ -77,25 +117,30 @@ type DurableObjectContainerBuildProps =
 	  >
 	| Pick<VersionsUploadProps, "command" | "containers" | "dryRun" | "name">;
 
+/**
+ * Build named Dockerfile images locally before deployment or version upload.
+ * Equivalent build inputs share a tag while retaining every class/image mapping.
+ */
 export async function buildDurableObjectContainerImages(
 	props: DurableObjectContainerBuildProps,
 	config: Config
 ): Promise<BuiltDurableObjectContainerImage[]> {
-	const durableObjectContainerConfig = getDurableObjectContainerApps(
-		props.containers.source
-	);
 	if (
 		(props.command === "deploy" && props.containersRollout === "none") ||
-		durableObjectContainerConfig.length === 0 ||
 		props.name === undefined
 	) {
 		return [];
 	}
+	const durableObjectContainerConfig = getResolvedDurableObjectContainerApps(
+		props.containers.source,
+		config.exports
+	);
 
 	const imagesToBuild = durableObjectContainerConfig.flatMap((container) =>
 		Object.entries(container.images ?? {})
-			.filter((entry): entry is [string, { dockerfile: string }] =>
-				isDockerfileDurableObjectContainerImage(entry[1])
+			.filter(
+				(entry): entry is [string, DockerfileDurableObjectContainerImage] =>
+					isDockerfileDurableObjectContainerImage(entry[1])
 			)
 			.map(([imageName, image]) => ({ container, imageName, image }))
 	);
@@ -117,29 +162,31 @@ export async function buildDurableObjectContainerImages(
 	});
 
 	const builtImages: BuiltDurableObjectContainerImage[] = [];
-	const baseDir = config.configPath
-		? path.dirname(config.configPath)
-		: process.cwd();
+	const tagsByBuild = new Map<string, string>();
 	try {
 		for (const { container, imageName, image } of imagesToBuild) {
-			const dockerfile = path.resolve(baseDir, image.dockerfile);
-			const localTag = buildDurableObjectImageTag(
-				props.name,
-				container.class_name,
-				imageName
-			);
-			await buildAndMaybePush(
-				{
-					tag: localTag,
-					pathToDockerfile: dockerfile,
-					buildContext: path.dirname(dockerfile),
-					platform: "linux/amd64",
-				},
-				dockerPath,
-				false,
-				undefined,
-				false
-			);
+			const build = getImageBuildOptions(config, image);
+			const source = getImageBuildKey(build);
+			let localTag = tagsByBuild.get(source);
+			if (localTag === undefined) {
+				localTag = buildDurableObjectImageTag(
+					props.name,
+					container.class_name,
+					imageName
+				);
+				await buildAndMaybePush(
+					{
+						tag: localTag,
+						...build,
+						platform: "linux/amd64",
+					},
+					dockerPath,
+					false,
+					undefined,
+					false
+				);
+				tagsByBuild.set(source, localTag);
+			}
 			builtImages.push({
 				className: container.class_name,
 				imageName,
