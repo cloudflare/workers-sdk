@@ -211,7 +211,9 @@ async function findWorkflowOwner(
 		return cached.url;
 	}
 
-	const peerUrls = await getPeerUrlsIfAggregating(c);
+	const peerUrls = await getPeerUrlsIfAggregating(c, {
+		sharedStorageOnly: true,
+	});
 	if (peerUrls.length === 0) {
 		return null;
 	}
@@ -247,7 +249,8 @@ export async function listWorkflows(c: AppContext): Promise<Response> {
 	const aggregatedWorkflows = await aggregateListResults(
 		c,
 		localWorkflows,
-		"/workflows"
+		"/workflows",
+		{ getKey: (wf) => wf.name, sharedStorageOnly: true }
 	);
 
 	// Deduplicate by name — first occurrence wins (local takes priority)
