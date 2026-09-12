@@ -56,8 +56,9 @@ export function maybeAddAgentHint(
  * Prints the Local Explorer API URL and useful routes to stdout so that
  * headless AI agents can discover and call them programmatically.
  *
- * Keep the message in sync with the wrangler copy in
- * packages/wrangler/src/dev/start-dev.ts.
+ * Keep the message in sync with:
+ * - packages/wrangler/src/dev/start-dev.ts (printLocalExplorerAgentHint)
+ * - packages/create-cloudflare/src/agents-md.ts (Local Explorer section)
  *
  * @param server - The Vite dev or preview server (must have `resolvedUrls` populated)
  * @param mode - Whether this is a "dev" or "preview" session
@@ -87,6 +88,7 @@ function printLocalExplorerAgentHint(
 			`  GET ${explorerApiUrl}/workflows - Workflows`,
 			`  POST ${explorerApiUrl}/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:`,
 			`    curl -X POST ${explorerApiUrl}/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'`,
+			`  POST ${explorerApiUrl}/local/observability/clear - clear all captured traces and logs`,
 			`If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):`,
 			`  GET ${explorerApiUrl} - OpenAPI schema`,
 			"",
