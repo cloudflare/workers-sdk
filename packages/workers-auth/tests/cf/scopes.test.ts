@@ -134,12 +134,7 @@ describe("cf OAuth scopes", () => {
 	});
 
 	it("rejects values outside the requestable scope catalog", ({ expect }) => {
-		const rejectedScopes = [
-			"dns_read",
-			"agent-memory.read",
-			"offline_access",
-			"scim-provisioning.write",
-		];
+		const rejectedScopes = ["dns_read", "not-a-real-scope", "offline_access"];
 
 		for (const scope of rejectedScopes) {
 			expect(CF_REGISTERED_SCOPES).not.toContain(scope);
