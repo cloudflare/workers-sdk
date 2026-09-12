@@ -52,6 +52,7 @@ type ConcreteDatabase = {
 type DatabaseInfo = {
 	uuid: string;
 	name: string;
+	jurisdiction?: string;
 };
 
 type R2BucketInfo = {
@@ -647,19 +648,25 @@ class D1Handler extends ProvisionResourceHandler<
 		) as Extract<WorkerMetadataBinding, { type: "d1" }> | undefined;
 		// A D1 binding with the same binding name exists is already present on the worker...
 		if (maybeInherited) {
-			// ...and the user hasn't specified a name in their config, so we don't need to check if the database_name matches.
-			if (!this.binding.database_name) {
+			// ...and the user hasn't specified a name or jurisdiction in their config, so we don't need to check the database metadata.
+			if (!this.binding.database_name && !this.binding.jurisdiction) {
 				return true;
 			}
 
-			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
-			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check).
+			// ...and the user HAS specified a name or jurisdiction in their config, so we need to check if the provided values
+			// match the existing binding (which aren't present in settings, so we'll need to make an API call to check).
 			const dbFromId = await getDatabaseInfoFromIdOrName(
 				this.complianceConfig,
 				this.accountId,
 				maybeInherited.id
 			);
-			if (this.binding.database_name === dbFromId.name) {
+			const nameMatches =
+				!this.binding.database_name ||
+				this.binding.database_name === dbFromId.name;
+			const jurisdictionMatches =
+				!this.binding.jurisdiction ||
+				this.binding.jurisdiction === dbFromId.jurisdiction;
+			if (nameMatches && jurisdictionMatches) {
 				return true;
 			}
 		}

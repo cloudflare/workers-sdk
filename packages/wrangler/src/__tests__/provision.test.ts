@@ -1551,6 +1551,85 @@ describe("resource provisioning", () => {
 			expect(std.err).toBe("");
 		});
 
+		it("can inherit a D1 binding when the jurisdiction matches", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "d1-id",
+						},
+					],
+				},
+			});
+			mockGetD1Database(expect, "d1-id", { jurisdiction: "eu" });
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "inherit",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+
+			expect(std.out).toContain("env.D1 (inherited)");
+			expect(std.err).toBe("");
+		});
+
+		it("will not inherit a D1 binding when the jurisdiction has changed", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "old-d1-id",
+						},
+					],
+				},
+			});
+			mockGetD1Database(expect, "old-d1-id", { jurisdiction: "us" });
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-d1",
+				assertJurisdiction: "eu",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain('Creating new D1 Database "test-name-d1"');
+			expect(std.err).toBe("");
+		});
+
 		it("can inherit d1 binding when the database name is provided", async ({
 			expect,
 		}) => {
