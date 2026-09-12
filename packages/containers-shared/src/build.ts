@@ -34,6 +34,37 @@ export type BuiltContainerImage = BuiltImage & {
 	container: DockerfileContainerConfig;
 };
 
+const MAX_DOCKER_REPOSITORY_NAME_LENGTH = 255;
+
+export function normalizeContainerImageRepositoryName(value: string): string {
+	return (
+		value
+			.toLowerCase()
+			.replace(/[^a-z0-9._-]+/g, "-")
+			.replace(/[._-]+/g, (separators) =>
+				separators === "." ||
+				separators === "_" ||
+				separators === "__" ||
+				/^-+$/.test(separators)
+					? separators
+					: "-"
+			)
+			.replace(/^[._-]+|[._-]+$/g, "")
+			.slice(0, MAX_DOCKER_REPOSITORY_NAME_LENGTH)
+			.replace(/[._-]+$/g, "") || "container"
+	);
+}
+
+/**
+ * Creates a unique local image tag from a Container-derived name.
+ *
+ * @param value - The Container-derived repository name to normalize.
+ * @returns A Docker image tag with a unique local suffix.
+ */
+export function createLocalContainerImageTag(value: string): string {
+	return `${normalizeContainerImageRepositoryName(value)}:${crypto.randomUUID()}`;
+}
+
 export function isDockerfileContainerConfig(
 	container: ContainerNormalizedConfig
 ): container is DockerfileContainerConfig {
@@ -571,9 +602,7 @@ async function buildContainerImage(
 	pathToDocker: string,
 	verifyDockerIsRunning?: boolean
 ): Promise<BuiltContainerImage> {
-	const localTag = `${getContainerImageRepositoryName(
-		containerConfig
-	)}:wrangler-${crypto.randomUUID()}`;
+	const localTag = createLocalContainerImageTag(containerConfig.name);
 	logger.log("Building image", localTag);
 
 	try {
@@ -708,19 +737,9 @@ export function getContainerImageTag(
 	containerConfig: DockerfileContainerConfig,
 	imageTag: string
 ): string {
-	return `${getContainerImageRepositoryName(containerConfig)}:${
+	return `${normalizeContainerImageRepositoryName(containerConfig.name)}:${
 		imageTag.split("-")[0]
 	}`;
-}
-
-function getContainerImageRepositoryName(
-	containerConfig: DockerfileContainerConfig
-): string {
-	// Docker rejects uppercase characters in an image repository name, and a
-	// container application name may embed a Durable Object class name verbatim,
-	// which is conventionally PascalCase. Lowercase the name for the image tag
-	// only; apply still needs the exact application name.
-	return containerConfig.name.toLowerCase();
 }
 
 /**

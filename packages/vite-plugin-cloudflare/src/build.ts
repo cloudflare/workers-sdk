@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import colors from "picocolors";
+import { buildOutputContainers } from "./build-output-containers";
 import { resolveDevOnly } from "./plugin-config";
 import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
 import { satisfiesMinimumViteVersion } from "./utils";
@@ -60,6 +61,9 @@ export function createBuildApp(
 				await fallbackBuild(builder, clientEnvironment);
 			}
 
+			if (!satisfiesMinimumViteVersion("7.0.0")) {
+				await buildOutputContainers(resolvedPluginConfig, builder.config.root);
+			}
 			return;
 		}
 
@@ -91,6 +95,9 @@ export function createBuildApp(
 			// In Vite 7 and above we do this in the `buildApp` hook.
 			if (!satisfiesMinimumViteVersion("7.0.0") && !cfBuildOutput) {
 				removeAssetsField(entryWorkerBuildDirectory);
+			}
+			if (!satisfiesMinimumViteVersion("7.0.0")) {
+				await buildOutputContainers(resolvedPluginConfig, builder.config.root);
 			}
 			// Return early as there is no client build
 			return;
@@ -134,6 +141,10 @@ export function createBuildApp(
 					),
 				].join("\n")
 			);
+		}
+
+		if (!satisfiesMinimumViteVersion("7.0.0")) {
+			await buildOutputContainers(resolvedPluginConfig, builder.config.root);
 		}
 	};
 }
