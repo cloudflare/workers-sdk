@@ -14,11 +14,13 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import * as find from "empathic/find";
+import globToRegExp from "glob-to-regexp";
 import { getNodeCompat } from "miniflare";
 import yargs from "yargs";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
+import { parseRules } from "../deployment-bundle/rules";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
@@ -40,6 +42,7 @@ import type {
 	Entry,
 	RawConfig,
 	RawEnvironment,
+	Rule,
 } from "@cloudflare/workers-utils";
 
 const CONTAINER_IMAGES_BINDING_TYPE =
@@ -757,17 +760,490 @@ export function constructTypeKey(key: string) {
 	return `"${escapeTypeScriptString(key)}"`;
 }
 
+/**
+ * Convert a Wrangler module-rule glob to a TypeScript ambient module pattern.
+ *
+ * @param glob - Wrangler module-rule glob
+ * @returns A pattern containing at most one asterisk
+ */
 export function constructTSModuleGlob(glob: string) {
-	// Exact module reference, don't transform
+	return getTSModuleGlob(glob).moduleGlob;
+}
+
+function getTSModuleGlob(glob: string): {
+	moduleGlob: string;
+	fallbackModuleGlob?: string;
+	preservesScope: boolean;
+	isRecursiveFallback: boolean;
+	emitsFallback: boolean;
+} {
 	if (!glob.includes("*")) {
-		return glob;
-		// Usually something like **/*.wasm. Turn into *.wasm
-	} else if (glob.includes(".")) {
-		return `*.${glob.split(".").at(-1)}`;
-	} else {
-		// Replace common patterns
-		return glob.replace("**/*", "*").replace("**/", "*/").replace("/**", "/*");
+		return {
+			moduleGlob: glob,
+			fallbackModuleGlob: getFallbackModuleGlob(glob),
+			preservesScope: true,
+			isRecursiveFallback: false,
+			emitsFallback: false,
+		};
 	}
+
+	// A TypeScript `*` also spans path separators, so these common globstar
+	// sequences can be collapsed without discarding literal directory prefixes.
+	const moduleGlob = glob
+		.replaceAll("**/*", "*")
+		.replaceAll("**/", "*/")
+		.replaceAll("/**", "/*");
+	const fallbackModuleGlob = getFallbackModuleGlob(glob);
+	const preservesScope =
+		moduleGlob.indexOf("*") === moduleGlob.lastIndexOf("*");
+
+	return {
+		moduleGlob: preservesScope ? moduleGlob : (fallbackModuleGlob ?? "*"),
+		fallbackModuleGlob,
+		preservesScope,
+		isRecursiveFallback:
+			preservesScope &&
+			moduleGlob === fallbackModuleGlob &&
+			glob.startsWith("**/"),
+		emitsFallback: true,
+	};
+}
+
+function getFallbackModuleGlob(glob: string): string | undefined {
+	const lastAsteriskIndex = glob.lastIndexOf("*");
+	if (lastAsteriskIndex !== -1) {
+		const suffix = glob.slice(lastAsteriskIndex + 1);
+		return suffix ? `*${suffix}` : undefined;
+	}
+
+	const lastSlashIndex = Math.max(
+		glob.lastIndexOf("/"),
+		glob.lastIndexOf("\\")
+	);
+	const lastDotIndex = glob.lastIndexOf(".");
+	return lastDotIndex > lastSlashIndex
+		? `*${glob.slice(lastDotIndex)}`
+		: undefined;
+}
+
+/**
+ * Resolve the effective additional-module discovery setting used by deployment.
+ *
+ * @param config - Normalized Wrangler configuration
+ * @returns Whether deployment discovers modules from the filesystem
+ */
+function isAdditionalModuleDiscoveryEnabled(
+	config: Pick<Config, "find_additional_modules" | "no_bundle">
+): boolean {
+	return config.find_additional_modules ?? config.no_bundle === true;
+}
+
+/**
+ * Generate TypeScript module declarations for bundling rules.
+ *
+ * @param rules - Bundling rules to convert to declarations
+ * @param resolveOverlappingGlobs - Whether to resolve overlapping declarations using deployment precedence
+ * @param findAdditionalModules - Whether filesystem discovery uses globstar matching
+ */
+function generateModuleTypeDeclarations(
+	rules: Rule[] = [],
+	resolveOverlappingGlobs = false,
+	findAdditionalModules = false
+): string[] {
+	const moduleTypeMap: Partial<Record<Rule["type"], string>> = {
+		CompiledWasm: "WebAssembly.Module",
+		Data: "ArrayBuffer",
+		Text: "string",
+	};
+	const declarations = new Array<string>();
+	if (!resolveOverlappingGlobs) {
+		for (const rule of rules) {
+			const typeScriptType = moduleTypeMap[rule.type];
+			if (typeScriptType === undefined) {
+				continue;
+			}
+
+			for (const glob of rule.globs) {
+				declarations.push(
+					generateModuleTypeDeclaration(getTSModuleGlob(glob).moduleGlob, [
+						typeScriptType,
+					])
+				);
+			}
+		}
+
+		return declarations;
+	}
+
+	return generateCombinedModuleTypeDeclarations([
+		{ findAdditionalModules, rules },
+	]);
+}
+
+interface ResolvedModuleTypeDeclarations {
+	findAdditionalModules: boolean;
+	scoped: Map<string, Set<string>>;
+	fallbacks: Map<string, FallbackModuleTypeDeclaration>;
+	matchingRules: ModuleTypeMatchingRule[];
+}
+
+interface ModuleTypeRuleSet {
+	findAdditionalModules: boolean;
+	rules: Rule[];
+}
+
+interface FallbackModuleTypeDeclaration {
+	types: Set<string>;
+	recursiveRuleSeen: boolean;
+	shouldEmit: boolean;
+}
+
+interface ModuleTypeMatchingRule {
+	deploymentGlob: string;
+	isConservativeFallback: boolean;
+	moduleGlob: string;
+	type: string;
+}
+
+/**
+ * Resolve declarations for one deployment configuration while preserving
+ * Wrangler's module-rule precedence.
+ *
+ * @param ruleSet - Effective rules and discovery behavior for one deployment configuration
+ * @returns Module patterns and their possible TypeScript types
+ */
+function resolveModuleTypeDeclarations(
+	ruleSet: ModuleTypeRuleSet
+): ResolvedModuleTypeDeclarations {
+	const { findAdditionalModules, rules } = ruleSet;
+	const moduleTypeMap: Partial<Record<Rule["type"], string>> = {
+		CompiledWasm: "WebAssembly.Module",
+		Data: "ArrayBuffer",
+		Text: "string",
+	};
+	const seenRuleGlobs = new Set<string>();
+	const scopedDeclarations = new Map<string, Set<string>>();
+	const fallbackDeclarations = new Map<string, FallbackModuleTypeDeclaration>();
+	const matchingRules = new Array<ModuleTypeMatchingRule>();
+
+	for (const rule of rules) {
+		const typeScriptType = moduleTypeMap[rule.type];
+		if (typeScriptType === undefined) {
+			continue;
+		}
+
+		for (const glob of rule.globs) {
+			const {
+				moduleGlob,
+				fallbackModuleGlob,
+				preservesScope,
+				isRecursiveFallback,
+				emitsFallback,
+			} = getTSModuleGlob(glob);
+			if (seenRuleGlobs.has(glob)) {
+				continue;
+			}
+			seenRuleGlobs.add(glob);
+			matchingRules.push({
+				deploymentGlob: glob,
+				isConservativeFallback: !preservesScope,
+				moduleGlob,
+				type: typeScriptType,
+			});
+
+			if (fallbackModuleGlob === undefined) {
+				const types = scopedDeclarations.get(moduleGlob) ?? new Set<string>();
+				types.add(typeScriptType);
+				scopedDeclarations.set(moduleGlob, types);
+				continue;
+			}
+
+			// Ambient module patterns cannot be relative and may contain only one `*`.
+			// Keep a suffix-only union so `./` imports are never assigned one scoped
+			// rule's type when multiple deployment rules could match that suffix.
+			const fallbackDeclaration = fallbackDeclarations.get(
+				fallbackModuleGlob
+			) ?? {
+				types: new Set<string>(),
+				recursiveRuleSeen: false,
+				shouldEmit: false,
+			};
+			if (fallbackDeclaration.recursiveRuleSeen) {
+				continue;
+			}
+
+			if (preservesScope && moduleGlob !== fallbackModuleGlob) {
+				const types = scopedDeclarations.get(moduleGlob) ?? new Set<string>();
+				types.add(typeScriptType);
+				scopedDeclarations.set(moduleGlob, types);
+			}
+
+			fallbackDeclaration.types.add(typeScriptType);
+			fallbackDeclaration.recursiveRuleSeen = isRecursiveFallback;
+			fallbackDeclaration.shouldEmit ||= emitsFallback;
+			fallbackDeclarations.set(fallbackModuleGlob, fallbackDeclaration);
+		}
+	}
+
+	return {
+		findAdditionalModules,
+		scoped: scopedDeclarations,
+		fallbacks: fallbackDeclarations,
+		matchingRules,
+	};
+}
+
+/**
+ * Find the overlap between two TypeScript ambient module patterns.
+ *
+ * TypeScript permits at most one `*` in an ambient module pattern. This makes
+ * their intersection another one-asterisk pattern whenever their fixed
+ * prefixes and suffixes are compatible.
+ *
+ * @param left - First ambient module pattern
+ * @param right - Second ambient module pattern
+ * @returns A pattern representing their overlap, or undefined when disjoint
+ */
+function intersectModuleGlobs(left: string, right: string): string | undefined {
+	const leftAsteriskIndex = left.indexOf("*");
+	const rightAsteriskIndex = right.indexOf("*");
+
+	if (leftAsteriskIndex === -1) {
+		return moduleGlobMatches(right, left) ? left : undefined;
+	}
+	if (rightAsteriskIndex === -1) {
+		return moduleGlobMatches(left, right) ? right : undefined;
+	}
+
+	const leftPrefix = left.slice(0, leftAsteriskIndex);
+	const rightPrefix = right.slice(0, rightAsteriskIndex);
+	if (
+		!leftPrefix.startsWith(rightPrefix) &&
+		!rightPrefix.startsWith(leftPrefix)
+	) {
+		return undefined;
+	}
+
+	const leftSuffix = left.slice(leftAsteriskIndex + 1);
+	const rightSuffix = right.slice(rightAsteriskIndex + 1);
+	if (!leftSuffix.endsWith(rightSuffix) && !rightSuffix.endsWith(leftSuffix)) {
+		return undefined;
+	}
+
+	const prefix =
+		leftPrefix.length >= rightPrefix.length ? leftPrefix : rightPrefix;
+	const suffix =
+		leftSuffix.length >= rightSuffix.length ? leftSuffix : rightSuffix;
+	return `${prefix}*${suffix}`;
+}
+
+/**
+ * Check whether an ambient module pattern matches an exact module specifier.
+ *
+ * @param moduleGlob - Ambient module pattern containing at most one `*`
+ * @param moduleName - Exact module specifier
+ * @returns Whether the module specifier matches the pattern
+ */
+function moduleGlobMatches(moduleGlob: string, moduleName: string): boolean {
+	const asteriskIndex = moduleGlob.indexOf("*");
+	if (asteriskIndex === -1) {
+		return moduleGlob === moduleName;
+	}
+
+	const prefix = moduleGlob.slice(0, asteriskIndex);
+	const suffix = moduleGlob.slice(asteriskIndex + 1);
+	return (
+		moduleName.length >= prefix.length + suffix.length &&
+		moduleName.startsWith(prefix) &&
+		moduleName.endsWith(suffix)
+	);
+}
+
+/**
+ * Check whether every module matched by one ambient pattern is also matched by
+ * another.
+ *
+ * @param container - Candidate containing ambient module pattern
+ * @param contained - Candidate contained ambient module pattern
+ * @returns Whether the first pattern contains the second
+ */
+function moduleGlobContains(container: string, contained: string): boolean {
+	const containedAsteriskIndex = contained.indexOf("*");
+	if (containedAsteriskIndex === -1) {
+		return moduleGlobMatches(container, contained);
+	}
+
+	const containerAsteriskIndex = container.indexOf("*");
+	if (containerAsteriskIndex === -1) {
+		return false;
+	}
+
+	const containerPrefix = container.slice(0, containerAsteriskIndex);
+	const containedPrefix = contained.slice(0, containedAsteriskIndex);
+	const containerSuffix = container.slice(containerAsteriskIndex + 1);
+	const containedSuffix = contained.slice(containedAsteriskIndex + 1);
+	return (
+		containedPrefix.startsWith(containerPrefix) &&
+		containedSuffix.endsWith(containerSuffix)
+	);
+}
+
+/**
+ * Resolve all types that can be selected for an emitted ambient module pattern
+ * in one deployment configuration.
+ *
+ * Rules retain Wrangler's first-match precedence. A later rule contributes
+ * only when some part of its overlap with the emitted pattern was not already
+ * covered by an earlier rule.
+ *
+ * @param moduleGlob - Emitted ambient module pattern
+ * @param matchingRules - Original and normalized module rules in deployment order
+ * @param findAdditionalModules - Whether deployment discovers files with globstar matching
+ * @returns Types selected for at least part of the emitted pattern
+ */
+function resolveMatchingModuleTypes(
+	moduleGlob: string,
+	matchingRules: ModuleTypeMatchingRule[],
+	findAdditionalModules: boolean
+): Set<string> {
+	const types = new Set<string>();
+	const coveredPatterns = new Array<string>();
+	const exactModuleName = moduleGlob.includes("*") ? undefined : moduleGlob;
+
+	for (const rule of matchingRules) {
+		// Discovered files are classified with globstar semantics before imports are
+		// resolved. Otherwise, use the default direct-import matcher.
+		const deploymentRegExp = findAdditionalModules
+			? globToRegExp(rule.deploymentGlob, { globstar: true })
+			: globToRegExp(rule.deploymentGlob);
+		const conservativeFallbackMatchesExact =
+			exactModuleName !== undefined &&
+			rule.isConservativeFallback &&
+			deploymentRegExp.test(exactModuleName);
+		if (
+			exactModuleName !== undefined &&
+			rule.isConservativeFallback &&
+			!conservativeFallbackMatchesExact
+		) {
+			continue;
+		}
+
+		const overlap = intersectModuleGlobs(moduleGlob, rule.moduleGlob);
+		if (
+			overlap === undefined ||
+			coveredPatterns.some((pattern) => moduleGlobContains(pattern, overlap))
+		) {
+			continue;
+		}
+
+		types.add(rule.type);
+		// A suffix-only fallback produced from a multi-wildcard Wrangler glob is
+		// intentionally broader than the deployment rule. It contributes a safe
+		// type, but cannot prove that later rules are unreachable.
+		if (!rule.isConservativeFallback || conservativeFallbackMatchesExact) {
+			coveredPatterns.push(overlap);
+			if (moduleGlobContains(rule.moduleGlob, moduleGlob)) {
+				break;
+			}
+		}
+	}
+
+	return types;
+}
+
+/**
+ * Combine independently resolved module declarations from every deployment
+ * configuration represented by per-environment type generation.
+ *
+ * @param ruleSets - Effective bundling rules and discovery behavior grouped by deployment configuration
+ * @returns Module declarations containing unions where environments differ
+ */
+function generateCombinedModuleTypeDeclarations(
+	ruleSets: ModuleTypeRuleSet[]
+): string[] {
+	const combinedDeclarations = new Map<string, Set<string>>();
+	const combinedFallbacks = new Map<
+		string,
+		{ types: Set<string>; shouldEmit: boolean }
+	>();
+	const resolvedRuleSets = ruleSets.map(resolveModuleTypeDeclarations);
+
+	for (const { scoped, fallbacks } of resolvedRuleSets) {
+		for (const moduleGlob of scoped.keys()) {
+			combinedDeclarations.set(
+				moduleGlob,
+				combinedDeclarations.get(moduleGlob) ?? new Set<string>()
+			);
+		}
+
+		for (const [moduleGlob, { types, shouldEmit }] of fallbacks) {
+			const combinedFallback = combinedFallbacks.get(moduleGlob) ?? {
+				types: new Set<string>(),
+				shouldEmit: false,
+			};
+			for (const type of types) {
+				combinedFallback.types.add(type);
+			}
+			combinedFallback.shouldEmit ||= shouldEmit;
+			combinedFallbacks.set(moduleGlob, combinedFallback);
+		}
+	}
+
+	for (const [moduleGlob, { types, shouldEmit }] of combinedFallbacks) {
+		if (!shouldEmit && types.size === 1) {
+			continue;
+		}
+
+		combinedDeclarations.set(
+			moduleGlob,
+			combinedDeclarations.get(moduleGlob) ?? new Set<string>()
+		);
+	}
+
+	for (const [moduleGlob, combinedTypes] of combinedDeclarations) {
+		for (const { findAdditionalModules, matchingRules } of resolvedRuleSets) {
+			for (const type of resolveMatchingModuleTypes(
+				moduleGlob,
+				matchingRules,
+				findAdditionalModules
+			)) {
+				combinedTypes.add(type);
+			}
+		}
+	}
+
+	return [...combinedDeclarations].map(([moduleGlob, types]) =>
+		generateModuleTypeDeclaration(moduleGlob, types)
+	);
+}
+
+function generateModuleTypeDeclaration(
+	moduleGlob: string,
+	types: Iterable<string>
+): string {
+	return `declare module "${moduleGlob}" {
+	const value: ${[...types].join(" | ")};
+	export default value;
+}`;
+}
+
+/**
+ * Generate script-level declarations for service-worker bindings and types.
+ * Keeping this output as a script allows ambient wildcard modules to be
+ * visible to consuming source files.
+ *
+ * @param typeDefinitions - Named type definitions used by bindings
+ * @param envTypeStructure - Environment binding declarations without `declare const`
+ * @returns Global service-worker declarations
+ */
+function generateServiceWorkerTypes(
+	typeDefinitions: string[],
+	envTypeStructure: string[]
+): string {
+	return [
+		...typeDefinitions,
+		...envTypeStructure.map((value) => `declare const ${value}`),
+	].join("\n");
 }
 
 /**
@@ -1186,37 +1662,24 @@ async function generateSimpleEnvTypes(
 		}
 	}
 
-	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType === undefined) {
-				continue;
-			}
-
-			for (const glob of ruleObject.globs) {
-				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-\tconst value: ${typeScriptType};
-\texport default value;
-}`);
-			}
-		}
-	}
+	const configuredModulesTypeStructure = generateModuleTypeDeclarations(
+		config.rules
+	);
+	const effectiveModulesTypeStructure = generateModuleTypeDeclarations(
+		parseRules(config.rules, log).rules,
+		true,
+		isAdditionalModuleDiscoveryEnabled(config)
+	);
 
 	const typesHaveBeenFound =
-		envTypeStructure.length > 0 || modulesTypeStructure.length > 0;
+		envTypeStructure.length > 0 || effectiveModulesTypeStructure.length > 0;
 	if (entrypointFormat === "modules" || typesHaveBeenFound) {
 		const { consoleOutput, fileContent } = generateTypeStrings(
 			entrypointFormat,
 			envInterface,
 			envTypeStructure.map(({ key, type }) => `${key}: ${type};`),
-			modulesTypeStructure,
+			configuredModulesTypeStructure,
+			effectiveModulesTypeStructure,
 			stringKeys,
 			config.compatibility_date,
 			config.compatibility_flags,
@@ -1233,7 +1696,7 @@ async function generateSimpleEnvTypes(
 		);
 
 		const hash = createHash("sha256")
-			.update(consoleOutput)
+			.update(fileContent)
 			.digest("hex")
 			.slice(0, 32);
 
@@ -1648,33 +2111,44 @@ async function generatePerEnvironmentTypes(
 		}
 	}
 
-	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType !== undefined) {
-				for (const glob of ruleObject.globs) {
-					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-	const value: ${typeScriptType};
-	export default value;
-	}`);
-				}
-			}
-		}
-	}
+	const environmentRuleSets: ModuleTypeRuleSet[] = [
+		{
+			findAdditionalModules: isAdditionalModuleDiscoveryEnabled(config),
+			rules: config.rules,
+		},
+		...envNames.map((envName) => {
+			const environmentConfig = readConfig(
+				{ ...collectionArgs, env: envName },
+				{ hideWarnings: true }
+			);
+			return {
+				findAdditionalModules:
+					isAdditionalModuleDiscoveryEnabled(environmentConfig),
+				rules: environmentConfig.rules,
+			};
+		}),
+	];
+	const uniqueRuleSets = [
+		...new Map(
+			environmentRuleSets.map((ruleSet) => [JSON.stringify(ruleSet), ruleSet])
+		).values(),
+	];
+	const configuredModulesTypeStructure =
+		generateCombinedModuleTypeDeclarations(uniqueRuleSets);
+	const effectiveModulesTypeStructure = generateCombinedModuleTypeDeclarations(
+		uniqueRuleSets.map(({ findAdditionalModules, rules }) => ({
+			findAdditionalModules,
+			rules: parseRules(rules, log).rules,
+		}))
+	);
 
 	const { consoleOutput, fileContent } = generatePerEnvTypeStrings(
 		entrypointFormat,
 		envInterface,
 		perEnvInterfaces,
 		aggregatedEnvBindings,
-		modulesTypeStructure,
+		configuredModulesTypeStructure,
+		effectiveModulesTypeStructure,
 		stringKeys,
 		config.compatibility_date,
 		config.compatibility_flags,
@@ -1691,7 +2165,7 @@ async function generatePerEnvironmentTypes(
 	);
 
 	const hash = createHash("sha256")
-		.update(consoleOutput)
+		.update(fileContent)
 		.digest("hex")
 		.slice(0, 32);
 
@@ -1719,7 +2193,8 @@ function prefixEnvInterface(envInterface: string) {
  * @param envInterface - The name of the generated environment interface
  * @param perEnvInterfaces - Array of per-environment interface strings
  * @param aggregatedEnvBindings - Array of aggregated environment bindings as [key, type, required]
- * @param modulesTypeStructure - Array of module type declaration strings
+ * @param consoleModulesTypeStructure - Array of configured module type declarations for console output
+ * @param fileModulesTypeStructure - Array of effective module type declarations for file output
  * @param stringKeys - Array of variable names that should be typed as strings in process.env
  * @param compatibilityDate - Compatibility date for the worker
  * @param compatibilityFlags - Compatibility flags for the worker
@@ -1737,7 +2212,8 @@ function generatePerEnvTypeStrings(
 		required: boolean;
 		type: string;
 	}>,
-	modulesTypeStructure: string[],
+	consoleModulesTypeStructure: string[],
+	fileModulesTypeStructure: string[],
 	stringKeys: string[],
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
@@ -1746,6 +2222,7 @@ function generatePerEnvTypeStrings(
 	typeDefinitions: string[] = []
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
+	let fileBaseContent: string | undefined;
 	let processEnv = "";
 
 	// Named type definitions go inside the Cloudflare namespace
@@ -1776,20 +2253,26 @@ function generatePerEnvTypeStrings(
 
 		baseContent = `interface ${internalEnvInterface} {\n${envBindingLines}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
-		// Service worker syntax - type definitions go at the top level since there's no namespace
 		const globalTypeDefsContent =
 			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
 		const envBindingLines = aggregatedEnvBindings
 			.map(({ key, type }) => `\tconst ${key}: ${type};`)
 			.join("\n");
 		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envBindingLines}\n}`;
+		fileBaseContent = generateServiceWorkerTypes(
+			typeDefinitions,
+			aggregatedEnvBindings.map(({ key, type }) => `${key}: ${type};`)
+		);
 	}
 
-	const modulesContent = modulesTypeStructure.join("\n");
+	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
+	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		consoleOutput: `${baseContent}\n${modulesContent}`,
-		fileContent: `${baseContent}\n${modulesContent}`,
+		consoleOutput: `${baseContent}\n${consoleModulesContent}`,
+		fileContent: [fileBaseContent ?? baseContent, fileModulesContent]
+			.filter((content) => content.length > 0)
+			.join("\n"),
 	};
 }
 
@@ -1835,7 +2318,8 @@ const validateTypesFile = (path: string): void => {
  * @param formatType - The worker format type ("modules" or "service-worker")
  * @param envInterface - The name of the generated environment interface
  * @param envTypeStructure - Array of environment binding strings
- * @param modulesTypeStructure - Array of module type declaration strings
+ * @param consoleModulesTypeStructure - Array of configured module type declarations for console output
+ * @param fileModulesTypeStructure - Array of effective module type declarations for file output
  * @param stringKeys - Array of variable names that should be typed as strings in process.env
  * @param compatibilityDate - Compatibility date for the worker
  * @param compatibilityFlags - Compatibility flags for the worker
@@ -1848,7 +2332,8 @@ function generateTypeStrings(
 	formatType: string,
 	envInterface: string,
 	envTypeStructure: string[],
-	modulesTypeStructure: string[],
+	consoleModulesTypeStructure: string[],
+	fileModulesTypeStructure: string[],
 	stringKeys: string[],
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
@@ -1860,6 +2345,7 @@ function generateTypeStrings(
 	fileContent: string;
 } {
 	let baseContent = "";
+	let fileBaseContent: string | undefined;
 	let processEnv = "";
 
 	// Type definitions (e.g., pipeline record types) go inside the Cloudflare namespace
@@ -1881,17 +2367,23 @@ function generateTypeStrings(
 
 		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
-		// For service worker format, type definitions still go at the top level since there's no namespace
 		const globalTypeDefsContent =
 			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
 		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
+		fileBaseContent = generateServiceWorkerTypes(
+			typeDefinitions,
+			envTypeStructure
+		);
 	}
 
-	const modulesContent = modulesTypeStructure.join("\n");
+	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
+	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		fileContent: `${baseContent}\n${modulesContent}`,
-		consoleOutput: `${baseContent}\n${modulesContent}`,
+		fileContent: [fileBaseContent ?? baseContent, fileModulesContent]
+			.filter((content) => content.length > 0)
+			.join("\n"),
+		consoleOutput: `${baseContent}\n${consoleModulesContent}`,
 	};
 }
 
