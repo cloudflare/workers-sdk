@@ -1,5 +1,18 @@
 # @cloudflare/build-output-utils
 
+## 0.5.0
+
+### Minor Changes
+
+- [#15605](https://github.com/cloudflare/workers-sdk/pull/15605) [`c846bd8`](https://github.com/cloudflare/workers-sdk/commit/c846bd8f0f27da59a77406c516fab0431c38740e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for reading and writing Container configs in build output
+
+  Container configs can now be written to and read from the Build Output Specification.
+
+### Patch Changes
+
+- Updated dependencies [[`3f42b10`](https://github.com/cloudflare/workers-sdk/commit/3f42b10a40d2b3aae1d8d5142ea0bc3ac58fa954)]:
+  - @cloudflare/config@0.12.0
+
 ## 0.4.1
 
 ### Patch Changes

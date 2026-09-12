@@ -1,5 +1,15 @@
 # @cloudflare/config
 
+## 0.12.0
+
+### Minor Changes
+
+- [#15544](https://github.com/cloudflare/workers-sdk/pull/15544) [`3f42b10`](https://github.com/cloudflare/workers-sdk/commit/3f42b10a40d2b3aae1d8d5142ea0bc3ac58fa954) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add standalone Container configuration to the experimental config API
+
+  Container applications can now be declared with `defineContainer`, exported alongside Workers, and referenced directly from SQLite Durable Object exports. The new input and output schemas support the camel-cased Container configuration format and require output to use an image reference.
+
+  Support currently only exists in the config package and has not been added to its consumers.
+
 ## 0.11.0
 
 ### Minor Changes
